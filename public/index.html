@@ -85,6 +85,24 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .rec-date{color:var(--ts);font-size:11.5px;min-width:72px}.rec-amt{font-weight:700}.rec-amt.plus{color:#065f46}.rec-amt.minus{color:#991b1b}.rec-note{color:var(--td);flex:1}
 .add-rec-row{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}.add-rec-row .finput{flex:1}
 .btn-add-rec{background:linear-gradient(135deg,var(--amber-base),var(--amber-warm));color:#fff;border:none;border-radius:9px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .14s;box-shadow:0 3px 10px rgba(180,83,9,0.3);height:38px}.btn-add-rec:hover{transform:translateY(-1px)}.btn-add-rec:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.import-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}
+.import-box{border:0.5px dashed rgba(180,83,9,0.25);border-radius:12px;padding:14px;background:rgba(254,243,199,0.14)}
+.import-drop{border:1px dashed rgba(180,83,9,0.25);border-radius:12px;padding:18px;text-align:center;background:rgba(254,243,199,0.18);cursor:pointer;color:var(--ts);font-size:13px;transition:all .15s}
+.import-drop:hover{border-color:var(--amber-warm);background:rgba(254,243,199,0.28)}
+.import-drop strong{color:var(--th)}
+.import-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.import-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(180,83,9,0.09);color:var(--amber-base)}
+.import-pill.ok{background:rgba(5,150,105,0.1);color:#065f46}
+.import-pill.warn{background:rgba(217,119,6,0.1);color:#b45309}
+.import-note{font-size:12px;line-height:1.55;color:var(--ts)}
+.import-table-wrap{max-height:320px;overflow:auto;border:0.5px solid rgba(180,83,9,0.12);border-radius:12px;background:rgba(255,255,255,0.45)}
+.import-table{width:100%;border-collapse:collapse}.import-table th,.import-table td{padding:8px 10px;border-bottom:0.5px solid rgba(180,83,9,0.08);font-size:12px;white-space:nowrap}.import-table th{position:sticky;top:0;background:rgba(254,243,199,0.96);z-index:1}
+.import-row.ok{background:rgba(5,150,105,0.04)}.import-row.warn{background:rgba(217,119,6,0.05)}.import-row.err{background:rgba(220,38,38,0.05)}
+.import-status{font-size:11px;font-weight:700}.import-status.ok{color:#065f46}.import-status.warn{color:#b45309}.import-status.err{color:#b91c1c}
+.import-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.import-actions .btn-save,.import-actions .btn-cancel{flex:1}
+.import-empty{padding:26px 14px;text-align:center;color:var(--ts);font-size:13px}
+.import-file{display:none}
 .mactions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:0.5px solid rgba(180,83,9,0.12)}
 .btn-cancel{flex:1;padding:10px;border-radius:9px;border:0.5px solid rgba(180,83,9,0.2);background:transparent;color:var(--ts);font-size:13px;cursor:pointer;font-family:inherit;transition:all .13s}.btn-cancel:hover{border-color:var(--amber-base);color:var(--th)}
 .btn-save{flex:2;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--amber-base),var(--amber-warm));color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(180,83,9,0.35);transition:all .14s}.btn-save:hover{transform:translateY(-1px)}.btn-save:disabled{opacity:.6;transform:none;cursor:not-allowed}
@@ -227,6 +245,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
       <div class="toolbar">
         <div class="search-box"><span style="color:rgba(180,83,9,0.4);font-size:14px">🔍</span><input type="text" id="courtSearch" placeholder="搜索姓名…" oninput="renderCourts()"></div>
         <button class="btn-sec" onclick="exportCourtCSV()">📥 导出CSV</button>
+        <button class="btn-sec" onclick="openCourtImport()">📤 导入CSV</button>
         <button class="btn-sec btn-green" onclick="backupToObsidian()">💾 备份</button>
         <button class="btn-add" onclick="openCourtModal(null)">＋ 添加订场用户</button>
       </div>
@@ -278,6 +297,12 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 
 <div class="overlay" id="overlay">
   <div class="modal"><div class="mhead"><div class="mtitle" id="mTitle">操作</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="mbody" id="mBody"></div></div>
+</div>
+<div class="overlay" id="importOv">
+  <div class="modal">
+    <div class="mhead"><div class="mtitle" id="importTitle">📥 导入订场用户</div><button class="mclose" onclick="closeCourtImport()">✕</button></div>
+    <div class="mbody" id="importBody"></div>
+  </div>
 </div>
 <div class="conf-ov" id="confOv">
   <div class="conf-box">
@@ -747,6 +772,190 @@ function exportCourtCSV(){
   csv+=d.map(u=>[u.name,u.phone||'',cn(u.campus),u.balance||0,u.totalDeposit||0,u.joinDate||'','"'+(u.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_订场用户_'+today()+'.csv';a.click();toast('导出成功','success');
+}
+let courtImportState={fileName:'',rows:[],summary:null};
+function openCourtImport(){
+  courtImportState={fileName:'',rows:[],summary:null};
+  document.getElementById('importTitle').textContent='📥 导入订场用户';
+  document.getElementById('importBody').innerHTML=`<div class="import-grid"><div class="import-box"><label class="import-drop" for="courtImportFile"><strong>点击选择 CSV 文件</strong><div style="margin-top:6px">支持 UTF-8 / GBK / GB18030 编码，额外列会自动忽略</div></label><input class="import-file" id="courtImportFile" type="file" accept=".csv,text/csv" onchange="handleCourtImportFile(this)"><div class="import-meta" id="courtImportMeta"><span class="import-pill">未选择文件</span></div><div class="import-note" style="margin-top:10px">导入规则：<br>1. 必填字段：姓名。<br>2. 校区默认顺义马坡（mabao）。<br>3. 余额/储值默认 0。<br>4. 额外字段会合并进备注，不会导致失败。<br>5. 已存在的用户会按手机号优先、否则按“姓名+校区”去重。</div></div><div class="import-box"><div class="import-note"><strong>建议列名</strong><br>姓名、手机号、校区、余额、储值、加入日期、备注<br><br><strong>特殊字段</strong><br>消费金额、类型、来源、群/独立标记等，会自动保留到备注中。</div></div></div><div style="margin-top:14px" id="courtImportPreview"><div class="import-empty">请选择 CSV 文件后预览数据</div></div><div class="import-actions"><button class="btn-cancel" onclick="closeCourtImport()">取消</button><button class="btn-save" id="courtImportBtn" onclick="runCourtImport()" disabled>导入</button></div>`;
+  document.getElementById('importOv').classList.add('open');
+}
+function closeCourtImport(){
+  document.getElementById('importOv').classList.remove('open');
+  courtImportState={fileName:'',rows:[],summary:null};
+}
+function parseCsvText(text){
+  if(!text)return[];
+  text=String(text).replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const rows=[];let row=[];let cell='';let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i],next=text[i+1];
+    if(inQuotes){
+      if(ch==='"'){
+        if(next==='"'){cell+='"';i++;}
+        else inQuotes=false;
+      }else cell+=ch;
+      continue;
+    }
+    if(ch==='"'){inQuotes=true;continue;}
+    if(ch===','){row.push(cell);cell='';continue;}
+    if(ch==='\n'){row.push(cell);rows.push(row);row=[];cell='';continue;}
+    cell+=ch;
+  }
+  if(cell.length||row.length){row.push(cell);rows.push(row);}
+  const headerRow=rows.shift()||[];
+  const headers=headerRow.map(h=>String(h||'').trim());
+  return rows
+    .map(r=>headers.reduce((acc,h,idx)=>{if(h)acc[h]=r[idx]??'';return acc;},{}))
+    .filter(r=>Object.values(r).some(v=>String(v||'').trim()!==''));
+}
+function normalizeImportPhone(v){
+  return String(v||'').replace(/[^\d]/g,'').trim();
+}
+function readRowValue(row, aliases){
+  const lowerMap=new Map(Object.keys(row).map(k=>[String(k).trim().toLowerCase(),k]));
+  for(const alias of aliases){
+    const realKey=lowerMap.get(String(alias).trim().toLowerCase());
+    if(realKey!=null){
+      const val=row[realKey];
+      if(val!=null&&String(val).trim()!=='')return String(val).trim();
+    }
+  }
+  return '';
+}
+function collectUnknownNotes(row,knownKeys){
+  const notes=[];
+  for(const [k,v] of Object.entries(row)){
+    const key=String(k||'').trim();
+    const val=String(v||'').trim();
+    if(!val)continue;
+    if(knownKeys.some(x=>String(x).trim().toLowerCase()===key.toLowerCase()))continue;
+    notes.push(`${key}：${val}`);
+  }
+  return notes;
+}
+function getCourtDedupKeys(item){
+  const keys=[];
+  const phone=normalizeImportPhone(item.phone);
+  if(phone)keys.push(`phone:${phone}`);
+  const name=String(item.name||'').trim();
+  const campus=String(item.campus||'').trim();
+  if(name)keys.push(`namecampus:${name}|${campus}`);
+  return keys;
+}
+function normalizeCampusCode(value){
+  const raw=String(value||'').trim();
+  if(!raw)return 'mabao';
+  if(CAMPUS[raw])return raw;
+  const match=Object.entries(CAMPUS).find(([,name])=>String(name).trim()===raw);
+  return match?match[0]:raw;
+}
+function normalizeCourtImportRows(rawRows){
+  const existingKeys=new Set();
+  courts.forEach(item=>getCourtDedupKeys(item).forEach(k=>existingKeys.add(k)));
+  const seenKeys=new Set();
+  const rows=rawRows.map((row,index)=>{
+    const name=readRowValue(row,['姓名','用户','订场用户','名称','客户']);
+    const phone=readRowValue(row,['手机号','电话','手机','联系方式']);
+    const campusRaw=readRowValue(row,['校区','门店','区域']);
+    const campus=normalizeCampusCode(campusRaw||'mabao');
+    const balanceRaw=readRowValue(row,['余额']);
+    const depositRaw=readRowValue(row,['储值','历史储值','总储值','累计储值']);
+    const joinDate=readRowValue(row,['加入日期','加入时间','日期']);
+    const baseNotes=readRowValue(row,['备注','说明']);
+    const extras=collectUnknownNotes(row,['姓名','用户','订场用户','名称','客户','手机号','电话','手机','联系方式','校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','备注','说明','消费金额','消费']);
+    const specialAmount=readRowValue(row,['消费金额','消费']);
+    if(specialAmount)extras.push(`消费金额：${specialAmount}`);
+    const notes=[baseNotes,...extras].filter(Boolean).join('；');
+    const item={name,phone,campus,balance:parseFloat(balanceRaw)||0,totalDeposit:parseFloat(depositRaw)||0,joinDate,notes,status:'active',history:[]};
+    const keys=getCourtDedupKeys(item);
+    let status='待导入';
+    let reason='';
+    if(!item.name){status='无效';reason='缺少姓名';}
+    else if(keys.some(k=>existingKeys.has(k))){status='重复';reason='系统中已存在';}
+    else if(keys.some(k=>seenKeys.has(k))){status='重复';reason='文件内重复';}
+    keys.forEach(k=>seenKeys.add(k));
+    return {...item,_rowIndex:index+2,_status:status,_reason:reason,_raw:row,_keys:keys};
+  });
+  const summary={
+    total:rows.length,
+    valid:rows.filter(r=>r._status==='待导入').length,
+    duplicate:rows.filter(r=>r._status==='重复').length,
+    invalid:rows.filter(r=>r._status==='无效').length
+  };
+  return {rows,summary};
+}
+function renderCourtImportPreview(){
+  const host=document.getElementById('courtImportPreview');
+  const meta=document.getElementById('courtImportMeta');
+  const btn=document.getElementById('courtImportBtn');
+  const {rows,summary}=courtImportState;
+  if(meta){
+    meta.innerHTML=courtImportState.fileName?[
+      `<span class="import-pill ok">文件：${esc(courtImportState.fileName)}</span>`,
+      `<span class="import-pill">总计 ${summary.total} 行</span>`,
+      `<span class="import-pill ok">可导入 ${summary.valid} 行</span>`,
+      summary.duplicate?`<span class="import-pill warn">重复 ${summary.duplicate} 行</span>`:'',
+      summary.invalid?`<span class="import-pill warn">无效 ${summary.invalid} 行</span>`:''
+    ].join(''):'<span class="import-pill">未选择文件</span>';
+  }
+  if(btn)btn.disabled=!summary||summary.valid===0;
+  if(!rows.length){host.innerHTML='<div class="import-empty">请选择 CSV 文件后预览数据</div>';return;}
+  const previewRows=rows.map((r,i)=>{
+    const cls=r._status==='待导入'?'ok':r._status==='重复'?'warn':'err';
+    const statusText=r._status==='待导入'?'可导入':r._status==='重复'?`已跳过：${r._reason}`:`无效：${r._reason}`;
+    return `<tr class="import-row ${cls}"><td>${i+1}</td><td>${esc(r.name||'')}</td><td>${esc(r.phone||'')}</td><td>${cn(r.campus)||esc(r.campus||'')}</td><td>${fmt(r.balance)||0}</td><td>${fmt(r.totalDeposit)||0}</td><td>${esc(r.joinDate||'')}</td><td style="max-width:240px;white-space:normal;word-break:break-word">${esc(r.notes||'')}</td><td><span class="import-status ${cls}">${statusText}</span></td></tr>`;
+  }).join('');
+  host.innerHTML=`<div class="import-table-wrap"><table class="import-table"><thead><tr><th>#</th><th>姓名</th><th>手机号</th><th>校区</th><th>余额</th><th>储值</th><th>加入日期</th><th>备注</th><th>结果</th></tr></thead><tbody>${previewRows}</tbody></table></div>`;
+}
+async function handleCourtImportFile(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  try{
+    const buf=await file.arrayBuffer();
+    let text='';
+    for(const enc of ['utf-8','gb18030','gbk']){
+      try{ text=new TextDecoder(enc).decode(buf); if(text)break; }catch{ text=''; }
+    }
+    const raw=parseCsvText(text);
+    const normalized=normalizeCourtImportRows(raw);
+    courtImportState={fileName:file.name,rows:normalized.rows,summary:normalized.summary};
+    renderCourtImportPreview();
+  }catch(e){
+    toast('读取失败：'+e.message,'error');
+  }
+}
+async function runCourtImport(){
+  const btn=document.getElementById('courtImportBtn');
+  const rows=(courtImportState.rows||[]).filter(r=>r._status==='待导入');
+  if(!rows.length){toast('没有可导入的数据','warn');return;}
+  btn.disabled=true;btn.textContent='导入中…';
+  let success=0,failed=0;
+  try{
+    for(const row of rows){
+      try{
+        const payload={name:row.name,phone:row.phone,campus:row.campus,balance:row.balance,totalDeposit:row.totalDeposit,joinDate:row.joinDate,notes:row.notes,status:'active',history:[]};
+        const r=await apiCall('POST','/courts',payload);
+        courts.unshift(r);
+        success++;
+        row._status='已导入';
+        row._reason='';
+      }catch(e){
+        failed++;
+        row._status='无效';
+        row._reason=e.message;
+      }
+    }
+    renderCourtImportPreview();
+    renderCourts();
+    toast(`导入完成：成功 ${success} 行，失败 ${failed} 行`,'success');
+    if(failed===0)closeCourtImport();
+  }catch(e){
+    toast('导入失败：'+e.message,'error');
+  }finally{
+    btn.disabled=false;
+    btn.textContent='导入';
+  }
 }
 // ===== 课程产品 =====
 function renderProducts(){
