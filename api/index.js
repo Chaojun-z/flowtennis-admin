@@ -21,6 +21,7 @@ function get(t,id){return new Promise((res,rej)=>{gc().getRow({tableName:t,prima
 function scan(t){return new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();});}
 function del(t,id){return new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));});}
 function mkTable(t){return new Promise(res=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
+async function timed(label,fn){const startedAt=Date.now();try{return await fn();}finally{console.log(`[api-timing] ${label} ${Date.now()-startedAt}ms`);}}
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
 async function applyLessonDelta(classId,delta){
@@ -29,7 +30,7 @@ async function applyLessonDelta(classId,delta){
   if(!cls)return;
   const oldClass={...cls};
   const nextUsed=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
-  const relatedPlans=(await scan(T_PLANS)).filter((p)=>p.classId===classId&&p.status==='active');
+  const relatedPlans=(await timed('scan plans for lesson delta',()=>scan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
   const oldPlans=relatedPlans.map((p)=>({...p}));
   try{
     await put(T_CLASSES,classId,{...cls,usedLessons:nextUsed,updatedAt:new Date().toISOString()});
@@ -86,7 +87,7 @@ function validateScheduleConflicts(candidate,schedules,excludeId){
   }
 }
 async function validateScheduleSave(nextRec,oldRec){
-  const schedules=await scan(T_SCHEDULE);
+  const schedules=await timed('scan schedule for conflict check',()=>scan(T_SCHEDULE));
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
   const oldDelta=scheduleLessonDelta(oldRec);
   const nextDelta=scheduleLessonDelta(nextRec);
@@ -118,6 +119,7 @@ async function ensureCoachBindings(){
 }
 async function init(){
   if(inited)return;
+  const startedAt=Date.now();
   const missing=REQUIRED_ENV_VARS.filter((k)=>!process.env[k]);
   if(missing.length)throw new Error('缺少环境变量：'+missing.join(', '));
   for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CAMPUSES])await mkTable(t);
@@ -129,6 +131,7 @@ async function init(){
   }
   await ensureCoachBindings();
   inited=true;
+  console.log(`[api-timing] init cold start ${Date.now()-startedAt}ms`);
 }
 
 function sendJson(res,body,code=200){
@@ -203,14 +206,14 @@ module.exports = async (req, res) => {
     if(path==='/load-all'&&method==='GET'){
       await init();
       const [courts,students,products,plans,schedule,coaches,classes,campuses]=await Promise.all([
-        scan(T_COURTS),
-        scan(T_STUDENTS),
-        scan(T_PRODUCTS),
-        scan(T_PLANS),
-        scan(T_SCHEDULE),
-        scan(T_COACHES).catch(()=>[]),
-        scan(T_CLASSES).catch(()=>[]),
-        scan(T_CAMPUSES).catch(()=>[])
+        timed('load-all scan courts',()=>scan(T_COURTS)),
+        timed('load-all scan students',()=>scan(T_STUDENTS)),
+        timed('load-all scan products',()=>scan(T_PRODUCTS)),
+        timed('load-all scan plans',()=>scan(T_PLANS)),
+        timed('load-all scan schedule',()=>scan(T_SCHEDULE)),
+        timed('load-all scan coaches',()=>scan(T_COACHES).catch(()=>[])),
+        timed('load-all scan classes',()=>scan(T_CLASSES).catch(()=>[])),
+        timed('load-all scan campuses',()=>scan(T_CAMPUSES).catch(()=>[]))
       ]);
       return sendJson(res,{
         courts:Array.isArray(courts)?courts:[],
