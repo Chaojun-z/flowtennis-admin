@@ -63,4 +63,24 @@ assert.throws(
   'coach cannot write other coach schedule feedback'
 );
 
+const isolated = rules.filterLoadAllForUser(
+  {
+    courts: [{ id: 'court-1' }],
+    students: [{ id: 'stu-1', name: '学员A' }, { id: 'stu-2', name: '学员B' }],
+    products: [{ id: 'prod-1' }],
+    plans: [{ id: 'plan-1', studentId: 'stu-1', classId: 'class-1' }, { id: 'plan-2', studentId: 'stu-2', classId: 'class-2' }],
+    schedule: [{ id: 'sch-1', coach: '朝珺', studentIds: ['stu-1'], classId: 'class-1' }, { id: 'sch-2', coach: '其他教练', studentIds: ['stu-2'], classId: 'class-2' }],
+    coaches: [{ id: 'coach-1', name: '朝珺' }, { id: 'coach-2', name: '其他教练' }],
+    classes: [{ id: 'class-1', coach: '朝珺', studentIds: ['stu-1'] }, { id: 'class-2', coach: '其他教练', studentIds: ['stu-2'] }],
+    campuses: [{ id: 'mabao' }],
+    feedbacks: [{ id: 'fb-1', scheduleId: 'sch-1' }, { id: 'fb-2', scheduleId: 'sch-2' }]
+  },
+  { role: 'editor', coachName: '朝珺', name: '朝珺' }
+);
+assert.deepStrictEqual(isolated.courts, [], 'coach load-all should not expose court accounts');
+assert.deepStrictEqual(isolated.schedule.map(x=>x.id), ['sch-1'], 'coach load-all should only expose own schedule');
+assert.deepStrictEqual(isolated.classes.map(x=>x.id), ['class-1'], 'coach load-all should only expose own classes');
+assert.deepStrictEqual(isolated.students.map(x=>x.id), ['stu-1'], 'coach load-all should only expose linked students');
+assert.deepStrictEqual(isolated.feedbacks.map(x=>x.id), ['fb-1'], 'coach load-all should only expose own feedbacks');
+
 console.log('feedback rules tests passed');

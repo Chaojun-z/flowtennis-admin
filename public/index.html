@@ -179,8 +179,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-time{font-size:15px;font-weight:700;color:var(--amber-base);white-space:nowrap}
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:18px 14px;text-align:center;color:var(--ts);font-size:12px;background:rgba(254,243,199,0.2);border-radius:12px;border:0.5px dashed rgba(180,83,9,0.16)}
-.coach-ops-grid{display:grid;grid-template-columns:160px minmax(1260px,1fr);gap:8px;overflow-x:auto}
-.coach-ops-head{display:grid;grid-template-columns:160px minmax(1260px,1fr);gap:8px;margin:0 0 8px;color:rgba(254,243,199,.72);font-size:11px;overflow-x:auto}
+.coach-ops-grid{display:grid;grid-template-columns:160px minmax(980px,1fr);gap:8px;overflow-x:auto}
+.coach-ops-head{display:grid;grid-template-columns:160px minmax(980px,1fr);gap:8px;margin:0 0 8px;color:rgba(254,243,199,.72);font-size:11px;overflow-x:auto}
+.coach-ops-grid,.coach-ops-head{scrollbar-width:none}.coach-ops-grid::-webkit-scrollbar,.coach-ops-head::-webkit-scrollbar{display:none}
+.coach-ops-tabs{display:flex;gap:8px;margin:2px 0 12px}.coach-ops-tab{border:none;border-radius:8px;padding:9px 14px;background:rgba(254,243,199,.26);color:var(--cream-pale);font-size:13px;font-weight:700;cursor:pointer}.coach-ops-tab.active{background:rgba(254,243,199,.82);color:var(--amber-deep)}
 .coach-ops-row{display:contents}
 .coach-ops-name{background:var(--card-f);border:var(--borf);border-radius:10px;padding:10px 12px;color:var(--th);font-weight:700;min-height:54px}
 .coach-ops-line{background:var(--card-f);border:var(--borf);border-radius:10px;min-height:64px;position:relative;overflow:hidden;background-image:repeating-linear-gradient(90deg,rgba(180,83,9,.08),rgba(180,83,9,.08) 1px,transparent 1px,transparent calc(100% / 15))}
@@ -276,10 +278,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   <div class="sb-item" onclick="goPage('plans',this)"><span class="sb-icon">📚</span>学习计划</div>
   <div class="sb-item" onclick="goPage('schedule',this)"><span class="sb-icon">📅</span>排课表</div>
   <div class="sb-item" onclick="goPage('coachops',this)"><span class="sb-icon">📊</span>教练运营</div>
-  <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon">👨‍🏫</span>教练管理</div>
   <div class="sb-sec">订场 & 配置</div>
   <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon">🏟️</span>订场用户</div>
   <div class="sb-item" onclick="goPage('products',this)"><span class="sb-icon">🏷️</span>课程产品</div>
+  <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon">👨‍🏫</span>教练管理</div>
   <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)"><span class="sb-icon">⚙️</span>校区管理</div>
   </div>
   <div class="sb-bottom">
@@ -346,6 +348,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     <!-- 教练运营 -->
     <div class="page-section" id="page-coachops">
       <div class="stats-row" id="coachOpsStats"></div>
+      <div class="coach-ops-tabs">
+        <button class="coach-ops-tab active" id="coachOpsTabSchedule" onclick="setCoachOpsPanel('schedule')">教练排课</button>
+        <button class="coach-ops-tab" id="coachOpsTabWorkload" onclick="setCoachOpsPanel('workload')">教练工作量</button>
+      </div>
       <div class="toolbar">
         <select class="fsel" id="coachOpsRange" onchange="setCoachOpsMode(this.value)"><option value="day">日视图</option><option value="week">周视图</option><option value="month">月视图</option></select>
         <button class="btn-sec" onclick="shiftCoachOpsDate(-1)">上一段</button>
@@ -353,11 +359,15 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
         <button class="btn-sec" onclick="shiftCoachOpsDate(1)">下一段</button>
         <button class="btn-sec" onclick="setCoachOpsToday()">回到今天</button>
       </div>
-      <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排课</div>
-      <div class="coach-ops-head"><div>教练</div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
-      <div class="coach-ops-grid" id="coachOpsTimeline"></div>
-      <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:18px 0 10px">教练工作量</div>
-      <div class="tcard"><table><thead><tr><th>教练</th><th>今日</th><th>本周</th><th>本月</th><th>当前范围</th><th>时长</th><th>未反馈</th><th>校区分布</th><th>时间段</th><th>风险</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div>
+      <div id="coachOpsSchedulePanel">
+        <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排课</div>
+        <div class="coach-ops-head"><div>教练</div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
+        <div class="coach-ops-grid" id="coachOpsTimeline"></div>
+      </div>
+      <div id="coachOpsWorkloadPanel" style="display:none">
+        <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px">教练工作量</div>
+        <div class="tcard"><table><thead><tr><th>教练</th><th>今日</th><th>本周</th><th>本月</th><th>当前筛选课数</th><th>当前筛选总时长</th><th>未反馈</th><th>校区分布</th><th>时间段</th><th>风险</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div>
+      </div>
     </div>
     <!-- 教练管理 -->
     <div class="page-section" id="page-coaches">
@@ -473,6 +483,7 @@ function localDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).pad
 function today(){return localDateKey(new Date())}
 function uid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 function durMin(s,e){if(!s||!e)return 0;return Math.round((new Date(e)-new Date(s))/60000)}
+function scheduleDurMin(s){return s?.endTime?durMin(s.startTime,s.endTime):60}
 function fmtDt(s){if(!s)return '—';return s.replace('T',' ').slice(0,16)}
 function rv(r,k,d=''){return r&&r[k]!=null?r[k]:d}
 function esc(s){if(s==null)return '';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
@@ -743,14 +754,18 @@ function doLogout(){
 function showApp(){
   document.getElementById('loginPage').style.display='none';document.getElementById('app').style.display='';
   document.getElementById('userNamePill').textContent='👤 '+(currentUser?.name||'用户');
+  const isAdmin=currentUser?.role==='admin';
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
-  if(isCoach){
+  if(isAdmin){
+    document.getElementById('sbAdminView').style.display='';
+    document.getElementById('sbCoachView').style.display='none';
+    const el=document.getElementById('sbCampusMgr');if(el)el.style.display='';
+  }else if(isCoach){
     document.getElementById('sbAdminView').style.display='none';
     document.getElementById('sbCoachView').style.display='';
   }else{
-    document.getElementById('sbAdminView').style.display='';
+    document.getElementById('sbAdminView').style.display='none';
     document.getElementById('sbCoachView').style.display='none';
-    if(currentUser?.role==='admin'){const el=document.getElementById('sbCampusMgr');if(el)el.style.display='';}
   }
   syncViewportMode();
   loadAll();
@@ -838,9 +853,11 @@ function renderAll(){
   if(isCoach){
     renderMySchedule();renderMyStudents();renderMyClasses();
     if(!['myschedule','mystudents','myclasses'].includes(currentPage))currentPage='myschedule';
-  }else{
+  }else if(currentUser?.role==='admin'){
     if(['myschedule','mystudents','myclasses'].includes(currentPage))currentPage='students';
     renderStudents();renderClasses();renderPlans();renderSchedule();renderCoachOps();renderCourts();renderProducts();renderCoaches();renderCampuses();
+  }else{
+    doLogout();return;
   }
   goPage(currentPage);
 }
@@ -848,10 +865,16 @@ function renderAll(){
 let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',editId=null,delId=null,delType=null,_pending=[];
 let stuPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1;
 let courtSortKey='',courtSortDir='desc',courtCampusFilterValue='',courtOwnerFilterValue='',selectedCourtIds=new Set();
-let coachOpsMode='day';
+let coachOpsMode='day',coachOpsPanel='schedule';
 
 function goPage(pg,el){
   syncViewportMode();
+  const adminPages=['students','classes','plans','schedule','coachops','coaches','courts','products','campusmgr'];
+  const coachPages=['myschedule','mystudents','myclasses'];
+  const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
+  if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'myschedule':'';
+  if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='students';
+  if(!pg)return;
   document.querySelectorAll('.sb-item').forEach(n=>{
     const matched=(n.getAttribute('onclick')||'').includes(`goPage('${pg}'`);
     n.classList.toggle('active',el?n===el:matched);
@@ -1199,6 +1222,17 @@ function openScheduleDetail(scheduleId){
   document.getElementById('overlay').classList.add('open');
 }
 // ===== 教练运营 =====
+function setCoachOpsPanel(panel){
+  coachOpsPanel=panel==='workload'?'workload':'schedule';
+  const schedulePanel=document.getElementById('coachOpsSchedulePanel');
+  const workloadPanel=document.getElementById('coachOpsWorkloadPanel');
+  const scheduleTab=document.getElementById('coachOpsTabSchedule');
+  const workloadTab=document.getElementById('coachOpsTabWorkload');
+  if(schedulePanel)schedulePanel.style.display=coachOpsPanel==='schedule'?'':'none';
+  if(workloadPanel)workloadPanel.style.display=coachOpsPanel==='workload'?'':'none';
+  if(scheduleTab)scheduleTab.classList.toggle('active',coachOpsPanel==='schedule');
+  if(workloadTab)workloadTab.classList.toggle('active',coachOpsPanel==='workload');
+}
 function ensureCoachOpsDate(){
   const el=document.getElementById('coachOpsDate');if(!el)return;
   const type=coachOpsMode==='month'?'month':coachOpsMode==='week'?'week':'date';
@@ -1249,6 +1283,7 @@ function coachOpsRows(){
 function renderCoachOps(){
   const host=document.getElementById('coachOpsTimeline');if(!host)return;
   ensureCoachOpsDate();
+  setCoachOpsPanel(coachOpsPanel);
   host.innerHTML='<div class="coach-ops-empty">加载中…</div>';
   const mode=coachOpsMode;
   const rangeSelect=document.getElementById('coachOpsRange');if(rangeSelect)rangeSelect.value=mode;
@@ -1275,7 +1310,8 @@ function renderCoachOps(){
       const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
       const blocks=r.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
         const startMin=(dateMs(s.startTime)-base.getTime())/60000;
-        const endMin=(dateMs(s.endTime)-base.getTime())/60000;
+        const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
+        const endMin=(endMs-base.getTime())/60000;
         const left=Math.max(0,Math.min(99,startMin/opsTotalMin*100));
         const width=Math.max(2,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/opsTotalMin*100);
         return `<div class="coach-ops-block" style="left:${left}%;width:${Math.min(width,100-left)}%" onclick="openScheduleDetail('${s.id}')"><div class="coach-ops-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div>${esc(s.studentName)||esc(classes.find(c=>c.id===s.classId)?.className)||'—'}</div><div style="color:var(--ts);margin-top:3px">${cn(s.campus)} · ${esc(s.venue)||'—'}</div></div>`;
@@ -1291,7 +1327,7 @@ function renderCoachOps(){
     }).join('');
     return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');
-  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td><div class="uname">${esc(r.name)}</div></td><td>${r.todayRows.length}</td><td>${r.weekRows.length}</td><td>${r.monthRows.length}</td><td>${r.rangeRows.length} 节</td><td>${r.rangeRows.reduce((n,s)=>n+durMin(s.startTime,s.endTime),0)} 分钟</td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
+  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td><div class="uname">${esc(r.name)}</div></td><td>${r.todayRows.length}</td><td>${r.weekRows.length}</td><td>${r.monthRows.length}</td><td>${r.rangeRows.length} 节</td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
 }
 // ===== 订场用户 =====
 function renderCourtHeaderFilters(base){

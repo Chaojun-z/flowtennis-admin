@@ -172,6 +172,42 @@ function assertCanWriteFeedback(user,schedule){
   if(coachName&&scheduleCoach&&coachName===scheduleCoach)return;
   throw new Error('只能填写自己的课程反馈');
 }
+function filterLoadAllForUser(data,user){
+  const normalized={
+    courts:Array.isArray(data?.courts)?data.courts:[],
+    students:Array.isArray(data?.students)?data.students:[],
+    products:Array.isArray(data?.products)?data.products:[],
+    plans:Array.isArray(data?.plans)?data.plans:[],
+    schedule:Array.isArray(data?.schedule)?data.schedule:[],
+    coaches:Array.isArray(data?.coaches)?data.coaches:[],
+    classes:Array.isArray(data?.classes)?data.classes:[],
+    campuses:Array.isArray(data?.campuses)?data.campuses:[],
+    feedbacks:Array.isArray(data?.feedbacks)?data.feedbacks:[]
+  };
+  if(user?.role==='admin')return normalized;
+  const coachName=String(user?.coachName||user?.name||'').trim();
+  const ownSchedule=normalized.schedule.filter(s=>String(s.coach||'').trim()===coachName);
+  const scheduleIds=new Set(ownSchedule.map(s=>s.id).filter(Boolean));
+  const scheduleClassIds=new Set(ownSchedule.map(s=>s.classId).filter(Boolean));
+  const ownClasses=normalized.classes.filter(c=>String(c.coach||'').trim()===coachName||scheduleClassIds.has(c.id));
+  const classIds=new Set([...ownClasses.map(c=>c.id).filter(Boolean),...scheduleClassIds]);
+  const studentIds=new Set();
+  ownSchedule.forEach(s=>parseArr(s.studentIds).forEach(id=>studentIds.add(id)));
+  ownClasses.forEach(c=>parseArr(c.studentIds).forEach(id=>studentIds.add(id)));
+  const ownPlans=normalized.plans.filter(p=>studentIds.has(p.studentId)||classIds.has(p.classId));
+  ownPlans.forEach(p=>{if(p.studentId)studentIds.add(p.studentId);});
+  return {
+    courts:[],
+    students:normalized.students.filter(s=>studentIds.has(s.id)),
+    products:normalized.products,
+    plans:ownPlans,
+    schedule:ownSchedule,
+    coaches:normalized.coaches.filter(c=>String(c.name||'').trim()===coachName),
+    classes:ownClasses,
+    campuses:normalized.campuses,
+    feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId))
+  };
+}
 async function validateScheduleSave(nextRec,oldRec){
   const schedules=await timed('scan schedule for conflict check',()=>scan(T_SCHEDULE));
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
@@ -553,7 +589,7 @@ module.exports = async (req, res) => {
         timed('load-all scan campuses',()=>scan(T_CAMPUSES).catch(()=>[])),
         timed('load-all scan feedbacks',()=>withTimeout(scanFeedbacks().catch(()=>[]),3000,[]))
       ]);
-      return sendJson(res,{
+      return sendJson(res,filterLoadAllForUser({
         courts:Array.isArray(courts)?courts:[],
         students:Array.isArray(students)?students:[],
         products:Array.isArray(products)?products:[],
@@ -563,7 +599,7 @@ module.exports = async (req, res) => {
         classes:Array.isArray(classes)?classes:[],
         campuses:Array.isArray(campuses)?campuses:[],
         feedbacks:Array.isArray(feedbacks)?feedbacks:[]
-      });
+      },user));
     }
     if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
     if(path==='/courts'){
@@ -734,8 +770,8 @@ module.exports = async (req, res) => {
         }
       }
     }
-    if(path==='/coaches'){await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
-    const coM=path.match(/^\/coaches\/(.+)$/);if(coM){const id=coM[1];if(method==='PUT'){const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_COACHES,id);return sendJson(res,{success:true});}}
+    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
+    const coM=path.match(/^\/coaches\/(.+)$/);if(coM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=coM[1];if(method==='PUT'){const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_COACHES,id);return sendJson(res,{success:true});}}
     if(path==='/classes'){await init();if(method==='GET')return sendJson(res,await scan(T_CLASSES));if(method==='POST'){const id=uuidv4();const r={...body,id,usedLessons:body.usedLessons||0,status:body.status||'已排班',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){assertCanDeleteClass(id,await scan(T_SCHEDULE));const classPlans=(await scan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(path==='/campuses'){await init();if(method==='GET')return sendJson(res,await scan(T_CAMPUSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}}
@@ -751,6 +787,7 @@ module.exports._test={
   collectScheduleRiskWarnings,
   buildFeedbackRecord,
   assertCanWriteFeedback,
+  filterLoadAllForUser,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,
