@@ -694,33 +694,13 @@ async function saveSchedule(){
   const data={startTime,endTime,classId,studentIds:parseArr(document.getElementById('sch_stuIds').value),studentName:document.getElementById('sch_stuName').value.trim(),coach:document.getElementById('sch_coach').value,venue:document.getElementById('sch_venue').value.trim(),campus:document.getElementById('sch_campus').value,lessonCount:lc,status:document.getElementById('sch_status').value,notes:document.getElementById('sch_notes').value.trim()};
   try{
     if(editId){
-      const old=schedules.find(x=>x.id===editId);
-      const oldLc=parseInt(old?.lessonCount)||0;
-      const oldClassId=old?.classId||'';
       await apiCall('PUT','/schedule/'+editId,data);
-      const i=schedules.findIndex(x=>x.id===editId);schedules[i]={...schedules[i],...data,id:editId};
-      // 处理课时差：如果关联班次或消课数变了，回退旧的再加新的
-      if(oldClassId&&oldLc>0){await adjustClassLessons(oldClassId,-oldLc);}
-      if(classId&&lc>0){await adjustClassLessons(classId,lc);}
     }else{
-      const r=await apiCall('POST','/schedule',data);schedules.unshift(r);
-      if(classId&&lc>0){await adjustClassLessons(classId,lc);}
+      await apiCall('POST','/schedule',data);
     }
+    await loadAll();
     closeModal();toast(editId?'修改成功 ✓':'排课成功 ✓','success');renderSchedule();renderClasses();renderPlans();
   }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
-}
-// 统一的课时加减函数：delta为正=消课，为负=回退
-async function adjustClassLessons(classId,delta){
-  const cls=classes.find(c=>c.id===classId);if(!cls)return;
-  const nu=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
-  await apiCall('PUT','/classes/'+classId,{...cls,usedLessons:nu});
-  const ci=classes.findIndex(x=>x.id===classId);classes[ci].usedLessons=nu;
-  const rp=plans.filter(p=>p.classId===classId&&p.status==='active');
-  for(const p of rp){
-    const np=Math.max(0,(parseInt(p.usedLessons)||0)+delta);
-    await apiCall('PUT','/plans/'+p.id,{...p,usedLessons:np});
-    const pi=plans.findIndex(x=>x.id===p.id);plans[pi].usedLessons=np;
-  }
 }
 // ===== 订场用户 =====
 function renderCourts(){
@@ -1010,15 +990,9 @@ function closeConf(){document.getElementById('confOv').classList.remove('open');
 async function doDelete(){
   if(!delId)return;
   try{
-    // 删除排课时先回退课时
-    if(delType==='schedule'){
-      const rec=schedules.find(x=>x.id===delId);
-      if(rec&&rec.classId&&rec.lessonCount){
-        await adjustClassLessons(rec.classId,-(parseInt(rec.lessonCount)||0));
-      }
-    }
     const m={court:'/courts/',student:'/students/',product:'/products/',plan:'/plans/',schedule:'/schedule/',class:'/classes/',coach:'/coaches/',campus:'/campuses/'};
     await apiCall('DELETE',m[delType]+delId);
+    if(delType==='schedule')await loadAll();
     if(delType==='court')courts=courts.filter(u=>u.id!==delId);
     else if(delType==='student')students=students.filter(u=>u.id!==delId);
     else if(delType==='product')products=products.filter(u=>u.id!==delId);

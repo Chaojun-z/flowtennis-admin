@@ -21,6 +21,32 @@ function get(t,id){return new Promise((res,rej)=>{gc().getRow({tableName:t,prima
 function scan(t){return new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();});}
 function del(t,id){return new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));});}
 function mkTable(t){return new Promise(res=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
+async function applyLessonDelta(classId,delta){
+  if(!classId||!delta)return;
+  const cls=await get(T_CLASSES,classId);
+  if(!cls)return;
+  const oldClass={...cls};
+  const nextUsed=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
+  const relatedPlans=(await scan(T_PLANS)).filter((p)=>p.classId===classId&&p.status==='active');
+  const oldPlans=relatedPlans.map((p)=>({...p}));
+  try{
+    await put(T_CLASSES,classId,{...cls,usedLessons:nextUsed,updatedAt:new Date().toISOString()});
+    for(const p of relatedPlans){
+      const nextPlanUsed=Math.max(0,(parseInt(p.usedLessons)||0)+delta);
+      await put(T_PLANS,p.id,{...p,usedLessons:nextPlanUsed,updatedAt:new Date().toISOString()});
+    }
+  }catch(err){
+    await put(T_CLASSES,classId,oldClass).catch(()=>null);
+    for(const p of oldPlans)await put(T_PLANS,p.id,p).catch(()=>null);
+    throw err;
+  }
+}
+function scheduleLessonDelta(rec){
+  if(!rec||!rec.classId)return null;
+  const lessonCount=parseInt(rec.lessonCount)||0;
+  if(lessonCount<=0)return null;
+  return {classId:rec.classId,delta:lessonCount};
+}
 
 let inited=false;
 const DEFAULT_COACH_USERS=['baiyangj','chendand','yuekez','zhoux','sunmingy'];
@@ -111,8 +137,53 @@ module.exports = async (req, res) => {
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_PRODUCTS,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));if(method==='POST'){const id=uuidv4();const r={...body,id,history:body.history||[],usedLessons:body.usedLessons||0,status:body.status||'active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_PLANS,id,r);return sendJson(res,r);}}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_PLANS,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_PLANS,id);return sendJson(res,{success:true});}}
-    if(path==='/schedule'){await init();if(method==='GET')return sendJson(res,await scan(T_SCHEDULE));if(method==='POST'){const id=uuidv4();const r={...body,id,status:body.status||'已排课',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_SCHEDULE,id,r);return sendJson(res,r);}}
-    const schM=path.match(/^\/schedule\/(.+)$/);if(schM){const id=schM[1];if(method==='GET')return sendJson(res,await get(T_SCHEDULE,id));if(method==='PUT'){const ex=await get(T_SCHEDULE,id).catch(()=>null);const r={...ex,...body,id,updatedAt:new Date().toISOString()};await put(T_SCHEDULE,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_SCHEDULE,id);return sendJson(res,{success:true});}}
+    if(path==='/schedule'){
+      await init();
+      if(method==='GET')return sendJson(res,await scan(T_SCHEDULE));
+      if(method==='POST'){
+        const id=uuidv4();
+        const r={...body,id,status:body.status||'已排课',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        await put(T_SCHEDULE,id,r);
+        const nextDelta=scheduleLessonDelta(r);
+        if(nextDelta)await applyLessonDelta(nextDelta.classId,nextDelta.delta);
+        return sendJson(res,r);
+      }
+    }
+    const schM=path.match(/^\/schedule\/(.+)$/);
+    if(schM){
+      const id=schM[1];
+      if(method==='GET')return sendJson(res,await get(T_SCHEDULE,id));
+      if(method==='PUT'){
+        const ex=await get(T_SCHEDULE,id).catch(()=>null);
+        const r={...ex,...body,id,updatedAt:new Date().toISOString()};
+        const oldDelta=scheduleLessonDelta(ex);
+        const nextDelta=scheduleLessonDelta(r);
+        await put(T_SCHEDULE,id,r);
+        try{
+          if(oldDelta)await applyLessonDelta(oldDelta.classId,-oldDelta.delta);
+          if(nextDelta)await applyLessonDelta(nextDelta.classId,nextDelta.delta);
+        }catch(err){
+          await put(T_SCHEDULE,id,ex).catch(()=>null);
+          if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);
+          if(nextDelta)await applyLessonDelta(nextDelta.classId,-nextDelta.delta).catch(()=>null);
+          throw err;
+        }
+        return sendJson(res,r);
+      }
+      if(method==='DELETE'){
+        const ex=await get(T_SCHEDULE,id).catch(()=>null);
+        const oldDelta=scheduleLessonDelta(ex);
+        await del(T_SCHEDULE,id);
+        try{
+          if(oldDelta)await applyLessonDelta(oldDelta.classId,-oldDelta.delta);
+        }catch(err){
+          if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
+          if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);
+          throw err;
+        }
+        return sendJson(res,{success:true});
+      }
+    }
     if(path==='/coaches'){await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
     const coM=path.match(/^\/coaches\/(.+)$/);if(coM){const id=coM[1];if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_COACHES,id);return sendJson(res,{success:true});}}
     if(path==='/classes'){await init();if(method==='GET')return sendJson(res,await scan(T_CLASSES));if(method==='POST'){const id=uuidv4();const r={...body,id,usedLessons:body.usedLessons||0,status:body.status||'已排班',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CLASSES,id,r);return sendJson(res,r);}}
