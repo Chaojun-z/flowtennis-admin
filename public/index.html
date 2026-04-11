@@ -177,6 +177,29 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   body.coach-mobile .week-grid,body.coach-mobile .desktop-only{display:none!important}
   body.coach-mobile .coach-mobile-only{display:block}
   body.coach-mobile .today-card{padding:12px 13px}
+  body.admin-mobile{overflow:auto;padding-bottom:88px}
+  body.admin-mobile .sidebar{top:auto;bottom:0;width:100%;height:78px;border-right:none;border-top:0.5px solid rgba(255,255,255,0.16);background:rgba(60,20,0,0.78);overflow-x:auto;overflow-y:hidden;flex-direction:row}
+  body.admin-mobile .sb-logo,body.admin-mobile .sb-sec,body.admin-mobile .sb-bottom,body.admin-mobile #sbCoachView{display:none!important}
+  body.admin-mobile #sbAdminView{display:flex;align-items:stretch;width:max-content;min-width:100%;padding:0 6px}
+  body.admin-mobile #sbAdminView .sb-item{flex-direction:column;justify-content:center;gap:4px;min-width:72px;margin:6px 4px;padding:8px 6px;font-size:10.5px;border-radius:12px;text-align:center}
+  body.admin-mobile #sbAdminView .sb-item.active::before{display:none}
+  body.admin-mobile #sbAdminView .sb-icon{width:auto;font-size:16px}
+  body.admin-mobile .main{margin-left:0;min-height:100vh}
+  body.admin-mobile .topbar{position:sticky;top:0;z-index:80;padding:0 14px;height:58px}
+  body.admin-mobile .tb-title{font-size:15px}
+  body.admin-mobile .coach-top-logout{display:block}
+  body.admin-mobile .content{padding:14px}
+  body.admin-mobile .stats-row{grid-template-columns:1fr;gap:10px}
+  body.admin-mobile .toolbar{flex-direction:column;align-items:stretch}
+  body.admin-mobile .search-box,body.admin-mobile .fsel,body.admin-mobile .btn-sec,body.admin-mobile .btn-add{width:100%;max-width:none;min-width:0}
+  body.admin-mobile .btn-add{margin-left:0;justify-content:center}
+  body.admin-mobile #campusTabs{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:6px;padding-bottom:2px}
+  body.admin-mobile .ctab{white-space:nowrap;flex:0 0 auto}
+  body.admin-mobile .tcard{overflow-x:auto}
+  body.admin-mobile table{min-width:760px}
+  body.admin-mobile .pager{gap:10px;align-items:flex-start;flex-direction:column}
+  body.admin-mobile .product-grid{grid-template-columns:1fr}
+  body.admin-mobile .mod-tabs{overflow-x:auto;max-width:100%}
 }
 </style>
 </head>
@@ -461,6 +484,7 @@ function syncViewportMode(){
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   const isMobile=window.innerWidth<=900;
   document.body.classList.toggle('coach-mobile',!!(isCoach&&isMobile));
+  document.body.classList.toggle('admin-mobile',!!(!isCoach&&isMobile&&currentUser));
 }
 
 let courts=[],students=[],products=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[];
