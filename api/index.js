@@ -21,6 +21,8 @@ function get(t,id){return new Promise((res,rej)=>{gc().getRow({tableName:t,prima
 function scan(t){return new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();});}
 function del(t,id){return new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));});}
 function mkTable(t){return new Promise(res=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
+function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
+function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
 async function applyLessonDelta(classId,delta){
   if(!classId||!delta)return;
   const cls=await get(T_CLASSES,classId);
@@ -42,10 +44,56 @@ async function applyLessonDelta(classId,delta){
   }
 }
 function scheduleLessonDelta(rec){
-  if(!rec||!rec.classId)return null;
+  if(!rec||!rec.classId||!isBillableSchedule(rec))return null;
   const lessonCount=parseInt(rec.lessonCount)||0;
   if(lessonCount<=0)return null;
   return {classId:rec.classId,delta:lessonCount};
+}
+function dateMs(v){if(!v)return NaN;return new Date(String(v).replace(' ','T')).getTime();}
+function rangesOverlap(aStart,aEnd,bStart,bEnd){
+  const as=dateMs(aStart),ae=dateMs(aEnd),bs=dateMs(bStart),be=dateMs(bEnd);
+  if(!Number.isFinite(as)||!Number.isFinite(ae)||!Number.isFinite(bs)||!Number.isFinite(be))return false;
+  return as<be&&bs<ae;
+}
+function shareStudent(a,b){
+  const aIds=parseArr(a.studentIds).filter(Boolean);
+  const bIds=parseArr(b.studentIds).filter(Boolean);
+  if(aIds.length&&bIds.length)return aIds.some(id=>bIds.includes(id));
+  const an=String(a.studentName||'').trim();
+  const bn=String(b.studentName||'').trim();
+  return !!(an&&bn&&an===bn);
+}
+function assertLessonCapacity(cls,oldDelta,nextDelta){
+  if(!nextDelta)return;
+  if(!cls)throw new Error('关联班次不存在');
+  const total=parseInt(cls.totalLessons)||0;
+  const used=parseInt(cls.usedLessons)||0;
+  const oldSame=oldDelta&&oldDelta.classId===nextDelta.classId?(parseInt(oldDelta.delta)||0):0;
+  const nextUsed=used-oldSame+(parseInt(nextDelta.delta)||0);
+  if(total>0&&nextUsed>total)throw new Error(`剩余课时不足：剩余 ${Math.max(0,total-used+oldSame)} 节，本次消课 ${nextDelta.delta} 节`);
+}
+function validateScheduleConflicts(candidate,schedules,excludeId){
+  if(!isBillableSchedule(candidate))return;
+  if(!candidate.startTime)throw new Error('请选择上课时间');
+  if(!candidate.endTime)throw new Error('请选择下课时间，系统需要用它校验冲突');
+  if(dateMs(candidate.endTime)<=dateMs(candidate.startTime))throw new Error('下课时间不能早于上课时间');
+  for(const rec of schedules||[]){
+    if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
+    if(!rangesOverlap(candidate.startTime,candidate.endTime,rec.startTime,rec.endTime))continue;
+    if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
+    if(candidate.venue&&rec.venue&&candidate.venue===rec.venue&&(candidate.campus||'')===(rec.campus||''))throw new Error(`场地「${candidate.venue}」此时间已被占用`);
+    if(shareStudent(candidate,rec))throw new Error('学员此时间已有课程');
+  }
+}
+async function validateScheduleSave(nextRec,oldRec){
+  const schedules=await scan(T_SCHEDULE);
+  validateScheduleConflicts(nextRec,schedules,nextRec.id);
+  const oldDelta=scheduleLessonDelta(oldRec);
+  const nextDelta=scheduleLessonDelta(nextRec);
+  if(nextDelta){
+    const cls=await get(T_CLASSES,nextDelta.classId);
+    assertLessonCapacity(cls,oldDelta,nextDelta);
+  }
 }
 
 let inited=false;
@@ -141,6 +189,8 @@ module.exports = async (req, res) => {
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');return res.status(200).end();}
   const path=(req.url||'').replace(/^\/api/,'').split('?')[0];
   const method=req.method;
+  const startedAt=Date.now();
+  if(res&&typeof res.on==='function')res.on('finish',()=>{console.log(`[api] ${method} ${path} ${res.statusCode} ${Date.now()-startedAt}ms`);});
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
@@ -245,6 +295,7 @@ module.exports = async (req, res) => {
       if(method==='POST'){
         const id=uuidv4();
         const r={...body,id,status:body.status||'已排课',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        await validateScheduleSave(r,null);
         await put(T_SCHEDULE,id,r);
         const nextDelta=scheduleLessonDelta(r);
         if(nextDelta)await applyLessonDelta(nextDelta.classId,nextDelta.delta);
@@ -260,6 +311,7 @@ module.exports = async (req, res) => {
         const r={...ex,...body,id,updatedAt:new Date().toISOString()};
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
+        await validateScheduleSave(r,ex);
         await put(T_SCHEDULE,id,r);
         try{
           if(oldDelta)await applyLessonDelta(oldDelta.classId,-oldDelta.delta);
@@ -294,4 +346,11 @@ module.exports = async (req, res) => {
     const caM=path.match(/^\/campuses\/(.+)$/);if(caM){const id=caM[1];if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const r={...body,id,updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await del(T_CAMPUSES,id);return sendJson(res,{success:true});}}
     return sendJson(res,{error:'Not found'},404);
   }catch(e){console.error('API error:',e);return sendJson(res,{error:e.message},500);}
+};
+
+module.exports._test={
+  scheduleLessonDelta,
+  assertLessonCapacity,
+  validateScheduleConflicts,
+  rangesOverlap
 };

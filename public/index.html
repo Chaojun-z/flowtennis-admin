@@ -814,27 +814,39 @@ function openScheduleModal(id){
   document.getElementById('mTitle').textContent=id?'✏️ 编辑排课':'➕ 添加排课';
   const clOpts=classes.filter(c=>c.status==='已排班').map(c=>{const rem=(parseInt(c.totalLessons)||0)-(parseInt(c.usedLessons)||0);return `<option value="${c.id}"${rv(s,'classId')===c.id?' selected':''}>${esc(c.className)} 剩余${rem}节</option>`;}).join('');
   const coOpts=activeCoachNames().map(c=>`<option value="${c}"${rv(s,'coach')===c?' selected':''}>${c}</option>`).join('');
-  document.getElementById('mBody').innerHTML=`<input type="hidden" id="sch_stuIds" value="${rv(s,'studentIds','[]')}"><div class="sec-ttl">排课信息</div><div class="fgrid"><div class="fg"><div class="flabel">上课时间 *</div><input class="finput" id="sch_start" type="datetime-local" value="${rv(s,'startTime','').replace(' ','T')}"></div><div class="fg"><div class="flabel">下课时间</div><input class="finput" id="sch_end" type="datetime-local" value="${rv(s,'endTime','').replace(' ','T')}"></div><div class="fg full"><div class="flabel">关联班次</div><select class="fselect" id="sch_classId" onchange="onSchClassChange()"><option value="">— 不关联 —</option>${clOpts}</select></div><div class="fg"><div class="flabel">学员</div><input class="finput" id="sch_stuName" value="${rv(s,'studentName')}" placeholder="选班次自动填入"></div><div class="fg"><div class="flabel">教练</div><select class="fselect" id="sch_coach"><option value="">— 选择 —</option>${coOpts}</select></div><div class="fg"><div class="flabel">场地</div><input class="finput" id="sch_venue" value="${rv(s,'venue')}" placeholder="马坡1号场"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="sch_campus">${campusOpts(rv(s,'campus'))}</select></div><div class="fg"><div class="flabel">消课节数</div><input class="finput" id="sch_lc" type="number" value="${rv(s,'lessonCount',1)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="sch_status">${SCH_STATUSES.map(t=>`<option value="${t}"${rv(s,'status','已排课')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-top:4px">💡 关联班次后保存会自动消课</div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${s.id}','此排课','schedule')">删除</button>`:''}<button class="btn-save" onclick="saveSchedule()">保存</button></div>`;
+  document.getElementById('mBody').innerHTML=`<input type="hidden" id="sch_stuIds" value="${rv(s,'studentIds','[]')}"><div class="sec-ttl">排课信息</div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">排课是一次上课记录；关联班次后会自动消课，并会校验教练、学员、场地时间冲突。</div><div class="fgrid"><div class="fg"><div class="flabel">上课时间 *</div><input class="finput" id="sch_start" type="datetime-local" value="${rv(s,'startTime','').replace(' ','T')}"></div><div class="fg"><div class="flabel">下课时间</div><input class="finput" id="sch_end" type="datetime-local" value="${rv(s,'endTime','').replace(' ','T')}"></div><div class="fg full"><div class="flabel">关联班次</div><select class="fselect" id="sch_classId" onchange="onSchClassChange()"><option value="">— 不关联 —</option>${clOpts}</select><div id="sch_class_hint" style="font-size:12px;color:var(--ts);margin-top:6px"></div></div><div class="fg"><div class="flabel">学员</div><input class="finput" id="sch_stuName" value="${rv(s,'studentName')}" placeholder="选班次自动填入"></div><div class="fg"><div class="flabel">教练</div><select class="fselect" id="sch_coach"><option value="">— 选择 —</option>${coOpts}</select></div><div class="fg"><div class="flabel">场地</div><input class="finput" id="sch_venue" value="${rv(s,'venue')}" placeholder="马坡1号场"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="sch_campus">${campusOpts(rv(s,'campus'))}</select></div><div class="fg"><div class="flabel">消课节数</div><input class="finput" id="sch_lc" type="number" value="${rv(s,'lessonCount',1)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="sch_status">${SCH_STATUSES.map(t=>`<option value="${t}"${rv(s,'status','已排课')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${s.id}','此排课','schedule')">删除</button>`:''}<button class="btn-save" onclick="saveSchedule()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
+  updateSchClassHint();
 }
 function onSchClassChange(){
-  const cid=document.getElementById('sch_classId').value;if(!cid)return;
-  const cls=classes.find(c=>c.id===cid);if(!cls)return;
+  const cid=document.getElementById('sch_classId').value;if(!cid){updateSchClassHint();return;}
+  const cls=classes.find(c=>c.id===cid);if(!cls){updateSchClassHint();return;}
   const ids=parseArr(cls.studentIds);
   document.getElementById('sch_stuIds').value=JSON.stringify(ids);
   document.getElementById('sch_stuName').value=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?st.name:sid;}).join('、');
   if(cls.coach)document.getElementById('sch_coach').value=cls.coach;
   if(cls.campus)document.getElementById('sch_campus').value=cls.campus;
+  updateSchClassHint();
+}
+function updateSchClassHint(){
+  const el=document.getElementById('sch_class_hint');if(!el)return;
+  const cid=document.getElementById('sch_classId').value;
+  const cls=classes.find(c=>c.id===cid);
+  if(!cls){el.textContent='不关联班次则不会自动消课。';return;}
+  const total=parseInt(cls.totalLessons)||0,used=parseInt(cls.usedLessons)||0;
+  el.textContent=`当前班次课时：已上 ${used}/${total}，剩余 ${Math.max(0,total-used)} 节。`;
 }
 async function saveSchedule(){
   const startTime=document.getElementById('sch_start').value.replace('T',' ');
   const endTime=document.getElementById('sch_end').value.replace('T',' ');
+  const status=document.getElementById('sch_status').value;
   if(!startTime){toast('请选择上课时间','warn');return;}
+  if(status!=='已取消'&&!endTime){toast('请选择下课时间，系统需要用它校验冲突','warn');return;}
   if(endTime&&endTime<=startTime){toast('下课时间不能早于上课时间','warn');return;}
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   const classId=document.getElementById('sch_classId').value;
   const lc=parseInt(document.getElementById('sch_lc').value)||1;
-  const data={startTime,endTime,classId,studentIds:parseArr(document.getElementById('sch_stuIds').value),studentName:document.getElementById('sch_stuName').value.trim(),coach:document.getElementById('sch_coach').value,venue:document.getElementById('sch_venue').value.trim(),campus:document.getElementById('sch_campus').value,lessonCount:lc,status:document.getElementById('sch_status').value,notes:document.getElementById('sch_notes').value.trim()};
+  const data={startTime,endTime,classId,studentIds:parseArr(document.getElementById('sch_stuIds').value),studentName:document.getElementById('sch_stuName').value.trim(),coach:document.getElementById('sch_coach').value,venue:document.getElementById('sch_venue').value.trim(),campus:document.getElementById('sch_campus').value,lessonCount:lc,status,notes:document.getElementById('sch_notes').value.trim()};
   try{
     if(editId){
       await apiCall('PUT','/schedule/'+editId,data);
