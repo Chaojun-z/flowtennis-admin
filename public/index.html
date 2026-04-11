@@ -323,7 +323,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
         <button class="btn-sec btn-green" onclick="backupToObsidian()">💾 备份</button>
         <button class="btn-add" onclick="openCourtModal(null)">＋ 添加订场用户</button>
       </div>
-      <div class="tcard"><table><thead><tr><th>用户</th><th>手机号</th><th>校区</th><th>余额状态</th><th>充值记录</th><th>加入日期</th><th style="text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table>
+      <div class="tcard"><table><thead><tr><th>用户</th><th>手机号</th><th>校区</th><th>消费金额</th><th>对接人</th><th>对储值态度</th><th>熟悉程度</th><th>备注</th><th>余额状态</th><th>充值记录</th><th>加入日期</th><th style="text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table>
         <div class="pager"><span class="pager-info" id="courtPagerInfo">共 0 条</span><div style="display:flex;gap:3px" id="courtPagerBtns"></div></div>
       </div>
     </div>
@@ -594,8 +594,9 @@ function openStudentModal(id){
 }
 async function saveStudent(){
   const name=document.getElementById('s_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
+  const phone=document.getElementById('s_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
-  const data={name,phone:document.getElementById('s_phone').value.trim(),type:document.getElementById('s_type').value,source:document.getElementById('s_source').value,activityRange:document.getElementById('s_range').value.trim(),campus:document.getElementById('s_campus').value,notes:document.getElementById('s_notes').value.trim(),updatedBy:currentUser?.name||''};
+  const data={name,phone,type:document.getElementById('s_type').value,source:document.getElementById('s_source').value,activityRange:document.getElementById('s_range').value.trim(),campus:document.getElementById('s_campus').value,notes:document.getElementById('s_notes').value.trim(),updatedBy:currentUser?.name||''};
   try{
     if(editId){await apiCall('PUT','/students/'+editId,data);const i=students.findIndex(x=>x.id===editId);students[i]={...students[i],...data,id:editId};}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
@@ -808,15 +809,15 @@ function renderCourts(){
   document.getElementById('courtTbody').innerHTML=slice.length?slice.map(u=>{
     const pct=u.totalDeposit>0?Math.min(100,Math.round(u.balance/u.totalDeposit*100)):0;
     const pc=pct>50?'pf-gold':pct>20?'pf-warn':'pf-red';const w=u.balance>0&&u.balance<=500;
-    return `<tr class="${w?'warn-row':''}"><td><div class="uname">${esc(u.name)}</div><div class="udesc">${esc(u.notes)||'—'}</div></td><td style="color:var(--ts)">${esc(u.phone)||'—'}</td><td><span class="campus-tag">📍 ${cn(u.campus)}</span></td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">¥${fmt(u.balance)} ${w?'<span class="warn-txt">低余额</span>':u.balance<=0?'<span style="color:var(--td)">归零</span>':''}</span></div></td><td><span class="hist-link" onclick="openCourtHist('${u.id}')">${parseArr(u.history).length} 条</span></td><td style="color:var(--ts);font-size:12px">${u.joinDate||'—'}</td><td style="text-align:right"><button class="abtn" onclick="openCourtModal('${u.id}')">⚙️</button></td></tr>`;
-  }).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td><div class="uname">${esc(u.name)}</div></td><td style="color:var(--ts)">${esc(u.phone)||'—'}</td><td><span class="campus-tag">📍 ${cn(u.campus)}</span></td><td>¥${fmt(u.spentAmount||0)}</td><td>${esc(u.owner)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.depositAttitude)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.familiarity)||'—'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--td);font-size:12px">${esc(u.notes)||'—'}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">¥${fmt(u.balance)} ${w?'<span class="warn-txt">低余额</span>':u.balance<=0?'<span style="color:var(--td)">归零</span>':''}</span></div></td><td><span class="hist-link" onclick="openCourtHist('${u.id}')">${parseArr(u.history).length} 条</span></td><td style="color:var(--ts);font-size:12px">${u.joinDate||'—'}</td><td style="text-align:right"><button class="abtn" onclick="openCourtModal('${u.id}')">⚙️</button></td></tr>`;
+  }).join(''):'<tr><td colspan="12"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
 }
 function courtRecRow(h){const ip=h.type==='充值'||(h.amount>0);return `<div class="rec-item"><span class="rec-date">📅 ${h.date}</span><span class="badge ${ip?'b-green':'b-red'}" style="font-size:10px">${h.type||'充值'}</span>${ip?`<span class="rec-amt plus">+¥${fmt(Math.abs(h.amount))}</span>`:`<span class="rec-amt minus">-¥${fmt(Math.abs(h.amount))}</span>`}<span class="rec-note">${esc(h.note)||''}</span></div>`;}
 function openCourtModal(id){
   editId=id;_pending=[];const r=id?courts.find(x=>x.id===id):null;
   const hist=parseArr(rv(r,'history',[]));
   document.getElementById('mTitle').textContent=id?'✏️ 编辑订场用户':'➕ 添加订场用户';
-  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">基本信息</div><div class="fgrid"><div class="fg"><div class="flabel">姓名 *</div><input class="finput" id="f_name" value="${rv(r,'name')}"></div><div class="fg"><div class="flabel">关联学员</div><select class="fselect" id="f_studentId"><option value="">— 不关联 —</option>${students.map(s=>`<option value="${s.id}"${rv(r,'studentId')===s.id?' selected':''}>${esc(s.name)}（${esc(s.phone||'无手机')}）</option>`).join('')}</select></div><div class="fg"><div class="flabel">手机号</div><input class="finput" id="f_phone" value="${rv(r,'phone')}"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="f_campus">${campusOpts(rv(r,'campus'))}</select></div><div class="fg"><div class="flabel">加入日期</div><input class="finput" id="f_joinDate" type="date" value="${rv(r,'joinDate',today())}"></div><div class="fg"><div class="flabel">历史储值</div><input class="finput" id="f_dep" type="number" value="${rv(r,'totalDeposit',0)}"></div><div class="fg"><div class="flabel">当前余额</div><input class="finput" id="f_bal" type="number" value="${rv(r,'balance',0)}"></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div><div class="sec-ttl">充值/消费记录</div><div class="rec-list" id="histList">${hist.map(h=>courtRecRow(h)).join('')}</div><div class="add-rec-row"><select class="fselect" id="nrType" style="min-width:82px"><option value="充值">💳 充值</option><option value="消费">📤 消费</option></select><input class="finput" id="nrAmt" type="number" placeholder="金额" style="max-width:110px"><input class="finput" id="nrNote" placeholder="备注"><button class="btn-add-rec" onclick="addCourtRec()">＋ 添加</button></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button>`:''}<button class="btn-save" onclick="saveCourt()">保存</button></div>`;
+  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">基本信息</div><div class="fgrid"><div class="fg"><div class="flabel">姓名 *</div><input class="finput" id="f_name" value="${rv(r,'name')}"></div><div class="fg"><div class="flabel">关联学员</div><select class="fselect" id="f_studentId"><option value="">— 不关联 —</option>${students.map(s=>`<option value="${s.id}"${rv(r,'studentId')===s.id?' selected':''}>${esc(s.name)}（${esc(s.phone||'无手机')}）</option>`).join('')}</select></div><div class="fg"><div class="flabel">手机号</div><input class="finput" id="f_phone" value="${rv(r,'phone')}" placeholder="13800138000"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="f_campus">${campusOpts(rv(r,'campus'))}</select></div><div class="fg"><div class="flabel">加入日期</div><input class="finput" id="f_joinDate" type="date" value="${rv(r,'joinDate',today())}"></div><div class="fg"><div class="flabel">历史储值</div><input class="finput" id="f_dep" type="number" value="${rv(r,'totalDeposit',0)}"></div><div class="fg"><div class="flabel">当前余额</div><input class="finput" id="f_bal" type="number" value="${rv(r,'balance',0)}"></div><div class="fg"><div class="flabel">消费金额</div><input class="finput" id="f_spent" type="number" value="${rv(r,'spentAmount',0)}"></div><div class="fg"><div class="flabel">对接人</div><input class="finput" id="f_owner" value="${rv(r,'owner')}"></div><div class="fg"><div class="flabel">对储值态度</div><input class="finput" id="f_attitude" value="${rv(r,'depositAttitude')}"></div><div class="fg"><div class="flabel">熟悉程度</div><input class="finput" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div><div class="sec-ttl">充值/消费记录</div><div class="rec-list" id="histList">${hist.map(h=>courtRecRow(h)).join('')}</div><div class="add-rec-row"><select class="fselect" id="nrType" style="min-width:82px"><option value="充值">💳 充值</option><option value="消费">📤 消费</option></select><input class="finput" id="nrAmt" type="number" placeholder="金额" style="max-width:110px"><input class="finput" id="nrNote" placeholder="备注"><button class="btn-add-rec" onclick="addCourtRec()">＋ 添加</button></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button>`:''}<button class="btn-save" onclick="saveCourt()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
 }
 function addCourtRec(){
@@ -831,9 +832,10 @@ function addCourtRec(){
 }
 async function saveCourt(){
   const name=document.getElementById('f_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
+  const phone=document.getElementById('f_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   const rawH=editId?parseArr(courts.find(u=>u.id===editId)?.history):[];
-  const rec={name,phone:document.getElementById('f_phone').value.trim(),studentId:document.getElementById('f_studentId').value,campus:document.getElementById('f_campus').value,joinDate:document.getElementById('f_joinDate').value,totalDeposit:parseFloat(document.getElementById('f_dep').value)||0,balance:parseFloat(document.getElementById('f_bal').value)||0,notes:document.getElementById('f_notes').value.trim(),status:'active',history:[...rawH,..._pending]};
+  const rec={name,phone,studentId:document.getElementById('f_studentId').value,campus:document.getElementById('f_campus').value,joinDate:document.getElementById('f_joinDate').value,totalDeposit:parseFloat(document.getElementById('f_dep').value)||0,balance:parseFloat(document.getElementById('f_bal').value)||0,spentAmount:parseFloat(document.getElementById('f_spent').value)||0,owner:document.getElementById('f_owner').value.trim(),depositAttitude:document.getElementById('f_attitude').value.trim(),familiarity:document.getElementById('f_familiarity').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:'active',history:[...rawH,..._pending]};
   try{
     if(editId){await apiCall('PUT','/courts/'+editId,rec);const i=courts.findIndex(u=>u.id===editId);courts[i]={...courts[i],...rec,id:editId};}
     else{const r=await apiCall('POST','/courts',rec);courts.unshift(r);}
@@ -849,8 +851,8 @@ function openCourtHist(id){
 }
 function exportCourtCSV(){
   const d=campus==='all'?courts:courts.filter(u=>u.campus===campus);
-  let csv='姓名,手机号,校区,余额,储值,加入日期,备注\n';
-  csv+=d.map(u=>[u.name,u.phone||'',cn(u.campus),u.balance||0,u.totalDeposit||0,u.joinDate||'','"'+(u.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
+  let csv='姓名,手机号,校区,余额,储值,消费金额,对接人,对储值态度,熟悉程度,加入日期,备注\n';
+  csv+=d.map(u=>[u.name,u.phone||'',cn(u.campus),u.balance||0,u.totalDeposit||0,u.spentAmount||0,u.owner||'',u.depositAttitude||'',u.familiarity||'',u.joinDate||'','"'+(u.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_订场用户_'+today()+'.csv';a.click();toast('导出成功','success');
 }
@@ -858,7 +860,7 @@ let courtImportState={fileName:'',rows:[],summary:null};
 function openCourtImport(){
   courtImportState={fileName:'',rows:[],summary:null};
   document.getElementById('importTitle').textContent='📥 导入订场用户';
-  document.getElementById('importBody').innerHTML=`<div class="import-grid"><div class="import-box"><label class="import-drop" for="courtImportFile"><strong>点击选择 CSV 文件</strong><div class="import-drop-sub">支持 UTF-8 / GBK / GB18030 编码，额外列会自动忽略</div></label><input class="import-file" id="courtImportFile" type="file" accept=".csv,text/csv" onchange="handleCourtImportFile(this)"><div class="import-meta" id="courtImportMeta"><span class="import-pill">未选择文件</span></div><div class="import-note" style="margin-top:10px">导入规则：<br>1. 必填字段：姓名。<br>2. 校区默认顺义马坡（mabao）。<br>3. 余额/储值默认 0。<br>4. 额外字段会合并进备注，不会导致失败。<br>5. 已存在的用户会按手机号优先、否则按“姓名+校区”去重。</div></div><div class="import-box"><div class="import-note"><strong>建议列名</strong><br>姓名、手机号、校区、余额、储值、加入日期、备注<br><br><strong>特殊字段</strong><br>消费金额、类型、来源、群/独立标记等，会自动保留到备注中。</div></div></div><div style="margin-top:14px" id="courtImportPreview"><div class="import-empty">请选择 CSV 文件后预览数据</div></div><div class="import-actions"><button class="btn-cancel" onclick="closeCourtImport()">取消</button><button class="btn-save" id="courtImportBtn" onclick="runCourtImport()" disabled>导入</button></div>`;
+  document.getElementById('importBody').innerHTML=`<div class="import-grid"><div class="import-box"><label class="import-drop" for="courtImportFile"><strong>点击选择 CSV 文件</strong><div class="import-drop-sub">支持 UTF-8 / GBK / GB18030 编码，额外列会自动忽略</div></label><input class="import-file" id="courtImportFile" type="file" accept=".csv,text/csv" onchange="handleCourtImportFile(this)"><div class="import-meta" id="courtImportMeta"><span class="import-pill">未选择文件</span></div><div class="import-note" style="margin-top:10px">导入规则：<br>1. 必填字段：姓名。<br>2. 校区默认顺义马坡（mabao）。<br>3. 余额/储值默认 0。<br>4. 序号不会入库。<br>5. 已存在的用户会按手机号优先、否则按“姓名+校区”去重。</div></div><div class="import-box"><div class="import-note"><strong>建议列名</strong><br>姓名、手机号、校区、余额、储值、消费金额、对接人、对储值态度、熟悉程度、加入日期、备注<br><br><strong>特殊字段</strong><br>基本情况、沟通情况等，会自动保留到备注中。</div></div></div><div style="margin-top:14px" id="courtImportPreview"><div class="import-empty">请选择 CSV 文件后预览数据</div></div><div class="import-actions"><button class="btn-cancel" onclick="closeCourtImport()">取消</button><button class="btn-save" id="courtImportBtn" onclick="runCourtImport()" disabled>导入</button></div>`;
   document.getElementById('importOv').classList.add('open');
 }
 function closeCourtImport(){
@@ -892,6 +894,10 @@ function parseCsvText(text){
 }
 function normalizeImportPhone(v){
   return String(v||'').replace(/[^\d]/g,'').trim();
+}
+function validateCnPhone(v){
+  const phone=String(v||'').replace(/\s+/g,'').trim();
+  return !phone||/^1[3-9]\d{9}$/.test(phone);
 }
 function readRowValue(row, aliases){
   const lowerMap=new Map(Object.keys(row).map(k=>[String(k).trim().toLowerCase(),k]));
@@ -943,12 +949,14 @@ function normalizeCourtImportRows(rawRows){
     const balanceRaw=readRowValue(row,['余额']);
     const depositRaw=readRowValue(row,['储值','历史储值','总储值','累计储值']);
     const joinDate=readRowValue(row,['加入日期','加入时间','日期']);
-    const baseNotes=readRowValue(row,['备注','说明']);
-    const extras=collectUnknownNotes(row,['姓名','用户名','用户','订场用户','名称','客户','手机号','电话','手机','联系方式','校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','备注','说明','消费金额','消费','消费金额（仅自己订场部分）']);
-    const specialAmount=readRowValue(row,['消费金额','消费','消费金额（仅自己订场部分）']);
-    if(specialAmount)extras.push(`消费金额：${specialAmount}`);
+    const spentAmount=readRowValue(row,['消费金额','消费','消费金额（仅自己订场部分）']);
+    const owner=readRowValue(row,['对接人','负责人']);
+    const depositAttitude=readRowValue(row,['对储值态度','对储值的态度']);
+    const familiarity=readRowValue(row,['熟悉程度']);
+    const baseNotes=[readRowValue(row,['备注','说明']),readRowValue(row,['基本情况']),readRowValue(row,['沟通情况'])].filter(Boolean).join('；');
+    const extras=collectUnknownNotes(row,['序号','姓名','用户名','用户','订场用户','名称','客户','手机号','电话','手机','联系方式','校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','备注','说明','基本情况','沟通情况','消费金额','消费','消费金额（仅自己订场部分）','对接人','负责人','对储值态度','对储值的态度','熟悉程度']);
     const notes=[baseNotes,...extras].filter(Boolean).join('；');
-    const item={name,phone,campus,balance:parseFloat(balanceRaw)||0,totalDeposit:parseFloat(depositRaw)||0,joinDate,notes,status:'active',history:[]};
+    const item={name,phone,campus,balance:parseFloat(balanceRaw)||0,totalDeposit:parseFloat(depositRaw)||0,spentAmount:parseFloat(spentAmount)||0,owner,depositAttitude,familiarity,joinDate,notes,status:'active',history:[]};
     const keys=getCourtDedupKeys(item);
     let status='待导入';
     let reason='';
@@ -985,9 +993,9 @@ function renderCourtImportPreview(){
   const previewRows=rows.map((r,i)=>{
     const cls=r._status==='待导入'?'ok':r._status==='重复'?'warn':'err';
     const statusText=r._status==='待导入'?'可导入':r._status==='重复'?`已跳过：${r._reason}`:`无效：${r._reason}`;
-    return `<tr class="import-row ${cls}"><td>${i+1}</td><td>${esc(r.name||'')}</td><td>${esc(r.phone||'')}</td><td>${cn(r.campus)||esc(r.campus||'')}</td><td>${fmt(r.balance)||0}</td><td>${fmt(r.totalDeposit)||0}</td><td>${esc(r.joinDate||'')}</td><td style="max-width:240px;white-space:normal;word-break:break-word">${esc(r.notes||'')}</td><td><span class="import-status ${cls}">${statusText}</span></td></tr>`;
+    return `<tr class="import-row ${cls}"><td>${esc(r.name||'')}</td><td>${esc(r.phone||'')}</td><td>${cn(r.campus)||esc(r.campus||'')}</td><td>${fmt(r.balance)||0}</td><td>${fmt(r.totalDeposit)||0}</td><td>${fmt(r.spentAmount)||0}</td><td>${esc(r.owner||'')}</td><td>${esc(r.depositAttitude||'')}</td><td>${esc(r.familiarity||'')}</td><td>${esc(r.joinDate||'')}</td><td style="max-width:240px;white-space:normal;word-break:break-word">${esc(r.notes||'')}</td><td><span class="import-status ${cls}">${statusText}</span></td></tr>`;
   }).join('');
-  host.innerHTML=`<div class="import-table-wrap"><table class="import-table"><thead><tr><th>#</th><th>姓名</th><th>手机号</th><th>校区</th><th>余额</th><th>储值</th><th>加入日期</th><th>备注</th><th>结果</th></tr></thead><tbody>${previewRows}</tbody></table></div>`;
+  host.innerHTML=`<div class="import-table-wrap"><table class="import-table"><thead><tr><th>姓名</th><th>手机号</th><th>校区</th><th>余额</th><th>储值</th><th>消费金额</th><th>对接人</th><th>对储值态度</th><th>熟悉程度</th><th>加入日期</th><th>备注</th><th>结果</th></tr></thead><tbody>${previewRows}</tbody></table></div>`;
 }
 async function handleCourtImportFile(input){
   const file=input.files&&input.files[0];
@@ -1013,24 +1021,19 @@ async function runCourtImport(){
   btn.disabled=true;btn.textContent='导入中…';
   let success=0,failed=0;
   try{
-    for(const row of rows){
-      try{
-        const payload={name:row.name,phone:row.phone,campus:row.campus,balance:row.balance,totalDeposit:row.totalDeposit,joinDate:row.joinDate,notes:row.notes,status:'active',history:[]};
-        const r=await apiCall('POST','/courts',payload);
-        courts.unshift(r);
-        success++;
-        row._status='已导入';
-        row._reason='';
-      }catch(e){
-        failed++;
-        row._status='无效';
-        row._reason=e.message;
-      }
-    }
+    const payload=rows.map(row=>({name:row.name,phone:row.phone,campus:row.campus,balance:row.balance,totalDeposit:row.totalDeposit,spentAmount:row.spentAmount,owner:row.owner,depositAttitude:row.depositAttitude,familiarity:row.familiarity,joinDate:row.joinDate,notes:row.notes,status:'active',history:[]}));
+    const result=await apiCall('POST','/courts/import',{rows:payload});
+    success=result.success||0;failed=result.failed||0;
+    rows.forEach((row,index)=>{
+      const err=result.errors?.find(e=>e.name===payload[index].name);
+      row._status=err?'无效':'已导入';
+      row._reason=err?err.error:'';
+    });
+    await loadAll();
     renderCourtImportPreview();
     renderCourts();
     toast(`导入完成：成功 ${success} 行，失败 ${failed} 行`,'success');
-    if(failed===0)closeCourtImport();
+    closeCourtImport();
   }catch(e){
     toast('导入失败：'+e.message,'error');
   }finally{
@@ -1073,7 +1076,8 @@ function openCoachModal(id){
 }
 async function saveCoach(){
   const name=document.getElementById('co_name').value.trim();if(!name){toast('请填写姓名','warn');return;}
-  const data={name,phone:document.getElementById('co_phone').value.trim(),campus:document.getElementById('co_campus').value,status:document.getElementById('co_status').value,notes:document.getElementById('co_notes').value.trim()};
+  const phone=document.getElementById('co_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
+  const data={name,phone,campus:document.getElementById('co_campus').value,status:document.getElementById('co_status').value,notes:document.getElementById('co_notes').value.trim()};
   try{if(editId){await apiCall('PUT','/coaches/'+editId,data);const i=coaches.findIndex(x=>x.id===editId);coaches[i]={...coaches[i],...data,id:editId};}else{const r=await apiCall('POST','/coaches',data);coaches.unshift(r);}closeModal();renderCoaches();toast(editId?'更新成功 ✓':'添加成功 ✓','success');}catch(e){toast('保存失败：'+e.message,'error');}
 }
 // ===== 删除 & 通用 =====
