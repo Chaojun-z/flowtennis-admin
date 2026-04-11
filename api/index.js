@@ -326,6 +326,25 @@ function shouldMigrateLegacyCourtFinance(court){
     normalizeMoney(court?.spentAmount)>0
   );
 }
+async function deleteCourtsByIds(ids){
+  const uniqueIds=[...new Set((ids||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  const deleted=[],errors=[];
+  for(let i=0;i<uniqueIds.length;i+=10){
+    const chunk=uniqueIds.slice(i,i+10);
+    const results=await Promise.all(chunk.map(async(id)=>{
+      try{
+        const court=await get(T_COURTS,id).catch(()=>null);
+        assertCanDeleteCourt(court);
+        await del(T_COURTS,id);
+        return {id,ok:true};
+      }catch(e){
+        return {id,ok:false,error:e.message};
+      }
+    }));
+    results.forEach(r=>r.ok?deleted.push(r.id):errors.push({id:r.id,error:r.error}));
+  }
+  return {success:deleted.length,failed:errors.length,deleted,errors};
+}
 function parseLegacyCourtNotes(notes){
   const raw=String(notes||'').trim();
   if(!raw)return{notes:'',updates:{},changed:false};
@@ -417,6 +436,11 @@ module.exports = async (req, res) => {
         }
       }
       return sendJson(res,{success,failed,errors});
+    }
+    if(path==='/courts/batch-delete'&&method==='POST'){
+      await init();
+      const result=await deleteCourtsByIds(body.ids);
+      return sendJson(res,result);
     }
     if(path==='/courts/migrate-legacy'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -561,5 +585,6 @@ module.exports._test={
   buildClassPlanRecord,
   assertCanDeleteProduct,
   assertCanDeleteClass,
-  assertCanDeleteCourt
+  assertCanDeleteCourt,
+  deleteCourtsByIds
 };

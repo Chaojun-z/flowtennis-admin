@@ -1364,19 +1364,17 @@ async function batchDeleteCourts(){
   if(!confirm(`确定删除选中的 ${ids.length} 个订场用户？已有财务数据的用户会自动跳过。`))return;
   const btn=document.getElementById('courtBatchDelBtn');
   if(btn){btn.disabled=true;btn.textContent='删除中…';}
-  let success=0,failed=0;
-  for(const id of ids){
-    try{
-      await apiCall('DELETE','/courts/'+id);
-      courts=courts.filter(u=>u.id!==id);
-      selectedCourtIds.delete(id);
-      success++;
-    }catch(e){
-      failed++;
-    }
+  try{
+    const result=await apiCall('POST','/courts/batch-delete',{ids});
+    const deleted=new Set(result.deleted||[]);
+    courts=courts.filter(u=>!deleted.has(u.id));
+    deleted.forEach(id=>selectedCourtIds.delete(id));
+    renderCourts();renderStudents();
+    toast(`批量删除完成：成功 ${result.success||0} 个，跳过 ${result.failed||0} 个`,result.failed?'warn':'success');
+  }catch(e){
+    toast('批量删除失败：'+e.message,'error');
+    updateCourtBatchButton();
   }
-  renderCourts();renderStudents();
-  toast(`批量删除完成：成功 ${success} 个，跳过 ${failed} 个`,failed?'warn':'success');
 }
 async function doDelete(){
   if(!delId)return;
