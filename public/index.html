@@ -179,16 +179,22 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-time{font-size:15px;font-weight:700;color:var(--amber-base);white-space:nowrap}
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:18px 14px;text-align:center;color:var(--ts);font-size:12px;background:rgba(254,243,199,0.2);border-radius:12px;border:0.5px dashed rgba(180,83,9,0.16)}
-.coach-ops-grid{display:grid;grid-template-columns:160px minmax(760px,1fr);gap:8px;overflow-x:auto}
-.coach-ops-head{display:grid;grid-template-columns:160px minmax(760px,1fr);gap:8px;margin:0 0 8px;color:rgba(254,243,199,.72);font-size:11px;overflow-x:auto}
+.coach-ops-grid{display:grid;grid-template-columns:160px minmax(1260px,1fr);gap:8px;overflow-x:auto}
+.coach-ops-head{display:grid;grid-template-columns:160px minmax(1260px,1fr);gap:8px;margin:0 0 8px;color:rgba(254,243,199,.72);font-size:11px;overflow-x:auto}
 .coach-ops-row{display:contents}
 .coach-ops-name{background:var(--card-f);border:var(--borf);border-radius:10px;padding:10px 12px;color:var(--th);font-weight:700;min-height:54px}
-.coach-ops-line{background:var(--card-f);border:var(--borf);border-radius:10px;min-height:64px;position:relative;overflow:hidden;background-image:repeating-linear-gradient(90deg,rgba(180,83,9,.08),rgba(180,83,9,.08) 1px,transparent 1px,transparent calc(100% / 15))}
-.coach-ops-hours{display:grid;grid-template-columns:repeat(15,1fr);background:rgba(0,0,0,.08);border-radius:8px;padding:6px 0;color:rgba(254,243,199,.8)}
-.coach-ops-hours span{text-align:left;font-size:10px;padding-left:4px}
+.coach-ops-line{background:var(--card-f);border:var(--borf);border-radius:10px;min-height:64px;position:relative;overflow:hidden;background-image:repeating-linear-gradient(90deg,rgba(180,83,9,.08),rgba(180,83,9,.08) 1px,transparent 1px,transparent calc(100% / 18))}
+.coach-ops-hours{display:flex;justify-content:space-between;background:rgba(0,0,0,.08);border-radius:8px;padding:6px 4px;color:rgba(254,243,199,.8)}
+.coach-ops-hours span{font-size:10px;white-space:nowrap}
 .coach-ops-block{position:absolute;top:8px;bottom:8px;border-radius:8px;background:rgba(217,119,6,.18);border:0.5px solid rgba(217,119,6,.28);padding:7px;color:var(--tb);font-size:11px;overflow:hidden;cursor:pointer}
 .coach-ops-time{font-weight:800;color:var(--amber-base);margin-bottom:3px}
 .coach-ops-empty{color:var(--ts);font-size:12px;position:absolute;left:10px;top:22px}
+.coach-ops-period-line{background:var(--card-f);border:var(--borf);border-radius:10px;min-height:64px;display:grid;gap:6px;padding:8px}
+.coach-ops-week{grid-template-columns:repeat(7,minmax(120px,1fr))}
+.coach-ops-month{grid-template-columns:repeat(10,minmax(76px,1fr))}
+.coach-ops-daycell{border:0.5px solid rgba(180,83,9,.13);border-radius:8px;padding:7px;font-size:11px;color:var(--tb);min-height:48px;cursor:pointer;background:rgba(254,243,199,.18)}
+.coach-ops-daycell:hover{border-color:rgba(180,83,9,.35);background:rgba(254,243,199,.28)}
+.coach-ops-daycell strong{display:block;color:var(--th);margin-bottom:3px}
 .risk-text{color:#b45309;font-size:11px;margin-top:4px;font-weight:700}
 @media (max-width:900px){
   body.coach-mobile{overflow:auto;padding-bottom:88px}
@@ -341,9 +347,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     <div class="page-section" id="page-coachops">
       <div class="stats-row" id="coachOpsStats"></div>
       <div class="toolbar">
-        <select class="fsel" id="coachOpsRange" onchange="renderCoachOps()"><option value="week">本周</option><option value="month">本月</option></select>
+        <select class="fsel" id="coachOpsRange" onchange="renderCoachOps()"><option value="day">日视图</option><option value="week">周视图</option><option value="month">月视图</option></select>
+        <button class="btn-sec" onclick="shiftCoachOpsDate(-1)">上一段</button>
+        <input class="finput" id="coachOpsDate" type="date" style="max-width:170px" onchange="renderCoachOps()">
+        <button class="btn-sec" onclick="shiftCoachOpsDate(1)">下一段</button>
+        <button class="btn-sec" onclick="setCoachOpsToday()">回到今天</button>
       </div>
-      <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px">今日教练排课</div>
+      <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排课</div>
       <div class="coach-ops-head"><div>教练</div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
       <div class="coach-ops-grid" id="coachOpsTimeline"></div>
       <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:18px 0 10px">教练工作量</div>
@@ -444,6 +454,11 @@ const API='';
 let CAMPUS={};
 function cn(k){return CAMPUS[k]||k}
 function campusOpts(sel){return Object.entries(CAMPUS).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${v}</option>`).join('');}
+const VENUES=['1号场','2号场','3号场','4号场'];
+function venueOpts(sel){
+  const extra=sel&&!VENUES.includes(sel)?[`<option value="${esc(sel)}" selected>${esc(sel)}</option>`]:[];
+  return [...extra,...VENUES.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');
+}
 const COACHES_LIST=['朝珺','晓哲','Siren','吴教练','Rive','郭教练','代教练','Jack','李韬','孙老师','Zoe','刘朝'];
 function activeCoachNames(){const live=coaches.filter(c=>c.status==='active').map(c=>c.name);return live.length?live:COACHES_LIST;}
 const SOURCES=['大众点评','抖音','视频号','小红书','转介绍','播客','其他'];
@@ -454,7 +469,8 @@ const SCH_STATUSES=['已排课','已结束','已取消'];
 const CLS_STATUSES=['已排班','已取消','已结课'];
 
 function fmt(n){return(n||0).toLocaleString('zh-CN')}
-function today(){return new Date().toISOString().slice(0,10)}
+function localDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function today(){return localDateKey(new Date())}
 function uid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 function durMin(s,e){if(!s||!e)return 0;return Math.round((new Date(e)-new Date(s))/60000)}
 function fmtDt(s){if(!s)return '—';return s.replace('T',' ').slice(0,16)}
@@ -465,6 +481,9 @@ function dtObj(v){return v?new Date(String(v).replace(' ','T')):null}
 function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
 function weekStart(d){const x=dayStart(d);const day=x.getDay();x.setDate(x.getDate()-day+(day===0?-6:1));return x}
 function monthStart(d){return new Date(d.getFullYear(),d.getMonth(),1)}
+function dateKey(d){return localDateKey(d)}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function addMonths(d,n){const x=new Date(d);x.setMonth(x.getMonth()+n);return x}
 function inRange(s,start,end){const d=dtObj(s);return d&&d>=start&&d<end}
 function billableSchedules(){return schedules.filter(s=>s.startTime&&s.status!=='已取消')}
 function scheduleFeedback(s){return feedbacks.find(f=>f.scheduleId===s.id)}
@@ -495,9 +514,11 @@ function coachOverlapCount(list){
   return count;
 }
 function rangeBounds(kind){
-  const now=new Date();
-  if(kind==='month')return {start:monthStart(now),end:new Date(now.getFullYear(),now.getMonth()+1,1),label:'本月'};
-  const start=weekStart(now),end=new Date(start);end.setDate(start.getDate()+7);
+  const raw=document.getElementById('coachOpsDate')?.value||today();
+  const now=dtObj(raw)||new Date();
+  if(kind==='day'){const start=dayStart(now),end=addDays(start,1);return {start,end,label:raw};}
+  if(kind==='month')return {start:monthStart(now),end:new Date(now.getFullYear(),now.getMonth()+1,1),label:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`};
+  const start=weekStart(now),end=addDays(start,7);
   return {start,end,label:'本周'};
 }
 function distText(list,keyFn){
@@ -999,7 +1020,7 @@ function openScheduleModal(id){
   document.getElementById('mTitle').textContent=id?'✏️ 编辑排课':'➕ 添加排课';
   const clOpts=classes.filter(c=>c.status==='已排班').map(c=>{const rem=(parseInt(c.totalLessons)||0)-(parseInt(c.usedLessons)||0);return `<option value="${c.id}"${rv(s,'classId')===c.id?' selected':''}>${esc(c.className)} 剩余${rem}节</option>`;}).join('');
   const coOpts=activeCoachNames().map(c=>`<option value="${c}"${rv(s,'coach')===c?' selected':''}>${c}</option>`).join('');
-  document.getElementById('mBody').innerHTML=`<input type="hidden" id="sch_stuIds" value="${rv(s,'studentIds','[]')}"><div class="sec-ttl">排课信息</div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">排课是一次上课记录；关联班次后会自动消课，并会校验教练、学员、场地时间冲突。</div><div class="fgrid"><div class="fg"><div class="flabel">上课时间 *</div><input class="finput" id="sch_start" type="datetime-local" value="${rv(s,'startTime','').replace(' ','T')}"></div><div class="fg"><div class="flabel">下课时间</div><input class="finput" id="sch_end" type="datetime-local" value="${rv(s,'endTime','').replace(' ','T')}"></div><div class="fg full"><div class="flabel">关联班次</div><select class="fselect" id="sch_classId" onchange="onSchClassChange()"><option value="">— 不关联 —</option>${clOpts}</select><div id="sch_class_hint" style="font-size:12px;color:var(--ts);margin-top:6px"></div></div><div class="fg"><div class="flabel">学员</div><input class="finput" id="sch_stuName" value="${rv(s,'studentName')}" placeholder="选班次自动填入"></div><div class="fg"><div class="flabel">教练</div><select class="fselect" id="sch_coach"><option value="">— 选择 —</option>${coOpts}</select></div><div class="fg"><div class="flabel">场地</div><input class="finput" id="sch_venue" value="${rv(s,'venue')}" placeholder="马坡1号场"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="sch_campus">${campusOpts(rv(s,'campus'))}</select></div><div class="fg"><div class="flabel">消课节数</div><input class="finput" id="sch_lc" type="number" value="${rv(s,'lessonCount',1)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="sch_status">${SCH_STATUSES.map(t=>`<option value="${t}"${rv(s,'status','已排课')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${s.id}','此排课','schedule')">删除</button>`:''}<button class="btn-save" onclick="saveSchedule()">保存</button></div>`;
+  document.getElementById('mBody').innerHTML=`<input type="hidden" id="sch_stuIds" value="${rv(s,'studentIds','[]')}"><div class="sec-ttl">排课信息</div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">排课是一次上课记录；关联班次后会自动消课，并会校验教练、学员、场地时间冲突。</div><div class="fgrid"><div class="fg"><div class="flabel">上课时间 *</div><input class="finput" id="sch_start" type="datetime-local" value="${rv(s,'startTime','').replace(' ','T')}"></div><div class="fg"><div class="flabel">下课时间</div><input class="finput" id="sch_end" type="datetime-local" value="${rv(s,'endTime','').replace(' ','T')}"></div><div class="fg full"><div class="flabel">关联班次</div><select class="fselect" id="sch_classId" onchange="onSchClassChange()"><option value="">— 不关联 —</option>${clOpts}</select><div id="sch_class_hint" style="font-size:12px;color:var(--ts);margin-top:6px"></div></div><div class="fg"><div class="flabel">学员</div><input class="finput" id="sch_stuName" value="${rv(s,'studentName')}" placeholder="选班次自动填入"></div><div class="fg"><div class="flabel">教练</div><select class="fselect" id="sch_coach"><option value="">— 选择 —</option>${coOpts}</select></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="sch_campus">${campusOpts(rv(s,'campus'))}</select></div><div class="fg"><div class="flabel">场地</div><select class="fselect" id="sch_venue">${venueOpts(rv(s,'venue','1号场'))}</select></div><div class="fg"><div class="flabel">消课节数</div><input class="finput" id="sch_lc" type="number" value="${rv(s,'lessonCount',1)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="sch_status">${SCH_STATUSES.map(t=>`<option value="${t}"${rv(s,'status','已排课')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${s.id}','此排课','schedule')">删除</button>`:''}<button class="btn-save" onclick="saveSchedule()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
   updateSchClassHint();
 }
@@ -1051,7 +1072,7 @@ async function saveSchedule(){
     mergeScheduleSaveResult(result,editId);
     closeModal();toast(editId?'修改成功 ✓':'排课成功 ✓','success');
     if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
-    renderSchedule();renderClasses();renderPlans();
+    renderSchedule();renderClasses();renderPlans();renderCoachOps();renderMySchedule();
   }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }
 function scheduleRemainingLessons(s){
@@ -1106,6 +1127,18 @@ function openScheduleDetail(scheduleId){
   document.getElementById('overlay').classList.add('open');
 }
 // ===== 教练运营 =====
+function ensureCoachOpsDate(){const el=document.getElementById('coachOpsDate');if(el&&!el.value)el.value=today();}
+function setCoachOpsToday(){const el=document.getElementById('coachOpsDate');if(el)el.value=today();renderCoachOps();}
+function shiftCoachOpsDate(step){
+  const el=document.getElementById('coachOpsDate');if(!el)return;
+  const mode=document.getElementById('coachOpsRange')?.value||'day';
+  const base=dtObj(el.value||today())||new Date();
+  if(mode==='month')el.value=dateKey(addMonths(base,step));
+  else if(mode==='week')el.value=dateKey(addDays(base,step*7));
+  else el.value=dateKey(addDays(base,step));
+  renderCoachOps();
+}
+function openCoachOpsDay(ds){const r=document.getElementById('coachOpsRange'),d=document.getElementById('coachOpsDate');if(r)r.value='day';if(d)d.value=ds;renderCoachOps();}
 function coachOpsRows(){
   const now=new Date(),todayStr=today();
   const ws=weekStart(now),we=new Date(ws);we.setDate(ws.getDate()+7);
@@ -1127,8 +1160,13 @@ function coachOpsRows(){
 }
 function renderCoachOps(){
   const host=document.getElementById('coachOpsTimeline');if(!host)return;
+  ensureCoachOpsDate();
+  const mode=document.getElementById('coachOpsRange')?.value||'day';
+  const range=rangeBounds(mode);
   const hourHost=document.getElementById('coachOpsHours');
-  if(hourHost)hourHost.innerHTML=Array.from({length:15},(_,i)=>`<span>${i+7}:00</span>`).join('');
+  if(hourHost)hourHost.innerHTML=mode==='day'?Array.from({length:19},(_,i)=>`<span>${i+6}:00</span>`).join(''):'';
+  const title=document.getElementById('coachOpsViewTitle');
+  if(title)title.textContent=mode==='day'?`${range.label} 教练排课（6:00-24:00）`:mode==='week'?`${dateKey(range.start)} 至 ${dateKey(addDays(range.end,-1))} 教练周视图`:`${range.label} 教练月视图`;
   const rows=coachOpsRows();
   const todayTotal=rows.reduce((n,r)=>n+r.todayRows.length,0);
   const weekTotal=rows.reduce((n,r)=>n+r.weekRows.length,0);
@@ -1141,14 +1179,25 @@ function renderCoachOps(){
     ['未反馈',pending,'节','si-e']
   ].map(([label,val,u,cls])=>`<div class="scard"><div class="sc-icon ${cls}">📊</div><div><div class="sc-label">${label}</div><div class="sc-val">${val}<span class="u">${u}</span></div></div></div>`).join('');
   host.innerHTML=rows.map(r=>{
-    const blocks=r.todayRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
-      const start=dtObj(s.startTime),end=dtObj(s.endTime);
-      const startMin=((start?.getHours()||7)-7)*60+(start?.getMinutes()||0);
-      const width=Math.max(durMin(s.startTime,s.endTime),30)/900*100;
-      const left=Math.max(0,Math.min(98,startMin/900*100));
-      return `<div class="coach-ops-block" style="left:${left}%;width:${Math.min(width,100-left)}%" onclick="openScheduleDetail('${s.id}')"><div class="coach-ops-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div>${esc(s.studentName)||esc(classes.find(c=>c.id===s.classId)?.className)||'—'}</div><div style="color:var(--ts);margin-top:3px">${cn(s.campus)} · ${esc(s.venue)||'—'}</div></div>`;
+    if(mode==='day'){
+      const base=new Date(range.start);base.setHours(6,0,0,0);
+      const blocks=r.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
+        const startMin=(dateMs(s.startTime)-base.getTime())/60000;
+        const endMin=(dateMs(s.endTime)-base.getTime())/60000;
+        const left=Math.max(0,Math.min(99,startMin/1080*100));
+        const width=Math.max(2,(Math.min(1080,endMin)-Math.max(0,startMin))/1080*100);
+        return `<div class="coach-ops-block" style="left:${left}%;width:${Math.min(width,100-left)}%" onclick="openScheduleDetail('${s.id}')"><div class="coach-ops-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div>${esc(s.studentName)||esc(classes.find(c=>c.id===s.classId)?.className)||'—'}</div><div style="color:var(--ts);margin-top:3px">${cn(s.campus)} · ${esc(s.venue)||'—'}</div></div>`;
+      }).join('');
+      return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-line">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
+    }
+    const days=[];
+    for(let d=new Date(range.start);d<range.end;d=addDays(d,1))days.push(new Date(d));
+    const cells=days.map(d=>{
+      const ds=dateKey(d);
+      const dayRows=r.rangeRows.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+      return `<div class="coach-ops-daycell" onclick="openCoachOpsDay('${ds}')"><strong>${mode==='week'?['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]+' ':''}${d.getMonth()+1}/${d.getDate()}</strong>${dayRows.length?`${dayRows.length}节<br>${dayRows.slice(0,2).map(s=>s.startTime.slice(11,16)+' '+(s.studentName||'')).join('<br>')}`:'无课'}</div>`;
     }).join('');
-    return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-line">${blocks||'<span class="coach-ops-empty">今日暂无课程</span>'}</div></div>`;
+    return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');
   document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td><div class="uname">${esc(r.name)}</div></td><td>${r.todayRows.length}</td><td>${r.weekRows.length}</td><td>${r.monthRows.length}</td><td>${r.rangeRows.length} 节</td><td>${r.rangeRows.reduce((n,s)=>n+durMin(s.startTime,s.endTime),0)} 分钟</td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
 }
