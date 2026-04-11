@@ -97,6 +97,31 @@ function assertPhone(value){
   if(phone&&!isValidCnPhone(phone))throw new Error('手机号格式不正确');
   return phone;
 }
+function parseLegacyCourtNotes(notes){
+  const raw=String(notes||'').trim();
+  if(!raw)return{notes:'',updates:{},changed:false};
+  const parts=raw.split(/[；;]\s*/).map(x=>String(x||'').trim()).filter(Boolean);
+  const remain=[];
+  const updates={};
+  for(const part of parts){
+    const m=part.match(/^([^：:]+)[：:]\s*(.+)$/);
+    if(!m){remain.push(part);continue;}
+    const key=String(m[1]||'').trim();
+    const value=String(m[2]||'').trim();
+    if(!value)continue;
+    if(key==='序号')continue;
+    if((key==='负责人'||key==='对接人')&&!updates.owner)updates.owner=value;
+    else if((key==='对储值的态度'||key==='对储值态度')&&!updates.depositAttitude)updates.depositAttitude=value;
+    else if(key==='熟悉程度'&&!updates.familiarity)updates.familiarity=value;
+    else if((key==='消费金额'||key==='消费金额（仅自己订场部分）')&&updates.spentAmount==null){
+      const amt=parseFloat(String(value).replace(/[^\d.-]/g,''));
+      if(!Number.isNaN(amt))updates.spentAmount=amt;
+    }else remain.push(part);
+  }
+  const nextNotes=remain.join('；');
+  const changed=nextNotes!==raw||Object.keys(updates).length>0;
+  return {notes:nextNotes,updates,changed};
+}
 
 module.exports = async (req, res) => {
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');return res.status(200).end();}
@@ -161,6 +186,36 @@ module.exports = async (req, res) => {
         }
       }
       return sendJson(res,{success,failed,errors});
+    }
+    if(path==='/courts/migrate-legacy'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const dryRun=body?.dryRun!==false;
+      const rows=await scan(T_COURTS);
+      let changed=0;
+      const preview=[];
+      for(const row of rows){
+        const parsed=parseLegacyCourtNotes(row.notes);
+        const next={
+          ...row,
+          notes:parsed.notes,
+          owner:row.owner||parsed.updates.owner||'',
+          depositAttitude:row.depositAttitude||parsed.updates.depositAttitude||'',
+          familiarity:row.familiarity||parsed.updates.familiarity||'',
+          spentAmount:row.spentAmount!=null&&row.spentAmount!==''?parseFloat(row.spentAmount)||0:(parsed.updates.spentAmount||0)
+        };
+        const hasFieldChange=
+          String(next.notes||'')!==String(row.notes||'')||
+          String(next.owner||'')!==String(row.owner||'')||
+          String(next.depositAttitude||'')!==String(row.depositAttitude||'')||
+          String(next.familiarity||'')!==String(row.familiarity||'')||
+          String(next.spentAmount||0)!==String(row.spentAmount||0);
+        if(!hasFieldChange)continue;
+        changed++;
+        if(preview.length<20)preview.push({id:row.id,name:row.name,before:row.notes||'',after:next.notes||'',owner:next.owner||'',depositAttitude:next.depositAttitude||'',familiarity:next.familiarity||'',spentAmount:next.spentAmount||0});
+        if(!dryRun)await put(T_COURTS,row.id,{...next,updatedAt:new Date().toISOString()});
+      }
+      return sendJson(res,{dryRun,total:rows.length,changed,preview});
     }
     const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){await del(T_COURTS,id);return sendJson(res,{success:true});}}
     if(path==='/students'){await init();if(method==='GET')return sendJson(res,await scan(T_STUDENTS));if(method==='POST'){const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
