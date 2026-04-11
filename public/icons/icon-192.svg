@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8f4b17"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#f2ff6d"/>
+      <stop offset="100%" stop-color="#b8cb27"/>
+    </radialGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <circle cx="96" cy="78" r="34" fill="url(#ball)"/>
+  <path d="M81 48c10 9 15 21 16 31 1 12-3 24-12 38" fill="none" stroke="#f9f7de" stroke-width="8" stroke-linecap="round"/>
+  <path d="M111 48c-10 9-15 21-16 31-1 12 3 24 12 38" fill="none" stroke="#f9f7de" stroke-width="8" stroke-linecap="round"/>
+  <text x="96" y="144" text-anchor="middle" font-size="22" font-family="Arial, sans-serif" font-weight="700" fill="#fff7ed">FT</text>
+</svg>
