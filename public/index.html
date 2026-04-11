@@ -341,10 +341,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
         <button class="btn-sec" onclick="exportCourtCSV()">导出CSV</button>
         <button class="btn-sec" onclick="openCourtImport()">导入CSV</button>
         <button class="btn-sec" onclick="openCourtFinanceMigrationPreview()">财务迁移预览</button>
+        <button class="btn-sec" id="courtBatchDelBtn" onclick="batchDeleteCourts()" disabled>批量删除</button>
         <button class="btn-sec btn-green" onclick="backupToObsidian()">备份</button>
         <button class="btn-add" onclick="openCourtModal(null)">＋ 添加订场用户</button>
       </div>
-      <div class="tcard"><table><thead><tr><th style="width:120px">姓名</th><th>手机号</th><th>校区<span class="th-filter-wrap"><button class="th-filter-btn" id="courtCampusFilterBtn" onclick="toggleCourtFilterMenu('campus')">⌛</button><span class="th-filter-menu" id="courtCampusFilterMenu"></span></span></th><th>对接人<span class="th-filter-wrap"><button class="th-filter-btn" id="courtOwnerFilterBtn" onclick="toggleCourtFilterMenu('owner')">⌛</button><span class="th-filter-menu" id="courtOwnerFilterMenu"></span></span></th><th>熟悉程度</th><th>对储值态度</th><th>当前余额<button class="th-sort" onclick="setCourtSort('balance')">排序</button></th><th>消费金额<button class="th-sort" onclick="setCourtSort('spentAmount')">排序</button></th><th>充值/消费记录</th><th>备注</th><th style="text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table>
+      <div class="tcard"><table><thead><tr><th style="width:36px"><input type="checkbox" id="courtSelectAll" onchange="toggleCourtPageSelection(this.checked)"></th><th style="width:120px">姓名</th><th>手机号</th><th>校区<span class="th-filter-wrap"><button class="th-filter-btn" id="courtCampusFilterBtn" onclick="toggleCourtFilterMenu('campus')">⌛</button><span class="th-filter-menu" id="courtCampusFilterMenu"></span></span></th><th>对接人<span class="th-filter-wrap"><button class="th-filter-btn" id="courtOwnerFilterBtn" onclick="toggleCourtFilterMenu('owner')">⌛</button><span class="th-filter-menu" id="courtOwnerFilterMenu"></span></span></th><th>熟悉程度</th><th>对储值态度</th><th>当前余额<button class="th-sort" onclick="setCourtSort('balance')">排序</button></th><th>消费金额<button class="th-sort" onclick="setCourtSort('spentAmount')">排序</button></th><th>充值/消费记录</th><th>备注</th><th style="text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table>
         <div class="pager"><span class="pager-info" id="courtPagerInfo">共 0 条</span><div style="display:flex;gap:3px" id="courtPagerBtns"></div></div>
       </div>
     </div>
@@ -675,7 +676,7 @@ function renderAll(){
 
 let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',editId=null,delId=null,delType=null,_pending=[];
 let stuPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1;
-let courtSortKey='',courtSortDir='desc',courtCampusFilterValue='',courtOwnerFilterValue='';
+let courtSortKey='',courtSortDir='desc',courtCampusFilterValue='',courtOwnerFilterValue='',selectedCourtIds=new Set();
 
 function goPage(pg,el){
   syncViewportMode();
@@ -979,6 +980,20 @@ function setCourtSort(key){
   else{courtSortKey=key;courtSortDir='desc';}
   renderCourts();
 }
+function updateCourtBatchButton(){
+  const btn=document.getElementById('courtBatchDelBtn');
+  if(!btn)return;
+  btn.disabled=selectedCourtIds.size===0;
+  btn.textContent=selectedCourtIds.size?`批量删除（${selectedCourtIds.size}）`:'批量删除';
+}
+function toggleCourtSelection(id,checked){
+  if(checked)selectedCourtIds.add(id);else selectedCourtIds.delete(id);
+  updateCourtBatchButton();
+}
+function toggleCourtPageSelection(checked){
+  document.querySelectorAll('.court-row-cb').forEach(cb=>{cb.checked=checked;if(checked)selectedCourtIds.add(cb.value);else selectedCourtIds.delete(cb.value);});
+  updateCourtBatchButton();
+}
 function renderCourts(){
   const q=(document.getElementById('courtSearch')?.value||'').toLowerCase();
   const tableCampus=courtCampusFilterValue;
@@ -1005,12 +1020,15 @@ function renderCourts(){
   const total=list.length,pages=Math.ceil(total/PAGE_SIZE),slice=list.slice((courtPage-1)*PAGE_SIZE,courtPage*PAGE_SIZE);
   document.getElementById('courtPagerInfo').textContent=`共 ${total} 条`;
   document.getElementById('courtPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<button class="pbtn${i+1===courtPage?' active':''}" onclick="courtPage=${i+1};renderCourts()">${i+1}</button>`).join('');
+  const selectAll=document.getElementById('courtSelectAll');
+  if(selectAll){selectAll.checked=!!slice.length&&slice.every(u=>selectedCourtIds.has(u.id));}
   document.getElementById('courtTbody').innerHTML=slice.length?slice.map(u=>{
     const f=courtFinanceLocal(u);
     const pct=f.totalDeposit>0?Math.min(100,Math.round(f.balance/f.totalDeposit*100)):0;
     const pc=pct>50?'pf-gold':pct>20?'pf-warn':'pf-red';const w=f.balance>0&&f.balance<=500;
-    return `<tr class="${w?'warn-row':''}"><td style="max-width:120px"><div class="uname">${esc(u.name)}</div></td><td style="color:var(--ts)">${esc(u.phone)||'—'}</td><td><span class="campus-tag">${cn(u.campus)}</span></td><td>${esc(u.owner)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.familiarity)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.depositAttitude)||'—'}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">¥${fmt(f.balance)} ${w?'<span class="warn-txt">低余额</span>':''}</span></div></td><td>¥${fmt(f.spentAmount)}</td><td><span class="hist-link" onclick="openCourtHist('${u.id}')">${parseArr(u.history).length} 条</span></td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--td);font-size:12px">${esc(u.notes)||'—'}</td><td style="text-align:right"><button class="abtn" onclick="openCourtModal('${u.id}')">⚙️</button></td></tr>`;
-  }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td><input type="checkbox" class="court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"></td><td style="max-width:120px"><div class="uname">${esc(u.name)}</div></td><td style="color:var(--ts)">${esc(u.phone)||'—'}</td><td><span class="campus-tag">${cn(u.campus)}</span></td><td>${esc(u.owner)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.familiarity)||'—'}</td><td style="font-size:12px;color:var(--ts)">${esc(u.depositAttitude)||'—'}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">¥${fmt(f.balance)} ${w?'<span class="warn-txt">低余额</span>':''}</span></div></td><td>¥${fmt(f.spentAmount)}</td><td><span class="hist-link" onclick="openCourtHist('${u.id}')">${parseArr(u.history).length} 条</span></td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--td);font-size:12px">${esc(u.notes)||'—'}</td><td style="text-align:right"><button class="abtn" onclick="openCourtModal('${u.id}')">⚙️</button></td></tr>`;
+  }).join(''):'<tr><td colspan="12"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+  updateCourtBatchButton();
 }
 function courtRecRow(h){
   const type=h.type||'消费',amount=Math.abs(parseFloat(h.amount)||0);
@@ -1340,6 +1358,26 @@ async function saveCoach(){
 // ===== 删除 & 通用 =====
 function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confDesc').textContent='即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.value='';var cb=document.getElementById('confYesBtn');cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
 function closeConf(){document.getElementById('confOv').classList.remove('open');delId=null;delType=null;document.getElementById('confInput').value='';}
+async function batchDeleteCourts(){
+  const ids=[...selectedCourtIds];
+  if(!ids.length){toast('请选择要删除的订场用户','warn');return;}
+  if(!confirm(`确定删除选中的 ${ids.length} 个订场用户？已有财务数据的用户会自动跳过。`))return;
+  const btn=document.getElementById('courtBatchDelBtn');
+  if(btn){btn.disabled=true;btn.textContent='删除中…';}
+  let success=0,failed=0;
+  for(const id of ids){
+    try{
+      await apiCall('DELETE','/courts/'+id);
+      courts=courts.filter(u=>u.id!==id);
+      selectedCourtIds.delete(id);
+      success++;
+    }catch(e){
+      failed++;
+    }
+  }
+  renderCourts();renderStudents();
+  toast(`批量删除完成：成功 ${success} 个，跳过 ${failed} 个`,failed?'warn':'success');
+}
 async function doDelete(){
   if(!delId)return;
   try{
