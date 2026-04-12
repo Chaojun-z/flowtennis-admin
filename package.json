@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-server.js",
-    "test": "node tests/schedule-rules.test.js && node tests/feedback-rules.test.js && node tests/court-finance.test.js && node tests/class-plan-rules.test.js && node tests/coach-rules.test.js && node tests/student-rules.test.js && node tests/coach-ops-view.test.js && node tests/entitlement-rules.test.js && node tests/course-management-nav.test.js && node tests/runtime-table-bootstrap.test.js"
+    "test": "node tests/schedule-rules.test.js && node tests/feedback-rules.test.js && node tests/court-finance.test.js && node tests/class-plan-rules.test.js && node tests/coach-rules.test.js && node tests/student-rules.test.js && node tests/coach-ops-view.test.js && node tests/coach-portal-view.test.js && node tests/entitlement-rules.test.js && node tests/course-management-nav.test.js && node tests/runtime-table-bootstrap.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
