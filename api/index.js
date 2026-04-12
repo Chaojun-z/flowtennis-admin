@@ -94,6 +94,22 @@ function scheduleLessonDelta(rec){
   if(lessonCount<=0)return null;
   return {classId:rec.classId,delta:lessonCount};
 }
+function effectiveScheduleStatus(rec,now=new Date()){
+  if(!rec)return '';
+  const status=rec.status||'已排课';
+  if(status==='已取消'||status==='已结束')return status;
+  const end=dateMs(rec.endTime);
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  if(status==='已排课'&&Number.isFinite(end)&&Number.isFinite(nowMs)&&end<nowMs)return '已结束';
+  return status;
+}
+function scheduleLessonChargeStatus(rec,ledger=[]){
+  if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
+  if((parseInt(rec.lessonCount)||0)<=0)return '不扣课';
+  if(!rec.entitlementId)return '未扣课';
+  const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&(parseInt(l.lessonDelta)||0)<0);
+  return used?'已扣课':'扣课异常';
+}
 function assertClassSchedulable(cls,rec){
   if(!rec?.classId||!isBillableSchedule(rec))return;
   if(!cls)throw new Error('关联班次不存在');
@@ -429,15 +445,13 @@ function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOStrin
 function assertScheduleEditableAfterFeedback(oldRec,nextRec,feedbacks){
   if(!oldRec||!nextRec)return;
   if(!(feedbacks||[]).some(f=>f.scheduleId===oldRec.id))return;
+  const coreFields=['studentName','classId','entitlementId','startTime','endTime','coach','coachId','campus','venue','courseType','isTrial','lessonCount','status'];
+  const changed=coreFields.filter(k=>String(oldRec[k]??'')!==String(nextRec[k]??''));
   const oldStudents=parseArr(oldRec.studentIds).sort();
   const nextStudents=parseArr(nextRec.studentIds).sort();
   const sameStudents=oldStudents.length===nextStudents.length&&oldStudents.every((id,idx)=>id===nextStudents[idx]);
-  const sameStudentName=String(oldRec.studentName||'')===String(nextRec.studentName||'');
-  const sameClass=String(oldRec.classId||'')===String(nextRec.classId||'');
-  const sameEntitlement=String(oldRec.entitlementId||'')===String(nextRec.entitlementId||'');
-  if(!sameStudents||!sameStudentName||!sameClass||!sameEntitlement){
-    throw new Error('该排课已有课后反馈，不能修改学员、班次或权益账户');
-  }
+  if(!sameStudents)changed.push('studentIds');
+  if(changed.length)throw new Error('该排课已有课后反馈，不能修改学员、班次、权益账户、时间、教练、校区、场地、课程类型、课时或状态');
 }
 function scheduleEntitlementDelta(rec){
   if(!rec||!rec.entitlementId||!isBillableSchedule(rec))return null;
@@ -2007,7 +2021,7 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await scan(T_SCHEDULE));
       if(method==='POST'){
         const id=uuidv4();
-        const r={...body,venue:normalizeVenue(body.venue),id,status:body.status||'已排课',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        const r={...body,venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         const risk=await validateScheduleSave(r,null);
         assertScheduleEntitlementRequired(r);
         await assertScheduleEntitlementCapacity(r,null);
@@ -2095,6 +2109,8 @@ module.exports = async (req, res) => {
 module.exports._test={
   MEMBERSHIP_TABLES,
   scheduleLessonDelta,
+  effectiveScheduleStatus,
+  scheduleLessonChargeStatus,
   assertClassSchedulable,
   assertLessonCapacity,
   validateScheduleConflicts,
