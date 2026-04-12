@@ -97,15 +97,15 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal{background:var(--card-f);backdrop-filter:var(--bf);border:var(--borf);border-radius:20px;width:580px;max-width:95vw;box-shadow:0 30px 90px rgba(60,20,0,0.35);transform:translateY(16px) scale(.97);transition:transform .22s cubic-bezier(.34,1.56,.64,1);max-height:90vh;overflow:hidden;color:var(--tb);display:flex;flex-direction:column}.overlay.open .modal{transform:translateY(0) scale(1)}
 .modal::-webkit-scrollbar{width:4px}.modal::-webkit-scrollbar-thumb{background:rgba(180,83,9,0.2);border-radius:2px}
 .modal.modal-court{display:flex;flex-direction:column;overflow:hidden}
-.modal.modal-wide{width:min(860px,95vw)}
+.modal.modal-wide{width:min(900px,95vw)}
 .modal.modal-tight{width:min(640px,95vw)}
 .modal.modal-court .mbody{overflow:auto;padding-bottom:16px}
 .modal.modal-court .mactions{position:sticky;bottom:0;z-index:2;margin-top:0;padding-top:12px;background:rgba(253,248,241,.72);backdrop-filter:blur(12px)}
-.mhead{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}.mtitle{font-size:16px;font-weight:700;color:var(--th)}.mclose{width:28px;height:28px;border-radius:8px;border:none;background:rgba(180,83,9,0.08);color:var(--ts);cursor:pointer;font-size:0;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .13s;flex:0 0 auto;overflow:hidden}.mclose::before{content:'×';font-size:18px;font-weight:800}.mclose:hover{background:#dc2626;color:#fff}
-.mbody{padding:14px 20px 96px;overflow:auto}
+.mhead{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}.mtitle{font-size:16px;font-weight:600;color:var(--th)}.mclose{width:30px;height:30px;border-radius:10px;border:none;background:rgba(180,83,9,0.08);color:var(--ts);cursor:pointer;font-size:18px;font-weight:500;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .13s;flex:0 0 auto;overflow:hidden}.mclose::before{content:none}.mclose:hover{background:#dc2626;color:#fff}
+.mbody{padding:14px 20px 20px;overflow:auto}
 .sec-ttl{font-size:10px;font-weight:700;color:var(--amber-base);letter-spacing:1.3px;text-transform:uppercase;margin:14px 0 9px;display:flex;align-items:center;gap:7px}.sec-ttl::after{content:'';flex:1;height:0.5px;background:rgba(180,83,9,0.2)}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.fgrid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.fgrid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.fg{display:flex;flex-direction:column;gap:5px;min-width:0}.fg.full{grid-column:1/-1}
-.flabel{font-size:11px;font-weight:600;color:var(--ts);letter-spacing:.4px;text-transform:uppercase}
+.flabel{font-size:11px;font-weight:500;color:var(--ts);letter-spacing:.35px;text-transform:uppercase}
 .finput,.fselect{border:0.5px solid rgba(180,83,9,0.18);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--th);outline:none;font-family:inherit;transition:border-color .14s,box-shadow .14s,background .14s;background:rgba(255,251,245,.96);width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}.finput:focus,.fselect:focus{border-color:var(--amber-warm);background:#fff;box-shadow:0 0 0 3px rgba(217,119,6,.10)}
 .fselect{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--amber-base) 50%),linear-gradient(135deg,var(--amber-base) 50%,transparent 50%);background-position:calc(100% - 18px) 17px,calc(100% - 13px) 17px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
 .ftextarea{resize:vertical;min-height:62px}
@@ -139,17 +139,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #importOv .mbody{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;min-height:0;overflow:hidden;padding-bottom:16px}
 #courtImportPreview{min-height:0;overflow:auto;padding-right:4px}
 #importOv .import-actions{position:sticky;bottom:0;z-index:2;margin-top:0;padding-top:12px;background:linear-gradient(180deg,rgba(253,248,241,0),rgba(253,248,241,.92) 18%,rgba(253,248,241,.98) 100%)}
-.mactions{display:flex;gap:8px;margin-top:16px;padding:12px 0;border-top:0.5px solid rgba(180,83,9,0.12);position:sticky;bottom:0;z-index:2;background:linear-gradient(180deg,rgba(253,248,241,0),rgba(253,248,241,.9) 18%,rgba(253,248,241,.96) 100%);backdrop-filter:blur(12px)}
+.mactions{display:flex;gap:8px;margin-top:16px;padding:12px 0 0;border-top:0.5px solid rgba(180,83,9,0.12);position:static;background:transparent;backdrop-filter:none}
 .btn-cancel{flex:1;padding:10px;border-radius:9px;border:0.5px solid rgba(180,83,9,0.2);background:transparent;color:var(--ts);font-size:13px;cursor:pointer;font-family:inherit;transition:all .13s}.btn-cancel:hover{border-color:var(--amber-base);color:var(--th)}
-.btn-save{flex:2;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--amber-base),var(--amber-warm));color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(180,83,9,0.35);transition:all .14s}.btn-save:hover{transform:translateY(-1px)}.btn-save:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.btn-save{flex:2;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--amber-base),var(--amber-warm));color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(180,83,9,0.35);transition:all .14s}.btn-save:hover{transform:translateY(-1px)}.btn-save:disabled{opacity:.6;transform:none;cursor:not-allowed}
 .btn-del{padding:10px 14px;border-radius:9px;border:0.5px solid rgba(220,38,38,0.25);background:transparent;color:#dc2626;font-size:13px;cursor:pointer;font-family:inherit;transition:all .13s}.btn-del:hover{background:#dc2626;color:#fff;border-color:#dc2626}
 .page-head-card{background:rgba(255,248,238,.14);border:0.5px solid rgba(255,244,230,.18);border-radius:16px;padding:16px 18px;margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
 .page-head-main{display:flex;flex-direction:column;gap:6px}
-.page-head-title{font-size:18px;font-weight:800;color:var(--cream-pale)}
+.page-head-title{font-size:18px;font-weight:650;color:var(--cream-pale)}
 .page-head-desc{font-size:13px;line-height:1.7;color:rgba(255,247,237,.82);max-width:720px}
 .page-head-actions{display:flex;gap:10px;flex-wrap:wrap}
 .light-btn{height:38px;border:none;border-radius:8px;background:rgba(255,255,255,.88);color:var(--amber-base);padding:0 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 5px 18px rgba(60,20,0,.1)}
 .course-filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(254,243,199,.16);border:0.5px solid rgba(254,243,199,.22);border-radius:14px;padding:10px 12px;margin-bottom:14px}
+#page-packages .course-filter-bar{display:grid;grid-template-columns:minmax(300px,1fr) 170px 170px;gap:10px;border-radius:16px;padding:10px;background:rgba(255,248,238,.12)}
+#page-packages .course-filter-bar .filter-search{height:44px;min-width:0;border:0.5px solid rgba(180,83,9,.14);border-radius:12px;background:rgba(255,251,245,.9);box-shadow:none}
+#page-packages .course-filter-bar .coach-ops-select{height:44px;min-width:0;border-radius:12px;background-color:rgba(255,251,245,.9);box-shadow:none;font-weight:500;color:var(--tb)}
 .purchase-filter-bar{display:grid;grid-template-columns:minmax(280px,1.4fr) repeat(3,minmax(136px,.75fr)) minmax(150px,.75fr) minmax(150px,.75fr) auto;gap:10px;align-items:center;background:rgba(254,243,199,.16);border:0.5px solid rgba(254,243,199,.22);border-radius:14px;padding:12px;margin-bottom:14px}
 .purchase-actions{display:flex;gap:10px;justify-content:flex-end}
 .filter-search{display:flex;align-items:center;gap:8px;flex:1;min-width:220px;height:38px;border:none;border-radius:8px;background:rgba(255,255,255,.84);padding:0 13px;box-shadow:0 5px 18px rgba(60,20,0,.1)}
@@ -170,15 +173,22 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .filter-hidden-date{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
 .global-date-pop{display:none;position:fixed;width:292px;background:rgba(255,251,245,.98);border:0.5px solid rgba(180,83,9,.18);border-radius:12px;box-shadow:0 18px 54px rgba(60,20,0,.28);padding:12px;z-index:320;color:var(--th)}
 .global-date-pop.open{display:block}
-.form-section{background:rgba(255,252,248,.62);border:0.5px solid rgba(180,83,9,.12);border-radius:14px;padding:14px 14px 12px;margin-bottom:12px}
-.form-section-title{font-size:12px;font-weight:800;color:var(--amber-base);margin-bottom:10px}
+.form-section{background:rgba(255,252,248,.66);border:0.5px solid rgba(180,83,9,.10);border-radius:16px;padding:14px;margin-bottom:12px}
+.form-section-title{font-size:12px;font-weight:650;color:var(--amber-base);margin-bottom:10px}
 .choice-grid{display:flex;flex-wrap:wrap;gap:8px}
-.choice-tag{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;background:rgba(254,243,199,.3);border:0.5px solid rgba(180,83,9,.12);font-size:12.5px;color:var(--tb)}
-.choice-tag input{margin:0}
+.choice-tag{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:12px;background:rgba(255,251,245,.72);border:0.5px solid rgba(180,83,9,.12);font-size:12.5px;font-weight:400;color:var(--tb)}
+.choice-tag input{appearance:none;-webkit-appearance:none;margin:0;width:14px;height:14px;border-radius:4px;border:0.5px solid rgba(120,53,15,.24);background:#fff;box-shadow:inset 0 1px 2px rgba(60,20,0,.06)}
+.choice-tag input:checked{border-color:var(--amber-base);background:var(--amber-base);box-shadow:inset 0 0 0 3px #fff}
+.fg.span-2{grid-column:span 2}
+.range-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.range-pair .coach-date-btn{width:100%;min-width:0}
+.range-dash{font-size:12px;color:var(--td)}
+.time-window-stack{display:flex;flex-direction:column;gap:8px}
+.time-window-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
 .inline-help{font-size:12px;color:var(--ts);line-height:1.6}
-.close-x{font-size:18px;font-weight:700}
+.close-x{font-size:18px;font-weight:500}
 @media(max-width:1100px){.purchase-filter-bar{grid-template-columns:1fr 1fr 1fr}.purchase-actions{grid-column:1/-1;justify-content:flex-start}}
-@media(max-width:900px){.page-head-card{flex-direction:column}.page-head-actions,.purchase-toolbar-spacer{width:100%}.page-stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}.fgrid.cols-3,.fgrid.cols-4,.purchase-filter-bar{grid-template-columns:1fr}}
+@media(max-width:900px){.page-head-card{flex-direction:column}.page-head-actions,.purchase-toolbar-spacer{width:100%}.page-stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}.fgrid.cols-3,.fgrid.cols-4,.purchase-filter-bar,#page-packages .course-filter-bar{grid-template-columns:1fr}.fg.span-2{grid-column:1/-1}}
 .conf-ov{position:fixed;inset:0;background:rgba(60,20,0,0.65);backdrop-filter:blur(12px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}.conf-ov.open{opacity:1;pointer-events:all}
 .conf-box{background:var(--card-f);border:var(--borf);border-radius:18px;padding:28px;width:340px;text-align:center;box-shadow:0 24px 80px rgba(60,20,0,0.35);transform:scale(.95);transition:transform .18s;color:var(--tb)}.conf-ov.open .conf-box{transform:scale(1)}
 .conf-acts{display:flex;gap:9px;margin-top:20px}.conf-no{flex:1;padding:10px;border-radius:9px;border:0.5px solid rgba(180,83,9,0.2);background:transparent;color:var(--ts);cursor:pointer;font-family:inherit;font-size:13px}.conf-yes{flex:1;padding:10px;border-radius:9px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}.conf-yes:hover{background:#b91c1c}
@@ -190,8 +200,8 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .loading{text-align:center;padding:40px;color:var(--ts);font-size:13px}
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:4px}
 .product-card{background:var(--card-f);backdrop-filter:var(--bf);border:var(--borf);border-radius:14px;padding:18px;box-shadow:var(--shm);transition:transform .14s,box-shadow .14s;cursor:pointer}.product-card:hover{transform:translateY(-2px);box-shadow:var(--shf)}
-.pc-type{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}.pc-name{font-size:15px;font-weight:700;color:var(--th);margin-bottom:10px}
-.pc-row{display:flex;justify-content:space-between;font-size:12px;color:var(--ts);margin-top:6px}.pc-val{font-weight:600;color:var(--tb)}
+.pc-type{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}.pc-name{font-size:15px;font-weight:600;color:var(--th);margin-bottom:10px}
+.pc-row{display:flex;justify-content:space-between;font-size:12px;color:var(--ts);margin-top:6px}.pc-val{font-weight:500;color:var(--tb)}
 .pc-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:0.5px solid rgba(180,83,9,0.1)}
 @media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:1200px){#courtStatsRow{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -221,7 +231,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:18px 14px;text-align:center;color:var(--ts);font-size:12px;background:rgba(254,243,199,0.2);border-radius:12px;border:0.5px dashed rgba(180,83,9,0.16)}
 .coach-ops-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(254,243,199,.16);border:0.5px solid rgba(254,243,199,.22);border-radius:14px;padding:10px 12px;margin-bottom:14px}
-.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:42px;border:0.5px solid rgba(180,83,9,.18);border-radius:10px;background:rgba(255,255,255,.96);color:var(--th);padding:0 14px;font-size:13px;font-weight:700;font-family:inherit;box-shadow:0 8px 22px rgba(60,20,0,.08);cursor:pointer}
+.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:42px;border:0.5px solid rgba(180,83,9,.18);border-radius:10px;background:rgba(255,255,255,.96);color:var(--th);padding:0 14px;font-size:13px;font-weight:500;font-family:inherit;box-shadow:0 8px 22px rgba(60,20,0,.08);cursor:pointer}
 .coach-ops-select{min-width:132px}
 .coach-date-wrap{position:relative}.coach-date-btn{min-width:178px;text-align:left}.coach-ops-nav{color:var(--amber-base);min-width:64px}.coach-ops-arrow{min-width:38px;width:38px;padding:0;font-size:22px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#fff}
 .coach-date-pop{display:none;position:absolute;top:44px;left:0;width:292px;background:rgba(255,251,245,.98);border:0.5px solid rgba(180,83,9,.18);border-radius:12px;box-shadow:0 18px 54px rgba(60,20,0,.28);padding:12px;z-index:30;color:var(--th)}
@@ -2172,7 +2182,8 @@ function renderPackages(){
     const status=String(p.status||'active');
     const usageWindow=[p.usageStartDate||'不限',p.usageEndDate||'不限'].join(' - ');
     const saleWindow=[p.saleStartDate||'不限',p.saleEndDate||'不限'].join(' - ');
-    const timeWindow=[p.timeBand||'全天',p.dailyTimeWindows?.[0]?.startTime||'',p.dailyTimeWindows?.[0]?.endTime||''].filter(Boolean).join(' · ');
+    const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、');
+    const timeWindow=[p.timeBand||'全天',windows].filter(Boolean).join(' · ');
     const coachText=parseArr(p.coachNames).join('、')||'不限';
     const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
     return `<div class="product-card"><div class="pc-type"><span class="badge ${tc[p.courseType]||'b-gray'}">${p.courseType||'—'}</span><span class="badge ${status==='inactive'?'b-gray':'b-green'}" style="margin-left:6px">${status==='inactive'?'停用':'启用'}</span></div><div class="pc-name">${esc(p.name)}</div><div class="pc-row"><span>课程产品</span><span class="pc-val">${esc(p.productName)||'—'}</span></div><div class="pc-row"><span>售卖规则</span><span class="pc-val">¥${fmt(p.price)} / ${p.lessons||0} 节 / ${p.maxStudents||1} 人</span></div><div class="pc-row"><span>可用教练</span><span class="pc-val">${esc(coachText)}</span></div><div class="pc-row"><span>可用校区</span><span class="pc-val">${esc(campusText)}</span></div><div class="pc-row"><span>活动期</span><span class="pc-val">${esc(saleWindow)}</span></div><div class="pc-row"><span>使用期</span><span class="pc-val">${esc(usageWindow)}</span></div><div class="pc-row"><span>使用时段</span><span class="pc-val">${esc(timeWindow||'全天')}</span></div><div class="pc-actions"><button class="btn-sec" style="flex:1;justify-content:center" onclick="openPackageModal('${p.id}')">编辑</button><button class="btn-sec" style="flex:1;justify-content:center" onclick="focusPurchaseByPackage('${p.id}')">查看购买</button><button class="btn-sec" style="color:#dc2626;border-color:rgba(220,38,38,0.2)" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div>`;
@@ -2246,11 +2257,79 @@ function packageCampusChecks(ids){
 function openPackageModal(id,presetProductId=''){
   editId=id;const p=id?packages.find(x=>x.id===id):null;
   const productId=rv(p,'productId',presetProductId);
-  const windowRow=parseArr(p?.dailyTimeWindows)[0]||{};
+  const timeWindows=parseArr(p?.dailyTimeWindows);
+  const windowRow=timeWindows[0]||{};
+  const secondWindow=timeWindows[1]||{};
   const modal=document.querySelector('#overlay .modal');
   if(modal)modal.className='modal modal-wide';
   document.getElementById('mTitle').textContent=id?'编辑售卖课包':'新增售卖课包';
-  document.getElementById('mBody').innerHTML=`<div class="form-section"><div class="form-section-title">基础信息</div><div class="fgrid cols-4"><div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div><div class="fg"><div class="flabel">课程产品 *</div><select class="fselect modern-select" id="pkg_productId">${productOpts(productId)}</select></div><div class="fg"><div class="flabel">课程类型</div><select class="fselect modern-select" id="pkg_type">${PRODUCT_TYPES.map(t=>`<option value="${t}"${rv(p,'courseType')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect modern-select" id="pkg_status"><option value="active"${rv(p,'status','active')==='active'?' selected':''}>启用</option><option value="inactive"${rv(p,'status')==='inactive'?' selected':''}>停用</option></select></div></div></div><div class="form-section"><div class="form-section-title">售卖规则</div><div class="fgrid cols-4"><div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div><div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"></div><div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div><div class="fg"><div class="flabel">备注</div><input class="finput" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div></div></div><div class="form-section"><div class="form-section-title">时间规则</div><div class="fgrid cols-4"><div class="fg"><div class="flabel">活动开始</div><button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">${rv(p,'saleStartDate')||'活动开始'}</button><input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')"></div><div class="fg"><div class="flabel">活动结束</div><button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">${rv(p,'saleEndDate')||'活动结束'}</button><input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')"></div><div class="fg"><div class="flabel">使用开始</div><button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">${rv(p,'usageStartDate')||'使用开始'}</button><input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')"></div><div class="fg"><div class="flabel">使用结束</div><button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">${rv(p,'usageEndDate')||'使用结束'}</button><input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')"></div><div class="fg"><div class="flabel">时段类型</div><select class="fselect modern-select" id="pkg_timeBand"><option value="全天"${rv(p,'timeBand','全天')==='全天'?' selected':''}>全天</option><option value="黄金时段"${rv(p,'timeBand')==='黄金时段'?' selected':''}>黄金时段</option><option value="非黄金时段"${rv(p,'timeBand')==='非黄金时段'?' selected':''}>非黄金时段</option></select></div><div class="fg"><div class="flabel">开始时间</div><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"></div><div class="fg"><div class="flabel">结束时间</div><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div><div class="fg"><div class="flabel">说明</div><div class="inline-help">购买时间和上课时间分开控制。过期或超时段不能消耗。</div></div></div></div><div class="form-section"><div class="form-section-title">适用范围</div><div class="fg full"><div class="flabel">可用教练</div><div class="choice-grid">${packageCoachChecks(rv(p,'coachNames',[]))}</div></div><div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div></div><textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="btn-save" onclick="savePackage()">保存</button></div>`;
+  document.getElementById('mBody').innerHTML=`
+    <div class="form-section">
+      <div class="form-section-title">基础信息</div>
+      <div class="fgrid cols-4">
+        <div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div>
+        <div class="fg"><div class="flabel">课程产品 *</div><select class="fselect modern-select" id="pkg_productId">${productOpts(productId)}</select></div>
+        <div class="fg"><div class="flabel">课程类型</div><select class="fselect modern-select" id="pkg_type">${PRODUCT_TYPES.map(t=>`<option value="${t}"${rv(p,'courseType')===t?' selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"></div>
+        <div class="fg"><div class="flabel">状态</div><select class="fselect modern-select" id="pkg_status"><option value="active"${rv(p,'status','active')==='active'?' selected':''}>启用</option><option value="inactive"${rv(p,'status')==='inactive'?' selected':''}>停用</option></select></div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">售卖规则</div>
+      <div class="fgrid cols-4">
+        <div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
+        <div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"></div>
+        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div>
+        <div class="fg"><div class="flabel">备注</div><input class="finput" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">时间规则</div>
+      <div class="fgrid cols-4">
+        <div class="fg span-2">
+          <div class="flabel">活动时间</div>
+          <div class="range-pair">
+            <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">${rv(p,'saleStartDate')||'活动开始'}</button>
+            <span class="range-dash">-</span>
+            <button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">${rv(p,'saleEndDate')||'活动结束'}</button>
+          </div>
+          <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">
+          <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">
+        </div>
+        <div class="fg span-2">
+          <div class="flabel">使用时间</div>
+          <div class="range-pair">
+            <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">${rv(p,'usageStartDate')||'使用开始'}</button>
+            <span class="range-dash">-</span>
+            <button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">${rv(p,'usageEndDate')||'使用结束'}</button>
+          </div>
+          <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">
+          <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">
+        </div>
+        <div class="fg">
+          <div class="flabel">时段类型</div>
+          <select class="fselect modern-select" id="pkg_timeBand"><option value="全天"${rv(p,'timeBand','全天')==='全天'?' selected':''}>全天</option><option value="黄金时段"${rv(p,'timeBand')==='黄金时段'?' selected':''}>黄金时段</option><option value="非黄金时段"${rv(p,'timeBand')==='非黄金时段'?' selected':''}>非黄金时段</option></select>
+        </div>
+        <div class="fg span-2">
+          <div class="flabel">可用时段</div>
+          <div class="time-window-stack">
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="flabel">说明</div>
+          <div class="inline-help">可填写两段黄金/非黄金时段，例如 08:00-10:00、16:00-21:00。</div>
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">适用范围</div>
+      <div class="fg full"><div class="flabel">可用教练</div><div class="choice-grid">${packageCoachChecks(rv(p,'coachNames',[]))}</div></div>
+      <div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div>
+    </div>
+    <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
+    <div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="btn-save" onclick="savePackage()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
 }
 async function savePackage(){
@@ -2263,14 +2342,22 @@ async function savePackage(){
   const usageEndDate=document.getElementById('pkg_usageEndDate').value;
   const timeStart=document.getElementById('pkg_timeStart').value;
   const timeEnd=document.getElementById('pkg_timeEnd').value;
+  const timeStart2=document.getElementById('pkg_timeStart2')?.value||'';
+  const timeEnd2=document.getElementById('pkg_timeEnd2')?.value||'';
   if(saleStartDate&&saleEndDate&&saleEndDate<saleStartDate){toast('活动结束时间不能早于活动开始时间','warn');return;}
   if(usageStartDate&&usageEndDate&&usageEndDate<usageStartDate){toast('可用结束时间不能早于可用开始时间','warn');return;}
+  if((timeStart&&!timeEnd)||(!timeStart&&timeEnd)){toast('第一个可用时段请填写完整','warn');return;}
   if(timeStart&&timeEnd&&timeEnd<=timeStart){toast('可用结束时间必须晚于可用开始时间','warn');return;}
+  if((timeStart2&&!timeEnd2)||(!timeStart2&&timeEnd2)){toast('第二个可用时段请填写完整','warn');return;}
+  if(timeStart2&&timeEnd2&&timeEnd2<=timeStart2){toast('第二个可用结束时间必须晚于开始时间','warn');return;}
   const coachNames=[...document.querySelectorAll('.pkg-coach-cb:checked')].map(cb=>cb.value);
   const campusIds=[...document.querySelectorAll('.pkg-campus-cb:checked')].map(cb=>cb.value);
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   document.getElementById('pkg_notes').value=document.getElementById('pkg_notes_inline').value.trim();
-  const data={name,productId,productName:product?.name||'',courseType:document.getElementById('pkg_type').value,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:parseInt(document.getElementById('pkg_validDays').value)||0,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand:document.getElementById('pkg_timeBand').value.trim(),dailyTimeWindows:[{label:document.getElementById('pkg_timeBand').value.trim()||'全天',startTime:timeStart,endTime:timeEnd,daysOfWeek:[]}],coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const timeBand=document.getElementById('pkg_timeBand').value.trim()||'全天';
+  const dailyTimeWindows=[{label:timeBand,startTime:timeStart,endTime:timeEnd,daysOfWeek:[]}];
+  if(timeStart2&&timeEnd2)dailyTimeWindows.push({label:timeBand,startTime:timeStart2,endTime:timeEnd2,daysOfWeek:[]});
+  const data={name,productId,productName:product?.name||'',courseType:document.getElementById('pkg_type').value,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:parseInt(document.getElementById('pkg_validDays').value)||0,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }
 function openPurchaseEntryModal(){
