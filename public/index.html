@@ -387,9 +387,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
       <div class="toolbar">
         <div class="search-box"><span class="filter-search-mark"></span><input type="text" id="clsSearch" placeholder="搜索班次/学员/课程…" oninput="renderClasses()"></div>
         <select class="fsel" id="clsStatusFilter" onchange="renderClasses()"><option value="">全部状态</option><option value="已排班">已排班</option><option value="已取消">已取消</option><option value="已结课">已结课</option></select>
+        <select class="fsel" id="clsCampusFilter" onchange="renderClasses()"><option value="">全部校区</option></select>
+        <select class="fsel" id="clsCoachFilter" onchange="renderClasses()"><option value="">全部教练</option></select>
+        <select class="fsel" id="clsTypeFilter" onchange="renderClasses()"><option value="">全部课程</option></select>
+        <select class="fsel" id="clsRiskFilter" onchange="renderClasses()"><option value="">全部风险</option><option value="即将结课">即将结课</option><option value="未安排下次课">未安排下次课</option><option value="长期未上课">长期未上课</option></select>
         <button class="btn-add" onclick="openClassModal(null)">＋ 新建班次</button>
       </div>
-      <div class="tcard"><table><thead><tr><th>班次名称</th><th>课程</th><th>学员</th><th>教练</th><th>上课日</th><th>课时进度</th><th>日期</th><th>状态</th><th style="text-align:right">操作</th></tr></thead><tbody id="clsTbody"></tbody></table>
+      <div class="tcard"><table><thead><tr><th>班次名称</th><th>课程</th><th>校区</th><th>学员</th><th>教练</th><th>上课日</th><th>最近上课</th><th>下次课</th><th>课时进度</th><th>风险/运营</th><th>状态</th><th style="text-align:right">操作</th></tr></thead><tbody id="clsTbody"></tbody></table>
         <div class="pager"><span class="pager-info" id="clsPagerInfo">共 0 条</span><div style="display:flex;gap:3px" id="clsPagerBtns"></div></div>
       </div>
     </div>
@@ -1271,9 +1275,11 @@ function studentEntitlementSummaryHtml(stu){
 }
 function classScheduleSummaryHtml(cls){
   if(!cls)return '';
-  const rows=schedules.filter(s=>s.classId===cls.id).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
-  const recent=rows.slice(0,5).map(s=>`<div style="font-size:12px;color:var(--tb);margin:3px 0">${fmtDt(s.startTime)} · ${esc(s.coach)||'未分配'} · ${esc(s.status||'已排课')}</div>`).join('');
-  return `<div style="font-size:12px;color:var(--ts);margin-bottom:4px">已排课 ${rows.length} 次，剩余 ${Math.max(0,(parseInt(cls.totalLessons)||0)-(parseInt(cls.usedLessons)||0))} 节</div>${recent||'<div style="color:var(--td);font-size:12px">暂无排课记录</div>'}`;
+  const rows=classSchedules(cls);
+  const recent=classLastLesson(cls);
+  const next=classNextLesson(cls);
+  const tags=classRiskTags(cls);
+  return `<div class="fgrid" style="margin-bottom:0"><div class="fg"><div class="flabel">最近上课</div><div class="finput">${recent?.startTime?fmtDt(recent.startTime):'—'}</div></div><div class="fg"><div class="flabel">下次课</div><div class="finput">${next?.startTime?fmtDt(next.startTime):'—'}</div></div><div class="fg"><div class="flabel">关联排课</div><div class="finput">${rows.length} 次</div></div><div class="fg"><div class="flabel">风险标签</div><div class="finput">${tags.length?tags.map(t=>`<span class="badge b-amber" style="font-size:10px;margin-right:4px">${esc(t)}</span>`).join(''):'—'}</div></div><div class="fg full"><button class="btn-sec" onclick="openClassScheduleList('${cls.id}')">去排课页查看</button><button class="btn-sec" style="margin-left:6px" onclick="openClassStudentList('${cls.id}')">去学员页查看</button></div></div>`;
 }
 function studentOpts(sel){
   return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}${s.phone?' · '+esc(s.phone):''}</option>`).join('');
@@ -1765,20 +1771,75 @@ function exportStudentCSV(){
 let clsCounter=0;
 function initClsCounter(){const nums=classes.map(c=>{const m=(c.classNo||'').match(/CLS(\d+)/);return m?parseInt(m[1]):0;});clsCounter=nums.length?Math.max(...nums):0;}
 function nextClassNo(){clsCounter++;return 'CLS'+String(clsCounter).padStart(4,'0');}
+function classSchedules(cls){return schedules.filter(s=>s.classId===cls?.id&&s.status!=='已取消'&&s.startTime).sort((a,b)=>new Date(a.startTime)-new Date(b.startTime));}
+function classHasSchedules(cls){return schedules.some(s=>s.classId===cls?.id);}
+function classLastLesson(cls){
+  const now=Date.now();
+  return classSchedules(cls).filter(s=>new Date(String(s.startTime).replace(' ','T')).getTime()<=now).pop()||null;
+}
+function classNextLesson(cls){
+  const now=Date.now();
+  return classSchedules(cls).find(s=>new Date(String(s.startTime).replace(' ','T')).getTime()>=now)||null;
+}
+function classHasNextLessonWithinDays(cls,days){
+  const now=Date.now(),limit=now+(parseInt(days)||0)*86400000;
+  return classSchedules(cls).some(s=>{const t=new Date(String(s.startTime).replace(' ','T')).getTime();return t>=now&&t<=limit;});
+}
+function classRemainingLessons(cls){return (parseInt(cls?.totalLessons)||0)-(parseInt(cls?.usedLessons)||0);}
+function classRiskTags(cls){
+  const tags=[],status=cls?.status||'已排班',total=parseInt(cls?.totalLessons)||0,rem=classRemainingLessons(cls),last=classLastLesson(cls),now=Date.now();
+  const alreadyStarted=!cls?.startDate||String(cls.startDate)<=today();
+  if(status==='已排班'&&total>0&&rem<=3)tags.push('即将结课');
+  if(status==='已排班'&&!classHasNextLessonWithinDays(cls,7))tags.push('未安排下次课');
+  if(status==='已排班'&&alreadyStarted&&(!last||now-new Date(String(last.startTime).replace(' ','T')).getTime()>14*86400000))tags.push('长期未上课');
+  return tags;
+}
+function classTagBadges(cls){
+  const tags=classRiskTags(cls);
+  return tags.length?tags.map(t=>`<span class="badge b-amber" style="font-size:10px;margin:1px">${esc(t)}</span>`).join(' '):'<span style="color:var(--td);font-size:12px">—</span>';
+}
+function openClassScheduleList(classId){
+  const cls=classes.find(c=>c.id===classId);if(!cls)return;
+  closeModal();goPage('schedule');
+  const el=document.getElementById('schSearch');if(el){el.value=cls.className||cls.classNo||'';schPage=1;renderSchedule();}
+}
+function openClassStudentList(classId){
+  const cls=classes.find(c=>c.id===classId);if(!cls)return;
+  const keyword=parseArr(cls.studentIds).map(id=>students.find(s=>s.id===id)?.name).filter(Boolean)[0]||'';
+  closeModal();goPage('students');
+  const el=document.getElementById('stuSearch');if(el){el.value=keyword||cls.className||'';stuPage=1;renderStudents();}
+}
+function syncClassFilterOptions(){
+  const campusEl=document.getElementById('clsCampusFilter'),coachEl=document.getElementById('clsCoachFilter'),typeEl=document.getElementById('clsTypeFilter');
+  if(campusEl){const v=campusEl.value;campusEl.innerHTML='<option value="">全部校区</option>'+campuses.map(c=>`<option value="${c.code||c.id}">${esc(c.name||c.code||c.id)}</option>`).join('');campusEl.value=v;}
+  if(coachEl){const v=coachEl.value;coachEl.innerHTML='<option value="">全部教练</option>'+activeCoachNames().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');coachEl.value=v;}
+  if(typeEl){const v=typeEl.value;typeEl.innerHTML='<option value="">全部课程</option>'+PRODUCT_TYPES.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');typeEl.value=v;}
+}
 function renderClasses(){
+  syncClassFilterOptions();
   const q=(document.getElementById('clsSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('clsStatusFilter')?.value||'';
+  const cf=document.getElementById('clsCampusFilter')?.value||'';
+  const coachF=document.getElementById('clsCoachFilter')?.value||'';
+  const typeF=document.getElementById('clsTypeFilter')?.value||'';
+  const riskF=document.getElementById('clsRiskFilter')?.value||'';
   let list=classes.filter(c=>{
     if(sf&&c.status!==sf)return false;
+    if(cf&&c.campus!==cf)return false;
+    if(coachF&&c.coach!==coachF)return false;
     const ids=parseArr(c.studentIds);
     const stuText=ids.map(sid=>{const st=students.find(x=>x.id===sid);return [st?.name||sid,st?.phone||'',courtsForStudent(st).map(x=>`${x.name} ${x.phone||''}`).join(' ')].join(' ');}).join(' ');
     const prod=products.find(x=>x.id===c.productId);
-    return searchHit(q,c.className,c.classNo,c.coach,c.productName,prod?.type,prod?.lessons,prod?.price,c.status,c.notes,cn(c.campus),stuText);
+    if(typeF&&prod?.type!==typeF)return false;
+    const tags=classRiskTags(c);
+    if(riskF&&!tags.includes(riskF))return false;
+    return searchHit(q,c.className,c.classNo,c.coach,c.productName,prod?.type,prod?.lessons,prod?.price,c.status,c.notes,c.opsNote,c.sourceType,cn(c.campus),stuText,tags.join(' '));
   });
-  const active=classes.filter(c=>c.status==='已排班').length;
-  const tL=classes.reduce((s,c)=>s+(parseInt(c.totalLessons)||0),0),uL=classes.reduce((s,c)=>s+(parseInt(c.usedLessons)||0),0);
-  document.getElementById('classStatsRow').innerHTML=`<div class="scard"><div class="sc-icon si-a">📋</div><div><div class="sc-label">班次总数</div><div class="sc-val">${classes.length}<span class="u">个</span></div><div class="sc-sub">进行中 ${active}</div></div></div><div class="scard"><div class="sc-icon si-c">📚</div><div><div class="sc-label">总课时/已上</div><div class="sc-val">${tL}<span class="u">/ ${uL}</span></div><div class="sc-sub">剩余 ${tL-uL} 节</div></div></div>`;
-  const total=list.length,pages=Math.ceil(total/PAGE_SIZE),slice=list.slice((clsPage-1)*PAGE_SIZE,clsPage*PAGE_SIZE);
+  const active=classes.filter(c=>c.status==='已排班').length,ending=classes.filter(c=>classRiskTags(c).includes('即将结课')).length,noNext=classes.filter(c=>classRiskTags(c).includes('未安排下次课')).length,silent=classes.filter(c=>classRiskTags(c).includes('长期未上课')).length;
+  document.getElementById('classStatsRow').innerHTML=`<div class="scard"><div class="sc-icon si-a">📋</div><div><div class="sc-label">班次总数</div><div class="sc-val">${classes.length}<span class="u">个</span></div><div class="sc-sub">进行中 ${active}</div></div></div><div class="scard"><div class="sc-icon si-c">📚</div><div><div class="sc-label">即将结课</div><div class="sc-val">${ending}<span class="u">个</span></div></div></div><div class="scard"><div class="sc-icon si-b">📅</div><div><div class="sc-label">未排下次课</div><div class="sc-val">${noNext}<span class="u">个</span></div></div></div><div class="scard"><div class="sc-icon si-d">⚠️</div><div><div class="sc-label">长期未上</div><div class="sc-val">${silent}<span class="u">个</span></div></div></div>`;
+  const total=list.length,pages=Math.ceil(total/PAGE_SIZE);
+  if(clsPage>Math.max(pages,1))clsPage=1;
+  const slice=list.slice((clsPage-1)*PAGE_SIZE,clsPage*PAGE_SIZE);
   document.getElementById('clsPagerInfo').textContent=`共 ${total} 条`;
   document.getElementById('clsPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<button class="pbtn${i+1===clsPage?' active':''}" onclick="clsPage=${i+1};renderClasses()">${i+1}</button>`).join('');
   const ss={'已排班':'b-blue','已取消':'b-gray','已结课':'b-green'};
@@ -1789,21 +1850,27 @@ function renderClasses(){
     const days=parseArr(c.scheduleDays).join(' ')||'—';
     const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
     const pct=tl>0?Math.round(rem/tl*100):0,pc=pct>40?'pf-gold':pct>15?'pf-warn':'pf-red';
-    return `<tr><td><div class="uname">${esc(c.className)||'—'}</div><div class="udesc">${esc(c.classNo)||''}</div></td><td style="font-weight:500;color:var(--th)">${prod?prod.name:'—'}</td><td style="font-size:12px">${names}</td><td style="font-weight:500">${esc(c.coach)||'—'}</td><td style="font-size:11px;color:var(--ts)">${days}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td style="font-size:11px;color:var(--ts)">${c.startDate||'—'}~${c.endDate||'—'}</td><td><span class="badge ${ss[c.status]||'b-gray'}">${c.status||'已排班'}</span></td><td style="text-align:right"><button class="abtn" onclick="openClassModal('${c.id}')">编辑</button></td></tr>`;
-  }).join(''):'<tr><td colspan="9"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
+    const last=classLastLesson(c),next=classNextLesson(c);
+    return `<tr><td><div class="uname">${esc(c.className)||'—'}</div><div class="udesc">${esc(c.classNo)||''} · ${c.startDate||'—'}~${c.endDate||'—'}</div></td><td style="font-weight:500;color:var(--th)">${prod?prod.name:'—'}<div class="udesc">${esc(prod?.type||c.sourceType||'')}</div></td><td style="font-size:12px;color:var(--ts)">${cn(c.campus)||'—'}</td><td style="font-size:12px">${names}</td><td style="font-weight:500">${esc(c.coach)||'—'}</td><td style="font-size:11px;color:var(--ts)">${days}</td><td style="font-size:11px;color:var(--ts)">${last?.startTime?fmtDt(last.startTime):'—'}</td><td style="font-size:11px;color:var(--ts)">${next?.startTime?fmtDt(next.startTime):'—'}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td>${classTagBadges(c)}</td><td><span class="badge ${ss[c.status]||'b-gray'}">${c.status||'已排班'}</span></td><td style="text-align:right"><button class="abtn" onclick="openClassModal('${c.id}')">编辑</button></td></tr>`;
+  }).join(''):'<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
 }
 function openClassModal(id){
   editId=id;const c=id?classes.find(x=>x.id===id):null;
   const sIds=c?parseArr(c.studentIds):[];const days=c?parseArr(c.scheduleDays):[];
+  const locked=!!(c&&classHasSchedules(c));
+  const rem=classRemainingLessons(c);
+  const sourceTypes=['新签','续班','体验转化','老学员加课','其他'];
   document.getElementById('mTitle').textContent=id?'编辑班次':'新建班次';
   const po=products.map(p=>`<option value="${p.id}"${rv(c,'productId')===p.id?' selected':''}>${esc(p.name)}（${p.type}，${p.lessons}节）</option>`).join('');
   const co=activeCoachNames().map(x=>`<option value="${x}"${rv(c,'coach')===x?' selected':''}>${x}</option>`).join('');
-  const sc=students.map(s=>`<label style="display:inline-flex;align-items:center;gap:4px;margin:3px 8px 3px 0;font-size:12.5px;color:var(--tb);cursor:pointer"><input type="checkbox" value="${s.id}" class="cls-stu-cb" ${sIds.includes(s.id)?'checked':''}>${esc(s.name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无学员</span>';
+  const sc=students.map(s=>`<label style="display:inline-flex;align-items:center;gap:4px;margin:3px 8px 3px 0;font-size:12.5px;color:var(--tb);cursor:pointer"><input type="checkbox" value="${s.id}" class="cls-stu-cb" ${sIds.includes(s.id)?'checked':''}${locked?' disabled':''}>${esc(s.name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无学员</span>';
   const dc=WEEKDAYS.map(d=>`<label style="display:inline-flex;align-items:center;gap:4px;margin:3px 8px 3px 0;font-size:12.5px;color:var(--tb);cursor:pointer"><input type="checkbox" value="${d}" class="cls-day-cb" ${days.includes(d)?'checked':''}>${d}</label>`).join('');
   const previewName=c?esc(c.className):'<span style="color:var(--td)">选择课程后自动生成</span>';
   const noProductHint=products.length?'':`<div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">请先到「课程产品」创建课程产品，再回来创建班次。<button class="btn-sec" style="display:inline-flex;margin-left:8px;padding:5px 10px" onclick="closeModal();goPage('products')">去创建</button></div>`;
-  const detail=id?`<div class="sec-ttl">排课记录</div><div style="background:rgba(217,119,6,0.06);border:0.5px solid rgba(217,119,6,0.16);border-radius:8px;padding:10px 12px;margin-bottom:12px">${classScheduleSummaryHtml(c)}</div>`:'';
-  document.getElementById('mBody').innerHTML=`${noProductHint}${detail}<div class="sec-ttl">班次信息</div><div class="fgrid"><div class="fg full"><div class="flabel">班次名称</div><div id="cls_name_preview" style="padding:9px 12px;border:0.5px solid rgba(180,83,9,0.12);border-radius:9px;background:rgba(254,243,199,0.1);font-size:13px;color:var(--th);min-height:38px">${previewName}</div></div><div class="fg full"><div class="flabel">关联课程产品 *</div><select class="fselect" id="cls_prodId"><option value="">— 选择 —</option>${po}</select></div><div class="fg full"><div class="flabel">选择学员（多选）</div><div style="max-height:140px;overflow-y:auto;border:0.5px solid rgba(180,83,9,0.15);border-radius:8px;padding:8px">${sc}</div></div><div class="fg"><div class="flabel">预设教练</div><select class="fselect" id="cls_coach"><option value="">— 未分配 —</option>${co}</select></div><div class="fg"><div class="flabel">所属校区</div><select class="fselect" id="cls_campus">${campusOpts(rv(c,'campus'))}</select></div><div class="fg"><div class="flabel">开始日期</div><input class="finput" id="cls_start" type="date" value="${rv(c,'startDate',today())}"></div><div class="fg"><div class="flabel">结束日期</div><input class="finput" id="cls_end" type="date" value="${rv(c,'endDate','')}"></div><div class="fg full"><div class="flabel">上课日（多选）</div><div style="padding:4px 0" id="cls_days_wrap">${dc}</div></div><div class="fg"><div class="flabel">应上课时</div><input class="finput" id="cls_total" type="number" value="${rv(c,'totalLessons',0)}"></div><div class="fg"><div class="flabel">已上课时</div><input class="finput" id="cls_used" type="number" value="${rv(c,'usedLessons',0)}"></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="cls_status">${CLS_STATUSES.map(t=>`<option value="${t}"${rv(c,'status','已排班')===t?' selected':''}>${t}</option>`).join('')}</select></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${c.id}','${esc(c.className)}','class')">删除</button>`:''}<button class="btn-save" onclick="saveClass()">保存</button></div>`;
+  const lockHint=locked?`<div style="background:rgba(220,38,38,0.06);border:0.5px solid rgba(220,38,38,0.18);border-radius:9px;padding:10px 13px;font-size:12px;color:#b91c1c;margin-bottom:12px">该班次已有排课，课程、学员、教练、校区和总课时已锁定，避免影响历史排课和课时口径。</div>`:'';
+  const detail=id?`<div class="sec-ttl">班次摘要</div><div style="background:rgba(217,119,6,0.06);border:0.5px solid rgba(217,119,6,0.16);border-radius:8px;padding:10px 12px;margin-bottom:12px">${classScheduleSummaryHtml(c)}</div>`:'';
+  const sourceOpts=sourceTypes.map(t=>`<option value="${t}"${rv(c,'sourceType')===t?' selected':''}>${t}</option>`).join('');
+  document.getElementById('mBody').innerHTML=`${noProductHint}${lockHint}${detail}<div class="sec-ttl">班次信息</div><div class="fgrid"><div class="fg full"><div class="flabel">班次名称</div><div id="cls_name_preview" style="padding:9px 12px;border:0.5px solid rgba(180,83,9,0.12);border-radius:9px;background:rgba(254,243,199,0.1);font-size:13px;color:var(--th);min-height:38px">${previewName}</div></div><div class="fg full"><div class="flabel">关联课程产品 *</div><select class="fselect" id="cls_prodId"${locked?' disabled':''}><option value="">— 选择 —</option>${po}</select></div><div class="fg full"><div class="flabel">选择学员（多选）</div><div style="max-height:140px;overflow-y:auto;border:0.5px solid rgba(180,83,9,0.15);border-radius:8px;padding:8px">${sc}</div></div><div class="fg"><div class="flabel">预设教练</div><select class="fselect" id="cls_coach"${locked?' disabled':''}><option value="">— 未分配 —</option>${co}</select></div><div class="fg"><div class="flabel">所属校区</div><select class="fselect" id="cls_campus"${locked?' disabled':''}>${campusOpts(rv(c,'campus'))}</select></div><div class="fg"><div class="flabel">开始日期</div><input class="finput" id="cls_start" type="date" value="${rv(c,'startDate',today())}"></div><div class="fg"><div class="flabel">结束日期</div><input class="finput" id="cls_end" type="date" value="${rv(c,'endDate','')}"></div><div class="fg full"><div class="flabel">上课日（多选）</div><div style="padding:4px 0" id="cls_days_wrap">${dc}</div></div><div class="fg"><div class="flabel">应上课时</div><input class="finput" id="cls_total" type="number" value="${rv(c,'totalLessons',0)}"${locked?' readonly':''}></div><div class="fg"><div class="flabel">已上课时（排课自动生成）</div><input class="finput" id="cls_used" type="number" value="${rv(c,'usedLessons',0)}" readonly></div><div class="fg"><div class="flabel">剩余课时</div><div class="finput">${Math.max(0,rem||0)} 节</div></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="cls_status">${CLS_STATUSES.map(t=>`<option value="${t}"${rv(c,'status','已排班')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg"><div class="flabel">班次来源/类型</div><select class="fselect" id="cls_source"><option value="">— 未设置 —</option>${sourceOpts}</select></div><div class="fg full"><div class="flabel">运营备注</div><textarea class="finput ftextarea" id="cls_ops_note" placeholder="例如：家长已沟通续班、待拼班、暂停原因、需要运营跟进">${esc(rv(c,'opsNote'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${c.id}','${esc(c.className)}','class')">删除</button>`:''}<button class="btn-save" onclick="saveClass()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
   // 课程变更 → 自动更新班次名称预览 + 课时
   const prodEl=document.getElementById('cls_prodId');
@@ -1829,7 +1896,7 @@ function updateClsNamePreview(){
   const prod=products.find(x=>x.id===prodId);
   if(prod){
     const existing=editId?classes.find(x=>x.id===editId):null;
-    const no=existing?.classNo||('CLS'+String(clsCounter+1).padStart(4,'0'));
+    const no=existing?.classNo||'系统生成编号';
     el.innerHTML='<span style="font-weight:600">'+esc(no)+'-'+esc(prod.name)+'</span>';
   }else{
     el.innerHTML='<span style="color:var(--td)">选择课程后自动生成</span>';
@@ -1843,9 +1910,11 @@ async function saveClass(){
   const scheduleDays=[...document.querySelectorAll('.cls-day-cb:checked')].map(cb=>cb.value);
   const prod=products.find(p=>p.id===productId);
   const existing=editId?classes.find(x=>x.id===editId):null;
-  const classNo=existing?.classNo||nextClassNo();
-  const className=classNo+'-'+(prod?prod.name:'');
-  const data={className,classNo,productId,productName:prod?prod.name:'',studentIds,coach:document.getElementById('cls_coach').value,campus:document.getElementById('cls_campus').value,startDate:document.getElementById('cls_start').value,endDate:document.getElementById('cls_end').value,scheduleDays,totalLessons:parseInt(document.getElementById('cls_total').value)||0,usedLessons:parseInt(document.getElementById('cls_used').value)||0,status:document.getElementById('cls_status').value,updatedBy:currentUser?.name||''};
+  const totalLessons=parseInt(document.getElementById('cls_total').value)||0;
+  if(prod?.maxStudents&&studentIds.length>(parseInt(prod.maxStudents)||0)){toast('选择学员数超过课程产品人数上限','warn');btn.disabled=false;btn.textContent='保存';return;}
+  const startDate=document.getElementById('cls_start').value,endDate=document.getElementById('cls_end').value;
+  if(endDate&&startDate&&endDate<startDate){toast('结束日期不能早于开始日期','warn');btn.disabled=false;btn.textContent='保存';return;}
+  const data={productId,productName:prod?prod.name:'',studentIds,coach:document.getElementById('cls_coach').value,campus:document.getElementById('cls_campus').value,startDate,endDate,scheduleDays,totalLessons,status:document.getElementById('cls_status').value,sourceType:document.getElementById('cls_source')?.value||'',opsNote:document.getElementById('cls_ops_note')?.value.trim()||'',updatedBy:currentUser?.name||''};
   try{
     let res;
     if(editId){res=await apiCall('PUT','/classes/'+editId,data);const saved=res.class||res;const i=classes.findIndex(x=>x.id===editId);classes[i]=saved;}

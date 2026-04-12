@@ -17,6 +17,23 @@ assert.strictEqual(
   'cancelled schedule should not consume lessons'
 );
 
+assert.throws(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已取消' }, { classId: 'class-a', status: '已排课' }),
+  /已取消.*不能继续排课/,
+  'cancelled class should not allow active schedule'
+);
+
+assert.throws(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已结课' }, { classId: 'class-a', status: '已排课' }),
+  /已结课.*不能继续排课/,
+  'finished class should not allow active schedule'
+);
+
+assert.doesNotThrow(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已排班' }, { classId: 'class-a', status: '已排课' }),
+  'active class should allow active schedule'
+);
+
 assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', studentIds: ['stu-1'], status: '已排课', lessonCount: 1 }),
   'billable schedule may be saved without binding a package entitlement account'
