@@ -246,6 +246,62 @@ assert.deepStrictEqual(
   'editing purchase should rebuild entitlement snapshot while preserving used lessons'
 );
 
+assert.throws(
+  () => rules.assertCanEditPackageWithPurchases(
+    pkg,
+    { ...pkg, lessons: 8 },
+    [{ id: 'pur-1', packageId: 'pkg-1' }]
+  ),
+  /已有购买记录，不能修改核心规则/,
+  'sold package should not allow changing core lesson count'
+);
+
+assert.throws(
+  () => rules.assertCanEditPackageWithPurchases(
+    pkg,
+    { ...pkg, dailyTimeWindows: [{ label: '非黄金时段', startTime: '08:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }] },
+    [{ id: 'pur-1', packageId: 'pkg-1' }]
+  ),
+  /已有购买记录，不能修改核心规则/,
+  'sold package should not allow changing nested time windows'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditPackageWithPurchases(
+    pkg,
+    { ...pkg, notes: '只改内部备注', status: 'active' },
+    [{ id: 'pur-1', packageId: 'pkg-1' }]
+  ),
+  'sold package can still edit non-core fields'
+);
+
+assert.throws(
+  () => rules.assertCanEditPurchaseWithLedger(
+    { ...purchase, packageId: 'pkg-1', notes: '' },
+    { ...purchase, packageId: 'pkg-1', amountPaid: 1200, notes: '' },
+    [{ id: 'ent-1', purchaseId: 'pur-1' }],
+    [{ id: 'led-1', entitlementId: 'ent-1', lessonDelta: -1 }]
+  ),
+  /已有课时消耗，只能修改备注/,
+  'consumed purchase should not allow changing payment amount'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditPurchaseWithLedger(
+    { ...purchase, packageId: 'pkg-1', notes: '' },
+    { ...purchase, packageId: 'pkg-1', notes: '补充备注' },
+    [{ id: 'ent-1', purchaseId: 'pur-1' }],
+    [{ id: 'led-1', entitlementId: 'ent-1', lessonDelta: -1 }]
+  ),
+  'consumed purchase can still edit notes'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteEntitlement('ent-1', [], [{ id: 'ent-1', purchaseId: 'pur-1' }]),
+  /来自购买记录，不能删除/,
+  'purchase-generated entitlement should not be physically deleted'
+);
+
 (async()=>{
   const writes=[];
   const store={

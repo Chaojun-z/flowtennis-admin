@@ -39,7 +39,7 @@ assert.throws(
     users: [],
     feedbacks: []
   }),
-  /已有班次、排课、学习计划、账号或反馈关联/,
+  /已有班次、排课、学习计划、账号、反馈、课包或权益关联/,
   'referenced coach should not be deletable'
 );
 
@@ -52,6 +52,34 @@ assert.doesNotThrow(
     feedbacks: []
   }),
   'unreferenced coach can be deleted'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteCoachName('测试教练', {
+    classes: [],
+    schedule: [],
+    plans: [],
+    users: [],
+    feedbacks: [],
+    packages: [{ id: 'pkg-1', coachNames: ['测试教练'] }],
+    entitlements: []
+  }),
+  /课包或权益关联/,
+  'coach referenced by package name should not be deletable'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteCoachName('改名后的教练', {
+    classes: [],
+    schedule: [],
+    plans: [],
+    users: [],
+    feedbacks: [],
+    packages: [{ id: 'pkg-2', coachIds: ['coach-1'] }],
+    entitlements: []
+  }, 'coach-1'),
+  /课包或权益关联/,
+  'coach referenced only by package id should not be deletable'
 );
 
 assert.throws(

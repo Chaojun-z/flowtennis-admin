@@ -69,6 +69,25 @@ assert.throws(
 );
 
 assert.throws(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+    { id: 'prod-a', type: '团课', maxStudents: 1, lessons: 10, price: 2000 },
+    { classes: [{ id: 'class-a', productId: 'prod-a' }], packages: [] }
+  ),
+  /已有班次或售卖课包使用，不能修改核心字段/,
+  'product used by classes should not allow changing course type'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000, name: '旧名称' },
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000, name: '新名称', notes: '备注' },
+    { classes: [], packages: [{ id: 'pkg-a', productId: 'prod-a' }] }
+  ),
+  'product used by packages can still edit display fields'
+);
+
+assert.throws(
   () => rules.assertCanDeleteClass('class-a', [{ classId: 'class-a' }]),
   /已有排课/,
   'class with schedules should not be deletable'
@@ -89,6 +108,33 @@ assert.throws(
 assert.doesNotThrow(
   () => rules.assertCanDeleteCourt({ id: 'court-c', balance: 0, totalDeposit: 0, spentAmount: 0, history: [] }),
   'empty court account can be deleted'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteCampus('mabao', {
+    students: [],
+    coaches: [],
+    classes: [],
+    schedule: [],
+    courts: [],
+    packages: [{ id: 'pkg-1', campusIds: ['mabao'] }],
+    entitlements: []
+  }),
+  /已有学员、教练、班次、排课、课包或权益关联/,
+  'campus used by packages should not be deletable'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanDeleteCampus('mabao', {
+    students: [],
+    coaches: [],
+    classes: [],
+    schedule: [],
+    courts: [],
+    packages: [{ id: 'pkg-1', campusIds: ['shunyi'] }],
+    entitlements: []
+  }),
+  'unreferenced campus can be deleted'
 );
 
 assert.throws(
