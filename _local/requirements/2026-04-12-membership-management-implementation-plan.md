@@ -1,5 +1,7 @@
 # 订场会员管理实施计划
 
+> 2026-04-12 补充：如果你正在处理会员页面结构、会员对象定义、续充/折扣/赠送权益规则，请优先同步阅读 `_local/requirements/2026-04-12-membership-module-restructure-spec.md`。该文档用于修正本计划成文后暴露出的产品层问题，尤其是“方案 / 购买 / 账户 / 权益批次 / 权益流水”的边界和页面组织方式。
+
 > **给后续执行线程：** 本文档是本地交接方案，路径在 `_local/requirements/`，不要提交到 GitHub。执行代码前必须先读本文档、`2026-04-11-coach-feedback-course-package-requirements.md` 和 `2026-04-12-course-package-entitlement-implementation-plan.md`。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

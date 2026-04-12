@@ -5,6 +5,9 @@ const rules = api._test;
 
 assert.ok(rules, 'api._test should expose membership rule helpers');
 assert.ok(rules.MEMBERSHIP_TABLES, 'membership tables should be exposed for runtime bootstrap checks');
+assert.ok(rules.normalizeMembershipBenefitTemplate, 'membership benefit template helper should be exposed');
+assert.ok(rules.allocateMembershipBenefitUsage, 'membership benefit allocation helper should be exposed');
+assert.ok(rules.isDuplicateMembershipOrderSubmission, 'membership order duplicate guard should be exposed');
 assert.deepStrictEqual(
   rules.MEMBERSHIP_TABLES,
   [
@@ -17,21 +20,55 @@ assert.deepStrictEqual(
   'membership should use independent tables'
 );
 
+const normalizedBenefitTemplate = rules.normalizeMembershipBenefitTemplate({
+  publicLessonCount: 2,
+  stringingLaborCount: 5,
+  ballMachineCount: 6,
+  level2PartnerCount: 2,
+  designatedCoachPartnerCount: 1,
+  designatedCoachIds: ['coach-zj'],
+  customBenefits: [{ label: '节日赠礼', unit: '份', count: 1 }]
+});
+
+assert.deepStrictEqual(
+  normalizedBenefitTemplate,
+  {
+    publicLesson: { label: '大师公开课', unit: '次', count: 2 },
+    stringingLabor: { label: '穿线免手工费', unit: '次', count: 5 },
+    ballMachine: { label: '发球机免费', unit: '次', count: 6 },
+    level2Partner: { label: '国家二级运动员陪打', unit: '次', count: 2 },
+    designatedCoachPartner: { label: '指定教练陪打', unit: '次', count: 1, designatedCoachIds: ['coach-zj'] },
+    customBenefits: [{ label: '节日赠礼', unit: '份', count: 1 }]
+  },
+  'membership plan should normalize structured benefit fields into membership benefit template'
+);
+
 const plan = rules.buildMembershipPlanRecord({
   name: '黄金卡',
   tierCode: 'gold',
   rechargeAmount: 5000,
   discountRate: 0.8,
   bonusAmount: 498,
-  benefitTemplate: {
-    ballMachine: { label: '发球机免费使用', unit: '次', count: 6 }
-  }
+  publicLessonCount: 2,
+  stringingLaborCount: 5,
+  ballMachineCount: 6,
+  level2PartnerCount: 2,
+  designatedCoachPartnerCount: 1,
+  designatedCoachIds: ['coach-zj'],
+  customBenefits: [{ label: '节日赠礼', unit: '份', count: 1 }]
 }, { id: 'mplan-gold', now: '2026-04-12T00:00:00.000Z' });
 
 assert.strictEqual(plan.id, 'mplan-gold');
 assert.strictEqual(plan.status, 'active');
 assert.strictEqual(plan.validMonths, 12);
 assert.strictEqual(plan.maxMonths, 24);
+assert.strictEqual(plan.benefitTemplate.designatedCoachPartner.count, 1);
+assert.deepStrictEqual(plan.benefitTemplate.designatedCoachPartner.designatedCoachIds, ['coach-zj']);
+assert.strictEqual(plan.publicLessonCount, 2);
+assert.strictEqual(plan.stringingLaborCount, 5);
+assert.strictEqual(plan.ballMachineCount, 6);
+assert.strictEqual(plan.level2PartnerCount, 2);
+assert.strictEqual(plan.designatedCoachPartnerCount, 1);
 
 const court = {
   id: 'court-1',
@@ -93,6 +130,48 @@ assert.deepStrictEqual(
 assert.strictEqual(first.historyRow.amount, 5000);
 assert.strictEqual(first.historyRow.bonusAmount, 498);
 assert.strictEqual(first.order.benefitSnapshot.ballMachine.count, 8, 'order stores deal snapshot instead of plan template');
+assert.strictEqual(plan.benefitTemplate.ballMachine.count, 6, 'plan template should remain unchanged after deal snapshot override');
+
+const adjustedPurchase = rules.buildMembershipPurchase({
+  court,
+  plan,
+  body: {
+    purchaseDate: '2026-04-06',
+    publicLessonCount: 5,
+    stringingLaborCount: 7,
+    ballMachineCount: 9,
+    level2PartnerCount: 3,
+    designatedCoachPartnerCount: 2,
+    designatedCoachIds: ['coach-zj', 'coach-chen'],
+    customBenefits: [{ label: '节日赠礼', unit: '份', count: 2 }]
+  },
+  now: '2026-04-12T00:00:00.000Z',
+  accountId: 'macc-2',
+  orderId: 'mord-4',
+  historyId: 'his-4'
+});
+
+assert.deepStrictEqual(
+  {
+    publicLesson: adjustedPurchase.order.benefitSnapshot.publicLesson.count,
+    stringingLabor: adjustedPurchase.order.benefitSnapshot.stringingLabor.count,
+    ballMachine: adjustedPurchase.order.benefitSnapshot.ballMachine.count,
+    level2Partner: adjustedPurchase.order.benefitSnapshot.level2Partner.count,
+    designatedCoachPartner: adjustedPurchase.order.benefitSnapshot.designatedCoachPartner.count,
+    designatedCoachIds: adjustedPurchase.order.benefitSnapshot.designatedCoachPartner.designatedCoachIds,
+    customBenefits: adjustedPurchase.order.benefitSnapshot.customBenefits
+  },
+  {
+    publicLesson: 5,
+    stringingLabor: 7,
+    ballMachine: 9,
+    level2Partner: 3,
+    designatedCoachPartner: 2,
+    designatedCoachIds: ['coach-zj', 'coach-chen'],
+    customBenefits: [{ label: '节日赠礼', unit: '份', count: 2 }]
+  },
+  'one-off purchase benefit adjustments should only affect the current order snapshot'
+);
 
 const renewal = rules.buildMembershipPurchase({
   court: { ...court, history: [first.historyRow] },
@@ -168,9 +247,113 @@ const benefitSummary = rules.summarizeMembershipBenefits({
   today: '2026-05-02'
 });
 
-assert.strictEqual(benefitSummary[0].membershipOrderId, 'mord-1');
-assert.strictEqual(benefitSummary[0].benefitCode, 'ballMachine');
-assert.strictEqual(benefitSummary[0].remaining, 6);
+const ballMachineSummary = benefitSummary.find(x => x.benefitCode === 'ballMachine');
+assert.ok(ballMachineSummary, 'benefit summary should include ballMachine batch');
+assert.strictEqual(ballMachineSummary.membershipOrderId, 'mord-1');
+assert.strictEqual(ballMachineSummary.remaining, 6);
+
+const allocatedUsage = rules.allocateMembershipBenefitUsage({
+  membershipAccountId: 'macc-1',
+  courtId: 'court-1',
+  benefitCode: 'ballMachine',
+  benefitLabel: '发球机免费使用',
+  unit: '次',
+  consumeCount: 3,
+  orders: [
+    {
+      ...first.order,
+      benefitSnapshot: {
+        ballMachine: { label: '发球机免费使用', unit: '次', count: 2 }
+      },
+      benefitValidUntil: '2026-06-01'
+    },
+    {
+      ...renewal.order,
+      membershipAccountId: 'macc-1',
+      benefitSnapshot: {
+        ballMachine: { label: '发球机免费使用', unit: '次', count: 5 }
+      },
+      benefitValidUntil: '2026-12-01'
+    }
+  ],
+  ledger: [],
+  now: '2026-05-01T00:00:00.000Z',
+  idFactory: (() => {
+    let i = 0;
+    return () => `alloc-${++i}`;
+  })()
+});
+
+assert.deepStrictEqual(
+  allocatedUsage.map(x => ({ membershipOrderId: x.membershipOrderId, delta: x.delta })),
+  [
+    { membershipOrderId: 'mord-1', delta: -2 },
+    { membershipOrderId: 'mord-2', delta: -1 }
+  ],
+  'benefit consumption should deduct the earliest-expiring batch first'
+);
+
+assert.throws(
+  () => rules.allocateMembershipBenefitUsage({
+    membershipAccountId: 'macc-1',
+    courtId: 'court-1',
+    benefitCode: 'ballMachine',
+    consumeCount: 10,
+    orders: [{
+      ...first.order,
+      benefitSnapshot: { ballMachine: { label: '发球机免费使用', unit: '次', count: 1 } }
+    }],
+    ledger: [],
+    now: '2026-05-01T00:00:00.000Z'
+  }),
+  /剩余权益不足/,
+  'benefit consumption should reject requests that exceed remaining batches'
+);
+
+assert.strictEqual(
+  rules.isDuplicateMembershipOrderSubmission({
+    courtId: 'court-1',
+    membershipPlanId: 'mplan-gold',
+    purchaseDate: '2026-04-05',
+    rechargeAmount: 5000,
+    requestKey: '',
+    recentOrders: [{
+      id: 'mord-dup',
+      courtId: 'court-1',
+      membershipPlanId: 'mplan-gold',
+      purchaseDate: '2026-04-05',
+      rechargeAmount: 5000,
+      status: 'active',
+      createdAt: '2026-04-12T00:00:05.000Z'
+    }],
+    now: '2026-04-12T00:00:10.000Z'
+  }),
+  true,
+  'membership order should reject short-window duplicate submissions'
+);
+
+assert.strictEqual(
+  rules.isDuplicateMembershipOrderSubmission({
+    courtId: 'court-1',
+    membershipPlanId: 'mplan-gold',
+    purchaseDate: '2026-04-05',
+    rechargeAmount: 5000,
+    requestKey: 'req-1',
+    recentOrders: [{
+      id: 'mord-dup',
+      courtId: 'court-1',
+      membershipPlanId: 'mplan-gold',
+      purchaseDate: '2026-04-05',
+      rechargeAmount: 5000,
+      requestKey: 'req-1',
+      status: 'active',
+      createdAt: '2026-04-12T00:00:05.000Z'
+    }],
+    now: '2026-04-12T00:01:10.000Z'
+  }),
+  true,
+  'same request key should be treated as duplicate even outside the short window'
+);
 
 assert.throws(
   () => rules.buildMembershipBenefitLedgerRecord({
