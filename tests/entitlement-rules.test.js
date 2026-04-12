@@ -63,6 +63,62 @@ assert.deepStrictEqual(
   'purchase should create a matching entitlement account'
 );
 
+assert.deepStrictEqual(
+  rules.buildPurchaseRecord(pkg, purchase, { id: 'stu-1', name: '张三', phone: '13800000000' }, { id: 'pur-1', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }),
+  {
+    id: 'pur-1',
+    studentId: 'stu-1',
+    studentName: '张三',
+    studentPhone: '13800000000',
+    packageId: 'pkg-1',
+    packageName: '五一私教非黄金课包',
+    productId: 'prod-1',
+    productName: '成人私教',
+    courseType: '私教课',
+    packageLessons: 5,
+    packagePrice: 1000,
+    packageTimeBand: '非黄金时段',
+    dailyTimeWindows: [{ label: '非黄金时段', startTime: '07:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }],
+    coachIds: ['coach-1'],
+    coachNames: ['朝珺'],
+    campusIds: ['mabao'],
+    usageStartDate: '2026-05-01',
+    usageEndDate: '2026-07-01',
+    purchaseDate: '2026-05-02',
+    amountPaid: 1000,
+    payMethod: '微信',
+    operator: '管理员',
+    status: 'active',
+    createdAt: '2026-04-12T00:00:00.000Z',
+    updatedAt: '2026-04-12T00:00:00.000Z'
+  },
+  'purchase should store immutable package and student snapshots'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...pkg, productId: 'missing' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /课程产品不存在/,
+  'package must reference an existing product'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...pkg, saleStartDate: '2026-06-01', saleEndDate: '2026-05-01' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /活动结束时间不能早于活动开始时间/,
+  'package sale date range must be valid'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...pkg, price: 0 }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /价格必须大于 0/,
+  'package price must be positive'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...pkg, dailyTimeWindows: [{ startTime: '10:00', endTime: '09:00' }] }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /可用结束时间必须晚于开始时间/,
+  'package daily time windows must be valid'
+);
+
 assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule(entitlement, {
     id: 'sch-1',
@@ -177,5 +233,35 @@ assert.strictEqual(
   4,
   'cancelled schedule should return lessons'
 );
+
+assert.deepStrictEqual(
+  rules.syncEntitlementFromPurchase(
+    { ...pkg, id: 'pkg-2', name: '新课包', lessons: 8, usageEndDate: '2026-08-01' },
+    { ...purchase, id: 'pur-1', packageId: 'pkg-2', packageName: '新课包', purchaseDate: '2026-05-03' },
+    { id: 'stu-1', name: '张三' },
+    { ...entitlement, id: 'ent-1', usedLessons: 2, remainingLessons: 3, createdAt: '2026-04-01T00:00:00.000Z' },
+    '2026-04-12T00:00:00.000Z'
+  ).remainingLessons,
+  6,
+  'editing purchase should rebuild entitlement snapshot while preserving used lessons'
+);
+
+(async()=>{
+  const writes=[];
+  const store={
+    put:async(table,id,row)=>{writes.push([table,id,row]);if(table==='entitlements')throw new Error('entitlement write failed');},
+    del:async(table,id)=>writes.push(['del',table,id])
+  };
+  await assert.rejects(
+    () => rules.writePurchaseAndEntitlementAtomic(store,'purchases','entitlements',{ id:'pur-x' },{ id:'ent-x' }),
+    /entitlement write failed/,
+    'purchase and entitlement atomic writer should expose entitlement write failure'
+  );
+  assert.deepStrictEqual(
+    writes.map(x=>x.slice(0,3)),
+    [['purchases','pur-x',{ id:'pur-x' }],['entitlements','ent-x',{ id:'ent-x' }],['del','purchases','pur-x']],
+    'failed entitlement write should roll back purchase write'
+  );
+})().then(()=>console.log('entitlement async rules tests passed'));
 
 console.log('entitlement rules tests passed');

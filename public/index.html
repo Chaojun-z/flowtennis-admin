@@ -1205,10 +1205,17 @@ async function saveStudent(){
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   const data={name,phone,type:document.getElementById('s_type').value,source:document.getElementById('s_source').value,activityRange:document.getElementById('s_range').value.trim(),campus:document.getElementById('s_campus').value,notes:document.getElementById('s_notes').value.trim(),updatedBy:currentUser?.name||''};
   try{
-    if(editId){await apiCall('PUT','/students/'+editId,data);const i=students.findIndex(x=>x.id===editId);students[i]={...students[i],...data,id:editId};}
+    if(editId){const res=await apiCall('PUT','/students/'+editId,data);const i=students.findIndex(x=>x.id===editId);students[i]={...students[i],...data,id:editId};mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
-    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderStudents();
+    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
   }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+}
+function mergeLinkedUpdates(updates){
+  (updates.plans||[]).forEach(r=>{const i=plans.findIndex(x=>x.id===r.id);if(i>=0)plans[i]=r;});
+  (updates.schedule||[]).forEach(r=>{const i=schedules.findIndex(x=>x.id===r.id);if(i>=0)schedules[i]=r;});
+  (updates.purchases||[]).forEach(r=>{const i=purchases.findIndex(x=>x.id===r.id);if(i>=0)purchases[i]=r;});
+  (updates.entitlements||[]).forEach(r=>{const i=entitlements.findIndex(x=>x.id===r.id);if(i>=0)entitlements[i]=r;});
+  (updates.feedbacks||[]).forEach(r=>{const i=feedbacks.findIndex(x=>x.id===r.id);if(i>=0)feedbacks[i]=r;});
 }
 function exportStudentCSV(){
   const d=campus==='all'?students:students.filter(u=>u.campus===campus);
@@ -1371,7 +1378,8 @@ function onSchClassChange(){
   const ids=parseArr(cls.studentIds);
   document.getElementById('sch_stuIds').value=JSON.stringify(ids);
   document.getElementById('sch_stuName').value=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?st.name:sid;}).join('、');
-  if(cls.productName&&!document.getElementById('sch_courseType').value)document.getElementById('sch_courseType').value=cls.productName;
+  const prod=products.find(p=>p.id===cls.productId);
+  if(prod?.type)document.getElementById('sch_courseType').value=prod.type;
   if(cls.coach)document.getElementById('sch_coach').value=cls.coach;
   if(cls.campus)document.getElementById('sch_campus').value=cls.campus;
   updateSchClassHint();
@@ -1416,12 +1424,14 @@ async function saveSchedule(){
   if(!startTime){toast('请选择上课时间','warn');return;}
   if(status!=='已取消'&&!endTime){toast('请选择下课时间，系统需要用它校验冲突','warn');return;}
   if(endTime&&endTime<=startTime){toast('下课时间不能早于上课时间','warn');return;}
-  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   const classId=document.getElementById('sch_classId').value;
   const lc=parseInt(document.getElementById('sch_lc').value)||1;
   const derivedIds=parseArr(document.getElementById('sch_stuIds').value);
   const studentIds=derivedIds.length?derivedIds:deriveStudentIdsFromNames(document.getElementById('sch_stuName').value.trim());
   const selectedEntitlementId=document.getElementById('sch_entitlement').value;
+  if(status!=='已取消'&&!selectedEntitlementId){toast('请选择权益账户，排课必须绑定课包权益','warn');return;}
+  if(status!=='已取消'&&studentIds.length>1){toast('多人排课暂不支持单个权益账户，请拆成单人排课','warn');return;}
+  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   const selectedEntitlement=entitlements.find(x=>x.id===selectedEntitlementId);
   const data={startTime,endTime,classId,studentIds,studentName:document.getElementById('sch_stuName').value.trim(),courseType:document.getElementById('sch_courseType').value,coach:document.getElementById('sch_coach').value,coachId:document.getElementById('sch_coach').value,venue:document.getElementById('sch_venue').value.trim(),campus:document.getElementById('sch_campus').value,lessonCount:lc,status,entitlementId:selectedEntitlementId,packageName:selectedEntitlement?.packageName||'',purchaseId:selectedEntitlement?.purchaseId||'',timeBand:selectedEntitlement?.timeBand||'',notes:document.getElementById('sch_notes').value.trim()};
   try{
@@ -2209,8 +2219,7 @@ function getFilteredPurchases(){
   const dateFrom=document.getElementById('purDateFrom')?.value||'';
   const dateTo=document.getElementById('purDateTo')?.value||'';
   return purchases.filter(p=>{
-    const pkg=packages.find(x=>x.id===p.packageId);
-    if(!searchHit(q,p.studentName,p.packageName,p.amountPaid,p.payMethod,p.purchaseDate,pkg?.productName,pkg?.courseType))return false;
+    if(!searchHit(q,p.studentName,p.packageName,p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand))return false;
     if(sf&&p.status!==sf)return false;
     if(studentId&&p.studentId!==studentId)return false;
     if(packageId&&p.packageId!==packageId)return false;
@@ -2228,10 +2237,9 @@ function renderPurchases(){
   document.getElementById('purchaseStatsRow').innerHTML=`<div class="scard"><div><div class="sc-label">当前筛选购买单</div><div class="sc-val">${list.length}<span class="u">笔</span></div></div></div><div class="scard"><div><div class="sc-label">当前筛选实收</div><div class="sc-val">¥${fmt(received)}</div></div></div><div class="scard"><div><div class="sc-label">有效权益账户</div><div class="sc-val">${effectiveEntitlements.length}<span class="u">个</span></div></div></div><div class="scard"><div><div class="sc-label">7天内到期</div><div class="sc-val">${nearExpiry}<span class="u">个</span></div></div></div>`;
   document.getElementById('purchaseTbody').innerHTML=list.length?list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
-    const pkg=packages.find(x=>x.id===p.packageId)||{};
     const remain=ent?`${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`:'—';
     const validRange=ent?`${ent.validFrom||'—'} - ${ent.validUntil||'—'}`:'—';
-    return `<tr><td>${esc(p.purchaseDate)||'—'}</td><td><div class="uname">${esc(p.studentName)||'—'}</div><div class="table-meta">${esc(p.payMethod)||'—'}</div></td><td><div class="uname">${esc(p.packageName)||'—'}</div><div class="table-meta">${esc(pkg.courseType)||'—'} · ${pkg.lessons||0} 节</div></td><td><div class="uname">${esc(pkg.productName)||'—'}</div><div class="table-meta">${esc(pkg.timeBand)||'全天'}</div></td><td>¥${fmt(p.amountPaid)}</td><td>${remain}</td><td>${esc(validRange)}</td><td><span class="badge ${p.status==='voided'?'b-gray':'b-green'}">${purchaseStatusText(p)}</span></td><td style="text-align:right">${p.status==='voided'?'<span style="color:var(--td);font-size:12px">已作废</span>':`<button class="btn-sec" style="padding:7px 12px;color:#dc2626;border-color:rgba(220,38,38,0.2)" onclick="confirmDel('${p.id}','${esc(p.studentName||'该学员')}的${esc(p.packageName||'课包购买')}','purchase')">作废</button>`}</td></tr>`;
+    return `<tr><td>${esc(p.purchaseDate)||'—'}</td><td><div class="uname">${esc(p.studentName)||'—'}</div><div class="table-meta">${esc(p.payMethod)||'—'}</div></td><td><div class="uname">${esc(p.packageName)||'—'}</div><div class="table-meta">${esc(p.courseType)||'—'} · ${p.packageLessons||0} 节</div></td><td><div class="uname">${esc(p.productName)||'—'}</div><div class="table-meta">${esc(p.packageTimeBand)||'全天'}</div></td><td>¥${fmt(p.amountPaid)}</td><td>${remain}</td><td>${esc(validRange)}</td><td><span class="badge ${p.status==='voided'?'b-gray':'b-green'}">${purchaseStatusText(p)}</span></td><td style="text-align:right">${p.status==='voided'?'<span style="color:var(--td);font-size:12px">已作废</span>':`<button class="btn-sec" style="padding:7px 12px;color:#dc2626;border-color:rgba(220,38,38,0.2)" onclick="confirmDel('${p.id}','${esc(p.studentName||'该学员')}的${esc(p.packageName||'课包购买')}','purchase')">作废</button>`}</td></tr>`;
   }).join(''):'<tr><td colspan="9"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
 }
 function renderEntitlements(){
@@ -2350,6 +2358,10 @@ async function savePackage(){
   if(timeStart&&timeEnd&&timeEnd<=timeStart){toast('可用结束时间必须晚于可用开始时间','warn');return;}
   if((timeStart2&&!timeEnd2)||(!timeStart2&&timeEnd2)){toast('第二个可用时段请填写完整','warn');return;}
   if(timeStart2&&timeEnd2&&timeEnd2<=timeStart2){toast('第二个可用结束时间必须晚于开始时间','warn');return;}
+  if((parseFloat(document.getElementById('pkg_price').value)||0)<=0){toast('价格必须大于 0','warn');return;}
+  if((parseInt(document.getElementById('pkg_lessons').value)||0)<=0){toast('课时必须大于 0','warn');return;}
+  if((parseInt(document.getElementById('pkg_validDays').value)||0)<=0){toast('有效天数必须大于 0','warn');return;}
+  if((parseInt(document.getElementById('pkg_maxStudents').value)||0)<=0){toast('人数限制必须大于 0','warn');return;}
   const coachNames=[...document.querySelectorAll('.pkg-coach-cb:checked')].map(cb=>cb.value);
   const campusIds=[...document.querySelectorAll('.pkg-campus-cb:checked')].map(cb=>cb.value);
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
@@ -2411,8 +2423,7 @@ function exportPurchaseCSV(){
   let csv='购买日期,学员,售卖课包,课程产品,实收,剩余课时,总课时,有效开始,有效结束,支付方式,状态,备注\n';
   csv+=list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
-    const pkg=packages.find(x=>x.id===p.packageId)||{};
-    return [p.purchaseDate||'',p.studentName||'',p.packageName||'',pkg.productName||'',parseFloat(p.amountPaid)||0,parseInt(ent.remainingLessons)||0,parseInt(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',p.payMethod||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
+    return [p.purchaseDate||'',p.studentName||'',p.packageName||'',p.productName||'',parseFloat(p.amountPaid)||0,parseInt(ent.remainingLessons)||0,parseInt(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',p.payMethod||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
   }).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_购买记录_'+today()+'.csv';a.click();toast('导出成功','success');

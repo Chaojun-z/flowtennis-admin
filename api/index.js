@@ -200,6 +200,96 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     updatedAt:now
   };
 }
+function buildPurchaseRecord(pkg,body,student,opts={}){
+  const now=opts.now||new Date().toISOString();
+  const purchaseDate=body.purchaseDate||now.slice(0,10);
+  return {
+    ...body,
+    id:opts.id||body.id||uuidv4(),
+    studentId:student.id,
+    studentName:student.name||student.id,
+    studentPhone:student.phone||'',
+    packageId:pkg.id,
+    packageName:pkg.name||'',
+    productId:pkg.productId||'',
+    productName:pkg.productName||'',
+    courseType:pkg.courseType||pkg.type||'',
+    packageLessons:parseInt(pkg.lessons)||0,
+    packagePrice:normalizeMoney(pkg.price),
+    packageTimeBand:pkg.timeBand||'',
+    dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
+    coachIds:parseArr(pkg.coachIds),
+    coachNames:parseArr(pkg.coachNames),
+    campusIds:parseArr(pkg.campusIds),
+    usageStartDate:pkg.usageStartDate||'',
+    usageEndDate:pkg.usageEndDate||'',
+    purchaseDate,
+    amountPaid:normalizeMoney(body.amountPaid??pkg.price),
+    payMethod:body.payMethod||'',
+    operator:opts.operator||body.operator||'',
+    status:body.status||'active',
+    createdAt:body.createdAt||now,
+    updatedAt:now
+  };
+}
+function packageRefIds(values){
+  return parseArr(values).map(x=>String(x||'').trim()).filter(Boolean);
+}
+function validatePackageInput(pkg,refs={}){
+  if(!String(pkg?.name||'').trim())throw new Error('请填写课包名称');
+  if(!pkg?.productId)throw new Error('请选择课程产品');
+  if(refs.products&&!(refs.products||[]).some(p=>p.id===pkg.productId))throw new Error('课程产品不存在');
+  if((parseInt(pkg.lessons)||0)<=0)throw new Error('课时必须大于 0');
+  if(normalizeMoney(pkg.price)<=0)throw new Error('价格必须大于 0');
+  if((parseInt(pkg.validDays)||0)<=0)throw new Error('有效天数必须大于 0');
+  if((parseInt(pkg.maxStudents)||0)<=0)throw new Error('人数限制必须大于 0');
+  if(pkg.saleStartDate&&pkg.saleEndDate&&pkg.saleEndDate<pkg.saleStartDate)throw new Error('活动结束时间不能早于活动开始时间');
+  if(pkg.usageStartDate&&pkg.usageEndDate&&pkg.usageEndDate<pkg.usageStartDate)throw new Error('可用结束时间不能早于可用开始时间');
+  for(const w of parseArr(pkg.dailyTimeWindows)){
+    if((w.startTime&&!w.endTime)||(!w.startTime&&w.endTime))throw new Error('可用时段请填写完整');
+    if(w.startTime&&w.endTime&&w.endTime<=w.startTime)throw new Error('可用结束时间必须晚于开始时间');
+  }
+  const coachIds=packageRefIds(pkg.coachIds);
+  if(refs.coaches&&coachIds.length){
+    const ok=new Set((refs.coaches||[]).flatMap(c=>[c.id,c.name]).filter(Boolean).map(String));
+    if(coachIds.some(id=>!ok.has(String(id))))throw new Error('可用教练不存在');
+  }
+  const campusIds=packageRefIds(pkg.campusIds);
+  if(refs.campuses&&campusIds.length){
+    const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
+    if(campusIds.some(id=>!ok.has(String(id))))throw new Error('可用校区不存在');
+  }
+}
+function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOString()){
+  const base={...(old||{}),...(input||{})};
+  const r={...base,lessons:parseInt(base.lessons)||0,price:normalizeMoney(base.price),validDays:parseInt(base.validDays)||0,maxStudents:parseInt(base.maxStudents)||0,status:base.status||'active',updatedAt:now};
+  validatePackageInput(r,refs);
+  return r;
+}
+function assertScheduleEntitlementRequired(rec){
+  if(!isBillableSchedule(rec))return;
+  const studentIds=parseArr(rec.studentIds).filter(Boolean);
+  if(studentIds.length>1)throw new Error('多人排课暂不支持单个权益账户，请拆成单人排课或先升级一对多权益结构');
+  if(!rec.entitlementId)throw new Error('排课必须绑定权益账户');
+}
+function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
+  const used=parseInt(oldEnt?.usedLessons)||0;
+  const next=buildEntitlementFromPurchase(pkg,purchase,student,oldEnt?.id||uuidv4(),now);
+  if(oldEnt?.createdAt)next.createdAt=oldEnt.createdAt;
+  next.usedLessons=used;
+  next.remainingLessons=(parseInt(next.totalLessons)||0)-used;
+  if(next.remainingLessons<0)throw new Error('该购买记录已有消耗，不能改成课时不足的课包');
+  next.status=oldEnt?.status==='voided'?'voided':(next.remainingLessons<=0?'depleted':'active');
+  return next;
+}
+async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement){
+  await store.put(purchaseTable,purchase.id,purchase);
+  try{return await store.put(entitlementTable,entitlement.id,entitlement);}
+  catch(err){
+    await store.del(purchaseTable,purchase.id).catch(()=>null);
+    throw err;
+  }
+}
 function isScheduleInsideDailyTimeWindows(schedule,windows){
   const list=parseArr(windows);
   if(!list.length)return true;
@@ -483,6 +573,45 @@ async function applyCoachRename(oldName,newName){
     ...updates.schedule.map(r=>put(T_SCHEDULE,r.id,r)),
     ...updates.plans.map(r=>put(T_PLANS,r.id,r)),
     ...updates.users.map(r=>put(T_USERS,r.id,r)),
+    ...updates.feedbacks.map(r=>putFeedback(r.id,r))
+  ]);
+  return updates;
+}
+function buildStudentIdentityUpdates(oldStudent,nextStudent,data,now=new Date().toISOString()){
+  const id=oldStudent?.id||nextStudent?.id;
+  const name=String(nextStudent?.name||'').trim();
+  const phone=normalizePhone(nextStudent?.phone);
+  const empty={plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};
+  if(!id||(!name&&!phone))return empty;
+  const changedName=String(oldStudent?.name||'')!==String(nextStudent?.name||'');
+  const changedPhone=normalizePhone(oldStudent?.phone)!==phone;
+  if(!changedName&&!changedPhone)return empty;
+  const touch=row=>({...row,updatedAt:now});
+  return {
+    plans:(data.plans||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName,studentPhone:phone})),
+    schedule:(data.schedule||[]).filter(r=>parseArr(r.studentIds).includes(id)||r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName})),
+    purchases:(data.purchases||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName,studentPhone:phone})),
+    entitlements:(data.entitlements||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName})),
+    feedbacks:(data.feedbacks||[]).filter(r=>r.studentId===id||parseArr(r.studentIds).includes(id)).map(r=>touch({...r,studentName:name||r.studentName}))
+  };
+}
+async function loadStudentReferenceData(){
+  const [plans,schedule,purchases,entitlements,feedbacks]=await Promise.all([
+    scan(T_PLANS).catch(()=>[]),
+    scan(T_SCHEDULE).catch(()=>[]),
+    scan(T_PURCHASES).catch(()=>[]),
+    scan(T_ENTITLEMENTS).catch(()=>[]),
+    withTimeout(scanFeedbacks().catch(()=>[]),3000,[])
+  ]);
+  return {plans,schedule,purchases,entitlements,feedbacks};
+}
+async function applyStudentIdentityUpdate(oldStudent,nextStudent){
+  const updates=buildStudentIdentityUpdates(oldStudent,nextStudent,await loadStudentReferenceData());
+  await Promise.all([
+    ...updates.plans.map(r=>put(T_PLANS,r.id,r)),
+    ...updates.schedule.map(r=>put(T_SCHEDULE,r.id,r)),
+    ...updates.purchases.map(r=>put(T_PURCHASES,r.id,r)),
+    ...updates.entitlements.map(r=>put(T_ENTITLEMENTS,r.id,r)),
     ...updates.feedbacks.map(r=>putFeedback(r.id,r))
   ]);
   return updates;
@@ -1016,14 +1145,14 @@ module.exports = async (req, res) => {
     }
     const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const r={...normalizeCourtRecord(body),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await get(T_COURTS,id).catch(()=>null);assertCanDeleteCourt(court);await del(T_COURTS,id);return sendJson(res,{success:true});}}
     if(path==='/students'){await init();if(method==='GET')return sendJson(res,await scan(T_STUDENTS));if(method==='POST'){const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
-    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
+    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){const old=await get(T_STUDENTS,id).catch(()=>null);const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
     if(path==='/products'){await init();if(method==='GET')return sendJson(res,await scan(T_PRODUCTS));if(method==='POST'){const id=uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_PRODUCTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
-    if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_PACKAGES).catch(()=>[]));if(method==='POST'){const id=uuidv4();const r={...body,id,lessons:parseInt(body.lessons)||0,price:normalizeMoney(body.price),status:body.status||'active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_PACKAGES,id,r);return sendJson(res,r);}}
-    const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=pkgM[1];if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);const r={...old,...body,id,lessons:parseInt(body.lessons??old?.lessons)||0,price:normalizeMoney(body.price??old?.price),updatedAt:new Date().toISOString()};await put(T_PACKAGES,id,r);return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
-    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);if(pkg.status&&pkg.status!=='active')return sendJson(res,{error:'该课包已停用'},400);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);if(pkg.saleStartDate&&purchaseDate<pkg.saleStartDate)return sendJson(res,{error:'不在课包活动购买时间内'},400);if(pkg.saleEndDate&&purchaseDate>pkg.saleEndDate)return sendJson(res,{error:'不在课包活动购买时间内'},400);const id=uuidv4();const purchase={...body,id,studentId:student.id,studentName:student.name||student.id,packageId:pkg.id,packageName:pkg.name||'',purchaseDate,amountPaid:normalizeMoney(body.amountPaid??pkg.price),operator:user.name,status:'active',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),new Date().toISOString());await put(T_PURCHASES,id,purchase);await put(T_ENTITLEMENTS,entitlement.id,entitlement);return sendJson(res,{purchase,entitlement});}}
-    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);const r={...old,...body,id,updatedAt:new Date().toISOString()};await put(T_PURCHASES,id,r);return sendJson(res,r);}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);for(const ent of ents.filter(e=>e.purchaseId===id))await put(T_ENTITLEMENTS,ent.id,{...ent,status:'voided',updatedAt:new Date().toISOString()});const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',updatedAt:new Date().toISOString()});return sendJson(res,{success:true});}}
+    if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_PACKAGES).catch(()=>[]));if(method==='POST'){const id=uuidv4();const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
+    const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=pkgM[1];if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[])};const r=normalizePackageRecord({...body,id},old,refs);await put(T_PACKAGES,id,r);return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
+    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);if(pkg.status&&pkg.status!=='active')return sendJson(res,{error:'该课包已停用'},400);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);if(pkg.saleStartDate&&purchaseDate<pkg.saleStartDate)return sendJson(res,{error:'不在课包活动购买时间内'},400);if(pkg.saleEndDate&&purchaseDate>pkg.saleEndDate)return sendJson(res,{error:'不在课包活动购买时间内'},400);const id=uuidv4();const now=new Date().toISOString();const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);return sendJson(res,{purchase,entitlement});}}
+    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const pkg=await get(T_PACKAGES,body.packageId||old.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const affectsEntitlement=String(body.studentId||old.studentId)!==String(old.studentId||'')||String(body.packageId||old.packageId)!==String(old.packageId||'')||String(body.purchaseDate||old.purchaseDate||'')!==String(old.purchaseDate||'');if(affectsEntitlement&&ledger.some(l=>ents.some(e=>e.id===l.entitlementId)))return sendJson(res,{error:'该购买已有课时消耗，不能修改学员、课包或购买日期'},400);const now=new Date().toISOString();const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt},student,{id,now,operator:old.operator||user.name});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=syncEntitlementFromPurchase(pkg,r,student,ent,now);await put(T_ENTITLEMENTS,ent.id,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();for(const ent of ents.filter(e=>e.purchaseId===id)){await put(T_ENTITLEMENTS,ent.id,{...ent,status:'voided',updatedAt:now});const event={id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now};await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now});return sendJson(res,{success:true});}}
     if(path==='/entitlements'){await init();if(method==='GET'){const rows=await scan(T_ENTITLEMENTS).catch(()=>[]);const sid=query.get('studentId')||'';return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);}}
     if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>parseArr(body.studentIds).includes(e.studentId));return sendJson(res,recommendEntitlements(rows,body));}
     const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await get(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]));await del(T_ENTITLEMENTS,id);return sendJson(res,{success:true});}}
@@ -1064,6 +1193,7 @@ module.exports = async (req, res) => {
         const id=uuidv4();
         const r={...body,venue:normalizeVenue(body.venue),id,status:body.status||'已排课',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         const risk=await validateScheduleSave(r,null);
+        assertScheduleEntitlementRequired(r);
         await assertScheduleEntitlementCapacity(r,null);
         await put(T_SCHEDULE,id,r);
         const nextDelta=scheduleLessonDelta(r);
@@ -1094,6 +1224,7 @@ module.exports = async (req, res) => {
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
         const risk=await validateScheduleSave(r,ex);
+        assertScheduleEntitlementRequired(r);
         await assertScheduleEntitlementCapacity(r,ex);
         assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
         await put(T_SCHEDULE,id,r);
@@ -1151,6 +1282,12 @@ module.exports._test={
   validateScheduleConflicts,
   validateCourtBookingConflicts,
   buildEntitlementFromPurchase,
+  buildPurchaseRecord,
+  validatePackageInput,
+  normalizePackageRecord,
+  assertScheduleEntitlementRequired,
+  syncEntitlementFromPurchase,
+  writePurchaseAndEntitlementAtomic,
   validateEntitlementForSchedule,
   recommendEntitlements,
   applyEntitlementLessonDelta,
@@ -1162,6 +1299,7 @@ module.exports._test={
   assertCanWriteFeedback,
   filterLoadAllForUser,
   buildCoachRenameUpdates,
+  buildStudentIdentityUpdates,
   assertCanDeleteCoachName,
   assertUniqueCoachName,
   mergeStoredAuthUser,
