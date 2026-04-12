@@ -75,6 +75,90 @@ assert.deepStrictEqual(
   'stored value payment should reduce balance without increasing received amount'
 );
 
+assert.deepStrictEqual(
+  computeCourtFinance({
+    history: [
+      {
+        id: 'm-recharge',
+        date: '2026-04-12',
+        type: '充值',
+        payMethod: '微信',
+        category: '会员充值',
+        amount: 5000,
+        bonusAmount: 498,
+        membershipOrderId: 'mord-1',
+        membershipAccountId: 'macc-1',
+        membershipPlanId: 'mplan-gold',
+        membershipPlanName: '黄金卡'
+      }
+    ]
+  }),
+  {
+    balance: 5498,
+    totalDeposit: 5000,
+    spentAmount: 0,
+    receivedAmount: 5000,
+    storedValueSpent: 0,
+    directPaidSpent: 0
+  },
+  'membership recharge should use courts.history as the money ledger'
+);
+
+assert.deepStrictEqual(
+  computeCourtFinance({
+    history: [
+      recharge,
+      {
+        id: 'm-booking',
+        date: '2026-04-12',
+        type: '消费',
+        payMethod: '储值扣款',
+        category: '会员订场',
+        originalAmount: 300,
+        discountRate: 0.8,
+        discountedAmount: 240,
+        amount: 240,
+        membershipAccountId: 'macc-1'
+      }
+    ]
+  }),
+  {
+    balance: 4760,
+    totalDeposit: 5000,
+    spentAmount: 240,
+    receivedAmount: 5000,
+    storedValueSpent: 240,
+    directPaidSpent: 0
+  },
+  'membership court booking should deduct the discounted stored value amount'
+);
+
+assert.deepStrictEqual(
+  computeCourtFinance({
+    history: [
+      recharge,
+      {
+        id: 'm-clear',
+        date: '2028-04-12',
+        type: '冲正',
+        payMethod: '储值扣款',
+        category: '会员到期清零',
+        amount: 600,
+        membershipAccountId: 'macc-1'
+      }
+    ]
+  }),
+  {
+    balance: 4400,
+    totalDeposit: 5000,
+    spentAmount: 0,
+    receivedAmount: 5000,
+    storedValueSpent: 0,
+    directPaidSpent: 0
+  },
+  'membership expiry clearing should reduce balance without increasing consumption'
+);
+
 assert.throws(
   () => normalizeCourtRecord({
     name: '家长A',

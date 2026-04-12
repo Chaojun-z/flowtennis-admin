@@ -16,5 +16,7 @@ assert.match(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, 'sidebar
 assert.match(html, /id="page-packages"/, 'should have packages page section');
 assert.match(html, /id="page-purchases"/, 'should have purchases page section');
 assert.match(html, /id="page-entitlements"/, 'should have entitlements page section');
+assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/, 'page title map should not be declared twice after merge');
+assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
 
 console.log('course management nav tests passed');

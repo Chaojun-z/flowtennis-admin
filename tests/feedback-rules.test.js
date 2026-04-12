@@ -22,9 +22,20 @@ const record = rules.buildFeedbackRecord(
     campus: 'mabao',
     venue: '1号场',
     lessonCount: 1,
+    isTrial: true,
     practicedToday: '底线练习',
     knowledgePoint: '重心转移',
-    nextTraining: '脚步移动'
+    nextTraining: '脚步移动',
+    playerLevel: '初学',
+    goalType: '提升技术',
+    experienceBackground: '有少量体验课',
+    mainIssues: '挥拍不稳定',
+    conversionIntent: '高',
+    recommendedProductType: '私教',
+    recommendedReason: '需要先建立动作基础',
+    needOpsFollowUp: true,
+    opsFollowUpPriority: '高',
+    opsFollowUpSuggestion: '24小时内联系，主推私教体验包'
   },
   { id: 'fb-1' },
   { name: '朝珺' }
@@ -34,9 +45,20 @@ assert.strictEqual(record.id, 'fb-1');
 assert.strictEqual(record.scheduleId, 'sch-1');
 assert.strictEqual(record.coach, '朝珺');
 assert.deepStrictEqual(record.studentIds, ['stu-1', 'stu-2']);
+assert.strictEqual(record.isTrial, true);
 assert.strictEqual(record.practicedToday, '底线练习');
 assert.strictEqual(record.knowledgePoint, '重心转移');
 assert.strictEqual(record.nextTraining, '脚步移动');
+assert.strictEqual(record.playerLevel, '初学');
+assert.strictEqual(record.goalType, '提升技术');
+assert.strictEqual(record.experienceBackground, '有少量体验课');
+assert.strictEqual(record.mainIssues, '挥拍不稳定');
+assert.strictEqual(record.conversionIntent, '高');
+assert.strictEqual(record.recommendedProductType, '私教');
+assert.strictEqual(record.recommendedReason, '需要先建立动作基础');
+assert.strictEqual(record.needOpsFollowUp, true);
+assert.strictEqual(record.opsFollowUpPriority, '高');
+assert.strictEqual(record.opsFollowUpSuggestion, '24小时内联系，主推私教体验包');
 
 assert.doesNotThrow(
   () => rules.assertCanWriteFeedback(

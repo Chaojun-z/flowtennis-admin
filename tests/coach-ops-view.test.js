@@ -28,4 +28,34 @@ assert.match(
   'coach ops should expose a grid click entry for creating schedules'
 );
 
+assert.match(
+  html,
+  /function effectiveScheduleStatus/,
+  'schedule views should use a shared effective status helper'
+);
+
+assert.match(
+  html,
+  /function scheduleLessonChargeStatus/,
+  'schedule views should expose a lesson charge status helper'
+);
+
+assert.match(
+  html,
+  /id="sch_cancelReason"/,
+  'schedule modal should capture cancellation reason'
+);
+
+assert.match(
+  html,
+  /id="sch_notifyStatus"/,
+  'schedule modal should capture notification status'
+);
+
+assert.match(
+  html,
+  /id="sch_scheduleSource"/,
+  'schedule modal should preserve schedule source'
+);
+
 console.log('coach ops view tests passed');

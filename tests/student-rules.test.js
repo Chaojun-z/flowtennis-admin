@@ -12,7 +12,8 @@ const data = {
   schedule: [{ id: 'sch-1', studentIds: ['stu-1'], studentName: '张三' }],
   purchases: [{ id: 'pur-1', studentId: 'stu-1', studentName: '张三', studentPhone: '13800000000' }],
   entitlements: [{ id: 'ent-1', studentId: 'stu-1', studentName: '张三' }],
-  feedbacks: [{ id: 'fb-1', studentId: 'stu-1', studentName: '张三' }]
+  feedbacks: [{ id: 'fb-1', studentId: 'stu-1', studentName: '张三' }],
+  courts: [{ id: 'court-1', name: '张三', phone: '13800000000', studentId: '', studentIds: [], history: [] }]
 };
 
 const updates = rules.buildStudentIdentityUpdates(oldStudent,nextStudent,data,'2026-04-12T00:00:00.000Z');
@@ -22,5 +23,6 @@ assert.deepStrictEqual(updates.schedule.map(x=>[x.id,x.studentName,x.updatedAt])
 assert.deepStrictEqual(updates.purchases.map(x=>[x.id,x.studentName,x.studentPhone,x.updatedAt]), [['pur-1','张三丰','13900000000','2026-04-12T00:00:00.000Z']]);
 assert.deepStrictEqual(updates.entitlements.map(x=>[x.id,x.studentName,x.updatedAt]), [['ent-1','张三丰','2026-04-12T00:00:00.000Z']]);
 assert.deepStrictEqual(updates.feedbacks.map(x=>[x.id,x.studentName,x.updatedAt]), [['fb-1','张三丰','2026-04-12T00:00:00.000Z']]);
+assert.deepStrictEqual(updates.courts.map(x=>[x.id,x.studentId,x.studentIds,x.updatedAt]), [['court-1','stu-1',['stu-1'],'2026-04-12T00:00:00.000Z']]);
 
 console.log('student rules tests passed');

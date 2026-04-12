@@ -4,6 +4,53 @@ const api = require('../api/index.js');
 const rules = api._test;
 
 assert.ok(rules, 'api._test should expose schedule rule helpers');
+assert.ok(rules.effectiveScheduleStatus, 'api._test should expose effective schedule status helper');
+assert.ok(rules.scheduleLessonChargeStatus, 'api._test should expose lesson charge status helper');
+
+assert.strictEqual(
+  rules.effectiveScheduleStatus(
+    { status: '已排课', endTime: '2026-04-11 10:00' },
+    new Date('2026-04-11T10:01:00')
+  ),
+  '已结束',
+  'past active schedule should behave as ended for filtering'
+);
+
+assert.strictEqual(
+  rules.effectiveScheduleStatus(
+    { status: '已取消', endTime: '2026-04-11 10:00' },
+    new Date('2026-04-11T10:01:00')
+  ),
+  '已取消',
+  'cancelled schedule should stay cancelled'
+);
+
+assert.strictEqual(
+  rules.scheduleLessonChargeStatus(
+    { id: 'sch-1', status: '已排课', entitlementId: 'ent-1', lessonCount: 1 },
+    [{ scheduleId: 'sch-1', entitlementId: 'ent-1', lessonDelta: -1 }]
+  ),
+  '已扣课',
+  'schedule with matching negative entitlement ledger should show charged'
+);
+
+assert.strictEqual(
+  rules.scheduleLessonChargeStatus(
+    { id: 'sch-1', status: '已排课', entitlementId: '', lessonCount: 1 },
+    []
+  ),
+  '未扣课',
+  'billable schedule without entitlement should show uncharged'
+);
+
+assert.strictEqual(
+  rules.scheduleLessonChargeStatus(
+    { id: 'sch-1', status: '已取消', entitlementId: 'ent-1', lessonCount: 1 },
+    [{ scheduleId: 'sch-1', entitlementId: 'ent-1', lessonDelta: 1 }]
+  ),
+  '不扣课',
+  'cancelled schedule should show no charge'
+);
 
 assert.deepStrictEqual(
   rules.scheduleLessonDelta({ classId: 'class-a', lessonCount: 1, status: '已排课' }),
@@ -18,9 +65,25 @@ assert.strictEqual(
 );
 
 assert.throws(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已取消' }, { classId: 'class-a', status: '已排课' }),
+  /已取消.*不能继续排课/,
+  'cancelled class should not allow active schedule'
+);
+
+assert.throws(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已结课' }, { classId: 'class-a', status: '已排课' }),
+  /已结课.*不能继续排课/,
+  'finished class should not allow active schedule'
+);
+
+assert.doesNotThrow(
+  () => rules.assertClassSchedulable({ id: 'class-a', status: '已排班' }, { classId: 'class-a', status: '已排课' }),
+  'active class should allow active schedule'
+);
+
+assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', studentIds: ['stu-1'], status: '已排课', lessonCount: 1 }),
-  /必须绑定权益账户/,
-  'billable schedule must bind an entitlement account'
+  'billable schedule may be saved without binding a package entitlement account'
 );
 
 assert.throws(
@@ -297,6 +360,46 @@ assert.doesNotThrow(
 );
 
 assert.throws(
+  () => rules.assertScheduleEditableAfterFeedback(
+    {
+      id: 'sch-1',
+      studentIds: ['stu-1'],
+      studentName: '学员A',
+      classId: 'class-1',
+      entitlementId: 'ent-1',
+      startTime: '2026-04-11 10:00',
+      endTime: '2026-04-11 11:00',
+      coach: '朝珺',
+      campus: 'mabao',
+      venue: '1号场',
+      courseType: '私教',
+      isTrial: false,
+      lessonCount: 1,
+      status: '已排课'
+    },
+    {
+      id: 'sch-1',
+      studentIds: ['stu-1'],
+      studentName: '学员A',
+      classId: 'class-1',
+      entitlementId: 'ent-1',
+      startTime: '2026-04-11 10:30',
+      endTime: '2026-04-11 11:30',
+      coach: '朝珺',
+      campus: 'mabao',
+      venue: '1号场',
+      courseType: '私教',
+      isTrial: false,
+      lessonCount: 1,
+      status: '已排课'
+    },
+    [{ id: 'fb-1', scheduleId: 'sch-1' }]
+  ),
+  /已有课后反馈/,
+  'schedule with feedback should not allow changing time'
+);
+
+assert.throws(
   () => rules.assertCanDeleteSchedule('sch-1', [{ id: 'fb-1', scheduleId: 'sch-1' }]),
   /该排课已有课后反馈/,
   'schedule with feedback should not be deletable'
@@ -305,6 +408,12 @@ assert.throws(
 assert.doesNotThrow(
   () => rules.assertCanDeleteSchedule('sch-1', [{ id: 'fb-1', scheduleId: 'sch-2' }]),
   'schedule without feedback can be deleted'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteSchedule('sch-1', [], [{ id: 'led-1', scheduleId: 'sch-1', entitlementId: 'ent-1' }]),
+  /权益消耗记录/,
+  'schedule with entitlement ledger should not be deletable'
 );
 
 assert.throws(

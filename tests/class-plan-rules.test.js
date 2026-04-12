@@ -62,10 +62,140 @@ assert.strictEqual(
   'finished class should create finished student plan'
 );
 
+const productRenameUpdates = rules.buildProductRenameDisplayUpdates(
+  { id: 'prod-a', name: '旧产品名', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+  { id: 'prod-a', name: '新产品名', type: '私教课', maxStudents: 1, lessons: 10, price: 2000, notes: '只改展示名' },
+  {
+    classes: [
+      {
+        id: 'class-a',
+        productId: 'prod-a',
+        classNo: 'CLS0001',
+        className: 'CLS0001-旧产品名',
+        productName: '旧产品名',
+        coach: '朝珺',
+        campus: 'mabao',
+        totalLessons: 10,
+        usedLessons: 2,
+        studentIds: ['stu-1'],
+        status: '已排班'
+      },
+      {
+        id: 'class-b',
+        productId: 'prod-b',
+        classNo: 'CLS0002',
+        className: 'CLS0002-其他产品',
+        productName: '其他产品',
+        coach: '白杨静',
+        campus: 'shunyi',
+        totalLessons: 8,
+        usedLessons: 1,
+        studentIds: ['stu-2'],
+        status: '已排班'
+      }
+    ],
+    plans: [
+      {
+        id: 'plan-1',
+        classId: 'class-a',
+        className: 'CLS0001-旧产品名',
+        productName: '旧产品名',
+        studentId: 'stu-1',
+        studentName: '大宝',
+        studentPhone: '13800000001',
+        coach: '朝珺',
+        campus: 'mabao',
+        totalLessons: 10,
+        usedLessons: 2,
+        status: 'active',
+        history: ['keep-me']
+      },
+      {
+        id: 'plan-2',
+        classId: 'class-b',
+        className: 'CLS0002-其他产品',
+        productName: '其他产品',
+        studentId: 'stu-2',
+        studentName: '二宝',
+        studentPhone: '13800000002',
+        coach: '白杨静',
+        campus: 'shunyi',
+        totalLessons: 8,
+        usedLessons: 1,
+        status: 'active'
+      }
+    ]
+  },
+  '2026-04-12T00:00:00.000Z'
+);
+
+assert.deepStrictEqual(
+  productRenameUpdates.classes.map(x => [x.id, x.productName, x.className, x.usedLessons, x.coach, x.campus]),
+  [['class-a', '新产品名', 'CLS0001-新产品名', 2, '朝珺', 'mabao']],
+  'product rename should sync only referenced classes'
+);
+
+assert.deepStrictEqual(
+  productRenameUpdates.plans.map(x => [x.id, x.productName, x.className, x.usedLessons, x.coach, x.campus, x.history[0]]),
+  [['plan-1', '新产品名', 'CLS0001-新产品名', 2, '朝珺', 'mabao', 'keep-me']],
+  'product rename should sync only plans under referenced classes'
+);
+
+assert.strictEqual(
+  productRenameUpdates.classes[0].updatedAt,
+  '2026-04-12T00:00:00.000Z',
+  'synced class rows should carry the provided timestamp'
+);
+
+assert.strictEqual(
+  productRenameUpdates.plans[0].updatedAt,
+  '2026-04-12T00:00:00.000Z',
+  'synced plan rows should carry the provided timestamp'
+);
+
+assert.deepStrictEqual(
+  rules.buildProductRenameDisplayUpdates(
+    { id: 'prod-a', name: '旧产品名', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+    { id: 'prod-a', name: '旧产品名', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+    { classes: [{ id: 'class-a', productId: 'prod-a' }], plans: [{ id: 'plan-1', classId: 'class-a' }] }
+  ),
+  { classes: [], plans: [] },
+  'same product name should not trigger display sync'
+);
+
+assert.deepStrictEqual(
+  rules.buildProductRenameDisplayUpdates(
+    { id: 'prod-a', name: '旧产品名', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+    { id: 'prod-a', name: '新产品名', type: '团课', maxStudents: 1, lessons: 10, price: 2000 },
+    { classes: [{ id: 'class-a', productId: 'prod-a' }], plans: [{ id: 'plan-1', classId: 'class-a' }] }
+  ),
+  { classes: [], plans: [] },
+  'core field changes should block display-only sync'
+);
+
 assert.throws(
   () => rules.assertCanDeleteProduct('prod-a', [{ productId: 'prod-a', className: 'CLS0001' }]),
   /已有班次使用/,
   'product used by classes should not be deletable'
+);
+
+assert.throws(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000 },
+    { id: 'prod-a', type: '团课', maxStudents: 1, lessons: 10, price: 2000 },
+    { classes: [{ id: 'class-a', productId: 'prod-a' }], packages: [] }
+  ),
+  /已有班次或售卖课包使用，不能修改核心字段/,
+  'product used by classes should not allow changing course type'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditProductWithReferences(
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000, name: '旧名称' },
+    { id: 'prod-a', type: '私教课', maxStudents: 1, lessons: 10, price: 2000, name: '新名称', notes: '备注' },
+    { classes: [], packages: [{ id: 'pkg-a', productId: 'prod-a' }] }
+  ),
+  'product used by packages can still edit display fields'
 );
 
 assert.throws(
@@ -92,6 +222,33 @@ assert.doesNotThrow(
 );
 
 assert.throws(
+  () => rules.assertCanDeleteCampus('mabao', {
+    students: [],
+    coaches: [],
+    classes: [],
+    schedule: [],
+    courts: [],
+    packages: [{ id: 'pkg-1', campusIds: ['mabao'] }],
+    entitlements: []
+  }),
+  /已有学员、教练、班次、排课、课包或权益关联/,
+  'campus used by packages should not be deletable'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanDeleteCampus('mabao', {
+    students: [],
+    coaches: [],
+    classes: [],
+    schedule: [],
+    courts: [],
+    packages: [{ id: 'pkg-1', campusIds: ['shunyi'] }],
+    entitlements: []
+  }),
+  'unreferenced campus can be deleted'
+);
+
+assert.throws(
   () => rules.assertCanDeleteStudent('stu-1', {
     classes: [{ id: 'class-a', studentIds: ['stu-1'] }],
     schedule: [],
@@ -109,17 +266,159 @@ assert.throws(
     { id: 'class-a', coach: '白杨静', studentIds: ['stu-1'] },
     [{ id: 'sch-1', classId: 'class-a' }]
   ),
-  /该班次已有排课，不能直接修改教练或学员/,
+  /该班次已有排课，不能直接修改教练/,
   'class with schedules should not allow changing coach'
 );
 
 assert.doesNotThrow(
   () => rules.assertCanEditClassWithSchedules(
     { id: 'class-a', coach: '朝珺', studentIds: ['stu-1'] },
-    { id: 'class-a', coach: '朝珺', studentIds: ['stu-1'], totalLessons: 12 },
+    { id: 'class-a', coach: '朝珺', studentIds: ['stu-1'], opsNote: '家长已沟通续班' },
     [{ id: 'sch-1', classId: 'class-a' }]
   ),
-  'class with schedules can still edit unrelated fields'
+  'class with schedules can still edit low-risk notes'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    { id: 'class-a', productId: 'prod-b', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    [{ id: 'sch-1', classId: 'class-a' }]
+  ),
+  /已有排课.*课程产品/,
+  'class with schedules should not allow changing product'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'shunyi', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    [{ id: 'sch-1', classId: 'class-a' }]
+  ),
+  /已有排课.*校区/,
+  'class with schedules should not allow changing campus'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 12, usedLessons: 2 },
+    [{ id: 'sch-1', classId: 'class-a' }]
+  ),
+  /已有排课.*总课时/,
+  'class with schedules should not allow changing total lessons'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2 },
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 3 },
+    [{ id: 'sch-1', classId: 'class-a' }]
+  ),
+  /已上课时.*排课/,
+  'class used lessons should be read-only and driven by schedule'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2, status: '已排班' },
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2, status: '已取消' },
+    [{ id: 'sch-1', classId: 'class-a', status: '已排课' }]
+  ),
+  /已有排课.*取消/,
+  'class with schedules should not be directly cancelled'
+);
+
+assert.throws(
+  () => rules.assertCanEditClassWithSchedules(
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2, status: '已排班' },
+    { id: 'class-a', productId: 'prod-a', coach: '朝珺', campus: 'mabao', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 2, status: '已结课' },
+    [{ id: 'sch-1', classId: 'class-a', status: '已排课' }]
+  ),
+  /剩余课时.*结课/,
+  'class with remaining lessons should not be finished'
+);
+
+assert.throws(
+  () => rules.assertCanWriteClass({ role: 'editor' }),
+  /无权限/,
+  'non-admin users should not write classes'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanWriteClass({ role: 'admin' }),
+  'admin users can write classes'
+);
+
+assert.strictEqual(
+  rules.nextClassNoFromClasses([{ classNo: 'CLS0003' }, { classNo: 'CLS0010' }, { classNo: 'BAD' }]),
+  'CLS0011',
+  'class number should be generated from existing classes server-side'
+);
+
+assert.strictEqual(
+  rules.nextClassNoFromClasses([]),
+  'CLS0001',
+  'empty class list should start from CLS0001'
+);
+
+assert.strictEqual(
+  rules.nextClassNoFromClasses([{ classNo: 'CLS0099' }]),
+  'CLS0100',
+  'class number should keep zero-padding across hundreds'
+);
+
+assert.strictEqual(
+  rules.isClassNoReservationConflict(new Error('Condition check failed')),
+  true,
+  'class number reservation should identify conditional write conflicts'
+);
+
+assert.deepStrictEqual(
+  rules.buildClassCreateRecord(
+    {
+      productId: 'prod-a',
+      productName: '成人私教10节',
+      studentIds: ['stu-1'],
+      coach: '朝珺',
+      campus: 'mabao',
+      totalLessons: 10,
+      usedLessons: 7,
+      startDate: '2026-04-12',
+      endDate: '2026-05-12',
+      status: '已排班'
+    },
+    { id: 'class-new', classNo: 'CLS0011', user: { name: '管理员' }, now: '2026-04-12T00:00:00.000Z' }
+  ).usedLessons,
+  0,
+  'creating classes should ignore manually supplied usedLessons'
+);
+
+assert.throws(
+  () => rules.validateClassInput(
+    { productId: 'prod-a', studentIds: ['stu-1', 'stu-2'], totalLessons: 10 },
+    { id: 'prod-a', maxStudents: 1 }
+  ),
+  /超过课程产品人数上限/,
+  'class student count should respect product maxStudents'
+);
+
+assert.throws(
+  () => rules.validateClassInput(
+    { productId: 'prod-a', studentIds: ['stu-1'], totalLessons: 10, usedLessons: 11 },
+    { id: 'prod-a', maxStudents: 1 }
+  ),
+  /已上课时不能大于应上课时/,
+  'class usedLessons cannot exceed totalLessons'
+);
+
+assert.throws(
+  () => rules.validateClassInput(
+    { productId: 'prod-a', studentIds: ['stu-1'], totalLessons: 10, startDate: '2026-05-12', endDate: '2026-04-12' },
+    { id: 'prod-a', maxStudents: 1 }
+  ),
+  /结束日期不能早于开始日期/,
+  'class endDate cannot be before startDate'
 );
 
 console.log('class plan rules tests passed');

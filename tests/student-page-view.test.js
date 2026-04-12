@@ -1,0 +1,40 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+
+assert.match(html, /function renderScheduleStudentPicker/, 'schedule modal should provide a dedicated student picker helper');
+assert.match(html, /id="sch_stuSearch"/, 'schedule modal should provide a searchable student input');
+assert.match(html, /id="sch_stuPicker"/, 'schedule modal should provide a student library picker');
+assert.doesNotMatch(html, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
+assert.match(html, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
+assert.match(html, /function onStudentFilterChange\(\)\{stuPage=1;renderStudents\(\);\}/, 'student filters should reset pagination to first page');
+assert.match(html, /oninput="onStudentFilterChange\(\)"/, 'student search should reset pagination before rendering');
+assert.match(html, /onchange="onStudentFilterChange\(\)"/, 'student filter selects should reset pagination before rendering');
+assert.match(html, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
+assert.match(html, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
+assert.match(html, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
+assert.match(html, /id="stuStatusFilter"/, 'student page should include status filter');
+assert.match(html, /id="stuLinkFilter"/, 'student page should include relation filter');
+assert.match(html, /有班次[\s\S]*无班次[\s\S]*有订场[\s\S]*无订场[\s\S]*有会员[\s\S]*无会员/, 'student filters should expose relation options');
+assert.match(html, /const activeCount=base\.filter\(s=>studentStatusMeta\(s\)\.label==='上课中'\)\.length;/, 'student stats should summarize active students');
+assert.match(html, /const convertingCount=base\.filter\(s=>studentStatusMeta\(s\)\.label==='待转化'\)\.length;/, 'student stats should summarize converting students');
+assert.match(html, /const silentCount=base\.filter\(s=>studentStatusMeta\(s\)\.label==='沉默30天'\)\.length;/, 'student stats should summarize silent students');
+assert.match(html, /const relationCount=base\.filter\(s=>studentBookingMembershipSummary\(s\)!=='未关联'\)\.length;/, 'student stats should summarize linked relations');
+assert.match(html, /function studentStatusMeta\(/, 'student list should compute business status labels');
+assert.match(html, /上课中[\s\S]*待转化[\s\S]*沉默30天[\s\S]*仅订场[\s\S]*无班次/, 'student status labels should cover the agreed business states');
+assert.match(html, /function studentNoteSummary\(/, 'student list should compute compact ops-style note summary');
+assert.match(html, /<th>学员<\/th><th>当前状态<\/th><th>当前班次<\/th><th>最近上课<\/th><th>负责教练<\/th><th>课包\/课时<\/th><th>订场\/会员<\/th><th>来源<\/th><th>备注摘要<\/th><th style="text-align:right">操作<\/th>/, 'student table should use the new decision-oriented columns');
+assert.doesNotMatch(html, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
+assert.doesNotMatch(html, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
+assert.match(html, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
+assert.match(html, /查看<\/button><button class="abtn" onclick="openStudentModal/, 'student row should prioritize view before edit');
+assert.match(html, /function studentTeachingInfoHtml\(/, 'student detail should render teaching info block');
+assert.match(html, /function studentOpsInfoHtml\(/, 'student detail should render operations info block');
+assert.match(html, /function studentConsumptionInfoHtml\(/, 'student detail should render consumption relation block');
+assert.match(html, /教学信息[\s\S]*运营信息[\s\S]*消费与关联信息/, 'student detail should follow the agreed information hierarchy');
+assert.doesNotMatch(html, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
+assert.match(html, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号码[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep only base profile fields');
+
+console.log('student page view tests passed');
