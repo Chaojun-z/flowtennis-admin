@@ -236,6 +236,50 @@ assert.strictEqual(rules.normalizeVenue('马坡1号场'), '1号场');
 assert.strictEqual(rules.normalizeVenue('4号场'), '4号场');
 
 assert.throws(
+  () => rules.assertScheduleEditableAfterFeedback(
+    {
+      id: 'sch-1',
+      studentIds: ['stu-1'],
+      studentName: '学员A',
+      classId: 'class-1',
+      entitlementId: 'ent-1'
+    },
+    {
+      id: 'sch-1',
+      studentIds: ['stu-2'],
+      studentName: '学员B',
+      classId: 'class-1',
+      entitlementId: 'ent-1'
+    },
+    [{ id: 'fb-1', scheduleId: 'sch-1' }]
+  ),
+  /已有课后反馈/,
+  'schedule with feedback should not allow changing linked student'
+);
+
+assert.doesNotThrow(
+  () => rules.assertScheduleEditableAfterFeedback(
+    {
+      id: 'sch-1',
+      studentIds: ['stu-1'],
+      studentName: '学员A',
+      classId: 'class-1',
+      entitlementId: 'ent-1'
+    },
+    {
+      id: 'sch-1',
+      studentIds: ['stu-1'],
+      studentName: '学员A',
+      classId: 'class-1',
+      entitlementId: 'ent-1',
+      notes: '调整备注'
+    },
+    [{ id: 'fb-1', scheduleId: 'sch-1' }]
+  ),
+  'schedule with feedback can still edit non-linked fields'
+);
+
+assert.throws(
   () => rules.assertCanDeleteSchedule('sch-1', [{ id: 'fb-1', scheduleId: 'sch-1' }]),
   /该排课已有课后反馈/,
   'schedule with feedback should not be deletable'

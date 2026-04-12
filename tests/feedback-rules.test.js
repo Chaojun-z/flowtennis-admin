@@ -68,6 +68,10 @@ const isolated = rules.filterLoadAllForUser(
     courts: [{ id: 'court-1' }],
     students: [{ id: 'stu-1', name: '学员A' }, { id: 'stu-2', name: '学员B' }],
     products: [{ id: 'prod-1' }],
+    packages: [{ id: 'pkg-1', price: 1000 }],
+    purchases: [{ id: 'pur-1', studentId: 'stu-1', amountPaid: 1000, payMethod: '微信', operator: '管理员' }],
+    entitlements: [{ id: 'ent-1', studentId: 'stu-1', packageName: '五一私教课包', totalLessons: 5, usedLessons: 1, remainingLessons: 4, amountPaid: 1000 }],
+    entitlementLedger: [{ id: 'led-1', entitlementId: 'ent-1', studentId: 'stu-1', scheduleId: 'sch-1', lessonDelta: -1, operator: '管理员' }],
     plans: [{ id: 'plan-1', studentId: 'stu-1', classId: 'class-1' }, { id: 'plan-2', studentId: 'stu-2', classId: 'class-2' }],
     schedule: [{ id: 'sch-1', coach: '朝珺', studentIds: ['stu-1'], classId: 'class-1' }, { id: 'sch-2', coach: '其他教练', studentIds: ['stu-2'], classId: 'class-2' }],
     coaches: [{ id: 'coach-1', name: '朝珺' }, { id: 'coach-2', name: '其他教练' }],
@@ -82,5 +86,10 @@ assert.deepStrictEqual(isolated.schedule.map(x=>x.id), ['sch-1'], 'coach load-al
 assert.deepStrictEqual(isolated.classes.map(x=>x.id), ['class-1'], 'coach load-all should only expose own classes');
 assert.deepStrictEqual(isolated.students.map(x=>x.id), ['stu-1'], 'coach load-all should only expose linked students');
 assert.deepStrictEqual(isolated.feedbacks.map(x=>x.id), ['fb-1'], 'coach load-all should only expose own feedbacks');
+assert.deepStrictEqual(isolated.packages, [], 'coach load-all should not expose package prices');
+assert.deepStrictEqual(isolated.purchases, [], 'coach load-all should not expose purchase payments');
+assert.deepStrictEqual(isolated.entitlements.map(x=>x.id), ['ent-1'], 'coach load-all should expose safe entitlement summary');
+assert.strictEqual(isolated.entitlements[0].amountPaid, undefined, 'coach entitlement summary should not expose paid amount');
+assert.strictEqual(isolated.entitlementLedger[0].operator, undefined, 'coach entitlement ledger should not expose operator');
 
 console.log('feedback rules tests passed');
