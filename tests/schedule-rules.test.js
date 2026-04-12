@@ -235,4 +235,15 @@ assert.deepStrictEqual(
 assert.strictEqual(rules.normalizeVenue('马坡1号场'), '1号场');
 assert.strictEqual(rules.normalizeVenue('4号场'), '4号场');
 
+assert.throws(
+  () => rules.assertCanDeleteSchedule('sch-1', [{ id: 'fb-1', scheduleId: 'sch-1' }]),
+  /该排课已有课后反馈/,
+  'schedule with feedback should not be deletable'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanDeleteSchedule('sch-1', [{ id: 'fb-1', scheduleId: 'sch-2' }]),
+  'schedule without feedback can be deleted'
+);
+
 console.log('schedule rules tests passed');

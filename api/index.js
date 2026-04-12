@@ -209,6 +209,23 @@ function filterLoadAllForUser(data,user){
   };
 }
 function sameCoachName(a,b){return String(a||'').trim()===String(b||'').trim();}
+function assertUniqueCoachName(name,coaches,excludeId){
+  const coach=String(name||'').trim();
+  if(!coach)return;
+  if((coaches||[]).some(c=>c.id!==excludeId&&sameCoachName(c.name,coach)))throw new Error('教练姓名已存在');
+}
+function mergeStoredAuthUser(tokenUser,storedUser){
+  const source=storedUser||tokenUser||{};
+  const role=source.role||tokenUser?.role||'';
+  const name=source.name||tokenUser?.name||'';
+  return {
+    id:source.id||tokenUser?.id||'',
+    name,
+    role,
+    coachId:source.coachId||tokenUser?.coachId||'',
+    coachName:source.coachName||(role==='editor'?name:(tokenUser?.coachName||''))
+  };
+}
 function buildCoachRenameUpdates(oldName,newName,data,now=new Date().toISOString()){
   const oldCoach=String(oldName||'').trim();
   const nextCoach=String(newName||'').trim();
@@ -440,6 +457,9 @@ function assertCanDeleteProduct(productId,classes){
 function assertCanDeleteClass(classId,schedules){
   if((schedules||[]).some(s=>s.classId===classId))throw new Error('该班次已有排课，不能删除');
 }
+function assertCanDeleteSchedule(scheduleId,feedbacks){
+  if((feedbacks||[]).some(f=>f.scheduleId===scheduleId))throw new Error('该排课已有课后反馈，不能直接删除');
+}
 function assertCanDeleteCourt(court){
   if(parseArr(court?.history).length)throw new Error('该客户已有财务流水，不能直接删除');
   if(normalizeMoney(court?.balance)||normalizeMoney(court?.totalDeposit)||normalizeMoney(court?.spentAmount))throw new Error('该客户已有财务数据，不能直接删除');
@@ -597,8 +617,10 @@ module.exports = async (req, res) => {
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
-    if(path==='/auth/login'&&method==='POST'){await init();const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await get(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const coachName=user.coachName||(user.role==='editor'?user.name:'');const payload={id:user.id,name:user.name,role:user.role,coachId:user.coachId||'',coachName};const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
-    const user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
+    if(path==='/auth/login'&&method==='POST'){await init();const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await get(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
+    let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
+    const storedAuthUser=await get(T_USERS,user.id).catch(()=>null);
+    user=mergeStoredAuthUser(user,storedAuthUser);
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');await put(T_USERS,id,{id,name,password:hashed,role:nextRole,coachId:coachId||'',coachName:nextCoachName});return sendJson(res,{success:true,id,name,role:nextRole,coachId:coachId||'',coachName:nextCoachName});}
     if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);const updates={...u,coachId:coachId||''};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');await put(T_USERS,id,updates);return sendJson(res,{success:true});}
     if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await scan(T_USERS);return sendJson(res,all.map(u=>({id:u.id,name:u.name,role:u.role,coachId:u.coachId||'',coachName:u.coachName||''})));}
@@ -636,7 +658,7 @@ module.exports = async (req, res) => {
         timed('load-all scan campuses',()=>scan(T_CAMPUSES).catch(()=>[])),
         timed('load-all scan feedbacks',()=>withTimeout(scanFeedbacks().catch(()=>[]),3000,[]))
       ]);
-      return sendJson(res,filterLoadAllForUser({
+      const loaded=filterLoadAllForUser({
         courts:Array.isArray(courts)?courts:[],
         students:Array.isArray(students)?students:[],
         products:Array.isArray(products)?products:[],
@@ -646,7 +668,8 @@ module.exports = async (req, res) => {
         classes:Array.isArray(classes)?classes:[],
         campuses:Array.isArray(campuses)?campuses:[],
         feedbacks:Array.isArray(feedbacks)?feedbacks:[]
-      },user));
+      },user);
+      return sendJson(res,{...loaded,user});
     }
     if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
     if(path==='/courts'){
@@ -806,6 +829,7 @@ module.exports = async (req, res) => {
       if(method==='DELETE'){
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
         const oldDelta=scheduleLessonDelta(ex);
+        assertCanDeleteSchedule(id,await scanFeedbacks());
         await del(T_SCHEDULE,id);
         try{
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
@@ -817,8 +841,8 @@ module.exports = async (req, res) => {
         }
       }
     }
-    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
-    const coM=path.match(/^\/coaches\/(.+)$/);if(coM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=coM[1];if(method==='PUT'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{error:'教练不存在'},404);const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);const r={...body,name,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);const coachUpdates=await applyCoachRename(old.name,name);return sendJson(res,{...r,coachUpdates});}if(method==='DELETE'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{success:true});assertCanDeleteCoachName(old.name,await loadCoachReferenceData());await del(T_COACHES,id);return sendJson(res,{success:true});}}
+    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await scan(T_COACHES));const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
+    const coM=path.match(/^\/coaches\/(.+)$/);if(coM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=coM[1];if(method==='PUT'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{error:'教练不存在'},404);const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await scan(T_COACHES),id);const r={...body,name,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);const coachUpdates=await applyCoachRename(old.name,name);return sendJson(res,{...r,coachUpdates});}if(method==='DELETE'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{success:true});assertCanDeleteCoachName(old.name,await loadCoachReferenceData());await del(T_COACHES,id);return sendJson(res,{success:true});}}
     if(path==='/classes'){await init();if(method==='GET')return sendJson(res,await scan(T_CLASSES));if(method==='POST'){const id=uuidv4();const r={...body,id,usedLessons:body.usedLessons||0,status:body.status||'已排班',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){const r={...body,id,updatedAt:new Date().toISOString()};await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){assertCanDeleteClass(id,await scan(T_SCHEDULE));const classPlans=(await scan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(path==='/campuses'){await init();if(method==='GET')return sendJson(res,await scan(T_CAMPUSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}}
@@ -837,6 +861,8 @@ module.exports._test={
   filterLoadAllForUser,
   buildCoachRenameUpdates,
   assertCanDeleteCoachName,
+  assertUniqueCoachName,
+  mergeStoredAuthUser,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,
@@ -848,6 +874,7 @@ module.exports._test={
   buildClassPlanRecord,
   assertCanDeleteProduct,
   assertCanDeleteClass,
+  assertCanDeleteSchedule,
   assertCanDeleteCourt,
   deleteCourtsByIds
 };

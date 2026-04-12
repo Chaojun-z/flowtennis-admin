@@ -54,4 +54,24 @@ assert.doesNotThrow(
   'unreferenced coach can be deleted'
 );
 
+assert.throws(
+  () => rules.assertUniqueCoachName('测试教练', [{ id: 'coach-1', name: ' 测试教练 ' }]),
+  /教练姓名已存在/,
+  'duplicate coach names should be rejected after trimming'
+);
+
+assert.doesNotThrow(
+  () => rules.assertUniqueCoachName('测试教练', [{ id: 'coach-1', name: '测试教练' }], 'coach-1'),
+  'editing the same coach should not reject its own name'
+);
+
+assert.deepStrictEqual(
+  rules.mergeStoredAuthUser(
+    { id: 'coach-user', name: '测试1号教练', role: 'editor', coachName: '测试1号教练' },
+    { id: 'coach-user', name: '测试教练', role: 'editor', coachName: '测试教练' }
+  ),
+  { id: 'coach-user', name: '测试教练', role: 'editor', coachId: '', coachName: '测试教练' },
+  'stale coach token should be refreshed from stored user'
+);
+
 console.log('coach rules tests passed');

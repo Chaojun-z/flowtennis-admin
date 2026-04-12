@@ -202,7 +202,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-empty{color:var(--ts);font-size:12px;position:absolute;left:10px;top:22px}
 .coach-ops-period-line{background:var(--card-f);border:var(--borf);border-radius:10px;min-height:76px;display:grid;gap:6px;padding:8px}
 .coach-ops-week{grid-template-columns:repeat(7,minmax(120px,1fr))}
-.coach-ops-month{grid-template-columns:repeat(10,minmax(76px,1fr))}
+.coach-ops-month{grid-template-columns:repeat(7,minmax(120px,1fr))}
 .coach-ops-daycell{border:0.5px solid rgba(180,83,9,.13);border-radius:8px;padding:7px;font-size:11px;color:var(--tb);min-height:48px;cursor:pointer;background:rgba(254,243,199,.18)}
 .coach-ops-daycell.has-course{background:rgba(20,184,166,.18);border-color:rgba(13,148,136,.34);box-shadow:inset 3px 0 0 rgba(13,148,136,.72)}
 .coach-ops-daycell.has-course strong{color:#0f766e}
@@ -487,7 +487,8 @@ function venueOpts(sel){
   return [...extra,...VENUES.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');
 }
 const COACHES_LIST=['朝珺','晓哲','Siren','吴教练','Rive','郭教练','代教练','Jack','李韬','孙老师','Zoe','刘朝'];
-function activeCoachNames(){const live=coaches.filter(c=>c.status==='active').map(c=>c.name);return live.length?live:COACHES_LIST;}
+function coachName(v){return String(v||'').trim()}
+function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status==='active').map(c=>coachName(c.name)).filter(Boolean))];return live.length?live:COACHES_LIST;}
 const SOURCES=['大众点评','抖音','视频号','小红书','转介绍','播客','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
@@ -830,6 +831,11 @@ function applyLoadedData(data){
   classes=Array.isArray(data?.classes)?data.classes:[];
   campuses=Array.isArray(data?.campuses)?data.campuses:[];
   feedbacks=Array.isArray(data?.feedbacks)?data.feedbacks:[];
+  if(data?.user){
+    currentUser=data.user;
+    localStorage.setItem('ft_user',JSON.stringify(currentUser));
+    document.getElementById('userNamePill').textContent='👤 '+(currentUser?.name||'用户');
+  }
   CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
   lastDataSyncAt=Date.now();
 }
@@ -1335,9 +1341,9 @@ function coachOpsRows(){
   const ms=monthStart(now),me=new Date(now.getFullYear(),now.getMonth()+1,1);
   const range=rangeBounds(coachOpsMode);
   const all=billableSchedules();
-  const names=[...new Set([...activeCoachNames(),...all.map(s=>s.coach).filter(Boolean)])];
+  const names=[...new Set([...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)])];
   return names.map(name=>{
-    const mine=all.filter(s=>s.coach===name);
+    const mine=all.filter(s=>coachName(s.coach)===name);
     const todayRows=mine.filter(s=>s.startTime.slice(0,10)===todayStr);
     const weekRows=mine.filter(s=>inRange(s.startTime,ws,we));
     const monthRows=mine.filter(s=>inRange(s.startTime,ms,me));
@@ -1358,8 +1364,8 @@ function renderCoachOps(){
   const hourHost=document.getElementById('coachOpsHours');
   const opsStartH=7,opsEndH=22,opsTotalMin=(opsEndH-opsStartH)*60;
   if(hourHost){
-    hourHost.classList.toggle('week',mode==='week');
-    hourHost.innerHTML=mode==='day'?Array.from({length:opsEndH-opsStartH+1},(_,i)=>`<span>${i+opsStartH}:00</span>`).join(''):mode==='week'?['周一','周二','周三','周四','周五','周六','周日'].map(d=>`<span>${d}</span>`).join(''):'';
+    hourHost.classList.toggle('week',mode==='week'||mode==='month');
+    hourHost.innerHTML=mode==='day'?Array.from({length:opsEndH-opsStartH+1},(_,i)=>`<span>${i+opsStartH}:00</span>`).join(''):(mode==='week'||mode==='month')?['周一','周二','周三','周四','周五','周六','周日'].map(d=>`<span>${d}</span>`).join(''):'';
   }
   const title=document.getElementById('coachOpsViewTitle');
   if(title)title.textContent=mode==='day'?`${range.label} 教练排课（7:00-22:00）`:mode==='week'?`${dateKey(range.start)} 至 ${dateKey(addDays(range.end,-1))} 教练周视图`:`${range.label} 教练月视图`;
@@ -1389,7 +1395,9 @@ function renderCoachOps(){
       return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-line">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
     }
     const days=[];
-    for(let d=new Date(range.start);d<range.end;d=addDays(d,1))days.push(new Date(d));
+    const gridStart=mode==='month'?weekStart(range.start):range.start;
+    const gridEnd=mode==='month'?addDays(weekStart(range.end),7):range.end;
+    for(let d=new Date(gridStart);d<gridEnd;d=addDays(d,1))days.push(new Date(d));
     const cells=days.map(d=>{
       const ds=dateKey(d);
       const dayRows=r.rangeRows.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
@@ -1904,7 +1912,7 @@ async function saveCampus(){
 }
 // ===== 教练视角 =====
 let myWeekOffset=0;
-function getMyCoachName(){return currentUser?.coachName||currentUser?.name||'';}
+function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}
 function isCoachMobile(){return document.body.classList.contains('coach-mobile');}
 function getWeekDates(offset){
   const now=new Date();now.setDate(now.getDate()+offset*7);
@@ -1917,7 +1925,7 @@ function renderMySchedule(){
   const week=getWeekDates(myWeekOffset);
   const todayStr=today();
   const WDNAMES=['周一','周二','周三','周四','周五','周六','周日'];
-  const allMine=billableSchedules().filter(s=>s.coach===cn2);
+  const allMine=billableSchedules().filter(s=>coachName(s.coach)===cn2);
   const now=new Date(),wsNow=weekStart(now),weNow=new Date(wsNow);weNow.setDate(wsNow.getDate()+7);
   const msNow=monthStart(now),meNow=new Date(now.getFullYear(),now.getMonth()+1,1);
   const currentToday=allMine.filter(s=>s.startTime.slice(0,10)===todayStr);
