@@ -24,7 +24,8 @@ assert.match(fnBody('renderCampuses'), /renderCourtEmptyText/, 'campus rows shou
 assert.match(fnBody('renderCampuses'), /<span class="tms-tag/, 'campus code should render as a tms tag');
 assert.match(fnBody('renderCampuses'), /tms-action-link[\s\S]*编辑[\s\S]*删除/, 'campus actions should use text links');
 assert.match(fnBody('renderCampuses'), /class="tms-sticky-r[^"]*tms-action-cell"[\s\S]*openCampusModal[\s\S]*confirmDel/, 'campus action cells should stay visible and keep edit/delete entries');
-assert.match(html, /\.tms-action-cell[^}]*text-align:right[^}]*white-space:nowrap/s, 'campus action area should right-align text links');
+assert.match(fnBody('renderCampuses'), /tms-action-cell" style="width:\d+px;padding-right:20px;text-align:right"/, 'campus action area should right-align text links without blank gutter');
+assert.match(html, /#page-campusmgr \.tms-table td\.tms-action-cell\{display:table-cell\}/, 'campus action cells should keep normal table layout while right-aligning links');
 assert.match(fnBody('openCampusModal'), /setCourtModalFrame/, 'campus create/edit should use the court-style modal frame');
 assert.match(fnBody('openCampusModal'), /tms-section-header[\s\S]*tms-form-row[\s\S]*tms-form-label[\s\S]*tms-form-control/, 'campus modal should use court-style form fields');
 assert.doesNotMatch(fnBody('openCampusModal'), /class="fgrid"|class="fg"|class="flabel"|class="mactions"/, 'campus modal should not use old form classes');

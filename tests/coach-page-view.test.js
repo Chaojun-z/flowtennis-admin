@@ -35,5 +35,6 @@ assert.match(fnBody('openCoachModal'), /co_hireDate/, 'coach modal should includ
 assert.match(fnBody('openCoachModal'), /courtDateButtonHtml\('co_hireDate'/, 'coach hire date should use the shared court-style date picker');
 assert.doesNotMatch(fnBody('openCoachModal'), /confirmDel\([^)]*'coach'|删除|class="fgrid"|class="fg"|class="flabel"|class="mactions"/, 'coach modal should not include delete entry or old form classes');
 assert.match(fnBody('saveCoach'), /hireDate:document\.getElementById\('co_hireDate'\)\.value/, 'coach save should include hire date');
+assert.match(html, /function renderCourtDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
 
 console.log('coach page view tests passed');

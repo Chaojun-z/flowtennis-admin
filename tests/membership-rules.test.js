@@ -225,6 +225,11 @@ assert.strictEqual(
   'deal benefit snapshot should not fall back to plan ball-machine rights when the current order adjusts them to 0'
 );
 assert.strictEqual(
+  swappedBenefitPurchase.order.benefitSnapshotCustomized,
+  true,
+  'deal benefit snapshot should mark explicit zero adjustments as customized'
+);
+assert.strictEqual(
   swappedBenefitPurchase.order.notes,
   '不要大师公开课和发球机，都换成穿线服务',
   'membership purchase should keep the operator remark on the order snapshot'
@@ -245,6 +250,110 @@ assert.strictEqual(
   emptySnapshotOrder.benefitSnapshot.publicLesson.count,
   2,
   'empty order snapshot should fall back to membership plan benefit template'
+);
+
+const partialSnapshotOrder = rules.normalizeMembershipOrderViewRecord(
+  {
+    id: 'mord-partial',
+    membershipPlanId: plan.id,
+    membershipAccountId: 'macc-partial',
+    courtId: court.id,
+    benefitSnapshot: {
+      stringingLabor: { label: '穿线免手工费', unit: '次', count: 20 }
+    },
+    planBenefitTemplateSnapshot: {
+      publicLesson: { label: '大师公开课', unit: '次', count: 2 },
+      stringingLabor: { label: '穿线免手工费', unit: '次', count: 2 },
+      ballMachine: { label: '发球机免费', unit: '次', count: 2 }
+    }
+  },
+  plan
+);
+
+assert.strictEqual(
+  partialSnapshotOrder.benefitSnapshot.stringingLabor.count,
+  20,
+  'stored deal snapshot should keep the manually adjusted count'
+);
+assert.strictEqual(
+  partialSnapshotOrder.benefitSnapshot.publicLesson,
+  undefined,
+  'stored deal snapshot should not refill omitted rights from the plan'
+);
+assert.strictEqual(
+  partialSnapshotOrder.benefitSnapshot.ballMachine,
+  undefined,
+  'stored deal snapshot should treat omitted rights as zero'
+);
+
+const customizedPublicLessonOrder = rules.normalizeMembershipOrderViewRecord(
+  {
+    id: 'mord-public-20',
+    membershipPlanId: plan.id,
+    membershipAccountId: 'macc-public-20',
+    courtId: court.id,
+    benefitSnapshot: {
+      publicLesson: { label: '大师公开课', unit: '次', count: 20 }
+    },
+    planBenefitTemplateSnapshot: {
+      publicLesson: { label: '大师公开课', unit: '次', count: 2 },
+      stringingLabor: { label: '穿线免手工费', unit: '次', count: 2 },
+      ballMachine: { label: '发球机免费', unit: '次', count: 2 }
+    },
+    benefitValidUntil: '2027-04-12',
+    status: 'active'
+  },
+  plan
+);
+
+const customizedPublicLessonSummary = rules.summarizeMembershipBenefits({
+  orders: [customizedPublicLessonOrder],
+  ledger: [{
+    id: 'b-led-public-1',
+    membershipOrderId: 'mord-public-20',
+    membershipAccountId: 'macc-public-20',
+    courtId: court.id,
+    benefitCode: 'publicLesson',
+    benefitLabel: '大师公开课',
+    unit: '次',
+    delta: -1,
+    action: 'consume',
+    createdAt: '2026-04-13T08:56:18.836Z'
+  }],
+  today: '2026-04-13'
+});
+
+assert.deepStrictEqual(
+  customizedPublicLessonSummary.map(x => ({ code: x.benefitCode, total: x.total, remaining: x.remaining })),
+  [{ code: 'publicLesson', total: 20, remaining: 19 }],
+  'customized deal rights should not refill zeroed standard rights after consumption'
+);
+
+const allZeroBenefitPurchase = rules.buildMembershipPurchase({
+  court,
+  plan,
+  body: {
+    purchaseDate: '2026-04-08',
+    publicLessonCount: 0,
+    stringingLaborCount: 0,
+    ballMachineCount: 0,
+    level2PartnerCount: 0,
+    designatedCoachPartnerCount: 0
+  },
+  now: '2026-04-12T00:00:00.000Z',
+  accountId: 'macc-zero',
+  orderId: 'mord-zero',
+  historyId: 'his-zero'
+});
+
+assert.deepStrictEqual(
+  rules.summarizeMembershipBenefits({
+    orders: [allZeroBenefitPurchase.order],
+    ledger: [],
+    today: '2026-04-13'
+  }),
+  [],
+  'explicitly zeroed deal rights should not fall back to standard plan rights'
 );
 
 const renewal = rules.buildMembershipPurchase({
@@ -325,6 +434,32 @@ const ballMachineSummary = benefitSummary.find(x => x.benefitCode === 'ballMachi
 assert.ok(ballMachineSummary, 'benefit summary should include ballMachine batch');
 assert.strictEqual(ballMachineSummary.membershipOrderId, 'mord-1');
 assert.strictEqual(ballMachineSummary.remaining, 6);
+
+const supplementedBenefitSummary = rules.summarizeMembershipBenefits({
+  orders: [first.order],
+  ledger: [{
+    id: 'b-led-supplement-1',
+    membershipOrderId: 'mord-1',
+    membershipAccountId: 'macc-1',
+    courtId: 'court-1',
+    benefitCode: 'stringingLabor',
+    benefitLabel: '穿线免手工费',
+    unit: '次',
+    delta: 50,
+    action: 'supplement',
+    createdAt: '2026-05-01T00:00:00.000Z'
+  }],
+  today: '2026-05-02'
+});
+const stringingSupplementSummary = supplementedBenefitSummary.find(x => x.benefitCode === 'stringingLabor');
+const baseStringingTotal = rules.summarizeMembershipBenefits({
+  orders: [first.order],
+  ledger: [],
+  today: '2026-05-02'
+}).find(x => x.benefitCode === 'stringingLabor')?.total || 0;
+assert.ok(stringingSupplementSummary, 'supplemented benefit summary should include stringing labor');
+assert.strictEqual(stringingSupplementSummary.total, baseStringingTotal + 50, 'supplement should increase the total benefit count');
+assert.strictEqual(stringingSupplementSummary.remaining, baseStringingTotal + 50, 'supplement should increase the remaining benefit count');
 
 const allocatedUsage = rules.allocateMembershipBenefitUsage({
   membershipAccountId: 'macc-1',

@@ -939,6 +939,9 @@ function normalizeMembershipBenefitTemplate(input={},fallbackTemplate={}){
   if(customBenefits.length)template.customBenefits=customBenefits;
   return template;
 }
+function hasMembershipBenefitSnapshot(value){
+  return value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length>0;
+}
 function addMonthsKey(ds,months){
   const [y,m,d0]=String(ds||'').slice(0,10).split('-').map(n=>parseInt(n)||0);
   const d=new Date(Date.UTC(y,m-1,d0));
@@ -1373,7 +1376,8 @@ function normalizeMembershipOrderViewRecord(order,plan=null){
   if(!order||typeof order!=='object')return order;
   const normalizedPlan=normalizeMembershipPlanViewRecord(plan||{});
   const planBenefitTemplateSnapshot=normalizeMembershipBenefitTemplate(order?.planBenefitTemplateSnapshot?{benefitTemplate:order.planBenefitTemplateSnapshot}:order,normalizedPlan?.benefitTemplate||{});
-  const benefitSnapshot=normalizeMembershipBenefitTemplate(order?.benefitSnapshot?{benefitTemplate:order.benefitSnapshot}:order,planBenefitTemplateSnapshot);
+  const hasDealSnapshot=hasMembershipBenefitSnapshot(order?.benefitSnapshot)||order?.benefitSnapshotCustomized===true;
+  const benefitSnapshot=hasDealSnapshot?normalizeMembershipBenefitTemplate({benefitTemplate:order.benefitSnapshot},{}):normalizeMembershipBenefitTemplate(order,planBenefitTemplateSnapshot);
   return {
     ...order,
     planBenefitTemplateSnapshot,
@@ -1408,6 +1412,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     hardExpireAt:oldAccount.hardExpireAt
   };
   const purchaseBenefitTemplate=body.benefitSnapshot||plan.benefitTemplate||{};
+  const benefitSnapshotCustomized=body.benefitSnapshotCustomized===true||hasMembershipBenefitSnapshot(body.benefitSnapshot)||MEMBERSHIP_BENEFIT_FIELD_MAP.some(({field})=>body[field]!==undefined&&body[field]!==null&&String(body[field]).trim()!=='');
   const benefitSnapshot=normalizeMembershipBenefitTemplate({
     ...plan,
     ...body,
@@ -1417,7 +1422,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     level2PartnerCount:body.level2PartnerCount??purchaseBenefitTemplate.level2Partner?.count??plan.level2PartnerCount,
     designatedCoachPartnerCount:body.designatedCoachPartnerCount??purchaseBenefitTemplate.designatedCoachPartner?.count??plan.designatedCoachPartnerCount,
     benefitTemplate:purchaseBenefitTemplate,
-    customBenefits:body.customBenefits??purchaseBenefitTemplate.customBenefits??plan.customBenefits??plan.benefitTemplate?.customBenefits,
+    customBenefits:body.customBenefits??(benefitSnapshotCustomized?[]:(purchaseBenefitTemplate.customBenefits??plan.customBenefits??plan.benefitTemplate?.customBenefits)),
     designatedCoachIds:body.designatedCoachIds??purchaseBenefitTemplate.designatedCoachPartner?.designatedCoachIds??plan.designatedCoachIds
   },plan.benefitTemplate||{});
   const account={
@@ -1460,6 +1465,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     qualifiesRenewalReset,
     planBenefitTemplateSnapshot:normalizeMembershipBenefitTemplate(plan,plan.benefitTemplate||{}),
     benefitSnapshot,
+    benefitSnapshotCustomized,
     benefitValidUntil:addMonthsKey(purchaseDate,validMonths),
     courtHistoryRechargeId:historyId,
     operator:body.operator||'',
@@ -1490,7 +1496,8 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
   return {account,order,historyRow,warning};
 }
 function membershipBenefitItemsFromOrder(order){
-  const snap=normalizeMembershipBenefitTemplate(order?.benefitSnapshot?{benefitTemplate:order.benefitSnapshot}:order,order?.planBenefitTemplateSnapshot||{});
+  const hasDealSnapshot=hasMembershipBenefitSnapshot(order?.benefitSnapshot)||order?.benefitSnapshotCustomized===true;
+  const snap=hasDealSnapshot?normalizeMembershipBenefitTemplate({benefitTemplate:order.benefitSnapshot},{}):normalizeMembershipBenefitTemplate(order,order?.planBenefitTemplateSnapshot||{});
   const items=[];
   Object.entries(snap).forEach(([code,value])=>{
     if(code==='customBenefits')return;
@@ -1505,9 +1512,12 @@ function membershipBenefitItemsFromOrder(order){
 }
 function summarizeMembershipBenefits({orders=[],ledger=[],today=new Date().toISOString().slice(0,10)}={}){
   return (orders||[]).filter(o=>o.status!=='voided'&&o.status!=='refunded').flatMap(order=>membershipBenefitItemsFromOrder(order).map(item=>{
-    const delta=(ledger||[]).filter(l=>l.membershipOrderId===item.membershipOrderId&&l.benefitCode===item.benefitCode&&l.action!=='grant').reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
+    const rows=(ledger||[]).filter(l=>l.membershipOrderId===item.membershipOrderId&&l.benefitCode===item.benefitCode&&l.action!=='grant');
+    const positiveDelta=rows.filter(l=>(parseInt(l.delta)||0)>0).reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
+    const negativeDelta=rows.filter(l=>(parseInt(l.delta)||0)<0).reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
+    const total=(item.total||0)+positiveDelta;
     const expired=item.benefitValidUntil&&today>item.benefitValidUntil;
-    return {...item,used:Math.abs(Math.min(0,delta)),adjusted:Math.max(0,delta),remaining:expired?0:Math.max(0,item.total+delta),status:expired?'expired':'active'};
+    return {...item,total,used:Math.abs(negativeDelta),adjusted:positiveDelta,remaining:expired?0:Math.max(0,total+negativeDelta),status:expired?'expired':'active'};
   }));
 }
 function buildMembershipGrantLedgerRows(order,opts={}){
@@ -2086,6 +2096,8 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]));
       if(method==='POST'){
         const now=new Date().toISOString();
+        const account=body.membershipAccountId?await get(T_MEMBERSHIP_ACCOUNTS,body.membershipAccountId).catch(()=>null):null;
+        if(account&&['voided','cleared'].includes(account.status)&&['consume','supplement'].includes(body.action))return sendJson(res,{error:'当前会员状态不可再消耗或补发权益，请先重新开卡'},400);
         if(!body.membershipOrderId&&(body.action==='consume'||parseInt(body.delta)<0)){
           const [orders,ledger]=await Promise.all([scan(T_MEMBERSHIP_ORDERS).catch(()=>[]),scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])]);
           const relevantOrders=(orders||[]).filter(order=>order.membershipAccountId===body.membershipAccountId&&order.courtId===body.courtId);

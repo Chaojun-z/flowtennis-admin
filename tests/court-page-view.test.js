@@ -18,7 +18,7 @@ assert.match(html, /\.tms-toolbar\s*\{/, 'court page should define scoped toolba
 assert.match(html, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(html, /<div class="tms-stats-row" id="courtStatsRow"><\/div>/, 'court page should use the upgraded tms stats row container');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /<th>下次跟进日期<\/th>/, 'court table should show next follow-up date');
+assert.match(html, /<th>最近跟进日期<\/th>[\s\S]*<th>下次跟进日期<\/th>/, 'court table should show recent and next follow-up dates');
 assert.match(html, /id="courtAccountTypeFilter"/, 'court toolbar should provide account type filter');
 assert.match(html, /id="courtOwnerFilter"/, 'court toolbar should provide owner filter');
 assert.match(html, /id="courtMoreActions"/, 'court toolbar should provide more actions menu');
