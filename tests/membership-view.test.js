@@ -5,8 +5,11 @@ const path = require('path');
 const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
 
 assert.match(html, /goPage\('memberships',this\)[\s\S]*?会员管理/, 'sidebar should add membership management entry');
+assert.match(html, /goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'sidebar should add membership plan entry');
 assert.match(html, /id="page-memberships"/, 'should have memberships page section');
-assert.match(html, /会员方案[\s\S]*会员购买[\s\S]*会员账户[\s\S]*赠送权益/, 'membership page should include four management views');
+assert.match(html, /id="page-membership-plans"/, 'should have dedicated membership plans page section');
+assert.match(html, /会员购买[\s\S]*会员账户[\s\S]*赠送权益/, 'membership page should keep operation views');
+assert.doesNotMatch(html, /id="page-memberships"[\s\S]*membershipTabPlans/, 'membership management page should not keep plan tab');
 assert.match(html, /let membershipTab='accounts';/, 'membership page should default to account overview');
 
 assert.match(html, /let courts=\[\],students=\[\],products=\[\],packages=\[\],purchases=\[\],entitlements=\[\],entitlementLedger=\[\],membershipPlans=\[\],membershipAccounts=\[\],membershipOrders=\[\],membershipBenefitLedger=\[\],membershipAccountEvents=\[\]/, 'frontend state should load membership data separately');
@@ -78,7 +81,7 @@ assert.match(html, /额外赠送/, 'membership purchase list should show one-off
 assert.match(html, /购买日期[\s\S]*订场用户[\s\S]*会员方案[\s\S]*充值[\s\S]*赠送金额[\s\S]*折扣[\s\S]*是否重置有效期[\s\S]*当次权益摘要[\s\S]*状态/, 'membership purchase page should be reduced to audit fields');
 assert.match(html, /此页面仅用于审计与追溯，不用于日常操作/, 'audit pages should explain read-only positioning');
 assert.match(html, /会员数[\s\S]*订购次数[\s\S]*总金额[\s\S]*30天内到期/, 'membership accounts home should show current-phase summary cards');
-assert.match(html, /方案配置[\s\S]*购买记录[\s\S]*权益流水/, 'membership accounts home should expose secondary navigation actions');
+assert.match(html, /goPage\('membership-plans'[\s\S]*购买记录[\s\S]*权益流水/, 'membership accounts home should expose secondary navigation actions');
 assert.match(html, /权益有效期固定 12 个月[\s\S]*余额最长按当前系统规则至 24 个月/, 'membership plan form should explain fixed validity rules');
 assert.match(html, /可用权益/, 'membership account list should expose benefit summary');
 assert.match(html, /查看账户/, 'membership account list should expose account detail entry');

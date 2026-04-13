@@ -516,4 +516,24 @@ assert.throws(
   'membership account event should block court deletion'
 );
 
+assert.strictEqual(
+  rules.courtDeleteAction({ id: 'court-delete-2', history: [] }, {}),
+  'delete',
+  'empty court account should be physically deletable'
+);
+
+assert.strictEqual(
+  rules.courtDeleteAction({ id: 'court-delete-3', history: [first.historyRow] }, {}),
+  'archive',
+  'court account with finance history should be archived instead of physically deleted'
+);
+
+assert.strictEqual(
+  rules.courtDeleteAction(emptyCourt, {
+    membershipOrders: [{ id: 'mord-delete-2', courtId: 'court-delete-1' }]
+  }),
+  'archive',
+  'court account with membership links should be archived instead of physically deleted'
+);
+
 console.log('membership rules tests passed');

@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+function fnBody(name){
+  const start = html.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const next = html.indexOf('\nfunction ', start + 1);
+  return html.slice(start, next === -1 ? html.length : next);
+}
 
 assert.match(html, /\.tms-stats-row\s*\{/, 'court page should define scoped tms stats styles');
 assert.match(html, /\.tms-table-card\s*\{/, 'court page should define scoped tms table card styles');
@@ -21,6 +27,8 @@ assert.doesNotMatch(html, /courtMoreActionValue_dropdown[\s\S]*class="tms-dropdo
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('validUntil'\)"[\s\S]*?>会员到期/, 'court table should keep expiry sorting');
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('balance'\)"[\s\S]*?>当前余额/, 'court table should keep balance sorting');
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('spentAmount'\)"[\s\S]*?>消费金额/, 'court table should keep spending sorting');
+assert.match(fnBody('setCourtSort'), /courtSortKey='';courtSortDir='desc'/, 'court sorting should cycle back to no sort');
+assert.match(html, /\.tms-sort-icon[^}]*vertical-align:middle[^}]*font-size:9px/s, 'sort icon should be visually centered and smaller');
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should freeze the action header');
 assert.match(html, /查看[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
@@ -28,13 +36,23 @@ assert.match(html, /id="courtPageSize"/, 'court table should support page size s
 assert.match(html, /20条\/页[\s\S]*50条\/页[\s\S]*100条\/页/, 'court page size selector should offer 20, 50, and 100 rows per page');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
+assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
+assert.doesNotMatch(fnBody('renderCourts'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
 assert.match(html, /function openCourtModal[\s\S]*最近跟进日期[\s\S]*下次跟进日期/, 'court edit modal should keep follow-up fields');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*充值\/消费记录[\s\S]*add-rec-row/, 'court edit modal should no longer contain the inline finance entry area');
 assert.match(html, /function renderCourtMiniBar\(/, 'court page should expose a dedicated mini bar renderer');
 assert.match(html, /class="tms-sticky-l"/, 'court page should freeze the left name column');
 assert.match(html, /class="tms-sticky-r"/, 'court page should freeze the right action column');
+assert.match(html, /#page-courts \.tms-table th\.tms-sticky-l\s*\{[^}]*top:0[^}]*left:0[^}]*z-index:140/s, 'court left header should stay fixed on both horizontal and vertical scroll');
+assert.match(html, /#page-courts \.tms-table th\.tms-sticky-r\s*\{[^}]*top:0[^}]*right:0[^}]*z-index:140/s, 'court right header should stay fixed on both horizontal and vertical scroll');
+assert.match(html, /#page-courts \.tms-table th\s*\{[^}]*background-color:#FDF7F2/s, 'court sticky and normal headers should share the same background');
+assert.match(html, /#page-courts \.tms-table tbody tr:hover td\.tms-sticky-l[\s\S]*#page-courts \.tms-table tbody tr:hover td\.tms-sticky-r/s, 'court sticky columns should join whole-row hover');
 assert.match(html, /class="tms-action-link"/, 'court page should render action links with the scoped visual style');
 assert.match(html, /function openCourtModal[\s\S]*tms-section-header[\s\S]*tms-form-row/, 'court edit modal should use the upgraded local form layout');
+assert.match(html, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
+assert.match(html, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
+assert.match(html, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
+assert.match(html, /tms-form-row court-date-row[\s\S]*f_campus[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate[\s\S]*f_nextFollowUpDate/, 'court modal should place campus and three date fields in one row');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
@@ -46,5 +64,21 @@ assert.match(html, /function setCourtPageSize\(/, 'court page should expose page
 assert.match(html, /function handleCourtMoreAction\(/, 'court page should expose more action handler');
 assert.match(html, /id="courtBatchDelBtn"[^>]*style="display:none"/, 'court batch delete button should stay hidden before any selection');
 assert.match(html, /function updateCourtBatchButton\([\s\S]*btn\.style\.display=selectedCourtIds\.size\?'inline-flex':'none'/, 'court batch delete button should only show when rows are selected');
+assert.match(html, /function renderCourtEmptyText\(/, 'court page should centralize empty dash rendering');
+assert.match(html, /return raw&&raw!=='—'\?raw:'-';/, 'court list empty cells should convert long dashes to short dashes');
+assert.match(html, /renderCourtDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',true,'updateCourtFinancePreview'\)/, 'court booking payment should default to stored-value deduction');
+assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use browser confirm');
+assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
+assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
+assert.match(html, /function courtMembershipTierLabel\(/, 'court membership display should use membership tier label');
+assert.match(html, /function courtMembershipTierTagClass\(/, 'court member tier should use tier-specific tag colors');
+assert.match(fnBody('renderCourts'), /m\.tierLabel&&m\.tierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');
+assert.doesNotMatch(fnBody('renderCourts'), /const memberTagClass=m\.accountType==='会员'\?'tms-tag-green':'';/, 'current membership tag color should not reuse account type tag color');
+assert.match(fnBody('renderAll'), /renderPageData\(currentPage\)/, 'initial load should render only the current page instead of every module');
+assert.match(html, /function renderCourtFinanceFields\(/, 'court finance modal should render fields by selected scene');
+assert.match(html, /function onCourtFinanceSceneChange\(/, 'court finance modal should update visible fields when scene changes');
+assert.match(html, /data-finance-field="booking"/, 'court booking-only fields should be scoped');
+assert.match(html, /data-finance-field="course"/, 'court course-only fields should be scoped');
+assert.match(fnBody('runBatchDeleteCourts'), /隐藏/, 'batch delete result should explain hidden archived courts');
 
 console.log('court page view tests passed');

@@ -96,7 +96,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-dropdown.tms-dropdown-form .tms-dropdown-display{padding:0 12px;font-size:14px;width:100%;background-color:#FDF7F2;border-radius:8px;height:48px}
 .tms-dropdown-display:hover{border-color:#EAE0D6}
 .tms-dropdown-display::after{content:"";border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8C7B6E;margin-left:8px;flex:0 0 auto}
-.tms-dropdown-menu{position:absolute;top:calc(100% + 4px);left:0;background-color:#FAF6F2;border:1px solid #EAE0D6;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:100;display:none;min-width:100%;padding:4px;box-sizing:border-box;max-height:250px;overflow-y:auto}
+.tms-dropdown-menu{position:absolute;top:calc(100% + 4px);left:0;background-color:#FAF6F2;border:1px solid #EAE0D6;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:100;display:none;min-width:100%;padding:4px;box-sizing:border-box;max-height:250px;overflow-y:auto;overscroll-behavior:contain}
 .tms-dropdown.open .tms-dropdown-menu{display:block}
 .tms-dropdown-item{padding:8px 12px;font-size:13px;color:#5C4D43;cursor:pointer;border-radius:4px;display:flex;align-items:center;white-space:nowrap}
 .tms-dropdown-item:hover{background-color:#F1EAE2}
@@ -115,9 +115,23 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-table th.tms-sticky-l,.tms-table th.tms-sticky-r{z-index:120}
 .tms-table thead .tms-sticky-l{left:0}
 .tms-table thead .tms-sticky-r{right:0}
-.tms-sticky-l::after{content:"";position:absolute;top:0;right:0;bottom:0;width:6px;background:linear-gradient(to right,rgba(0,0,0,.04),transparent);pointer-events:none;transform:translateX(100%)}
-.tms-sticky-r::before{content:"";position:absolute;top:0;left:0;bottom:0;width:6px;background:linear-gradient(to left,rgba(0,0,0,.04),transparent);pointer-events:none;transform:translateX(-100%)}
+.tms-sticky-l::after,.tms-sticky-r::before{display:none}
 .tms-table tbody tr:hover td.tms-sticky-l,.tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
+#page-courts .tms-table th{background-color:#FDF7F2}
+#page-courts .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#FDF7F2}
+#page-courts .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#FDF7F2}
+#page-courts .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FDF7F2}
+#page-courts .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
+#page-courts .tms-table tbody tr:hover td.tms-sticky-l,#page-courts .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
+#page-campusmgr .tms-table{min-width:900px}
+#page-campusmgr .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#FDF7F2}
+#page-campusmgr .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
+#page-campusmgr .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
+#page-coaches .tms-table{min-width:1000px}
+#page-coaches .tms-table-wrapper{max-height:calc(100vh - 190px)}
+#page-coaches .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#FDF7F2}
+#page-coaches .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
+#page-coaches .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
 .tms-th-checkbox{display:flex;align-items:center;gap:8px;font-size:10px;color:#8C7B6E;font-weight:400;line-height:1;width:100%}
 .tms-th-checkbox span{font-size:10px;color:#8C7B6E;font-weight:400}
 .court-name-cell,[data-court-name-cell]{min-width:156px;max-width:156px;width:156px;white-space:normal}
@@ -141,6 +155,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag{display:inline-block;background-color:#F1EAE2;color:#8C7B6E;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:400}
 .tms-tag-green{background-color:#EAF4EA;color:#5BAE65}
 .tms-tag-red{background-color:#FCECE3;color:#C06031}
+.tms-tag-tier-gold{background:#FFF1D6;color:#A16207}
+.tms-tag-tier-blue{background:#E9F1FF;color:#3157B7}
+.tms-tag-tier-teal{background:#E3F5F1;color:#0F766E}
+.tms-tag-tier-slate{background:#EEF1F5;color:#52606D}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-amber{background:rgba(217,119,6,0.15);color:var(--amber-base);border:0.5px solid rgba(217,119,6,0.25)}.b-cream{background:var(--cream-soft);color:#92400E;border:0.5px solid rgba(146,64,14,0.2)}.b-green{background:rgba(5,150,105,0.1);color:#065f46;border:0.5px solid rgba(5,150,105,0.2)}.b-red{background:rgba(220,38,38,0.1);color:#991b1b;border:0.5px solid rgba(220,38,38,0.18)}.b-gray{background:rgba(107,114,128,0.1);color:#4b5563;border:0.5px solid rgba(107,114,128,0.15)}.b-blue{background:rgba(59,130,246,0.1);color:#1d4ed8;border:0.5px solid rgba(59,130,246,0.2)}.b-purple{background:rgba(139,92,246,0.1);color:#6d28d9;border:0.5px solid rgba(139,92,246,0.2)}
 .campus-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(217,119,6,0.12);color:var(--amber-base);border:0.5px solid rgba(217,119,6,0.22);border-radius:7px;padding:3px 7px;font-size:11.5px;font-weight:500;white-space:nowrap}
@@ -154,7 +172,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .th-sort{margin-left:5px;border:none;background:rgba(180,83,9,.08);color:var(--amber-base);border-radius:6px;padding:2px 5px;font-size:10px;cursor:pointer}
 .tms-sortable{cursor:pointer;user-select:none;transition:color .2s}
 .tms-sortable:hover{color:#C06031}
-.tms-sort-icon{display:inline-block;margin-left:4px;font-size:10px;color:#D9D0C7;font-family:monospace;font-weight:400;transition:color .2s}
+.tms-sort-icon{display:inline-block;margin-left:4px;vertical-align:middle;font-size:9px;line-height:1;color:#D9D0C7;font-family:monospace;font-weight:400;transition:color .2s}
 .tms-sortable:hover .tms-sort-icon,.tms-sortable.asc .tms-sort-icon,.tms-sortable.desc .tms-sort-icon{color:#C06031}
 .tms-mini-bar{position:relative;display:inline-block;min-width:80px;padding:2px 0}
 .tms-mini-bar-bg{position:absolute;left:0;top:0;bottom:0;background-color:#F1EAE2;border-radius:3px;z-index:1}
@@ -166,6 +184,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .hist-link{font-size:11.5px;color:#b45309;cursor:pointer;text-decoration:underline;text-underline-offset:2px;white-space:nowrap}.hist-link:hover{color:#92400e}
 .tms-action-link{color:#C06031;cursor:pointer;font-weight:400;text-decoration:none;display:inline-block;padding:6px 8px;border-radius:6px;transition:background .2s;font-size:12px}
 .tms-action-link:hover{background-color:#F1EAE2}
+.tms-action-cell{text-align:right;white-space:nowrap}
 .tms-checkbox-wrap{display:inline-flex;align-items:center;cursor:pointer;gap:8px;font-size:13px;color:#5C4D43;user-select:none}
 .tms-checkbox{width:16px;height:16px;border:1px solid #A3968F;border-radius:4px;appearance:none;outline:none;cursor:pointer;position:relative;background-color:#FDF7F2;margin:0;transition:all .2s;flex-shrink:0}
 .tms-checkbox:checked{background-color:#C06031;border-color:#C06031}
@@ -288,6 +307,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-history-item .amount.neg{color:#C06031}
 .tms-history-item .amount.pos{color:#4CAF50}
 .tms-history-item .desc{flex:1;color:#8C7B6E}
+.modal.modal-court .tms-form-label{font-size:11px;font-weight:400;color:#5C4D43;margin-bottom:6px}
+.modal.modal-court .tms-form-control{height:38px;padding:0 12px;font-size:13px;font-weight:400}
+.modal.modal-court textarea.tms-form-control{height:auto;min-height:62px;padding:10px 12px}
+.modal.modal-court .coach-date-btn,.modal.modal-court .tms-dropdown.tms-dropdown-form .tms-dropdown-display{height:38px;font-size:13px;font-weight:400}
+.modal.modal-court .tms-checkbox-matrix{font-size:10px}
+.modal.modal-court .tms-checkbox-matrix .tms-checkbox-wrap,.modal.modal-court .tms-checkbox-matrix .tms-checkbox-wrap span{font-size:10px;font-weight:400}
+.modal.modal-court .court-date-row{gap:12px}
 .choice-grid{display:flex;flex-wrap:wrap;gap:8px}
 .choice-tag{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:12px;background:rgba(255,251,245,.72);border:0.5px solid rgba(180,83,9,.12);font-size:12.5px;font-weight:400;color:var(--tb)}
 .choice-tag input{appearance:none;-webkit-appearance:none;margin:0;width:14px;height:14px;border-radius:4px;border:0.5px solid rgba(120,53,15,.24);background:#fff;box-shadow:inset 0 1px 2px rgba(60,20,0,.06)}
@@ -302,9 +328,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .close-x{font-size:18px;font-weight:500}
 @media(max-width:1100px){.purchase-filter-bar{grid-template-columns:1fr 1fr 1fr}.purchase-actions{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:900px){.page-head-card{flex-direction:column}.page-head-actions,.purchase-toolbar-spacer{width:100%}.page-stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}.fgrid.cols-3,.fgrid.cols-4,.purchase-filter-bar,#page-packages .course-filter-bar{grid-template-columns:1fr}.fg.span-2{grid-column:1/-1}}
-.conf-ov{position:fixed;inset:0;background:rgba(60,20,0,0.65);backdrop-filter:blur(12px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}.conf-ov.open{opacity:1;pointer-events:all}
+.conf-ov{position:fixed;inset:0;background:rgba(60,20,0,0.65);backdrop-filter:blur(12px);z-index:300;display:none;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}.conf-ov.open{display:flex;opacity:1;pointer-events:all}
 .conf-box{background:var(--card-f);border:var(--borf);border-radius:18px;padding:28px;width:340px;text-align:center;box-shadow:0 24px 80px rgba(60,20,0,0.35);transform:scale(.95);transition:transform .18s;color:var(--tb)}.conf-ov.open .conf-box{transform:scale(1)}
-.conf-acts{display:flex;gap:9px;margin-top:20px}.conf-no{flex:1;padding:10px;border-radius:9px;border:0.5px solid rgba(180,83,9,0.2);background:transparent;color:var(--ts);cursor:pointer;font-family:inherit;font-size:13px}.conf-yes{flex:1;padding:10px;border-radius:9px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}.conf-yes:hover{background:#b91c1c}
+.conf-icon{width:42px;height:42px;border-radius:50%;margin:0 auto 12px;background:rgba(220,38,38,.10);color:#dc2626;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;line-height:1}
+.conf-acts{display:flex;gap:9px;margin-top:20px}.conf-no{flex:1;padding:10px;border-radius:9px;border:0.5px solid rgba(180,83,9,0.2);background:transparent;color:var(--ts);cursor:pointer;font-family:inherit;font-size:13px}.conf-yes{flex:1;padding:10px;border-radius:9px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}.conf-yes:hover{background:#b91c1c}.conf-yes.neutral:hover{background:#1d4ed8}
 .toasts{position:fixed;top:18px;right:22px;z-index:400;display:flex;flex-direction:column;gap:7px}
 .toast{background:var(--card-f);border-radius:11px;padding:11px 16px;box-shadow:var(--shf);display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;min-width:200px;color:var(--th);animation:tIn .24s cubic-bezier(.34,1.56,.64,1);border-left:3.5px solid var(--amber-warm)}.toast.success{border-color:#059669}.toast.error{border-color:#dc2626}.toast.warn{border-color:var(--amber-base)}
 @keyframes tIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
@@ -463,6 +490,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   <div class="sb-sec">场地与资源</div>
   <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon">🏟️</span>订场用户</div>
   <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon">💳</span>会员管理</div>
+  <div class="sb-item" onclick="goPage('membership-plans',this)"><span class="sb-icon">🏷️</span>会员方案</div>
   <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon">👨‍🏫</span>教练管理</div>
   <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)"><span class="sb-icon">⚙️</span>校区管理</div>
   </div>
@@ -569,11 +597,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 教练管理 -->
     <div class="page-section" id="page-coaches">
-      <div class="toolbar" style="margin-bottom:16px">
-        <div class="search-box"><span class="filter-search-mark"></span><input type="text" id="coachSearch" placeholder="搜索教练…" oninput="renderCoaches()"></div>
-        <button class="btn-add" onclick="openCoachModal()">＋ 新增教练</button>
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="tms-search-wrapper">
+            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="tms-search-input" id="coachSearch" placeholder="搜索教练姓名、电话或备注" oninput="renderCoaches()">
+          </div>
+        </div>
+        <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-primary" onclick="openCoachModal(null)">＋ 新增教练</button>
+        </div>
       </div>
-      <div class="tcard"><table><thead><tr><th>姓名</th><th>电话</th><th>校区</th><th>状态</th><th>备注</th><th style="text-align:right">操作</th></tr></thead><tbody id="coachTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:16%;padding-left:20px">姓名</th><th style="width:16%">电话</th><th style="width:14%">校区</th><th style="width:12%">入职时间</th><th style="width:10%">状态</th><th style="width:18%">备注</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachTbody"></tbody></table></div></div>
     </div>
     <!-- 订场用户 -->
     <div class="page-section" id="page-courts">
@@ -596,23 +633,30 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
           <button class="tms-btn tms-btn-primary" onclick="openCourtModal(null)">＋ 添加订场用户</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" data-court-name-cell="1" style="width:156px;padding-left:20px"><label class="tms-th-checkbox"><input type="checkbox" class="tms-checkbox" id="courtSelectAll" onchange="toggleCourtPageSelection(this.checked)"><span>姓名</span></label></th><th style="width:140px">手机号</th><th style="width:110px">校区</th><th style="width:90px">账户类型</th><th style="width:140px">当前会员</th><th style="width:110px">会员状态</th><th style="width:90px">当前折扣</th><th class="tms-sortable" onclick="setCourtSort('validUntil')" style="width:120px">会员到期 <span class="tms-sort-icon">↕</span></th><th style="width:90px">对接人</th><th style="width:90px">熟悉程度</th><th style="width:160px">对储值态度</th><th style="width:120px">下次跟进日期</th><th class="tms-sortable" onclick="setCourtSort('balance')" style="width:120px">当前余额 <span class="tms-sort-icon">↕</span></th><th class="tms-sortable" onclick="setCourtSort('spentAmount')" style="width:120px">消费金额 <span class="tms-sort-icon">↕</span></th><th style="width:120px">充值/消费记录</th><th style="width:220px">备注</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" data-court-name-cell="1" style="width:156px;padding-left:20px"><label class="tms-th-checkbox"><input type="checkbox" class="tms-checkbox" id="courtSelectAll" onchange="toggleCourtPageSelection(this.checked)"><span>姓名</span></label></th><th style="width:140px">手机号</th><th style="width:110px">校区</th><th style="width:90px">账户类型</th><th style="width:140px">当前会员</th><th style="width:110px">会员状态</th><th style="width:90px">当前折扣</th><th class="tms-sortable" onclick="setCourtSort('validUntil')" style="width:120px">会员到期 <span class="tms-sort-icon">↕</span></th><th style="width:90px">对接人</th><th style="width:90px">熟悉程度</th><th style="width:160px">对储值态度</th><th style="width:120px">下次跟进日期</th><th class="tms-sortable" onclick="setCourtSort('balance')" style="width:120px">当前余额 <span class="tms-sort-icon">↕</span></th><th class="tms-sortable" onclick="setCourtSort('spentAmount')" style="width:120px">消费金额 <span class="tms-sort-icon">↕</span></th><th style="width:220px">备注</th><th class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="courtTbody"></tbody></table></div>
         <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="courtPagerInfo">共 0 条</span><div id="courtPageSize"></div></div><div class="tms-page-numbers" id="courtPagerBtns"></div></div>
       </div>
     </div>
     <!-- 会员管理 -->
     <div class="page-section" id="page-memberships">
       <div class="toolbar">
-        <div class="search-box"><span class="filter-search-mark"></span><input type="text" id="membershipSearch" placeholder="搜索订场用户/会员方案" oninput="renderMemberships()"></div>
-        <button class="btn-add" id="membershipAddPlanBtn" onclick="openMembershipPlanModal(null)">＋ 新增会员方案</button>
+        <div class="search-box"><span class="filter-search-mark"></span><input type="text" id="membershipSearch" placeholder="搜索订场用户/购买记录/权益…" oninput="renderMemberships()"></div>
       </div>
       <div class="mod-tabs">
-        <button class="mtab active" id="membershipTabPlans" onclick="setMembershipTab('plans')">会员方案</button>
         <button class="mtab" id="membershipTabOrders" onclick="setMembershipTab('orders')">会员购买</button>
         <button class="mtab" id="membershipTabAccounts" onclick="setMembershipTab('accounts')">会员账户</button>
         <button class="mtab" id="membershipTabBenefits" onclick="setMembershipTab('benefits')">赠送权益</button>
       </div>
       <div id="membershipTabBody"></div>
+    </div>
+    <!-- 会员方案 -->
+    <div class="page-section" id="page-membership-plans">
+      <div class="toolbar">
+        <div class="search-box"><span class="filter-search-mark"></span><input type="text" id="membershipPlanSearch" placeholder="搜索会员方案…" oninput="renderMembershipPlans()"></div>
+        <button class="btn-add" onclick="openMembershipPlanModal(null)">＋ 新增会员方案</button>
+      </div>
+      <div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.18);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tb);margin-bottom:12px">会员方案是后台配置，用于定义充值金额、折扣和默认赠送权益。日常开卡、续充、消耗权益请到会员管理处理。</div>
+      <div id="membershipPlanBody"></div>
     </div>
     <!-- 课程产品 -->
     <div class="page-section" id="page-products">
@@ -713,11 +757,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 校区管理 -->
     <div class="page-section" id="page-campusmgr">
-      <div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--ts);margin-bottom:14px">校区管理仅管理员可操作。新增/修改校区后，全系统（顶部切换、下拉选项等）即时生效。</div>
-      <div class="toolbar" style="margin-bottom:16px">
-        <button class="btn-add" onclick="openCampusModal(null)">＋ 新增校区</button>
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="tms-search-wrapper">
+            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="tms-search-input" id="campusSearch" placeholder="搜索校区名称或代码" oninput="renderCampuses()">
+          </div>
+        </div>
+        <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-primary" onclick="openCampusModal(null)">＋ 新增校区</button>
+        </div>
       </div>
-      <div class="tcard"><table><thead><tr><th>校区名称</th><th>校区代码</th><th>创建时间</th><th style="text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:34%;padding-left:20px">校区名称</th><th style="width:24%">校区代码</th><th style="width:22%">创建时间</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div></div>
     </div>
 </div>
 </div>
@@ -735,10 +788,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 </div>
 <div class="conf-ov" id="confOv">
   <div class="conf-box">
-    <div style="font-size:36px;margin-bottom:12px">!</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:7px;color:var(--th)">确认删除？</div>
+    <div class="conf-icon" id="confIcon">!</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:7px;color:var(--th)" id="confTitle">确认删除？</div>
     <div style="font-size:12.5px;color:var(--ts);line-height:1.6" id="confDesc">此操作不可恢复。</div>
-    <div style="margin:12px 0"><input class="finput" id="confInput" placeholder="请输入「确认删除」" style="text-align:center;font-size:13px"></div><div class="conf-acts"><button class="conf-no" onclick="closeConf()">取消</button><button class="conf-yes" id="confYesBtn" onclick="doDelete()" disabled style="opacity:0.4;cursor:not-allowed">确认删除</button></div>
+    <div style="margin:12px 0"><input class="finput" id="confInput" placeholder="请输入「确认删除」" style="text-align:center;font-size:13px"></div><div class="conf-acts"><button class="conf-no" id="confNoBtn" onclick="closeConf()">取消</button><button class="conf-yes" id="confYesBtn" onclick="doDelete()" disabled style="opacity:0.4;cursor:not-allowed">确认删除</button></div>
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
@@ -1316,8 +1369,22 @@ function membershipBenefitConsumePreview(account,benefitCode,count){
 function courtMembershipSummary(court){
   const account=courtMembershipAccount(court?.id);
   const finance=courtFinanceLocal(court||{history:[]});
-  if(!account)return {account:null,accountType:finance.balance>0?'储值':'普通',memberLabel:'—',status:'未开卡',discount:'—',validUntil:'—'};
-  return {account,accountType:['active','extended'].includes(account.status)?'会员':'历史会员',memberLabel:account.memberLabel||'—',status:membershipDisplayStatus(account),discount:account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—',validUntil:account.validUntil||'—'};
+  if(!account)return {account:null,accountType:finance.balance>0?'储值':'普通',memberLabel:'—',tierLabel:'-',status:'未开卡',discount:'—',validUntil:'—'};
+  return {account,accountType:['active','extended'].includes(account.status)?'会员':'历史会员',memberLabel:account.memberLabel||'—',tierLabel:courtMembershipTierLabel(account),status:membershipDisplayStatus(account),discount:account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—',validUntil:account.validUntil||'—'};
+}
+function courtMembershipTierLabel(account){
+  if(!account)return '-';
+  const latestOrder=membershipOrdersForAccount(account.id)[0]||null;
+  const plan=membershipPlans.find(p=>p.id===(latestOrder?.membershipPlanId||account.membershipPlanId))||{};
+  return account.tierCode||latestOrder?.tierCode||plan.tierCode||'-';
+}
+function courtMembershipTierTagClass(tierLabel){
+  const text=String(tierLabel||'').toLowerCase();
+  if(!text||text==='-')return '';
+  if(text.includes('金')||text.includes('gold'))return 'tms-tag-tier-gold';
+  if(text.includes('钻')||text.includes('diamond')||text.includes('铂')||text.includes('platinum'))return 'tms-tag-tier-blue';
+  if(text.includes('银')||text.includes('silver'))return 'tms-tag-tier-slate';
+  return 'tms-tag-tier-teal';
 }
 function studentMembershipSummaryHtml(stu){
   const linked=courtsForStudent(stu);
@@ -1554,10 +1621,11 @@ function getCourtDuplicateCandidates(input,editingId=''){
 function courtFinanceConfirmText(h,studentId){
   const st=studentId?students.find(s=>s.id===studentId):null;
   const target=st?`，关联学员：${st.name}`:'，未关联具体学员';
-  if(h.type==='充值')return `确认添加充值 ¥${fmt(h.amount)}？会增加当前余额和累计实收${target}。`;
-  if(h.type==='退款')return h.payMethod==='储值退款'?`确认添加储值退款 ¥${fmt(h.amount)}？会减少当前余额和累计实收${target}。`:`确认添加退款 ¥${fmt(h.amount)}？会减少累计实收，不影响当前余额${target}。`;
-  if(h.type==='冲正')return h.payMethod==='储值扣款'?`确认添加储值扣款冲正 ¥${fmt(h.amount)}？会抵消一笔错误消费，并把余额加回${target}。`:`确认添加单次支付冲正 ¥${fmt(h.amount)}？会抵消一笔错误消费，并减少累计实收${target}。`;
-  return h.payMethod==='储值扣款'?`确认添加储值扣款消费 ¥${fmt(h.amount)}？会减少当前余额，只增加累计消费，不重复增加累计实收${target}。`:`确认添加单次支付消费 ¥${fmt(h.amount)}？会增加累计消费和累计实收，不减少当前余额${target}。`;
+  if(h.type==='充值')return `确认充值 ¥${fmt(h.amount)}？这笔钱会进入当前余额，以后订场可选择“储值扣款”使用${target}。`;
+  if(h.type==='退款')return h.payMethod==='储值退款'?`确认从储值余额退款 ¥${fmt(h.amount)}？会减少当前余额${target}。`:`确认退款 ¥${fmt(h.amount)}？用于记录已退回的单次付款${target}。`;
+  if(h.type==='冲正')return h.payMethod==='储值扣款'?`确认冲正 ¥${fmt(h.amount)}？用于撤回一笔录错的储值扣款，余额会加回${target}。`:`确认冲正 ¥${fmt(h.amount)}？用于撤回一笔录错的单次支付消费${target}。`;
+  if(h.payMethod==='储值扣款')return `确认用储值余额支付 ¥${fmt(h.amount)}？会从当前余额扣除${target}。`;
+  return `确认记录单次支付 ¥${fmt(h.amount)}？适用于微信、支付宝、现金或转账现场收款${target}。`;
 }
 
 let token=localStorage.getItem('ft_token');
@@ -1757,16 +1825,32 @@ function renderAll(){
   const scf=document.getElementById('schCampusFilter');
   if(scf)scf.innerHTML='<option value="">全部校区</option>'+campuses.map(c=>`<option value="${c.code||c.id}">${esc(c.name)}</option>`).join('');
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
-  if(isCoach){
-    renderWorkbench();renderMySchedule();renderMyStudents();renderMyClasses();
-    if(!['workbench','myschedule','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
-  }else if(currentUser?.role==='admin'){
-    if(['workbench','myschedule','mystudents','myclasses'].includes(currentPage))currentPage='students';
-    renderStudents();renderClasses();renderPlans();renderSchedule();renderCoachOps();renderProducts();renderPackages();renderPurchases();renderEntitlements();renderCourts();renderMemberships();renderCoaches();renderCampuses();
-  }else{
-    doLogout();return;
-  }
-  goPage(currentPage);
+  if(isCoach&&!['workbench','myschedule','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
+  else if(currentUser?.role==='admin'&&['workbench','myschedule','mystudents','myclasses'].includes(currentPage))currentPage='students';
+  else if(currentUser?.role!=='admin'&&!isCoach){doLogout();return;}
+  renderPageData(currentPage);
+  goPage(currentPage,null,true);
+}
+
+function renderPageData(pg){
+  if(pg==='students')renderStudents();
+  if(pg==='classes')renderClasses();
+  if(pg==='plans')renderPlans();
+  if(pg==='schedule')renderSchedule();
+  if(pg==='coachops')renderCoachOps();
+  if(pg==='products')renderProducts();
+  if(pg==='packages')renderPackages();
+  if(pg==='purchases')renderPurchases();
+  if(pg==='entitlements')renderEntitlements();
+  if(pg==='coaches')renderCoaches();
+  if(pg==='courts')renderCourts();
+  if(pg==='memberships')renderMemberships();
+  if(pg==='membership-plans')renderMembershipPlans();
+  if(pg==='campusmgr')renderCampuses();
+  if(pg==='workbench')renderWorkbench();
+  if(pg==='myschedule')renderMySchedule();
+  if(pg==='mystudents')renderMyStudents();
+  if(pg==='myclasses')renderMyClasses();
 }
 
 let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',editId=null,delId=null,delType=null,_pending=[];
@@ -1776,9 +1860,9 @@ let membershipTab='accounts';
 let courtSortKey='',courtSortDir='desc',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtPageSize=20,selectedCourtIds=new Set();
 let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null;
 
-function goPage(pg,el){
+function goPage(pg,el,skipRender=false){
   syncViewportMode();
-  const adminPages=['students','classes','plans','schedule','coachops','products','packages','purchases','entitlements','coaches','courts','memberships','campusmgr'];
+  const adminPages=['students','classes','plans','schedule','coachops','products','packages','purchases','entitlements','coaches','courts','memberships','membership-plans','campusmgr'];
   const coachPages=['workbench','myschedule','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
@@ -1792,16 +1876,15 @@ function goPage(pg,el){
   document.getElementById('page-'+pg).classList.add('active');currentPage=pg;
   localStorage.setItem(PAGE_KEY,currentPage);
   document.getElementById('campusTabs').style.display=['students','courts'].includes(pg)?'flex':'none';
-  const t={students:'学员信息',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',entitlements:'权益账户',coaches:'教练管理',courts:'订场用户',memberships:'会员管理',campusmgr:'校区管理',workbench:'工作台',myschedule:'我的课表',mystudents:'我的学员',myclasses:'我的班次'};
+  const t={students:'学员信息',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',entitlements:'权益账户',coaches:'教练管理',courts:'订场用户',memberships:'会员管理','membership-plans':'会员方案',campusmgr:'校区管理',workbench:'工作台',myschedule:'我的课表',mystudents:'我的学员',myclasses:'我的班次'};
   document.getElementById('topTitle').textContent=t[pg]||'';
-  if(pg==='coachops')renderCoachOps();
-  if(pg==='workbench')renderWorkbench();
-  if(pg==='myschedule')renderMySchedule();
-  if(pg==='mystudents')renderMyStudents();
-  if(pg==='myclasses')renderMyClasses();
-  if(pg==='memberships')renderMemberships();
+  if(!skipRender)renderPageData(pg);
 }
-function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;courtPage=1;renderStudents();renderCourts();}
+function renderStudentsIfVisible(){
+  if(currentPage==='students')renderStudents();
+  if(currentPage==='mystudents')renderMyStudents();
+}
+function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;courtPage=1;if(currentPage==='students')renderStudents();if(currentPage==='courts')renderCourts();}
 // ===== 学员信息 =====
 function onStudentFilterChange(){stuPage=1;renderStudents();}
 function getStudentBaseList(){
@@ -2720,26 +2803,30 @@ function handleCourtMoreAction(value){
   }
 }
 function setCourtSort(key){
-  if(courtSortKey===key)courtSortDir=courtSortDir==='desc'?'asc':'desc';
-  else{courtSortKey=key;courtSortDir='desc';}
+  if(courtSortKey!==key){courtSortKey=key;courtSortDir='desc';}
+  else if(courtSortDir==='desc')courtSortDir='asc';
+  else{courtSortKey='';courtSortDir='desc';}
   renderCourts();
 }
 function setMembershipTab(tab){
+  if(tab==='plans'){goPage('membership-plans',null);return;}
   membershipTab=tab;
   renderMemberships();
+}
+function membershipPlansTableHtml(q=''){
+  const rows=membershipPlans.filter(p=>searchHit(q,p.name,p.tierCode,p.notes));
+  return `<div class="tcard"><table><thead style="font-size:10px"><tr><th>会员方案</th><th>档位</th><th>充值金额</th><th>赠送金额</th><th>折扣</th><th>赠送权益</th><th>状态</th><th style="text-align:right">操作</th></tr></thead><tbody style="font-size:12px">${rows.map(p=>`<tr><td><div class="uname">${esc(p.name)}</div></td><td>${esc(p.tierCode)||'—'}</td><td>¥${fmt(p.rechargeAmount)}</td><td>¥${fmt(p.bonusAmount)}</td><td>${p.discountRate?Math.round((parseFloat(p.discountRate)||1)*100)/10+' 折':'—'}</td><td style="font-size:12px;color:var(--tb)">${[{label:'大师公开课',count:parseInt(p.publicLessonCount)||0},{label:'穿线免手工费',count:parseInt(p.stringingLaborCount)||0},{label:'发球机免费',count:parseInt(p.ballMachineCount)||0},{label:'国家二级运动员陪打',count:parseInt(p.level2PartnerCount)||0},{label:'指定教练陪打',count:parseInt(p.designatedCoachPartnerCount)||0}].filter(x=>x.count>0).map(x=>`${x.label} ${x.count}次`).join('；')||'—'}</td><td>${membershipStatusText(p.status)}</td><td style="text-align:right"><button class="abtn" onclick="openMembershipPlanModal('${p.id}')">编辑</button></td></tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无会员方案</p></div></td></tr>'}</tbody></table></div>`;
+}
+function renderMembershipPlans(){
+  const host=document.getElementById('membershipPlanBody');if(!host)return;
+  const q=(document.getElementById('membershipPlanSearch')?.value||'').toLowerCase();
+  host.innerHTML=membershipPlansTableHtml(q);
 }
 function renderMemberships(){
   const host=document.getElementById('membershipTabBody');if(!host)return;
   const q=(document.getElementById('membershipSearch')?.value||'').toLowerCase();
   const benefitCourtFilter=document.getElementById('membershipBenefitCourtFilter')?.value||'';
-  const addPlanBtn=document.getElementById('membershipAddPlanBtn');
-  ['Plans','Orders','Accounts','Benefits'].forEach(name=>document.getElementById('membershipTab'+name)?.classList.toggle('active',membershipTab===name.toLowerCase()));
-  if(addPlanBtn)addPlanBtn.style.display=membershipTab==='plans'?'inline-flex':'none';
-  if(membershipTab==='plans'){
-    const rows=membershipPlans.filter(p=>searchHit(q,p.name,p.tierCode,p.notes));
-    host.innerHTML=`<div class="tcard"><table><thead style="font-size:10px"><tr><th>会员方案</th><th>档位</th><th>充值金额</th><th>赠送金额</th><th>折扣</th><th>赠送权益</th><th>状态</th><th style="text-align:right">操作</th></tr></thead><tbody style="font-size:12px">${rows.map(p=>`<tr><td><div class="uname">${esc(p.name)}</div></td><td>${esc(p.tierCode)||'—'}</td><td>¥${fmt(p.rechargeAmount)}</td><td>¥${fmt(p.bonusAmount)}</td><td>${p.discountRate?Math.round((parseFloat(p.discountRate)||1)*100)/10+' 折':'—'}</td><td style="font-size:12px;color:var(--tb)">${[{label:'大师公开课',count:parseInt(p.publicLessonCount)||0},{label:'穿线免手工费',count:parseInt(p.stringingLaborCount)||0},{label:'发球机免费',count:parseInt(p.ballMachineCount)||0},{label:'国家二级运动员陪打',count:parseInt(p.level2PartnerCount)||0},{label:'指定教练陪打',count:parseInt(p.designatedCoachPartnerCount)||0}].filter(x=>x.count>0).map(x=>`${x.label} ${x.count}次`).join('；')||'—'}</td><td>${membershipStatusText(p.status)}</td><td style="text-align:right"><button class="abtn" onclick="openMembershipPlanModal('${p.id}')">编辑</button></td></tr>`).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无会员方案</p></div></td></tr>'}</tbody></table></div>`;
-    return;
-  }
+  ['Orders','Accounts','Benefits'].forEach(name=>document.getElementById('membershipTab'+name)?.classList.toggle('active',membershipTab===name.toLowerCase()));
   if(membershipTab==='orders'){
     const rows=membershipOrders.filter(o=>searchHit(q,o.courtName,o.membershipPlanName,o.notes));
     host.innerHTML=`<div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.18);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tb);margin-bottom:12px">此页面仅用于审计与追溯，不用于日常操作</div><div class="tcard"><table><thead style="font-size:10px"><tr><th>购买日期</th><th>订场用户</th><th>会员方案</th><th>充值</th><th>赠送金额</th><th>折扣</th><th>是否重置有效期</th><th>当次权益摘要</th><th>状态</th></tr></thead><tbody style="font-size:12px">${rows.map(o=>`<tr><td>${esc(o.purchaseDate)||'—'}</td><td>${esc(o.courtName)||'—'}</td><td>${esc(o.membershipPlanName)||'—'}</td><td>¥${fmt(o.rechargeAmount)}</td><td>¥${fmt(o.bonusAmount)}</td><td>${membershipDiscountText(o.discountRate)}</td><td>${o.qualifiesRenewalReset===false?'否':'是'}</td><td style="font-size:12px;color:var(--tb)">${membershipOrderBenefitSummaryHtml(o)}</td><td>${membershipStatusText(o.status)}</td></tr>`).join('')||'<tr><td colspan="9"><div class="empty"><p>暂无会员购买记录</p></div></td></tr>'}</tbody></table></div>`;
@@ -2752,7 +2839,7 @@ function renderMemberships(){
     const totalAmount=membershipOrders.reduce((sum,o)=>sum+(parseFloat(o.rechargeAmount)||0),0);
     const expiringCount=membershipAccounts.filter(a=>membershipDisplayStatus(a)==='30天内到期').length;
     const balanceTotal=membershipAccounts.reduce((sum,a)=>{const court=courts.find(c=>c.id===a.courtId);return sum+(courtFinanceLocal(court||{history:[]}).balance||0);},0);
-    host.innerHTML=`<div class="stats-row" style="margin-bottom:12px"><div class="scard"><div><div class="sc-label">会员数</div><div class="sc-val">${memberCount}<span class="u">人</span></div></div></div><div class="scard"><div><div class="sc-label">订购次数</div><div class="sc-val">${orderCount}<span class="u">次</span></div></div></div><div class="scard"><div><div class="sc-label">总金额</div><div class="sc-val">¥${fmt(totalAmount)}</div></div></div><div class="scard"><div><div class="sc-label">30天内到期</div><div class="sc-val">${expiringCount}<span class="u">人</span></div></div></div><div class="scard"><div><div class="sc-label">当前余额总额</div><div class="sc-val">¥${fmt(balanceTotal)}</div></div></div></div><div class="toolbar" style="margin-bottom:10px"><button class="btn-sec" onclick="setMembershipTab('plans')">方案配置</button><button class="btn-sec" onclick="setMembershipTab('orders')">购买记录</button><button class="btn-sec" onclick="setMembershipTab('benefits')">权益流水</button></div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.18);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tb);margin-bottom:12px">余额来自 courts.history，仅展示不可直接修改</div><div class="tcard"><table><thead style="font-size:10px"><tr><th>订场用户</th><th>当前方案</th><th>会员状态</th><th>当前余额</th><th>当前折扣</th><th>可用权益</th><th>余额有效期</th><th style="text-align:right">操作</th></tr></thead><tbody style="font-size:12px">${rows.map(a=>{const court=courts.find(c=>c.id===a.courtId);const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'—';return `<tr><td>${esc(a.courtName)||'—'}</td><td>${esc(a.memberLabel)||'—'}</td><td>${membershipDisplayStatus(a)}</td><td>¥${fmt(finance.balance)}</td><td>${a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':'—'}</td><td style="font-size:12px;color:var(--tb)">${benefits}</td><td>${esc(membershipValidityHint(a))}</td><td style="text-align:right"><button class="abtn" onclick="openCourtMembershipPanel('${a.courtId}')">查看账户</button></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无会员账户</p></div></td></tr>'}</tbody></table></div>`;
+    host.innerHTML=`<div class="stats-row" style="margin-bottom:12px"><div class="scard"><div><div class="sc-label">会员数</div><div class="sc-val">${memberCount}<span class="u">人</span></div></div></div><div class="scard"><div><div class="sc-label">订购次数</div><div class="sc-val">${orderCount}<span class="u">次</span></div></div></div><div class="scard"><div><div class="sc-label">总金额</div><div class="sc-val">¥${fmt(totalAmount)}</div></div></div><div class="scard"><div><div class="sc-label">30天内到期</div><div class="sc-val">${expiringCount}<span class="u">人</span></div></div></div><div class="scard"><div><div class="sc-label">当前余额总额</div><div class="sc-val">¥${fmt(balanceTotal)}</div></div></div></div><div class="toolbar" style="margin-bottom:10px"><button class="btn-sec" onclick="goPage('membership-plans',null)">方案配置</button><button class="btn-sec" onclick="setMembershipTab('orders')">购买记录</button><button class="btn-sec" onclick="setMembershipTab('benefits')">权益流水</button></div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.18);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tb);margin-bottom:12px">余额来自 courts.history，仅展示不可直接修改</div><div class="tcard"><table><thead style="font-size:10px"><tr><th>订场用户</th><th>当前方案</th><th>会员状态</th><th>当前余额</th><th>当前折扣</th><th>可用权益</th><th>余额有效期</th><th style="text-align:right">操作</th></tr></thead><tbody style="font-size:12px">${rows.map(a=>{const court=courts.find(c=>c.id===a.courtId);const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'—';return `<tr><td>${esc(a.courtName)||'—'}</td><td>${esc(a.memberLabel)||'—'}</td><td>${membershipDisplayStatus(a)}</td><td>¥${fmt(finance.balance)}</td><td>${a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':'—'}</td><td style="font-size:12px;color:var(--tb)">${benefits}</td><td>${esc(membershipValidityHint(a))}</td><td style="text-align:right"><button class="abtn" onclick="openCourtMembershipPanel('${a.courtId}')">查看账户</button></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无会员账户</p></div></td></tr>'}</tbody></table></div>`;
     return;
   }
   const courtOptions=[`<option value="">全部订场用户</option>`,...membershipAccounts.map(a=>`<option value="${a.courtId}" ${benefitCourtFilter===a.courtId?'selected':''}>${esc(a.courtName)||esc(a.courtId)}</option>`)].join('');
@@ -2776,7 +2863,7 @@ async function saveMembershipPlan(){
   if(tierInput&&!tierInput.value.trim())tierInput.value=membershipTierCodeValue(name);
   const data={name,tierCode:tierInput.value.trim(),rechargeAmount:parseFloat(document.getElementById('mp_recharge').value)||0,discountRate:parseFloat(document.getElementById('mp_discount').value)||0,bonusAmount:parseFloat(document.getElementById('mp_bonus').value)||0,publicLessonCount:parseInt(document.getElementById('mp_publicLesson').value)||0,stringingLaborCount:parseInt(document.getElementById('mp_stringingLabor').value)||0,ballMachineCount:parseInt(document.getElementById('mp_ballMachine').value)||0,level2PartnerCount:parseInt(document.getElementById('mp_level2Partner').value)||0,designatedCoachPartnerCount:parseInt(document.getElementById('mp_designatedCoachPartner').value)||0,designatedCoachIds:membershipCoachSelectorValues('mp_designatedCoachIdsWrap'),notes:document.getElementById('mp_notes').value.trim(),status:'active'};
   const btn=document.getElementById('membershipPlanSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{if(editId){const r=await apiCall('PUT','/membership-plans/'+editId,data);const i=membershipPlans.findIndex(x=>x.id===editId);membershipPlans[i]=r;}else{const r=await apiCall('POST','/membership-plans',data);membershipPlans.unshift(r);}closeModal();renderMemberships();toast('会员方案已保存','success');}catch(e){if(btn){btn.disabled=false;btn.textContent='保存';}toast('保存失败：'+e.message,'error');}
+  try{if(editId){const r=await apiCall('PUT','/membership-plans/'+editId,data);const i=membershipPlans.findIndex(x=>x.id===editId);membershipPlans[i]=r;}else{const r=await apiCall('POST','/membership-plans',data);membershipPlans.unshift(r);}closeModal();renderMembershipPlans();renderMemberships();toast('会员方案已保存','success');}catch(e){if(btn){btn.disabled=false;btn.textContent='保存';}toast('保存失败：'+e.message,'error');}
 }
 function refreshMembershipOrderPreview(mode='renew'){
   const courtId=document.getElementById('mo_courtId')?.value||'';
@@ -2927,7 +3014,7 @@ function renderCourtDropdownHtml(id,label,options,value,isForm=false,onchange=''
   const list=(options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt);
   const active=list.find(opt=>String(opt.value)===String(value))||list.find(opt=>opt.active)||null;
   const displayLabel=active?(active.label||active.value):label;
-  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu">${list.map(opt=>`<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(opt.label||opt.value)},event)">${esc(opt.label||opt.value)}</div>`).join('')}</div></div>`;
+  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" onwheel="event.stopPropagation()" ontouchmove="event.stopPropagation()">${list.map(opt=>`<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(opt.label||opt.value)},event)">${esc(opt.label||opt.value)}</div>`).join('')}</div></div>`;
 }
 function closeCourtDropdowns(){
   document.querySelectorAll('#page-courts .tms-dropdown.open,#overlay .modal-court .tms-dropdown.open').forEach(el=>{
@@ -2990,9 +3077,13 @@ function renderCourtMiniBar(amount,total=0,low=false){
 }
 function renderCourtCellText(value,mutedWhenEmpty=true){
   const raw=String(value??'').trim();
-  const text=raw||'—';
-  const muted=mutedWhenEmpty&&(!raw||raw==='—'||raw==='未开卡');
+  const text=renderCourtEmptyText(raw);
+  const muted=mutedWhenEmpty&&(!raw||raw==='-'||raw==='未开卡');
   return `<div class="tms-cell-text${muted?' is-muted':''}">${esc(text)}</div>`;
+}
+function renderCourtEmptyText(value){
+  const raw=String(value??'').trim();
+  return raw&&raw!=='—'?raw:'-';
 }
 function courtDateButtonHtml(id,value,label='年 / 月 / 日'){
   const show=value||label;
@@ -3034,9 +3125,10 @@ function getCourtTimeOptions(selected='08:00'){
 }
 function renderCourts(){
   const q=(document.getElementById('courtSearch')?.value||'').toLowerCase();
-  const base=courts.filter(c=>campus==='all'||c.campus===campus);
+  const visibleCourts=courts.filter(c=>String(c.status||'active')!=='inactive');
+  const base=visibleCourts.filter(c=>campus==='all'||c.campus===campus);
   renderCourtHeaderFilters(base);
-  let list=courts.filter(c=>{
+  let list=visibleCourts.filter(c=>{
     if(campus!=='all'&&c.campus!==campus)return false;
     if(courtOwnerFilterValue&&String(c.owner||'').trim()!==courtOwnerFilterValue)return false;
     const linked=findStudentForCourt(c);
@@ -3054,8 +3146,7 @@ function renderCourts(){
   }
   const finBase=base.map(courtFinanceLocal);
   const totBal=finBase.reduce((s,u)=>s+u.balance,0),totDep=finBase.reduce((s,u)=>s+u.totalDeposit,0),totSpent=finBase.reduce((s,u)=>s+u.spentAmount,0),totReceived=finBase.reduce((s,u)=>s+u.receivedAmount,0);
-  const low=finBase.filter(u=>u.balance>0&&u.balance<=500).length;
-  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${base.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">余额合计</div><div class="tms-stat-value">¥${fmt(totBal)}</div><div class="tms-stat-sub" style="color:${low?'#b45309':''}">低余额 ${low}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计充值</div><div class="tms-stat-value">¥${fmt(totDep)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计消费</div><div class="tms-stat-value">¥${fmt(totSpent)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(totReceived)}</div></div>`;
+  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${base.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">余额合计</div><div class="tms-stat-value">¥${fmt(totBal)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计充值</div><div class="tms-stat-value">¥${fmt(totDep)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计消费</div><div class="tms-stat-value">¥${fmt(totSpent)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(totReceived)}</div></div>`;
   const total=list.length,pages=Math.ceil(total/courtPageSize),slice=list.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
   document.getElementById('courtPagerInfo').textContent=`共 ${total} 条`;
   document.getElementById('courtPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===courtPage?' active':''}" onclick="courtPage=${i+1};renderCourts()">${i+1}</div>`).join('');
@@ -3066,8 +3157,10 @@ function renderCourts(){
     const m=courtMembershipSummary(u);
     const w=f.balance>0&&f.balance<=500;
     const accountTagClass=m.accountType==='会员'?'tms-tag-green':m.accountType==='普通'?'':'tms-tag-red';
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><label class="tms-checkbox-wrap" style="align-items:flex-start;width:100%"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary" style="margin-left:4px;white-space:normal;display:block;line-height:1.35;max-width:88px">${esc(u.name)}</span></label></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td><div class="tms-cell-text${!m.memberLabel||m.memberLabel==='—'?' is-muted':''}" style="max-width:130px;overflow:hidden;text-overflow:ellipsis">${esc(m.memberLabel||'—')}</div></td><td>${renderCourtCellText(m.status)}</td><td>${renderCourtCellText(m.discount)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtCellText(u.owner)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td>${renderCourtCellText(u.nextFollowUpDate)}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td><div class="tms-cell-text">¥${fmt(f.spentAmount)}</div></td><td><span class="tms-action-link" onclick="openCourtHist('${u.id}')">${parseArr(u.history).length}条</span></td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(u.notes)||'—'}</div></td><td class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right;white-space:nowrap"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">查看</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
-  }).join(''):'<tr><td colspan="18"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+    const memberTagClass=courtMembershipTierTagClass(m.tierLabel);
+    const memberCell=m.tierLabel&&m.tierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderCourtEmptyText(m.tierLabel))}</span>`:renderCourtCellText('-');
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><label class="tms-checkbox-wrap" style="align-items:flex-start;width:100%"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary" style="margin-left:4px;white-space:normal;display:block;line-height:1.35;max-width:88px">${esc(u.name)}</span></label></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td>${memberCell}</td><td>${renderCourtCellText(m.status)}</td><td>${renderCourtCellText(m.discount)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtCellText(u.owner)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td>${renderCourtCellText(u.nextFollowUpDate)}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td><div class="tms-cell-text">¥${fmt(f.spentAmount)}</div></td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(renderCourtEmptyText(u.notes))}</div></td><td class="tms-sticky-r" style="width:210px;padding-right:20px;text-align:right;white-space:nowrap"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">查看</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
+  }).join(''):'<tr><td colspan="16"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts .tms-sortable').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
@@ -3106,7 +3199,7 @@ function openCourtModal(id){
   const linked=findStudentForCourt(r);
   const selectedIds=parseArr(r?.studentIds);if(!selectedIds.length&&linked)selectedIds.push(linked.id);
   const campusList=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="13800138000" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label><div class="tms-checkbox-matrix">${studentChecks(selectedIds)}</div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('f_campus','校区',campusList,rv(r,'campus')||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate',today()))}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最近跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" id="f_dep" value="${fin.totalDeposit}" readonly></div><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" id="f_bal" value="${fin.balance}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" id="f_spent" value="${fin.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" id="f_received" value="${fin.receivedAmount}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="13800138000" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label><div class="tms-checkbox-matrix">${studentChecks(selectedIds)}</div></div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('f_campus','校区',campusList,rv(r,'campus')||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate',today()))}</div><div class="tms-form-item"><label class="tms-form-label">最近跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" id="f_dep" value="${fin.totalDeposit}" readonly></div><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" id="f_bal" value="${fin.balance}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" id="f_spent" value="${fin.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" id="f_received" value="${fin.receivedAmount}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
   const footer=id?`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-danger" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`:`<div style="display:flex;gap:12px;margin-left:auto;"><button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`;
   setCourtModalFrame(id?'编辑订场用户':'添加订场用户',body,footer,'modal-wide');
 }
@@ -3121,7 +3214,7 @@ async function saveCourt(){
   const duplicates=getCourtDuplicateCandidates({name,phone,campus:campusValue},editId);
   if(duplicates.length){
     const summary=duplicates.map(c=>`${c.name}${c.phone?`（${c.phone}）`:''}${c.campus?` · ${cn(c.campus)}`:''}`).join('、');
-    if(!confirm(`发现可能重复的订场用户：${summary}。手机号优先，若无手机号则按姓名+校区去重。是否继续保存？`)){
+    if(!await appConfirm(`发现可能重复的订场用户：${summary}。手机号优先，若无手机号则按姓名+校区去重。是否继续保存？`,{title:'发现重复用户',confirmText:'继续保存'})){
       if(btn){btn.disabled=false;btn.textContent='保存';}
       return;
     }
@@ -3129,7 +3222,7 @@ async function saveCourt(){
   try{
     if(editId){const saved=await apiCall('PUT','/courts/'+editId,rec);const i=courts.findIndex(u=>u.id===editId);courts[i]=saved;}
     else{const r=await apiCall('POST','/courts',rec);courts.unshift(r);}
-    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderCourts();renderStudents();
+    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderCourts();renderStudentsIfVisible();
   }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
 function updateCourtFinancePreview(){
@@ -3142,9 +3235,25 @@ function updateCourtFinancePreview(){
   if(type==='消费'&&pay.value==='储值退款')setCourtDropdownValue('nrPayMethod','储值扣款','储值扣款');
   if(type==='退款'&&pay.value==='储值扣款')setCourtDropdownValue('nrPayMethod','储值退款','储值退款');
   if(type==='冲正'&&pay.value==='储值退款')setCourtDropdownValue('nrPayMethod','储值扣款','储值扣款');
+  if(type==='充值'&&cat)setCourtDropdownValue('nrCategory','储值','储值');
+  if(type==='消费'&&cat&&['储值','退款','冲正','其他'].includes(cat.value))setCourtDropdownValue('nrCategory','订场','订场');
   if(type==='退款'&&cat)setCourtDropdownValue('nrCategory','退款','退款');
   if(type==='冲正'&&cat)setCourtDropdownValue('nrCategory','冲正','冲正');
-  hint.textContent=type==='充值'?'充值会增加余额和累计实收。':type==='退款'?(pay.value==='储值退款'?'储值退款会减少余额和累计实收。':'退款会减少累计实收，不影响余额。'):type==='冲正'?(pay.value==='储值扣款'?'冲正用于抵消误操作的储值扣款消费，会把余额加回。':'冲正用于抵消误操作的单次支付消费，会减少累计消费和累计实收。'):pay.value==='储值扣款'?'储值扣款会减少余额，只增加累计消费，不重复增加实收。':'单次支付消费不减少余额，会增加累计消费和累计实收。';
+  const nextCat=document.getElementById('nrCategory')?.value;
+  hint.textContent=type==='充值'?'充值是预存储值，不需要填写场地和时间；以后订场可用储值扣款。':type==='退款'?(pay.value==='储值退款'?'从储值余额退款，会减少当前余额。':'记录单次付款退款，不影响储值余额。'):type==='冲正'?(pay.value==='储值扣款'?'冲正用于撤回录错的储值扣款，余额会加回。':'冲正用于撤回录错的单次支付消费。'):nextCat==='订场'?(pay.value==='储值扣款'?'本次订场会从当前余额扣款。':'本次订场按单次支付记录，不扣储值余额。'):'报课消费只记录课程项目、节数和金额，不需要选择场地时间。';
+}
+function renderCourtFinanceFields(){
+  const type=document.getElementById('nrType')?.value||'消费';
+  const category=document.getElementById('nrCategory')?.value||'订场';
+  const isBooking=type==='消费'&&category==='订场';
+  const isCourse=type==='消费'&&['私教课','班课','训练营'].includes(category);
+  document.querySelectorAll('[data-finance-field="booking"]').forEach(el=>el.style.display=isBooking?'':'none');
+  document.querySelectorAll('[data-finance-field="course"]').forEach(el=>el.style.display=isCourse?'':'none');
+  document.querySelectorAll('[data-finance-field="student"]').forEach(el=>el.style.display=(isBooking||isCourse)?'':'none');
+}
+function onCourtFinanceSceneChange(){
+  updateCourtFinancePreview();
+  renderCourtFinanceFields();
 }
 let courtFinanceModalId='';
 function openCourtFinanceModal(courtId){
@@ -3158,29 +3267,29 @@ function openCourtFinanceModal(courtId){
   const campusOptions=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
   const venueOptions=VENUES.map(v=>({value:v,label:esc(v)}));
   const hist=[...parseArr(court.history)].reverse();
-  const body=`<div class="tms-section-header" style="margin-top:0;">财务摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" value="${finance.balance}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" value="${finance.totalDeposit}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" value="${finance.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" value="${finance.receivedAmount}" readonly></div></div><div class="tms-section-header">流水录入</div><div class="tms-record-add-box"><div class="tms-form-row"><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrType','类型',[{value:'充值',label:'充值'},{value:'消费',label:'消费'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'消费',true,'updateCourtFinancePreview')}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrCategory','项目',[{value:'订场',label:'订场'},{value:'私教课',label:'私教课'},{value:'班课',label:'班课'},{value:'训练营',label:'训练营'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'},{value:'其他',label:'其他'}],'订场',true,'updateCourtFinancePreview')}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrPayMethod','支付',[{value:'微信',label:'微信'},{value:'支付宝',label:'支付宝'},{value:'现金',label:'现金'},{value:'转账',label:'转账'},{value:'储值扣款',label:'储值扣款'},{value:'储值退款',label:'储值退款'},{value:'其他',label:'其他'}],'微信',true,'updateCourtFinancePreview')}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrStudentId','不关联学员',studentOptions,'',true)}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrCampus','校区',campusOptions,court.campus||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrVenue','场地',venueOptions,venueOptions[0]?.value||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item" style="flex:1;">${courtDateButtonHtml('nrDate',today())}</div><div class="tms-form-item" style="flex:1;min-width:0;">${renderCourtDropdownHtml('nrStartTime','08:00',getCourtTimeOptions('08:00'),'08:00',true)}</div><div style="color:#8C7B6E;align-self:center;">至</div><div class="tms-form-item" style="flex:1;min-width:0;">${renderCourtDropdownHtml('nrEndTime','10:00',getCourtTimeOptions('10:00'),'10:00',true)}</div><div class="tms-form-item" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrAmt" placeholder="¥ 发生金额"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrNote" placeholder="备注信息 (非必填)"></div><div class="tms-form-item" style="flex:none;width:160px;"><button class="tms-btn tms-btn-primary" id="courtFinanceAddBtn" style="width:100%;height:100%;padding:0;" onclick="saveCourtFinanceRecord()">添加</button></div></div></div><div style="font-size:12px;color:var(--ts);margin:0 0 16px" id="financeHint">储值扣款会减少余额；微信/支付宝/现金/转账消费不减少余额。</div><div class="tms-section-header">历史记录</div><div class="tms-history-list">${renderCourtHistoryItems(hist)}</div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">财务摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" value="${finance.balance}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" value="${finance.totalDeposit}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" value="${finance.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" value="${finance.receivedAmount}" readonly></div></div><div class="tms-section-header">流水录入</div><div class="tms-record-add-box"><div class="tms-form-row"><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrType','类型',[{value:'充值',label:'充值'},{value:'消费',label:'消费'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'消费',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrCategory','项目',[{value:'储值',label:'储值'},{value:'订场',label:'订场'},{value:'私教课',label:'私教课'},{value:'班课',label:'班课'},{value:'训练营',label:'训练营'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'订场',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:1;">${renderCourtDropdownHtml('nrPayMethod','支付',[{value:'微信',label:'微信'},{value:'支付宝',label:'支付宝'},{value:'现金',label:'现金'},{value:'转账',label:'转账'},{value:'储值扣款',label:'储值扣款'},{value:'储值退款',label:'储值退款'},{value:'其他',label:'其他'}],'储值扣款',true,'updateCourtFinancePreview')}</div><div class="tms-form-item" data-finance-field="student" style="flex:1;">${renderCourtDropdownHtml('nrStudentId','不关联学员',studentOptions,'',true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:1;">${renderCourtDropdownHtml('nrCampus','校区',campusOptions,court.campus||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:1;">${renderCourtDropdownHtml('nrVenue','场地',venueOptions,venueOptions[0]?.value||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item" data-finance-field="booking" style="flex:1;">${courtDateButtonHtml('nrDate',today())}</div><div class="tms-form-item" data-finance-field="booking" style="flex:1;min-width:0;">${renderCourtDropdownHtml('nrStartTime','08:00',getCourtTimeOptions('08:00'),'08:00',true)}</div><div data-finance-field="booking" style="color:#8C7B6E;align-self:center;">至</div><div class="tms-form-item" data-finance-field="booking" style="flex:1;min-width:0;">${renderCourtDropdownHtml('nrEndTime','10:00',getCourtTimeOptions('10:00'),'10:00',true)}</div><div class="tms-form-item" data-finance-field="course" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrLessonCount" min="1" step="1" placeholder="节数"></div><div class="tms-form-item" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrAmt" placeholder="¥ 发生金额"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrNote" placeholder="备注信息 (非必填)"></div><div class="tms-form-item" style="flex:none;width:160px;"><button class="tms-btn tms-btn-primary" id="courtFinanceAddBtn" style="width:100%;height:100%;padding:0;" onclick="saveCourtFinanceRecord()">添加</button></div></div></div><div style="font-size:12px;color:var(--ts);margin:0 0 16px" id="financeHint">本次订场会从当前余额扣款。</div><div class="tms-section-header">历史记录</div><div class="tms-history-list">${renderCourtHistoryItems(hist)}</div>`;
   setCourtModalFrame(`${court.name} · 记一笔流水`,body,`<button class="tms-btn tms-btn-default" style="width:100%;text-align:center" onclick="closeModal()">关闭</button>`,'modal-wide');
-  updateCourtFinancePreview();
+  onCourtFinanceSceneChange();
 }
 async function saveCourtFinanceRecord(){
   const court=courts.find(c=>c.id===courtFinanceModalId);
   if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
   const type=document.getElementById('nrType').value,date=document.getElementById('nrDate').value,amt=parseFloat(document.getElementById('nrAmt').value),note=document.getElementById('nrNote').value.trim();
   const category=document.getElementById('nrCategory').value,payMethod=document.getElementById('nrPayMethod').value,studentId=document.getElementById('nrStudentId')?.value||'';
-  const startTime=document.getElementById('nrStartTime')?.value||'',endTime=document.getElementById('nrEndTime')?.value||'',venue=document.getElementById('nrVenue')?.value||'',recCampus=document.getElementById('nrCampus')?.value||court.campus||'';
+  const startTime=document.getElementById('nrStartTime')?.value||'',endTime=document.getElementById('nrEndTime')?.value||'',venue=document.getElementById('nrVenue')?.value||'',recCampus=document.getElementById('nrCampus')?.value||court.campus||'',lessonCount=parseInt(document.getElementById('nrLessonCount')?.value)||0;
   if(!date){toast('请选择日期','warn');return;}
   if(!amt||isNaN(amt)){toast('请输入金额','warn');return;}
   if(type==='消费'&&category==='订场'){
     if(!startTime||!endTime||!venue){toast('订场记录请填写时间和场地','warn');return;}
     if(endTime<=startTime){toast('订场结束时间不能早于开始时间','warn');return;}
   }
-  const h={id:uid(),date,type,category,payMethod,studentId,amount:Math.abs(amt),note,startTime,endTime,venue,campus:recCampus};
+  const h={id:uid(),date,type,category,payMethod,studentId,amount:Math.abs(amt),note,startTime,endTime,venue,campus:recCampus,lessonCount};
   const hist=[...courtBaseHistoryForSave(court),h];
   const preview=courtFinanceLocal({...court,history:hist});
   if(preview.balance<0){toast('余额不足，不能使用储值扣款','warn');return;}
   if(preview.receivedAmount<0){toast('退款金额超过累计实收','warn');return;}
   if(preview.spentAmount<0||preview.storedValueSpent<0||preview.directPaidSpent<0){toast('冲正金额超过已有消费','warn');return;}
-  if(!confirm(courtFinanceConfirmText(h,studentId)))return;
+  if(!await appConfirm(courtFinanceConfirmText(h,studentId),{title:'确认添加流水',confirmText:'确认添加'}))return;
   const btn=document.getElementById('courtFinanceAddBtn');
   if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const rec={...court,history:hist};
@@ -3191,7 +3300,7 @@ async function saveCourtFinanceRecord(){
     closeModal();
     toast('添加成功 ✓','success');
     renderCourts();
-    renderStudents();
+    renderStudentsIfVisible();
   }catch(e){
     toast('保存失败：'+e.message,'error');
     if(btn){btn.disabled=false;btn.textContent='添加';}
@@ -3909,34 +4018,60 @@ function renderCoaches(){
   const q=(document.getElementById('coachSearch')?.value||'').toLowerCase();
   const d=coaches.filter(c=>searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
   const tbody=document.getElementById('coachTbody');if(!tbody)return;
-  tbody.innerHTML=d.length?d.map(c=>`<tr><td style="font-weight:600;color:var(--th)">${esc(c.name)||'—'}</td><td>${esc(c.phone)||'—'}</td><td>${cn(c.campus)||'—'}</td><td><span class="badge ${c.status==='active'?'b-green':'b-gray'}">${c.status==='active'?'在职':'离职'}</span></td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.notes)||'—'}</td><td style="text-align:right"><button class="abtn" onclick="openCoachModal('${c.id}')">✏️</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><p>暂无教练</p></div></td></tr>';
+  tbody.innerHTML=d.length?d.map(c=>{
+    const statusText=c.status==='inactive'?'离职':'在职';
+    const statusClass=c.status==='inactive'?'':'tms-tag-green';
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(c.name,false)}</td><td>${renderCourtCellText(c.phone)}</td><td>${renderCourtCellText(cn(c.campus))}</td><td>${renderCourtCellText(c.hireDate)}</td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td><div class="tms-text-remark" title="${esc(c.notes||'')}">${esc(renderCourtEmptyText(c.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openCoachModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','coach')">删除</span></td></tr>`;
+  }).join(''):'<tr><td colspan="7"><div class="empty"><p>暂无教练</p></div></td></tr>';
 }
 function openCoachModal(id){
   editId=id||null;const c=id?coaches.find(x=>x.id===id):null;
-  document.getElementById('mTitle').textContent=id?'编辑教练':'新增教练';
-  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">姓名 *</div><input class="finput" id="co_name" value="${rv(c,'name')}"></div><div class="fg"><div class="flabel">电话</div><input class="finput" id="co_phone" value="${rv(c,'phone')}"></div><div class="fg"><div class="flabel">校区</div><select class="fselect" id="co_campus">${campusOpts(rv(c,'campus'))}</select></div><div class="fg"><div class="flabel">状态</div><select class="fselect" id="co_status"><option value="active"${rv(c,'status','active')==='active'?' selected':''}>在职</option><option value="inactive"${rv(c,'status')==='inactive'?' selected':''}>离职</option></select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="co_notes">${esc(rv(c,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${c.id}','${esc(c.name)}','coach')">删除</button>`:''}<button class="btn-save" onclick="saveCoach()">保存</button></div>`;
-  document.getElementById('overlay').classList.add('open');
+  const campusOptions=campuses.map(x=>({value:x.code||x.id,label:esc(x.name)}));
+  const statusOptions=[{value:'active',label:'在职'},{value:'inactive',label:'离职'}];
+  const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="co_name" value="${rv(c,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="co_phone" value="${rv(c,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('co_campus','校区',campusOptions,rv(c,'campus')||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item"><label class="tms-form-label">入职时间</label><input class="finput tms-form-control" id="co_hireDate" type="date" value="${rv(c,'hireDate')}"></div><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('co_status','状态',statusOptions,rv(c,'status','active'),true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="co_notes">${esc(rv(c,'notes'))}</textarea></div></div>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="coachSaveBtn" onclick="saveCoach()">保存</button>`;
+  setCourtModalFrame(id?'编辑教练':'新增教练',body,actions,'modal-tight');
 }
 async function saveCoach(){
   const name=document.getElementById('co_name').value.trim();if(!name){toast('请填写姓名','warn');return;}
   const phone=document.getElementById('co_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
-  const data={name,phone,campus:document.getElementById('co_campus').value,status:document.getElementById('co_status').value,notes:document.getElementById('co_notes').value.trim()};
-  try{if(editId){await apiCall('PUT','/coaches/'+editId,data);await loadAll();}else{const r=await apiCall('POST','/coaches',data);coaches.unshift(r);renderCoaches();}closeModal();toast(editId?'更新成功 ✓':'添加成功 ✓','success');}catch(e){toast('保存失败：'+e.message,'error');}
+  const data={name,phone,campus:document.getElementById('co_campus').value,hireDate:document.getElementById('co_hireDate').value,status:document.getElementById('co_status').value,notes:document.getElementById('co_notes').value.trim()};
+  const btn=document.getElementById('coachSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    if(editId){const r=await apiCall('PUT','/coaches/'+editId,data);const i=coaches.findIndex(x=>x.id===editId);if(i>=0)coaches[i]=r;}
+    else{const r=await apiCall('POST','/coaches',data);coaches.unshift(r);}
+    closeModal();renderCoaches();toast(editId?'更新成功 ✓':'添加成功 ✓','success');
+  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
 // ===== 删除 & 通用 =====
-function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confDesc').textContent='即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
+function appConfirm(message,{title='请确认',confirmText='确定',danger=false}={}){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('confOv'),ci=document.getElementById('confInput'),cb=document.getElementById('confYesBtn'),nb=document.getElementById('confNoBtn');
+    document.getElementById('confTitle').textContent=title;
+    document.getElementById('confDesc').textContent=message;
+    document.getElementById('confIcon').textContent='!';
+    if(ci){ci.value='';ci.style.display='none';ci.oninput=null;}
+    if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent=confirmText;cb.style.background=danger?'#dc2626':'#2454c5';cb.classList.toggle('neutral',!danger);cb.onclick=function(){closeConf();resolve(true);};}
+    if(nb)nb.onclick=function(){closeConf();resolve(false);};
+    ov.classList.add('open');
+  });
+}
+function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confTitle').textContent=type==='court'?'确认删除/隐藏？':'确认删除？';document.getElementById('confIcon').textContent='!';document.getElementById('confDesc').textContent=type==='court'?'即将处理「'+name+'」。没有财务/会员记录会删除；已有记录会隐藏保留数据。请输入「确认删除」。':'即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';var nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
 function openBatchCourtDeleteConfirm(ids){
   batchDeleteCourtIds=[...ids];
   delId='__batch__';
   delType='court-batch';
-  document.getElementById('confDesc').textContent=`确定删除选中的 ${ids.length} 个订场用户？已有财务数据的用户会自动跳过。`;
+  document.getElementById('confTitle').textContent='确认删除/隐藏？';
+  document.getElementById('confIcon').textContent='!';
+  document.getElementById('confDesc').textContent=`确定处理选中的 ${ids.length} 个订场用户？没有财务/会员记录的会删除；已有记录的会隐藏保留数据。`;
   document.getElementById('confOv').classList.add('open');
   const ci=document.getElementById('confInput');
   const cb=document.getElementById('confYesBtn');
   if(ci){ci.value='';ci.style.display='none';ci.oninput=null;}
-  if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent='确认删除';}
+  if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent='确认处理';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}
+  const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;
 }
-function closeConf(){document.getElementById('confOv').classList.remove('open');delId=null;delType=null;batchDeleteCourtIds=[];const ci=document.getElementById('confInput');if(ci){ci.value='';ci.style.display='block';}const cb=document.getElementById('confYesBtn');if(cb)cb.textContent='确认删除';}
+function closeConf(){document.getElementById('confOv').classList.remove('open');delId=null;delType=null;batchDeleteCourtIds=[];const ci=document.getElementById('confInput');if(ci){ci.value='';ci.style.display='block';ci.oninput=null;}const cb=document.getElementById('confYesBtn');if(cb){cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;}
 async function batchDeleteCourts(){
   const ids=[...selectedCourtIds];
   if(!ids.length){toast('请选择要删除的订场用户','warn');return;}
@@ -3948,11 +4083,11 @@ async function runBatchDeleteCourts(ids){
   try{
     const result=await apiCall('POST','/courts/batch-delete',{ids},120000);
     if(btn)btn.textContent=`删除中 ${result.success||0}/${ids.length}`;
-    const deleted=new Set(result.deleted||[]);
+    const deleted=new Set([...(result.deleted||[]),...(result.archived||[])]);
     courts=courts.filter(u=>!deleted.has(u.id));
     deleted.forEach(id=>selectedCourtIds.delete(id));
-    renderCourts();renderStudents();
-    toast(`批量删除完成：成功 ${result.success||0} 个，跳过 ${result.failed||0} 个`,result.failed?'warn':'success');
+    renderCourts();renderStudentsIfVisible();
+    toast(`批量处理完成：删除 ${result.success||0} 个，隐藏 ${result.archivedCount||0} 个，跳过 ${result.failed||0} 个`,result.failed?'warn':'success');
   }catch(e){
     toast('批量删除失败：'+e.message,'error');
     updateCourtBatchButton();
@@ -3979,7 +4114,7 @@ async function doDelete(){
     else if(delType==='class'){classes=classes.filter(u=>u.id!==delId);plans=plans.filter(p=>p.classId!==delId);}
     else if(delType==='coach')coaches=coaches.filter(u=>u.id!==delId);
     else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});buildCampusTabs();}
-    closeConf();closeModal();toast('已删除','error');renderAll();
+    closeConf();closeModal();toast(result?.archived?'已隐藏':'已删除',result?.archived?'warn':'error');renderAll();
   }catch(e){toast('删除失败：'+e.message,'error');closeConf();}
 }
 function closeModal(){const ov=document.getElementById('overlay');ov.classList.remove('open');const modal=ov.querySelector('.modal');if(modal)modal.className='modal';const actions=document.getElementById('mActions');if(actions){actions.innerHTML='';actions.style.display='none';actions.className='mactions';}document.getElementById('mBody').innerHTML='';editId=null;courtFinanceModalId='';_pending=[];closeGlobalDatePicker();}
@@ -3999,27 +4134,32 @@ async function backupToObsidian(){
 // ===== 校区管理 =====
 function renderCampuses(){
   const tbody=document.getElementById('campusTbody');if(!tbody)return;
-  tbody.innerHTML=campuses.length?campuses.map(c=>`<tr><td style="font-weight:600;color:var(--th)">${esc(c.name)}</td><td><span class="badge b-amber">${esc(c.code||c.id)}</span></td><td style="color:var(--ts);font-size:12px">${c.createdAt?c.createdAt.slice(0,10):'—'}</td><td style="text-align:right;display:flex;gap:4px;justify-content:flex-end"><button class="abtn" onclick="openCampusModal('${c.id}')">✏️</button><button class="abtn" style="background:rgba(220,38,38,0.08);color:#dc2626" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">🗑️</button></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty"><p>暂无校区</p></div></td></tr>';
+  const q=(document.getElementById('campusSearch')?.value||'').toLowerCase();
+  const list=campuses.filter(c=>searchHit(q,c.name,c.code,c.id));
+  tbody.innerHTML=list.length?list.map(c=>{
+    const code=renderCourtEmptyText(c.code||c.id);
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(c.name,false)}</td><td><span class="tms-tag tms-tag-tier-gold">${esc(code)}</span></td><td>${renderCourtCellText(c.createdAt?c.createdAt.slice(0,10):'')}</td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openCampusModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</span></td></tr>`;
+  }).join(''):'<tr><td colspan="4"><div class="empty"><p>暂无校区</p></div></td></tr>';
 }
 function openCampusModal(id){
   editId=id;const c=id?campuses.find(x=>x.id===id):null;
-  document.getElementById('mTitle').textContent=id?'编辑校区':'新增校区';
-  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">校区名称 *</div><input class="finput" id="ca_name" value="${rv(c,'name')}" placeholder="例：朝阳十里堡"></div><div class="fg"><div class="flabel">校区代码 *</div><input class="finput" id="ca_code" value="${rv(c,'code')}" placeholder="例：shilipu"${id?' disabled':''}></div></div><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-top:10px">💡 校区代码创建后不可修改，用于关联学员/排课等数据</div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</button>`:''}<button class="btn-save" onclick="saveCampus()">保存</button></div>`;
-  document.getElementById('overlay').classList.add('open');
+  const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区名称 *</label><input class="finput tms-form-control" id="ca_name" value="${rv(c,'name')}" placeholder="例：朝阳十里堡"></div><div class="tms-form-item"><label class="tms-form-label">校区代码 *</label><input class="finput tms-form-control" id="ca_code" value="${rv(c,'code')}" placeholder="例：shilipu"${id?' disabled':''}></div></div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">校区代码创建后不可修改，用于关联学员、排课和订场数据。</div>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="campusSaveBtn" onclick="saveCampus()">保存</button>`;
+  setCourtModalFrame(id?'编辑校区':'新增校区',body,actions,'modal-tight');
 }
 async function saveCampus(){
   const name=document.getElementById('ca_name').value.trim();
   const code=document.getElementById('ca_code').value.trim();
   if(!name||!code){toast('请填写名称和代码','warn');return;}
   if(!editId&&campuses.find(c=>(c.code||c.id)===code)){toast('代码已存在','warn');return;}
-  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
+  const btn=document.getElementById('campusSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const data={name,code};
   try{
     if(editId){await apiCall('PUT','/campuses/'+editId,data);const i=campuses.findIndex(x=>x.id===editId);campuses[i]={...campuses[i],...data};}
     else{const r=await apiCall('POST','/campuses',data);campuses.push(r);}
     CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
     buildCampusTabs();closeModal();toast(editId?'校区修改成功 ✓':'校区新增成功 ✓','success');renderCampuses();renderAll();
-  }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
 // ===== 教练视角 =====
 let myWeekOffset=0;

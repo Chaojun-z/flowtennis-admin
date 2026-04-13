@@ -15,6 +15,21 @@ const ENABLE_TABLE_BOOTSTRAP = process.env.ENABLE_TABLE_BOOTSTRAP === 'true';
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
 const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,...MEMBERSHIP_TABLES];
+const TEST_DATA_RESET_TABLES=[
+  T_COURTS,
+  T_STUDENTS,
+  T_PRODUCTS,
+  T_PLANS,
+  T_SCHEDULE,
+  T_CLASSES,
+  T_CLASS_NOS,
+  T_FEEDBACKS,
+  T_PACKAGES,
+  T_PURCHASES,
+  T_ENTITLEMENTS,
+  T_ENTITLEMENT_LEDGER,
+  ...MEMBERSHIP_TABLES
+];
 
 let tsClient;
 function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3});return tsClient;}
@@ -39,6 +54,22 @@ function putIfAbsent(t,id,attrs){return withStorageRetry(()=>new Promise((res,re
 function get(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
 function scan(t){return withStorageRetry(()=>new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();}));}
 function del(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
+async function clearTables(storage,tables){
+  const result={success:true,total:0,tables:[]};
+  for(const table of tables){
+    try{
+      const rows=await storage.scan(table);
+      for(const row of rows)await storage.del(table,row.id);
+      result.total+=rows.length;
+      result.tables.push({table,count:rows.length});
+    }catch(err){
+      result.success=false;
+      result.tables.push({table,count:0,error:String(err?.message||err)});
+    }
+  }
+  return result;
+}
+function getTestDataResetTables(){return [...TEST_DATA_RESET_TABLES];}
 function mkTable(t){return new Promise(res=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
 async function timed(label,fn){const startedAt=Date.now();try{return await fn();}finally{console.log(`[api-timing] ${label} ${Date.now()-startedAt}ms`);}}
 function withTimeout(promise,ms,fallback){
@@ -1183,6 +1214,14 @@ function assertCanDeleteCourt(court,data={}){
     (data.membershipAccountEvents||[]).some(r=>String(r.courtId||'').trim()===courtId);
   if(used)throw new Error('该客户已有会员账户、会员订单、权益流水或账户事件关联，不能直接删除');
 }
+function courtDeleteAction(court,data={}){
+  try{
+    assertCanDeleteCourt(court,data);
+    return 'delete';
+  }catch(e){
+    return 'archive';
+  }
+}
 function assertCanDeleteCampus(campusId,data={}){
   const id=String(campusId||'').trim();
   if(!id)return;
@@ -1643,22 +1682,32 @@ async function deleteCourtsByIds(ids,data={}){
   const uniqueIds=[...new Set((ids||[]).map(id=>String(id||'').trim()).filter(Boolean))];
   const courts=await scan(T_COURTS).catch(()=>[]);
   const courtMap=new Map((courts||[]).map(c=>[String(c.id||''),c]));
-  const deleted=[],errors=[];
+  const deleted=[],archived=[],errors=[];
   for(let i=0;i<uniqueIds.length;i+=25){
     const chunk=uniqueIds.slice(i,i+25);
     const results=await Promise.all(chunk.map(async(id)=>{
       try{
         const court=courtMap.get(id)||null;
-        assertCanDeleteCourt(court,data);
-        await del(T_COURTS,id);
-        return {id,ok:true};
+        if(!court)return {id,ok:false,error:'订场用户不存在'};
+        const action=courtDeleteAction(court,data);
+        if(action==='delete'){
+          await del(T_COURTS,id);
+          return {id,ok:true,action};
+        }
+        const now=new Date().toISOString();
+        await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});
+        return {id,ok:true,action};
       }catch(e){
         return {id,ok:false,error:e.message};
       }
     }));
-    results.forEach(r=>r.ok?deleted.push(r.id):errors.push({id:r.id,error:r.error}));
+    results.forEach(r=>{
+      if(!r.ok){errors.push({id:r.id,error:r.error});return;}
+      if(r.action==='archive')archived.push(r.id);
+      else deleted.push(r.id);
+    });
   }
-  return {success:deleted.length,failed:errors.length,deleted,errors};
+  return {success:deleted.length,archivedCount:archived.length,failed:errors.length,deleted,archived,errors};
 }
 async function clearAllCourts(){
   const existing=await scan(T_COURTS);
@@ -1744,6 +1793,13 @@ module.exports = async (req, res) => {
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');await put(T_USERS,id,{id,name,password:hashed,role:nextRole,coachId:coachId||'',coachName:nextCoachName});return sendJson(res,{success:true,id,name,role:nextRole,coachId:coachId||'',coachName:nextCoachName});}
     if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);const updates={...u,coachId:coachId||''};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');await put(T_USERS,id,updates);return sendJson(res,{success:true});}
     if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await scan(T_USERS);return sendJson(res,all.map(u=>({id:u.id,name:u.name,role:u.role,coachId:u.coachId||'',coachName:u.coachName||''})));}
+    if(path==='/admin/clear-test-data'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      if(body.confirm!=='CLEAR_TEST_DATA')return sendJson(res,{error:'缺少清空确认'},400);
+      await init();
+      const result=await clearTables({scan,del},TEST_DATA_RESET_TABLES);
+      return sendJson(res,{...result,kept:[T_USERS,T_COACHES,T_CAMPUSES]});
+    }
     if(path==='/admin/replace-courts'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
@@ -1897,7 +1953,7 @@ module.exports = async (req, res) => {
       }
       return sendJson(res,{dryRun,total:rows.length,candidates,migrated,skipped,preview});
     }
-    const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await get(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const schedules=prevHistory===nextHistory?[]:await scan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(body,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await get(T_COURTS,id).catch(()=>null);assertCanDeleteCourt(court,await loadCourtDeleteReferenceData());await del(T_COURTS,id);return sendJson(res,{success:true});}}
+    const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await get(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const schedules=prevHistory===nextHistory?[]:await scan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(body,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await get(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
     if(path==='/students'){await init();if(method==='GET')return sendJson(res,await scan(T_STUDENTS));if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
     const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){assertStudentWriteAccess(user);const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
@@ -2188,6 +2244,7 @@ module.exports = async (req, res) => {
 
 module.exports._test={
   MEMBERSHIP_TABLES,
+  TEST_DATA_RESET_TABLES,
   scheduleLessonDelta,
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
@@ -2263,7 +2320,10 @@ module.exports._test={
   assertCanDeleteSchedule,
   assertCanDeleteStudent,
   assertCanDeleteCourt,
+  courtDeleteAction,
   assertCanDeleteCampus,
   deleteCourtsByIds,
-  getRuntimeEnsuredTables
+  getRuntimeEnsuredTables,
+  getTestDataResetTables,
+  clearTables
 };
