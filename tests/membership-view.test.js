@@ -175,6 +175,8 @@ assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only no
 assert.match(html, /当前会员[\s\S]*courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');
+assert.match(html, /membershipLedgerOperatorText/, 'membership ledger audit should normalize operator account names');
+assert.match(html, /renderCourtCellText\(membershipLedgerOperatorText\(l\.operator\)\)/, 'membership ledger audit should render the normalized operator account name');
 assert.match(html, /操作账号/, 'membership ledger audit should show operator account');
 assert.match(html, /已消耗/, 'membership account rights should show consumed count');
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');

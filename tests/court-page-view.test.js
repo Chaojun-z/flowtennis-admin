@@ -18,7 +18,7 @@ assert.match(html, /\.tms-toolbar\s*\{/, 'court page should define scoped toolba
 assert.match(html, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(html, /<div class="tms-stats-row" id="courtStatsRow"><\/div>/, 'court page should use the upgraded tms stats row container');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /<th>最近跟进日期<\/th>[\s\S]*<th>下次跟进日期<\/th>/, 'court table should show recent and next follow-up dates');
+assert.match(html, /<th>末次跟进日期<\/th>[\s\S]*<th>下次跟进日期<\/th>/, 'court table should show last and next follow-up dates');
 assert.match(html, /id="courtAccountTypeFilter"/, 'court toolbar should provide account type filter');
 assert.match(html, /id="courtOwnerFilter"/, 'court toolbar should provide owner filter');
 assert.match(html, /id="courtMoreActions"/, 'court toolbar should provide more actions menu');
@@ -38,7 +38,7 @@ assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
 assert.doesNotMatch(fnBody('renderCourts'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
-assert.match(html, /function openCourtModal[\s\S]*最近跟进日期[\s\S]*下次跟进日期/, 'court edit modal should keep follow-up fields');
+assert.match(html, /function openCourtModal[\s\S]*末次跟进日期[\s\S]*下次跟进日期/, 'court edit modal should keep follow-up fields');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*充值\/消费记录[\s\S]*add-rec-row/, 'court edit modal should no longer contain the inline finance entry area');
 assert.match(html, /function renderCourtMiniBar\(/, 'court page should expose a dedicated mini bar renderer');
 assert.match(html, /class="tms-sticky-l"/, 'court page should freeze the left name column');
@@ -53,6 +53,8 @@ assert.match(html, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*
 assert.match(html, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
 assert.match(html, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
 assert.match(html, /tms-form-row court-date-row[\s\S]*f_campus[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate[\s\S]*f_nextFollowUpDate/, 'court modal should place campus and three date fields in one row');
+assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校区',\[\{value:'',label:'-'\},\.\.\.campusList\],rv\(r,'campus'\),true\)/, 'court modal should allow blank campus');
+assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');

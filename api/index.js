@@ -711,9 +711,21 @@ function mergeStoredAuthUser(tokenUser,storedUser){
     id:source.id||tokenUser?.id||'',
     name,
     role,
+    username:source.username||tokenUser?.username||'',
     coachId:source.coachId||tokenUser?.coachId||'',
     coachName:source.coachName||(role==='editor'?name:(tokenUser?.coachName||''))
   };
+}
+function operatorAccountName(user){
+  return String(user?.username||user?.id||user?.name||'').trim();
+}
+function normalizeOperatorAccountName(operator,users=[]){
+  const raw=String(operator||'').trim();
+  if(!raw)return '';
+  const byUsername=(users||[]).find(u=>String(u?.username||'').trim()===raw||String(u?.id||'').trim()===raw);
+  if(byUsername)return String(byUsername.username||byUsername.id||raw).trim();
+  const byName=(users||[]).find(u=>String(u?.name||'').trim()===raw);
+  return String(byName?.username||byName?.id||raw).trim();
 }
 function buildCoachRenameUpdates(oldName,newName,data,now=new Date().toISOString()){
   const oldCoach=String(oldName||'').trim();
@@ -2093,10 +2105,17 @@ module.exports = async (req, res) => {
     if(path==='/membership-benefit-ledger'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      if(method==='GET')return sendJson(res,await scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]));
+      if(method==='GET'){
+        const [rows,users]=await Promise.all([
+          scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
+          scan(T_USERS).catch(()=>[])
+        ]);
+        return sendJson(res,(rows||[]).map(row=>({...row,operator:normalizeOperatorAccountName(row.operator,users)})));
+      }
       if(method==='POST'){
         const now=new Date().toISOString();
         const account=body.membershipAccountId?await get(T_MEMBERSHIP_ACCOUNTS,body.membershipAccountId).catch(()=>null):null;
+        const operator=body.operator||operatorAccountName(user);
         if(account&&['voided','cleared'].includes(account.status)&&['consume','supplement'].includes(body.action))return sendJson(res,{error:'当前会员状态不可再消耗或补发权益，请先重新开卡'},400);
         if(!body.membershipOrderId&&(body.action==='consume'||parseInt(body.delta)<0)){
           const [orders,ledger]=await Promise.all([scan(T_MEMBERSHIP_ORDERS).catch(()=>[]),scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])]);
@@ -2121,14 +2140,14 @@ module.exports = async (req, res) => {
             ledger,
             relatedDate:body.relatedDate,
             reason:body.reason||'会员权益使用',
-            operator:body.operator||user.name,
+            operator,
             now,
             idFactory:uuidv4
           });
           await Promise.all(rows.map(row=>put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row)));
           return sendJson(res,{records:rows});
         }
-        const r=buildMembershipBenefitLedgerRecord({...body,operator:body.operator||user.name},{id:uuidv4(),now});
+        const r=buildMembershipBenefitLedgerRecord({...body,operator},{id:uuidv4(),now});
         await put(T_MEMBERSHIP_BENEFIT_LEDGER,r.id,r);
         return sendJson(res,r);
       }
