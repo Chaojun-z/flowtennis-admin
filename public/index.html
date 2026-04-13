@@ -523,6 +523,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 购买记录 -->
     <div class="page-section" id="page-purchases">
+      <div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--ts);margin-bottom:14px">购买记录用于查账和追溯；真正消课的是权益账户。购买记录作废不会物理删除历史，只会作废对应权益。</div>
       <div class="page-stat-row" id="purchaseStatsRow"></div>
       <div class="purchase-filter-bar">
         <div class="filter-search tall"><span class="filter-search-mark"></span><input type="text" id="purSearch" placeholder="搜索学员、课包、课程产品" oninput="renderPurchases()"></div>
@@ -1335,6 +1336,30 @@ function resolveStudentIdByText(value){
   if(byPhone)return byPhone.id;
   const byName=students.find(s=>String(s.name||'').trim()===raw);
   return byName?byName.id:'';
+}
+function resolveUniqueStudentIdByText(value){
+  const raw=String(value||'').trim();
+  if(!raw)return {id:'',reason:'学员未匹配'};
+  const hits=students.filter(s=>s.id===raw||String(s.phone||'').trim()===raw||String(s.name||'').trim()===raw);
+  if(hits.length===1)return {id:hits[0].id,reason:''};
+  if(hits.length>1)return {id:'',reason:'学员匹配到多个，请用手机号'};
+  return {id:'',reason:'学员未匹配'};
+}
+function resolveUniquePackageIdByText(value){
+  const raw=String(value||'').trim();
+  if(!raw)return {id:'',reason:'课包未匹配'};
+  const byId=packages.filter(p=>p.id===raw);
+  if(byId.length===1)return {id:byId[0].id,reason:''};
+  const byName=packages.filter(p=>String(p.name||'').trim()===raw);
+  if(byName.length===1)return {id:byName[0].id,reason:''};
+  if(byName.length>1)return {id:'',reason:'课包匹配到多个，请用课包ID'};
+  return {id:'',reason:'课包未匹配'};
+}
+function productHasReferences(productId){
+  return classes.some(c=>c.productId===productId)||packages.some(p=>p.productId===productId);
+}
+function packageHasPurchases(packageId){
+  return purchases.some(p=>p.packageId===packageId);
 }
 function normalizeCourtHistoryLocal(history){
   return parseArr(history).map(h=>{
@@ -3123,14 +3148,16 @@ function normalizePurchaseImportRows(rawRows){
   const rows=rawRows.map((row,index)=>{
     const studentText=readRowValue(row,['学员','学员姓名','姓名','手机号','电话']);
     const phone=readRowValue(row,['手机号','电话','手机']);
-    const studentId=resolveStudentIdByText(studentText||phone);
-    const packageId=normalizePackageIdByText(readRowValue(row,['售卖课包','课包','课包名称']));
+    const studentMatch=resolveUniqueStudentIdByText(studentText||phone);
+    const packageMatch=resolveUniquePackageIdByText(readRowValue(row,['售卖课包','课包','课包名称']));
+    const studentId=studentMatch.id;
+    const packageId=packageMatch.id;
     const student=students.find(s=>s.id===studentId);
     const pkg=packages.find(p=>p.id===packageId);
     const item={studentId,studentName:student?.name||'',packageId,packageName:pkg?.name||'',purchaseDate:readRowValue(row,['购买日期','日期'])||today(),amountPaid:importMoney(readRowValue(row,['实收','实收金额','金额']))||(pkg?.price||0),payMethod:readRowValue(row,['支付方式','支付'])||'微信',notes:readRowValue(row,['备注','说明'])||''};
     let status='待导入',reason='';
-    if(!studentId){status='无效';reason='学员未匹配';}
-    else if(!packageId){status='无效';reason='课包未匹配';}
+    if(!studentId){status='无效';reason=studentMatch.reason;}
+    else if(!packageId){status='无效';reason=packageMatch.reason;}
     else if(pkg?.status==='inactive'){status='无效';reason='课包已停用';}
     return {...item,_rowIndex:index+2,_status:status,_reason:reason};
   });
@@ -3285,7 +3312,7 @@ function renderPurchases(){
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const remain=ent?`${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`:'—';
     const validRange=ent?`${ent.validFrom||'—'} - ${ent.validUntil||'—'}`:'—';
-    return `<tr><td>${esc(p.purchaseDate)||'—'}</td><td><div class="uname">${esc(p.studentName)||'—'}</div><div class="table-meta">${esc(p.payMethod)||'—'}</div></td><td><div class="uname">${esc(p.packageName)||'—'}</div><div class="table-meta">${esc(p.courseType)||'—'} · ${p.packageLessons||0} 节</div></td><td><div class="uname">${esc(p.productName)||'—'}</div><div class="table-meta">${esc(p.packageTimeBand)||'全天'}</div></td><td>¥${fmt(p.amountPaid)}</td><td>${remain}</td><td>${esc(validRange)}</td><td><span class="badge ${p.status==='voided'?'b-gray':'b-green'}">${purchaseStatusText(p)}</span></td><td style="text-align:right">${p.status==='voided'?'<span style="color:var(--td);font-size:12px">已作废</span>':`<button class="btn-sec" style="padding:7px 12px;color:#dc2626;border-color:rgba(220,38,38,0.2)" onclick="confirmDel('${p.id}','${esc(p.studentName||'该学员')}的${esc(p.packageName||'课包购买')}','purchase')">作废</button>`}</td></tr>`;
+    return `<tr><td>${esc(p.purchaseDate)||'—'}</td><td><div class="uname">${esc(p.studentName)||'—'}</div><div class="table-meta">${esc(p.payMethod)||'—'}</div></td><td><div class="uname">${esc(p.packageName)||'—'}</div><div class="table-meta">${esc(p.courseType)||'—'} · ${p.packageLessons||0} 节</div></td><td><div class="uname">${esc(p.productName)||'—'}</div><div class="table-meta">${esc(p.packageTimeBand)||'全天'}</div></td><td>¥${fmt(p.amountPaid)}</td><td>${remain}</td><td>${esc(validRange)}</td><td><span class="badge ${p.status==='voided'?'b-gray':'b-green'}">${purchaseStatusText(p)}</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="btn-sec" style="padding:7px 12px" onclick="openPurchaseDetailModal('${p.id}')">详情</button>${p.status==='voided'?'':`<button class="btn-sec" style="padding:7px 12px" onclick="openPurchaseEditModal('${p.id}')">编辑</button><button class="btn-sec" style="padding:7px 12px;color:#dc2626;border-color:rgba(220,38,38,0.2)" onclick="openPurchaseVoidModal('${p.id}')">作废</button>`}</div></td></tr>`;
   }).join(''):'<tr><td colspan="9"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
 }
 function renderEntitlements(){
@@ -3300,6 +3327,9 @@ function productOpts(sel){
 function packageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(p.name)} · ¥${fmt(p.price)} · ${p.lessons||0}节</option>`).join('');
 }
+function purchasePackageOpts(sel){
+  return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive'||p.id===sel).map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(p.name)} · ¥${fmt(p.price)} · ${p.lessons||0}节${p.status==='inactive'?' · 已停用':''}</option>`).join('');
+}
 function packageCoachChecks(ids){
   ids=parseArr(ids);
   return activeCoachNames().map(name=>`<label class="choice-tag"><input type="checkbox" value="${esc(name)}" class="pkg-coach-cb" ${ids.includes(name)?'checked':''}>${esc(name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无教练</span>';
@@ -3308,9 +3338,30 @@ function packageCampusChecks(ids){
   ids=parseArr(ids);
   return campuses.map(c=>`<label class="choice-tag"><input type="checkbox" value="${c.code||c.id}" class="pkg-campus-cb" ${ids.includes(c.code||c.id)?'checked':''}>${esc(c.name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无校区</span>';
 }
+function syncPackageProductMeta(){
+  const productId=document.getElementById('pkg_productId')?.value||'';
+  const product=products.find(x=>x.id===productId);
+  const typeEl=document.getElementById('pkg_type');
+  if(typeEl&&product?.type)typeEl.value=product.type;
+}
+function purchaseEntitlement(purchaseId){
+  return entitlements.find(e=>e.purchaseId===purchaseId)||null;
+}
+function purchaseHasLedger(purchaseId){
+  const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
+  return entitlementLedger.some(l=>entIds.has(l.entitlementId));
+}
+function purchasePackageSnapshotHtml(p){
+  const coachText=parseArr(p.coachNames).join('、')||'不限';
+  const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
+  const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
+  return `<div class="sec-ttl">购买时规则快照</div><div class="fgrid"><div class="fg"><div class="flabel">课程产品</div><div class="finput">${esc(p.productName)||'—'}</div></div><div class="fg"><div class="flabel">课程类型</div><div class="finput">${esc(p.courseType)||'—'}</div></div><div class="fg"><div class="flabel">课包课时</div><div class="finput">${parseInt(p.packageLessons)||0} 节</div></div><div class="fg"><div class="flabel">课包标价</div><div class="finput">¥${fmt(p.packagePrice)}</div></div><div class="fg"><div class="flabel">时段类型</div><div class="finput">${esc(p.packageTimeBand)||'全天'}</div></div><div class="fg"><div class="flabel">每日时段</div><div class="finput">${esc(windows)}</div></div><div class="fg"><div class="flabel">可用教练</div><div class="finput">${esc(coachText)}</div></div><div class="fg"><div class="flabel">可用校区</div><div class="finput">${esc(campusText)}</div></div><div class="fg"><div class="flabel">使用开始</div><div class="finput">${esc(p.usageStartDate)||'—'}</div></div><div class="fg"><div class="flabel">使用结束</div><div class="finput">${esc(p.usageEndDate)||'—'}</div></div></div>`;
+}
 function openPackageModal(id,presetProductId=''){
   editId=id;const p=id?packages.find(x=>x.id===id):null;
   const productId=rv(p,'productId',presetProductId);
+  const product=products.find(x=>x.id===productId);
+  const locked=!!(id&&packageHasPurchases(id));
   const timeWindows=parseArr(p?.dailyTimeWindows);
   const windowRow=timeWindows[0]||{};
   const secondWindow=timeWindows[1]||{};
@@ -3320,55 +3371,57 @@ function openPackageModal(id,presetProductId=''){
   document.getElementById('mBody').innerHTML=`
     <div class="form-section">
       <div class="form-section-title">基础信息</div>
+      ${locked?'<div class="inline-help">核心字段已锁定：该课包已有购买记录，只能修改名称、状态和备注。</div>':''}
       <div class="fgrid cols-4">
         <div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div>
-        <div class="fg"><div class="flabel">课程产品 *</div><select class="fselect modern-select" id="pkg_productId">${productOpts(productId)}</select></div>
-        <div class="fg"><div class="flabel">课程类型</div><select class="fselect modern-select" id="pkg_type">${PRODUCT_TYPES.map(t=>`<option value="${t}"${rv(p,'courseType')===t?' selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"></div>
+        <div class="fg"><div class="flabel">课程产品 *</div><select class="fselect modern-select" id="pkg_productId" onchange="syncPackageProductMeta()"${locked?' disabled':''}>${productOpts(productId)}</select></div>
+        <div class="fg"><div class="flabel">课程类型</div><select class="fselect modern-select" id="pkg_type" disabled>${PRODUCT_TYPES.map(t=>`<option value="${t}"${(rv(p,'courseType')||(product?.type||''))===t?' selected':''}>${t}</option>`).join('')}</select><div class="inline-help">课程类型跟随课程产品，避免售卖规则和消课规则不一致。</div></div>
+        <div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"${locked?' readonly':''}></div>
         <div class="fg"><div class="flabel">状态</div><select class="fselect modern-select" id="pkg_status"><option value="active"${rv(p,'status','active')==='active'?' selected':''}>启用</option><option value="inactive"${rv(p,'status')==='inactive'?' selected':''}>停用</option></select></div>
       </div>
     </div>
     <div class="form-section">
       <div class="form-section-title">售卖规则</div>
       <div class="fgrid cols-4">
-        <div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
-        <div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"></div>
-        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div>
+        <div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"${locked?' readonly':''}></div>
+        <div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"${locked?' readonly':''}></div>
+        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"${locked?' readonly':''}></div>
         <div class="fg"><div class="flabel">备注</div><input class="finput" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div>
       </div>
     </div>
     <div class="form-section">
       <div class="form-section-title">时间规则</div>
+      <div class="inline-help">固定使用结束日优先；不填固定结束日时，按购买日起算有效天数。</div>
       <div class="fgrid cols-4">
         <div class="fg span-2">
           <div class="flabel">活动时间</div>
           <div class="range-pair">
-            <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">${rv(p,'saleStartDate')||'活动开始'}</button>
+            <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')"${locked?' disabled':''}>${rv(p,'saleStartDate')||'活动开始'}</button>
             <span class="range-dash">-</span>
-            <button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">${rv(p,'saleEndDate')||'活动结束'}</button>
+            <button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')"${locked?' disabled':''}>${rv(p,'saleEndDate')||'活动结束'}</button>
           </div>
-          <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">
-          <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">
+          <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')"${locked?' disabled':''}>
+          <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')"${locked?' disabled':''}>
         </div>
         <div class="fg span-2">
           <div class="flabel">使用时间</div>
           <div class="range-pair">
-            <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">${rv(p,'usageStartDate')||'使用开始'}</button>
+            <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')"${locked?' disabled':''}>${rv(p,'usageStartDate')||'使用开始'}</button>
             <span class="range-dash">-</span>
-            <button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">${rv(p,'usageEndDate')||'使用结束'}</button>
+            <button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')"${locked?' disabled':''}>${rv(p,'usageEndDate')||'使用结束'}</button>
           </div>
-          <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">
-          <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">
+          <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')"${locked?' disabled':''}>
+          <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')"${locked?' disabled':''}>
         </div>
         <div class="fg">
           <div class="flabel">时段类型</div>
-          <select class="fselect modern-select" id="pkg_timeBand"><option value="全天"${rv(p,'timeBand','全天')==='全天'?' selected':''}>全天</option><option value="黄金时段"${rv(p,'timeBand')==='黄金时段'?' selected':''}>黄金时段</option><option value="非黄金时段"${rv(p,'timeBand')==='非黄金时段'?' selected':''}>非黄金时段</option></select>
+          <select class="fselect modern-select" id="pkg_timeBand"${locked?' disabled':''}><option value="全天"${rv(p,'timeBand','全天')==='全天'?' selected':''}>全天</option><option value="黄金时段"${rv(p,'timeBand')==='黄金时段'?' selected':''}>黄金时段</option><option value="非黄金时段"${rv(p,'timeBand')==='非黄金时段'?' selected':''}>非黄金时段</option></select>
         </div>
         <div class="fg span-2">
           <div class="flabel">可用时段</div>
           <div class="time-window-stack">
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"${locked?' readonly':''}><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"${locked?' readonly':''}></div>
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"${locked?' readonly':''}><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"${locked?' readonly':''}></div>
           </div>
         </div>
         <div class="fg">
@@ -3379,12 +3432,13 @@ function openPackageModal(id,presetProductId=''){
     </div>
     <div class="form-section">
       <div class="form-section-title">适用范围</div>
-      <div class="fg full"><div class="flabel">可用教练</div><div class="choice-grid">${packageCoachChecks(rv(p,'coachNames',[]))}</div></div>
-      <div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div>
+      <div class="fg full"><div class="flabel">可用教练</div><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCoachChecks(rv(p,'coachNames',[]))}</div></div>
+      <div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCampusChecks(rv(p,'campusIds',[]))}</div></div>
     </div>
     <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
     <div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="btn-save" onclick="savePackage()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
+  syncPackageProductMeta();
 }
 async function savePackage(){
   const name=document.getElementById('pkg_name').value.trim();if(!name){toast('请输入课包名称','warn');return;}
@@ -3413,9 +3467,10 @@ async function savePackage(){
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   document.getElementById('pkg_notes').value=document.getElementById('pkg_notes_inline').value.trim();
   const timeBand=document.getElementById('pkg_timeBand').value.trim()||'全天';
+  const courseType=product?.type||document.getElementById('pkg_type').value;
   const dailyTimeWindows=[{label:timeBand,startTime:timeStart,endTime:timeEnd,daysOfWeek:[]}];
   if(timeStart2&&timeEnd2)dailyTimeWindows.push({label:timeBand,startTime:timeStart2,endTime:timeEnd2,daysOfWeek:[]});
-  const data={name,productId,productName:product?.name||'',courseType:document.getElementById('pkg_type').value,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:parseInt(document.getElementById('pkg_validDays').value)||0,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId,productName:product?.name||'',courseType,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:parseInt(document.getElementById('pkg_validDays').value)||0,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }
 function openPurchaseEntryModal(){
@@ -3444,6 +3499,72 @@ function openPurchaseModal(studentId){
 function fillPurchasePackageMeta(){
   const pkg=packages.find(x=>x.id===document.getElementById('pur_packageId')?.value);
   const amount=document.getElementById('pur_amountPaid');if(pkg&&amount&&(!amount.value||amount.value==='0'))amount.value=pkg.price||0;
+}
+function openPurchaseDetailModal(id){
+  const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
+  const ent=purchaseEntitlement(id);
+  const modal=document.querySelector('#overlay .modal');
+  if(modal)modal.className='modal modal-wide';
+  document.getElementById('mTitle').textContent='购买记录详情';
+  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">成交快照</div><div class="fgrid"><div class="fg"><div class="flabel">购买日期</div><div class="finput">${esc(p.purchaseDate)||'—'}</div></div><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(p.studentName)||'—'}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(p.packageName)||'—'}</div></div><div class="fg"><div class="flabel">实收金额</div><div class="finput">¥${fmt(p.amountPaid)}</div></div><div class="fg"><div class="flabel">支付方式</div><div class="finput">${esc(p.payMethod)||'—'}</div></div><div class="fg"><div class="flabel">状态</div><div class="finput">${purchaseStatusText(p)}</div></div><div class="fg"><div class="flabel">操作人</div><div class="finput">${esc(p.operator)||'—'}</div></div><div class="fg full"><div class="flabel">备注</div><div class="finput" style="min-height:42px">${esc(p.notes)||'—'}</div></div></div><div class="sec-ttl">权益账户</div><div class="fgrid"><div class="fg"><div class="flabel">权益进度</div><div class="finput">${ent?`${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`:'—'}</div></div><div class="fg"><div class="flabel">有效期</div><div class="finput">${ent?`${ent.validFrom||'—'} - ${ent.validUntil||'—'}`:'—'}</div></div><div class="fg"><div class="flabel">权益状态</div><div class="finput">${ent?entitlementStatusText(ent):'—'}</div></div></div>${purchasePackageSnapshotHtml(p)}${p.status==='voided'?`<div class="sec-ttl">作废信息</div><div class="fgrid"><div class="fg"><div class="flabel">作废时间</div><div class="finput">${esc(p.voidedAt)||'—'}</div></div><div class="fg"><div class="flabel">作废人</div><div class="finput">${esc(p.voidedBy)||'—'}</div></div><div class="fg full"><div class="flabel">作废原因</div><div class="finput" style="min-height:42px">${esc(p.voidReason)||'—'}</div></div></div>`:''}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${p.status==='voided'?'':`<button class="btn-save" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`}</div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+function openPurchaseEditModal(id){
+  const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
+  const locked=purchaseHasLedger(id);
+  const modal=document.querySelector('#overlay .modal');
+  if(modal)modal.className='modal modal-tight';
+  document.getElementById('mTitle').textContent='编辑购买记录';
+  document.getElementById('mBody').innerHTML=`${locked?'<div class="inline-help">该购买记录已有课时消耗，只能修改备注。</div>':''}<div class="form-section"><div class="form-section-title">购买信息</div><div class="fgrid"><div class="fg full"><div class="flabel">学员 *</div><select class="fselect modern-select" id="pur_edit_studentId"${locked?' disabled':''}>${students.map(s=>`<option value="${s.id}"${p.studentId===s.id?' selected':''}>${esc(s.name)}${s.phone?' · '+esc(s.phone):''}</option>`).join('')}</select></div><div class="fg full"><div class="flabel">选择课包 *</div><select class="fselect modern-select" id="pur_edit_packageId" onchange="fillPurchaseEditPackageMeta()"${locked?' disabled':''}>${purchasePackageOpts(p.packageId)}</select></div><div class="fg"><div class="flabel">购买日期</div><button class="coach-date-btn" id="pur_edit_purchaseDate_btn" onclick="toggleGlobalDatePicker(event,'pur_edit_purchaseDate','pur_edit_purchaseDate_btn','购买日期')"${locked?' disabled':''}>${p.purchaseDate||today()}</button><input class="filter-hidden-date" id="pur_edit_purchaseDate" type="date" value="${p.purchaseDate||today()}" onchange="syncDateButton('pur_edit_purchaseDate','pur_edit_purchaseDate_btn','购买日期')"${locked?' disabled':''}></div><div class="fg"><div class="flabel">实收金额</div><input class="finput" id="pur_edit_amountPaid" type="number" value="${parseFloat(p.amountPaid)||0}"${locked?' readonly':''}></div><div class="fg"><div class="flabel">支付方式</div><select class="fselect modern-select" id="pur_edit_payMethod"${locked?' disabled':''}><option value="微信"${p.payMethod==='微信'?' selected':''}>微信</option><option value="支付宝"${p.payMethod==='支付宝'?' selected':''}>支付宝</option><option value="现金"${p.payMethod==='现金'?' selected':''}>现金</option><option value="转账"${p.payMethod==='转账'?' selected':''}>转账</option><option value="其他"${p.payMethod==='其他'?' selected':''}>其他</option></select></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="pur_edit_notes">${esc(p.notes||'')}</textarea></div></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" onclick="savePurchaseEdit('${p.id}')">保存</button></div>`;
+  document.getElementById('overlay').classList.add('open');
+  fillPurchaseEditPackageMeta();
+}
+function fillPurchaseEditPackageMeta(){
+  const pkg=packages.find(x=>x.id===document.getElementById('pur_edit_packageId')?.value);
+  const amount=document.getElementById('pur_edit_amountPaid');
+  if(pkg&&amount&&(!amount.value||amount.dataset.autofill==='1')){
+    amount.value=pkg.price||0;
+    amount.dataset.autofill='1';
+  }
+}
+async function savePurchaseEdit(id){
+  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
+  const data={studentId:document.getElementById('pur_edit_studentId')?.value||'',packageId:document.getElementById('pur_edit_packageId')?.value||'',purchaseDate:document.getElementById('pur_edit_purchaseDate')?.value||'',amountPaid:parseFloat(document.getElementById('pur_edit_amountPaid')?.value)||0,payMethod:document.getElementById('pur_edit_payMethod')?.value||'',notes:document.getElementById('pur_edit_notes')?.value.trim()||''};
+  try{
+    const res=await apiCall('PUT','/purchases/'+id,data);
+    if(res.purchase){
+      const i=purchases.findIndex(x=>x.id===id);
+      if(i>=0)purchases[i]=res.purchase;
+    }
+    if(Array.isArray(res.entitlements)){
+      res.entitlements.forEach(next=>{
+        const i=entitlements.findIndex(x=>x.id===next.id);
+        if(i>=0)entitlements[i]=next;
+      });
+    }
+    closeModal();toast('购买记录已更新','success');renderStudents();renderPurchases();renderEntitlements();
+  }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+}
+function openPurchaseVoidModal(id){
+  const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
+  const ent=purchaseEntitlement(id);
+  const blocked=purchaseHasLedger(id);
+  const modal=document.querySelector('#overlay .modal');
+  if(modal)modal.className='modal modal-tight';
+  document.getElementById('mTitle').textContent='作废购买记录';
+  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(p.studentName)||'—'}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(p.packageName)||'—'}</div></div><div class="fg"><div class="flabel">购买日期</div><div class="finput">${esc(p.purchaseDate)||'—'}</div></div><div class="fg"><div class="flabel">实收金额</div><div class="finput">¥${fmt(p.amountPaid)}</div></div><div class="fg full"><div class="flabel">影响范围</div><div class="finput" style="min-height:42px">${ent?`将同步作废权益账户「${esc(ent.packageName)}」，当前剩余 ${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节。`:'未找到对应权益账户。'}</div></div>${blocked?`<div class="fg full"><div class="flabel">当前状态</div><div class="finput" style="min-height:42px">该购买记录已有课时消耗，不能直接作废。</div></div>`:`<div class="fg full"><div class="flabel">作废原因</div><textarea class="finput ftextarea" id="pur_void_reason" placeholder="例如：录错学员、重复购买、实际未付款"></textarea></div>`}</div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${blocked?'':`<button class="btn-save" onclick="voidPurchase('${p.id}')">确认作废</button>`}</div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+async function voidPurchase(id){
+  const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
+  if(!reason){toast('请填写作废原因','warn');return;}
+  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='作废中…';
+  try{
+    await apiCall('DELETE','/purchases/'+id,{reason});
+    await loadAll();
+    closeModal();
+    toast('购买记录已作废','success');
+  }catch(e){toast('作废失败：'+e.message,'error');btn.disabled=false;btn.textContent='确认作废';}
 }
 async function savePurchase(){
   const studentId=document.getElementById('pur_studentId').value;
@@ -3476,8 +3597,9 @@ function exportPurchaseCSV(){
 }
 function openProductModal(id){
   editId=id;const p=id?products.find(x=>x.id===id):null;
+  const locked=!!(id&&productHasReferences(id));
   document.getElementById('mTitle').textContent=id?'编辑课程产品':'新增课程产品';
-  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">基本信息</div><div class="fgrid"><div class="fg full"><div class="flabel">课程名称 *</div><input class="finput" id="p_name" value="${rv(p,'name')}"></div><div class="fg"><div class="flabel">类型</div><select class="fselect" id="p_type">${PRODUCT_TYPES.map(t=>`<option value="${t}"${rv(p,'type')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg"><div class="flabel">人数</div><input class="finput" id="p_max" type="number" value="${rv(p,'maxStudents',1)}"></div><div class="fg"><div class="flabel">定价</div><input class="finput" id="p_price" type="number" value="${rv(p,'price',0)}"></div><div class="fg"><div class="flabel">课时</div><input class="finput" id="p_lessons" type="number" value="${rv(p,'lessons',0)}"></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="p_notes">${esc(rv(p,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','product')">删除</button>`:''}<button class="btn-save" onclick="saveProduct()">保存</button></div>`;
+  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">基本信息</div>${locked?'<div class="inline-help">核心字段已锁定：该课程产品已被班次或售卖课包使用，只能修改名称和备注。</div>':''}<div class="fgrid"><div class="fg full"><div class="flabel">课程名称 *</div><input class="finput" id="p_name" value="${rv(p,'name')}"></div><div class="fg"><div class="flabel">类型</div><select class="fselect" id="p_type"${locked?' disabled':''}>${PRODUCT_TYPES.map(t=>`<option value="${t}"${rv(p,'type')===t?' selected':''}>${t}</option>`).join('')}</select></div><div class="fg"><div class="flabel">人数</div><input class="finput" id="p_max" type="number" value="${rv(p,'maxStudents',1)}"${locked?' readonly':''}></div><div class="fg"><div class="flabel">定价</div><input class="finput" id="p_price" type="number" value="${rv(p,'price',0)}"${locked?' readonly':''}></div><div class="fg"><div class="flabel">课时</div><input class="finput" id="p_lessons" type="number" value="${rv(p,'lessons',0)}"${locked?' readonly':''}></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="p_notes">${esc(rv(p,'notes'))}</textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','product')">删除</button>`:''}<button class="btn-save" onclick="saveProduct()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
 }
 async function saveProduct(){

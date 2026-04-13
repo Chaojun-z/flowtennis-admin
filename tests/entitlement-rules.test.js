@@ -96,6 +96,36 @@ assert.deepStrictEqual(
 );
 
 assert.throws(
+  () => rules.validateProductInput({ name: '', type: '私教', maxStudents: 1, price: 0, lessons: 0 }),
+  /请填写课程名称/,
+  'product name is required'
+);
+
+assert.throws(
+  () => rules.validateProductInput({ name: '成人私教', type: '', maxStudents: 1, price: 0, lessons: 0 }),
+  /请选择课程类型/,
+  'product type is required'
+);
+
+assert.throws(
+  () => rules.validateProductInput({ name: '成人私教', type: '私教', maxStudents: 0, price: 0, lessons: 0 }),
+  /人数必须大于 0/,
+  'product max students must be positive'
+);
+
+assert.throws(
+  () => rules.validateProductInput({ name: '成人私教', type: '私教', maxStudents: 1, price: -1, lessons: 0 }),
+  /价格不能小于 0/,
+  'product price cannot be negative'
+);
+
+assert.throws(
+  () => rules.validateProductInput({ name: '成人私教', type: '私教', maxStudents: 1, price: 0, lessons: -1 }),
+  /课时不能小于 0/,
+  'product lessons cannot be negative'
+);
+
+assert.throws(
   () => rules.validatePackageInput({ ...pkg, productId: 'missing' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
   /课程产品不存在/,
   'package must reference an existing product'
@@ -117,6 +147,18 @@ assert.throws(
   () => rules.validatePackageInput({ ...pkg, dailyTimeWindows: [{ startTime: '10:00', endTime: '09:00' }] }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
   /可用结束时间必须晚于开始时间/,
   'package daily time windows must be valid'
+);
+
+assert.throws(
+  () => rules.validatePurchaseInputForPackage({ ...pkg, status: 'inactive' }, purchase),
+  /该课包已停用/,
+  'inactive package cannot be newly purchased'
+);
+
+assert.throws(
+  () => rules.validatePurchaseInputForPackage({ ...pkg, saleStartDate: '2026-06-01', saleEndDate: '2026-06-30' }, purchase),
+  /不在课包活动购买时间内/,
+  'purchase date must be inside sale window'
 );
 
 assert.doesNotThrow(
