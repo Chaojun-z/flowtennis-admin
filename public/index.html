@@ -215,6 +215,54 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-action-link-strong{color:#C06031!important}
 #page-memberships .tms-toolbar-right .tms-action-link-strong{color:#FEF3C7!important;background:rgba(120,53,15,.18)}
 .tms-audit-note{margin-bottom:12px;padding:8px 12px;border-radius:8px;background:rgba(254,243,199,.16);border:0.5px solid rgba(254,243,199,.22);color:#FEF3C7;font-size:12px;line-height:1.4}
+.course-showcase,.course-package-showcase{display:flex;flex-direction:column;gap:16px}
+.course-showcase-banner,.course-package-showcase-banner{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.92);font-size:13px;line-height:1.5}
+.course-showcase-banner svg,.course-package-showcase-banner svg{flex:0 0 auto}
+.course-showcase-toolbar,.course-package-showcase-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.course-showcase-filters,.course-package-showcase-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
+.course-package-showcase-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.course-showcase .tms-search-wrapper,.course-package-showcase .tms-search-wrapper{width:280px;max-width:100%}
+.course-showcase .tms-search-input,.course-package-showcase .tms-search-input{height:36px;border:1px solid transparent;border-radius:6px;background:#fff;color:#5C4D43;box-shadow:inset 0 1px 2px rgba(0,0,0,.02)}
+.course-showcase .tms-search-input:focus,.course-package-showcase .tms-search-input:focus{border-color:#EAE0D6}
+.course-showcase .tms-btn,.course-package-showcase .tms-btn{height:36px;border-radius:6px;font-size:13px;font-weight:700}
+.course-showcase .tms-btn-primary,.course-package-showcase .tms-btn-primary{background:#DF895E;border:none;color:#fff;box-shadow:none}
+.course-showcase .tms-btn-primary:hover,.course-package-showcase .tms-btn-primary:hover{opacity:.92}
+.course-showcase .tms-btn-ghost,.course-package-showcase .tms-btn-ghost{background:#fff;border:1px solid #EAE0D6;color:#5C4D43;box-shadow:none}
+.course-showcase .tms-btn-ghost:hover,.course-package-showcase .tms-btn-ghost:hover{background:#FAF6F2}
+.course-showcase .tms-dropdown-display,.course-package-showcase .tms-dropdown-display{height:36px;padding:0 12px;border-radius:6px;background:#fff;color:#5C4D43;font-size:13px;border:1px solid transparent;box-shadow:0 1px 2px rgba(0,0,0,.02);min-width:100px}
+.course-showcase .tms-dropdown-display:hover,.course-package-showcase .tms-dropdown-display:hover{background:#FAF6F2}
+.course-showcase-grid,.course-package-showcase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;align-items:start}
+.product-card-shell,.package-card-shell{background-color:#FFFFFF;border-radius:12px;border:1px solid #EAE0D6;display:flex;flex-direction:column;transition:all .3s cubic-bezier(.2,.8,.2,1);box-sizing:border-box;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.product-card-shell:hover,.package-card-shell:hover{transform:translateY(-3px);box-shadow:0 12px 24px rgba(0,0,0,.08);border-color:#D9D0C7}
+.showcase-card-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.showcase-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.showcase-card-title-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.showcase-card-title{font-size:16px;font-weight:800;color:#2C2420;line-height:1.3;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.showcase-card-subtitle{font-size:12px;color:#A3968F}
+.showcase-status-tag{font-size:11px;padding:2px 10px;border-radius:100px;font-weight:400;border:1px solid transparent}
+.showcase-status-tag.is-on{background-color:#EAF4EA;color:#22C55E;border-color:#BBF7D0}
+.showcase-status-tag.is-off{background-color:#F8F9FA;color:#A3968F;border-color:#EAE0D6}
+.showcase-status-tag.is-linked{background-color:#EFF6FF;color:#3B82F6;border-color:#BFDBFE}
+.showcase-highlight{display:flex;align-items:baseline;gap:10px;margin:6px 0 10px 0}
+.showcase-highlight-price{font-size:24px;font-weight:900;color:#C06031;letter-spacing:-0.5px}
+.showcase-highlight-value{font-size:16px;font-weight:800;color:#332A24}
+.showcase-highlight-unit{font-size:12px;color:#8C7B6E;font-weight:400;margin-left:2px}
+.showcase-highlight-divider{color:#EAE0D6;font-size:14px;font-weight:300}
+.showcase-kv-list{display:flex;flex-direction:column;gap:10px}
+.showcase-kv-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;line-height:1.4}
+.showcase-kv-label{color:#A3968F;flex-shrink:0;width:72px}
+.showcase-kv-value{color:#332A24;text-align:right;flex:1;word-break:break-all}
+.showcase-kv-value.is-mono{font-family:monospace;font-size:12.5px;color:#4A403A}
+.showcase-kv-sep{color:#D9D0C7;font-family:sans-serif}
+.showcase-card-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-top:1px dashed #EAE0D6;background-color:#FCF9F6;border-radius:0 0 12px 12px}
+.showcase-card-actions{display:flex;gap:10px}
+.showcase-action-btn{background:#FFFFFF;border:1px solid #D9D0C7;color:#5C4D43;font-size:13px;padding:6px 16px;border-radius:6px;cursor:pointer;transition:all .2s;font-weight:700}
+.showcase-action-btn:hover{background:#FDF7F2;border-color:#C0B5AB}
+.showcase-action-btn.is-primary{color:#C06031;border-color:#FCE1CE;background:#FFF4EC}
+.showcase-action-btn.is-primary:hover{background:#FFE6D5;border-color:#FDBA74}
+.showcase-action-btn.is-danger:hover{color:#D32F2F;border-color:#FFCCC7;background:#FFF2F0}
+.course-showcase-empty,.course-package-showcase-empty{grid-column:1/-1;padding:44px 18px;text-align:center;border-radius:12px;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.18);color:rgba(255,247,237,.86)}
+.course-showcase-empty .tms-btn,.course-package-showcase-empty .tms-btn{margin-top:14px}
 .membership-panel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .membership-panel-card{background:#FDF7F2;border-radius:10px;padding:12px 14px;min-height:72px}
 .membership-panel-label{font-size:11px;color:#8C7B6E;margin-bottom:8px}
@@ -417,11 +465,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 @media(max-width:1200px){#courtStatsRow{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){#courtStatsRow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .week-nav{display:flex;align-items:center;gap:12px;margin-bottom:14px}.week-nav button{background:var(--card-f);border:0.5px solid rgba(180,83,9,0.2);border-radius:9px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--amber-base);font-family:inherit;transition:all .13s}.week-nav button:hover{border-color:var(--amber-warm);background:rgba(254,243,199,0.3)}.week-label{font-size:15px;font-weight:600;color:var(--cream-pale)}
-.week-grid{display:grid;grid-template-columns:60px repeat(7,1fr);background:var(--card-f);border-radius:16px;border:var(--borf);box-shadow:var(--shf);overflow:hidden;min-height:480px}
+.week-grid{display:grid;grid-template-columns:60px repeat(7,1fr);background:var(--card-f);border-radius:16px;border:var(--borf);box-shadow:var(--shf);overflow:hidden;min-height:520px}
 .wg-corner{background:rgba(180,83,9,0.06);border-bottom:0.5px solid rgba(180,83,9,0.12);border-right:0.5px solid rgba(180,83,9,0.12)}
 .wg-dayhead{text-align:center;padding:10px 4px;font-size:11px;font-weight:600;color:var(--ts);letter-spacing:.5px;text-transform:uppercase;background:rgba(180,83,9,0.06);border-bottom:0.5px solid rgba(180,83,9,0.12);border-right:0.5px solid rgba(180,83,9,0.06)}.wg-dayhead.today{color:var(--amber-base);background:rgba(217,119,6,0.12)}
-.wg-hour{font-size:10px;color:var(--td);text-align:right;padding:2px 6px 0 0;border-right:0.5px solid rgba(180,83,9,0.12);height:48px;border-bottom:0.5px solid rgba(180,83,9,0.06)}
-.wg-cell{position:relative;border-right:0.5px solid rgba(180,83,9,0.06);border-bottom:0.5px solid rgba(180,83,9,0.06);height:48px;min-width:0}.wg-cell.today{background:rgba(217,119,6,0.04)}
+.wg-hour{font-size:10px;color:var(--td);text-align:right;padding:2px 6px 0 0;border-right:0.5px solid rgba(180,83,9,0.12);height:52px;border-bottom:0.5px solid rgba(180,83,9,0.06)}
+.wg-cell{position:relative;border-right:0.5px solid rgba(180,83,9,0.06);border-bottom:0.5px solid rgba(180,83,9,0.06);height:52px;min-width:0}.wg-cell.today{background:rgba(217,119,6,0.04)}
 .wg-block{position:absolute;left:2px;right:2px;border-radius:6px;padding:3px 5px;font-size:10px;line-height:1.3;overflow:hidden;cursor:pointer;z-index:1;border:0.5px solid rgba(180,83,9,0.2)}.wg-block:hover{z-index:2;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
 .wgb-gold{background:rgba(217,119,6,0.18);color:#92400e}.wgb-blue{background:rgba(59,130,246,0.12);color:#1d4ed8}.wgb-green{background:rgba(5,150,105,0.12);color:#065f46}
 .wg-block .wgb-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wg-block .wgb-info{color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -451,19 +499,68 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .today-card-note.is-alert{background:#FFF2E8;color:#A55116}
 .today-card-actions{display:flex;gap:10px;margin-top:auto}
 .today-card-actions .tms-btn{flex:1;min-width:0;padding:0 10px}
-.workbench-stack{display:grid;gap:18px}
-.workbench-section{display:grid;gap:12px}
-.workbench-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.workbench-section-title{font-size:16px;font-weight:700;color:var(--cream-pale)}
-.workbench-section-sub{font-size:12px;color:rgba(254,243,199,.72)}
-.workbench-progress-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-size:12px;color:var(--cream-pale)}
-.workbench-progress-chip strong{font-size:13px;color:#FFF7ED}
+#page-workbench .coach-wb-container{width:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0;gap:16px}
+#page-workbench .coach-wb-stats-row{display:flex;gap:14px;flex-shrink:0}
+#page-workbench .coach-wb-stat-card{flex:1;background-color:#FDF7F2;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;flex-direction:column;border:1px solid #F4EFEA;min-height:88px}
+#page-workbench .coach-wb-stat-label{font-size:12px;color:#8C7B6E;margin-bottom:10px;font-weight:700}
+#page-workbench .coach-wb-stat-value{font-size:22px;font-weight:900;color:#332A24;display:flex;align-items:baseline;letter-spacing:-0.5px;line-height:1}
+#page-workbench .coach-wb-stat-value span{font-size:13px;font-weight:400;margin-left:6px;color:#8C7B6E;letter-spacing:0}
+#page-workbench .coach-wb-stat-sub{font-size:11px;color:#A3968F;margin-top:10px;line-height:1.45}
+#page-workbench .coach-wb-page-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.15);flex-shrink:0}
+#page-workbench .coach-wb-page-title{font-size:16px;font-weight:700;color:#FFFFFF;display:flex;align-items:baseline;gap:8px}
+#page-workbench .coach-wb-page-title-sub{font-size:14px;font-weight:400;color:rgba(255,255,255,0.8)}
+#page-workbench .coach-wb-current-time{font-family:monospace;font-size:13px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.1);padding:4px 10px;border-radius:100px}
+#page-workbench .coach-wb-board{display:flex;flex-direction:column;gap:18px}
+#page-workbench .coach-wb-group-title{font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+#page-workbench .coach-wb-group-title::before{content:"";display:block;width:4px;height:14px;background-color:#DF895E;border-radius:2px}
+#page-workbench .coach-wb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+#page-workbench .coach-wb-card{border-radius:12px;display:flex;flex-direction:column;transition:all .2s ease-in-out;box-sizing:border-box;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.03)}
+#page-workbench .coach-wb-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06)}
+#page-workbench .coach-wb-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background-color:#D9D0C7}
+#page-workbench .coach-wb-card-body{padding:15px 17px;display:flex;flex-direction:column;gap:8px}
+#page-workbench .coach-wb-row1{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#page-workbench .coach-wb-time{font-family:monospace;font-size:15px;font-weight:700;color:#332A24;letter-spacing:-0.5px;line-height:1.2}
+#page-workbench .coach-wb-name{font-size:16px;font-weight:800;color:#2C2420;line-height:1.3;margin-top:1px}
+#page-workbench .coach-wb-row3{display:flex;align-items:center;gap:8px;font-size:11px;color:#8C7B6E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-workbench .coach-wb-row4{margin-top:4px}
+#page-workbench .coach-wb-alert{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;width:100%;box-sizing:border-box}
+#page-workbench .coach-wb-card.is-progress{border:1px solid #D1DBD4;background-color:#FAFCFB}
+#page-workbench .coach-wb-card.is-progress::before{background-color:#5F7164}
+#page-workbench .coach-wb-card.is-progress .coach-wb-alert{background-color:#EEF3F0;color:#3A4B40}
+#page-workbench .coach-wb-badge.is-progress{color:#3A4B40;background:#EEF3F0}
+#page-workbench .coach-wb-card.is-upcoming{border:1px solid #EEDCCB;background-color:#FFFCFA}
+#page-workbench .coach-wb-card.is-upcoming::before{background-color:#C07C54}
+#page-workbench .coach-wb-card.is-upcoming .coach-wb-alert{background-color:#FDF3EA;color:#9B512C}
+#page-workbench .coach-wb-badge.is-upcoming{color:#9B512C;background:#FDF3EA}
+#page-workbench .coach-wb-card.is-feedback{border:1px solid #E8D5CD;background-color:#FCFAF9}
+#page-workbench .coach-wb-card.is-feedback::before{background-color:#8C4A32}
+#page-workbench .coach-wb-card.is-feedback .coach-wb-alert{background-color:#F7EBE5;color:#733621}
+#page-workbench .coach-wb-badge.is-feedback{color:#733621;background:#F7EBE5}
+#page-workbench .coach-wb-card.is-normal{border:1px solid #EAE0D6;background-color:#FFFFFF}
+#page-workbench .coach-wb-card.is-normal::before{background-color:#D9D0C7}
+#page-workbench .coach-wb-card.is-done{opacity:.65;background-color:#FDF7F2;border:1px solid #EAE0D6}
+#page-workbench .coach-wb-card.is-done::before{background-color:#EAE0D6}
+#page-workbench .coach-wb-tag{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:400;flex-shrink:0}
+#page-workbench .coach-wb-tag.is-stone{background-color:#F0EDE8;color:#5C4D43}
+#page-workbench .coach-wb-tag.is-sage{background-color:#EEF3F0;color:#3A4B40}
+#page-workbench .coach-wb-tag.is-caramel{background-color:#FDF3EA;color:#9B512C}
+#page-workbench .coach-wb-tag.is-rust{background-color:#F7EBE5;color:#733621}
+#page-workbench .coach-wb-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:6px;flex-shrink:0}
+#page-workbench .coach-wb-badge.is-done,#page-workbench .coach-wb-badge.is-normal{color:#8C7B6E;background:#F1EAE2}
+#page-workbench .coach-wb-card-footer{display:flex;gap:10px;padding:12px 16px;border-top:1px dashed #EAE0D6;background-color:#FAF6F2}
+#page-workbench .coach-wb-action{flex:1;text-align:center;background:#FFFFFF;border:1px solid #D9D0C7;color:#5C4D43;font-size:12px;padding:7px 0;border-radius:6px;cursor:pointer;transition:all .2s;font-weight:700}
+#page-workbench .coach-wb-action:hover{background:#FDF7F2;border-color:#C0B5AB}
+#page-workbench .coach-wb-action.is-primary{color:#FFFFFF;border-color:#DF895E;background:#DF895E}
+#page-workbench .coach-wb-action.is-primary:hover{background:#D37A50;border-color:#D37A50}
+#page-workbench .coach-wb-action.is-warning{color:#FFFFFF;border-color:#8C4A32;background:#8C4A32}
+#page-workbench .coach-wb-action.is-warning:hover{background:#733621;border-color:#733621}
 .workbench-empty{background:#FCFAF7;border:1px dashed #E3D6C8;border-radius:18px;padding:28px 20px;text-align:center;font-size:13px;color:#8C7B6E}
-.workbench-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.workbench-summary-card{background:#FCFAF7;border:1px solid #E9DED2;border-radius:16px;padding:14px 16px;box-shadow:0 8px 24px rgba(60,20,0,.04)}
-.workbench-summary-label{font-size:11px;font-weight:700;color:#8C7B6E}
-.workbench-summary-value{margin-top:8px;font-size:28px;font-weight:700;color:#332A24;line-height:1}
-.workbench-summary-sub{margin-top:8px;font-size:12px;line-height:1.5;color:#8C7B6E}
+#page-mystudents .tms-table,#page-myclasses .tms-table{table-layout:fixed;width:100%;min-width:0}
+#page-mystudents .tms-text-remark,#page-myclasses .tms-text-remark{min-width:0;max-width:none}
+#page-mystudents th,#page-mystudents td,#page-myclasses th,#page-myclasses td{padding-top:10px;padding-bottom:10px}
+#page-myclasses .prog-wrap{min-width:0}
+#page-myclasses .prog-track{width:48px}
+#page-myclasses .prog-txt{font-size:11px}
 .coach-mobile-only{display:none}
 .coach-mobile-list{display:flex;flex-direction:column;gap:12px}
 .coach-mobile-day{background:var(--card-f);border:var(--borf);border-radius:16px;padding:14px;box-shadow:var(--shm)}
@@ -567,13 +664,16 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .my-schedule-week .wg-dayhead.today{background:#FCE9D8}
 .my-schedule-week .wg-corner{background:#F7F1EA}
 .my-schedule-week .wg-cell.today{background:#FFF8F1}
-.my-schedule-week .wg-block{left:4px;right:4px;border-radius:12px;padding:7px 8px;border:1px solid transparent;box-shadow:0 4px 12px rgba(60,20,0,.05)}
-.my-schedule-week .wg-block.type-private{background:#E8F0FF;border-color:#BDD1FF;color:#224185}
-.my-schedule-week .wg-block.type-trial{background:#FFF0E3;border-color:#F3C18E;color:#9A5622}
+.my-schedule-week .wg-block{left:4px;right:4px;border-radius:12px;padding:5px 6px;border:1px solid transparent;box-shadow:0 4px 12px rgba(60,20,0,.05)}
+.my-schedule-week .wg-block.type-private{background:#E7F0FF;border-color:#AFC8FF;color:#224185}
+.my-schedule-week .wg-block.type-trial{background:#FFF2E2;border-color:#E7B57C;color:#9A5622}
 .my-schedule-week .wg-block.type-camp{background:#EAF7EA;border-color:#B9D8BC;color:#2E6E37}
 .my-schedule-week .wg-block.type-master{background:#F5ECE6;border-color:#DAB8A1;color:#73452D}
-.my-schedule-week .wgb-name{font-size:11px;font-weight:800}
-.my-schedule-week .wgb-info{font-size:10px;color:inherit;opacity:.94}
+.my-schedule-week .wgb-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.my-schedule-week .wgb-time{font-size:10px;font-weight:800;line-height:1.15}
+.my-schedule-week .wgb-type{font-size:9px;font-weight:700;line-height:1.15;text-align:right;white-space:nowrap}
+.my-schedule-week .wgb-name{font-size:10px;font-weight:800;margin-top:1px;line-height:1.15}
+.my-schedule-week .wgb-info{font-size:9px;color:inherit;opacity:.94;line-height:1.15}
 @media (max-width:900px){
   body.coach-mobile{overflow:auto;padding-bottom:88px}
   body.coach-mobile .sidebar{top:auto;bottom:0;width:100%;height:74px;border-right:none;border-top:0.5px solid rgba(255,255,255,0.16);flex-direction:row;overflow:hidden;background:rgba(60,20,0,0.72)}
@@ -934,43 +1034,55 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 课程产品 -->
     <div class="page-section" id="page-products">
-      <div class="tms-audit-note">课程产品只定义课程模板。后续创建班次、售卖课包，都是基于这里的课程产品。</div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索课程名称、类型或备注" oninput="renderProducts()">
-          </div>
-          <div id="prodTypeFilterHost"></div>
+      <div class="course-showcase">
+        <div class="course-showcase-banner">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          课程产品只定义课程模板。后续创建班次、售卖课包，都是基于这里的课程产品。
         </div>
-        <div class="tms-toolbar-right">
+        <div class="course-showcase-toolbar">
+          <div class="course-showcase-filters">
+            <div class="tms-search-wrapper">
+              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索课程名称、类型或备注" oninput="renderProducts()">
+            </div>
+            <div id="prodTypeFilterHost"></div>
+          </div>
           <button class="tms-btn tms-btn-primary" onclick="openProductModal(null)">＋ 新增课程产品</button>
         </div>
+        <div class="course-showcase-grid" id="productGrid"></div>
       </div>
-      <div class="product-grid" id="productGrid"></div>
     </div>
     <!-- 售卖课包 -->
     <div class="page-section" id="page-packages">
-      <div class="tms-audit-note">课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。</div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索课包名称、课程产品、时段" oninput="renderPackages()">
+      <div class="course-package-showcase">
+        <div class="course-package-showcase-banner">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。
+        </div>
+        <div class="course-package-showcase-toolbar">
+          <div class="course-package-showcase-filters">
+            <div class="tms-search-wrapper">
+              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索课包名称、课程产品、时段" oninput="renderPackages()">
+            </div>
+            <div id="pkgTypeFilterHost"></div>
+            <div id="pkgStatusFilterHost"></div>
           </div>
-          <div id="pkgTypeFilterHost"></div>
-          <div id="pkgStatusFilterHost"></div>
+          <div class="course-package-showcase-actions">
+            <button class="tms-btn tms-btn-ghost" onclick="goPage('products')">查看课程产品</button>
+            <button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">＋ 新增售卖课包</button>
+          </div>
         </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="goPage('products')">查看课程产品</button>
-          <button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">＋ 新增售卖课包</button>
-        </div>
+        <div class="course-package-showcase-grid" id="packageGrid"></div>
       </div>
-      <div class="package-list" id="packageGrid"></div>
     </div>
     <!-- 购买记录 -->
     <div class="page-section" id="page-purchases">
@@ -1013,11 +1125,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 工作台（教练视角） -->
     <div class="page-section" id="page-workbench">
-      <div class="stats-row" id="workbenchStats"></div>
-      <div id="workbenchUpcomingSection"></div>
-      <div id="workbenchTodaySection"></div>
-      <div id="workbenchPendingSection"></div>
-      <div id="workbenchTrialSection"></div>
+      <div id="workbenchBody"></div>
     </div>
     <!-- 我的课表（教练视角） -->
     <div class="page-section" id="page-myschedule">
@@ -1026,7 +1134,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
           <button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button>
           <span class="week-label" id="myWeekLabel"></span>
           <button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button>
-          <button onclick="myWeekOffset=0;renderMySchedule()" style="margin-left:auto">回到本周</button>
+          <button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button>
         </div>
         <div id="myScheduleWeekHeader"></div>
         <div class="my-schedule-week-grid">
@@ -1036,15 +1144,15 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     </div>
     <!-- 我的学员（教练视角） -->
     <div class="page-section" id="page-mystudents">
-      <div class="stats-row" id="myStudentStats"></div>
-      <div class="tcard desktop-only"><table><thead><tr><th>学员</th><th>手机号</th><th>类型</th><th>所上班次</th><th>最后上课</th><th>备注</th></tr></thead><tbody id="myStuTbody"></tbody></table></div>
-      <div class="coach-mobile-list coach-mobile-only" id="myStuMobileList"></div>
+      <div class="tms-stats-row" id="myStudentStats"></div>
+      <div class="tms-audit-note">这里查看你当前负责的学员，可快速了解最近上课、所在班次和备注信息。</div>
+      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:84px">校区</th><th style="width:88px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:120px">最后上课</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
     </div>
     <!-- 我的班次（教练视角） -->
     <div class="page-section" id="page-myclasses">
-      <div class="stats-row" id="myClassStats"></div>
-      <div class="tcard desktop-only"><table><thead><tr><th>班次名称</th><th>课程</th><th>学员</th><th>课时进度</th><th>日期</th><th>状态</th></tr></thead><tbody id="myClsTbody"></tbody></table></div>
-      <div class="coach-mobile-list coach-mobile-only" id="myClsMobileList"></div>
+      <div class="tms-stats-row" id="myClassStats"></div>
+      <div class="tms-audit-note">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</div>
+      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:108px;padding-left:20px">班次名称</th><th style="width:100px">课程</th><th style="width:108px">学员</th><th style="width:100px">课时进度</th><th style="width:116px">日期</th><th style="width:68px">状态</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myClsTbody"></tbody></table></div></div>
     </div>
     <!-- 校区管理 -->
     <div class="page-section" id="page-campusmgr">
@@ -3190,13 +3298,18 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
   const sorted=rows.slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
   const cards=sorted.map((s,i)=>{
     const state=workbenchScheduleState(s,sorted[i-1],now);
-    const typeClass=coachOpsCourseTypeTagClass(scheduleCourseType(s));
-    const feedbackText=scheduleFeedbackLabel(s);
-    const noteText=s.notes?`备注：${esc(s.notes)}`:state.hint;
-    const feedbackButton=hasScheduleFeedback(s)?'查看反馈':buttonText;
-    return `<div class="today-card ${typeClass} is-${state.code}"><div class="today-card-head"><div class="today-card-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}<span>${String(s.startTime||'').slice(0,10)}</span></div><span class="today-card-status state-${state.code}">${state.label}</span></div><div class="today-card-stu">${esc(scheduleStudentSummary(s))}</div><div class="today-card-grid"><div><div class="today-card-cell-label">课程类型</div><div class="today-card-cell-value">${esc(scheduleCourseType(s))}</div></div><div><div class="today-card-cell-label">校区 / 场地</div><div class="today-card-cell-value">${cn(s.campus)} · ${esc(s.venue)||'—'}</div></div><div><div class="today-card-cell-label">班次</div><div class="today-card-cell-value">${esc(scheduleClassName(s))}</div></div><div><div class="today-card-cell-label">反馈状态</div><div class="today-card-cell-value">${feedbackText}</div></div></div><div class="today-card-note ${state.code==='travel'||state.code==='upcoming'||state.code==='pending'?'is-alert':''}">${noteText||'今日排课正常'}</div><div class="today-card-actions"><button class="tms-btn tms-btn-default" onclick="openScheduleDetail('${s.id}')">查看详情</button><button class="tms-btn tms-btn-primary" onclick="openFeedbackModal('${s.id}')">${feedbackButton}</button></div></div>`;
+    const courseType=scheduleCourseType(s);
+    const typeClass=courseType==='训练营'?'rust':courseType==='体验课'?'caramel':courseType==='班课'?'sage':'stone';
+    const stateClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':state.code==='done'?'is-done':'is-normal';
+    const badgeClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':state.code==='done'?'is-done':'is-normal';
+    const alertText=state.code==='travel'?'⚠️ 跨校区，建议立即出发换场':state.code==='live'?'课程正在进行中':state.code==='pending'?'已下课，待填写反馈':(s.notes||'');
+    const primaryLabel=state.code==='pending'?'填写反馈':state.code==='done'&&hasScheduleFeedback(s)?'查看反馈':state.code==='live'?'查看进度':state.code==='later'?'查看反馈':'查看详情';
+    const primaryClass=state.code==='pending'?'is-warning':(state.code==='live'||state.code==='upcoming')?'is-primary':'';
+    const primaryAction=state.code==='pending'||(state.code==='done'&&hasScheduleFeedback(s))||state.code==='later'?`openFeedbackModal('${s.id}')`:`openScheduleDetail('${s.id}')`;
+    const alertHtml=alertText?`<div class="coach-wb-row4"><div class="coach-wb-alert">${esc(alertText)}</div></div>`:'';
+    return `<div class="coach-wb-card ${stateClass}"><div class="coach-wb-card-body"><div class="coach-wb-row1"><div class="coach-wb-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}</div><div class="coach-wb-badge ${badgeClass}">${state.label}</div></div><div class="coach-wb-name">${esc(scheduleStudentSummary(s))}</div><div class="coach-wb-row3"><span class="coach-wb-tag is-${typeClass}">${esc(courseType)}</span><span>${cn(s.campus)} · ${esc(s.venue)||'—'}</span></div>${alertHtml}</div><div class="coach-wb-card-footer"><button class="coach-wb-action" onclick="openScheduleDetail('${s.id}')">查看详情</button><button class="coach-wb-action ${primaryClass}" onclick="${primaryAction}">${primaryLabel}</button></div></div>`;
   }).join('');
-  return `<div class="workbench-section" id="${esc(meta.anchor||'workbench-today')}"><div class="workbench-section-head"><div><div class="workbench-section-title">${title}</div><div class="workbench-section-sub">${esc(meta.subtitle||'按北京时间自动判断课程状态，新增排课后这里会同步更新。')}</div></div><div class="workbench-progress-chip"><span>当前时间</span><strong>${now.toTimeString().slice(0,5)}</strong></div></div>${cards?`<div class="my-today-cards">${cards}</div>`:'<div class="workbench-empty">今天暂无课程</div>'}</div>`;
+  return `<div id="${esc(meta.anchor||'workbench-today')}"><div class="coach-wb-group-title">${esc(title)}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:'<div class="workbench-empty">今天暂无课程</div>'}</div>`;
 }
 function ensureWorkbenchTicker(){
   if(workbenchTicker)return;
@@ -3210,25 +3323,32 @@ function renderWorkbench(){
   const todayStr=localDateKey(now);
   const todayRows=myRows.filter(s=>String(s.startTime||'').slice(0,10)===todayStr);
   const counts=workbenchSummaryCounts(todayRows,now);
-  const stats=document.getElementById('workbenchStats');
-  if(stats)stats.innerHTML=[
-    ['今日课程',todayRows.length,'节',`已上 ${counts.completed} 节`],
-    ['即将开始',counts.upcoming,'节',counts.upcoming?'30 分钟内需准备':'当前没有临近课程'],
-    ['待反馈',counts.pending,'节',counts.pending?'优先处理已结束课程':'今天反馈进度正常'],
-    ['体验课待判断',counts.trial,'节',counts.trial?'需补转化判断':'今天没有待判断体验课']
-  ].map(([label,val,u,sub])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}<span>${u}</span></div><div class="tms-stat-sub">${sub}</div></div>`).join('');
-  const upcomingHost=document.getElementById('workbenchUpcomingSection');
-  const todayHost=document.getElementById('workbenchTodaySection');
-  const pendingHost=document.getElementById('workbenchPendingSection');
-  const trialHost=document.getElementById('workbenchTrialSection');
+  const host=document.getElementById('workbenchBody');
   const totalTitle=`今日全部课程（已上 ${counts.completed} / 共 ${todayRows.length} 节）`;
-  const nextCourse=todayRows.filter(s=>dtObj(s.startTime)>now).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)))[0];
-  const pendingRows=todayRows.filter(s=>effectiveScheduleStatus(s,now)==='已结束'&&!hasScheduleFeedback(s));
-  const trialRows=todayRows.filter(s=>scheduleIsTrial(s)&&effectiveScheduleStatus(s,now)==='已结束'&&!hasTrialConversionDecision(scheduleFeedback(s)));
-  if(upcomingHost)upcomingHost.innerHTML='';
-  if(todayHost)todayHost.innerHTML=`<div class="workbench-stack">${workbenchSection(totalTitle,todayRows,'填写反馈',now,{subtitle:'优先看进行中、即将开始、待换场和已结束待反馈的课程。'})}<div class="workbench-summary-grid"><div class="workbench-summary-card"><div class="workbench-summary-label">下一节课</div><div class="workbench-summary-value">${nextCourse?nextCourse.startTime.slice(11,16):'—'}</div><div class="workbench-summary-sub">${nextCourse?`${esc(scheduleStudentSummary(nextCourse))} · ${cn(nextCourse.campus)} · ${esc(nextCourse.venue)||'—'}`:'今天后续没有新课程'}</div></div><div class="workbench-summary-card"><div class="workbench-summary-label">今日重点</div><div class="workbench-summary-value">${counts.pending + counts.trial}</div><div class="workbench-summary-sub">待反馈 ${pendingRows.length} 节${trialRows.length?` · 体验课待判断 ${trialRows.length} 节`:''}</div></div></div></div>`;
-  if(pendingHost)pendingHost.innerHTML='';
-  if(trialHost)trialHost.innerHTML='';
+  const urgentRows=todayRows.filter((s,i,arr)=>{
+    const sorted=arr.slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
+    const idx=sorted.findIndex(x=>x.id===s.id);
+    const state=workbenchScheduleState(s,sorted[idx-1],now);
+    return ['live','upcoming','travel','pending'].includes(state.code);
+  });
+  const laterRows=todayRows.filter((s,i,arr)=>{
+    const sorted=arr.slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
+    const idx=sorted.findIndex(x=>x.id===s.id);
+    return workbenchScheduleState(s,sorted[idx-1],now).code==='later';
+  });
+  const doneRows=todayRows.filter((s,i,arr)=>{
+    const sorted=arr.slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
+    const idx=sorted.findIndex(x=>x.id===s.id);
+    return workbenchScheduleState(s,sorted[idx-1],now).code==='done';
+  });
+  if(!host)return;
+  const statsHtml=[
+    ['今日课程',todayRows.length,'节',`已上 ${counts.completed} 节`,false],
+    ['即将开始',counts.upcoming,'节',counts.upcoming?'当前有临近课程':'当前没有临近课程',false],
+    ['待反馈',counts.pending,'节',counts.pending?'优先处理已结束课程':'优先处理已结束课程',true],
+    ['体验课待判断',counts.trial,'节',counts.trial?'今天有待判断体验课':'今天没有待判断体验课',false]
+  ].map(([label,val,u,sub,accent])=>`<div class="coach-wb-stat-card"><div class="coach-wb-stat-label">${label}</div><div class="coach-wb-stat-value"${accent?' style="color:#8C4A32;"':''}>${val}<span>${u}</span></div><div class="coach-wb-stat-sub">${sub}</div></div>`).join('');
+  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">${totalTitle}<span class="coach-wb-page-title-sub"></span></div><div class="coach-wb-current-time">⌚️ 当前时间 ${now.toTimeString().slice(0,5)}</div></div><div class="coach-wb-board">${workbenchSection('🔥 亟待处理 (进行中 / 即将开始 / 待反馈)',urgentRows,'填写反馈',now,{anchor:'workbench-urgent'})}${workbenchSection('📅 今日后续',laterRows,'查看详情',now,{anchor:'workbench-later'})}<div style="opacity:0.8;">${workbenchSection('✅ 已完成',doneRows,'查看反馈',now,{anchor:'workbench-done'})}</div></div></div>`;
 }
 // ===== 教练运营 =====
 function setCoachOpsPanel(panel){
@@ -4421,8 +4541,8 @@ function renderProducts(){
     const linkedClasses=classes.filter(c=>c.productId===p.id).length;
     const linkedPackages=packages.filter(pkg=>pkg.productId===p.id).length;
     const locked=productHasReferences(p.id);
-    return `<div class="product-card"><div class="pc-head"><div><div class="pc-type"><span class="tms-tag ${productTypeTagClass(p.type)}">${esc(p.type||'—')}</span>${locked?'<span class="tms-tag tms-tag-tier-slate">已被引用</span>':''}</div><div class="pc-name">${esc(p.name)}</div></div></div><div class="pc-note">${esc(renderCourtEmptyText(p.notes||'用于创建班次和售卖课包的课程模板'))}</div><div class="pc-metrics"><div class="pc-metric"><div class="pc-metric-label">人数</div><div class="pc-metric-value">${p.maxStudents||1}</div></div><div class="pc-metric"><div class="pc-metric-label">定价</div><div class="pc-metric-value">¥${fmt(p.price)}</div></div><div class="pc-metric"><div class="pc-metric-label">课时</div><div class="pc-metric-value">${p.lessons||0}<span>节</span></div></div></div><div class="pc-row"><span>已建班次</span><strong>${linkedClasses} 个</strong></div><div class="pc-row"><span>已建课包</span><strong>${linkedPackages} 个</strong></div><div class="pc-actions"><button class="tms-btn tms-btn-default" onclick="openProductModal('${p.id}')">编辑</button><button class="tms-btn tms-btn-ghost" onclick="openPackageModal(null,'${p.id}')">建课包</button><button class="tms-btn tms-btn-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','product')">删除</button></div></div>`;
-  }).join(''):'<div style="grid-column:1/-1"><div class="empty"><p>暂无课程产品</p></div></div>';
+    return `<div class="product-card-shell"><div class="showcase-card-body"><div class="showcase-card-header"><div class="showcase-card-title-group"><div class="showcase-card-title">${esc(p.name)}<span class="tms-tag ${productTypeTagClass(p.type)}">${esc(p.type||'—')}</span></div><div class="showcase-card-subtitle">用于创建班次和售卖课包的课程模板</div></div>${locked?'<span class="showcase-status-tag is-linked">已被引用</span>':''}</div><div class="showcase-highlight"><span class="showcase-highlight-value">${p.maxStudents||1}<span class="showcase-highlight-unit">人</span></span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">¥${fmt(p.price)}</span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.lessons||0}<span class="showcase-highlight-unit">节</span></span></div><div class="showcase-kv-list"><div class="showcase-kv-row"><div class="showcase-kv-label">已建班次</div><div class="showcase-kv-value">${linkedClasses} 个</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">已建课包</div><div class="showcase-kv-value">${linkedPackages} 个</div></div></div></div><div class="showcase-card-footer"><div class="showcase-card-actions"><button class="showcase-action-btn is-primary" onclick="openPackageModal(null,'${p.id}')">建课包</button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openProductModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','product')">删除</button></div></div></div>`;
+  }).join(''):'<div class="course-showcase-empty"><div class="empty"><p>暂无课程产品</p></div></div>';
 }
 function syncPackageFilterOptions(){
   const typeValue=document.getElementById('pkgTypeFilter')?.value||'';
@@ -4446,19 +4566,17 @@ function renderPackages(){
   const list=packages.filter(p=>{if(!searchHit(q,p.name,p.courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName))return false;if(tf&&p.courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;});
   const host=document.getElementById('packageGrid');
   if(!products.length){
-    host.innerHTML=`<div class="package-hero-empty" style="grid-column:1/-1"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">还没有课程产品</div><div style="margin-top:8px;font-size:13px;line-height:1.7">先创建课程产品，再基于课程产品创建售卖课包。</div><div style="margin-top:14px"><button class="light-btn" onclick="goPage('products')">去创建课程产品</button></div></div>`;
+    host.innerHTML=`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">还没有课程产品</div><div style="margin-top:8px;font-size:13px;line-height:1.7">先创建课程产品，再基于课程产品创建售卖课包。</div><button class="tms-btn tms-btn-ghost" onclick="goPage('products')">去创建课程产品</button></div>`;
     return;
   }
   host.innerHTML=list.length?list.map(p=>{
     const status=String(p.status||'active');
-    const usageWindow=[p.usageStartDate||'不限',p.usageEndDate||'不限'].join(' - ');
-    const saleWindow=[p.saleStartDate||'不限',p.saleEndDate||'不限'].join(' - ');
     const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、');
     const timeWindow=[p.timeBand||'全天',windows].filter(Boolean).join(' · ');
     const coachText=parseArr(p.coachNames).join('、')||'不限';
     const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
-    return `<div class="package-card"><div class="package-card-head"><div><div class="package-card-badges"><span class="tms-tag ${productTypeTagClass(p.courseType)}">${esc(p.courseType||'—')}</span><span class="tms-tag ${status==='inactive'?'tms-tag-tier-slate':'tms-tag-green'}">${status==='inactive'?'停用':'启用'}</span></div><div class="package-card-title">${esc(p.name)}</div><div class="package-card-sub">${esc(p.productName||'—')}</div></div></div><div class="package-card-metrics"><div class="package-card-metric"><div class="package-card-metric-label">价格</div><div class="package-card-metric-value">¥${fmt(p.price)}</div></div><div class="package-card-metric"><div class="package-card-metric-label">课时</div><div class="package-card-metric-value">${p.lessons||0}</div></div><div class="package-card-metric"><div class="package-card-metric-label">人数</div><div class="package-card-metric-value">${p.maxStudents||1}</div></div></div><div class="package-card-row"><span>可用教练</span><strong>${esc(coachText)}</strong></div><div class="package-card-row"><span>可用校区</span><strong>${esc(campusText)}</strong></div><div class="package-card-row"><span>活动期</span><strong>${esc(saleWindow)}</strong></div><div class="package-card-row"><span>使用期</span><strong>${esc(usageWindow)}</strong></div><div class="package-card-row"><span>使用时段</span><strong>${esc(timeWindow||'全天')}</strong></div><div class="package-card-actions"><button class="tms-btn tms-btn-default" onclick="openPackageModal('${p.id}')">编辑</button><button class="tms-btn tms-btn-ghost" onclick="focusPurchaseByPackage('${p.id}')">查看购买</button><button class="tms-btn tms-btn-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div>`;
-  }).join(''):`<div class="package-hero-empty" style="grid-column:1/-1"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">先选一个课程产品，再创建对应的售卖方案。</div><div style="margin-top:14px"><button class="light-btn" onclick="openPackageModal(null)">创建售卖课包</button></div></div>`;
+    return `<div class="package-card-shell"><div class="showcase-card-body"><div class="showcase-card-header"><div class="showcase-card-title-group"><div class="showcase-card-title">${esc(p.name)}<span class="tms-tag ${productTypeTagClass(p.courseType)}">${esc(p.courseType||'—')}</span></div><div class="showcase-card-subtitle">关联产品: ${esc(p.productName||'—')}</div></div><span class="showcase-status-tag ${status==='inactive'?'is-off':'is-on'}">${status==='inactive'?'停用':'启用'}</span></div><div class="showcase-highlight"><span class="showcase-highlight-price">¥${fmt(p.price)}</span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.lessons||0}<span class="showcase-highlight-unit">节</span></span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.maxStudents||1}<span class="showcase-highlight-unit">人</span></span></div><div class="showcase-kv-list"><div class="showcase-kv-row"><div class="showcase-kv-label">可用教练</div><div class="showcase-kv-value">${esc(coachText)}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">可用校区</div><div class="showcase-kv-value">${esc(campusText)}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">活动期</div><div class="showcase-kv-value is-mono">${esc(p.saleStartDate||'不限')} <span class="showcase-kv-sep">至</span> ${esc(p.saleEndDate||'不限')}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">使用期</div><div class="showcase-kv-value is-mono">${esc(p.usageStartDate||'不限')} <span class="showcase-kv-sep">至</span> ${esc(p.usageEndDate||'不限')}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">使用时段</div><div class="showcase-kv-value">${esc(timeWindow||'全天')}</div></div></div></div><div class="showcase-card-footer"><div class="showcase-card-actions"><button class="showcase-action-btn is-primary" onclick="focusPurchaseByPackage('${p.id}')">看订单</button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div></div>`;
+  }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">先选一个课程产品，再创建对应的售卖方案。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建售卖课包</button></div>`;
 }
 function refreshPurchaseFilters(){
   const packageValue=document.getElementById('purPackageFilter')?.value||'';
@@ -4993,6 +5111,11 @@ function myScheduleTravelGap(prev,current){
   if(!prev||!current||prev.campus===current.campus||!prev.endTime)return -1;
   return durMin(prev.endTime,current.startTime);
 }
+function myScheduleBlockTitle(schedule){
+  const type=scheduleCourseType(schedule);
+  if(type==='班课'||type==='训练营'||type==='大师课')return scheduleClassName(schedule);
+  return scheduleStudentSummary(schedule);
+}
 function renderMySchedule(){
   const cn2=getMyCoachName();
   const week=getWeekDates(myWeekOffset);
@@ -5002,7 +5125,7 @@ function renderMySchedule(){
   const m1=week[0],m2=week[6];
   document.getElementById('myWeekLabel').textContent=(m1.getMonth()+1)+'/'+m1.getDate()+' — '+(m2.getMonth()+1)+'/'+m2.getDate();
   const weekHeader=document.getElementById('myScheduleWeekHeader');
-  if(weekHeader)weekHeader.innerHTML=`<div class="my-schedule-week-title">本周总览</div><div class="my-schedule-week-sub">看本周上课分布和场地安排，点击课程块可以直接查看详情。</div>`;
+  if(weekHeader)weekHeader.innerHTML=`<div class="my-schedule-week-title">本周总览</div><div class="my-schedule-week-sub">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。</div>`;
   const startH=7,endH=22;
   let html='<div class="wg-corner"></div>';
   week.forEach((d,i)=>{const ds=d.toISOString().slice(0,10);const isToday=ds===todayStr;html+=`<div class="wg-dayhead${isToday?' today':''}">${WDNAMES[i]}<br>${d.getDate()}日</div>`;});
@@ -5018,7 +5141,8 @@ function renderMySchedule(){
         const dur=s.endTime?durMin(s.startTime,s.endTime):60;
         const topPx=sm/60*48,hPx=Math.max(dur/60*48,28);
         const cc=coachOpsCourseTypeTagClass(scheduleCourseType(s));
-        blocks+=`<div class="wg-block ${cc}" style="top:${topPx}px;height:${hPx}px" onclick="openScheduleDetail('${s.id}')" title="${esc(scheduleStudentSummary(s))} ${s.startTime.slice(11,16)}~${(s.endTime||'').slice(11,16)} ${esc(s.venue)||''}"><div class="wgb-name">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="wgb-info">${esc(scheduleStudentSummary(s))}</div><div class="wgb-info">${esc(scheduleCourseType(s))} · ${cn(s.campus)} ${esc(s.venue)||'—'}</div><div class="wgb-info">反馈：${scheduleFeedbackLabel(s)}</div></div>`;
+        const blockTitle=myScheduleBlockTitle(s);
+        blocks+=`<div class="wg-block ${cc}" style="top:${topPx}px;height:${hPx}px" onclick="openScheduleDetail('${s.id}')" title="${esc(blockTitle)} ${s.startTime.slice(11,16)}~${(s.endTime||'').slice(11,16)} ${esc(s.venue)||''}"><div class="wgb-top"><div class="wgb-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="wgb-type">${esc(scheduleCourseType(s))}</div></div><div class="wgb-name">${esc(blockTitle)}</div><div class="wgb-info">${cn(s.campus)} ${esc(s.venue)||'—'}</div><div class="wgb-info">反馈：${scheduleFeedbackLabel(s)}</div></div>`;
       });
       html+=`<div class="wg-cell${isToday?' today':''}">${blocks}</div>`;
     });
@@ -5031,40 +5155,35 @@ function renderMyStudents(){
   const myStuIds=new Set();
   myCls.forEach(c=>parseArr(c.studentIds).forEach(sid=>myStuIds.add(sid)));
   const myStus=students.filter(s=>myStuIds.has(s.id));
-  document.getElementById('myStudentStats').innerHTML=`<div class="scard"><div class="sc-icon si-a">👥</div><div><div class="sc-label">我的学员</div><div class="sc-val">${myStus.length}<span class="u">人</span></div></div></div><div class="scard"><div class="sc-icon si-b">📋</div><div><div class="sc-label">我的班次</div><div class="sc-val">${myCls.length}<span class="u">个</span></div></div></div>`;
+  document.getElementById('myStudentStats').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">我的学员</div><div class="tms-stat-value">${myStus.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">我的班次</div><div class="tms-stat-value">${myCls.length}<span>个</span></div></div>`;
   document.getElementById('myStuTbody').innerHTML=myStus.length?myStus.map(s=>{
     const sc=myCls.filter(c=>parseArr(c.studentIds).includes(s.id));
-    const cb=sc.map(c=>`<span class="badge b-blue" style="font-size:10px;margin:1px">${esc(c.className)||'—'}</span>`).join(' ')||'—';
+    const cb=sc.map(c=>c.className||'—').join('、')||'—';
     const stuScheds=schedules.filter(x=>x.coach===cn2&&scheduleHasStudent(x,s)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
-    const lastLesson=stuScheds.length?stuScheds[0].startTime.slice(0,10):'';
-    const lessonDays=lastLesson?Math.floor((Date.now()-new Date(lastLesson))/(86400000)):null;
-    const lessonTag=lastLesson?(lessonDays>30?'<span style="color:#dc2626;font-weight:600">'+lastLesson+'</span>':lastLesson):'<span style="color:var(--td)">—</span>';
+    const lastSchedule=stuScheds[0];
+    const lastDate=lastSchedule?.startTime?lastSchedule.startTime.slice(0,10):'';
+    const lastTime=lastSchedule?.startTime?`${lastSchedule.startTime.slice(11,16)}${lastSchedule.endTime?` - ${lastSchedule.endTime.slice(11,16)}`:''}`:'';
+    const lessonDays=lastDate?Math.floor((Date.now()-new Date(lastDate))/(86400000)):null;
+    const lessonTag=lastDate?`<div class="tms-text-primary"${lessonDays>30?' style="color:#dc2626"':''}>${lastDate}</div><div class="tms-text-secondary">${lastTime||'—'}</div>`:'<span style="color:var(--td)">—</span>';
     const recentFb=feedbacks.filter(f=>f.studentId===s.id||parseArr(f.studentIds).includes(s.id)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0];
     const noteSummary=recentFb?.recommendedProductType?`推荐${recentFb.recommendedProductType}；${recentFb.mainIssues||recentFb.knowledgePoint||''}`:(recentFb?.mainIssues||recentFb?.knowledgePoint||s.notes||'');
-    return `<tr onclick="openMyStudentDetail('${s.id}')" style="cursor:pointer"><td><div class="uname">${esc(s.name)}</div><div class="udesc">${cn(s.campus)}</div></td><td style="color:var(--ts)">${esc(s.phone)||'—'}</td><td><span class="badge ${s.type==='青少年'?'b-amber':'b-cream'}">${s.type||'—'}</span></td><td>${cb}</td><td style="font-size:12px">${lessonTag}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--td);font-size:12px">${esc(noteSummary)||'—'}</td></tr>`;
-  }).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
-  const mobileHost=document.getElementById('myStuMobileList');
-  if(mobileHost){
-    mobileHost.innerHTML=myStus.length?myStus.map(s=>{
-      const sc=myCls.filter(c=>parseArr(c.studentIds).includes(s.id));
-      const stuScheds=schedules.filter(x=>x.coach===cn2&&scheduleHasStudent(x,s)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
-      const lastLesson=stuScheds.length?stuScheds[0].startTime.slice(0,10):'—';
-      return `<div class="coach-mobile-card" onclick="openMyStudentDetail('${s.id}')"><div class="coach-mobile-main"><div class="coach-mobile-name">${esc(s.name)}</div><span class="badge ${s.type==='青少年'?'b-amber':'b-cream'}">${s.type||'—'}</span></div><div class="coach-mobile-meta">手机号：${esc(s.phone)||'—'}<br>班次：${sc.map(c=>esc(c.className)).join('、')||'—'}<br>最后上课：${lastLesson}<br>备注：${esc(s.notes)||'—'}</div></div>`;
-    }).join(''):'<div class="coach-mobile-empty">暂无学员</div>';
-  }
+    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td><div class="tms-text-remark" title="${esc(cb)}">${esc(cb)}</div></td><td>${lessonTag}</td><td><div class="tms-text-remark" title="${esc(noteSummary)}">${esc(renderCourtEmptyText(noteSummary))}</div></td><td class="tms-action-cell" style="width:72px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openMyStudentDetail('${s.id}')">查看</span></td></tr>`;
+  }).join(''):'<tr><td colspan="8"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
 }
 function openMyStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
-  document.getElementById('mTitle').textContent='👥 学员详情';
-  document.getElementById('mBody').innerHTML=`${studentLinkedDetailHtml(s,false)}<div class="sec-ttl">基本信息</div><div class="fgrid"><div class="fg"><div class="flabel">姓名</div><div class="finput">${esc(s.name)||'—'}</div></div><div class="fg"><div class="flabel">手机号码</div><div class="finput">${esc(s.phone)||'—'}</div></div><div class="fg"><div class="flabel">学员类型</div><div class="finput">${esc(s.type)||'—'}</div></div><div class="fg"><div class="flabel">所在校区</div><div class="finput">${cn(s.campus)||'—'}</div></div><div class="fg full"><div class="flabel">备注</div><div class="finput" style="min-height:42px">${esc(s.notes)||'—'}</div></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button></div>`;
-  document.getElementById('overlay').classList.add('open');
+  const myCls=classes.filter(c=>c.coach===getMyCoachName()&&parseArr(c.studentIds).includes(s.id));
+  const lastSchedule=schedules.filter(x=>x.coach===getMyCoachName()&&scheduleHasStudent(x,s)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
+  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" value="${esc(s.name)||'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">手机号码</label><input class="finput tms-form-control" value="${esc(s.phone)||'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员类型</label><input class="finput tms-form-control" value="${esc(s.type)||'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">所在校区</label><input class="finput tms-form-control" value="${cn(s.campus)||'—'}" readonly></div></div><div class="tms-section-header">教练视角摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所上班次</label><div class="finput tms-form-control" style="height:auto;min-height:54px;white-space:normal;line-height:1.7">${esc(myCls.map(c=>c.className||c.classNo).join('、'))||'—'}</div></div><div class="tms-form-item"><label class="tms-form-label">最近上课</label><input class="finput tms-form-control" value="${lastSchedule?.startTime?fmtDt(lastSchedule.startTime):'—'}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><div class="finput tms-form-control" style="height:auto;min-height:72px;white-space:normal;line-height:1.7">${esc(s.notes)||'—'}</div></div></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>`;
+  setCourtModalFrame('学员详情',body,footer,'modal-tight');
 }
 function renderMyClasses(){
   const cn2=getMyCoachName();
   const myCls=classes.filter(c=>c.coach===cn2);
   const active=myCls.filter(c=>c.status==='已排班').length;
   const tL=myCls.reduce((s,c)=>s+(parseInt(c.totalLessons)||0),0),uL=myCls.reduce((s,c)=>s+(parseInt(c.usedLessons)||0),0);
-  document.getElementById('myClassStats').innerHTML=`<div class="scard"><div class="sc-icon si-a">📋</div><div><div class="sc-label">我的班次</div><div class="sc-val">${myCls.length}<span class="u">个</span></div><div class="sc-sub">进行中 ${active}</div></div></div><div class="scard"><div class="sc-icon si-c">📚</div><div><div class="sc-label">总课时/已上</div><div class="sc-val">${tL}<span class="u">/ ${uL}</span></div><div class="sc-sub">剩余 ${tL-uL} 节</div></div></div>`;
+  document.getElementById('myClassStats').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">我的班次</div><div class="tms-stat-value">${myCls.length}<span>个</span></div><div class="tms-stat-sub">进行中 ${active}</div></div><div class="tms-stat-card"><div class="tms-stat-label">总课时 / 已上</div><div class="tms-stat-value">${tL}<span>/ ${uL}</span></div><div class="tms-stat-sub">剩余 ${tL-uL} 节</div></div>`;
   const ss={'已排班':'b-blue','已取消':'b-gray','已结课':'b-green'};
   document.getElementById('myClsTbody').innerHTML=myCls.length?myCls.map(c=>{
     const prod=products.find(x=>x.id===c.productId);
@@ -5072,18 +5191,17 @@ function renderMyClasses(){
     const names=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?esc(st.name):esc(sid);}).join('、')||'—';
     const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
     const pct=tl>0?Math.round(rem/tl*100):0,pc=pct>40?'pf-gold':pct>15?'pf-warn':'pf-red';
-    return `<tr><td><div class="uname">${esc(c.className)||'—'}</div><div class="udesc">${esc(c.classNo)||''}</div></td><td style="font-weight:500;color:var(--th)">${prod?prod.name:'—'}</td><td style="font-size:12px">${names}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td style="font-size:11px;color:var(--ts)">${c.startDate||'—'}~${c.endDate||'—'}</td><td><span class="badge ${ss[c.status]||'b-gray'}">${c.status||'已排班'}</span></td></tr>`;
-  }).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
-  const mobileHost=document.getElementById('myClsMobileList');
-  if(mobileHost){
-    mobileHost.innerHTML=myCls.length?myCls.map(c=>{
-      const prod=products.find(x=>x.id===c.productId);
-      const ids=parseArr(c.studentIds);
-      const names=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?esc(st.name):esc(sid);}).join('、')||'—';
-      const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
-      return `<div class="coach-mobile-card"><div class="coach-mobile-main"><div class="coach-mobile-name">${esc(c.className)||'—'}</div><span class="badge ${ss[c.status]||'b-gray'}">${c.status||'已排班'}</span></div><div class="coach-mobile-meta">课程：${prod?esc(prod.name):'—'}<br>学员：${names}<br>课时：${ul}/${tl}，剩余 ${rem}<br>日期：${c.startDate||'—'} ~ ${c.endDate||'—'}</div></div>`;
-    }).join(''):'<div class="coach-mobile-empty">暂无班次</div>';
-  }
+    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(c.className)||'—'}</div><div class="tms-text-secondary">${esc(c.classNo)||''}</div></td><td>${renderCourtCellText(prod?prod.name:'—')}</td><td><div class="tms-text-remark" title="${names}">${names}</div></td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td>${renderCourtCellText(`${c.startDate||'—'} ~ ${c.endDate||'—'}`,false)}</td><td><span class="tms-tag ${c.status==='已结课'?'tms-tag-green':c.status==='已取消'?'tms-tag-tier-slate':'tms-tag-tier-blue'}">${c.status||'已排班'}</span></td><td class="tms-action-cell" style="width:72px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openMyClassDetail('${c.id}')">查看</span></td></tr>`;
+  }).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
+}
+function openMyClassDetail(id){
+  const c=classes.find(x=>x.id===id);if(!c)return;
+  const prod=products.find(x=>x.id===c.productId);
+  const studentText=parseArr(c.studentIds).map(sid=>students.find(s=>s.id===sid)?.name||sid).join('、')||'—';
+  const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
+  const body=`<div class="tms-section-header" style="margin-top:0;">班次信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">班次名称</label><input class="finput tms-form-control" value="${esc(c.className)||'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">班次编号</label><input class="finput tms-form-control" value="${esc(c.classNo)||'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程</label><input class="finput tms-form-control" value="${esc(prod?.name||c.productName)||'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">状态</label><input class="finput tms-form-control" value="${esc(c.status)||'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员</label><div class="finput tms-form-control" style="height:auto;min-height:54px;white-space:normal;line-height:1.7">${esc(studentText)}</div></div><div class="tms-form-item"><label class="tms-form-label">日期</label><input class="finput tms-form-control" value="${esc(c.startDate||'—')} ~ ${esc(c.endDate||'—')}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">课时进度</label><div class="finput tms-form-control" style="height:auto;min-height:54px;white-space:normal;line-height:1.7">总课时 ${tl} 节；已上 ${ul} 节；剩余 ${rem} 节</div></div></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>`;
+  setCourtModalFrame('查看班次',body,footer,'modal-tight');
 }
 
 </script>

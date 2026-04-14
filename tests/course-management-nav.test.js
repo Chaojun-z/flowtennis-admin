@@ -16,6 +16,11 @@ assert.match(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, 'sidebar
 assert.match(html, /id="page-packages"/, 'should have packages page section');
 assert.match(html, /id="page-purchases"/, 'should have purchases page section');
 assert.match(html, /id="page-entitlements"/, 'should have entitlements page section');
+assert.match(html, /course-showcase/, 'course product page should use the new showcase container');
+assert.match(html, /course-package-showcase/, 'package page should use the new showcase container');
+assert.match(html, /product-card-shell/, 'product page should render the gemini-style product cards');
+assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
+assert.doesNotMatch(html, /tms-pill-tabs/, 'sidebar navigation should replace the demo top tabs');
 assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/, 'page title map should not be declared twice after merge');
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
 assert.match(html, /function syncPackageProductMeta/, 'package modal should sync product metadata');

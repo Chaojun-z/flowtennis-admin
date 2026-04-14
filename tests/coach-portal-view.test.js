@@ -33,14 +33,26 @@ assert.match(
 
 assert.match(
   html,
+  /id="page-mystudents"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
+  'my students page should reuse the management-side note and table shell'
+);
+
+assert.match(
+  html,
+  /id="page-myclasses"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
+  'my classes page should reuse the management-side note and table shell'
+);
+
+assert.match(
+  html,
   /今日课程[\s\S]*?即将开始[\s\S]*?待反馈[\s\S]*?体验课待判断/,
   'coach workbench should show four priority cards'
 );
 
 assert.match(
   fnBody('renderWorkbench'),
-  /tms-stat-card[\s\S]*counts\.completed[\s\S]*counts\.trial/,
-  'coach workbench stats should use the management-side stat card language'
+  /coach-wb-page-header[\s\S]*coach-wb-current-time[\s\S]*亟待处理[\s\S]*今日后续[\s\S]*已完成/,
+  'coach workbench should render the gemini-style grouped shell directly'
 );
 
 assert.match(
@@ -51,8 +63,8 @@ assert.match(
 
 assert.match(
   fnBody('workbenchSection'),
-  /课程类型[\s\S]*校区 \/ 场地[\s\S]*反馈状态/,
-  'coach workbench today cards should show type, location, and feedback'
+  /coach-wb-card[\s\S]*coach-wb-row1[\s\S]*coach-wb-name[\s\S]*coach-wb-row3[\s\S]*coach-wb-card-footer/,
+  'coach workbench cards should use the gemini-style course card structure'
 );
 
 assert.match(
@@ -62,9 +74,33 @@ assert.match(
 );
 
 assert.match(
+  fnBody('renderWorkbench'),
+  /亟待处理[\s\S]*今日后续[\s\S]*已完成/,
+  'coach workbench should group cards into urgent, later, and done sections'
+);
+
+assert.match(
   html,
   /function hasTrialConversionDecision\(fb\)/,
   'coach portal should expose a helper for trial conversion completion'
+);
+
+assert.match(
+  fnBody('openMyStudentDetail'),
+  /tms-section-header[\s\S]*setCourtModalFrame/,
+  'my student detail should reuse the management modal frame and section style'
+);
+
+assert.match(
+  html,
+  /function openMyClassDetail\(/,
+  'coach portal should provide a dedicated my class detail modal'
+);
+
+assert.match(
+  fnBody('openMyClassDetail'),
+  /tms-section-header[\s\S]*setCourtModalFrame/,
+  'my class detail should reuse the management modal frame and section style'
 );
 
 assert.match(
