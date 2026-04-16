@@ -20,6 +20,8 @@ assert.match(html, /course-showcase/, 'course product page should use the new sh
 assert.match(html, /course-package-showcase/, 'package page should use the new showcase container');
 assert.match(html, /product-card-shell/, 'product page should render the gemini-style product cards');
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
+assert.match(html, /归属教练[\s\S]*购买时选择[\s\S]*可上课教练/, 'package card should distinguish sale owner coach from teachable coaches');
+assert.match(html, /主归属教练[\s\S]*可上课教练/, 'purchase records should expose owner coach and teachable coaches');
 assert.doesNotMatch(html, /tms-pill-tabs/, 'sidebar navigation should replace the demo top tabs');
 assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/, 'page title map should not be declared twice after merge');
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');

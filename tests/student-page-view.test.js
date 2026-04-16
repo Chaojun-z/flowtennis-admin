@@ -28,6 +28,9 @@ assert.match(html, /function studentStatusMeta\(/, 'student list should compute 
 assert.match(html, /上课中[\s\S]*待转化[\s\S]*沉默30天[\s\S]*仅订场[\s\S]*无班次/, 'student status labels should cover the agreed business states');
 assert.match(html, /function studentNoteSummary\(/, 'student list should compute compact ops-style note summary');
 assert.match(html, /<table class="tms-table">[\s\S]*<th[^>]*>学员<\/th><th[^>]*>电话<\/th><th[^>]*>类型<\/th><th[^>]*>校区<\/th><th[^>]*>当前班次<\/th><th[^>]*>最近上课<\/th><th[^>]*>负责教练<\/th><th[^>]*>课包\/课时<\/th><th[^>]*>订场\/会员<\/th><th[^>]*>来源<\/th><th[^>]*>备注<\/th><th[^>]*>操作<\/th>/, 'student table should split phone, type, and campus into separate columns');
+assert.match(html, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the profile field');
+assert.match(html, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
+assert.match(html, /未分配/, 'empty primary coach should display 未分配');
 assert.doesNotMatch(html, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(html, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
 assert.match(html, /function openStudentDetail\(/, 'student list should provide a dedicated view action');

@@ -129,8 +129,26 @@ assert.match(
 
 assert.match(
   html,
-  /累计上课[\s\S]*课包进度[\s\S]*剩余课时/,
-  'coach my students should show lesson counts and package progress'
+  /累计上课<\/th>[\s\S]*最后上课<\/th>[\s\S]*课包进度<\/th>[\s\S]*剩余课时<\/th>/,
+  'coach my students should split lesson count, last lesson, package progress and remaining lessons'
+);
+
+assert.match(
+  fnBody('renderMyStudents'),
+  /visibleStudentCount[\s\S]*ownerStudentCount[\s\S]*substituteStudentCount[\s\S]*monthLessons[\s\S]*totalLessons/,
+  'coach my students stats should distinguish visible, owner, substitute and lesson counts'
+);
+
+assert.doesNotMatch(
+  fnBody('renderMyStudents'),
+  /累计上课 \$\{myStudentLessonCount/,
+  'coach my students table should render numeric lesson count only'
+);
+
+assert.match(
+  fnBody('normalizeCurrentPageForRole'),
+  /if\(isCoach\)\{[\s\S]*if\(!\['workbench','myschedule','mystudents','myclasses'\]\.includes\(currentPage\)\)currentPage='workbench'/,
+  'quiet sync should keep the current coach page instead of forcing workbench'
 );
 
 assert.doesNotMatch(
