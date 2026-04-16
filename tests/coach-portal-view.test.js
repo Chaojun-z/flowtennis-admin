@@ -115,6 +115,24 @@ assert.match(
   'coach schedule views should render the required course info fields'
 );
 
+assert.match(
+  fnBody('renderMySchedule'),
+  /scheduleAbsentText/,
+  'coach weekly schedule should show absent count for class schedules'
+);
+
+assert.match(
+  html,
+  /my-schedule-mobile-list/,
+  'coach schedule should provide a mobile-friendly list for phones'
+);
+
+assert.match(
+  html,
+  /累计上课[\s\S]*课包进度[\s\S]*剩余课时/,
+  'coach my students should show lesson counts and package progress'
+);
+
 assert.doesNotMatch(
   html,
   /正式课/,

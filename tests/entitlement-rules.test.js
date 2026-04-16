@@ -30,7 +30,9 @@ const purchase = {
   studentName: '张三',
   purchaseDate: '2026-05-02',
   amountPaid: 1000,
-  payMethod: '微信'
+  payMethod: '微信',
+  ownerCoach: '朝珺',
+  allowedCoaches: ['mira', '小舟']
 };
 
 const entitlement = rules.buildEntitlementFromPurchase(pkg, purchase, { id: 'stu-1', name: '张三' }, 'ent-1', '2026-04-12T00:00:00.000Z');
@@ -46,7 +48,9 @@ assert.deepStrictEqual(
     remainingLessons: entitlement.remainingLessons,
     validFrom: entitlement.validFrom,
     validUntil: entitlement.validUntil,
-    timeBand: entitlement.timeBand
+    timeBand: entitlement.timeBand,
+    ownerCoach: entitlement.ownerCoach,
+    allowedCoaches: entitlement.allowedCoaches
   },
   {
     id: 'ent-1',
@@ -58,7 +62,9 @@ assert.deepStrictEqual(
     remainingLessons: 5,
     validFrom: '2026-05-02',
     validUntil: '2026-07-01',
-    timeBand: '非黄金时段'
+    timeBand: '非黄金时段',
+    ownerCoach: '朝珺',
+    allowedCoaches: ['mira', '小舟']
   },
   'purchase should create a matching entitlement account'
 );
@@ -82,6 +88,8 @@ assert.deepStrictEqual(
     coachIds: ['coach-1'],
     coachNames: ['朝珺'],
     campusIds: ['mabao'],
+    ownerCoach: '朝珺',
+    allowedCoaches: ['mira', '小舟'],
     usageStartDate: '2026-05-01',
     usageEndDate: '2026-07-01',
     purchaseDate: '2026-05-02',
@@ -175,6 +183,37 @@ assert.doesNotThrow(
     status: '已排课'
   }),
   'matching non-prime package can be consumed'
+);
+
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule({ ...entitlement, coachIds: [], coachNames: [], ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
+    id: 'sch-owner-allowed',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coach: 'mira',
+    campus: 'mabao',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  'sold package allowed coaches should be usable in scheduling'
+);
+
+assert.throws(
+  () => rules.validateEntitlementForSchedule({ ...entitlement, coachIds: [], coachNames: [], ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
+    id: 'sch-owner-block',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coach: '小舟',
+    campus: 'mabao',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  /课包可上课教练不匹配/,
+  'sold package allowed coaches should restrict scheduling'
 );
 
 assert.throws(

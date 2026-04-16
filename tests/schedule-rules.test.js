@@ -86,15 +86,20 @@ assert.doesNotThrow(
   'billable schedule may be saved without binding a package balance record'
 );
 
-assert.throws(
-  () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', entitlementId: 'ent-1', studentIds: ['stu-1', 'stu-2'], status: '已排课', lessonCount: 1 }),
-  /多人排课暂不支持单个课包余额/,
-  'multi-student schedule cannot consume one package balance record'
+assert.doesNotThrow(
+  () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', entitlementIds: ['ent-1', 'ent-2'], studentIds: ['stu-1', 'stu-2'], expectedStudentIds: ['stu-1', 'stu-2', 'stu-3'], absentStudentIds: ['stu-3'], status: '已排课', lessonCount: 1 }),
+  'multi-student class schedule should support checked participants and absent students'
 );
 
 assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', entitlementId: 'ent-1', studentIds: ['stu-1'], status: '已排课', lessonCount: 1 }),
   'single-student billable schedule with entitlement should pass'
+);
+
+assert.deepStrictEqual(
+  rules.scheduleParticipantSummary({ studentIds: ['stu-1', 'stu-2'], expectedStudentIds: ['stu-1', 'stu-2', 'stu-3'] }),
+  { expectedCount: 3, actualCount: 2, absentCount: 1 },
+  'schedule participant summary should count actual and absent students'
 );
 
 assert.throws(

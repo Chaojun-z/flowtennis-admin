@@ -40,7 +40,9 @@ assert.match(html, /教学信息[\s\S]*运营信息[\s\S]*消费与关联信息/
 assert.match(html, /已购课包/, 'student detail should present purchased packages in plain language');
 assert.match(html, /扣课记录/, 'student detail should expose lesson charge history in the student detail');
 assert.doesNotMatch(html, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
-assert.match(html, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep only base profile fields');
+assert.match(html, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');
+assert.match(html, /renderCourtDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');
+assert.match(html, /const data=\{name,phone,primaryCoach:/, 'student save should submit primary coach');
 assert.match(html, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
 
 console.log('student page view tests passed');

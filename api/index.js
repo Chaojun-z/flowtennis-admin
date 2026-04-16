@@ -94,19 +94,21 @@ async function scanFeedbacks(){
 function getRuntimeEnsuredTables(){return [...RUNTIME_ENSURED_TABLES];}
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
-async function applyLessonDelta(classId,delta){
+async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
   const cls=await get(T_CLASSES,classId);
   if(!cls)return null;
   const oldClass={...cls};
   const nextUsed=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
   const relatedPlans=(await timed('scan plans for lesson delta',()=>scan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
+  const studentSet=new Set(parseArr(studentIds).filter(Boolean));
+  const chargedPlans=studentSet.size?relatedPlans.filter(p=>studentSet.has(p.studentId)):relatedPlans;
   const oldPlans=relatedPlans.map((p)=>({...p}));
   const updatedPlans=[];
   try{
     const nextClass={...cls,usedLessons:nextUsed,updatedAt:new Date().toISOString()};
     await put(T_CLASSES,classId,nextClass);
-    for(const p of relatedPlans){
+    for(const p of chargedPlans){
       const nextPlanUsed=Math.max(0,(parseInt(p.usedLessons)||0)+delta);
       const nextPlan={...p,usedLessons:nextPlanUsed,updatedAt:new Date().toISOString()};
       await put(T_PLANS,p.id,nextPlan);
@@ -291,6 +293,8 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     timeBand:pkg.timeBand||'',
     coachIds:parseArr(pkg.coachIds),
     coachNames:parseArr(pkg.coachNames),
+    ownerCoach:purchase.ownerCoach||'',
+    allowedCoaches:parseArr(purchase.allowedCoaches),
     campusIds:parseArr(pkg.campusIds),
     maxStudents:parseInt(pkg.maxStudents)||0,
     status:'active',
@@ -318,6 +322,8 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
     coachIds:parseArr(pkg.coachIds),
     coachNames:parseArr(pkg.coachNames),
+    ownerCoach:body.ownerCoach||'',
+    allowedCoaches:parseArr(body.allowedCoaches),
     campusIds:parseArr(pkg.campusIds),
     usageStartDate:pkg.usageStartDate||'',
     usageEndDate:pkg.usageEndDate||'',
@@ -435,8 +441,17 @@ function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId
 }
 function assertScheduleEntitlementRequired(rec){
   if(!isBillableSchedule(rec))return;
-  const studentIds=parseArr(rec.studentIds).filter(Boolean);
-  if(studentIds.length>1)throw new Error('多人排课暂不支持单个课包余额，请拆成单人排课或先升级一对多结构');
+}
+function scheduleParticipantSummary(rec){
+  const actual=parseArr(rec?.studentIds).filter(Boolean);
+  const expected=parseArr(rec?.expectedStudentIds).filter(Boolean);
+  const base=expected.length?expected:actual;
+  const actualSet=new Set(actual);
+  return {
+    expectedCount:base.length,
+    actualCount:actual.length,
+    absentCount:base.filter(id=>!actualSet.has(id)).length
+  };
 }
 function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
   const used=parseInt(oldEnt?.usedLessons)||0;
@@ -485,6 +500,8 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const coachNames=parseArr(entitlement.coachNames);
   if(coachIds.length&&schedule.coachId&&!coachIds.includes(schedule.coachId))throw new Error('课包可用教练不匹配');
   if(coachNames.length&&schedule.coach&&!coachNames.some(n=>sameCoachName(n,schedule.coach)))throw new Error('课包可用教练不匹配');
+  const saleCoachNames=[entitlement.ownerCoach,...parseArr(entitlement.allowedCoaches)].filter(Boolean);
+  if(saleCoachNames.length&&schedule.coach&&!saleCoachNames.some(n=>sameCoachName(n,schedule.coach)))throw new Error('课包可上课教练不匹配');
   const campusIds=parseArr(entitlement.campusIds);
   if(campusIds.length&&schedule.campus&&!campusIds.includes(schedule.campus))throw new Error('课包可用校区不匹配');
   const usedDate=dateKey(schedule.startTime);
@@ -494,6 +511,20 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
+}
+function entitlementMatchesCoach(entitlement,coachName){
+  const name=String(coachName||'').trim();
+  if(!name)return false;
+  return String(entitlement?.ownerCoach||'').trim()===name||parseArr(entitlement?.allowedCoaches).some(c=>String(c||'').trim()===name);
+}
+function scheduleEntitlementDeltas(rec){
+  if(!rec||!isBillableSchedule(rec))return[];
+  const lessonCount=parseInt(rec.lessonCount)||1;
+  if(lessonCount<=0)return[];
+  const ids=parseArr(rec.entitlementIds).filter(Boolean);
+  if(ids.length)return ids.map(entitlementId=>({entitlementId,delta:lessonCount}));
+  if(rec.entitlementId)return[{entitlementId:rec.entitlementId,delta:lessonCount}];
+  return[];
 }
 function recommendEntitlements(entitlements,schedule){
   const options=(entitlements||[]).map(ent=>{
@@ -523,6 +554,18 @@ function recommendEntitlements(entitlements,schedule){
   const clean=options.map(({_source,...rest})=>rest);
   return {recommended:clean.find(o=>o.selectable)||null,options:clean};
 }
+function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
+  const explicit=scheduleEntitlementDeltas(rec);
+  if(explicit.length)return explicit;
+  if(!rec||!isBillableSchedule(rec))return[];
+  const lessonCount=parseInt(rec.lessonCount)||1;
+  if(lessonCount<=0)return[];
+  return parseArr(rec.studentIds).filter(Boolean).map(studentId=>{
+    const options=(entitlements||[]).filter(e=>e.studentId===studentId);
+    const {recommended}=recommendEntitlements(options,{...rec,studentIds:[studentId]});
+    return recommended?{studentId,entitlementId:recommended.entitlementId,delta:lessonCount}:null;
+  }).filter(Boolean);
+}
 function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOString()){
   const total=parseInt(entitlement.totalLessons)||0;
   const used=Math.max(0,(parseInt(entitlement.usedLessons)||0)-(parseInt(delta)||0));
@@ -543,20 +586,22 @@ function assertScheduleEditableAfterFeedback(oldRec,nextRec,feedbacks){
   if(changed.length)throw new Error('该排课已有课后反馈，不能修改学员、班次、课包余额、时间、教练、校区、场地、课程类型、课时或状态');
 }
 function scheduleEntitlementDelta(rec){
-  if(!rec||!rec.entitlementId||!isBillableSchedule(rec))return null;
-  const lessonCount=parseInt(rec.lessonCount)||1;
-  if(lessonCount<=0)return null;
-  return {entitlementId:rec.entitlementId,delta:lessonCount};
+  return scheduleEntitlementDeltas(rec)[0]||null;
 }
 async function assertScheduleEntitlementCapacity(nextRec,oldRec){
-  const nextDelta=scheduleEntitlementDelta(nextRec);
-  if(!nextDelta)return null;
-  const ent=await get(T_ENTITLEMENTS,nextDelta.entitlementId);
-  if(!ent)throw new Error('课包余额不存在');
-  const oldDelta=scheduleEntitlementDelta(oldRec);
-  const adjusted=oldDelta&&oldDelta.entitlementId===nextDelta.entitlementId?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+oldDelta.delta}:ent;
-  validateEntitlementForSchedule(adjusted,nextRec);
-  return adjusted;
+  const nextDeltas=scheduleEntitlementDeltas(nextRec);
+  if(!nextDeltas.length)return null;
+  const oldDeltas=scheduleEntitlementDeltas(oldRec);
+  const oldMap=new Map(oldDeltas.map(d=>[d.entitlementId,d.delta]));
+  const checked=[];
+  for(const nextDelta of nextDeltas){
+    const ent=await get(T_ENTITLEMENTS,nextDelta.entitlementId);
+    if(!ent)throw new Error('课包余额不存在');
+    const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+oldMap.get(nextDelta.entitlementId)}:ent;
+    validateEntitlementForSchedule(adjusted,{...nextRec,studentIds:[adjusted.studentId].filter(Boolean)});
+    checked.push(adjusted);
+  }
+  return checked;
 }
 async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reason,user){
   if(!entitlementId||!delta)return null;
@@ -667,12 +712,14 @@ function filterLoadAllForUser(data,user){
   const ownClasses=normalized.classes.filter(c=>String(c.coach||'').trim()===coachName||scheduleClassIds.has(c.id));
   const classIds=new Set([...ownClasses.map(c=>c.id).filter(Boolean),...scheduleClassIds]);
   const studentIds=new Set();
+  normalized.students.filter(s=>String(s.primaryCoach||'').trim()===coachName).forEach(s=>studentIds.add(s.id));
   ownSchedule.forEach(s=>parseArr(s.studentIds).forEach(id=>studentIds.add(id)));
   ownClasses.forEach(c=>parseArr(c.studentIds).forEach(id=>studentIds.add(id)));
+  normalized.entitlements.filter(e=>entitlementMatchesCoach(e,coachName)).forEach(e=>{if(e.studentId)studentIds.add(e.studentId);});
   const ownPlans=normalized.plans.filter(p=>studentIds.has(p.studentId)||classIds.has(p.classId));
   ownPlans.forEach(p=>{if(p.studentId)studentIds.add(p.studentId);});
-  const safeEntitlements=normalized.entitlements.filter(e=>studentIds.has(e.studentId)).map(e=>({
-    id:e.id,studentId:e.studentId,studentName:e.studentName,packageName:e.packageName,courseType:e.courseType,totalLessons:e.totalLessons,usedLessons:e.usedLessons,remainingLessons:e.remainingLessons,validFrom:e.validFrom,validUntil:e.validUntil,timeBand:e.timeBand,status:e.status
+  const safeEntitlements=normalized.entitlements.filter(e=>studentIds.has(e.studentId)||entitlementMatchesCoach(e,coachName)).map(e=>({
+    id:e.id,studentId:e.studentId,studentName:e.studentName,packageName:e.packageName,courseType:e.courseType,totalLessons:e.totalLessons,usedLessons:e.usedLessons,remainingLessons:e.remainingLessons,validFrom:e.validFrom,validUntil:e.validUntil,timeBand:e.timeBand,status:e.status,ownerCoach:e.ownerCoach,allowedCoaches:parseArr(e.allowedCoaches)
   }));
   const safeLedger=normalized.entitlementLedger.filter(l=>scheduleIds.has(l.scheduleId)).map(l=>({
     id:l.id,entitlementId:l.entitlementId,studentId:l.studentId,scheduleId:l.scheduleId,lessonDelta:l.lessonDelta,action:l.action,reason:l.reason,createdAt:l.createdAt
@@ -2281,25 +2328,33 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await scan(T_SCHEDULE));
       if(method==='POST'){
         const id=uuidv4();
-        const r={...body,venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        const r={...body,studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         const risk=await validateScheduleSave(r,null);
         assertScheduleEntitlementRequired(r);
+        const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await scan(T_ENTITLEMENTS).catch(()=>[]));
+        r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
+        r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
         await assertScheduleEntitlementCapacity(r,null);
         await put(T_SCHEDULE,id,r);
         const nextDelta=scheduleLessonDelta(r);
-        const nextEntDelta=scheduleEntitlementDelta(r);
         const appliedEntitlements=[];
         let lessonApplied=false;
         try{
-          const entitlementUpdate=nextEntDelta?await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user):null;
-          if(nextEntDelta)appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
-          const lessonUpdate=nextDelta?await applyLessonDelta(nextDelta.classId,nextDelta.delta):null;
+          const entitlementChanged=[];
+          for(const nextEntDelta of entitlementDeltas){
+            const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user);
+            if(update)entitlementChanged.push(update);
+            appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
+          }
+          const lessonUpdate=nextDelta?await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds):null;
           if(nextDelta)lessonApplied=true;
-          return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),...(entitlementUpdate||{})});
+          const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
+          const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
+          return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null});
         }catch(err){
           await del(T_SCHEDULE,id).catch(()=>null);
           for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
-          if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta).catch(()=>null);
+          if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
           throw err;
         }
       }
@@ -2310,25 +2365,30 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await get(T_SCHEDULE,id));
       if(method==='PUT'){
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
-        const r={...ex,...body,venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
+        const r={...ex,...body,studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
         const risk=await validateScheduleSave(r,ex);
         assertScheduleEntitlementRequired(r);
-        await assertScheduleEntitlementCapacity(r,ex);
         assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
+        const oldEntDeltas=scheduleEntitlementDeltas(ex);
+        const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
+        const entitlementRows=await scan(T_ENTITLEMENTS).catch(()=>[]);
+        const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
+        const nextEntDeltas=resolveScheduleEntitlementDeltas(r,nextBaseRows);
+        r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
+        r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+        await assertScheduleEntitlementCapacity(r,ex);
         await put(T_SCHEDULE,id,r);
         const appliedEntitlements=[];
         const appliedClassDeltas=[];
         try{
           const changed=[];
           const entitlementChanged=[];
-          const oldEntDelta=scheduleEntitlementDelta(ex);
-          const nextEntDelta=scheduleEntitlementDelta(r);
-          if(oldEntDelta){entitlementChanged.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
-          if(nextEntDelta){entitlementChanged.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
-          if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta});}
-          if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta});}
+          for(const oldEntDelta of oldEntDeltas){entitlementChanged.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
+          for(const nextEntDelta of nextEntDeltas){entitlementChanged.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
+          if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds)));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});}
+          if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta,studentIds:r.studentIds});}
           const classes=changed.filter(Boolean).map(x=>x.class);
           const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
           const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
@@ -2336,7 +2396,7 @@ module.exports = async (req, res) => {
           return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
         }catch(err){
           await put(T_SCHEDULE,id,ex).catch(()=>null);
-          for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta).catch(()=>null);
+          for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
           for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
           throw err;
         }
@@ -2387,10 +2447,12 @@ module.exports._test={
   assertCanEditPackageWithPurchases,
   assertCanEditPurchaseWithLedger,
   assertScheduleEntitlementRequired,
+  scheduleParticipantSummary,
   syncEntitlementFromPurchase,
   writePurchaseAndEntitlementAtomic,
   validateEntitlementForSchedule,
   recommendEntitlements,
+  resolveScheduleEntitlementDeltas,
   applyEntitlementLessonDelta,
   assertScheduleEditableAfterFeedback,
   isScheduleInsideDailyTimeWindows,
