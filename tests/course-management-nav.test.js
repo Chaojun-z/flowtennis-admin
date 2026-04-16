@@ -27,6 +27,7 @@ assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/,
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
 assert.match(html, /function syncPackageProductMeta/, 'package modal should sync product metadata');
 assert.match(html, /课程类型跟随课程产品/, 'package modal should explain course type follows product');
+assert.match(html, /归属教练不在这里维护，实际售卖时按购买记录选择/, 'package modal should explain owner coach is selected at purchase time');
 assert.match(html, /function productHasReferences/, 'product modal should know whether product is referenced');
 assert.match(html, /function packageHasPurchases/, 'package modal should know whether package is sold');
 assert.match(html, /核心字段已锁定/, 'locked core fields should show operator-facing hint');
@@ -35,6 +36,8 @@ assert.match(html, /function openPurchaseEditModal/, 'purchase page should have 
 assert.match(html, /function savePurchaseEdit/, 'purchase page should save purchase edits');
 assert.match(html, /function openPurchaseModal/, 'purchase page should provide the unified purchase modal');
 assert.match(html, /function openPurchaseModal[\s\S]*renderCourtDropdownHtml\('pur_studentId','选择学员'/, 'purchase modal should pick the student in the same step');
+assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
+assert.match(html, /<th style="width:120px;padding-left:20px">购买日期<\/th><th style="width:140px">学员<\/th><th style="width:170px">售卖课包<\/th><th style="width:120px">主归属教练<\/th>/, 'purchase table should show owner coach directly in the list');
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
 assert.match(html, /function openPurchaseVoidModal/, 'purchase page should use dedicated void modal');

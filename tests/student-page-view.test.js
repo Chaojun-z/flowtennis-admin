@@ -31,6 +31,8 @@ assert.match(html, /<table class="tms-table">[\s\S]*<th[^>]*>学员<\/th><th[^>]
 assert.match(html, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the profile field');
 assert.match(html, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
 assert.match(html, /未分配/, 'empty primary coach should display 未分配');
+assert.match(html, /const SOURCES=\[[^\]]*'孙老师'/, 'student source options should include 孙老师');
+assert.match(html, /function renderCourtCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
 assert.doesNotMatch(html, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(html, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
 assert.match(html, /function openStudentDetail\(/, 'student list should provide a dedicated view action');

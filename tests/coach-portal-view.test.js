@@ -129,6 +129,42 @@ assert.match(
 
 assert.match(
   html,
+  /id="myScheduleMobileList"[^>]*coach-mobile-list/,
+  'coach mobile schedule list should use the dedicated mobile card container'
+);
+
+assert.match(
+  html,
+  /id="myStudentMobileList"[^>]*coach-mobile-list[\s\S]*id="myClassMobileList"[^>]*coach-mobile-list/,
+  'coach my students and my classes should provide dedicated mobile card lists'
+);
+
+assert.match(
+  html,
+  /body\.coach-mobile #page-workbench \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+  'coach workbench should switch to a true mobile two-column stat grid'
+);
+
+assert.match(
+  html,
+  /body\.coach-mobile #page-workbench \.coach-wb-grid\{grid-template-columns:1fr/,
+  'coach workbench cards should stack as single-column cards on mobile'
+);
+
+assert.match(
+  fnBody('renderMyStudents'),
+  /myStudentMobileList/,
+  'coach my students renderer should fill the mobile list container'
+);
+
+assert.match(
+  fnBody('renderMyClasses'),
+  /myClassMobileList/,
+  'coach my classes renderer should fill the mobile list container'
+);
+
+assert.match(
+  html,
   /累计上课<\/th>[\s\S]*最后上课<\/th>[\s\S]*课包进度<\/th>[\s\S]*剩余课时<\/th>/,
   'coach my students should split lesson count, last lesson, package progress and remaining lessons'
 );

@@ -6,6 +6,7 @@ const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8
 
 assert.match(html, /真实可约课以课包余额规则为准/, 'plan page should explain class progress vs package balance truth boundary');
 assert.match(html, /tms-audit-note">学习计划由「班次管理」自动生成/, 'plan page should render the top explanation as an audit note style');
+assert.match(html, /id="page-classes"[\s\S]*tms-audit-note">班次用于组织固定上课关系和学习进度；是否还能继续约课，仍然以课包余额和可用规则为准。<\/div>/, 'class page should explain the difference between class progress and package balance');
 assert.match(html, /planCampusFilterHost/, 'plan page should include campus filter host');
 assert.match(html, /planCoachFilterHost/, 'plan page should include coach filter host');
 assert.match(html, /planTypeFilterHost/, 'plan page should include course type filter host');

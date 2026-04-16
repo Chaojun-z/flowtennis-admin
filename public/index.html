@@ -584,6 +584,17 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-time{font-size:15px;font-weight:700;color:var(--amber-base);white-space:nowrap}
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:18px 14px;text-align:center;color:var(--ts);font-size:12px;background:rgba(254,243,199,0.2);border-radius:12px;border:0.5px dashed rgba(180,83,9,0.16)}
+.coach-mobile-stack{display:flex;flex-direction:column;gap:12px}
+.coach-mobile-info-card{background:var(--card-f);border:var(--borf);border-radius:16px;padding:14px;box-shadow:var(--shm)}
+.coach-mobile-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.coach-mobile-info-title{font-size:15px;font-weight:800;color:var(--th);line-height:1.3}
+.coach-mobile-info-badge{font-size:11px;color:var(--amber-base);background:rgba(217,119,6,.10);border-radius:999px;padding:4px 8px;white-space:nowrap}
+.coach-mobile-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;margin-top:12px}
+.coach-mobile-info-cell strong{display:block;font-size:11px;color:#A3968F;font-weight:700;margin-bottom:3px}
+.coach-mobile-info-cell{font-size:13px;color:var(--tb);line-height:1.55;min-width:0;word-break:break-word}
+.coach-mobile-info-note{margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(180,83,9,0.12);font-size:12px;line-height:1.6;color:var(--ts)}
+.coach-mobile-actions{display:flex;gap:8px;margin-top:12px}
+.coach-mobile-actions .tms-btn,.coach-mobile-actions .tms-action-link{flex:1;text-align:center;justify-content:center}
 .coach-ops-shell{display:grid;gap:12px;margin-bottom:14px}
 .coach-ops-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}
 .coach-ops-toolbar-main,.coach-ops-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -718,6 +729,22 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   body.coach-mobile .today-card{padding:12px 13px}
   body.coach-mobile .today-card-grid{grid-template-columns:1fr}
   body.coach-mobile .today-card-actions{flex-direction:column}
+  body.coach-mobile #page-workbench .coach-wb-container{gap:12px}
+  body.coach-mobile #page-workbench .coach-wb-page-header{flex-direction:column;align-items:flex-start;gap:10px}
+  body.coach-mobile #page-workbench .coach-wb-stats-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  body.coach-mobile #page-workbench .coach-wb-stat-card{min-height:0;padding:12px 14px}
+  body.coach-mobile #page-workbench .coach-wb-stat-value{font-size:18px}
+  body.coach-mobile #page-workbench .coach-wb-grid{grid-template-columns:1fr;gap:10px}
+  body.coach-mobile #page-workbench .coach-wb-card-body{padding:13px 14px}
+  body.coach-mobile #page-workbench .coach-wb-row1{align-items:flex-start}
+  body.coach-mobile #page-workbench .coach-wb-row3{white-space:normal;overflow:visible;text-overflow:clip;flex-wrap:wrap}
+  body.coach-mobile #page-workbench .coach-wb-card-footer{flex-direction:column;padding:10px 14px}
+  body.coach-mobile #page-workbench .coach-wb-action{padding:10px 0}
+  body.coach-mobile .my-schedule-week-title{font-size:16px}
+  body.coach-mobile .my-schedule-week-sub{font-size:11px;line-height:1.5}
+  body.coach-mobile .coach-mobile-list{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+  body.coach-mobile .coach-mobile-info-grid{grid-template-columns:1fr 1fr}
+  body.coach-mobile .coach-mobile-actions{flex-direction:column}
   body.admin-mobile{overflow:auto;padding-bottom:88px}
   body.admin-mobile .sidebar{top:auto;bottom:0;width:100%;height:78px;border-right:none;border-top:0.5px solid rgba(255,255,255,0.16);background:rgba(60,20,0,0.78);overflow-x:auto;overflow-y:hidden;flex-direction:row}
   body.admin-mobile .sb-logo,body.admin-mobile .sb-sec,body.admin-mobile .sb-bottom,body.admin-mobile #sbCoachView{display:none!important}
@@ -825,6 +852,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
           <button class="tms-btn tms-btn-ghost" onclick="exportStudentCSV()">导出</button>
         </div>
         <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-ghost" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
           <button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">＋ 添加学员</button>
         </div>
       </div>
@@ -835,6 +863,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
     <!-- 班次管理 -->
     <div class="page-section" id="page-classes">
       <div class="tms-stats-row" id="classStatsRow"></div>
+      <div class="tms-audit-note">班次用于组织固定上课关系和学习进度；是否还能继续约课，仍然以课包余额和可用规则为准。</div>
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -1129,10 +1158,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
           <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateToBtn" onclick="toggleGlobalDatePicker(event,'purDateTo','purDateToBtn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="purDateTo" type="date" onchange="syncDateButton('purDateTo','purDateToBtn','结束日期');renderPurchases()"></div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openPurchaseEntryModal()">＋ 新增购买记录</button>
+          <button class="tms-btn tms-btn-primary" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">购买日期</th><th style="width:140px">学员</th><th style="width:170px">售卖课包</th><th style="width:150px">课程产品</th><th style="width:100px">实收</th><th style="width:140px">课包余额</th><th style="width:180px">有效期</th><th style="width:90px">余额状态</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">购买日期</th><th style="width:140px">学员</th><th style="width:170px">售卖课包</th><th style="width:120px">主归属教练</th><th style="width:150px">课程产品</th><th style="width:100px">实收</th><th style="width:140px">课包余额</th><th style="width:180px">有效期</th><th style="width:90px">余额状态</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div></div>
     </div>
     <!-- 课包余额（已隐藏入口，仅保留底层审计页） -->
     <div class="page-section" id="page-entitlements">
@@ -1167,20 +1196,22 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
         <div class="my-schedule-week-grid">
           <div class="week-grid" id="myWeekGrid"></div>
         </div>
-        <div class="coach-mobile-only my-schedule-mobile-list" id="myScheduleMobileList"></div>
+        <div id="myScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div>
       </div>
     </div>
     <!-- 我的学员（教练视角） -->
     <div class="page-section" id="page-mystudents">
       <div class="tms-stats-row" id="myStudentStats"></div>
       <div class="tms-audit-note">这里查看你当前可见的学员，能区分自己负责的学员、代上过的学员，以及最近上课和课时进度。</div>
-      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:88px">校区</th><th style="width:136px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
+      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:96px">校区</th><th style="width:148px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:96px">负责教练</th><th style="width:96px">归属教练</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
+      <div id="myStudentMobileList" class="coach-mobile-only coach-mobile-list"></div>
     </div>
     <!-- 我的班次（教练视角） -->
     <div class="page-section" id="page-myclasses">
       <div class="tms-stats-row" id="myClassStats"></div>
       <div class="tms-audit-note">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</div>
       <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:108px;padding-left:20px">班次名称</th><th style="width:100px">课程</th><th style="width:108px">学员</th><th style="width:100px">课时进度</th><th style="width:116px">日期</th><th style="width:68px">状态</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myClsTbody"></tbody></table></div></div>
+      <div id="myClassMobileList" class="coach-mobile-only coach-mobile-list"></div>
     </div>
     <!-- 校区管理 -->
     <div class="page-section" id="page-campusmgr">
@@ -1242,7 +1273,7 @@ function venueOpts(sel){
 const COACHES_LIST=['朝珺','晓哲','Siren','吴教练','Rive','郭教练','代教练','Jack','李韬','孙老师','Zoe','刘朝'];
 function coachName(v){return String(v||'').trim()}
 function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status==='active').map(c=>coachName(c.name)).filter(Boolean))];return live.length?live:COACHES_LIST;}
-const SOURCES=['大众点评','抖音','视频号','小红书','转介绍','播客','其他'];
+const SOURCES=['大众点评','抖音','视频号','小红书','转介绍','孙老师','播客','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
 const PRODUCT_TYPES=['私教课','体验课','训练营','大师课'];
@@ -4038,7 +4069,7 @@ function renderCourtMiniBar(amount,total=0,low=false){
 function renderCourtCellText(value,mutedWhenEmpty=true){
   const raw=String(value??'').trim();
   const text=renderCourtEmptyText(raw);
-  const muted=mutedWhenEmpty&&(!raw||raw==='-'||raw==='未开卡');
+  const muted=!raw||raw==='-'||raw==='—'||raw==='未开卡'||(mutedWhenEmpty&&raw==='未分配');
   return `<div class="tms-cell-text${muted?' is-muted':''}">${esc(text)}</div>`;
 }
 function renderCourtEmptyText(value){
@@ -4780,12 +4811,12 @@ function renderPurchases(){
   const list=getFilteredPurchases();
   document.getElementById('purchaseTbody').innerHTML=list.length?list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
-    const remain=ent?`${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`:'—';
-    const validRange=ent?`${ent.validFrom||'—'} - ${ent.validUntil||'—'}`:'—';
+    const remain=ent?`${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`:'-';
+    const validRange=ent?`${renderCourtEmptyText(ent.validFrom)} - ${renderCourtEmptyText(ent.validUntil)}`:'-';
     const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(p.studentName)||'—'}</div><div class="tms-text-secondary">${esc(p.payMethod)||'—'}</div></td><td><div class="tms-text-primary">${esc(p.packageName)||'—'}</div><div class="tms-text-secondary">${esc(p.courseType)||'—'} · ${p.packageLessons||0} 节</div></td><td><div class="tms-text-primary">${esc(p.productName)||'—'}</div><div class="tms-text-secondary">${esc(p.packageTimeBand)||'全天'} · ${purchaseStatusText(p)}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${renderCourtCellText(remain,false)}</td><td>${renderCourtCellText(validRange,false)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
-  }).join(''):'<tr><td colspan="9"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.studentName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.payMethod))}</div></td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.courseType))} · ${p.packageLessons||0} 节</div></td><td>${renderCourtCellText(p.ownerCoach)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.productName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.packageTimeBand||'全天'))} · ${purchaseStatusText(p)}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${renderCourtCellText(remain,false)}</td><td>${renderCourtCellText(validRange,false)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+  }).join(''):'<tr><td colspan="10"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
 }
 function syncEntitlementFilters(){
   const statusValue=document.getElementById('entStatusFilter')?.value||'';
@@ -4975,7 +5006,7 @@ function openPurchaseModal(studentId=''){
   const ownerOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const body=`<div class="tms-section-header" style="margin-top:0;">学员信息</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员 *</label>${renderCourtDropdownHtml('pur_studentId','选择学员',studentOptions,stu?.id||'',true)}</div></div><div class="tms-section-header">购买信息</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">选择课包 *</label>${renderCourtDropdownHtml('pur_packageId','选择课包',packages.filter(p=>p.status!=='inactive').map(p=>({value:p.id,label:`${p.name} · ¥${fmt(p.price)} · ${p.lessons||0}节`})), '', true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">主归属教练</label>${renderCourtDropdownHtml('pur_ownerCoach','主归属教练',ownerOptions,stu?.primaryCoach||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">购买日期</label>${courtDateButtonHtml('pur_purchaseDate',today(),'购买日期')}</div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_amountPaid" type="number" value="0"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderCourtDropdownHtml('pur_payMethod','支付方式',payOptions,'微信',true)}</div><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="choice-wrap">${purchaseAllowedCoachChecks([], 'pur-allowed-coach-cb')}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_notes"></textarea></div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="savePurchase()">保存</button>`;
-  setCourtModalFrame('新增购买记录',body,footer,'modal-wide');
+  setCourtModalFrame('课包购买',body,footer,'modal-wide');
   fillPurchasePackageMeta();
 }
 function fillPurchasePackageMeta(){
@@ -5481,16 +5512,33 @@ function renderMyStudents(){
   const monthPrefix=today().slice(0,7);
   const monthLessons=endedRows.filter(s=>String(s.startTime||'').slice(0,7)===monthPrefix).reduce((sum,s)=>sum+(parseInt(s.lessonCount)||0),0);
   const totalLessons=endedRows.reduce((sum,s)=>sum+(parseInt(s.lessonCount)||0),0);
+  const mobile=document.getElementById('myStudentMobileList');
   document.getElementById('myStudentStats').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">可见学员</div><div class="tms-stat-value">${visibleStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">负责学员</div><div class="tms-stat-value">${ownerStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">代上学员</div><div class="tms-stat-value">${substituteStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本月 / 累计课时</div><div class="tms-stat-value">${monthLessons}<span>/ ${totalLessons}</span></div></div>`;
   document.getElementById('myStuTbody').innerHTML=myStus.length?myStus.map(s=>{
     const sc=myCls.filter(c=>parseArr(c.studentIds).includes(s.id));
-    const cb=sc.map(c=>c.className||'—').join('、')||'—';
+    const cb=sc.map(c=>c.className||'-').join('、')||'-';
     const lastLesson=myStudentLastLessonMeta(s,cn2);
     const packageMeta=myStudentPackageProgressMeta(s);
     const recentFb=feedbacks.filter(f=>f.studentId===s.id||parseArr(f.studentIds).includes(s.id)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0];
     const noteSummary=recentFb?.recommendedProductType?`推荐${recentFb.recommendedProductType}；${recentFb.mainIssues||recentFb.knowledgePoint||''}`:(recentFb?.mainIssues||recentFb?.knowledgePoint||s.notes||'');
-    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(cn(s.campus))}</td><td><div class="tms-text-primary" style="white-space:nowrap">${esc(renderCourtEmptyText(s.phone))}</div></td><td>${renderCourtCellText(s.type)}</td><td><div class="tms-text-remark" title="${esc(cb)}">${esc(cb)}</div></td><td>${renderCourtCellText(myStudentLessonCount(s,cn2),false)}</td><td><div class="tms-text-remark" title="${esc(lastLesson.fullText)}">${esc(lastLesson.dateText)}</div></td><td>${renderCourtCellText(packageMeta.progress,false)}</td><td>${renderCourtCellText(packageMeta.remaining,false)}</td><td><div class="tms-text-remark" title="${esc(noteSummary)}">${esc(renderCourtEmptyText(noteSummary))}</div></td><td class="tms-action-cell" style="width:72px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openMyStudentDetail('${s.id}')">查看</span></td></tr>`;
-  }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
+    const primaryCoach=studentPrimaryCoachText(s);
+    const ownerCoach=myStudentOwnerCoachText(s);
+    const relationLabel=coachName(s.primaryCoach)===cn2?'负责学员':'代上学员';
+    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(cn(s.campus))}</td><td><div class="tms-text-primary" style="white-space:nowrap">${esc(renderCourtEmptyText(s.phone))}</div></td><td>${renderCourtCellText(s.type)}</td><td><div class="tms-text-remark" title="${esc(cb)}">${esc(cb)}</div></td><td>${renderCourtCellText(primaryCoach)}</td><td>${renderCourtCellText(ownerCoach)}</td><td>${renderCourtCellText(myStudentLessonCount(s,cn2),false)}</td><td><div class="tms-text-remark" title="${esc(lastLesson.fullText)}">${esc(lastLesson.dateText)}</div></td><td>${renderCourtCellText(packageMeta.progress,false)}</td><td>${renderCourtCellText(packageMeta.remaining,false)}</td><td><div class="tms-text-remark" title="${esc(noteSummary)}">${esc(renderCourtEmptyText(noteSummary))}</div></td><td class="tms-action-cell" style="width:72px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openMyStudentDetail('${s.id}')">查看</span></td></tr>`;
+  }).join(''):'<tr><td colspan="13"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
+  if(mobile){
+    mobile.innerHTML=myStus.length?myStus.map(s=>{
+      const sc=myCls.filter(c=>parseArr(c.studentIds).includes(s.id));
+      const classText=sc.map(c=>c.className||'-').join('、')||'-';
+      const lastLesson=myStudentLastLessonMeta(s,cn2);
+      const packageMeta=myStudentPackageProgressMeta(s);
+      const noteText=renderCourtEmptyText(s.notes);
+      const primaryCoach=studentPrimaryCoachText(s);
+      const ownerCoach=myStudentOwnerCoachText(s);
+      const relationLabel=coachName(s.primaryCoach)===cn2?'负责学员':'代上学员';
+      return `<div class="coach-mobile-info-card"><div class="coach-mobile-info-head"><div class="coach-mobile-info-title">${esc(renderCourtEmptyText(s.name))}</div><div class="coach-mobile-info-badge">${relationLabel}</div></div><div class="coach-mobile-info-grid"><div class="coach-mobile-info-cell"><strong>校区</strong>${esc(renderCourtEmptyText(cn(s.campus)))}</div><div class="coach-mobile-info-cell"><strong>手机号</strong>${esc(renderCourtEmptyText(s.phone))}</div><div class="coach-mobile-info-cell"><strong>负责教练</strong>${esc(renderCourtEmptyText(primaryCoach))}</div><div class="coach-mobile-info-cell"><strong>归属教练</strong>${esc(renderCourtEmptyText(ownerCoach))}</div><div class="coach-mobile-info-cell"><strong>所上班次</strong>${esc(renderCourtEmptyText(classText))}</div><div class="coach-mobile-info-cell"><strong>累计上课</strong>${esc(renderCourtEmptyText(myStudentLessonCount(s,cn2)))}</div><div class="coach-mobile-info-cell"><strong>最后上课</strong>${esc(renderCourtEmptyText(lastLesson.dateText))}</div><div class="coach-mobile-info-cell"><strong>课包进度</strong>${esc(renderCourtEmptyText(packageMeta.progress))}</div><div class="coach-mobile-info-cell"><strong>剩余课时</strong>${esc(renderCourtEmptyText(packageMeta.remaining))}</div></div><div class="coach-mobile-info-note">备注：${esc(noteText)}</div><div class="coach-mobile-actions"><button class="tms-btn tms-btn-primary" onclick="openMyStudentDetail('${s.id}')">查看</button></div></div>`;
+    }).join(''):'<div class="coach-mobile-empty">暂无学员</div>';
+  }
 }
 function openMyStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
@@ -5506,16 +5554,25 @@ function renderMyClasses(){
   const myCls=classes.filter(c=>c.coach===cn2);
   const active=myCls.filter(c=>c.status==='已排班').length;
   const tL=myCls.reduce((s,c)=>s+(parseInt(c.totalLessons)||0),0),uL=myCls.reduce((s,c)=>s+(parseInt(c.usedLessons)||0),0);
+  const mobile=document.getElementById('myClassMobileList');
   document.getElementById('myClassStats').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">我的班次</div><div class="tms-stat-value">${myCls.length}<span>个</span></div><div class="tms-stat-sub">进行中 ${active}</div></div><div class="tms-stat-card"><div class="tms-stat-label">总课时 / 已上</div><div class="tms-stat-value">${tL}<span>/ ${uL}</span></div><div class="tms-stat-sub">剩余 ${tL-uL} 节</div></div>`;
   const ss={'已排班':'b-blue','已取消':'b-gray','已结课':'b-green'};
   document.getElementById('myClsTbody').innerHTML=myCls.length?myCls.map(c=>{
     const prod=products.find(x=>x.id===c.productId);
     const ids=parseArr(c.studentIds);
-    const names=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?esc(st.name):esc(sid);}).join('、')||'—';
+    const names=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?esc(st.name):esc(sid);}).join('、')||'-';
     const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
     const pct=tl>0?Math.round(rem/tl*100):0,pc=pct>40?'pf-gold':pct>15?'pf-warn':'pf-red';
     return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(c.className)||'—'}</div><div class="tms-text-secondary">${esc(c.classNo)||''}</div></td><td>${renderCourtCellText(prod?prod.name:'—')}</td><td><div class="tms-text-remark" title="${names}">${names}</div></td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td>${renderCourtCellText(`${c.startDate||'—'} ~ ${c.endDate||'—'}`,false)}</td><td><span class="tms-tag ${c.status==='已结课'?'tms-tag-green':c.status==='已取消'?'tms-tag-tier-slate':'tms-tag-tier-blue'}">${c.status||'已排班'}</span></td><td class="tms-action-cell" style="width:72px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openMyClassDetail('${c.id}')">查看</span></td></tr>`;
   }).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
+  if(mobile){
+    mobile.innerHTML=myCls.length?myCls.map(c=>{
+      const prod=products.find(x=>x.id===c.productId);
+      const studentText=parseArr(c.studentIds).map(sid=>students.find(s=>s.id===sid)?.name||sid).join('、')||'-';
+      const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
+      return `<div class="coach-mobile-info-card"><div class="coach-mobile-info-head"><div class="coach-mobile-info-title">${esc(renderCourtEmptyText(c.className||c.classNo))}</div><div class="coach-mobile-info-badge">${esc(renderCourtEmptyText(c.status||'已排班'))}</div></div><div class="coach-mobile-info-grid"><div class="coach-mobile-info-cell"><strong>课程</strong>${esc(renderCourtEmptyText(prod?.name||c.productName))}</div><div class="coach-mobile-info-cell"><strong>学员</strong>${esc(renderCourtEmptyText(studentText))}</div><div class="coach-mobile-info-cell"><strong>日期</strong>${esc(renderCourtEmptyText(c.startDate))}</div><div class="coach-mobile-info-cell"><strong>结束</strong>${esc(renderCourtEmptyText(c.endDate))}</div><div class="coach-mobile-info-cell"><strong>总课时</strong>${tl||'-'}</div><div class="coach-mobile-info-cell"><strong>已上课时</strong>${ul||'-'}</div><div class="coach-mobile-info-cell"><strong>剩余课时</strong>${rem||'0'}</div></div><div class="coach-mobile-actions"><button class="tms-btn tms-btn-primary" onclick="openMyClassDetail('${c.id}')">查看</button></div></div>`;
+    }).join(''):'<div class="coach-mobile-empty">暂无班次</div>';
+  }
 }
 function openMyClassDetail(id){
   const c=classes.find(x=>x.id===id);if(!c)return;
