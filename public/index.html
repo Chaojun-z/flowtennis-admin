@@ -56,6 +56,7 @@
   <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2z"/></svg></span>订场用户</div>
   <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>会员管理</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>会员方案</div>
+  <div class="sb-item" onclick="goPage('prices',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg></span>价格管理</div>
   <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>教练管理</div>
   <div class="sb-item" onclick="goPage('admin-users',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>账号管理</div>
   <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>校区管理</div>
@@ -194,6 +195,7 @@
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot master"></i>大师课</span>
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot partner"></i>陪打</span>
           </div>
+          <button class="tms-btn tms-btn-ghost" onclick="openCoachLateSettlementModal()">迟到月结</button>
           <button class="tms-btn tms-btn-primary" id="coachOpsQuickCreateBtn" onclick="coachOpsQuickCreate()">＋ 新增排课</button>
         </div>
       </div>
@@ -468,6 +470,27 @@
       </div>
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:34%;padding-left:20px">校区名称</th><th style="width:24%">校区代码</th><th style="width:22%">创建时间</th><th class="tms-sticky-r" style="width:132px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div></div>
     </div>
+    <!-- 价格管理 -->
+    <div class="page-section" id="page-prices">
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="tms-search-wrapper">
+            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索校区、渠道、商品" oninput="renderPrices()">
+          </div>
+          <div id="priceTypeFilterHost"></div>
+          <div id="priceProductTypeFilterHost"></div>
+          <button class="tms-btn tms-btn-ghost" onclick="importDefaultMabaoPrices()">导入默认马坡价格</button>
+        </div>
+        <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-primary" onclick="openPriceModal()">＋ 新增价格</button>
+        </div>
+      </div>
+      <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:92px;padding-left:20px">类型</th><th>名称 / 范围</th><th style="width:96px">日期类型</th><th style="width:96px">商品类型</th><th style="width:96px">关联业务</th><th style="width:86px">时长</th><th style="width:110px">价格</th><th style="width:78px">状态</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
+    </div>
 </div>
 </div>
 </div>
@@ -510,6 +533,7 @@
 <script src="/assets/scripts/pages/purchases.js"></script>
 <script src="/assets/scripts/pages/entitlements.js"></script>
 <script src="/assets/scripts/pages/coachops.js"></script>
+<script src="/assets/scripts/pages/prices.js"></script>
 <script src="/assets/scripts/pages/courts.js"></script>
 <script src="/assets/scripts/pages/coach-portal.js"></script>
 </body>

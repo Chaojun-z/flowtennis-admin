@@ -201,6 +201,69 @@ assert.strictEqual(normalized.totalDeposit, 5000);
 assert.strictEqual(normalized.spentAmount, 300);
 assert.strictEqual(normalized.receivedAmount, 5000);
 
+const pricedBooking = normalizeCourtRecord({
+  name: '订场价格快照',
+  history: [{
+    id: 'priced-booking-1',
+    date: '2026-04-20',
+    type: '消费',
+    category: '订场',
+    payMethod: '微信',
+    amount: 198,
+    priceMode: 'venue_rate',
+    pricePlanId: 'weekday-prime',
+    systemAmount: 198,
+    finalAmount: 198,
+    memberDiscount: 0.9
+  }]
+});
+
+assert.deepStrictEqual(
+  pricedBooking.history[0],
+  {
+    id: 'priced-booking-1',
+    date: '2026-04-20',
+    type: '消费',
+    category: '订场',
+    payMethod: '微信',
+    amount: 198,
+    priceMode: 'venue_rate',
+    pricePlanId: 'weekday-prime',
+    systemAmount: 198,
+    finalAmount: 198,
+    memberDiscount: 0.9,
+    channel: '',
+    channelOrderNo: '',
+    redeemCode: '',
+    studentId: '',
+    bonusAmount: 0,
+    campus: '',
+    priceOverridden: false,
+    overrideReason: ''
+  },
+  'booking finance row should preserve price snapshot fields'
+);
+
+assert.throws(
+  () => normalizeCourtRecord({
+    name: '订场改价未填原因',
+    history: [{
+      id: 'priced-booking-2',
+      date: '2026-04-20',
+      type: '消费',
+      category: '订场',
+      payMethod: '微信',
+      amount: 180,
+      priceMode: 'venue_rate',
+      pricePlanId: 'weekday-prime',
+      systemAmount: 198,
+      finalAmount: 180
+    }]
+  }),
+  /请填写改价原因/,
+  'price override requires a reason'
+);
+
 assert.throws(
   () => normalizeCourtRecord({
     name: '订场用户冲突',

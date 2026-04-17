@@ -64,6 +64,58 @@ assert.strictEqual(
   'cancelled schedule should not consume lessons'
 );
 
+assert.strictEqual(
+  rules.scheduleLessonDelta({ classId: 'class-a', lessonCount: 1, status: '已排课', coachLateFree: true }),
+  null,
+  'coach-late free schedule should not consume class lessons'
+);
+
+assert.deepStrictEqual(
+  rules.scheduleEntitlementDeltas({ id: 'sch-late', status: '已排课', coachLateFree: true, entitlementId: 'ent-1', lessonCount: 1 }),
+  [],
+  'coach-late free schedule should not consume package lessons'
+);
+
+assert.deepStrictEqual(
+  rules.normalizeCoachLateInfo({
+    coachLateFree: true,
+    lateMinutes: '12',
+    lateReason: '堵车',
+    coachLateFieldFeeAmount: '220',
+    coachLateHandledAt: '2026-04-18T12:00:00.000Z',
+    coachLateHandledBy: '管理员'
+  }),
+  {
+    coachLateFree: true,
+    lateMinutes: 12,
+    lateReason: '堵车',
+    coachLateFieldFeeAmount: 220,
+    coachLateHandledAt: '2026-04-18T12:00:00.000Z',
+    coachLateHandledBy: '管理员'
+  },
+  'coach late info should normalize settlement fields'
+);
+
+assert.deepStrictEqual(
+  rules.buildCoachLateSettlementRows([
+    { id: 'sch-late', coach: '朝珺', studentName: '张三', startTime: '2026-04-18 16:00', endTime: '2026-04-18 17:00', campus: 'mabao', venue: '1号场', coachLateFree: true, lateMinutes: 8, coachLateFieldFeeAmount: 220 },
+    { id: 'sch-ok', coach: '朝珺', startTime: '2026-04-18 18:00', endTime: '2026-04-18 19:00', campus: 'mabao', venue: '2号场', coachLateFree: false }
+  ], '2026-04'),
+  [{
+    scheduleId: 'sch-late',
+    month: '2026-04',
+    coach: '朝珺',
+    date: '2026-04-18',
+    time: '16:00-17:00',
+    campus: 'mabao',
+    venue: '1号场',
+    studentName: '张三',
+    lateMinutes: 8,
+    fieldFeeAmount: 220
+  }],
+  'coach late settlement should include monthly fee details'
+);
+
 assert.throws(
   () => rules.assertClassSchedulable({ id: 'class-a', status: '已取消' }, { classId: 'class-a', status: '已排课' }),
   /已取消.*不能继续排课/,

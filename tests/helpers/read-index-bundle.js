@@ -19,6 +19,7 @@ const pageScriptFiles = [
   'purchases.js',
   'entitlements.js',
   'coachops.js',
+  'prices.js',
   'courts.js',
   'coach-portal.js'
 ];

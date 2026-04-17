@@ -7,7 +7,7 @@ let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null;
 function goPage(pg,el,skipRender=false){
   syncViewportMode();
   if(pg==='entitlements')pg='students';
-  const adminPages=['students','classes','plans','schedule','coachops','products','packages','purchases','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','campusmgr'];
+  const adminPages=['students','classes','plans','schedule','coachops','products','packages','purchases','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr'];
   const coachPages=['workbench','myschedule','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
@@ -26,7 +26,7 @@ function goPage(pg,el,skipRender=false){
     currentPage=pg;
     localStorage.setItem(PAGE_KEY,currentPage);
     document.getElementById('campusTabs').style.display=['students','courts'].includes(pg)?'flex':'none';
-    const t={students:'学员信息',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',campusmgr:'校区管理',workbench:'工作台',myschedule:'我的课表',mystudents:'我的学员',myclasses:'我的班次'};
+    const t={students:'学员信息',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格管理',campusmgr:'校区管理',workbench:'工作台',myschedule:'我的课表',mystudents:'我的学员',myclasses:'我的班次'};
     document.getElementById('topTitle').textContent=t[pg]||'';
     if(!skipRender)loadPageDataAndRender(pg);
   };
