@@ -624,7 +624,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-select,.coach-date-btn,.coach-ops-nav{height:34px;border:1px solid #E7DBCE;border-radius:6px;background:#fff;color:#2F241E;padding:0 12px;font-size:13px;font-weight:400;font-family:inherit;box-shadow:0 2px 8px rgba(60,20,0,0.04);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
 .coach-ops-select{min-width:110px}
 .coach-date-wrap{position:relative}.coach-date-btn{min-width:160px;text-align:left}.coach-ops-nav{color:#6E6259;min-width:48px}.coach-ops-arrow{min-width:34px;width:34px;padding:0;font-size:18px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#F8F3EE;border-color:#D8C8B8;box-shadow:0 4px 12px rgba(60,20,0,0.06);transform:translateY(-1px)}
-.coach-ops-legend{display:flex;align-items:center;gap:12px;color:#8C7B6E;font-size:11px;font-weight:400}
+.coach-ops-legend{display:flex;align-items:center;gap:12px;color:#FEF3C7;font-size:10px;font-weight:400}
 .coach-ops-legend-item{display:inline-flex;align-items:center;gap:6px}
 .coach-ops-legend-dot{width:7px;height:7px;border-radius:50%}
 .coach-ops-legend-dot.private{background:#4C7DE0}
