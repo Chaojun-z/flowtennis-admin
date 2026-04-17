@@ -30,8 +30,9 @@ assert.match(html, /tms-btn-ghost" onclick="importDefaultMabaoPrices/, 'price im
 assert.match(html, /tms-btn-primary" onclick="openPriceModal/, 'price create button should match student page primary action style');
 assert.match(html, /渠道[\s\S]*?名称[\s\S]*?场地类型[\s\S]*?日期类型[\s\S]*?商品类型[\s\S]*?关联业务[\s\S]*?时间段[\s\S]*?时长/, 'price table should split channel, name, venue type, date type, product type, business type, time band and duration');
 assert.match(html, /price-table/, 'price table should use compact page-specific table sizing');
-assert.match(html, /style="width:300px">名称/, 'price table should expand the name column for readability');
-assert.ok(styles.includes('padding-left:8px;padding-right:8px'), 'price table should tighten cell padding to reduce column gaps');
+assert.match(html, /style="width:340px">名称/, 'price table should further expand the name column for readability');
+assert.ok(styles.includes('padding-left:6px;padding-right:6px'), 'price table should further tighten cell padding to reduce column gaps');
+assert.ok(styles.includes('#page-prices .price-table{min-width:1200px;table-layout:fixed}'), 'price table should shrink overall width so more columns fit on one screen');
 assert.match(appSource, /function importDefaultMabaoPrices/, 'price page script should import default Mabao prices');
 assert.match(appSource, /function priceTimeBandText\(/, 'price page should expose a dedicated time-band renderer');
 assert.match(appSource, /function priceDurationText\(/, 'price page should expose a dedicated duration renderer');

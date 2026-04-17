@@ -80,11 +80,11 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-btn-danger{background-color:#FFF2F0;color:#D32F2F;border:1px solid #FFCCC7;box-shadow:0 2px 4px rgba(0,0,0,.05)}
 .tms-btn-default{background-color:transparent;border:1px solid #D9D0C7;color:#5C4D43}
 .tms-btn-default:hover{background-color:#D9D0C7}
-#page-prices .price-table{min-width:1260px;table-layout:fixed}
-#page-prices .price-table th,#page-prices .price-table td{padding-left:8px;padding-right:8px}
-#page-prices .price-table th:first-child,#page-prices .price-table td:first-child{padding-left:20px}
+#page-prices .price-table{min-width:1200px;table-layout:fixed}
+#page-prices .price-table th,#page-prices .price-table td{padding-left:6px;padding-right:6px}
+#page-prices .price-table th:first-child,#page-prices .price-table td:first-child{padding-left:16px}
 #page-prices .price-table .tms-cell-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#page-prices .price-table th:nth-child(3),#page-prices .price-table td:nth-child(3){width:300px}
+#page-prices .price-table th:nth-child(3),#page-prices .price-table td:nth-child(3){width:340px}
 #page-prices .price-table td:nth-child(3) .tms-cell-text{overflow:visible;text-overflow:clip;white-space:nowrap}
 .tms-dropdown{position:relative;display:inline-block}
 .tms-dropdown.tms-dropdown-form{display:block;width:100%}
