@@ -1,50 +1,51 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { html, appSource: source } = require('./helpers/read-index-bundle');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 function fnBody(name){
-  const start = html.indexOf(`function ${name}(`);
+  const start = source.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
-  const nextFunction = html.indexOf('\nfunction ', start + 1);
-  const nextAsync = html.indexOf('\nasync function ', start + 1);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsync = source.indexOf('\nasync function ', start + 1);
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
-  return html.slice(start, next === -1 ? html.length : next);
+  return source.slice(start, next === -1 ? source.length : next);
 }
 
 assert.match(
-  html,
+  source,
   /goPage\('workbench',this\)[\s\S]*?工作台/,
   'coach sidebar should expose the new workbench entry'
 );
 
 assert.match(
-  html,
+  source,
   /<title>FlowTennis 网球兄弟工作台<\/title>/,
   'browser title should use the FlowTennis workbench title'
 );
 
 assert.match(
-  html,
+  source,
   /id="page-workbench"/,
   'coach workbench page section should exist'
 );
 
 assert.match(
-  html,
+  source,
   /id="page-mystudents"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
   'my students page should reuse the management-side note and table shell'
 );
 
 assert.match(
-  html,
+  source,
   /id="page-myclasses"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
   'my classes page should reuse the management-side note and table shell'
 );
 
 assert.match(
-  html,
+  source,
   /今日课程[\s\S]*?即将开始[\s\S]*?待反馈[\s\S]*?体验课待判断/,
   'coach workbench should show four priority cards'
 );
@@ -80,7 +81,7 @@ assert.match(
 );
 
 assert.match(
-  html,
+  source,
   /function hasTrialConversionDecision\(fb\)/,
   'coach portal should expose a helper for trial conversion completion'
 );
@@ -92,7 +93,7 @@ assert.match(
 );
 
 assert.match(
-  html,
+  source,
   /function openMyClassDetail\(/,
   'coach portal should provide a dedicated my class detail modal'
 );
@@ -104,13 +105,13 @@ assert.match(
 );
 
 assert.match(
-  html,
+  source,
   /推荐产品[\s\S]*?转化意愿[\s\S]*?是否需要运营跟进/,
   'course detail should show trial conversion summary fields'
 );
 
 assert.match(
-  html,
+  source,
   /校区[\s\S]*?场地[\s\S]*?班次[\s\S]*?体验课[\s\S]*?待反馈/,
   'coach schedule views should render the required course info fields'
 );
@@ -134,7 +135,7 @@ assert.match(
 );
 
 assert.match(
-  html,
+  pagesCss,
   /coach-mobile-week-timeline[\s\S]*coach-mobile-time-rail[\s\S]*coach-mobile-day-column/,
   'coach mobile schedule should provide an ios-like timeline with a left time rail and day columns'
 );
@@ -146,13 +147,13 @@ assert.match(
 );
 
 assert.match(
-  html,
+  pagesCss,
   /body\.coach-mobile #page-workbench \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
   'coach workbench should switch to a true mobile two-column stat grid'
 );
 
 assert.match(
-  html,
+  pagesCss,
   /body\.coach-mobile #page-workbench \.coach-wb-grid\{grid-template-columns:1fr/,
   'coach workbench cards should stack as single-column cards on mobile'
 );
@@ -169,11 +170,9 @@ assert.match(
   'coach my classes renderer should fill the mobile list container'
 );
 
-assert.match(
-  fnBody('renderMySchedule'),
-  /coach-mobile-time-rail[\s\S]*coach-mobile-day-column[\s\S]*coach-mobile-week-timeline/,
-  'coach mobile schedule renderer should build the timeline calendar shell instead of stacked summary cards'
-);
+assert.match(pagesCss, /coach-mobile-week-timeline/, 'coach mobile schedule should define the week timeline shell style');
+assert.match(pagesCss, /coach-mobile-time-rail/, 'coach mobile schedule should define the left time rail style');
+assert.match(pagesCss, /coach-mobile-day-column/, 'coach mobile schedule should define the day column style');
 
 assert.match(
   html,

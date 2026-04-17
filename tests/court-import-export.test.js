@@ -1,8 +1,5 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const { appSource: html } = require('./helpers/read-index-bundle');
 
 assert.match(html, /function csvEscapeCell\(/, 'court csv helpers should escape fields consistently');
 assert.match(html, /function decodeCourtCsvText\(/, 'court import should decode csv text through a dedicated helper');

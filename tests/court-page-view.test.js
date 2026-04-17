@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { appSource: html } = require('./helpers/read-index-bundle');
 
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
@@ -10,12 +11,12 @@ function fnBody(name){
   return html.slice(start, next === -1 ? html.length : next);
 }
 
-assert.match(html, /\.tms-stats-row\s*\{/, 'court page should define scoped tms stats styles');
-assert.match(html, /\.tms-table-card\s*\{/, 'court page should define scoped tms table card styles');
-assert.match(html, /\.tms-mini-bar\s*\{/, 'court page should define scoped tms mini bar styles');
-assert.match(html, /\.tms-record-add-box\s*\{/, 'court page should define scoped modal form layout styles');
-assert.match(html, /\.tms-toolbar\s*\{/, 'court page should define scoped toolbar styles');
-assert.match(html, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
+assert.match(pagesCss, /\.tms-stats-row\s*\{/, 'court page should define scoped tms stats styles');
+assert.match(pagesCss, /\.tms-table-card\s*\{/, 'court page should define scoped tms table card styles');
+assert.match(pagesCss, /\.tms-mini-bar\s*\{/, 'court page should define scoped tms mini bar styles');
+assert.match(pagesCss, /\.tms-record-add-box\s*\{/, 'court page should define scoped modal form layout styles');
+assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped toolbar styles');
+assert.match(pagesCss, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(html, /<div class="tms-stats-row" id="courtStatsRow"><\/div>/, 'court page should use the upgraded tms stats row container');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
 assert.match(html, /<th>末次跟进日期<\/th>[\s\S]*<th>下次跟进日期<\/th>/, 'court table should show last and next follow-up dates');
@@ -30,8 +31,8 @@ assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('nextFollowU
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('balance'\)"[\s\S]*?>当前余额/, 'court table should keep balance sorting');
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('spentAmount'\)"[\s\S]*?>消费金额/, 'court table should keep spending sorting');
 assert.match(fnBody('setCourtSort'), /courtSortKey='';courtSortDir='desc'/, 'court sorting should cycle back to no sort');
-assert.match(html, /\.tms-sort-icon[^}]*display:inline-flex[^}]*align-items:center[^}]*justify-content:center/s, 'sort icon should align vertically with header text');
-assert.match(html, /\.tms-sort-icon svg[^}]*width:16px[^}]*height:16px/s, 'sort icon should use the larger mac-style svg glyph');
+assert.match(pagesCss, /\.tms-sort-icon[^}]*display:inline-flex[^}]*align-items:center[^}]*justify-content:center/s, 'sort icon should align vertically with header text');
+assert.match(pagesCss, /\.tms-sort-icon svg[^}]*width:16px[^}]*height:16px/s, 'sort icon should use the larger mac-style svg glyph');
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should freeze the action header');
 assert.match(html, /查看[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
@@ -46,21 +47,21 @@ assert.doesNotMatch(html, /function openCourtModal[\s\S]*充值\/消费记录[\s
 assert.match(html, /function renderCourtMiniBar\(/, 'court page should expose a dedicated mini bar renderer');
 assert.match(html, /class="tms-sticky-l"/, 'court page should freeze the left name column');
 assert.match(html, /class="tms-sticky-r"/, 'court page should freeze the right action column');
-assert.match(html, /#page-courts \.tms-table th\.tms-sticky-l\s*\{[^}]*top:0[^}]*left:0[^}]*z-index:140/s, 'court left header should stay fixed on both horizontal and vertical scroll');
-assert.match(html, /#page-courts \.tms-table th\.tms-sticky-r\s*\{[^}]*top:0[^}]*right:0[^}]*z-index:140/s, 'court right header should stay fixed on both horizontal and vertical scroll');
-assert.match(html, /#page-courts \.tms-table th\s*\{[^}]*background-color:#FDF7F2/s, 'court sticky and normal headers should share the same background');
-assert.match(html, /#page-courts \.tms-table tbody tr:hover td\.tms-sticky-l[\s\S]*#page-courts \.tms-table tbody tr:hover td\.tms-sticky-r/s, 'court sticky columns should join whole-row hover');
+assert.match(pagesCss, /#page-courts \.tms-table th\.tms-sticky-l\s*\{[^}]*top:0[^}]*left:0[^}]*z-index:140/s, 'court left header should stay fixed on both horizontal and vertical scroll');
+assert.match(pagesCss, /#page-courts \.tms-table th\.tms-sticky-r\s*\{[^}]*top:0[^}]*right:0[^}]*z-index:140/s, 'court right header should stay fixed on both horizontal and vertical scroll');
+assert.match(pagesCss, /#page-courts \.tms-table th\s*\{[^}]*background-color:#FDF7F2/s, 'court sticky and normal headers should share the same background');
+assert.match(pagesCss, /#page-courts \.tms-table tbody tr:hover td\.tms-sticky-l[\s\S]*#page-courts \.tms-table tbody tr:hover td\.tms-sticky-r/s, 'court sticky columns should join whole-row hover');
 assert.match(html, /class="tms-action-link"/, 'court page should render action links with the scoped visual style');
 assert.match(html, /function openCourtModal[\s\S]*tms-section-header[\s\S]*tms-form-row/, 'court edit modal should use the upgraded local form layout');
-assert.match(html, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
-assert.match(html, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
-assert.match(html, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
+assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
+assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
+assert.match(pagesCss, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
 assert.match(html, /tms-form-row court-date-row[\s\S]*f_campus[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate[\s\S]*f_nextFollowUpDate/, 'court modal should place campus and three date fields in one row');
 assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校区',\[\{value:'',label:'-'\},\.\.\.campusList\],rv\(r,'campus'\),true\)/, 'court modal should allow blank campus');
 assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
-assert.match(html, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
+assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
 assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrType','类型'[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrCategory','项目'[\s\S]*flex:0 0 118px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付'/s, 'court finance modal should narrow the first three selectors to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');

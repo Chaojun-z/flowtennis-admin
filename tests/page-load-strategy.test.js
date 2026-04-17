@@ -1,0 +1,18 @@
+const assert = require('assert');
+const { appSource: html } = require('./helpers/read-index-bundle');
+
+function fnBody(name){
+  const start = html.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const next = html.indexOf('\nfunction ', start + 1);
+  return html.slice(start, next === -1 ? html.length : next);
+}
+
+assert.match(html, /const PAGE_DATA_REQUIREMENTS=\{/, 'state should define per-page data requirements');
+assert.match(html, /function loadPageDataAndRender\(/, 'state should expose a page-scoped loading entry');
+assert.doesNotMatch(fnBody('showApp'), /loadAll\(\)/, 'showApp should no longer trigger full load-all on first paint');
+assert.match(fnBody('showApp'), /loadPageDataAndRender\(currentPage\)/, 'showApp should load only the current page data on first paint');
+assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
+assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg\)/, 'goPage should reuse the page-scoped loading entry');
+
+console.log('page load strategy tests passed');

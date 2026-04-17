@@ -1,8 +1,5 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const { appSource: html } = require('./helpers/read-index-bundle');
 
 assert.match(html, /<div class="sb-sec">教学管理<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">课程管理<\/div>/, 'sidebar should group course pages');

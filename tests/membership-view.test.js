@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { appSource: html } = require('./helpers/read-index-bundle');
 
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 function fnBody(name) {
   const start = html.indexOf(`function ${name}`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
@@ -16,8 +17,8 @@ assert.match(html, /id="page-memberships"/, 'should have memberships page sectio
 assert.match(html, /id="page-membership-plans"/, 'should have dedicated membership plans page section');
 assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-toolbar"/, 'membership plan page should use the court-style toolbar');
 assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'membership plan page should use the court-style table shell');
-assert.match(html, /#page-membership-plans \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership plan table should freeze the left name column');
-assert.match(html, /#page-membership-plans \.tms-table td\.tms-sticky-r[\s\S]*right:0/s, 'membership plan table should keep the action column fixed on the right');
+assert.match(pagesCss, /#page-membership-plans \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership plan table should freeze the left name column');
+assert.match(pagesCss, /#page-membership-plans \.tms-table td\.tms-sticky-r[\s\S]*right:0/s, 'membership plan table should keep the action column fixed on the right');
 assert.doesNotMatch(html, /membershipTabOrders|membershipTabAccounts|membershipTabBenefits/, 'membership page should no longer use tabs');
 assert.match(html, /查看购买记录[\s\S]*查看权益总流水/, 'membership page should expose audit links near the main actions');
 assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership management page should remove the scheme config shortcut');
@@ -159,7 +160,7 @@ assert.match(html, /function membershipBookingCount\(/, 'membership management s
 assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&String\(h\.payMethod\|\|''\)\.trim\(\)==='储值扣款'&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
 assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:#C06031" onclick="goPage\('membership-orders'\)"/, 'membership management purchase audit entry should use visible accent color');
 assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:#C06031" onclick="goPage\('membership-ledger'\)"/, 'membership management ledger audit entry should use visible accent color');
-assert.match(html, /#page-memberships \.tms-toolbar-right \.tms-action-link-strong[\s\S]*#FEF3C7/s, 'membership audit entries should be readable on the brown background');
+assert.match(pagesCss, /#page-memberships \.tms-toolbar-right \.tms-action-link-strong[\s\S]*#FEF3C7/s, 'membership audit entries should be readable on the brown background');
 assert.match(html, /const statusMeta=membershipStatusTagMeta\(a\);/, 'membership management rows should derive status tag metadata');
 assert.match(html, /function membershipVisibleCourt/, 'membership management should ignore deleted or archived court users');
 assert.match(fnBody('renderMemberships'), /courts\.filter\(court=>isActiveCourtRecord\(court\)\)\.map/, 'membership management should build rows from active court users only');
@@ -184,7 +185,7 @@ assert.match(html, /renderCourtCellText\(membershipLedgerOperatorText\(l\.operat
 assert.match(html, /操作账号/, 'membership ledger audit should show operator account');
 assert.match(html, /已消耗/, 'membership account rights should show consumed count');
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
-assert.match(html, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
+assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
 assert.match(fnBody('membershipBenefitSummaryForOrder'), /const positiveDelta=.*?delta\)\|\|0\)>0[\s\S]*const negativeDelta=.*?delta\)\|\|0\)<0[\s\S]*const total=\(item\.total\|\|0\)\+positiveDelta[\s\S]*remaining:expired\?0:Math\.max\(0,total\+negativeDelta\)/, 'frontend benefit summary should add supplements to both total and remaining');
 
 console.log('membership view tests passed');

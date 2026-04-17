@@ -1,30 +1,27 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const { html, appSource: source } = require('./helpers/read-index-bundle');
 const coachSidebar = html.match(/<div id="sbCoachView"[\s\S]*?<\/div>\s*<!-- 管理员视角 -->/);
 const adminSidebar = html.match(/<div id="sbAdminView">[\s\S]*?<\/div>\s*<div class="sb-bottom">/);
 assert.ok(coachSidebar, 'coach sidebar should exist');
 assert.ok(adminSidebar, 'admin sidebar should exist');
 
 function fnBody(name){
-  const start = html.indexOf(`function ${name}(`);
+  const start = source.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
-  const nextFunction = html.indexOf('\nfunction ', start + 1);
-  const nextAsync = html.indexOf('\nasync function ', start + 1);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsync = source.indexOf('\nasync function ', start + 1);
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
-  return html.slice(start, next === -1 ? html.length : next);
+  return source.slice(start, next === -1 ? source.length : next);
 }
 
 assert.doesNotMatch(coachSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'coach sidebar should not expose account management');
 assert.match(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'admin sidebar should expose account management');
-assert.match(html, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
-assert.match(html, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
-assert.match(html, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名或绑定教练"/, 'account page should provide a search field');
-assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
-assert.match(html, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
+assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
+assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
+assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名或绑定教练"/, 'account page should provide a search field');
+assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
+assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
 assert.match(fnBody('renderAdminUsers'), /adminUserTbody/, 'account page should render rows into adminUserTbody');
 assert.match(fnBody('renderAdminUsers'), /绑定教练/, 'account rows should show coach binding text');
 assert.match(fnBody('renderAdminUsers'), /停用|启用/, 'account rows should expose enable and disable actions');

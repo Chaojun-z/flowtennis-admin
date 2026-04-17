@@ -1,131 +1,129 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-
-const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+const { appSource: source } = require('./helpers/read-index-bundle');
+const html = source;
 
 assert.match(
-  html,
+  source,
   /mode==='week'\|\|mode==='month'/,
   'month view should use the weekday header like week view'
 );
 
 assert.doesNotMatch(
-  html,
+  source,
   /<div style="font-size:14px;font-weight:600;color:var\(--cream-pale\);margin:4px 0 10px">教练工作量<\/div>/,
   'workload tab should not render the duplicate workload title'
 );
 
 assert.match(
-  html,
+  source,
   /function dateMs\(v\)/,
   'coach ops day view needs dateMs so schedule blocks render instead of interrupting the table'
 );
 
 assert.match(
-  html,
+  source,
   /function openCoachOpsCreateSchedule/,
   'coach ops should expose a grid click entry for creating schedules'
 );
 
 assert.match(
-  html,
+  source,
   /function effectiveScheduleStatus/,
   'schedule views should use a shared effective status helper'
 );
 
 assert.match(
-  html,
+  source,
   /function scheduleLessonChargeStatus/,
   'schedule views should expose a lesson charge status helper'
 );
 
 assert.match(
-  html,
+  source,
   /id="sch_cancelReason"/,
   'schedule modal should capture cancellation reason'
 );
 
 assert.match(
-  html,
+  source,
   /id="sch_notifyStatus"/,
   'schedule modal should capture notification status'
 );
 
 assert.match(
-  html,
+  source,
   /id="sch_scheduleSource"/,
   'schedule modal should preserve schedule source'
 );
 
 assert.match(
-  html,
+  source,
   /私教课/,
   'schedule views should expose 私教课 as a fixed course type'
 );
 
 assert.match(
-  html,
+  source,
   /体验课/,
   'schedule views should expose 体验课 as a fixed course type'
 );
 
 assert.match(
-  html,
+  source,
   /训练营/,
   'schedule views should expose 训练营 as a fixed course type'
 );
 
 assert.match(
-  html,
+  source,
   /大师课/,
   'schedule views should expose 大师课 as a fixed course type'
 );
 
 assert.doesNotMatch(
-  html,
+  source,
   /仅正式课/,
   'schedule filters should not keep the old formal-course option'
 );
 
 assert.doesNotMatch(
-  html,
+  source,
   /课程性质/,
   'schedule modal should no longer expose a separate course nature field'
 );
 
 assert.match(
-  html,
+  source,
   /id="coachOpsQuickCreateBtn"/,
   'coach ops should expose a quick create button in the toolbar'
 );
 
 assert.match(
-  html,
+  source,
   /id="coachOpsRangeHost"/,
   'coach ops should render the shared custom dropdown host for view switching'
 );
 
 assert.doesNotMatch(
-  html,
+  source,
   /<select class="coach-ops-select" id="coachOpsRange"/,
   'coach ops should not keep the native select for the view switcher'
 );
 
 assert.match(
-  html,
+  source,
   /coach-ops-legend/,
   'coach ops toolbar should render a course type legend'
 );
 
 assert.doesNotMatch(
-  html,
+  source,
   /\.coach-ops-toolbar\{[^}]*background:#FCFAF7/s,
   'coach ops toolbar should not render as a filled white block background'
 );
 
 assert.match(
-  html,
+  source,
   /class="tms-btn tms-btn-primary" id="coachOpsQuickCreateBtn"/,
   'coach ops quick create should use the shared primary button style'
 );

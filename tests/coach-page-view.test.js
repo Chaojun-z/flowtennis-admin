@@ -1,17 +1,18 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { html, appSource: source } = require('./helpers/read-index-bundle');
 
-const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 
 function fnBody(name){
-  const start = html.indexOf(`function ${name}(`);
+  const start = source.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
-  const nextFunction = html.indexOf('\nfunction ', start + 1);
-  const nextAsync = html.indexOf('\nasync function ', start + 1);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsync = source.indexOf('\nasync function ', start + 1);
   const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
   const next = candidates.length ? Math.min(...candidates) : -1;
-  return html.slice(start, next === -1 ? html.length : next);
+  return source.slice(start, next === -1 ? source.length : next);
 }
 
 assert.match(html, /id="page-coaches"[\s\S]*class="tms-toolbar"/, 'coach page should use the court-style toolbar');
@@ -23,9 +24,9 @@ assert.doesNotMatch(html, /id="myScheduleStats"|id="mySchedulePrimarySection"|id
 assert.match(fnBody('renderMySchedule'), /本周总览/, 'my schedule should label the week overview as a secondary section');
 assert.match(fnBody('renderMySchedule'), /slice\(11,16\)\}\$\{s\.endTime\?' - '\+s\.endTime\.slice\(11,16\)/, 'my schedule week cards should render the time range');
 assert.match(fnBody('renderMySchedule'), /scheduleCourseType\(s\).*cn\(s\.campus\).*scheduleFeedbackLabel\(s\)/s, 'my schedule week cards should show course type, campus, and feedback');
-assert.match(html, /#page-coaches \.tms-table\s*\{[^}]*min-width:1000px/s, 'coach table should not inherit the wide court table min width');
-assert.match(html, /#page-coaches \.tms-table-wrapper\s*\{[^}]*max-height:calc\(100vh - 190px\)/s, 'coach table should use more vertical space before scrolling');
-assert.match(html, /\.tms-dropdown-menu[^}]*overscroll-behavior:contain/s, 'dropdown scrolling should not drag the modal or page behind it');
+assert.match(pagesCss, /#page-coaches \.tms-table\s*\{[^}]*min-width:1000px/s, 'coach table should not inherit the wide court table min width');
+assert.match(pagesCss, /#page-coaches \.tms-table-wrapper\s*\{[^}]*max-height:calc\(100vh - 190px\)/s, 'coach table should use more vertical space before scrolling');
+assert.match(pagesCss, /\.tms-dropdown-menu[^}]*overscroll-behavior:contain/s, 'dropdown scrolling should not drag the modal or page behind it');
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*>操作<\/th>/, 'coach action header should stay visible on the right');
 assert.match(html, /<th[^>]*>入职时间<\/th>/, 'coach table should show hire date');
 assert.doesNotMatch(fnBody('renderCoaches'), /class="abtn"|✏️|🗑️|class="badge /, 'coach rows should not use old icon buttons or old badge style');
@@ -42,6 +43,6 @@ assert.doesNotMatch(fnBody('openCoachModal'), /confirmDel\([^)]*'coach'|删除|c
 assert.match(fnBody('scheduleTimeRangeControls'), /court-date-row[\s\S]*sch_date[\s\S]*sch_startTime[\s\S]*sch_endTime/, 'schedule modal should keep date and time controls on one row');
 assert.match(fnBody('scheduleTimeRangeControls'), /white-space:nowrap/, 'schedule modal date and time separator should stay on one line');
 assert.match(fnBody('saveCoach'), /hireDate:document\.getElementById\('co_hireDate'\)\.value/, 'coach save should include hire date');
-assert.match(html, /function renderCourtDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
+assert.match(source, /function renderCourtDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
 
 console.log('coach page view tests passed');

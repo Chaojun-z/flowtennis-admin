@@ -1,0 +1,42 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+
+assert.match(apiSource, /const HOT_SCAN_TABLES=new Map\(/, 'api should declare hot table cache config');
+assert.match(apiSource, /const HOT_GET_TABLES=new Map\(/, 'api should declare hot row cache config');
+assert.match(apiSource, /function getCachedScan\(t\)/, 'api should expose a cached scan helper');
+assert.match(apiSource, /function getCachedRow\(t,id\)/, 'api should expose a cached row helper');
+assert.match(apiSource, /function invalidateHotScanCache\(t\)/, 'api should expose cache invalidation');
+assert.match(apiSource, /function invalidateHotGetCache\(t,id\)/, 'api should expose row cache invalidation');
+assert.match(apiSource, /if\(HOT_SCAN_TABLES\.has\(t\)\)invalidateHotScanCache\(t\);/, 'writes should invalidate hot table cache');
+assert.match(apiSource, /if\(HOT_GET_TABLES\.has\(t\)\)invalidateHotGetCache\(t,id\);/, 'writes should invalidate hot row cache');
+assert.match(apiSource, /if\(path==='\/students'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_STUDENTS\)\);/, 'students list should use cached scan');
+assert.match(apiSource, /if\(path==='\/courts'\)\{[\s\S]*if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_COURTS\)\);/, 'courts list should use cached scan');
+assert.match(apiSource, /if\(path==='\/schedule'\)\{[\s\S]*if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_SCHEDULE\)\);/, 'schedule list should use cached scan');
+assert.match(apiSource, /if\(path==='\/classes'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_CLASSES\)\);/, 'classes list should use cached scan');
+assert.match(apiSource, /if\(path==='\/coaches'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_COACHES\)\);/, 'coaches list should use cached scan');
+assert.match(apiSource, /if\(path==='\/campuses'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_CAMPUSES\)\);/, 'campuses list should use cached scan');
+assert.match(apiSource, /\[T_PLANS,\{ttlMs:60000\}\]/, 'plans should be configured as a hot scan table');
+assert.match(apiSource, /\[T_ENTITLEMENTS,\{ttlMs:60000\}\]/, 'entitlements should be configured as a hot scan table');
+assert.match(apiSource, /\[T_CLASSES,\{ttlMs:60000\}\]/, 'classes should be configured as a hot row cache');
+assert.match(apiSource, /\[T_ENTITLEMENTS,\{ttlMs:60000\}\]/, 'entitlements should be configured as a hot row cache');
+assert.match(apiSource, /async function applyLessonDelta\(classId,delta,studentIds=\[\]\)\{[\s\S]*const cls=await getCachedRow\(T_CLASSES,classId\);/, 'lesson delta should reuse cached class row');
+assert.match(apiSource, /async function assertScheduleEntitlementCapacity\(nextRec,oldRec\)\{[\s\S]*const ent=await getCachedRow\(T_ENTITLEMENTS,nextDelta\.entitlementId\);/, 'schedule entitlement capacity should reuse cached entitlement row');
+assert.match(apiSource, /async function applyEntitlementDelta\(entitlementId,scheduleId,delta,action,reason,user\)\{[\s\S]*const ent=await getCachedRow\(T_ENTITLEMENTS,entitlementId\);/, 'schedule entitlement writes should reuse cached entitlement row');
+assert.match(apiSource, /if\(path==='\/entitlements'\)\{await init\(\);if\(method==='GET'\)\{const rows=await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\);/, 'entitlement list should use cached scan');
+assert.match(apiSource, /if\(path==='\/entitlements\/recommend'&&method==='POST'\)\{await init\(\);const rows=\(await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)\)\.filter/, 'entitlement recommend should use cached scan');
+assert.match(apiSource, /if\(method==='GET'\)return sendJson\(res,await getCachedRow\(T_ENTITLEMENTS,id\)\);/, 'entitlement detail should use cached row');
+assert.match(apiSource, /async function validateScheduleSave\(nextRec,oldRec\)\{[\s\S]*timed\('scan schedule for conflict check',\(\)=>getCachedScan\(T_SCHEDULE\)\)[\s\S]*timed\('scan courts for schedule conflict check',\(\)=>getCachedScan\(T_COURTS\)\.catch\(\(\)=>\[\]\)\)/, 'schedule save validation should reuse cached schedule and court scans');
+assert.match(apiSource, /async function syncClassPlans\(classId,cls\)\{[\s\S]*timed\('sync class plans scan students',\(\)=>getCachedScan\(T_STUDENTS\)\)[\s\S]*timed\('sync class plans scan plans',\(\)=>getCachedScan\(T_PLANS\)\)/, 'class plan sync should reuse cached student and plan scans');
+assert.match(apiSource, /async function loadStudentReferenceData\(\)\{[\s\S]*getCachedScan\(T_PLANS\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_SCHEDULE\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_COURTS\)\.catch\(\(\)=>\[\]\)/, 'student identity update should reuse cached scans for heavy linked tables');
+assert.match(apiSource, /const entitlementDeltas=resolveScheduleEntitlementDeltas\(r,await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)\);/, 'schedule create should reuse cached entitlement scan');
+assert.match(apiSource, /const entitlementRows=await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\);/, 'schedule edit should reuse cached entitlement scan');
+assert.match(apiSource, /assertCanEditClassWithSchedules\(old,r,await getCachedScan\(T_SCHEDULE\)\);/, 'class edit should reuse cached schedule scan');
+assert.match(apiSource, /assertCanDeleteClass\(id,await getCachedScan\(T_SCHEDULE\)\);const classPlans=\(await getCachedScan\(T_PLANS\)\)\.filter\(p=>p\.classId===id\);/, 'class delete should reuse cached schedule and plan scans');
+assert.match(apiSource, /async function prewarmHotScanCache\(\)/, 'api should expose a hot table prewarm');
+assert.match(apiSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.error\('\[api-timing\] prewarm hot tables failed',err\)\);/, 'init should trigger hot table prewarm');
+assert.match(apiSource, /const storedAuthUser=await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\);/, 'authenticated requests should reuse cached user row lookup');
+
+console.log('hot table cache tests passed');

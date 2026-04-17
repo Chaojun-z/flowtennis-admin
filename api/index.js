@@ -11,6 +11,7 @@ const TS_KEY_SEC = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
 const REQUIRED_ENV_VARS = ['JWT_SECRET', 'TS_ENDPOINT', 'ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'];
 const ENABLE_DEFAULT_USER_BOOTSTRAP = process.env.ENABLE_DEFAULT_USER_BOOTSTRAP === 'true';
 const ENABLE_TABLE_BOOTSTRAP = process.env.ENABLE_TABLE_BOOTSTRAP === 'true';
+const ENABLE_RUNTIME_TABLE_ENSURE = process.env.ENABLE_RUNTIME_TABLE_ENSURE === 'true';
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
@@ -30,6 +31,23 @@ const TEST_DATA_RESET_TABLES=[
   T_ENTITLEMENT_LEDGER,
   ...MEMBERSHIP_TABLES
 ];
+const HOT_SCAN_TABLES=new Map([
+  [T_COURTS,{ttlMs:60000}],
+  [T_STUDENTS,{ttlMs:60000}],
+  [T_SCHEDULE,{ttlMs:60000}],
+  [T_CLASSES,{ttlMs:60000}],
+  [T_PLANS,{ttlMs:60000}],
+  [T_ENTITLEMENTS,{ttlMs:60000}],
+  [T_COACHES,{ttlMs:60000}],
+  [T_CAMPUSES,{ttlMs:60000}]
+]);
+const HOT_GET_TABLES=new Map([
+  [T_USERS,{ttlMs:60000}],
+  [T_CLASSES,{ttlMs:60000}],
+  [T_ENTITLEMENTS,{ttlMs:60000}]
+]);
+const hotScanCache=new Map();
+const hotGetCache=new Map();
 
 let tsClient;
 function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3});return tsClient;}
@@ -49,11 +67,42 @@ async function withStorageRetry(fn,maxAttempts=2){
   }
   throw lastErr;
 }
-function put(t,id,attrs){return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
+function cloneCacheValue(value){return JSON.parse(JSON.stringify(value));}
+function invalidateHotScanCache(t){hotScanCache.delete(t);}
+function hotGetCacheKey(t,id){return `${t}:${String(id)}`;}
+function invalidateHotGetCache(t,id){
+  if(id===undefined||id===null){
+    for(const key of hotGetCache.keys())if(key.startsWith(`${t}:`))hotGetCache.delete(key);
+    return;
+  }
+  hotGetCache.delete(hotGetCacheKey(t,id));
+}
+async function getCachedScan(t){
+  const cfg=HOT_SCAN_TABLES.get(t);
+  if(!cfg)return scan(t);
+  const now=Date.now();
+  const cached=hotScanCache.get(t);
+  if(cached&&cached.expiresAt>now)return cloneCacheValue(cached.rows);
+  const rows=await scan(t);
+  hotScanCache.set(t,{rows:cloneCacheValue(rows),expiresAt:now+cfg.ttlMs});
+  return rows;
+}
+async function getCachedRow(t,id){
+  const cfg=HOT_GET_TABLES.get(t);
+  if(!cfg)return get(t,id);
+  const now=Date.now();
+  const key=hotGetCacheKey(t,id);
+  const cached=hotGetCache.get(key);
+  if(cached&&cached.expiresAt>now)return cloneCacheValue(cached.row);
+  const row=await get(t,id);
+  hotGetCache.set(key,{row:cloneCacheValue(row),expiresAt:now+cfg.ttlMs});
+  return row;
+}
+function put(t,id,attrs){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function putIfAbsent(t,id,attrs){return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function get(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
 function scan(t){return withStorageRetry(()=>new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();}));}
-function del(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
+function del(t,id){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
 async function clearTables(storage,tables){
   const result={success:true,total:0,tables:[]};
   for(const table of tables){
@@ -91,16 +140,19 @@ async function scanFeedbacks(){
     return [];
   }
 }
+async function prewarmHotScanCache(){
+  await Promise.all([...HOT_SCAN_TABLES.keys()].map(t=>getCachedScan(t)));
+}
 function getRuntimeEnsuredTables(){return [...RUNTIME_ENSURED_TABLES];}
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
-  const cls=await get(T_CLASSES,classId);
+  const cls=await getCachedRow(T_CLASSES,classId);
   if(!cls)return null;
   const oldClass={...cls};
   const nextUsed=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
-  const relatedPlans=(await timed('scan plans for lesson delta',()=>scan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
+  const relatedPlans=(await timed('scan plans for lesson delta',()=>getCachedScan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
   const studentSet=new Set(parseArr(studentIds).filter(Boolean));
   const chargedPlans=studentSet.size?relatedPlans.filter(p=>studentSet.has(p.studentId)):relatedPlans;
   const oldPlans=relatedPlans.map((p)=>({...p}));
@@ -595,7 +647,7 @@ async function assertScheduleEntitlementCapacity(nextRec,oldRec){
   const oldMap=new Map(oldDeltas.map(d=>[d.entitlementId,d.delta]));
   const checked=[];
   for(const nextDelta of nextDeltas){
-    const ent=await get(T_ENTITLEMENTS,nextDelta.entitlementId);
+    const ent=await getCachedRow(T_ENTITLEMENTS,nextDelta.entitlementId);
     if(!ent)throw new Error('课包余额不存在');
     const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+oldMap.get(nextDelta.entitlementId)}:ent;
     validateEntitlementForSchedule(adjusted,{...nextRec,studentIds:[adjusted.studentId].filter(Boolean)});
@@ -605,7 +657,7 @@ async function assertScheduleEntitlementCapacity(nextRec,oldRec){
 }
 async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reason,user){
   if(!entitlementId||!delta)return null;
-  const ent=await get(T_ENTITLEMENTS,entitlementId);
+  const ent=await getCachedRow(T_ENTITLEMENTS,entitlementId);
   if(!ent)return null;
   const next=applyEntitlementLessonDelta(ent,delta);
   await put(T_ENTITLEMENTS,entitlementId,next);
@@ -860,12 +912,12 @@ function buildStudentIdentityUpdates(oldStudent,nextStudent,data,now=new Date().
 }
 async function loadStudentReferenceData(){
   const [plans,schedule,purchases,entitlements,feedbacks,courts]=await Promise.all([
-    scan(T_PLANS).catch(()=>[]),
-    scan(T_SCHEDULE).catch(()=>[]),
+    getCachedScan(T_PLANS).catch(()=>[]),
+    getCachedScan(T_SCHEDULE).catch(()=>[]),
     scan(T_PURCHASES).catch(()=>[]),
-    scan(T_ENTITLEMENTS).catch(()=>[]),
+    getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
     withTimeout(scanFeedbacks().catch(()=>[]),3000,[]),
-    scan(T_COURTS).catch(()=>[])
+    getCachedScan(T_COURTS).catch(()=>[])
   ]);
   return {plans,schedule,purchases,entitlements,feedbacks,courts};
 }
@@ -882,9 +934,9 @@ async function applyStudentIdentityUpdate(oldStudent,nextStudent){
   return updates;
 }
 async function validateScheduleSave(nextRec,oldRec){
-  const schedules=await timed('scan schedule for conflict check',()=>scan(T_SCHEDULE));
+  const schedules=await timed('scan schedule for conflict check',()=>getCachedScan(T_SCHEDULE));
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
-  validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>scan(T_COURTS).catch(()=>[])));
+  validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>getCachedScan(T_COURTS).catch(()=>[])));
   const oldDelta=scheduleLessonDelta(oldRec);
   const nextDelta=scheduleLessonDelta(nextRec);
   if(nextRec?.classId&&isBillableSchedule(nextRec)){
@@ -922,7 +974,9 @@ async function init(){
   const startedAt=Date.now();
   const missing=REQUIRED_ENV_VARS.filter((k)=>!process.env[k]);
   if(missing.length)throw new Error('缺少环境变量：'+missing.join(', '));
-  for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
+  if(ENABLE_RUNTIME_TABLE_ENSURE||ENABLE_TABLE_BOOTSTRAP){
+    for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
+  }
   if(ENABLE_TABLE_BOOTSTRAP){
     for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
     await bootstrapDefaultUsers();
@@ -934,6 +988,7 @@ async function init(){
     await ensureCoachBindings();
   }
   inited=true;
+  prewarmHotScanCache().catch(err=>console.error('[api-timing] prewarm hot tables failed',err));
   console.log(`[api-timing] init cold start ${Date.now()-startedAt}ms`);
 }
 
@@ -1370,8 +1425,8 @@ function buildProductRenameDisplayUpdates(oldProduct,nextProduct,data={},now=new
 async function syncClassPlans(classId,cls){
   const studentIds=parseArr(cls.studentIds);
   const [students,existingPlans]=await Promise.all([
-    timed('sync class plans scan students',()=>scan(T_STUDENTS)),
-    timed('sync class plans scan plans',()=>scan(T_PLANS))
+    timed('sync class plans scan students',()=>getCachedScan(T_STUDENTS)),
+    timed('sync class plans scan plans',()=>getCachedScan(T_PLANS))
   ]);
   const classPlans=existingPlans.filter(p=>p.classId===classId);
   const saved=[];
@@ -1913,7 +1968,7 @@ module.exports = async (req, res) => {
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
     if(path==='/auth/login'&&method==='POST'){await init();const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await get(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
-    const storedAuthUser=await get(T_USERS,user.id).catch(()=>null);
+    const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');await put(T_USERS,id,{id,name,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});return sendJson(res,{success:true,id,name,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});}
@@ -1999,7 +2054,7 @@ module.exports = async (req, res) => {
     if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
     if(path==='/courts'){
       await init();
-      if(method==='GET')return sendJson(res,await scan(T_COURTS));
+      if(method==='GET')return sendJson(res,await getCachedScan(T_COURTS));
       if(method==='POST'){
         const id=uuidv4();
         const schedules=await scan(T_SCHEDULE).catch(()=>[]);
@@ -2114,7 +2169,7 @@ module.exports = async (req, res) => {
       return sendJson(res,{dryRun,total:rows.length,candidates,migrated,skipped,preview});
     }
     const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await get(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const schedules=prevHistory===nextHistory?[]:await scan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(body,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await get(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
-    if(path==='/students'){await init();if(method==='GET')return sendJson(res,await scan(T_STUDENTS));if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
+    if(path==='/students'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_STUDENTS));if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
     const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){assertStudentWriteAccess(user);const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
     if(path==='/products'){await init();if(method==='GET')return sendJson(res,await scan(T_PRODUCTS));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=uuidv4();const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},null,now);r.createdAt=now;await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
@@ -2290,9 +2345,13 @@ module.exports = async (req, res) => {
       await init();
       if(method==='GET')return sendJson(res,await scan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[]));
     }
-    if(path==='/entitlements'){await init();if(method==='GET'){const rows=await scan(T_ENTITLEMENTS).catch(()=>[]);const sid=query.get('studentId')||'';return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);}}
-    if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>parseArr(body.studentIds).includes(e.studentId));return sendJson(res,recommendEntitlements(rows,body));}
-    const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await get(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);return sendJson(res,{success:true});}}
+    if(path==='/entitlement-ledger'){
+      await init();
+      if(method==='GET')return sendJson(res,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]));
+    }
+    if(path==='/entitlements'){await init();if(method==='GET'){const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);const sid=query.get('studentId')||'';return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);}}
+    if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>parseArr(body.studentIds).includes(e.studentId));return sendJson(res,recommendEntitlements(rows,body));}
+    const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     if(path==='/feedbacks'){
@@ -2325,28 +2384,34 @@ module.exports = async (req, res) => {
     }
     if(path==='/schedule'){
       await init();
-      if(method==='GET')return sendJson(res,await scan(T_SCHEDULE));
+      if(method==='GET')return sendJson(res,await getCachedScan(T_SCHEDULE));
       if(method==='POST'){
         const id=uuidv4();
         const r={...body,studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-        const risk=await validateScheduleSave(r,null);
-        assertScheduleEntitlementRequired(r);
-        const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await scan(T_ENTITLEMENTS).catch(()=>[]));
-        r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
-        r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
-        await assertScheduleEntitlementCapacity(r,null);
-        await put(T_SCHEDULE,id,r);
+        const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
+          const risk=await validateScheduleSave(r,null);
+          assertScheduleEntitlementRequired(r);
+          const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await getCachedScan(T_ENTITLEMENTS).catch(()=>[]));
+          r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
+          r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+          await assertScheduleEntitlementCapacity(r,null);
+          return {risk,entitlementDeltas};
+        });
+        await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
         const nextDelta=scheduleLessonDelta(r);
         const appliedEntitlements=[];
         let lessonApplied=false;
         try{
-          const entitlementChanged=[];
-          for(const nextEntDelta of entitlementDeltas){
-            const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user);
-            if(update)entitlementChanged.push(update);
-            appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
-          }
-          const lessonUpdate=nextDelta?await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds):null;
+          const entitlementChanged=await timed('schedule create entitlement writes',async()=>{
+            const changed=[];
+            for(const nextEntDelta of entitlementDeltas){
+              const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user);
+              if(update)changed.push(update);
+              appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
+            }
+            return changed;
+          });
+          const lessonUpdate=nextDelta?await timed('schedule create lesson writes',()=>applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds)):null;
           if(nextDelta)lessonApplied=true;
           const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
           const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
@@ -2368,27 +2433,35 @@ module.exports = async (req, res) => {
         const r={...ex,...body,studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
-        const risk=await validateScheduleSave(r,ex);
-        assertScheduleEntitlementRequired(r);
-        assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
-        const oldEntDeltas=scheduleEntitlementDeltas(ex);
-        const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
-        const entitlementRows=await scan(T_ENTITLEMENTS).catch(()=>[]);
-        const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
-        const nextEntDeltas=resolveScheduleEntitlementDeltas(r,nextBaseRows);
-        r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
-        r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
-        await assertScheduleEntitlementCapacity(r,ex);
-        await put(T_SCHEDULE,id,r);
+        const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
+          const risk=await validateScheduleSave(r,ex);
+          assertScheduleEntitlementRequired(r);
+          assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
+          const oldEntDeltas=scheduleEntitlementDeltas(ex);
+          const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
+          const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
+          const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
+          const nextEntDeltas=resolveScheduleEntitlementDeltas(r,nextBaseRows);
+          r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
+          r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+          await assertScheduleEntitlementCapacity(r,ex);
+          return {risk,oldEntDeltas,nextEntDeltas};
+        });
+        await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
         const appliedEntitlements=[];
         const appliedClassDeltas=[];
         try{
           const changed=[];
-          const entitlementChanged=[];
-          for(const oldEntDelta of oldEntDeltas){entitlementChanged.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
-          for(const nextEntDelta of nextEntDeltas){entitlementChanged.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
-          if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds)));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});}
-          if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta,studentIds:r.studentIds});}
+          const entitlementChanged=await timed('schedule update entitlement writes',async()=>{
+            const rows=[];
+            for(const oldEntDelta of oldEntDeltas){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
+            for(const nextEntDelta of nextEntDeltas){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
+            return rows;
+          });
+          await timed('schedule update lesson writes',async()=>{
+            if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds)));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});}
+            if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta,studentIds:r.studentIds});}
+          });
           const classes=changed.filter(Boolean).map(x=>x.class);
           const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
           const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
@@ -2416,11 +2489,11 @@ module.exports = async (req, res) => {
         }
       }
     }
-    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await scan(T_COACHES));if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await scan(T_COACHES));const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
+    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_COACHES));if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await getCachedScan(T_COACHES));const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
     const coM=path.match(/^\/coaches\/(.+)$/);if(coM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=coM[1];if(method==='PUT'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{error:'教练不存在'},404);const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await scan(T_COACHES),id);const r={...body,name,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);const coachUpdates=await applyCoachRename(old.name,name);return sendJson(res,{...r,coachUpdates});}if(method==='DELETE'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{success:true});assertCanDeleteCoachName(old.name,await loadCoachReferenceData(),old.id);await del(T_COACHES,id);return sendJson(res,{success:true});}}
-    if(path==='/classes'){await init();if(method==='GET')return sendJson(res,await scan(T_CLASSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([scan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
-    const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await scan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await scan(T_SCHEDULE));const classPlans=(await scan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
-    if(path==='/campuses'){await init();if(method==='GET')return sendJson(res,await scan(T_CAMPUSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}}
+    if(path==='/classes'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_CLASSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
+    const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
+    if(path==='/campuses'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_CAMPUSES));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}}
     const caM=path.match(/^\/campuses\/(.+)$/);if(caM){const id=caM[1];if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const r={...body,id,updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [students,coaches,classes,schedule,courts,packages,entitlements]=await Promise.all([scan(T_STUDENTS).catch(()=>[]),scan(T_COACHES).catch(()=>[]),scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scan(T_PACKAGES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[])]);assertCanDeleteCampus(id,{students,coaches,classes,schedule,courts,packages,entitlements});await del(T_CAMPUSES,id);return sendJson(res,{success:true});}}
     return sendJson(res,{error:'Not found'},404);
   }catch(e){console.error('API error:',e);return sendJson(res,{error:e.message},500);}
