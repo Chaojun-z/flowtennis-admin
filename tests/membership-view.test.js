@@ -76,7 +76,8 @@ assert.doesNotMatch(html, /openMembershipBenefitHistoryModal\('\$\{court\.id\}',
 assert.match(html, /function studentMembershipSummaryHtml/, 'student detail should render linked court membership summary');
 assert.match(html, /关联订场账户会员摘要/, 'student detail should label linked membership summary');
 assert.match(html, /大师公开课[\s\S]*穿线免手工费[\s\S]*发球机免费[\s\S]*国家二级运动员陪打[\s\S]*指定教练陪打/, 'membership plan form should expose structured benefit fields');
-assert.match(html, /余额有效期按购买日起算 12 个月/, 'membership purchase flow should surface balance validity rule');
+assert.match(html, /余额有效期按支付日期起算 12 个月/, 'membership purchase flow should surface balance validity rule based on pay date');
+assert.match(html, /系统创建日期只用于留痕，不影响会员有效期/, 'membership purchase flow should explain created time does not affect validity');
 assert.match(html, /若到期时仍有余额，可自动进入延续期，最长至 24 个月/, 'membership purchase flow should surface extended validity rule');
 assert.match(html, /低于原合规档位续充时，余额有效期不会重置/, 'membership purchase flow should warn when low-tier renewal does not reset validity');
 assert.match(html, /余额由充值和消费自动计算，不能在这里手动改/, 'membership views should explain readonly balance in user wording');
@@ -177,6 +178,7 @@ assert.match(html, /id="membershipBenefitSaveBtn"[\s\S]*保存中/, 'benefit sav
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase audit page should use breadcrumb-style navigation');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员权益流水/, 'ledger audit page should use breadcrumb-style navigation');
 assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only note');
+assert.match(html, /支付日期<\/th>[\s\S]*录入时间<\/th>[\s\S]*订场用户/, 'membership order audit should show pay date and recorded time columns');
 assert.match(html, /当前会员[\s\S]*courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');

@@ -38,6 +38,7 @@ assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct pac
 assert.match(html, /<th style="width:120px;padding-left:20px">购买日期<\/th><th style="width:140px">学员<\/th><th style="width:170px">售卖课包<\/th><th style="width:120px">主归属教练<\/th>/, 'purchase table should show owner coach directly in the list');
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
+assert.match(html, /实际发生日期[\s\S]*系统录入时间/, 'purchase detail should show business date and system recorded time');
 assert.match(html, /function openPurchaseVoidModal/, 'purchase page should use dedicated void modal');
 assert.match(html, /function voidPurchase/, 'purchase page should send void reason');
 assert.match(html, /作废原因/, 'void modal should require reason');
