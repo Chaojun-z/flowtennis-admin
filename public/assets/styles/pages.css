@@ -611,7 +611,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-event.type-trial{background:#FFF2E2;border-color:#E7B57C;color:#9A5622}
 .coach-mobile-event.type-camp{background:#EAF7EA;border-color:#B9D8BC;color:#2E6E37}
 .coach-mobile-event.type-master{background:#F5ECE6;border-color:#DAB8A1;color:#73452D}
-.coach-mobile-event.type-partner{background:#F5F3FF;border-color:#C4B5FD;color:#5B21B6}
+.coach-mobile-event.type-partner{background:#E6F7F6;border-color:#A5E1DE;color:#0D6E66}
 .coach-mobile-event-time{font-size:12px;font-weight:800;line-height:1.15}
 .coach-mobile-event-title{font-size:13px;font-weight:800;line-height:1.25;margin-top:4px}
 .coach-mobile-event-meta{font-size:11px;line-height:1.35;margin-top:4px;opacity:.96}
@@ -621,19 +621,19 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-shell{display:grid;gap:12px;margin-bottom:14px}
 .coach-ops-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}
 .coach-ops-toolbar-main,.coach-ops-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:40px;border:1px solid #E7DBCE;border-radius:12px;background:#fff;color:#2F241E;padding:0 14px;font-size:13px;font-weight:500;font-family:inherit;box-shadow:0 4px 12px rgba(60,20,0,0.05);cursor:pointer;transition:all .2s}
-.coach-ops-select{min-width:120px}
-.coach-date-wrap{position:relative}.coach-date-btn{min-width:170px;text-align:left}.coach-ops-nav{color:#6E6259;min-width:56px}.coach-ops-arrow{min-width:40px;width:40px;padding:0;font-size:22px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#F8F3EE;border-color:#D8C8B8;box-shadow:0 6px 16px rgba(60,20,0,0.08);transform:translateY(-1px)}
-.coach-ops-legend{display:flex;align-items:center;gap:16px;color:#4A3C32;font-size:12px;font-weight:500}
-.coach-ops-legend-item{display:inline-flex;align-items:center;gap:8px}
-.coach-ops-legend-dot{width:10px;height:10px;border-radius:50%}
+.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:34px;border:1px solid #E7DBCE;border-radius:6px;background:#fff;color:#2F241E;padding:0 12px;font-size:13px;font-weight:400;font-family:inherit;box-shadow:0 2px 8px rgba(60,20,0,0.04);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+.coach-ops-select{min-width:110px}
+.coach-date-wrap{position:relative}.coach-date-btn{min-width:160px;text-align:left}.coach-ops-nav{color:#6E6259;min-width:48px}.coach-ops-arrow{min-width:34px;width:34px;padding:0;font-size:18px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#F8F3EE;border-color:#D8C8B8;box-shadow:0 4px 12px rgba(60,20,0,0.06);transform:translateY(-1px)}
+.coach-ops-legend{display:flex;align-items:center;gap:12px;color:#8C7B6E;font-size:11px;font-weight:400}
+.coach-ops-legend-item{display:inline-flex;align-items:center;gap:6px}
+.coach-ops-legend-dot{width:7px;height:7px;border-radius:50%}
 .coach-ops-legend-dot.private{background:#4C7DE0}
 .coach-ops-legend-dot.trial{background:#D77A2D}
 .coach-ops-legend-dot.camp{background:#5E9F61}
 .coach-ops-legend-dot.master{background:#8E5A3C}
-.coach-ops-legend-dot.partner{background:#8B5CF6}
-.coach-ops-toolbar .tms-dropdown-display{height:40px;min-width:124px;border-radius:12px;background:#fff;color:#2F241E;font-size:13px;font-weight:600;box-shadow:none}
-.coach-ops-toolbar .tms-dropdown-display:hover{background:#F8F3EE}
+.coach-ops-legend-dot.partner{background:#14B8A6}
+.coach-ops-toolbar .tms-dropdown-display{height:34px;min-width:110px;border-radius:6px;background:#fff;color:#2F241E;font-size:13px;font-weight:400;box-shadow:0 2px 8px rgba(60,20,0,0.04);border:1px solid #E7DBCE}
+.coach-ops-toolbar .tms-dropdown-display:hover{background:#F8F3EE;border-color:#D8C8B8}
 .coach-ops-toolbar .tms-dropdown-menu{top:calc(100% + 6px)}
 .coach-date-pop{display:none;position:absolute;top:44px;left:0;width:292px;background:rgba(255,251,245,.98);border:0.5px solid rgba(180,83,9,.18);border-radius:12px;box-shadow:0 18px 54px rgba(60,20,0,.28);padding:12px;z-index:30;color:var(--th)}
 .coach-date-pop.open{display:block}.coach-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.coach-picker-title{font-size:15px;font-weight:800}.coach-picker-move{width:28px;height:28px;border:none;border-radius:7px;background:rgba(180,83,9,.08);color:var(--amber-base);cursor:pointer;font-size:16px}.coach-picker-weekdays,.coach-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.coach-picker-weekdays span{font-size:11px;color:var(--ts);text-align:center;font-weight:700}.coach-picker-day,.coach-picker-month{border:none;border-radius:8px;background:rgba(180,83,9,.06);color:var(--th);height:34px;font-size:13px;font-family:inherit;cursor:pointer}.coach-picker-day:hover,.coach-picker-month:hover{background:rgba(217,119,6,.16)}.coach-picker-day.muted{color:rgba(28,25,23,.35)}.coach-picker-day.today{box-shadow:inset 0 0 0 1px rgba(180,83,9,.45);color:var(--amber-base);font-weight:700}.coach-picker-day.active,.coach-picker-month.active{background:var(--amber-base);color:#fff;font-weight:800}.coach-picker-day.week-active{box-shadow:inset 0 0 0 2px var(--amber-base);font-weight:800}.coach-picker-months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.coach-picker-month{height:38px}
@@ -647,7 +647,9 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-head,.coach-ops-row{display:grid;grid-template-columns:108px minmax(980px,1fr);gap:8px;min-width:1104px}
 .coach-ops-row{margin-bottom:10px}
 .coach-ops-head{margin:0 0 8px;color:#8C7B6E;font-size:11px;align-items:center}
-.coach-ops-tabs{display:flex;gap:6px;margin:0;padding:4px;border:1px solid #E7DBCE;border-radius:14px;background:#F8F3EE}.coach-ops-tab{border:0;border-radius:10px;padding:8px 12px;background:transparent;color:#6E6259;font-size:12px;font-weight:700;cursor:pointer}.coach-ops-tab.active{background:#fff;color:#2F241E;box-shadow:0 2px 8px rgba(60,20,0,.06)}
+.coach-ops-tabs{display:flex;gap:4px;margin:0;padding:4px;border:1px solid #E7DBCE;border-radius:8px;background:#F8F3EE;height:34px;box-sizing:border-box;align-items:center}
+.coach-ops-tab{border:0;border-radius:5px;padding:0 12px;height:24px;background:transparent;color:#6E6259;font-size:12px;font-weight:400;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;transition:all .2s}
+.coach-ops-tab.active{background:#fff;color:#2F241E;box-shadow:0 2px 6px rgba(60,20,0,0.06);font-weight:500}
 .coach-ops-name,.coach-ops-corner{position:sticky;left:0;z-index:4;background:rgba(255,247,237,.96);border:var(--borf);border-radius:10px;padding:10px 12px;color:var(--th);font-weight:700;min-height:54px;box-shadow:10px 0 16px rgba(146,64,14,.14)}
 .coach-ops-corner{min-height:26px;height:26px;color:#8C7B6E;background:#F7F1EA;border:1px solid #E9DED2;border-radius:10px;box-shadow:none;display:flex;align-items:center;padding:0 10px;font-size:10px}
 .coach-ops-line{background:#FFFCF8;border:1px solid #E9DED2;border-radius:12px;min-height:64px;position:relative;overflow:hidden;background-image:repeating-linear-gradient(90deg,rgba(180,83,9,.08),rgba(180,83,9,.08) 1px,transparent 1px,transparent calc(100% / 15))}
@@ -656,7 +658,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-hours.week{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:6px;justify-content:normal}
 .coach-ops-block{position:absolute;top:8px;bottom:8px;border-radius:8px;background:#EEF3FF;border:0.5px solid rgba(49,87,183,.16);border-left:4px solid #4C7DE0;padding:6px 7px;color:var(--tb);font-size:9px;line-height:1.3;overflow:hidden;cursor:pointer}
 .coach-ops-block.type-private{background:#EEF3FF;border-left-color:#4C7DE0}
-.coach-ops-block.type-partner{background:#F5F3FF;border-left-color:#8B5CF6}
+.coach-ops-block.type-partner{background:#E6F7F6;border-left-color:#14B8A6}
 .coach-ops-block.type-trial{background:#FFF1E5;border-left-color:#D77A2D}
 .coach-ops-block.type-camp{background:#ECF8EE;border-left-color:#5E9F61}
 .coach-ops-block.type-master{background:#F6ECE4;border-left-color:#8E5A3C}
