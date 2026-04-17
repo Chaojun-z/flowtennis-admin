@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
   window.addEventListener('resize',syncViewportMode);
   document.addEventListener('click',e=>{
+    const vTarget = e.target.closest?.('button, .sb-item, .ctab, .coach-ops-tab, .coach-mobile-event, .tms-action-link, .today-card, .coach-wb-card');
+    if(vTarget && navigator.vibrate && (document.body.classList.contains('coach-mobile') || document.body.classList.contains('admin-mobile'))) {
+      navigator.vibrate([12]);
+    }
     if(!e.target.closest?.('.coach-date-wrap'))closeCoachOpsPicker();
     if(!e.target.closest?.('.filter-date-wrap')&&!e.target.closest?.('#globalDatePicker'))closeGlobalDatePicker();
   });
