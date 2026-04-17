@@ -430,17 +430,17 @@
           <button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button>
         </div>
         <div id="myScheduleWeekHeader"></div>
-        <div class="my-schedule-week-grid">
+        <div class="my-schedule-week-grid" style="display:none">
           <div class="week-grid" id="myWeekGrid"></div>
         </div>
-        <div id="myScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div>
+        <div id="myScheduleMobileList" class="coach-mobile-list my-schedule-mobile-list" style="display:block"></div>
       </div>
     </div>
     <!-- 我的学员（教练视角） -->
     <div class="page-section" id="page-mystudents">
       <div class="tms-stats-row" id="myStudentStats"></div>
       <div class="tms-audit-note">这里查看你当前可见的学员，能区分自己负责的学员、代上过的学员，以及最近上课和课时进度。</div>
-      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:96px">校区</th><th style="width:148px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:96px">负责教练</th><th style="width:96px">归属教练</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:96px">校区</th><th style="width:148px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:96px">负责教练</th><th style="width:96px">归属教练</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
       <div id="myStudentMobileList" class="coach-mobile-only coach-mobile-list"></div>
     </div>
     <!-- 我的班次（教练视角） -->
