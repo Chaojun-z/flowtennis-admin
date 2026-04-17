@@ -85,6 +85,7 @@ function coachOpsCourseTypeTagClass(type){
   if(normalized==='体验课')return 'type-trial';
   if(normalized==='训练营')return 'type-camp';
   if(normalized==='大师课')return 'type-master';
+  if(normalized==='陪打')return 'type-partner';
   return 'type-private';
 }
 function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){

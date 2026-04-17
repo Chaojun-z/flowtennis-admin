@@ -611,6 +611,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-event.type-trial{background:#FFF2E2;border-color:#E7B57C;color:#9A5622}
 .coach-mobile-event.type-camp{background:#EAF7EA;border-color:#B9D8BC;color:#2E6E37}
 .coach-mobile-event.type-master{background:#F5ECE6;border-color:#DAB8A1;color:#73452D}
+.coach-mobile-event.type-partner{background:#F5F3FF;border-color:#C4B5FD;color:#5B21B6}
 .coach-mobile-event-time{font-size:12px;font-weight:800;line-height:1.15}
 .coach-mobile-event-title{font-size:13px;font-weight:800;line-height:1.25;margin-top:4px}
 .coach-mobile-event-meta{font-size:11px;line-height:1.35;margin-top:4px;opacity:.96}
@@ -620,16 +621,17 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-shell{display:grid;gap:12px;margin-bottom:14px}
 .coach-ops-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}
 .coach-ops-toolbar-main,.coach-ops-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:40px;border:1px solid #E7DBCE;border-radius:12px;background:#fff;color:#2F241E;padding:0 14px;font-size:13px;font-weight:600;font-family:inherit;box-shadow:none;cursor:pointer}
+.coach-ops-select,.coach-date-btn,.coach-ops-nav{height:40px;border:1px solid #E7DBCE;border-radius:12px;background:#fff;color:#2F241E;padding:0 14px;font-size:13px;font-weight:500;font-family:inherit;box-shadow:0 4px 12px rgba(60,20,0,0.05);cursor:pointer;transition:all .2s}
 .coach-ops-select{min-width:120px}
-.coach-date-wrap{position:relative}.coach-date-btn{min-width:170px;text-align:left}.coach-ops-nav{color:#6E6259;min-width:56px}.coach-ops-arrow{min-width:40px;width:40px;padding:0;font-size:22px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#F8F3EE;border-color:#D8C8B8}
-.coach-ops-legend{display:flex;align-items:center;gap:16px;color:#6E6259;font-size:12px;font-weight:700}
+.coach-date-wrap{position:relative}.coach-date-btn{min-width:170px;text-align:left}.coach-ops-nav{color:#6E6259;min-width:56px}.coach-ops-arrow{min-width:40px;width:40px;padding:0;font-size:22px;line-height:1}.coach-ops-nav:hover,.coach-date-btn:hover,.coach-ops-select:hover{background:#F8F3EE;border-color:#D8C8B8;box-shadow:0 6px 16px rgba(60,20,0,0.08);transform:translateY(-1px)}
+.coach-ops-legend{display:flex;align-items:center;gap:16px;color:#4A3C32;font-size:12px;font-weight:500}
 .coach-ops-legend-item{display:inline-flex;align-items:center;gap:8px}
 .coach-ops-legend-dot{width:10px;height:10px;border-radius:50%}
 .coach-ops-legend-dot.private{background:#4C7DE0}
 .coach-ops-legend-dot.trial{background:#D77A2D}
 .coach-ops-legend-dot.camp{background:#5E9F61}
 .coach-ops-legend-dot.master{background:#8E5A3C}
+.coach-ops-legend-dot.partner{background:#8B5CF6}
 .coach-ops-toolbar .tms-dropdown-display{height:40px;min-width:124px;border-radius:12px;background:#fff;color:#2F241E;font-size:13px;font-weight:600;box-shadow:none}
 .coach-ops-toolbar .tms-dropdown-display:hover{background:#F8F3EE}
 .coach-ops-toolbar .tms-dropdown-menu{top:calc(100% + 6px)}
@@ -654,6 +656,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-hours.week{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:6px;justify-content:normal}
 .coach-ops-block{position:absolute;top:8px;bottom:8px;border-radius:8px;background:#EEF3FF;border:0.5px solid rgba(49,87,183,.16);border-left:4px solid #4C7DE0;padding:6px 7px;color:var(--tb);font-size:9px;line-height:1.3;overflow:hidden;cursor:pointer}
 .coach-ops-block.type-private{background:#EEF3FF;border-left-color:#4C7DE0}
+.coach-ops-block.type-partner{background:#F5F3FF;border-left-color:#8B5CF6}
 .coach-ops-block.type-trial{background:#FFF1E5;border-left-color:#D77A2D}
 .coach-ops-block.type-camp{background:#ECF8EE;border-left-color:#5E9F61}
 .coach-ops-block.type-master{background:#F6ECE4;border-left-color:#8E5A3C}
