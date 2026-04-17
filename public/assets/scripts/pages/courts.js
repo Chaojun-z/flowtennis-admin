@@ -450,7 +450,7 @@ function renderCourtHistoryItems(hist){
 }
 function getCourtTimeOptions(selected='08:00'){
   const opts=[];
-  for(let h=8;h<=22;h++){
+  for(let h=6;h<=22;h++){
     const hh=String(h).padStart(2,'0');
     opts.push({value:`${hh}:00`,label:`${hh}:00`});
     if(h!==22)opts.push({value:`${hh}:30`,label:`${hh}:30`});
@@ -662,12 +662,67 @@ function renderCourtFinanceFields(){
   document.querySelectorAll('[data-finance-field="course"]').forEach(el=>el.style.display=isCourse?'':'none');
   document.querySelectorAll('[data-finance-field="student"]').forEach(el=>el.style.display=(isBooking||isCourse)?'':'none');
   document.querySelectorAll('[data-finance-field="internal"]').forEach(el=>el.style.display=isInternal?'':'none');
+  document.querySelectorAll('[data-price-field="channel"]').forEach(el=>el.style.display=document.getElementById('nrPriceMode')?.value==='channel_product'?'':'none');
 }
 function onCourtFinanceSceneChange(){
   updateCourtFinancePreview();
   renderCourtFinanceFields();
+  refreshCourtFinanceQuote();
 }
 let courtFinanceModalId='';
+function activeChannelProductOptions(){
+  return pricePlans.filter(p=>p.type==='channel_product'&&p.status!=='inactive').map(p=>({value:p.id,label:`${p.channel} · ${p.productName} · ¥${fmt(p.salePrice)}`}));
+}
+function selectedChannelProduct(){
+  const id=document.getElementById('nrChannelProductId')?.value||'';
+  return pricePlans.find(p=>p.id===id)||null;
+}
+function currentCourtMemberDiscount(court){
+  const account=courtMembershipSummary(court)?.account;
+  const rate=parseFloat(account?.discountRate);
+  return Number.isFinite(rate)&&rate>0?rate:1;
+}
+async function refreshCourtFinanceQuote(){
+  const court=courts.find(c=>c.id===courtFinanceModalId);
+  if(!court)return;
+  const type=document.getElementById('nrType')?.value||'';
+  const category=document.getElementById('nrCategory')?.value||'';
+  if(type!=='消费'||category!=='订场')return;
+  const mode=document.getElementById('nrPriceMode')?.value||'venue_rate';
+  const systemEl=document.getElementById('nrSystemAmount');
+  const finalEl=document.getElementById('nrFinalAmount');
+  const amountEl=document.getElementById('nrAmt');
+  const pricePlanEl=document.getElementById('nrPricePlanId');
+  const quoteMeta=document.getElementById('nrQuoteMeta');
+  try{
+    if(mode==='channel_product'){
+      const product=selectedChannelProduct();
+      if(!product)return;
+      if(systemEl)systemEl.value=product.salePrice||0;
+      if(finalEl&&!finalEl.dataset.touched)finalEl.value=product.salePrice||0;
+      if(amountEl)amountEl.value=finalEl?.value||product.salePrice||0;
+      if(pricePlanEl)pricePlanEl.value=product.id||'';
+      if(quoteMeta)quoteMeta.textContent=`渠道商品：${product.channel} · ${product.productName}`;
+      return;
+    }
+    const payMethod=document.getElementById('nrPayMethod')?.value||'';
+    const memberDiscount=payMethod==='储值扣款'?currentCourtMemberDiscount(court):1;
+    const quote=await apiCall('POST','/price-plans/quote',{campus:document.getElementById('nrCampus')?.value||court.campus||'',date:document.getElementById('nrDate')?.value||today(),startTime:document.getElementById('nrStartTime')?.value||'',endTime:document.getElementById('nrEndTime')?.value||'',memberDiscount});
+    if(systemEl)systemEl.value=quote.systemAmount||0;
+    if(finalEl&&!finalEl.dataset.touched)finalEl.value=quote.systemAmount||0;
+    if(amountEl)amountEl.value=finalEl?.value||quote.systemAmount||0;
+    if(pricePlanEl)pricePlanEl.value=(quote.pricePlanIds||[]).join(',');
+    if(quoteMeta)quoteMeta.textContent=`系统报价：原价 ¥${fmt(quote.originalAmount||0)}${memberDiscount!==1?` · 会员 ${Math.round(memberDiscount*100)/10} 折`:''}`;
+  }catch(e){
+    if(quoteMeta)quoteMeta.textContent=e.message||'未找到匹配价格';
+  }
+}
+function syncCourtFinalAmount(){
+  const finalEl=document.getElementById('nrFinalAmount');
+  const amountEl=document.getElementById('nrAmt');
+  if(finalEl)finalEl.dataset.touched='1';
+  if(amountEl&&finalEl)amountEl.value=finalEl.value||'';
+}
 async function createCourtCompanionSchedule(court,record,companionCoach){
   if(!companionCoach||record.type!=='消费'||record.category!=='订场')return null;
   const student=students.find(s=>s.id===record.studentId);
@@ -709,8 +764,9 @@ function openCourtFinanceModal(courtId){
   const coachOptions=[{value:'',label:'不安排陪打'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const campusOptions=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
   const venueOptions=VENUES.map(v=>({value:v,label:esc(v)}));
+  const channelProductOptions=[{value:'',label:'选择渠道商品'},...activeChannelProductOptions()];
   const hist=[...parseArr(court.history)].reverse();
-  const body=`<div class="tms-section-header" style="margin-top:0;">财务摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" value="${finance.balance}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" value="${finance.totalDeposit}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" value="${finance.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" value="${finance.receivedAmount}" readonly></div></div><div class="tms-section-header">流水录入</div><div class="tms-record-add-box"><div class="tms-form-row"><div class="tms-form-item" style="flex:0 0 96px;min-width:96px;">${renderCourtDropdownHtml('nrType','类型',[{value:'充值',label:'充值'},{value:'消费',label:'消费'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'消费',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 96px;min-width:96px;">${renderCourtDropdownHtml('nrCategory','项目',[{value:'储值',label:'储值'},{value:'订场',label:'订场'},{value:'内部占用',label:'内部占用'},{value:'私教课',label:'私教课'},{value:'班课',label:'班课'},{value:'训练营',label:'训练营'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'订场',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrPayMethod','支付',[{value:'微信',label:'微信'},{value:'支付宝',label:'支付宝'},{value:'现金',label:'现金'},{value:'转账',label:'转账'},{value:'储值扣款',label:'储值扣款'},{value:'储值退款',label:'储值退款'},{value:'其他',label:'其他'}],'储值扣款',true,'updateCourtFinancePreview')}</div><div class="tms-form-item" data-finance-field="student" style="flex:0 0 128px;min-width:128px;">${renderCourtDropdownHtml('nrStudentId','关联学员',studentOptions,'',true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrCampus','校区',campusOptions,court.campus||campuses[0]?.code||campuses[0]?.id,true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrVenue','场地',venueOptions,venueOptions[0]?.value||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 168px;min-width:168px;">${courtDateButtonHtml('nrDate',today(),'订场日期')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderCourtDropdownHtml('nrStartTime','08:00',getCourtTimeOptions('08:00'),'08:00',true)}</div><div data-finance-field="booking" style="color:#8C7B6E;align-self:center;white-space:nowrap;padding:0 2px;">至</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderCourtDropdownHtml('nrEndTime','10:00',getCourtTimeOptions('10:00'),'10:00',true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 136px;min-width:136px;">${renderCourtDropdownHtml('nrCompanionCoach','陪打教练',coachOptions,'',true)}</div><div class="tms-form-item" data-finance-field="internal" style="flex:0 0 140px;min-width:140px;">${renderCourtDropdownHtml('nrInternalReason','占用原因',[{value:'领导打球',label:'领导打球'},{value:'活动',label:'活动'},{value:'测试教学',label:'测试教学'},{value:'其他',label:'其他'}],'领导打球',true)}</div><div class="tms-form-item" data-finance-field="course" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrLessonCount" min="1" step="1" placeholder="节数"></div><div class="tms-form-item" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrAmt" placeholder="¥ 发生金额"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrNote" placeholder="备注（非必填）"></div><div class="tms-form-item" style="flex:none;width:160px;"><button class="tms-btn tms-btn-primary" id="courtFinanceAddBtn" style="width:100%;height:100%;padding:0;" onclick="saveCourtFinanceRecord()">添加</button></div></div></div><div style="font-size:12px;color:var(--ts);margin:0 0 16px" id="financeHint">本次订场会从当前余额扣款。</div><div class="tms-section-header">历史记录</div><div class="tms-history-list">${renderCourtHistoryItems(hist)}</div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">财务摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前余额</label><input type="number" class="finput tms-form-control" value="${finance.balance}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计充值</label><input type="number" class="finput tms-form-control" value="${finance.totalDeposit}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><input type="number" class="finput tms-form-control" value="${finance.spentAmount}" readonly></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><input type="number" class="finput tms-form-control" value="${finance.receivedAmount}" readonly></div></div><div class="tms-section-header">流水录入</div><div class="tms-record-add-box"><div class="tms-form-row"><div class="tms-form-item" style="flex:0 0 96px;min-width:96px;">${renderCourtDropdownHtml('nrType','类型',[{value:'充值',label:'充值'},{value:'消费',label:'消费'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'消费',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 96px;min-width:96px;">${renderCourtDropdownHtml('nrCategory','项目',[{value:'储值',label:'储值'},{value:'订场',label:'订场'},{value:'内部占用',label:'内部占用'},{value:'私教课',label:'私教课'},{value:'班课',label:'班课'},{value:'训练营',label:'训练营'},{value:'退款',label:'退款'},{value:'冲正',label:'冲正'}],'订场',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrPayMethod','支付',[{value:'微信',label:'微信'},{value:'支付宝',label:'支付宝'},{value:'现金',label:'现金'},{value:'转账',label:'转账'},{value:'储值扣款',label:'储值扣款'},{value:'储值退款',label:'储值退款'},{value:'其他',label:'其他'}],'储值扣款',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" data-finance-field="student" style="flex:0 0 128px;min-width:128px;">${renderCourtDropdownHtml('nrStudentId','关联学员',studentOptions,'',true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrCampus','校区',campusOptions,court.campus||campuses[0]?.code||campuses[0]?.id,true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderCourtDropdownHtml('nrVenue','场地',venueOptions,venueOptions[0]?.value||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 168px;min-width:168px;">${courtDateButtonHtml('nrDate',today(),'订场日期')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderCourtDropdownHtml('nrStartTime','08:00',getCourtTimeOptions('08:00'),'08:00',true,'refreshCourtFinanceQuote')}</div><div data-finance-field="booking" style="color:#8C7B6E;align-self:center;white-space:nowrap;padding:0 2px;">至</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderCourtDropdownHtml('nrEndTime','10:00',getCourtTimeOptions('10:00'),'10:00',true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 136px;min-width:136px;">${renderCourtDropdownHtml('nrCompanionCoach','陪打教练',coachOptions,'',true)}</div><div class="tms-form-item" data-finance-field="internal" style="flex:0 0 140px;min-width:140px;">${renderCourtDropdownHtml('nrInternalReason','占用原因',[{value:'领导打球',label:'领导打球'},{value:'活动',label:'活动'},{value:'测试教学',label:'测试教学'},{value:'其他',label:'其他'}],'领导打球',true)}</div><div class="tms-form-item" data-finance-field="course" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrLessonCount" min="1" step="1" placeholder="节数"></div></div><div class="tms-form-row" data-finance-field="booking"><div class="tms-form-item" style="flex:0 0 132px;min-width:132px;">${renderCourtDropdownHtml('nrPriceMode','价格来源',[{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'},{value:'manual',label:'手动价格'}],'venue_rate',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" data-price-field="channel" style="flex:1;">${renderCourtDropdownHtml('nrChannelProductId','渠道商品',channelProductOptions,channelProductOptions[0]?.value||'',true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;"><input type="number" class="finput tms-form-control" id="nrSystemAmount" placeholder="系统应收" readonly></div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;"><input type="number" class="finput tms-form-control" id="nrFinalAmount" placeholder="最终成交" oninput="syncCourtFinalAmount()"></div><input type="hidden" id="nrPricePlanId"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrOverrideReason" placeholder="改价原因"></div></div><div class="tms-form-row" data-price-field="channel"><div class="tms-form-item"><input type="text" class="finput tms-form-control" id="nrChannelOrderNo" placeholder="平台订单号"></div><div class="tms-form-item"><input type="text" class="finput tms-form-control" id="nrRedeemCode" placeholder="核销码"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrNote" placeholder="备注（非必填）"></div><div class="tms-form-item" style="flex:0 0 128px;"><input type="number" class="finput tms-form-control" id="nrAmt" placeholder="¥ 金额"></div><div class="tms-form-item" style="flex:none;width:160px;"><button class="tms-btn tms-btn-primary" id="courtFinanceAddBtn" style="width:100%;height:100%;padding:0;" onclick="saveCourtFinanceRecord()">添加</button></div></div></div><div style="font-size:12px;color:var(--ts);margin:0 0 6px" id="financeHint">本次订场会从当前余额扣款。</div><div style="font-size:12px;color:var(--ts);margin:0 0 16px" id="nrQuoteMeta"></div><div class="tms-section-header">历史记录</div><div class="tms-history-list">${renderCourtHistoryItems(hist)}</div>`;
   setCourtModalFrame(`${court.name} · 记一笔流水`,body,`<button class="tms-btn tms-btn-default" style="width:100%;text-align:center" onclick="closeModal()">关闭</button>`,'modal-wide');
   onCourtFinanceSceneChange();
 }
@@ -722,6 +778,8 @@ async function saveCourtFinanceRecord(){
   const companionCoach=document.getElementById('nrCompanionCoach')?.value||'';
   const internalReason=document.getElementById('nrInternalReason')?.value||'';
   const startTime=document.getElementById('nrStartTime')?.value||'',endTime=document.getElementById('nrEndTime')?.value||'',venue=document.getElementById('nrVenue')?.value||'',recCampus=document.getElementById('nrCampus')?.value||court.campus||'',lessonCount=parseInt(document.getElementById('nrLessonCount')?.value)||0;
+  const priceMode=document.getElementById('nrPriceMode')?.value||'manual',pricePlanId=document.getElementById('nrPricePlanId')?.value||'',channelProduct=selectedChannelProduct();
+  const systemAmount=parseFloat(document.getElementById('nrSystemAmount')?.value)||0,finalAmount=parseFloat(document.getElementById('nrFinalAmount')?.value)||amt||0,overrideReason=document.getElementById('nrOverrideReason')?.value.trim()||'';
   if(!date){toast('请选择日期','warn');return;}
   if(category!=='内部占用'&&(!amt||isNaN(amt))){toast('请输入金额','warn');return;}
   if(type==='消费'&&(category==='订场'||category==='内部占用')){
@@ -729,7 +787,8 @@ async function saveCourtFinanceRecord(){
     if(endTime<=startTime){toast('订场结束时间不能早于开始时间','warn');return;}
   }
   if(category==='内部占用'&&!internalReason){toast('请选择占用原因','warn');return;}
-  const h={id:uid(),date,type,category,payMethod:category==='内部占用'?'其他':payMethod,studentId,amount:category==='内部占用'?0:Math.abs(amt),note,startTime,endTime,venue,campus:recCampus,lessonCount,internalReason};
+  if(type==='消费'&&category==='订场'&&systemAmount&&finalAmount&&systemAmount!==finalAmount&&!overrideReason){toast('请填写改价原因','warn');return;}
+  const h={id:uid(),date,type,category,payMethod:category==='内部占用'?'其他':payMethod,studentId,amount:category==='内部占用'?0:Math.abs(finalAmount||amt),note,startTime,endTime,venue,campus:recCampus,lessonCount,internalReason,priceMode,pricePlanId,channel:channelProduct?.channel||'',channelOrderNo:document.getElementById('nrChannelOrderNo')?.value?.trim?.()||'',redeemCode:document.getElementById('nrRedeemCode')?.value?.trim?.()||'',systemAmount,finalAmount,priceOverridden:!!(systemAmount&&finalAmount&&systemAmount!==finalAmount),overrideReason,memberDiscount:priceMode==='venue_rate'&&payMethod==='储值扣款'?currentCourtMemberDiscount(court):1};
   const hist=[...courtBaseHistoryForSave(court),h];
   const preview=courtFinanceLocal({...court,history:hist});
   if(preview.balance<0){toast('余额不足，不能使用储值扣款','warn');return;}

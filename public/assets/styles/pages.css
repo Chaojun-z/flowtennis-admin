@@ -80,6 +80,10 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-btn-danger{background-color:#FFF2F0;color:#D32F2F;border:1px solid #FFCCC7;box-shadow:0 2px 4px rgba(0,0,0,.05)}
 .tms-btn-default{background-color:transparent;border:1px solid #D9D0C7;color:#5C4D43}
 .tms-btn-default:hover{background-color:#D9D0C7}
+#page-prices .price-table{min-width:1160px;table-layout:fixed}
+#page-prices .price-table th,#page-prices .price-table td{padding-left:12px;padding-right:12px}
+#page-prices .price-table th:first-child,#page-prices .price-table td:first-child{padding-left:20px}
+#page-prices .price-table .tms-cell-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tms-dropdown{position:relative;display:inline-block}
 .tms-dropdown.tms-dropdown-form{display:block;width:100%}
 .tms-dropdown-display{height:34px;box-sizing:border-box;padding:0 12px;border-radius:6px;background-color:#fff;color:#5C4D43;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;min-width:100px;box-shadow:inset 0 1px 2px rgba(0,0,0,.02);user-select:none;border:1px solid transparent}
@@ -659,6 +663,18 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-coachops .tms-stat-value{font-size:30px;color:#2F241E}
 #page-coachops .tms-stat-value span{font-size:14px;color:#7A6B60}
 #page-coachops #coachOpsViewTitle{color:#2F241E;margin:2px 0 10px}
+.late-settlement-modal .mbody{padding-bottom:18px}
+.late-settlement-head{max-width:260px;margin-bottom:14px}
+.late-settlement-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;margin-bottom:12px}
+.late-settlement-card{background:#FFFCF8;border:1px solid #E9DED2;border-radius:8px;padding:12px 14px}
+.late-settlement-label{font-size:12px;color:#8C7B6E;font-weight:600}
+.late-settlement-value{font-size:22px;font-weight:800;color:#2F241E;margin-top:5px;line-height:1.1}
+.late-settlement-value span{font-size:12px;color:#8C7B6E;font-weight:600;margin-left:2px}
+.late-settlement-note{margin-bottom:12px}
+.late-settlement-table{box-shadow:none;margin-top:0}
+.late-settlement-table .tms-table{min-width:720px}
+.late-settlement-table .tms-table-wrapper{max-height:340px}
+.late-settlement-empty{padding:32px 16px;text-align:center;color:#A3968F;font-size:14px}
 .coach-ops-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:rgba(120,53,15,.32) transparent;padding-bottom:6px}.coach-ops-scroll::-webkit-scrollbar{height:6px}.coach-ops-scroll::-webkit-scrollbar-thumb{background:rgba(120,53,15,.28);border-radius:999px}.coach-ops-scroll::-webkit-scrollbar-track{background:transparent}
 .coach-ops-head,.coach-ops-row{display:grid;grid-template-columns:108px minmax(980px,1fr);gap:8px;min-width:1104px}
 .coach-ops-row{margin-bottom:10px}

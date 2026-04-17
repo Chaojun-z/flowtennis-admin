@@ -5,7 +5,7 @@ function syncViewportMode(){
   document.body.classList.toggle('admin-mobile',!!(!isCoach&&isMobile&&currentUser));
 }
 
-let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[];
+let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[];
 let adminUsersLoaded=false;
 let modalCleanupTimer=null;
 let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
@@ -22,11 +22,12 @@ const PAGE_DATA_REQUIREMENTS={
   entitlements:['entitlements','students'],
   coaches:['coaches'],
   'admin-users':[],
-  courts:['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
+  courts:['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches','pricePlans'],
   memberships:['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
   'membership-orders':['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
   'membership-ledger':['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
   'membership-plans':['membershipPlans','membershipOrders','campuses','coaches'],
+  prices:['campuses','pricePlans'],
   campusmgr:['campuses'],
   workbench:['campuses','students','classes','schedule','feedbacks'],
   myschedule:['campuses','students','classes','schedule','feedbacks'],
@@ -46,6 +47,7 @@ const DATASET_LOADERS={
   membershipOrders:()=>apiCall('GET','/membership-orders'),
   membershipBenefitLedger:()=>apiCall('GET','/membership-benefit-ledger'),
   membershipAccountEvents:()=>apiCall('GET','/membership-account-events'),
+  pricePlans:()=>apiCall('GET','/price-plans'),
   plans:()=>apiCall('GET','/plans'),
   schedule:()=>apiCall('GET','/schedule'),
   coaches:()=>apiCall('GET','/coaches'),
@@ -66,6 +68,7 @@ function setDatasetValue(name,data){
   if(name==='membershipOrders')membershipOrders=Array.isArray(data)?data:[];
   if(name==='membershipBenefitLedger')membershipBenefitLedger=Array.isArray(data)?data:[];
   if(name==='membershipAccountEvents')membershipAccountEvents=Array.isArray(data)?data:[];
+  if(name==='pricePlans')pricePlans=Array.isArray(data)?data:[];
   if(name==='plans')plans=Array.isArray(data)?data:[];
   if(name==='schedule')schedules=Array.isArray(data)?data:[];
   if(name==='coaches')coaches=Array.isArray(data)?data:[];
@@ -87,7 +90,7 @@ async function ensurePageDatasets(pg,{force=false}={}){
 }
 function clearLoadedData(){
   courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];
-  membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];
+  membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];adminUsersLoaded=false;
   loadedDatasets=new Set();
 }
@@ -118,13 +121,14 @@ function applyLoadedData(data){
   membershipOrders=Array.isArray(data?.membershipOrders)?data.membershipOrders:[];
   membershipBenefitLedger=Array.isArray(data?.membershipBenefitLedger)?data.membershipBenefitLedger:[];
   membershipAccountEvents=Array.isArray(data?.membershipAccountEvents)?data.membershipAccountEvents:[];
+  pricePlans=Array.isArray(data?.pricePlans)?data.pricePlans:[];
   plans=Array.isArray(data?.plans)?data.plans:[];
   schedules=Array.isArray(data?.schedule)?data.schedule:[];
   coaches=Array.isArray(data?.coaches)?data.coaches:[];
   classes=Array.isArray(data?.classes)?data.classes:[];
   campuses=Array.isArray(data?.campuses)?data.campuses:[];
   feedbacks=Array.isArray(data?.feedbacks)?data.feedbacks:[];
-  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','plans','schedule','coaches','classes','campuses','feedbacks']);
+  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks']);
   if(data?.user){
     currentUser=data.user;
     localStorage.setItem('ft_user',JSON.stringify(currentUser));
@@ -223,6 +227,7 @@ function renderPageData(pg){
   if(pg==='products')renderProducts();
   if(pg==='packages')renderPackages();
   if(pg==='purchases')renderPurchases();
+  if(pg==='prices')renderPrices();
   if(pg==='entitlements')renderEntitlements();
   if(pg==='coaches')renderCoaches();
   if(pg==='admin-users')loadAdminUsers();

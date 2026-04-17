@@ -13,9 +13,9 @@ const ENABLE_DEFAULT_USER_BOOTSTRAP = process.env.ENABLE_DEFAULT_USER_BOOTSTRAP 
 const ENABLE_TABLE_BOOTSTRAP = process.env.ENABLE_TABLE_BOOTSTRAP === 'true';
 const ENABLE_RUNTIME_TABLE_ENSURE = process.env.ENABLE_RUNTIME_TABLE_ENSURE === 'true';
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -29,6 +29,7 @@ const TEST_DATA_RESET_TABLES=[
   T_PURCHASES,
   T_ENTITLEMENTS,
   T_ENTITLEMENT_LEDGER,
+  T_PRICE_PLANS,
   ...MEMBERSHIP_TABLES
 ];
 const HOT_SCAN_TABLES=new Map([
@@ -39,7 +40,8 @@ const HOT_SCAN_TABLES=new Map([
   [T_PLANS,{ttlMs:60000}],
   [T_ENTITLEMENTS,{ttlMs:60000}],
   [T_COACHES,{ttlMs:60000}],
-  [T_CAMPUSES,{ttlMs:60000}]
+  [T_CAMPUSES,{ttlMs:60000}],
+  [T_PRICE_PLANS,{ttlMs:60000}]
 ]);
 const HOT_GET_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
@@ -146,6 +148,7 @@ async function prewarmHotScanCache(){
 function getRuntimeEnsuredTables(){return [...RUNTIME_ENSURED_TABLES];}
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
+function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree;}
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
   const cls=await getCachedRow(T_CLASSES,classId);
@@ -174,7 +177,7 @@ async function applyLessonDelta(classId,delta,studentIds=[]){
   }
 }
 function scheduleLessonDelta(rec){
-  if(!rec||!rec.classId||!isBillableSchedule(rec))return null;
+  if(!rec||!rec.classId||!isScheduleLessonCharged(rec))return null;
   const lessonCount=parseInt(rec.lessonCount)||0;
   if(lessonCount<=0)return null;
   return {classId:rec.classId,delta:lessonCount};
@@ -190,6 +193,7 @@ function effectiveScheduleStatus(rec,now=new Date()){
 }
 function scheduleLessonChargeStatus(rec,ledger=[]){
   if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
+  if(rec.coachLateFree)return '迟到免费';
   if((parseInt(rec.lessonCount)||0)<=0)return '不扣课';
   if(!rec.entitlementId)return '未扣课';
   const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&(parseInt(l.lessonDelta)||0)<0);
@@ -571,13 +575,42 @@ function entitlementMatchesCoach(entitlement,coachName){
   return String(entitlement?.ownerCoach||'').trim()===name||parseArr(entitlement?.allowedCoaches).some(c=>String(c||'').trim()===name);
 }
 function scheduleEntitlementDeltas(rec){
-  if(!rec||!isBillableSchedule(rec))return[];
+  if(!rec||!isScheduleLessonCharged(rec))return[];
   const lessonCount=parseInt(rec.lessonCount)||1;
   if(lessonCount<=0)return[];
   const ids=parseArr(rec.entitlementIds).filter(Boolean);
   if(ids.length)return ids.map(entitlementId=>({entitlementId,delta:lessonCount}));
   if(rec.entitlementId)return[{entitlementId:rec.entitlementId,delta:lessonCount}];
   return[];
+}
+function normalizeCoachLateInfo(input={}){
+  const late=!!input.coachLateFree;
+  return {
+    coachLateFree:late,
+    lateMinutes:late?Math.max(0,parseInt(input.lateMinutes)||0):0,
+    lateReason:late?String(input.lateReason||'').trim():'',
+    coachLateFieldFeeAmount:late?Math.max(0,parseFloat(input.coachLateFieldFeeAmount)||0):0,
+    coachLateHandledAt:late?String(input.coachLateHandledAt||'').trim():'',
+    coachLateHandledBy:late?String(input.coachLateHandledBy||'').trim():''
+  };
+}
+function buildCoachLateSettlementRows(schedules=[],month=''){
+  return (schedules||[]).filter(s=>{
+    if(!s?.coachLateFree)return false;
+    const ds=String(s.startTime||'').slice(0,7);
+    return !month||ds===month;
+  }).map(s=>({
+    scheduleId:s.id||'',
+    month:String(s.startTime||'').slice(0,7),
+    coach:s.coach||'',
+    date:String(s.startTime||'').slice(0,10),
+    time:`${String(s.startTime||'').slice(11,16)}-${String(s.endTime||'').slice(11,16)}`,
+    campus:s.campus||'',
+    venue:s.venue||'',
+    studentName:s.studentName||'',
+    lateMinutes:parseInt(s.lateMinutes)||0,
+    fieldFeeAmount:parseFloat(s.coachLateFieldFeeAmount)||0
+  }));
 }
 function recommendEntitlements(entitlements,schedule){
   const options=(entitlements||[]).map(ent=>{
@@ -750,6 +783,7 @@ function filterLoadAllForUser(data,user){
     membershipOrders:Array.isArray(data?.membershipOrders)?data.membershipOrders:[],
     membershipBenefitLedger:Array.isArray(data?.membershipBenefitLedger)?data.membershipBenefitLedger:[],
     membershipAccountEvents:Array.isArray(data?.membershipAccountEvents)?data.membershipAccountEvents:[],
+    pricePlans:Array.isArray(data?.pricePlans)?data.pricePlans:[],
     plans:Array.isArray(data?.plans)?data.plans:[],
     schedule:Array.isArray(data?.schedule)?data.schedule:[],
     coaches:Array.isArray(data?.coaches)?data.coaches:[],
@@ -790,6 +824,7 @@ function filterLoadAllForUser(data,user){
     membershipOrders:[],
     membershipBenefitLedger:[],
     membershipAccountEvents:[],
+    pricePlans:[],
     plans:ownPlans,
     schedule:ownSchedule,
     coaches:normalized.coaches.filter(c=>String(c.name||'').trim()===coachName),
@@ -979,7 +1014,7 @@ async function init(){
     for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
   }
   if(ENABLE_TABLE_BOOTSTRAP){
-    for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
+    for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
     await bootstrapDefaultUsers();
     const defaultCampuses=[{id:'mabao',name:'顺义马坡',code:'mabao'},{id:'shilipu',name:'朝阳十里堡',code:'shilipu'},{id:'guowang',name:'朝阳国网',code:'guowang'},{id:'langang',name:'朝阳蓝色港湾',code:'langang'},{id:'chaojun',name:'朝珺私教',code:'chaojun'}];
     for(const c of defaultCampuses){
@@ -1010,6 +1045,113 @@ function assertPhone(value){
 function normalizeMoney(value){
   const n=parseFloat(String(value??'').replace(/,/g,''));
   return Number.isFinite(n)?n:0;
+}
+function assertPricePlanInput(plan){
+  const type=String(plan?.type||'').trim();
+  if(!['venue_rate','channel_product'].includes(type))throw new Error('请选择价格类型');
+  if(type==='venue_rate'){
+    if(!String(plan.campus||'').trim())throw new Error('请选择校区');
+    if(!String(plan.dateType||'').trim())throw new Error('请选择日期类型');
+    const start=clockMin(plan.startTime),end=clockMin(plan.endTime);
+    if(!Number.isFinite(start)||!Number.isFinite(end))throw new Error('请填写有效时间段');
+    if(end<=start)throw new Error('结束时间必须晚于开始时间');
+    if(normalizeMoney(plan.unitPrice)<=0)throw new Error('场地价格必须大于 0');
+  }
+  if(type==='channel_product'){
+    if(!String(plan.channel||'').trim())throw new Error('请选择渠道');
+    if(!String(plan.productName||'').trim())throw new Error('请填写渠道商品名称');
+    if(!String(plan.productType||'').trim())throw new Error('请选择商品类型');
+    if(!String(plan.businessType||'').trim())throw new Error('请选择关联业务');
+    if(String(plan.businessType||'').trim()==='court'&&(parseInt(plan.durationMinutes)||0)<=0)throw new Error('订场券请填写时长');
+    if(normalizeMoney(plan.salePrice)<=0)throw new Error('渠道商品售价必须大于 0');
+  }
+}
+function normalizePricePlan(input={},id=uuidv4(),now=new Date().toISOString(),old=null){
+  const type=String(input.type||old?.type||'').trim();
+  const base={
+    id,
+    type,
+    campus:String(input.campus??old?.campus??'').trim(),
+    dateType:String(input.dateType??old?.dateType??'').trim(),
+    startTime:String(input.startTime??old?.startTime??'').trim(),
+    endTime:String(input.endTime??old?.endTime??'').trim(),
+    unitPrice:normalizeMoney(input.unitPrice??old?.unitPrice),
+    channel:String(input.channel??old?.channel??'').trim(),
+    productName:String(input.productName??old?.productName??'').trim(),
+    productType:String(input.productType??old?.productType??'').trim(),
+    businessType:String(input.businessType??old?.businessType??'').trim(),
+    durationMinutes:parseInt(input.durationMinutes??old?.durationMinutes)||0,
+    salePrice:normalizeMoney(input.salePrice??old?.salePrice),
+    status:String(input.status??old?.status??'active').trim()||'active',
+    effectiveFrom:String(input.effectiveFrom??old?.effectiveFrom??'').trim(),
+    effectiveTo:String(input.effectiveTo??old?.effectiveTo??'').trim(),
+    notes:String(input.notes??old?.notes??'').trim(),
+    createdAt:old?.createdAt||input.createdAt||now,
+    updatedAt:now
+  };
+  if(base.type==='venue_rate'){
+    base.channel='';
+    base.productName='';
+    base.productType='';
+    base.businessType='';
+    base.durationMinutes=0;
+    base.salePrice=0;
+  }
+  if(base.type==='channel_product'){
+    base.campus='';
+    base.dateType='';
+    base.startTime='';
+    base.endTime='';
+    base.unitPrice=0;
+  }
+  assertPricePlanInput(base);
+  return base;
+}
+function priceDateType(date){
+  const d=new Date(`${dateKey(date)}T00:00:00`);
+  const day=d.getDay();
+  return day===0||day===6?'周末节假日':'工作日';
+}
+function roundMoney(n){return Math.round((Number(n)||0)*100)/100;}
+function quoteVenuePrice(pricePlans=[],input={}){
+  const campus=String(input.campus||'').trim();
+  const ds=dateKey(input.date||input.startTime);
+  const dateType=String(input.dateType||'').trim()||priceDateType(ds);
+  const start=clockMin(input.startTime);
+  const end=clockMin(input.endTime);
+  if(!campus)throw new Error('请选择校区');
+  if(!ds)throw new Error('请选择日期');
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)throw new Error('请填写有效时间段');
+  const candidates=(pricePlans||[]).filter(plan=>{
+    if(plan?.type!=='venue_rate'||plan.status==='inactive')return false;
+    if(String(plan.campus||'').trim()!==campus)return false;
+    if(String(plan.dateType||'').trim()!==dateType)return false;
+    if(plan.effectiveFrom&&ds<plan.effectiveFrom)return false;
+    if(plan.effectiveTo&&ds>plan.effectiveTo)return false;
+    return true;
+  }).sort((a,b)=>clockMin(a.startTime)-clockMin(b.startTime));
+  let cursor=start;
+  const segments=[];
+  while(cursor<end){
+    const hit=candidates.find(plan=>{
+      const ps=clockMin(plan.startTime),pe=clockMin(plan.endTime);
+      return Number.isFinite(ps)&&Number.isFinite(pe)&&cursor>=ps&&cursor<pe;
+    });
+    if(!hit)throw new Error('未找到匹配的场地价格');
+    const segmentEnd=Math.min(end,clockMin(hit.endTime));
+    const hours=(segmentEnd-cursor)/60;
+    const amount=roundMoney(hours*normalizeMoney(hit.unitPrice));
+    segments.push({pricePlanId:hit.id,startTime:minToClock(cursor),endTime:minToClock(segmentEnd),unitPrice:normalizeMoney(hit.unitPrice),amount});
+    cursor=segmentEnd;
+  }
+  const originalAmount=roundMoney(segments.reduce((sum,row)=>sum+row.amount,0));
+  const rawDiscount=parseFloat(input.memberDiscount);
+  const memberDiscount=Number.isFinite(rawDiscount)&&rawDiscount>0?rawDiscount:1;
+  const systemAmount=roundMoney(originalAmount*memberDiscount);
+  return {pricePlanIds:[...new Set(segments.map(s=>s.pricePlanId))],dateType,systemAmount,originalAmount,memberDiscount,segments};
+}
+function minToClock(min){
+  return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
 }
 function hasMoneyValue(value){
   return value!==undefined&&value!==null&&String(value).trim()!=='';
@@ -1078,20 +1220,44 @@ function extractDepositAmountFromText(text){
   const m=raw.match(/已储值\s*([0-9]+(?:\.[0-9]+)?)/);
   return m?normalizeMoney(m[1]):0;
 }
+function normalizeFinancePriceSnapshot(row){
+  const hasSnapshot=row.priceMode||row.pricePlanId||row.systemAmount!==undefined||row.finalAmount!==undefined;
+  if(!hasSnapshot)return row;
+  const systemAmount=normalizeMoney(row.systemAmount);
+  const finalAmount=normalizeMoney(row.finalAmount!==undefined?row.finalAmount:row.amount);
+  const priceOverridden=systemAmount>0&&finalAmount>0&&systemAmount!==finalAmount;
+  const overrideReason=String(row.overrideReason||'').trim();
+  if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
+  return {
+    ...row,
+    priceMode:String(row.priceMode||'manual').trim(),
+    pricePlanId:String(row.pricePlanId||'').trim(),
+    channel:String(row.channel||'').trim(),
+    channelOrderNo:String(row.channelOrderNo||'').trim(),
+    redeemCode:String(row.redeemCode||'').trim(),
+    systemAmount,
+    finalAmount,
+    amount:finalAmount||normalizeMoney(row.amount),
+    priceOverridden,
+    overrideReason,
+    memberDiscount:normalizeMoney(row.memberDiscount||1)||1
+  };
+}
 function normalizeCourtHistory(history){
   if(!Array.isArray(history))return[];
   return history.map((h)=> {
-    const amountRaw=normalizeMoney(h.amount);
+    const priced=normalizeFinancePriceSnapshot(h);
+    const amountRaw=normalizeMoney(priced.amount);
     const type=h.type||'消费';
     const payMethod=h.payMethod||(type==='消费'&&amountRaw<0?'储值扣款':'');
     return {
-      ...h,
+      ...priced,
       type,
       payMethod,
-      category:h.category||'其他',
-      studentId:h.studentId||'',
+      category:priced.category||'其他',
+      studentId:priced.studentId||'',
       amount:Math.abs(amountRaw),
-      bonusAmount:normalizeMoney(h.bonusAmount)
+      bonusAmount:normalizeMoney(priced.bonusAmount)
     };
   });
 }
@@ -2005,7 +2171,7 @@ module.exports = async (req, res) => {
     if(path==='/auth/me')return sendJson(res,user);
     if(path==='/load-all'&&method==='GET'){
       await init();
-      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
+      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
         timed('load-all scan courts',()=>scan(T_COURTS)),
         timed('load-all scan students',()=>scan(T_STUDENTS)),
         timed('load-all scan products',()=>scan(T_PRODUCTS)),
@@ -2018,6 +2184,7 @@ module.exports = async (req, res) => {
         timed('load-all scan membership orders',()=>scan(T_MEMBERSHIP_ORDERS).catch(()=>[])),
         timed('load-all scan membership benefit ledger',()=>scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])),
         timed('load-all scan membership account events',()=>scan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[])),
+        timed('load-all scan price plans',()=>scan(T_PRICE_PLANS).catch(()=>[])),
         timed('load-all scan plans',()=>scan(T_PLANS)),
         timed('load-all scan schedule',()=>scan(T_SCHEDULE)),
         timed('load-all scan coaches',()=>scan(T_COACHES).catch(()=>[])),
@@ -2043,6 +2210,7 @@ module.exports = async (req, res) => {
         membershipOrders:normalizedMembershipOrders,
         membershipBenefitLedger:Array.isArray(membershipBenefitLedger)?membershipBenefitLedger:[],
         membershipAccountEvents:[...(Array.isArray(membershipAccountEvents)?membershipAccountEvents:[]),...(reconciled.events||[])],
+        pricePlans:Array.isArray(pricePlans)?pricePlans:[],
         plans:Array.isArray(plans)?plans:[],
         schedule:Array.isArray(schedule)?schedule:[],
         coaches:Array.isArray(coaches)?coaches:[],
@@ -2053,6 +2221,42 @@ module.exports = async (req, res) => {
       return sendJson(res,{...loaded,user});
     }
     if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
+    if(path==='/price-plans'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      if(method==='GET')return sendJson(res,await getCachedScan(T_PRICE_PLANS).catch(()=>[]));
+      if(method==='POST'){
+        const id=uuidv4();
+        const now=new Date().toISOString();
+        const r=normalizePricePlan({...body,id},id,now);
+        await put(T_PRICE_PLANS,id,r);
+        return sendJson(res,r);
+      }
+    }
+    if(path==='/price-plans/quote'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      return sendJson(res,quoteVenuePrice(await getCachedScan(T_PRICE_PLANS).catch(()=>[]),body));
+    }
+    const pricePlanM=path.match(/^\/price-plans\/(.+)$/);
+    if(pricePlanM){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const id=pricePlanM[1];
+      if(method==='GET')return sendJson(res,await getCachedRow(T_PRICE_PLANS,id));
+      const old=await getCachedRow(T_PRICE_PLANS,id).catch(()=>null);
+      if(!old)return sendJson(res,{error:'价格方案不存在'},404);
+      if(method==='PUT'){
+        const r=normalizePricePlan({...old,...body,id},id,new Date().toISOString(),old);
+        await put(T_PRICE_PLANS,id,r);
+        return sendJson(res,r);
+      }
+      if(method==='DELETE'){
+        const r={...old,status:'inactive',updatedAt:new Date().toISOString()};
+        await put(T_PRICE_PLANS,id,r);
+        return sendJson(res,{success:true,archived:true,pricePlan:r});
+      }
+    }
     if(path==='/courts'){
       await init();
       if(method==='GET')return sendJson(res,await getCachedScan(T_COURTS));
@@ -2388,7 +2592,7 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await getCachedScan(T_SCHEDULE));
       if(method==='POST'){
         const id=uuidv4();
-        const r={...body,studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        const r={...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
           const risk=await validateScheduleSave(r,null);
           assertScheduleEntitlementRequired(r);
@@ -2431,7 +2635,7 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,await get(T_SCHEDULE,id));
       if(method==='PUT'){
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
-        const r={...ex,...body,studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
+        const r={...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
         const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
@@ -2506,6 +2710,9 @@ module.exports._test={
   scheduleLessonDelta,
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
+  isScheduleLessonCharged,
+  normalizeCoachLateInfo,
+  buildCoachLateSettlementRows,
   assertClassSchedulable,
   assertLessonCapacity,
   validateScheduleConflicts,
@@ -2526,6 +2733,7 @@ module.exports._test={
   writePurchaseAndEntitlementAtomic,
   validateEntitlementForSchedule,
   recommendEntitlements,
+  scheduleEntitlementDeltas,
   resolveScheduleEntitlementDeltas,
   applyEntitlementLessonDelta,
   assertScheduleEditableAfterFeedback,
@@ -2546,6 +2754,9 @@ module.exports._test={
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,
+  normalizePricePlan,
+  assertPricePlanInput,
+  quoteVenuePrice,
   normalizeMembershipBenefitTemplate,
   buildMembershipPlanRecord,
   buildMembershipPurchase,
