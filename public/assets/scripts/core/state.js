@@ -29,10 +29,10 @@ const PAGE_DATA_REQUIREMENTS={
   'membership-plans':['membershipPlans','membershipOrders','campuses','coaches'],
   prices:['campuses','pricePlans'],
   campusmgr:['campuses'],
-  workbench:['campuses','students','classes','schedule','feedbacks'],
-  myschedule:['campuses','students','classes','schedule','feedbacks'],
-  mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
-  myclasses:['students','classes','products']
+  workbench:[],
+  myschedule:[],
+  mystudents:[],
+  myclasses:[]
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['campuses','students','courts','classes','schedule','feedbacks','products'],
@@ -40,7 +40,11 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   packages:['packages','products'],
   purchases:['purchases','packages','students','entitlements'],
   courts:['campuses','students','courts','membershipAccounts','coaches','pricePlans'],
-  memberships:['campuses','students','courts','membershipAccounts','coaches']
+  memberships:['campuses','students','courts','membershipAccounts','coaches'],
+  workbench:['campuses','students','classes','schedule','feedbacks'],
+  myschedule:['campuses','students','classes','schedule','feedbacks'],
+  mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
+  myclasses:['students','classes','products']
 };
 const DATASET_LOADERS={
   courts:()=>apiCall('GET','/courts'),
@@ -107,14 +111,17 @@ async function ensurePageDatasets(pg,{force=false}={}){
 async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
   const names=backgroundDatasetsForPage(pg);
   if(!names.length)return;
-  try{
-    await ensureDatasetsByName(names,{force});
+  for(const name of names){
     if(requestVersion!==dataRequestVersion)return;
-    buildCampusTabs();
-    renderAll();
-  }catch(e){
-    if(requestVersion!==dataRequestVersion)return;
-    console.warn('deferred page data load failed',pg,e);
+    try{
+      await ensureDatasetsByName([name],{force});
+      if(requestVersion!==dataRequestVersion)return;
+      buildCampusTabs();
+      renderAll();
+    }catch(e){
+      if(requestVersion!==dataRequestVersion)return;
+      console.warn('deferred page data load failed',pg,name,e);
+    }
   }
 }
 function clearLoadedData(){
@@ -180,10 +187,6 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
-    clearLoadedData();
-    normalizeCurrentPageForRole();
-    buildCampusTabs();
-    renderAll();
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');

@@ -14,7 +14,7 @@ function showApp(){
   clearLoadedData();
   normalizeCurrentPageForRole();
   renderRoleShell();
-  loadPageDataAndRender(currentPage);
+  loadPageDataAndRender(currentPage,{quiet:true});
 }
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});

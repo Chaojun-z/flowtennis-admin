@@ -11,8 +11,8 @@ function fnBody(name){
 assert.match(html, /const PAGE_DATA_REQUIREMENTS=\{/, 'state should define per-page data requirements');
 assert.match(html, /function loadPageDataAndRender\(/, 'state should expose a page-scoped loading entry');
 assert.doesNotMatch(fnBody('showApp'), /loadAll\(\)/, 'showApp should no longer trigger full load-all on first paint');
-assert.match(fnBody('showApp'), /loadPageDataAndRender\(currentPage\)/, 'showApp should load only the current page data on first paint');
+assert.match(fnBody('showApp'), /loadPageDataAndRender\(currentPage,\{quiet:true\}\)/, 'showApp should boot the current page without a blocking full-screen loader');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
-assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg\)/, 'goPage should reuse the page-scoped loading entry');
+assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should reuse the page-scoped loading entry without blocking the whole screen');
 
 console.log('page load strategy tests passed');
