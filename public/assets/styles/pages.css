@@ -525,6 +525,12 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-workbench .coach-wb-stat-sub{font-size:11px;color:#A3968F;margin-top:10px;line-height:1.45}
 #page-workbench .coach-wb-page-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.15);flex-shrink:0}
 #page-workbench .coach-wb-page-title{font-size:16px;font-weight:700;color:#FFFFFF;display:flex;align-items:baseline;gap:8px}
+#page-workbench .coach-wb-help-wrap{position:relative;display:inline-flex;align-items:center}
+#page-workbench .coach-wb-help-btn{width:18px;height:18px;border:none;border-radius:999px;background:rgba(255,255,255,.18);color:#FFFFFF;font-size:11px;font-weight:800;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+#page-workbench .coach-wb-help-btn:hover{background:rgba(255,255,255,.28)}
+#page-workbench .coach-wb-help-wrap:hover .coach-wb-help-popover{display:flex}
+#page-workbench .coach-wb-help-popover{display:none;position:absolute;top:24px;left:0;z-index:20;min-width:280px;max-width:320px;padding:10px 12px;border-radius:8px;background:#FFFDFB;color:#5C4D43;border:1px solid #E8DCCF;box-shadow:0 10px 24px rgba(0,0,0,.12);font-size:12px;line-height:1.6;flex-direction:column;gap:4px}
+#page-workbench .coach-wb-help-popover.open{display:flex}
 #page-workbench .coach-wb-page-title-sub{font-size:14px;font-weight:400;color:rgba(255,255,255,0.8)}
 #page-workbench .coach-wb-current-time{font-family:monospace;font-size:13px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.1);padding:4px 10px;border-radius:100px}
 #page-workbench .coach-wb-board{display:flex;flex-direction:column;gap:18px}
@@ -801,6 +807,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   body.coach-mobile .today-card-actions{flex-direction:column}
   body.coach-mobile #page-workbench .coach-wb-container{gap:12px}
   body.coach-mobile #page-workbench .coach-wb-page-header{flex-direction:column;align-items:flex-start;gap:10px}
+  body.coach-mobile #page-workbench .coach-wb-help-popover{left:auto;right:0;min-width:240px;max-width:min(320px,80vw)}
   body.coach-mobile #page-workbench .coach-wb-stats-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
   body.coach-mobile #page-workbench .coach-wb-stat-card{min-height:0;padding:12px 14px}
   body.coach-mobile #page-workbench .coach-wb-stat-value{font-size:18px}

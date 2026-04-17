@@ -26,7 +26,7 @@ const record = rules.buildFeedbackRecord(
     practicedToday: '底线练习',
     knowledgePoint: '重心转移',
     nextTraining: '脚步移动',
-    playerLevel: '初学',
+    playerLevel: '1.5～2.0',
     goalType: '提升技术',
     experienceBackground: '有少量体验课',
     mainIssues: '挥拍不稳定',
@@ -49,7 +49,7 @@ assert.strictEqual(record.isTrial, true);
 assert.strictEqual(record.practicedToday, '底线练习');
 assert.strictEqual(record.knowledgePoint, '重心转移');
 assert.strictEqual(record.nextTraining, '脚步移动');
-assert.strictEqual(record.playerLevel, '初学');
+assert.strictEqual(record.playerLevel, '1.5～2.0');
 assert.strictEqual(record.goalType, '提升技术');
 assert.strictEqual(record.experienceBackground, '有少量体验课');
 assert.strictEqual(record.mainIssues, '挥拍不稳定');

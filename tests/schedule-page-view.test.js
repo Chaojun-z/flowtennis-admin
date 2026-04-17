@@ -50,6 +50,10 @@ assert.match(fnBody('shareFeedbackPoster'), /AbortError/, 'cancelled share shoul
 assert.match(styles, /::-webkit-scrollbar\{height:3px\}[\s\S]*max-height:58vh/, 'poster preview should fit the modal and use a thin horizontal scrollbar');
 assert.match(fnBody('openFeedbackModal'), /生成海报/, 'saved feedback modal should show a poster entry');
 assert.match(fnBody('openFeedbackModal'), /trialFieldsHtml/, 'trial conversion fields should be conditional');
+assert.match(fnBody('openFeedbackModal'), /练习情况（非必填）/, 'feedback modal should rename knowledge point to practice status');
+assert.match(fnBody('openFeedbackModal'), /体验课内部记录/, 'trial-only fields should be framed as internal notes');
+assert.match(fnBody('openFeedbackModal'), /1\.0～1\.5[\s\S]*1\.5～2\.0[\s\S]*2\.0～2\.5[\s\S]*2\.5～3\.0[\s\S]*3\.0～3\.5[\s\S]*3\.5～4\.0/, 'trial level options should use the fixed numeric ladder');
+assert.doesNotMatch(fnBody('openFeedbackModal'), /知识点（非必填）|体验课转化判断|零基础|初学|有基础|长期打球/, 'feedback modal should remove the old trial copy and level options');
 assert.doesNotMatch(fnBody('openFeedbackModal'), /复制给学员/, 'feedback modal should not keep copy action after poster entry exists');
 assert.doesNotMatch(fnBody('saveFeedback'), /openFeedbackPosterModal\(/, 'saving feedback should not force coach into poster generation');
 

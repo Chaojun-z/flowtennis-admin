@@ -94,7 +94,7 @@ function studentFeedbackHistoryHtml(s){
     const product=cls?.productName||products.find(p=>p.id===cls?.productId)?.name||'';
     const course=[cls?.className,product].filter(Boolean).join(' / ')||'—';
     const campus=f.campus||sch.campus,venue=f.venue||sch.venue;
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:8px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${fmtDt(f.startTime||sch.startTime)} · ${esc(f.coach||sch.coach)||'—'}</div><div style="margin-top:3px;color:var(--ts)">校区/场地：${cn(campus)||'—'} ${esc(venue)||''}；课程：${esc(course)}</div><div style="margin-top:3px">今天练习了：${esc(f.practicedToday)||'—'}</div><div style="margin-top:3px">知识点：${esc(f.knowledgePoint)||'—'}</div><div style="margin-top:3px">下节课我们训练：${esc(f.nextTraining)||'—'}</div></div>`;
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:8px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${fmtDt(f.startTime||sch.startTime)} · ${esc(f.coach||sch.coach)||'—'}</div><div style="margin-top:3px;color:var(--ts)">校区/场地：${cn(campus)||'—'} ${esc(venue)||''}；课程：${esc(course)}</div><div style="margin-top:3px">今天练习了：${esc(f.practicedToday)||'—'}</div><div style="margin-top:3px">练习情况：${esc(f.knowledgePoint)||'—'}</div><div style="margin-top:3px">下次练习：${esc(f.nextTraining)||'—'}</div></div>`;
   }).join('');
 }
 function studentRecentFeedbacks(stu,limit=2){

@@ -21,6 +21,28 @@ function workbenchScheduleState(schedule,prevSchedule,now){
   }
   return {code:'done',label:'已完成',hint:'课程已结束并完成反馈',priority:5};
 }
+function workbenchMetricHelpHtml(){
+  return `<div class="coach-wb-help-wrap"><button type="button" class="coach-wb-help-btn" aria-label="查看指标口径" onclick="toggleWorkbenchMetricHelp(event)">?</button><div class="coach-wb-help-popover" id="workbenchMetricHelp"><div>本月课时 = 本月已结束课程数</div><div>本周课时 = 本周已结束课程数</div><div>今天课时 = 今天已结束课程数</div><div>本月反馈 = 本月已结束且已填写课后反馈的课程数</div><div>未反馈 = 已结束但未填写反馈的课程数</div><div>本月体验课转化率 = 本月已结束体验课中，后续已购买任意产品的学员占比</div></div></div>`;
+}
+function toggleWorkbenchMetricHelp(event){
+  if(event)event.stopPropagation();
+  const panel=document.getElementById('workbenchMetricHelp');
+  if(!panel)return;
+  panel.classList.toggle('open');
+}
+function workbenchTrialConvertedByPurchase(schedule){
+  const studentId=parseArr(schedule?.studentIds)[0]||scheduleFeedback(schedule)?.studentId||schedule?.studentId||'';
+  const studentName=String(scheduleStudentSummary(schedule)||schedule?.studentName||'').trim();
+  const trialDate=String(schedule?.endTime||schedule?.startTime||'').slice(0,10);
+  if(!trialDate)return false;
+  return purchases.some(p=>{
+    if(p?.status==='voided')return false;
+    const purchaseDate=String(p.purchaseDate||p.createdAt||'').slice(0,10);
+    if(!purchaseDate||purchaseDate<trialDate)return false;
+    if(studentId)return String(p.studentId||'')===studentId;
+    return studentName&&String(p.studentName||'').trim()===studentName;
+  });
+}
 function workbenchSummaryCounts(rows,now){
   const completed=rows.filter(s=>{
     const end=dtObj(s.endTime||s.startTime);
@@ -62,22 +84,31 @@ function renderWorkbench(){
   const myRows=billableSchedules().filter(s=>coachName(s.coach)===coach).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
   const now=shanghaiNow();
   const todayStr=localDateKey(now);
+  const monthKey=todayStr.slice(0,7);
   const week=getWeekDates(0);
   const weekStart=week[0].toISOString().slice(0,10);
   const weekEnd=week[6].toISOString().slice(0,10);
   const weekRows=myRows.filter(s=>{const d=String(s.startTime||'').slice(0,10);return d>=weekStart&&d<=weekEnd;});
   const todayRows=weekRows.filter(s=>String(s.startTime||'').slice(0,10)===todayStr);
-  const counts=workbenchSummaryCounts(todayRows,now);
-  const weekDone=weekRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;}).length;
-  const weekPending=weekRows.filter(s=>effectiveScheduleStatus(s,now)==='已结束'&&!hasScheduleFeedback(s)).length;
-  const weekTrial=weekRows.filter(s=>scheduleIsTrial(s)&&effectiveScheduleStatus(s,now)==='已结束'&&!hasTrialConversionDecision(scheduleFeedback(s))).length;
+  const endedRows=myRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
+  const monthRows=myRows.filter(s=>String(s.startTime||'').slice(0,7)===monthKey);
+  const monthEndedRows=monthRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
+  const weekEndedRows=weekRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
+  const todayEndedRows=todayRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
+  const monthFeedbackCount=monthEndedRows.filter(s=>hasScheduleFeedback(s)).length;
+  const pendingFeedbackCount=endedRows.filter(s=>!hasScheduleFeedback(s)).length;
+  const monthTrialRows=monthEndedRows.filter(s=>scheduleIsTrial(s));
+  const monthTrialConverted=monthTrialRows.filter(s=>workbenchTrialConvertedByPurchase(s)).length;
+  const monthTrialRate=monthTrialRows.length?Math.round(monthTrialConverted/monthTrialRows.length*100):0;
   const host=document.getElementById('workbenchBody');
   if(!host)return;
   const statsHtml=[
-    ['本周课程',weekRows.length,'节',`已完成 ${weekDone} 节`,false],
-    ['今日待处理',counts.upcoming+counts.pending,'节',counts.upcoming?`即将开始 ${counts.upcoming} 节`:'无即将开始课程',counts.upcoming+counts.pending>0],
-    ['本周待反馈',weekPending,'节',weekPending?'有已结束课待填写':'本周反馈已全部完成',weekPending>0],
-    ['体验课待判断',weekTrial,'节',weekTrial?'有体验课追踪待判断':'本周暂无待判断',false]
+    ['本月课时',monthEndedRows.length,'节',monthEndedRows.length?`本月已结束 ${monthEndedRows.length} 节`:'本月还没有已结束课程',false],
+    ['本周课时',weekEndedRows.length,'节',weekEndedRows.length?`本周已结束 ${weekEndedRows.length} 节`:'本周还没有已结束课程',false],
+    ['今天课时',todayEndedRows.length,'节',todayEndedRows.length?`今天已结束 ${todayEndedRows.length} 节`:'今天还没有已结束课程',false],
+    ['本月反馈',monthFeedbackCount,'节',monthFeedbackCount?`本月已写反馈 ${monthFeedbackCount} 节`:'本月还没有已写反馈',false],
+    ['未反馈',pendingFeedbackCount,'节',pendingFeedbackCount?'有已结束课程待补反馈':'已结束课程都已反馈',pendingFeedbackCount>0],
+    ['本月体验课转化率',monthTrialRate,'%',monthTrialRows.length?`${monthTrialConverted}/${monthTrialRows.length} 已购买产品`:'本月暂无已结束体验课',false]
   ].map(([label,val,u,sub,accent])=>`<div class="coach-wb-stat-card"><div class="coach-wb-stat-label">${label}</div><div class="coach-wb-stat-value"${accent?' style="color:#8C4A32;"':''}>${val}<span>${u}</span></div><div class="coach-wb-stat-sub">${sub}</div></div>`).join('');
   const WDNAMES=['周一','周二','周三','周四','周五','周六','周日'];
   const weekBoardHtml=week.map((d,i)=>{
@@ -106,7 +137,7 @@ function renderWorkbench(){
     return `<div class="coach-wb-day-section${isToday?' is-today':isPast?' is-past':''}"><div class="coach-wb-day-label">${dayLabel}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:emptyTip}</div>`;
   }).join('');
   const weekLabel=`${week[0].getMonth()+1}/${week[0].getDate()} — ${week[6].getMonth()+1}/${week[6].getDate()}`;
-  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）<span class="coach-wb-page-title-sub"></span></div><div class="coach-wb-current-time">${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,5)}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
+  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）${workbenchMetricHelpHtml()}<span class="coach-wb-page-title-sub"></span></div><div class="coach-wb-current-time">${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,5)}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
 }
 let myWeekOffset=0;
 function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}
