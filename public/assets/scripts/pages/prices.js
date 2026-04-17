@@ -68,7 +68,7 @@ function renderPrices(){
   const rows=filteredPricePlans();
   const body=document.getElementById('priceTbody');
   if(!body)return;
-  body.innerHTML=rows.map(row=>`<tr><td style="padding-left:16px"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${priceTypeLabel(row.type)}</span></td><td>${renderCourtCellText(priceChannelText(row),false)}</td><td>${renderCourtCellText(priceNameText(row),false)}</td><td>${renderCourtCellText(priceVenueSpaceTypeText(row),false)}</td><td>${renderCourtCellText(priceDateTypeText(row),false)}</td><td>${renderCourtCellText(priceProductTypeText(row),false)}</td><td>${renderCourtCellText(priceBusinessText(row),false)}</td><td>${renderCourtCellText(priceTimeBandText(row),false)}</td><td>${renderCourtCellText(priceDurationText(row),false)}</td><td>${esc(priceAmountText(row))}</td><td><span class="tms-tag ${priceStatusTag(row.status)}">${priceStatusLabel(row.status)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:96px;padding-right:16px"><span class="tms-action-link" onclick="openPriceModal('${row.type}','${row.id}')">编辑</span><span class="tms-action-link" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</span></td></tr>`).join('')||`<tr><td colspan="12"><div class="empty"><p>${priceTypeFilter?'暂无'+priceTypeLabel(priceTypeFilter):'暂无价格'}，可先导入默认马坡价格。</p></div></td></tr>`;
+  body.innerHTML=rows.map(row=>`<tr><td style="padding-left:14px"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${priceTypeLabel(row.type)}</span></td><td>${renderCourtCellText(priceChannelText(row),false)}</td><td>${renderCourtCellText(priceNameText(row),false)}</td><td>${renderCourtCellText(priceVenueSpaceTypeText(row),false)}</td><td>${renderCourtCellText(priceDateTypeText(row),false)}</td><td>${renderCourtCellText(priceProductTypeText(row),false)}</td><td>${renderCourtCellText(priceBusinessText(row),false)}</td><td>${renderCourtCellText(priceTimeBandText(row),false)}</td><td>${renderCourtCellText(priceDurationText(row),false)}</td><td>${esc(priceAmountText(row))}</td><td><span class="tms-tag ${priceStatusTag(row.status)}">${priceStatusLabel(row.status)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:92px;padding-right:14px"><span class="tms-action-link" onclick="openPriceModal('${row.type}','${row.id}')">编辑</span><span class="tms-action-link" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</span></td></tr>`).join('')||`<tr><td colspan="12"><div class="empty"><p>${priceTypeFilter?'暂无'+priceTypeLabel(priceTypeFilter):'暂无价格'}，可先同步默认马坡价格。</p></div></td></tr>`;
 }
 function openPriceModal(type='',id=''){
   const row=pricePlans.find(x=>x.id===id)||{type:type||'venue_rate',status:'active'};
@@ -150,7 +150,7 @@ function hasSameActivePricePlan(row){
   });
 }
 async function importDefaultMabaoPrices(){
-  if(!await appConfirm('同步默认马坡场地价和大众点评商品价？已存在的价格会按最新表格更新。',{title:'同步默认价格',confirmText:'确认同步'}))return;
+  if(!await appConfirm('同步默认马坡场地价和大众点评商品价？已存在的价格会按最新模板更新。',{title:'同步默认马坡价格',confirmText:'确认同步'}))return;
   let ok=0,updated=0,created=0;
   try{
     for(const row of defaultMabaoPricePlans()){

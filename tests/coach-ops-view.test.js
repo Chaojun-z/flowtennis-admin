@@ -116,6 +116,54 @@ assert.match(
   'coach ops toolbar should render a course type legend'
 );
 
+assert.match(
+  source,
+  /coachOpsTabRevenue/,
+  'coach ops should expose a revenue lesson report tab'
+);
+
+assert.match(
+  source,
+  /coachOpsTabConsume/,
+  'coach ops should expose a consume ledger tab'
+);
+
+assert.match(
+  source,
+  /id="coachOpsRevenuePanel"/,
+  'coach ops should render a revenue lesson report panel'
+);
+
+assert.match(
+  source,
+  /id="coachOpsConsumePanel"/,
+  'coach ops should render a consume ledger panel'
+);
+
+assert.match(
+  source,
+  /function renderCoachOpsRevenueReport\(/,
+  'coach ops should expose a revenue report renderer'
+);
+
+assert.match(
+  source,
+  /function renderCoachOpsConsumeReport\(/,
+  'coach ops should expose a consume report renderer'
+);
+
+assert.match(
+  source,
+  /function exportCoachOpsRevenueCsv\(/,
+  'coach ops should expose revenue report export'
+);
+
+assert.match(
+  source,
+  /function exportCoachOpsConsumeCsv\(/,
+  'coach ops should expose consume report export'
+);
+
 assert.doesNotMatch(
   source,
   /\.coach-ops-toolbar\{[^}]*background:#FCFAF7/s,

@@ -15,7 +15,7 @@ const PAGE_DATA_REQUIREMENTS={
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
   schedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
-  coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
+  coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   products:['products','classes','plans'],
   packages:[],
   purchases:[],

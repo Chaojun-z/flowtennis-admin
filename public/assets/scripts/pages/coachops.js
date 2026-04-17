@@ -1,20 +1,48 @@
 // ===== 教练运营 =====
 function setCoachOpsPanel(panel){
-  coachOpsPanel=panel==='workload'?'workload':'schedule';
+  coachOpsPanel=['schedule','workload','revenue','consume'].includes(panel)?panel:'schedule';
   const schedulePanel=document.getElementById('coachOpsSchedulePanel');
   const workloadPanel=document.getElementById('coachOpsWorkloadPanel');
+  const revenuePanel=document.getElementById('coachOpsRevenuePanel');
+  const consumePanel=document.getElementById('coachOpsConsumePanel');
   const scheduleTab=document.getElementById('coachOpsTabSchedule');
   const workloadTab=document.getElementById('coachOpsTabWorkload');
+  const revenueTab=document.getElementById('coachOpsTabRevenue');
+  const consumeTab=document.getElementById('coachOpsTabConsume');
+  const scheduleControls=document.getElementById('coachOpsScheduleControls');
+  const legend=document.getElementById('coachOpsLegend');
+  const quickBtn=document.getElementById('coachOpsQuickCreateBtn');
+  const isScheduleLike=coachOpsPanel==='schedule'||coachOpsPanel==='workload';
   if(schedulePanel)schedulePanel.style.display=coachOpsPanel==='schedule'?'':'none';
   if(workloadPanel)workloadPanel.style.display=coachOpsPanel==='workload'?'':'none';
+  if(revenuePanel)revenuePanel.style.display=coachOpsPanel==='revenue'?'':'none';
+  if(consumePanel)consumePanel.style.display=coachOpsPanel==='consume'?'':'none';
   if(scheduleTab)scheduleTab.classList.toggle('active',coachOpsPanel==='schedule');
   if(workloadTab)workloadTab.classList.toggle('active',coachOpsPanel==='workload');
+  if(revenueTab)revenueTab.classList.toggle('active',coachOpsPanel==='revenue');
+  if(consumeTab)consumeTab.classList.toggle('active',coachOpsPanel==='consume');
+  if(scheduleControls)scheduleControls.style.display=isScheduleLike?'flex':'none';
+  if(legend)legend.style.display=isScheduleLike?'':'none';
+  if(quickBtn)quickBtn.style.display=coachOpsPanel==='schedule'?'':'none';
 }
 function updateCoachOpsDateButton(){
   const btn=document.getElementById('coachOpsDateBtn');
   if(btn)btn.textContent=coachOpsDateLabel();
 }
 function closeCoachOpsPicker(){document.getElementById('coachOpsPicker')?.classList.remove('open');}
+function ensureCoachOpsReportDateControls(){
+  const monthStartValue=today().slice(0,8)+'01';
+  const configs=[
+    ['coachOpsRevenueFromHost','coachOpsRevenueFrom','开始日期',document.getElementById('coachOpsRevenueFrom')?.value||monthStartValue,'renderCoachOpsRevenueReport()'],
+    ['coachOpsRevenueToHost','coachOpsRevenueTo','结束日期',document.getElementById('coachOpsRevenueTo')?.value||today(),'renderCoachOpsRevenueReport()'],
+    ['coachOpsConsumeFromHost','coachOpsConsumeFrom','开始日期',document.getElementById('coachOpsConsumeFrom')?.value||monthStartValue,'renderCoachOpsConsumeReport()'],
+    ['coachOpsConsumeToHost','coachOpsConsumeTo','结束日期',document.getElementById('coachOpsConsumeTo')?.value||today(),'renderCoachOpsConsumeReport()']
+  ];
+  configs.forEach(([hostId,id,label,value,handler])=>{
+    const host=document.getElementById(hostId);
+    if(host)host.innerHTML=courtDateButtonHtml(id,value,label,handler);
+  });
+}
 function toggleCoachOpsPicker(){
   const pop=document.getElementById('coachOpsPicker');if(!pop)return;
   coachOpsPickerMonth=monthStart(coachOpsInputDate());
@@ -132,6 +160,7 @@ function renderCoachOpsRangeFilter(){
 }
 function renderCoachOps(){
   const host=document.getElementById('coachOpsTimeline');if(!host)return;
+  ensureCoachOpsReportDateControls();
   renderCoachOpsRangeFilter();
   ensureCoachOpsDate();
   setCoachOpsPanel(coachOpsPanel);
@@ -181,4 +210,100 @@ function renderCoachOps(){
     return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');
   document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td><div class="uname">${esc(r.name)}</div></td><td>${r.rangeRows.length} 节</td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
+  renderCoachOpsRevenueReport();
+  renderCoachOpsConsumeReport();
+}
+
+function coachOpsDateWithinRange(value,from,to){
+  const day=String(value||'').slice(0,10);
+  if(!day)return false;
+  if(from&&day<from)return false;
+  if(to&&day>to)return false;
+  return true;
+}
+function coachOpsRevenueRows(){
+  const q=String(document.getElementById('coachOpsRevenueSearch')?.value||'').trim().toLowerCase();
+  const from=document.getElementById('coachOpsRevenueFrom')?.value||'';
+  const to=document.getElementById('coachOpsRevenueTo')?.value||'';
+  return purchases.filter(p=>{
+    if(!coachOpsDateWithinRange(p.purchaseDate||p.createdAt,from,to))return false;
+    return searchHit(q,p.studentName,p.packageName,p.productName,p.ownerCoach,p.payMethod,p.notes);
+  }).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||''))).map(p=>{
+    const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
+    const total=parseInt(ent.totalLessons)||parseInt(p.packageLessons)||0;
+    const remaining=parseInt(ent.remainingLessons)||0;
+    const used=Math.max(0,total-remaining);
+    return {...p,entitlement:ent,totalLessons:total,usedLessons:used,remainingLessons:remaining};
+  });
+}
+function renderCoachOpsRevenueReport(){
+  const body=document.getElementById('coachOpsRevenueTbody');
+  const stats=document.getElementById('coachOpsRevenueStats');
+  if(!body||!stats)return;
+  const rows=coachOpsRevenueRows();
+  const totalIncome=rows.reduce((sum,row)=>sum+(Number(row.amountPaid)||0),0);
+  const totalLessons=rows.reduce((sum,row)=>sum+(Number(row.totalLessons)||0),0);
+  const usedLessons=rows.reduce((sum,row)=>sum+(Number(row.usedLessons)||0),0);
+  stats.innerHTML=[
+    ['成交笔数',rows.length,'笔'],
+    ['实收合计',`¥${fmt(totalIncome)}`,''],
+    ['售出课时',totalLessons,'节'],
+    ['已消课时',usedLessons,'节']
+  ].map(([label,val,unit])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}${unit?`<span>${unit}</span>`:''}</div></div>`).join('');
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.purchaseDate,false)}</td><td>${renderCourtCellText(row.studentName,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(row.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(row.entitlement?.timeBand||row.packageTimeBand||'全天'))}</div></td><td>${renderCourtCellText(row.productName,false)}</td><td>${renderCourtCellText(row.ownerCoach,false)}</td><td>¥${fmt(row.amountPaid)}</td><td>${row.totalLessons||0} 节</td><td>${row.usedLessons||0} 节</td><td>${row.remainingLessons||0} 节</td><td>${row.entitlement?.validFrom||'—'} - ${row.entitlement?.validUntil||'—'}</td><td>${renderCourtCellText(row.payMethod,false)}</td><td><span class="tms-tag ${row.status==='voided'?'tms-tag-tier-slate':'tms-tag-green'}">${purchaseStatusText(row)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:110px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${row.id}')">查看</span></td></tr>`).join(''):`<tr><td colspan="13"><div class="empty"><p>暂无收入课时记录</p></div></td></tr>`;
+}
+function coachOpsConsumeRows(){
+  const q=String(document.getElementById('coachOpsConsumeSearch')?.value||'').trim().toLowerCase();
+  const from=document.getElementById('coachOpsConsumeFrom')?.value||'';
+  const to=document.getElementById('coachOpsConsumeTo')?.value||'';
+  return entitlementLedger.filter(row=>{
+    if(!coachOpsDateWithinRange(row.createdAt||row.relatedDate,from,to))return false;
+    const ent=entitlements.find(e=>e.id===row.entitlementId)||{};
+    const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
+    const schedule=schedules.find(s=>s.id===row.scheduleId)||{};
+    return searchHit(q,row.reason,row.operator,ent.studentName,ent.packageName,purchase.studentName,schedule.coach,schedule.studentName);
+  }).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||''))).map(row=>{
+    const ent=entitlements.find(e=>e.id===row.entitlementId)||{};
+    const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
+    const schedule=schedules.find(s=>s.id===row.scheduleId)||{};
+    return {
+      ...row,
+      actionLabel:(parseInt(row.lessonDelta)||0)<0?'扣课':'退回',
+      studentName:ent.studentName||purchase.studentName||schedule.studentName||'—',
+      packageName:ent.packageName||purchase.packageName||'—',
+      scheduleTime:schedule.startTime||'',
+      coach:schedule.coach||purchase.ownerCoach||'—',
+      courseType:scheduleCourseType(schedule)||ent.courseType||purchase.courseType||'—'
+    };
+  });
+}
+function renderCoachOpsConsumeReport(){
+  const body=document.getElementById('coachOpsConsumeTbody');
+  const stats=document.getElementById('coachOpsConsumeStats');
+  if(!body||!stats)return;
+  const rows=coachOpsConsumeRows();
+  const usedRows=rows.filter(row=>row.actionLabel==='扣课');
+  const refundRows=rows.filter(row=>row.actionLabel==='退回');
+  const usedLessons=usedRows.reduce((sum,row)=>sum+Math.abs(parseInt(row.lessonDelta)||0),0);
+  stats.innerHTML=[
+    ['流水条数',rows.length,'条'],
+    ['扣课节数',usedLessons,'节'],
+    ['退回记录',refundRows.length,'条'],
+    ['异常风险',rows.filter(row=>!row.scheduleId).length,'条']
+  ].map(([label,val,unit])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}<span>${unit}</span></div></div>`).join('');
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${fmtDt(row.createdAt||row.relatedDate)}</td><td><span class="tms-tag ${row.actionLabel==='扣课'?'tms-tag-tier-gold':'tms-tag-tier-slate'}">${row.actionLabel}</span></td><td>${renderCourtCellText(row.studentName,false)}</td><td>${renderCourtCellText(row.packageName,false)}</td><td>${Math.abs(parseInt(row.lessonDelta)||0)} 节</td><td>${renderCourtCellText(row.scheduleTime?fmtDt(row.scheduleTime):'—',false)}</td><td>${renderCourtCellText(row.coach,false)}</td><td>${renderCourtCellText(row.courseType,false)}</td><td>${renderCourtCellText(row.reason,false)}</td><td>${renderCourtCellText(row.operator,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:100px;padding-right:20px">${row.scheduleId?`<span class="tms-action-link" onclick="openScheduleDetail('${row.scheduleId}')">排课</span>`:'—'}</td></tr>`).join(''):`<tr><td colspan="11"><div class="empty"><p>暂无消课记录</p></div></td></tr>`;
+}
+function exportCoachOpsRevenueCsv(){
+  const rows=coachOpsRevenueRows();
+  let csv='支付日期,学员,售卖课包,课程产品,主归属教练,实收金额,总课时,已消课时,剩余课时,有效开始,有效结束,支付方式,状态\n';
+  csv+=rows.map(row=>[row.purchaseDate||'',row.studentName||'',row.packageName||'',row.productName||'',row.ownerCoach||'',Number(row.amountPaid)||0,row.totalLessons||0,row.usedLessons||0,row.remainingLessons||0,row.entitlement?.validFrom||'',row.entitlement?.validUntil||'',row.payMethod||'',purchaseStatusText(row)].join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_收入课时表_'+today()+'.csv';a.click();toast('导出成功','success');
+}
+function exportCoachOpsConsumeCsv(){
+  const rows=coachOpsConsumeRows();
+  let csv='流水时间,类型,学员,课包,课时变动,排课时间,教练,课程类型,原因,操作人\n';
+  csv+=rows.map(row=>[fmtDt(row.createdAt||row.relatedDate),row.actionLabel,row.studentName||'',row.packageName||'',Math.abs(parseInt(row.lessonDelta)||0),row.scheduleTime?fmtDt(row.scheduleTime):'',row.coach||'',row.courseType||'','"'+String(row.reason||'').replace(/"/g,'""')+'"',row.operator||''].join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_消课记录_'+today()+'.csv';a.click();toast('导出成功','success');
 }

@@ -176,19 +176,23 @@
           <div class="coach-ops-tabs">
             <button class="coach-ops-tab active" id="coachOpsTabSchedule" onclick="setCoachOpsPanel('schedule')">教练排课</button>
             <button class="coach-ops-tab" id="coachOpsTabWorkload" onclick="setCoachOpsPanel('workload')">教练工作量</button>
+            <button class="coach-ops-tab" id="coachOpsTabRevenue" onclick="setCoachOpsPanel('revenue')">收入课时表</button>
+            <button class="coach-ops-tab" id="coachOpsTabConsume" onclick="setCoachOpsPanel('consume')">消课记录</button>
           </div>
-          <div id="coachOpsRangeHost"></div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段">‹</button>
-          <div class="coach-date-wrap">
-            <input id="coachOpsDate" type="hidden" value="">
-            <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
-            <div class="coach-date-pop" id="coachOpsPicker"></div>
+          <div id="coachOpsScheduleControls" style="display:flex;align-items:center;gap:10px">
+            <div id="coachOpsRangeHost"></div>
+            <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段">‹</button>
+            <div class="coach-date-wrap">
+              <input id="coachOpsDate" type="hidden" value="">
+              <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
+              <div class="coach-date-pop" id="coachOpsPicker"></div>
+            </div>
+            <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(1)" title="下一段">›</button>
+            <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
           </div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(1)" title="下一段">›</button>
-          <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
         </div>
         <div class="coach-ops-toolbar-right">
-          <div class="coach-ops-legend">
+          <div class="coach-ops-legend" id="coachOpsLegend">
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot private"></i>私教课</span>
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot camp"></i>训练营</span>
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot trial"></i>体验课</span>
@@ -209,6 +213,40 @@
       </div>
       <div id="coachOpsWorkloadPanel" style="display:none">
         <div class="tcard"><table><thead><tr><th>教练</th><th>当前筛选课数</th><th>当前筛选总时长</th><th>未反馈</th><th>校区分布</th><th>时间段</th><th>风险</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div>
+      </div>
+      <div id="coachOpsRevenuePanel" style="display:none">
+        <div class="tms-toolbar">
+          <div class="tms-filters">
+            <div class="tms-search-wrapper">
+              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索学员、课包、课程、教练" oninput="renderCoachOpsRevenueReport()">
+            </div>
+            <div id="coachOpsRevenueFromHost" style="width:148px"></div>
+            <div id="coachOpsRevenueToHost" style="width:148px"></div>
+          </div>
+          <div class="tms-toolbar-right">
+            <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
+          </div>
+        </div>
+        <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">支付日期</th><th style="width:120px">学员</th><th style="width:170px">售卖课包</th><th style="width:130px">课程产品</th><th style="width:96px">主归属教练</th><th style="width:90px">实收</th><th style="width:88px">总课时</th><th style="width:88px">已消</th><th style="width:88px">剩余</th><th style="width:180px">有效期</th><th style="width:88px">支付方式</th><th style="width:72px">状态</th><th class="tms-sticky-r" style="width:110px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachOpsRevenueTbody"></tbody></table></div></div>
+      </div>
+      <div id="coachOpsConsumePanel" style="display:none">
+        <div class="tms-toolbar">
+          <div class="tms-filters">
+            <div class="tms-search-wrapper">
+              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索学员、课包、教练、原因" oninput="renderCoachOpsConsumeReport()">
+            </div>
+            <div id="coachOpsConsumeFromHost" style="width:148px"></div>
+            <div id="coachOpsConsumeToHost" style="width:148px"></div>
+          </div>
+          <div class="tms-toolbar-right">
+            <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsConsumeCsv()">导出</button>
+          </div>
+        </div>
+        <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">流水时间</th><th style="width:70px">类型</th><th style="width:120px">学员</th><th style="width:170px">课包</th><th style="width:88px">课时变动</th><th style="width:120px">排课时间</th><th style="width:90px">教练</th><th style="width:88px">课程类型</th><th style="width:160px">原因</th><th style="width:88px">操作人</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">追溯</th></tr></thead><tbody id="coachOpsConsumeTbody"></tbody></table></div></div>
       </div>
     </div>
     <!-- 教练管理 -->
@@ -482,14 +520,14 @@
           </div>
           <div id="priceTypeFilterHost"></div>
           <div id="priceProductTypeFilterHost"></div>
-          <button class="tms-btn tms-btn-ghost" onclick="importDefaultMabaoPrices()">导入默认马坡价格</button>
+          <button class="tms-btn tms-btn-ghost" onclick="importDefaultMabaoPrices()">同步默认马坡价格</button>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-primary" onclick="openPriceModal()">＋ 新增价格</button>
         </div>
       </div>
       <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:72px;padding-left:16px">类型</th><th style="width:74px">渠道</th><th style="width:340px">名称</th><th style="width:60px">场地类型</th><th style="width:68px">日期类型</th><th style="width:72px">商品类型</th><th style="width:68px">关联业务</th><th style="width:92px">时间段</th><th style="width:64px">时长</th><th style="width:60px">价格</th><th style="width:56px">状态</th><th class="tms-sticky-r" style="width:96px;padding-right:16px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:68px;padding-left:14px">类型</th><th style="width:70px">渠道</th><th style="width:360px">名称</th><th style="width:54px">场地类型</th><th style="width:62px">日期类型</th><th style="width:68px">商品类型</th><th style="width:64px">关联业务</th><th style="width:90px">时间段</th><th style="width:60px">时长</th><th style="width:58px">价格</th><th style="width:54px">状态</th><th class="tms-sticky-r" style="width:92px;padding-right:14px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
     </div>
 </div>
 </div>
