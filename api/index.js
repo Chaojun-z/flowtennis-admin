@@ -2,6 +2,7 @@ const TableStore = require('tablestore');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
@@ -13,6 +14,7 @@ const ENABLE_DEFAULT_USER_BOOTSTRAP = process.env.ENABLE_DEFAULT_USER_BOOTSTRAP 
 const ENABLE_TABLE_BOOTSTRAP = process.env.ENABLE_TABLE_BOOTSTRAP === 'true';
 const ENABLE_RUNTIME_TABLE_ENSURE = process.env.ENABLE_RUNTIME_TABLE_ENSURE === 'true';
 const ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP = process.env.ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP === 'true';
+const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP !== 'false';
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
@@ -363,6 +365,11 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
 function buildPurchaseRecord(pkg,body,student,opts={}){
   const now=opts.now||new Date().toISOString();
   const purchaseDate=body.purchaseDate||now.slice(0,10);
+  const systemAmount=normalizeMoney(pkg.price);
+  const finalAmount=normalizeMoney(body.amountPaid??pkg.price);
+  const priceOverridden=systemAmount!==finalAmount;
+  const overrideReason=String(body.overrideReason||'').trim();
+  if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
   return {
     ...body,
     id:opts.id||body.id||uuidv4(),
@@ -376,6 +383,13 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     courseType:pkg.courseType||pkg.type||'',
     packageLessons:parseInt(pkg.lessons)||0,
     packagePrice:normalizeMoney(pkg.price),
+    priceSource:'package',
+    priceSourceId:pkg.id,
+    priceSourceName:pkg.name||'',
+    systemAmount,
+    finalAmount,
+    priceOverridden,
+    overrideReason,
     packageTimeBand:pkg.timeBand||'',
     dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
     coachIds:parseArr(pkg.coachIds),
@@ -386,7 +400,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     usageStartDate:pkg.usageStartDate||'',
     usageEndDate:pkg.usageEndDate||'',
     purchaseDate,
-    amountPaid:normalizeMoney(body.amountPaid??pkg.price),
+    amountPaid:finalAmount,
     payMethod:body.payMethod||'',
     operator:opts.operator||body.operator||'',
     status:body.status||'active',
@@ -989,6 +1003,13 @@ async function validateScheduleSave(nextRec,oldRec){
 let inited=false;
 let defaultPricePlanSyncStarted=false;
 const DEFAULT_COACH_USERS=['baiyangj','chendand','yuekez','zhoux','sunmingy'];
+const DEFAULT_CAMPUSES=[
+  {id:'mabao',name:'顺义马坡',code:'mabao'},
+  {id:'shilipu',name:'朝阳十里堡',code:'shilipu'},
+  {id:'guowang',name:'朝阳国网',code:'guowang'},
+  {id:'langang',name:'朝阳蓝色港湾',code:'langang'},
+  {id:'chaojun',name:'朝珺私教',code:'chaojun'}
+];
 async function bootstrapDefaultUsers(){
   if(!ENABLE_DEFAULT_USER_BOOTSTRAP)return;
   const us=[{id:'admin',name:'管理员',role:'admin',username:'admin'},{id:'baiyangj',name:'白杨静',role:'editor',username:'baiyangj'},{id:'chendand',name:'陈丹丹',role:'editor',username:'chendand'},{id:'yuekez',name:'岳克舟',role:'editor',username:'yuekez'},{id:'zhoux',name:'周欣',role:'editor',username:'zhoux'},{id:'sunmingy',name:'孙明玥',role:'editor',username:'sunmingy'}];
@@ -1007,6 +1028,36 @@ async function ensureCoachBindings(){
     }
   }
 }
+async function ensureDefaultCampuses(){
+  await mkTable(T_CAMPUSES);
+  for(const campus of DEFAULT_CAMPUSES){
+    const ex=await get(T_CAMPUSES,campus.id).catch(()=>null);
+    if(!ex)await put(T_CAMPUSES,campus.id,{...campus,createdAt:new Date().toISOString()});
+  }
+}
+function isAlreadyExistsError(err){
+  return /ConditionCheckFail|EXPECT_NOT_EXIST|already exists|OTSConditionCheckFail/i.test(String(err?.message||err||''));
+}
+async function putSeedRows(table,rows=[]){
+  for(const row of rows){
+    try{
+      await putIfAbsent(table,row.id,row);
+    }catch(err){
+      if(!isAlreadyExistsError(err))throw err;
+    }
+  }
+}
+async function bootstrapMabaoFinanceSeed(){
+  if(!ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP)return;
+  const existing=await get(T_PURCHASES,'seed-purchase-001').catch(()=>null);
+  if(existing)return;
+  await putSeedRows(T_STUDENTS,mabaoFinanceSeed.students);
+  await putSeedRows(T_PRODUCTS,mabaoFinanceSeed.products);
+  await putSeedRows(T_PACKAGES,mabaoFinanceSeed.packages);
+  await putSeedRows(T_PURCHASES,mabaoFinanceSeed.purchases);
+  await putSeedRows(T_ENTITLEMENTS,mabaoFinanceSeed.entitlements);
+  await putSeedRows(T_ENTITLEMENT_LEDGER,mabaoFinanceSeed.entitlementLedger);
+}
 async function init(){
   if(inited)return;
   const startedAt=Date.now();
@@ -1015,16 +1066,17 @@ async function init(){
   if(ENABLE_RUNTIME_TABLE_ENSURE||ENABLE_TABLE_BOOTSTRAP){
     for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
   }
+  if(ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
+    for(const t of [T_STUDENTS,T_PRODUCTS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
+  }
   if(ENABLE_TABLE_BOOTSTRAP){
     for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
     await bootstrapDefaultUsers();
-    const defaultCampuses=[{id:'mabao',name:'顺义马坡',code:'mabao'},{id:'shilipu',name:'朝阳十里堡',code:'shilipu'},{id:'guowang',name:'朝阳国网',code:'guowang'},{id:'langang',name:'朝阳蓝色港湾',code:'langang'},{id:'chaojun',name:'朝珺私教',code:'chaojun'}];
-    for(const c of defaultCampuses){
-      const ex=await get(T_CAMPUSES,c.id).catch(()=>null);
-      if(!ex)await put(T_CAMPUSES,c.id,{...c,createdAt:new Date().toISOString()});
-    }
+    await ensureDefaultCampuses();
     await ensureCoachBindings();
   }
+  await ensureDefaultCampuses();
+  await bootstrapMabaoFinanceSeed();
   inited=true;
   if(ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP){
     await syncDefaultPricePlans().catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
@@ -1769,8 +1821,19 @@ function normalizeMembershipOrderViewRecord(order,plan=null){
   const planBenefitTemplateSnapshot=normalizeMembershipBenefitTemplate(order?.planBenefitTemplateSnapshot?{benefitTemplate:order.planBenefitTemplateSnapshot}:order,normalizedPlan?.benefitTemplate||{});
   const hasDealSnapshot=hasMembershipBenefitSnapshot(order?.benefitSnapshot)||order?.benefitSnapshotCustomized===true;
   const benefitSnapshot=hasDealSnapshot?normalizeMembershipBenefitTemplate({benefitTemplate:order.benefitSnapshot},{}):normalizeMembershipBenefitTemplate(order,planBenefitTemplateSnapshot);
+  const systemAmount=normalizeMoney(order.systemAmount??normalizedPlan.rechargeAmount);
+  const finalAmount=normalizeMoney(order.finalAmount??order.rechargeAmount??systemAmount);
+  const priceOverridden=order.priceOverridden!==undefined?!!order.priceOverridden:(systemAmount!==finalAmount);
+  const overrideReason=String(order.overrideReason||'').trim();
   return {
     ...order,
+    priceSource:order.priceSource||'membership_plan',
+    priceSourceId:order.priceSourceId||order.membershipPlanId||'',
+    priceSourceName:order.priceSourceName||order.membershipPlanName||normalizedPlan.name||'',
+    systemAmount,
+    finalAmount,
+    priceOverridden,
+    overrideReason,
     planBenefitTemplateSnapshot,
     benefitSnapshot
   };
@@ -1789,7 +1852,11 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
   if(!court?.id)throw new Error('订场用户不存在');
   if(!plan?.id)throw new Error('会员方案不存在');
   const purchaseDate=body.purchaseDate||now.slice(0,10);
+  const systemAmount=normalizeMoney(plan.rechargeAmount);
   const rechargeAmount=normalizeMoney(body.rechargeAmount??plan.rechargeAmount);
+  const priceOverridden=systemAmount!==rechargeAmount;
+  const overrideReason=String(body.overrideReason||'').trim();
+  if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
   if(rechargeAmount<=0)throw new Error('会员充值金额必须大于 0');
   const validMonths=parseInt(plan.validMonths)||12;
   const maxMonths=parseInt(plan.maxMonths)||24;
@@ -1845,6 +1912,13 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     studentIds:normalizeStudentIds(court),
     membershipPlanId:plan.id,
     membershipPlanName:plan.name||'',
+    priceSource:'membership_plan',
+    priceSourceId:plan.id,
+    priceSourceName:plan.name||'',
+    systemAmount,
+    finalAmount:rechargeAmount,
+    priceOverridden,
+    overrideReason,
     rechargeAmount,
     bonusAmount:normalizeMoney(body.bonusAmount??plan.bonusAmount),
     discountRate:account.discountRate,
@@ -1878,6 +1952,10 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     membershipAccountId:account.id,
     membershipPlanId:plan.id,
     membershipPlanName:plan.name||'',
+    systemAmount,
+    finalAmount:rechargeAmount,
+    priceOverridden,
+    overrideReason,
     discountRate:account.discountRate,
     originalAmount:0,
     discountedAmount:0,

@@ -147,9 +147,63 @@ assert.deepStrictEqual(
 
 assert.strictEqual(first.historyRow.amount, 5000);
 assert.strictEqual(first.historyRow.bonusAmount, 498);
+assert.strictEqual(first.order.priceSource, 'membership_plan');
+assert.strictEqual(first.order.priceSourceId, 'mplan-gold');
+assert.strictEqual(first.order.priceSourceName, '黄金卡');
+assert.strictEqual(first.order.systemAmount, 5000);
+assert.strictEqual(first.order.finalAmount, 5000);
+assert.strictEqual(first.order.priceOverridden, false);
+assert.strictEqual(first.order.overrideReason, '');
 assert.strictEqual(first.order.benefitSnapshot.ballMachine.count, 8, 'order stores deal snapshot instead of plan template');
 assert.strictEqual(first.order.planBenefitTemplateSnapshot.ballMachine.count, 6, 'order should keep the original plan benefit template snapshot');
 assert.strictEqual(plan.benefitTemplate.ballMachine.count, 6, 'plan template should remain unchanged after deal snapshot override');
+assert.strictEqual(first.historyRow.systemAmount, 5000);
+assert.strictEqual(first.historyRow.finalAmount, 5000);
+assert.strictEqual(first.historyRow.priceOverridden, false);
+assert.strictEqual(first.historyRow.overrideReason, '');
+
+const discountedMembershipPurchase = rules.buildMembershipPurchase({
+  court,
+  plan,
+  body: {
+    purchaseDate: '2026-04-08',
+    rechargeAmount: 4600,
+    overrideReason: '续充优惠',
+    operator: '管理员'
+  },
+  now: '2026-04-12T00:00:00.000Z',
+  accountId: 'macc-price',
+  orderId: 'mord-price',
+  historyId: 'his-price'
+});
+
+assert.strictEqual(discountedMembershipPurchase.order.systemAmount, 5000);
+assert.strictEqual(discountedMembershipPurchase.order.finalAmount, 4600);
+assert.strictEqual(discountedMembershipPurchase.order.priceOverridden, true);
+assert.strictEqual(discountedMembershipPurchase.order.overrideReason, '续充优惠');
+assert.strictEqual(discountedMembershipPurchase.historyRow.amount, 4600);
+assert.strictEqual(discountedMembershipPurchase.historyRow.systemAmount, 5000);
+assert.strictEqual(discountedMembershipPurchase.historyRow.finalAmount, 4600);
+assert.strictEqual(discountedMembershipPurchase.historyRow.priceOverridden, true);
+assert.strictEqual(discountedMembershipPurchase.historyRow.overrideReason, '续充优惠');
+
+assert.throws(
+  () => rules.buildMembershipPurchase({
+    court,
+    plan,
+    body: {
+      purchaseDate: '2026-04-08',
+      rechargeAmount: 4600,
+      overrideReason: ''
+    },
+    now: '2026-04-12T00:00:00.000Z',
+    accountId: 'macc-price',
+    orderId: 'mord-price',
+    historyId: 'his-price'
+  }),
+  /请填写改价原因/,
+  'membership purchase should require override reason when final deal amount differs from plan price'
+);
 
 const adjustedPurchase = rules.buildMembershipPurchase({
   court,

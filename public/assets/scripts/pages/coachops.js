@@ -322,17 +322,8 @@ function exportCoachOpsConsumeCsv(){
 }
 function renderFinanceSettlementSummary(){
   const host=document.getElementById('financeSettlementStats');
-  const top=document.getElementById('financeStatsRow');
-  if(!host||!top)return;
-  const revenueRows=coachOpsRevenueRows();
-  const consumeRows=coachOpsConsumeRows();
+  if(!host)return;
   const lateRows=(schedules||[]).filter(s=>s.coachLateMinutes&&String(s.startTime||'').slice(0,7)===today().slice(0,7));
-  top.innerHTML=[
-    ['本月实收',`¥${fmt(revenueRows.reduce((sum,row)=>sum+(Number(row.amountPaid)||0),0))}`,''],
-    ['本月消课',consumeRows.filter(row=>row.actionLabel==='扣课').reduce((sum,row)=>sum+Math.abs(parseInt(row.lessonDelta)||0),0),'节'],
-    ['退款/退回',consumeRows.filter(row=>row.actionLabel==='退回').length,'条'],
-    ['迟到待结',lateRows.length,'条']
-  ].map(([label,val,unit])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}${unit?`<span>${unit}</span>`:''}</div></div>`).join('');
   host.innerHTML=[
     ['本月迟到记录',lateRows.length,'条'],
     ['迟到分钟',lateRows.reduce((sum,row)=>sum+(parseInt(row.coachLateMinutes)||0),0),'分'],

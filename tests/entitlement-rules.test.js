@@ -90,6 +90,13 @@ assert.deepStrictEqual(
     campusIds: ['mabao'],
     ownerCoach: '朝珺',
     allowedCoaches: ['mira', '小舟'],
+    priceSource: 'package',
+    priceSourceId: 'pkg-1',
+    priceSourceName: '五一私教非黄金课包',
+    systemAmount: 1000,
+    finalAmount: 1000,
+    priceOverridden: false,
+    overrideReason: '',
     usageStartDate: '2026-05-01',
     usageEndDate: '2026-07-01',
     purchaseDate: '2026-05-02',
@@ -101,6 +108,53 @@ assert.deepStrictEqual(
     updatedAt: '2026-04-12T00:00:00.000Z'
   },
   'purchase should store immutable package and student snapshots'
+);
+
+assert.deepStrictEqual(
+  {
+    systemAmount: rules.buildPurchaseRecord(
+      pkg,
+      { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
+      { id: 'stu-1', name: '张三', phone: '13800000000' },
+      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+    ).systemAmount,
+    finalAmount: rules.buildPurchaseRecord(
+      pkg,
+      { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
+      { id: 'stu-1', name: '张三', phone: '13800000000' },
+      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+    ).finalAmount,
+    priceOverridden: rules.buildPurchaseRecord(
+      pkg,
+      { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
+      { id: 'stu-1', name: '张三', phone: '13800000000' },
+      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+    ).priceOverridden,
+    overrideReason: rules.buildPurchaseRecord(
+      pkg,
+      { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
+      { id: 'stu-1', name: '张三', phone: '13800000000' },
+      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+    ).overrideReason
+  },
+  {
+    systemAmount: 1000,
+    finalAmount: 880,
+    priceOverridden: true,
+    overrideReason: '老客补差优惠'
+  },
+  'purchase snapshot should keep system price, final deal price and override reason'
+);
+
+assert.throws(
+  () => rules.buildPurchaseRecord(
+    pkg,
+    { ...purchase, amountPaid: 880, overrideReason: '' },
+    { id: 'stu-1', name: '张三', phone: '13800000000' },
+    { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+  ),
+  /请填写改价原因/,
+  'purchase snapshot should require override reason when final deal price differs from system price'
 );
 
 assert.throws(

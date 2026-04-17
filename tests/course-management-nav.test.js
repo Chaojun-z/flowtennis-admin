@@ -19,6 +19,7 @@ assert.match(html, /product-card-shell/, 'product page should render the gemini-
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
 assert.match(html, /归属教练[\s\S]*购买时选择[\s\S]*可上课教练/, 'package card should distinguish sale owner coach from teachable coaches');
 assert.match(html, /主归属教练[\s\S]*可上课教练/, 'purchase records should expose owner coach and teachable coaches');
+assert.match(html, /系统价格[\s\S]*实收金额[\s\S]*改价原因/, 'purchase modal should expose system price, actual paid amount and override reason');
 assert.doesNotMatch(html, /tms-pill-tabs/, 'sidebar navigation should replace the demo top tabs');
 assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/, 'page title map should not be declared twice after merge');
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
@@ -38,6 +39,7 @@ assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct pac
 assert.match(html, /<th style="width:120px;padding-left:20px">购买日期<\/th><th style="width:140px">学员<\/th><th style="width:170px">售卖课包<\/th><th style="width:120px">主归属教练<\/th>/, 'purchase table should show owner coach directly in the list');
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
+assert.match(html, /系统价格[\s\S]*成交金额[\s\S]*改价原因/, 'purchase detail should show price snapshot fields');
 assert.match(html, /支付日期[\s\S]*系统录入时间/, 'purchase detail should show business date and system recorded time');
 assert.match(html, /function openPurchaseVoidModal/, 'purchase page should use dedicated void modal');
 assert.match(html, /function voidPurchase/, 'purchase page should send void reason');

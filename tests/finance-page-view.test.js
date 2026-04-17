@@ -14,6 +14,7 @@ assert.match(source,/function renderFinanceCenter\(/,'finance center should expo
 assert.match(source,/function renderCoachOpsRevenueReport\(/,'finance center should reuse revenue report renderer');
 assert.match(source,/function renderCoachOpsConsumeReport\(/,'finance center should reuse consume report renderer');
 assert.match(source,/function renderFinanceSettlementSummary\(/,'finance center should render settlement summary');
+assert.doesNotMatch(source,/id="financeStatsRow"/,'finance center should not keep a duplicated top stats row');
 assert.match(source,/查看迟到月结/,'finance center should expose late settlement entry');
 
 console.log('finance page view tests passed');

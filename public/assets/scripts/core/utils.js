@@ -585,6 +585,7 @@ function applyMembershipOrderDraft(planId){
   const draft=membershipOrderDraftFromPlan(planId);
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
   const plan=membershipOrderPlanById(planId);
+  set('mo_systemAmount',membershipNumericValue(plan?.rechargeAmount));
   set('mo_recharge',membershipNumericValue(plan?.rechargeAmount));
   set('mo_bonus',membershipNumericValue(draft.bonusAmount));
   set('mo_publicLesson',membershipNumericValue(draft.publicLessonCount));

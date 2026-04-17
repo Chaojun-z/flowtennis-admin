@@ -179,6 +179,8 @@ assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase a
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员权益流水/, 'ledger audit page should use breadcrumb-style navigation');
 assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only note');
 assert.match(html, /支付日期<\/th>[\s\S]*录入时间<\/th>[\s\S]*订场用户/, 'membership order audit should show pay date and recorded time columns');
+assert.match(html, /会员方案 \*[\s\S]*系统价格[\s\S]*实收\/充值金额[\s\S]*改价原因/, 'membership order modal should expose system price and override reason fields');
+assert.match(html, /支付日期<\/th>[\s\S]*系统价[\s\S]*成交价[\s\S]*改价原因/, 'membership order audit should show price snapshot columns');
 assert.match(html, /当前会员[\s\S]*courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');
