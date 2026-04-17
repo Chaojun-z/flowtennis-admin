@@ -16,6 +16,7 @@ const PAGE_DATA_REQUIREMENTS={
   plans:[],
   schedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
   coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  finance:['campuses','students','schedule','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   products:['products','classes','plans'],
   packages:[],
   purchases:[],
@@ -39,6 +40,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   plans:['campuses','students','classes','plans','products','schedule','courts','entitlements'],
   packages:['packages','products'],
   purchases:['purchases','packages','students','entitlements'],
+  finance:['campuses','students','schedule','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   courts:['campuses','students','courts','membershipAccounts','coaches','pricePlans'],
   memberships:['campuses','students','courts','membershipAccounts','coaches'],
   workbench:['campuses','students','classes','schedule','feedbacks'],
@@ -257,6 +259,7 @@ function renderPageData(pg){
   if(pg==='plans')renderPlans();
   if(pg==='schedule')renderSchedule();
   if(pg==='coachops')renderCoachOps();
+  if(pg==='finance')renderFinanceCenter();
   if(pg==='products')renderProducts();
   if(pg==='packages')renderPackages();
   if(pg==='purchases')renderPurchases();

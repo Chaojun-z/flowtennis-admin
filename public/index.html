@@ -52,6 +52,8 @@
   <div class="sb-item" onclick="goPage('products',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>课程产品</div>
   <div class="sb-item" onclick="goPage('packages',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8v12"/><path d="M16 8c0-1.5-1-3-3-3s-3 1.5-3 3"/></svg></span>售卖课包</div>
   <div class="sb-item" onclick="goPage('purchases',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>购买记录</div>
+  <div class="sb-sec">财务中心</div>
+  <div class="sb-item" onclick="goPage('finance',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg></span>财务中心</div>
   <div class="sb-sec">场地与资源</div>
   <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2z"/></svg></span>订场用户</div>
   <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>会员管理</div>
@@ -176,8 +178,6 @@
           <div class="coach-ops-tabs">
             <button class="coach-ops-tab active" id="coachOpsTabSchedule" onclick="setCoachOpsPanel('schedule')">教练排课</button>
             <button class="coach-ops-tab" id="coachOpsTabWorkload" onclick="setCoachOpsPanel('workload')">教练工作量</button>
-            <button class="coach-ops-tab" id="coachOpsTabRevenue" onclick="setCoachOpsPanel('revenue')">收入课时表</button>
-            <button class="coach-ops-tab" id="coachOpsTabConsume" onclick="setCoachOpsPanel('consume')">消课记录</button>
           </div>
           <div id="coachOpsScheduleControls" style="display:flex;align-items:center;gap:10px">
             <div id="coachOpsRangeHost"></div>
@@ -199,7 +199,6 @@
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot master"></i>大师课</span>
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot partner"></i>陪打</span>
           </div>
-          <button class="tms-btn tms-btn-ghost" onclick="openCoachLateSettlementModal()">迟到月结</button>
           <button class="tms-btn tms-btn-primary" id="coachOpsQuickCreateBtn" onclick="coachOpsQuickCreate()">＋ 新增排课</button>
         </div>
       </div>
@@ -214,7 +213,19 @@
       <div id="coachOpsWorkloadPanel" style="display:none">
         <div class="tcard"><table><thead><tr><th>教练</th><th>当前筛选课数</th><th>当前筛选总时长</th><th>未反馈</th><th>校区分布</th><th>时间段</th><th>风险</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div>
       </div>
-      <div id="coachOpsRevenuePanel" style="display:none">
+    </div>
+    <div class="page-section" id="page-finance">
+      <div class="tms-stats-row" id="financeStatsRow"></div>
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="coach-ops-tabs">
+            <button class="coach-ops-tab active" id="financeTabRevenue" onclick="setFinancePanel('revenue')">收入课时表</button>
+            <button class="coach-ops-tab" id="financeTabConsume" onclick="setFinancePanel('consume')">消课记录</button>
+            <button class="coach-ops-tab" id="financeTabSettlement" onclick="setFinancePanel('settlement')">教练结算</button>
+          </div>
+        </div>
+      </div>
+      <div id="financeRevenuePanel">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
@@ -231,7 +242,7 @@
         <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">支付日期</th><th style="width:120px">学员</th><th style="width:170px">售卖课包</th><th style="width:130px">课程产品</th><th style="width:96px">主归属教练</th><th style="width:90px">实收</th><th style="width:88px">总课时</th><th style="width:88px">已消</th><th style="width:88px">剩余</th><th style="width:180px">有效期</th><th style="width:88px">支付方式</th><th style="width:72px">状态</th><th class="tms-sticky-r" style="width:110px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachOpsRevenueTbody"></tbody></table></div></div>
       </div>
-      <div id="coachOpsConsumePanel" style="display:none">
+      <div id="financeConsumePanel" style="display:none">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
@@ -247,6 +258,16 @@
         </div>
         <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">流水时间</th><th style="width:70px">类型</th><th style="width:120px">学员</th><th style="width:170px">课包</th><th style="width:88px">课时变动</th><th style="width:120px">排课时间</th><th style="width:90px">教练</th><th style="width:88px">课程类型</th><th style="width:160px">原因</th><th style="width:88px">操作人</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">追溯</th></tr></thead><tbody id="coachOpsConsumeTbody"></tbody></table></div></div>
+      </div>
+      <div id="financeSettlementPanel" style="display:none">
+        <div class="tms-audit-note">教练结算用于处理迟到承担场地费，后续会并入月度结算、已结算锁定和导出结算单。</div>
+        <div class="tms-toolbar">
+          <div class="tms-filters"></div>
+          <div class="tms-toolbar-right">
+            <button class="tms-btn tms-btn-ghost" onclick="openCoachLateSettlementModal()">查看迟到月结</button>
+          </div>
+        </div>
+        <div class="tms-stats-row" id="financeSettlementStats"></div>
       </div>
     </div>
     <!-- 教练管理 -->
@@ -520,14 +541,13 @@
           </div>
           <div id="priceTypeFilterHost"></div>
           <div id="priceProductTypeFilterHost"></div>
-          <button class="tms-btn tms-btn-ghost" onclick="importDefaultMabaoPrices()">同步默认马坡价格</button>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-primary" onclick="openPriceModal()">＋ 新增价格</button>
         </div>
       </div>
       <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:68px;padding-left:14px">类型</th><th style="width:70px">渠道</th><th style="width:360px">名称</th><th style="width:54px">场地类型</th><th style="width:62px">日期类型</th><th style="width:68px">商品类型</th><th style="width:64px">关联业务</th><th style="width:90px">时间段</th><th style="width:60px">时长</th><th style="width:58px">价格</th><th style="width:54px">状态</th><th class="tms-sticky-r" style="width:92px;padding-right:14px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:66px;padding-left:12px">类型</th><th style="width:64px">渠道</th><th style="width:372px">名称</th><th style="width:50px">场地类型</th><th style="width:60px">日期类型</th><th style="width:62px">商品类型</th><th style="width:58px">关联业务</th><th style="width:88px">时间段</th><th style="width:58px">时长</th><th style="width:54px">价格</th><th style="width:52px">状态</th><th class="tms-sticky-r" style="width:88px;padding-right:12px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
     </div>
 </div>
 </div>

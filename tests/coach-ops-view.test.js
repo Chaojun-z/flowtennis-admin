@@ -116,28 +116,16 @@ assert.match(
   'coach ops toolbar should render a course type legend'
 );
 
-assert.match(
+assert.doesNotMatch(
   source,
   /coachOpsTabRevenue/,
-  'coach ops should expose a revenue lesson report tab'
+  'coach ops should no longer keep finance reports inside coach tabs'
 );
 
-assert.match(
+assert.doesNotMatch(
   source,
   /coachOpsTabConsume/,
-  'coach ops should expose a consume ledger tab'
-);
-
-assert.match(
-  source,
-  /id="coachOpsRevenuePanel"/,
-  'coach ops should render a revenue lesson report panel'
-);
-
-assert.match(
-  source,
-  /id="coachOpsConsumePanel"/,
-  'coach ops should render a consume ledger panel'
+  'coach ops should no longer keep consume reports inside coach tabs'
 );
 
 assert.match(

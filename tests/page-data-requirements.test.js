@@ -8,6 +8,7 @@ assert.match(source, /students:\[\]/, 'students page should open shell immediate
 assert.match(source, /plans:\[\]/, 'plans page should open shell immediately and load data in background');
 assert.match(source, /packages:\[\]/, 'packages page should open shell immediately and load data in background');
 assert.match(source, /purchases:\[\]/, 'purchases page should open shell immediately and load data in background');
+assert.match(source, /finance:\['campuses','students','schedule','entitlements','entitlementLedger','coaches','products','purchases','packages'\]/, 'finance center should load the datasets needed for reports');
 assert.match(source, /courts:\[\]/, 'courts page should open shell immediately and load data in background');
 assert.match(source, /memberships:\[\]/, 'memberships page should open shell immediately and load data in background');
 assert.match(source, /workbench:\[\]/, 'coach workbench should open immediately and load data in background');
