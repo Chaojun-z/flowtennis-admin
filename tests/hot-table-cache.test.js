@@ -20,6 +20,13 @@ assert.match(apiSource, /if\(path==='\/coaches'\)\{if\(user\.role!=='admin'\)ret
 assert.match(apiSource, /if\(path==='\/campuses'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_CAMPUSES\)\);/, 'campuses list should use cached scan');
 assert.match(apiSource, /\[T_PLANS,\{ttlMs:60000\}\]/, 'plans should be configured as a hot scan table');
 assert.match(apiSource, /\[T_ENTITLEMENTS,\{ttlMs:60000\}\]/, 'entitlements should be configured as a hot scan table');
+assert.match(apiSource, /\[T_PRODUCTS,\{ttlMs:60000\}\]/, 'products should be configured as a hot scan table');
+assert.match(apiSource, /\[T_PACKAGES,\{ttlMs:60000\}\]/, 'packages should be configured as a hot scan table');
+assert.match(apiSource, /\[T_PURCHASES,\{ttlMs:60000\}\]/, 'purchases should be configured as a hot scan table');
+assert.match(apiSource, /\[T_MEMBERSHIP_ACCOUNTS,\{ttlMs:60000\}\]/, 'membership accounts should be configured as a hot scan table');
+assert.match(apiSource, /\[T_MEMBERSHIP_ORDERS,\{ttlMs:60000\}\]/, 'membership orders should be configured as a hot scan table');
+assert.match(apiSource, /\[T_MEMBERSHIP_BENEFIT_LEDGER,\{ttlMs:60000\}\]/, 'membership benefit ledger should be configured as a hot scan table');
+assert.match(apiSource, /\[T_ENTITLEMENT_LEDGER,\{ttlMs:60000\}\]/, 'entitlement ledger should be configured as a hot scan table');
 assert.match(apiSource, /\[T_CLASSES,\{ttlMs:60000\}\]/, 'classes should be configured as a hot row cache');
 assert.match(apiSource, /\[T_ENTITLEMENTS,\{ttlMs:60000\}\]/, 'entitlements should be configured as a hot row cache');
 assert.match(apiSource, /async function applyLessonDelta\(classId,delta,studentIds=\[\]\)\{[\s\S]*const cls=await getCachedRow\(T_CLASSES,classId\);/, 'lesson delta should reuse cached class row');
@@ -38,5 +45,12 @@ assert.match(apiSource, /assertCanDeleteClass\(id,await getCachedScan\(T_SCHEDUL
 assert.match(apiSource, /async function prewarmHotScanCache\(\)/, 'api should expose a hot table prewarm');
 assert.match(apiSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.error\('\[api-timing\] prewarm hot tables failed',err\)\);/, 'init should trigger hot table prewarm');
 assert.match(apiSource, /const storedAuthUser=await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\);/, 'authenticated requests should reuse cached user row lookup');
+assert.match(apiSource, /const user=await getCachedRow\(T_USERS,username\);/, 'login should reuse cached user row lookup');
+assert.match(apiSource, /if\(path==='\/products'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PRODUCTS\)\.catch\(\(\)=>\[\]\)\);/, 'products list should use cached scan');
+assert.match(apiSource, /if\(path==='\/packages'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PACKAGES\)\.catch\(\(\)=>\[\]\)\);/, 'packages list should use cached scan');
+assert.match(apiSource, /if\(path==='\/purchases'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PURCHASES\)\.catch\(\(\)=>\[\]\)\);/, 'purchases list should use cached scan');
+assert.match(apiSource, /if\(path==='\/membership-accounts'\)\{[\s\S]*if\(method==='GET'\)\{const rows=await getCachedScan\(T_MEMBERSHIP_ACCOUNTS\)\.catch\(\(\)=>\[\]\);/, 'membership accounts list should use cached scan');
+assert.match(apiSource, /if\(path==='\/membership-orders'\)\{[\s\S]*if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_MEMBERSHIP_ORDERS\)\.catch\(\(\)=>\[\]\)\);/, 'membership orders list should use cached scan');
+assert.match(apiSource, /scan\(T_MEMBERSHIP_BENEFIT_LEDGER\)\.catch\(\(\)=>\[\]\)/, 'membership benefit ledger should keep a safe fallback path');
 
 console.log('hot table cache tests passed');

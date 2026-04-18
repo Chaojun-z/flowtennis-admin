@@ -12,6 +12,7 @@ function showApp(){
   dataRequestVersion++;
   document.getElementById('loginPage').style.display='none';document.getElementById('app').style.display='';
   clearLoadedData();
+  hydrateDatasetsFromCache();
   normalizeCurrentPageForRole();
   renderRoleShell();
   loadPageDataAndRender(currentPage,{quiet:true});

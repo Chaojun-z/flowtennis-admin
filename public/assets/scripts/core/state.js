@@ -10,6 +10,8 @@ let adminUsersLoaded=false;
 let modalCleanupTimer=null;
 let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let loadedDatasets=new Set();
+const DATA_CACHE_PREFIX='ft_dataset_cache_';
+const datasetLoadPromises=new Map();
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students','classes','schedule','feedbacks','products','courts'],
   classes:['campuses','students','products','classes','schedule','coaches'],
@@ -69,27 +71,51 @@ const DATASET_LOADERS={
   campuses:()=>apiCall('GET','/campuses'),
   feedbacks:()=>apiCall('GET','/feedbacks')
 };
-function setDatasetValue(name,data){
-  if(name==='courts')courts=Array.isArray(data)?data:[];
-  if(name==='students')students=Array.isArray(data)?data:[];
-  if(name==='products')products=Array.isArray(data)?data:[];
-  if(name==='packages')packages=Array.isArray(data)?data:[];
-  if(name==='purchases')purchases=Array.isArray(data)?data:[];
-  if(name==='entitlements')entitlements=Array.isArray(data)?data:[];
-  if(name==='entitlementLedger')entitlementLedger=Array.isArray(data)?data:[];
-  if(name==='membershipPlans')membershipPlans=Array.isArray(data)?data:[];
-  if(name==='membershipAccounts')membershipAccounts=Array.isArray(data)?data:[];
-  if(name==='membershipOrders')membershipOrders=Array.isArray(data)?data:[];
-  if(name==='membershipBenefitLedger')membershipBenefitLedger=Array.isArray(data)?data:[];
-  if(name==='membershipAccountEvents')membershipAccountEvents=Array.isArray(data)?data:[];
-  if(name==='pricePlans')pricePlans=Array.isArray(data)?data:[];
-  if(name==='plans')plans=Array.isArray(data)?data:[];
-  if(name==='schedule')schedules=Array.isArray(data)?data:[];
-  if(name==='coaches')coaches=Array.isArray(data)?data:[];
-  if(name==='classes')classes=Array.isArray(data)?data:[];
-  if(name==='campuses')campuses=Array.isArray(data)?data:[];
-  if(name==='feedbacks')feedbacks=Array.isArray(data)?data:[];
+function datasetCacheKey(name){
+  return DATA_CACHE_PREFIX+(currentUser?.id||'anon')+'_'+name;
+}
+function persistDatasetCache(name,data){
+  try{localStorage.setItem(datasetCacheKey(name),JSON.stringify({savedAt:Date.now(),data:Array.isArray(data)?data:[]}));}catch(e){}
+}
+function readDatasetCache(name){
+  try{
+    const raw=localStorage.getItem(datasetCacheKey(name));
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    return Array.isArray(parsed?.data)?parsed.data:null;
+  }catch(e){return null;}
+}
+function setDatasetValue(name,data,{persist=true}={}){
+  const rows=Array.isArray(data)?data:[];
+  if(name==='courts')courts=rows;
+  if(name==='students')students=rows;
+  if(name==='products')products=rows;
+  if(name==='packages')packages=rows;
+  if(name==='purchases')purchases=rows;
+  if(name==='entitlements')entitlements=rows;
+  if(name==='entitlementLedger')entitlementLedger=rows;
+  if(name==='membershipPlans')membershipPlans=rows;
+  if(name==='membershipAccounts')membershipAccounts=rows;
+  if(name==='membershipOrders')membershipOrders=rows;
+  if(name==='membershipBenefitLedger')membershipBenefitLedger=rows;
+  if(name==='membershipAccountEvents')membershipAccountEvents=rows;
+  if(name==='pricePlans')pricePlans=rows;
+  if(name==='plans')plans=rows;
+  if(name==='schedule')schedules=rows;
+  if(name==='coaches')coaches=rows;
+  if(name==='classes')classes=rows;
+  if(name==='campuses')campuses=rows;
+  if(name==='feedbacks')feedbacks=rows;
   loadedDatasets.add(name);
+  if(persist)persistDatasetCache(name,rows);
+}
+function hydrateDatasetsFromCache(){
+  Object.keys(DATASET_LOADERS).forEach(name=>{
+    const cached=readDatasetCache(name);
+    if(cached)setDatasetValue(name,cached,{persist:false});
+  });
+  CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
+  lastDataSyncAt=Date.now();
 }
 function requiredDatasetsForPage(pg){
   return PAGE_DATA_REQUIREMENTS[pg]||[];
@@ -100,7 +126,12 @@ function backgroundDatasetsForPage(pg){
 async function ensureDatasetsByName(names=[],{force=false}={}){
   const pending=(names||[]).filter(name=>force||!loadedDatasets.has(name));
   if(!pending.length)return;
-  const results=await Promise.all(pending.map(name=>DATASET_LOADERS[name]().then(data=>[name,data])));
+  const results=await Promise.all(pending.map(name=>{
+    if(datasetLoadPromises.has(name))return datasetLoadPromises.get(name);
+    const promise=DATASET_LOADERS[name]().then(data=>[name,data]).finally(()=>datasetLoadPromises.delete(name));
+    datasetLoadPromises.set(name,promise);
+    return promise;
+  }));
   results.forEach(([name,data])=>setDatasetValue(name,data));
   CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
   lastDataSyncAt=Date.now();
@@ -185,7 +216,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(requestVersion!==dataRequestVersion)return;
     buildCampusTabs();
     renderAll();
-    loadPageBackgroundDatasets(pg,requestVersion,{force});
+    loadPageBackgroundDatasets(pg,requestVersion,{force:true});
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
