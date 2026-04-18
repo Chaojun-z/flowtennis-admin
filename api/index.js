@@ -1012,6 +1012,7 @@ async function validateScheduleSave(nextRec,oldRec){
 }
 
 let inited=false;
+let initPromise=null;
 let defaultPricePlanSyncStarted=false;
 const DEFAULT_COACH_USERS=['baiyangj','chendand','yuekez','zhoux','sunmingy'];
 const DEFAULT_CAMPUSES=[
@@ -1082,35 +1083,75 @@ async function bootstrapMabaoFinanceSeed(){
   await putSeedRows(T_ENTITLEMENTS,mabaoFinanceSeed.entitlements);
   await putSeedRows(T_ENTITLEMENT_LEDGER,mabaoFinanceSeed.entitlementLedger);
 }
+function scheduleInitInBackground(){
+  if(REQUIRED_ENV_VARS.some((k)=>!process.env[k]))return;
+  if(inited||initPromise)return;
+  init().catch(err=>console.error('[api-init] background init failed',err));
+}
 async function init(){
   if(inited)return;
-  const startedAt=Date.now();
-  const missing=REQUIRED_ENV_VARS.filter((k)=>!process.env[k]);
-  if(missing.length)throw new Error('缺少环境变量：'+missing.join(', '));
-  if(ENABLE_RUNTIME_TABLE_ENSURE||ENABLE_TABLE_BOOTSTRAP){
-    for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
-  }
-  if(ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
-    for(const t of [T_STUDENTS,T_PRODUCTS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
-  }
-  if(ENABLE_TABLE_BOOTSTRAP){
-    for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
-    await bootstrapDefaultUsers();
-    await ensureDefaultCampuses();
-    await ensureCoachBindings();
-  }
-  await ensureDefaultCampuses();
-  await bootstrapMabaoFinanceSeed();
-  inited=true;
-  if(ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP){
-    await syncDefaultPricePlans().catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
-  }else if(!defaultPricePlanSyncStarted){
-    defaultPricePlanSyncStarted=true;
-    Promise.resolve().then(()=>syncDefaultPricePlans()).catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
-  }
-  prewarmHotScanCache().catch(err=>console.error('[api-timing] prewarm hot tables failed',err));
-  console.log(`[api-timing] init cold start ${Date.now()-startedAt}ms`);
+  if(initPromise)return initPromise;
+  initPromise=(async()=>{
+    const startedAt=Date.now();
+    const missing=REQUIRED_ENV_VARS.filter((k)=>!process.env[k]);
+    if(missing.length)throw new Error('缺少环境变量：'+missing.join(', '));
+    if(ENABLE_RUNTIME_TABLE_ENSURE||ENABLE_TABLE_BOOTSTRAP){
+      const stepStartedAt=Date.now();
+      for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
+      console.log(`[api-init] ensure runtime tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }
+    if(ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
+      const stepStartedAt=Date.now();
+      for(const t of [T_STUDENTS,T_PRODUCTS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
+      console.log(`[api-init] ensure mabao seed tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }
+    if(ENABLE_TABLE_BOOTSTRAP){
+      let stepStartedAt=Date.now();
+      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
+      console.log(`[api-init] ensure bootstrap tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+      stepStartedAt=Date.now();
+      await bootstrapDefaultUsers();
+      console.log(`[api-init] bootstrapDefaultUsers done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+      stepStartedAt=Date.now();
+      await ensureDefaultCampuses();
+      console.log(`[api-init] ensureDefaultCampuses done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+      stepStartedAt=Date.now();
+      await ensureCoachBindings();
+      console.log(`[api-init] ensureCoachBindings done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }else{
+      const stepStartedAt=Date.now();
+      await ensureDefaultCampuses();
+      console.log(`[api-init] ensureDefaultCampuses done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }
+    {
+      const stepStartedAt=Date.now();
+      await bootstrapMabaoFinanceSeed();
+      console.log(`[api-init] bootstrapMabaoFinanceSeed done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }
+    inited=true;
+    if(ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP){
+      const stepStartedAt=Date.now();
+      await syncDefaultPricePlans().catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
+      console.log(`[api-init] syncDefaultPricePlans done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }else if(!defaultPricePlanSyncStarted){
+      defaultPricePlanSyncStarted=true;
+      Promise.resolve().then(()=>syncDefaultPricePlans()).catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
+    }
+    {
+      const stepStartedAt=Date.now();
+      prewarmHotScanCache().catch(err=>console.error('[api-timing] prewarm hot tables failed',err));
+      console.log(`[api-init] prewarmHotScanCache dispatched ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+    }
+    console.log(`[api-timing] init cold start ${Date.now()-startedAt}ms`);
+  })().catch(err=>{
+    initPromise=null;
+    inited=false;
+    throw err;
+  });
+  return initPromise;
 }
+
+scheduleInitInBackground();
 
 function sendJson(res,body,code=200){
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -2285,6 +2326,7 @@ function parseLegacyCourtNotes(notes){
 }
 
 module.exports = async (req, res) => {
+  scheduleInitInBackground();
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');return res.status(200).end();}
   const path=(req.url||'').replace(/^\/api/,'').split('?')[0];
   const query=new URL(req.url||'/', 'http://local').searchParams;
@@ -2294,7 +2336,7 @@ module.exports = async (req, res) => {
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
-    if(path==='/auth/login'&&method==='POST'){await init();const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await getCachedRow(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
+    if(path==='/auth/login'&&method==='POST'){const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await getCachedRow(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
     user=mergeStoredAuthUser(user,storedAuthUser);

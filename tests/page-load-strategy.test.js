@@ -16,5 +16,7 @@ assert.match(fnBody('showApp'), /buildCampusTabs\(\);[\s\S]*renderAll\(\);/, 'sh
 assert.match(fnBody('showApp'), /loadPageDataAndRender\(currentPage,\{quiet:true\}\)/, 'showApp should boot the current page without a blocking full-screen loader');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
 assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should reuse the page-scoped loading entry without blocking the whole screen');
+assert.doesNotMatch(fnBody('loadPageBackgroundDatasets'), /for\(const name of names\)/, 'background page datasets should not load one by one');
+assert.match(fnBody('loadPageBackgroundDatasets'), /Promise\.allSettled\(names\.map/, 'background page datasets should load in parallel');
 
 console.log('page load strategy tests passed');

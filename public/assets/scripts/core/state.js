@@ -177,18 +177,18 @@ async function ensurePageDatasets(pg,{force=false}={}){
 async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
   const names=backgroundDatasetsForPage(pg);
   if(!names.length)return;
-  for(const name of names){
+  await Promise.allSettled(names.map(async name=>{
     if(requestVersion!==dataRequestVersion)return;
     try{
       await ensureDatasetsByName([name],{force});
-      if(requestVersion!==dataRequestVersion)return;
-      buildCampusTabs();
-      renderAll();
     }catch(e){
       if(requestVersion!==dataRequestVersion)return;
       console.warn('deferred page data load failed',pg,name,e);
     }
-  }
+  }));
+  if(requestVersion!==dataRequestVersion)return;
+  buildCampusTabs();
+  renderAll();
 }
 function clearLoadedData(){
   courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];
