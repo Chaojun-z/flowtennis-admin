@@ -21,7 +21,7 @@ const PAGE_DATA_REQUIREMENTS={
   plans:[],
   schedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
   coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
-  finance:['campuses','students','schedule','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  finance:[],
   products:['products','classes','plans'],
   packages:[],
   purchases:[],
@@ -45,7 +45,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   plans:['plansPage'],
   packages:['packages','products'],
   purchases:['purchasesPage'],
-  finance:['campuses','students','schedule','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  finance:['financePage'],
   courts:['courtsPage'],
   memberships:['membershipsPage'],
   workbench:['workbenchPage'],
@@ -75,6 +75,7 @@ const DATASET_LOADERS={
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,plansPage:()=>apiCall('GET','/page-data/plans')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
+  ,financePage:()=>apiCall('GET','/page-data/finance')
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
   ,membershipsPage:()=>apiCall('GET','/page-data/memberships')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
@@ -154,6 +155,7 @@ function initialBackgroundDatasetsForPage(pg){
   const fallback={
     plansPage:['plans'],
     purchasesPage:['purchases'],
+    financePage:['purchases','entitlementLedger'],
     courtsPage:['courts'],
     membershipsPage:['courts','membershipAccounts'],
     workbenchPage:['schedule']
@@ -185,9 +187,6 @@ function renderPageLoading(pg){
   if(pg==='finance'){
     renderTableBodyLoading('coachOpsRevenueTbody',14,'财务数据加载中...');
     renderTableBodyLoading('coachOpsConsumeTbody',12,'消课记录加载中...');
-    renderBlockLoading('coachOpsRevenueStats','财务汇总加载中...');
-    renderBlockLoading('coachOpsConsumeStats','消课汇总加载中...');
-    renderBlockLoading('financeSettlementStats','教练结算加载中...');
   }
   if(pg==='courts')renderTableBodyLoading('courtTbody',17,'订场用户加载中...');
   if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
@@ -224,6 +223,19 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('students',data.students||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       loadedDatasets.add('purchasesPage');
+      return;
+    }
+    if(name==='financePage'){
+      setDatasetValue('campuses',data.campuses||[]);
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('schedule',data.schedule||[]);
+      setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('coaches',data.coaches||[]);
+      setDatasetValue('products',data.products||[]);
+      setDatasetValue('purchases',data.purchases||[]);
+      setDatasetValue('packages',data.packages||[]);
+      loadedDatasets.add('financePage');
       return;
     }
     if(name==='courtsPage'){

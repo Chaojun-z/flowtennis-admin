@@ -3207,6 +3207,22 @@ module.exports = async (req, res) => {
       ]);
       return sendJson(res,{purchases,packages,students,entitlements});
     }
+    if(path==='/page-data/finance'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const [campuses,students,schedule,entitlements,entitlementLedger,coaches,products,purchases,packages]=await Promise.all([
+        listCampusesWithDefaults(),
+        getCachedScan(T_STUDENTS).catch(()=>[]),
+        getCachedScan(T_SCHEDULE).catch(()=>[]),
+        getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
+        getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+        getCachedScan(T_COACHES).catch(()=>[]),
+        getCachedScan(T_PRODUCTS).catch(()=>[]),
+        getCachedScan(T_PURCHASES).catch(()=>[]),
+        getCachedScan(T_PACKAGES).catch(()=>[])
+      ]);
+      return sendJson(res,{campuses,students,schedule,entitlements,entitlementLedger,coaches,products,purchases,packages});
+    }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
