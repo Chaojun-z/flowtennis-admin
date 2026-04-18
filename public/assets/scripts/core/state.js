@@ -11,6 +11,8 @@ let modalCleanupTimer=null;
 let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
+const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
+const DATA_CACHE_VERSION='2026-04-18-disable-ledger-cache';
 const datasetLoadPromises=new Map();
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students'],
@@ -79,16 +81,24 @@ const DATASET_LOADERS={
 function datasetCacheKey(name){
   return DATA_CACHE_PREFIX+(currentUser?.id||'anon')+'_'+name;
 }
+function clearDatasetCache(){
+  try{
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++)keys.push(localStorage.key(i));
+    keys.filter(key=>String(key||'').startsWith(DATA_CACHE_PREFIX)).forEach(key=>localStorage.removeItem(key));
+    localStorage.setItem(DATA_CACHE_VERSION_KEY,DATA_CACHE_VERSION);
+  }catch(e){}
+}
+function ensureDatasetCacheVersion(){
+  try{
+    if(localStorage.getItem(DATA_CACHE_VERSION_KEY)!==DATA_CACHE_VERSION)clearDatasetCache();
+  }catch(e){}
+}
 function persistDatasetCache(name,data){
-  try{localStorage.setItem(datasetCacheKey(name),JSON.stringify({savedAt:Date.now(),data:Array.isArray(data)?data:[]}));}catch(e){}
+  return;
 }
 function readDatasetCache(name){
-  try{
-    const raw=localStorage.getItem(datasetCacheKey(name));
-    if(!raw)return null;
-    const parsed=JSON.parse(raw);
-    return Array.isArray(parsed?.data)?parsed.data:null;
-  }catch(e){return null;}
+  return null;
 }
 function setDatasetValue(name,data,{persist=true}={}){
   const rows=Array.isArray(data)?data:[];
@@ -115,6 +125,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(persist)persistDatasetCache(name,rows);
 }
 function hydrateDatasetsFromCache(){
+  ensureDatasetCacheVersion();
   Object.keys(DATASET_LOADERS).forEach(name=>{
     const cached=readDatasetCache(name);
     if(cached)setDatasetValue(name,cached,{persist:false});
