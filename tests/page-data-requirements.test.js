@@ -21,6 +21,9 @@ assert.match(source, /await ensureDatasetsByName\(\[name\],\{force\}\)/, 'backgr
 assert.match(source, /const DATA_CACHE_PREFIX='ft_dataset_cache_';/, 'state should persist the last successful datasets for refresh fallback');
 assert.match(source, /function hydrateDatasetsFromCache\(\)/, 'state should hydrate cached datasets before network refresh');
 assert.match(source, /function persistDatasetCache\(name,data\)/, 'state should cache every successful dataset load');
+assert.match(source, /function missingRequiredDatasetsForPage\(pg\)/, 'state should be able to detect when the current page still lacks blocking datasets');
+assert.match(source, /function renderPageLoading\(pg\)/, 'state should render inline loading placeholders instead of empty pages');
+assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{\s*renderPageLoading\(pg\);\s*return;\s*\}/, 'page rendering should show inline loading placeholders until the page has the datasets it needs');
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
 assert.match(source, /datasetLoadPromises\.has\(name\)/, 'dataset loading should reuse in-flight requests');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force:true\}\);/, 'page background loading should revalidate cached data without blocking first paint');

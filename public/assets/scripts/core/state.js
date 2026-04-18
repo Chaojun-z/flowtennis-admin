@@ -123,6 +123,39 @@ function requiredDatasetsForPage(pg){
 function backgroundDatasetsForPage(pg){
   return PAGE_DATA_BACKGROUND_REQUIREMENTS[pg]||[];
 }
+function missingRequiredDatasetsForPage(pg){
+  return requiredDatasetsForPage(pg).filter(name=>!loadedDatasets.has(name));
+}
+function pageNeedsInlineLoading(pg){
+  return missingRequiredDatasetsForPage(pg).length>0;
+}
+function renderTableBodyLoading(id,colspan,text){
+  const el=document.getElementById(id);
+  if(el)el.innerHTML=`<tr><td colspan="${colspan}"><div class="empty"><p>${esc(text)}</p></div></td></tr>`;
+}
+function renderBlockLoading(id,text){
+  const el=document.getElementById(id);
+  if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
+}
+function renderPageLoading(pg){
+  if(pg==='students')renderTableBodyLoading('stuTbody',13,'学员数据加载中...');
+  if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
+  if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
+  if(pg==='purchases')renderTableBodyLoading('purchaseTbody',10,'购买记录加载中...');
+  if(pg==='finance'){
+    renderTableBodyLoading('coachOpsRevenueTbody',14,'财务数据加载中...');
+    renderTableBodyLoading('coachOpsConsumeTbody',12,'消课记录加载中...');
+    renderBlockLoading('coachOpsRevenueStats','财务汇总加载中...');
+    renderBlockLoading('coachOpsConsumeStats','消课汇总加载中...');
+    renderBlockLoading('financeSettlementStats','教练结算加载中...');
+  }
+  if(pg==='courts')renderTableBodyLoading('courtTbody',17,'订场用户加载中...');
+  if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
+  if(pg==='workbench')renderBlockLoading('workbenchBody','教练工作台加载中...');
+  if(pg==='myschedule')renderBlockLoading('myScheduleBody','课表加载中...');
+  if(pg==='mystudents')renderBlockLoading('myStudentsBody','学员数据加载中...');
+  if(pg==='myclasses')renderBlockLoading('myClassesBody','班次数据加载中...');
+}
 async function ensureDatasetsByName(names=[],{force=false}={}){
   const pending=(names||[]).filter(name=>force||!loadedDatasets.has(name));
   if(!pending.length)return;
@@ -289,6 +322,10 @@ function renderAll(){
 }
 
 function renderPageData(pg){
+  if(pageNeedsInlineLoading(pg)){
+    renderPageLoading(pg);
+    return;
+  }
   if(pg==='students')renderStudents();
   if(pg==='classes')renderClasses();
   if(pg==='plans')renderPlans();
