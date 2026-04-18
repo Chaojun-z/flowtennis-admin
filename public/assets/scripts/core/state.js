@@ -12,10 +12,11 @@ let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-04-18-disable-ledger-cache';
+const DATA_CACHE_VERSION='2026-04-18-safe-list-cache';
+const DATASETS_EXCLUDED_FROM_CACHE=new Set(['entitlementLedger']);
 const datasetLoadPromises=new Map();
 const PAGE_DATA_REQUIREMENTS={
-  students:['campuses','students','entitlements','entitlementLedger'],
+  students:['campuses','students'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
   schedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
@@ -40,7 +41,7 @@ const PAGE_DATA_REQUIREMENTS={
   myclasses:[]
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
-  students:['classes','schedule','feedbacks','products','courts'],
+  students:['entitlements','entitlementLedger','classes','schedule','feedbacks','products','courts'],
   plans:['plansPage'],
   packages:['packages','products'],
   purchases:['purchasesPage'],
@@ -95,10 +96,17 @@ function ensureDatasetCacheVersion(){
   }catch(e){}
 }
 function persistDatasetCache(name,data){
-  return;
+  if(DATASETS_EXCLUDED_FROM_CACHE.has(name))return;
+  try{localStorage.setItem(datasetCacheKey(name),JSON.stringify({savedAt:Date.now(),data:Array.isArray(data)?data:[]}));}catch(e){}
 }
 function readDatasetCache(name){
-  return null;
+  if(DATASETS_EXCLUDED_FROM_CACHE.has(name))return null;
+  try{
+    const raw=localStorage.getItem(datasetCacheKey(name));
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    return Array.isArray(parsed?.data)?parsed.data:null;
+  }catch(e){return null;}
 }
 function setDatasetValue(name,data,{persist=true}={}){
   const rows=Array.isArray(data)?data:[];
@@ -142,8 +150,24 @@ function backgroundDatasetsForPage(pg){
 function missingRequiredDatasetsForPage(pg){
   return requiredDatasetsForPage(pg).filter(name=>!loadedDatasets.has(name));
 }
+function initialBackgroundDatasetsForPage(pg){
+  const fallback={
+    plansPage:['plans'],
+    purchasesPage:['purchases'],
+    courtsPage:['courts'],
+    membershipsPage:['courts','membershipAccounts'],
+    workbenchPage:['schedule']
+  };
+  return backgroundDatasetsForPage(pg).flatMap(name=>fallback[name]||[name]);
+}
+function missingInitialDatasetsForPage(pg){
+  const requiredMissing=missingRequiredDatasetsForPage(pg);
+  if(requiredMissing.length)return requiredMissing;
+  if(requiredDatasetsForPage(pg).length)return [];
+  return initialBackgroundDatasetsForPage(pg).filter(name=>!loadedDatasets.has(name));
+}
 function pageNeedsInlineLoading(pg){
-  return missingRequiredDatasetsForPage(pg).length>0;
+  return missingInitialDatasetsForPage(pg).length>0;
 }
 function renderTableBodyLoading(id,colspan,text){
   const el=document.getElementById(id);
