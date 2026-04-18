@@ -3,7 +3,12 @@ const seed = require('../api/seeds/mabao-finance-seed.json');
 
 assert.strictEqual(seed.purchases.length, 47, 'income report should include initial purchases and renewals');
 assert.strictEqual(seed.entitlements.length, 47, 'initial purchases and renewal rows should create course entitlements');
-assert.strictEqual(seed.packages.length, 22, 'imported purchases should link to standard package records, not one package per student');
+assert.ok(seed.packages.length <= 6, 'imported purchases should link to a small set of course-spec packages');
+assert.deepStrictEqual(
+  seed.packages.map(x => x.name).sort(),
+  ['成人1v1 10节课包', '历史特殊课包', '青少年1v1 10节课包', '青少年1v2 20节课包', '青少年1v2 40节课包'].sort(),
+  'standard packages should not be split by coach-specific or historical deal prices'
+);
 assert.ok(seed.meta.deletePackages.includes('seed-package-001'), 'old per-student package records should be cleaned from online data');
 assert.strictEqual(
   seed.purchases.reduce((sum, row) => sum + (Number(row.amountPaid) || 0), 0),
@@ -37,13 +42,15 @@ const liRenewal = seed.purchases.find(x => x.studentName === '李嵚' && x.sourc
 assert.ok(liRenewal, '李嵚 renewal should be imported');
 assert.strictEqual(liRenewal.amountPaid, 21000, '李嵚 renewal fee should be imported');
 assert.strictEqual(liRenewal.packageLessons, 50, '李嵚 renewal lessons should be imported');
-assert.ok(seed.packages.find(x => x.id === liRenewal.packageId), '李嵚 renewal should link to a standard package');
+assert.strictEqual(liRenewal.packageName, '历史特殊课包', '李嵚 50 lesson renewal should not be promoted to a standard package');
+assert.strictEqual(liRenewal.coachPriceName, '晓哲教练', 'coach price dimension should stay on the purchase snapshot');
 
 const wjingRenewal = seed.purchases.find(x => x.studentName === 'W.Jing' && x.sourceType === 'renewal');
 assert.ok(wjingRenewal, 'W.Jing renewal should be imported');
 assert.strictEqual(wjingRenewal.amountPaid, 7600, 'W.Jing renewal fee should be parsed from text');
 assert.strictEqual(wjingRenewal.packageLessons, 20, 'W.Jing renewal lessons should be parsed from text');
-assert.ok(seed.packages.find(x => x.id === wjingRenewal.packageId), 'W.Jing renewal should link to a standard package');
+assert.strictEqual(wjingRenewal.packageName, '历史特殊课包', 'W.Jing 20 lesson renewal should not be promoted to a standard package');
+assert.strictEqual(wjingRenewal.coachPriceName, 'siren', 'coach price dimension should stay on the purchase snapshot');
 
 const misha = seed.purchases.find(x => x.studentName === 'misha');
 assert.ok(misha && /每周四20-21点/.test(misha.notes || ''), 'purchase notes should include notes from 课时统计 remarks column');
