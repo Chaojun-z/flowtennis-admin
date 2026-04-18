@@ -5,502 +5,502 @@
       "Sheet1",
       "课时统计"
     ],
-    "tag": "mabao-finance-seed-v2",
+    "tag": "mabao-finance-seed-v3",
     "generatedAt": "2026-04-18T00:00:00.000Z"
   },
   "students": [
     {
       "id": "seed-student-001",
       "name": "佑佑",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "认识朱局，父亲消防局，走优惠黄金500/小时",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-002",
       "name": "misha",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "每周三 12-13点；每周四20-21点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-003",
       "name": "黄总",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "每周三 12-13点；每周四19-20点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-004",
       "name": "赵雨桐、赵雨晴",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "放假非黄和日常训练黄金，身边有朋友可以推荐，走新客优惠非黄10和黄金10",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-005",
       "name": "线熙宇（哈库呐玛塔塔）",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "吴教练",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-006",
       "name": "李嵚",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "晓哲教练",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-007",
       "name": "丫丫",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-008",
       "name": "润瑾",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "晓哲教练",
-      "notes": "固定周四13-14点上课",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-009",
       "name": "简先生",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "每周五15-16点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-010",
       "name": "朦朦",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "晓哲教练",
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-011",
       "name": "纪宁（vii）",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周五 19-20点；每周一+周五 19-20点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-012",
       "name": "Halena、Willian",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周一+周五 16-18点；有单独的课时统计表",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-013",
       "name": "Lam、Loon",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "没有固定教练",
-      "notes": "周一 16-18点 + 周五朗茶校区",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-014",
       "name": "永阳",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "",
-      "createdAt": "2026-04-18T00:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
-      "id": "seed-student-016",
-      "name": "朱一龙",
       "type": "成人",
-      "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-015",
       "name": "小土豆的姐姐",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "updatedAt": "2026-04-18T00:00:00.000Z"
+    },
+    {
+      "id": "seed-student-016",
+      "name": "朱一龙",
+      "phone": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-017",
-      "name": "高珺？",
-      "type": "成人",
+      "name": "高珺",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-018",
       "name": "马杰",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-019",
       "name": "Oliver",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "刘朝",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-020",
       "name": "·J ·",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "晓哲",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-021",
       "name": "袁博",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-022",
       "name": "余晓溪",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-023",
       "name": "葡萄",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "每周三中午12-13点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-024",
       "name": "赵新阳 田秀楠",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "不固定",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-025",
       "name": "王玺宁",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-026",
       "name": "Caranee",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-027",
       "name": "张佳良老大",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周三17点30-18点30",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-028",
       "name": "张佳良老二",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周三18点30-19点30",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-029",
       "name": "闫瀚珑AceYan",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "siren+老吴",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-030",
       "name": "高老师（暖暖爸爸）",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "siren+老吴",
-      "notes": "每周二16-17点 + 每周六10-11点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-031",
       "name": "杨子一",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-032",
       "name": "魏平涛 18600803917",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周三19点30-20点30分、周日9-10",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-033",
       "name": "袁冶",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "吴教练",
-      "notes": "每周二上午10-11点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-034",
       "name": "小林、德德",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-035",
       "name": "暴晓燕",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "周日10-11点",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-036",
       "name": "宋缇缇",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "每周四12点30分-13点30分",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-037",
       "name": "淇淇（ZT）",
-      "type": "青少年",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "每周五18-19点",
+      "type": "青少年",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-038",
       "name": "W.Jing",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "按照约定好的时间来上课",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-039",
       "name": "W.Jing朋友",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-040",
       "name": "是锤锤呀",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "每周一19-20点+每周五18-19点，赠送一节私教课+一次陪打（不包含场地费）",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-041",
       "name": "张昊",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "siren/天昊",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-042",
       "name": "李鹏昊",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "chaojun",
-      "notes": "网球协会会长推荐",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-043",
       "name": "宗钰",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-044",
       "name": "李先生",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "和李鹏昊是朋友",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-student-045",
       "name": "马晨",
-      "type": "成人",
       "phone": "",
-      "campus": "mabao",
-      "primaryCoach": "Siren",
-      "notes": "和袁博是朋友",
+      "type": "成人",
+      "campus": "顺义马坡",
+      "source": "历史导入",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     }
@@ -509,44 +509,32 @@
     {
       "id": "seed-product-001",
       "name": "青少年1v1私教课",
-      "type": "私教课",
-      "maxStudents": 1,
-      "price": 10000,
-      "lessons": 1,
-      "notes": "由马坡财务历史表导入",
+      "courseType": "私教课",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-product-002",
       "name": "成人1v1私教课",
-      "type": "私教课",
-      "maxStudents": 1,
-      "price": 6000,
-      "lessons": 1,
-      "notes": "由马坡财务历史表导入",
+      "courseType": "私教课",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-product-003",
       "name": "青少年1v2私教课",
-      "type": "私教课",
-      "maxStudents": 2,
-      "price": 11000,
-      "lessons": 1,
-      "notes": "由马坡财务历史表导入",
+      "courseType": "半私教课",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-product-004",
       "name": "成人1v2私教课",
-      "type": "私教课",
-      "maxStudents": 2,
-      "price": 5000,
-      "lessons": 1,
-      "notes": "由马坡财务历史表导入",
+      "courseType": "半私教课",
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     }
@@ -560,19 +548,7 @@
       "courseType": "私教课",
       "lessons": 20,
       "price": 10000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "认识朱局，父亲消防局，走优惠黄金500/小时",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -584,19 +560,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 6000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周三 12-13点；每周四20-21点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -608,19 +572,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 6000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周三 12-13点；每周四19-20点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -629,22 +581,10 @@
       "name": "赵雨桐、赵雨晴课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "lessons": 20,
       "price": 11000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 2,
       "status": "active",
-      "notes": "放假非黄和日常训练黄金，身边有朋友可以推荐，走新客优惠非黄10和黄金10",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -656,19 +596,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "吴教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -680,19 +608,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "晓哲教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -704,19 +620,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -728,19 +632,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "晓哲教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "固定周四13-14点上课",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -752,19 +644,7 @@
       "courseType": "私教课",
       "lessons": 15,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周五15-16点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -776,19 +656,7 @@
       "courseType": "私教课",
       "lessons": 15,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "晓哲教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周六10-11点30分；每周六10-11点半",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -800,19 +668,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5400,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "周五 19-20点；每周一+周五 19-20点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -821,22 +677,10 @@
       "name": "Halena、Willian课包（40节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "lessons": 40,
       "price": 24000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 2,
       "status": "active",
-      "notes": "周一+周五 16-18点；有单独的课时统计表",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -845,22 +689,10 @@
       "name": "Lam、Loon课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "lessons": 20,
       "price": 12000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "没有固定教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 2,
       "status": "active",
-      "notes": "周一 16-18点 + 周五朗茶校区",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -872,43 +704,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 6000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
-      "createdAt": "2026-04-18T00:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
-      "id": "seed-package-016",
-      "name": "朱一龙课包（10节）",
-      "productId": "seed-product-002",
-      "productName": "成人1v1私教课",
-      "courseType": "私教课",
-      "lessons": 10,
-      "price": 6000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
-      "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -920,43 +716,31 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "updatedAt": "2026-04-18T00:00:00.000Z"
+    },
+    {
+      "id": "seed-package-016",
+      "name": "朱一龙课包（10节）",
+      "productId": "seed-product-002",
+      "productName": "成人1v1私教课",
+      "courseType": "私教课",
+      "lessons": 10,
+      "price": 6000,
+      "status": "active",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
       "id": "seed-package-017",
-      "name": "高珺？课包（10节）",
+      "name": "高珺课包（10节）",
       "productId": "seed-product-002",
       "productName": "成人1v1私教课",
       "courseType": "私教课",
       "lessons": 10,
       "price": 0,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -968,19 +752,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 6000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -992,19 +764,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "刘朝"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1016,19 +776,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "晓哲"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1040,19 +788,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1064,19 +800,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1088,19 +812,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周三中午12-13点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1111,20 +823,8 @@
       "productName": "成人1v1私教课",
       "courseType": "私教课",
       "lessons": 20,
-      "price": 0,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "不固定"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
+      "price": 8800,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1136,19 +836,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1160,19 +848,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1184,19 +860,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "周三17点30-18点30",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1208,19 +872,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "周三18点30-19点30",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1232,19 +884,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "siren+老吴"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1256,19 +896,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "siren+老吴"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周二16-17点 + 每周六10-11点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1280,19 +908,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1304,19 +920,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "周三19点30-20点30分、周日9-10",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1328,19 +932,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "吴教练"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周二上午10-11点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1352,19 +944,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3800,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1373,22 +953,10 @@
       "name": "暴晓燕课包（10节）",
       "productId": "seed-product-004",
       "productName": "成人1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "lessons": 10,
       "price": 5000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 2,
       "status": "active",
-      "notes": "周日10-11点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1400,19 +968,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4500,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周四12点30分-13点30分",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1424,19 +980,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周五18-19点",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1448,19 +992,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3500,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "按照约定好的时间来上课",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1472,19 +1004,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1496,19 +1016,7 @@
       "courseType": "私教课",
       "lessons": 20,
       "price": 9000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "每周一19-20点+每周五18-19点，赠送一节私教课+一次陪打（不包含场地费）",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1520,19 +1028,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "siren/天昊"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1544,19 +1040,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 4000,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "网球协会会长推荐",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1568,19 +1052,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3500,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "由马坡财务历史表导入",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1592,19 +1064,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3500,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "和李鹏昊是朋友",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1616,19 +1076,7 @@
       "courseType": "私教课",
       "lessons": 10,
       "price": 3500,
-      "validDays": 365,
-      "timeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
       "status": "active",
-      "notes": "和袁博是朋友",
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     }
@@ -1716,7 +1164,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周三 12-13点；每周四20-21点",
+      "notes": "每周四20-21点",
       "createdAt": "2026-01-06T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1759,7 +1207,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周三 12-13点；每周四19-20点",
+      "notes": "每周四19-20点",
       "createdAt": "2026-01-06T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1772,7 +1220,7 @@
       "packageName": "赵雨桐、赵雨晴课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "packageLessons": 20,
       "packagePrice": 11000,
       "priceSource": "package",
@@ -1888,7 +1336,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
+      "notes": "固定周四上午10点上课",
       "createdAt": "2026-01-15T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -1931,7 +1379,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "小程序后台购买10课时",
       "createdAt": "2026-01-19T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2060,7 +1508,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "notes": "每周六10-11点半",
       "createdAt": "2026-01-22T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2103,7 +1551,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周五 19-20点；每周一+周五 19-20点",
+      "notes": "每周一+周五 19-20点",
       "createdAt": "2026-01-24T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2116,7 +1564,7 @@
       "packageName": "Halena、Willian课包（40节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "packageLessons": 40,
       "packagePrice": 24000,
       "priceSource": "package",
@@ -2146,7 +1594,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周一+周五 16-18点；有单独的课时统计表",
+      "notes": "有单独的课时统计表",
       "createdAt": "2025-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2159,7 +1607,7 @@
       "packageName": "Lam、Loon课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "packageLessons": 20,
       "packagePrice": 12000,
       "priceSource": "package",
@@ -2189,7 +1637,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周一 16-18点 + 周五朗茶校区",
+      "notes": "",
       "createdAt": "2025-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2237,49 +1685,6 @@
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
-      "id": "seed-purchase-016",
-      "studentId": "seed-student-016",
-      "studentName": "朱一龙",
-      "studentPhone": "",
-      "packageId": "seed-package-016",
-      "packageName": "朱一龙课包（10节）",
-      "productId": "seed-product-002",
-      "productName": "成人1v1私教课",
-      "courseType": "私教课",
-      "packageLessons": 10,
-      "packagePrice": 6000,
-      "priceSource": "package",
-      "priceSourceId": "seed-package-016",
-      "priceSourceName": "朱一龙课包（10节）",
-      "systemAmount": 6000,
-      "finalAmount": 6000,
-      "priceOverridden": false,
-      "overrideReason": "",
-      "packageTimeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "ownerCoach": "chaojun",
-      "allowedCoaches": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "usageStartDate": "2026-02-06",
-      "usageEndDate": "",
-      "purchaseDate": "2026-02-06",
-      "amountPaid": 6000,
-      "payMethod": "转账",
-      "operator": "系统导入",
-      "status": "active",
-      "notes": "",
-      "createdAt": "2026-02-06T10:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
       "id": "seed-purchase-015",
       "studentId": "seed-student-015",
       "studentName": "小土豆的姐姐",
@@ -2323,12 +1728,55 @@
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
+      "id": "seed-purchase-016",
+      "studentId": "seed-student-016",
+      "studentName": "朱一龙",
+      "studentPhone": "",
+      "packageId": "seed-package-016",
+      "packageName": "朱一龙课包（10节）",
+      "productId": "seed-product-002",
+      "productName": "成人1v1私教课",
+      "courseType": "私教课",
+      "packageLessons": 10,
+      "packagePrice": 6000,
+      "priceSource": "package",
+      "priceSourceId": "seed-package-016",
+      "priceSourceName": "朱一龙课包（10节）",
+      "systemAmount": 6000,
+      "finalAmount": 6000,
+      "priceOverridden": false,
+      "overrideReason": "",
+      "packageTimeBand": "全天",
+      "dailyTimeWindows": [],
+      "coachIds": [],
+      "coachNames": [
+        "chaojun"
+      ],
+      "ownerCoach": "chaojun",
+      "allowedCoaches": [
+        "chaojun"
+      ],
+      "campusIds": [
+        "mabao"
+      ],
+      "usageStartDate": "2026-02-06",
+      "usageEndDate": "",
+      "purchaseDate": "2026-02-06",
+      "amountPaid": 6000,
+      "payMethod": "转账",
+      "operator": "系统导入",
+      "status": "active",
+      "notes": "",
+      "createdAt": "2026-02-06T10:00:00.000Z",
+      "updatedAt": "2026-04-18T00:00:00.000Z"
+    },
+    {
       "id": "seed-purchase-017",
       "studentId": "seed-student-017",
-      "studentName": "高珺？",
+      "studentName": "高珺",
       "studentPhone": "",
       "packageId": "seed-package-017",
-      "packageName": "高珺？课包（10节）",
+      "packageName": "高珺课包（10节）",
       "productId": "seed-product-002",
       "productName": "成人1v1私教课",
       "courseType": "私教课",
@@ -2336,7 +1784,7 @@
       "packagePrice": 0,
       "priceSource": "package",
       "priceSourceId": "seed-package-017",
-      "priceSourceName": "高珺？课包（10节）",
+      "priceSourceName": "高珺课包（10节）",
       "systemAmount": 0,
       "finalAmount": 0,
       "priceOverridden": false,
@@ -2517,11 +1965,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2560,11 +2008,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2603,11 +2051,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2619,7 +2067,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周三中午12-13点",
+      "notes": "",
       "createdAt": "2026-03-02T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2634,12 +2082,12 @@
       "productName": "成人1v1私教课",
       "courseType": "私教课",
       "packageLessons": 20,
-      "packagePrice": 0,
+      "packagePrice": 8800,
       "priceSource": "package",
       "priceSourceId": "seed-package-024",
       "priceSourceName": "赵新阳 田秀楠课包（20节）",
-      "systemAmount": 0,
-      "finalAmount": 0,
+      "systemAmount": 8800,
+      "finalAmount": 8800,
       "priceOverridden": false,
       "overrideReason": "",
       "packageTimeBand": "全天",
@@ -2658,7 +2106,7 @@
       "usageStartDate": "2026-03-04",
       "usageEndDate": "",
       "purchaseDate": "2026-03-04",
-      "amountPaid": 0,
+      "amountPaid": 8800,
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
@@ -2689,11 +2137,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2732,11 +2180,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2775,24 +2223,24 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
-      "usageStartDate": "2026-03-12",
+      "usageStartDate": "2026-01-01",
       "usageEndDate": "",
-      "purchaseDate": "2026-03-12",
+      "purchaseDate": "2026-01-01",
       "amountPaid": 5000,
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周三17点30-18点30",
-      "createdAt": "2026-03-12T10:00:00.000Z",
+      "notes": "",
+      "createdAt": "2026-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -2818,24 +2266,24 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
-      "usageStartDate": "2026-03-12",
+      "usageStartDate": "2026-01-01",
       "usageEndDate": "",
-      "purchaseDate": "2026-03-12",
+      "purchaseDate": "2026-01-01",
       "amountPaid": 5000,
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周三18点30-19点30",
-      "createdAt": "2026-03-12T10:00:00.000Z",
+      "notes": "",
+      "createdAt": "2026-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -2920,7 +2368,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周二16-17点 + 每周六10-11点",
+      "notes": "",
       "createdAt": "2026-03-17T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -2947,11 +2395,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -2990,11 +2438,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3006,7 +2454,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周三19点30-20点30分、周日9-10",
+      "notes": "",
       "createdAt": "2026-03-20T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3049,7 +2497,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周二上午10-11点",
+      "notes": "",
       "createdAt": "2026-03-24T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3076,11 +2524,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3105,7 +2553,7 @@
       "packageName": "暴晓燕课包（10节）",
       "productId": "seed-product-004",
       "productName": "成人1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "packageLessons": 10,
       "packagePrice": 5000,
       "priceSource": "package",
@@ -3119,11 +2567,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3135,7 +2583,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "周日10-11点",
+      "notes": "",
       "createdAt": "2026-03-28T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3178,7 +2626,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周四12点30分-13点30分",
+      "notes": "",
       "createdAt": "2026-04-03T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3205,11 +2653,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3221,7 +2669,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周五18-19点",
+      "notes": "",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3248,11 +2696,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3264,7 +2712,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "按照约定好的时间来上课",
+      "notes": "",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3291,11 +2739,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3334,11 +2782,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3350,7 +2798,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "每周一19-20点+每周五18-19点，赠送一节私教课+一次陪打（不包含场地费）",
+      "notes": "",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3436,7 +2884,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "网球协会会长推荐",
+      "notes": "",
       "createdAt": "2026-04-08T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3463,11 +2911,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3506,11 +2954,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3522,7 +2970,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "和李鹏昊是朋友",
+      "notes": "",
       "createdAt": "2026-04-15T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3549,11 +2997,11 @@
       "dailyTimeWindows": [],
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -3565,7 +3013,7 @@
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
-      "notes": "和袁博是朋友",
+      "notes": "",
       "createdAt": "2026-04-17T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     }
@@ -3638,7 +3086,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周三 12-13点；每周四20-21点",
+      "notes": "每周四20-21点",
       "status": "active",
       "createdAt": "2026-01-06T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -3674,7 +3122,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周三 12-13点；每周四19-20点",
+      "notes": "每周四19-20点",
       "status": "active",
       "createdAt": "2026-01-06T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -3688,7 +3136,7 @@
       "packageName": "赵雨桐、赵雨晴课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "totalLessons": 20,
       "usedLessons": 1,
       "remainingLessons": 19,
@@ -3782,8 +3230,8 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
-      "status": "depleted",
+      "notes": "固定周四上午10点上课",
+      "status": "active",
       "createdAt": "2026-01-15T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3818,8 +3266,8 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
-      "status": "depleted",
+      "notes": "小程序后台购买10课时",
+      "status": "active",
       "createdAt": "2026-01-19T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
@@ -3906,8 +3354,8 @@
       "productName": "成人1v1私教课",
       "courseType": "私教课",
       "totalLessons": 15,
-      "usedLessons": 10,
-      "remainingLessons": 5,
+      "usedLessons": 9.5,
+      "remainingLessons": 5.5,
       "validFrom": "2026-01-22",
       "validUntil": "",
       "usageStartDate": "2026-01-22",
@@ -3926,7 +3374,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "notes": "每周六10-11点半",
       "status": "active",
       "createdAt": "2026-01-22T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -3962,7 +3410,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "周五 19-20点；每周一+周五 19-20点",
+      "notes": "每周一+周五 19-20点",
       "status": "active",
       "createdAt": "2026-01-24T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -3976,7 +3424,7 @@
       "packageName": "Halena、Willian课包（40节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "totalLessons": 40,
       "usedLessons": 0,
       "remainingLessons": 40,
@@ -3998,7 +3446,7 @@
         "mabao"
       ],
       "maxStudents": 2,
-      "notes": "周一+周五 16-18点；有单独的课时统计表",
+      "notes": "有单独的课时统计表",
       "status": "active",
       "createdAt": "2025-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4012,7 +3460,7 @@
       "packageName": "Lam、Loon课包（20节）",
       "productId": "seed-product-003",
       "productName": "青少年1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "totalLessons": 20,
       "usedLessons": 0,
       "remainingLessons": 20,
@@ -4034,7 +3482,7 @@
         "mabao"
       ],
       "maxStudents": 2,
-      "notes": "周一 16-18点 + 周五朗茶校区",
+      "notes": "",
       "status": "active",
       "createdAt": "2025-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4076,42 +3524,6 @@
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
-      "id": "seed-entitlement-016",
-      "studentId": "seed-student-016",
-      "studentName": "朱一龙",
-      "purchaseId": "seed-purchase-016",
-      "packageId": "seed-package-016",
-      "packageName": "朱一龙课包（10节）",
-      "productId": "seed-product-002",
-      "productName": "成人1v1私教课",
-      "courseType": "私教课",
-      "totalLessons": 10,
-      "usedLessons": 3,
-      "remainingLessons": 7,
-      "validFrom": "2026-02-06",
-      "validUntil": "",
-      "usageStartDate": "2026-02-06",
-      "usageEndDate": "",
-      "dailyTimeWindows": [],
-      "timeBand": "全天",
-      "coachIds": [],
-      "coachNames": [
-        "chaojun"
-      ],
-      "ownerCoach": "chaojun",
-      "allowedCoaches": [
-        "chaojun"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
-      "notes": "",
-      "status": "active",
-      "createdAt": "2026-02-06T10:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
       "id": "seed-entitlement-015",
       "studentId": "seed-student-015",
       "studentName": "小土豆的姐姐",
@@ -4122,8 +3534,8 @@
       "productName": "成人1v1私教课",
       "courseType": "私教课",
       "totalLessons": 10,
-      "usedLessons": 5,
-      "remainingLessons": 5,
+      "usedLessons": 3,
+      "remainingLessons": 7,
       "validFrom": "2026-02-01",
       "validUntil": "",
       "usageStartDate": "2026-02-01",
@@ -4148,12 +3560,48 @@
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
+      "id": "seed-entitlement-016",
+      "studentId": "seed-student-016",
+      "studentName": "朱一龙",
+      "purchaseId": "seed-purchase-016",
+      "packageId": "seed-package-016",
+      "packageName": "朱一龙课包（10节）",
+      "productId": "seed-product-002",
+      "productName": "成人1v1私教课",
+      "courseType": "私教课",
+      "totalLessons": 10,
+      "usedLessons": 5,
+      "remainingLessons": 5,
+      "validFrom": "2026-02-06",
+      "validUntil": "",
+      "usageStartDate": "2026-02-06",
+      "usageEndDate": "",
+      "dailyTimeWindows": [],
+      "timeBand": "全天",
+      "coachIds": [],
+      "coachNames": [
+        "chaojun"
+      ],
+      "ownerCoach": "chaojun",
+      "allowedCoaches": [
+        "chaojun"
+      ],
+      "campusIds": [
+        "mabao"
+      ],
+      "maxStudents": 1,
+      "notes": "",
+      "status": "active",
+      "createdAt": "2026-02-06T10:00:00.000Z",
+      "updatedAt": "2026-04-18T00:00:00.000Z"
+    },
+    {
       "id": "seed-entitlement-017",
       "studentId": "seed-student-017",
-      "studentName": "高珺？",
+      "studentName": "高珺",
       "purchaseId": "seed-purchase-017",
       "packageId": "seed-package-017",
-      "packageName": "高珺？课包（10节）",
+      "packageName": "高珺课包（10节）",
       "productId": "seed-product-002",
       "productName": "成人1v1私教课",
       "courseType": "私教课",
@@ -4312,11 +3760,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4348,11 +3796,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4384,17 +3832,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周三中午12-13点",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-03-02T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4456,11 +3904,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4492,11 +3940,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4520,27 +3968,27 @@
       "totalLessons": 10,
       "usedLessons": 2,
       "remainingLessons": 8,
-      "validFrom": "2026-03-12",
+      "validFrom": "2026-01-01",
       "validUntil": "",
-      "usageStartDate": "2026-03-12",
+      "usageStartDate": "2026-01-01",
       "usageEndDate": "",
       "dailyTimeWindows": [],
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "周三17点30-18点30",
+      "notes": "",
       "status": "active",
-      "createdAt": "2026-03-12T10:00:00.000Z",
+      "createdAt": "2026-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -4556,27 +4004,27 @@
       "totalLessons": 10,
       "usedLessons": 2,
       "remainingLessons": 8,
-      "validFrom": "2026-03-12",
+      "validFrom": "2026-01-01",
       "validUntil": "",
-      "usageStartDate": "2026-03-12",
+      "usageStartDate": "2026-01-01",
       "usageEndDate": "",
       "dailyTimeWindows": [],
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "周三18点30-19点30",
+      "notes": "",
       "status": "active",
-      "createdAt": "2026-03-12T10:00:00.000Z",
+      "createdAt": "2026-01-01T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -4646,7 +4094,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周二16-17点 + 每周六10-11点",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-03-17T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4672,11 +4120,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4708,17 +4156,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "周三19点30-20点30分、周日9-10",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-03-20T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4754,7 +4202,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周二上午10-11点",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-03-24T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4780,11 +4228,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4804,7 +4252,7 @@
       "packageName": "暴晓燕课包（10节）",
       "productId": "seed-product-004",
       "productName": "成人1v2私教课",
-      "courseType": "私教课",
+      "courseType": "半私教课",
       "totalLessons": 10,
       "usedLessons": 0,
       "remainingLessons": 10,
@@ -4816,17 +4264,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 2,
-      "notes": "周日10-11点",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-03-28T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4862,7 +4310,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周四12点30分-13点30分",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-03T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4888,17 +4336,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周五18-19点",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4924,17 +4372,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "按照约定好的时间来上课",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -4960,11 +4408,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -4996,17 +4444,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "每周一19-20点+每周五18-19点，赠送一节私教课+一次陪打（不包含场地费）",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-05T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -5078,7 +4526,7 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "网球协会会长推荐",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-08T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -5104,11 +4552,11 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
@@ -5140,17 +4588,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "和李鹏昊是朋友",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-15T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -5176,17 +4624,17 @@
       "timeBand": "全天",
       "coachIds": [],
       "coachNames": [
-        "Siren"
+        "siren"
       ],
-      "ownerCoach": "Siren",
+      "ownerCoach": "siren",
       "allowedCoaches": [
-        "Siren"
+        "siren"
       ],
       "campusIds": [
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "和袁博是朋友",
+      "notes": "",
       "status": "active",
       "createdAt": "2026-04-17T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -5198,600 +4646,800 @@
       "entitlementId": "seed-entitlement-001",
       "purchaseId": "seed-purchase-001",
       "scheduleId": "",
+      "studentId": "seed-student-001",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 1月消课",
       "notes": "认识朱局，父亲消防局，走优惠黄金500/小时",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-001-02",
       "entitlementId": "seed-entitlement-001",
       "purchaseId": "seed-purchase-001",
       "scheduleId": "",
+      "studentId": "seed-student-001",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 2月消课",
       "notes": "认识朱局，父亲消防局，走优惠黄金500/小时",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-001-03",
       "entitlementId": "seed-entitlement-001",
       "purchaseId": "seed-purchase-001",
       "scheduleId": "",
+      "studentId": "seed-student-001",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "认识朱局，父亲消防局，走优惠黄金500/小时",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-002-01",
       "entitlementId": "seed-entitlement-002",
       "purchaseId": "seed-purchase-002",
       "scheduleId": "",
+      "studentId": "seed-student-002",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 1月消课",
-      "notes": "每周三 12-13点；每周四20-21点",
+      "notes": "每周四20-21点",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-002-02",
       "entitlementId": "seed-entitlement-002",
       "purchaseId": "seed-purchase-002",
       "scheduleId": "",
+      "studentId": "seed-student-002",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 2月消课",
-      "notes": "每周三 12-13点；每周四20-21点",
+      "notes": "每周四20-21点",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-002-03",
       "entitlementId": "seed-entitlement-002",
       "purchaseId": "seed-purchase-002",
       "scheduleId": "",
+      "studentId": "seed-student-002",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周三 12-13点；每周四20-21点",
+      "notes": "每周四20-21点",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-003-01",
       "entitlementId": "seed-entitlement-003",
       "purchaseId": "seed-purchase-003",
       "scheduleId": "",
+      "studentId": "seed-student-003",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 1月消课",
-      "notes": "每周三 12-13点；每周四19-20点",
+      "notes": "每周四19-20点",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-003-02",
       "entitlementId": "seed-entitlement-003",
       "purchaseId": "seed-purchase-003",
       "scheduleId": "",
+      "studentId": "seed-student-003",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 2月消课",
-      "notes": "每周三 12-13点；每周四19-20点",
+      "notes": "每周四19-20点",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-003-03",
       "entitlementId": "seed-entitlement-003",
       "purchaseId": "seed-purchase-003",
       "scheduleId": "",
+      "studentId": "seed-student-003",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周三 12-13点；每周四19-20点",
+      "notes": "每周四19-20点",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-004-03",
       "entitlementId": "seed-entitlement-004",
       "purchaseId": "seed-purchase-004",
       "scheduleId": "",
+      "studentId": "seed-student-004",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "放假非黄和日常训练黄金，身边有朋友可以推荐，走新客优惠非黄10和黄金10",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-005-01",
       "entitlementId": "seed-entitlement-005",
       "purchaseId": "seed-purchase-005",
       "scheduleId": "",
+      "studentId": "seed-student-005",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 1月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-006-01",
       "entitlementId": "seed-entitlement-006",
       "purchaseId": "seed-purchase-006",
       "scheduleId": "",
+      "studentId": "seed-student-006",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 1月消课",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
+      "notes": "固定周四上午10点上课",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-006-02",
       "entitlementId": "seed-entitlement-006",
       "purchaseId": "seed-purchase-006",
       "scheduleId": "",
-      "lessonDelta": -2,
+      "studentId": "seed-student-006",
+      "lessonDelta": -2.5,
+      "action": "consume",
       "reason": "历史导入 2月消课",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
+      "notes": "固定周四上午10点上课",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-006-03",
       "entitlementId": "seed-entitlement-006",
       "purchaseId": "seed-purchase-006",
       "scheduleId": "",
-      "lessonDelta": -8,
+      "studentId": "seed-student-006",
+      "lessonDelta": -7.5,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "周三12-13点+周四10-11点30分上课（3月7日 赠送五节专项课）；固定周四上午10点上课",
+      "notes": "固定周四上午10点上课",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-007-01",
       "entitlementId": "seed-entitlement-007",
       "purchaseId": "seed-purchase-007",
       "scheduleId": "",
+      "studentId": "seed-student-007",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 1月消课",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "小程序后台购买10课时",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-007-02",
       "entitlementId": "seed-entitlement-007",
       "purchaseId": "seed-purchase-007",
       "scheduleId": "",
+      "studentId": "seed-student-007",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 2月消课",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "小程序后台购买10课时",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-007-03",
       "entitlementId": "seed-entitlement-007",
       "purchaseId": "seed-purchase-007",
       "scheduleId": "",
+      "studentId": "seed-student-007",
       "lessonDelta": -6,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "小程序后台购买10课时",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-008-03",
       "entitlementId": "seed-entitlement-008",
       "purchaseId": "seed-purchase-008",
       "scheduleId": "",
+      "studentId": "seed-student-008",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "固定周四13-14点上课",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-009-01",
       "entitlementId": "seed-entitlement-009",
       "purchaseId": "seed-purchase-009",
       "scheduleId": "",
+      "studentId": "seed-student-009",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 1月消课",
       "notes": "每周五15-16点",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-009-02",
       "entitlementId": "seed-entitlement-009",
       "purchaseId": "seed-purchase-009",
       "scheduleId": "",
+      "studentId": "seed-student-009",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 2月消课",
       "notes": "每周五15-16点",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-009-03",
       "entitlementId": "seed-entitlement-009",
       "purchaseId": "seed-purchase-009",
       "scheduleId": "",
+      "studentId": "seed-student-009",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "每周五15-16点",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-010-01",
       "entitlementId": "seed-entitlement-010",
       "purchaseId": "seed-purchase-010",
       "scheduleId": "",
+      "studentId": "seed-student-010",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 1月消课",
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "notes": "每周六10-11点半",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-010-02",
       "entitlementId": "seed-entitlement-010",
       "purchaseId": "seed-purchase-010",
       "scheduleId": "",
-      "lessonDelta": -2,
+      "studentId": "seed-student-010",
+      "lessonDelta": -1.5,
+      "action": "consume",
       "reason": "历史导入 2月消课",
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "notes": "每周六10-11点半",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-010-03",
       "entitlementId": "seed-entitlement-010",
       "purchaseId": "seed-purchase-010",
       "scheduleId": "",
+      "studentId": "seed-student-010",
       "lessonDelta": -6,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周六10-11点30分；每周六10-11点半",
+      "notes": "每周六10-11点半",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-011-03",
       "entitlementId": "seed-entitlement-011",
       "purchaseId": "seed-purchase-011",
       "scheduleId": "",
+      "studentId": "seed-student-011",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "周五 19-20点；每周一+周五 19-20点",
+      "notes": "每周一+周五 19-20点",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-014-03",
       "entitlementId": "seed-entitlement-014",
       "purchaseId": "seed-purchase-014",
       "scheduleId": "",
+      "studentId": "seed-student-014",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
-    },
-    {
-      "id": "seed-ledger-016-02",
-      "entitlementId": "seed-entitlement-016",
-      "purchaseId": "seed-purchase-016",
-      "scheduleId": "",
-      "lessonDelta": -1,
-      "reason": "历史导入 2月消课",
-      "notes": "",
-      "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
-    },
-    {
-      "id": "seed-ledger-016-03",
-      "entitlementId": "seed-entitlement-016",
-      "purchaseId": "seed-purchase-016",
-      "scheduleId": "",
-      "lessonDelta": -2,
-      "reason": "历史导入 3月消课",
-      "notes": "",
-      "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-015-02",
       "entitlementId": "seed-entitlement-015",
       "purchaseId": "seed-purchase-015",
       "scheduleId": "",
-      "lessonDelta": -2,
+      "studentId": "seed-student-015",
+      "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 2月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-015-03",
       "entitlementId": "seed-entitlement-015",
       "purchaseId": "seed-purchase-015",
       "scheduleId": "",
-      "lessonDelta": -3,
+      "studentId": "seed-student-015",
+      "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
+    },
+    {
+      "id": "seed-ledger-016-02",
+      "entitlementId": "seed-entitlement-016",
+      "purchaseId": "seed-purchase-016",
+      "scheduleId": "",
+      "studentId": "seed-student-016",
+      "lessonDelta": -2,
+      "action": "consume",
+      "reason": "历史导入 2月消课",
+      "notes": "",
+      "operator": "系统导入",
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
+    },
+    {
+      "id": "seed-ledger-016-03",
+      "entitlementId": "seed-entitlement-016",
+      "purchaseId": "seed-purchase-016",
+      "scheduleId": "",
+      "studentId": "seed-student-016",
+      "lessonDelta": -3,
+      "action": "consume",
+      "reason": "历史导入 3月消课",
+      "notes": "",
+      "operator": "系统导入",
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-017-01",
       "entitlementId": "seed-entitlement-017",
       "purchaseId": "seed-purchase-017",
       "scheduleId": "",
+      "studentId": "seed-student-017",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 1月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-01-28T20:00:00.000Z",
-      "relatedDate": "2026-01-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-01-31",
+      "sourceMonth": "2026-01",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-017-03",
       "entitlementId": "seed-entitlement-017",
       "purchaseId": "seed-purchase-017",
       "scheduleId": "",
+      "studentId": "seed-student-017",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-018-02",
       "entitlementId": "seed-entitlement-018",
       "purchaseId": "seed-purchase-018",
       "scheduleId": "",
+      "studentId": "seed-student-018",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 2月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-018-03",
       "entitlementId": "seed-entitlement-018",
       "purchaseId": "seed-purchase-018",
       "scheduleId": "",
+      "studentId": "seed-student-018",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-019-02",
       "entitlementId": "seed-entitlement-019",
       "purchaseId": "seed-purchase-019",
       "scheduleId": "",
+      "studentId": "seed-student-019",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 2月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-02-28T20:00:00.000Z",
-      "relatedDate": "2026-02-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-02-28",
+      "sourceMonth": "2026-02",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-020-03",
       "entitlementId": "seed-entitlement-020",
       "purchaseId": "seed-purchase-020",
       "scheduleId": "",
+      "studentId": "seed-student-020",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-021-03",
       "entitlementId": "seed-entitlement-021",
       "purchaseId": "seed-purchase-021",
       "scheduleId": "",
+      "studentId": "seed-student-021",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-022-03",
       "entitlementId": "seed-entitlement-022",
       "purchaseId": "seed-purchase-022",
       "scheduleId": "",
+      "studentId": "seed-student-022",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-023-03",
       "entitlementId": "seed-entitlement-023",
       "purchaseId": "seed-purchase-023",
       "scheduleId": "",
+      "studentId": "seed-student-023",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周三中午12-13点",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-024-03",
       "entitlementId": "seed-entitlement-024",
       "purchaseId": "seed-purchase-024",
       "scheduleId": "",
+      "studentId": "seed-student-024",
       "lessonDelta": -7,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-025-03",
       "entitlementId": "seed-entitlement-025",
       "purchaseId": "seed-purchase-025",
       "scheduleId": "",
+      "studentId": "seed-student-025",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-026-03",
       "entitlementId": "seed-entitlement-026",
       "purchaseId": "seed-purchase-026",
       "scheduleId": "",
+      "studentId": "seed-student-026",
       "lessonDelta": -4,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-027-03",
       "entitlementId": "seed-entitlement-027",
       "purchaseId": "seed-purchase-027",
       "scheduleId": "",
+      "studentId": "seed-student-027",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "周三17点30-18点30",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-028-03",
       "entitlementId": "seed-entitlement-028",
       "purchaseId": "seed-purchase-028",
       "scheduleId": "",
+      "studentId": "seed-student-028",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "周三18点30-19点30",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-029-03",
       "entitlementId": "seed-entitlement-029",
       "purchaseId": "seed-purchase-029",
       "scheduleId": "",
+      "studentId": "seed-student-029",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-030-03",
       "entitlementId": "seed-entitlement-030",
       "purchaseId": "seed-purchase-030",
       "scheduleId": "",
+      "studentId": "seed-student-030",
       "lessonDelta": -5,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周二16-17点 + 每周六10-11点",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-031-03",
       "entitlementId": "seed-entitlement-031",
       "purchaseId": "seed-purchase-031",
       "scheduleId": "",
+      "studentId": "seed-student-031",
       "lessonDelta": -3,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-032-03",
       "entitlementId": "seed-entitlement-032",
       "purchaseId": "seed-purchase-032",
       "scheduleId": "",
+      "studentId": "seed-student-032",
       "lessonDelta": -1,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "周三19点30-20点30分、周日9-10",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-033-03",
       "entitlementId": "seed-entitlement-033",
       "purchaseId": "seed-purchase-033",
       "scheduleId": "",
+      "studentId": "seed-student-033",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
-      "notes": "每周二上午10-11点",
+      "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     },
     {
       "id": "seed-ledger-034-03",
       "entitlementId": "seed-entitlement-034",
       "purchaseId": "seed-purchase-034",
       "scheduleId": "",
+      "studentId": "seed-student-034",
       "lessonDelta": -2,
+      "action": "consume",
       "reason": "历史导入 3月消课",
       "notes": "",
       "operator": "系统导入",
-      "createdAt": "2026-03-28T20:00:00.000Z",
-      "relatedDate": "2026-03-28"
+      "createdAt": "2026-04-18T00:00:00.000Z",
+      "relatedDate": "2026-03-31",
+      "sourceMonth": "2026-03",
+      "importSource": "系统导入"
     }
   ]
 }

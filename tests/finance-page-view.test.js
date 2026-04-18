@@ -18,6 +18,9 @@ assert.doesNotMatch(source,/id="financeStatsRow"/,'finance center should not kee
 assert.match(source,/备注[\s\S]*coachOpsRevenueTbody/,'revenue report should expose imported notes');
 assert.match(source,/原因[\s\S]*备注[\s\S]*操作人[\s\S]*coachOpsConsumeTbody/,'consume report should expose imported notes');
 assert.match(source,/courtDateButtonHtml\(id,value,label,handler\)/,'finance date controls should refresh reports after selecting a date');
+assert.match(source,/coachOpsLedgerTimeText\(row\)/,'finance consume report should show imported source month instead of fake class time');
+assert.match(source,/renderCoachOpsRevenueReport\(\)">查询/,'revenue date filters should have an explicit query button');
+assert.match(source,/renderCoachOpsConsumeReport\(\)">查询/,'consume date filters should have an explicit query button');
 assert.match(source,/查看迟到月结/,'finance center should expose late settlement entry');
 
 console.log('finance page view tests passed');
