@@ -152,6 +152,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-membership-ledger .tms-table{min-width:1100px}
 #page-membership-orders .tms-table-wrapper,#page-membership-ledger .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-membership-plans .tms-table{min-width:1660px}
+#page-purchases .tms-table{min-width:1060px;table-layout:fixed}
 #page-membership-plans .tms-table-wrapper{max-height:calc(100vh - 250px)}
 #page-membership-plans .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#FDF7F2}
 #page-membership-plans .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FDF7F2}
@@ -216,6 +217,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-court-row-main{display:flex;align-items:flex-start;gap:10px;width:100%}
 .tms-court-name-cell{margin-left:4px;white-space:normal;display:block;line-height:1.35;max-width:88px;user-select:text;cursor:text}
 .tms-mini-bar{position:relative;display:inline-block;min-width:80px;padding:2px 0}
+.student-package-mini{min-width:64px}
 .tms-mini-bar-bg{position:absolute;left:0;top:0;bottom:0;background-color:#F1EAE2;border-radius:3px;z-index:1}
 .tms-mini-bar-fill{position:absolute;left:0;top:0;bottom:0;background-color:#DCA58B;border-radius:3px;z-index:2;opacity:.6}
 .tms-mini-bar-text{position:relative;z-index:3;font-weight:400;color:#5C4D43;padding:0 4px;font-size:12px}

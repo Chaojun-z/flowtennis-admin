@@ -28,8 +28,8 @@ function renderPurchases(){
     const validRange=ent?`${renderCourtEmptyText(ent.validFrom)} - ${renderCourtEmptyText(ent.validUntil)}`:'-';
     const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.studentName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.payMethod))}</div></td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.courseType))} · ${p.packageLessons||0} 节</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${renderCourtCellText(remain,false)}</td><td><div class="tms-cell-text">${esc(validRange)}</div><span class="tms-tag ${balanceTagClass}" style="margin-top:6px">${balanceStatus}</span></td><td>${renderCourtCellText(p.ownerCoach)}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
-  }).join(''):'<tr><td colspan="8"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.studentName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.payMethod))}</div></td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.courseType))} · ${p.packageLessons||0} 节</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${renderCourtCellText(remain,false)}</td><td><div class="tms-cell-text">${esc(validRange)}</div></td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderCourtCellText(p.ownerCoach)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+  }).join(''):'<tr><td colspan="9"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
 }
 
 function purchaseEntitlement(purchaseId){
@@ -47,9 +47,9 @@ function purchasePackageSnapshotHtml(p){
 }
 function purchaseLedgerHtml(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
-  const rows=entitlementLedger.filter(l=>entIds.has(l.entitlementId)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,10);
+  const rows=dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entIds.has(l.entitlementId))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
   if(!rows.length)return '<div class="finput" style="min-height:42px">暂无扣课记录</div>';
-  return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>`${(parseInt(l.lessonDelta)||0)>0?'退回':'扣减'} ${Math.abs(parseInt(l.lessonDelta)||0)} 节 · ${esc(l.reason)||'—'} · ${String(l.createdAt||'').slice(0,16).replace('T',' ')}`).join('<br>')}</div>`;
+  return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>`${(parseInt(l.lessonDelta)||0)>0?'退回':'扣减'} ${Math.abs(parseInt(l.lessonDelta)||0)} 节 · ${esc(l.reason)||'—'} · ${entitlementLedgerDisplayDate(l)}`).join('<br>')}</div>`;
 }
 function purchaseSystemAmountForPackage(packageId){
   const pkg=packages.find(x=>x.id===packageId);

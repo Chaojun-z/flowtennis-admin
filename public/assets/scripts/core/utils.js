@@ -719,11 +719,23 @@ function studentCoachSummary(stu){
 function studentPrimaryCoachText(stu){
   return String(stu?.primaryCoach||'').trim()||'未分配';
 }
-function studentPackageLessonSummary(stu){
+function studentPackageLessonMeta(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided');
-  if(!rows.length)return '无课包';
+  if(!rows.length)return {hasPackage:false,remaining:0,total:0,text:'-'};
+  const total=rows.reduce((sum,row)=>sum+(parseInt(row.totalLessons)||0),0);
   const remaining=rows.reduce((sum,row)=>sum+(parseInt(row.remainingLessons)||0),0);
-  return `有课包 · 剩${remaining}节`;
+  if(total<=0)return {hasPackage:false,remaining:0,total:0,text:'-'};
+  return {hasPackage:true,remaining,total,text:`${remaining}/${total}`,pct:Math.max(0,Math.min(100,Math.round((remaining/total)*100)))};
+}
+function studentPackageLessonSummary(stu){
+  const meta=studentPackageLessonMeta(stu);
+  return meta.hasPackage?meta.text:'-';
+}
+function studentPackageLessonMiniBar(stu){
+  const meta=studentPackageLessonMeta(stu);
+  if(!meta.hasPackage)return renderCourtCellText('-',false);
+  const remaining=meta.remaining,total=meta.total;
+  return `<div class="tms-mini-bar student-package-mini" title="${remaining}/${total} 节"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${meta.pct}%"></div><div class="tms-mini-bar-text">${remaining}/${total}</div></div>`;
 }
 function studentBookingMembershipSummary(stu){
   const linked=courtsForStudent(stu);
@@ -842,15 +854,43 @@ function studentEntitlementSummaryHtml(stu){
     return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${esc(e.packageName)||'—'} <span class="badge b-amber" style="font-size:10px">${esc(e.courseType)||'—'}</span></div><div style="margin-top:3px">剩余 ${parseInt(e.remainingLessons)||0}/${parseInt(e.totalLessons)||0} 节；已扣 ${used} 节；有效至 ${esc(e.validUntil)||'—'}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div></div>`;
   }).join('');
 }
+function entitlementLedgerSortDate(row){
+  return row?.relatedDate||row?.scheduleTime||row?.createdAt||'';
+}
+function entitlementLedgerDisplayDate(row){
+  const raw=entitlementLedgerSortDate(row);
+  return raw?String(raw).slice(0,16).replace('T',' '):'-';
+}
+function dedupeEntitlementLedgerForDisplay(rows){
+  const seen=new Set();
+  return (rows||[]).filter(row=>{
+    const key=[
+      row.entitlementId,
+      row.purchaseId,
+      row.studentId,
+      row.scheduleId||'',
+      row.lessonDelta,
+      row.action||'',
+      row.reason||'',
+      row.relatedDate||'',
+      row.sourceMonth||'',
+      row.sourceSheet||'',
+      row.notes||''
+    ].join('|');
+    if(seen.has(key))return false;
+    seen.add(key);
+    return true;
+  });
+}
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
-  const rows=entitlementLedger.filter(l=>entMap.has(l.entitlementId)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,10);
+  const rows=dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entMap.has(l.entitlementId))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无扣课记录</div>';
   return rows.map(l=>{
     const ent=entMap.get(l.entitlementId)||{};
     const count=Math.abs(parseInt(l.lessonDelta)||0);
     const action=(parseInt(l.lessonDelta)||0)>0?'退回':'扣减';
-    const dateText=String(l.createdAt||'').slice(0,16).replace('T',' ');
+    const dateText=entitlementLedgerDisplayDate(l);
     return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${action} ${count} 节 · ${esc(ent.packageName)||'课包'}</div><div style="margin-top:3px">${esc(l.reason)||'—'} · ${dateText||'—'}</div></div>`;
   }).join('');
 }

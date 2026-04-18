@@ -55,6 +55,34 @@ assert.ok(seed.entitlementLedger.length >= 50, 'consume ledger should include mo
 assert.strictEqual(seed.entitlementLedger.filter(x => x.sourceSheet).length, 22, 'third and fourth sheets should import detailed lesson history');
 assert.strictEqual(seed.purchases.filter(x => x.sourceType === 'lesson_payment').length, 0, 'detailed lesson sheet transfer rows should stay as notes, not duplicated income');
 
+const ledgerKeys = seed.entitlementLedger.map(row => [
+  row.entitlementId,
+  row.purchaseId,
+  row.studentId,
+  row.scheduleId || '',
+  row.lessonDelta,
+  row.action || '',
+  row.reason || '',
+  row.relatedDate || '',
+  row.sourceMonth || '',
+  row.sourceSheet || '',
+  row.notes || '',
+  row.createdAt || ''
+].join('|'));
+assert.strictEqual(
+  new Set(ledgerKeys).size,
+  ledgerKeys.length,
+  'historical consume ledger should not contain duplicate imported rows'
+);
+
+for (const entitlement of seed.entitlements) {
+  const consumed = seed.entitlementLedger
+    .filter(row => row.entitlementId === entitlement.id && Number(row.lessonDelta) < 0)
+    .reduce((sum, row) => sum + Math.abs(Number(row.lessonDelta) || 0), 0);
+  assert.strictEqual(Number(entitlement.usedLessons) || 0, consumed, `entitlement ${entitlement.id} used lessons should match consume ledger`);
+  assert.strictEqual(Number(entitlement.remainingLessons) || 0, Math.max(0, (Number(entitlement.totalLessons) || 0) - consumed), `entitlement ${entitlement.id} remaining lessons should match consume ledger`);
+}
+
 const zhao = seed.purchases.find(x => x.studentName === '赵新阳 田秀楠');
 assert.ok(zhao, '赵新阳 田秀楠 should be imported');
 assert.strictEqual(zhao.amountPaid, 8800, 'formula fee for 赵新阳 田秀楠 should be evaluated');

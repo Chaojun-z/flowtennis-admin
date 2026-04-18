@@ -36,6 +36,11 @@ assert.match(source, /function renderCourtEmptyText[\s\S]*return raw&&raw!=='—
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
 assert.match(source, /课包\/课时<\/th><th style="width:120px">订场\/会员/, 'student package and booking columns should be compact');
+assert.match(source, /<th style="width:80px">课包\/课时<\/th>/, 'student package lesson column should be 40px narrower');
+assert.match(source, /function studentPackageLessonMeta\(/, 'student package lesson summary should expose remaining and total lessons');
+assert.match(source, /function studentPackageLessonMiniBar\(/, 'student package lesson column should render the same mini balance bar as booking accounts');
+assert.match(source, /studentPackageLessonMiniBar\(s\)/, 'student list should render package lessons through the mini balance bar');
+assert.match(source, /\$\{remaining\}\/\$\{total\}/, 'student package lesson text should use remaining over total lesson count');
 assert.match(source, /student-summary-strong/, 'student rows should visually distinguish non-empty package and booking summaries');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should prioritize view before edit');
@@ -45,6 +50,8 @@ assert.match(source, /function studentOpsInfoHtml\(/, 'student detail should ren
 assert.match(source, /function studentConsumptionInfoHtml\(/, 'student detail should render consumption relation block');
 assert.match(source, /function studentLessonRecordHtml\(/, 'student detail should expose a dedicated lesson record helper');
 assert.match(source, /function studentEntitlementLedgerHtml\(/, 'student detail should provide a dedicated lesson charge history helper');
+assert.match(source, /function entitlementLedgerDisplayDate\(/, 'lesson charge history should display the real lesson or month date instead of import time');
+assert.match(source, /dedupeEntitlementLedgerForDisplay/, 'lesson charge history should collapse duplicate ledger rows before display');
 assert.match(source, /教学信息[\s\S]*运营信息[\s\S]*消费与关联信息/, 'student detail should follow the agreed information hierarchy');
 assert.match(source, /上课记录/, 'student detail should provide lesson record history in plain language');
 assert.match(source, /已购课包/, 'student detail should present purchased packages in plain language');
@@ -61,6 +68,6 @@ assert.match(source, /选择课包 \*[\s\S]*主归属教练[\s\S]*支付日期[\
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-wrap[\s\S]*purchase-notes-row/, 'purchase modal should leave space between allowed coaches and notes');
-assert.match(source, /购买日期<\/th><th style="width:150px">学员\/支付<\/th><th style="width:190px">课包\/课程<\/th><th style="width:110px">实收<\/th><th style="width:120px">余额<\/th><th style="width:150px">有效期\/状态<\/th><th style="width:120px">归属教练<\/th>/, 'purchase record table should use compact ordered columns');
+assert.match(source, /购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase record table should split validity and status into compact ordered columns');
 
 console.log('student page view tests passed');
