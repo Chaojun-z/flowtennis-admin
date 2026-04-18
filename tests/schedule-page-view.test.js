@@ -25,8 +25,11 @@ assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should p
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*自有校区[\s\S]*外部场馆/, 'schedule modal should support own campus and external venue location types');
-assert.match(fnBody('openScheduleModal'), /sch_externalVenueName[\s\S]*sch_externalAddress/, 'external venue schedules should capture venue name and optional address');
-assert.match(fnBody('openScheduleModal'), /更多设置[\s\S]*每周重复[\s\S]*教练迟到处理/, 'low-frequency schedule fields should be folded into advanced settings');
+assert.match(fnBody('openScheduleModal'), /人和课程[\s\S]*关联班次[\s\S]*本次参与人[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*课程类型[\s\S]*教练[\s\S]*消课节数[\s\S]*扣减课包[\s\S]*地点/, 'schedule modal should follow the simplified create/edit flow');
+assert.match(fnBody('openScheduleModal'), /上课日期与时间[\s\S]*课程类型[\s\S]*每周重复/, 'weekly repeat should stay with lesson time settings');
+assert.match(fnBody('openScheduleModal'), /sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external venue schedules should capture venue, court, and notes');
+assert.doesNotMatch(fnBody('openScheduleModal'), /sch_externalAddress|地址/, 'external venue schedules should not ask for an address');
+assert.match(fnBody('openScheduleModal'), /更多设置[\s\S]*教练迟到处理/, 'coach late fields should remain folded as advanced settings');
 assert.doesNotMatch(fnBody('openScheduleModal'), /通知状态|确认状态|确认规则/, 'schedule modal should remove fake notification and confirmation fields');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /确认规则|确认截止|通知：/, 'schedule save confirm copy should not show fake notification rules');
 assert.doesNotMatch(fnBody('openScheduleDetail'), /通知 \/ 确认|确认规则/, 'schedule detail should not show fake notification rules');

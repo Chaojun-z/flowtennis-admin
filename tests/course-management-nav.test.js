@@ -36,7 +36,7 @@ assert.match(html, /function openPurchaseModal/, 'purchase page should provide t
 assert.match(html, /function openPurchaseModal[\s\S]*renderCourtDropdownHtml\('pur_studentId','选择学员'/, 'purchase modal should pick the student in the same step');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(html, /<th style="width:120px;padding-left:20px">购买日期<\/th><th style="width:140px">学员<\/th><th style="width:170px">售卖课包<\/th><th style="width:120px">主归属教练<\/th>/, 'purchase table should show owner coach directly in the list');
+assert.match(html, /<th style="width:110px;padding-left:20px">购买日期<\/th><th style="width:150px">学员\/支付<\/th><th style="width:190px">课包\/课程<\/th><th style="width:110px">实收<\/th><th style="width:120px">余额<\/th><th style="width:150px">有效期\/状态<\/th><th style="width:120px">归属教练<\/th>/, 'purchase table should show compact purchase, balance and owner coach columns');
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
 assert.match(html, /系统价格[\s\S]*成交金额[\s\S]*改价原因/, 'purchase detail should show price snapshot fields');

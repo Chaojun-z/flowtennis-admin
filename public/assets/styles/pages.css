@@ -184,6 +184,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-text-primary{font-size:13px;font-weight:400;color:#332A24}
 .tms-text-secondary{font-size:13px;color:#8C7B6E;margin-top:0;font-weight:400}
 .tms-text-remark{font-size:13px;color:#A3968F;line-height:1.5;white-space:normal;min-width:140px;max-width:200px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-overflow:ellipsis}
+.student-summary-strong{color:#8C3F21;font-weight:700}
 .tms-cell-text{font-size:13px;color:#332A24;font-weight:400}
 .tms-cell-text.is-muted{color:#A3968F}
 .tms-tag{display:inline-block;background-color:#F1EAE2;color:#8C7B6E;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:400}
@@ -439,10 +440,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-history-item .desc{flex:1;color:#8C7B6E}
 .modal.modal-court .tms-form-label{font-size:11px;font-weight:400;color:#5C4D43;margin-bottom:6px}
 .modal.modal-court .tms-form-control{height:38px;padding:0 12px;font-size:13px;font-weight:400}
-.modal.modal-court .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding:10px 12px}
+.modal.modal-court div.tms-form-control:not(.tms-readonly-text){display:flex;align-items:center}
+.modal.modal-court .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding:12px 14px}
 .modal.modal-court textarea.tms-form-control{height:auto;min-height:62px;padding:10px 12px}
 .modal.modal-court .coach-date-btn,.modal.modal-court .tms-dropdown.tms-dropdown-form .tms-dropdown-display{height:38px;font-size:13px;font-weight:400}
-.modal.modal-court .coach-date-btn{background:#FDF7F2;box-shadow:none}
+.modal.modal-court .coach-date-btn{background:#FDF7F2;box-shadow:none;text-align:left;justify-content:flex-start}
 .schedule-advanced{border:1px solid #D9D0C7;border-radius:10px;padding:0 14px;margin:4px 0 16px;background:rgba(253,247,242,.55)}
 .schedule-advanced summary{cursor:pointer;height:42px;display:flex;align-items:center;font-size:13px;color:#5C4D43;font-weight:600}
 .schedule-advanced[open]{padding-bottom:14px}
@@ -457,6 +459,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .choice-wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
 .choice-wrap .choice-tag{flex:0 0 auto}
 .purchase-coach-wrap{padding-top:4px}
+.purchase-notes-row{margin-top:12px}
 .choice-tag{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:12px;background:rgba(255,251,245,.72);border:0.5px solid rgba(180,83,9,.12);font-size:12.5px;font-weight:400;color:var(--tb)}
 .choice-tag input{appearance:none;-webkit-appearance:none;margin:0;width:14px;height:14px;border-radius:4px;border:0.5px solid rgba(120,53,15,.24);background:#fff;box-shadow:inset 0 1px 2px rgba(60,20,0,.06)}
 .choice-tag input:checked{border-color:var(--amber-base);background:var(--amber-base);box-shadow:inset 0 0 0 3px #fff}

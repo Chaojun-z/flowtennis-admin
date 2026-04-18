@@ -32,8 +32,11 @@ assert.match(source, /studentPrimaryCoachText\(s\)/, 'student list coach column 
 assert.match(source, /未分配/, 'empty primary coach should display 未分配');
 assert.match(source, /const SOURCES=\['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','其他'\]/, 'student source options should keep the unified ops order');
 assert.match(source, /function renderCourtCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
+assert.match(source, /function renderCourtEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
+assert.match(source, /课包\/课时<\/th><th style="width:120px">订场\/会员/, 'student package and booking columns should be compact');
+assert.match(source, /student-summary-strong/, 'student rows should visually distinguish non-empty package and booking summaries');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should prioritize view before edit');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openPurchaseModal\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should expose a direct package purchase shortcut between view and edit');
@@ -56,5 +59,8 @@ assert.match(source, /const data=\{name,phone,primaryCoach:/, 'student save shou
 assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
 assert.match(source, /选择课包 \*[\s\S]*主归属教练[\s\S]*支付日期[\s\S]*系统价格[\s\S]*实收金额[\s\S]*支付方式/, 'purchase modal should arrange package, owner, payment date, price and pay method in compact rows');
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
+assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
+assert.match(source, /purchase-coach-wrap[\s\S]*purchase-notes-row/, 'purchase modal should leave space between allowed coaches and notes');
+assert.match(source, /购买日期<\/th><th style="width:150px">学员\/支付<\/th><th style="width:190px">课包\/课程<\/th><th style="width:110px">实收<\/th><th style="width:120px">余额<\/th><th style="width:150px">有效期\/状态<\/th><th style="width:120px">归属教练<\/th>/, 'purchase record table should use compact ordered columns');
 
 console.log('student page view tests passed');

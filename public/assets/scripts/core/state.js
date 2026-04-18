@@ -146,7 +146,7 @@ function renderPageLoading(pg){
   if(pg==='students')renderTableBodyLoading('stuTbody',13,'学员数据加载中...');
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
-  if(pg==='purchases')renderTableBodyLoading('purchaseTbody',10,'购买记录加载中...');
+  if(pg==='purchases')renderTableBodyLoading('purchaseTbody',8,'购买记录加载中...');
   if(pg==='finance'){
     renderTableBodyLoading('coachOpsRevenueTbody',14,'财务数据加载中...');
     renderTableBodyLoading('coachOpsConsumeTbody',12,'消课记录加载中...');
