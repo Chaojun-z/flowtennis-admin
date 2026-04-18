@@ -13,7 +13,7 @@ let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const datasetLoadPromises=new Map();
 const PAGE_DATA_REQUIREMENTS={
-  students:['campuses','students','classes','schedule','feedbacks','products','courts'],
+  students:['campuses','students'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
   schedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products'],
@@ -38,7 +38,7 @@ const PAGE_DATA_REQUIREMENTS={
   myclasses:[]
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
-  students:[],
+  students:['classes','schedule','feedbacks','products','courts'],
   plans:['campuses','students','classes','plans','products','schedule','courts','entitlements'],
   packages:['packages','products'],
   purchases:['purchases','packages','students','entitlements'],
