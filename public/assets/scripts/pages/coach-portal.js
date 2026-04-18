@@ -22,7 +22,7 @@ function workbenchScheduleState(schedule,prevSchedule,now){
   return {code:'done',label:'已完成',hint:'课程已结束并完成反馈',priority:5};
 }
 function workbenchMetricHelpHtml(){
-  return `<div class="coach-wb-help-wrap"><button type="button" class="coach-wb-help-btn" aria-label="查看指标口径" onclick="toggleWorkbenchMetricHelp(event)">?</button><div class="coach-wb-help-popover" id="workbenchMetricHelp"><div>本月课时 = 本月已结束课程课时数</div><div>本周课时 = 本周已结束课程课时数</div><div>今天课时 = 今天已结束课程课时数</div><div>本月反馈 = 本月已结束且已填写课后反馈的课程数</div><div>未反馈 = 已结束但未填写反馈的课程数</div><div>本月体验课转化率 = 本月已结束体验课中，后续已购买任意产品的学员占比</div></div></div>`;
+  return `<div class="coach-wb-help-wrap"><button type="button" class="coach-wb-help-btn" aria-label="查看指标口径" onclick="toggleWorkbenchMetricHelp(event)"><span>?</span></button><div class="coach-wb-help-popover" id="workbenchMetricHelp"><div>本月课时 = 本月已结束课程课时数</div><div>本周课时 = 本周已结束课程课时数</div><div>今天课时 = 今天已结束课程课时数</div><div>本月反馈 = 本月已结束且已填写课后反馈的课程数</div><div>未反馈 = 已结束但未填写反馈的课程数</div><div>本月体验课转化率 = 本月已结束体验课中，后续已购买任意产品的学员占比</div></div></div>`;
 }
 function toggleWorkbenchMetricHelp(event){
   if(event)event.stopPropagation();
@@ -76,7 +76,7 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
 }
 function ensureWorkbenchTicker(){
   if(workbenchTicker)return;
-  workbenchTicker=setInterval(()=>{if(currentPage==='workbench')renderWorkbench();},60000);
+  workbenchTicker=setInterval(()=>{if(currentPage==='workbench')renderWorkbench();},1000);
 }
 function renderWorkbench(){
   ensureWorkbenchTicker();
@@ -140,7 +140,7 @@ function renderWorkbench(){
     return `<div class="coach-wb-day-section${isToday?' is-today':isPast?' is-past':''}"><div class="coach-wb-day-label">${dayLabel}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:emptyTip}</div>`;
   }).join('');
   const weekLabel=`${week[0].getMonth()+1}/${week[0].getDate()} — ${week[6].getMonth()+1}/${week[6].getDate()}`;
-  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）${workbenchMetricHelpHtml()}<span class="coach-wb-page-title-sub"></span></div><div class="coach-wb-current-time">${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,5)}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
+  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）${workbenchMetricHelpHtml()}</div><div class="coach-wb-current-time"><span class="live-dot"></span>${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,8)}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
 }
 let myWeekOffset=0;
 function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}
@@ -246,10 +246,21 @@ function renderMySchedule(){
     setTimeout(()=>{
       const todayCol=mobile.querySelector('.coach-mobile-day-column.today');
       const container=mobile.querySelector('.coach-mobile-day-columns');
+      const timeline=mobile.querySelector('.coach-mobile-day-body');
       if(todayCol&&container){
-        container.scrollTo({left:Math.max(0,todayCol.offsetLeft-40),behavior:'smooth'});
+        container.scrollTo({left:Math.max(0,todayCol.offsetLeft-24),behavior:'smooth'});
       }
-    },100);
+      // 垂直滚动到当前时间
+      if(timeline){
+        const nowHour=new Date().getHours();
+        const startH=7; // 对应 renderMySchedule 中的 startH
+        const hourHeight=56; // 对应 renderMySchedule 中的 mobileHourHeight
+        if(nowHour>=startH&&nowHour<22){
+          const scrollTarget=(nowHour-startH)*hourHeight-100;
+          mobile.scrollTo({top:Math.max(0,scrollTarget),behavior:'smooth'});
+        }
+      }
+    },200);
   }
 }
 function myStudentLessonCount(stu,coach){
