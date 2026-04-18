@@ -15,6 +15,8 @@ function showApp(){
   hydrateDatasetsFromCache();
   normalizeCurrentPageForRole();
   renderRoleShell();
+  buildCampusTabs();
+  renderAll();
   loadPageDataAndRender(currentPage,{quiet:true});
 }
 document.addEventListener('DOMContentLoaded',()=>{

@@ -12,6 +12,7 @@ assert.match(html, /const PAGE_DATA_REQUIREMENTS=\{/, 'state should define per-p
 assert.match(html, /function loadPageDataAndRender\(/, 'state should expose a page-scoped loading entry');
 assert.doesNotMatch(fnBody('showApp'), /loadAll\(\)/, 'showApp should no longer trigger full load-all on first paint');
 assert.match(fnBody('showApp'), /hydrateDatasetsFromCache\(\)/, 'showApp should restore last successful data before network refresh');
+assert.match(fnBody('showApp'), /buildCampusTabs\(\);[\s\S]*renderAll\(\);/, 'showApp should render cached data immediately before waiting on network');
 assert.match(fnBody('showApp'), /loadPageDataAndRender\(currentPage,\{quiet:true\}\)/, 'showApp should boot the current page without a blocking full-screen loader');
 assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, 'goPage should not render immediately before page data is ready');
 assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should reuse the page-scoped loading entry without blocking the whole screen');

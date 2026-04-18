@@ -212,6 +212,10 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   const loading=document.getElementById('pageLoading');
   if(!quiet&&loading)loading.classList.add('show');
   try{
+    if(quiet&&loadedDatasets.size){
+      buildCampusTabs();
+      renderAll();
+    }
     await ensurePageDatasets(pg,{force});
     if(requestVersion!==dataRequestVersion)return;
     buildCampusTabs();
