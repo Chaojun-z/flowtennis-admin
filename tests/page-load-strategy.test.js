@@ -20,5 +20,6 @@ assert.doesNotMatch(fnBody('loadPageBackgroundDatasets'), /for\(const name of na
 assert.match(fnBody('loadPageBackgroundDatasets'), /Promise\.allSettled\(names\.map/, 'background page datasets should load in parallel');
 assert.match(html, /if\(path==='\/page-data\/plans'&&method==='GET'\)/, 'api should expose an aggregated plans page endpoint');
 assert.match(html, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
+assert.match(html, /if\(path==='\/page-data\/workbench'&&method==='GET'\)/, 'api should expose an aggregated workbench page endpoint');
 
 console.log('page load strategy tests passed');
