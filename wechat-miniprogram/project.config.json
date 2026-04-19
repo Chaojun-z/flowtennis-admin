@@ -1,0 +1,14 @@
+{
+  "description": "FlowTennis coach PWA shell",
+  "miniprogramRoot": "miniprogram/",
+  "appid": "wx7acb7603ee803923",
+  "projectname": "flowtennis-coach",
+  "compileType": "miniprogram",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}
