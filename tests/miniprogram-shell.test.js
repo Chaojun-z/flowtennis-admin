@@ -40,10 +40,15 @@ assert.match(webviewJs, /WEB_VIEW_URL/, 'web-view page should read the PWA URL f
 assert.doesNotMatch(webviewJs, /https:\/\/[^'"]+/, 'web-view page should not hardcode the business domain');
 assert.match(webviewJs, /wx\.login/, 'web-view page should request a mini program login code');
 assert.match(webviewJs, /wechatCode/, 'web-view page should pass the mini program login code into the web-view URL');
+assert.match(webviewJs, /scheduleId/, 'web-view page should pass notification scheduleId into the PWA URL');
 
 const apiJs = readText('public/assets/scripts/core/api.js');
 assert.match(apiJs, /WECHAT_CODE_KEY/, 'web app should keep the mini program login code until account login succeeds');
 assert.match(apiJs, /\/auth\/wechat-bind/, 'web app should call the wechat bind API after account login');
+assert.match(apiJs, /PENDING_SCHEDULE_ID_KEY/, 'web app should keep notification scheduleId until data is loaded');
+
+const stateJs = readText('public/assets/scripts/core/state.js');
+assert.match(stateJs, /openPendingScheduleDeepLink/, 'page data load should try to open a pending notification schedule');
 
 const configJs = readText('wechat-miniprogram/miniprogram/config.js');
 assert.match(configJs, /WEB_VIEW_URL:\s*'https:\/\/www\.flowtennis\.cn'/, 'config should use the verified business domain');

@@ -3,15 +3,22 @@ let currentUser=JSON.parse(localStorage.getItem('ft_user')||'null');
 const PAGE_KEY='ft_current_page';
 const CAMPUS_KEY='ft_current_campus';
 const WECHAT_CODE_KEY='ft_wechat_login_code';
+const PENDING_SCHEDULE_ID_KEY='ft_pending_schedule_id';
 
 function captureWechatLoginCode(){
   try{
     const url=new URL(window.location.href);
     const code=url.searchParams.get('wechatCode');
-    if(!code)return;
-    sessionStorage.setItem(WECHAT_CODE_KEY,code);
-    url.searchParams.delete('wechatCode');
-    window.history.replaceState({},document.title,url.pathname+url.search+url.hash);
+    const scheduleId=url.searchParams.get('scheduleId');
+    if(code){
+      sessionStorage.setItem(WECHAT_CODE_KEY,code);
+      url.searchParams.delete('wechatCode');
+    }
+    if(scheduleId){
+      sessionStorage.setItem(PENDING_SCHEDULE_ID_KEY,scheduleId);
+      url.searchParams.delete('scheduleId');
+    }
+    if(code||scheduleId)window.history.replaceState({},document.title,url.pathname+url.search+url.hash);
   }catch(e){}
 }
 async function bindWechatAfterLogin(){
@@ -23,6 +30,16 @@ async function bindWechatAfterLogin(){
   }catch(e){
     console.warn('wechat bind skipped:',e.message);
   }
+}
+function openPendingScheduleDeepLink(){
+  const scheduleId=sessionStorage.getItem(PENDING_SCHEDULE_ID_KEY);
+  if(!scheduleId)return;
+  const exists=schedules.some(s=>s.id===scheduleId);
+  if(!exists)return;
+  sessionStorage.removeItem(PENDING_SCHEDULE_ID_KEY);
+  const page=currentUser?.role==='editor'&&currentUser?.coachName?'myschedule':'schedule';
+  goPage(page,null,true);
+  setTimeout(()=>openScheduleDetail(scheduleId),0);
 }
 
 async function apiCall(method,path,body,timeoutMs=60000){

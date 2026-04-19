@@ -975,10 +975,11 @@ function findWechatScheduleRecipient(schedule,users=[]){
 }
 function buildScheduleSubscribeMessage({templateId,openid,schedule}){
   const start=String(schedule?.startTime||'').trim();
+  const scheduleId=encodeURIComponent(String(schedule?.id||''));
   return {
     touser:openid,
     template_id:templateId,
-    page:'pages/index/index',
+    page:`pages/webview/webview${scheduleId?`?scheduleId=${scheduleId}`:''}`,
     data:{
       thing1:{value:truncateWechatValue(schedule?.courseType||'课程')},
       time2:{value:start},

@@ -359,6 +359,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(requestVersion!==dataRequestVersion)return;
     buildCampusTabs();
     renderAll();
+    openPendingScheduleDeepLink();
     loadPageBackgroundDatasets(pg,requestVersion,{force:true});
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
