@@ -18,6 +18,7 @@ const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEE
 const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
 const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
 const WECHAT_SCHEDULE_TEMPLATE_ID = process.env.WECHAT_SCHEDULE_TEMPLATE_ID;
+const WECHAT_COURSE_REMINDER_TEMPLATE_ID = process.env.WECHAT_COURSE_REMINDER_TEMPLATE_ID;
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
@@ -1007,6 +1008,59 @@ async function notifyCoachScheduleCreated(schedule){
   const message=buildScheduleSubscribeMessage({templateId:WECHAT_SCHEDULE_TEMPLATE_ID,openid:recipient.wechatOpenId,schedule});
   await sendWechatSubscribeMessage(message);
   return {sent:true,userId:recipient.id};
+}
+function collectCourseReminderCandidates(rows=[],now=new Date()){
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  const minMs=nowMs+45*60000;
+  const maxMs=nowMs+75*60000;
+  const active=(rows||[]).filter(s=>effectiveScheduleStatus(s,now)==='已排课'&&!s.courseReminderSentAt&&Number.isFinite(dateMs(s.startTime)));
+  return active
+    .filter(s=>{const start=dateMs(s.startTime);return start>=minMs&&start<=maxMs;})
+    .sort((a,b)=>dateMs(a.startTime)-dateMs(b.startTime))
+    .map(schedule=>{
+      const sameCoach=(rows||[]).filter(s=>s.id!==schedule.id&&String(s.coach||'').trim()===String(schedule.coach||'').trim());
+      const previous=sameCoach
+        .filter(s=>Number.isFinite(dateMs(s.endTime))&&dateMs(s.endTime)<=dateMs(schedule.startTime))
+        .sort((a,b)=>dateMs(b.endTime)-dateMs(a.endTime))[0]||null;
+      const gap=previous?Math.round((dateMs(schedule.startTime)-dateMs(previous.endTime))/60000):null;
+      const crossCampus=!!(previous&&gap!==null&&gap>=0&&gap<=90&&String(previous.campus||'')!==String(schedule.campus||''));
+      return {schedule,previous,gap,crossCampus};
+    });
+}
+function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCampus=false}){
+  const scheduleId=encodeURIComponent(String(schedule?.id||''));
+  return {
+    touser:openid,
+    template_id:templateId,
+    page:`pages/webview/webview${scheduleId?`?scheduleId=${scheduleId}`:''}`,
+    data:{
+      thing1:{value:truncateWechatValue(crossCampus?'跨校区，请预留通勤时间':'即将上课，请提前准备')},
+      time2:{value:String(schedule?.startTime||'').trim()},
+      thing3:{value:truncateWechatValue(schedule?.studentName||'学员')},
+      thing4:{value:truncateWechatValue(schedule?.courseType||'课程')}
+    }
+  };
+}
+async function sendCourseReminders({now=new Date()}={}){
+  if(!WECHAT_COURSE_REMINDER_TEMPLATE_ID)return {success:true,skipped:true,reason:'missing_template',sent:0,failed:0};
+  const [rows,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
+  const candidates=collectCourseReminderCandidates(rows,now);
+  const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
+  for(const item of candidates){
+    const recipient=findWechatScheduleRecipient(item.schedule,users);
+    if(!recipient){result.skipped++;result.items.push({id:item.schedule.id,skipped:true,reason:'missing_openid'});continue;}
+    try{
+      const message=buildCourseReminderSubscribeMessage({templateId:WECHAT_COURSE_REMINDER_TEMPLATE_ID,openid:recipient.wechatOpenId,schedule:item.schedule,crossCampus:item.crossCampus});
+      await sendWechatSubscribeMessage(message);
+      await put(T_SCHEDULE,item.schedule.id,{...item.schedule,courseReminderSentAt:new Date().toISOString(),courseReminderCrossCampus:item.crossCampus?'true':'false'});
+      result.sent++;
+      result.items.push({id:item.schedule.id,sent:true,crossCampus:item.crossCampus});
+    }catch(err){
+      result.failed++;
+      result.items.push({id:item.schedule.id,sent:false,error:err.message});
+    }
+  }
+  return result;
 }
 function operatorAccountName(user){
   return String(user?.username||user?.id||user?.name||'').trim();
@@ -2700,6 +2754,17 @@ module.exports = async (req, res) => {
   const body=req.body||{};
   try{
     if(path==='/health')return sendJson(res,{status:'ok',time:new Date().toISOString()});
+    if(path==='/cron/course-reminders'&&method==='GET'){
+      const ua=String(req.headers['user-agent']||'');
+      if(process.env.CRON_SECRET){
+        const auth=String(req.headers.authorization||'');
+        if(auth!==`Bearer ${process.env.CRON_SECRET}`)return sendJson(res,{error:'无权限'},403);
+      }else if(!/vercel-cron/i.test(ua)){
+        return sendJson(res,{error:'无权限'},403);
+      }
+      await init();
+      return sendJson(res,await sendCourseReminders());
+    }
     if(path==='/auth/login'&&method==='POST'){const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await getCachedRow(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
@@ -3441,6 +3506,8 @@ module.exports._test={
   extractWechatAccessToken,
   findWechatScheduleRecipient,
   buildScheduleSubscribeMessage,
+  collectCourseReminderCandidates,
+  buildCourseReminderSubscribeMessage,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,

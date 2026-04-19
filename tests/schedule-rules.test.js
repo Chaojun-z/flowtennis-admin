@@ -10,6 +10,8 @@ assert.ok(rules.buildWechatAccessTokenUrl, 'api._test should expose wechat acces
 assert.ok(rules.extractWechatAccessToken, 'api._test should expose wechat access token extractor');
 assert.ok(rules.findWechatScheduleRecipient, 'api._test should expose schedule recipient finder');
 assert.ok(rules.buildScheduleSubscribeMessage, 'api._test should expose schedule subscribe message builder');
+assert.ok(rules.collectCourseReminderCandidates, 'api._test should expose course reminder candidate helper');
+assert.ok(rules.buildCourseReminderSubscribeMessage, 'api._test should expose course reminder message helper');
 
 assert.strictEqual(
   rules.effectiveScheduleStatus(
@@ -128,6 +130,41 @@ assert.deepStrictEqual(
     }
   },
   'schedule subscribe message should build the mini program template payload'
+);
+
+const reminderRows = [
+  { id: 'prev-cross', coach: '朝珺', startTime: '2026-04-20 09:00', endTime: '2026-04-20 10:00', campus: 'mabao', venue: '1号场', status: '已排课' },
+  { id: 'due-cross', coach: '朝珺', startTime: '2026-04-20 11:00', endTime: '2026-04-20 12:00', campus: 'shunyi', venue: '2号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+  { id: 'too-soon', coach: '朝珺', startTime: '2026-04-20 10:20', endTime: '2026-04-20 11:20', campus: 'mabao', status: '已排课' },
+  { id: 'sent', coach: '朝珺', startTime: '2026-04-20 11:05', endTime: '2026-04-20 12:05', campus: 'mabao', status: '已排课', courseReminderSentAt: '2026-04-20T09:50:00.000Z' },
+  { id: 'cancelled', coach: '朝珺', startTime: '2026-04-20 11:10', endTime: '2026-04-20 12:10', campus: 'mabao', status: '已取消' }
+];
+const reminderCandidates = rules.collectCourseReminderCandidates(reminderRows, new Date('2026-04-20T10:00:00+08:00'));
+assert.deepStrictEqual(
+  reminderCandidates.map(x => [x.schedule.id, x.crossCampus]),
+  [['due-cross', true]],
+  'course reminder helper should pick unsent active courses starting around one hour later and flag cross-campus travel'
+);
+
+assert.deepStrictEqual(
+  rules.buildCourseReminderSubscribeMessage({
+    templateId: 'reminder-tpl',
+    openid: 'openid-1',
+    schedule: reminderRows[1],
+    crossCampus: true
+  }),
+  {
+    touser: 'openid-1',
+    template_id: 'reminder-tpl',
+    page: 'pages/webview/webview?scheduleId=due-cross',
+    data: {
+      thing1: { value: '跨校区，请预留通勤时间' },
+      time2: { value: '2026-04-20 11:00' },
+      thing3: { value: '小鹿' },
+      thing4: { value: '私教课' }
+    }
+  },
+  'course reminder message should use the selected class reminder template fields'
 );
 
 assert.deepStrictEqual(
