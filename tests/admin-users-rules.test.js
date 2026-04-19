@@ -8,6 +8,8 @@ assert.ok(rules.assertAuthUserActive, 'api._test should expose auth user active 
 assert.ok(rules.buildWechatCode2SessionUrl, 'api._test should expose wechat session URL helper');
 assert.ok(rules.extractWechatOpenId, 'api._test should expose wechat openid helper');
 assert.ok(rules.buildWechatBoundUser, 'api._test should expose wechat bind helper');
+assert.ok(rules.buildAdminUserView, 'api._test should expose admin user view helper');
+assert.ok(rules.buildWechatUnboundUser, 'api._test should expose wechat unbind helper');
 
 assert.doesNotThrow(
   () => rules.assertAuthUserActive({ id: 'coach_1', status: 'active' }),
@@ -52,6 +54,41 @@ assert.deepStrictEqual(
   ),
   { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed', wechatOpenId: 'openid-123', wechatBoundAt: '2026-04-19T12:00:00.000Z' },
   'wechat bind helper should preserve user fields and attach openid'
+);
+
+assert.deepStrictEqual(
+  rules.buildAdminUserView({
+    id: 'coach_1',
+    name: '朝珺',
+    role: 'editor',
+    status: 'active',
+    coachId: 'coach-id',
+    coachName: '朝珺',
+    wechatOpenId: 'openid-secret',
+    wechatBoundAt: '2026-04-19T12:00:00.000Z'
+  }),
+  {
+    id: 'coach_1',
+    name: '朝珺',
+    role: 'editor',
+    status: 'active',
+    coachId: 'coach-id',
+    coachName: '朝珺',
+    wechatBound: true,
+    wechatBoundAt: '2026-04-19T12:00:00.000Z'
+  },
+  'admin user view should expose binding status without leaking openid'
+);
+
+assert.deepStrictEqual(
+  rules.buildWechatUnboundUser({
+    id: 'coach_1',
+    name: '朝珺',
+    wechatOpenId: 'openid-secret',
+    wechatBoundAt: '2026-04-19T12:00:00.000Z'
+  }),
+  { id: 'coach_1', name: '朝珺', wechatOpenId: '', wechatBoundAt: '' },
+  'wechat unbind helper should clear openid and bind time'
 );
 
 console.log('admin user rules tests passed');

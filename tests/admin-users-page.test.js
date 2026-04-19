@@ -24,6 +24,8 @@ assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdmin
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
 assert.match(fnBody('renderAdminUsers'), /adminUserTbody/, 'account page should render rows into adminUserTbody');
 assert.match(fnBody('renderAdminUsers'), /绑定教练/, 'account rows should show coach binding text');
+assert.match(fnBody('renderAdminUsers'), /微信通知/, 'account rows should show wechat notification binding text');
+assert.match(fnBody('renderAdminUsers'), /unbindAdminUserWechat/, 'account rows should expose wechat unbind action');
 assert.match(fnBody('renderAdminUsers'), /停用|启用/, 'account rows should expose enable and disable actions');
 assert.match(fnBody('loadAdminUsers'), /apiCall\('GET','\/admin\/users'\)/, 'account page should load users from admin api');
 assert.match(fnBody('openAdminUserModal'), /setCourtModalFrame/, 'account modal should use shared modal shell');
@@ -35,5 +37,6 @@ assert.match(fnBody('saveAdminUser'), /\/admin\/create-user/, 'account create sh
 assert.match(fnBody('saveAdminUser'), /\/admin\/update-user/, 'account edit should call update-user api');
 assert.match(fnBody('toggleAdminUserStatus'), /\/admin\/update-user/, 'account status toggle should reuse update-user api');
 assert.match(fnBody('toggleAdminUserStatus'), /status/, 'account status toggle should send status field');
+assert.match(fnBody('unbindAdminUserWechat'), /clearWechat/, 'wechat unbind should send clearWechat flag');
 
 console.log('admin users page tests passed');

@@ -7,6 +7,10 @@ function adminUserStatusText(status){
 function adminUserCoachText(user){
   return user.role==='editor'?(user.coachName||coaches.find(c=>c.id===user.coachId)?.name||'未绑定'):'—';
 }
+function adminUserWechatText(user){
+  if(user.role!=='editor')return '—';
+  return user.wechatBound?`已绑定${user.wechatBoundAt?' · '+String(user.wechatBoundAt).slice(0,10):''}`:'未绑定';
+}
 function adminUserNoteText(user){
   return user.role==='editor'?'用于教练登录工作台':'用于后台管理';
 }
@@ -24,13 +28,15 @@ async function loadAdminUsers(force=false){
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;
   const q=(document.getElementById('adminUserSearch')?.value||'').toLowerCase();
-  const list=adminUsers.filter(u=>searchHit(q,u.id,u.name,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u)));
+  const list=adminUsers.filter(u=>searchHit(q,u.id,u.name,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserWechatText(u)));
   tbody.innerHTML=list.length?list.map(u=>{
     const statusText=adminUserStatusText(u.status);
     const statusClass=u.status==='inactive'?'':'tms-tag-green';
     const toggleText=u.status==='inactive'?'启用':'停用';
-    return `<tr><td style="padding-left:20px">${renderCourtCellText(u.id,false)}</td><td>${renderCourtCellText(u.name,false)}</td><td><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${adminUserRoleText(u.role)}</span></td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td><span title="绑定教练">${renderCourtCellText(adminUserCoachText(u))}</span></td><td>${renderCourtCellText(adminUserNoteText(u))}</td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openAdminUserModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</span></td></tr>`;
-  }).join(''):'<tr><td colspan="7"><div class="empty"><p>暂无账号</p></div></td></tr>';
+    const wechatClass=u.wechatBound?'tms-tag-green':'tms-tag-tier-slate';
+    const wechatAction=u.wechatBound?`<span class="tms-action-link" onclick="unbindAdminUserWechat('${u.id}')">解绑微信</span>`:'';
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(u.id,false)}</td><td>${renderCourtCellText(u.name,false)}</td><td><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${adminUserRoleText(u.role)}</span></td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td><span title="绑定教练">${renderCourtCellText(adminUserCoachText(u))}</span></td><td><span title="微信通知"><span class="tms-tag ${wechatClass}">${adminUserWechatText(u)}</span></span></td><td>${renderCourtCellText(adminUserNoteText(u))}</td><td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openAdminUserModal('${u.id}')">编辑</span>${wechatAction}<span class="tms-action-link" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="8"><div class="empty"><p>暂无账号</p></div></td></tr>';
 }
 async function toggleAdminUserStatus(id){
   const user=adminUsers.find(x=>x.id===id);if(!user)return;
@@ -44,6 +50,18 @@ async function toggleAdminUserStatus(id){
     toast(`${actionText}成功 ✓`,'success');
   }catch(e){
     toast(`${actionText}失败：`+e.message,'error');
+  }
+}
+async function unbindAdminUserWechat(id){
+  const user=adminUsers.find(x=>x.id===id);if(!user)return;
+  const confirmed=await appConfirm(`确认解绑「${user.name||user.id}」的微信通知？解绑后该账号不会再收到排课通知。`,{title:'解绑微信通知',confirmText:'确认解绑',danger:true});
+  if(!confirmed)return;
+  try{
+    await apiCall('POST','/admin/update-user',{id:user.id,name:user.name,coachId:user.coachId||'',coachName:user.coachName||'',status:user.status||'active',clearWechat:true});
+    await loadAdminUsers(true);
+    toast('微信绑定已解绑 ✓','success');
+  }catch(e){
+    toast('解绑失败：'+e.message,'error');
   }
 }
 function toggleAdminUserCoachBinding(){

@@ -938,6 +938,21 @@ async function fetchWechatSession(code){
 function buildWechatBoundUser(user,openid,now=new Date().toISOString()){
   return {...user,wechatOpenId:String(openid||''),wechatBoundAt:now};
 }
+function buildWechatUnboundUser(user){
+  return {...user,wechatOpenId:'',wechatBoundAt:''};
+}
+function buildAdminUserView(u){
+  return {
+    id:u.id,
+    name:u.name,
+    role:u.role,
+    status:u.status||'active',
+    coachId:u.coachId||'',
+    coachName:u.coachName||'',
+    wechatBound:!!u.wechatOpenId,
+    wechatBoundAt:u.wechatBoundAt||''
+  };
+}
 function buildWechatAccessTokenUrl(appid,secret){
   return `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}`;
 }
@@ -2771,8 +2786,8 @@ module.exports = async (req, res) => {
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');await put(T_USERS,id,{id,name,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});return sendJson(res,{success:true,id,name,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});}
-    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);const updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');await put(T_USERS,id,updates);return sendJson(res,{success:true});}
-    if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await getCachedScan(T_USERS);return sendJson(res,all.map(u=>({id:u.id,name:u.name,role:u.role,status:u.status||'active',coachId:u.coachId||'',coachName:u.coachName||''})));}
+    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(body.clearWechat)updates=buildWechatUnboundUser(updates);await put(T_USERS,id,updates);return sendJson(res,{success:true});}
+    if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await getCachedScan(T_USERS);return sendJson(res,all.map(buildAdminUserView));}
     if(path==='/admin/clear-test-data'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       if(body.confirm!=='CLEAR_TEST_DATA')return sendJson(res,{error:'缺少清空确认'},400);
@@ -3502,6 +3517,8 @@ module.exports._test={
   buildWechatCode2SessionUrl,
   extractWechatOpenId,
   buildWechatBoundUser,
+  buildWechatUnboundUser,
+  buildAdminUserView,
   buildWechatAccessTokenUrl,
   extractWechatAccessToken,
   findWechatScheduleRecipient,
