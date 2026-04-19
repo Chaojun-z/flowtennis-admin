@@ -27,6 +27,12 @@ assert.match(indexWxml, /<web-view\s+src="\{\{webViewUrl\}\}"/, 'index page shou
 const indexJs = readText('wechat-miniprogram/miniprogram/pages/index/index.js');
 assert.match(indexJs, /WEB_VIEW_URL/, 'index page should read the PWA URL from config');
 assert.doesNotMatch(indexJs, /https:\/\/[^'"]+/, 'index page should not hardcode the business domain');
+assert.match(indexJs, /wx\.login/, 'index page should request a mini program login code');
+assert.match(indexJs, /wechatCode/, 'index page should pass the mini program login code into the web-view URL');
+
+const apiJs = readText('public/assets/scripts/core/api.js');
+assert.match(apiJs, /WECHAT_CODE_KEY/, 'web app should keep the mini program login code until account login succeeds');
+assert.match(apiJs, /\/auth\/wechat-bind/, 'web app should call the wechat bind API after account login');
 
 const configJs = readText('wechat-miniprogram/miniprogram/config.js');
 assert.match(configJs, /WEB_VIEW_URL:\s*'https:\/\/www\.flowtennis\.cn'/, 'config should use the verified business domain');

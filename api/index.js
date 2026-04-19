@@ -15,6 +15,8 @@ const ENABLE_TABLE_BOOTSTRAP = process.env.ENABLE_TABLE_BOOTSTRAP === 'true';
 const ENABLE_RUNTIME_TABLE_ENSURE = process.env.ENABLE_RUNTIME_TABLE_ENSURE === 'true';
 const ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP = process.env.ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP === 'true';
 const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP === 'true';
+const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
+const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
@@ -914,6 +916,24 @@ function mergeStoredAuthUser(tokenUser,storedUser){
 }
 function assertAuthUserActive(user){
   if(String(user?.status||'active')==='inactive')throw new Error('账号已停用');
+}
+function buildWechatCode2SessionUrl(appid,secret,code){
+  return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+}
+function extractWechatOpenId(data){
+  if(data?.openid)return String(data.openid);
+  const msg=data?.errmsg||data?.errcode||'unknown';
+  throw new Error(`微信登录失败：${msg}`);
+}
+async function fetchWechatSession(code){
+  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
+  const url=buildWechatCode2SessionUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET,code);
+  const res=await fetch(url);
+  const data=await res.json();
+  return data;
+}
+function buildWechatBoundUser(user,openid,now=new Date().toISOString()){
+  return {...user,wechatOpenId:String(openid||''),wechatBoundAt:now};
 }
 function operatorAccountName(user){
   return String(user?.username||user?.id||user?.name||'').trim();
@@ -2642,6 +2662,16 @@ module.exports = async (req, res) => {
       const rows=Array.isArray(body.rows)?body.rows:[];
       return sendJson(res,await importCourtRows(rows));
     }
+    if(path==='/auth/wechat-bind'&&method==='POST'){
+      const code=String(body.code||'').trim();
+      if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
+      const session=await fetchWechatSession(code);
+      const openid=extractWechatOpenId(session);
+      const stored=await get(T_USERS,user.id);
+      if(!stored)return sendJson(res,{error:'用户不存在'},404);
+      await put(T_USERS,user.id,buildWechatBoundUser(stored,openid));
+      return sendJson(res,{success:true,wechatBound:true});
+    }
     if(path==='/auth/me')return sendJson(res,user);
     if(path==='/load-all'&&method==='GET'){
       await init();
@@ -3330,6 +3360,9 @@ module.exports._test={
   assertUniqueCoachName,
   assertAuthUserActive,
   mergeStoredAuthUser,
+  buildWechatCode2SessionUrl,
+  extractWechatOpenId,
+  buildWechatBoundUser,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,

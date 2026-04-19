@@ -2,6 +2,28 @@ let token=localStorage.getItem('ft_token');
 let currentUser=JSON.parse(localStorage.getItem('ft_user')||'null');
 const PAGE_KEY='ft_current_page';
 const CAMPUS_KEY='ft_current_campus';
+const WECHAT_CODE_KEY='ft_wechat_login_code';
+
+function captureWechatLoginCode(){
+  try{
+    const url=new URL(window.location.href);
+    const code=url.searchParams.get('wechatCode');
+    if(!code)return;
+    sessionStorage.setItem(WECHAT_CODE_KEY,code);
+    url.searchParams.delete('wechatCode');
+    window.history.replaceState({},document.title,url.pathname+url.search+url.hash);
+  }catch(e){}
+}
+async function bindWechatAfterLogin(){
+  const code=sessionStorage.getItem(WECHAT_CODE_KEY);
+  if(!code)return;
+  try{
+    await apiCall('POST','/auth/wechat-bind',{code},15000);
+    sessionStorage.removeItem(WECHAT_CODE_KEY);
+  }catch(e){
+    console.warn('wechat bind skipped:',e.message);
+  }
+}
 
 async function apiCall(method,path,body,timeoutMs=60000){
   const headers={'Content-Type':'application/json'};
@@ -35,6 +57,7 @@ async function doLogin(){
     const data=await apiCall('POST','/auth/login',{username,password});
     token=data.token;currentUser=data.user;
     localStorage.setItem('ft_token',token);localStorage.setItem('ft_user',JSON.stringify(currentUser));
+    await bindWechatAfterLogin();
     showApp();
   }catch(e){err.textContent=e.message;err.classList.add('show');btn.disabled=false;btn.textContent='登 录';}
 }

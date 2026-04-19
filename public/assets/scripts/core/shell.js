@@ -20,6 +20,7 @@ function showApp(){
   loadPageDataAndRender(currentPage,{quiet:true});
 }
 document.addEventListener('DOMContentLoaded',()=>{
+  captureWechatLoginCode();
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
   window.addEventListener('resize',syncViewportMode);
