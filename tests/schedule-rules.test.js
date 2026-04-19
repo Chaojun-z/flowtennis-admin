@@ -6,6 +6,10 @@ const rules = api._test;
 assert.ok(rules, 'api._test should expose schedule rule helpers');
 assert.ok(rules.effectiveScheduleStatus, 'api._test should expose effective schedule status helper');
 assert.ok(rules.scheduleLessonChargeStatus, 'api._test should expose lesson charge status helper');
+assert.ok(rules.buildWechatAccessTokenUrl, 'api._test should expose wechat access token helper');
+assert.ok(rules.extractWechatAccessToken, 'api._test should expose wechat access token extractor');
+assert.ok(rules.findWechatScheduleRecipient, 'api._test should expose schedule recipient finder');
+assert.ok(rules.buildScheduleSubscribeMessage, 'api._test should expose schedule subscribe message builder');
 
 assert.strictEqual(
   rules.effectiveScheduleStatus(
@@ -59,6 +63,72 @@ assert.strictEqual(
   ),
   '不扣课',
   'cancelled schedule should show no charge'
+);
+
+assert.strictEqual(
+  rules.buildWechatAccessTokenUrl('wx-app-id', 'secret-value'),
+  'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wx-app-id&secret=secret-value',
+  'wechat access token helper should build the official token URL'
+);
+
+assert.strictEqual(
+  rules.extractWechatAccessToken({ access_token: 'token-123' }),
+  'token-123',
+  'wechat access token extractor should return access_token'
+);
+
+assert.throws(
+  () => rules.extractWechatAccessToken({ errcode: 40125, errmsg: 'invalid appsecret' }),
+  /微信 access_token 获取失败/,
+  'wechat access token extractor should reject wx API errors'
+);
+
+assert.deepStrictEqual(
+  rules.findWechatScheduleRecipient(
+    { coachId: 'coach-id-1', coach: '朝珺' },
+    [
+      { id: 'admin', role: 'admin', wechatOpenId: 'admin-openid' },
+      { id: 'coach-user', role: 'editor', coachId: 'coach-id-1', coachName: '朝珺', wechatOpenId: 'coach-openid' }
+    ]
+  ),
+  { id: 'coach-user', role: 'editor', coachId: 'coach-id-1', coachName: '朝珺', wechatOpenId: 'coach-openid' },
+  'schedule notification should target the bound coach account'
+);
+
+assert.strictEqual(
+  rules.findWechatScheduleRecipient({ coach: '朝珺' }, [{ id: 'coach-user', role: 'editor', coachName: '朝珺' }]),
+  null,
+  'schedule notification should skip coaches without openid'
+);
+
+assert.deepStrictEqual(
+  rules.buildScheduleSubscribeMessage({
+    templateId: 'tpl-1',
+    openid: 'openid-1',
+    schedule: {
+      id: 'sch-1',
+      courseType: '私教课',
+      startTime: '2026-04-20 16:00',
+      endTime: '2026-04-20 17:00',
+      campus: 'mabao',
+      venue: '1号场',
+      studentName: '小鹿',
+      coach: '朝珺'
+    }
+  }),
+  {
+    touser: 'openid-1',
+    template_id: 'tpl-1',
+    page: 'pages/index/index',
+    data: {
+      thing1: { value: '私教课' },
+      time2: { value: '2026-04-20 16:00' },
+      thing3: { value: 'mabao 1号场' },
+      name4: { value: '小鹿' },
+      thing5: { value: '教练：朝珺' }
+    }
+  },
+  'schedule subscribe message should build the mini program template payload'
 );
 
 assert.deepStrictEqual(

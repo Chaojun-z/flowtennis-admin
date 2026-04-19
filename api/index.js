@@ -17,6 +17,7 @@ const ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP = process.env.ENABLE_DEFAULT_PRICE_PLA
 const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP === 'true';
 const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
 const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
+const WECHAT_SCHEDULE_TEMPLATE_ID = process.env.WECHAT_SCHEDULE_TEMPLATE_ID;
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
@@ -74,6 +75,7 @@ const hotGetCache=new Map();
 let importedLedgerRepairChecked=false;
 
 let tsClient;
+let wechatAccessTokenCache=null;
 function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3});return tsClient;}
 function isTransientStorageError(err){
   const msg=String(err?.message||err||'');
@@ -934,6 +936,77 @@ async function fetchWechatSession(code){
 }
 function buildWechatBoundUser(user,openid,now=new Date().toISOString()){
   return {...user,wechatOpenId:String(openid||''),wechatBoundAt:now};
+}
+function buildWechatAccessTokenUrl(appid,secret){
+  return `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}`;
+}
+function extractWechatAccessToken(data){
+  if(data?.access_token)return String(data.access_token);
+  const msg=data?.errmsg||data?.errcode||'unknown';
+  throw new Error(`微信 access_token 获取失败：${msg}`);
+}
+async function fetchWechatAccessToken(){
+  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
+  const now=Date.now();
+  if(wechatAccessTokenCache&&wechatAccessTokenCache.expiresAt>now)return wechatAccessTokenCache.token;
+  const res=await fetch(buildWechatAccessTokenUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET));
+  const data=await res.json();
+  const token=extractWechatAccessToken(data);
+  const ttlMs=Math.max(300000,((parseInt(data.expires_in)||7200)-300)*1000);
+  wechatAccessTokenCache={token,expiresAt:now+ttlMs};
+  return token;
+}
+function truncateWechatValue(value,max=20){
+  const text=String(value||'').trim();
+  return text.length>max?text.slice(0,max):text;
+}
+function scheduleNotifyLocation(schedule){
+  return [schedule.campus,schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')||'待确认';
+}
+function findWechatScheduleRecipient(schedule,users=[]){
+  const coachId=String(schedule?.coachId||'').trim();
+  const coachName=String(schedule?.coach||'').trim();
+  return (users||[]).find(u=>{
+    if(!u?.wechatOpenId)return false;
+    if(String(u.role||'')!=='editor')return false;
+    if(coachId&&String(u.coachId||'').trim()===coachId)return true;
+    return coachName&&String(u.coachName||u.name||'').trim()===coachName;
+  })||null;
+}
+function buildScheduleSubscribeMessage({templateId,openid,schedule}){
+  const start=String(schedule?.startTime||'').trim();
+  return {
+    touser:openid,
+    template_id:templateId,
+    page:'pages/index/index',
+    data:{
+      thing1:{value:truncateWechatValue(schedule?.courseType||'课程')},
+      time2:{value:start},
+      thing3:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
+      name4:{value:truncateWechatValue(schedule?.studentName||'学员',10)},
+      thing5:{value:truncateWechatValue(`教练：${schedule?.coach||'待确认'}`)}
+    }
+  };
+}
+async function sendWechatSubscribeMessage(message){
+  const token=await fetchWechatAccessToken();
+  const res=await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${encodeURIComponent(token)}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(message)
+  });
+  const data=await res.json();
+  if(data.errcode&&data.errcode!==0)throw new Error(`微信订阅消息发送失败：${data.errmsg||data.errcode}`);
+  return data;
+}
+async function notifyCoachScheduleCreated(schedule){
+  if(!WECHAT_SCHEDULE_TEMPLATE_ID)return {skipped:true,reason:'missing_template'};
+  const users=await getCachedScan(T_USERS).catch(()=>[]);
+  const recipient=findWechatScheduleRecipient(schedule,users);
+  if(!recipient)return {skipped:true,reason:'missing_openid'};
+  const message=buildScheduleSubscribeMessage({templateId:WECHAT_SCHEDULE_TEMPLATE_ID,openid:recipient.wechatOpenId,schedule});
+  await sendWechatSubscribeMessage(message);
+  return {sent:true,userId:recipient.id};
 }
 function operatorAccountName(user){
   return String(user?.username||user?.id||user?.name||'').trim();
@@ -3125,7 +3198,8 @@ module.exports = async (req, res) => {
           if(nextDelta)lessonApplied=true;
           const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
           const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-          return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null});
+          const notification=await notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message}));
+          return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
         }catch(err){
           await del(T_SCHEDULE,id).catch(()=>null);
           for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
@@ -3363,6 +3437,10 @@ module.exports._test={
   buildWechatCode2SessionUrl,
   extractWechatOpenId,
   buildWechatBoundUser,
+  buildWechatAccessTokenUrl,
+  extractWechatAccessToken,
+  findWechatScheduleRecipient,
+  buildScheduleSubscribeMessage,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,
