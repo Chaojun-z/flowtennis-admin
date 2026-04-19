@@ -19,6 +19,7 @@ assert.strictEqual(projectConfig.appid, 'wx7acb7603ee803923', 'project.config.js
 const appConfig = readJson('wechat-miniprogram/miniprogram/app.json');
 assert.deepStrictEqual(appConfig.pages, ['pages/index/index'], 'mini program should keep one shell page');
 assert.strictEqual(appConfig.sitemapLocation, 'sitemap.json', 'mini program should include sitemap config');
+assert.strictEqual(appConfig.lazyCodeLoading, 'requiredComponents', 'mini program should enable component lazy injection');
 
 const indexWxml = readText('wechat-miniprogram/miniprogram/pages/index/index.wxml');
 assert.match(indexWxml, /<web-view\s+src="\{\{webViewUrl\}\}"/, 'index page should render the PWA through web-view');
