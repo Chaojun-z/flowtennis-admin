@@ -1,3 +1,54 @@
 page {
   height: 100%;
+  background: #a46f42;
+}
+
+.entry-page {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+
+.entry-card {
+  width: 100%;
+  padding: 48rpx 40rpx;
+  border-radius: 8px;
+  background: #fffaf3;
+  box-sizing: border-box;
+}
+
+.entry-title {
+  display: block;
+  color: #2e241c;
+  font-size: 40rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.entry-desc {
+  display: block;
+  margin-top: 24rpx;
+  color: #6f6258;
+  font-size: 28rpx;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.primary-btn {
+  margin-top: 40rpx;
+  border-radius: 8px;
+  background: #c97824;
+  color: #ffffff;
+  font-size: 30rpx;
+}
+
+.plain-btn {
+  margin-top: 20rpx;
+  border-radius: 8px;
+  background: transparent;
+  color: #7b6047;
+  font-size: 28rpx;
 }

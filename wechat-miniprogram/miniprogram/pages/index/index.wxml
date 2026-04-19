@@ -1,1 +1,8 @@
-<web-view src="{{webViewUrl}}"></web-view>
+<view class="entry-page">
+  <view class="entry-card">
+    <text class="entry-title">FlowTennis 教练端</text>
+    <text class="entry-desc">开启排课通知后，新课程安排会通过微信服务通知提醒你。</text>
+    <button class="primary-btn" bindtap="requestScheduleNotice">接收排课通知并进入教练端</button>
+    <button class="plain-btn" bindtap="enterWithoutNotice">暂不接收，直接进入</button>
+  </view>
+</view>

@@ -123,9 +123,8 @@ assert.deepStrictEqual(
     data: {
       thing1: { value: '私教课' },
       time2: { value: '2026-04-20 16:00' },
-      thing3: { value: 'mabao 1号场' },
-      name4: { value: '小鹿' },
-      thing5: { value: '教练：朝珺' }
+      thing3: { value: '小鹿' },
+      thing4: { value: 'mabao 1号场' }
     }
   },
   'schedule subscribe message should build the mini program template payload'

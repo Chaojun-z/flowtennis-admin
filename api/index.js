@@ -982,9 +982,8 @@ function buildScheduleSubscribeMessage({templateId,openid,schedule}){
     data:{
       thing1:{value:truncateWechatValue(schedule?.courseType||'课程')},
       time2:{value:start},
-      thing3:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
-      name4:{value:truncateWechatValue(schedule?.studentName||'学员',10)},
-      thing5:{value:truncateWechatValue(`教练：${schedule?.coach||'待确认'}`)}
+      thing3:{value:truncateWechatValue(schedule?.studentName||'学员')},
+      thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))}
     }
   };
 }

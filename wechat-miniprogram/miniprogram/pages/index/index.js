@@ -1,23 +1,17 @@
-const { WEB_VIEW_URL } = require('../../config');
+const { SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID } = require('../../config');
 
-function appendWechatCode(url, code) {
-  if (!code) return url;
-  const joiner = url.includes('?') ? '&' : '?';
-  return `${url}${joiner}wechatCode=${encodeURIComponent(code)}`;
+function enterCoachPortal() {
+  wx.navigateTo({ url: '/pages/webview/webview' });
 }
 
 Page({
-  data: {
-    webViewUrl: WEB_VIEW_URL
-  },
-  onLoad() {
-    wx.login({
-      success: (res) => {
-        if (!res.code) return;
-        this.setData({
-          webViewUrl: appendWechatCode(WEB_VIEW_URL, res.code)
-        });
-      }
+  requestScheduleNotice() {
+    wx.requestSubscribeMessage({
+      tmplIds: [SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID],
+      complete: enterCoachPortal
     });
+  },
+  enterWithoutNotice() {
+    enterCoachPortal();
   }
 });
