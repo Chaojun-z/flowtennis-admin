@@ -60,10 +60,46 @@ function buildWeekDays(schedule = [], weekOffset = 0, now = new Date()) {
     const key = dateKey(date);
     return {
       key,
+      isToday: key === dateKey(new Date()),
       label: `${WEEKDAYS[date.getDay()]} ${pad(date.getMonth() + 1)}/${pad(date.getDate())}`,
       items: items.filter((item) => String(item.startTime || '').slice(0, 10) === key)
     };
   });
+}
+
+function weekRangeText(weekOffset = 0, now = new Date()) {
+  const start = addDays(startOfWeek(now), weekOffset * 7);
+  const end = addDays(start, 6);
+  return `${start.getMonth() + 1}/${pad(start.getDate())} - ${end.getMonth() + 1}/${pad(end.getDate())}`;
+}
+
+function buildTimetableDays(schedule = [], weekOffset = 0, now = new Date()) {
+  const start = addDays(startOfWeek(now), weekOffset * 7);
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = addDays(start, index);
+    const key = dateKey(date);
+    return {
+      key,
+      name: WEEKDAYS[date.getDay()],
+      date: `${pad(date.getDate())}日`,
+      isToday: key === dateKey(new Date()),
+      items: schedule.filter(item => String(item.startTime || '').slice(0, 10) === key)
+    };
+  });
+}
+
+function clockMinutes(value) {
+  const date = parseDate(value);
+  return date ? date.getHours() * 60 + date.getMinutes() : 7 * 60;
+}
+
+function classBlockStyle(item) {
+  const hourHeight = 90;
+  const start = clockMinutes(item.startTime);
+  const end = clockMinutes(item.endTime);
+  const top = Math.max(0, Math.round(((start - 7 * 60) / 60) * hourHeight));
+  const height = Math.max(80, Math.round(((Math.max(end, start + 60) - start) / 60) * hourHeight) - 4);
+  return { top, height };
 }
 
 function findSchedule(schedule = [], id = '') {
@@ -72,6 +108,9 @@ function findSchedule(schedule = [], id = '') {
 
 module.exports = {
   buildWeekDays,
+  buildTimetableDays,
+  classBlockStyle,
   findSchedule,
-  formatScheduleItem
+  formatScheduleItem,
+  weekRangeText
 };

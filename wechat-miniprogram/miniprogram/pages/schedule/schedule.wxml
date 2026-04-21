@@ -1,4 +1,4 @@
-<view class="schedule-page">
+<view class="app-shell">
   <view wx:if="{{loading}}" class="state-text">课表加载中...</view>
 
   <view wx:elif="{{error}}" class="empty-box">
@@ -7,31 +7,165 @@
   </view>
 
   <block wx:else>
-    <view class="top-bar">
-      <view>
-        <text class="page-title">我的课表</text>
-        <text class="page-subtitle">{{weekTitle}}</text>
-      </view>
-      <button class="small-btn" bindtap="openWebview">完整工作台</button>
-    </view>
-
-    <view class="week-actions">
-      <button class="week-btn" bindtap="prevWeek">上一周</button>
-      <button class="week-btn" bindtap="goCurrentWeek">回到本周</button>
-      <button class="week-btn" bindtap="nextWeek">下一周</button>
-    </view>
-
-    <view class="day-list">
-      <view wx:for="{{days}}" wx:key="key" class="day-section">
-        <view class="day-title">{{item.label}}</view>
-        <view wx:if="{{!item.items.length}}" class="day-empty">当天暂无课程</view>
-        <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="course-card" data-id="{{course.id}}" bindtap="openDetail">
-          <view class="course-time">{{course.timeText}}</view>
-          <view class="course-title">{{course.title}}</view>
-          <view class="course-meta">{{course.studentText}}</view>
-          <view class="course-meta">{{course.locationText}}</view>
+    <scroll-view wx:if="{{activeTab === 'dashboard'}}" scroll-y class="page-scroll">
+      <view class="hero">
+        <view class="coach-row">
+          <view class="coach-avatar">教练</view>
+          <view>
+            <view class="hero-title">早安，王教练 <text class="icon">⌄</text></view>
+            <view class="hero-subtitle">准备好今天的教学了吗？</view>
+          </view>
         </view>
       </view>
+      <view class="stats-card">
+        <view class="stat-item"><text class="stat-label">本月课时</text><text class="stat-number">{{stats.month}}</text></view>
+        <view class="stat-item"><text class="stat-label">本周课时</text><text class="stat-number">{{stats.week}}</text></view>
+        <view class="stat-item"><text class="stat-label">今天课时</text><text class="stat-number">{{stats.today}}</text></view>
+        <view class="stat-item small"><text class="stat-label">已反馈</text><text class="stat-number small-number">{{stats.feedback}}</text></view>
+        <view class="stat-item small"><text class="stat-label">未反馈</text><text class="stat-number danger small-number">{{stats.pending}}</text></view>
+        <view class="stat-item small"><text class="stat-label">体验转化</text><text class="stat-number small-number">{{stats.conversion}}</text></view>
+      </view>
+      <view class="content-section">
+        <view class="notice-card">本周汇总：您有 <text class="danger-text">{{stats.pending}}</text> 节课程待反馈</view>
+        <view class="section-title">今日排课 <text> {{weekRange}}</text></view>
+        <view wx:for="{{dashboardClasses}}" wx:key="id" class="lesson-card">
+          <view class="lesson-head"><text class="lesson-time">◷ {{item.timeText}}</text><text class="status-tag {{item.statusClass}}">{{item.status}}</text></view>
+          <view class="lesson-info">
+            <view class="lesson-student">{{item.student}}</view>
+            <view class="lesson-meta"><text class="type-pill">{{item.type}}</text>{{item.loc}}</view>
+          </view>
+          <view class="lesson-actions">
+            <button class="ghost-btn" data-id="{{item.id}}" bindtap="openDetail">查看详情</button>
+            <button class="solid-btn" data-id="{{item.id}}" bindtap="openDetail">填写反馈</button>
+          </view>
+        </view>
+        <view wx:if="{{!dashboardClasses.length}}" class="notice-card">今天暂无课程</view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{activeTab === 'timetable'}}" class="timetable-page">
+      <view class="timetable-header">
+        <view class="nav-title">我的课表</view>
+        <view class="week-row">
+          <view class="week-switch">
+            <button bindtap="prevWeek" class="circle-btn">‹</button>
+            <text class="week-range">{{weekRange}}</text>
+            <button bindtap="nextWeek" class="circle-btn">›</button>
+          </view>
+          <button bindtap="goCurrentWeek" class="today-btn">回到本周</button>
+        </view>
+      </view>
+      <scroll-view scroll-x scroll-y class="timetable-scroll">
+        <view class="grid-header">
+          <view class="time-corner"></view>
+          <view wx:for="{{timetableDays}}" wx:key="key" class="day-column-head {{item.isToday ? 'today-head' : ''}}">
+            <text class="day-name">{{item.name}}</text>
+            <text class="day-date">{{item.date}}</text>
+          </view>
+        </view>
+        <view class="grid-body">
+          <view class="time-axis">
+            <view wx:for="{{timetableHours}}" wx:key="*this" class="hour-cell"><text>{{item}}</text></view>
+          </view>
+          <view class="day-columns">
+            <view wx:for="{{timetableDays}}" wx:key="key" class="day-column {{item.isToday ? 'today-column' : ''}}">
+              <view wx:for="{{timetableHours}}" wx:key="*this" class="grid-hour"></view>
+              <view wx:if="{{!item.items.length}}" class="grid-empty">暂无课程</view>
+              <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="grid-course" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
+                <view class="grid-course-top"><text>{{course.timeText}}</text><text>{{course.type}}</text></view>
+                <view class="grid-course-name">{{course.student}}</view>
+                <view class="grid-course-meta">{{course.loc}}</view>
+                <view class="grid-course-foot">反馈: {{course.status}}</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <scroll-view wx:if="{{activeTab === 'students'}}" scroll-y class="page-scroll">
+      <view class="simple-header"><text>我的学员</text></view>
+      <view class="student-summary"><view><text class="summary-num">12</text><text>可见学员</text></view><view><text class="summary-num">11</text><text>负责学员</text></view></view>
+      <view class="list-section">
+        <view wx:for="{{studentsList}}" wx:key="id" class="student-card">
+          <view class="student-avatar {{item.avatarClass}}">{{item.avatarText}}</view>
+          <view class="student-main">
+            <view><text class="student-name">{{item.name}}</text><text class="student-tag">{{item.type}}</text></view>
+            <view class="student-meta">累计上课：{{item.cumulative}} 节　课包进度：{{item.progress}}</view>
+          </view>
+          <text class="chevron">›</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <scroll-view wx:if="{{activeTab === 'shifts'}}" scroll-y class="page-scroll">
+      <view class="simple-header"><text>我的班次</text></view>
+      <view class="shift-summary"><view><text class="summary-num">4</text><text>我的班次</text></view><view><text class="summary-num">37</text><text>已上课时</text></view></view>
+      <view class="list-section">
+        <view class="notice-card">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</view>
+        <view wx:for="{{shiftsList}}" wx:key="id" class="shift-card">
+          <view class="shift-head"><text class="shift-name">{{item.name}}</text><text class="status-tag tag-green">{{item.status}}</text></view>
+          <view class="shift-meta">学员：{{item.student}}</view>
+          <view class="shift-meta">课时进度：{{item.progress}}</view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="tabbar">
+      <view class="tab-item {{activeTab === 'dashboard' ? 'active' : ''}}" data-tab="dashboard" bindtap="switchTab"><text class="tab-icon">▦</text><text>工作台</text></view>
+      <view class="tab-item {{activeTab === 'timetable' ? 'active' : ''}}" data-tab="timetable" bindtap="switchTab"><text class="tab-icon">□</text><text>我的课表</text></view>
+      <view class="tab-item {{activeTab === 'students' ? 'active' : ''}}" data-tab="students" bindtap="switchTab"><text class="tab-icon">♙</text><text>我的学员</text></view>
+      <view class="tab-item {{activeTab === 'shifts' ? 'active' : ''}}" data-tab="shifts" bindtap="switchTab"><text class="tab-icon">☷</text><text>我的班次</text></view>
+    </view>
+
+    <view wx:if="{{showDetail || showFeedback}}" class="mask" catchtouchmove="stopMove" bindtap="closeSheets"></view>
+
+    <view class="sheet {{showDetail ? 'sheet-show' : ''}}" catchtouchmove="stopMove">
+      <view class="sheet-handle"></view>
+      <view class="sheet-title"><text>排课详情</text><button bindtap="closeSheets">×</button></view>
+      <scroll-view scroll-y class="sheet-body">
+        <view class="block-title">课程基础信息</view>
+        <view class="info-card">
+          <view class="info-row"><text>时间</text><text>{{selectedClass.timeText}}</text></view>
+          <view class="info-row"><text>学员</text><text>{{selectedClass.student}}</text></view>
+          <view class="info-row"><text>课程</text><text>{{selectedClass.type}}</text></view>
+          <view class="info-row"><text>地点</text><text>{{selectedClass.loc}}</text></view>
+          <view class="info-row"><text>状态</text><text>{{selectedClass.status}}</text></view>
+        </view>
+      </scroll-view>
+      <view class="sheet-actions">
+        <button class="ghost-btn" bindtap="closeSheets">关闭</button>
+        <button class="solid-btn" bindtap="openFeedback">填写反馈</button>
+      </view>
+    </view>
+
+    <view class="sheet {{showFeedback ? 'sheet-show' : ''}}" catchtouchmove="stopMove">
+      <view class="sheet-handle"></view>
+      <view class="sheet-title"><text>课后反馈</text><button bindtap="closeSheets">×</button></view>
+      <scroll-view scroll-y class="sheet-body">
+        <view class="feedback-context">{{selectedClass.timeText}} · {{selectedClass.student}}</view>
+        <view class="field-label">今天练习了 <text>*</text></view>
+        <textarea class="feedback-input" placeholder="请输入内容..." />
+      </scroll-view>
+      <view class="sheet-actions three">
+        <button class="ghost-btn" bindtap="closeSheets">取消</button>
+        <button class="outline-btn" bindtap="openPoster">生成海报</button>
+        <button class="solid-btn" bindtap="closeSheets">保存反馈</button>
+      </view>
+    </view>
+
+    <view wx:if="{{showPoster}}" class="poster-layer">
+      <view class="poster-head"><text>生成课后海报</text><button bindtap="closePoster">×</button></view>
+      <scroll-view scroll-x class="poster-tabs">
+        <text wx:for="{{posterStyles}}" wx:key="*this" data-style="{{item}}" bindtap="selectPosterStyle" class="poster-tab {{posterStyle === item ? 'active' : ''}}">{{item}}</text>
+      </scroll-view>
+      <view class="poster-card">
+        <view class="poster-title">{{selectedClass.student}} <text>训练反馈</text></view>
+        <view class="poster-date">上课日期：{{selectedClass.timeText}}</view>
+        <view class="poster-note"><text>今天练习了</text><text>训练非常努力，技术动作有了明显改观...</text></view>
+        <view class="poster-brand">网球兄弟<text>用网球向生活发出邀请</text></view>
+      </view>
+      <view class="poster-actions"><button bindtap="closePoster">返回反馈</button><button>分享图片</button></view>
     </view>
   </block>
 </view>
