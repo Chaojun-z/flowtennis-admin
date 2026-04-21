@@ -43,6 +43,10 @@ Page({
     loading: true,
     error: '',
     activeTab: 'timetable',
+    isDashboard: false,
+    isTimetable: true,
+    isStudents: false,
+    isShifts: false,
     weekOffset: 0,
     weekTitle: '本周',
     weekRange: '',
@@ -104,7 +108,14 @@ Page({
   },
 
   switchTab(event) {
-    this.setData({ activeTab: event.currentTarget.dataset.tab });
+    const activeTab = event.currentTarget.dataset.tab || 'timetable';
+    this.setData({
+      activeTab,
+      isDashboard: activeTab === 'dashboard',
+      isTimetable: activeTab === 'timetable',
+      isStudents: activeTab === 'students',
+      isShifts: activeTab === 'shifts'
+    });
   },
 
   prevWeek() {

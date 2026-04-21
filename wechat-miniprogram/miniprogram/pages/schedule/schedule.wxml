@@ -7,7 +7,7 @@
   </view>
 
   <block wx:else>
-    <scroll-view wx:if="{{activeTab === 'dashboard'}}" scroll-y class="page-scroll">
+    <scroll-view wx:if="{{isDashboard}}" scroll-y class="page-scroll">
       <view class="hero">
         <view class="coach-row">
           <view class="coach-avatar">教练</view>
@@ -43,7 +43,7 @@
       </view>
     </scroll-view>
 
-    <view wx:if="{{activeTab === 'timetable'}}" class="timetable-page">
+    <view wx:if="{{isTimetable}}" class="timetable-page">
       <view class="timetable-header">
         <view class="nav-title">我的课表</view>
         <view class="week-row">
@@ -83,7 +83,7 @@
       </scroll-view>
     </view>
 
-    <scroll-view wx:if="{{activeTab === 'students'}}" scroll-y class="page-scroll">
+    <scroll-view wx:if="{{isStudents}}" scroll-y class="page-scroll">
       <view class="simple-header"><text>我的学员</text></view>
       <view class="student-summary"><view><text class="summary-num">12</text><text>可见学员</text></view><view><text class="summary-num">11</text><text>负责学员</text></view></view>
       <view class="list-section">
@@ -98,7 +98,7 @@
       </view>
     </scroll-view>
 
-    <scroll-view wx:if="{{activeTab === 'shifts'}}" scroll-y class="page-scroll">
+    <scroll-view wx:if="{{isShifts}}" scroll-y class="page-scroll">
       <view class="simple-header"><text>我的班次</text></view>
       <view class="shift-summary"><view><text class="summary-num">4</text><text>我的班次</text></view><view><text class="summary-num">37</text><text>已上课时</text></view></view>
       <view class="list-section">
@@ -112,10 +112,10 @@
     </scroll-view>
 
     <view class="tabbar">
-      <view class="tab-item {{activeTab === 'dashboard' ? 'active' : ''}}" data-tab="dashboard" bindtap="switchTab"><text class="tab-icon">▦</text><text>工作台</text></view>
-      <view class="tab-item {{activeTab === 'timetable' ? 'active' : ''}}" data-tab="timetable" bindtap="switchTab"><text class="tab-icon">□</text><text>我的课表</text></view>
-      <view class="tab-item {{activeTab === 'students' ? 'active' : ''}}" data-tab="students" bindtap="switchTab"><text class="tab-icon">♙</text><text>我的学员</text></view>
-      <view class="tab-item {{activeTab === 'shifts' ? 'active' : ''}}" data-tab="shifts" bindtap="switchTab"><text class="tab-icon">☷</text><text>我的班次</text></view>
+      <view class="tab-item {{isDashboard ? 'active' : ''}}" data-tab="dashboard" bindtap="switchTab"><text class="tab-icon">▦</text><text>工作台</text></view>
+      <view class="tab-item {{isTimetable ? 'active' : ''}}" data-tab="timetable" bindtap="switchTab"><text class="tab-icon">□</text><text>我的课表</text></view>
+      <view class="tab-item {{isStudents ? 'active' : ''}}" data-tab="students" bindtap="switchTab"><text class="tab-icon">♙</text><text>我的学员</text></view>
+      <view class="tab-item {{isShifts ? 'active' : ''}}" data-tab="shifts" bindtap="switchTab"><text class="tab-icon">☷</text><text>我的班次</text></view>
     </view>
 
     <view wx:if="{{showDetail || showFeedback}}" class="mask" catchtouchmove="stopMove" bindtap="closeSheets"></view>
