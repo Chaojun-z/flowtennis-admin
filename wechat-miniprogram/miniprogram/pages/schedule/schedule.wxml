@@ -7,8 +7,8 @@
   </view>
 
   <block wx:else>
-    <scroll-view wx:if="{{isDashboard}}" scroll-y class="page-scroll">
-      <view class="hero">
+    <scroll-view wx:if="{{isDashboard}}" scroll-y class="page-scroll dashboard-scroll">
+      <view class="hero dashboard-hero">
         <view class="coach-row">
           <view class="coach-avatar">教练</view>
           <view>
@@ -21,15 +21,15 @@
         <view class="stat-item"><text class="stat-label">本月课时</text><text class="stat-number">{{stats.month}}</text></view>
         <view class="stat-item"><text class="stat-label">本周课时</text><text class="stat-number">{{stats.week}}</text></view>
         <view class="stat-item"><text class="stat-label">今天课时</text><text class="stat-number">{{stats.today}}</text></view>
-        <view class="stat-item small"><text class="stat-label">已反馈</text><text class="stat-number small-number">{{stats.feedback}}</text></view>
+        <view class="stat-item small"><text class="stat-label">本月反馈</text><text class="stat-number small-number">{{stats.feedback}}</text></view>
         <view class="stat-item small"><text class="stat-label">未反馈</text><text class="stat-number danger small-number">{{stats.pending}}</text></view>
         <view class="stat-item small"><text class="stat-label">体验转化</text><text class="stat-number small-number">{{stats.conversion}}</text></view>
       </view>
       <view class="content-section">
-        <view class="notice-card">本周汇总：您有 <text class="danger-text">{{stats.pending}}</text> 节课程待反馈</view>
-        <view class="section-title">今日排课 <text> {{weekRange}}</text></view>
+        <view class="notice-card summary-notice"><text class="notice-icon">ⓘ</text>本周汇总：您有 <text class="danger-text">{{stats.pending}}</text> 节课程待反馈</view>
+        <view class="section-title">今日排课 <text>{{todayLabel}}</text></view>
         <view wx:for="{{dashboardClasses}}" wx:key="id" class="lesson-card">
-          <view class="lesson-head"><text class="lesson-time">◷ {{item.timeText}}</text><text class="status-tag {{item.statusClass}}">{{item.status}}</text></view>
+          <view class="lesson-head"><text class="lesson-time"><text class="clock-icon">◷</text>{{item.timeText}}</text><text class="status-tag {{item.statusClass}}">{{item.status}}</text></view>
           <view class="lesson-info">
             <view class="lesson-student">{{item.student}}</view>
             <view class="lesson-meta"><text class="type-pill">{{item.type}}</text>{{item.loc}}</view>
@@ -68,6 +68,7 @@
             <view wx:for="{{timetableHours}}" wx:key="*this" class="hour-cell"><text>{{item}}</text></view>
           </view>
           <view class="day-columns">
+            <view wx:if="{{isCurrentWeek}}" class="now-line"><text>13:30</text></view>
             <view wx:for="{{timetableDays}}" wx:key="key" class="day-column {{item.isToday ? 'today-column' : ''}}">
               <view wx:for="{{timetableHours}}" wx:key="*this" class="grid-hour"></view>
               <view wx:if="{{!item.items.length}}" class="grid-empty">暂无课程</view>
@@ -84,8 +85,7 @@
     </view>
 
     <scroll-view wx:if="{{isStudents}}" scroll-y class="page-scroll">
-      <view class="simple-header"><text>我的学员</text></view>
-      <view class="student-summary"><view><text class="summary-num">12</text><text>可见学员</text></view><view><text class="summary-num">11</text><text>负责学员</text></view></view>
+      <view class="simple-header"><text>我的学员</text><view class="student-summary"><view><text class="summary-num">12</text><text>可见学员</text></view><view class="summary-divider"></view><view><text class="summary-num">11</text><text>负责学员</text></view></view></view>
       <view class="list-section">
         <view wx:for="{{studentsList}}" wx:key="id" class="student-card">
           <view class="student-avatar {{item.avatarClass}}">{{item.avatarText}}</view>
@@ -100,7 +100,7 @@
 
     <scroll-view wx:if="{{isShifts}}" scroll-y class="page-scroll">
       <view class="simple-header"><text>我的班次</text></view>
-      <view class="shift-summary"><view><text class="summary-num">4</text><text>我的班次</text></view><view><text class="summary-num">37</text><text>已上课时</text></view></view>
+      <view class="shift-summary"><view><text class="summary-label">我的班次</text><text class="summary-num dark">4<text>个</text></text><text>进行中 3</text></view><view><text class="summary-label">总课时 / 已上</text><text class="summary-num dark">69 / 37</text><text>剩余 32 节</text></view></view>
       <view class="list-section">
         <view class="notice-card">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</view>
         <view wx:for="{{shiftsList}}" wx:key="id" class="shift-card">

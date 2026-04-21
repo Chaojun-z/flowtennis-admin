@@ -42,14 +42,16 @@ Page({
   data: {
     loading: true,
     error: '',
-    activeTab: 'timetable',
-    isDashboard: false,
-    isTimetable: true,
+    activeTab: 'dashboard',
+    isDashboard: true,
+    isTimetable: false,
     isStudents: false,
     isShifts: false,
+    isCurrentWeek: true,
     weekOffset: 0,
     weekTitle: '本周',
     weekRange: '',
+    todayLabel: '',
     days: [],
     timetableDays: [],
     timetableHours,
@@ -89,13 +91,16 @@ Page({
     const visibleClasses = days.reduce((all, day) => all.concat(day.items.map(item => ({ ...item, dayKey: day.key }))), []);
     const pending = visibleClasses.filter(item => item.feedbackPending).length;
     const today = days.find(day => day.isToday);
+    const dashboardClasses = today && today.items.length ? today.items : visibleClasses.slice(0, 4);
     this.setData({
       weekTitle: weekOffset === 0 ? '本周' : (weekOffset > 0 ? `后 ${weekOffset} 周` : `前 ${Math.abs(weekOffset)} 周`),
       weekRange: weekRangeText(weekOffset),
+      todayLabel: today ? today.label.replace(' ', '　') : '',
+      isCurrentWeek: weekOffset === 0,
       days,
       timetableDays: buildTimetableDays(visibleClasses, weekOffset),
       visibleClasses,
-      dashboardClasses: visibleClasses.slice(0, 4),
+      dashboardClasses,
       stats: {
         month: schedule.length,
         week: visibleClasses.length,

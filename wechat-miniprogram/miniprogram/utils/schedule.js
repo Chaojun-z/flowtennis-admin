@@ -31,7 +31,7 @@ function timeText(item) {
   const start = parseDate(item.startTime);
   const end = parseDate(item.endTime);
   if (!start) return '时间待定';
-  return `${pad(start.getHours())}:${pad(start.getMinutes())}${end ? `-${pad(end.getHours())}:${pad(end.getMinutes())}` : ''}`;
+  return `${pad(start.getHours())}:${pad(start.getMinutes())}${end ? ` - ${pad(end.getHours())}:${pad(end.getMinutes())}` : ''}`;
 }
 
 function formatScheduleItem(item) {
@@ -94,11 +94,11 @@ function clockMinutes(value) {
 }
 
 function classBlockStyle(item) {
-  const hourHeight = 90;
+  const hourHeight = 150;
   const start = clockMinutes(item.startTime);
   const end = clockMinutes(item.endTime);
   const top = Math.max(0, Math.round(((start - 7 * 60) / 60) * hourHeight));
-  const height = Math.max(80, Math.round(((Math.max(end, start + 60) - start) / 60) * hourHeight) - 4);
+  const height = Math.max(128, Math.round(((Math.max(end, start + 60) - start) / 60) * hourHeight) - 4);
   return { top, height };
 }
 
