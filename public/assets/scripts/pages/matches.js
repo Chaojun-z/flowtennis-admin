@@ -57,7 +57,16 @@ function renderMatchFinanceStats(rows){
     ['减免',`¥${fmt(s.waived)}`],
     ['异常',`¥${fmt(s.abnormal)}`],
     ['退款',`¥${fmt(s.refunded)}`]
-  ].map(([label,value])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div></div>`).join('');
+  ].map(([label,value])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div></div>`).join('')+
+    `<div class="tms-stat-card" style="cursor:pointer" onclick="openMatchCourtFinanceLedger()"><div class="tms-stat-label">约球订场总账</div><div class="tms-stat-value">查看</div></div>`;
+}
+async function openMatchCourtFinanceLedger(){
+  try{
+    await ensureDatasetsByName(['courtsPage']);
+    openCourtFinanceModal('match-court-finance');
+  }catch(e){
+    toast('总账打开失败：'+e.message,'error');
+  }
 }
 function matchTimeText(row){
   const start=String(row.startTime||'').replace('T',' ').slice(0,16);
@@ -122,8 +131,13 @@ function matchPayStatusText(status){
   return ({pending:'待收',paid:'已收',waived:'减免',refunded:'已退款',bad_debt:'坏账',abnormal:'异常'}[status]||status||'-');
 }
 async function updateMatchFeeSplit(matchId,userId,payStatus){
+  let matchFeeNote='';
+  if(['waived','abnormal','refunded','bad_debt'].includes(payStatus)){
+    matchFeeNote=String(window.prompt('请填写原因')||'').trim();
+    if(!matchFeeNote){toast('请填写原因','warn');return;}
+  }
   try{
-    await apiCall('POST',`/admin/matches/${matchId}/fees/splits/${userId}`,{payStatus});
+    await apiCall('POST',`/admin/matches/${matchId}/fees/splits/${userId}`,{payStatus,note:matchFeeNote});
     toast('收款状态已更新','success');
     await loadMatches(true);
     openMatchFeeModal(matchId);

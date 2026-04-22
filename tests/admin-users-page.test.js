@@ -33,6 +33,9 @@ assert.match(fnBody('openAdminUserModal'), /au_id/, 'account modal should includ
 assert.match(fnBody('openAdminUserModal'), /au_password/, 'account modal should include password field for create');
 assert.match(fnBody('openAdminUserModal'), /au_role/, 'account modal should include role field');
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
+assert.match(fnBody('openAdminUserModal'), /au_match_ops/, 'account modal should configure match ops permission');
+assert.match(fnBody('openAdminUserModal'), /au_match_finance/, 'account modal should configure match finance permission');
+assert.match(fnBody('saveAdminUser'), /matchPermissions/, 'account save should submit match permissions');
 assert.match(fnBody('saveAdminUser'), /\/admin\/create-user/, 'account create should call create-user api');
 assert.match(fnBody('saveAdminUser'), /\/admin\/update-user/, 'account edit should call update-user api');
 assert.match(fnBody('toggleAdminUserStatus'), /\/admin\/update-user/, 'account status toggle should reuse update-user api');

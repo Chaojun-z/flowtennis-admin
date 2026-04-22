@@ -100,6 +100,20 @@ async function main() {
     assert.equal(financeRow.sourceCategory, '约球订场');
     assert.equal(Number(financeRow.amount), 250);
 
+    await assert.rejects(
+      () => rules.markMatchFeeSplit(match.id, ids.userA, 'dandan', { payStatus: 'refunded' }),
+      /请填写原因/,
+      'refund should require operator reason'
+    );
+    const refunded = await rules.markMatchFeeSplit(match.id, ids.userA, 'dandan', { payStatus: 'refunded', note: '测试退款' });
+    assert.equal(refunded.financeSync.synced, true, 'refunded split should sync refund into court finance ledger');
+    const financeAfterRefund = await rules.getCourtRecordForTest('match-court-finance');
+    const refundRow = (financeAfterRefund.history || []).find(row => row.matchId === match.id && row.matchUserId === ids.userA && row.type === '退款');
+    assert.ok(refundRow, 'court finance history should contain refunded match split');
+    assert.equal(refundRow.category, '订场');
+    assert.equal(refundRow.sourceCategory, '约球订场');
+    assert.equal(Number(refundRow.amount), 250);
+
     const raceMatch = await rules.createMatchForUser(ids.creator, {
       title: `${prefix} 并发抢位`,
       matchType: 'single',

@@ -1849,6 +1849,14 @@ function assertBookedWithdrawalInput(input={}){
   const reason=String(input.reason||input.withdrawalReason||'').trim();
   return {financialResponsibility,reason};
 }
+function assertMatchFeeSplitUpdateInput(input={}){
+  const payStatus=String(input.payStatus||'paid').trim();
+  if(!['pending','paid','waived','refunded','bad_debt','abnormal'].includes(payStatus))throw new Error('收款状态不正确');
+  const note=String(input.note||'').trim();
+  if(['waived','refunded','bad_debt','abnormal'].includes(payStatus)&&!note)throw new Error('请填写原因');
+  const paidAmount=input.paidAmount==null?null:normalizeMoney(input.paidAmount);
+  return {payStatus,paidAmount,note};
+}
 function resolveFinalAttendanceStatus(row){
   if(row?.creatorStatus==='attended'||row?.creatorstatus==='attended')return 'attended';
   if(row?.creatorStatus==='absent'||row?.creatorstatus==='absent')return 'absent';
@@ -2112,23 +2120,26 @@ async function generateMatchFeeLedger(matchId,operatorId,{chargeAbsentUserIds=[]
     return ledger;
   });
 }
-async function markMatchFeeSplit(matchId,userId,operatorId,{payStatus='paid',paidAmount,note=''}={}){
-  if(!['pending','paid','waived','refunded','bad_debt','abnormal'].includes(payStatus))throw new Error('收款状态不正确');
+async function markMatchFeeSplit(matchId,userId,operatorId,input={}){
+  const update=assertMatchFeeSplitUpdateInput(input);
   const result=await withMatchSqlTransaction(async(client)=>{
     const splitRes=await client.query('SELECT * FROM match_fee_splits WHERE matchId=$1 AND userId=$2 FOR UPDATE',[matchId,userId]);
     const split=splitRes.rows[0];
     if(!split)throw new Error('账单不存在');
     const amount=normalizeMoney(split.amount);
-    const nextPaidAmount=paidAmount==null?(payStatus==='paid'?amount:0):normalizeMoney(paidAmount);
-    await client.query('UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE matchId=$5 AND userId=$6',[payStatus,nextPaidAmount,payStatus==='paid'?new Date():null,note,matchId,userId]);
+    const previousPaidAmount=normalizeMoney(split.paidamount||split.paidAmount);
+    if(update.payStatus==='refunded'&&String(split.paystatus||split.payStatus)!=='paid'&&previousPaidAmount<=0)throw new Error('未收款不能退款');
+    const nextPaidAmount=update.paidAmount==null?(update.payStatus==='paid'?amount:(update.payStatus==='refunded'?previousPaidAmount:0)):update.paidAmount;
+    await client.query('UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE matchId=$5 AND userId=$6',[update.payStatus,nextPaidAmount,update.payStatus==='paid'?new Date():null,update.note,matchId,userId]);
     const all=await client.query('SELECT payStatus FROM match_fee_splits WHERE matchId=$1',[matchId]);
     const settled=all.rows.length>0&&all.rows.every(row=>['paid','waived'].includes(row.paystatus||row.payStatus));
     await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE matchId=$2',[settled?'settled':'confirmed',matchId]);
     if(settled)await client.query("UPDATE match_posts SET status='settled',updatedAt=NOW() WHERE id=$1",[matchId]);
-    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'admin_user',operatorId,'fee_split_update',JSON.stringify(split),JSON.stringify({payStatus,paidAmount:nextPaidAmount,note})]);
+    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'admin_user',operatorId,'fee_split_update',JSON.stringify(split),JSON.stringify({payStatus:update.payStatus,paidAmount:nextPaidAmount,note:update.note})]);
     return {success:true,status:settled?'settled':'confirmed'};
   });
-  if(payStatus==='paid')result.financeSync=await syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId);
+  if(update.payStatus==='paid')result.financeSync=await syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId);
+  if(update.payStatus==='refunded')result.financeSync=await syncMatchFeeSplitRefundToCourtFinance(matchId,userId,operatorId,update.note);
   return result;
 }
 function buildMatchProfileStats({createdMatches=[],joinedMatches=[],attendanceRows=[],feeSplits=[]}={}){
@@ -2652,6 +2663,26 @@ function buildMatchCourtFinanceHistoryRow({match={},split={},user={},operatorId=
     operator:operatorId
   };
 }
+function buildMatchCourtFinanceRefundRow({paidRow={},split={},operatorId='',note='',now=new Date().toISOString()}={}){
+  const amount=normalizeMoney(split.paidAmount||split.paidamount||split.amount||paidRow.amount);
+  if(amount<=0)throw new Error('约球退款金额必须大于 0');
+  return {
+    ...paidRow,
+    id:`match-fee-refund-${split.id||uuidv4()}`,
+    createdAt:now,
+    recordedAt:now,
+    type:'退款',
+    category:'订场',
+    sourceCategory:'约球订场',
+    payMethod:paidRow.payMethod||'微信转账',
+    revenueBucket:paidRow.revenueBucket||'现场收款',
+    amount,
+    note:`约球订场退款 - ${String(note||'运营退款').trim()}`,
+    matchFeeSplitId:split.id||paidRow.matchFeeSplitId||'',
+    matchUserId:split.userid||split.userId||paidRow.matchUserId||'',
+    operator:operatorId
+  };
+}
 async function syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId){
   const pool=getMatchSqlPool();
   const [matchRes,splitRes,userRes]=await Promise.all([
@@ -2680,6 +2711,24 @@ async function syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId){
   await put(T_COURTS,MATCH_COURT_FINANCE_ACCOUNT_ID,next);
   return {synced:true,historyId:row.id};
 }
+async function syncMatchFeeSplitRefundToCourtFinance(matchId,userId,operatorId,note=''){
+  const pool=getMatchSqlPool();
+  const splitRes=await pool.query('SELECT * FROM match_fee_splits WHERE matchId=$1 AND userId=$2',[matchId,userId]);
+  const split=splitRes.rows[0];
+  if(!split||String(split.paystatus||split.payStatus)!=='refunded')return {synced:false};
+  const now=new Date().toISOString();
+  const existing=await getCachedRow(T_COURTS,MATCH_COURT_FINANCE_ACCOUNT_ID).catch(()=>null);
+  if(!existing)return {synced:false,error:'match court finance account missing'};
+  const history=normalizeCourtHistory(existing.history);
+  const splitId=String(split.id||'');
+  if(history.some(row=>String(row.id||'')===`match-fee-refund-${splitId}`))return {synced:true,skipped:true};
+  const paidRow=history.find(row=>String(row.matchFeeSplitId||'')===splitId&&row.type==='消费');
+  if(!paidRow)throw new Error('未找到原收款流水，不能退款');
+  const row=buildMatchCourtFinanceRefundRow({paidRow,split,operatorId,note,now});
+  const next=normalizeCourtRecord({...existing,history:[...history,row],updatedAt:now});
+  await put(T_COURTS,MATCH_COURT_FINANCE_ACCOUNT_ID,next);
+  return {synced:true,historyId:row.id};
+}
 async function getCourtRecordForTest(id){
   return getCachedRow(T_COURTS,id);
 }
@@ -2687,7 +2736,11 @@ async function removeMatchCourtFinanceRowsForTest(matchIdPrefix){
   const account=await getCachedRow(T_COURTS,MATCH_COURT_FINANCE_ACCOUNT_ID).catch(()=>null);
   if(!account)return {removed:0};
   const history=normalizeCourtHistory(account.history);
-  const nextHistory=history.filter(row=>!String(row.matchId||'').startsWith(String(matchIdPrefix||'')));
+  const prefix=String(matchIdPrefix||'');
+  const nextHistory=history.filter(row=>{
+    const haystack=[row.matchId,row.note,row.matchUserId,row.id].map(x=>String(x||'')).join(' ');
+    return !haystack.includes(prefix);
+  });
   const removed=history.length-nextHistory.length;
   if(removed>0){
     const next=normalizeCourtRecord({...account,history:nextHistory,updatedAt:new Date().toISOString()});
@@ -3695,8 +3748,8 @@ module.exports = async (req, res) => {
       try{return sendJson(res,await markMatchFeeSplit(adminFeeSplitM[1],adminFeeSplitM[2],user.id,body));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');await put(T_USERS,id,{id,name,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});return sendJson(res,{success:true,id,name,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName});}
-    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(body.clearWechat)updates=buildWechatUnboundUser(updates);await put(T_USERS,id,updates);return sendJson(res,{success:true});}
+    if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');const matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions||[]});await put(T_USERS,id,{id,name,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,matchPermissions});return sendJson(res,{success:true,id,name,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,matchPermissions});}
+    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(Array.isArray(body.matchPermissions)||Array.isArray(body.permissions))updates.matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions});if(body.clearWechat)updates=buildWechatUnboundUser(updates);await put(T_USERS,id,updates);return sendJson(res,{success:true});}
     if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await getCachedScan(T_USERS);return sendJson(res,all.map(buildAdminUserView));}
     if(path==='/admin/clear-test-data'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -4447,6 +4500,7 @@ module.exports._test={
   computeCourtFinance,
   summarizeCourtFinanceRevenue,
   buildMatchCourtFinanceHistoryRow,
+  buildMatchCourtFinanceRefundRow,
   normalizePricePlan,
   assertPricePlanInput,
   quoteVenuePrice,
@@ -4507,6 +4561,7 @@ module.exports._test={
   ,matchStatusText
   ,assertMatchBookingInput
   ,assertBookedWithdrawalInput
+  ,assertMatchFeeSplitUpdateInput
   ,resolveFinalAttendanceStatus
   ,buildMatchFeeLedger
   ,listMatchesForViewer
@@ -4533,6 +4588,7 @@ module.exports._test={
   ,buildMatchSubscribeMessage
   ,notifyMatchUsers
   ,syncMatchFeeSplitToCourtFinance
+  ,syncMatchFeeSplitRefundToCourtFinance
   ,getCourtRecordForTest
   ,removeMatchCourtFinanceRowsForTest
 };

@@ -20,6 +20,8 @@ assert.ok(rules.toMatchDetailResponse, 'api._test should expose mini-program det
 assert.ok(rules.userMatchPermissions, 'api._test should expose match permission resolver');
 assert.ok(rules.requireMatchAdminPermission, 'api._test should expose match permission guard');
 assert.ok(rules.buildMatchCourtFinanceHistoryRow, 'api._test should expose match court finance row builder');
+assert.ok(rules.buildMatchCourtFinanceRefundRow, 'api._test should expose match court finance refund row builder');
+assert.ok(rules.assertMatchFeeSplitUpdateInput, 'api._test should expose match fee update validation');
 
 for (const table of [
   'match_users',
@@ -47,6 +49,7 @@ assert.match(apiSource, /requireMatchAdminPermission\(user,'match_finance'\)/, '
 assert.match(apiSource, /adminWithdrawalM=path\.match/, 'API should expose booked withdrawal handling endpoint');
 assert.match(migration, /financialResponsibility/, 'registrations should persist booked withdrawal financial responsibility');
 assert.match(apiSource, /syncMatchFeeSplitToCourtFinance/, 'paid match fee splits should sync into court finance ledger');
+assert.match(apiSource, /syncMatchFeeSplitRefundToCourtFinance/, 'refunded match fee splits should sync refund into court finance ledger');
 assert.match(apiSource, /match-court-finance/, 'match finance should use a dedicated court finance account');
 assert.match(apiSource, /path==='\/my-matches'/, 'API should expose my matches endpoint');
 assert.match(apiSource, /path==='\/match-profile'/, 'API should expose match profile endpoint');
@@ -224,5 +227,25 @@ const matchRevenueSummary = rules.summarizeCourtFinanceRevenue({
 });
 assert.equal(matchRevenueSummary.matchBooking, 125);
 assert.equal(matchRevenueSummary.confirmedRevenue, 125);
+
+const matchRefundHistoryRow = rules.buildMatchCourtFinanceRefundRow({
+  paidRow: matchCourtHistoryRow,
+  split: { id: 'split-1', amount: 125, paidAmount: 125 },
+  operatorId: 'dandan',
+  note: '用户退款',
+  now: '2026-04-22T14:00:00.000Z'
+});
+assert.equal(matchRefundHistoryRow.type, '退款');
+assert.equal(matchRefundHistoryRow.category, '订场');
+assert.equal(matchRefundHistoryRow.sourceCategory, '约球订场');
+assert.equal(matchRefundHistoryRow.amount, 125);
+assert.equal(matchRefundHistoryRow.matchFeeSplitId, 'split-1');
+assert.match(matchRefundHistoryRow.note, /用户退款/);
+
+assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus: 'waived' }), /请填写原因/);
+assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus: 'abnormal' }), /请填写原因/);
+assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus: 'refunded' }), /请填写原因/);
+assert.equal(rules.assertMatchFeeSplitUpdateInput({ payStatus: 'paid' }).payStatus, 'paid');
+assert.equal(rules.assertMatchFeeSplitUpdateInput({ payStatus: 'refunded', note: '重复收款退回' }).note, '重复收款退回');
 
 console.log('match-api rules ok');
