@@ -40,8 +40,17 @@ CREATE TABLE IF NOT EXISTS match_registrations (
   userId TEXT NOT NULL REFERENCES match_users(id),
   registrationStatus TEXT NOT NULL DEFAULT 'registered',
   createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  cancelledAt TIMESTAMPTZ
+  cancelledAt TIMESTAMPTZ,
+  financialResponsibility TEXT,
+  withdrawalReason TEXT,
+  withdrawalHandledBy TEXT,
+  withdrawalHandledAt TIMESTAMPTZ
 );
+
+ALTER TABLE match_registrations ADD COLUMN IF NOT EXISTS financialResponsibility TEXT;
+ALTER TABLE match_registrations ADD COLUMN IF NOT EXISTS withdrawalReason TEXT;
+ALTER TABLE match_registrations ADD COLUMN IF NOT EXISTS withdrawalHandledBy TEXT;
+ALTER TABLE match_registrations ADD COLUMN IF NOT EXISTS withdrawalHandledAt TIMESTAMPTZ;
 
 CREATE UNIQUE INDEX IF NOT EXISTS match_registrations_active_unique
   ON match_registrations(matchId,userId)

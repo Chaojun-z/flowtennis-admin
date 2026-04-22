@@ -107,6 +107,7 @@ assert.match(fnBody('courtFinanceConfirmText'), /内部占用/, 'court finance c
 assert.match(html, /function courtFinanceRevenueSummaryLocal\(/, 'court page should expose local booking income confirmation summary');
 assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /confirmedRevenue=t\.storedValueBooking\+t\.onsiteBooking/, 'court finance summary should separate confirmed booking revenue');
 assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /pendingRevenue=t\.proxyBooking/, 'court finance summary should separate proxy booking as pending revenue');
+assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /matchBooking/, 'court finance summary should expose match booking revenue');
 assert.match(fnBody('openCourtFinanceModal'), /确认订场收入[\s\S]*本次实收\/现金流入[\s\S]*待确认\/代用户订场[\s\S]*内部占用次数/, 'court finance modal should show booking income confirmation buckets');
 assert.match(fnBody('runBatchDeleteCourts'), /隐藏/, 'batch delete result should explain hidden archived courts');
 assert.match(fnBody('renderCourts'), /class="tms-court-row-main"[\s\S]*class="tms-checkbox court-row-cb"/, 'court name cell should separate checkbox and name for easier text selection');

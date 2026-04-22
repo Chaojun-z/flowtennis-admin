@@ -17,6 +17,9 @@ assert.ok(rules.buildMatchFeeLedger, 'api._test should expose match fee ledger b
 assert.ok(rules.resolveFinalAttendanceStatus, 'api._test should expose attendance resolver');
 assert.ok(rules.buildMatchProfileStats, 'api._test should expose profile stats builder');
 assert.ok(rules.toMatchDetailResponse, 'api._test should expose mini-program detail response adapter');
+assert.ok(rules.userMatchPermissions, 'api._test should expose match permission resolver');
+assert.ok(rules.requireMatchAdminPermission, 'api._test should expose match permission guard');
+assert.ok(rules.buildMatchCourtFinanceHistoryRow, 'api._test should expose match court finance row builder');
 
 for (const table of [
   'match_users',
@@ -39,6 +42,12 @@ assert.match(apiSource, /if\(user\.type==='match_user'\)return sendJson\(res,\{e
 assert.match(apiSource, /\/admin\/matches/, 'API should expose admin match endpoints');
 assert.match(apiSource, /adminBookingM=path\.match/, 'API should expose admin booking endpoint');
 assert.match(apiSource, /adminFeeConfirmM=path\.match/, 'API should expose admin fee confirmation endpoint');
+assert.match(apiSource, /requireMatchAdminPermission\(user,'match_ops'\)/, 'match booking and attendance admin APIs should require ops permission');
+assert.match(apiSource, /requireMatchAdminPermission\(user,'match_finance'\)/, 'match fee admin APIs should require finance permission');
+assert.match(apiSource, /adminWithdrawalM=path\.match/, 'API should expose booked withdrawal handling endpoint');
+assert.match(migration, /financialResponsibility/, 'registrations should persist booked withdrawal financial responsibility');
+assert.match(apiSource, /syncMatchFeeSplitToCourtFinance/, 'paid match fee splits should sync into court finance ledger');
+assert.match(apiSource, /match-court-finance/, 'match finance should use a dedicated court finance account');
 assert.match(apiSource, /path==='\/my-matches'/, 'API should expose my matches endpoint');
 assert.match(apiSource, /path==='\/match-profile'/, 'API should expose match profile endpoint');
 assert.match(apiSource, /path==='\/match-profile\/phone'/, 'API should expose match phone endpoint');
@@ -110,6 +119,10 @@ assert.equal(rules.deriveMatchStatus({
 }, new Date('2026-04-21T13:00:00')), 'attendance_pending');
 
 assert.throws(() => rules.requireAdminUser({ type: 'match_user', id: 'm1' }), /无管理端权限/);
+assert.deepEqual(rules.userMatchPermissions({ id: 'dandan', role: 'editor', name: '陈丹丹' }).sort(), ['match_finance', 'match_ops']);
+assert.doesNotThrow(() => rules.requireMatchAdminPermission({ id: 'dandan', role: 'editor', name: '陈丹丹' }, 'match_finance'));
+assert.throws(() => rules.requireMatchAdminPermission({ id: 'staff', role: 'editor', name: '其他员工' }, 'match_finance'), /无约球财务权限/);
+assert.deepEqual(rules.mergeStoredAuthUser({ id: 'staff' }, { id: 'staff', name: '运营', role: 'editor', matchPermissions: ['match_ops'] }).matchPermissions, ['match_ops']);
 
 const detailResponse = rules.toMatchDetailResponse({ id: 'm1', title: '周末双打', registrations: [{ userId: 'u1' }] });
 assert.equal(detailResponse.match.id, 'm1');
@@ -152,6 +165,11 @@ assert.throws(() => rules.buildMatchFeeLedger({
   participants: [{ userId: 'u1', finalStatus: 'absent' }]
 }), /没有可计费参与人/);
 
+const withdrawal = rules.assertBookedWithdrawalInput({ financialResponsibility: 'charge', reason: '临时有事' });
+assert.equal(withdrawal.financialResponsibility, 'charge');
+assert.equal(withdrawal.reason, '临时有事');
+assert.throws(() => rules.assertBookedWithdrawalInput({ financialResponsibility: 'skip' }), /退赛责任不正确/);
+
 const profileStats = rules.buildMatchProfileStats({
   userId: 'u1',
   createdMatches: [{ id: 'm1' }, { id: 'm2' }],
@@ -173,5 +191,36 @@ assert.equal(profileStats.matchJoinedCount, 2);
 assert.equal(profileStats.attendanceRate, 50);
 assert.equal(profileStats.attendanceRateText, '50%');
 assert.equal(profileStats.totalFeeAmount, 333);
+
+const matchCourtHistoryRow = rules.buildMatchCourtFinanceHistoryRow({
+  match: {
+    id: 'm1',
+    title: '周末双打',
+    starttime: '2026-04-22T10:00:00.000Z',
+    endtime: '2026-04-22T12:00:00.000Z',
+    venuename: '马坡网球馆'
+  },
+  split: { id: 'split-1', amount: 125 },
+  user: { nickName: '球友A', phone: '13800000000' },
+  operatorId: 'dandan',
+  now: '2026-04-22T13:00:00.000Z'
+});
+assert.equal(matchCourtHistoryRow.type, '消费');
+assert.equal(matchCourtHistoryRow.category, '订场');
+assert.equal(matchCourtHistoryRow.sourceCategory, '约球订场');
+assert.equal(matchCourtHistoryRow.payMethod, '微信转账');
+assert.equal(matchCourtHistoryRow.revenueBucket, '现场收款');
+assert.equal(matchCourtHistoryRow.amount, 125);
+assert.equal(matchCourtHistoryRow.matchId, 'm1');
+assert.equal(matchCourtHistoryRow.matchFeeSplitId, 'split-1');
+assert.equal(matchCourtHistoryRow.startTime, '10:00');
+assert.equal(matchCourtHistoryRow.endTime, '12:00');
+assert.match(matchCourtHistoryRow.note, /约球订场/);
+
+const matchRevenueSummary = rules.summarizeCourtFinanceRevenue({
+  history: [matchCourtHistoryRow]
+});
+assert.equal(matchRevenueSummary.matchBooking, 125);
+assert.equal(matchRevenueSummary.confirmedRevenue, 125);
 
 console.log('match-api rules ok');
