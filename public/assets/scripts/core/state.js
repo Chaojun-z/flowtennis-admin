@@ -288,6 +288,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('classes',data.classes||[]);
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('feedbacks',data.feedbacks||[]);
+      setDatasetValue('purchases',data.purchases||[]);
       loadedDatasets.add('workbenchPage');
       return;
     }

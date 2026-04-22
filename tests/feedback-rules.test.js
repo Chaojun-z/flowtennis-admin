@@ -112,8 +112,15 @@ assert.deepStrictEqual(isolated.classes.map(x=>x.id), ['class-1'], 'coach load-a
 assert.deepStrictEqual(isolated.students.map(x=>x.id), ['stu-1'], 'coach load-all should only expose linked students');
 assert.deepStrictEqual(isolated.feedbacks.map(x=>x.id), ['fb-1'], 'coach load-all should only expose own feedbacks');
 assert.deepStrictEqual(isolated.packages, [], 'coach load-all should not expose package prices');
-assert.deepStrictEqual(isolated.purchases, [], 'coach load-all should not expose purchase payments');
+assert.deepStrictEqual(
+  isolated.purchases,
+  [{ id: 'pur-1', studentId: 'stu-1', studentName: '', purchaseDate: '', createdAt: '', status: 'active' }],
+  'coach load-all should only expose safe purchase summary for linked students'
+);
 assert.deepStrictEqual(isolated.entitlements.map(x=>x.id), ['ent-1'], 'coach load-all should expose safe entitlement summary');
+assert.strictEqual(isolated.purchases[0].amountPaid, undefined, 'coach purchase summary should not expose paid amount');
+assert.strictEqual(isolated.purchases[0].payMethod, undefined, 'coach purchase summary should not expose pay method');
+assert.strictEqual(isolated.purchases[0].operator, undefined, 'coach purchase summary should not expose operator');
 assert.strictEqual(isolated.entitlements[0].amountPaid, undefined, 'coach entitlement summary should not expose paid amount');
 assert.strictEqual(isolated.entitlementLedger[0].operator, undefined, 'coach entitlement ledger should not expose operator');
 assert.ok(isolated.entitlementLedger.some(x=>x.id==='led-import'), 'coach load-all should retain imported historical consume rows for linked students');

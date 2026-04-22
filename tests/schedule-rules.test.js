@@ -221,6 +221,12 @@ assert.deepStrictEqual(
   'active schedule should consume lessons'
 );
 
+assert.deepStrictEqual(
+  rules.scheduleLessonDelta({ classId: 'class-a', lessonCount: 1.5, status: '已排课' }),
+  { classId: 'class-a', delta: 1.5 },
+  'active schedule should preserve fractional lesson counts'
+);
+
 assert.strictEqual(
   rules.scheduleLessonDelta({ classId: 'class-a', lessonCount: 1, status: '已取消' }),
   null,
@@ -238,6 +244,18 @@ assert.deepStrictEqual(
   [],
   'coach-late free schedule should not consume package lessons'
 );
+
+assert.deepStrictEqual(
+  rules.scheduleEntitlementDeltas({ id: 'sch-half', status: '已排课', coachLateFree: false, entitlementId: 'ent-1', lessonCount: 0.5 }),
+  [{ entitlementId: 'ent-1', delta: 0.5 }],
+  'active schedule should preserve fractional package deductions'
+);
+
+const fractionalEntitlement = rules.applyEntitlementLessonDelta({ totalLessons: 10, usedLessons: 3.5 }, -1.5);
+assert.strictEqual(fractionalEntitlement.totalLessons, 10, 'fractional entitlement total lessons should stay unchanged');
+assert.strictEqual(fractionalEntitlement.usedLessons, 5, 'entitlement deltas should preserve fractional used lessons');
+assert.strictEqual(fractionalEntitlement.remainingLessons, 5, 'fractional entitlement remaining lessons should stay accurate');
+assert.strictEqual(fractionalEntitlement.status, 'active', 'fractional entitlement updates should keep active status when balance remains');
 
 assert.deepStrictEqual(
   rules.normalizeCoachLateInfo({

@@ -183,6 +183,10 @@ async function prewarmHotScanCache(){
 }
 function getRuntimeEnsuredTables(){return [...RUNTIME_ENSURED_TABLES];}
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
+function parseLessonValue(v,fallback=0){
+  const n=Number(v);
+  return Number.isFinite(n)?n:fallback;
+}
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
 function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree;}
 async function applyLessonDelta(classId,delta,studentIds=[]){
@@ -190,7 +194,7 @@ async function applyLessonDelta(classId,delta,studentIds=[]){
   const cls=await getCachedRow(T_CLASSES,classId);
   if(!cls)return null;
   const oldClass={...cls};
-  const nextUsed=Math.max(0,(parseInt(cls.usedLessons)||0)+delta);
+  const nextUsed=Math.max(0,parseLessonValue(cls.usedLessons)+delta);
   const relatedPlans=(await timed('scan plans for lesson delta',()=>getCachedScan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
   const studentSet=new Set(parseArr(studentIds).filter(Boolean));
   const chargedPlans=studentSet.size?relatedPlans.filter(p=>studentSet.has(p.studentId)):relatedPlans;
@@ -200,7 +204,7 @@ async function applyLessonDelta(classId,delta,studentIds=[]){
     const nextClass={...cls,usedLessons:nextUsed,updatedAt:new Date().toISOString()};
     await put(T_CLASSES,classId,nextClass);
     for(const p of chargedPlans){
-      const nextPlanUsed=Math.max(0,(parseInt(p.usedLessons)||0)+delta);
+      const nextPlanUsed=Math.max(0,parseLessonValue(p.usedLessons)+delta);
       const nextPlan={...p,usedLessons:nextPlanUsed,updatedAt:new Date().toISOString()};
       await put(T_PLANS,p.id,nextPlan);
       updatedPlans.push(nextPlan);
@@ -214,7 +218,7 @@ async function applyLessonDelta(classId,delta,studentIds=[]){
 }
 function scheduleLessonDelta(rec){
   if(!rec||!rec.classId||!isScheduleLessonCharged(rec))return null;
-  const lessonCount=parseInt(rec.lessonCount)||0;
+  const lessonCount=parseLessonValue(rec.lessonCount);
   if(lessonCount<=0)return null;
   return {classId:rec.classId,delta:lessonCount};
 }
@@ -231,9 +235,9 @@ function effectiveScheduleStatus(rec,now=new Date()){
 function scheduleLessonChargeStatus(rec,ledger=[]){
   if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
   if(rec.coachLateFree)return '迟到免费';
-  if((parseInt(rec.lessonCount)||0)<=0)return '不扣课';
+  if(parseLessonValue(rec.lessonCount)<=0)return '不扣课';
   if(!rec.entitlementId)return '未扣课';
-  const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&(parseInt(l.lessonDelta)||0)<0);
+  const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&parseLessonValue(l.lessonDelta)<0);
   return used?'已扣课':'扣课异常';
 }
 function assertClassSchedulable(cls,rec){
@@ -281,10 +285,10 @@ function shareStudent(a,b){
 function assertLessonCapacity(cls,oldDelta,nextDelta){
   if(!nextDelta)return;
   if(!cls)throw new Error('关联班次不存在');
-  const total=parseInt(cls.totalLessons)||0;
-  const used=parseInt(cls.usedLessons)||0;
-  const oldSame=oldDelta&&oldDelta.classId===nextDelta.classId?(parseInt(oldDelta.delta)||0):0;
-  const nextUsed=used-oldSame+(parseInt(nextDelta.delta)||0);
+  const total=parseLessonValue(cls.totalLessons);
+  const used=parseLessonValue(cls.usedLessons);
+  const oldSame=oldDelta&&oldDelta.classId===nextDelta.classId?parseLessonValue(oldDelta.delta):0;
+  const nextUsed=used-oldSame+parseLessonValue(nextDelta.delta);
   if(total>0&&nextUsed>total)throw new Error(`剩余课时不足：剩余 ${Math.max(0,total-used+oldSame)} 节，本次消课 ${nextDelta.delta} 节`);
 }
 function validateScheduleConflicts(candidate,schedules,excludeId){
@@ -560,11 +564,11 @@ function scheduleParticipantSummary(rec){
   };
 }
 function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
-  const used=parseInt(oldEnt?.usedLessons)||0;
+  const used=parseLessonValue(oldEnt?.usedLessons);
   const next=buildEntitlementFromPurchase(pkg,purchase,student,oldEnt?.id||uuidv4(),now);
   if(oldEnt?.createdAt)next.createdAt=oldEnt.createdAt;
   next.usedLessons=used;
-  next.remainingLessons=(parseInt(next.totalLessons)||0)-used;
+  next.remainingLessons=parseLessonValue(next.totalLessons)-used;
   if(next.remainingLessons<0)throw new Error('该购买记录已有消耗，不能改成课时不足的课包');
   next.status=oldEnt?.status==='voided'?'voided':(next.remainingLessons<=0?'depleted':'active');
   return next;
@@ -597,8 +601,8 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
   if(entitlement.status&&entitlement.status!=='active')throw new Error('课包余额不可用');
-  const lessonCount=parseInt(schedule.lessonCount)||1;
-  if((parseInt(entitlement.remainingLessons)||0)<lessonCount)throw new Error('课包剩余课时不足');
+  const lessonCount=parseLessonValue(schedule.lessonCount,1);
+  if(parseLessonValue(entitlement.remainingLessons)<lessonCount)throw new Error('课包剩余课时不足');
   const studentIds=parseArr(schedule.studentIds);
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
@@ -625,7 +629,7 @@ function entitlementMatchesCoach(entitlement,coachName){
 }
 function scheduleEntitlementDeltas(rec){
   if(!rec||!isScheduleLessonCharged(rec))return[];
-  const lessonCount=parseInt(rec.lessonCount)||1;
+  const lessonCount=parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
   const ids=parseArr(rec.entitlementIds).filter(Boolean);
   if(ids.length)return ids.map(entitlementId=>({entitlementId,delta:lessonCount}));
@@ -671,8 +675,8 @@ function recommendEntitlements(entitlements,schedule){
       entitlementId:ent.id,
       id:ent.id,
       packageName:ent.packageName||'',
-      remainingLessons:parseInt(ent.remainingLessons)||0,
-      totalLessons:parseInt(ent.totalLessons)||0,
+      remainingLessons:parseLessonValue(ent.remainingLessons),
+      totalLessons:parseLessonValue(ent.totalLessons),
       validUntil:ent.validUntil||'',
       timeBand:ent.timeBand||'',
       selectable:warnings.length===0,
@@ -693,7 +697,7 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
   const explicit=scheduleEntitlementDeltas(rec);
   if(explicit.length)return explicit;
   if(!rec||!isBillableSchedule(rec))return[];
-  const lessonCount=parseInt(rec.lessonCount)||1;
+  const lessonCount=parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
   return parseArr(rec.studentIds).filter(Boolean).map(studentId=>{
     const options=(entitlements||[]).filter(e=>e.studentId===studentId);
@@ -702,8 +706,8 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
   }).filter(Boolean);
 }
 function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOString()){
-  const total=parseInt(entitlement.totalLessons)||0;
-  const used=Math.max(0,(parseInt(entitlement.usedLessons)||0)-(parseInt(delta)||0));
+  const total=parseLessonValue(entitlement.totalLessons);
+  const used=Math.max(0,parseLessonValue(entitlement.usedLessons)-parseLessonValue(delta));
   if(used>total)throw new Error('课包剩余课时不足');
   const remaining=Math.max(0,total-used);
   const status=remaining<=0?'depleted':(entitlement.status==='depleted'?'active':(entitlement.status||'active'));
@@ -724,7 +728,7 @@ function scheduleEntitlementDelta(rec){
   return scheduleEntitlementDeltas(rec)[0]||null;
 }
 function diffScheduleEntitlementDeltas(oldDeltas=[],nextDeltas=[]){
-  const keyOf=d=>`${d.entitlementId}|${parseInt(d.delta)||0}`;
+  const keyOf=d=>`${d.entitlementId}|${parseLessonValue(d.delta)}`;
   const nextCounts=new Map();
   nextDeltas.forEach(d=>nextCounts.set(keyOf(d),(nextCounts.get(keyOf(d))||0)+1));
   const returns=[];
@@ -754,7 +758,7 @@ async function assertScheduleEntitlementCapacity(nextRec,oldRec){
   for(const nextDelta of nextDeltas){
     const ent=await getCachedRow(T_ENTITLEMENTS,nextDelta.entitlementId);
     if(!ent)throw new Error('课包余额不存在');
-    const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+oldMap.get(nextDelta.entitlementId)}:ent;
+    const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+oldMap.get(nextDelta.entitlementId)}:ent;
     validateEntitlementForSchedule(adjusted,{...nextRec,studentIds:[adjusted.studentId].filter(Boolean)});
     checked.push(adjusted);
   }
@@ -885,12 +889,20 @@ function filterLoadAllForUser(data,user){
   ).map(l=>({
     id:l.id,entitlementId:l.entitlementId,studentId:l.studentId,scheduleId:l.scheduleId,lessonDelta:l.lessonDelta,action:l.action,reason:l.reason,createdAt:l.createdAt,relatedDate:l.relatedDate,sourceMonth:l.sourceMonth,importSource:l.importSource,notes:l.notes
   }));
+  const safePurchases=normalized.purchases.filter(p=>studentIds.has(p.studentId)).map(p=>({
+    id:p.id,
+    studentId:p.studentId||'',
+    studentName:p.studentName||'',
+    purchaseDate:p.purchaseDate||'',
+    createdAt:p.createdAt||'',
+    status:p.status||'active'
+  }));
   return {
     courts:[],
     students:normalized.students.filter(s=>studentIds.has(s.id)),
     products:normalized.products,
     packages:[],
-    purchases:[],
+    purchases:safePurchases,
     entitlements:safeEntitlements,
     entitlementLedger:normalizeEntitlementLedgerRowsForView(safeLedger),
     membershipPlans:[],
@@ -4460,20 +4472,22 @@ module.exports = async (req, res) => {
     }
     if(path==='/page-data/workbench'&&method==='GET'){
       await init();
-      const [campuses,students,classes,schedule,feedbacks]=await Promise.all([
+      const [campuses,students,classes,schedule,feedbacks,purchases]=await Promise.all([
         listCampusesWithDefaults(),
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_CLASSES).catch(()=>[]),
         getCachedScan(T_SCHEDULE).catch(()=>[]),
-        withTimeout(scanFeedbacks().catch(()=>[]),3000,[])
+        withTimeout(scanFeedbacks().catch(()=>[]),3000,[]),
+        getCachedScan(T_PURCHASES).catch(()=>[])
       ]);
-      const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks},user);
+      const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases},user);
       return sendJson(res,{
         campuses:scoped.campuses||[],
         students:scoped.students||[],
         classes:scoped.classes||[],
         schedule:scoped.schedule||[],
-        feedbacks:scoped.feedbacks||[]
+        feedbacks:scoped.feedbacks||[],
+        purchases:scoped.purchases||[]
       });
     }
     if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,rows);const schedule=await getCachedScan(T_SCHEDULE).catch(()=>[]);return sendJson(res,filterLoadAllForUser({classes:rows,schedule},user).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}

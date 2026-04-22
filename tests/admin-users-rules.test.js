@@ -74,6 +74,7 @@ assert.deepStrictEqual(
     status: 'active',
     coachId: 'coach-id',
     coachName: '朝珺',
+    matchPermissions: [],
     wechatBound: true,
     wechatBoundAt: '2026-04-19T12:00:00.000Z'
   },
