@@ -60,8 +60,8 @@ assert.match(apiSource, /path==='\/match-profile\/phone-code'/, 'API should expo
 assert.match(apiSource, /getuserphonenumber/, 'API should exchange WeChat phone code');
 assert.match(apiSource, /matchUpdateM=path\.match/, 'API should expose match update endpoint');
 assert.match(apiSource, /matchCancelM=path\.match/, 'API should expose match cancel endpoint');
-assert.match(apiSource, /path==='\/match-attendance'/, 'API should expose self attendance endpoint');
 assert.match(apiSource, /path==='\/match-attendance\/creator-confirm'/, 'API should expose creator attendance endpoint');
+assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should not expose self attendance endpoint');
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
 assert.match(apiSource, /viewerFeeSplit/, 'match detail should include viewer fee split');

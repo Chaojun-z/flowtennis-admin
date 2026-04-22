@@ -3754,11 +3754,6 @@ module.exports = async (req, res) => {
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/match-attendance'&&method==='POST'){
-      const matchUser=requireMatchUser(req);
-      try{return sendJson(res,await selfConfirmMatchAttendance(body.matchId,matchUser.id));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
     if(path==='/match-attendance/creator-confirm'&&method==='POST'){
       const matchUser=requireMatchUser(req);
       try{return sendJson(res,await creatorConfirmMatchAttendance(body.matchId,matchUser.id,body.registrationId,body.finalAttendanceStatus));}
