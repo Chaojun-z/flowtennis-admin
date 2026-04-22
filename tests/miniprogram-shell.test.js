@@ -59,7 +59,7 @@ assert.match(scheduleWxml, /week-task-location[\s\S]*item\.student[\s\S]*week-ta
 assert.match(scheduleWxml, /scroll-top="\{\{timetableScrollTop\}\}"/, 'native timetable should support vertical auto positioning');
 assert.match(scheduleWxml, /scroll-left="\{\{timetableScrollLeft\}\}"/, 'native timetable should support horizontal auto positioning to today');
 assert.match(scheduleWxml, /scroll-x scroll-y class="timetable-scroll"/, 'native timetable should use one native two-axis scroll for smoother movement');
-assert.match(scheduleWxml, /tt-now-label[\s\S]*currentTimeText[\s\S]*tt-now-line/, 'native timetable should render the current-time label separately from the red line');
+assert.match(scheduleWxml, /tt-time-axis[\s\S]*tt-now-label[\s\S]*currentTimeText[\s\S]*tt-day-columns[\s\S]*tt-now-line/, 'native timetable should keep the current-time label fixed inside the left time axis');
 assert.match(scheduleWxml, /tt-day-date-dot/, 'native timetable should render the active day as a round date marker');
 assert.match(scheduleWxml, /tt-course-status/, 'native timetable course cards should render pending status as a compact badge');
 assert.doesNotMatch(scheduleWxml, /反馈:/, 'native timetable course cards should not show the old feedback prefix');
@@ -227,7 +227,8 @@ assert.match(scheduleJs, /displayDate:\s*item\.isToday[\s\S]*replace\('日', ''\
 assert.doesNotMatch(scheduleJs, /onTimetableScrollX/, 'timetable should avoid JS scroll syncing that causes horizontal lag');
 assert.match(scheduleJs, /activeTab === 'timetable'[\s\S]*this\.renderWeek\(\)/, 'timetable tab should refresh current-time positioning when opened');
 assert.match(scheduleWxss, /\.tt-now-line\s*\{[\s\S]*background:\s*#ef4444;/i, 'timetable should show the requested current-time marker');
-assert.match(scheduleWxss, /\.tt-now-label text\s*\{[\s\S]*width:\s*61px;[\s\S]*height:\s*28px;[\s\S]*font-size:\s*14px;/, 'timetable current-time marker should show the left time pill');
+assert.match(scheduleWxss, /\.tt-now-label\s*\{[\s\S]*transform:\s*translateY\(-9px\);/, 'timetable current-time label should align vertically with the red line');
+assert.match(scheduleWxss, /\.tt-now-label text\s*\{[\s\S]*width:\s*40px;[\s\S]*height:\s*18px;[\s\S]*background:\s*#ef4444;[\s\S]*font-size:\s*10px;[\s\S]*font-weight:\s*700;/i, 'timetable current-time marker should show the fixed 40x18 left time pill');
 assert.match(scheduleWxss, /\.tt-now-line::after\s*\{[\s\S]*width:\s*14px;[\s\S]*height:\s*14px;[\s\S]*box-shadow:\s*0 0 0 10px rgba\(239,\s*68,\s*68,\s*0\.14\);/i, 'timetable current-time dot should use the requested solid dot and soft ring style');
 assert.match(scheduleWxss, /\.tt-course::before\s*\{[\s\S]*width:\s*8rpx;[\s\S]*background:\s*var\(--course-accent\);/, 'timetable course cards should use the SVG left accent bar');
 assert.match(scheduleWxss, /\.detail-sheet-body\s*\{[\s\S]*background:\s*#f8fafc;/, 'detail sheet body should use slate-50 background');

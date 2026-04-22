@@ -140,8 +140,8 @@
           <view class="tt-body">
             <view class="tt-time-axis">
               <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-hour-cell"><text>{{item}}</text></view>
+              <view wx:if="{{isCurrentWeek}}" class="tt-now-label" style="{{timetableNowLineStyle}}"><text>{{currentTimeText}}</text></view>
             </view>
-            <view wx:if="{{isCurrentWeek}}" class="tt-now-label" style="{{timetableNowLineStyle}}"><text>{{currentTimeText}}</text></view>
 
             <view class="tt-day-columns">
               <view wx:if="{{isCurrentWeek}}" class="tt-now-line" style="{{timetableNowLineStyle}}"></view>
