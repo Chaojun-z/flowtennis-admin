@@ -1793,12 +1793,13 @@ async function registerMatchUser(matchId,userId){
     return {id,currentHeadcount:nextCount,status:nextStatus};
   });
 }
-function toMatchView(row,registrations=[],viewerId='',feeSplits=[]){
+function toMatchView(row,registrations=[],viewerId='',feeSplits=[],viewerAttendance=null){
   const active=(registrations||[]).filter(r=>String(r.registrationstatus||r.registrationStatus)==='registered');
   const viewerRegistration=(registrations||[]).find(r=>String(r.userid||r.userId)===String(viewerId));
   const finalFee=normalizeMoney(row.finalcourtfee||row.finalCourtFee);
   const activeCount=active.length;
   const viewerFeeSplit=(feeSplits||[]).find(row=>String(row.userid||row.userId)===String(viewerId))||null;
+  const viewerFinalAttendanceStatus=viewerAttendance?.finalstatus||viewerAttendance?.finalStatus||'';
   return {
     id:row.id,
     creatorUserId:row.creatoruserid||row.creatorUserId,
@@ -1820,6 +1821,7 @@ function toMatchView(row,registrations=[],viewerId='',feeSplits=[]){
     viewerJoined:!!viewerRegistration&&String(viewerRegistration.registrationstatus||viewerRegistration.registrationStatus)==='registered',
     viewerIsCreator:String(row.creatoruserid||row.creatorUserId)===String(viewerId),
     viewerRegistrationStatus:viewerRegistration?.registrationstatus||viewerRegistration?.registrationStatus||'',
+    viewerFinalAttendanceStatus,
     aaDisplayText:finalFee>0&&activeCount>0?`AA 约 ${Math.ceil(finalFee/activeCount)} 元/人`:'AA 待定',
     viewerFeeSplit,
     offlinePaymentText:viewerFeeSplit&&String(viewerFeeSplit.paystatus||viewerFeeSplit.payStatus)==='pending'?'请线下联系运营收款，付款后由管理端确认':'',
@@ -1899,11 +1901,12 @@ async function getMatchForViewer(matchId,viewerId){
   const pool=getMatchSqlPool();
   const match=await pool.query('SELECT * FROM match_posts WHERE id=$1',[matchId]);
   if(!match.rows[0])return null;
-  const [regs,splits]=await Promise.all([
+  const [regs,splits,attendance]=await Promise.all([
     pool.query('SELECT r.*,u.nickName,u.avatarUrl,u.phone FROM match_registrations r LEFT JOIN match_users u ON u.id=r.userId WHERE r.matchId=$1',[matchId]),
-    pool.query('SELECT * FROM match_fee_splits WHERE matchId=$1',[matchId])
+    pool.query('SELECT * FROM match_fee_splits WHERE matchId=$1',[matchId]),
+    pool.query('SELECT * FROM match_attendance WHERE matchId=$1 AND userId=$2 LIMIT 1',[matchId,viewerId])
   ]);
-  return toMatchView(match.rows[0],regs.rows,viewerId,splits.rows);
+  return toMatchView(match.rows[0],regs.rows,viewerId,splits.rows,attendance.rows[0]||null);
 }
 async function createMatchForUser(userId,input){
   const row=assertMatchPostInput(input);
@@ -2163,13 +2166,20 @@ async function listMyMatches(userId){
     "SELECT DISTINCT p.* FROM match_posts p LEFT JOIN match_registrations r ON r.matchId=p.id LEFT JOIN match_attendance a ON a.matchId=p.id WHERE p.creatorUserId=$1 OR (r.userId=$1 AND r.registrationStatus='registered') OR a.userId=$1 ORDER BY p.startTime DESC",
     [userId]
   );
-  const registrations=await pool.query("SELECT * FROM match_registrations WHERE registrationStatus='registered'");
+  const [registrations,attendanceRows]=await Promise.all([
+    pool.query("SELECT * FROM match_registrations WHERE registrationStatus='registered'"),
+    pool.query('SELECT * FROM match_attendance WHERE userId=$1',[userId])
+  ]);
   const regsByMatch=new Map();
   for(const row of registrations.rows){
     const key=String(row.matchid||row.matchId);
     regsByMatch.set(key,[...(regsByMatch.get(key)||[]),row]);
   }
-  return rows.rows.map(row=>toMatchView(row,regsByMatch.get(String(row.id))||[],userId));
+  const attendanceByMatch=new Map();
+  for(const row of attendanceRows.rows){
+    attendanceByMatch.set(String(row.matchid||row.matchId),row);
+  }
+  return rows.rows.map(row=>toMatchView(row,regsByMatch.get(String(row.id))||[],userId,[],attendanceByMatch.get(String(row.id))||null));
 }
 async function getMatchProfile(userId){
   const pool=getMatchSqlPool();

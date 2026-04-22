@@ -65,6 +65,7 @@ assert.match(apiSource, /path==='\/match-attendance\/creator-confirm'/, 'API sho
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
 assert.match(apiSource, /viewerFeeSplit/, 'match detail should include viewer fee split');
+assert.match(apiSource, /viewerFinalAttendanceStatus/, 'match detail should include viewer final attendance status');
 assert.match(apiSource, /offlinePaymentText/, 'match detail should include offline payment text');
 assert.match(apiSource, /feeSplitsByMatch/, 'admin match list should include fee splits');
 assert.match(apiSource, /operationLogs/, 'admin match list should include operation logs');
