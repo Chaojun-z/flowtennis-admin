@@ -55,6 +55,7 @@
   <div class="sb-item" onclick="goPage('purchases',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5V19"/><path d="M12 5v1.5"/></svg></span>购买记录</div>
   <div class="sb-sec">场地与资源</div>
   <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>订场用户</div>
+  <div class="sb-item" onclick="goPage('matches',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><path d="M18 3v18"/><path d="M3 8h18"/><path d="M3 16h18"/></svg></span>约球管理</div>
   <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>会员管理</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg></span>会员方案</div>
   <div class="sb-item" onclick="goPage('prices',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>价格管理</div>
@@ -272,6 +273,32 @@
         </div>
         <div class="tms-stats-row" id="financeSettlementStats"></div>
       </div>
+    </div>
+    <div class="page-section" id="page-matches">
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="tms-search-wrapper">
+            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索标题、场馆、报名人" oninput="renderMatches()">
+          </div>
+          <select class="finput tms-form-control" id="matchStatusFilter" onchange="renderMatches()" style="width:150px">
+            <option value="">全部状态</option>
+            <option value="open">招募中</option>
+            <option value="full">已满员</option>
+            <option value="booked">已订场</option>
+            <option value="attendance_pending">待确认到场</option>
+            <option value="fee_pending">待确认费用</option>
+            <option value="settled">已结清</option>
+            <option value="cancelled">已取消</option>
+          </select>
+        </div>
+        <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-ghost" onclick="loadMatches(true)">刷新</button>
+        </div>
+      </div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">球局</th><th style="width:150px">时间</th><th style="width:160px">场地</th><th style="width:90px">人数</th><th style="width:100px">状态</th><th style="width:120px">预计费用</th><th style="width:120px">最终费用</th><th style="width:240px">报名名单</th><th class="tms-sticky-r" style="width:220px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="matchTbody"></tbody></table></div></div>
     </div>
     <!-- 教练管理 -->
     <div class="page-section" id="page-coaches">
@@ -596,6 +623,7 @@
 <script src="/assets/scripts/pages/coachops.js"></script>
 <script src="/assets/scripts/pages/prices.js"></script>
 <script src="/assets/scripts/pages/courts.js"></script>
+<script src="/assets/scripts/pages/matches.js"></script>
 <script src="/assets/scripts/pages/coach-portal.js"></script>
 </body>
 </html>
