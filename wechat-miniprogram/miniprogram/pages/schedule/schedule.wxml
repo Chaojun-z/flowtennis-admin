@@ -9,17 +9,24 @@
   <block wx:else>
     <scroll-view wx:if="{{isDashboard}}" scroll-y class="page-scroll page-bg">
       <view class="dashboard-top">
-        <view class="coach-banner">
-          <view class="coach-avatar">教练</view>
-          <view class="coach-copy">
-            <view class="coach-title">早安，王教练 <text class="coach-arrow">⌄</text></view>
-            <view class="coach-subtitle">准备好今天的教学了吗？</view>
+        <view class="dashboard-hero">
+          <view class="dashboard-coach-row">
+            <view class="coach-banner">
+              <view class="coach-avatar">教练</view>
+              <view class="coach-copy">
+                <view class="coach-title-row">
+                  <view class="coach-title">{{coachGreeting}}，{{coachDisplayName}}</view>
+                  <text class="coach-arrow">⌄</text>
+                </view>
+                <view class="coach-subtitle">准备好今天的教学了吗？</view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
 
-      <view class="page-body">
-        <view class="mini-metrics overview-card">
+      <view class="page-body dashboard-shell">
+        <view class="mini-metrics overview-card dashboard-grid">
           <view class="mini-metric metric-primary"><text>今日课程</text><text>{{stats.today}}</text></view>
           <view class="mini-metric"><text>本周课时</text><text>{{stats.week}}</text></view>
           <view class="mini-metric"><text>本月课时</text><text>{{stats.month}}</text></view>
@@ -43,42 +50,51 @@
           <text class="section-date">{{todayLabel}}</text>
         </view>
 
-        <view wx:for="{{dashboardClasses}}" wx:key="id" class="schedule-card">
-          <view class="schedule-card-head">
-            <text class="schedule-time"><text class="muted-icon">◷</text>{{item.timeText}}</text>
-            <text class="status-tag {{item.statusClass}}">{{item.status}}</text>
-          </view>
-          <view class="schedule-card-main">
-            <view class="schedule-student">{{item.student}}</view>
-            <view class="schedule-meta"><text class="course-pill">{{item.type}}</text></view>
-            <view class="schedule-location"><text class="location-icon">⌖</text>{{item.loc}}</view>
-          </view>
-          <view class="schedule-actions">
-            <button class="outline-btn" data-id="{{item.id}}" bindtap="openDetail">查看详情</button>
-            <button class="solid-btn" data-id="{{item.id}}" bindtap="openFeedbackById">填写反馈</button>
+        <view wx:for="{{dashboardClasses}}" wx:key="id" class="today-lesson-card" data-id="{{item.id}}" bindtap="openDetail">
+          <view class="today-lesson-main">
+            <view class="today-lesson-clock">
+              <view class="icon-clock">
+                <view class="icon-clock-hand is-hour"></view>
+                <view class="icon-clock-hand is-minute"></view>
+              </view>
+            </view>
+            <view class="today-lesson-content">
+              <view class="today-lesson-head">
+                <text class="today-lesson-time">{{item.timeText}}</text>
+                <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+              </view>
+              <view class="today-lesson-location schedule-location">{{item.loc}}</view>
+              <view class="today-lesson-student">{{item.student}}</view>
+            </view>
+            <button class="today-detail-btn" data-id="{{item.id}}" bindtap="openDetail">查看详情</button>
           </view>
         </view>
 
-        <view wx:if="{{!dashboardClasses.length}}" class="summary-card">今天暂无课程</view>
+        <view wx:if="{{!dashboardClasses.length}}" class="today-empty-card">今天暂无课程</view>
 
         <view class="section-heading week-heading">
           <text class="section-title">本周待办</text>
           <text class="section-date">{{weekRange}}</text>
         </view>
 
-        <view wx:if="{{weekTodoGroups.length}}" class="week-todo-card">
-          <view wx:for="{{weekTodoGroups}}" wx:key="key" class="week-todo-group">
-            <view class="week-todo-day">
-              <text class="week-todo-marker"></text>
-              <text class="week-todo-label">{{item.label}}</text>
-              <text class="week-todo-count">{{item.countText}}</text>
-            </view>
-            <view wx:for="{{item.items}}" wx:for-item="todo" wx:key="id" class="week-todo-row" data-id="{{todo.id}}" bindtap="openDetail">
-              <view class="week-todo-main">
-                <text class="week-todo-title">{{todo.shortMeta}}</text>
-                <text class="week-todo-location">{{todo.shortLocation}}</text>
+        <view wx:if="{{weekTodoCards.length}}">
+          <view wx:for="{{weekTodoCards}}" wx:key="id" class="week-task-card">
+            <view class="week-task-accent"></view>
+            <view class="week-task-main">
+              <view class="week-task-topline">
+                <text class="week-task-date">{{item.weekdayText}} {{item.dateText}}</text>
+                <text class="week-task-status">{{item.todoLabel}}</text>
               </view>
-              <text class="status-tag week-status {{todo.todoClass}}">{{todo.todoLabel}}</text>
+              <view class="week-task-time-row">
+                <text class="week-task-time">{{item.timeText}}</text>
+                <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+              </view>
+              <view class="week-task-location">{{item.shortLocation}}</view>
+              <view class="week-task-divider"></view>
+              <view class="week-task-actions">
+                <button class="week-task-outline" data-id="{{item.id}}" bindtap="openDetail">查看详情</button>
+                <button wx:if="{{item.showFeedbackAction}}" class="week-task-solid" data-id="{{item.id}}" bindtap="openFeedbackById">填写反馈</button>
+              </view>
             </view>
           </view>
         </view>
@@ -100,56 +116,64 @@
         </view>
       </view>
 
-      <scroll-view scroll-x scroll-y class="timetable-scroll">
-        <view class="tt-header">
-          <view class="tt-time-corner"></view>
-          <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-head {{item.headClass}}">
-            <text class="tt-day-name">{{item.name}}</text>
-            <text class="tt-day-date">{{item.date}}</text>
-          </view>
-        </view>
-
-        <view class="tt-body">
-          <view class="tt-time-axis">
-            <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-hour-cell"><text>{{item}}</text></view>
+      <scroll-view scroll-y class="timetable-scroll-y" scroll-top="{{timetableScrollTop}}">
+        <scroll-view scroll-x class="timetable-scroll" scroll-left="{{timetableScrollLeft}}">
+          <view class="tt-header">
+            <view class="tt-time-corner"></view>
+            <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-head {{item.headClass}}">
+              <text class="tt-day-name">{{item.name}}</text>
+              <text class="tt-day-date">{{item.date}}</text>
+            </view>
           </view>
 
-          <view class="tt-day-columns">
-            <view wx:if="{{isCurrentWeek}}" class="tt-now-line"><text>13:30</text></view>
-            <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-column {{item.columnClass}}">
-              <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
-              <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
-              <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
-                <view class="tt-course-top"><text>{{course.timeText}}</text><text>{{course.type}}</text></view>
-                <view class="tt-course-name">{{course.student}}</view>
-                <view class="tt-course-meta">{{course.loc}}</view>
-                <view class="tt-course-foot">反馈: {{course.status}}</view>
+          <view class="tt-body">
+            <view class="tt-time-axis">
+              <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-hour-cell"><text>{{item}}</text></view>
+            </view>
+
+            <view class="tt-day-columns">
+              <view wx:if="{{isCurrentWeek}}" class="tt-now-line" style="{{timetableNowLineStyle}}"><text>{{currentTimeText}}</text></view>
+              <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-column {{item.columnClass}}">
+                <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
+                <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
+                <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
+                  <view class="tt-course-top"><text>{{course.timeText}}</text><text>{{course.type}}</text></view>
+                  <view class="tt-course-name">{{course.student}}</view>
+                  <view class="tt-course-meta">{{course.loc}}</view>
+                  <view class="tt-course-foot">反馈: {{course.status}}</view>
+                </view>
               </view>
             </view>
           </view>
-        </view>
+        </scroll-view>
       </scroll-view>
     </view>
 
     <scroll-view wx:if="{{isStudents}}" scroll-y class="page-scroll page-bg">
-      <view class="students-top">
-        <view class="top-title">我的学员</view>
+      <view class="students-top"></view>
+
+      <view class="page-body students-body">
         <view class="students-summary">
           <view class="students-summary-block"><text class="students-number">{{studentStats.visibleCount}}</text><text class="students-caption">可见学员</text></view>
           <view class="students-divider"></view>
           <view class="students-summary-block"><text class="students-number">{{studentStats.ownerCount}}</text><text class="students-caption">负责学员</text></view>
         </view>
-      </view>
-
-      <view class="page-body">
+        <view class="student-list">
         <view wx:for="{{studentsList}}" wx:key="id" class="student-card">
           <view class="student-avatar {{item.avatarClass}}">{{item.avatarText}}</view>
           <view class="student-main">
-            <view class="student-row"><text class="student-name">{{item.name}}</text><text class="student-tag">{{item.type}}</text></view>
-            <view class="student-meta">累计上课：<text class="student-strong">{{item.cumulative}}</text> 节</view>
-            <view wx:if="{{item.showProgress}}" class="student-meta">课包进度：<text class="student-strong">{{item.progress}}</text></view>
+            <view class="student-row">
+              <text class="student-name">{{item.name}}</text>
+              <text class="student-tag {{item.tagClass}}">{{item.type}}</text>
+            </view>
+            <view class="student-meta-line">
+              <text class="student-meta">累计课时：<text class="student-strong">{{item.cumulative}}</text></text>
+              <text wx:if="{{item.showPackage}}" class="student-meta-divider">|</text>
+              <text wx:if="{{item.showPackage}}" class="student-meta">课包：<text class="student-strong">{{item.packageText}}</text></text>
+              <text wx:if="{{item.showLastClass}}" class="student-last-class">最后上课 {{item.lastClassText}}</text>
+            </view>
           </view>
-          <text class="student-chevron">›</text>
+        </view>
         </view>
       </view>
     </scroll-view>
@@ -188,30 +212,147 @@
     </scroll-view>
 
     <view class="tabbar">
-      <view class="tab-item {{dashboardTabClass}}" data-tab="dashboard" bindtap="switchTab"><text class="tab-icon">▦</text><text>工作台</text></view>
-      <view class="tab-item {{timetableTabClass}}" data-tab="timetable" bindtap="switchTab"><text class="tab-icon">□</text><text>我的课表</text></view>
-      <view class="tab-item {{studentsTabClass}}" data-tab="students" bindtap="switchTab"><text class="tab-icon">♙</text><text>我的学员</text></view>
-      <view class="tab-item {{shiftsTabClass}}" data-tab="shifts" bindtap="switchTab"><text class="tab-icon">☷</text><text>我的班次</text></view>
+      <view class="tab-item {{dashboardTabClass}}" data-tab="dashboard" bindtap="switchTab">
+        <view class="tab-icon tab-grid-icon">
+          <text></text><text></text><text></text><text></text>
+        </view>
+        <text>工作台</text>
+      </view>
+      <view class="tab-item {{timetableTabClass}}" data-tab="timetable" bindtap="switchTab">
+        <view class="tab-icon tab-calendar-icon">
+          <view class="tab-calendar-head"></view>
+          <view class="tab-calendar-body"></view>
+        </view>
+        <text>我的课表</text>
+      </view>
+      <view class="tab-item {{studentsTabClass}}" data-tab="students" bindtap="switchTab">
+        <view class="tab-icon tab-user-icon">
+          <view class="tab-user-head"></view>
+          <view class="tab-user-body"></view>
+        </view>
+        <text>我的学员</text>
+      </view>
+      <view class="tab-item {{shiftsTabClass}}" data-tab="shifts" bindtap="switchTab">
+        <view class="tab-icon tab-list-icon">
+          <text></text><text></text><text></text>
+        </view>
+        <text>我的班次</text>
+      </view>
     </view>
 
     <view wx:if="{{showDetail || showFeedback}}" class="mask" catchtouchmove="stopMove" bindtap="closeSheets"></view>
 
-    <view class="sheet {{detailSheetClass}}" catchtouchmove="stopMove">
-      <view class="sheet-handle"></view>
-      <view class="sheet-title"><text>排课详情</text><button bindtap="closeSheets">×</button></view>
-      <scroll-view scroll-y class="sheet-body">
-        <view class="block-title">课程基础信息</view>
-        <view class="info-card">
-          <view class="info-row"><text>时间</text><text>{{selectedClass.timeText}}</text></view>
-          <view class="info-row"><text>学员</text><text>{{selectedClass.student}}</text></view>
-          <view class="info-row"><text>课程</text><text>{{selectedClass.type}}</text></view>
-          <view class="info-row"><text>地点</text><text>{{selectedClass.loc}}</text></view>
-          <view class="info-row"><text>状态</text><text>{{selectedClass.status}}</text></view>
+    <view class="sheet detail-sheet {{detailSheetClass}}" catchtouchmove="stopMove">
+      <view class="sheet-handle detail-sheet-handle"></view>
+      <view class="detail-sheet-head">
+        <text class="detail-sheet-title">排课详情</text>
+        <button class="detail-sheet-close" bindtap="closeSheets">×</button>
+      </view>
+      <scroll-view scroll-y class="sheet-body detail-sheet-body">
+        <view class="detail-section-card">
+          <view class="detail-section-title">
+            <view class="detail-section-bar"></view>
+            <text>基础信息</text>
+          </view>
+          <view class="detail-info-grid">
+            <view class="detail-info-row">
+              <text class="detail-info-label">上课时间</text>
+              <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.datetime}}</text>
+            </view>
+            <view class="detail-info-row">
+              <text class="detail-info-label">校区场地</text>
+              <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.location}}</text>
+            </view>
+            <view class="detail-info-row is-split">
+              <view class="detail-info-cell">
+                <text class="detail-info-label">课程类型</text>
+                <text class="detail-inline-tag {{selectedClassDetail.basicInfo.courseTypeClass}}">{{selectedClassDetail.basicInfo.courseType}}</text>
+              </view>
+              <view class="detail-info-cell">
+                <text class="detail-info-label">当前状态</text>
+                <text class="detail-inline-tag {{selectedClassDetail.basicInfo.statusClass}}">{{selectedClassDetail.basicInfo.status}}</text>
+              </view>
+            </view>
+            <view class="detail-info-row">
+              <text class="detail-info-label">上课学员</text>
+              <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.studentName}}</text>
+            </view>
+            <view class="detail-info-row">
+              <text class="detail-info-label">负责教练</text>
+              <view class="detail-info-value-group">
+                <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.coachName}}</text>
+                <text class="detail-info-helper">（归属: {{selectedClassDetail.basicInfo.coachNote}}）</text>
+              </view>
+            </view>
+            <view class="detail-info-row">
+              <text class="detail-info-label">课包权益</text>
+              <view class="detail-info-value-group">
+                <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.entitlementText}}</text>
+                <text class="detail-info-divider">|</text>
+                <text class="detail-info-helper">{{selectedClassDetail.basicInfo.entitlementSource}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view class="detail-section-card">
+          <view class="detail-section-title">
+            <view class="detail-section-bar"></view>
+            <text>课前须知</text>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">学员备注</text>
+            <view wx:if="{{selectedClassDetail.notices.studentRemark.useBox}}" class="detail-note-box {{selectedClassDetail.notices.studentRemark.isEmpty ? 'is-empty' : ''}}">
+              <text>{{selectedClassDetail.notices.studentRemark.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text {{selectedClassDetail.notices.studentRemark.isEmpty ? 'is-empty' : ''}}">{{selectedClassDetail.notices.studentRemark.text}}</text>
+          </view>
+          <view class="detail-note-grid">
+            <view class="detail-note-col">
+              <text class="detail-note-label">历史问题</text>
+              <text class="detail-note-text {{selectedClassDetail.notices.historyIssue.isEmpty ? 'is-empty' : ''}}">{{selectedClassDetail.notices.historyIssue.text}}</text>
+            </view>
+            <view class="detail-note-col">
+              <text class="detail-note-label">本节关注</text>
+              <text class="detail-note-text {{selectedClassDetail.notices.focusNote.isEmpty ? 'is-empty' : ''}}">{{selectedClassDetail.notices.focusNote.text}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="detail-section-card">
+          <view class="detail-section-title">
+            <view class="detail-section-bar"></view>
+            <text>课后反馈</text>
+          </view>
+          <view class="detail-feedback-top">
+            <view class="detail-feedback-cell">
+              <text class="detail-note-label">消耗课时</text>
+              <text class="detail-feedback-value">{{selectedClassDetail.feedback.consumedLessons}}</text>
+            </view>
+            <view class="detail-feedback-cell">
+              <text class="detail-note-label">班次剩余</text>
+              <text class="detail-feedback-value">{{selectedClassDetail.feedback.remainingLessons}}</text>
+            </view>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">反馈摘要</text>
+            <view wx:if="{{selectedClassDetail.feedback.summary.useBox}}" class="detail-note-box {{selectedClassDetail.feedback.summary.isEmpty ? 'is-empty' : ''}}">
+              <text class="{{selectedClassDetail.feedback.summary.isEmpty ? 'detail-feedback-pending' : ''}}">{{selectedClassDetail.feedback.summary.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text {{selectedClassDetail.feedback.summary.isEmpty ? 'detail-feedback-pending' : ''}}">{{selectedClassDetail.feedback.summary.text}}</text>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">历史反馈{{selectedClassDetail.hasFeedback ? '（最近一次）' : ''}}</text>
+            <view wx:if="{{selectedClassDetail.feedback.history.useBox}}" class="detail-note-box {{selectedClassDetail.feedback.history.isEmpty ? 'is-empty' : ''}}">
+              <text>{{selectedClassDetail.feedback.history.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text {{selectedClassDetail.feedback.history.isEmpty ? 'is-empty' : ''}}">{{selectedClassDetail.feedback.history.text}}</text>
+          </view>
         </view>
       </scroll-view>
-      <view class="sheet-actions">
-        <button class="outline-btn" bindtap="closeSheets">关闭</button>
-        <button class="solid-btn" bindtap="openFeedback">填写反馈</button>
+      <view class="detail-sheet-actions">
+        <button class="detail-sheet-btn is-ghost" bindtap="closeSheets">关闭</button>
+        <button class="detail-sheet-btn is-primary" bindtap="openFeedback">{{selectedClassDetail.actionText}}</button>
       </view>
     </view>
 
@@ -223,7 +364,7 @@
         <view class="field-label">今天练习了 <text>*</text></view>
         <textarea class="feedback-input" placeholder="请输入内容..." value="{{feedbackForm.practicedToday}}" bindinput="onFeedbackInput" />
       </scroll-view>
-      <view class="sheet-actions three">
+      <view class="feedback-sheet-actions three">
         <button class="outline-btn" bindtap="closeSheets">取消</button>
         <button class="ghost-btn" bindtap="openPoster">生成海报</button>
         <button class="solid-btn" bindtap="saveFeedback" loading="{{savingFeedback}}">保存反馈</button>

@@ -3,6 +3,30 @@ const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, cl
 
 const timetableHours = Array.from({ length: 16 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`);
 const avatarClasses = ['avatar-warm', 'avatar-teal', 'avatar-green', 'avatar-purple'];
+const TIMETABLE_START_HOUR = 7;
+const TIMETABLE_HOUR_HEIGHT_RPX = 150;
+const TIMETABLE_DAY_WIDTH_RPX = 240;
+
+function coachDisplayName(name = '') {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return '王教练';
+  return trimmed.endsWith('教练') ? trimmed : `${trimmed}教练`;
+}
+
+function coachGreeting(now = new Date()) {
+  const hour = now.getHours();
+  if (hour < 11) return '早安';
+  if (hour < 14) return '中午好';
+  if (hour < 18) return '下午好';
+  return '晚上好';
+}
+
+function dashboardCourseTag(item = {}) {
+  const text = item.type || item.title || '课程';
+  if (item.isTrial || /体验/.test(text)) return { text, className: 'is-trial' };
+  if (/小班/.test(text)) return { text, className: 'is-group' };
+  return { text, className: 'is-private' };
+}
 
 function statusClass(item) {
   return String(item.statusText || '').includes('待') ? 'tag-danger' : 'tag-green';
@@ -40,9 +64,15 @@ function decorateTimetableDays(days = []) {
 
 function decorateWorkbenchClass(item, now = new Date()) {
   const state = workbenchTodoState(item, now);
-  if (!state) return item;
-  return {
+  const tag = dashboardCourseTag(item);
+  const base = {
     ...item,
+    courseTagText: tag.text,
+    courseTagClass: tag.className
+  };
+  if (!state) return base;
+  return {
+    ...base,
     status: state.label,
     statusClass: state.className
   };
@@ -84,6 +114,20 @@ function buildReminderItems({ todayCount = 0, nextClass = null, todoCount = 0, p
   return items;
 }
 
+function buildWeekTodoCards(groups = []) {
+  return groups.flatMap((group) => {
+    const [weekdayText = '', dateText = ''] = String(group.label || '').split(' ');
+    return (group.items || []).map((item) => ({
+      ...item,
+      weekdayText,
+      dateText,
+      courseTagText: dashboardCourseTag(item).text,
+      courseTagClass: dashboardCourseTag(item).className,
+      showFeedbackAction: item.todoLabel === '待反馈'
+    }));
+  });
+}
+
 function studentIdsOf(item = {}) {
   return Array.isArray(item.studentIds) ? item.studentIds.filter(Boolean) : [];
 }
@@ -97,6 +141,18 @@ function avatarText(name = '') {
   return String(name || '').trim().slice(0, 1).toUpperCase() || '学';
 }
 
+function parseLocalDate(value) {
+  if (!value) return null;
+  const date = new Date(String(value).replace(' ', 'T'));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatMonthDay(value) {
+  const date = parseLocalDate(value);
+  if (!date) return '';
+  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function buildStudentCards(students = [], classes = [], schedule = [], coachName = '') {
   return (students || []).map((student, index) => {
     const relatedClasses = (classes || []).filter(item => studentIdsOf(item).includes(student.id));
@@ -105,15 +161,25 @@ function buildStudentCards(students = [], classes = [], schedule = [], coachName
       return ids.includes(student.id) || (!ids.length && String(item.studentName || '').trim() === String(student.name || '').trim());
     });
     const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
+    const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
+    const lastClass = validSchedule
+      .slice()
+      .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
+    const totalLessons = parseInt(activeClass && activeClass.totalLessons, 10) || 0;
+    const usedLessons = parseInt(activeClass && activeClass.usedLessons, 10) || 0;
+    const isOwner = String(student.primaryCoach || '').trim() === coachName;
     return {
       id: student.id,
       name: student.name || '未命名学员',
       avatarText: avatarText(student.name),
       avatarClass: avatarClasses[index % avatarClasses.length],
-      type: String(student.primaryCoach || '').trim() === coachName ? '负责学员' : '代上学员',
-      cumulative: relatedSchedule.filter(item => String(item.status || '') !== '已取消').length,
-      progress: activeClass ? `${parseInt(activeClass.usedLessons, 10) || 0} / ${parseInt(activeClass.totalLessons, 10) || 0}` : '',
-      showProgress: !!activeClass
+      type: isOwner ? '负责学员' : '代课学员',
+      tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
+      cumulative: validSchedule.length,
+      packageText: totalLessons ? `${usedLessons}/${totalLessons}` : '',
+      showPackage: !!totalLessons,
+      lastClassText: formatMonthDay(lastClass && lastClass.startTime),
+      showLastClass: !!lastClass
     };
   }).sort((a, b) => {
     if (a.type !== b.type) return a.type === '负责学员' ? -1 : 1;
@@ -161,6 +227,165 @@ function findFeedbackByScheduleId(feedbacks = [], scheduleId = '') {
   return (feedbacks || []).find(item => String(item.scheduleId) === String(scheduleId)) || null;
 }
 
+function formatDetailDateTime(item = {}) {
+  const start = parseLocalDate(item.startTime);
+  const end = parseLocalDate(item.endTime);
+  if (!start) return item.timeText || '时间待定';
+  const dateText = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+  const startText = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+  const endText = end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : '';
+  return `${dateText} ${startText}${endText ? ` - ${endText}` : ''}`;
+}
+
+function detailStatusMeta(item = {}) {
+  if (String(item.status || '') === '已取消') {
+    return { text: '已取消', className: 'detail-tag-muted' };
+  }
+  const now = new Date();
+  const start = parseLocalDate(item.startTime);
+  const end = parseLocalDate(item.endTime || item.startTime);
+  if (end && end <= now) return { text: '已下课', className: 'detail-tag-muted' };
+  if (start && start > now) return { text: '待上课', className: 'detail-tag-success' };
+  return { text: '进行中', className: 'detail-tag-success' };
+}
+
+function firstNonEmpty(...values) {
+  for (let i = 0; i < values.length; i += 1) {
+    const value = values[i];
+    if (value === 0) return '0';
+    if (String(value || '').trim()) return String(value).trim();
+  }
+  return '';
+}
+
+function buildNoticeField(content = '', useBox = false) {
+  const text = String(content || '').trim();
+  return {
+    text: text || '暂无记录',
+    isEmpty: !text,
+    useBox: !!text && useBox
+  };
+}
+
+function buildDetailData(selectedClass, context = {}) {
+  if (!selectedClass) return null;
+  const students = Array.isArray(context.students) ? context.students : [];
+  const classes = Array.isArray(context.classes) ? context.classes : [];
+  const feedbacks = Array.isArray(context.feedbacks) ? context.feedbacks : [];
+  const coachName = String(context.coachName || '').trim();
+  const studentIds = studentIdsOf(selectedClass);
+  const student = students.find(item => studentIds.includes(item.id))
+    || students.find(item => String(item.name || '').trim() === String(selectedClass.student || '').trim())
+    || null;
+  const linkedClass = classes.find(item => studentIdsOf(item).some(id => studentIds.includes(id)))
+    || null;
+  const currentFeedback = findFeedbackByScheduleId(feedbacks, selectedClass.id);
+  const studentFeedbacks = feedbacks
+    .filter(item => String(item.studentId || '') === String(student && student.id || '')
+      || (Array.isArray(item.studentIds) && Array.isArray(studentIds) && item.studentIds.some(id => studentIds.includes(id))))
+    .sort((a, b) => String(b.startTime || b.createdAt || '').localeCompare(String(a.startTime || a.createdAt || '')));
+  const previousFeedback = studentFeedbacks.find(item => String(item.scheduleId || '') !== String(selectedClass.id)) || null;
+  const typeTag = dashboardCourseTag(selectedClass);
+  const statusTag = detailStatusMeta(selectedClass);
+  const consumedLessons = currentFeedback ? `${selectedClass.lessonCount || 1} 节` : '-';
+  const remainingLessons = linkedClass && linkedClass.remainingLessons != null
+    ? `${linkedClass.remainingLessons} 节`
+    : (linkedClass && linkedClass.totalLessons != null && linkedClass.usedLessons != null
+      ? `${Math.max(0, Number(linkedClass.totalLessons || 0) - Number(linkedClass.usedLessons || 0))} 节`
+      : '-');
+  const studentRemark = buildNoticeField(firstNonEmpty(
+    student && student.remark,
+    student && student.studentRemark,
+    student && student.note,
+    student && student.notes
+  ), true);
+  const historyIssue = buildNoticeField(firstNonEmpty(
+    student && student.historyIssue,
+    student && student.issueHistory,
+    student && student.issueNote,
+    student && student.healthNote
+  ));
+  const focusNote = buildNoticeField(firstNonEmpty(
+    currentFeedback && currentFeedback.sessionFocus,
+    currentFeedback && currentFeedback.coachFocus,
+    currentFeedback && currentFeedback.coachNote,
+    student && student.sessionFocus,
+    student && student.focusNote
+  ));
+  const feedbackSummary = buildNoticeField(firstNonEmpty(
+    currentFeedback && currentFeedback.summary,
+    currentFeedback && currentFeedback.practicedToday
+  ), true);
+  const previousFeedbackSummary = buildNoticeField(firstNonEmpty(
+    previousFeedback && previousFeedback.summary,
+    previousFeedback && previousFeedback.practicedToday
+  ), true);
+  return {
+    scheduleId: selectedClass.id,
+    hasFeedback: !!currentFeedback,
+    actionText: currentFeedback ? '查看反馈' : '填写反馈',
+    basicInfo: {
+      datetime: formatDetailDateTime(selectedClass),
+      location: [selectedClass.campus, selectedClass.venue || selectedClass.loc || selectedClass.locationText].filter(Boolean).join('·') || '地点待确认',
+      courseType: typeTag.text,
+      courseTypeClass: typeTag.className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
+      status: statusTag.text,
+      statusClass: statusTag.className,
+      studentName: selectedClass.student || '学员待确认',
+      coachName: firstNonEmpty(selectedClass.coach, coachName) || '待确认',
+      coachNote: firstNonEmpty(student && student.primaryCoach, '未设置'),
+      entitlementText: currentFeedback ? consumedLessons : '未扣课',
+      entitlementSource: '来源: 排课表'
+    },
+    notices: {
+      studentRemark,
+      historyIssue,
+      focusNote
+    },
+    feedback: {
+      consumedLessons,
+      remainingLessons,
+      summary: feedbackSummary,
+      history: previousFeedbackSummary
+    }
+  };
+}
+
+function rpxToPx(value) {
+  const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+  return (value * (info.windowWidth || 375)) / 750;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function currentTimeMarker(now = new Date()) {
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function timetableNowLineStyle(now = new Date()) {
+  const minutes = ((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes();
+  const top = Math.max(0, Math.round((minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX));
+  return `top:${top}rpx;`;
+}
+
+function timetableScrollTop(now = new Date(), isCurrentWeek = true) {
+  if (!isCurrentWeek) return 0;
+  const minutes = ((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes();
+  const lineTopPx = rpxToPx(Math.max(0, (minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX));
+  return Math.max(0, Math.round(lineTopPx - 260));
+}
+
+function timetableScrollLeft(days = [], isCurrentWeek = true) {
+  if (!isCurrentWeek) return 0;
+  const todayIndex = (days || []).findIndex(item => item.isToday);
+  if (todayIndex < 0) return 0;
+  return Math.max(0, Math.round(rpxToPx(todayIndex * TIMETABLE_DAY_WIDTH_RPX) - 60));
+}
+
 Page({
   data: {
     loading: true,
@@ -176,14 +401,23 @@ Page({
     weekTitle: '本周',
     weekRange: '',
     todayLabel: '',
+    coachGreeting: '早安',
+    coachDisplayName: '王教练',
     days: [],
     timetableDays: [],
     timetableHours,
+    timetableScrollTop: 0,
+    timetableScrollLeft: 0,
+    currentTimeText: '',
+    timetableNowLineStyle: '',
     schedule: [],
     feedbacks: [],
+    studentsRaw: [],
+    classesRaw: [],
     visibleClasses: [],
     dashboardClasses: [],
     weekTodoGroups: [],
+    weekTodoCards: [],
     reminderItems: [],
     studentsList: [],
     studentStats: { visibleCount: 0, ownerCount: 0 },
@@ -193,6 +427,7 @@ Page({
     savingFeedback: false,
     stats: { month: 0, week: 0, today: 0, feedback: 0, pending: 0, conversion: '0%', nextTime: '暂无', nextText: '暂无', todo: 0 },
     selectedClass: null,
+    selectedClassDetail: null,
     showDetail: false,
     showFeedback: false,
     showPoster: false,
@@ -223,17 +458,23 @@ Page({
     try {
       await loginWithWechat();
       const data = await loadCoachWorkbench();
-      const coachName = currentCoachName();
+    const coachName = currentCoachName();
+      const displayName = coachDisplayName(coachName);
+      const now = new Date();
       const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
       const studentsList = buildStudentCards(data.students || [], data.classes || [], schedule, coachName);
       const shiftsList = buildShiftCards(data.classes || [], data.students || []);
       this.setData({
         schedule,
         feedbacks: data.feedbacks || [],
+        studentsRaw: data.students || [],
+        classesRaw: data.classes || [],
         studentsList,
         studentStats: buildStudentStats(data.students || [], coachName),
         shiftsList,
         shiftStats: buildShiftStats(shiftsList),
+        coachGreeting: coachGreeting(now),
+        coachDisplayName: displayName,
         loading: false,
         hasLoaded: true
       });
@@ -253,6 +494,7 @@ Page({
     const today = days.find(day => day.isToday);
     const dashboardClasses = today ? today.items.map(item => decorateWorkbenchClass(item, now)) : [];
     const weekTodoGroups = buildWeekTodoGroups(days, now);
+    const weekTodoCards = buildWeekTodoCards(weekTodoGroups);
     const todoItems = weekTodoGroups.reduce((all, day) => all.concat(day.items), []);
     const pending = todoItems.filter(item => item.todoLabel === '待反馈').length;
     const nextClass = visibleClasses
@@ -268,16 +510,23 @@ Page({
       todoCount: todoItems.length,
       pendingCount: pending
     });
+    const decoratedTimetableDays = decorateTimetableDays(buildTimetableDays(visibleClasses, weekOffset));
+    const isCurrentWeek = weekOffset === 0;
     this.setData({
       weekTitle: weekOffset === 0 ? '本周' : (weekOffset > 0 ? `后 ${weekOffset} 周` : `前 ${Math.abs(weekOffset)} 周`),
       weekRange: weekRangeText(weekOffset),
       todayLabel: today ? today.label.replace(' ', '　') : '',
-      isCurrentWeek: weekOffset === 0,
+      isCurrentWeek,
       days,
-      timetableDays: decorateTimetableDays(buildTimetableDays(visibleClasses, weekOffset)),
+      timetableDays: decoratedTimetableDays,
+      timetableScrollTop: timetableScrollTop(now, isCurrentWeek),
+      timetableScrollLeft: timetableScrollLeft(decoratedTimetableDays, isCurrentWeek),
+      currentTimeText: currentTimeMarker(now),
+      timetableNowLineStyle: timetableNowLineStyle(now),
       visibleClasses,
       dashboardClasses,
       weekTodoGroups,
+      weekTodoCards,
       reminderItems,
       stats: {
         month: schedule.length,
@@ -324,7 +573,18 @@ Page({
     const id = event.currentTarget.dataset.id;
     if (!id) return;
     const selectedClass = this.data.schedule.find(item => String(item.id) === String(id));
-    if (selectedClass) this.setData({ selectedClass, showDetail: true, detailSheetClass: 'sheet-show' });
+    if (!selectedClass) return;
+    this.setData({
+      selectedClass,
+      selectedClassDetail: buildDetailData(selectedClass, {
+        students: this.data.studentsRaw,
+        classes: this.data.classesRaw,
+        feedbacks: this.data.feedbacks,
+        coachName: currentCoachName()
+      }),
+      showDetail: true,
+      detailSheetClass: 'sheet-show'
+    });
   },
 
   closeSheets() {
@@ -334,7 +594,8 @@ Page({
       showPoster: false,
       detailSheetClass: '',
       feedbackSheetClass: '',
-      feedbackForm: { practicedToday: '' }
+      feedbackForm: { practicedToday: '' },
+      selectedClassDetail: null
     });
   },
 
