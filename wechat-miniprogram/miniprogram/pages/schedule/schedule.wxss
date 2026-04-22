@@ -1213,34 +1213,34 @@ button::after {
   top: 975rpx;
   z-index: 25;
   height: 2px;
-  background: #ef4444;
+  background: rgba(239, 68, 68, 0.95);
 }
 
 .tt-now-line text {
   position: absolute;
-  left: -88rpx;
-  top: -17rpx;
-  width: 80rpx;
-  height: 34rpx;
-  border-radius: 999rpx;
+  left: -66px;
+  top: -14px;
+  width: 61px;
+  height: 28px;
+  border-radius: 999px;
   background: #ef4444;
   color: #fff;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 34rpx;
+  line-height: 28px;
   text-align: center;
 }
 
 .tt-now-line::after {
   content: "";
   position: absolute;
-  left: calc(100rpx + 228rpx * 2 - 8rpx);
-  top: -10rpx;
-  width: 20rpx;
-  height: 20rpx;
-  border-radius: 999rpx;
+  left: calc(228rpx * 2 + 114rpx - 7px);
+  top: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
   background: #ef4444;
-  box-shadow: 0 0 0 14rpx rgba(239, 68, 68, 0.16);
+  box-shadow: 0 0 0 10px rgba(239, 68, 68, 0.14);
 }
 
 .students-body {

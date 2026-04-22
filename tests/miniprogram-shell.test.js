@@ -227,6 +227,8 @@ assert.match(scheduleJs, /displayDate:\s*item\.isToday[\s\S]*replace\('日', ''\
 assert.doesNotMatch(scheduleJs, /onTimetableScrollX/, 'timetable should avoid JS scroll syncing that causes horizontal lag');
 assert.match(scheduleJs, /activeTab === 'timetable'[\s\S]*this\.renderWeek\(\)/, 'timetable tab should refresh current-time positioning when opened');
 assert.match(scheduleWxss, /\.tt-now-line\s*\{[\s\S]*background:\s*#ef4444;/i, 'timetable should show the requested current-time marker');
+assert.match(scheduleWxss, /\.tt-now-line text\s*\{[\s\S]*left:\s*-66px;[\s\S]*width:\s*61px;[\s\S]*height:\s*28px;[\s\S]*font-size:\s*14px;/, 'timetable current-time marker should show the left time pill');
+assert.match(scheduleWxss, /\.tt-now-line::after\s*\{[\s\S]*width:\s*14px;[\s\S]*height:\s*14px;[\s\S]*box-shadow:\s*0 0 0 10px rgba\(239,\s*68,\s*68,\s*0\.14\);/i, 'timetable current-time dot should use the requested solid dot and soft ring style');
 assert.match(scheduleWxss, /\.tt-course::before\s*\{[\s\S]*width:\s*8rpx;[\s\S]*background:\s*var\(--course-accent\);/, 'timetable course cards should use the SVG left accent bar');
 assert.match(scheduleWxss, /\.detail-sheet-body\s*\{[\s\S]*background:\s*#f8fafc;/, 'detail sheet body should use slate-50 background');
 assert.match(scheduleWxml, /enhanced show-scrollbar="\{\{false\}\}"/, 'detail sheet scroll view should hide the native right scrollbar');
