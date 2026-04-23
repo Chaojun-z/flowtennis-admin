@@ -96,7 +96,7 @@
           <view class="mini-metric"><text>本月课时</text><text>{{stats.month}}</text></view>
           <view class="mini-metric"><text>本月反馈</text><text>{{stats.feedback}}</text></view>
           <view class="mini-metric"><text>未反馈</text><text class="danger">{{stats.pending}}</text></view>
-          <view class="mini-metric"><text>体验转化</text><text>{{stats.conversionText}}<text wx:if="{{stats.conversionUnit}}" class="conversion-unit">{{stats.conversionUnit}}</text></text></view>
+          <view class="mini-metric"><text>体验课转化</text><text class="conversion-value {{stats.conversionUnit ? 'has-data' : ''}}">{{stats.conversionText}}<text wx:if="{{stats.conversionUnit}}" class="conversion-unit">{{stats.conversionUnit}}</text></text></view>
         </view>
 
         <view wx:if="{{reminderItems.length}}" class="reminder-bar">

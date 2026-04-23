@@ -123,10 +123,6 @@ page {
   line-height: 1.35;
 }
 
-.danger {
-  color: #d45b41;
-}
-
 .page-body {
   padding: 0 32rpx 42rpx;
 }
@@ -221,7 +217,19 @@ page {
 }
 
 .mini-metric text.danger {
+  color: #D97706;
+}
+
+.conversion-value {
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.conversion-value.has-data {
   color: #0f172a;
+  font-size: 24px;
+  font-weight: 700;
 }
 
 .reminder-bar {
@@ -238,17 +246,18 @@ page {
   color: #64748b;
   display: flex;
   align-items: center;
+  line-height: 1;
   box-sizing: border-box;
 }
 
 .reminder-bar .summary-icon {
-  width: 12px;
-  height: 12px;
-  margin-right: 18rpx;
-  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.6001 12.5996C9.91381 12.5996 12.6001 9.91332 12.6001 6.59961C12.6001 3.2859 9.91381 0.599609 6.6001 0.599609C3.28639 0.599609 0.600098 3.2859 0.600098 6.59961C0.600098 9.91332 3.28639 12.5996 6.6001 12.5996Z' stroke='%2364748B' stroke-width='1.2'/%3E%3Cpath d='M5.70379 10.5996V5.14506H7.21657V10.5996H5.70379ZM6.46373 4.44194C6.23883 4.44194 6.04588 4.36736 5.8849 4.21822C5.72628 4.0667 5.64697 3.88559 5.64697 3.67489C5.64697 3.46656 5.72628 3.28782 5.8849 3.13867C6.04588 2.98716 6.23883 2.9114 6.46373 2.9114C6.68864 2.9114 6.8804 2.98716 7.03902 3.13867C7.2 3.28782 7.2805 3.46656 7.2805 3.67489C7.2805 3.88559 7.2 4.0667 7.03902 4.21822C6.8804 4.36736 6.68864 4.44194 6.46373 4.44194Z' fill='%2364748B'/%3E%3C/svg%3E");
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='8' cy='8' r='6.5' stroke='%2364748B' stroke-width='1.5'/%3E%3Cpath d='M8 7.25V11' stroke='%2364748B' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M8 5.2V5.25' stroke='%2364748B' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 12px 12px;
+  background-size: 16px 16px;
   flex-shrink: 0;
 }
 
@@ -260,6 +269,7 @@ page {
 .reminder-list {
   flex: 1;
   display: flex;
+  align-items: center;
   flex-wrap: nowrap;
   gap: 42rpx;
 }
@@ -279,6 +289,8 @@ page {
 
 .conversion-unit {
   font-size: 13px;
+  font-weight: 400;
+  color: #64748B;
 }
 
 .reminder-chip.is-danger .reminder-value {

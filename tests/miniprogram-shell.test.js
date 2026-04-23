@@ -72,7 +72,7 @@ assert.match(scheduleWxml, /bindtap="openDetail"/, 'native schedule cards should
 assert.match(scheduleWxml, /student-card"[^>]*data-id="\{\{item\.id\}\}"[^>]*bindtap="openStudentDetail"/, 'native student cards should open the mapped student detail sheet');
 assert.match(scheduleWxml, /今日排课/, 'native workbench should keep the today schedule section');
 assert.match(scheduleWxml, /本周待办/, 'native workbench should also show a weekly todo section');
-assert.match(scheduleWxml, /今日课程[\s\S]*本周课时[\s\S]*本月课时[\s\S]*本月反馈[\s\S]*未反馈[\s\S]*体验转化/, 'native workbench should keep the six original web metrics in the requested order');
+assert.match(scheduleWxml, /今日课程[\s\S]*本周课时[\s\S]*本月课时[\s\S]*本月反馈[\s\S]*未反馈[\s\S]*体验课转化/, 'native workbench should keep the six original web metrics in the requested order');
 assert.match(scheduleWxml, /stats\.conversionText[\s\S]*stats\.conversionUnit[\s\S]*conversion-unit/, 'native workbench should render conversion percent with a separate small unit');
 assert.match(scheduleWxml, /dashboard-hero/, 'native workbench should render the recreated SVG hero header');
 assert.match(scheduleWxml, /dashboard-grid/, 'native workbench should render the two-row three-column metric grid');
@@ -330,8 +330,14 @@ assert.match(scheduleWxss, /\.dashboard-shell\s*\{[\s\S]*margin-top:\s*-40px;/, 
 assert.match(scheduleWxss, /\.mini-metrics\s*\{[\s\S]*height:\s*170px;[\s\S]*padding:\s*16px;[\s\S]*gap:\s*6px;/, 'dashboard metric shell should match the requested 361x170 token with 16px padding and 6px gap');
 assert.match(scheduleWxss, /\.mini-metric\s*\{[\s\S]*height:\s*66px;[\s\S]*padding:\s*16px;/, 'dashboard metric cells should match the requested 104x66 token');
 assert.match(scheduleWxss, /\.mini-metric text\s*\{[\s\S]*transform:\s*translateY\(-6px\);/, 'dashboard metric label and number should move upward by 6px');
+assert.match(scheduleWxss, /\.mini-metric text\.danger\s*\{[\s\S]*color:\s*#D97706;/, 'dashboard pending feedback metric should use the requested warning color');
+assert.match(scheduleWxss, /\.conversion-value\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'empty conversion value should use the requested muted regular style');
+assert.match(scheduleWxss, /\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
+assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*13px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should use requested 13px muted regular style');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*height:\s*38px;[\s\S]*margin-top:\s*12px;[\s\S]*border:\s*0\.8px solid #e2e8f0;/i, 'dashboard reminder bar should match the requested size and border token');
-assert.match(scheduleWxss, /\.reminder-bar \.summary-icon\s*\{[\s\S]*width:\s*12px;[\s\S]*height:\s*12px;/, 'dashboard reminder icon should use the requested 12x12 size');
+assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*line-height:\s*1;/i, 'dashboard reminder bar content should be vertically centered');
+assert.match(scheduleWxss, /\.reminder-bar \.summary-icon\s*\{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;[\s\S]*background-image:[\s\S]*circle cx='8' cy='8' r='6\.5'/, 'dashboard reminder icon should reuse the shifts reminder icon');
+assert.match(scheduleWxss, /\.reminder-list\s*\{[\s\S]*align-items:\s*center;/, 'dashboard reminder text should align with the icon vertically');
 assert.match(scheduleWxss, /\.today-lesson-card\s*\{[\s\S]*height:\s*84px;/, 'dashboard today course card should match the requested 84px height');
 assert.match(scheduleWxss, /\.today-lesson-clock\s*\{[\s\S]*width:\s*40px;[\s\S]*height:\s*40px;[\s\S]*background:\s*#f1f5f9;/i, 'dashboard today course clock background should be 40x40 slate-100');
 assert.match(scheduleWxss, /\.icon-clock\s*\{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;[\s\S]*background-image:\s*url\("data:image\/svg\+xml/, 'dashboard today course clock icon should use the provided SVG at 16x16');
