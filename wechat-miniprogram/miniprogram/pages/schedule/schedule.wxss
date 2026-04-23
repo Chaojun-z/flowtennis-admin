@@ -220,13 +220,13 @@ page {
   color: #D97706;
 }
 
-.conversion-value {
+.mini-metric text.conversion-value {
   color: #64748B;
   font-size: 12px;
   font-weight: 400;
 }
 
-.conversion-value.has-data {
+.mini-metric text.conversion-value.has-data {
   color: #0f172a;
   font-size: 24px;
   font-weight: 700;
