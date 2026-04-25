@@ -2,10 +2,11 @@ function uid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).sli
 function durMin(s,e){if(!s||!e)return 0;return Math.round((new Date(e)-new Date(s))/60000)}
 function scheduleDurMin(s){return s?.endTime?durMin(s.startTime,s.endTime):60}
 function scheduleLessonUnits(s){
+  const count=Number(s?.lessonCount);
+  if(Number.isFinite(count)&&count>0)return count;
   const mins=scheduleDurMin(s);
   if(mins>0)return Math.max(0,mins/60);
-  const count=Number(s?.lessonCount)||0;
-  return count>0?count:1;
+  return 1;
 }
 function sumScheduleLessonUnits(rows=[]){return rows.reduce((sum,s)=>sum+scheduleLessonUnits(s),0)}
 function lessonUnitsText(value){
@@ -714,6 +715,10 @@ function lessonQty(value){
   const num=Number(value)||0;
   return Number.isInteger(num)?String(num):String(Math.round(num*10)/10);
 }
+function lessonValue(value,fallback=0){
+  const num=Number(value);
+  return Number.isFinite(num)?num:fallback;
+}
 function studentCoachSummary(stu){
   const coachSet=[...new Set([stu?.primaryCoach,...studentActiveClasses(stu).map(c=>String(c.coach||'').trim())].filter(Boolean))];
   if(!coachSet.length)return '—';
@@ -812,7 +817,7 @@ function studentNoteSummary(stu){
 function studentClassSummaryHtml(stu){
   const cls=studentClasses(stu);
   if(!cls.length)return '<div style="color:var(--td);font-size:12px">暂无班次</div>';
-  return cls.map(c=>`<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.className)}：${parseInt(c.usedLessons)||0}/${parseInt(c.totalLessons)||0}，${esc(c.coach)||'未分配教练'}</div>`).join('');
+  return cls.map(c=>`<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.className)}：${lessonQty(c.usedLessons)}/${lessonQty(c.totalLessons)}，${esc(c.coach)||'未分配教练'}</div>`).join('');
 }
 function entitlementStatusText(e){
   if(e.status==='voided')return '已作废';
@@ -830,11 +835,11 @@ function findEntitlementForSchedule(s){
 }
 function scheduleLessonChargeStatus(s){
   if(!s||effectiveScheduleStatus(s)==='已取消')return '不扣课';
-  if((parseInt(s.lessonCount)||0)<=0)return '不扣课';
+  if(lessonValue(s.lessonCount)<=0)return '不扣课';
   const ids=parseArr(s.entitlementIds);
   const checkIds=ids.length?ids:(s.entitlementId?[s.entitlementId]:[]);
   if(!checkIds.length)return '未扣课';
-  const used=checkIds.every(id=>entitlementLedger.some(l=>l.scheduleId===s.id&&l.entitlementId===id&&(parseInt(l.lessonDelta)||0)<0));
+  const used=checkIds.every(id=>entitlementLedger.some(l=>l.scheduleId===s.id&&l.entitlementId===id&&lessonValue(l.lessonDelta)<0));
   return used?'已扣课':'扣课异常';
 }
 function scheduleHasEntitlementLedger(s){
@@ -849,7 +854,7 @@ function scheduleEntitlementSummary(s){
   if(ids.length>1)return `${ids.length}个课包 · ${charge}`;
   const ent=findEntitlementForSchedule(s);
   if(!ent)return charge;
-  return `${ent.packageName||'—'} · ${charge} · 剩余 ${parseInt(ent.remainingLessons)||0}/${parseInt(ent.totalLessons)||0} 节`;
+  return `${ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
 }
 function studentEntitlementSummaryHtml(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(a.validUntil||'9999-12-31').localeCompare(String(b.validUntil||'9999-12-31')));
@@ -998,13 +1003,13 @@ function classSummaryPanelHtml(cls,readonly=false){
   const recent=classLastLesson(cls);
   const next=classNextLesson(cls);
   const tags=classRiskTags(cls);
-  const total=parseInt(cls.totalLessons)||0;
-  const used=parseInt(cls.usedLessons)||0;
+  const total=lessonValue(cls.totalLessons);
+  const used=lessonValue(cls.usedLessons);
   const remaining=Math.max(0,total-used);
   const studentCount=parseArr(cls.studentIds).length;
   const tagsHtml=tags.length?tags.map(t=>`<span class="tms-tag tms-tag-tier-slate">${esc(t)}</span>`).join(''):'<span style="color:var(--td);font-size:12px">当前无风险标签</span>';
   const links=readonly?'':`<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">快捷跳转</label><div class="finput tms-form-control" style="height:auto;min-height:54px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="tms-action-link" onclick="openClassScheduleList('${cls.id}')">查看关联排课</span><span class="tms-action-link" onclick="openClassStudentList('${cls.id}')">查看关联学员</span></div></div></div>`;
-  return `<div class="tms-section-header" style="margin-top:0;">班次摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最近上课</label><input class="finput tms-form-control" value="${recent?.startTime?fmtDt(recent.startTime):'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">下次课</label><input class="finput tms-form-control" value="${next?.startTime?fmtDt(next.startTime):'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">关联排课</label><input class="finput tms-form-control" value="${rows.length} 次" readonly></div><div class="tms-form-item"><label class="tms-form-label">关联学员</label><input class="finput tms-form-control" value="${studentCount} 人" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课时进度</label><input class="finput tms-form-control" value="已上 ${used} / 应上 ${total} / 剩余 ${remaining}" readonly></div><div class="tms-form-item"><label class="tms-form-label">风险标签</label><div class="finput tms-form-control" style="height:auto;min-height:54px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${tagsHtml}</div></div></div>${links}`;
+  return `<div class="tms-section-header" style="margin-top:0;">班次摘要</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最近上课</label><input class="finput tms-form-control" value="${recent?.startTime?fmtDt(recent.startTime):'—'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">下次课</label><input class="finput tms-form-control" value="${next?.startTime?fmtDt(next.startTime):'—'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">关联排课</label><input class="finput tms-form-control" value="${rows.length} 次" readonly></div><div class="tms-form-item"><label class="tms-form-label">关联学员</label><input class="finput tms-form-control" value="${studentCount} 人" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课时进度</label><input class="finput tms-form-control" value="已上 ${lessonQty(used)} / 应上 ${lessonQty(total)} / 剩余 ${lessonQty(remaining)}" readonly></div><div class="tms-form-item"><label class="tms-form-label">风险标签</label><div class="finput tms-form-control" style="height:auto;min-height:54px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${tagsHtml}</div></div></div>${links}`;
 }
 function studentOpts(sel){
   return '<option value="">— 不关联 —</option>'+students.map(s=>`<option value="${s.id}"${sel===s.id?' selected':''}>${esc(s.name)}${s.phone?' · '+esc(s.phone):''}</option>`).join('');
@@ -1074,7 +1079,8 @@ function normalizeCourtHistoryLocal(history){
   });
 }
 function courtFinanceLocal(c){
-  const hist=normalizeCourtHistoryLocal(c?.history);
+  const currentHistory=normalizeCourtHistoryLocal(c?.history);
+  const hist=currentHistory.length?currentHistory:courtBaseHistoryForSave(c);
   if(!hist.length)return{balance:parseFloat(c?.balance)||0,totalDeposit:parseFloat(c?.totalDeposit)||0,spentAmount:parseFloat(c?.spentAmount)||0,receivedAmount:parseFloat(c?.receivedAmount??c?.totalDeposit)||0,storedValueSpent:parseFloat(c?.storedValueSpent)||0,directPaidSpent:parseFloat(c?.directPaidSpent)||0};
   const t={balance:0,totalDeposit:0,spentAmount:0,receivedAmount:0,storedValueSpent:0,directPaidSpent:0};
   hist.forEach(h=>{

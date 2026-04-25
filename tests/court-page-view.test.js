@@ -103,6 +103,7 @@ assert.match(html, /data-finance-field="internal"/, 'court finance modal should 
 assert.match(fnBody('renderCourtFinanceFields'), /const isInternal=type==='消费'&&category==='内部占用';/, 'court finance field visibility should recognize internal occupancy');
 assert.match(fnBody('courtFinanceLocal'), /const isInternal=String\(h\.category\|\|''\)\.includes\('内部占用'\);/, 'court finance summary should detect internal occupancy rows');
 assert.match(fnBody('courtFinanceLocal'), /else if\(h\.type==='消费'\)\{if\(isInternal\)return;/, 'internal occupancy should not count as direct income or spending totals');
+assert.match(fnBody('courtFinanceLocal'), /const hist=currentHistory\.length\?currentHistory:courtBaseHistoryForSave\(c\);/, 'court finance summary should reuse legacy opening history when old records have no explicit history');
 assert.match(fnBody('courtFinanceConfirmText'), /内部占用/, 'court finance confirm copy should explain internal occupancy');
 assert.match(html, /function courtFinanceRevenueSummaryLocal\(/, 'court page should expose local booking income confirmation summary');
 assert.match(fnBody('courtFinanceRevenueSummaryLocal'), /confirmedRevenue=t\.storedValueBooking\+t\.onsiteBooking/, 'court finance summary should separate confirmed booking revenue');

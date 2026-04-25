@@ -220,60 +220,95 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="coach-ops-tabs">
-            <button class="coach-ops-tab active" id="financeTabRevenue" onclick="setFinancePanel('revenue')">收入课时表</button>
-            <button class="coach-ops-tab" id="financeTabConsume" onclick="setFinancePanel('consume')">消课记录</button>
+            <button class="coach-ops-tab active" id="financeTabLedger" onclick="setFinancePanel('ledger')">总账</button>
+            <button class="coach-ops-tab" id="financeTabRevenue" onclick="setFinancePanel('revenue')">收入流水</button>
+            <button class="coach-ops-tab" id="financeTabRecognized" onclick="setFinancePanel('recognized')">已入账流水</button>
             <button class="coach-ops-tab" id="financeTabSettlement" onclick="setFinancePanel('settlement')">教练结算</button>
           </div>
         </div>
       </div>
-      <div id="financeRevenuePanel">
+      <div id="financeLedgerPanel">
+        <div class="tms-audit-note">先看总账和顶部汇总，知道这个校区当前收了多少钱、已经入账多少、还有多少没入账。</div>
+        <div class="tms-stats-row" id="financeOverviewPrimaryStats"></div>
+        <div class="tms-stats-row" id="financeOverviewSecondaryStats"></div>
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索学员、课包、课程、教练" oninput="renderCoachOpsRevenueReport()">
+              <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索客户、业务类型、支付方式、单据" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
             </div>
+            <div id="financeLedgerBusinessTypeFilterHost"></div>
+            <div id="financeLedgerActionFilterHost"></div>
+            <div id="financeLedgerPayMethodFilterHost"></div>
+            <div class="finance-date-host" id="financeLedgerFromHost"></div>
+            <div class="finance-date-host" id="financeLedgerToHost"></div>
+            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceLedgerPage();renderFinanceLedger()">查询</button>
+          </div>
+        </div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">业务日期</th><th style="width:120px">客户</th><th style="width:100px">校区</th><th style="width:120px">业务类型</th><th style="width:120px">动作</th><th style="width:100px">实收</th><th style="width:110px">已入账</th><th style="width:110px">未入账</th><th style="width:100px">支付方式</th><th style="width:150px">来源单据</th><th style="width:220px">备注</th></tr></thead><tbody id="financeLedgerTbody"></tbody></table></div>
+          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeLedgerPagerInfo">共 0 条</span><div id="financeLedgerPageSize"></div></div><div class="tms-page-numbers" id="financeLedgerPagerBtns"></div></div>
+        </div>
+      </div>
+      <div id="financeRevenuePanel" style="display:none">
+        <div class="tms-toolbar">
+          <div class="tms-filters">
+            <div class="tms-search-wrapper">
+              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、收入类型、支付方式、备注" oninput="renderFinanceRevenueReport()">
+            </div>
+            <div id="financeRevenueTypeFilterHost"></div>
+            <div id="financeRevenuePayMethodFilterHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueFromHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="renderCoachOpsRevenueReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceRevenueReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
           </div>
         </div>
         <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">支付日期</th><th style="width:120px">学员</th><th style="width:170px">售卖课包</th><th style="width:130px">课程产品</th><th style="width:96px">主归属教练</th><th style="width:90px">实收</th><th style="width:88px">总课时</th><th style="width:88px">已消</th><th style="width:88px">剩余</th><th style="width:180px">有效期</th><th style="width:88px">支付方式</th><th style="width:72px">状态</th><th style="width:220px">备注</th><th class="tms-sticky-r" style="width:110px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachOpsRevenueTbody"></tbody></table></div></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div></div>
       </div>
-      <div id="financeConsumePanel" style="display:none">
+      <div id="financeRecognizedPanel" style="display:none">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索学员、课包、教练、原因" oninput="renderCoachOpsConsumeReport()">
+              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="renderFinanceConsumeReport()">
             </div>
             <div class="finance-date-host" id="coachOpsConsumeFromHost"></div>
             <div class="finance-date-host" id="coachOpsConsumeToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="renderCoachOpsConsumeReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceConsumeReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsConsumeCsv()">导出</button>
           </div>
         </div>
         <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">流水时间</th><th style="width:70px">类型</th><th style="width:120px">学员</th><th style="width:170px">课包</th><th style="width:88px">课时变动</th><th style="width:120px">排课时间</th><th style="width:90px">教练</th><th style="width:88px">课程类型</th><th style="width:160px">原因</th><th style="width:220px">备注</th><th style="width:88px">操作人</th><th class="tms-sticky-r" style="width:100px;padding-right:20px;text-align:right">追溯</th></tr></thead><tbody id="coachOpsConsumeTbody"></tbody></table></div></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div></div>
       </div>
       <div id="financeSettlementPanel" style="display:none">
-        <div class="tms-audit-note">教练结算用于处理迟到承担场地费，后续会并入月度结算、已结算锁定和导出结算单。</div>
+        <div class="tms-audit-note">教练结算这一期只看两件事：已完成课时数、迟到承担场地费。</div>
         <div class="tms-toolbar">
-          <div class="tms-filters"></div>
+          <div class="tms-filters">
+            <div class="tms-form-item" style="min-width:180px;margin:0">
+              <label class="tms-form-label" style="margin-bottom:6px">结算月份</label>
+              <input class="finput tms-form-control" id="financeSettlementMonth" type="month" onchange="renderFinanceSettlementSummary()">
+            </div>
+          </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="openCoachLateSettlementModal()">查看迟到月结</button>
           </div>
         </div>
         <div class="tms-stats-row" id="financeSettlementStats"></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:140px;padding-left:20px">教练</th><th style="width:120px">校区</th><th style="width:120px">已完成课时数</th><th style="width:120px">迟到记录</th><th style="width:140px">承担场地费</th></tr></thead><tbody id="financeSettlementTbody"></tbody></table></div></div>
       </div>
     </div>
     <div class="page-section" id="page-matches">
+      <div class="tms-page-head">
+        <div class="tms-page-head-title">约球管理</div>
+        <div class="tms-page-head-desc">这里只看球局、订场、AA 收款和日志，不单独再堆一排财务卡片。</div>
+      </div>
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -282,23 +317,13 @@
             </svg>
             <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索标题、场馆、报名人" oninput="renderMatches()">
           </div>
-          <select class="finput tms-form-control" id="matchStatusFilter" onchange="renderMatches()" style="width:150px">
-            <option value="">全部状态</option>
-            <option value="open">招募中</option>
-            <option value="full">已满员</option>
-            <option value="booked">已订场</option>
-            <option value="attendance_pending">待确认到场</option>
-            <option value="fee_pending">待确认费用</option>
-            <option value="settled">已结清</option>
-            <option value="cancelled">已取消</option>
-          </select>
+          <div id="matchStatusFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-ghost" onclick="loadMatches(true)">刷新</button>
         </div>
       </div>
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">球局</th><th style="width:150px">时间</th><th style="width:160px">场地</th><th style="width:90px">人数</th><th style="width:100px">状态</th><th style="width:120px">预计费用</th><th style="width:120px">最终费用</th><th style="width:240px">报名名单</th><th class="tms-sticky-r" style="width:220px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="matchTbody"></tbody></table></div></div>
-      <div class="tms-stats-row" id="matchFinanceStats"></div>
     </div>
     <!-- 教练管理 -->
     <div class="page-section" id="page-coaches">
