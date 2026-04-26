@@ -2008,7 +2008,18 @@ function buildFinanceAudit(rows=[],overview=null){
     toCampus:String(row?.campusName||'').trim()||'—',
     reason:String(row?.campusResolutionReason||'').trim()||'按文本线索自动纠偏'
   }));
+  const blockingCount=details.filter(item=>String(item?.level||'')==='P0'&&Number(item?.count||0)>0).length;
+  const warningCount=details.filter(item=>String(item?.level||'')==='P1'&&Number(item?.count||0)>0).length;
+  const pendingCount=actionItems.length;
+  const fixedCount=fixedItems.length;
+  const status=blockingCount>0?'blocked':warningCount>0||pendingCount>0?'warning':'ok';
   return {
+    generatedAt:new Date().toISOString(),
+    status,
+    blockingCount,
+    warningCount,
+    pendingCount,
+    fixedCount,
     missingCampusCount:missingCampusRows.length,
     unknownBusinessCount:unknownBusinessRows.length,
     unknownActionCount:unknownActionRows.length,

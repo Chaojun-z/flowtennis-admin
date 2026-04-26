@@ -92,6 +92,12 @@ assert.strictEqual(overview.all.recognized, 1700, 'finance overview should aggre
 assert.strictEqual(overview.campuses.length, 3, 'finance overview should keep campus-level buckets after explicit external campus normalization');
 assert.strictEqual(overview.campuses[0].campusName, '朝珺私教', 'finance overview should expose campus names in the summary');
 assert.strictEqual(audit.missingCampusCount, 0, 'finance audit should report zero missing campus rows for normalized fixtures');
+assert.ok(audit.generatedAt, 'finance audit should expose snapshot generation time');
+assert.strictEqual(audit.status, 'blocked', 'finance audit should expose a machine-readable summary status');
+assert.strictEqual(audit.blockingCount, 2, 'finance audit should count blocking anomalies');
+assert.strictEqual(audit.warningCount, 2, 'finance audit should count warning anomalies');
+assert.strictEqual(audit.pendingCount, 2, 'finance audit should count pending actionable items');
+assert.strictEqual(audit.fixedCount, 2, 'finance audit should count auto-fixed items');
 assert.strictEqual(audit.cashGap, 0, 'finance audit should keep total cash aligned with campus buckets');
 assert.strictEqual(audit.recognizedGap, 0, 'finance audit should keep total recognized revenue aligned with campus buckets');
 assert.strictEqual(audit.importMissingDateCount, 1, 'finance audit should flag historical import rows missing business date');
