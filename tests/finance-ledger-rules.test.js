@@ -7,6 +7,7 @@ const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pa
 assert.match(source, /function financeCampusNameFromTextClues\(/, 'finance ledger should normalize campus names from free-text clues');
 assert.match(source, /function financeRevenueRowsFromLedger\(/, 'finance revenue report should support a financial-ledger-first source');
 assert.match(source, /function financeConsumeRowsFromLedger\(/, 'finance recognized report should support a financial-ledger-first source');
+assert.match(source, /function financeLessonDeferredRows\(\)\{[\s\S]*purchaseEntitlement\(purchase\.id\)/, 'lesson deferred report should still compute from purchases and entitlements instead of depending on revenue rows');
 assert.match(source, /if\(Array\.isArray\(financialLedger\)&&financialLedger\.length\)return financeRevenueRowsFromLedger\(\);/, 'finance revenue report should prefer financialLedger before legacy stitched sources');
 assert.match(source, /if\(Array\.isArray\(financialLedger\)&&financialLedger\.length\)\{[\s\S]*return financeConsumeRowsFromLedger\(\)\.filter/, 'finance recognized report should prefer financialLedger before legacy entitlement stitching');
 assert.match(source, /purchase\.saleCampusId\|\|entitlementCampus\|\|purchase\.campus\|\|studentCampus/, 'course income campus should prefer saleCampusId before old fallback fields');

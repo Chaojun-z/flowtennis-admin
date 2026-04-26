@@ -731,15 +731,25 @@ function financeStoredValueRows(){
   });
 }
 function financeLessonDeferredRows(){
-  return financeRevenueRows().filter(row=>Number(row.remainingLessons)>0&&Number(row.totalLessons)>0&&Number(row.actualAmount)>0).map(row=>({
-    id:row.id,
-    customer:row.studentName||'—',
-    campusName:row.campusName,
-    deferredType:'课包待确认',
-    deferredAmount:Math.round((Number(row.actualAmount)||0)*(Number(row.remainingLessons)||0)/Math.max(1,Number(row.totalLessons)||1)*100)/100,
-    source:row.incomeType||'课包购买',
-    notes:row.relatedDocument
-  }));
+  return purchases.map(purchase=>{
+    const entitlement=purchaseEntitlement(purchase.id);
+    if(!entitlement)return null;
+    const totalLessons=Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0;
+    const remainingLessons=Number(entitlement.remainingLessons)||0;
+    const actualAmount=Number(purchase.amountPaid)||0;
+    if(totalLessons<=0||remainingLessons<=0||actualAmount<=0)return null;
+    const campusName=financeCampusNameForPurchase(purchase,entitlement);
+    if(!financeMatchesCampusName(campusName))return null;
+    return {
+      id:purchase.id,
+      customer:purchase.studentName||'—',
+      campusName,
+      deferredType:'课包待确认',
+      deferredAmount:Math.round(actualAmount*remainingLessons/Math.max(1,totalLessons)*100)/100,
+      source:purchase.packageName||purchase.productName||'课包购买',
+      notes:`购买记录 ${purchase.id}`
+    };
+  }).filter(Boolean);
 }
 function financePrepaidRows(){
   const rows=[...financeLessonDeferredRows(),...financeStoredValueRows()];
