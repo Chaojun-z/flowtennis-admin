@@ -198,41 +198,43 @@
         </view>
       </view>
 
-      <scroll-view scroll-x scroll-y class="timetable-scroll" scroll-top="{{timetableScrollTop}}" scroll-left="{{timetableScrollLeft}}" enhanced show-scrollbar="{{false}}">
-        <view class="timetable-panel">
-          <view class="tt-header">
-            <view class="tt-time-corner"></view>
-            <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-head {{item.headClass}}">
-              <text class="tt-day-name">{{item.name}}</text>
-              <text class="tt-day-date {{item.isToday ? 'tt-day-date-dot' : ''}}">{{item.displayDate}}</text>
-            </view>
-          </view>
-
-          <view class="tt-body">
-            <view class="tt-time-axis">
-              <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-hour-cell"><text>{{item}}</text></view>
-              <view wx:if="{{isCurrentWeek}}" class="tt-now-label" style="{{timetableNowLineStyle}}"><text>{{currentTimeText}}</text></view>
+      <view class="timetable-shell">
+        <scroll-view scroll-x scroll-y class="timetable-scroll" scroll-top="{{timetableScrollTop}}" scroll-left="{{timetableScrollLeft}}" enhanced show-scrollbar="{{false}}">
+          <view class="timetable-panel">
+            <view class="tt-header">
+              <view class="tt-time-corner"></view>
+              <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-head {{item.headClass}}">
+                <text class="tt-day-name">{{item.name}}</text>
+                <text class="tt-day-date {{item.isToday ? 'tt-day-date-dot' : ''}}">{{item.displayDate}}</text>
+              </view>
             </view>
 
-            <view class="tt-day-columns">
-              <view wx:if="{{isCurrentWeek}}" class="tt-now-line" style="{{timetableNowLineStyle}}"></view>
-              <view wx:if="{{isCurrentWeek}}" class="tt-now-line-solid" style="{{timetableNowSolidLineStyle}}"></view>
-              <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-column {{item.columnClass}}">
-                <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
-                <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
-                <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course {{course.accentClass}}" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
-                  <view class="tt-course-top"><text class="tt-course-time">{{course.timeText}}</text><text class="tt-course-type">{{course.courseTagText}}</text></view>
-                  <view class="tt-course-name-row">
-                    <text class="tt-course-name">{{course.student}}</text>
-                    <text wx:if="{{course.todoLabel}}" class="tt-course-status">{{course.todoLabel}}</text>
+            <view class="tt-body">
+              <view class="tt-time-axis">
+                <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-hour-cell"><text>{{item}}</text></view>
+                <view wx:if="{{isCurrentWeek}}" class="tt-now-label" style="{{timetableNowLineStyle}}"><text>{{currentTimeText}}</text></view>
+              </view>
+
+              <view class="tt-day-columns">
+                <view wx:if="{{isCurrentWeek}}" class="tt-now-line" style="{{timetableNowLineStyle}}"></view>
+                <view wx:if="{{isCurrentWeek}}" class="tt-now-line-solid" style="{{timetableNowSolidLineStyle}}"></view>
+                <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-column {{item.columnClass}}">
+                  <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
+                  <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
+                  <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course {{course.accentClass}}" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
+                    <view class="tt-course-top"><text class="tt-course-time">{{course.timeText}}</text><text class="tt-course-type">{{course.courseTagText}}</text></view>
+                    <view class="tt-course-name-row">
+                      <text class="tt-course-name">{{course.student}}</text>
+                      <text wx:if="{{course.todoLabel}}" class="tt-course-status">{{course.todoLabel}}</text>
+                    </view>
+                    <view class="tt-course-meta">{{course.loc}}</view>
                   </view>
-                  <view class="tt-course-meta">{{course.loc}}</view>
                 </view>
               </view>
             </view>
           </view>
-        </view>
-      </scroll-view>
+        </scroll-view>
+      </view>
     </view>
 
     <scroll-view wx:if="{{isStudents}}" scroll-y class="page-scroll page-bg">
