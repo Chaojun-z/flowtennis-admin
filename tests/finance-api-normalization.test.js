@@ -62,5 +62,7 @@ assert.strictEqual(overview.campuses[0].campusName, '朝珺私教', 'finance ove
 assert.strictEqual(audit.missingCampusCount, 0, 'finance audit should report zero missing campus rows for normalized fixtures');
 assert.strictEqual(audit.cashGap, 0, 'finance audit should keep total cash aligned with campus buckets');
 assert.strictEqual(audit.recognizedGap, 0, 'finance audit should keep total recognized revenue aligned with campus buckets');
+assert.strictEqual(audit.details.length, 6, 'finance audit should expose a fixed anomaly detail checklist');
+assert.strictEqual(audit.details[0].type, '缺校区', 'finance audit detail should include missing campus checks');
 
 console.log('finance api normalization tests passed');

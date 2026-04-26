@@ -1921,13 +1921,25 @@ function buildFinanceAudit(rows=[],overview=null){
   const campusCashTotal=(overviewData?.campuses||[]).reduce((sum,row)=>sum+(Number(row?.cash)||0),0);
   const campusRecognizedTotal=(overviewData?.campuses||[]).reduce((sum,row)=>sum+(Number(row?.recognized)||0),0);
   const campusDeferredTotal=(overviewData?.campuses||[]).reduce((sum,row)=>sum+(Number(row?.deferred)||0),0);
+  const cashGap=Math.round(((Number(overviewData?.all?.cash)||0)-campusCashTotal)*100)/100;
+  const recognizedGap=Math.round(((Number(overviewData?.all?.recognized)||0)-campusRecognizedTotal)*100)/100;
+  const deferredGap=Math.round(((Number(overviewData?.all?.deferred)||0)-campusDeferredTotal)*100)/100;
+  const details=[
+    {id:'missing-campus',level:missingCampusRows.length?'P0':'OK',type:'缺校区',count:missingCampusRows.length,amount:0,notes:'正式账缺校区，不能用于经营归属'},
+    {id:'unknown-business',level:unknownBusinessRows.length?'P0':'OK',type:'未识别业务',count:unknownBusinessRows.length,amount:0,notes:'业务类型落到“其他”，需要补枚举'},
+    {id:'unknown-action',level:unknownActionRows.length?'P0':'OK',type:'未识别动作',count:unknownActionRows.length,amount:0,notes:'动作落到“记录”，需要补协议'},
+    {id:'cash-gap',level:cashGap?'P0':'OK',type:'实收汇总差额',count:cashGap?1:0,amount:cashGap,notes:'总实收与分校区汇总不一致'},
+    {id:'recognized-gap',level:recognizedGap?'P0':'OK',type:'已入账汇总差额',count:recognizedGap?1:0,amount:recognizedGap,notes:'总已入账与分校区汇总不一致'},
+    {id:'deferred-gap',level:deferredGap?'P0':'OK',type:'未入账汇总差额',count:deferredGap?1:0,amount:deferredGap,notes:'总未入账与分校区汇总不一致'}
+  ];
   return {
     missingCampusCount:missingCampusRows.length,
     unknownBusinessCount:unknownBusinessRows.length,
     unknownActionCount:unknownActionRows.length,
-    cashGap:Math.round(((Number(overviewData?.all?.cash)||0)-campusCashTotal)*100)/100,
-    recognizedGap:Math.round(((Number(overviewData?.all?.recognized)||0)-campusRecognizedTotal)*100)/100,
-    deferredGap:Math.round(((Number(overviewData?.all?.deferred)||0)-campusDeferredTotal)*100)/100
+    cashGap,
+    recognizedGap,
+    deferredGap,
+    details
   };
 }
 function scheduleInitInBackground(){

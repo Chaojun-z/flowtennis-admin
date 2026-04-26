@@ -14,6 +14,8 @@ assert.match(source, /if\(Array\.isArray\(financeRows\)&&financeRows\.length\)\{
 assert.match(source, /return loadedDatasets\.has\('financeRows'\)\|\|loadedDatasets\.has\('financialLedger'\)\|\|loadedDatasets\.has\('financePage'\);/, 'finance center loading state should recognize normalized finance rows');
 assert.match(source, /const overviewFromApi=campusName[\s\S]*: financeOverviewData\?\.all;/, 'finance overview cards should prefer the backend normalized overview summary');
 assert.match(source, /const audit=financeAuditData\|\|\{\};[\s\S]*缺校区记录[\s\S]*未识别业务[\s\S]*总实收-分校区差额/, 'finance overview should surface audit summary cards for missing campus and aggregation gaps');
+assert.match(source, /function renderFinanceAuditTable\(/, 'finance page should render audit detail rows from backend audit payload');
+assert.match(source, /financeAuditTbody/, 'finance ledger tab should show an audit detail table');
 assert.match(source, /purchase\.saleCampusId\|\|entitlementCampus\|\|purchase\.campus\|\|studentCampus/, 'course income campus should prefer saleCampusId before old fallback fields');
 assert.match(source, /if\(actionType==='核销'\)return '已入账';/, 'finance ledger should treat write-off rows as recognized revenue actions');
 assert.match(source, /if\(actionType==='留痕'\)return '记录';/, 'finance ledger should preserve trace-only rows as non-revenue records');
