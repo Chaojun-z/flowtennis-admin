@@ -12,6 +12,7 @@ assert.match(source, /function financeLessonDeferredRows\(\)\{[\s\S]*purchaseEnt
 assert.match(source, /if\(Array\.isArray\(financeRows\)&&financeRows\.length\)return financeRevenueRowsFromLedger\(\);/, 'finance revenue report should prefer normalized financeRows before older stitched sources');
 assert.match(source, /if\(Array\.isArray\(financeRows\)&&financeRows\.length\)\{[\s\S]*return financeConsumeRowsFromLedger\(\)\.filter/, 'finance recognized report should prefer normalized financeRows before older entitlement stitching');
 assert.match(source, /return loadedDatasets\.has\('financeRows'\)\|\|loadedDatasets\.has\('financialLedger'\)\|\|loadedDatasets\.has\('financePage'\);/, 'finance center loading state should recognize normalized finance rows');
+assert.match(source, /const overviewFromApi=campusName[\s\S]*: financeOverviewData\?\.all;/, 'finance overview cards should prefer the backend normalized overview summary');
 assert.match(source, /purchase\.saleCampusId\|\|entitlementCampus\|\|purchase\.campus\|\|studentCampus/, 'course income campus should prefer saleCampusId before old fallback fields');
 assert.match(source, /if\(actionType==='核销'\)return '已入账';/, 'finance ledger should treat write-off rows as recognized revenue actions');
 assert.match(source, /if\(actionType==='留痕'\)return '记录';/, 'finance ledger should preserve trace-only rows as non-revenue records');

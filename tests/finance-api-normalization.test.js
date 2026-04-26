@@ -45,6 +45,7 @@ const rows = api.buildNormalizedFinanceRows({
     }
   ]
 });
+const overview = api.buildFinanceOverview(rows);
 
 assert.strictEqual(rows.length, 2, 'finance normalization should keep every active ledger row');
 assert.strictEqual(rows[0].campusName, '朝珺私教', 'finance normalization should prefer explicit ledger campus');
@@ -53,5 +54,9 @@ assert.strictEqual(rows[0].recognizedRevenueDelta, 1200, 'finance normalization 
 assert.strictEqual(rows[1].campusName, '顺义马坡', 'match-court-finance rows should fall back to mabao campus');
 assert.strictEqual(rows[1].actionType, '记录', 'trace rows should stay as non-revenue records');
 assert.strictEqual(rows[1].sourceDocument, '账本记录 match-1', 'finance normalization should emit a readable source document');
+assert.strictEqual(overview.all.cash, 200, 'finance overview should aggregate total cash from normalized rows');
+assert.strictEqual(overview.all.recognized, 1200, 'finance overview should aggregate total recognized revenue from normalized rows');
+assert.strictEqual(overview.campuses.length, 2, 'finance overview should keep campus-level buckets');
+assert.strictEqual(overview.campuses[0].campusName, '朝珺私教', 'finance overview should expose campus names in the summary');
 
 console.log('finance api normalization tests passed');

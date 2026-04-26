@@ -5,7 +5,7 @@ function syncViewportMode(){
   document.body.classList.toggle('admin-mobile',!!(!isCoach&&isMobile&&currentUser));
 }
 
-let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],financeRows=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
+let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],financeRows=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[],financeOverviewData=null;
 window.coachWorkbenchStats=window.coachWorkbenchStats||{};
 let adminUsersLoaded=false;
 let modalCleanupTimer=null;
@@ -255,6 +255,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('financialLedger',data.financialLedger||[]);
       setDatasetValue('financeRows',data.financeRows||[]);
+      financeOverviewData=data.financeOverview||null;
       setDatasetValue('coaches',data.coaches||[]);
       setDatasetValue('products',data.products||[]);
       setDatasetValue('purchases',data.purchases||[]);
@@ -333,7 +334,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
   renderAll();
 }
 function clearLoadedData(){
-  courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];financeRows=[];
+  courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];financeRows=[];financeOverviewData=null;
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   loadedDatasets=new Set();
@@ -362,6 +363,7 @@ function applyLoadedData(data){
   entitlementLedger=Array.isArray(data?.entitlementLedger)?data.entitlementLedger:[];
   financialLedger=Array.isArray(data?.financialLedger)?data.financialLedger:[];
   financeRows=Array.isArray(data?.financeRows)?data.financeRows:[];
+  financeOverviewData=data?.financeOverview||null;
   membershipPlans=Array.isArray(data?.membershipPlans)?data.membershipPlans:[];
   membershipAccounts=Array.isArray(data?.membershipAccounts)?data.membershipAccounts:[];
   membershipOrders=Array.isArray(data?.membershipOrders)?data.membershipOrders:[];
