@@ -20,6 +20,10 @@ assert.match(source,/function renderFinanceLedger\(/,'finance center should rend
 assert.match(source,/function renderFinanceRevenueReport\(/,'finance center should render revenue detail table');
 assert.match(source,/function renderFinanceConsumeReport\(/,'finance center should render consume detail table');
 assert.match(source,/function renderFinanceSettlementSummary\(/,'finance center should render settlement summary');
+assert.match(source,/function financeCampusNameFromTextClues\(/,'finance center should normalize campus names from historical text clues');
+assert.match(source,/purchase\.saleCampusId\|\|entitlementCampus\|\|purchase\.campus\|\|studentCampus/,'course income campus should prefer saleCampusId before old fallback fields');
+assert.match(source,/if\(actionType==='核销'\)return '已入账';/,'finance ledger should treat write-off rows as recognized revenue actions');
+assert.match(source,/if\(userId==='match-court-finance'\)return '顺义马坡';/,'finance ledger should pin match-court-finance rows to mabao campus');
 assert.match(source,/id="financeLedgerBusinessTypeFilterHost"/,'ledger should expose business type filter host');
 assert.match(source,/id="financeLedgerActionFilterHost"/,'ledger should expose action filter host');
 assert.match(source,/id="financeLedgerPayMethodFilterHost"/,'ledger should expose pay method filter host');

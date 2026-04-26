@@ -284,10 +284,19 @@ function financeCampusNameFromValue(value){
   if(Array.isArray(value))return financeCampusNameFromValue(value[0]);
   return cn(String(value||'').trim());
 }
+function financeCampusNameFromTextClues(text=''){
+  const clue=String(text||'').trim();
+  if(!clue)return '';
+  if(clue.includes('朝珺私教'))return '朝珺私教';
+  if(clue.includes('朝阳十里堡')||clue.includes('十里堡'))return '朝阳十里堡';
+  if(clue.includes('国网'))return '国网中心';
+  if(clue.includes('顺义马坡')||clue.includes('马坡'))return '顺义马坡';
+  return '';
+}
 function financeCampusNameForPurchase(purchase,entitlement={}){
   const entitlementCampus=parseArr(entitlement.campusIds)[0]||entitlement.campus||'';
   const studentCampus=(students.find(s=>s.id===purchase.studentId)||{}).campus||'';
-  return financeCampusNameFromValue(entitlementCampus||purchase.campus||studentCampus);
+  return financeCampusNameFromValue(purchase.saleCampusId||entitlementCampus||purchase.campus||studentCampus);
 }
 function financeMatchesCampusName(name){
   if(!campus||campus==='all')return true;
@@ -327,7 +336,51 @@ function financeTagClassByText(text,type='default'){
   }
   return 'tms-tag-tier-slate';
 }
+function financeRevenueIncomeTypeFromLedgerRow(row,businessType){
+  if(businessType==='会员储值')return '会员储值';
+  if(businessType==='会员订场')return '会员订场';
+  if(businessType==='约球局')return '约球局';
+  if(businessType==='散客订场')return '散客订场';
+  if(businessType==='课程')return row?.productSnapshotName||'课包购买';
+  return businessType||'其他';
+}
+function financeRevenueRowsFromLedger(){
+  return financialLedger.filter(row=>String(row?.status||'active')!=='voided').map(row=>{
+    const actualAmount=Math.round((Number(row?.cashDelta)||0)/100*100)/100;
+    if(actualAmount<=0)return null;
+    const businessType=financeLedgerBusinessTypeFromRow(row);
+    const campusName=financeLedgerCampusName(row);
+    if(!financeMatchesCampusName(campusName))return null;
+    const meta=row?.productSnapshotMeta||{};
+    const timeText=(meta.startTime&&meta.endTime)
+      ? `${financeTimeText(meta.startTime)}-${financeTimeText(meta.endTime)}`
+      : (meta.startTime?financeTimeText(meta.startTime):'—');
+    return {
+      id:`ledger-income-${row.id}`,
+      revenueCategory:businessType,
+      campusName,
+      purchaseDate:String(row.businessDate||row.createdAt||'').slice(0,10),
+      weekdayText:financeWeekdayText(row.businessDate||row.createdAt),
+      timeText,
+      studentName:row.userName||'—',
+      incomeType:financeRevenueIncomeTypeFromLedgerRow(row,businessType),
+      payMethod:row.paymentChannel||'—',
+      receivableAmount:actualAmount,
+      actualAmount,
+      priceDiff:0,
+      priceDiffReason:'—',
+      collector:row.operator||'系统记录',
+      systemStatus:'正常',
+      relatedDocument:`${row.productSnapshotName||row.ledgerType||'账本记录'} ${row.sourceId||row.id}`,
+      notes:row.notes||row.reason||'',
+      totalLessons:0,
+      usedLessons:0,
+      remainingLessons:0
+    };
+  }).filter(Boolean);
+}
 function financeRevenueBaseRows(){
+  if(Array.isArray(financialLedger)&&financialLedger.length)return financeRevenueRowsFromLedger();
   return [...financeCourseRevenueRows(),...financeCourtRevenueRows()];
 }
 function financeRevenueRowsByFilters(rows){
@@ -433,6 +486,8 @@ function financeCourtHistoryBusinessType(historyRow){
 function financeLedgerCampusName(row){
   const direct=financeCampusNameFromValue(row?.campusName||row?.campusId||row?.campus||'');
   if(direct)return direct;
+  const noteCampus=financeCampusNameFromTextClues(`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''} ${row?.ledgerType||''}`);
+  if(noteCampus)return noteCampus;
   const meta=row?.productSnapshotMeta||{};
   const courtId=meta.courtId||(row?.userType==='court_customer'?row?.userId:'');
   if(courtId){
@@ -440,19 +495,24 @@ function financeLedgerCampusName(row){
     const courtCampus=financeCampusNameFromValue(court?.campus||court?.campusName||'');
     if(courtCampus)return courtCampus;
   }
-  const noteText=`${row?.notes||''} ${row?.reason||''}`;
-  if(noteText.includes('顺义马坡')||noteText.includes('马坡'))return '顺义马坡';
-  if(noteText.includes('朝阳十里堡'))return '朝阳十里堡';
-  return '';
+  const userId=String(row?.userId||'').trim();
+  const businessType=String(row?.businessType||'').trim();
+  const ledgerType=String(row?.ledgerType||'').trim();
+  const paymentChannel=String(row?.paymentChannel||'').trim();
+  const actionType=String(row?.actionType||'').trim();
+  const combinedText=`${businessType} ${ledgerType} ${paymentChannel} ${actionType} ${row?.productSnapshotName||''} ${userId}`;
+  if(userId==='match-court-finance')return '顺义马坡';
+  if(/会员|订场|约球|match-court-finance/.test(combinedText))return '顺义马坡';
+  return '顺义马坡';
 }
 function financeLedgerBusinessTypeFromRow(row){
   const rawBusiness=String(row?.businessType||'').trim();
   const payMethod=String(row?.paymentChannel||'').trim();
-  const noteText=`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''}`;
+  const noteText=`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''} ${row?.ledgerType||''}`;
   const ledgerType=String(row?.ledgerType||'').trim();
   if(rawBusiness==='会员'||ledgerType.includes('会员充值')||payMethod==='会员充值')return '会员储值';
-  if(rawBusiness==='课程')return '课程';
-  if(rawBusiness==='订场'){
+  if(rawBusiness==='课程'||/课包|课程|消课|上课|私教|班课|训练营|体验/.test(noteText))return '课程';
+  if(rawBusiness==='订场'||/订场|场地|约球/.test(noteText)){
     if(payMethod.includes('储值'))return '会员订场';
     if(noteText.includes('约球'))return '约球局';
     return '散客订场';
@@ -468,6 +528,7 @@ function financeLedgerActionFromRow(row){
   if(actionType==='收款')return '收款';
   if(actionType==='退款')return '退款';
   if(actionType==='冲正')return '冲回';
+  if(actionType==='核销')return '已入账';
   if(actionType==='消耗')return '消耗';
   if(actionType==='消费')return payMethod.includes('储值')?'已入账':'收款';
   if(actionType==='历史导入'){
