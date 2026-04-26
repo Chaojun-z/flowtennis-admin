@@ -1788,6 +1788,101 @@ async function listCampusesWithDefaults(){
   const rows=await getCachedScan(T_CAMPUSES).catch(()=>[]);
   return rows.length?rows:DEFAULT_CAMPUSES;
 }
+function financeCampusNameForValue(value,campuses=[]){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  const hit=(campuses||[]).find(item=>String(item.id||'')===raw||String(item.code||'')===raw||String(item.name||'')===raw);
+  if(hit)return String(hit.name||hit.code||hit.id||'').trim();
+  return raw;
+}
+function financeCampusNameFromTextClues(text=''){
+  const clue=String(text||'').trim();
+  if(!clue)return '';
+  if(clue.includes('朝珺私教'))return '朝珺私教';
+  if(clue.includes('朝阳十里堡')||clue.includes('十里堡'))return '朝阳十里堡';
+  if(clue.includes('国网'))return '国网中心';
+  if(clue.includes('顺义马坡')||clue.includes('马坡'))return '顺义马坡';
+  return '';
+}
+function financeLedgerCampusName(row,campuses=[],courts=[]){
+  const direct=financeCampusNameForValue(row?.campusName||row?.campusId||row?.campus||'',campuses);
+  if(direct)return direct;
+  const textCampus=financeCampusNameFromTextClues(`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''} ${row?.ledgerType||''}`);
+  if(textCampus)return textCampus;
+  const meta=row?.productSnapshotMeta||{};
+  const courtId=meta.courtId||(row?.userType==='court_customer'?row?.userId:'');
+  if(courtId){
+    const court=(courts||[]).find(item=>String(item.id||'')===String(courtId));
+    const courtCampus=financeCampusNameForValue(court?.campus||court?.campusName||'',campuses);
+    if(courtCampus)return courtCampus;
+  }
+  if(String(row?.userId||'').trim()===MATCH_COURT_FINANCE_ACCOUNT_ID)return '顺义马坡';
+  return '顺义马坡';
+}
+function financeLedgerBusinessType(row){
+  const rawBusiness=String(row?.businessType||'').trim();
+  const payMethod=String(row?.paymentChannel||'').trim();
+  const noteText=`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''} ${row?.ledgerType||''}`;
+  const ledgerType=String(row?.ledgerType||'').trim();
+  if(rawBusiness==='会员'||ledgerType.includes('会员充值')||payMethod==='会员充值')return '会员储值';
+  if(rawBusiness==='课程'||/课包|课程|消课|上课|私教|班课|训练营|体验/.test(noteText))return '课程';
+  if(rawBusiness==='订场'||/订场|场地|约球/.test(noteText)){
+    if(payMethod.includes('储值'))return '会员订场';
+    if(noteText.includes('约球'))return '约球局';
+    return '散客订场';
+  }
+  return rawBusiness||'其他';
+}
+function financeLedgerActionType(row){
+  const actionType=String(row?.actionType||'').trim();
+  const payMethod=String(row?.paymentChannel||'').trim();
+  const cashDelta=Number(row?.cashDelta)||0;
+  const recognizedRevenueDelta=Number(row?.recognizedRevenueDelta)||0;
+  const deferredRevenueDelta=Number(row?.deferredRevenueDelta)||0;
+  if(actionType==='收款')return '收款';
+  if(actionType==='退款')return '退款';
+  if(actionType==='冲正')return '冲回';
+  if(actionType==='核销')return '已入账';
+  if(actionType==='消耗')return '消耗';
+  if(actionType==='留痕')return '记录';
+  if(actionType==='消费')return payMethod.includes('储值')?'已入账':'收款';
+  if(actionType==='历史导入'){
+    if(cashDelta>0)return '收款';
+    if(cashDelta===0&&recognizedRevenueDelta!==0&&deferredRevenueDelta!==0)return '已入账';
+  }
+  return '记录';
+}
+function buildNormalizedFinanceRows({financialLedger=[],campuses=[],courts=[]}={}){
+  return (financialLedger||[])
+    .filter(row=>String(row?.status||'active')!=='voided')
+    .map(row=>({
+      id:String(row.id||''),
+      businessDate:String(row.businessDate||row.createdAt||'').slice(0,10),
+      campusId:String(row.campusId||row.campus||row.campusName||'').trim(),
+      campusName:financeLedgerCampusName(row,campuses,courts),
+      customerId:String(row.userId||'').trim(),
+      customerName:String(row.userName||'').trim()||'—',
+      sourceType:String(row.ledgerType||'').trim()||'finance_ledger',
+      sourceId:String(row.sourceId||row.id||'').trim(),
+      sourceDocument:`${row.productSnapshotName||row.ledgerType||'账本记录'} ${row.sourceId||row.id}`,
+      businessType:financeLedgerBusinessType(row),
+      actionType:financeLedgerActionType(row),
+      cashDelta:Math.round((Number(row.cashDelta)||0))/100,
+      recognizedRevenueDelta:Math.round((Number(row.recognizedRevenueDelta)||0))/100,
+      deferredRevenueDelta:Math.round((Number(row.deferredRevenueDelta)||0))/100,
+      paymentChannel:String(row.paymentChannel||'').trim()||'—',
+      collector:String(row.operator||'').trim()||'系统记录',
+      notes:String(row.notes||row.reason||'').trim(),
+      purchaseId:String(row.purchaseId||'').trim(),
+      entitlementId:String(row.entitlementId||'').trim(),
+      scheduleId:String(row.scheduleId||'').trim(),
+      membershipOrderId:String(row.membershipOrderId||'').trim(),
+      membershipAccountId:String(row.membershipAccountId||'').trim(),
+      courtId:String((row.productSnapshotMeta||{}).courtId||'').trim(),
+      status:String(row.status||'active').trim()||'active',
+      systemStatus:String(row.scheduleId||row.entitlementId||row.purchaseId||row.sourceId?'已关联':'待补来源')
+    }));
+}
 function scheduleInitInBackground(){
   if(REQUIRED_ENV_VARS.some((k)=>!process.env[k]))return;
   if(inited||initPromise)return;
@@ -4720,7 +4815,8 @@ module.exports = async (req, res) => {
         getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[])
       ]);
-      return sendJson(res,{campuses,students,schedule,entitlements,entitlementLedger,financialLedger,coaches,products,purchases,packages,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents});
+      const financeRows=buildNormalizedFinanceRows({financialLedger,campuses,courts});
+      return sendJson(res,{campuses,students,schedule,entitlements,entitlementLedger,financialLedger,financeRows,coaches,products,purchases,packages,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -4883,6 +4979,7 @@ module.exports._test={
   buildMembershipAccountEventRecord,
   buildMembershipBenefitLedgerRecord,
   buildMembershipGrantLedgerRows,
+  buildNormalizedFinanceRows,
   allocateMembershipBenefitUsage,
   reconcileMembershipAccounts,
   mergeCourtRecords,
