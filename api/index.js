@@ -19,17 +19,20 @@ const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEE
 const DEFAULT_ADMIN_BOOTSTRAP_PASSWORD = process.env.DEFAULT_ADMIN_BOOTSTRAP_PASSWORD || '';
 const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
 const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
+const MATCH_MINIPROGRAM_APPID = process.env.MATCH_MINIPROGRAM_APPID || '';
+const MATCH_MINIPROGRAM_SECRET = process.env.MATCH_MINIPROGRAM_SECRET;
 const WECHAT_SCHEDULE_TEMPLATE_ID = process.env.WECHAT_SCHEDULE_TEMPLATE_ID;
 const WECHAT_COURSE_REMINDER_TEMPLATE_ID = process.env.WECHAT_COURSE_REMINDER_TEMPLATE_ID;
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
+const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -1106,9 +1109,9 @@ function extractWechatOpenId(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信登录失败：${msg}`);
 }
-async function fetchWechatSession(code){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
-  const url=buildWechatCode2SessionUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET,code);
+async function fetchWechatSession(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,errorText='缺少微信小程序密钥配置'}={}){
+  if(!appid||!secret)throw new Error(errorText);
+  const url=buildWechatCode2SessionUrl(appid,secret,code);
   const res=await fetch(url);
   const data=await res.json();
   return data;
@@ -1140,19 +1143,20 @@ function extractWechatAccessToken(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信 access_token 获取失败：${msg}`);
 }
-async function fetchWechatAccessToken(){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
+async function fetchWechatAccessToken({appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
+  if(!appid||!secret)throw new Error(errorText);
   const now=Date.now();
-  if(wechatAccessTokenCache&&wechatAccessTokenCache.expiresAt>now)return wechatAccessTokenCache.token;
-  const res=await fetch(buildWechatAccessTokenUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET));
+  const cached=wechatAccessTokenCache&&wechatAccessTokenCache[cacheKey];
+  if(cached&&cached.expiresAt>now)return cached.token;
+  const res=await fetch(buildWechatAccessTokenUrl(appid,secret));
   const data=await res.json();
   const token=extractWechatAccessToken(data);
   const ttlMs=Math.max(300000,((parseInt(data.expires_in)||7200)-300)*1000);
-  wechatAccessTokenCache={token,expiresAt:now+ttlMs};
+  wechatAccessTokenCache={...(wechatAccessTokenCache||{}),[cacheKey]:{token,expiresAt:now+ttlMs}};
   return token;
 }
-async function fetchWechatPhoneNumber(code){
-  const token=await fetchWechatAccessToken();
+async function fetchWechatPhoneNumber(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
+  const token=await fetchWechatAccessToken({appid,secret,cacheKey,errorText});
   const res=await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(token)}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -2060,6 +2064,30 @@ function assertMatchFeeSplitUpdateInput(input={}){
   const paidAmount=input.paidAmount==null?null:normalizeMoney(input.paidAmount);
   return {payStatus,paidAmount,note};
 }
+function defaultMatchSettings(){
+  return {
+    operatorWechatId:String(process.env.MATCH_OPERATOR_WECHAT_ID||'').trim(),
+    operatorPaymentQr:String(process.env.MATCH_OPERATOR_PAYMENT_QR||'').trim(),
+    creatorConfirmDeadlineHours:MATCH_CREATOR_CONFIRM_DEADLINE_HOURS
+  };
+}
+async function getMatchSettings(){
+  await mkTable(T_MATCH_SETTINGS);
+  const stored=await get(T_MATCH_SETTINGS,MATCH_SETTINGS_ROW_ID).catch(()=>null);
+  return {...defaultMatchSettings(),...(stored||{})};
+}
+async function saveMatchSettings(input={},operatorId=''){
+  const current=await getMatchSettings();
+  const next={
+    ...current,
+    operatorWechatId:String(input.operatorWechatId??current.operatorWechatId??'').trim(),
+    operatorPaymentQr:String(input.operatorPaymentQr??current.operatorPaymentQr??'').trim(),
+    updatedAt:new Date().toISOString(),
+    updatedBy:String(operatorId||'').trim()
+  };
+  await put(T_MATCH_SETTINGS,MATCH_SETTINGS_ROW_ID,next);
+  return next;
+}
 function resolveFinalAttendanceStatus(row){
   if(row?.creatorStatus==='attended'||row?.creatorstatus==='attended')return 'attended';
   if(row?.creatorStatus==='absent'||row?.creatorstatus==='absent')return 'absent';
@@ -2264,23 +2292,6 @@ async function adminHandleBookedWithdrawal(matchId,userId,operatorId,input={}){
     );
     await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'admin_user',operatorId,'booked_withdrawal',JSON.stringify(reg),JSON.stringify(withdrawal)]);
     return {success:true,financialResponsibility:withdrawal.financialResponsibility};
-  });
-}
-async function selfConfirmMatchAttendance(matchId,userId){
-  return withMatchSqlTransaction(async(client)=>{
-    const matchRes=await client.query('SELECT * FROM match_posts WHERE id=$1 FOR UPDATE',[matchId]);
-    const match=matchRes.rows[0];
-    if(!match)throw new Error('球局不存在');
-    const status=deriveMatchStatus(match);
-    if(!['booked','playing','attendance_pending'].includes(status))throw new Error('当前还不能确认到场');
-    if(dateMs(match.starttime||match.startTime)>Date.now())throw new Error('未到开始时间');
-    const reg=await client.query("SELECT id FROM match_registrations WHERE matchId=$1 AND userId=$2 AND registrationStatus='registered'",[matchId,userId]);
-    if(reg.rowCount<=0)throw new Error('未报名，不能确认到场');
-    await client.query(
-      "INSERT INTO match_attendance(id,matchId,userId,selfStatus,creatorStatus,finalStatus,updatedAt) VALUES($1,$2,$3,'attended','pending','pending',NOW()) ON CONFLICT(matchId,userId) DO UPDATE SET selfStatus='attended',updatedAt=NOW()",
-      [uuidv4(),matchId,userId]
-    );
-    return {success:true,selfStatus:'attended'};
   });
 }
 async function creatorConfirmMatchAttendance(matchId,creatorUserId,registrationId,finalStatus){
@@ -3970,10 +3981,10 @@ module.exports = async (req, res) => {
       const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});
       return sendJson(res,{token,user:payload});
     }
-    if(path==='/auth/wechat-mini-login'&&method==='POST'){
+  if(path==='/auth/wechat-mini-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code);
+      const session=await fetchWechatSession(code,{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,errorText:'缺少约球小程序密钥配置'});
       const openid=extractWechatOpenId(session);
       const unionid=session.unionid?String(session.unionid):'';
       const pool=getMatchSqlPool();
@@ -4057,14 +4068,13 @@ module.exports = async (req, res) => {
     if(path==='/match-profile/phone-code'&&method==='POST'){
       const matchUser=requireMatchUser(req);
       try{
-        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim());
+        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,cacheKey:'match',errorText:'缺少约球小程序密钥配置'});
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/match-attendance'&&method==='POST'){
-      const matchUser=requireMatchUser(req);
-      try{return sendJson(res,await selfConfirmMatchAttendance(body.matchId,matchUser.id));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
+    if(path==='/match-settings'&&method==='GET'){
+      requireMatchUser(req);
+      return sendJson(res,await getMatchSettings());
     }
     if(path==='/match-attendance/creator-confirm'&&method==='POST'){
       const matchUser=requireMatchUser(req);
@@ -4087,6 +4097,14 @@ module.exports = async (req, res) => {
     if(path==='/admin/matches'&&method==='GET'){
       requireAdminUser(user);
       return sendJson(res,{items:await listAdminMatches()});
+    }
+    if(path==='/admin/matches/settings'&&method==='GET'){
+      requireMatchAdminPermission(user,'match_ops');
+      return sendJson(res,await getMatchSettings());
+    }
+    if(path==='/admin/matches/settings'&&method==='POST'){
+      requireMatchAdminPermission(user,'match_ops');
+      return sendJson(res,await saveMatchSettings(body,user.id));
     }
     if(path==='/admin/matches/finance-daily'&&method==='GET'){
       requireMatchAdminPermission(user,'match_finance');
@@ -4962,6 +4980,8 @@ module.exports._test={
   ,assertMatchBookingInput
   ,assertBookedWithdrawalInput
   ,assertMatchFeeSplitUpdateInput
+  ,getMatchSettings
+  ,saveMatchSettings
   ,resolveFinalAttendanceStatus
   ,buildMatchFeeLedger
   ,creatorAttendanceDeadline
@@ -4975,7 +4995,6 @@ module.exports._test={
   ,adminBookMatch
   ,confirmMatchAttendance
   ,adminHandleBookedWithdrawal
-  ,selfConfirmMatchAttendance
   ,creatorConfirmMatchAttendance
   ,generateMatchFeeLedger
   ,markMatchFeeSplit
