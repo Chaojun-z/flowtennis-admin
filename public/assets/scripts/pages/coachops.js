@@ -45,6 +45,7 @@ function setFinancePanel(panel){
 }
 function renderFinanceCenter(){
   ensureCoachOpsReportDateControls();
+  syncFinanceLedgerLoadingState();
   setFinancePanel(financePanel);
 }
 let financePrepaidFilter='all';
@@ -358,6 +359,13 @@ function renderFinanceRevenueFilterChange(){
 function financeMoney(value){
   const num=Math.round((Number(value)||0)*100)/100;
   return `¥${fmt(num)}`;
+}
+function financeCardMoney(value){
+  return `¥${fmt(Math.round(Number(value)||0))}`;
+}
+function financeCardValue(mainValue,subValue=null){
+  if(subValue===null)return financeCardMoney(mainValue);
+  return `<span class="finance-main-number">${financeCardMoney(mainValue)}</span><span class="finance-split-sep">/</span><span class="finance-sub-number">${financeCardMoney(subValue)}</span>`;
 }
 function financeAmountText(value){
   const num=Math.round((Number(value)||0)*100)/100;
@@ -736,10 +744,22 @@ function financeLedgerRows(){
     return searchHit(q,row.customer,row.businessType,row.action,row.paymentChannel,row.sourceDocument,row.notes,row.campusName);
   }).sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||'')));
 }
+function financeLedgerDataReady(){
+  return loadedDatasets.has('financialLedger')||loadedDatasets.has('financePage');
+}
+function syncFinanceLedgerLoadingState(){
+  const loading=document.getElementById('financeLedgerLoading');
+  const ready=document.getElementById('financeLedgerReady');
+  const showLoading=financePanel==='ledger'&&!financeLedgerDataReady();
+  if(loading)loading.style.display=showLoading?'block':'none';
+  if(ready)ready.style.display=showLoading?'none':'';
+  return !showLoading;
+}
 function renderFinanceOverview(){
   const primaryHost=document.getElementById('financeOverviewPrimaryStats');
   const secondaryHost=document.getElementById('financeOverviewSecondaryStats');
   if(!primaryHost||!secondaryHost)return;
+  if(!syncFinanceLedgerLoadingState())return;
   const ledgerRows=financeLedgerRows();
   const cash=ledgerRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const recognized=ledgerRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
@@ -750,14 +770,14 @@ function renderFinanceOverview(){
   const storedValueConsumed=ledgerRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+Math.max(0,Number(row.recognizedRevenueDelta)||0),0);
   const bookingIncome=ledgerRows.filter(row=>['散客订场','约球局'].includes(row.businessType)&&row.action==='收款').reduce((sum,row)=>sum+Math.max(0,Number(row.cashDelta)||0),0);
   const bookingRecognized=ledgerRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+Math.max(0,Number(row.recognizedRevenueDelta)||0),0);
-  const renderStatCards=items=>items.map(item=>`<div class="tms-stat-card"><div class="tms-stat-label">${item.label}</div><div class="tms-stat-value">${item.value}</div></div>`).join('');
+  const renderStatCards=items=>items.map(item=>`<div class="tms-stat-card"><div class="tms-stat-label">${item.label}</div><div class="tms-stat-value${item.split?' finance-split-value':''}">${item.value}</div></div>`).join('');
   primaryHost.innerHTML=renderStatCards([
-    {label:'总收入（实收）',value:financeMoney(cash)},
-    {label:'总已入账',value:financeMoney(recognized)},
-    {label:'总未入账',value:financeMoney(deferred)},
-    {label:'课包收入 / 已入账',value:`${financeMoney(packageIncome)} / ${financeMoney(packageRecognized)}`},
-    {label:'会员储值收入 / 已消耗',value:`${financeMoney(storedValueIncome)} / ${financeMoney(storedValueConsumed)}`},
-    {label:'订场收入 / 已入账',value:`${financeMoney(bookingIncome)} / ${financeMoney(bookingRecognized)}`}
+    {label:'总收入（实收）',value:financeCardValue(cash)},
+    {label:'总已入账',value:financeCardValue(recognized)},
+    {label:'总未入账',value:financeCardValue(deferred)},
+    {label:'课包收入 / 已入账',value:financeCardValue(packageIncome,packageRecognized),split:true},
+    {label:'会员储值收入 / 已消耗',value:financeCardValue(storedValueIncome,storedValueConsumed),split:true},
+    {label:'订场收入 / 已入账',value:financeCardValue(bookingIncome,bookingRecognized),split:true}
   ]);
   secondaryHost.innerHTML='';
   secondaryHost.style.display='none';
@@ -784,6 +804,7 @@ function renderFinanceLedgerFilterChange(){
 function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');
   if(!body)return;
+  if(!syncFinanceLedgerLoadingState())return;
   const baseRows=financeLedgerBaseRows().filter(row=>coachOpsDateWithinRange(row.businessDate,document.getElementById('financeLedgerFrom')?.value||'',document.getElementById('financeLedgerTo')?.value||''));
   renderFinanceLedgerFilterDropdowns(baseRows);
   renderFinanceLedgerPageSizeFilter();

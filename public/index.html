@@ -20,8 +20,8 @@
   <div class="login-card">
     <div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">FlowTennis · 管理系统</div></div>
     <div class="login-err" id="loginErr"></div>
-    <label class="login-label">账号</label>
-    <input class="login-input" id="loginUser" placeholder="请输入账号" autocomplete="username">
+    <label class="login-label">账号ID</label>
+    <input class="login-input" id="loginUser" placeholder="请输入账号ID（不是姓名）" autocomplete="username">
     <label class="login-label">密码</label>
     <input class="login-input" id="loginPass" type="password" placeholder="请输入密码" autocomplete="current-password">
     <button class="login-btn" id="loginBtn" onclick="doLogin()">登 录</button>
@@ -228,25 +228,31 @@
         </div>
       </div>
       <div id="financeLedgerPanel">
-        <div class="tms-audit-note">先看总账和顶部汇总，知道这个校区当前收了多少钱、已经入账多少、还有多少没入账。</div>
-        <div class="tms-stats-row" id="financeOverviewPrimaryStats"></div>
-        <div class="tms-stats-row" id="financeOverviewSecondaryStats"></div>
-        <div class="tms-toolbar">
-          <div class="tms-filters">
-            <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索客户、业务类型、支付方式、单据" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
-            </div>
-            <div id="financeLedgerBusinessTypeFilterHost"></div>
-            <div id="financeLedgerActionFilterHost"></div>
-            <div id="financeLedgerPayMethodFilterHost"></div>
-            <div class="finance-date-host" id="financeLedgerFromHost"></div>
-            <div class="finance-date-host" id="financeLedgerToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceLedgerPage();renderFinanceLedger()">查询</button>
-          </div>
+        <div id="financeLedgerLoading" class="finance-loading-card" style="display:none">
+          <div class="finance-loading-title">总账加载中</div>
+          <div class="finance-loading-desc">先把这一页数据加载完整，再展示筛选和表格。</div>
         </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">业务日期</th><th style="width:120px">客户</th><th style="width:100px">校区</th><th style="width:120px">业务类型</th><th style="width:120px">动作</th><th style="width:100px">实收</th><th style="width:110px">已入账</th><th style="width:110px">未入账</th><th style="width:100px">支付方式</th><th style="width:150px">来源单据</th><th style="width:220px">备注</th></tr></thead><tbody id="financeLedgerTbody"></tbody></table></div>
-          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeLedgerPagerInfo">共 0 条</span><div id="financeLedgerPageSize"></div></div><div class="tms-page-numbers" id="financeLedgerPagerBtns"></div></div>
+        <div id="financeLedgerReady">
+          <div class="tms-audit-note">先看总账和顶部汇总，知道这个校区当前收了多少钱、已经入账多少、还有多少没入账。</div>
+          <div class="tms-stats-row finance-ledger-stats" id="financeOverviewPrimaryStats"></div>
+          <div class="tms-stats-row" id="financeOverviewSecondaryStats"></div>
+          <div class="tms-toolbar">
+            <div class="tms-filters">
+              <div class="tms-search-wrapper">
+                <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索客户、业务类型、支付方式、单据" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
+              </div>
+              <div id="financeLedgerBusinessTypeFilterHost"></div>
+              <div id="financeLedgerActionFilterHost"></div>
+              <div id="financeLedgerPayMethodFilterHost"></div>
+              <div class="finance-date-host" id="financeLedgerFromHost"></div>
+              <div class="finance-date-host" id="financeLedgerToHost"></div>
+              <button class="tms-btn tms-btn-ghost" onclick="resetFinanceLedgerPage();renderFinanceLedger()">查询</button>
+            </div>
+          </div>
+          <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">业务日期</th><th style="width:120px">客户</th><th style="width:100px">校区</th><th style="width:120px">业务类型</th><th style="width:120px">动作</th><th style="width:100px">实收</th><th style="width:110px">已入账</th><th style="width:110px">未入账</th><th style="width:100px">支付方式</th><th style="width:150px">来源单据</th><th style="width:220px">备注</th></tr></thead><tbody id="financeLedgerTbody"></tbody></table></div>
+            <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeLedgerPagerInfo">共 0 条</span><div id="financeLedgerPageSize"></div></div><div class="tms-page-numbers" id="financeLedgerPagerBtns"></div></div>
+          </div>
         </div>
       </div>
       <div id="financeRevenuePanel" style="display:none">
@@ -374,7 +380,11 @@
           <div id="courtOwnerFilter"></div>
           <button class="tms-btn tms-btn-ghost" onclick="exportCourtCSV()">导出</button>
           <div id="courtMoreActions"></div>
-          <button class="tms-btn tms-btn-danger" id="courtBatchDelBtn" onclick="batchDeleteCourts()" disabled style="display:none">批量删除</button>
+          <div class="court-batch-toolbar" id="courtBatchToolbar" style="display:none">
+            <span class="court-batch-count" id="courtBatchCount">已选 0 条</span>
+            <button class="tms-btn tms-btn-danger" id="courtBatchDelBtn" onclick="batchDeleteCourts()" disabled>批量删除</button>
+            <button class="tms-btn tms-btn-ghost" id="courtBatchCancelBtn" onclick="setCourtBatchMode(false)">取消</button>
+          </div>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-primary" onclick="openCourtModal(null)">＋ 添加订场用户</button>

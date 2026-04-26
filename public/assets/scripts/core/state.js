@@ -5,7 +5,7 @@ function syncViewportMode(){
   document.body.classList.toggle('admin-mobile',!!(!isCoach&&isMobile&&currentUser));
 }
 
-let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
+let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
 window.coachWorkbenchStats=window.coachWorkbenchStats||{};
 let adminUsersLoaded=false;
 let modalCleanupTimer=null;
@@ -133,6 +133,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='purchases')purchases=rows;
   if(name==='entitlements')entitlements=rows;
   if(name==='entitlementLedger')entitlementLedger=rows;
+  if(name==='financialLedger')financialLedger=rows;
   if(name==='membershipPlans')membershipPlans=rows;
   if(name==='membershipAccounts')membershipAccounts=rows;
   if(name==='membershipOrders')membershipOrders=rows;
@@ -201,8 +202,11 @@ function renderPageLoading(pg){
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
   if(pg==='finance'){
-    renderTableBodyLoading('coachOpsRevenueTbody',14,'财务数据加载中...');
-    renderTableBodyLoading('coachOpsConsumeTbody',12,'消课记录加载中...');
+    renderTableBodyLoading('financeLedgerTbody',11,'总账加载中...');
+    renderTableBodyLoading('financeRevenueTbody',15,'收入表加载中...');
+    renderTableBodyLoading('financeConsumeTbody',9,'消耗表加载中...');
+    renderTableBodyLoading('financePrepaidTbody',6,'预收余额加载中...');
+    renderTableBodyLoading('financeAnomalyTbody',4,'异常检查加载中...');
   }
   if(pg==='courts')renderTableBodyLoading('courtTbody',17,'订场用户加载中...');
   if(pg==='matches')renderTableBodyLoading('matchTbody',9,'约球数据加载中...');
@@ -248,10 +252,16 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('financialLedger',data.financialLedger||[]);
       setDatasetValue('coaches',data.coaches||[]);
       setDatasetValue('products',data.products||[]);
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
+      setDatasetValue('courts',data.courts||[]);
+      setDatasetValue('membershipAccounts',data.membershipAccounts||[]);
+      setDatasetValue('membershipOrders',data.membershipOrders||[]);
+      setDatasetValue('membershipBenefitLedger',data.membershipBenefitLedger||[]);
+      setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
       loadedDatasets.add('financePage');
       return;
     }
@@ -289,7 +299,6 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('classes',data.classes||[]);
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('feedbacks',data.feedbacks||[]);
-      setDatasetValue('purchases',data.purchases||[]);
       window.coachWorkbenchStats=data.stats||{};
       loadedDatasets.add('workbenchPage');
       return;
@@ -321,7 +330,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
   renderAll();
 }
 function clearLoadedData(){
-  courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];
+  courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   loadedDatasets=new Set();
@@ -348,6 +357,7 @@ function applyLoadedData(data){
   purchases=Array.isArray(data?.purchases)?data.purchases:[];
   entitlements=Array.isArray(data?.entitlements)?data.entitlements:[];
   entitlementLedger=Array.isArray(data?.entitlementLedger)?data.entitlementLedger:[];
+  financialLedger=Array.isArray(data?.financialLedger)?data.financialLedger:[];
   membershipPlans=Array.isArray(data?.membershipPlans)?data.membershipPlans:[];
   membershipAccounts=Array.isArray(data?.membershipAccounts)?data.membershipAccounts:[];
   membershipOrders=Array.isArray(data?.membershipOrders)?data.membershipOrders:[];
@@ -361,7 +371,7 @@ function applyLoadedData(data){
   campuses=Array.isArray(data?.campuses)?data.campuses:[];
   feedbacks=Array.isArray(data?.feedbacks)?data.feedbacks:[];
   matches=Array.isArray(data?.matches)?data.matches:[];
-  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','matches']);
+  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','matches']);
   if(data?.user){
     currentUser=data.user;
     localStorage.setItem('ft_user',JSON.stringify(currentUser));

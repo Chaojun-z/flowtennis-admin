@@ -26,7 +26,7 @@ assert.match(html, /<th>末次跟进日期<\/th>[\s\S]*<th>下次跟进日期<\/
 assert.match(html, /id="courtAccountTypeFilter"/, 'court toolbar should provide account type filter');
 assert.match(html, /id="courtOwnerFilter"/, 'court toolbar should provide owner filter');
 assert.match(html, /id="courtMoreActions"/, 'court toolbar should provide more actions menu');
-assert.match(html, /导入CSV[\s\S]*财务迁移预览[\s\S]*备份/, 'court more actions should include import, finance migration preview, and backup');
+assert.match(html, /批量选择[\s\S]*导入CSV[\s\S]*财务迁移预览[\s\S]*备份/, 'court more actions should include batch select, import, finance migration preview, and backup');
 assert.doesNotMatch(html, /courtMoreActionValue_dropdown[\s\S]*class="tms-dropdown-item[^"]*">更多操作</, 'court more actions menu should not include a redundant self option');
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('validUntil'\)"[\s\S]*?>会员到期/, 'court table should keep expiry sorting');
 assert.match(html, /<th class="tms-sortable" onclick="setCourtSort\('recentFollowUpDate'\)"[\s\S]*?>末次跟进日期/, 'court table should support sorting by recent follow-up date');
@@ -80,8 +80,10 @@ assert.match(fnBody('courtSortMetric'), /if\(!raw\|\|raw==='-'\|\|raw==='—'\)r
 assert.match(fnBody('renderCourts'), /const sortedList=\[\.\.\.list\];/, 'court page should sort the full filtered list before paging');
 assert.match(fnBody('renderCourts'), /else\{[\s\S]*updatedAt\|\|b\.createdAt[\s\S]*updatedAt\|\|a\.createdAt/, 'court rows should use a deterministic default sort when no explicit sort is selected');
 assert.match(html, /function handleCourtMoreAction\(/, 'court page should expose more action handler');
-assert.match(html, /id="courtBatchDelBtn"[^>]*style="display:none"/, 'court batch delete button should stay hidden before any selection');
-assert.match(html, /function updateCourtBatchButton\([\s\S]*btn\.style\.display=selectedCourtIds\.size\?'inline-flex':'none'/, 'court batch delete button should only show when rows are selected');
+assert.match(html, /id="courtBatchToolbar"[^>]*style="display:none"/, 'court batch toolbar should stay hidden before entering batch mode');
+assert.match(html, /function setCourtBatchMode\(/, 'court page should expose explicit batch mode toggling');
+assert.match(html, /function updateCourtBatchButton\([\s\S]*toolbar\.style\.display=courtBatchMode\?'flex':'none'/, 'court batch toolbar should only show in batch mode');
+assert.match(html, /function updateCourtBatchButton\([\s\S]*btn\.style\.display=courtBatchMode\?'inline-flex':'none'/, 'court batch delete button should follow batch mode visibility');
 assert.match(html, /function renderCourtEmptyText\(/, 'court page should centralize empty dash rendering');
 assert.match(html, /return raw&&raw!=='—'\?raw:'-';/, 'court list empty cells should convert long dashes to short dashes');
 assert.match(html, /renderCourtDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value deduction');
