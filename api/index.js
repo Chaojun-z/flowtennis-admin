@@ -25,12 +25,11 @@ const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
-const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -2061,30 +2060,6 @@ function assertMatchFeeSplitUpdateInput(input={}){
   const paidAmount=input.paidAmount==null?null:normalizeMoney(input.paidAmount);
   return {payStatus,paidAmount,note};
 }
-function defaultMatchSettings(){
-  return {
-    operatorWechatId:String(process.env.MATCH_OPERATOR_WECHAT_ID||'').trim(),
-    operatorPaymentQr:String(process.env.MATCH_OPERATOR_PAYMENT_QR||'').trim(),
-    creatorConfirmDeadlineHours:MATCH_CREATOR_CONFIRM_DEADLINE_HOURS
-  };
-}
-async function getMatchSettings(){
-  await mkTable(T_MATCH_SETTINGS);
-  const stored=await get(T_MATCH_SETTINGS,MATCH_SETTINGS_ROW_ID).catch(()=>null);
-  return {...defaultMatchSettings(),...(stored||{})};
-}
-async function saveMatchSettings(input={},operatorId=''){
-  const current=await getMatchSettings();
-  const next={
-    ...current,
-    operatorWechatId:String(input.operatorWechatId??current.operatorWechatId??'').trim(),
-    operatorPaymentQr:String(input.operatorPaymentQr??current.operatorPaymentQr??'').trim(),
-    updatedAt:new Date().toISOString(),
-    updatedBy:String(operatorId||'').trim()
-  };
-  await put(T_MATCH_SETTINGS,MATCH_SETTINGS_ROW_ID,next);
-  return next;
-}
 function resolveFinalAttendanceStatus(row){
   if(row?.creatorStatus==='attended'||row?.creatorstatus==='attended')return 'attended';
   if(row?.creatorStatus==='absent'||row?.creatorstatus==='absent')return 'absent';
@@ -4091,10 +4066,6 @@ module.exports = async (req, res) => {
       try{return sendJson(res,await selfConfirmMatchAttendance(body.matchId,matchUser.id));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/match-settings'&&method==='GET'){
-      requireMatchUser(req);
-      return sendJson(res,await getMatchSettings());
-    }
     if(path==='/match-attendance/creator-confirm'&&method==='POST'){
       const matchUser=requireMatchUser(req);
       try{return sendJson(res,await creatorConfirmMatchAttendance(body.matchId,matchUser.id,body.registrationId,body.finalAttendanceStatus));}
@@ -4116,14 +4087,6 @@ module.exports = async (req, res) => {
     if(path==='/admin/matches'&&method==='GET'){
       requireAdminUser(user);
       return sendJson(res,{items:await listAdminMatches()});
-    }
-    if(path==='/admin/matches/settings'&&method==='GET'){
-      requireMatchAdminPermission(user,'match_ops');
-      return sendJson(res,await getMatchSettings());
-    }
-    if(path==='/admin/matches/settings'&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      return sendJson(res,await saveMatchSettings(body,user.id));
     }
     if(path==='/admin/matches/finance-daily'&&method==='GET'){
       requireMatchAdminPermission(user,'match_finance');
@@ -4993,8 +4956,6 @@ module.exports._test={
   ,assertMatchBookingInput
   ,assertBookedWithdrawalInput
   ,assertMatchFeeSplitUpdateInput
-  ,getMatchSettings
-  ,saveMatchSettings
   ,resolveFinalAttendanceStatus
   ,buildMatchFeeLedger
   ,creatorAttendanceDeadline
