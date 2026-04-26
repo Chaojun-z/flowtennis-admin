@@ -106,7 +106,7 @@ assert.match(scheduleWxml, /today-lesson-separator/, 'native workbench today car
 assert.match(scheduleWxml, /week-task-location[\s\S]*item\.student[\s\S]*week-task-separator[\s\S]*item\.shortLocation/, 'native workbench weekly todo card should render student before location like the SVG');
 assert.match(scheduleWxml, /scroll-top="\{\{timetableScrollTop\}\}"/, 'native timetable should support vertical auto positioning');
 assert.match(scheduleWxml, /scroll-left="\{\{timetableScrollLeft\}\}"/, 'native timetable should support horizontal auto positioning to today');
-assert.match(scheduleWxml, /scroll-x scroll-y class="timetable-scroll"/, 'native timetable should use one native two-axis scroll for smoother movement');
+assert.match(scheduleWxml, /class="timetable-shell"[\s\S]*scroll-x scroll-y class="timetable-scroll"/, 'native timetable should keep the white shell fixed outside the scrollable content');
 assert.match(scheduleWxml, /custom-nav-title">我的课表/, 'timetable tab should render the title in a dedicated custom nav layer');
 assert.match(scheduleWxml, /custom-nav-title">我的学员/, 'students tab should render the title in a dedicated custom nav layer');
 assert.match(scheduleWxml, /custom-nav-title">我的班次/, 'shifts tab should render the title in a dedicated custom nav layer');
@@ -355,6 +355,8 @@ assert.match(appJs, /onNeedPrivacyAuthorization/, 'mini program app should imple
 assert.match(appJs, /openPrivacyContract/, 'mini program app should provide a helper to open the WeChat privacy contract');
 
 const scheduleWxss = readText('wechat-miniprogram/miniprogram/pages/schedule/schedule.wxss');
+assert.match(scheduleWxss, /\.timetable-shell\s*\{[\s\S]*background:\s*#fff;[\s\S]*border-top-left-radius:\s*40rpx;[\s\S]*border-top-right-radius:\s*40rpx;/i, 'timetable shell should own the white rounded panel instead of the scroll container');
+assert.doesNotMatch(scheduleWxss.match(/\.timetable-scroll\s*\{[\s\S]*?\n\}/)[0], /background:\s*#fff|border-top-left-radius|border-top-right-radius/i, 'timetable scroll container should no longer own the white shell background and radius');
 assert.match(scheduleWxss, /\.today-detail-btn\s*\{[\s\S]*min-width:\s*92rpx;[\s\S]*padding:\s*0 20rpx;[\s\S]*display:\s*flex;[\s\S]*justify-content:\s*center;/i, 'today detail button should use a flexible width so narrow phones do not truncate the label');
 assert.match(scheduleWxss, /\.coach-menu-icon-agreement\s*\{[\s\S]*width:\s*20px;[\s\S]*height:\s*20px;/i, 'settings action sheet should use the 20px agreement icon slot');
 assert.match(scheduleWxss, /\.coach-menu-icon-privacy\s*\{[\s\S]*width:\s*20px;[\s\S]*height:\s*20px;/i, 'settings action sheet should use the 20px privacy icon slot');
@@ -412,7 +414,7 @@ assert.match(scheduleWxss, /\.week-switch\s*\{[^}]*gap:\s*20px;/, 'timetable wee
 assert.match(scheduleWxss, /\.switch-btn::before\s*\{[\s\S]*width:\s*8px;[\s\S]*height:\s*10px;[\s\S]*background-image:\s*url\("data:image\/svg\+xml/, 'timetable switch arrows should use the provided SVG chevron shape without distortion');
 assert.match(scheduleWxss, /\.week-range\s*\{[\s\S]*font-size:\s*15px;[\s\S]*font-weight:\s*500;/, 'timetable week range text should use 15px medium');
 assert.match(scheduleWxss, /\.back-week-btn\s*\{[\s\S]*width:\s*80px;[\s\S]*height:\s*36px;[\s\S]*font-size:\s*13px;[\s\S]*font-weight:\s*500;/, 'timetable back-to-week button should match the SVG token');
-assert.match(scheduleWxss, /\.timetable-scroll\s*\{[\s\S]*margin-top:\s*-45px;[\s\S]*border-top-left-radius:\s*40rpx;[\s\S]*border-top-right-radius:\s*40rpx;/, 'timetable grid should sit in the SVG rounded white panel with 45px overlap');
+assert.match(scheduleWxss, /\.timetable-shell\s*\{[\s\S]*margin-top:\s*-45px;[\s\S]*border-top-left-radius:\s*40rpx;[\s\S]*border-top-right-radius:\s*40rpx;/, 'timetable grid should sit in the SVG rounded white panel with 45px overlap');
 assert.match(scheduleWxss, /\.timetable-top\s*\{[\s\S]*height:\s*210px;/i, 'timetable top blue panel should use the unified 210px height');
 assert.match(scheduleWxss, /\.students-top\s*\{[\s\S]*height:\s*210px;/i, 'students top blue panel should use the unified 210px height');
 assert.match(scheduleWxss, /\.shifts-top\s*\{[\s\S]*height:\s*210px;/i, 'shifts top blue panel should use the unified 210px height');

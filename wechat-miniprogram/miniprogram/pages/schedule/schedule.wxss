@@ -962,15 +962,19 @@ button::after {
   line-height: 36px;
 }
 
-.timetable-scroll {
+.timetable-shell {
   flex: 1;
   height: 0;
   margin-top: -45px;
-  white-space: nowrap;
   background: #fff;
   border-top-left-radius: 40rpx;
   border-top-right-radius: 40rpx;
   overflow: hidden;
+}
+
+.timetable-scroll {
+  height: 100%;
+  white-space: nowrap;
 }
 
 .timetable-panel {
