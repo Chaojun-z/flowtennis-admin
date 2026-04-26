@@ -55,6 +55,8 @@ assert.match(apiSource, /match-court-finance/, 'match finance should use a dedic
 assert.match(apiSource, /\/admin\/matches\/finance-daily/, 'API should expose match finance daily report endpoint');
 assert.match(apiSource, /\/admin\/matches\/settings/, 'API should expose match settings admin endpoint');
 assert.match(apiSource, /path==='\/match-settings'/, 'API should expose mini match settings endpoint');
+assert.match(apiSource, /MATCH_MINIPROGRAM_APPID/, 'match mini program should use a dedicated appid env');
+assert.match(apiSource, /MATCH_MINIPROGRAM_SECRET/, 'match mini program should use a dedicated secret env');
 assert.match(apiSource, /path==='\/my-matches'/, 'API should expose my matches endpoint');
 assert.match(apiSource, /path==='\/match-profile'/, 'API should expose match profile endpoint');
 assert.match(apiSource, /path==='\/match-profile\/phone'/, 'API should expose match phone endpoint');

@@ -19,6 +19,8 @@ const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEE
 const DEFAULT_ADMIN_BOOTSTRAP_PASSWORD = process.env.DEFAULT_ADMIN_BOOTSTRAP_PASSWORD || '';
 const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
 const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
+const MATCH_MINIPROGRAM_APPID = process.env.MATCH_MINIPROGRAM_APPID || '';
+const MATCH_MINIPROGRAM_SECRET = process.env.MATCH_MINIPROGRAM_SECRET;
 const WECHAT_SCHEDULE_TEMPLATE_ID = process.env.WECHAT_SCHEDULE_TEMPLATE_ID;
 const WECHAT_COURSE_REMINDER_TEMPLATE_ID = process.env.WECHAT_COURSE_REMINDER_TEMPLATE_ID;
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
@@ -942,9 +944,9 @@ function extractWechatOpenId(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信登录失败：${msg}`);
 }
-async function fetchWechatSession(code){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
-  const url=buildWechatCode2SessionUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET,code);
+async function fetchWechatSession(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,errorText='缺少微信小程序密钥配置'}={}){
+  if(!appid||!secret)throw new Error(errorText);
+  const url=buildWechatCode2SessionUrl(appid,secret,code);
   const res=await fetch(url);
   const data=await res.json();
   return data;
@@ -976,19 +978,20 @@ function extractWechatAccessToken(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信 access_token 获取失败：${msg}`);
 }
-async function fetchWechatAccessToken(){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
+async function fetchWechatAccessToken({appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
+  if(!appid||!secret)throw new Error(errorText);
   const now=Date.now();
-  if(wechatAccessTokenCache&&wechatAccessTokenCache.expiresAt>now)return wechatAccessTokenCache.token;
-  const res=await fetch(buildWechatAccessTokenUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET));
+  const cached=wechatAccessTokenCache&&wechatAccessTokenCache[cacheKey];
+  if(cached&&cached.expiresAt>now)return cached.token;
+  const res=await fetch(buildWechatAccessTokenUrl(appid,secret));
   const data=await res.json();
   const token=extractWechatAccessToken(data);
   const ttlMs=Math.max(300000,((parseInt(data.expires_in)||7200)-300)*1000);
-  wechatAccessTokenCache={token,expiresAt:now+ttlMs};
+  wechatAccessTokenCache={...(wechatAccessTokenCache||{}),[cacheKey]:{token,expiresAt:now+ttlMs}};
   return token;
 }
-async function fetchWechatPhoneNumber(code){
-  const token=await fetchWechatAccessToken();
+async function fetchWechatPhoneNumber(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
+  const token=await fetchWechatAccessToken({appid,secret,cacheKey,errorText});
   const res=await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(token)}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -3735,10 +3738,10 @@ module.exports = async (req, res) => {
       const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});
       return sendJson(res,{token,user:payload});
     }
-    if(path==='/auth/wechat-mini-login'&&method==='POST'){
+  if(path==='/auth/wechat-mini-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code);
+      const session=await fetchWechatSession(code,{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,errorText:'缺少约球小程序密钥配置'});
       const openid=extractWechatOpenId(session);
       const unionid=session.unionid?String(session.unionid):'';
       const pool=getMatchSqlPool();
@@ -3822,7 +3825,7 @@ module.exports = async (req, res) => {
     if(path==='/match-profile/phone-code'&&method==='POST'){
       const matchUser=requireMatchUser(req);
       try{
-        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim());
+        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,cacheKey:'match',errorText:'缺少约球小程序密钥配置'});
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
