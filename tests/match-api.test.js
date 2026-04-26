@@ -23,6 +23,7 @@ assert.ok(rules.buildMatchCourtFinanceHistoryRow, 'api._test should expose match
 assert.ok(rules.buildMatchCourtFinanceRefundRow, 'api._test should expose match court finance refund row builder');
 assert.ok(rules.assertMatchFeeSplitUpdateInput, 'api._test should expose match fee update validation');
 assert.ok(rules.buildMatchFinanceDailyReport, 'api._test should expose match finance daily report builder');
+assert.ok(rules.selfConfirmMatchAttendance, 'api._test should expose self attendance confirm helper');
 
 for (const table of [
   'match_users',
@@ -63,7 +64,7 @@ assert.match(apiSource, /getuserphonenumber/, 'API should exchange WeChat phone 
 assert.match(apiSource, /matchUpdateM=path\.match/, 'API should expose match update endpoint');
 assert.match(apiSource, /matchCancelM=path\.match/, 'API should expose match cancel endpoint');
 assert.match(apiSource, /path==='\/match-attendance\/creator-confirm'/, 'API should expose creator attendance endpoint');
-assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should not expose self attendance endpoint');
+assert.match(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should expose self attendance endpoint');
 assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'default admin bootstrap password must come from env');
 assert.doesNotMatch(apiSource, /wqxd2026/, 'api source should not hardcode the default bootstrap password');
 assert.match(apiSource, /已超过发起者确认时限，请联系运营处理/, 'creator attendance confirm should enforce ops handoff after timeout');

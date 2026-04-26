@@ -2291,6 +2291,23 @@ async function adminHandleBookedWithdrawal(matchId,userId,operatorId,input={}){
     return {success:true,financialResponsibility:withdrawal.financialResponsibility};
   });
 }
+async function selfConfirmMatchAttendance(matchId,userId){
+  return withMatchSqlTransaction(async(client)=>{
+    const matchRes=await client.query('SELECT * FROM match_posts WHERE id=$1 FOR UPDATE',[matchId]);
+    const match=matchRes.rows[0];
+    if(!match)throw new Error('球局不存在');
+    const status=deriveMatchStatus(match);
+    if(!['booked','playing','attendance_pending'].includes(status))throw new Error('当前还不能确认到场');
+    if(dateMs(match.starttime||match.startTime)>Date.now())throw new Error('未到开始时间');
+    const reg=await client.query("SELECT id FROM match_registrations WHERE matchId=$1 AND userId=$2 AND registrationStatus='registered'",[matchId,userId]);
+    if(reg.rowCount<=0)throw new Error('未报名，不能确认到场');
+    await client.query(
+      "INSERT INTO match_attendance(id,matchId,userId,selfStatus,creatorStatus,finalStatus,updatedAt) VALUES($1,$2,$3,'attended','pending','pending',NOW()) ON CONFLICT(matchId,userId) DO UPDATE SET selfStatus='attended',updatedAt=NOW()",
+      [uuidv4(),matchId,userId]
+    );
+    return {success:true,selfStatus:'attended'};
+  });
+}
 async function creatorConfirmMatchAttendance(matchId,creatorUserId,registrationId,finalStatus){
   if(!['attended','absent'].includes(finalStatus))throw new Error('到场状态不正确');
   return withMatchSqlTransaction(async(client)=>{
@@ -4069,6 +4086,11 @@ module.exports = async (req, res) => {
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
+    if(path==='/match-attendance'&&method==='POST'){
+      const matchUser=requireMatchUser(req);
+      try{return sendJson(res,await selfConfirmMatchAttendance(body.matchId,matchUser.id));}
+      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
+    }
     if(path==='/match-settings'&&method==='GET'){
       requireMatchUser(req);
       return sendJson(res,await getMatchSettings());
@@ -4986,6 +5008,7 @@ module.exports._test={
   ,adminBookMatch
   ,confirmMatchAttendance
   ,adminHandleBookedWithdrawal
+  ,selfConfirmMatchAttendance
   ,creatorConfirmMatchAttendance
   ,generateMatchFeeLedger
   ,markMatchFeeSplit
