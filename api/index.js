@@ -4815,7 +4815,6 @@ module.exports = async (req, res) => {
         classes:decoratedClasses,
         schedule:decoratedSchedule,
         feedbacks:decoratedFeedbacks,
-        purchases:scoped.purchases||[],
         stats
       });
     }

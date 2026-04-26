@@ -31,6 +31,9 @@ async function bindWechatAfterLogin(){
     console.warn('wechat bind skipped:',e.message);
   }
 }
+function defaultLandingPageForUser(user){
+  return user?.role==='editor'&&user?.coachName?'workbench':'students';
+}
 function openPendingScheduleDeepLink(){
   const scheduleId=sessionStorage.getItem(PENDING_SCHEDULE_ID_KEY);
   if(!scheduleId)return;
@@ -74,6 +77,8 @@ async function doLogin(){
     const data=await apiCall('POST','/auth/login',{username,password});
     token=data.token;currentUser=data.user;
     localStorage.setItem('ft_token',token);localStorage.setItem('ft_user',JSON.stringify(currentUser));
+    currentPage=defaultLandingPageForUser(currentUser);
+    localStorage.setItem(PAGE_KEY,currentPage);
     await bindWechatAfterLogin();
     showApp();
   }catch(e){err.textContent=e.message;err.classList.add('show');btn.disabled=false;btn.textContent='登 录';}

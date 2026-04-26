@@ -6,8 +6,8 @@
     <text class="entry-subtitle">FLOWTENNIS · 管理系统</text>
 
     <view class="entry-field">
-      <text class="entry-label">账号</text>
-      <input class="entry-input" placeholder="请输入账号或手机号" placeholder-class="entry-placeholder" value="{{account}}" bindinput="onAccountInput" />
+      <text class="entry-label">账号ID</text>
+      <input class="entry-input" placeholder="请输入账号ID（不是姓名）" placeholder-class="entry-placeholder" value="{{account}}" bindinput="onAccountInput" />
     </view>
 
     <view class="entry-field entry-field-password">

@@ -469,9 +469,14 @@ page {
 }
 
 .today-detail-btn {
-  width: 70px;
+  min-width: 92rpx;
   height: 28px;
   margin-left: 18rpx;
+  padding: 0 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   border-radius: 999rpx;
   background: #2b3a55;
   color: #fff;

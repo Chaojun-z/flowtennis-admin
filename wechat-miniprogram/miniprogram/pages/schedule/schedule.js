@@ -1245,7 +1245,7 @@ function timetableScrollLeft(days = [], isCurrentWeek = true) {
   if (!isCurrentWeek) return 0;
   const todayIndex = (days || []).findIndex(item => item.isToday);
   if (todayIndex < 0) return 0;
-  return Math.max(0, Math.round(rpxToPx(todayIndex * TIMETABLE_DAY_WIDTH_RPX) - 60));
+  return Math.max(0, Math.round(rpxToPx(todayIndex * TIMETABLE_DAY_WIDTH_RPX)));
 }
 
 Page({
