@@ -83,6 +83,10 @@ assert.match(source, /const data=\{name,phone,primaryCoach:/, 'student save shou
 assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
 assert.match(source, /选择课包 \*[\s\S]*主归属教练[\s\S]*支付日期[\s\S]*系统价格[\s\S]*实收金额[\s\S]*支付方式/, 'purchase modal should arrange package, owner, payment date, price and pay method in compact rows');
 assert.match(source, /销售归属校区 \*/, 'purchase modal should collect the actual sale campus separately from usable campuses');
+assert.match(source, /id="purchaseCreateSaveBtn"[\s\S]*onclick="savePurchase\(\)"/, 'purchase modal save button should expose a stable DOM id for save handler state');
+assert.match(source, /id="purchaseEditSaveBtn"[\s\S]*onclick="savePurchaseEdit\('/, 'purchase edit modal save button should expose a stable DOM id for save handler state');
+assert.match(source, /document\.getElementById\('purchaseCreateSaveBtn'\)/, 'purchase create save flow should target its real footer button');
+assert.match(source, /document\.getElementById\('purchaseEditSaveBtn'\)/, 'purchase edit save flow should target its real footer button');
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-wrap[\s\S]*purchase-notes-row/, 'purchase modal should leave space between allowed coaches and notes');
