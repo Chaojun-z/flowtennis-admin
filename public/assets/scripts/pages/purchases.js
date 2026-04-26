@@ -87,7 +87,19 @@ function purchasePriceSummaryHtml(p){
 function openPurchaseEntryModal(){
   openPurchaseModal();
 }
-function openPurchaseModal(studentId=''){
+async function ensurePurchaseModalDatasets(){
+  const required=['students','packages','purchases','entitlements','coaches'];
+  const missing=required.filter(name=>!loadedDatasets.has(name));
+  if(!missing.length)return;
+  await ensureDatasetsByName(['purchasesPage','coaches']);
+}
+async function openPurchaseModal(studentId=''){
+  try{
+    await ensurePurchaseModalDatasets();
+  }catch(e){
+    toast('打开购买弹窗失败：'+(e?.message||'课包数据加载失败'),'error');
+    return;
+  }
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
   editId=null;

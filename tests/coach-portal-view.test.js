@@ -174,6 +174,21 @@ assert.match(
   /scheduleSource==='订场陪打'[\s\S]*陪打/,
   'coach weekly schedule should label companion bookings as dedicated companion tasks'
 );
+assert.match(
+  source,
+  /function scheduleRepeatBadgeText\(schedule\)/,
+  'coach portal should expose a repeat schedule badge helper'
+);
+assert.match(
+  fnBody('workbenchSection'),
+  /scheduleRepeatBadgeText\(s\)[\s\S]*is-stone/,
+  'coach workbench cards should expose repeat schedule badges in the main view'
+);
+assert.match(
+  fnBody('renderMySchedule'),
+  /repeatText=scheduleRepeatBadgeText\(s\)[\s\S]*wgb-type/,
+  'coach weekly schedule blocks should show repeat schedule markers'
+);
 
 assert.match(
   html,

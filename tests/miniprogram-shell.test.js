@@ -103,6 +103,7 @@ assert.match(scheduleWxml, /schedule-location/, 'native workbench lesson cards s
 assert.match(scheduleWxml, /reminder-value/, 'native workbench reminder numbers should be styled separately');
 assert.match(scheduleWxml, /class="reminder-value">\s\{\{item\.value\}\}\s<\/text>/, 'native workbench reminder numbers should keep one visible space before and after the number');
 assert.match(scheduleWxml, /today-lesson-separator/, 'native workbench today card should render location and student on one SVG-style meta row');
+assert.match(scheduleWxml, /today-lesson-tags[\s\S]*item\.showRepeatTag[\s\S]*item\.repeatTagText/, 'native workbench cards should expose a repeat schedule badge when needed');
 assert.match(scheduleWxml, /week-task-location[\s\S]*item\.student[\s\S]*week-task-separator[\s\S]*item\.shortLocation/, 'native workbench weekly todo card should render student before location like the SVG');
 assert.match(scheduleWxml, /scroll-top="\{\{timetableScrollTop\}\}"/, 'native timetable should support vertical auto positioning');
 assert.match(scheduleWxml, /scroll-left="\{\{timetableScrollLeft\}\}"/, 'native timetable should support horizontal auto positioning to today');
@@ -113,6 +114,7 @@ assert.match(scheduleWxml, /custom-nav-title">我的班次/, 'shifts tab should 
 assert.match(scheduleWxml, /tt-time-axis[\s\S]*tt-now-label[\s\S]*currentTimeText[\s\S]*tt-day-columns[\s\S]*tt-now-line[\s\S]*tt-now-line-solid/, 'native timetable should keep the current-time label fixed inside the left time axis');
 assert.match(scheduleWxml, /tt-day-date-dot/, 'native timetable should render the active day as a round date marker');
 assert.match(scheduleWxml, /tt-course-status/, 'native timetable course cards should render pending status as a compact badge');
+assert.match(scheduleWxml, /tt-course-tags[\s\S]*course\.showRepeatTag[\s\S]*course\.repeatTagText/, 'native timetable cards should expose a repeat schedule badge when needed');
 assert.match(scheduleWxml, /tt-course-time[\s\S]*course\.timeText[\s\S]*tt-course-type[\s\S]*course\.courseTagText/, 'native timetable course cards should split time and course type for separate typography');
 assert.doesNotMatch(scheduleWxml, /反馈:/, 'native timetable course cards should not show the old feedback prefix');
 assert.match(scheduleWxml, /feedbackHasSaved && !feedbackEditing[\s\S]*生成海报[\s\S]*编辑反馈/, 'saved feedback sheet should show poster and edit actions');
@@ -211,6 +213,11 @@ assert.strictEqual(
   scheduleUtils.formatScheduleItem({ campus: '__external__', externalVenueName: '国网北区', externalCourtName: 'C1' }).locationText,
   '国网北区 · C1',
   'mini program schedule items should hide the internal external-campus sentinel value'
+);
+assert.strictEqual(
+  scheduleUtils.formatScheduleItem({ scheduleSource: '循环排课' }).repeatTagText,
+  '循环',
+  'mini program schedule items should expose a repeat badge label for repeat schedules'
 );
 const sundayNow = new Date('2026-04-26T09:00:00+08:00');
 const sundayWindow = scheduleUtils.buildTimetableDays([

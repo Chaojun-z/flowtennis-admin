@@ -112,8 +112,32 @@ function renderStudents(){
     const packageText=studentPackageLessonSummary(s);
     const bookingText=studentBookingMembershipSummary(s);
     const bookingClass=bookingText&&bookingText!=='未关联'?' student-summary-strong':'';
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(classText)}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td><div class="tms-text-remark${bookingClass}" title="${esc(bookingText)}">${esc(renderCourtEmptyText(bookingText))}</div></td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(classText)}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td><div class="tms-text-remark${bookingClass}" title="${esc(bookingText)}">${esc(renderCourtEmptyText(bookingText))}</div></td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openStudentPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
   }).join(''):'<tr><td colspan="13"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
+}
+async function ensureStudentPurchaseDatasets(){
+  const required=['purchases','packages','entitlements','students','coaches'];
+  const missing=required.filter(name=>!loadedDatasets.has(name));
+  if(!missing.length)return;
+  await ensureDatasetsByName(['purchasesPage','coaches']);
+}
+async function openStudentPurchaseModal(studentId){
+  const stu=students.find(x=>x.id===studentId);
+  if(!stu){toast('学员不存在','error');return;}
+  try{
+    await ensureStudentPurchaseDatasets();
+  }catch(e){
+    toast('打开课包失败：'+(e?.message||'课包数据加载失败'),'error');
+    return;
+  }
+  const rows=purchases.filter(p=>p.studentId===studentId).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
+  if(!rows.length){
+    openPurchaseModal(studentId);
+    return;
+  }
+  const body=`<div class="tms-section-header" style="margin-top:0;">${esc(stu.name)} 的课包</div><div class="tms-audit-note" style="margin-bottom:18px">这里先看已买课包；要新增课包，点下面的「新增课包」。</div><div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">购买日期</th><th>课包</th><th style="width:120px">余额</th><th style="width:90px">状态</th><th class="tms-sticky-r" style="width:120px;padding-right:20px">操作</th></tr></thead><tbody>${rows.map(p=>{const ent=entitlements.find(e=>e.purchaseId===p.id);const remain=ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:'-';const status=ent?entitlementStatusText(ent):purchaseStatusText(p);return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.payMethod))}</div></td><td>${renderCourtCellText(remain,false)}</td><td>${renderCourtCellText(status,false)}</td><td class="tms-sticky-r tms-action-cell" style="padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span></td></tr>`;}).join('')}</tbody></table></div></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openPurchaseModal('${studentId}')">新增课包</button>`;
+  setCourtModalFrame('课包记录',body,footer,'modal-wide');
 }
 function studentFeedbackHistoryHtml(s){
   const rows=feedbacks.filter(f=>{
@@ -173,7 +197,7 @@ function studentConsumptionInfoHtml(stu){
 function studentLinkedDetailHtml(s,showAccount=true){
   const latest=schedules.filter(x=>scheduleHasStudent(x,s)).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0))[0];
   const canBuyPackage=currentUser?.role==='admin';
-  return `<div class="sec-ttl">关联信息</div><div style="background:rgba(217,119,6,0.06);border:0.5px solid rgba(217,119,6,0.16);border-radius:8px;padding:10px 12px;margin-bottom:12px">${showAccount?`<div class="flabel">订场账户</div>${studentAccountSummaryHtml(s)}<div class="flabel" style="margin-top:8px">关联订场账户会员摘要</div>${studentMembershipSummaryHtml(s)}`:''}<div class="flabel" style="margin-top:${showAccount?8:0}px">所在班次</div>${studentClassSummaryHtml(s)}<div class="flabel" style="margin-top:8px">课包余额</div>${studentEntitlementSummaryHtml(s)}${canBuyPackage?`<div style="margin-top:8px"><button class="btn-sec" onclick="openPurchaseModal('${s.id}')">购买课包</button></div>`:''}<div class="flabel" style="margin-top:8px">最近记录</div><div style="font-size:12px;color:var(--tb)">最近上课：${latest?.startTime?.slice(0,10)||'—'}；最近订场：${latestCourtUseDateForStudent(s)||'—'}</div><div class="flabel" style="margin-top:8px">课后反馈</div>${studentFeedbackHistoryHtml(s)}</div>`;
+  return `<div class="sec-ttl">关联信息</div><div style="background:rgba(217,119,6,0.06);border:0.5px solid rgba(217,119,6,0.16);border-radius:8px;padding:10px 12px;margin-bottom:12px">${showAccount?`<div class="flabel">订场账户</div>${studentAccountSummaryHtml(s)}<div class="flabel" style="margin-top:8px">关联订场账户会员摘要</div>${studentMembershipSummaryHtml(s)}`:''}<div class="flabel" style="margin-top:${showAccount?8:0}px">所在班次</div>${studentClassSummaryHtml(s)}<div class="flabel" style="margin-top:8px">课包余额</div>${studentEntitlementSummaryHtml(s)}${canBuyPackage?`<div style="margin-top:8px"><button class="btn-sec" onclick="openStudentPurchaseModal('${s.id}')">购买课包</button></div>`:''}<div class="flabel" style="margin-top:8px">最近记录</div><div style="font-size:12px;color:var(--tb)">最近上课：${latest?.startTime?.slice(0,10)||'—'}；最近订场：${latestCourtUseDateForStudent(s)||'—'}</div><div class="flabel" style="margin-top:8px">课后反馈</div>${studentFeedbackHistoryHtml(s)}</div>`;
 }
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;

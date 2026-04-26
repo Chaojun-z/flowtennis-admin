@@ -445,6 +445,18 @@ page {
   color: #13c2c2;
 }
 
+.today-course-pill.is-repeat {
+  border: 0.5px solid #d1d5db;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.today-lesson-tags {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
 .today-lesson-meta {
   margin-top: 14rpx;
   color: #64748b;
@@ -1194,6 +1206,22 @@ button::after {
   color: var(--course-accent);
   font-size: 9px;
   font-weight: 400;
+  line-height: 1.2;
+}
+
+.tt-course-tags {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.tt-course-repeat {
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  background: rgba(15, 23, 42, 0.12);
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 9px;
+  font-weight: 600;
   line-height: 1.2;
 }
 

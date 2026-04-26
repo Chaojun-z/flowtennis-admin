@@ -137,7 +137,10 @@
             <view class="today-lesson-content">
               <view class="today-lesson-head">
                 <text class="today-lesson-time">{{item.timeText}}</text>
-                <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+                <view class="today-lesson-tags">
+                  <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+                  <text wx:if="{{item.showRepeatTag}}" class="today-course-pill is-repeat">{{item.repeatTagText}}</text>
+                </view>
               </view>
               <view class="today-lesson-meta schedule-location">
                 <text>{{item.loc}}</text>
@@ -166,7 +169,10 @@
               </view>
               <view class="week-task-time-row">
                 <text class="week-task-time">{{item.timeText}}</text>
-                <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+                <view class="today-lesson-tags">
+                  <text class="today-course-pill {{item.courseTagClass}}">{{item.courseTagText}}</text>
+                  <text wx:if="{{item.showRepeatTag}}" class="today-course-pill is-repeat">{{item.repeatTagText}}</text>
+                </view>
               </view>
               <view class="week-task-location">
                 <text>{{item.student}}</text>
@@ -222,7 +228,7 @@
                   <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
                   <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
                   <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course {{course.accentClass}}" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
-                    <view class="tt-course-top"><text class="tt-course-time">{{course.timeText}}</text><text class="tt-course-type">{{course.courseTagText}}</text></view>
+                    <view class="tt-course-top"><text class="tt-course-time">{{course.timeText}}</text><view class="tt-course-tags"><text class="tt-course-type">{{course.courseTagText}}</text><text wx:if="{{course.showRepeatTag}}" class="tt-course-repeat">{{course.repeatTagText}}</text></view></view>
                     <view class="tt-course-name-row">
                       <text class="tt-course-name">{{course.student}}</text>
                       <text wx:if="{{course.todoLabel}}" class="tt-course-status">{{course.todoLabel}}</text>

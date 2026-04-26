@@ -1,9 +1,15 @@
 const path = require('path');
+const fs = require('fs');
 
 const express = require('express');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const envCandidates = [
+  path.join(__dirname, '..', '.env'),
+  path.join(__dirname, '..', '..', '..', '.env')
+];
+const envPath = envCandidates.find(file => fs.existsSync(file));
+if (envPath) dotenv.config({ path: envPath });
 
 const apiHandler = require(path.join(__dirname, '..', 'api', 'index.js'));
 
@@ -48,4 +54,3 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(port, () => {
   console.log(`FlowTennis local dev: http://127.0.0.1:${port}`);
 });
-

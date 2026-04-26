@@ -15,6 +15,8 @@ function fnBody(name){
 }
 
 assert.match(source, /function buildRepeatScheduleSeeds\(/, 'schedule page should expose a repeat schedule helper');
+assert.match(source, /function formatScheduleLocalDateTime\(/, 'schedule page should format repeat schedule times with local business time');
+assert.match(fnBody('buildRepeatScheduleSeeds'), /formatScheduleLocalDateTime\(dt\)/, 'repeat schedule seeds should use local datetime formatting instead of UTC ISO strings');
 assert.match(fnBody('openScheduleModal'), /sch_repeatEnabled/, 'schedule modal should allow enabling repeat scheduling');
 assert.match(fnBody('openScheduleModal'), /每周重复/, 'schedule modal should describe weekly repeat scheduling');
 assert.match(fnBody('openScheduleModal'), /教练迟到免费/, 'schedule modal should support marking coach-late free lessons');
@@ -22,6 +24,8 @@ assert.match(fnBody('openScheduleModal'), /教练承担场地费/, 'schedule mod
 assert.match(fnBody('scheduleSaveConfirmText'), /迟到免费/, 'schedule save confirm copy should show coach-late free status');
 assert.match(fnBody('saveSchedule'), /buildRepeatScheduleSeeds\(/, 'saving schedules should fan out repeat seeds when enabled');
 assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should persist coach late fields');
+assert.match(source, /function scheduleRepeatBadgeHtml\(/, 'schedule page should expose a repeat badge helper for the main list');
+assert.match(fnBody('renderSchedule'), /scheduleRepeatBadgeHtml\(s\)/, 'schedule main list should show repeat schedule badges beside course type');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*校区内[\s\S]*校区外/, 'schedule modal should support in-campus and off-campus lesson location types');

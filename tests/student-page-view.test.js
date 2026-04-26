@@ -52,7 +52,9 @@ assert.match(source, /\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}/, '
 assert.match(source, /student-summary-strong/, 'student rows should visually distinguish non-empty package and booking summaries');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should prioritize view before edit');
-assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openPurchaseModal\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should expose a direct package purchase shortcut between view and edit');
+assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentPurchaseModal\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should expose a direct package purchase shortcut between view and edit');
+assert.match(source, /function ensureStudentPurchaseDatasets\(/, 'student page should preload purchase datasets before opening package flows');
+assert.match(source, /ensureDatasetsByName\(\['purchasesPage','coaches'\]\)/, 'student package entry should reuse the purchases page data bundle and coach list');
 assert.match(source, /function studentTeachingInfoHtml\(/, 'student detail should render teaching info block');
 assert.match(source, /function studentOpsInfoHtml\(/, 'student detail should render operations info block');
 assert.match(source, /function studentConsumptionInfoHtml\(/, 'student detail should render consumption relation block');

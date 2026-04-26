@@ -61,13 +61,16 @@ function scheduleLocationText(item = {}) {
 
 function formatScheduleItem(item) {
   const state = item.workbenchState && item.workbenchState.code ? item.workbenchState : null;
+  const repeatTagText = item.scheduleSource === '循环排课' ? '循环' : '';
   return {
     ...item,
     timeText: timeText(item),
     title: item.courseType || item.className || '课程',
     studentText: item.studentName || '学员待确认',
     locationText: scheduleLocationText(item),
-    statusText: state ? state.label : (item.status || '已排课')
+    statusText: state ? state.label : (item.status || '已排课'),
+    repeatTagText,
+    showRepeatTag: !!repeatTagText
   };
 }
 
