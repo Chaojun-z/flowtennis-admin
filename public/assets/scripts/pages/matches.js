@@ -1,20 +1,4 @@
 // ===== 约球管理 =====
-function onMatchFilterChange(){renderMatches();}
-function renderMatchToolbarFilters(){
-  const statusValue=document.getElementById('matchStatusFilter')?.value||'';
-  const statusOptions=[
-    {value:'',label:'全部状态'},
-    {value:'open',label:'招募中'},
-    {value:'full',label:'已满员'},
-    {value:'booked',label:'已订场'},
-    {value:'attendance_pending',label:'待确认到场'},
-    {value:'fee_pending',label:'待确认费用'},
-    {value:'settled',label:'已结清'},
-    {value:'cancelled',label:'已取消'}
-  ];
-  const host=document.getElementById('matchStatusFilterHost');
-  if(host)host.innerHTML=renderCourtDropdownHtml('matchStatusFilter','全部状态',statusOptions,statusValue,false,'onMatchFilterChange');
-}
 async function loadMatches(force=false){
   try{
     await ensureDatasetsByName(['matchesPage'],{force});
@@ -29,7 +13,6 @@ function matchRowText(row){
 }
 function renderMatches(){
   const host=document.getElementById('matchTbody');if(!host)return;
-  renderMatchToolbarFilters();
   const q=String(document.getElementById('matchSearch')?.value||'').trim().toLowerCase();
   const status=document.getElementById('matchStatusFilter')?.value||'';
   const rows=(matches||[]).filter(row=>(!status||row.status===status)&&(!q||matchRowText(row).includes(q)));
@@ -40,12 +23,11 @@ function renderMatches(){
       `<span class="tms-action-link" onclick="openMatchBookingModal('${row.id}')">订场</span>`,
       `<span class="tms-action-link" onclick="openMatchWithdrawalModal('${row.id}')">退赛</span>`,
       `<span class="tms-action-link" onclick="openMatchAttendanceModal('${row.id}')">到场</span>`,
-      `<span class="tms-action-link" onclick="openMatchTakeoverModal('${row.id}')">运营接管</span>`,
       `<span class="tms-action-link" onclick="confirmMatchFees('${row.id}')">生成AA</span>`,
       `<span class="tms-action-link" onclick="openMatchFeeModal('${row.id}')">收款</span>`,
       `<span class="tms-action-link" onclick="openMatchLogModal('${row.id}')">日志</span>`
     ].join('');
-    return `<tr><td style="padding-left:20px"><div class="tms-cell-main">${esc(row.title||'-')}</div><div class="tms-cell-sub">${esc(row.matchType||'')}</div></td><td>${renderCourtCellText(matchTimeText(row),false)}</td><td>${renderCourtCellText(row.booking?.venueNameFinal||row.venueName||'待定')}</td><td><div class="tms-cell-text">${row.currentHeadcount||0}/${row.targetHeadcount||0}</div></td><td><span class="tms-tag">${esc(row.statusText||row.status||'-')}</span><div class="tms-text-remark" style="margin-top:6px;white-space:normal">${esc(row.statusHintText||'-')}</div></td><td><div class="tms-cell-text">¥${fmt(row.estimatedCourtFee||0)}</div></td><td><div class="tms-cell-text">¥${fmt(row.booking?.finalcourtfee||row.booking?.finalCourtFee||row.finalCourtFee||0)}</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:220px">${esc(regs.map(r=>r.nickName||r.phone||r.userId).join('；')||'-')}</div></td><td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right">${actions}</td></tr>`;
+    return `<tr><td style="padding-left:20px"><div class="tms-cell-main">${esc(row.title||'-')}</div><div class="tms-cell-sub">${esc(row.matchType||'')}</div></td><td>${renderCourtCellText(matchTimeText(row),false)}</td><td>${renderCourtCellText(row.booking?.venueNameFinal||row.venueName||'待定')}</td><td><div class="tms-cell-text">${row.currentHeadcount||0}/${row.targetHeadcount||0}</div></td><td><span class="tms-tag">${esc(row.statusText||row.status||'-')}</span></td><td><div class="tms-cell-text">¥${fmt(row.estimatedCourtFee||0)}</div></td><td><div class="tms-cell-text">¥${fmt(row.booking?.finalcourtfee||row.booking?.finalCourtFee||row.finalCourtFee||0)}</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:220px">${esc(regs.map(r=>r.nickName||r.phone||r.userId).join('；')||'-')}</div></td><td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right">${actions}</td></tr>`;
   }).join('')||'<tr><td colspan="9"><div class="empty"><p>暂无约球数据</p></div></td></tr>';
 }
 function matchFinanceSummary(rows){
@@ -77,23 +59,7 @@ function renderMatchFinanceStats(rows){
     ['退款',`¥${fmt(s.refunded)}`]
   ].map(([label,value])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div></div>`).join('')+
     `<div class="tms-stat-card" style="cursor:pointer" onclick="openMatchCourtFinanceLedger()"><div class="tms-stat-label">约球订场总账</div><div class="tms-stat-value">查看</div></div>`+
-    `<div class="tms-stat-card" style="cursor:pointer" onclick="openMatchDailyFinanceReport()"><div class="tms-stat-label">约球日结</div><div class="tms-stat-value">对账</div></div>`+
-    `<div class="tms-stat-card" style="cursor:pointer" onclick="openMatchSettingsModal()"><div class="tms-stat-label">约球设置</div><div class="tms-stat-value">配置</div></div>`;
-}
-async function openMatchSettingsModal(){
-  try{
-    const settings=await apiCall('GET','/admin/matches/settings');
-    const body=`<div class="tms-section-header" style="margin-top:0;">收款配置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">运营微信</label><input class="finput tms-form-control" id="matchSettingsWechat" value="${esc(settings.operatorWechatId||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">收款二维码</label><input class="finput tms-form-control" id="matchSettingsQr" value="${esc(settings.operatorPaymentQr||'')}" placeholder="图片地址"></div></div><div style="font-size:12px;color:var(--ts);line-height:1.6">这里修改后，小程序约球详情会直接读取最新运营微信和二维码。</div>`;
-    const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchSettings()">保存</button>`;
-    setCourtModalFrame('约球设置',body,actions,'modal-wide');
-  }catch(e){toast('设置加载失败：'+e.message,'error');}
-}
-async function saveMatchSettings(){
-  try{
-    await apiCall('POST','/admin/matches/settings',{operatorWechatId:document.getElementById('matchSettingsWechat')?.value.trim()||'',operatorPaymentQr:document.getElementById('matchSettingsQr')?.value.trim()||''});
-    closeModal();
-    toast('约球设置已保存','success');
-  }catch(e){toast('保存失败：'+e.message,'error');}
+    `<div class="tms-stat-card" style="cursor:pointer" onclick="openMatchDailyFinanceReport()"><div class="tms-stat-label">约球日结</div><div class="tms-stat-value">对账</div></div>`;
 }
 async function openMatchCourtFinanceLedger(){
   try{
@@ -139,20 +105,6 @@ function openMatchAttendanceModal(id){
   const body=`<div class="tms-section-header" style="margin-top:0;">到场确认</div>${regs.map(r=>`<label class="choice-tag" style="width:100%;justify-content:space-between;margin-bottom:8px"><span>${esc(r.nickName||r.phone||r.userId)}</span><select class="finput tms-form-control match-attendance-status" data-user-id="${esc(r.userId||r.userid)}" style="width:130px"><option value="attended">到场</option><option value="absent">缺席</option></select></label>`).join('')||'<div class="empty"><p>暂无报名人</p></div>'}`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchAttendance('${id}')">保存</button>`;
   setCourtModalFrame('确认到场',body,actions,'modal-wide');
-}
-function openMatchTakeoverModal(id){
-  const row=(matches||[]).find(x=>x.id===id);if(!row)return;
-  const regs=Array.isArray(row.registrations)?row.registrations:[];
-  const body=`<div class="tms-section-header" style="margin-top:0;">运营接管</div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:10px">${esc(row.statusHintText||'发起者未完成到场确认，运营可在这里接管。')}</div>${regs.map(r=>`<label class="choice-tag" style="width:100%;justify-content:space-between;margin-bottom:8px"><span>${esc(r.nickName||r.phone||r.userId)}</span><select class="finput tms-form-control match-takeover-status" data-user-id="${esc(r.userId||r.userid)}" style="width:130px"><option value="attended" ${(r.finalAttendanceStatus||'')==='attended'?'selected':''}>到场</option><option value="absent" ${(r.finalAttendanceStatus||'')==='absent'?'selected':''}>缺席</option></select></label>`).join('')||'<div class="empty"><p>暂无报名人</p></div>'}`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchTakeover('${id}')">保存接管结果</button>`;
-  setCourtModalFrame('运营接管',body,actions,'modal-wide');
-}
-async function saveMatchTakeover(id){
-  const items=[...document.querySelectorAll('.match-takeover-status')].map(el=>({userId:el.dataset.userId,finalStatus:el.value}));
-  try{
-    await apiCall('POST',`/admin/matches/${id}/attendance`,{items});
-    closeModal();toast('运营接管已保存','success');await loadMatches(true);
-  }catch(e){toast('接管失败：'+e.message,'error');}
 }
 async function saveMatchAttendance(id){
   const items=[...document.querySelectorAll('.match-attendance-status')].map(el=>({userId:el.dataset.userId,finalStatus:el.value}));
@@ -206,7 +158,7 @@ async function updateMatchFeeSplit(matchId,userId,payStatus){
   }catch(e){toast('更新失败：'+e.message,'error');}
 }
 function matchLogActionText(action){
-  return ({booking:'订场',attendance_confirm:'确认到场',attendance_takeover:'运营接管',fee_generate:'生成AA',fee_split_update:'收款更新',booked_withdrawal:'已订场退赛',match_cancel:'取消球局',match_update:'修改球局',notify_failed:'通知失败'}[action]||action||'-');
+  return ({booking:'订场',attendance_confirm:'确认到场',fee_generate:'生成AA',fee_split_update:'收款更新',booked_withdrawal:'已订场退赛',match_cancel:'取消球局',match_update:'修改球局',notify_failed:'通知失败'}[action]||action||'-');
 }
 function openMatchLogModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;
