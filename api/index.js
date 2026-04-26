@@ -1969,11 +1969,12 @@ function buildFinanceAudit(rows=[],overview=null){
     const text=`${row?.notes||''} ${row?.sourceDocument||''} ${row?.customerName||''}`;
     return text.includes('朝珺私教')&&String(row?.campusName||'').trim()==='顺义马坡';
   });
+  const autoFixedCampusRows=activeRows.filter(row=>String(row?.campusResolution||'')==='text_override_import');
   const externalCampusRows=activeRows.filter(row=>{
     const text=`${row?.notes||''} ${row?.sourceDocument||''} ${row?.customerName||''}`;
-    return /朗茶|周五朗茶校区/.test(text);
+    if(!/朗茶|周五朗茶校区/.test(text))return false;
+    return String(row?.campusName||'').trim()!=='朗茶校区';
   });
-  const autoFixedCampusRows=activeRows.filter(row=>String(row?.campusResolution||'')==='text_override_import');
   const overviewData=overview||buildFinanceOverview(activeRows);
   const campusCashTotal=(overviewData?.campuses||[]).reduce((sum,row)=>sum+(Number(row?.cash)||0),0);
   const campusRecognizedTotal=(overviewData?.campuses||[]).reduce((sum,row)=>sum+(Number(row?.recognized)||0),0);

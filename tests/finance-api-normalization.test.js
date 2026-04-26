@@ -97,7 +97,7 @@ assert.strictEqual(audit.recognizedGap, 0, 'finance audit should keep total reco
 assert.strictEqual(audit.importMissingDateCount, 1, 'finance audit should flag historical import rows missing business date');
 assert.strictEqual(audit.importZeroAmountCount, 1, 'finance audit should flag zero-amount historical import rows');
 assert.strictEqual(audit.chaojunRiskCount, 0, 'finance audit should stop flagging chaojun rows once import clue correction fixes the campus');
-assert.strictEqual(audit.externalCampusRiskCount, 1, 'finance audit should flag explicit external-campus clues');
+assert.strictEqual(audit.externalCampusRiskCount, 0, 'finance audit should stop flagging explicit external-campus rows once campus auto-fix already split them out');
 assert.strictEqual(audit.autoFixedCampusCount, 2, 'finance audit should expose how many rows were auto-fixed by import clues');
 assert.strictEqual(audit.details.length, 10, 'finance audit should expose the extended anomaly detail checklist');
 assert.strictEqual(audit.details[0].type, '缺校区', 'finance audit detail should include missing campus checks');
