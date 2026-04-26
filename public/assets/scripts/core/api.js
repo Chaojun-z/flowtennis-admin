@@ -74,8 +74,8 @@ async function doLogin(){
     const data=await apiCall('POST','/auth/login',{username,password});
     token=data.token;currentUser=data.user;
     localStorage.setItem('ft_token',token);localStorage.setItem('ft_user',JSON.stringify(currentUser));
-    await bindWechatAfterLogin();
     showApp();
+    bindWechatAfterLogin().catch(()=>null);
   }catch(e){err.textContent=e.message;err.classList.add('show');btn.disabled=false;btn.textContent='登 录';}
 }
 function doLogout(){

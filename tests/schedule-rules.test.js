@@ -547,10 +547,22 @@ assert.strictEqual(
   'coach-late free schedule should not consume class lessons'
 );
 
+assert.strictEqual(
+  rules.scheduleLessonDelta({ classId: 'class-a', lessonCount: 1, status: '已排课', giftLesson: true }),
+  null,
+  'gift lesson schedule should not consume class lessons'
+);
+
 assert.deepStrictEqual(
   rules.scheduleEntitlementDeltas({ id: 'sch-late', status: '已排课', coachLateFree: true, entitlementId: 'ent-1', lessonCount: 1 }),
   [],
   'coach-late free schedule should not consume package lessons'
+);
+
+assert.deepStrictEqual(
+  rules.scheduleEntitlementDeltas({ id: 'sch-gift', status: '已排课', giftLesson: true, entitlementId: 'ent-1', lessonCount: 1 }),
+  [],
+  'gift lesson schedule should not consume package lessons'
 );
 
 assert.deepStrictEqual(
@@ -583,6 +595,12 @@ assert.deepStrictEqual(
     coachLateHandledBy: '管理员'
   },
   'coach late info should normalize settlement fields'
+);
+
+assert.deepStrictEqual(
+  rules.normalizeGiftLessonInfo({ giftLesson: true }),
+  { giftLesson: true },
+  'gift lesson info should normalize the dedicated flag'
 );
 
 assert.deepStrictEqual(

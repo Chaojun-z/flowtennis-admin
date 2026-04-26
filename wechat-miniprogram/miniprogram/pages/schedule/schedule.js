@@ -1371,37 +1371,72 @@ Page({
     this.load({ stopPullDown: true });
   },
 
+  consumePrefetchedWorkbench() {
+    const app = getApp();
+    if (!app || !app.globalData) return Promise.resolve(null);
+    if (app.globalData.coachWorkbenchSnapshot) {
+      const data = app.globalData.coachWorkbenchSnapshot;
+      app.globalData.coachWorkbenchSnapshot = null;
+      app.globalData.coachWorkbenchPrefetch = null;
+      return Promise.resolve(data);
+    }
+    if (app.globalData.coachWorkbenchPrefetch) {
+      return Promise.resolve(app.globalData.coachWorkbenchPrefetch)
+        .then((data) => {
+          app.globalData.coachWorkbenchSnapshot = null;
+          app.globalData.coachWorkbenchPrefetch = null;
+          return data || null;
+        })
+        .catch(() => {
+          app.globalData.coachWorkbenchPrefetch = null;
+          return null;
+        });
+    }
+    return Promise.resolve(null);
+  },
+
+  applyWorkbenchData(data, extra = {}) {
+    const coachName = currentCoachName();
+    const displayName = coachDisplayName(coachName);
+    const coachMenuId = currentCoachId();
+    const now = new Date();
+    const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
+    const studentsList = buildStudentCards(data.students || [], data.classes || [], schedule, coachName);
+    const shiftsList = buildShiftCards(data.classes || [], data.students || []);
+    this.setData({
+      schedule,
+      coachWorkbenchStats: data.stats || {},
+      feedbacks: data.feedbacks || [],
+      campusesRaw: data.campuses || [],
+      studentsRaw: data.students || [],
+      classesRaw: data.classes || [],
+      studentsList,
+      studentStats: buildStudentStats(data.students || [], coachName),
+      shiftsList,
+      shiftStats: buildShiftStats(shiftsList),
+      coachGreeting: coachGreeting(now),
+      coachDisplayName: displayName,
+      coachMenuId,
+      coachMenuAvatar: avatarText(displayName),
+      loading: false,
+      hasLoaded: true,
+      ...extra
+    });
+    this.renderWeek();
+  },
+
   async load(options = {}) {
     if (!options.keepLoading) this.setData({ loading: true, error: '' });
     try {
       await ensureCoachSession();
+      const prefetched = !this.data.hasLoaded ? await this.consumePrefetchedWorkbench() : null;
+      if (prefetched) {
+        this.applyWorkbenchData(prefetched, { error: '' });
+        if (options.stopPullDown) wx.stopPullDownRefresh();
+        return;
+      }
       const data = await loadCoachWorkbench();
-      const coachName = currentCoachName();
-      const displayName = coachDisplayName(coachName);
-      const coachMenuId = currentCoachId();
-      const now = new Date();
-      const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
-      const studentsList = buildStudentCards(data.students || [], data.classes || [], schedule, coachName);
-      const shiftsList = buildShiftCards(data.classes || [], data.students || []);
-      this.setData({
-        schedule,
-        coachWorkbenchStats: data.stats || {},
-        feedbacks: data.feedbacks || [],
-        campusesRaw: data.campuses || [],
-        studentsRaw: data.students || [],
-        classesRaw: data.classes || [],
-        studentsList,
-        studentStats: buildStudentStats(data.students || [], coachName),
-        shiftsList,
-        shiftStats: buildShiftStats(shiftsList),
-        coachGreeting: coachGreeting(now),
-        coachDisplayName: displayName,
-        coachMenuId,
-        coachMenuAvatar: avatarText(displayName),
-        loading: false,
-        hasLoaded: true
-      });
-      this.renderWeek();
+      this.applyWorkbenchData(data, { error: '' });
     } catch (err) {
       if (handleCoachAuthError(err)) return;
       this.setData({ loading: false, hasLoaded: true, error: err.message || '请先确认账号已绑定微信后重试' });

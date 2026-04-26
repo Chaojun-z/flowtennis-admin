@@ -67,6 +67,16 @@ assert.match(
   /coach-wb-page-header[\s\S]*本周课程待办[\s\S]*coach-wb-current-time[\s\S]*coach-wb-board/,
   'coach workbench should render the weekly shell directly'
 );
+assert.match(
+  fnBody('renderWorkbench'),
+  /localDateKey\(week\[0\]\)[\s\S]*localDateKey\(week\[6\]\)/,
+  'coach workbench should derive week bounds from local business dates instead of UTC ISO strings'
+);
+assert.doesNotMatch(
+  fnBody('renderWorkbench'),
+  /toISOString\(\)\.slice\(0,10\)/,
+  'coach workbench should not use UTC ISO keys for week grouping'
+);
 
 assert.match(
   fnBody('renderWorkbench'),
@@ -173,6 +183,11 @@ assert.match(
   fnBody('renderMySchedule'),
   /scheduleSource==='订场陪打'[\s\S]*陪打/,
   'coach weekly schedule should label companion bookings as dedicated companion tasks'
+);
+assert.doesNotMatch(
+  fnBody('renderMySchedule'),
+  /toISOString\(\)\.slice\(0,10\)/,
+  'coach weekly schedule should not use UTC ISO keys for day columns'
 );
 assert.match(
   source,

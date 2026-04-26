@@ -9,9 +9,31 @@ function cn(k){
 }
 function campusOpts(sel){return Object.entries(CAMPUS).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${v}</option>`).join('');}
 const VENUES=['1号场','2号场','3号场','4号场'];
-function venueOpts(sel){
-  const extra=sel&&!VENUES.includes(sel)?[`<option value="${esc(sel)}" selected>${esc(sel)}</option>`]:[];
-  return [...extra,...VENUES.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');
+const SHILIPU_VENUES=['1号场','2号场','3号场','4号场','5号场'];
+function normalizeCampusVenueRuleKey(raw=''){
+  return String(raw||'').trim().toLowerCase();
+}
+function campusVenueRule(campus=''){
+  const raw=String(campus||'').trim();
+  const key=normalizeCampusVenueRuleKey(raw);
+  if(['shilipu','朝阳十里堡','十里堡'].includes(key)||raw.includes('十里堡'))return {mode:'select',options:SHILIPU_VENUES};
+  if(['guowang','朝阳国网','国网'].includes(key)||raw.includes('国网'))return {mode:'text',options:[]};
+  return {mode:'select',options:VENUES};
+}
+function venueOpts(sel,campus=''){
+  const rule=campusVenueRule(campus);
+  const options=rule.options||VENUES;
+  const extra=sel&&!options.includes(sel)?[`<option value="${esc(sel)}" selected>${esc(sel)}</option>`]:[];
+  return [...extra,...options.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');
+}
+function venueFieldHtml(inputId,label,campus,value='',required=true,onchange=''){
+  const rule=campusVenueRule(campus);
+  if(rule.mode==='text'){
+    const requiredAttr=required?'':'';
+    const changeAttr=onchange?` oninput="${onchange}"`:'';
+    return `<label class="tms-form-label">${label}${requiredAttr?' *':''}</label><input class="finput tms-form-control" id="${inputId}" value="${esc(value)}" placeholder="例：C1 / 自定义场地"${changeAttr}>`;
+  }
+  return renderCourtDropdownHtml(inputId,label,(rule.options||VENUES).map(v=>({value:v,label:v})),value||(rule.options||VENUES)[0]||'',required,onchange);
 }
 const COACHES_LIST=['朝珺','晓哲','Siren','吴教练','Rive','郭教练','代教练','Jack','李韬','孙老师','Zoe','刘朝'];
 function coachName(v){return String(v||'').trim()}

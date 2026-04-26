@@ -42,6 +42,9 @@ assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court t
 assert.match(html, /id="courtPageSize"/, 'court table should support page size selection');
 assert.match(html, /20条\/页[\s\S]*50条\/页[\s\S]*100条\/页/, 'court page size selector should offer 20, 50, and 100 rows per page');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
+assert.match(html, /function campusVenueRule\(/, 'court finance page should reuse the shared campus venue rule helper');
+assert.match(html, /function renderCourtFinanceVenueField\(/, 'court finance modal should render venue field from the shared rule');
+assert.match(html, /function onCourtFinanceCampusChange\(/, 'court finance modal should refresh venue strategy when campus changes');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
 assert.doesNotMatch(fnBody('renderCourts'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
@@ -64,6 +67,7 @@ assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校
 assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
+assert.match(html, /function openCourtFinanceModal[\s\S]*nrCampus[\s\S]*onCourtFinanceCampusChange[\s\S]*nrVenueHost[\s\S]*venueFieldHtml\('nrVenue','场地'/, 'court finance modal should choose venue input strategy from campus rules');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
 assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrType','类型'[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrCategory','项目'[\s\S]*flex:0 0 118px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付'/s, 'court finance modal should narrow the first three selectors to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');

@@ -299,6 +299,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('classes',data.classes||[]);
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('feedbacks',data.feedbacks||[]);
+      setDatasetValue('purchases',data.purchases||[]);
       window.coachWorkbenchStats=data.stats||{};
       loadedDatasets.add('workbenchPage');
       return;
@@ -395,7 +396,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     buildCampusTabs();
     renderAll();
     openPendingScheduleDeepLink();
-    loadPageBackgroundDatasets(pg,requestVersion,{force:true});
+    setTimeout(()=>{loadPageBackgroundDatasets(pg,requestVersion,{force:true});},120);
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}

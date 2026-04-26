@@ -1,6 +1,8 @@
 App({
   globalData: {
-    privacyAccepted: false
+    privacyAccepted: false,
+    coachWorkbenchPrefetch: null,
+    coachWorkbenchSnapshot: null
   },
 
   openPrivacyContract() {

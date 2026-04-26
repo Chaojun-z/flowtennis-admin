@@ -25,7 +25,7 @@ assert.strictEqual(appConfig.__usePrivacyCheck__, true, 'mini program should ena
 const indexWxml = readText('wechat-miniprogram/miniprogram/pages/index/index.wxml');
 assert.match(indexWxml, /网球兄弟/, 'index page should render the Gemini login title');
 assert.match(indexWxml, /FLOWTENNIS · 管理系统/, 'index page should render the Gemini login subtitle');
-assert.match(indexWxml, /请输入账号ID（不是姓名）/, 'index page should render the mapped account input');
+assert.match(indexWxml, /请输入账号或手机号/, 'index page should render the mapped account input');
 assert.match(indexWxml, /请输入密码/, 'index page should render the mapped password input');
 assert.match(indexWxml, /checkbox/, 'index page should render an agreement checkbox');
 assert.match(indexWxml, /我已阅读并同意/, 'index page should render the agreement consent copy');
@@ -43,10 +43,13 @@ assert.match(indexJs, /SCHEDULE_TEMPLATE_ID/, 'index page should read the schedu
 assert.match(indexJs, /COURSE_REMINDER_TEMPLATE_ID/, 'index page should read the course reminder subscribe template ID from config');
 assert.match(indexJs, /loginWithPassword/, 'index page should call the real account password login helper');
 assert.match(indexJs, /bindWechatAfterLogin/, 'index page should bind the current mini program WeChat account after password login');
-assert.match(indexJs, /function shouldBindWechatAfterLogin/, 'index page should decide whether WeChat bind is still needed after password login');
+assert.match(indexJs, /loadCoachWorkbench/, 'index page should prefetch coach workbench data right after account login');
+assert.match(indexJs, /coachWorkbenchPrefetch/, 'index page should keep the in-flight workbench request on app global state');
+assert.match(indexJs, /coachWorkbenchSnapshot/, 'index page should cache the prefetched workbench payload on app global state');
 assert.match(indexJs, /function assertCoachLoginUser/, 'index page should validate coach role before entering the coach mini program');
 assert.match(indexJs, /user\.role !== 'editor'/, 'index page should reject non-coach accounts on the login page');
-assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*shouldBindWechatAfterLogin\(data\.user \|\| \{\}\)\s*\? bindWechatAfterLogin\(\)\s*: Promise\.resolve\(\)/, 'index page should skip repeated WeChat bind when the coach account is already bound');
+assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*coachWorkbenchPrefetch = loadCoachWorkbench\(\)/, 'index page should kick off workbench prefetch immediately after account login succeeds');
+assert.match(indexJs, /bindWechatAfterLogin\(\)\.catch\(\(\) => null\);[\s\S]*this\.requestScheduleNotice\(\);/, 'index page should request subscribe permission without waiting for WeChat bind to finish');
 assert.match(indexJs, /wx\.requestSubscribeMessage/, 'index page should request schedule subscribe permission from a tap');
 assert.match(indexJs, /tmplIds:\s*\[SCHEDULE_TEMPLATE_ID,\s*COURSE_REMINDER_TEMPLATE_ID\]/, 'index page should request both schedule and course reminder templates');
 assert.match(indexJs, /pages\/schedule\/schedule/, 'index page should navigate into the native schedule page after the tap');
@@ -133,6 +136,9 @@ assert.match(scheduleWxml, /wx:elif="\{\{!shiftsList\.length\}\}"[\s\S]*暂无�
 assert.doesNotMatch(scheduleWxml, /编辑排课|取消排课|去排课|保存排课|确认取消/, 'coach mini program should not expose schedule create, edit, or cancel actions');
 
 const scheduleJs = readText('wechat-miniprogram/miniprogram/pages/schedule/schedule.js');
+assert.match(scheduleJs, /consumePrefetchedWorkbench/, 'schedule page should reuse prefetched workbench payloads from login');
+assert.match(scheduleJs, /applyWorkbenchData/, 'schedule page should apply workbench payloads through a shared hydrator');
+assert.match(scheduleJs, /const prefetched = !this\.data\.hasLoaded \? await this\.consumePrefetchedWorkbench\(\) : null;/, 'schedule page should consume prefetched workbench data on first entry before making another request');
 assert.match(scheduleJs, /weekTodoGroups/, 'native workbench should prepare grouped weekly todo data');
 assert.match(scheduleJs, /dashboardClasses,\s*weekTodoGroups/, 'native week render should expose both today cards and weekly todo groups');
 assert.match(scheduleJs, /reminderItems/, 'native workbench should prepare compact reminder chips');

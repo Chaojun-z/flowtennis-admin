@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
 
 assert.match(source, /students:\['campuses','students'\]/, 'students page should only block on the datasets needed to paint the list immediately');
 assert.match(source, /plans:\[\]/, 'plans page should open shell immediately and load data in background');
@@ -45,5 +46,7 @@ assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{\s*renderPageLoading\(
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
 assert.match(source, /datasetLoadPromises\.has\(name\)/, 'dataset loading should reuse in-flight requests');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force:true\}\);/, 'page background loading should revalidate cached data without blocking first paint');
+assert.doesNotMatch(indexHtml, /<script src="\/assets\/scripts\/[^"?]+\.js"><\/script>/, 'every bundled page script should carry a shared cache-busting version query');
+assert.match(indexHtml, /constants\.js\?v=20260426-static-sync[\s\S]*coach-portal\.js\?v=20260426-static-sync/, 'all core and page scripts should share the same release version tag');
 
 console.log('page data requirements tests passed');

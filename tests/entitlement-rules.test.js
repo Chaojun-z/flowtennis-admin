@@ -24,6 +24,7 @@ const pkg = {
   timeBand: '非黄金时段',
   coachIds: ['coach-1'],
   coachNames: ['朝珺'],
+  saleCampusId: 'mabao',
   campusIds: ['mabao'],
   maxStudents: 1
 };
@@ -35,6 +36,7 @@ const purchase = {
   purchaseDate: '2026-05-02',
   amountPaid: 1000,
   payMethod: '微信',
+  saleCampusId: 'shilibao',
   ownerCoach: '朝珺',
   allowedCoaches: ['mira', '小舟']
 };
@@ -88,6 +90,7 @@ assert.deepStrictEqual(
     validFrom: entitlement.validFrom,
     validUntil: entitlement.validUntil,
     timeBand: entitlement.timeBand,
+    saleCampusId: entitlement.saleCampusId,
     ownerCoach: entitlement.ownerCoach,
     allowedCoaches: entitlement.allowedCoaches
   },
@@ -102,6 +105,7 @@ assert.deepStrictEqual(
     validFrom: '2026-05-02',
     validUntil: '2026-07-01',
     timeBand: '非黄金时段',
+    saleCampusId: 'shilibao',
     ownerCoach: '朝珺',
     allowedCoaches: ['mira', '小舟']
   },
@@ -126,6 +130,7 @@ assert.deepStrictEqual(
     dailyTimeWindows: [{ label: '非黄金时段', startTime: '07:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }],
     coachIds: ['coach-1'],
     coachNames: ['朝珺'],
+    saleCampusId: 'shilibao',
     campusIds: ['mabao'],
     ownerCoach: '朝珺',
     allowedCoaches: ['mira', '小舟'],
@@ -236,6 +241,12 @@ assert.throws(
   () => rules.validatePackageInput({ ...pkg, saleStartDate: '2026-06-01', saleEndDate: '2026-05-01' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
   /活动结束时间不能早于活动开始时间/,
   'package sale date range must be valid'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...pkg, saleCampusId: 'missing' }, { products: [{ id: 'prod-1' }], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /销售归属校区不存在/,
+  'package sale campus must reference an existing campus'
 );
 
 assert.throws(

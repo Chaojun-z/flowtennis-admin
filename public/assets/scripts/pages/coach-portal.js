@@ -84,8 +84,8 @@ function renderWorkbench(){
   const now=shanghaiNow();
   const todayStr=localDateKey(now);
   const week=getWeekDates(0);
-  const weekStart=week[0].toISOString().slice(0,10);
-  const weekEnd=week[6].toISOString().slice(0,10);
+  const weekStart=localDateKey(week[0]);
+  const weekEnd=localDateKey(week[6]);
   const weekRows=myRows.filter(s=>{const d=String(s.startTime||'').slice(0,10);return d>=weekStart&&d<=weekEnd;});
   const coachWorkbenchStats=window.coachWorkbenchStats||{};
   const host=document.getElementById('workbenchBody');
@@ -100,7 +100,7 @@ function renderWorkbench(){
   ].map(([label,val,u,sub,accent])=>`<div class="coach-wb-stat-card"><div class="coach-wb-stat-label">${label}</div><div class="coach-wb-stat-value"${accent?' style="color:#8C4A32;"':''}>${val}<span>${u}</span></div><div class="coach-wb-stat-sub">${sub}</div></div>`).join('');
   const WDNAMES=['周一','周二','周三','周四','周五','周六','周日'];
   const weekBoardHtml=week.map((d,i)=>{
-    const ds=d.toISOString().slice(0,10);
+    const ds=localDateKey(d);
     const isToday=ds===todayStr;
     const isPast=ds<todayStr;
     const dayRows=weekRows.filter(s=>String(s.startTime||'').slice(0,10)===ds)
@@ -188,11 +188,11 @@ function renderMySchedule(){
   if(weekHeader)weekHeader.innerHTML=`<div class="my-schedule-week-title">本周总览</div><div class="my-schedule-week-sub">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。</div>`;
   const startH=7,endH=22;
   let html='<div class="wg-corner"></div>';
-  week.forEach((d,i)=>{const ds=d.toISOString().slice(0,10);const isToday=ds===todayStr;html+=`<div class="wg-dayhead${isToday?' today':''}">${WDNAMES[i]}<br>${d.getDate()}日</div>`;});
+  week.forEach((d,i)=>{const ds=localDateKey(d);const isToday=ds===todayStr;html+=`<div class="wg-dayhead${isToday?' today':''}">${WDNAMES[i]}<br>${d.getDate()}日</div>`;});
   for(let h=startH;h<endH;h++){
     html+=`<div class="wg-hour">${String(h).padStart(2,'0')}:00</div>`;
     week.forEach((d,di)=>{
-      const ds=d.toISOString().slice(0,10);const isToday=ds===todayStr;
+      const ds=localDateKey(d);const isToday=ds===todayStr;
       if(isToday)isTodayGrid=true;
       const cellScheds=allMine.filter(s=>s.startTime.slice(0,10)===ds);
       let blocks='';
@@ -218,7 +218,7 @@ function renderMySchedule(){
     const timelineHeight=(endH-startH)*mobileHourHeight;
     const timeRail=`<div class="coach-mobile-time-rail"><div class="coach-mobile-time-head"></div>${Array.from({length:endH-startH},(_,idx)=>`<div class="coach-mobile-time-label">${String(startH+idx).padStart(2,'0')}:00</div>`).join('')}</div>`;
     const dayColumns=week.map((d,i)=>{
-      const ds=d.toISOString().slice(0,10);
+      const ds=localDateKey(d);
       const rows=allMine.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
       const isToday=ds===todayStr;
       const nowLine=isToday&&now.getHours()>=startH&&now.getHours()<endH?`<div class="coach-mobile-now-line" style="top:${((now.getHours()-startH)*60+now.getMinutes())/60*mobileHourHeight}px"><span class="coach-mobile-now-dot"></span></div>`:'';

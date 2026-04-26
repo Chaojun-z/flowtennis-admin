@@ -190,7 +190,9 @@ function parseLessonValue(v,fallback=0){
   return Number.isFinite(n)?n:fallback;
 }
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
-function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree;}
+function isGiftLesson(rec){return !!rec?.giftLesson;}
+function isCoachLateFreeSchedule(rec){return !!rec?.coachLateFree;}
+function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!isCoachLateFreeSchedule(rec)&&!isGiftLesson(rec);}
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
   const cls=await getCachedRow(T_CLASSES,classId);
@@ -236,7 +238,8 @@ function effectiveScheduleStatus(rec,now=new Date()){
 }
 function scheduleLessonChargeStatus(rec,ledger=[]){
   if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
-  if(rec.coachLateFree)return '迟到免费';
+  if(isCoachLateFreeSchedule(rec))return '迟到免费';
+  if(isGiftLesson(rec))return '赠送上课';
   if(parseLessonValue(rec.lessonCount)<=0)return '不扣课';
   if(!rec.entitlementId)return '未扣课';
   const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&parseLessonValue(l.lessonDelta)<0);
@@ -501,6 +504,7 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
   const purchaseDate=purchase.purchaseDate||now.slice(0,10);
   const validUntil=pkg.usageEndDate||pkg.validUntil||(pkg.validDays?addDaysKey(purchaseDate,pkg.validDays):'');
   const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
+  const saleCampusId=String(purchase.saleCampusId||pkg.saleCampusId||parseArr(pkg.campusIds)[0]||'').trim();
   return {
     id,
     studentId:purchase.studentId||student?.id||'',
@@ -524,6 +528,7 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     coachNames:parseArr(pkg.coachNames),
     ownerCoach:purchase.ownerCoach||'',
     allowedCoaches:parseArr(purchase.allowedCoaches),
+    saleCampusId,
     campusIds:parseArr(pkg.campusIds),
     maxStudents:parseInt(pkg.maxStudents)||0,
     status:'active',
@@ -538,6 +543,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
   const finalAmount=normalizeMoney(body.amountPaid??pkg.price);
   const priceOverridden=systemAmount!==finalAmount;
   const overrideReason=String(body.overrideReason||'').trim();
+  const saleCampusId=String(body.saleCampusId||pkg.saleCampusId||parseArr(pkg.campusIds)[0]||'').trim();
   if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
   return {
     ...body,
@@ -565,6 +571,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     coachNames:parseArr(pkg.coachNames),
     ownerCoach:body.ownerCoach||'',
     allowedCoaches:parseArr(body.allowedCoaches),
+    saleCampusId,
     campusIds:parseArr(pkg.campusIds),
     usageStartDate:pkg.usageStartDate||'',
     usageEndDate:pkg.usageEndDate||'',
@@ -622,14 +629,17 @@ function validatePackageInput(pkg,refs={}){
     if(coachIds.some(id=>!ok.has(String(id))))throw new Error('可用教练不存在');
   }
   const campusIds=packageRefIds(pkg.campusIds);
+  const saleCampusId=String(pkg.saleCampusId||'').trim();
   if(refs.campuses&&campusIds.length){
     const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
     if(campusIds.some(id=>!ok.has(String(id))))throw new Error('可用校区不存在');
+    if(saleCampusId&&!ok.has(saleCampusId))throw new Error('销售归属校区不存在');
   }
 }
 function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOString()){
   const base={...(old||{}),...(input||{})};
-  const r={...base,lessons:parseInt(base.lessons)||0,price:normalizeMoney(base.price),validDays:parseInt(base.validDays)||0,maxStudents:parseInt(base.maxStudents)||0,status:base.status||'active',updatedAt:now};
+  const saleCampusId=String(base.saleCampusId||parseArr(base.campusIds)[0]||'').trim();
+  const r={...base,saleCampusId,lessons:parseInt(base.lessons)||0,price:normalizeMoney(base.price),validDays:parseInt(base.validDays)||0,maxStudents:parseInt(base.maxStudents)||0,status:base.status||'active',updatedAt:now};
   validatePackageInput(r,refs);
   return r;
 }
@@ -657,7 +667,7 @@ function assertCanEditPackageWithPurchases(oldPackage,nextPackage,purchases=[]){
   const changed=changedCoreFields(oldPackage,nextPackage,[
     'productId','productName','courseType','price','lessons','validDays',
     'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
-    'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
+    'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','saleCampusId','maxStudents'
   ]);
   if(changed.length)throw new Error('该课包已有购买记录，不能修改核心规则');
 }
@@ -672,11 +682,17 @@ function purchaseHasEntitlementLedger(purchaseId,entitlements=[],ledger=[]){
   const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   return (ledger||[]).some(l=>entitlementIds.has(l.entitlementId));
 }
-function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId=''}={}){
+function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId='',campuses=[]}={}){
   if(!pkg)throw new Error('售卖课包不存在');
   const samePackage=isEdit&&String(pkg.id||'')===String(oldPackageId||'');
   if(pkg.status&&pkg.status!=='active'&&!samePackage)throw new Error('该课包已停用');
   const purchaseDate=purchase?.purchaseDate||new Date().toISOString().slice(0,10);
+  const saleCampusId=String(purchase?.saleCampusId||pkg.saleCampusId||parseArr(pkg.campusIds)[0]||'').trim();
+  if(!saleCampusId)throw new Error('请选择销售归属校区');
+  if((campuses||[]).length){
+    const ok=new Set((campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
+    if(!ok.has(saleCampusId))throw new Error('销售归属校区不存在');
+  }
   if(pkg.saleStartDate&&purchaseDate<pkg.saleStartDate)throw new Error('不在课包活动购买时间内');
   if(pkg.saleEndDate&&purchaseDate>pkg.saleEndDate)throw new Error('不在课包活动购买时间内');
 }
@@ -778,9 +794,14 @@ function normalizeCoachLateInfo(input={}){
     coachLateHandledBy:late?String(input.coachLateHandledBy||'').trim():''
   };
 }
+function normalizeGiftLessonInfo(input={}){
+  return {
+    giftLesson:!!input.giftLesson
+  };
+}
 function buildCoachLateSettlementRows(schedules=[],month=''){
   return (schedules||[]).filter(s=>{
-    if(!s?.coachLateFree)return false;
+    if(!isCoachLateFreeSchedule(s))return false;
     const ds=String(s.startTime||'').slice(0,7);
     return !month||ds===month;
   }).map(s=>({
@@ -3296,8 +3317,9 @@ function assertCanDeleteCampus(campusId,data={}){
     (data.classes||[]).some(r=>String(r.campus||'').trim()===id)||
     (data.schedule||[]).some(r=>String(r.campus||'').trim()===id)||
     (data.courts||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.packages||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id))||
-    (data.entitlements||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id));
+    (data.packages||[]).some(r=>String(r.saleCampusId||'').trim()===id||parseArr(r.campusIds).some(c=>String(c||'').trim()===id))||
+    (data.purchases||[]).some(r=>String(r.saleCampusId||'').trim()===id)||
+    (data.entitlements||[]).some(r=>String(r.saleCampusId||'').trim()===id||parseArr(r.campusIds).some(c=>String(c||'').trim()===id));
   if(used)throw new Error('该校区已有学员、教练、班次、排课、课包或权益关联，不能直接删除');
 }
 function buildProductRenameDisplayUpdates(oldProduct,nextProduct,data={},now=new Date().toISOString()){
@@ -4322,8 +4344,8 @@ module.exports = async (req, res) => {
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
     if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PACKAGES).catch(()=>[]));if(method==='POST'){const id=uuidv4();const refs={products:await getCachedScan(T_PRODUCTS).catch(()=>[]),coaches:await getCachedScan(T_COACHES).catch(()=>[]),campuses:await getCachedScan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
     const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=pkgM[1];if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);if(!old)return sendJson(res,{error:'售卖课包不存在'},404);const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[])};const r=normalizePackageRecord({...body,id},old,refs);assertCanEditPackageWithPurchases(old,r,await scan(T_PURCHASES).catch(()=>[]));await put(T_PACKAGES,id,r);return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
-    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate});const id=uuidv4();const now=new Date().toISOString();const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);return sendJson(res,{purchase,entitlement});}}
-    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const now=new Date().toISOString();if(purchaseHasEntitlementLedger(id,ents,ledger)){const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};assertCanEditPurchaseWithLedger(old,r,ents,ledger);await put(T_PURCHASES,id,r);return sendJson(res,{purchase:r,entitlements:[]});}const nextPackageId=body.packageId||old.packageId;const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);const pkg=await get(T_PACKAGES,nextPackageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);validatePurchaseInputForPackage(pkg,{...old,...body,purchaseDate},{isEdit:true,oldPackageId:old.packageId});const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=syncEntitlementFromPurchase(pkg,r,student,ent,now);await put(T_ENTITLEMENTS,ent.id,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();for(const ent of ents.filter(e=>e.purchaseId===id)){await put(T_ENTITLEMENTS,ent.id,{...ent,status:'voided',updatedAt:now});const event={id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now};await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now});return sendJson(res,{success:true});}}
+    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const campuses=await getCachedScan(T_CAMPUSES).catch(()=>[]);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate},{campuses});const id=uuidv4();const now=new Date().toISOString();const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);return sendJson(res,{purchase,entitlement});}}
+    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const now=new Date().toISOString();if(purchaseHasEntitlementLedger(id,ents,ledger)){const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};assertCanEditPurchaseWithLedger(old,r,ents,ledger);await put(T_PURCHASES,id,r);return sendJson(res,{purchase:r,entitlements:[]});}const nextPackageId=body.packageId||old.packageId;const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);const pkg=await get(T_PACKAGES,nextPackageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const campuses=await scan(T_CAMPUSES).catch(()=>[]);validatePurchaseInputForPackage(pkg,{...old,...body,purchaseDate},{isEdit:true,oldPackageId:old.packageId,campuses});const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=syncEntitlementFromPurchase(pkg,r,student,ent,now);await put(T_ENTITLEMENTS,ent.id,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();for(const ent of ents.filter(e=>e.purchaseId===id)){await put(T_ENTITLEMENTS,ent.id,{...ent,status:'voided',updatedAt:now});const event={id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now};await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now});return sendJson(res,{success:true});}}
     if(path==='/membership-plans'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
@@ -4534,7 +4556,7 @@ module.exports = async (req, res) => {
       if(method==='POST'){
         try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
         const id=uuidv4();
-        const r={...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+        const r={...body,...normalizeGiftLessonInfo(body),...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
           const risk=await validateScheduleSave(r,null);
           assertScheduleEntitlementRequired(r);
@@ -4581,7 +4603,7 @@ module.exports = async (req, res) => {
       if(method==='PUT'){
         try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
-        const r={...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
+        const r={...ex,...body,...normalizeGiftLessonInfo({...ex,...body}),...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
         const oldDelta=scheduleLessonDelta(ex);
         const nextDelta=scheduleLessonDelta(r);
         const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
@@ -4770,7 +4792,10 @@ module.exports._test={
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
   isScheduleLessonCharged,
+  isGiftLesson,
+  isCoachLateFreeSchedule,
   normalizeCoachLateInfo,
+  normalizeGiftLessonInfo,
   buildCoachLateSettlementRows,
   assertClassSchedulable,
   assertLessonCapacity,

@@ -1,5 +1,5 @@
 const { SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID } = require('../../config');
-const { loginWithPassword, bindWechatAfterLogin, TOKEN_KEY, USER_KEY } = require('../../utils/api');
+const { loginWithPassword, bindWechatAfterLogin, loadCoachWorkbench, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 
 function enterCoachPortal() {
   wx.navigateTo({ url: '/pages/schedule/schedule' });
@@ -58,12 +58,21 @@ Page({
     loginWithPassword(account, password)
       .then((data) => {
         assertCoachLoginUser(data.user || {});
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.coachWorkbenchPrefetch = loadCoachWorkbench()
+            .then((payload) => {
+              app.globalData.coachWorkbenchSnapshot = payload || null;
+              return payload;
+            })
+            .catch(() => null);
+        }
         return data;
       })
-      .then(() => bindWechatAfterLogin())
       .then(() => {
         const app = getApp();
         if (app && app.globalData) app.globalData.privacyAccepted = true;
+        bindWechatAfterLogin().catch(() => null);
         this.requestScheduleNotice();
       })
       .catch((error) => {
