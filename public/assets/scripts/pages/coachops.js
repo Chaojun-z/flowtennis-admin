@@ -1007,7 +1007,7 @@ function renderFinanceAuditTable(){
   const body=document.getElementById('financeAuditTbody');
   if(!body)return;
   const rows=Array.isArray(financeAuditData?.details)?financeAuditData.details:[];
-  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px"><span class="tms-tag ${row.level==='P0'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.level||'OK')}</span></td><td>${renderCourtCellText(row.type,false)}</td><td>${renderCourtCellText(String(row.count||0),false)}</td><td>${financeAmountText(row.amount||0)}</td><td><div class="tms-text-remark">${esc(renderCourtEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty"><p>暂无异常检查结果</p></div></td></tr>`;
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px"><span class="tms-tag ${row.level==='P0'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.level||'OK')}</span></td><td>${renderCourtCellText(row.type,false)}</td><td>${renderCourtCellText(String(row.count||0),false)}</td><td>${financeAmountText(row.amount||0)}</td><td><div class="tms-text-remark">${esc(renderCourtEmptyText(row.suggestion))}</div></td><td><div class="tms-text-remark">${esc(renderCourtEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>暂无异常检查结果</p></div></td></tr>`;
 }
 function renderFinanceLedgerFilterDropdowns(baseRows){
   const businessHost=document.getElementById('financeLedgerBusinessTypeFilterHost');

@@ -1801,13 +1801,16 @@ function financeCampusNameFromTextClues(text=''){
   if(clue.includes('朝珺私教'))return '朝珺私教';
   if(clue.includes('朝阳十里堡')||clue.includes('十里堡'))return '朝阳十里堡';
   if(clue.includes('国网'))return '国网中心';
+  if(clue.includes('朗茶'))return '朗茶校区';
   if(clue.includes('顺义马坡')||clue.includes('马坡'))return '顺义马坡';
   return '';
 }
 function financeLedgerCampusName(row,campuses=[],courts=[]){
   const direct=financeCampusNameForValue(row?.campusName||row?.campusId||row?.campus||'',campuses);
-  if(direct)return direct;
   const textCampus=financeCampusNameFromTextClues(`${row?.notes||''} ${row?.reason||''} ${row?.productSnapshotName||''} ${row?.ledgerType||''}`);
+  const isImportLike=String(row?.actionType||'').trim()==='历史导入'||String(row?.paymentChannel||'').trim()==='历史导入'||String(row?.notes||'').includes('导入');
+  if(textCampus&&isImportLike&&(!direct||direct==='顺义马坡')&&textCampus!==direct)return textCampus;
+  if(direct)return direct;
   if(textCampus)return textCampus;
   const meta=row?.productSnapshotMeta||{};
   const courtId=meta.courtId||(row?.userType==='court_customer'?row?.userId:'');
@@ -1946,16 +1949,16 @@ function buildFinanceAudit(rows=[],overview=null){
   const recognizedGap=Math.round(((Number(overviewData?.all?.recognized)||0)-campusRecognizedTotal)*100)/100;
   const deferredGap=Math.round(((Number(overviewData?.all?.deferred)||0)-campusDeferredTotal)*100)/100;
   const details=[
-    {id:'missing-campus',level:missingCampusRows.length?'P0':'OK',type:'缺校区',count:missingCampusRows.length,amount:0,notes:'正式账缺校区，不能用于经营归属'},
-    {id:'unknown-business',level:unknownBusinessRows.length?'P0':'OK',type:'未识别业务',count:unknownBusinessRows.length,amount:0,notes:'业务类型落到“其他”，需要补枚举'},
-    {id:'unknown-action',level:unknownActionRows.length?'P0':'OK',type:'未识别动作',count:unknownActionRows.length,amount:0,notes:'动作落到“记录”，需要补协议'},
-    {id:'import-missing-date',level:importMissingDateRows.length?'P1':'OK',type:'历史导入缺日期',count:importMissingDateRows.length,amount:0,notes:detailNotes(importMissingDateRows,'导入记录缺 businessDate，不能直接做经营统计')},
-    {id:'import-zero-amount',level:importZeroAmountRows.length?'P1':'OK',type:'历史导入零金额',count:importZeroAmountRows.length,amount:0,notes:detailNotes(importZeroAmountRows,'导入记录三项金额都为 0，只能留痕，不能直接入经营口径')},
-    {id:'chaojun-risk',level:chaojunRiskRows.length?'P1':'OK',type:'朝珺误归马坡风险',count:chaojunRiskRows.length,amount:0,notes:detailNotes(chaojunRiskRows,'文本写了朝珺私教，但当前归到了顺义马坡，需要逐条清理')},
-    {id:'external-campus-risk',level:externalCampusRows.length?'P1':'OK',type:'明确外校区特例',count:externalCampusRows.length,amount:0,notes:detailNotes(externalCampusRows,'文本明确提到外校区，需要确认是否应从马坡分出')},
-    {id:'cash-gap',level:cashGap?'P0':'OK',type:'实收汇总差额',count:cashGap?1:0,amount:cashGap,notes:'总实收与分校区汇总不一致'},
-    {id:'recognized-gap',level:recognizedGap?'P0':'OK',type:'已入账汇总差额',count:recognizedGap?1:0,amount:recognizedGap,notes:'总已入账与分校区汇总不一致'},
-    {id:'deferred-gap',level:deferredGap?'P0':'OK',type:'未入账汇总差额',count:deferredGap?1:0,amount:deferredGap,notes:'总未入账与分校区汇总不一致'}
+    {id:'missing-campus',level:missingCampusRows.length?'P0':'OK',type:'缺校区',count:missingCampusRows.length,amount:0,suggestion:'补真实发生校区后再入经营口径',notes:'正式账缺校区，不能用于经营归属'},
+    {id:'unknown-business',level:unknownBusinessRows.length?'P0':'OK',type:'未识别业务',count:unknownBusinessRows.length,amount:0,suggestion:'补业务类型枚举映射',notes:'业务类型落到“其他”，需要补枚举'},
+    {id:'unknown-action',level:unknownActionRows.length?'P0':'OK',type:'未识别动作',count:unknownActionRows.length,amount:0,suggestion:'补动作协议映射',notes:'动作落到“记录”，需要补协议'},
+    {id:'import-missing-date',level:importMissingDateRows.length?'P1':'OK',type:'历史导入缺日期',count:importMissingDateRows.length,amount:0,suggestion:'补 businessDate 或降级为仅留痕',notes:detailNotes(importMissingDateRows,'导入记录缺 businessDate，不能直接做经营统计')},
+    {id:'import-zero-amount',level:importZeroAmountRows.length?'P1':'OK',type:'历史导入零金额',count:importZeroAmountRows.length,amount:0,suggestion:'保留留痕，不进经营统计',notes:detailNotes(importZeroAmountRows,'导入记录三项金额都为 0，只能留痕，不能直接入经营口径')},
+    {id:'chaojun-risk',level:chaojunRiskRows.length?'P1':'OK',type:'朝珺误归马坡风险',count:chaojunRiskRows.length,amount:0,suggestion:'按备注优先改归属到朝珺私教',notes:detailNotes(chaojunRiskRows,'文本写了朝珺私教，但当前归到了顺义马坡，需要逐条清理')},
+    {id:'external-campus-risk',level:externalCampusRows.length?'P1':'OK',type:'明确外校区特例',count:externalCampusRows.length,amount:0,suggestion:'确认是否从马坡分出到外校区',notes:detailNotes(externalCampusRows,'文本明确提到外校区，需要确认是否应从马坡分出')},
+    {id:'cash-gap',level:cashGap?'P0':'OK',type:'实收汇总差额',count:cashGap?1:0,amount:cashGap,suggestion:'先修归属规则，再看总数',notes:'总实收与分校区汇总不一致'},
+    {id:'recognized-gap',level:recognizedGap?'P0':'OK',type:'已入账汇总差额',count:recognizedGap?1:0,amount:recognizedGap,suggestion:'先修动作口径和归属规则',notes:'总已入账与分校区汇总不一致'},
+    {id:'deferred-gap',level:deferredGap?'P0':'OK',type:'未入账汇总差额',count:deferredGap?1:0,amount:deferredGap,suggestion:'先修动作口径和归属规则',notes:'总未入账与分校区汇总不一致'}
   ];
   return {
     missingCampusCount:missingCampusRows.length,
