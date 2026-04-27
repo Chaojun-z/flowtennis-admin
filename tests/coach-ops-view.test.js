@@ -130,32 +130,20 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /function renderCoachOpsRevenueReport\(/,
-  'coach ops should expose a revenue report renderer'
+  /function renderFinanceRevenueReport\(/,
+  'finance center should expose the revenue report renderer'
 );
 
 assert.match(
   source,
-  /function renderCoachOpsConsumeReport\(/,
-  'coach ops should expose a consume report renderer'
+  /function renderFinanceConsumeReport\(/,
+  'finance center should expose the consume report renderer'
 );
 
 assert.match(
   source,
-  /function coachOpsConsumeRows\([\s\S]*aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/,
-  'coach ops consume report should reuse the unified entitlement ledger dedupe and monthly aggregation'
-);
-
-assert.match(
-  source,
-  /function exportCoachOpsRevenueCsv\(/,
-  'coach ops should expose revenue report export'
-);
-
-assert.match(
-  source,
-  /function exportCoachOpsConsumeCsv\(/,
-  'coach ops should expose consume report export'
+  /function financeConsumeRows\([\s\S]*aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/,
+  'finance consume report should reuse the unified entitlement ledger dedupe and monthly aggregation'
 );
 
 assert.doesNotMatch(

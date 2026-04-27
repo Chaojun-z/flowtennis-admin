@@ -11,9 +11,9 @@
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>FlowTennis 网球兄弟工作台</title>
-<link rel="stylesheet" href="/assets/styles/base.css?v=20260427-cachefix">
-<link rel="stylesheet" href="/assets/styles/components.css?v=20260427-cachefix">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260427-cachefix">
+<link rel="stylesheet" href="/assets/styles/base.css">
+<link rel="stylesheet" href="/assets/styles/components.css">
+<link rel="stylesheet" href="/assets/styles/pages.css">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -42,30 +42,27 @@
   </div>
   <!-- 管理员视角 -->
   <div id="sbAdminView">
-  <div class="sb-sec">用户中心</div>
-  <div class="sb-item active" onclick="goPage('students',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>学员管理</div>
-  <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>订场用户</div>
-  <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>订场会员</div>
-  <div class="sb-sec">教学中心</div>
-  <div class="sb-item" onclick="goPage('schedule',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg></span>排课表</div>
-  <div class="sb-item" onclick="goPage('products',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>课程产品</div>
-  <div class="sb-item" onclick="goPage('packages',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>售卖课包</div>
+  <div class="sb-sec">教学管理</div>
+  <div class="sb-item active" onclick="goPage('students',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>学员信息</div>
   <div class="sb-item" onclick="goPage('classes',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>班次管理</div>
   <div class="sb-item" onclick="goPage('plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>学习计划</div>
-  <div class="sb-sec">场地运营</div>
+  <div class="sb-item" onclick="goPage('schedule',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg></span>排课表</div>
+  <div class="sb-item" onclick="goPage('coachops',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 3 3 4-3 3 3"/><path d="M3 12h18"/><path d="M3 21h18"/><path d="m15 15 3 3 3-3"/><path d="m21 9-3-3-3 3"/></svg></span>教练运营</div>
+  <div class="sb-sec">课程管理</div>
+  <div class="sb-item" onclick="goPage('products',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>课程产品</div>
+  <div class="sb-item" onclick="goPage('packages',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>售卖课包</div>
+  <div class="sb-item" onclick="goPage('purchases',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5V19"/><path d="M12 5v1.5"/></svg></span>购买记录</div>
+  <div class="sb-sec">场地与资源</div>
+  <div class="sb-item" onclick="goPage('courts',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>订场用户</div>
   <div class="sb-item" onclick="goPage('matches',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><path d="M18 3v18"/><path d="M3 8h18"/><path d="M3 16h18"/></svg></span>约球管理</div>
-  <div class="sb-item" onclick="goPage('prices',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>价格方案</div>
+  <div class="sb-item" onclick="goPage('memberships',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>会员管理</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg></span>会员方案</div>
-  <div class="sb-sec">资源管理</div>
+  <div class="sb-item" onclick="goPage('prices',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>价格管理</div>
+  <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg></span>教练管理</div>
   <div class="sb-item" onclick="goPage('admin-users',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg></span>账号管理</div>
   <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg></span>校区管理</div>
-  <div class="sb-item" onclick="goPage('coaches',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg></span>教练管理</div>
-  <div class="sb-item" onclick="goPage('coachops',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 3 3 4-3 3 3"/><path d="M3 12h18"/><path d="M3 21h18"/><path d="m15 15 3 3 3-3"/><path d="m21 9-3-3-3 3"/></svg></span>教练运营</div>
   <div class="sb-sec">财务中心</div>
-  <div class="sb-item" data-nav-page="finance" data-finance-panel="ledger" onclick="setFinancePanel('ledger');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4Z"/></svg></span>财务总览</div>
-  <div class="sb-item" data-nav-page="finance" data-finance-panel="revenue" onclick="setFinancePanel('revenue');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5V19"/><path d="M12 5v1.5"/></svg></span>收入流水</div>
-  <div class="sb-item" data-nav-page="finance" data-finance-panel="recognized" onclick="setFinancePanel('recognized');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>已入账流水</div>
-  <div class="sb-item" data-nav-page="finance" data-finance-panel="settlement" onclick="setFinancePanel('settlement');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>教练结算</div>
+  <div class="sb-item" onclick="goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4Z"/></svg></span>财务中心</div>
   </div>
   </div>
   <div class="sb-bottom">
@@ -75,13 +72,13 @@
 
 <div class="main">
   <div class="topbar">
-    <div class="tb-title" id="topTitle">学员管理</div>
+    <div class="tb-title" id="topTitle">学员信息</div>
     <div style="display:flex;gap:4px;flex-wrap:wrap" id="campusTabs"></div>
     <button class="coach-top-logout" id="coachTopLogout" onclick="doLogout()">退出</button>
   </div>
   <div class="content">
     <!-- 学员信息 -->
-    <div class="page-section page-layout-standard active" id="page-students">
+    <div class="page-section active" id="page-students">
       <div class="tms-stats-row" id="studentStatsRow"></div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -106,9 +103,9 @@
       </div>
     </div>
     <!-- 班次管理 -->
-    <div class="page-section page-layout-standard" id="page-classes">
-      <div class="tms-audit-note">班次管理用于建立长期教学关系、班级周期、学员归属和基础规则；每天具体怎么排课，请去排课表处理。</div>
+    <div class="page-section" id="page-classes">
       <div class="tms-stats-row" id="classStatsRow"></div>
+      <div class="tms-audit-note">班次用于组织固定上课关系和学习进度；是否还能继续约课，仍然以课包余额和可用规则为准。</div>
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -123,7 +120,6 @@
           <div id="clsTypeFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="goPage('schedule')">去排课表排课</button>
           <button class="tms-btn tms-btn-primary" onclick="openClassModal(null)">＋ 新建班次</button>
         </div>
       </div>
@@ -132,7 +128,7 @@
       </div>
     </div>
     <!-- 学习计划 -->
-    <div class="page-section page-layout-standard" id="page-plans">
+    <div class="page-section" id="page-plans">
       <div class="tms-audit-note">学习计划由「班次管理」自动生成，每个学员 × 班次 = 一条记录；班次进度用于看学习推进，真实可约课以课包余额规则为准。</div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -154,8 +150,7 @@
       </div>
     </div>
     <!-- 排课表 -->
-    <div class="page-section page-layout-standard" id="page-schedule">
-      <div class="tms-audit-note">排课表是统一的排课主入口，所有新增、调整、取消课次都从这里完成。</div>
+    <div class="page-section" id="page-schedule">
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -169,24 +164,22 @@
           <div id="schCourseTypeFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="goPage('coachops')">查看教练排班/工作量</button>
           <button class="tms-btn tms-btn-primary" onclick="openScheduleModal(null)">＋ 添加排课</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:84px;padding-left:14px">日期</th><th style="width:92px">上课时间</th><th style="width:52px">时长</th><th style="width:125px">校区/场地</th><th style="width:68px">教练</th><th style="width:120px">学员</th><th style="width:64px">课程类型</th><th style="width:64px">重复?</th><th style="width:52px">反馈</th><th style="width:68px">状态</th><th class="tms-sticky-r" style="width:118px;padding-right:10px;text-align:right">操作</th></tr></thead><tbody id="schTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:84px;padding-left:14px">日期</th><th style="width:92px">上课时间</th><th style="width:52px">时长</th><th style="width:125px">校区/场地</th><th style="width:68px">教练</th><th style="width:120px">学员</th><th style="width:64px">课程类型</th><th style="width:52px">反馈</th><th style="width:68px">状态</th><th class="tms-sticky-r" style="width:118px;padding-right:10px;text-align:right">操作</th></tr></thead><tbody id="schTbody"></tbody></table></div>
         <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="schPagerInfo">共 0 条</span></div><div class="tms-page-numbers" id="schPagerBtns"></div></div>
       </div>
     </div>
     <!-- 教练运营 -->
-    <div class="page-section page-layout-standard" id="page-coachops">
-      <div class="tms-audit-note">教练运营用于查看教练排班分布和工作量，不作为独立排课系统；需要新增或调整课次，请回到排课表处理。</div>
+    <div class="page-section" id="page-coachops">
       <div class="coach-ops-shell">
       <div class="stats-row" id="coachOpsStats"></div>
       <div class="coach-ops-toolbar">
         <div class="coach-ops-toolbar-main">
           <div class="coach-ops-tabs">
-            <button class="coach-ops-tab active" id="coachOpsTabSchedule" onclick="setCoachOpsPanel('schedule')">教练排班视图</button>
-            <button class="coach-ops-tab" id="coachOpsTabWorkload" onclick="setCoachOpsPanel('workload')">教练工作量统计</button>
+            <button class="coach-ops-tab active" id="coachOpsTabSchedule" onclick="setCoachOpsPanel('schedule')">教练排课</button>
+            <button class="coach-ops-tab" id="coachOpsTabWorkload" onclick="setCoachOpsPanel('workload')">教练工作量</button>
           </div>
           <div id="coachOpsScheduleControls" style="display:flex;align-items:center;gap:10px">
             <div id="coachOpsRangeHost"></div>
@@ -208,12 +201,12 @@
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot master"></i>大师课</span>
             <span class="coach-ops-legend-item"><i class="coach-ops-legend-dot partner"></i>陪打</span>
           </div>
-          <button class="tms-btn tms-btn-ghost" id="coachOpsQuickCreateBtn" onclick="goPage('schedule')">去排课表排课</button>
+          <button class="tms-btn tms-btn-primary" id="coachOpsQuickCreateBtn" onclick="coachOpsQuickCreate()">＋ 新增排课</button>
         </div>
       </div>
       </div>
       <div id="coachOpsSchedulePanel">
-        <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排班视图</div>
+        <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排课</div>
         <div class="coach-ops-scroll">
           <div class="coach-ops-head"><div class="coach-ops-corner">教练</div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
           <div id="coachOpsTimeline"></div>
@@ -224,12 +217,22 @@
       </div>
     </div>
     <div class="page-section" id="page-finance">
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="coach-ops-tabs">
+            <button class="coach-ops-tab active" id="financeTabLedger" onclick="setFinancePanel('ledger')">总账</button>
+            <button class="coach-ops-tab" id="financeTabRevenue" onclick="setFinancePanel('revenue')">收入流水</button>
+            <button class="coach-ops-tab" id="financeTabRecognized" onclick="setFinancePanel('recognized')">已入账流水</button>
+            <button class="coach-ops-tab" id="financeTabSettlement" onclick="setFinancePanel('settlement')">教练结算</button>
+          </div>
+        </div>
+      </div>
       <div id="financeLedgerPanel">
         <div id="financeLedgerLoading" class="finance-loading-card" style="display:none">
           <div class="finance-loading-title">总账加载中</div>
           <div class="finance-loading-desc">先把这一页数据加载完整，再展示筛选和表格。</div>
         </div>
-        <div id="financeLedgerReady" class="section-stack">
+        <div id="financeLedgerReady">
           <div class="tms-audit-note">先看总账和顶部汇总，知道这个校区当前收了多少钱、已经入账多少、还有多少没入账。</div>
           <div class="tms-stats-row finance-ledger-stats" id="financeOverviewPrimaryStats"></div>
           <div class="tms-stats-row" id="financeOverviewSecondaryStats"></div>
@@ -252,55 +255,50 @@
           </div>
         </div>
       </div>
-      <div id="financeRevenuePanel" class="section-stack" style="display:none">
-        <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
+      <div id="financeRevenuePanel" style="display:none">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、收入类型、支付方式、备注" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
+              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、收入类型、支付方式、备注" oninput="renderFinanceRevenueReport()">
             </div>
             <div id="financeRevenueTypeFilterHost"></div>
             <div id="financeRevenuePayMethodFilterHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueFromHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceRevenuePage();renderFinanceRevenueReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceRevenueReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
           </div>
         </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
-          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeRevenuePagerInfo">共 0 条</span><div id="financeRevenuePageSize"></div></div><div class="tms-page-numbers" id="financeRevenuePagerBtns"></div></div>
-        </div>
+        <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div></div>
       </div>
-      <div id="financeRecognizedPanel" class="section-stack" style="display:none">
-        <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
+      <div id="financeRecognizedPanel" style="display:none">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="resetFinanceConsumePage();renderFinanceConsumeReport()">
+              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="renderFinanceConsumeReport()">
             </div>
             <div class="finance-date-host" id="coachOpsConsumeFromHost"></div>
             <div class="finance-date-host" id="coachOpsConsumeToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceConsumePage();renderFinanceConsumeReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceConsumeReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsConsumeCsv()">导出</button>
           </div>
         </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div>
-          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeConsumePagerInfo">共 0 条</span><div id="financeConsumePageSize"></div></div><div class="tms-page-numbers" id="financeConsumePagerBtns"></div></div>
-        </div>
+        <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div></div>
       </div>
-      <div id="financeSettlementPanel" class="section-stack" style="display:none">
+      <div id="financeSettlementPanel" style="display:none">
         <div class="tms-audit-note">教练结算这一期只看两件事：已完成课时数、迟到承担场地费。</div>
-        <div class="tms-stats-row" id="financeSettlementStats"></div>
-        <div class="tms-toolbar finance-settlement-toolbar">
+        <div class="tms-toolbar">
           <div class="tms-filters">
-            <div class="tms-form-item finance-settlement-month-field">
-              <label class="tms-form-label">结算月份</label>
+            <div class="tms-form-item" style="min-width:180px;margin:0">
+              <label class="tms-form-label" style="margin-bottom:6px">结算月份</label>
               <input class="finput tms-form-control" id="financeSettlementMonth" type="month" onchange="renderFinanceSettlementSummary()">
             </div>
           </div>
@@ -308,11 +306,15 @@
             <button class="tms-btn tms-btn-ghost" onclick="openCoachLateSettlementModal()">查看迟到月结</button>
           </div>
         </div>
+        <div class="tms-stats-row" id="financeSettlementStats"></div>
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:140px;padding-left:20px">教练</th><th style="width:120px">校区</th><th style="width:120px">已完成课时数</th><th style="width:120px">迟到记录</th><th style="width:140px">承担场地费</th></tr></thead><tbody id="financeSettlementTbody"></tbody></table></div></div>
       </div>
     </div>
-    <div class="page-section page-layout-standard" id="page-matches">
-      <div class="tms-audit-note">这里只看球局、订场、AA 收款和日志，不单独再堆一排财务卡片。</div>
+    <div class="page-section" id="page-matches">
+      <div class="tms-page-head">
+        <div class="tms-page-head-title">约球管理</div>
+        <div class="tms-page-head-desc">这里只看球局、订场、AA 收款和日志，不单独再堆一排财务卡片。</div>
+      </div>
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -330,7 +332,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">球局</th><th style="width:150px">时间</th><th style="width:160px">场地</th><th style="width:90px">人数</th><th style="width:100px">状态</th><th style="width:120px">预计费用</th><th style="width:120px">最终费用</th><th style="width:240px">报名名单</th><th class="tms-sticky-r" style="width:220px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="matchTbody"></tbody></table></div></div>
     </div>
     <!-- 教练管理 -->
-    <div class="page-section page-layout-standard" id="page-coaches">
+    <div class="page-section" id="page-coaches">
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -347,7 +349,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:16%;padding-left:20px">姓名</th><th style="width:16%">电话</th><th style="width:14%">校区</th><th style="width:12%">入职时间</th><th style="width:10%">状态</th><th style="width:18%">备注</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachTbody"></tbody></table></div></div>
     </div>
     <!-- 账号管理 -->
-    <div class="page-section page-layout-standard" id="page-admin-users">
+    <div class="page-section" id="page-admin-users">
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -364,7 +366,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:18%;padding-left:20px">账号</th><th style="width:16%">姓名</th><th style="width:12%">角色</th><th style="width:12%">状态</th><th style="width:20%">绑定教练</th><th style="width:14%">账号说明</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="adminUserTbody"></tbody></table></div></div>
     </div>
     <!-- 订场用户 -->
-    <div class="page-section page-layout-standard" id="page-courts">
+    <div class="page-section" id="page-courts">
       <div class="tms-stats-row" id="courtStatsRow"></div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -393,7 +395,7 @@
       </div>
     </div>
     <!-- 会员管理 -->
-    <div class="page-section page-layout-standard" id="page-memberships">
+    <div class="page-section" id="page-memberships">
       <div class="tms-stats-row" id="membershipStatsRow"></div>
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
@@ -411,7 +413,7 @@
       </div>
       <div id="membershipTabBody"></div>
     </div>
-    <div class="page-section page-layout-standard" id="page-membership-orders">
+    <div class="page-section" id="page-membership-orders">
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
           <div style="font-size:13px;color:var(--cream-pale);font-weight:600">会员管理 <span style="opacity:.55">/</span> 会员购买记录</div>
@@ -422,7 +424,7 @@
       </div>
       <div id="membershipOrdersAuditBody"></div>
     </div>
-    <div class="page-section page-layout-standard" id="page-membership-ledger">
+    <div class="page-section" id="page-membership-ledger">
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
           <div style="font-size:13px;color:var(--cream-pale);font-weight:600">会员管理 <span style="opacity:.55">/</span> 会员权益流水</div>
@@ -434,7 +436,7 @@
       <div id="membershipLedgerAuditBody"></div>
     </div>
     <!-- 会员方案 -->
-    <div class="page-section page-layout-standard" id="page-membership-plans">
+    <div class="page-section" id="page-membership-plans">
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
           <div class="tms-search-wrapper">
@@ -451,7 +453,7 @@
       <div id="membershipPlanBody"></div>
     </div>
     <!-- 课程产品 -->
-    <div class="page-section page-layout-standard" id="page-products">
+    <div class="page-section" id="page-products">
       <div class="course-showcase">
         <div class="course-showcase-banner">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -475,7 +477,7 @@
       </div>
     </div>
     <!-- 售卖课包 -->
-    <div class="page-section page-layout-standard" id="page-packages">
+    <div class="page-section" id="page-packages">
       <div class="course-package-showcase">
         <div class="course-package-showcase-banner">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -503,7 +505,7 @@
       </div>
     </div>
     <!-- 购买记录 -->
-    <div class="page-section page-layout-standard" id="page-purchases">
+    <div class="page-section" id="page-purchases">
       <div class="tms-audit-note">购买记录用于查账和追溯；真正消课的是课包余额。购买记录作废不会物理删除历史，只会作废对应课包余额。</div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -526,7 +528,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">购买日期</th><th style="width:120px">学员/支付</th><th style="width:170px">课包/课程</th><th style="width:90px">实收</th><th style="width:95px">余额</th><th style="width:135px">有效期</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div></div>
     </div>
     <!-- 课包余额（已隐藏入口，仅保留底层审计页） -->
-    <div class="page-section page-layout-standard" id="page-entitlements">
+    <div class="page-section" id="page-entitlements">
       <div class="tms-audit-note">课包余额是学员当前可用课时余额。排课时实际消耗的是这里，不是直接消耗课程产品。</div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -562,21 +564,21 @@
       </div>
     </div>
     <!-- 我的学员（教练视角） -->
-    <div class="page-section page-layout-standard" id="page-mystudents">
-      <div class="tms-audit-note">这里查看你当前可见的学员，能区分自己负责的学员、代上过的学员，以及最近上课和课时进度。</div>
+    <div class="page-section" id="page-mystudents">
       <div class="tms-stats-row" id="myStudentStats"></div>
+      <div class="tms-audit-note">这里查看你当前可见的学员，能区分自己负责的学员、代上过的学员，以及最近上课和课时进度。</div>
       <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:96px">校区</th><th style="width:148px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:96px">负责教练</th><th style="width:96px">归属教练</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
       <div id="myStudentMobileList" class="coach-mobile-only coach-mobile-list"></div>
     </div>
     <!-- 我的班次（教练视角） -->
-    <div class="page-section page-layout-standard" id="page-myclasses">
-      <div class="tms-audit-note">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</div>
+    <div class="page-section" id="page-myclasses">
       <div class="tms-stats-row" id="myClassStats"></div>
+      <div class="tms-audit-note">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</div>
       <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:108px;padding-left:20px">班次名称</th><th style="width:100px">课程</th><th style="width:108px">学员</th><th style="width:100px">课时进度</th><th style="width:116px">日期</th><th style="width:68px">状态</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myClsTbody"></tbody></table></div></div>
       <div id="myClassMobileList" class="coach-mobile-only coach-mobile-list"></div>
     </div>
     <!-- 校区管理 -->
-    <div class="page-section page-layout-standard" id="page-campusmgr">
+    <div class="page-section" id="page-campusmgr">
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -593,8 +595,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:34%;padding-left:20px">校区名称</th><th style="width:24%">校区代码</th><th style="width:22%">创建时间</th><th class="tms-sticky-r" style="width:132px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div></div>
     </div>
     <!-- 价格管理 -->
-    <div class="page-section page-layout-standard" id="page-prices">
-      <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
+    <div class="page-section" id="page-prices">
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
@@ -610,6 +611,7 @@
           <button class="tms-btn tms-btn-primary" onclick="openPriceModal()">＋ 新增价格</button>
         </div>
       </div>
+      <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:66px;padding-left:12px">类型</th><th style="width:64px">渠道</th><th style="width:372px">名称</th><th style="width:50px">场地类型</th><th style="width:60px">日期类型</th><th style="width:62px">商品类型</th><th style="width:58px">关联业务</th><th style="width:88px">时间段</th><th style="width:58px">时长</th><th style="width:54px">价格</th><th style="width:52px">状态</th><th class="tms-sticky-r" style="width:88px;padding-right:12px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
     </div>
 </div>
@@ -636,27 +638,27 @@
 </div>
 <div class="toasts" id="toasts"></div>
 <div class="global-date-pop" id="globalDatePicker"></div>
-<script src="/assets/scripts/core/constants.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/core/utils.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/core/api.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/core/shell.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/core/state.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/core/bootstrap.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/admin-users.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/coaches.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/campusmgr.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/students.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/schedule.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/classes.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/plans.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/products.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/packages.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/purchases.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/entitlements.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/coachops.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/prices.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/courts.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/matches.js?v=20260427-cachefix"></script>
-<script src="/assets/scripts/pages/coach-portal.js?v=20260427-cachefix"></script>
+<script src="/assets/scripts/core/constants.js"></script>
+<script src="/assets/scripts/core/utils.js"></script>
+<script src="/assets/scripts/core/api.js?v=20260421-wechat-bindings"></script>
+<script src="/assets/scripts/core/shell.js?v=20260418-stability"></script>
+<script src="/assets/scripts/core/state.js?v=20260421-wechat-bindings"></script>
+<script src="/assets/scripts/core/bootstrap.js?v=20260418-stability"></script>
+<script src="/assets/scripts/pages/admin-users.js?v=20260421-wechat-bindings"></script>
+<script src="/assets/scripts/pages/coaches.js"></script>
+<script src="/assets/scripts/pages/campusmgr.js"></script>
+<script src="/assets/scripts/pages/students.js"></script>
+<script src="/assets/scripts/pages/schedule.js"></script>
+<script src="/assets/scripts/pages/classes.js"></script>
+<script src="/assets/scripts/pages/plans.js"></script>
+<script src="/assets/scripts/pages/products.js"></script>
+<script src="/assets/scripts/pages/packages.js"></script>
+<script src="/assets/scripts/pages/purchases.js"></script>
+<script src="/assets/scripts/pages/entitlements.js"></script>
+<script src="/assets/scripts/pages/coachops.js"></script>
+<script src="/assets/scripts/pages/prices.js"></script>
+<script src="/assets/scripts/pages/courts.js"></script>
+<script src="/assets/scripts/pages/matches.js"></script>
+<script src="/assets/scripts/pages/coach-portal.js"></script>
 </body>
 </html>
