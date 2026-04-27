@@ -154,7 +154,9 @@ function hasTravelReminder(nextClass = null) {
 
 function buildWeekTodoCards(groups = []) {
   return groups.flatMap((group) => {
-    const [weekdayText = '', dateText = ''] = String(group.label || '').split(' ');
+    const labelParts = String(group.label || '').split(' ');
+    const weekdayText = labelParts[0] || '';
+    const dateText = labelParts[1] || '';
     return (group.items || []).map((item) => ({
       ...item,
       weekdayText,
@@ -303,7 +305,9 @@ function formatDateInputValue(value) {
 }
 
 function normalizeTimeValue(value = '') {
-  const [hour = '00', minute = '00'] = String(value || '').split(':');
+  const parts = String(value || '').split(':');
+  const hour = parts[0] || '00';
+  const minute = parts[1] || '00';
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
