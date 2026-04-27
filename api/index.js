@@ -1882,6 +1882,22 @@ function ensureMatchUserResponse(req,res){
   try{return requireMatchUser(req);}
   catch(err){sendJson(res,{error:String(err?.message||'未登录')},401);return null;}
 }
+async function canMatchUserCreate(userId){
+  const pool=getMatchSqlPool();
+  const [createdRes,userRes]=await Promise.all([
+    pool.query('SELECT COUNT(*)::int AS count FROM match_posts WHERE creatorUserId=$1',[userId]),
+    pool.query('SELECT * FROM match_users WHERE id=$1',[userId])
+  ]);
+  const createdCount=Number(createdRes.rows[0]?.count||0);
+  if(createdCount>0)return true;
+  const user=userRes.rows[0]||{};
+  const phone=normalizePhone(user.phone||'');
+  if(!phone)return false;
+  const adminUser=await getCachedRow(T_USERS,phone).catch(()=>null);
+  if(!adminUser)return false;
+  const permissions=userMatchPermissions(adminUser);
+  return adminUser.role==='admin'||permissions.includes('match_ops');
+}
 function buildMatchUserToken(user){
   return jwt.sign({id:user.id,type:'match_user',openid:user.openid},JWT_SECRET,{expiresIn:'7d'});
 }
@@ -2736,7 +2752,7 @@ async function getMatchProfile(userId){
   ]);
   const stats=buildMatchProfileStats({createdMatches:created.rows,joinedMatches:joined.rows,attendanceRows:attendance.rows,feeSplits:fees.rows});
   const user=userRes.rows[0]||{};
-  return {...stats,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||'',canCreateMatch:created.rows.length>0}};
+  return {...stats,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||'',canCreateMatch:await canMatchUserCreate(userId)}};
 }
 async function updateMatchProfile(userId,input){
   const phone=assertPhone(input.phone||'');
