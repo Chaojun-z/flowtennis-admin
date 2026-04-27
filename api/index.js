@@ -1814,10 +1814,24 @@ function financeCampusNameFromTextClues(text=''){
   if(!clue)return '';
   if(clue.includes('朝珺私教'))return '朝珺私教';
   if(clue.includes('朝阳十里堡')||clue.includes('十里堡'))return '朝阳十里堡';
-  if(clue.includes('国网'))return '国网中心';
+  if(clue.includes('国家网球中心')||clue.includes('国网中心')||clue.includes('国网'))return '朝阳国网';
+  if(clue.includes('蓝色港湾')||clue.includes('蓝港'))return '朝阳蓝色港湾';
   if(clue.includes('朗茶'))return '朗茶校区';
   if(clue.includes('顺义马坡')||clue.includes('马坡'))return '顺义马坡';
   return '';
+}
+function financeBusinessDateResolution(row){
+  const direct=String(row?.businessDate||'').trim();
+  if(direct)return {businessDate:direct.slice(0,10),resolution:'direct',reason:''};
+  const created=String(row?.createdAt||'').trim();
+  if(created)return {businessDate:created.slice(0,10),resolution:'created_at',reason:'缺少 businessDate，已回退到创建时间'};
+  const text=`${row?.notes||''} ${row?.reason||''} ${row?.sourceDocument||''} ${row?.productSnapshotName||''}`;
+  const hit=text.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})/);
+  if(hit){
+    const businessDate=`${hit[1]}-${String(hit[2]).padStart(2,'0')}-${String(hit[3]).padStart(2,'0')}`;
+    return {businessDate,resolution:'text_clue',reason:'历史导入文本里带日期，已自动补 businessDate'};
+  }
+  return {businessDate:'',resolution:'missing',reason:''};
 }
 function financeLedgerCampusName(row,campuses=[],courts=[]){
   const direct=financeCampusNameForValue(row?.campusName||row?.campusId||row?.campus||'',campuses);
@@ -1893,9 +1907,12 @@ function buildNormalizedFinanceRows({financialLedger=[],campuses=[],courts=[]}={
     .filter(row=>String(row?.status||'active')!=='voided')
     .map(row=>{
       const campusResolution=financeLedgerCampusResolution(row,campuses,courts);
+      const dateResolution=financeBusinessDateResolution(row);
       return {
       id:String(row.id||''),
-      businessDate:String(row.businessDate||row.createdAt||'').slice(0,10),
+      businessDate:dateResolution.businessDate,
+      businessDateResolution:dateResolution.resolution,
+      businessDateResolutionReason:dateResolution.reason,
       campusId:String(row.campusId||row.campus||row.campusName||'').trim(),
       campusName:campusResolution.campusName,
       campusResolution:campusResolution.resolution,
@@ -1973,6 +1990,7 @@ function buildFinanceAudit(rows=[],overview=null){
   const unknownActionRows=activeRows.filter(row=>!String(row?.actionType||'').trim()||String(row?.actionType||'').trim()==='记录');
   const importRows=activeRows.filter(row=>String(row?.actionType||'').trim()==='记录'||String(row?.sourceType||'').includes('导入')||String(row?.paymentChannel||'').trim()==='历史导入'||String(row?.notes||'').includes('导入'));
   const importMissingDateRows=importRows.filter(row=>!String(row?.businessDate||'').trim());
+  const autoFixedDateRows=activeRows.filter(row=>String(row?.businessDateResolution||'')==='text_clue');
   const importZeroAmountRows=importRows.filter(row=>{
     const cash=Math.abs(Number(row?.cashDelta)||0);
     const recognized=Math.abs(Number(row?.recognizedRevenueDelta)||0);
@@ -2021,7 +2039,14 @@ function buildFinanceAudit(rows=[],overview=null){
     fromCampus:String(row?.originalCampusName||'').trim()||'顺义马坡',
     toCampus:String(row?.campusName||'').trim()||'—',
     reason:String(row?.campusResolutionReason||'').trim()||'按文本线索自动纠偏'
-  }));
+  })).concat(autoFixedDateRows.slice(0,10).map(row=>({
+    type:'日期自动补齐',
+    customerName:String(row?.customerName||'').trim()||'—',
+    sourceDocument:String(row?.sourceDocument||row?.id||'').trim()||'—',
+    fromCampus:'—',
+    toCampus:String(row?.businessDate||'').trim()||'—',
+    reason:String(row?.businessDateResolutionReason||'').trim()||'历史导入文本里带日期，已自动补 businessDate'
+  })));
   const blockingCount=details.filter(item=>String(item?.level||'')==='P0'&&Number(item?.count||0)>0).length;
   const warningCount=details.filter(item=>String(item?.level||'')==='P1'&&Number(item?.count||0)>0).length;
   const pendingCount=actionItems.length;
@@ -2042,6 +2067,7 @@ function buildFinanceAudit(rows=[],overview=null){
     chaojunRiskCount:chaojunRiskRows.length,
     externalCampusRiskCount:externalCampusRows.length,
     autoFixedCampusCount:autoFixedCampusRows.length,
+    autoFixedDateCount:autoFixedDateRows.length,
     cashGap,
     recognizedGap,
     deferredGap,
