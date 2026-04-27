@@ -708,6 +708,43 @@ assert.throws(
   'benefit usage must reference membership order batch'
 );
 
+assert.throws(
+  () => rules.assertMembershipOrderMutable(
+    { id: 'mord-1' },
+    {
+      benefitLedger: [{ membershipOrderId: 'mord-1' }],
+      courts: []
+    }
+  ),
+  /权益流水/,
+  'membership orders with existing benefit ledger should not be directly edited or voided'
+);
+
+assert.throws(
+  () => rules.assertManualMembershipBenefitLedgerAllowed(
+    {
+      membershipOrderId: 'mord-1',
+      membershipAccountId: 'macc-1',
+      courtId: 'court-1',
+      benefitCode: 'ballMachine',
+      delta: -2,
+      relatedDate: '2026-04-12'
+    },
+    {
+      account: { id: 'macc-1', courtId: 'court-1' },
+      orders: [{
+        id: 'mord-1',
+        membershipAccountId: 'macc-1',
+        courtId: 'court-1',
+        benefitSnapshot: { ballMachine: { count: 1, label: '发球机', unit: '次' } }
+      }],
+      ledger: []
+    }
+  ),
+  /剩余权益不足/,
+  'manual membership benefit writes should not over-consume a specific purchase batch'
+);
+
 const voidedEvent = rules.buildMembershipAccountEventRecord({
   membershipAccountId: 'macc-1',
   courtId: 'court-1',

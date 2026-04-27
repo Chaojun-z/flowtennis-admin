@@ -857,6 +857,20 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
     return recommended?{studentId,entitlementId:recommended.entitlementId,delta:lessonCount}:null;
   }).filter(Boolean);
 }
+function restoreEntitlementsForScheduleEdit(schedule,entitlements=[]){
+  if(!schedule?.id)return entitlements;
+  const oldDeltas=resolveScheduleEntitlementDeltas(schedule,entitlements);
+  if(!oldDeltas.length)return entitlements;
+  const oldMap=new Map(oldDeltas.map(d=>[d.entitlementId,parseLessonValue(d.delta)]));
+  return (entitlements||[]).map(ent=>{
+    if(!oldMap.has(ent.id))return ent;
+    return {
+      ...ent,
+      status:'active',
+      remainingLessons:parseLessonValue(ent.remainingLessons)+oldMap.get(ent.id)
+    };
+  });
+}
 function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOString()){
   const total=parseLessonValue(entitlement.totalLessons);
   const used=Math.max(0,parseLessonValue(entitlement.usedLessons)-parseLessonValue(delta));
@@ -3983,6 +3997,39 @@ function buildMembershipAccountEventRecord(input,opts={}){
     createdAt:input.createdAt||opts.now||new Date().toISOString()
   };
 }
+function sanitizeMembershipAccountEditableBody(body={}){
+  return {
+    saleCampusId:body.saleCampusId,
+    notes:body.notes,
+    status:body.status,
+    voidReason:body.voidReason,
+    reason:body.reason
+  };
+}
+function assertMembershipOrderMutable(order,{benefitLedger=[],courts=[]}={}){
+  if(!order?.id)return;
+  const hasBenefitEffects=(benefitLedger||[]).some(row=>row.membershipOrderId===order.id);
+  if(hasBenefitEffects)throw new Error('该会员购买记录已产生权益流水，不能直接修改或作废');
+  const hasFinanceEffects=(courts||[]).some(court=>normalizeCourtHistory(court?.history).some(row=>row.membershipOrderId===order.id));
+  if(hasFinanceEffects)throw new Error('该会员购买记录已产生财务流水，不能直接修改或作废');
+}
+function assertManualMembershipBenefitLedgerAllowed(input,{account=null,orders=[],ledger=[]}={}){
+  if(!input?.membershipOrderId)return;
+  const order=(orders||[]).find(item=>item.id===input.membershipOrderId);
+  if(!order)throw new Error('会员购买批次不存在');
+  if(account&&order.membershipAccountId!==account.id)throw new Error('会员购买批次不属于当前会员账户');
+  if(account&&order.courtId!==account.courtId)throw new Error('会员购买批次不属于当前订场用户');
+  if(input.courtId&&order.courtId!==input.courtId)throw new Error('会员购买批次与订场用户不匹配');
+  if(input.membershipAccountId&&order.membershipAccountId!==input.membershipAccountId)throw new Error('会员购买批次与会员账户不匹配');
+  const benefitItem=membershipBenefitItemsFromOrder(order).find(item=>item.benefitCode===input.benefitCode);
+  if(!benefitItem)throw new Error('该会员购买批次不包含所选权益');
+  const delta=parseInt(input.delta)||0;
+  if(delta<0){
+    const summary=summarizeMembershipBenefits({orders:[order],ledger,today:String(input.relatedDate||new Date().toISOString().slice(0,10)).slice(0,10)});
+    const current=summary.find(item=>item.membershipOrderId===order.id&&item.benefitCode===input.benefitCode);
+    if((current?.remaining||0)<Math.abs(delta))throw new Error('该会员购买批次剩余权益不足');
+  }
+}
 function allocateMembershipBenefitUsage({membershipAccountId,courtId,benefitCode,benefitLabel='',unit='次',consumeCount,orders=[],ledger=[],today,now=new Date().toISOString(),idFactory=uuidv4,operator='',reason='会员权益使用',relatedDate=''}={}){
   const need=Math.abs(parseInt(consumeCount)||0);
   if(!membershipAccountId)throw new Error('会员权益流水必须关联会员账户');
@@ -4647,8 +4694,9 @@ module.exports = async (req, res) => {
         if(!old)return sendJson(res,{error:'会员账户不存在'},404);
         const now=new Date().toISOString();
         const campuses=await getCachedScan(T_CAMPUSES).catch(()=>[]);
-        const nextSaleCampusId=body.saleCampusId!==undefined?body.saleCampusId:old.saleCampusId||'';
-        const r=normalizeMembershipFinanceLink({...old,...body,id,saleCampusId:nextSaleCampusId,updatedAt:now},campuses);
+        const editableBody=sanitizeMembershipAccountEditableBody(body);
+        const nextSaleCampusId=editableBody.saleCampusId!==undefined?editableBody.saleCampusId:old.saleCampusId||'';
+        const r=normalizeMembershipFinanceLink({...old,...editableBody,id,saleCampusId:nextSaleCampusId,updatedAt:now},campuses);
         if(body.status==='voided'){
           r.status='voided';
           r.voidedAt=now;
@@ -4726,8 +4774,8 @@ module.exports = async (req, res) => {
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       const id=moM[1];
       if(method==='GET')return sendJson(res,await getCachedRow(T_MEMBERSHIP_ORDERS,id));
-      if(method==='PUT'){const old=await getCachedRow(T_MEMBERSHIP_ORDERS,id).catch(()=>null);if(!old)return sendJson(res,{error:'会员购买记录不存在'},404);const campuses=await getCachedScan(T_CAMPUSES).catch(()=>[]);const nextSaleCampusId=body.saleCampusId!==undefined?body.saleCampusId:old.saleCampusId||'';const r=normalizeMembershipFinanceLink({...old,...body,id,saleCampusId:nextSaleCampusId,updatedAt:new Date().toISOString()},campuses);await put(T_MEMBERSHIP_ORDERS,id,r);return sendJson(res,r);}
-      if(method==='DELETE'){const old=await getCachedRow(T_MEMBERSHIP_ORDERS,id).catch(()=>null);if(old)await put(T_MEMBERSHIP_ORDERS,id,{...old,status:'voided',voidedAt:new Date().toISOString(),voidedBy:user.name||'',voidReason:body.reason||'会员购买记录作废',updatedAt:new Date().toISOString()});return sendJson(res,{success:true});}
+      if(method==='PUT'){const old=await getCachedRow(T_MEMBERSHIP_ORDERS,id).catch(()=>null);if(!old)return sendJson(res,{error:'会员购买记录不存在'},404);const [benefitLedger,courts,campuses]=await Promise.all([getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),getCachedScan(T_COURTS).catch(()=>[]),getCachedScan(T_CAMPUSES).catch(()=>[])]);assertMembershipOrderMutable(old,{benefitLedger,courts});const nextSaleCampusId=body.saleCampusId!==undefined?body.saleCampusId:old.saleCampusId||'';const r=normalizeMembershipFinanceLink({...old,saleCampusId:nextSaleCampusId,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:new Date().toISOString()},campuses);await put(T_MEMBERSHIP_ORDERS,id,r);return sendJson(res,r);}
+      if(method==='DELETE'){const old=await getCachedRow(T_MEMBERSHIP_ORDERS,id).catch(()=>null);if(old){const [benefitLedger,courts]=await Promise.all([getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),getCachedScan(T_COURTS).catch(()=>[])]);assertMembershipOrderMutable(old,{benefitLedger,courts});await put(T_MEMBERSHIP_ORDERS,id,{...old,status:'voided',voidedAt:new Date().toISOString(),voidedBy:user.name||'',voidReason:body.reason||'会员购买记录作废',updatedAt:new Date().toISOString()});}return sendJson(res,{success:true});}
     }
     if(path==='/membership-benefit-ledger'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -4774,6 +4822,9 @@ module.exports = async (req, res) => {
           await Promise.all(rows.map(row=>put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row)));
           return sendJson(res,{records:rows});
         }
+        const allOrders=await getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]);
+        const allLedger=await getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]);
+        assertManualMembershipBenefitLedgerAllowed(body,{account,orders:allOrders,ledger:allLedger});
         const r=buildMembershipBenefitLedgerRecord({...body,operator},{id:uuidv4(),now});
         await put(T_MEMBERSHIP_BENEFIT_LEDGER,r.id,r);
         return sendJson(res,r);
@@ -4789,7 +4840,17 @@ module.exports = async (req, res) => {
       if(method==='GET')return sendJson(res,normalizeEntitlementLedgerRowsForView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[])));
     }
     if(path==='/entitlements'){await init();if(method==='GET'){const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);const sid=query.get('studentId')||'';if(user.role==='admin')return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[])]);const scoped=filterLoadAllForUser({students,schedule,classes,entitlements:rows},user).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
-    if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>parseArr(body.studentIds).includes(e.studentId));return sendJson(res,recommendEntitlements(rows,body));}
+    if(path==='/entitlements/recommend'&&method==='POST'){
+      await init();
+      const [allEntitlements,allSchedules]=await Promise.all([getCachedScan(T_ENTITLEMENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[])]);
+      let rows=allEntitlements.filter(e=>parseArr(body.studentIds).includes(e.studentId));
+      const scheduleId=String(body.scheduleId||'').trim();
+      if(scheduleId){
+        const currentSchedule=allSchedules.find(item=>item.id===scheduleId);
+        if(currentSchedule)rows=restoreEntitlementsForScheduleEdit(currentSchedule,rows);
+      }
+      return sendJson(res,recommendEntitlements(rows,body));
+    }
     const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
@@ -5097,6 +5158,7 @@ module.exports._test={
   recommendEntitlements,
   scheduleEntitlementDeltas,
   resolveScheduleEntitlementDeltas,
+  restoreEntitlementsForScheduleEdit,
   applyEntitlementLessonDelta,
   diffScheduleEntitlementDeltas,
   assertScheduleEditableAfterFeedback,
@@ -5156,6 +5218,8 @@ module.exports._test={
   isDuplicateMembershipOrderSubmission,
   buildMembershipAccountEventRecord,
   buildMembershipBenefitLedgerRecord,
+  assertMembershipOrderMutable,
+  assertManualMembershipBenefitLedgerAllowed,
   buildMembershipGrantLedgerRows,
   buildNormalizedFinanceRows,
   buildFinanceOverview,

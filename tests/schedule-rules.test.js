@@ -20,6 +20,7 @@ assert.ok(rules.decorateWorkbenchStudents, 'api._test should expose student cont
 assert.ok(rules.decorateWorkbenchFeedbacks, 'api._test should expose feedback contract normalization helper');
 assert.ok(rules.feedbackScopeForSchedule, 'api._test should expose feedback scope helper');
 assert.ok(rules.buildFeedbackRecord, 'api._test should expose feedback record builder');
+assert.ok(rules.restoreEntitlementsForScheduleEdit, 'api._test should expose edit-mode entitlement restore helper');
 
 assert.strictEqual(
   rules.effectiveScheduleStatus(
@@ -73,6 +74,15 @@ assert.strictEqual(
   ),
   '不扣课',
   'cancelled schedule should show no charge'
+);
+
+assert.deepStrictEqual(
+  rules.restoreEntitlementsForScheduleEdit(
+    { id: 'sch-1', status: '已排课', studentIds: ['stu-1'], entitlementId: 'ent-1', lessonCount: 1.5 },
+    [{ id: 'ent-1', studentId: 'stu-1', remainingLessons: 0.5, totalLessons: 20, status: 'depleted' }]
+  ),
+  [{ id: 'ent-1', studentId: 'stu-1', remainingLessons: 2, totalLessons: 20, status: 'active' }],
+  'editing a schedule should temporarily restore the already-deducted lesson hours when recommending entitlements'
 );
 
 assert.doesNotThrow(
