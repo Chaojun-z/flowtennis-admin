@@ -91,6 +91,7 @@ assert.doesNotMatch(apiSource, /wqxd2026/, 'api source should not hardcode the d
 assert.match(apiSource, /已超过发起者确认时限，请联系运营处理/, 'creator attendance confirm should enforce ops handoff after timeout');
 assert.match(apiSource, /请先完成全部到场确认，再生成AA/, 'fee generation should block until every active player is confirmed');
 assert.match(apiSource, /已生成AA，不能再修改到场名单/, 'attendance should lock after AA generation');
+assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should not expose self attendance endpoint');
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
 assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'bootstrap password should come from env instead of hardcoded source');
@@ -256,8 +257,8 @@ assert.equal(rules.deriveMatchStatus({
 }, new Date('2026-04-21T13:00:00')), 'attendance_pending');
 
 assert.throws(() => rules.requireAdminUser({ type: 'match_user', id: 'm1' }), /无管理端权限/);
-assert.deepEqual(rules.userMatchPermissions({ id: 'dandan', role: 'editor', name: '陈丹丹' }).sort(), ['match_finance', 'match_ops']);
-assert.doesNotThrow(() => rules.requireMatchAdminPermission({ id: 'dandan', role: 'editor', name: '陈丹丹' }, 'match_finance'));
+assert.deepEqual(rules.userMatchPermissions({ id: 'dandan', role: 'editor', name: '陈丹丹', matchPermissions: ['match_ops', 'match_finance'] }).sort(), ['match_finance', 'match_ops']);
+assert.doesNotThrow(() => rules.requireMatchAdminPermission({ id: 'dandan', role: 'editor', name: '陈丹丹', matchPermissions: ['match_finance'] }, 'match_finance'));
 assert.throws(() => rules.requireMatchAdminPermission({ id: 'staff', role: 'editor', name: '其他员工' }, 'match_finance'), /无约球财务权限/);
 assert.deepEqual(rules.mergeStoredAuthUser({ id: 'staff' }, { id: 'staff', name: '运营', role: 'editor', matchPermissions: ['match_ops'] }).matchPermissions, ['match_ops']);
 
@@ -410,8 +411,10 @@ const profileStats = rules.buildMatchProfileStats({
     { matchId: 'm4', finalStatus: 'attended', matchStatus: 'cancelled' }
   ],
   feeSplits: [
-    { amount: 167, payStatus: 'paid' },
-    { amount: 166, payStatus: 'pending' }
+    { amount: 167, paidAmount: 167, payStatus: 'paid' },
+    { amount: 166, paidAmount: 0, payStatus: 'pending' },
+    { amount: 125, paidAmount: 125, payStatus: 'refunded' },
+    { amount: 88, paidAmount: 0, payStatus: 'cancelled' }
   ]
 });
 assert.equal(profileStats.createdCount, 2);
@@ -421,7 +424,11 @@ assert.equal(profileStats.matchJoinedCount, 2);
 assert.equal(profileStats.matchCompletedCount, 3);
 assert.equal(profileStats.attendanceRate, 67);
 assert.equal(profileStats.attendanceRateText, '67%');
-assert.equal(profileStats.totalFeeAmount, 333);
+assert.equal(profileStats.totalFeeAmount, 42);
+assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'admin' }), true);
+assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', matchPermissions: ['match_ops'] }), true);
+assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', matchPermissions: [] }), false);
+assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', name: '陈丹丹', matchPermissions: [] }), false);
 
 const matchCourtHistoryRow = rules.buildMatchCourtFinanceHistoryRow({
   match: {

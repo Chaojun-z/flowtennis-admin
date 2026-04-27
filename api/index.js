@@ -2226,7 +2226,6 @@ function parsePermissionList(value){
 function userMatchPermissions(user){
   const permissions=new Set(parsePermissionList(user?.permissions||user?.matchPermissions));
   if(user?.role==='admin')permissions.add('match_ops'),permissions.add('match_finance');
-  if(String(user?.name||'').trim()==='陈丹丹')permissions.add('match_ops'),permissions.add('match_finance');
   if(user?.matchOps)permissions.add('match_ops');
   if(user?.matchFinance)permissions.add('match_finance');
   return [...permissions].filter(x=>['match_ops','match_finance'].includes(x));
@@ -2246,21 +2245,19 @@ function ensureMatchUserResponse(req,res){
   try{return requireMatchUser(req);}
   catch(err){sendJson(res,{error:String(err?.message||'未登录')},401);return null;}
 }
+function canMatchUserCreateByAdminUser(adminUser){
+  if(!adminUser)return false;
+  const permissions=userMatchPermissions(adminUser);
+  return adminUser.role==='admin'||permissions.includes('match_ops');
+}
 async function canMatchUserCreate(userId){
   const pool=getMatchSqlPool();
-  const [createdRes,userRes]=await Promise.all([
-    pool.query('SELECT COUNT(*)::int AS count FROM match_posts WHERE creatorUserId=$1',[userId]),
-    pool.query('SELECT * FROM match_users WHERE id=$1',[userId])
-  ]);
-  const createdCount=Number(createdRes.rows[0]?.count||0);
-  if(createdCount>0)return true;
+  const userRes=await pool.query('SELECT * FROM match_users WHERE id=$1',[userId]);
   const user=userRes.rows[0]||{};
   const phone=normalizePhone(user.phone||'');
   if(!phone)return false;
   const adminUser=await getCachedRow(T_USERS,phone).catch(()=>null);
-  if(!adminUser)return false;
-  const permissions=userMatchPermissions(adminUser);
-  return adminUser.role==='admin'||permissions.includes('match_ops');
+  return canMatchUserCreateByAdminUser(adminUser);
 }
 function buildMatchUserToken(user){
   return jwt.sign({id:user.id,type:'match_user',openid:user.openid},JWT_SECRET,{expiresIn:'7d'});
@@ -3299,6 +3296,13 @@ function buildMatchProfileStats({createdMatches=[],joinedMatches=[],attendanceRo
   });
   const attended=confirmedAttendance.filter(row=>(row.finalStatus||row.finalstatus)==='attended').length;
   const attendanceRate=confirmedAttendance.length?Math.round(attended*100/confirmedAttendance.length):0;
+  const totalFeeAmount=(feeSplits||[]).reduce((sum,row)=>{
+    const status=String(row.payStatus||row.paystatus||'').trim();
+    const amount=normalizeMoney(row.paidAmount??row.paidamount??row.amount);
+    if(status==='paid')return sum+amount;
+    if(status==='refunded')return sum-amount;
+    return sum;
+  },0);
   return {
     createdCount:(createdMatches||[]).length,
     joinedCount:(joinedMatches||[]).length,
@@ -3307,7 +3311,7 @@ function buildMatchProfileStats({createdMatches=[],joinedMatches=[],attendanceRo
     matchCompletedCount:confirmedAttendance.length,
     attendanceRate,
     attendanceRateText:confirmedAttendance.length?`${attendanceRate}%`:'暂无记录',
-    totalFeeAmount:(feeSplits||[]).reduce((sum,row)=>sum+normalizeMoney(row.amount),0)
+    totalFeeAmount
   };
 }
 async function listMyMatches(userId){
@@ -5908,6 +5912,8 @@ module.exports._test={
   ,requireAdminUser
   ,requireMatchUser
   ,ensureMatchUserResponse
+  ,canMatchUserCreateByAdminUser
+  ,ensureMatchUserResponse
   ,buildMatchUserToken
   ,assertMatchPostInput
   ,normalizeMatchType
@@ -5939,7 +5945,6 @@ module.exports._test={
   ,confirmMatchAttendance
   ,adminHandleBookedWithdrawal
   ,adminTransferMatchReplacement
-  ,selfConfirmMatchAttendance
   ,creatorConfirmMatchAttendance
   ,generateMatchFeeLedger
   ,markMatchFeeSplit
