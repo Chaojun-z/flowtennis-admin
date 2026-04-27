@@ -2481,7 +2481,12 @@ async function getMatchProfile(userId){
 async function updateMatchProfile(userId,input){
   const phone=assertPhone(input.phone||'');
   const ntrpLevel=input.ntrpLevel==null?'':String(input.ntrpLevel||'').trim();
-  await getMatchSqlPool().query('UPDATE match_users SET phone=COALESCE(NULLIF($2,$3),phone),ntrpLevel=COALESCE(NULLIF($4,$3),ntrpLevel),updatedAt=NOW() WHERE id=$1',[userId,phone,'',ntrpLevel]);
+  const nickName=input.nickName==null?'':String(input.nickName||'').trim();
+  const avatarUrl=input.avatarUrl==null?'':String(input.avatarUrl||'').trim();
+  await getMatchSqlPool().query(
+    'UPDATE match_users SET phone=COALESCE(NULLIF($2,$6),phone),ntrpLevel=COALESCE(NULLIF($3,$6),ntrpLevel),nickName=COALESCE(NULLIF($4,$6),nickName),avatarUrl=COALESCE(NULLIF($5,$6),avatarUrl),updatedAt=NOW() WHERE id=$1',
+    [userId,phone,ntrpLevel,nickName,avatarUrl,'']
+  );
   return getMatchProfile(userId);
 }
 async function listMatchNotifications(userId){
