@@ -275,6 +275,8 @@ assert.deepEqual(rules.assertMatchReplacementTransferInput({ fromUserId:'u1', re
   refundNote:'原用户退赛',
   transferNote:''
 });
+assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus:'pending', amount: 200 }), /请填写原因/);
+assert.equal(rules.assertMatchFeeSplitUpdateInput({ payStatus:'pending', amount: 200, note:'运营调价' }).amount, 200);
 
 assert.equal(
   rules.matchTimelineStatus({

@@ -148,7 +148,7 @@ async function confirmMatchFees(id){
 function openMatchFeeModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;
   const splits=Array.isArray(row.feeSplits)?row.feeSplits:[];
-  const body=`<div class="tms-section-header" style="margin-top:0;">AA 应收</div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:10px">标记已收后会同步进入场地财务总账，分类为约球订场收入。</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:160px">球友</th><th style="width:100px">应收</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:260px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${splits.map(s=>`<tr><td style="padding-left:20px">${renderCourtCellText(s.nickName||s.phone||s.userId||s.userid)}</td><td><div class="tms-cell-text">¥${fmt(s.amount||0)}</div></td><td>${renderCourtCellText(matchPayStatusText(s.payStatus||s.paystatus),false)}</td><td class="tms-sticky-r tms-action-cell" style="width:260px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','paid')">已收</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','waived')">减免</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','abnormal')">异常</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','refunded')">退款</span></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>暂无 AA 应收，请先生成 AA</p></div></td></tr>'}</tbody></table></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">AA 应收</div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:10px">标记已收后会同步进入场地财务总账，分类为约球订场收入。需要人工调整时，可直接修改单人 AA 金额。</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:160px">球友</th><th style="width:100px">应收</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:320px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${splits.map(s=>`<tr><td style="padding-left:20px">${renderCourtCellText(s.nickName||s.phone||s.userId||s.userid)}</td><td><div class="tms-cell-text">¥${fmt(s.amount||0)}</div></td><td>${renderCourtCellText(matchPayStatusText(s.payStatus||s.paystatus),false)}</td><td class="tms-sticky-r tms-action-cell" style="width:320px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="editMatchFeeAmount('${id}','${s.userId||s.userid}',${Number(s.amount||0)},'${esc(s.payStatus||s.paystatus||'pending')}')">改金额</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','paid')">已收</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','waived')">减免</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','abnormal')">异常</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','refunded')">退款</span></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>暂无 AA 应收，请先生成 AA</p></div></td></tr>'}</tbody></table></div></div>`;
   setCourtModalFrame('约球收款',body,`<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>`,'modal-wide');
 }
 function matchPayStatusText(status){
@@ -163,6 +163,20 @@ async function updateMatchFeeSplit(matchId,userId,payStatus){
   try{
     await apiCall('POST',`/admin/matches/${matchId}/fees/splits/${userId}`,{payStatus,note:matchFeeNote});
     toast('收款状态已更新','success');
+    await loadMatches(true);
+    openMatchFeeModal(matchId);
+  }catch(e){toast('更新失败：'+e.message,'error');}
+}
+async function editMatchFeeAmount(matchId,userId,currentAmount,currentStatus='pending'){
+  const amountRaw=window.prompt('请输入新的 AA 金额', String(Number(currentAmount||0)));
+  if(amountRaw==null)return;
+  const amount=Number(amountRaw);
+  if(!Number.isFinite(amount)||amount<0){toast('AA金额不正确','warn');return;}
+  const note=String(window.prompt('请填写修改原因')||'').trim();
+  if(!note){toast('请填写原因','warn');return;}
+  try{
+    await apiCall('POST',`/admin/matches/${matchId}/fees/splits/${userId}`,{payStatus:currentStatus||'pending',amount,note});
+    toast('AA金额已更新','success');
     await loadMatches(true);
     openMatchFeeModal(matchId);
   }catch(e){toast('更新失败：'+e.message,'error');}

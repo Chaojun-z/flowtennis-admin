@@ -25,6 +25,8 @@ assert.match(page, /function openMatchAttendanceModal\(/, 'match page should sup
 assert.match(page, /function confirmMatchFees\(/, 'match page should support AA fee generation');
 assert.match(page, /function openMatchFeeModal\(/, 'match page should support fee split management');
 assert.match(page, /function updateMatchFeeSplit\(/, 'match page should support marking fee split status');
+assert.match(page, /function editMatchFeeAmount\(/, 'match page should support direct AA amount editing');
+assert.match(page, /改金额/, 'fee split modal should expose a direct edit amount action');
 assert.match(page, /function openMatchWithdrawalModal\(/, 'match page should support booked withdrawal handling');
 assert.match(page, /\/registrations\/\$\{userId\}\/withdrawal/, 'booked withdrawal should call admin withdrawal API');
 assert.match(page, /function openMatchReplacementModal\(/, 'match page should support replacement transfer handling');

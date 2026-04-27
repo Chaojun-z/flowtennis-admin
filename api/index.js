@@ -2201,9 +2201,11 @@ function assertMatchFeeSplitUpdateInput(input={}){
   const payStatus=String(input.payStatus||'paid').trim();
   if(!['pending','paid','waived','refunded','bad_debt','abnormal'].includes(payStatus))throw new Error('收款状态不正确');
   const note=String(input.note||'').trim();
-  if(['waived','refunded','bad_debt','abnormal'].includes(payStatus)&&!note)throw new Error('请填写原因');
+  const amount=input.amount==null?null:normalizeMoney(input.amount);
+  if(amount!=null&&amount<0)throw new Error('AA金额不能小于 0');
+  if((['waived','refunded','bad_debt','abnormal'].includes(payStatus)||amount!=null)&&!note)throw new Error('请填写原因');
   const paidAmount=input.paidAmount==null?null:normalizeMoney(input.paidAmount);
-  return {payStatus,paidAmount,note};
+  return {payStatus,paidAmount,amount,note};
 }
 function assertMatchReplacementTransferInput(input={}){
   const fromUserId=String(input.fromUserId||'').trim();
@@ -2741,22 +2743,21 @@ async function markMatchFeeSplit(matchId,userId,operatorId,input={}){
     const splitRes=await client.query('SELECT * FROM match_fee_splits WHERE matchId=$1 AND userId=$2 FOR UPDATE',[matchId,userId]);
     const split=splitRes.rows[0];
     if(!split)throw new Error('账单不存在');
-    const amount=normalizeMoney(split.amount);
+    const amount=update.amount==null?normalizeMoney(split.amount):normalizeMoney(update.amount);
     const previousPaidAmount=normalizeMoney(split.paidamount||split.paidAmount);
     if(update.payStatus==='refunded'&&String(split.paystatus||split.payStatus)!=='paid'&&previousPaidAmount<=0)throw new Error('未收款不能退款');
     const nextPaidAmount=update.paidAmount==null?(update.payStatus==='paid'?amount:(update.payStatus==='refunded'?previousPaidAmount:0)):update.paidAmount;
-    await client.query('UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE matchId=$5 AND userId=$6',[update.payStatus,nextPaidAmount,update.payStatus==='paid'?new Date():null,update.note,matchId,userId]);
-    const all=await client.query('SELECT payStatus FROM match_fee_splits WHERE matchId=$1',[matchId]);
-    const settled=all.rows.length>0&&all.rows.every(row=>['paid','waived'].includes(row.paystatus||row.payStatus));
-    if(isPrepay){
-      await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE matchId=$2',[settled?'prepay_paid':'prepay_pending',matchId]);
-      await client.query("UPDATE match_posts SET formationStatus=$2,updatedAt=NOW() WHERE id=$1",[matchId,settled?'group_locked':'group_ready']);
-    }else{
-      await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE matchId=$2',[settled?'settled':'confirmed',matchId]);
-      if(settled)await client.query("UPDATE match_posts SET status='settled',updatedAt=NOW() WHERE id=$1",[matchId]);
-    }
-    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'admin_user',operatorId,'fee_split_update',JSON.stringify(split),JSON.stringify({payStatus:update.payStatus,paidAmount:nextPaidAmount,note:update.note})]);
-    return {success:true,status:isPrepay?(settled?'prepay_paid':'prepay_pending'):(settled?'settled':'confirmed'),isPrepay};
+    await client.query('UPDATE match_fee_splits SET amount=$1,payStatus=$2,paidAmount=$3,paidAt=$4,note=$5,updatedAt=NOW() WHERE matchId=$6 AND userId=$7',[amount,update.payStatus,nextPaidAmount,update.payStatus==='paid'?new Date():null,update.note,matchId,userId]);
+    const feeRowsRes=await client.query("SELECT * FROM match_fee_splits WHERE matchId=$1 AND payStatus NOT IN ('cancelled','refunded')",[matchId]);
+    const activeRows=feeRowsRes.rows;
+    const participantCount=activeRows.length;
+    const finalCourtFee=activeRows.reduce((sum,row)=>sum+normalizeMoney(row.amount),0);
+    const aaAmount=participantCount>0?Math.ceil(finalCourtFee/participantCount):0;
+    const distributedTotal=activeRows.reduce((sum,row)=>sum+normalizeMoney(row.amount),0);
+    await client.query('UPDATE match_fee_records SET finalCourtFee=$1,participantCount=$2,aaAmount=$3,roundingDifference=$4,updatedAt=NOW() WHERE matchId=$5',[finalCourtFee,participantCount,aaAmount,finalCourtFee-distributedTotal,matchId]);
+    const nextState=await syncMatchFeeRecordState(client,matchId,{isPrepay});
+    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'admin_user',operatorId,'fee_split_update',JSON.stringify(split),JSON.stringify({amount,payStatus:update.payStatus,paidAmount:nextPaidAmount,note:update.note})]);
+    return {success:true,status:nextState.status,isPrepay};
   });
   if(!result.isPrepay&&update.payStatus==='paid')result.financeSync=await syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId);
   if(!result.isPrepay&&update.payStatus==='refunded')result.financeSync=await syncMatchFeeSplitRefundToCourtFinance(matchId,userId,operatorId,update.note);
