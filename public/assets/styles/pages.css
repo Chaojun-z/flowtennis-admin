@@ -81,7 +81,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .finance-date-host{flex:0 0 152px;min-width:152px}
 #page-finance .coach-ops-tabs{margin-bottom:0}
 #page-finance .tms-stats-row{margin-bottom:18px}
-#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;overflow:visible}
+#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow:visible}
 #page-finance .finance-ledger-stats .tms-stat-card{min-width:0}
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:17px;min-width:0;overflow:hidden}
