@@ -7,6 +7,7 @@ const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8
 assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css');
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
+assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api.js');
@@ -24,9 +25,11 @@ assert.match(html, /assets\/scripts\/pages\/purchases\.js/, 'index.html should l
 assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html should load entitlements page module');
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
+assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=/, 'index.html should version coachops.js to avoid stale finance behavior');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
+assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
 
 assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
 assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');

@@ -17,7 +17,7 @@ let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-04-18-safe-list-cache';
+const DATA_CACHE_VERSION='2026-04-27-cachefix-schedule-finance';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['entitlementLedger']);
 const datasetLoadPromises=new Map();
 const PAGE_DATA_REQUIREMENTS={
