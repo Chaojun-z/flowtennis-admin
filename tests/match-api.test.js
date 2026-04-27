@@ -30,6 +30,7 @@ assert.ok(rules.assertMatchFeeSplitUpdateInput, 'api._test should expose match f
 assert.ok(rules.assertMatchReplacementTransferInput, 'api._test should expose replacement transfer validation');
 assert.ok(rules.buildMatchFinanceDailyReport, 'api._test should expose match finance daily report builder');
 assert.ok(rules.canMatchUserCreateByAdminUser, 'api._test should expose match creator permission resolver');
+assert.ok(rules.resolveMatchPrepayClosure, 'api._test should expose prepay closure resolver');
 
 for (const table of [
   'match_users',
@@ -58,6 +59,12 @@ assert.match(apiSource, /requireMatchAdminPermission\(user,'match_finance'\)/, '
 assert.match(apiSource, /adminWithdrawalM=path\.match/, 'API should expose booked withdrawal handling endpoint');
 assert.match(apiSource, /adminReplacementM=path\.match/, 'API should expose replacement transfer endpoint');
 assert.match(apiSource, /adminTransferMatchReplacement/, 'API should implement replacement transfer flow');
+assert.match(apiSource, /cancelMatchForUser[\s\S]*status==='booked'[\s\S]*UPDATE match_registrations SET registrationStatus='cancelled'/, 'booked match cancel should also close active registrations');
+assert.match(apiSource, /cancelMatchForUser[\s\S]*status==='booked'[\s\S]*closeMatchFeeLedger/, 'booked match cancel should also settle fee split states');
+assert.match(apiSource, /if\(isFourPlayerGroupMatch\(match\)&&nextCount<4\)\{[\s\S]*closeMatchFeeLedger\(client,matchId,'四人局人数不足，已降级为自由局',\{onlyPrepay:true,mode:'downgraded'\}\)/, 'formation downgrade should close prepay ledgers with downgrade status instead of deleting them');
+assert.match(apiSource, /financialResponsibility='waive'/, 'booked match cancel should waive active registrations instead of dropping history');
+assert.match(apiSource, /prepay_cancelled/, 'booked match cancel should persist a dedicated prepay cancelled status');
+assert.match(apiSource, /prepay_downgraded/, 'formation downgrade should persist a dedicated prepay downgraded status');
 assert.match(migration, /financialResponsibility/, 'registrations should persist booked withdrawal financial responsibility');
 assert.match(migration, /CREATE TABLE IF NOT EXISTS match_replacements/, 'replacement transfer records should persist in SQL');
 assert.match(apiSource, /syncMatchFeeSplitToCourtFinance/, 'paid match fee splits should sync into court finance ledger');
@@ -182,6 +189,35 @@ const firstJoinLevelMatch = rules.assertMatchPostInput({
 assert.equal(firstJoinLevelMatch.levelMode, 'first_join');
 assert.equal(firstJoinLevelMatch.ntrpMin, 0);
 assert.equal(firstJoinLevelMatch.ntrpMax, 0);
+
+const downgradedPrepay = rules.resolveMatchPrepayClosure({
+  mode: 'downgraded',
+  reason: '人数跌破4人，降级为自由局',
+  splits: [
+    { userId: 'u1', amount: 100, payStatus: 'pending', paidAmount: 0, note: '' },
+    { userId: 'u2', amount: 100, payStatus: 'paid', paidAmount: 100, note: '已线下收款' }
+  ]
+});
+assert.equal(downgradedPrepay.recordStatus, 'prepay_downgraded_refunded');
+assert.deepEqual(
+  downgradedPrepay.splits.map((row) => ({ userId: row.userId, payStatus: row.payStatus, paidAmount: row.paidAmount })),
+  [
+    { userId: 'u1', payStatus: 'cancelled', paidAmount: 0 },
+    { userId: 'u2', payStatus: 'refunded', paidAmount: 100 }
+  ]
+);
+assert.match(downgradedPrepay.splits[0].note, /人数跌破4人/);
+
+const cancelledPrepay = rules.resolveMatchPrepayClosure({
+  mode: 'cancelled',
+  reason: '运营取消已订场球局',
+  splits: [
+    { userId: 'u3', amount: 88, payStatus: 'pending', paidAmount: 0, note: '' }
+  ]
+});
+assert.equal(cancelledPrepay.recordStatus, 'prepay_cancelled');
+assert.equal(cancelledPrepay.splits[0].payStatus, 'cancelled');
+assert.match(cancelledPrepay.splits[0].note, /运营取消已订场球局/);
 
 assert.deepEqual(rules.splitAaFee(500, ['u1', 'u2', 'u3']).map(x => x.amount), [167, 167, 166]);
 assert.equal(rules.splitAaFee(500, ['u1', 'u2', 'u3']).reduce((sum, row) => sum + row.amount, 0), 500);

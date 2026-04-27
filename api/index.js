@@ -2255,6 +2255,41 @@ function buildGroupPrepayLedger({matchId,estimatedCourtFee=0,participantIds=[]}=
     splits:splits.map(row=>({id:uuidv4(),matchId,userId:row.userId,amount:row.amount,payStatus:'pending',paidAmount:0}))
   };
 }
+function resolveMatchPrepayClosure({mode='cancelled',reason='',splits=[]}={}){
+  const normalizedReason=String(reason||'').trim();
+  const nextSplits=(splits||[]).map((row)=>{
+    const paidAmount=normalizeMoney(row.paidamount??row.paidAmount??0);
+    const nextStatus=paidAmount>0||String(row.paystatus||row.payStatus||'')==='paid'?'refunded':'cancelled';
+    const baseNote=String(row.note||'').trim();
+    return {
+      ...row,
+      payStatus:nextStatus,
+      paidAmount,
+      note:[baseNote,normalizedReason].filter(Boolean).join('；')
+    };
+  });
+  const refunded=nextSplits.some((row)=>row.payStatus==='refunded');
+  const recordStatus=mode==='downgraded'
+    ? (refunded?'prepay_downgraded_refunded':'prepay_downgraded')
+    : (refunded?'prepay_cancelled_refunded':'prepay_cancelled');
+  return {recordStatus,splits:nextSplits};
+}
+async function closeMatchPrepayLedger(client,matchId,{mode='cancelled',reason=''}={}){
+  const feeRecordRes=await client.query('SELECT * FROM match_fee_records WHERE matchId=$1 FOR UPDATE',[matchId]);
+  const feeRecord=feeRecordRes.rows[0]||null;
+  if(!feeRecord)return {changed:false,recordStatus:'',splits:[]};
+  if(!/^prepay_/.test(String(feeRecord.status||'')))return {changed:false,recordStatus:String(feeRecord.status||''),splits:[]};
+  const splitRes=await client.query('SELECT * FROM match_fee_splits WHERE matchId=$1 FOR UPDATE',[matchId]);
+  const closure=resolveMatchPrepayClosure({mode,reason,splits:splitRes.rows});
+  for(const row of closure.splits){
+    await client.query(
+      'UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE id=$5',
+      [row.payStatus,row.paidAmount,row.payStatus==='refunded'?(row.paidat||row.paidAt||new Date()):null,row.note||'',row.id]
+    );
+  }
+  await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE matchId=$2',[closure.recordStatus,matchId]);
+  return {...closure,changed:true};
+}
 async function syncMatchFeeRecordState(client,matchId,{isPrepay=false}={}){
   const activeSplitsRes=await client.query("SELECT payStatus FROM match_fee_splits WHERE matchId=$1 AND payStatus NOT IN ('cancelled','refunded')",[matchId]);
   const settled=activeSplitsRes.rows.length>0&&activeSplitsRes.rows.every(row=>['paid','waived'].includes(row.paystatus||row.payStatus));
@@ -2391,18 +2426,74 @@ async function updateMatchForUser(matchId,userId,input){
     return {success:true};
   });
 }
+async function closeMatchFeeLedger(client,matchId,note,{feeRecord=null,onlyPrepay=false,mode='cancelled'}={}){
+  const lockedFeeRecord=feeRecord||((await client.query('SELECT * FROM match_fee_records WHERE matchId=$1 FOR UPDATE',[matchId])).rows[0]||null);
+  if(!lockedFeeRecord)return {feeRecord:null,isPrepay:false,updatedSplits:[]};
+  const isPrepay=/^prepay_/.test(String(lockedFeeRecord.status||''));
+  if(onlyPrepay&&!isPrepay)return {feeRecord:lockedFeeRecord,isPrepay,updatedSplits:[]};
+  const splitRows=(await client.query('SELECT * FROM match_fee_splits WHERE matchId=$1 FOR UPDATE',[matchId])).rows;
+  if(isPrepay){
+    const closure=resolveMatchPrepayClosure({mode,reason:note,splits:splitRows});
+    for(const split of closure.splits){
+      await client.query(
+        'UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE id=$5',
+        [split.payStatus,split.paidAmount,split.payStatus==='refunded'?(split.paidat||split.paidAt||new Date()):null,split.note||'',String(split.id||'')]
+      );
+    }
+    await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE id=$2',[closure.recordStatus,String(lockedFeeRecord.id||'')]);
+    return {feeRecord:lockedFeeRecord,isPrepay,updatedSplits:closure.splits};
+  }
+  const updatedSplits=[];
+  for(const split of splitRows){
+    const currentStatus=String(split.paystatus||split.payStatus||'').trim();
+    if(['cancelled','refunded'].includes(currentStatus))continue;
+    const paidAmount=normalizeMoney(split.paidamount||split.paidAmount);
+    const nextStatus=paidAmount>0?'refunded':'cancelled';
+    const nextPaidAmount=nextStatus==='refunded'?paidAmount:0;
+    await client.query(
+      'UPDATE match_fee_splits SET payStatus=$1,paidAmount=$2,paidAt=$3,note=$4,updatedAt=NOW() WHERE id=$5',
+      [nextStatus,nextPaidAmount,nextStatus==='refunded'?new Date():null,note,String(split.id||'')]
+    );
+    updatedSplits.push({...split,payStatus:nextStatus,paidAmount:nextPaidAmount});
+  }
+  const nextRecordStatus=updatedSplits.some(row=>String(row.payStatus||'')==='refunded')?'refunded':'cancelled';
+  await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE id=$2',[nextRecordStatus,String(lockedFeeRecord.id||'')]);
+  return {feeRecord:lockedFeeRecord,isPrepay,updatedSplits};
+}
 async function cancelMatchForUser(matchId,userId,reason=''){
-  return withMatchSqlTransaction(async(client)=>{
+  const cancellationReason=String(reason||'发起者取消').trim()||'发起者取消';
+  const financeSync={refundUserIds:[]};
+  const result=await withMatchSqlTransaction(async(client)=>{
     const matchRes=await client.query('SELECT * FROM match_posts WHERE id=$1 FOR UPDATE',[matchId]);
     const match=matchRes.rows[0];
     if(!match)throw new Error('球局不存在');
     if(String(match.creatoruserid||match.creatorUserId)!==String(userId))throw new Error('只有发起者可取消');
-    if(!['open','full','booked'].includes(String(match.status||'open')))throw new Error('当前状态不能取消');
+    const status=deriveMatchStatus(match);
+    if(!['open','full','booked'].includes(status))throw new Error('当前状态不能取消');
     if(dateMs(match.starttime||match.startTime)<=Date.now())throw new Error('已开始，不能取消');
-    await client.query("UPDATE match_posts SET status='cancelled',cancelReason=$1,updatedAt=NOW() WHERE id=$2",[String(reason||'发起者取消'),matchId]);
-    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'match_user',userId,'match_cancel',JSON.stringify(match),JSON.stringify({reason})]);
-    return {success:true,status:'cancelled'};
+    let feeClosure=null;
+    if(status==='booked'){
+      await client.query(
+        "UPDATE match_registrations SET registrationStatus='cancelled',cancelledAt=NOW(),financialResponsibility='waive',withdrawalReason=$1,withdrawalHandledBy=$2,withdrawalHandledAt=NOW() WHERE matchId=$3 AND registrationStatus='registered'",
+        [cancellationReason,userId,matchId]
+      );
+      feeClosure=await closeMatchFeeLedger(client,matchId,cancellationReason,{mode:'cancelled'});
+      if(feeClosure&&!feeClosure.isPrepay){
+        financeSync.refundUserIds=feeClosure.updatedSplits
+          .filter(row=>String(row.payStatus||'')==='refunded')
+          .map(row=>String(row.userid||row.userId||''))
+          .filter(Boolean);
+      }
+    }
+    await client.query("UPDATE match_posts SET status='cancelled',formationStatus='free_open',cancelReason=$1,prepayTriggeredAt=NULL,prepayDeadlineAt=NULL,updatedAt=NOW() WHERE id=$2",[cancellationReason,matchId]);
+    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'match_user',userId,status==='booked'?'match_cancel_booked':'match_cancel',JSON.stringify(match),JSON.stringify({reason:cancellationReason,closedFeeSplits:feeClosure?.updatedSplits?.length||0})]);
+    return {success:true,status:'cancelled',closedFeeSplits:feeClosure?.updatedSplits?.length||0};
   });
+  for(const refundUserId of financeSync.refundUserIds){
+    await syncMatchFeeSplitRefundToCourtFinance(matchId,refundUserId,userId,cancellationReason).catch(()=>null);
+  }
+  notifyMatchUsers(matchId,'match_update').catch(()=>null);
+  return result;
 }
 async function cancelRegistrationForUser(matchId,userId){
   return withMatchSqlTransaction(async(client)=>{
@@ -2421,13 +2512,9 @@ async function cancelRegistrationForUser(matchId,userId){
     const nextCount=countRes.rows[0]?.count||0;
     const nextStatus=nextCount>=Number(match.targetheadcount||match.targetHeadcount)?'full':'open';
     if(isFourPlayerGroupMatch(match)&&nextCount<4){
-      const feeRecordRes=await client.query('SELECT * FROM match_fee_records WHERE matchId=$1 LIMIT 1',[matchId]);
-      const feeStatus=String(feeRecordRes.rows[0]?.status||'');
-      if(/^prepay_/.test(feeStatus)){
-        await client.query('DELETE FROM match_fee_splits WHERE matchId=$1',[matchId]);
-        await client.query('DELETE FROM match_fee_records WHERE matchId=$1',[matchId]);
-      }
+      const feeClosure=await closeMatchFeeLedger(client,matchId,'四人局人数不足，已降级为自由局',{onlyPrepay:true,mode:'downgraded'});
       await client.query('UPDATE match_posts SET status=$1,formationStatus=$2,prepayTriggeredAt=NULL,prepayDeadlineAt=NULL,updatedAt=NOW() WHERE id=$3',[nextStatus,'free_open',matchId]);
+      await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'match_user',userId,'formation_downgrade',JSON.stringify(match),JSON.stringify({reason:'四人局人数不足，已降级为自由局',closedFeeSplits:feeClosure.updatedSplits.length})]);
       return {success:true,currentHeadcount:nextCount,status:nextStatus,formationStatus:'free_open'};
     }
     await client.query('UPDATE match_posts SET status=$1,updatedAt=NOW() WHERE id=$2',[nextStatus,matchId]);
@@ -5383,6 +5470,7 @@ module.exports._test={
   ,assertBookedWithdrawalInput
   ,assertMatchFeeSplitUpdateInput
   ,assertMatchReplacementTransferInput
+  ,resolveMatchPrepayClosure
   ,resolveFinalAttendanceStatus
   ,buildMatchFeeLedger
   ,listMatchesForViewer
