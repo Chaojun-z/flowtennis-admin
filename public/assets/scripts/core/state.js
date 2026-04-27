@@ -6,9 +6,12 @@ function syncViewportMode(){
 }
 
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
-let financeOverviewData=null,financeNormalizedLedgerRows=[];
+let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 function financeNormalizedRows(){
   return Array.isArray(financeNormalizedLedgerRows)?financeNormalizedLedgerRows:[];
+}
+function financeSettlementRowsFromSnapshot(){
+  return Array.isArray(financeSettlementSummaryRows)?financeSettlementSummaryRows:[];
 }
 window.coachWorkbenchStats=window.coachWorkbenchStats||{};
 let adminUsersLoaded=false;
@@ -176,7 +179,6 @@ function initialBackgroundDatasetsForPage(pg){
   const fallback={
     plansPage:['plans'],
     purchasesPage:['purchases'],
-    financePage:['purchases','entitlementLedger'],
     courtsPage:['courts'],
     membershipsPage:['courts','membershipAccounts'],
     workbenchPage:['schedule']
@@ -252,22 +254,9 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     }
     if(name==='financePage'){
       setDatasetValue('campuses',data.campuses||[]);
-      setDatasetValue('students',data.students||[]);
-      setDatasetValue('schedule',data.schedule||[]);
-      setDatasetValue('entitlements',data.entitlements||[]);
-      setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
-      setDatasetValue('financialLedger',data.financialLedger||[]);
-      setDatasetValue('coaches',data.coaches||[]);
-      setDatasetValue('products',data.products||[]);
-      setDatasetValue('purchases',data.purchases||[]);
-      setDatasetValue('packages',data.packages||[]);
-      setDatasetValue('courts',data.courts||[]);
-      setDatasetValue('membershipAccounts',data.membershipAccounts||[]);
-      setDatasetValue('membershipOrders',data.membershipOrders||[]);
-      setDatasetValue('membershipBenefitLedger',data.membershipBenefitLedger||[]);
-      setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
       financeOverviewData=data.financeOverviewData||null;
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
+      financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
       loadedDatasets.add('financePage');
       return;
     }
@@ -339,7 +328,7 @@ function clearLoadedData(){
   courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];matches=[];adminUsersLoaded=false;
-  financeOverviewData=null;financeNormalizedLedgerRows=[];
+  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];
   loadedDatasets=new Set();
 }
 function normalizeCurrentPageForRole(){
@@ -380,6 +369,7 @@ function applyLoadedData(data){
   matches=Array.isArray(data?.matches)?data.matches:[];
   financeOverviewData=data?.financeOverviewData||null;
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
+  financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
   loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','matches']);
   if(data?.user){
     currentUser=data.user;

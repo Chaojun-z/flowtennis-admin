@@ -459,7 +459,7 @@ function financeUnifiedDebitTarget(row){
   if(['散客订场','约球局'].includes(row.businessType))return '现场收款';
   return row.paymentChannel||'—';
 }
-function financeUnifiedRows(){
+function financeLegacyUnifiedRows(){
   const courseReceiptRows=financeCourseRevenueRows().map(row=>{
     const actualAmount=Number(row.actualAmount)||0;
     return {
@@ -616,6 +616,10 @@ function financeUnifiedRows(){
     }).filter(Boolean);
   });
   return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...courtRows];
+}
+function financeUnifiedRows(){
+  const snapshotRows=financeNormalizedRows();
+  return snapshotRows.length?snapshotRows:financeLegacyUnifiedRows();
 }
 function financeRecognizedRows(){
   const q=String(document.getElementById('coachOpsConsumeSearch')?.value||'').trim().toLowerCase();
@@ -1118,7 +1122,7 @@ function renderFinancePrepaidBalance(){
   ].map(([label,val,formatter])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${formatter(val)}</div></div>`).join('');
   body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.customer,false)}</td><td>${renderCourtCellText(row.campusName,false)}</td><td>${renderCourtCellText(row.deferredType==='课包待确认'?'课包':'会员储值',false)}</td><td>${financeAmountText(row.deferredAmount)}</td><td>${renderCourtCellText(row.source,false)}</td><td><div class="tms-text-remark">${esc(renderCourtEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>暂无待确认收入</p></div></td></tr>`;
 }
-function financeSettlementRows(){
+function financeLegacySettlementRows(){
   const monthInput=document.getElementById('financeSettlementMonth');
   const monthValue=(monthInput?.value||today().slice(0,7)).slice(0,7);
   if(monthInput&&!monthInput.value)monthInput.value=monthValue;
@@ -1151,6 +1155,17 @@ function financeSettlementRows(){
       if((Number(b.lateFeeAmount)||0)!==(Number(a.lateFeeAmount)||0))return (Number(b.lateFeeAmount)||0)-(Number(a.lateFeeAmount)||0);
       return String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN');
     });
+}
+function financeSettlementRows(){
+  const monthInput=document.getElementById('financeSettlementMonth');
+  const monthValue=(monthInput?.value||today().slice(0,7)).slice(0,7);
+  if(monthInput&&!monthInput.value)monthInput.value=monthValue;
+  const snapshotRows=financeSettlementRowsFromSnapshot().filter(row=>String(row.month||'')===monthValue&&financeMatchesCampusName(row.campusName));
+  if(snapshotRows.length)return snapshotRows.sort((a,b)=>{
+    if((Number(b.lateFeeAmount)||0)!==(Number(a.lateFeeAmount)||0))return (Number(b.lateFeeAmount)||0)-(Number(a.lateFeeAmount)||0);
+    return String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN');
+  });
+  return financeLegacySettlementRows();
 }
 function renderFinanceSettlementSummary(){
   const host=document.getElementById('financeSettlementStats');

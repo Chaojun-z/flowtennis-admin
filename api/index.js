@@ -71,6 +71,16 @@ const HOT_SCAN_TABLES=new Map([
   [T_CAMPUSES,{ttlMs:60000}],
   [T_PRICE_PLANS,{ttlMs:60000}]
 ]);
+const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
+  T_COURTS,
+  T_STUDENTS,
+  T_PURCHASES,
+  T_ENTITLEMENTS,
+  T_ENTITLEMENT_LEDGER,
+  T_MEMBERSHIP_ORDERS,
+  T_SCHEDULE,
+  T_CAMPUSES
+]);
 const HOT_GET_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_CLASSES,{ttlMs:60000}],
@@ -83,6 +93,7 @@ const HOT_GET_TABLES=new Map([
 ]);
 const hotScanCache=new Map();
 const hotGetCache=new Map();
+let financeSnapshotCache=null;
 let importedLedgerRepairChecked=false;
 
 let tsClient;
@@ -120,6 +131,9 @@ function invalidateHotGetCache(t,id){
   }
   hotGetCache.delete(hotGetCacheKey(t,id));
 }
+function invalidateFinanceSnapshotCache(t){
+  if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;
+}
 async function getCachedScan(t){
   const cfg=HOT_SCAN_TABLES.get(t);
   if(!cfg)return scan(t);
@@ -141,11 +155,11 @@ async function getCachedRow(t,id){
   hotGetCache.set(key,{row:cloneCacheValue(row),expiresAt:now+cfg.ttlMs});
   return row;
 }
-function put(t,id,attrs){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
+function put(t,id,attrs){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);invalidateFinanceSnapshotCache(t);return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function putIfAbsent(t,id,attrs){return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function get(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
 function scan(t){return withStorageRetry(()=>new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});const lastRow=(d.rows||[]).length?(d.rows||[])[(d.rows||[]).length-1]:null;const nextStartPrimaryKey=lastRow&&lastRow.primaryKey&&lastRow.primaryKey[0]?[{id:String(lastRow.primaryKey[0].value)+'\u0000'}]:null;nextStartPrimaryKey?f(nextStartPrimaryKey):res(rows);});}f();}));}
-function del(t,id){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
+function del(t,id){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);invalidateFinanceSnapshotCache(t);return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
 async function clearTables(storage,tables){
   const result={success:true,total:0,tables:[]};
   for(const table of tables){
@@ -1770,6 +1784,356 @@ async function bootstrapMabaoFinanceSeed(){
 async function listCampusesWithDefaults(){
   const rows=await getCachedScan(T_CAMPUSES).catch(()=>[]);
   return rows.length?rows:DEFAULT_CAMPUSES;
+}
+function financeWeekdayText(value){
+  const day=String(value||'').slice(0,10);
+  if(!day)return '—';
+  const date=new Date(`${day}T00:00:00`);
+  if(Number.isNaN(date.getTime()))return '—';
+  return ['周一','周二','周三','周四','周五','周六','周日'][(date.getDay()+6)%7]||'—';
+}
+function financeTimeText(value){
+  const text=String(value||'');
+  if(text.includes('T'))return text.slice(11,16)||'—';
+  if(/^\d{2}:\d{2}/.test(text))return text.slice(0,5);
+  return '—';
+}
+function financeDateTimeText(value){
+  const text=String(value||'');
+  if(!text)return '—';
+  if(text.includes('T'))return `${text.slice(0,10)} ${text.slice(11,16)}`.trim();
+  return text;
+}
+function financePurchaseStatusText(purchase){
+  return purchase?.status==='voided'?'已作废':'正常';
+}
+function buildFinanceCampusResolvers(campuses=[]){
+  const codeToName=new Map();
+  const knownNames=new Set();
+  (campuses||[]).forEach(item=>{
+    const code=String(item?.code||item?.id||'').trim();
+    const name=String(item?.name||item?.code||item?.id||'').trim();
+    if(code&&name)codeToName.set(code,name);
+    if(name)knownNames.add(name);
+  });
+  const fromValue=(value)=>{
+    if(Array.isArray(value))return fromValue(value[0]);
+    const raw=String(value||'').trim();
+    if(!raw)return '';
+    if(codeToName.has(raw))return codeToName.get(raw)||'';
+    if(knownNames.has(raw))return raw;
+    return '';
+  };
+  const fromHints=(...values)=>{
+    for(const value of values){
+      const direct=fromValue(value);
+      if(direct)return direct;
+    }
+    const hintText=values.flatMap(value=>Array.isArray(value)?value:[value]).map(value=>String(value||'')).join(' ');
+    if(/mabao|马坡/i.test(hintText))return '顺义马坡';
+    if(/shilipu|十里堡/i.test(hintText))return '朝阳十里堡';
+    if(/guowang|国网/i.test(hintText))return '朝阳国网';
+    if(/langang|蓝色港湾/i.test(hintText))return '朝阳蓝色港湾';
+    if(/chaojun|朝珺/i.test(hintText))return '朝珺私教';
+    return '';
+  };
+  return {fromValue,fromHints};
+}
+function financeDifferenceReason(text=''){
+  const hint=String(text||'');
+  if(/会员储值补足/.test(hint))return '系统补的会员储值来源，不计入三张业务表';
+  if(/期初导入汇总/.test(hint))return '期初导入汇总，不计入三张业务表';
+  return '';
+}
+function financeNeutralActionLabel(text=''){
+  return /免费|赠送/.test(String(text||''))?'赠送':'记录';
+}
+function financeCourtHistoryBusinessType(row){
+  const category=String(row?.category||'');
+  const sourceCategory=String(row?.sourceCategory||'');
+  const payMethod=String(row?.payMethod||'').trim();
+  if(row?.type==='充值')return '会员储值';
+  if(sourceCategory.includes('约球订场'))return '约球局';
+  if(category.includes('订场')){
+    if(payMethod==='储值扣款'||payMethod==='储值卡'||payMethod.includes('储值')||category.includes('会员'))return '会员订场';
+    return '散客订场';
+  }
+  if(/课|班课|训练营|体验/.test(category))return '课程';
+  return '散客订场';
+}
+function financeRecognizedAmountForConsumeRow(row,entitlement,purchase){
+  const lessonDelta=Math.abs(Number(row?.lessonDelta)||0);
+  const totalLessons=Math.max(1,Number(entitlement?.totalLessons)||Number(purchase?.packageLessons)||lessonDelta||1);
+  const amountPaid=Number(purchase?.amountPaid)||0;
+  if(!amountPaid||!lessonDelta)return 0;
+  return Math.round((amountPaid/totalLessons)*lessonDelta*100)/100;
+}
+function aggregateFinanceHistoricalMonthlyLedgerRows(rows=[]){
+  const monthlyMap=new Map();
+  const result=[];
+  (rows||[]).forEach(row=>{
+    const monthKey=importedLedgerMonthKey(row);
+    if(!monthKey){
+      result.push(row);
+      return;
+    }
+    const key=[row.entitlementId,row.purchaseId,row.studentId,row.reason||'',monthKey].join('|');
+    const current=monthlyMap.get(key);
+    if(!current){
+      monthlyMap.set(key,{...row,sourceMonth:row.sourceMonth||monthKey});
+      return;
+    }
+    monthlyMap.set(key,{
+      ...current,
+      lessonDelta:(Number(current.lessonDelta)||0)+(Number(row.lessonDelta)||0),
+      relatedDate:String(row.relatedDate||'')>String(current.relatedDate||'')?row.relatedDate:current.relatedDate,
+      createdAt:String(row.createdAt||'')>String(current.createdAt||'')?row.createdAt:current.createdAt
+    });
+  });
+  return [...result,...monthlyMap.values()];
+}
+function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitlements=[],entitlementLedger=[],courts=[],membershipOrders=[],schedule=[]}={}){
+  const campusName=buildFinanceCampusResolvers(campuses);
+  const studentMap=new Map((students||[]).map(item=>[String(item.id||''),item]));
+  const entitlementByPurchaseId=new Map();
+  const entitlementMap=new Map();
+  (entitlements||[]).forEach(item=>{
+    entitlementMap.set(String(item.id||''),item);
+    if(item?.purchaseId&&!entitlementByPurchaseId.has(String(item.purchaseId)))entitlementByPurchaseId.set(String(item.purchaseId),item);
+  });
+  const purchaseMap=new Map((purchases||[]).map(item=>[String(item.id||''),item]));
+  const scheduleMap=new Map((schedule||[]).map(item=>[String(item.id||''),item]));
+  const courtMap=new Map((courts||[]).map(item=>[String(item.id||''),item]));
+  const courseReceiptRows=(purchases||[]).map(purchase=>{
+    const entitlement=entitlementByPurchaseId.get(String(purchase.id))||{};
+    const student=studentMap.get(String(purchase.studentId||''))||{};
+    const rowCampusName=campusName.fromHints(
+      parseArr(entitlement.campusIds)[0]||entitlement.campus||'',
+      purchase.campus,
+      student.campus,
+      purchase.notes,
+      purchase.packageName,
+      purchase.productName
+    )||'—';
+    const actualAmount=Number(purchase.amountPaid)||0;
+    const differenceReason=financeDifferenceReason(`${purchase.notes||''} ${purchase.packageName||''} ${purchase.productName||''}`);
+    return {
+      id:`purchase-${purchase.id}`,
+      businessDate:purchase.purchaseDate||String(purchase.createdAt||'').slice(0,10),
+      weekdayText:financeWeekdayText(purchase.purchaseDate||purchase.createdAt),
+      timeText:'—',
+      customer:purchase.studentName||'—',
+      campusName:rowCampusName,
+      businessType:differenceReason?'差异项':'课程',
+      action:differenceReason?'差异':(actualAmount>0?'收款':financeNeutralActionLabel(`${purchase.notes||''} ${purchase.payMethod||''}`)),
+      cashDelta:differenceReason?0:actualAmount,
+      recognizedRevenueDelta:0,
+      deferredRevenueDelta:differenceReason?0:actualAmount,
+      paymentChannel:purchase.payMethod||'—',
+      sourceDocument:`购买记录 ${purchase.id}`,
+      notes:differenceReason?`${differenceReason}；${purchase.notes||''}`:(purchase.notes||''),
+      incomeType:purchase.packageName||purchase.productName||'课包购买',
+      packageName:purchase.packageName||purchase.productName||'课包',
+      collector:purchase.operator||purchase.ownerCoach||'—',
+      differenceReason:differenceReason||'',
+      systemStatus:financePurchaseStatusText(purchase),
+      totalLessons:Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0,
+      usedLessons:Math.max(0,(Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0)-(Number(entitlement.remainingLessons)||0)),
+      remainingLessons:Number(entitlement.remainingLessons)||0,
+      sourceProject:purchase.packageName||purchase.productName||'课包购买',
+      debitTarget:purchase.packageName||purchase.productName||'课包'
+    };
+  });
+  const membershipReceiptRows=(membershipOrders||[])
+    .filter(order=>String(order?.status||'active')!=='voided')
+    .map(order=>{
+      const court=courtMap.get(String(order.courtId||''))||{};
+      const rowCampusName=campusName.fromHints(court.campus,court.campusName,order.courtName,order.notes,order.membershipPlanName)||'—';
+      const amount=Number(order.rechargeAmount)||0;
+      const differenceReason=financeDifferenceReason(`${order.notes||''} ${order.membershipPlanName||''}`);
+      return {
+        id:`membership-${order.id}`,
+        businessDate:order.purchaseDate||String(order.createdAt||'').slice(0,10),
+        weekdayText:financeWeekdayText(order.purchaseDate||order.createdAt),
+        timeText:'—',
+        customer:order.courtName||court.name||order.courtId||'—',
+        campusName:rowCampusName,
+        businessType:differenceReason?'差异项':'会员储值',
+        action:differenceReason?'差异':(amount>0?'收款':financeNeutralActionLabel(`${order.notes||''} ${order.payMethod||''}`)),
+        cashDelta:differenceReason?0:amount,
+        recognizedRevenueDelta:0,
+        deferredRevenueDelta:differenceReason?0:amount,
+        paymentChannel:order.payMethod||'会员充值',
+        sourceDocument:`会员订单 ${order.id}`,
+        notes:differenceReason?`${differenceReason}；${order.notes||''}`:(order.notes||''),
+        incomeType:'会员储值',
+        packageName:'',
+        collector:order.operator||'系统记录',
+        differenceReason:differenceReason||'',
+        systemStatus:differenceReason?'差异项':'正常',
+        totalLessons:0,
+        usedLessons:0,
+        remainingLessons:0,
+        sourceProject:'会员充值',
+        debitTarget:'会员储值余额'
+      };
+    });
+  const courseConsumeRows=aggregateFinanceHistoricalMonthlyLedgerRows(normalizeEntitlementLedgerRowsForView(entitlementLedger||[])).map(row=>{
+    const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
+    const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
+    const scheduleRow=scheduleMap.get(String(row.scheduleId||''))||{};
+    const student=studentMap.get(String(purchase.studentId||''))||{};
+    const recognizedAmount=financeRecognizedAmountForConsumeRow(row,entitlement,purchase);
+    const sign=Number(row.lessonDelta||0)>0?-1:1;
+    return {
+      id:`consume-${row.id}`,
+      businessDate:String(row.relatedDate||row.createdAt||'').slice(0,10),
+      weekdayText:financeWeekdayText(row.relatedDate||row.createdAt),
+      timeText:financeTimeText(scheduleRow.startTime),
+      customer:entitlement.studentName||purchase.studentName||scheduleRow.studentName||'—',
+      campusName:campusName.fromValue(scheduleRow.campus||parseArr(entitlement.campusIds)[0]||purchase.campus||student.campus)||'—',
+      businessType:'课程',
+      action:Number(row.lessonDelta||0)>0?'回退':'消耗',
+      cashDelta:0,
+      recognizedRevenueDelta:Math.round(recognizedAmount*sign*100)/100,
+      deferredRevenueDelta:Math.round(-recognizedAmount*sign*100)/100,
+      paymentChannel:'课包划扣',
+      sourceDocument:row.scheduleId?`排课 ${row.scheduleId}`:`课包流水 ${row.id}`,
+      notes:row.notes||row.reason||'',
+      incomeType:entitlement.packageName||purchase.packageName||'课包消耗',
+      packageName:entitlement.packageName||purchase.packageName||'课包',
+      collector:scheduleRow.coach||row.operator||purchase.ownerCoach||'系统记录',
+      differenceReason:'',
+      systemStatus:row.scheduleId||row.importSource==='系统导入'?'已关联':'待补来源',
+      totalLessons:Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0,
+      usedLessons:Math.max(0,(Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0)-(Number(entitlement.remainingLessons)||0)),
+      remainingLessons:Number(entitlement.remainingLessons)||0,
+      sourceProject:scheduleRow.id?`${scheduleRow.courseType||'课程'} ${financeDateTimeText(scheduleRow.startTime)}`:(row.reason||'历史导入'),
+      debitTarget:entitlement.packageName||purchase.packageName||'课包'
+    };
+  });
+  const courtRows=(courts||[]).flatMap(court=>{
+    const baseCampusName=campusName.fromHints(court.campus,court.campusName,court.name,court.notes);
+    return normalizeCourtHistory(court.history).map(historyRow=>{
+      const noteText=`${historyRow.note||''} ${historyRow.category||''} ${historyRow.sourceCategory||''} ${historyRow.payMethod||''}`;
+      const rowCampusName=campusName.fromHints(baseCampusName,historyRow.campus,historyRow.note,historyRow.category,historyRow.source,historyRow.importSource,historyRow.sourceCategory)||'—';
+      if(historyRow.type==='充值'&&historyRow.membershipOrderId)return null;
+      const differenceReason=financeDifferenceReason(noteText);
+      const businessType=financeCourtHistoryBusinessType(historyRow);
+      const amount=Math.round((Number(historyRow.amount)||0)*100)/100;
+      let action=financeNeutralActionLabel(noteText);
+      let cashDelta=0;
+      let recognizedRevenueDelta=0;
+      let deferredRevenueDelta=0;
+      if(historyRow.type==='充值'){
+        action=amount>0?'收款':action;
+        cashDelta=amount;
+        deferredRevenueDelta=amount;
+      }else if(historyRow.type==='消费'&&String(historyRow.payMethod||'').trim()==='储值扣款'){
+        action=amount>0?'已入账':action;
+        recognizedRevenueDelta=amount;
+        deferredRevenueDelta=-amount;
+      }else if(historyRow.type==='消费'){
+        action=amount>0?'收款':action;
+        cashDelta=amount;
+        recognizedRevenueDelta=amount;
+      }else if(historyRow.type==='退款'&&String(historyRow.payMethod||'').trim()==='储值退款'){
+        action='退款';
+        cashDelta=-amount;
+        deferredRevenueDelta=-amount;
+      }else if(historyRow.type==='退款'){
+        action='退款';
+        cashDelta=-amount;
+        recognizedRevenueDelta=-amount;
+      }else if(historyRow.type==='冲正'&&String(historyRow.payMethod||'').trim()==='储值扣款'){
+        action='冲回';
+        recognizedRevenueDelta=-amount;
+        deferredRevenueDelta=amount;
+      }else if(historyRow.type==='冲正'){
+        action='冲回';
+        cashDelta=-amount;
+        recognizedRevenueDelta=-amount;
+      }
+      if(differenceReason){
+        action='差异';
+        cashDelta=0;
+        recognizedRevenueDelta=0;
+        deferredRevenueDelta=0;
+      }
+      return {
+        id:`court-${court.id}-${historyRow.id||historyRow.date||uuidv4()}`,
+        businessDate:historyRow.occurredDate||historyRow.date||'',
+        weekdayText:financeWeekdayText(historyRow.occurredDate||historyRow.date),
+        timeText:historyRow.startTime&&historyRow.endTime?`${String(historyRow.startTime).slice(11,16)}-${String(historyRow.endTime).slice(11,16)}`:(historyRow.time||'—'),
+        customer:court.name||court.id,
+        campusName:rowCampusName,
+        businessType:differenceReason?'差异项':businessType,
+        action,
+        cashDelta,
+        recognizedRevenueDelta,
+        deferredRevenueDelta,
+        paymentChannel:historyRow.payMethod||'—',
+        sourceDocument:`订场账户 ${court.id}`,
+        notes:differenceReason?`${differenceReason}；${historyRow.note||historyRow.category||''}`:(historyRow.note||historyRow.category||''),
+        incomeType:businessType,
+        packageName:'',
+        collector:historyRow.operator||historyRow.createdBy||'系统记录',
+        differenceReason:differenceReason||'',
+        systemStatus:differenceReason?'差异项':'正常',
+        totalLessons:0,
+        usedLessons:0,
+        remainingLessons:0,
+        sourceProject:businessType,
+        debitTarget:businessType==='会员储值'?'会员储值余额':(String(historyRow.payMethod||'').trim()==='储值扣款'?'会员储值余额':'现场收款')
+      };
+    }).filter(Boolean);
+  });
+  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...courtRows]
+    .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
+}
+function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){
+  const campusName=buildFinanceCampusResolvers(campuses);
+  const grouped=new Map();
+  (schedule||[]).forEach(item=>{
+    const month=String(item.startTime||'').slice(0,7);
+    if(!month)return;
+    const coach=String(item.coach||'').trim()||'未分配';
+    const rowCampusName=campusName.fromValue(item.campus)||'—';
+    const key=[month,coach,rowCampusName].join('|');
+    const current=grouped.get(key)||{month,coach,campusName:rowCampusName,lessonUnits:0,lateCount:0,lateFeeAmount:0};
+    if(effectiveScheduleStatus(item)==='已结束')current.lessonUnits+=parseLessonValue(item.lessonCount,1);
+    if(item.coachLateFree){
+      current.lateCount+=1;
+      current.lateFeeAmount+=Number(item.coachLateFieldFeeAmount)||0;
+    }
+    grouped.set(key,current);
+  });
+  return [...grouped.values()]
+    .filter(row=>row.lessonUnits>0||row.lateCount>0||row.lateFeeAmount>0)
+    .sort((a,b)=>String(b.month||'').localeCompare(String(a.month||''))||String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN'));
+}
+function buildFinancePageSnapshot(source={}){
+  return {
+    generatedAt:new Date().toISOString(),
+    financeNormalizedRows:buildFinanceUnifiedRows(source),
+    financeSettlementRows:buildFinanceSettlementRows(source)
+  };
+}
+async function getFinancePageSnapshot(){
+  if(financeSnapshotCache)return cloneCacheValue(financeSnapshotCache);
+  const campuses=await listCampusesWithDefaults();
+  const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule]=await Promise.all([
+    getCachedScan(T_STUDENTS).catch(()=>[]),
+    getCachedScan(T_PURCHASES).catch(()=>[]),
+    getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
+    getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+    getCachedScan(T_COURTS).catch(()=>[]),
+    getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
+    getCachedScan(T_SCHEDULE).catch(()=>[])
+  ]);
+  const snapshot=buildFinancePageSnapshot({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule});
+  financeSnapshotCache=cloneCacheValue(snapshot);
+  return snapshot;
 }
 function scheduleInitInBackground(){
   if(REQUIRED_ENV_VARS.some((k)=>!process.env[k]))return;
@@ -4801,24 +5165,15 @@ module.exports = async (req, res) => {
     if(path==='/page-data/finance'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [campuses,students,schedule,entitlements,entitlementLedger,financialLedger,coaches,products,purchases,packages,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents]=await Promise.all([
-        listCampusesWithDefaults(),
-        getCachedScan(T_STUDENTS).catch(()=>[]),
-        getCachedScan(T_SCHEDULE).catch(()=>[]),
-        getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
-        getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
-        getCachedScan(T_FINANCIAL_LEDGER).catch(()=>[]),
-        getCachedScan(T_COACHES).catch(()=>[]),
-        getCachedScan(T_PRODUCTS).catch(()=>[]),
-        getCachedScan(T_PURCHASES).catch(()=>[]),
-        getCachedScan(T_PACKAGES).catch(()=>[]),
-        getCachedScan(T_COURTS).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[])
-      ]);
-      return sendJson(res,{campuses,students,schedule,entitlements,entitlementLedger,financialLedger,coaches,products,purchases,packages,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents});
+      const campuses=await listCampusesWithDefaults();
+      const snapshot=await getFinancePageSnapshot();
+      return sendJson(res,{
+        campuses,
+        financeOverviewData:null,
+        financeNormalizedRows:snapshot.financeNormalizedRows||[],
+        financeSettlementRows:snapshot.financeSettlementRows||[],
+        generatedAt:snapshot.generatedAt||''
+      });
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -5009,6 +5364,9 @@ module.exports._test={
   courtDeleteAction,
   assertCanDeleteCampus,
   deleteCourtsByIds,
+  buildFinanceUnifiedRows,
+  buildFinanceSettlementRows,
+  buildFinancePageSnapshot,
   getRuntimeEnsuredTables,
   getTestDataResetTables,
   clearTables
