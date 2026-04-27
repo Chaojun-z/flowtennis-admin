@@ -35,6 +35,8 @@ assert.match(fnBody('saveSchedule'), /openScheduleSaveConfirmModal\(/, 'schedule
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'schedule save flow should not fall back to the browser confirm');
 assert.match(source, /function refreshScheduleSettlementMode\(/, 'schedule page should define the settlement mode refresh helper before opening the modal');
 assert.match(source, /function campusOptionLabel\(/, 'schedule page should define the campus option label helper used by the modal');
+assert.match(source, /function venueOptionsForCampus\(/, 'schedule page should define the venue options helper used by the modal');
+assert.match(fnBody('venueOptionsForCampus'), /VENUES\.map/, 'schedule venue options helper should derive choices from the shared venue constants');
 assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
 assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
 

@@ -26,6 +26,9 @@ function scheduleLocationText(s){
 function campusOptionLabel(campusRecord){
   return campusRecord?.name||cn(campusRecord?.code||campusRecord?.id)||campusRecord?.code||campusRecord?.id||'—';
 }
+function venueOptionsForCampus(){
+  return VENUES.map(name=>({value:name,label:name}));
+}
 function scheduleStatusLabel(status){
   if(status==='已结束')return '已下课';
   if(status==='已排课')return '待上课';
