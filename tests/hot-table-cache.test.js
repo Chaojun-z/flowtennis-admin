@@ -6,6 +6,7 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 
 assert.match(apiSource, /const HOT_SCAN_TABLES=new Map\(/, 'api should declare hot table cache config');
 assert.match(apiSource, /const HOT_GET_TABLES=new Map\(/, 'api should declare hot row cache config');
+assert.match(apiSource, /function scan\(t\)\{[\s\S]*const lastRow=\(d\.rows\|\|\[\]\)\.length\?\(d\.rows\|\|\[\]\)\[\(d\.rows\|\|\[\]\)\.length-1\]:null;[\s\S]*const nextStartPrimaryKey=lastRow&&lastRow\.primaryKey&&lastRow\.primaryKey\[0\]\?\[\{id:lastRow\.primaryKey\[0\]\.value\}\]:null;[\s\S]*nextStartPrimaryKey\?f\(nextStartPrimaryKey\):res\(rows\);/, 'scan pagination should derive the next cursor from the last row primary key instead of reusing raw TableStore cursor payload');
 assert.match(apiSource, /function getCachedScan\(t\)/, 'api should expose a cached scan helper');
 assert.match(apiSource, /function getCachedRow\(t,id\)/, 'api should expose a cached row helper');
 assert.match(apiSource, /function invalidateHotScanCache\(t\)/, 'api should expose cache invalidation');
