@@ -40,7 +40,7 @@ async function main() {
   const pool = rules.getMatchSqlPool();
   await cleanup(pool);
   try {
-    const dandan = { id: 'chendand', role: 'editor', name: '陈丹丹' };
+    const dandan = { id: 'chendand', role: 'editor', name: '陈丹丹', matchOps: true, matchFinance: true };
     assert.doesNotThrow(() => rules.requireMatchAdminPermission(dandan, 'match_ops'), 'dandan should have match ops permission');
     assert.doesNotThrow(() => rules.requireMatchAdminPermission(dandan, 'match_finance'), 'dandan should have match finance permission');
 
@@ -54,21 +54,45 @@ async function main() {
       await insertUser(pool, id, phone);
     }
 
-    const match = await rules.createMatchForUser(ids.creator, {
-      title: `${prefix} 约球联调`,
-      matchType: 'double',
-      targetHeadcount: 4,
-      startTime: futureDate(2),
-      endTime: futureDate(4),
-      venueName: '马坡网球馆',
-      venueAddress: '马坡',
-      venueLatitude: 40.123,
-      venueLongitude: 116.654,
-      ntrpMin: 2.5,
-      ntrpMax: 3.5,
-      genderPreference: '不限',
-      estimatedCourtFee: 480
-    });
+    await assert.rejects(
+      () => rules.createMatchForUser(ids.creator, {
+        title: `${prefix} 普通用户发起`,
+        matchType: 'double',
+        targetHeadcount: 4,
+        startTime: futureDate(2),
+        endTime: futureDate(4),
+        venueName: '马坡网球馆',
+        venueAddress: '马坡',
+        venueLatitude: 40.123,
+        venueLongitude: 116.456,
+        ntrpMin: 2.5,
+        ntrpMax: 3.5,
+        genderPreference: '不限',
+        estimatedCourtFee: 480
+      }),
+      /仅管理员可发起约球/,
+      'plain match users should no longer be able to create matches'
+    );
+
+    const matchId = `${prefix}-match-main`;
+    const createdAt = new Date().toISOString();
+    await pool.query(
+      `INSERT INTO match_posts(
+        id,creatorUserId,title,matchType,targetHeadcount,startTime,endTime,
+        venueName,venueAddress,venueLatitude,venueLongitude,ntrpMin,ntrpMax,
+        levelMode,genderPreference,estimatedCourtFee,status,formationStatus,createdAt,updatedAt
+      ) VALUES(
+        $1,$2,$3,$4,$5,$6,$7,
+        $8,$9,$10,$11,$12,$13,
+        $14,$15,$16,$17,$18,$19::timestamptz,$19::timestamptz
+      )`,
+      [
+        matchId, ids.creator, `${prefix} 约球联调`, 'double', 4, futureDate(2), futureDate(4),
+        '马坡网球馆', '马坡', 40.123, 116.456, 2.5, 3.5,
+        'preset', '不限', 480, 'open', 'free_open', createdAt
+      ]
+    );
+    const match = await rules.getMatchForViewer(matchId, ids.creator);
     assert.equal(match.currentHeadcount, 0, 'creator should not auto-register');
 
     await rules.registerMatchUser(match.id, ids.userA);
@@ -92,19 +116,26 @@ async function main() {
     await assert.rejects(
       () => rules.generateMatchFeeLedger(match.id, dandan.id),
       /请先完成全部到场确认，再生成AA/,
-      'AA generation should wait until every active registration is confirmed'
+      'AA generation should wait until every active player has creator-confirmed attendance'
     );
+
     await pool.query("INSERT INTO match_attendance(id,matchId,userId,selfStatus,creatorStatus,finalStatus,updatedAt) VALUES($1,$2,$3,'pending','attended','attended',NOW())", [`${prefix}-att-a`, match.id, ids.userA]);
     await rules.generateMatchFeeLedger(match.id, dandan.id);
-    const regA = await pool.query("SELECT id FROM match_registrations WHERE matchId=$1 AND userId=$2 AND registrationStatus='registered' LIMIT 1", [match.id, ids.userA]);
     await assert.rejects(
-      () => rules.creatorConfirmMatchAttendance(match.id, ids.creator, regA.rows[0].id, 'absent'),
+      () => rules.creatorConfirmMatchAttendance(match.id, ids.creator, 'missing-registration', 'attended'),
       /已生成AA，不能再修改到场名单/,
-      'creator should not be able to change attendance after AA generation'
+      'creator confirmation should refuse any further edits once AA is locked'
     );
     const splits = await pool.query('SELECT userId,amount,payStatus FROM match_fee_splits WHERE matchId=$1 ORDER BY userId', [match.id]);
     assert.deepEqual(splits.rows.map(row => Number(row.amount)).sort((a, b) => b - a), [250, 250], 'AA should include charged booked withdrawal and stay balanced');
     assert.equal(splits.rows.reduce((sum, row) => sum + Number(row.amount), 0), 500, 'split total should equal final court fee');
+
+    const regA = await pool.query("SELECT * FROM match_registrations WHERE matchId=$1 AND userId=$2", [match.id, ids.userA]);
+    await assert.rejects(
+      () => rules.creatorConfirmMatchAttendance(match.id, ids.creator, regA.rows[0].id, 'absent'),
+      /已生成AA，不能再修改到场名单/,
+      'attendance should lock once AA has been generated'
+    );
 
     const paid = await rules.markMatchFeeSplit(match.id, ids.userA, dandan.id, { payStatus: 'paid' });
     assert.equal(paid.financeSync.synced, true, 'paid split should sync into court finance ledger');
@@ -135,21 +166,24 @@ async function main() {
     assert.equal(dailyReport.summary.diff, 0, 'dandan daily finance report should reconcile with court ledger');
     assert.ok(dailyReport.summary.receivable >= 500, 'dandan daily report should include generated AA receivable');
 
-    const raceMatch = await rules.createMatchForUser(ids.creator, {
-      title: `${prefix} 并发抢位`,
-      matchType: 'single',
-      targetHeadcount: 2,
-      startTime: futureDate(3),
-      endTime: futureDate(5),
-      venueName: '马坡网球馆',
-      venueAddress: '马坡',
-      venueLatitude: 40.123,
-      venueLongitude: 116.654,
-      ntrpMin: 2.5,
-      ntrpMax: 3.5,
-      genderPreference: '不限',
-      estimatedCourtFee: 300
-    });
+    const raceMatchId = `${prefix}-match-race`;
+    await pool.query(
+      `INSERT INTO match_posts(
+        id,creatorUserId,title,matchType,targetHeadcount,startTime,endTime,
+        venueName,venueAddress,venueLatitude,venueLongitude,ntrpMin,ntrpMax,
+        levelMode,genderPreference,estimatedCourtFee,status,formationStatus,createdAt,updatedAt
+      ) VALUES(
+        $1,$2,$3,$4,$5,$6,$7,
+        $8,$9,$10,$11,$12,$13,
+        $14,$15,$16,$17,$18,NOW(),NOW()
+      )`,
+      [
+        raceMatchId, ids.creator, `${prefix} 并发抢位`, 'single', 2, futureDate(3), futureDate(5),
+        '马坡网球馆', '马坡', 40.123, 116.456, 2.5, 3.5,
+        'preset', '不限', 300, 'open', 'free_open'
+      ]
+    );
+    const raceMatch = await rules.getMatchForViewer(raceMatchId, ids.creator);
     await rules.registerMatchUser(raceMatch.id, ids.preUser);
     const results = await Promise.allSettled([
       rules.registerMatchUser(raceMatch.id, ids.userA),
