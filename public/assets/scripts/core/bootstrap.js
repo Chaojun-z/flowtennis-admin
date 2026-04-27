@@ -1,7 +1,7 @@
 let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',editId=null,delId=null,delType=null,_pending=[];
 let batchDeleteCourtIds=[];
-let stuPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,financeLedgerPage=1;
-let courtSortKey='',courtSortDir='desc',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtPageSize=20,financeLedgerPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
+let stuPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,financeLedgerPage=1,financeRevenuePage=1,financeConsumePage=1;
+let courtSortKey='',courtSortDir='desc',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtPageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,financeConsumePageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
 let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger';
 
 function goPage(pg,el,skipRender=false){

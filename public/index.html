@@ -260,38 +260,42 @@
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、收入类型、支付方式、备注" oninput="renderFinanceRevenueReport()">
+              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、收入类型、支付方式、备注" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
             </div>
             <div id="financeRevenueTypeFilterHost"></div>
             <div id="financeRevenuePayMethodFilterHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueFromHost"></div>
             <div class="finance-date-host" id="coachOpsRevenueToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceRevenueReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceRevenuePage();renderFinanceRevenueReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
           </div>
         </div>
         <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
+          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeRevenuePagerInfo">共 0 条</span><div id="financeRevenuePageSize"></div></div><div class="tms-page-numbers" id="financeRevenuePagerBtns"></div></div>
+        </div>
       </div>
       <div id="financeRecognizedPanel" style="display:none">
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="renderFinanceConsumeReport()">
+              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="resetFinanceConsumePage();renderFinanceConsumeReport()">
             </div>
             <div class="finance-date-host" id="coachOpsConsumeFromHost"></div>
             <div class="finance-date-host" id="coachOpsConsumeToHost"></div>
-            <button class="tms-btn tms-btn-ghost" onclick="renderFinanceConsumeReport()">查询</button>
+            <button class="tms-btn tms-btn-ghost" onclick="resetFinanceConsumePage();renderFinanceConsumeReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsConsumeCsv()">导出</button>
           </div>
         </div>
         <div class="tms-stats-row" id="coachOpsConsumeStats"></div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div>
+          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeConsumePagerInfo">共 0 条</span><div id="financeConsumePageSize"></div></div><div class="tms-page-numbers" id="financeConsumePagerBtns"></div></div>
+        </div>
       </div>
       <div id="financeSettlementPanel" style="display:none">
         <div class="tms-audit-note">教练结算这一期只看两件事：已完成课时数、迟到承担场地费。</div>
