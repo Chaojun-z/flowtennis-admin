@@ -37,7 +37,7 @@ function openPendingScheduleDeepLink(){
   const exists=schedules.some(s=>s.id===scheduleId);
   if(!exists)return;
   sessionStorage.removeItem(PENDING_SCHEDULE_ID_KEY);
-  const page=currentUser?.role==='editor'&&currentUser?.coachName?'myschedule':'schedule';
+  const page=currentUser?.role==='editor'&&currentUser?.coachName?'workbench':'schedule';
   goPage(page,null,true);
   setTimeout(()=>openScheduleDetail(scheduleId),0);
 }
