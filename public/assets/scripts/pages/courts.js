@@ -639,7 +639,7 @@ async function mergeCourtUsers(sourceCourtId){
   try{
     await apiCall('POST','/courts/merge',{sourceCourtId,targetCourtId,deleteSource});
     closeModal();
-    await loadAll();
+    await loadPageDataAndRender('courts',{quiet:true,force:true});
     toast(deleteSource?'合并成功，原用户已删除':'合并成功，原用户已隐藏','success');
   }catch(e){
     toast('合并失败：'+e.message,'error');
@@ -730,6 +730,30 @@ function currentCourtMemberDiscount(court){
   const rate=parseFloat(account?.discountRate);
   return Number.isFinite(rate)&&rate>0?rate:1;
 }
+let courtFinanceQuoteTimer=0;
+let courtFinanceQuoteSeq=0;
+const courtFinanceQuoteCache=new Map();
+function courtFinanceQuoteCacheKey(payload){
+  return JSON.stringify(payload);
+}
+function applyCourtFinanceQuoteResult(quote,memberDiscount){
+  const systemEl=document.getElementById('nrSystemAmount');
+  const finalEl=document.getElementById('nrFinalAmount');
+  const amountEl=document.getElementById('nrAmt');
+  const pricePlanEl=document.getElementById('nrPricePlanId');
+  const quoteMeta=document.getElementById('nrQuoteMeta');
+  if(systemEl)systemEl.value=quote.systemAmount||0;
+  if(finalEl&&!finalEl.dataset.touched)finalEl.value=quote.systemAmount||0;
+  if(amountEl)amountEl.value=finalEl?.value||quote.systemAmount||0;
+  if(pricePlanEl)pricePlanEl.value=(quote.pricePlanIds||[]).join(',');
+  if(quoteMeta)quoteMeta.textContent=`系统报价：原价 ¥${fmt(quote.originalAmount||0)}${memberDiscount!==1?` · 会员 ${Math.round(memberDiscount*100)/10} 折`:''}`;
+}
+function trimCourtFinanceQuoteCache(limit=24){
+  while(courtFinanceQuoteCache.size>limit){
+    const firstKey=courtFinanceQuoteCache.keys().next().value;
+    courtFinanceQuoteCache.delete(firstKey);
+  }
+}
 async function refreshCourtFinanceQuote(){
   const court=courts.find(c=>c.id===courtFinanceModalId);
   if(!court)return;
@@ -755,12 +779,30 @@ async function refreshCourtFinanceQuote(){
     }
     const payMethod=document.getElementById('nrPayMethod')?.value||'';
     const memberDiscount=payMethod==='储值扣款'?currentCourtMemberDiscount(court):1;
-    const quote=await apiCall('POST','/price-plans/quote',{campus:document.getElementById('nrCampus')?.value||court.campus||'',date:document.getElementById('nrDate')?.value||today(),startTime:document.getElementById('nrStartTime')?.value||'',endTime:document.getElementById('nrEndTime')?.value||'',memberDiscount});
-    if(systemEl)systemEl.value=quote.systemAmount||0;
-    if(finalEl&&!finalEl.dataset.touched)finalEl.value=quote.systemAmount||0;
-    if(amountEl)amountEl.value=finalEl?.value||quote.systemAmount||0;
-    if(pricePlanEl)pricePlanEl.value=(quote.pricePlanIds||[]).join(',');
-    if(quoteMeta)quoteMeta.textContent=`系统报价：原价 ¥${fmt(quote.originalAmount||0)}${memberDiscount!==1?` · 会员 ${Math.round(memberDiscount*100)/10} 折`:''}`;
+    const payload={campus:document.getElementById('nrCampus')?.value||court.campus||'',date:document.getElementById('nrDate')?.value||today(),startTime:document.getElementById('nrStartTime')?.value||'',endTime:document.getElementById('nrEndTime')?.value||'',memberDiscount};
+    const cacheKey=courtFinanceQuoteCacheKey(payload);
+    const cached=courtFinanceQuoteCache.get(cacheKey);
+    const now=Date.now();
+    if(cached&&(now-cached.at)<30000){
+      applyCourtFinanceQuoteResult(cached.value,memberDiscount);
+      return;
+    }
+    clearTimeout(courtFinanceQuoteTimer);
+    const quoteSeq=++courtFinanceQuoteSeq;
+    if(quoteMeta)quoteMeta.textContent='正在计算系统报价…';
+    courtFinanceQuoteTimer=setTimeout(async ()=>{
+      try{
+        const quote=await apiCall('POST','/price-plans/quote',payload);
+        courtFinanceQuoteCache.set(cacheKey,{at:Date.now(),value:quote});
+        trimCourtFinanceQuoteCache();
+        if(quoteSeq!==courtFinanceQuoteSeq)return;
+        applyCourtFinanceQuoteResult(quote,memberDiscount);
+      }catch(e){
+        if(quoteSeq!==courtFinanceQuoteSeq)return;
+        if(quoteMeta)quoteMeta.textContent=e.message||'未找到匹配价格';
+      }
+    },300);
+    return;
   }catch(e){
     if(quoteMeta)quoteMeta.textContent=e.message||'未找到匹配价格';
   }
@@ -906,7 +948,7 @@ async function runCourtFinanceMigration(){
   try{
     const res=await apiCall('POST','/courts/migrate-finance-legacy',{dryRun:false});
     closeModal();toast(`迁移完成：${res.migrated||0} 人，跳过 ${res.skipped||0} 人`,'success');
-    await loadAll();
+    await loadPageDataAndRender('courts',{quiet:true,force:true});
   }catch(e){toast('迁移失败：'+e.message,'error');btn.disabled=false;btn.textContent='执行无警告迁移';}
 }
 let courtImportState={fileName:'',rows:[],summary:null};
@@ -1092,7 +1134,7 @@ async function runCourtImport(){
       btn.textContent=`导入中 ${Math.min(i+batchRows.length,rows.length)}/${rows.length}`;
       renderCourtImportPreview();
     }
-    await loadAll();
+    await loadPageDataAndRender('courts',{quiet:true,force:true});
     renderCourtImportPreview();
     renderCourts();
     toast(`导入完成：成功 ${success} 行，失败 ${failed} 行`,'success');

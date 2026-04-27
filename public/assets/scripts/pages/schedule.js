@@ -395,6 +395,39 @@ async function refreshScheduleLateFee(){
     amountInput.value=quote.finalAmount||quote.systemAmount||0;
   }catch(e){}
 }
+let schEntitlementRefreshTimer=0;
+let schEntitlementRefreshSeq=0;
+const schEntitlementCache=new Map();
+function scheduleEntitlementCacheKey(payload){
+  return JSON.stringify(payload);
+}
+function applySchEntitlementOptions(res,preferredId=''){
+  const sel=document.getElementById('sch_entitlement');
+  const hint=document.getElementById('sch_ent_hint');
+  if(!sel||!hint)return;
+  sel.innerHTML=(res.options||[]).filter(x=>x.selectable).map(x=>`<option value="${x.entitlementId}"${preferredId===x.entitlementId?' selected':''}>${esc(x.packageName)} · 剩余${x.remainingLessons}/${x.totalLessons} · ${esc(x.timeBand)||'全天'} · 到期${esc(x.validUntil)||'—'}</option>`).join('')||'<option value="">— 无可用课包 —</option>';
+  hint.textContent=res.recommended?`推荐课包：${res.recommended.packageName}，剩余 ${res.recommended.remainingLessons}/${res.recommended.totalLessons}，${res.recommended.timeBand||'全天'}，到期 ${res.recommended.validUntil||'—'}`:'当前没有可用课包';
+}
+function readSchEntitlementPayload(ids,startRaw,endRaw){
+  return {
+    studentIds:ids,
+    courseType:document.getElementById('sch_courseType')?.value||'',
+    coach:document.getElementById('sch_coach')?.value||'',
+    coachId:document.getElementById('sch_coach')?.value||'',
+    campus:document.getElementById('sch_campus')?.value||'',
+    startTime:startRaw,
+    endTime:endRaw,
+    lessonCount:parseFloat(document.getElementById('sch_lc')?.value)||1,
+    status:document.getElementById('sch_status')?.value||'已排课',
+    scheduleId:editId||''
+  };
+}
+function trimSchEntitlementCache(limit=24){
+  while(schEntitlementCache.size>limit){
+    const firstKey=schEntitlementCache.keys().next().value;
+    schEntitlementCache.delete(firstKey);
+  }
+}
 function coachLateSettlementRows(month){
   return schedules.filter(s=>s.coachLateFree&&String(s.startTime||'').slice(0,7)===(month||today().slice(0,7))).sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||'')));
 }
@@ -430,11 +463,36 @@ async function refreshSchEntitlementOptions(){
   const endRaw=scheduleComposeDateTime('sch_date','sch_endTime');
   if(!ids.length||!startRaw||!endRaw){sel.innerHTML='<option value="">— 先选本次参与人和时间 —</option>';hint.textContent='';return;}
   if(ids.length>1){sel.innerHTML='<option value="">— 系统按参与学员自动扣课 —</option>';hint.textContent='多人班次会按勾选的参与学员分别扣各自可用课包，未勾选学员不扣课。';return;}
-  try{
-    const res=await apiCall('POST','/entitlements/recommend',{studentIds:ids,courseType:document.getElementById('sch_courseType')?.value||'',coach:document.getElementById('sch_coach')?.value||'',coachId:document.getElementById('sch_coach')?.value||'',campus:document.getElementById('sch_campus')?.value||'',startTime:startRaw,endTime:endRaw,lessonCount:parseFloat(document.getElementById('sch_lc')?.value)||1,status:document.getElementById('sch_status')?.value||'已排课',scheduleId:editId||''});
-    sel.innerHTML=(res.options||[]).filter(x=>x.selectable).map(x=>`<option value="${x.entitlementId}"${(document.getElementById('sch_entitlement').dataset.keep||document.getElementById('sch_entitlement').value||'')===x.entitlementId?' selected':''}>${esc(x.packageName)} · 剩余${x.remainingLessons}/${x.totalLessons} · ${esc(x.timeBand)||'全天'} · 到期${esc(x.validUntil)||'—'}</option>`).join('')||'<option value="">— 无可用课包 —</option>';
-    hint.textContent=res.recommended?`推荐课包：${res.recommended.packageName}，剩余 ${res.recommended.remainingLessons}/${res.recommended.totalLessons}，${res.recommended.timeBand||'全天'}，到期 ${res.recommended.validUntil||'—'}`:'当前没有可用课包';
-  }catch(e){sel.innerHTML='<option value="">— 无可用课包 —</option>';hint.textContent=e.message;}
+  const keepValue=sel.dataset.keep||sel.value||'';
+  const editId=window.editScheduleId||'';
+  const payload={
+    ...readSchEntitlementPayload(ids,startRaw,endRaw),
+    lessonCount:parseFloat(document.getElementById('sch_lc')?.value)||1,
+    scheduleId:editId||''
+  };
+  const cacheKey=scheduleEntitlementCacheKey(payload);
+  const cached=schEntitlementCache.get(cacheKey);
+  const now=Date.now();
+  if(cached&&(now-cached.at)<30000){
+    applySchEntitlementOptions(cached.value,keepValue);
+    return;
+  }
+  clearTimeout(schEntitlementRefreshTimer);
+  const refreshSeq=++schEntitlementRefreshSeq;
+  hint.textContent='正在匹配可用课包…';
+  schEntitlementRefreshTimer=setTimeout(async ()=>{
+    try{
+      const res=await apiCall('POST','/entitlements/recommend',payload);
+      schEntitlementCache.set(cacheKey,{at:Date.now(),value:res});
+      trimSchEntitlementCache();
+      if(refreshSeq!==schEntitlementRefreshSeq)return;
+      applySchEntitlementOptions(res,keepValue);
+    }catch(e){
+      if(refreshSeq!==schEntitlementRefreshSeq)return;
+      sel.innerHTML='<option value="">— 无可用课包 —</option>';
+      hint.textContent=e.message;
+    }
+  },300);
 }
 function scheduleSaveConfirmText(data,selectedEntitlement){
   return [

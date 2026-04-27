@@ -957,8 +957,8 @@ function renderFinanceRevenueReport(){
   if(pagerBtns)pagerBtns.innerHTML=financePagerButtons(financeRevenuePage,pages,'setFinanceRevenuePage');
   body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.purchaseDate,false)}</td><td>${renderCourtCellText(row.weekdayText,false)}</td><td>${renderCourtCellText(row.timeText,false)}</td><td>${renderCourtCellText(row.studentName,false)}</td><td>${renderCourtCellText(row.incomeType,false)}</td><td>${renderCourtCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderCourtCellText(row.priceDiffReason,false)}</td><td>${renderCourtCellText(row.collector,false)}</td><td><div class="tms-text-remark" title="${esc(row.notes||'')}">${esc(renderCourtEmptyText(row.notes))}</div></td><td>${renderCourtCellText(row.campusName,false)}</td><td><span class="tms-tag ${row.status==='voided'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.systemStatus)}</span></td><td class="tms-sticky-r" style="padding-right:20px">${renderCourtCellText(row.relatedDocument,false)}</td></tr>`).join(''):`<tr><td colspan="15"><div class="empty"><p>暂无收入表记录</p></div></td></tr>`;
 }
-function financeConsumeBaseRows(){
-  return aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger)).filter(row=>{
+function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))){
+  return sourceRows.filter(row=>{
     const ent=entitlements.find(e=>e.id===row.entitlementId)||{};
     const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
     const schedule=schedules.find(s=>s.id===row.scheduleId)||{};
@@ -990,14 +990,21 @@ function financeConsumeBaseRows(){
     };
   });
 }
-function financeConsumeRows(){
+function renderCoachOpsRevenueReport(){
+  return renderFinanceRevenueReport();
+}
+function coachOpsConsumeRows(){
   const q=String(document.getElementById('coachOpsConsumeSearch')?.value||'').trim().toLowerCase();
   const from=document.getElementById('coachOpsConsumeFrom')?.value||'';
   const to=document.getElementById('coachOpsConsumeTo')?.value||'';
-  return financeConsumeBaseRows().filter(row=>{
+  const ledgerRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger));
+  return financeConsumeBaseRows(ledgerRows).filter(row=>{
     if(!coachOpsDateWithinRange(row.relatedDate||row.createdAt,from,to))return false;
     return searchHit(q,row.reason,row.notes,row.operator,row.studentName,row.packageName,row.coach,row.courseType,row.campusName,row.sourceProject,row.debitTarget);
   }).sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')));
+}
+function financeConsumeRows(){
+  return coachOpsConsumeRows();
 }
 function renderFinanceConsumeReport(){
   const body=document.getElementById('financeConsumeTbody');
@@ -1032,6 +1039,9 @@ function renderFinanceConsumeReport(){
   const pagerBtns=document.getElementById('financeConsumePagerBtns');
   if(pagerBtns)pagerBtns.innerHTML=financePagerButtons(financeConsumePage,pages,'setFinanceConsumePage');
   body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.businessDate,false)}</td><td>${renderCourtCellText(row.customer,false)}</td><td>${renderCourtCellText(row.confirmType,false)}</td><td>${renderCourtCellText(row.sourceProject,false)}</td><td>${renderCourtCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderCourtCellText(row.campusName,false)}</td><td><span class="tms-tag ${Number(row.recognizedRevenueDelta||0)>=0?'tms-tag-green':'tms-tag-tier-slate'}">${esc(row.systemStatus||'已入账')}</span></td><td class="tms-sticky-r" style="padding-right:20px">${renderCourtCellText(row.sourceDocument,false)}</td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无已入账流水</p></div></td></tr>`;
+}
+function renderCoachOpsConsumeReport(){
+  return renderFinanceConsumeReport();
 }
 function exportCoachOpsRevenueCsv(){
   const rows=financeRevenueRows();
@@ -1117,9 +1127,7 @@ function renderFinanceOverview(){
   const secondaryHost=document.getElementById('financeOverviewSecondaryStats');
   if(!primaryHost)return;
   if(!syncFinanceLedgerLoadingState())return;
-  const from=document.getElementById('financeLedgerFrom')?.value||'';
-  const to=document.getElementById('financeLedgerTo')?.value||'';
-  const rows=financeUnifiedRows().filter(row=>coachOpsDateWithinRange(row.businessDate,from,to));
+  const rows=financeLedgerRows();
   const businessRows=rows.filter(row=>!row.differenceReason);
   const positiveCashRows=businessRows.filter(row=>Number(row.cashDelta)>0);
   const finalPackageIncome=positiveCashRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);

@@ -128,7 +128,7 @@ async function doDelete(){
     else if(delType==='student')students=students.filter(u=>u.id!==delId);
     else if(delType==='product')products=products.filter(u=>u.id!==delId);
     else if(delType==='package')packages=packages.filter(u=>u.id!==delId);
-    else if(delType==='purchase'){await loadAll();closeConf();closeModal();toast('已作废','error');return;}
+    else if(delType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});closeConf();closeModal();toast('已作废','error');return;}
     else if(delType==='plan')plans=plans.filter(u=>u.id!==delId);
     else if(delType==='schedule'){schedules=schedules.filter(u=>u.id!==delId);mergeScheduleSaveResult(result,null);}
     else if(delType==='class'){classes=classes.filter(u=>u.id!==delId);plans=plans.filter(p=>p.classId!==delId);}

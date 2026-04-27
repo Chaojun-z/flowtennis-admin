@@ -60,7 +60,7 @@ Page({
         assertCoachLoginUser(data.user || {});
         return data;
       })
-      .then(() => bindWechatAfterLogin())
+      .then((data) => bindWechatAfterLogin().then(() => data))
       .then(() => {
         const app = getApp();
         if (app && app.globalData) app.globalData.privacyAccepted = true;

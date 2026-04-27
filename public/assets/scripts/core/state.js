@@ -257,6 +257,20 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       financeOverviewData=data.financeOverviewData||null;
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
+      setDatasetValue('students',data.students||[]);
+      setDatasetValue('schedule',data.schedule||[]);
+      setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('financialLedger',data.financialLedger||[]);
+      setDatasetValue('coaches',data.coaches||[]);
+      setDatasetValue('products',data.products||[]);
+      setDatasetValue('purchases',data.purchases||[]);
+      setDatasetValue('packages',data.packages||[]);
+      setDatasetValue('courts',data.courts||[]);
+      setDatasetValue('membershipAccounts',data.membershipAccounts||[]);
+      setDatasetValue('membershipOrders',data.membershipOrders||[]);
+      setDatasetValue('membershipBenefitLedger',data.membershipBenefitLedger||[]);
+      setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
       loadedDatasets.add('financePage');
       return;
     }

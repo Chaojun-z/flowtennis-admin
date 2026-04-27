@@ -91,7 +91,6 @@ assert.doesNotMatch(apiSource, /wqxd2026/, 'api source should not hardcode the d
 assert.match(apiSource, /已超过发起者确认时限，请联系运营处理/, 'creator attendance confirm should enforce ops handoff after timeout');
 assert.match(apiSource, /请先完成全部到场确认，再生成AA/, 'fee generation should block until every active player is confirmed');
 assert.match(apiSource, /已生成AA，不能再修改到场名单/, 'attendance should lock after AA generation');
-assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should not expose self attendance endpoint');
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
 assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'bootstrap password should come from env instead of hardcoded source');

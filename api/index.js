@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
+const { recordPerfMetric } = require('./lib/perf-metrics');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
@@ -28,12 +29,12 @@ const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABAS
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 const MATCH_PREPAY_WINDOW_HOURS = 2;
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -84,6 +85,9 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
 ]);
 const HOT_GET_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
+  [T_USER_WECHAT_INDEX,{ttlMs:60000}],
+  [T_COACH_SCHEDULE_INDEX,{ttlMs:60000}],
+  [T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,{ttlMs:60000}],
   [T_CLASSES,{ttlMs:60000}],
   [T_ENTITLEMENTS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -180,6 +184,11 @@ async function clearTables(storage,tables){
 function getTestDataResetTables(){return [...TEST_DATA_RESET_TABLES];}
 function mkTable(t){return new Promise(res=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
 async function timed(label,fn){const startedAt=Date.now();try{return await fn();}finally{console.log(`[api-timing] ${label} ${Date.now()-startedAt}ms`);}}
+async function timedEndpointMetric(name,fn,meta={}){
+  const startedAt=Date.now();
+  try{return await fn();}
+  finally{recordPerfMetric(name,Date.now()-startedAt,meta);}
+}
 function withTimeout(promise,ms,fallback){
   return Promise.race([promise,new Promise((res)=>setTimeout(()=>res(fallback),ms))]);
 }
@@ -920,6 +929,7 @@ async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reaso
   if(!ent)return null;
   const next=applyEntitlementLessonDelta(ent,delta);
   await put(T_ENTITLEMENTS,entitlementId,next);
+  await syncStudentActiveEntitlementIndexes(ent,next);
   const ledger={
     id:uuidv4(),
     entitlementId,
@@ -1109,7 +1119,7 @@ function mergeStoredAuthUser(tokenUser,storedUser){
     role,
     status:source.status||tokenUser?.status||'active',
     username,
-    coachId:source.coachId||tokenUser?.coachId||(role==='editor'?(id||username):''),
+    coachId:source.coachId||tokenUser?.coachId||(!tokenUser&&role==='editor'?(id||username):''),
     coachName:source.coachName||(role==='editor'?name:(tokenUser?.coachName||'')),
     matchPermissions:source.matchPermissions||source.permissions||tokenUser?.matchPermissions||tokenUser?.permissions||[]
   };
@@ -1125,9 +1135,24 @@ function extractWechatOpenId(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信登录失败：${msg}`);
 }
-async function fetchWechatSession(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,errorText='缺少微信小程序密钥配置'}={}){
-  if(!appid||!secret)throw new Error(errorText);
-  const url=buildWechatCode2SessionUrl(appid,secret,code);
+function resolveWechatMiniConfig(kind='coach'){
+  if(kind==='match'){
+    return {
+      appid: MATCH_MINIPROGRAM_APPID || WECHAT_MINIPROGRAM_APPID,
+      secret: MATCH_MINIPROGRAM_SECRET || WECHAT_MINIPROGRAM_SECRET,
+      errorText: '缺少约球小程序密钥配置'
+    };
+  }
+  return {
+    appid: WECHAT_MINIPROGRAM_APPID,
+    secret: WECHAT_MINIPROGRAM_SECRET,
+    errorText: '缺少微信小程序密钥配置'
+  };
+}
+async function fetchWechatSession(code,kind='coach'){
+  const config=resolveWechatMiniConfig(kind);
+  if(!config.secret)throw new Error(config.errorText);
+  const url=buildWechatCode2SessionUrl(config.appid,config.secret,code);
   const res=await fetch(url);
   const data=await res.json();
   return data;
@@ -1137,6 +1162,15 @@ function buildWechatBoundUser(user,openid,now=new Date().toISOString()){
 }
 function buildWechatUnboundUser(user){
   return {...user,wechatOpenId:'',wechatBoundAt:''};
+}
+function buildWechatUserIndexRow(user){
+  return {
+    userId:String(user?.id||''),
+    role:String(user?.role||''),
+    coachId:String(user?.coachId||''),
+    coachName:String(user?.coachName||user?.name||''),
+    updatedAt:new Date().toISOString()
+  };
 }
 function buildAdminUserView(u){
   return {
@@ -1159,20 +1193,21 @@ function extractWechatAccessToken(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信 access_token 获取失败：${msg}`);
 }
-async function fetchWechatAccessToken({appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
-  if(!appid||!secret)throw new Error(errorText);
+async function fetchWechatAccessToken(kind='coach'){
+  const config=resolveWechatMiniConfig(kind);
+  if(!config.secret)throw new Error(config.errorText);
   const now=Date.now();
-  const cached=wechatAccessTokenCache&&wechatAccessTokenCache[cacheKey];
+  const cached=wechatAccessTokenCacheByApp.get(config.appid);
   if(cached&&cached.expiresAt>now)return cached.token;
-  const res=await fetch(buildWechatAccessTokenUrl(appid,secret));
+  const res=await fetch(buildWechatAccessTokenUrl(config.appid,config.secret));
   const data=await res.json();
   const token=extractWechatAccessToken(data);
   const ttlMs=Math.max(300000,((parseInt(data.expires_in)||7200)-300)*1000);
-  wechatAccessTokenCache={...(wechatAccessTokenCache||{}),[cacheKey]:{token,expiresAt:now+ttlMs}};
+  wechatAccessTokenCacheByApp.set(config.appid,{token,expiresAt:now+ttlMs});
   return token;
 }
-async function fetchWechatPhoneNumber(code,{appid=WECHAT_MINIPROGRAM_APPID,secret=WECHAT_MINIPROGRAM_SECRET,cacheKey='coach',errorText='缺少微信小程序密钥配置'}={}){
-  const token=await fetchWechatAccessToken({appid,secret,cacheKey,errorText});
+async function fetchWechatPhoneNumber(code,kind='coach'){
+  const token=await fetchWechatAccessToken(kind);
   const res=await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(token)}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1206,6 +1241,131 @@ function findWechatUserByOpenId(users=[],openid=''){
   if(!key)return null;
   const matched=(users||[]).filter(u=>String(u?.wechatOpenId||'').trim()===key);
   return matched.find(u=>String(u?.role||'')==='editor')||matched[0]||null;
+}
+async function putWechatUserIndex(openid,user){
+  const key=String(openid||'').trim();
+  if(!key||!user?.id)return;
+  try{
+    await put(T_USER_WECHAT_INDEX,key,buildWechatUserIndexRow(user));
+  }catch(err){
+    if(!isTableMissingError(err))throw err;
+    await mkTable(T_USER_WECHAT_INDEX);
+    await put(T_USER_WECHAT_INDEX,key,buildWechatUserIndexRow(user));
+  }
+}
+async function deleteWechatUserIndex(openid,expectedUserId=''){
+  const key=String(openid||'').trim();
+  if(!key)return;
+  const existing=await getCachedRow(T_USER_WECHAT_INDEX,key).catch(()=>null);
+  if(expectedUserId&&existing&&String(existing.userId||'')!==String(expectedUserId))return;
+  await del(T_USER_WECHAT_INDEX,key).catch(err=>{
+    if(!isTableMissingError(err))throw err;
+  });
+}
+async function bindWechatUserWithIndex(user,openid){
+  const nextUser=buildWechatBoundUser(user,openid);
+  await put(T_USERS,user.id,nextUser);
+  const oldOpenId=String(user?.wechatOpenId||'').trim();
+  const nextOpenId=String(openid||'').trim();
+  if(oldOpenId&&oldOpenId!==nextOpenId)await deleteWechatUserIndex(oldOpenId,user.id);
+  await putWechatUserIndex(nextOpenId,nextUser);
+  return nextUser;
+}
+async function unbindWechatUserWithIndex(user){
+  const oldOpenId=String(user?.wechatOpenId||'').trim();
+  const nextUser=buildWechatUnboundUser(user);
+  await put(T_USERS,user.id,nextUser);
+  if(oldOpenId)await deleteWechatUserIndex(oldOpenId,user.id);
+  return nextUser;
+}
+async function getWechatUserByOpenId(openid){
+  const key=String(openid||'').trim();
+  if(!key)return null;
+  const link=await getCachedRow(T_USER_WECHAT_INDEX,key).catch(()=>null);
+  if(link?.userId){
+    const indexedUser=await getCachedRow(T_USERS,link.userId).catch(()=>null);
+    if(indexedUser&&String(indexedUser.wechatOpenId||'').trim()===key)return indexedUser;
+  }
+  return findWechatUserByOpenId(await getCachedScan(T_USERS).catch(()=>[]),key);
+}
+function coachScheduleIndexKeysFromRecord(record){
+  const keys=[];
+  const coachId=String(record?.coachId||'').trim();
+  const coachName=String(record?.coach||'').trim();
+  if(coachId)keys.push(`coach-id:${coachId}`);
+  if(coachName)keys.push(`coach-name:${coachName}`);
+  return [...new Set(keys)];
+}
+function coachScheduleIndexKeysForUser(user){
+  const keys=[];
+  const coachId=String(user?.coachId||'').trim();
+  const coachName=String(user?.coachName||user?.name||'').trim();
+  const authId=String(user?.id||user?.username||'').trim();
+  if(coachId&&coachId!==authId)keys.push(`coach-id:${coachId}`);
+  if(coachName)keys.push(`coach-name:${coachName}`);
+  return [...new Set(keys)];
+}
+async function rebuildCoachScheduleIndexRows(keys=[]){
+  const normalized=[...new Set((keys||[]).map(key=>String(key||'').trim()).filter(Boolean))];
+  if(!normalized.length)return;
+  const rows=await getCachedScan(T_SCHEDULE).catch(()=>[]);
+  const now=new Date().toISOString();
+  for(const key of normalized){
+    const scheduleIds=rows.filter(row=>coachScheduleIndexKeysFromRecord(row).includes(key)).map(row=>row.id).filter(Boolean);
+    await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds,updatedAt:now});
+  }
+}
+async function syncCoachScheduleIndexes(oldRecord,nextRecord){
+  const keys=[...coachScheduleIndexKeysFromRecord(oldRecord),...coachScheduleIndexKeysFromRecord(nextRecord)];
+  await rebuildCoachScheduleIndexRows(keys);
+}
+async function getCoachIndexedScheduleForUser(user){
+  const keys=coachScheduleIndexKeysForUser(user);
+  if(!keys.length)return null;
+  const indexRows=await Promise.all(keys.map(key=>getCachedRow(T_COACH_SCHEDULE_INDEX,key).catch(()=>null)));
+  if(indexRows.every(row=>!row))return null;
+  const scheduleIds=[...new Set(indexRows.flatMap(row=>parseArr(row?.scheduleIds)).filter(Boolean))];
+  if(!scheduleIds.length)return [];
+  return (await Promise.all(scheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean);
+}
+function isActiveEntitlementForIndex(entitlement){
+  if(!entitlement?.studentId)return false;
+  if(String(entitlement.status||'active')!=='active')return false;
+  return parseLessonValue(entitlement.remainingLessons)>0;
+}
+async function rebuildStudentActiveEntitlementIndexRows(studentIds=[]){
+  const normalized=[...new Set((studentIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!normalized.length)return;
+  const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
+  const now=new Date().toISOString();
+  for(const studentId of normalized){
+    const entitlementIds=rows.filter(row=>String(row.studentId||'').trim()===studentId&&isActiveEntitlementForIndex(row)).map(row=>row.id).filter(Boolean);
+    await put(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,studentId,{studentId,entitlementIds,updatedAt:now});
+  }
+}
+async function syncStudentActiveEntitlementIndexes(oldEntitlement,nextEntitlement){
+  const studentIds=[String(oldEntitlement?.studentId||'').trim(),String(nextEntitlement?.studentId||'').trim()].filter(Boolean);
+  await rebuildStudentActiveEntitlementIndexRows(studentIds);
+}
+async function getIndexedActiveEntitlementsForStudents(studentIds=[]){
+  const normalized=[...new Set((studentIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!normalized.length)return [];
+  const indexRows=await Promise.all(normalized.map(studentId=>getCachedRow(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,studentId).catch(()=>null)));
+  const missingStudentIds=[];
+  const entitlementIds=new Set();
+  indexRows.forEach((row,index)=>{
+    if(!row){
+      missingStudentIds.push(normalized[index]);
+      return;
+    }
+    parseArr(row.entitlementIds).forEach(id=>{ if(id)entitlementIds.add(id); });
+  });
+  const indexedRows=(await Promise.all([...entitlementIds].map(id=>getCachedRow(T_ENTITLEMENTS,id).catch(()=>null)))).filter(row=>row&&normalized.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
+  if(!missingStudentIds.length)return indexedRows;
+  const fallbackRows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(row=>missingStudentIds.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
+  const merged=new Map(indexedRows.map(row=>[row.id,row]));
+  fallbackRows.forEach(row=>merged.set(row.id,row));
+  return [...merged.values()];
 }
 function buildScheduleSubscribeMessage({templateId,openid,schedule}){
   const start=String(schedule?.startTime||'').trim();
@@ -2392,6 +2552,7 @@ function buildPreviewAaText({matchType,startTime,endTime,estimatedCourtFee=0,fin
     const total=computeMatchSettlementAmount({matchType,startTime,endTime,finalCourtFee:estimatedFee,participantCount:previewCount});
     return `约 ¥${Math.ceil(total/previewCount)}/人`;
   }
+  if(currentCount===1)return '待成团';
   return 'AA待定';
 }
 function splitAaFee(finalCourtFee,participantIds){
@@ -3206,16 +3367,16 @@ async function generateMatchFeeLedger(matchId,operatorId,{chargeAbsentUserIds=[]
     if(!match)throw new Error('球局不存在');
     const bookingRes=await client.query("SELECT * FROM match_bookings WHERE matchId=$1 AND bookingStatus='booked' ORDER BY createdAt DESC LIMIT 1",[matchId]);
     const finalCourtFee=bookingRes.rows[0]?.finalcourtfee||bookingRes.rows[0]?.finalCourtFee||match.finalcourtfee||match.finalCourtFee;
-    const activeRegsRes=await client.query("SELECT * FROM match_registrations WHERE matchId=$1 AND registrationStatus='registered'",[matchId]);
     const attendanceRes=await client.query('SELECT * FROM match_attendance WHERE matchId=$1',[matchId]);
+    const activeRegsRes=await client.query("SELECT userId FROM match_registrations WHERE matchId=$1 AND registrationStatus='registered'",[matchId]);
+    const confirmedAttendanceUserIds=new Set(
+      attendanceRes.rows
+        .filter(row=>['attended','absent'].includes(row.finalstatus||row.finalStatus))
+        .map(row=>String(row.userid||row.userId))
+    );
+    const unconfirmedUsers=activeRegsRes.rows.filter(row=>!confirmedAttendanceUserIds.has(String(row.userid||row.userId)));
+    if(unconfirmedUsers.length)throw new Error('请先完成全部到场确认，再生成AA');
     const chargeWithdrawalRes=await client.query("SELECT userId FROM match_registrations WHERE matchId=$1 AND registrationStatus='cancelled' AND financialResponsibility='charge'",[matchId]);
-    const attendanceByUser=new Map(attendanceRes.rows.map(row=>[String(row.userid||row.userId),row]));
-    const unconfirmed=activeRegsRes.rows.some(row=>{
-      const attendance=attendanceByUser.get(String(row.userid||row.userId));
-      const confirmed=attendance&&(attendance.finalstatus||attendance.finalStatus);
-      return !['attended','absent'].includes(confirmed);
-    });
-    if(unconfirmed)throw new Error('请先完成全部到场确认，再生成AA');
     const existingSplitsRes=await client.query('SELECT * FROM match_fee_splits WHERE matchId=$1',[matchId]);
     const existingPaidByUser=new Map(existingSplitsRes.rows.map(row=>[String(row.userid||row.userId),normalizeMoney(row.paidamount||row.paidAmount)]));
     const ledger=buildMatchFeeLedger({
@@ -3407,7 +3568,7 @@ function defaultMabaoPricePlans(){
     ['削球实战训练','体验课','lesson','1-2小时',0,260],
     ['截击入门训练','体验课','lesson','1-2小时',0,260],
     ['疯狂多球训练','体验课','lesson','1-2小时',0,260],
-    ['新客福利 约球双打局 2H','订场券','court','',0,70],
+    ['新客福利 约球双打局 2H','订场券','court','2小时',120,70],
     ['晚场福利 场地预定 1H','订场券','court','1小时',60,180],
     ['黄金时段 场地预定 1H','订场券','court','1小时',60,220],
     ['实力之选 网球陪打 1H','订场券','court','1小时',60,100],
@@ -3977,8 +4138,8 @@ function buildClassPlanRecord(cls,student){
     productName:cls.productName||'',
     coach:cls.coach||'',
     campus:cls.campus||'',
-    totalLessons:parseInt(cls.totalLessons)||0,
-    usedLessons:parseInt(cls.usedLessons)||0,
+    totalLessons:parseLessonValue(cls.totalLessons),
+    usedLessons:parseLessonValue(cls.usedLessons),
     status:classStatusToPlanStatus(cls.status)
   };
 }
@@ -4010,7 +4171,7 @@ function sameStudentIds(a,b){
   return x.length===y.length&&x.every((id,i)=>id===y[i]);
 }
 function classRemainingLessonsForRecord(cls){
-  return (parseInt(cls?.totalLessons)||0)-(parseInt(cls?.usedLessons)||0);
+  return parseLessonValue(cls?.totalLessons)-parseLessonValue(cls?.usedLessons);
 }
 function assertCanWriteClass(user){
   if(user?.role!=='admin')throw new Error('无权限');
@@ -4044,8 +4205,8 @@ async function reserveNextClassNo(existingClasses,user,now){
 }
 function validateClassInput(input,product){
   if(!input?.productId)throw new Error('请选择课程产品');
-  const total=parseInt(input.totalLessons);
-  const used=parseInt(input.usedLessons)||0;
+  const total=parseLessonValue(input.totalLessons,Number.NaN);
+  const used=parseLessonValue(input.usedLessons);
   if(Number.isNaN(total)||total<0)throw new Error('应上课时不能小于0');
   if(used<0)throw new Error('已上课时不能小于0');
   if(used>total)throw new Error('已上课时不能大于应上课时');
@@ -4064,7 +4225,7 @@ function buildClassCreateRecord(body,{id,classNo,user,now}){
     productName,
     studentIds:parseArr(body.studentIds),
     scheduleDays:parseArr(body.scheduleDays),
-    totalLessons:parseInt(body.totalLessons)||0,
+    totalLessons:parseLessonValue(body.totalLessons),
     usedLessons:0,
     status:body.status||'已排班',
     createdBy:user?.name||'',
@@ -4084,8 +4245,8 @@ function buildClassUpdateRecord(oldClass,body,{product,now}){
     productName,
     studentIds:parseArr(body.studentIds),
     scheduleDays:parseArr(body.scheduleDays),
-    totalLessons:parseInt(body.totalLessons)||0,
-    usedLessons:parseInt(oldClass?.usedLessons)||0,
+    totalLessons:parseLessonValue(body.totalLessons),
+    usedLessons:parseLessonValue(oldClass?.usedLessons),
     status:body.status||oldClass?.status||'已排班',
     updatedAt:now
   };
@@ -4174,8 +4335,8 @@ function assertCanEditClassWithSchedules(oldClass,nextClass,schedules){
   if(String(oldClass?.coach||'').trim()!==String(nextClass?.coach||'').trim())throw new Error('该班次已有排课，不能直接修改教练');
   if(String(oldClass?.campus||'').trim()!==String(nextClass?.campus||'').trim())throw new Error('该班次已有排课，不能直接修改校区');
   if(!sameStudentIds(oldClass?.studentIds,nextClass?.studentIds))throw new Error('该班次已有排课，不能直接修改学员');
-  if((parseInt(oldClass?.totalLessons)||0)!==(parseInt(nextClass?.totalLessons)||0))throw new Error('该班次已有排课，不能直接修改总课时');
-  if((parseInt(oldClass?.usedLessons)||0)!==(parseInt(nextClass?.usedLessons)||0))throw new Error('已上课时由排课自动维护，不能手动修改');
+  if(parseLessonValue(oldClass?.totalLessons)!==parseLessonValue(nextClass?.totalLessons))throw new Error('该班次已有排课，不能直接修改总课时');
+  if(parseLessonValue(oldClass?.usedLessons)!==parseLessonValue(nextClass?.usedLessons))throw new Error('已上课时由排课自动维护，不能手动修改');
   const oldStatus=oldClass?.status||'已排班',nextStatus=nextClass?.status||'已排班';
   if(oldStatus!==nextStatus&&nextStatus==='已取消')throw new Error('该班次已有排课，不能直接取消');
   if(oldStatus!==nextStatus&&nextStatus==='已结课'&&classRemainingLessonsForRecord(nextClass)>0)throw new Error('该班次仍有剩余课时，不能直接结课');
@@ -4880,13 +5041,13 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendCourseReminders());
     }
-    if(path==='/auth/login'&&method==='POST'){const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await getCachedRow(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});}
+    if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await getCachedRow(T_USERS,username);if(!user||!await bcrypt.compare(password,user.password))return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
     if(path==='/auth/wechat-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
       const session=await fetchWechatSession(code);
       const openid=extractWechatOpenId(session);
-      const account=findWechatUserByOpenId(await getCachedScan(T_USERS).catch(()=>[]),openid);
+      const account=await getWechatUserByOpenId(openid);
       if(!account)return sendJson(res,{error:'微信未绑定教练账号，请先使用账号密码登录完成绑定'},404);
       const payload=mergeStoredAuthUser(null,account);
       try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}
@@ -4896,7 +5057,7 @@ module.exports = async (req, res) => {
   if(path==='/auth/wechat-mini-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code,{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,errorText:'缺少约球小程序密钥配置'});
+      const session=await fetchWechatSession(code,'match');
       const openid=extractWechatOpenId(session);
       const unionid=session.unionid?String(session.unionid):'';
       const pool=getMatchSqlPool();
@@ -4980,7 +5141,7 @@ module.exports = async (req, res) => {
     if(path==='/match-profile/phone-code'&&method==='POST'){
       const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
       try{
-        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),{appid:MATCH_MINIPROGRAM_APPID,secret:MATCH_MINIPROGRAM_SECRET,cacheKey:'match',errorText:'缺少约球小程序密钥配置'});
+        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),'match');
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
@@ -5060,7 +5221,7 @@ module.exports = async (req, res) => {
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');const matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions||[]});await put(T_USERS,id,{id,name,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,matchPermissions});return sendJson(res,{success:true,id,name,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,matchPermissions});}
-    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(Array.isArray(body.matchPermissions)||Array.isArray(body.permissions))updates.matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions});if(body.clearWechat)updates=buildWechatUnboundUser(updates);await put(T_USERS,id,updates);return sendJson(res,{success:true});}
+    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(Array.isArray(body.matchPermissions)||Array.isArray(body.permissions))updates.matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions});if(body.clearWechat){await unbindWechatUserWithIndex(updates);return sendJson(res,{success:true});}await put(T_USERS,id,updates);return sendJson(res,{success:true});}
     if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=await getCachedScan(T_USERS);return sendJson(res,all.map(buildAdminUserView));}
     if(path==='/admin/clear-test-data'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -5096,14 +5257,14 @@ module.exports = async (req, res) => {
       const openid=extractWechatOpenId(session);
       const stored=await get(T_USERS,user.id);
       if(!stored)return sendJson(res,{error:'用户不存在'},404);
-      await put(T_USERS,user.id,buildWechatBoundUser(stored,openid));
+      await bindWechatUserWithIndex(stored,openid);
       return sendJson(res,{success:true,wechatBound:true});
     }
     if(path==='/auth/me')return sendJson(res,user);
     if(path==='/load-all'&&method==='GET'){
       await init();
       await maybeRepairImportedLedgerDuplicates();
-      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
+      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
         timed('load-all scan courts',()=>scan(T_COURTS)),
         timed('load-all scan students',()=>scan(T_STUDENTS)),
         timed('load-all scan products',()=>scan(T_PRODUCTS)),
@@ -5111,6 +5272,7 @@ module.exports = async (req, res) => {
         timed('load-all scan purchases',()=>scan(T_PURCHASES).catch(()=>[])),
         timed('load-all scan entitlements',()=>scan(T_ENTITLEMENTS).catch(()=>[])),
         timed('load-all scan entitlement ledger',()=>scan(T_ENTITLEMENT_LEDGER).catch(()=>[])),
+        timed('load-all scan financial ledger',()=>scan(T_FINANCIAL_LEDGER).catch(()=>[])),
         timed('load-all scan membership plans',()=>scan(T_MEMBERSHIP_PLANS).catch(()=>[])),
         timed('load-all scan membership accounts',()=>scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])),
         timed('load-all scan membership orders',()=>scan(T_MEMBERSHIP_ORDERS).catch(()=>[])),
@@ -5137,6 +5299,7 @@ module.exports = async (req, res) => {
         purchases:Array.isArray(purchases)?purchases:[],
         entitlements:Array.isArray(entitlements)?entitlements:[],
         entitlementLedger:normalizeEntitlementLedgerRowsForView(Array.isArray(entitlementLedger)?entitlementLedger:[]),
+        financialLedger:Array.isArray(financialLedger)?financialLedger:[],
         membershipPlans:normalizedMembershipPlans,
         membershipAccounts:Array.isArray(reconciled.accounts)?reconciled.accounts:[],
         membershipOrders:normalizedMembershipOrders,
@@ -5313,8 +5476,8 @@ module.exports = async (req, res) => {
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
     if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PACKAGES).catch(()=>[]));if(method==='POST'){const id=uuidv4();const refs={products:await getCachedScan(T_PRODUCTS).catch(()=>[]),coaches:await getCachedScan(T_COACHES).catch(()=>[]),campuses:await getCachedScan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
     const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=pkgM[1];if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);if(!old)return sendJson(res,{error:'售卖课包不存在'},404);const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[])};const r=normalizePackageRecord({...body,id},old,refs);assertCanEditPackageWithPurchases(old,r,await scan(T_PURCHASES).catch(()=>[]));await put(T_PACKAGES,id,r);return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
-    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate});const id=uuidv4();const now=new Date().toISOString();const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);return sendJson(res,{purchase,entitlement});}}
-    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const now=new Date().toISOString();if(purchaseHasEntitlementLedger(id,ents,ledger)){const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};assertCanEditPurchaseWithLedger(old,r,ents,ledger);await put(T_PURCHASES,id,r);return sendJson(res,{purchase:r,entitlements:[]});}const nextPackageId=body.packageId||old.packageId;const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);const pkg=await get(T_PACKAGES,nextPackageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);validatePurchaseInputForPackage(pkg,{...old,...body,purchaseDate},{isEdit:true,oldPackageId:old.packageId});const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=syncEntitlementFromPurchase(pkg,r,student,ent,now);await put(T_ENTITLEMENTS,ent.id,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();for(const ent of ents.filter(e=>e.purchaseId===id)){await put(T_ENTITLEMENTS,ent.id,{...ent,status:'voided',updatedAt:now});const event={id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now};await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now});return sendJson(res,{success:true});}}
+    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate});const id=uuidv4();const now=new Date().toISOString();const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);await syncStudentActiveEntitlementIndexes(null,entitlement);return sendJson(res,{purchase,entitlement});}}
+    const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const now=new Date().toISOString();if(purchaseHasEntitlementLedger(id,ents,ledger)){const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};assertCanEditPurchaseWithLedger(old,r,ents,ledger);await put(T_PURCHASES,id,r);return sendJson(res,{purchase:r,entitlements:[]});}const nextPackageId=body.packageId||old.packageId;const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);const pkg=await get(T_PACKAGES,nextPackageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);validatePurchaseInputForPackage(pkg,{...old,...body,purchaseDate},{isEdit:true,oldPackageId:old.packageId});const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=syncEntitlementFromPurchase(pkg,r,student,ent,now);await put(T_ENTITLEMENTS,ent.id,next);await syncStudentActiveEntitlementIndexes(ent,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();for(const ent of ents.filter(e=>e.purchaseId===id)){const nextEnt={...ent,status:'voided',updatedAt:now};await put(T_ENTITLEMENTS,ent.id,nextEnt);await syncStudentActiveEntitlementIndexes(ent,nextEnt);const event={id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now};await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,{...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now});return sendJson(res,{success:true});}}
     if(path==='/membership-plans'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
@@ -5486,22 +5649,24 @@ module.exports = async (req, res) => {
       await init();
       if(method==='GET')return sendJson(res,normalizeEntitlementLedgerRowsForView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[])));
     }
-    if(path==='/entitlements'){await init();if(method==='GET'){const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);const sid=query.get('studentId')||'';if(user.role==='admin')return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[])]);const scoped=filterLoadAllForUser({students,schedule,classes,entitlements:rows},user).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
-    if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>parseArr(body.studentIds).includes(e.studentId));return sendJson(res,recommendEntitlements(rows,body));}
-    const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);return sendJson(res,{success:true});}}
+    if(path==='/entitlements'){await init();if(method==='GET'){const sid=query.get('studentId')||'';if(user.role==='admin'&&sid)return sendJson(res,await getIndexedActiveEntitlementsForStudents([sid]));const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);if(user.role==='admin')return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[])]);const scoped=filterLoadAllForUser({students,schedule,classes,entitlements:rows},user).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
+    if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=await getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds));return sendJson(res,recommendEntitlements(rows,body));}
+    const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await getCachedRow(T_ENTITLEMENTS,id).catch(()=>null);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);await syncStudentActiveEntitlementIndexes(old,null);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     if(path==='/feedbacks'){
       await init();
       if(method==='GET')return sendJson(res,await withTimeout(getCachedScan(T_FEEDBACKS).catch(()=>[]),3000,[]));
       if(method==='POST'){
-        const id=uuidv4();
-        const schedule=await get(T_SCHEDULE,body.scheduleId).catch(()=>null);
-        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-        assertCanWriteFeedback(user,schedule);
-        const r=buildFeedbackRecord(body,{id},user);
-        await putFeedback(id,r);
-        return sendJson(res,r);
+        return timedEndpointMetric('feedback.save',async()=>{
+          const id=uuidv4();
+          const schedule=await get(T_SCHEDULE,body.scheduleId).catch(()=>null);
+          if(!schedule)return sendJson(res,{error:'排课不存在'},404);
+          assertCanWriteFeedback(user,schedule);
+          const r=buildFeedbackRecord(body,{id},user);
+          await putFeedback(id,r);
+          return sendJson(res,r);
+        },{mode:'create'});
       }
     }
     const fbM=path.match(/^\/feedbacks\/(.+)$/);
@@ -5509,60 +5674,65 @@ module.exports = async (req, res) => {
       const id=fbM[1];
       if(method==='GET')return sendJson(res,await get(T_FEEDBACKS,id));
       if(method==='PUT'){
-        const ex=await get(T_FEEDBACKS,id).catch(()=>null);
-        if(!ex)return sendJson(res,{error:'反馈不存在'},404);
-        const schedule=await get(T_SCHEDULE,body.scheduleId||ex.scheduleId).catch(()=>null);
-        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-        assertCanWriteFeedback(user,schedule);
-        const r=buildFeedbackRecord({...ex,...body},{...ex,id},user);
-        await putFeedback(id,r);
-        return sendJson(res,r);
+        return timedEndpointMetric('feedback.save',async()=>{
+          const ex=await get(T_FEEDBACKS,id).catch(()=>null);
+          if(!ex)return sendJson(res,{error:'反馈不存在'},404);
+          const schedule=await get(T_SCHEDULE,body.scheduleId||ex.scheduleId).catch(()=>null);
+          if(!schedule)return sendJson(res,{error:'排课不存在'},404);
+          assertCanWriteFeedback(user,schedule);
+          const r=buildFeedbackRecord({...ex,...body},{...ex,id},user);
+          await putFeedback(id,r);
+          return sendJson(res,r);
+        },{mode:'update'});
       }
     }
     if(path==='/schedule'){
       await init();
-      if(method==='GET'){const rows=await getCachedScan(T_SCHEDULE);return sendJson(res,user.role==='admin'?rows:filterLoadAllForUser({schedule:rows},user).schedule);}
+      if(method==='GET'){if(user.role==='admin')return sendJson(res,await getCachedScan(T_SCHEDULE));const indexedRows=await getCoachIndexedScheduleForUser(user);if(indexedRows)return sendJson(res,indexedRows);const rows=await getCachedScan(T_SCHEDULE);return sendJson(res,filterLoadAllForUser({schedule:rows},user).schedule);}
       if(method==='POST'){
-        try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
-        const id=uuidv4();
-        const r={...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-        const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
-          const risk=await validateScheduleSave(r,null);
-          assertScheduleEntitlementRequired(r);
-          const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await getCachedScan(T_ENTITLEMENTS).catch(()=>[]));
-          r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
-          r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
-          await assertScheduleEntitlementCapacity(r,null);
-          return {risk,entitlementDeltas};
-        });
-        await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
-        const nextDelta=scheduleLessonDelta(r);
-        const appliedEntitlements=[];
-        let lessonApplied=false;
-        try{
-          const entitlementChanged=await timed('schedule create entitlement writes',async()=>{
-            const changed=[];
-            for(const nextEntDelta of entitlementDeltas){
-              const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user);
-              if(update)changed.push(update);
-              appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
-            }
-            return changed;
+        return timedEndpointMetric('schedule.save',async()=>{
+          try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
+          const id=uuidv4();
+          const r={...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+          const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
+            const risk=await validateScheduleSave(r,null);
+            assertScheduleEntitlementRequired(r);
+            const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await getCachedScan(T_ENTITLEMENTS).catch(()=>[]));
+            r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
+            r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+            await assertScheduleEntitlementCapacity(r,null);
+            return {risk,entitlementDeltas};
           });
-          const lessonUpdate=nextDelta?await timed('schedule create lesson writes',()=>applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds)):null;
-          if(nextDelta)lessonApplied=true;
-          const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
-          const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-          const notification=await notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message}));
-          Object.assign(r,buildScheduleNotificationUpdate(r,notification,'schedule_created',new Date().toISOString()));
-          await put(T_SCHEDULE,id,r);
-          return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
-        }catch(err){
-          await del(T_SCHEDULE,id).catch(()=>null);
-          for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
-          if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
-          throw err;
-        }
+          await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
+          const nextDelta=scheduleLessonDelta(r);
+          const appliedEntitlements=[];
+          let lessonApplied=false;
+          try{
+            const entitlementChanged=await timed('schedule create entitlement writes',async()=>{
+              const changed=[];
+              for(const nextEntDelta of entitlementDeltas){
+                const update=await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','排课消课',user);
+                if(update)changed.push(update);
+                appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
+              }
+              return changed;
+            });
+            const lessonUpdate=nextDelta?await timed('schedule create lesson writes',()=>applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds)):null;
+            if(nextDelta)lessonApplied=true;
+            const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
+            const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
+            const notification=await notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message}));
+            Object.assign(r,buildScheduleNotificationUpdate(r,notification,'schedule_created',new Date().toISOString()));
+            await put(T_SCHEDULE,id,r);
+            await syncCoachScheduleIndexes(null,r);
+            return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
+          }catch(err){
+            await del(T_SCHEDULE,id).catch(()=>null);
+            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
+            throw err;
+          }
+        },{mode:'create'});
       }
     }
     const schM=path.match(/^\/schedule\/(.+)$/);
@@ -5570,52 +5740,55 @@ module.exports = async (req, res) => {
       const id=schM[1];
       if(method==='GET')return sendJson(res,await get(T_SCHEDULE,id));
       if(method==='PUT'){
-        try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
-        const ex=await get(T_SCHEDULE,id).catch(()=>null);
-        const r={...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
-        const oldDelta=scheduleLessonDelta(ex);
-        const nextDelta=scheduleLessonDelta(r);
-        const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
-          const risk=await validateScheduleSave(r,ex);
-          assertScheduleEntitlementRequired(r);
-          assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
-          const oldEntDeltas=scheduleEntitlementDeltas(ex);
-          const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
-          const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
-          const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:(parseInt(ent.remainingLessons)||0)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
-          const nextEntDeltas=resolveScheduleEntitlementDeltas(r,nextBaseRows);
-          r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
-          r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
-          await assertScheduleEntitlementCapacity(r,ex);
-          return {risk,oldEntDeltas,nextEntDeltas};
-        });
-        await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
-        const appliedEntitlements=[];
-        const appliedClassDeltas=[];
-        try{
-          const changed=[];
-          const entitlementChanged=await timed('schedule update entitlement writes',async()=>{
-            const rows=[];
-            const entDiff=diffScheduleEntitlementDeltas(oldEntDeltas,nextEntDeltas);
-            for(const oldEntDelta of entDiff.returns){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
-            for(const nextEntDelta of entDiff.consumes){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
-            return rows;
+        return timedEndpointMetric('schedule.save',async()=>{
+          try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
+          const ex=await get(T_SCHEDULE,id).catch(()=>null);
+          const r={...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
+          const oldDelta=scheduleLessonDelta(ex);
+          const nextDelta=scheduleLessonDelta(r);
+          const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
+            const risk=await validateScheduleSave(r,ex);
+            assertScheduleEntitlementRequired(r);
+            assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
+            const oldEntDeltas=scheduleEntitlementDeltas(ex);
+            const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
+            const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
+            const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
+            const nextEntDeltas=resolveScheduleEntitlementDeltas(r,nextBaseRows);
+            r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
+            r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
+            await assertScheduleEntitlementCapacity(r,ex);
+            return {risk,oldEntDeltas,nextEntDeltas};
           });
-          await timed('schedule update lesson writes',async()=>{
-            if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds)));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});}
-            if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta,studentIds:r.studentIds});}
-          });
-          const classes=changed.filter(Boolean).map(x=>x.class);
-          const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
-          const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
-          const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-          return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
-        }catch(err){
-          await put(T_SCHEDULE,id,ex).catch(()=>null);
-          for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
-          for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
-          throw err;
-        }
+          await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
+          const appliedEntitlements=[];
+          const appliedClassDeltas=[];
+          try{
+            const changed=[];
+            const entitlementChanged=await timed('schedule update entitlement writes',async()=>{
+              const rows=[];
+              const entDiff=diffScheduleEntitlementDeltas(oldEntDeltas,nextEntDeltas);
+              for(const oldEntDelta of entDiff.returns){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
+              for(const nextEntDelta of entDiff.consumes){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
+              return rows;
+            });
+            await timed('schedule update lesson writes',async()=>{
+              if(oldDelta){changed.push(await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds)));appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});}
+              if(nextDelta){changed.push(await applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds));appliedClassDeltas.push({classId:nextDelta.classId,delta:-nextDelta.delta,studentIds:r.studentIds});}
+            });
+            const classes=changed.filter(Boolean).map(x=>x.class);
+            const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
+            const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
+            const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
+            await syncCoachScheduleIndexes(ex,r);
+            return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
+          }catch(err){
+            await put(T_SCHEDULE,id,ex).catch(()=>null);
+            for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
+            for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+            throw err;
+          }
+        },{mode:'update'});
       }
       if(method==='DELETE'){
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
@@ -5624,6 +5797,7 @@ module.exports = async (req, res) => {
         await del(T_SCHEDULE,id);
         try{
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
+          await syncCoachScheduleIndexes(ex,null);
           return sendJson(res,{success:true,...(lessonUpdate||{})});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
@@ -5712,30 +5886,33 @@ module.exports = async (req, res) => {
       return sendJson(res,{campuses,students,courts,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,membershipPlans,coaches});
     }
     if(path==='/page-data/workbench'&&method==='GET'){
-      await init();
-      const [campuses,students,classes,schedule,feedbacks,purchases]=await Promise.all([
-        listCampusesWithDefaults(),
-        getCachedScan(T_STUDENTS).catch(()=>[]),
-        getCachedScan(T_CLASSES).catch(()=>[]),
-        getCachedScan(T_SCHEDULE).catch(()=>[]),
-        withTimeout(scanFeedbacks().catch(()=>[]),3000,[]),
-        getCachedScan(T_PURCHASES).catch(()=>[])
-      ]);
-      const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases},user);
-      const now=new Date();
-      const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
-      const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
-      const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now);
-      const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
-      const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,purchases:scoped.purchases||[],now});
-      return sendJson(res,{
-        campuses:scoped.campuses||[],
-        students:decoratedStudents,
-        classes:decoratedClasses,
-        schedule:decoratedSchedule,
-        feedbacks:decoratedFeedbacks,
-        stats
-      });
+      return timedEndpointMetric('pageData.workbench',async()=>{
+        await init();
+        const indexedSchedule=user.role==='admin'?null:await getCoachIndexedScheduleForUser(user);
+        const [campuses,students,classes,schedule,feedbacks,purchases]=await Promise.all([
+          listCampusesWithDefaults(),
+          getCachedScan(T_STUDENTS).catch(()=>[]),
+          getCachedScan(T_CLASSES).catch(()=>[]),
+          Promise.resolve(indexedSchedule||null).then(rows=>rows||getCachedScan(T_SCHEDULE).catch(()=>[])),
+          withTimeout(scanFeedbacks().catch(()=>[]),3000,[]),
+          getCachedScan(T_PURCHASES).catch(()=>[])
+        ]);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases},user);
+        const now=new Date();
+        const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
+        const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
+        const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now);
+        const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
+        const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,purchases:scoped.purchases||[],now});
+        return sendJson(res,{
+          campuses:scoped.campuses||[],
+          students:decoratedStudents,
+          classes:decoratedClasses,
+          schedule:decoratedSchedule,
+          feedbacks:decoratedFeedbacks,
+          stats
+        });
+      },{role:user.role||''});
     }
     if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,rows);const schedule=await getCachedScan(T_SCHEDULE).catch(()=>[]);return sendJson(res,filterLoadAllForUser({classes:rows,schedule},user).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
@@ -5881,9 +6058,9 @@ module.exports._test={
   ,getMatchSqlPool
   ,requireAdminUser
   ,requireMatchUser
-  ,ensureMatchUserResponse
   ,canMatchUserCreateByAdminUser
   ,ensureMatchUserResponse
+  ,canMatchUserCreateByAdminUser
   ,buildMatchUserToken
   ,assertMatchPostInput
   ,normalizeMatchType

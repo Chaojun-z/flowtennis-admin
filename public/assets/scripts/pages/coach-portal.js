@@ -81,6 +81,7 @@ function renderWorkbench(){
   const coach=getMyCoachName();
   const myRows=billableSchedules().filter(s=>coachName(s.coach)===coach).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
   const now=shanghaiNow();
+  const currentTimeText=`${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,8)}`;
   const todayStr=localDateKey(now);
   const week=getWeekDates(0);
   const weekStart=week[0].toISOString().slice(0,10);
@@ -125,7 +126,16 @@ function renderWorkbench(){
     return `<div class="coach-wb-day-section${isToday?' is-today':isPast?' is-past':''}"><div class="coach-wb-day-label">${dayLabel}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:emptyTip}</div>`;
   }).join('');
   const weekLabel=`${week[0].getMonth()+1}/${week[0].getDate()} — ${week[6].getMonth()+1}/${week[6].getDate()}`;
-  host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）${workbenchMetricHelpHtml()}</div><div class="coach-wb-current-time"><span class="live-dot"></span>${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,8)}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
+  const renderKey=`${weekLabel}__${statsHtml}__${weekBoardHtml}`;
+  if(host.dataset.workbenchRenderKey!==renderKey){
+    host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div><div class="coach-wb-page-header"><div class="coach-wb-page-title">本周课程待办（${weekLabel}）${workbenchMetricHelpHtml()}</div><div class="coach-wb-current-time"><span class="live-dot"></span>${currentTimeText}</div></div><div class="coach-wb-board">${weekBoardHtml}</div></div>`;
+    host.dataset.workbenchRenderKey=renderKey;
+  }
+  const currentTimeNode=host.querySelector('.coach-wb-current-time');
+  if(currentTimeNode){
+    currentTimeNode.textContent=currentTimeText;
+    currentTimeNode.insertAdjacentHTML('afterbegin','<span class="live-dot"></span>');
+  }
 }
 let myWeekOffset=0;
 function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}

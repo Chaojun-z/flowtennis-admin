@@ -241,6 +241,36 @@ function mergeWorkbenchStats(backendStats = {}, localStats = {}) {
   return { ...backendStats, ...localStats };
 }
 
+function upsertFeedbackRecord(feedbacks = [], feedback = null) {
+  if (!feedback || !feedback.id) return Array.isArray(feedbacks) ? feedbacks.slice() : [];
+  const list = Array.isArray(feedbacks) ? feedbacks.slice() : [];
+  const index = list.findIndex(item => String(item && item.id || '') === String(feedback.id));
+  if (index >= 0) {
+    list[index] = { ...list[index], ...feedback };
+    return list;
+  }
+  return [feedback, ...list];
+}
+
+function patchScheduleFeedbackState(schedule = [], feedback = null) {
+  const scheduleId = String(feedback && feedback.scheduleId || '').trim();
+  if (!scheduleId) return Array.isArray(schedule) ? schedule.slice() : [];
+  return (Array.isArray(schedule) ? schedule : []).map(item => {
+    if (String(item && item.id || '').trim() !== scheduleId) return item;
+    const nextItem = {
+      ...item,
+      hasFeedback: true,
+      feedbackPending: false,
+      feedbackId: feedback.id || item.feedbackId || '',
+      feedbackStatus: '已反馈'
+    };
+    return {
+      ...nextItem,
+      statusClass: statusClass(nextItem)
+    };
+  });
+}
+
 function currentCoachName() {
   const user = wx.getStorageSync(USER_KEY) || {};
   return String(user.coachName || user.name || '').trim();
@@ -1307,6 +1337,7 @@ Page({
     savingFeedback: false,
     savingShiftSchedule: false,
     savingCancelSchedule: false,
+    needsWorkbenchRefresh: false,
     stats: { month: 0, week: 0, today: 0, feedback: 0, pending: 0, conversionText: '-', conversionUnit: '', nextTime: '暂无', nextText: '暂无', todo: 0 },
     selectedClass: null,
     selectedClassDetail: null,
@@ -1364,7 +1395,7 @@ Page({
   },
 
   onShow() {
-    if (this.data.hasLoaded) this.load({ keepLoading: true });
+    if (this.shouldRefreshOnShow()) this.load({ keepLoading: true });
   },
 
   onPullDownRefresh() {
@@ -1399,15 +1430,20 @@ Page({
         coachMenuId,
         coachMenuAvatar: avatarText(displayName),
         loading: false,
-        hasLoaded: true
+        hasLoaded: true,
+        needsWorkbenchRefresh: false
       });
       this.renderWeek();
     } catch (err) {
       if (handleCoachAuthError(err)) return;
-      this.setData({ loading: false, hasLoaded: true, error: err.message || '请先确认账号已绑定微信后重试' });
+      this.setData({ loading: false, hasLoaded: true, needsWorkbenchRefresh: false, error: err.message || '请先确认账号已绑定微信后重试' });
     } finally {
       if (options.stopPullDown) wx.stopPullDownRefresh();
     }
+  },
+
+  shouldRefreshOnShow() {
+    return !!(this.data.hasLoaded && this.data.needsWorkbenchRefresh);
   },
 
   renderWeek() {
@@ -1707,6 +1743,32 @@ Page({
     this.setData({ feedbackEditing: true, feedbackFocusedField: '' });
   },
 
+  applyFeedbackPatch(selectedClass, savedFeedback) {
+    if (!selectedClass || !savedFeedback) return;
+    const feedbacks = upsertFeedbackRecord(this.data.feedbacks, savedFeedback);
+    const schedule = patchScheduleFeedbackState(this.data.schedule, savedFeedback);
+    const localStats = buildLocalWorkbenchStats(schedule, feedbacks, new Date());
+    const nextSelectedClass = schedule.find(item => String(item.id || '') === String(selectedClass.id || '')) || selectedClass;
+    this.setData({
+      schedule,
+      feedbacks,
+      selectedClass: nextSelectedClass,
+      selectedClassDetail: buildDetailData(nextSelectedClass, {
+        classes: this.data.classesRaw,
+        students: this.data.studentsRaw,
+        feedbacks,
+        coachName: currentCoachName()
+      }),
+      coachWorkbenchStats: {
+        ...this.data.coachWorkbenchStats,
+        monthFeedbackCount: localStats.monthFeedbackCount,
+        pendingFeedbackCount: localStats.pendingFeedbackCount
+      },
+      needsWorkbenchRefresh: false
+    });
+    this.renderWeek();
+  },
+
   async saveFeedback() {
     const selectedClass = this.data.selectedClass;
     if (!selectedClass || this.data.savingFeedback) return;
@@ -1725,7 +1787,7 @@ Page({
     const feedbackScope = feedbackScopeForSchedule(selectedClass);
     this.setData({ savingFeedback: true });
     try {
-      await saveCoachFeedback({
+      const savedFeedback = await saveCoachFeedback({
         id: currentFeedback ? currentFeedback.id : '',
         scheduleId: selectedClass.id,
         classId: selectedClass.classId || '',
@@ -1744,9 +1806,9 @@ Page({
         knowledgePoint,
         nextTraining
       });
+      this.applyFeedbackPatch(selectedClass, savedFeedback);
       wx.showToast({ title: '反馈已保存', icon: 'success' });
       this.closeSheets();
-      await this.load({ keepLoading: true });
     } catch (err) {
       wx.showToast({ title: err.message || '保存失败', icon: 'none' });
     } finally {
