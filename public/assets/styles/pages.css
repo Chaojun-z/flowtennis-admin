@@ -194,6 +194,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-page-btn{min-width:28px;height:28px;padding:0 4px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;color:#5C4D43;transition:all .2s;user-select:none;font-weight:400}
 .tms-page-btn:hover{background-color:#EAE0D6}
 .tms-page-btn.active{background-color:#C06031;color:#fff;font-weight:400}
+.tms-page-btn.tms-page-ellipsis{cursor:default;color:#A3968F}
+.tms-page-btn.tms-page-ellipsis:hover{background-color:transparent}
 table{width:100%;border-collapse:collapse}thead tr{background:rgba(180,83,9,0.06)}
 th{padding:11px 15px;text-align:left;font-size:11px;font-weight:600;color:var(--ts);letter-spacing:.9px;text-transform:uppercase;border-bottom:0.5px solid rgba(180,83,9,0.15);white-space:nowrap}
 td{padding:12px 15px;font-size:13px;color:var(--tb);border-bottom:0.5px solid rgba(180,83,9,0.08);vertical-align:middle}
