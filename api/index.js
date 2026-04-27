@@ -18,6 +18,8 @@ const ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP = process.env.ENABLE_DEFAULT_PRICE_PLA
 const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = process.env.ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP === 'true';
 const WECHAT_MINIPROGRAM_APPID = process.env.WECHAT_MINIPROGRAM_APPID || 'wx7acb7603ee803923';
 const WECHAT_MINIPROGRAM_SECRET = process.env.WECHAT_MINIPROGRAM_SECRET;
+const MATCH_MINIPROGRAM_APPID = process.env.MATCH_MINIPROGRAM_APPID || '';
+const MATCH_MINIPROGRAM_SECRET = process.env.MATCH_MINIPROGRAM_SECRET || '';
 const WECHAT_SCHEDULE_TEMPLATE_ID = process.env.WECHAT_SCHEDULE_TEMPLATE_ID;
 const WECHAT_COURSE_REMINDER_TEMPLATE_ID = process.env.WECHAT_COURSE_REMINDER_TEMPLATE_ID;
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
@@ -84,7 +86,7 @@ const hotGetCache=new Map();
 let importedLedgerRepairChecked=false;
 
 let tsClient;
-let wechatAccessTokenCache=null;
+const wechatAccessTokenCacheByApp = new Map();
 let matchSqlPool;
 function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3});return tsClient;}
 function getMatchSqlPool(){
@@ -1107,9 +1109,24 @@ function extractWechatOpenId(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信登录失败：${msg}`);
 }
-async function fetchWechatSession(code){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
-  const url=buildWechatCode2SessionUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET,code);
+function resolveWechatMiniConfig(kind='coach'){
+  if(kind==='match'){
+    return {
+      appid: MATCH_MINIPROGRAM_APPID || WECHAT_MINIPROGRAM_APPID,
+      secret: MATCH_MINIPROGRAM_SECRET || WECHAT_MINIPROGRAM_SECRET,
+      errorText: '缺少约球小程序密钥配置'
+    };
+  }
+  return {
+    appid: WECHAT_MINIPROGRAM_APPID,
+    secret: WECHAT_MINIPROGRAM_SECRET,
+    errorText: '缺少微信小程序密钥配置'
+  };
+}
+async function fetchWechatSession(code,kind='coach'){
+  const config=resolveWechatMiniConfig(kind);
+  if(!config.secret)throw new Error(config.errorText);
+  const url=buildWechatCode2SessionUrl(config.appid,config.secret,code);
   const res=await fetch(url);
   const data=await res.json();
   return data;
@@ -1141,19 +1158,21 @@ function extractWechatAccessToken(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信 access_token 获取失败：${msg}`);
 }
-async function fetchWechatAccessToken(){
-  if(!WECHAT_MINIPROGRAM_SECRET)throw new Error('缺少微信小程序密钥配置');
+async function fetchWechatAccessToken(kind='coach'){
+  const config=resolveWechatMiniConfig(kind);
+  if(!config.secret)throw new Error(config.errorText);
   const now=Date.now();
-  if(wechatAccessTokenCache&&wechatAccessTokenCache.expiresAt>now)return wechatAccessTokenCache.token;
-  const res=await fetch(buildWechatAccessTokenUrl(WECHAT_MINIPROGRAM_APPID,WECHAT_MINIPROGRAM_SECRET));
+  const cached=wechatAccessTokenCacheByApp.get(config.appid);
+  if(cached&&cached.expiresAt>now)return cached.token;
+  const res=await fetch(buildWechatAccessTokenUrl(config.appid,config.secret));
   const data=await res.json();
   const token=extractWechatAccessToken(data);
   const ttlMs=Math.max(300000,((parseInt(data.expires_in)||7200)-300)*1000);
-  wechatAccessTokenCache={token,expiresAt:now+ttlMs};
+  wechatAccessTokenCacheByApp.set(config.appid,{token,expiresAt:now+ttlMs});
   return token;
 }
-async function fetchWechatPhoneNumber(code){
-  const token=await fetchWechatAccessToken();
+async function fetchWechatPhoneNumber(code,kind='coach'){
+  const token=await fetchWechatAccessToken(kind);
   const res=await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(token)}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1874,6 +1893,11 @@ function requireMatchUser(req){
   if(!user||user.type!=='match_user')throw new Error('未登录');
   return user;
 }
+async function canMatchUserCreate(userId){
+  const pool=getMatchSqlPool();
+  const createdRes=await pool.query('SELECT COUNT(*)::int AS count FROM match_posts WHERE creatorUserId=$1',[userId]);
+  return Number(createdRes.rows[0]?.count||0) > 0;
+}
 function buildMatchUserToken(user){
   return jwt.sign({id:user.id,type:'match_user',openid:user.openid},JWT_SECRET,{expiresIn:'7d'});
 }
@@ -2299,6 +2323,7 @@ async function getMatchForViewer(matchId,viewerId){
   return toMatchView(match.rows[0],regs.rows,viewerId,splits.rows);
 }
 async function createMatchForUser(userId,input){
+  if(!(await canMatchUserCreate(userId)))throw new Error('仅管理员可发起约球');
   const row=assertMatchPostInput(input);
   const id=uuidv4();
   await getMatchSqlPool().query(
@@ -2644,7 +2669,7 @@ async function getMatchProfile(userId){
   ]);
   const stats=buildMatchProfileStats({createdMatches:created.rows,joinedMatches:joined.rows,attendanceRows:attendance.rows,feeSplits:fees.rows});
   const user=userRes.rows[0]||{};
-  return {...stats,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||''}};
+  return {...stats,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||'',canCreateMatch:created.rows.length>0}};
 }
 async function updateMatchProfile(userId,input){
   const phone=assertPhone(input.phone||'');
@@ -4200,7 +4225,7 @@ module.exports = async (req, res) => {
     if(path==='/auth/wechat-mini-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code);
+      const session=await fetchWechatSession(code,'match');
       const openid=extractWechatOpenId(session);
       const unionid=session.unionid?String(session.unionid):'';
       const pool=getMatchSqlPool();
@@ -4214,7 +4239,7 @@ module.exports = async (req, res) => {
           [matchUser.id,matchUser.openid,matchUser.unionid,matchUser.nickName,matchUser.avatarUrl,matchUser.phone,matchUser.ntrpLevel]
         );
       }
-      return sendJson(res,{token:buildMatchUserToken(matchUser),user:{id:matchUser.id,type:'match_user',openid:matchUser.openid,phone:matchUser.phone||'',ntrpLevel:matchUser.ntrplevel||matchUser.ntrpLevel||''}});
+      return sendJson(res,{token:buildMatchUserToken(matchUser),user:{id:matchUser.id,type:'match_user',openid:matchUser.openid,phone:matchUser.phone||'',ntrpLevel:matchUser.ntrplevel||matchUser.ntrpLevel||'',canCreateMatch:await canMatchUserCreate(matchUser.id)}});
     }
     if(path==='/matches'&&method==='GET'){
       const matchUser=requireMatchUser(req);
@@ -4284,7 +4309,7 @@ module.exports = async (req, res) => {
     if(path==='/match-profile/phone-code'&&method==='POST'){
       const matchUser=requireMatchUser(req);
       try{
-        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim());
+        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),'match');
         return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
       }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
