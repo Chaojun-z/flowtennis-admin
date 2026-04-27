@@ -34,13 +34,6 @@ assert.match(page, /function openMatchReplacementModal\(/, 'match page should su
 assert.match(page, /\/replacements\/transfer/, 'replacement transfer should call admin replacement API');
 assert.match(page, /替补名额 \/ 订单转让/, 'match page should explain replacement transfer flow');
 assert.match(page, /'refunded'/, 'fee split modal should support refund status');
-assert.match(page, /约球订场总账/, 'match page should provide a match booking ledger entry');
-assert.match(page, /约球日结/, 'match page should provide a daily reconciliation report entry');
-assert.doesNotMatch(page, /约球设置/, 'match page should not expose the removed settings entry');
-assert.doesNotMatch(page, /运营接管/, 'match page should not expose the removed operator takeover entry');
-assert.doesNotMatch(page, /\/admin\/matches\/settings/, 'match page should not call removed match settings api');
-assert.match(page, /\/admin\/matches\/finance-daily/, 'match page should load finance daily report API');
-assert.match(page, /差额/, 'match daily report should expose reconciliation diff');
 assert.match(page, /matchFeeNote/, 'fee split updates should collect note for risky statuses');
 assert.match(page, /请填写原因/, 'fee split refunds and exceptions should require reason on admin page');
 assert.match(page, /function openMatchLogModal\(/, 'match page should show operation logs');

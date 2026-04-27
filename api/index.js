@@ -2019,7 +2019,7 @@ function computeMatchSettlementAmount({matchType,startTime,endTime,finalCourtFee
 }
 function buildPreviewAaText({matchType,startTime,endTime,estimatedCourtFee=0,finalCourtFee=0,activeCount=0,targetHeadcount=0}={}){
   const currentCount=Number(activeCount||0);
-  const previewCount=currentCount>1?currentCount:(currentCount===0?Number(targetHeadcount||0):0);
+  const previewCount=currentCount>1?currentCount:Number(targetHeadcount||0);
   const finalFee=normalizeMoney(finalCourtFee);
   const estimatedFee=normalizeMoney(estimatedCourtFee);
   if(previewCount>1&&finalFee>0){
@@ -2030,7 +2030,6 @@ function buildPreviewAaText({matchType,startTime,endTime,estimatedCourtFee=0,fin
     const total=computeMatchSettlementAmount({matchType,startTime,endTime,finalCourtFee:estimatedFee,participantCount:previewCount});
     return `约 ¥${Math.ceil(total/previewCount)}/人`;
   }
-  if(currentCount===1)return '待成团';
   return 'AA待定';
 }
 function splitAaFee(finalCourtFee,participantIds){
