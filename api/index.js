@@ -2171,6 +2171,50 @@ function toMatchView(row,registrations=[],viewerId='',feeSplits=[]){
     }))
   };
 }
+async function loadAttendanceRateMap(pool,userIds=[]){
+  const uniqueUserIds=[...new Set((userIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!uniqueUserIds.length)return new Map();
+  const statsRows=await pool.query(`
+    SELECT
+      userId,
+      COUNT(*) FILTER (WHERE finalStatus IN ('attended','absent'))::int AS resolved_count,
+      COUNT(*) FILTER (WHERE finalStatus='attended')::int AS attended_count
+    FROM match_attendance
+    WHERE userId = ANY($1::text[])
+    GROUP BY userId
+  `,[uniqueUserIds]);
+  const rateMap=new Map();
+  for(const row of statsRows.rows){
+    const resolved=Number(row.resolved_count||0);
+    const attended=Number(row.attended_count||0);
+    rateMap.set(String(row.userid||row.userId),resolved>0?`${Math.round(attended*100/resolved)}%`:'暂无守约率');
+  }
+  return rateMap;
+}
+async function loadMatchRegistrationViews(pool,matchIds=[],{registeredOnly=true}={}){
+  const uniqueMatchIds=[...new Set((matchIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!uniqueMatchIds.length)return [];
+  const statusClause=registeredOnly?"AND r.registrationStatus='registered'":'';
+  const regRows=await pool.query(`
+    SELECT
+      r.*,
+      u.nickName,
+      u.phone,
+      u.avatarUrl,
+      u.ntrpLevel,
+      a.finalStatus
+    FROM match_registrations r
+    LEFT JOIN match_users u ON u.id=r.userId
+    LEFT JOIN match_attendance a ON a.matchId=r.matchId AND a.userId=r.userId
+    WHERE r.matchId = ANY($1::text[])
+    ${statusClause}
+  `,[uniqueMatchIds]);
+  const rateMap=await loadAttendanceRateMap(pool,regRows.rows.map(row=>String(row.userid||row.userId||'')));
+  return regRows.rows.map(row=>({
+    ...row,
+    attendanceRateText:rateMap.get(String(row.userid||row.userId||''))||'暂无守约率'
+  }));
+}
 function toMatchDetailResponse(view){
   if(!view)return null;
   const registrations=Array.isArray(view.registrations)?view.registrations:[];
@@ -2327,37 +2371,10 @@ function buildMatchFeeLedger({matchId,estimatedCourtFee=0,finalCourtFee,matchTyp
 }
 async function listMatchesForViewer(viewerId){
   const pool=getMatchSqlPool();
-  const registrationSelect=`
-    SELECT
-      r.*,
-      u.nickName,
-      u.phone,
-      u.avatarUrl,
-      u.ntrpLevel,
-      a.finalStatus,
-      CASE
-        WHEN stats.resolved_count > 0 THEN CONCAT(ROUND(stats.attended_count * 100.0 / stats.resolved_count), '%')
-        ELSE '暂无守约率'
-      END AS attendanceRateText
-    FROM match_registrations r
-    LEFT JOIN match_users u ON u.id=r.userId
-    LEFT JOIN match_attendance a ON a.matchId=r.matchId AND a.userId=r.userId
-    LEFT JOIN (
-      SELECT
-        userId,
-        COUNT(*) FILTER (WHERE finalStatus IN ('attended','absent'))::int AS resolved_count,
-        COUNT(*) FILTER (WHERE finalStatus='attended')::int AS attended_count
-      FROM match_attendance
-      GROUP BY userId
-    ) stats ON stats.userId=r.userId
-    WHERE r.registrationStatus='registered'
-  `;
-  const [matches,registrations]=await Promise.all([
-    pool.query("SELECT * FROM match_posts WHERE status<>'cancelled' ORDER BY startTime ASC"),
-    pool.query(registrationSelect)
-  ]);
+  const matches=await pool.query("SELECT * FROM match_posts WHERE status<>'cancelled' ORDER BY startTime ASC");
+  const registrations=await loadMatchRegistrationViews(pool,matches.rows.map(row=>String(row.id||'')),{registeredOnly:true});
   const regsByMatch=new Map();
-  for(const row of registrations.rows){
+  for(const row of registrations){
     const key=String(row.matchid||row.matchId);
     regsByMatch.set(key,[...(regsByMatch.get(key)||[]),row]);
   }
@@ -2368,34 +2385,10 @@ async function getMatchForViewer(matchId,viewerId){
   const match=await pool.query('SELECT * FROM match_posts WHERE id=$1',[matchId]);
   if(!match.rows[0])return null;
   const [regs,splits]=await Promise.all([
-    pool.query(`
-      SELECT
-        r.*,
-        u.nickName,
-        u.avatarUrl,
-        u.phone,
-        u.ntrpLevel,
-        a.finalStatus,
-        CASE
-          WHEN stats.resolved_count > 0 THEN CONCAT(ROUND(stats.attended_count * 100.0 / stats.resolved_count), '%')
-          ELSE '暂无守约率'
-        END AS attendanceRateText
-      FROM match_registrations r
-      LEFT JOIN match_users u ON u.id=r.userId
-      LEFT JOIN match_attendance a ON a.matchId=r.matchId AND a.userId=r.userId
-      LEFT JOIN (
-        SELECT
-          userId,
-          COUNT(*) FILTER (WHERE finalStatus IN ('attended','absent'))::int AS resolved_count,
-          COUNT(*) FILTER (WHERE finalStatus='attended')::int AS attended_count
-        FROM match_attendance
-        GROUP BY userId
-      ) stats ON stats.userId=r.userId
-      WHERE r.matchId=$1
-    `,[matchId]),
+    loadMatchRegistrationViews(pool,[matchId],{registeredOnly:false}),
     pool.query('SELECT * FROM match_fee_splits WHERE matchId=$1',[matchId])
   ]);
-  return toMatchView(match.rows[0],regs.rows,viewerId,splits.rows);
+  return toMatchView(match.rows[0],regs,viewerId,splits.rows);
 }
 async function createMatchForUser(userId,input){
   if(!(await canMatchUserCreate(userId)))throw new Error('仅管理员可发起约球');
@@ -2875,33 +2868,9 @@ async function listMyMatches(userId){
     "SELECT DISTINCT p.* FROM match_posts p LEFT JOIN match_registrations r ON r.matchId=p.id LEFT JOIN match_attendance a ON a.matchId=p.id WHERE p.creatorUserId=$1 OR (r.userId=$1 AND r.registrationStatus='registered') OR a.userId=$1 ORDER BY p.startTime DESC",
     [userId]
   );
-  const registrations=await pool.query(`
-    SELECT
-      r.*,
-      u.nickName,
-      u.phone,
-      u.avatarUrl,
-      u.ntrpLevel,
-      a.finalStatus,
-      CASE
-        WHEN stats.resolved_count > 0 THEN CONCAT(ROUND(stats.attended_count * 100.0 / stats.resolved_count), '%')
-        ELSE '暂无守约率'
-      END AS attendanceRateText
-    FROM match_registrations r
-    LEFT JOIN match_users u ON u.id=r.userId
-    LEFT JOIN match_attendance a ON a.matchId=r.matchId AND a.userId=r.userId
-    LEFT JOIN (
-      SELECT
-        userId,
-        COUNT(*) FILTER (WHERE finalStatus IN ('attended','absent'))::int AS resolved_count,
-        COUNT(*) FILTER (WHERE finalStatus='attended')::int AS attended_count
-      FROM match_attendance
-      GROUP BY userId
-    ) stats ON stats.userId=r.userId
-    WHERE r.registrationStatus='registered'
-  `);
+  const registrations=await loadMatchRegistrationViews(pool,rows.rows.map(row=>String(row.id||'')),{registeredOnly:true});
   const regsByMatch=new Map();
-  for(const row of registrations.rows){
+  for(const row of registrations){
     const key=String(row.matchid||row.matchId);
     regsByMatch.set(key,[...(regsByMatch.get(key)||[]),row]);
   }
