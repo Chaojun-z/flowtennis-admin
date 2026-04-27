@@ -1,0 +1,11 @@
+ALTER TABLE match_posts
+  ADD COLUMN IF NOT EXISTS levelMode TEXT NOT NULL DEFAULT 'preset';
+
+ALTER TABLE match_posts
+  ADD COLUMN IF NOT EXISTS formationStatus TEXT NOT NULL DEFAULT 'free_open';
+
+ALTER TABLE match_posts
+  ADD COLUMN IF NOT EXISTS prepayTriggeredAt TIMESTAMPTZ;
+
+ALTER TABLE match_posts
+  ADD COLUMN IF NOT EXISTS prepayDeadlineAt TIMESTAMPTZ;

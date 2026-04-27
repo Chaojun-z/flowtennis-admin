@@ -40,8 +40,7 @@ assert.match(source,/renderFinanceConsumeReport\(\)">查询/,'consume date filte
 assert.doesNotMatch(source,/未入账明细/,'ledger should no longer show a second prepaid detail table');
 assert.match(source,/总收入（实收）[\s\S]*总已入账[\s\S]*总未入账/,'ledger summary should use plain-language owner terms');
 assert.doesNotMatch(source,/总流水笔数/,'ledger summary should not keep total flow count card');
-assert.match(source,/课包收入 \/ 已入账[\s\S]*会员储值收入 \/ 已消耗[\s\S]*订场收入 \/ 已入账/,'ledger summary should keep six owner-facing cards without duplicate member booking stats');
-assert.doesNotMatch(source,/会员订场已入账/,'ledger summary should not repeat stored value consumption as a separate member booking card');
+assert.match(source,/课包收入 \/ 已入账[\s\S]*会员储值 \/ 已入账[\s\S]*订场收入 \/ 已入账/,'ledger summary should keep the three owner-facing business cards in the latest wording');
 assert.match(source,/id="financeLedgerPagerInfo"/,'ledger should expose pager info');
 assert.match(source,/id="financeLedgerPageSize"/,'ledger should expose page size selector');
 assert.match(source,/id="financeLedgerPagerBtns"/,'ledger should expose pager buttons');

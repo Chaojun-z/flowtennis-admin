@@ -15,9 +15,12 @@ async function main() {
     ssl: process.env.MATCH_DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined
   });
   try {
-    const file = path.join(__dirname, '..', 'migrations', '20260421_match_real_launch.sql');
-    const sql = fs.readFileSync(file, 'utf8');
-    await pool.query(sql);
+    const migrationDir = path.join(__dirname, '..', 'migrations');
+    const files = fs.readdirSync(migrationDir).filter((file) => file.endsWith('.sql')).sort();
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationDir, file), 'utf8');
+      await pool.query(sql);
+    }
     console.log('match db migration applied');
   } finally {
     await pool.end();
