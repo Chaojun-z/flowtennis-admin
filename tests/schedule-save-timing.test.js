@@ -8,7 +8,9 @@ assert.match(apiSource, /timed\('schedule create validate',async\(\)=>\{/, 'sche
 assert.match(apiSource, /timed\('schedule create persist',\(\)=>put\(T_SCHEDULE,id,r\)\)/, 'schedule create should expose a persist timing segment');
 assert.match(apiSource, /timed\('schedule create entitlement writes',async\(\)=>\{/, 'schedule create should expose entitlement write timing');
 assert.match(apiSource, /timed\('schedule create lesson writes',\(\)=>applyLessonDelta\(nextDelta\.classId,nextDelta\.delta,r\.studentIds\)\)/, 'schedule create should expose lesson write timing');
+assert.match(apiSource, /timed\(\s*'schedule create coach notification'[\s\S]*?withTimeout\(/, 'schedule create should guard coach notification with a timeout timing segment');
 assert.match(apiSource, /timed\('schedule update validate',async\(\)=>\{/, 'schedule update should expose a validate timing segment');
+assert.match(apiSource, /timed\(\s*'schedule update feedback guard'[\s\S]*?withTimeout\(scanFeedbacks\(\)\.catch\(\(\)=>\[\]\),3000,\[\]\)/, 'schedule update should guard feedback fetch latency before blocking edits');
 assert.match(apiSource, /timed\('schedule update persist',\(\)=>put\(T_SCHEDULE,id,r\)\)/, 'schedule update should expose a persist timing segment');
 assert.match(apiSource, /timed\('schedule update entitlement writes',async\(\)=>\{/, 'schedule update should expose entitlement write timing');
 assert.match(apiSource, /timed\('schedule update lesson writes',async\(\)=>\{/, 'schedule update should expose lesson write timing');

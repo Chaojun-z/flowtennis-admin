@@ -490,6 +490,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .schedule-location-type{flex:0 0 190px;min-width:0}
 .modal.modal-court .schedule-location-fields{display:flex;gap:14px;flex:1;min-width:0}
 .modal.modal-court .schedule-location-fields .tms-form-item{flex:1;min-width:0}
+.overlay.open .modal.modal-court.modal-schedule-cancel{width:560px;max-height:92vh}
+.schedule-cancel-summary{background:#F7EEE4;border:1px solid #D9D0C7;border-radius:12px;padding:14px 16px;margin-bottom:18px;color:#5C4D43;font-size:14px;line-height:1.75}
+.schedule-cancel-scope{background:#FDF7F2;border:1px solid #E7DDD2;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:14px;min-height:128px}
+.schedule-cancel-scope .tms-checkbox-wrap{display:flex;align-items:flex-start;line-height:1.65}
+.schedule-cancel-help{font-size:12px;color:#8C7B6E;line-height:1.7}
 .choice-grid{display:flex;flex-wrap:wrap;gap:8px}
 .choice-wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
 .choice-wrap .choice-tag{flex:0 0 auto}
