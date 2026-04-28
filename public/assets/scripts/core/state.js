@@ -380,7 +380,7 @@ function applyLoadedData(data){
   schedules=Array.isArray(data?.schedule)?data.schedule:[];
   coaches=Array.isArray(data?.coaches)?data.coaches:[];
   classes=Array.isArray(data?.classes)?data.classes:[];
-  campuses=Array.isArray(data?.campuses)?data.campuses:[];
+  campuses=Array.isArray(data?.campuses)?data.campuses.map(row=>({...row,name:campusDisplayName(row?.name||row?.code||row?.id)})):[];
   feedbacks=Array.isArray(data?.feedbacks)?data.feedbacks:[];
   matches=Array.isArray(data?.matches)?data.matches:[];
   financeOverviewData=data?.financeOverviewData||null;
@@ -393,7 +393,7 @@ function applyLoadedData(data){
     normalizeCurrentPageForRole();
     renderRoleShell();
   }
-  CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
+  CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});
   lastDataSyncAt=Date.now();
 }
 async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){

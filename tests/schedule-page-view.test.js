@@ -39,11 +39,13 @@ assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locat
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
 assert.match(fnBody('scheduleVenueOptionsForCampus'), /shilipu[\s\S]*5号场/, 'shilipu should expose 1-5 courts');
 assert.match(source, /function scheduleCampusAllowsCustomVenue\(/, 'schedule page should expose custom venue rule by campus');
-assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /guowang[\s\S]*国网/, 'guowang should allow custom venue input');
+assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return true/, 'all campuses should allow custom venue input');
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
-assert.match(fnBody('openScheduleModal'), /人和课程[\s\S]*关联班次[\s\S]*本次参与人[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*课程类型[\s\S]*教练[\s\S]*消课节数[\s\S]*扣减课包[\s\S]*地点/, 'schedule modal should follow the simplified create/edit flow');
+assert.match(fnBody('openScheduleModal'), /人和课程[\s\S]*关联班次[\s\S]*本次参与人[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*课程类型[\s\S]*教练[\s\S]*消课时数[\s\S]*扣减课包[\s\S]*地点/, 'schedule modal should follow the simplified create/edit flow');
+assert.match(source, /function refreshScheduleTimeDerivedFields\(/, 'schedule modal should expose a time-derived refresh helper');
+assert.match(fnBody('openScheduleModal'), /refreshScheduleTimeDerivedFields/, 'schedule modal should refresh lesson units when time changes');
 assert.match(fnBody('openScheduleModal'), /上课日期与时间[\s\S]*课程类型[\s\S]*每周重复/, 'weekly repeat should stay with lesson time settings');
 assert.match(fnBody('openScheduleModal'), /sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external venue schedules should capture venue, court, and notes');
 assert.doesNotMatch(fnBody('openScheduleModal'), /sch_externalAddress|地址/, 'external venue schedules should not ask for an address');

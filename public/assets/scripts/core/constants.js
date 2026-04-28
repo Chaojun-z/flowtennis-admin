@@ -1,11 +1,18 @@
 const API='';
 let CAMPUS={};
+function campusDisplayName(value){
+  const raw=String(value??'').trim();
+  if(!raw||raw==='undefined'||raw==='null')return '';
+  if(raw==='__external__'||raw==='external')return '校区外';
+  if(raw==='mabao'||raw==='顺义马坡')return '马坡';
+  return raw;
+}
 function cn(k){
   const raw=String(k??'').trim();
   if(!raw||raw==='undefined'||raw==='null')return '';
-  if(CAMPUS[raw])return CAMPUS[raw];
+  if(CAMPUS[raw])return campusDisplayName(CAMPUS[raw]);
   const hit=campuses.find(c=>[c.code,c.id,c.name].map(v=>String(v||'').trim()).includes(raw));
-  return hit?.name||raw;
+  return campusDisplayName(hit?.name||raw);
 }
 function campusOpts(sel){return Object.entries(CAMPUS).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${v}</option>`).join('');}
 const VENUES=['1号场','2号场','3号场','4号场'];

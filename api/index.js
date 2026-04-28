@@ -193,6 +193,17 @@ function withTimeout(promise,ms,fallback){
   return Promise.race([promise,new Promise((res)=>setTimeout(()=>res(fallback),ms))]);
 }
 function isTableMissingError(err){return /not.*exist|table.*not.*exist|OTSObjectNotExist/i.test(String(err?.message||err||''));}
+function campusDisplayName(value,externalVenueName=''){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  if(raw==='__external__'||raw==='external')return String(externalVenueName||'').trim()||'校区外';
+  if(raw==='mabao'||raw==='顺义马坡')return '马坡';
+  if(raw==='shilipu'||raw==='朝阳十里堡')return '朝阳十里堡';
+  if(raw==='guowang'||raw==='朝阳国网'||raw==='国家网球中心')return '国家网球中心';
+  if(raw==='langang'||raw==='朝阳蓝色港湾')return '蓝色港湾';
+  if(raw==='chaojun'||raw==='朝珺私教')return '朝珺私教';
+  return raw;
+}
 async function putFeedback(id,row){
   try{return await put(T_FEEDBACKS,id,row);}
   catch(err){
@@ -947,17 +958,19 @@ async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reaso
 function collectScheduleRiskWarnings(candidate,schedules,excludeId){
   if(!isBillableSchedule(candidate)||!candidate.coach||!candidate.campus||!candidate.startTime||!candidate.endTime)return[];
   const warnings=[];
+  const currentCampusText=campusDisplayName(candidate.campus,candidate.externalVenueName||candidate.venue);
   for(const rec of schedules||[]){
     if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
     if(rec.coach!==candidate.coach||!rec.campus||rec.campus===candidate.campus)continue;
+    const prevCampusText=campusDisplayName(rec.campus,rec.externalVenueName||rec.venue);
     const gapBefore=minutesBetween(rec.endTime,candidate.startTime);
     if(gapBefore!==null&&dateMs(rec.endTime)<=dateMs(candidate.startTime)&&gapBefore<60){
-      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${rec.campus}，下一节在 ${candidate.campus}，中间仅 ${gapBefore} 分钟`);
+      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${prevCampusText}，下一节在 ${currentCampusText}，中间仅 ${gapBefore} 分钟`);
       continue;
     }
     const gapAfter=minutesBetween(candidate.endTime,rec.startTime);
     if(gapAfter!==null&&dateMs(candidate.endTime)<=dateMs(rec.startTime)&&gapAfter<60){
-      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${candidate.campus}，下一节在 ${rec.campus}，中间仅 ${gapAfter} 分钟`);
+      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${currentCampusText}，下一节在 ${prevCampusText}，中间仅 ${gapAfter} 分钟`);
     }
   }
   return [...new Set(warnings)];
@@ -1312,12 +1325,38 @@ async function rebuildCoachScheduleIndexRows(keys=[]){
   const now=new Date().toISOString();
   for(const key of normalized){
     const scheduleIds=rows.filter(row=>coachScheduleIndexKeysFromRecord(row).includes(key)).map(row=>row.id).filter(Boolean);
-    await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds,updatedAt:now});
+    try{
+      await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds,updatedAt:now});
+    }catch(err){
+      if(!isTableMissingError(err))throw err;
+      await mkTable(T_COACH_SCHEDULE_INDEX);
+      await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds,updatedAt:now});
+    }
   }
 }
 async function syncCoachScheduleIndexes(oldRecord,nextRecord){
-  const keys=[...coachScheduleIndexKeysFromRecord(oldRecord),...coachScheduleIndexKeysFromRecord(nextRecord)];
-  await rebuildCoachScheduleIndexRows(keys);
+  const oldKeys=coachScheduleIndexKeysFromRecord(oldRecord);
+  const nextKeys=coachScheduleIndexKeysFromRecord(nextRecord);
+  const keys=[...new Set([...oldKeys,...nextKeys])];
+  for(const key of keys){
+    const hasOld=oldKeys.includes(key);
+    const hasNext=nextKeys.includes(key);
+    const row=await getCachedRow(T_COACH_SCHEDULE_INDEX,key).catch(()=>null);
+    if(!row){
+      await rebuildCoachScheduleIndexRows([key]);
+      continue;
+    }
+    const scheduleIds=new Set(parseArr(row.scheduleIds).filter(Boolean));
+    if(hasOld&&oldRecord?.id)scheduleIds.delete(oldRecord.id);
+    if(hasNext&&nextRecord?.id)scheduleIds.add(nextRecord.id);
+    try{
+      await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds:[...scheduleIds],updatedAt:new Date().toISOString()});
+    }catch(err){
+      if(!isTableMissingError(err))throw err;
+      await mkTable(T_COACH_SCHEDULE_INDEX);
+      await put(T_COACH_SCHEDULE_INDEX,key,{scheduleIds:[...scheduleIds],updatedAt:new Date().toISOString()});
+    }
+  }
 }
 async function getCoachIndexedScheduleForUser(user){
   const keys=coachScheduleIndexKeysForUser(user);
@@ -1624,7 +1663,7 @@ async function applyStudentIdentityUpdate(oldStudent,nextStudent){
 async function validateScheduleSave(nextRec,oldRec){
   const schedules=await timed('scan schedule for conflict check',()=>getCachedScan(T_SCHEDULE));
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
-  validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>getCachedScan(T_COURTS).catch(()=>[])));
+  validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
   const oldDelta=scheduleLessonDelta(oldRec);
   const nextDelta=scheduleLessonDelta(nextRec);
   if(nextRec?.classId&&isBillableSchedule(nextRec)){
@@ -5265,12 +5304,12 @@ module.exports = async (req, res) => {
       await init();
       await maybeRepairImportedLedgerDuplicates();
       const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
-        timed('load-all scan courts',()=>scan(T_COURTS)),
+        timed('load-all scan courts',()=>getCachedScan(T_COURTS).catch(()=>[])),
         timed('load-all scan students',()=>scan(T_STUDENTS)),
         timed('load-all scan products',()=>scan(T_PRODUCTS)),
         timed('load-all scan packages',()=>scan(T_PACKAGES).catch(()=>[])),
         timed('load-all scan purchases',()=>scan(T_PURCHASES).catch(()=>[])),
-        timed('load-all scan entitlements',()=>scan(T_ENTITLEMENTS).catch(()=>[])),
+        timed('load-all scan entitlements',()=>getCachedScan(T_ENTITLEMENTS).catch(()=>[])),
         timed('load-all scan entitlement ledger',()=>scan(T_ENTITLEMENT_LEDGER).catch(()=>[])),
         timed('load-all scan financial ledger',()=>scan(T_FINANCIAL_LEDGER).catch(()=>[])),
         timed('load-all scan membership plans',()=>scan(T_MEMBERSHIP_PLANS).catch(()=>[])),
@@ -5280,11 +5319,11 @@ module.exports = async (req, res) => {
         timed('load-all scan membership account events',()=>scan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[])),
         timed('load-all scan price plans',()=>scan(T_PRICE_PLANS).catch(()=>[])),
         timed('load-all scan plans',()=>scan(T_PLANS)),
-        timed('load-all scan schedule',()=>scan(T_SCHEDULE)),
+        timed('load-all scan schedule',()=>getCachedScan(T_SCHEDULE).catch(()=>[])),
         timed('load-all scan coaches',()=>scan(T_COACHES).catch(()=>[])),
         timed('load-all scan classes',()=>scan(T_CLASSES).catch(()=>[])),
         timed('load-all scan campuses',()=>listCampusesWithDefaults()),
-        timed('load-all scan feedbacks',()=>withTimeout(scanFeedbacks().catch(()=>[]),3000,[]))
+        timed('load-all scan feedbacks',()=>withTimeout(scanFeedbacks().catch(()=>[]),1500,[]))
       ]);
       const normalizedMembershipPlans=(Array.isArray(membershipPlans)?membershipPlans:[]).map(normalizeMembershipPlanViewRecord);
       const membershipPlanMap=new Map(normalizedMembershipPlans.map(p=>[p.id,p]));
@@ -5750,9 +5789,42 @@ module.exports = async (req, res) => {
         return timedEndpointMetric('schedule.save',async()=>{
           try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
           const ex=await get(T_SCHEDULE,id).catch(()=>null);
+          const isCancelOnlyUpdate=String(body.status||'').trim()==='已取消'&&Object.keys(body||{}).every(key=>['status','cancelReason'].includes(key));
           const r={...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()};
           const oldDelta=scheduleLessonDelta(ex);
           const nextDelta=scheduleLessonDelta(r);
+          if(isCancelOnlyUpdate&&ex){
+            const feedbacks=await timed('schedule cancel feedback guard',()=>withTimeout(scanFeedbacks().catch(()=>[]),1500,[]));
+            assertScheduleEditableAfterFeedback(ex,r,feedbacks);
+            const oldEntDeltas=scheduleEntitlementDeltas(ex);
+            await timed('schedule cancel persist',()=>put(T_SCHEDULE,id,r));
+            const appliedEntitlements=[];
+            const appliedClassDeltas=[];
+            try{
+              const entitlements=[];
+              const entitlementLedger=[];
+              for(const oldEntDelta of oldEntDeltas){
+                const updated=await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','取消排课退回权益',user);
+                if(updated){
+                  entitlements.push(updated.entitlement);
+                  entitlementLedger.push(updated.ledger);
+                  appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'取消排课失败重新扣回权益'});
+                }
+              }
+              let lessonUpdate=null;
+              if(oldDelta){
+                lessonUpdate=await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds));
+                appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});
+              }
+              await syncCoachScheduleIndexes(ex,r);
+              return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),warnings:[]});
+            }catch(err){
+              await put(T_SCHEDULE,id,ex).catch(()=>null);
+              for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
+              for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
+              throw err;
+            }
+          }
           const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
             const risk=await validateScheduleSave(r,ex);
             assertScheduleEntitlementRequired(r);

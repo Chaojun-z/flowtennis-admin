@@ -125,7 +125,7 @@ async function doDelete(){
     else if(delType==='schedule'){schedules=schedules.filter(u=>u.id!==delId);mergeScheduleSaveResult(result,null);}
     else if(delType==='class'){classes=classes.filter(u=>u.id!==delId);plans=plans.filter(p=>p.classId!==delId);}
     else if(delType==='coach')coaches=coaches.filter(u=>u.id!==delId);
-    else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});buildCampusTabs();}
+    else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});buildCampusTabs();}
     else if(delType==='membership-plan')membershipPlans=membershipPlans.filter(u=>u.id!==delId);
     closeConf();closeModal();toast(result?.archived?'已隐藏':'已删除',result?.archived?'warn':'error');renderAll();
   }catch(e){toast('删除失败：'+e.message,'error');closeConf();}
