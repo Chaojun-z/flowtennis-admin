@@ -24,6 +24,13 @@ assert.match(fnBody('saveSchedule'), /buildRepeatScheduleSeeds\(/, 'saving sched
 assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should persist coach late fields');
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
+assert.match(fnBody('openCancelScheduleModal'), /确认取消/, 'schedule cancel should use a dedicated confirm modal instead of reopening the edit form');
+assert.match(fnBody('openCancelScheduleModal'), /取消本节及后续未上课的循环课/, 'repeat schedules should expose a future-lessons cancel option');
+assert.match(fnBody('openCancelScheduleModal'), /schedule-cancel-summary/, 'schedule cancel modal should use a readable summary block instead of low-contrast warning text');
+assert.match(fnBody('openCancelScheduleModal'), /schedule-cancel-scope/, 'schedule cancel modal should render the cancellation scope options in a dedicated stacked layout');
+assert.match(fnBody('confirmScheduleCancel'), /effectiveScheduleStatus\(item\)==='已排课'/, 'repeat cancellation should only touch not-yet-started lessons');
+assert.match(fnBody('confirmScheduleCancel'), /scope==='future'/, 'repeat cancellation should support current-and-future scope');
+assert.doesNotMatch(fnBody('confirmScheduleCancel'), /window\.confirm\(/, 'schedule cancel flow should not fall back to the browser confirm');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*校区内[\s\S]*校区外/, 'schedule modal should support in-campus and off-campus lesson location types');
@@ -46,6 +53,8 @@ assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /确认规则|确认截�
 assert.doesNotMatch(fnBody('openScheduleDetail'), /通知 \/ 确认|确认规则/, 'schedule detail should not show fake notification rules');
 assert.match(fnBody('scheduleStatusLabel'), /已结束[\s\S]*已下课/, 'schedule ended status should display as 已下课');
 assert.match(fnBody('renderSchedule'), /scheduleStatusLabel/, 'schedule list should render user-facing status text');
+assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
+assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
 assert.match(source, /function openCoachLateSettlementModal\(/, 'schedule page should expose coach late settlement modal');
 assert.match(source, /迟到月结/, 'schedule page should expose coach late monthly settlement entry');
 assert.doesNotMatch(source, /id="page-schedule"[\s\S]*?openCoachLateSettlementModal\(\)[\s\S]*?id="page-coachops"/, 'late monthly settlement should not be a primary schedule-table action');
