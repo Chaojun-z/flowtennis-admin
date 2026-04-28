@@ -203,6 +203,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-text-primary{font-size:13px;font-weight:400;color:#332A24}
 .tms-text-secondary{font-size:13px;color:#8C7B6E;margin-top:0;font-weight:400}
 .tms-text-remark{font-size:13px;color:#A3968F;line-height:1.5;white-space:normal;min-width:140px;max-width:200px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-overflow:ellipsis}
+.tms-text-remark-3{-webkit-line-clamp:3;max-width:none}
 .student-summary-strong{color:#8C3F21;font-weight:700}
 .tms-cell-text{font-size:13px;color:#332A24;font-weight:400}
 .tms-cell-text.is-muted{color:#A3968F}
@@ -467,6 +468,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .tms-form-control{height:38px;padding:0 12px;font-size:13px;font-weight:400}
 .modal.modal-court div.tms-form-control:not(.tms-readonly-text){display:flex;align-items:center}
 .modal.modal-court .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding:12px 14px}
+#page-leads .tms-table-wrapper{max-height:calc(100vh - 230px)}
+#page-leads .tms-table td{padding-top:7px;padding-bottom:7px;vertical-align:top}
+#page-leads .tms-table th{padding-top:9px;padding-bottom:9px}
+#page-leads .tms-text-remark{max-width:none}
+.tms-text-remark-1{-webkit-line-clamp:1;max-width:none}
 .modal.modal-court textarea.tms-form-control{height:auto;min-height:62px;padding:10px 12px}
 .modal.modal-court .coach-date-btn,.modal.modal-court .tms-dropdown.tms-dropdown-form .tms-dropdown-display{height:38px;font-size:13px;font-weight:400}
 .modal.modal-court .coach-date-btn{background:#FDF7F2;box-shadow:none;text-align:left;justify-content:flex-start}

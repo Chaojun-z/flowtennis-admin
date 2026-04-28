@@ -28,12 +28,15 @@ const DEFAULT_ADMIN_BOOTSTRAP_PASSWORD = process.env.DEFAULT_ADMIN_BOOTSTRAP_PAS
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 const MATCH_PREPAY_WINDOW_HOURS = 2;
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
+  T_LEADS,
+  T_LEAD_FOLLOWUPS,
+  T_LEAD_IMPORT_BATCHES,
   T_COURTS,
   T_STUDENTS,
   T_PRODUCTS,
@@ -69,7 +72,10 @@ const HOT_SCAN_TABLES=new Map([
   [T_MEMBERSHIP_ACCOUNT_EVENTS,{ttlMs:60000}],
   [T_COACHES,{ttlMs:60000}],
   [T_CAMPUSES,{ttlMs:60000}],
-  [T_PRICE_PLANS,{ttlMs:60000}]
+  [T_PRICE_PLANS,{ttlMs:60000}],
+  [T_LEADS,{ttlMs:60000}],
+  [T_LEAD_FOLLOWUPS,{ttlMs:60000}],
+  [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}]
 ]);
 const HOT_GET_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
@@ -79,7 +85,9 @@ const HOT_GET_TABLES=new Map([
   [T_MEMBERSHIP_PLANS,{ttlMs:60000}],
   [T_MEMBERSHIP_ACCOUNTS,{ttlMs:60000}],
   [T_MEMBERSHIP_ORDERS,{ttlMs:60000}],
-  [T_PRICE_PLANS,{ttlMs:60000}]
+  [T_PRICE_PLANS,{ttlMs:60000}],
+  [T_LEADS,{ttlMs:60000}],
+  [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}]
 ]);
 const hotScanCache=new Map();
 const hotGetCache=new Map();
@@ -145,7 +153,8 @@ async function getCachedRow(t,id){
 function put(t,id,attrs){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function putIfAbsent(t,id,attrs){return withStorageRetry(()=>new Promise((res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
 function get(t,id){return withStorageRetry(()=>new Promise((res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
-function scan(t){return withStorageRetry(()=>new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();}));}
+function scanSinglePage(t,limit=5000){return withStorageRetry(()=>new Promise((res,rej)=>{gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit},(e,d)=>{if(e)return rej(e);const rows=[];(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});res(rows);});}));}
+function scan(t){if(t===T_COURTS)return scanSinglePage(t,5000);return withStorageRetry(()=>new Promise((res,rej)=>{const rows=[];function f(sk){gc().getRange({tableName:t,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:500},(e,d)=>{if(e)return rej(e);(d.rows||[]).forEach(r=>{if(!r.primaryKey)return;const obj={id:r.primaryKey[0].value};(r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});rows.push(obj);});d.nextStartPrimaryKey?f(d.nextStartPrimaryKey):res(rows);});}f();}));}
 function del(t,id){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);return withStorageRetry(()=>new Promise((res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
 async function clearTables(storage,tables){
   const result={success:true,total:0,tables:[]};
@@ -993,6 +1002,8 @@ function assertCanWriteFeedback(user,schedule){
 }
 function filterLoadAllForUser(data,user){
   const normalized={
+    leads:Array.isArray(data?.leads)?data.leads:[],
+    leadFollowups:Array.isArray(data?.leadFollowups)?data.leadFollowups:[],
     courts:Array.isArray(data?.courts)?data.courts:[],
     students:Array.isArray(data?.students)?data.students:[],
     products:Array.isArray(data?.products)?data.products:[],
@@ -1055,6 +1066,8 @@ function filterLoadAllForUser(data,user){
     status:p.status||'active'
   }));
   return {
+    leads:[],
+    leadFollowups:[],
     courts:[],
     students:normalized.students.filter(s=>studentIds.has(s.id)),
     products:normalized.products,
@@ -1812,7 +1825,7 @@ async function init(){
     }
     if(ENABLE_TABLE_BOOTSTRAP){
       let stepStartedAt=Date.now();
-      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
+      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS,T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES])await mkTable(t);
       console.log(`[api-init] ensure bootstrap tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       stepStartedAt=Date.now();
       await bootstrapDefaultUsers();
@@ -1858,6 +1871,10 @@ async function init(){
 }
 
 scheduleInitInBackground();
+
+async function ensureLeadTables(){
+  for(const table of [T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES])await mkTable(table);
+}
 
 function sendJson(res,body,code=200){
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -2935,6 +2952,530 @@ function assertPhone(value){
 function normalizeMoney(value){
   const n=parseFloat(String(value??'').replace(/,/g,''));
   return Number.isFinite(n)?n:0;
+}
+function cleanLeadText(value){
+  return String(value||'').trim();
+}
+function normalizeLeadBoolean(value){
+  const raw=String(value||'').trim();
+  if(!raw)return false;
+  return /^(是|已转化|已报名|true|1|yes)$/i.test(raw);
+}
+function extractLeadPhoneMeta(value){
+  const raw=cleanLeadText(value);
+  const match=raw.match(/1[3-9]\d{9}/);
+  const phone=match?match[0]:'';
+  const wechatName=cleanLeadText(raw.replace(phone,'').replace(/[\/|｜，,;；]+/g,' '));
+  return {raw,phone,wechatName};
+}
+function deriveLeadSystemStatus(input={}){
+  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter);
+  const studentId=cleanLeadText(input.studentId);
+  const courtId=cleanLeadText(input.courtId);
+  if(studentId&&courtId)return '已转课程+订场';
+  if(studentId)return '已转课程';
+  if(courtId)return '已转订场';
+  if(rawStatus.includes('已报名'))return '已转课程';
+  if(rawStatus==='已定场'||rawStatus.includes('定场'))return '已转订场';
+  if(rawStatus==='已流失'||rawStatus==='无意向')return '已流失';
+  if(rawStatus==='体验课预约')return '已约体验';
+  return '跟进中';
+}
+function normalizeLeadRecord(input={},opts={}){
+  const now=opts.now||new Date().toISOString();
+  const id=input.id||opts.id||uuidv4();
+  const phoneMeta=extractLeadPhoneMeta(input['微信名/电话']??input.contactRaw??input.displayName??'');
+  const studentId=cleanLeadText(input.studentId);
+  const courtId=cleanLeadText(input.courtId);
+  const concern=cleanLeadText(input.latestConcern??input['用户顾虑点']);
+  const conclusion=cleanLeadText(input.latestConclusion??input['沟通情况和方案建议']);
+  const rawStatus=cleanLeadText(input.rawStatus??input['跟进状态']);
+  const next={
+    id,
+    leadDate:cleanLeadText(input.leadDate??input['线索时间']),
+    displayName:cleanLeadText(input.displayName??phoneMeta.wechatName??phoneMeta.phone??phoneMeta.raw),
+    phone:assertPhone(input.phone??phoneMeta.phone),
+    wechatName:cleanLeadText(input.wechatName??phoneMeta.wechatName),
+    level:cleanLeadText(input.level??input['水平']),
+    profileNote:cleanLeadText(input.profileNote??input['其他信息（包含年纪等）']),
+    source:cleanLeadText(input.source??input['线索渠道']),
+    consultType:cleanLeadText(input.consultType??input['咨询需求']),
+    intentLevel:cleanLeadText(input.intentLevel??input['意向类型']),
+    owner:cleanLeadText(input.owner??input['跟进人']),
+    rawStatus,
+    trialAtRaw:cleanLeadText(input.trialAtRaw??input['体验课时间']),
+    enrollAtRaw:cleanLeadText(input.enrollAtRaw??input['正式课报名时间']),
+    convertedFlag:normalizeLeadBoolean(input.convertedFlag??input['是否转化']),
+    formalCoach:cleanLeadText(input.formalCoach??input['正式课教练']),
+    lostReason:cleanLeadText(input.lostReason??input['未成交原因']),
+    latestConcern:concern,
+    latestConclusion:conclusion,
+    nextAction:cleanLeadText(input.nextAction),
+    lastFollowupAt:cleanLeadText(input.lastFollowupAt),
+    nextFollowupAt:cleanLeadText(input.nextFollowupAt),
+    studentId,
+    courtId,
+    membershipAccountId:cleanLeadText(input.membershipAccountId),
+    isCourseConverted:input.isCourseConverted===true||!!studentId,
+    isCourtConverted:input.isCourtConverted===true||!!courtId,
+    isMembershipConverted:input.isMembershipConverted===true||!!cleanLeadText(input.membershipAccountId),
+    closedAt:cleanLeadText(input.closedAt),
+    createdAt:input.createdAt||now,
+    updatedAt:now
+  };
+  next.systemStatus=deriveLeadSystemStatus(next);
+  return next;
+}
+function normalizeLeadFollowupRecord(input={},opts={}){
+  const now=opts.now||new Date().toISOString();
+  return {
+    id:input.id||opts.id||uuidv4(),
+    leadId:cleanLeadText(input.leadId),
+    followupAt:cleanLeadText(input.followupAt)||now,
+    followupBy:cleanLeadText(input.followupBy),
+    followupType:cleanLeadText(input.followupType)||'manual',
+    concern:cleanLeadText(input.concern),
+    communicationNote:cleanLeadText(input.communicationNote),
+    statusAfter:cleanLeadText(input.statusAfter),
+    conclusion:cleanLeadText(input.conclusion||input.communicationNote),
+    nextFollowupAt:cleanLeadText(input.nextFollowupAt),
+    nextAction:cleanLeadText(input.nextAction),
+    createdAt:input.createdAt||now,
+    updatedAt:now
+  };
+}
+function applyLeadFollowupSnapshot(lead,followup){
+  const next={
+    ...lead,
+    lastFollowupAt:cleanLeadText(followup.followupAt)||lead.lastFollowupAt||'',
+    latestConcern:cleanLeadText(followup.concern)||lead.latestConcern||'',
+    latestConclusion:cleanLeadText(followup.conclusion)||lead.latestConclusion||'',
+    nextFollowupAt:cleanLeadText(followup.nextFollowupAt)||'',
+    nextAction:cleanLeadText(followup.nextAction)||'',
+    rawStatus:cleanLeadText(followup.statusAfter)||lead.rawStatus||'',
+    updatedAt:followup.updatedAt||new Date().toISOString()
+  };
+  next.systemStatus=deriveLeadSystemStatus(next);
+  return next;
+}
+function isLeadPending(lead,today){
+  if(!lead?.nextFollowupAt||!today)return false;
+  const nextMs=dateMs(lead.nextFollowupAt);
+  const todayMs=dateMs(today);
+  if(!Number.isFinite(nextMs)||!Number.isFinite(todayMs))return false;
+  return nextMs<=todayMs;
+}
+function leadMatchesFilters(lead,filters={}){
+  const search=cleanLeadText(filters.search).toLowerCase();
+  if(search){
+    const haystack=[
+      lead.displayName,
+      lead.phone,
+      lead.wechatName,
+      lead.source,
+      lead.consultType,
+      lead.owner,
+      lead.profileNote
+    ].join(' ').toLowerCase();
+    if(!haystack.includes(search))return false;
+  }
+  if(filters.source&&cleanLeadText(lead.source)!==cleanLeadText(filters.source))return false;
+  if(filters.consultType&&cleanLeadText(lead.consultType)!==cleanLeadText(filters.consultType))return false;
+  if(filters.owner&&cleanLeadText(lead.owner)!==cleanLeadText(filters.owner))return false;
+  if(filters.systemStatus&&cleanLeadText(lead.systemStatus)!==cleanLeadText(filters.systemStatus))return false;
+  if(filters.pendingOnly&&!isLeadPending(lead,filters.today||new Date().toISOString()))return false;
+  return true;
+}
+function createLeadService({storage,idFactory=uuidv4,now=()=>new Date().toISOString()}={}){
+  if(!storage)throw new Error('缺少线索存储实现');
+  const nextNow=()=>String(now());
+  const nextId=()=>String(idFactory());
+  return {
+    async getLead(id){
+      return storage.get(T_LEADS,String(id));
+    },
+    async listLeads(filters={}){
+      const rows=await storage.scan(T_LEADS);
+      return (rows||[])
+        .filter(row=>leadMatchesFilters(row,filters))
+        .sort((a,b)=>dateMs(b.updatedAt||b.createdAt)-dateMs(a.updatedAt||a.createdAt));
+    },
+    async createLead(input={}){
+      const nowValue=nextNow();
+      const leadId=nextId();
+      let lead=normalizeLeadRecord({...input,id:leadId,createdAt:nowValue},{id:leadId,now:nowValue});
+      const followups=[];
+      if(input.firstFollowup){
+        const followupId=nextId();
+        const followup=normalizeLeadFollowupRecord({...input.firstFollowup,leadId,id:followupId,createdAt:nowValue},{id:followupId,now:nowValue});
+        lead=applyLeadFollowupSnapshot(lead,followup);
+        await storage.put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        followups.push(followup);
+      }
+      await storage.put(T_LEADS,lead.id,lead);
+      return {lead,followups};
+    },
+    async updateLead(id,input={}){
+      const current=await storage.get(T_LEADS,String(id));
+      if(!current)throw new Error('线索不存在');
+      const lead=normalizeLeadRecord({...current,...input,id:String(id),createdAt:current.createdAt},{id:String(id),now:nextNow()});
+      await storage.put(T_LEADS,lead.id,lead);
+      return lead;
+    },
+    async listLeadFollowups(leadId){
+      const rows=await storage.scan(T_LEAD_FOLLOWUPS);
+      return (rows||[])
+        .filter(row=>String(row.leadId||'')===String(leadId))
+        .sort((a,b)=>dateMs(b.followupAt||b.createdAt)-dateMs(a.followupAt||a.createdAt));
+    },
+    async addLeadFollowup(leadId,input={}){
+      const current=await storage.get(T_LEADS,String(leadId));
+      if(!current)throw new Error('线索不存在');
+      const nowValue=nextNow();
+      const followupId=nextId();
+      const followup=normalizeLeadFollowupRecord({...input,leadId:String(leadId),id:followupId,createdAt:nowValue},{id:followupId,now:nowValue});
+      const lead=applyLeadFollowupSnapshot(current,followup);
+      await storage.put(T_LEAD_FOLLOWUPS,followup.id,followup);
+      await storage.put(T_LEADS,lead.id,lead);
+      return {lead,followup};
+    }
+  };
+}
+function splitCsvLine(line=''){
+  const cells=[];
+  let current='';
+  let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(inQuotes&&line[i+1]==='"'){current+='"';i++;continue;}
+      inQuotes=!inQuotes;
+      continue;
+    }
+    if(ch===','&&!inQuotes){
+      cells.push(current);
+      current='';
+      continue;
+    }
+    current+=ch;
+  }
+  cells.push(current);
+  return cells;
+}
+function parseCsvText(text=''){
+  const lines=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(line=>line!==''||text.includes('\n'));
+  return lines.map(splitCsvLine);
+}
+const LEAD_IMPORT_REQUIRED_COLUMNS=[
+  '线索时间',
+  '微信名/电话',
+  '水平',
+  '其他信息（包含年纪等）',
+  '线索渠道',
+  '咨询需求',
+  '意向类型',
+  '跟进人',
+  '跟进状态',
+  '体验课时间',
+  '正式课报名时间',
+  '用户顾虑点',
+  '沟通情况和方案建议',
+  '是否转化',
+  '正式课教练',
+  '未成交原因'
+];
+function findLeadImportHeaderIndex(rows=[]){
+  return rows.findIndex(row=>{
+    const cells=(row||[]).map(cell=>cleanLeadText(cell));
+    return cells.includes('序号')&&cells.includes('线索时间')&&cells.includes('微信名/电话');
+  });
+}
+function buildLeadImportHeaderRows(rows=[],headerIndex=-1){
+  const mainHeader=(rows[headerIndex]||[]).map(cell=>cleanLeadText(cell));
+  const subHeader=(rows[headerIndex+1]||[]).map(cell=>cleanLeadText(cell));
+  const isTwoRowHeader=subHeader.some(cell=>['水平','其他信息（包含年纪等）','用户顾虑点','沟通情况和方案建议'].includes(cell));
+  if(!isTwoRowHeader)return {header:mainHeader,dataStartIndex:headerIndex+1};
+  const header=mainHeader.map((cell,index)=>subHeader[index]||cell);
+  return {header,dataStartIndex:headerIndex+2};
+}
+function normalizeLeadImportRows(input={}){
+  if(Array.isArray(input.rows))return input.rows.map(row=>normalizeLeadRecord(row));
+  const csvText=String(input.csvText||'');
+  if(!csvText.trim())return [];
+  const rows=parseCsvText(csvText);
+  if(rows.length<2)return [];
+  const headerIndex=findLeadImportHeaderIndex(rows);
+  if(headerIndex<0)throw new Error(`缺少必需列：${LEAD_IMPORT_REQUIRED_COLUMNS.join('、')}`);
+  const {header,dataStartIndex}=buildLeadImportHeaderRows(rows,headerIndex);
+  const missing=LEAD_IMPORT_REQUIRED_COLUMNS.filter(col=>!header.includes(col));
+  if(missing.length)throw new Error(`缺少必需列：${missing.join('、')}`);
+  const dataRows=rows.slice(dataStartIndex).filter(row=>row.some(cell=>cleanLeadText(cell)));
+  return dataRows.map(row=>{
+    const raw={};
+    for(const col of LEAD_IMPORT_REQUIRED_COLUMNS)raw[col]=row[header.indexOf(col)]||'';
+    return normalizeLeadRecord(raw);
+  });
+}
+function buildLeadInitialFollowup(lead){
+  return normalizeLeadFollowupRecord({
+    leadId: lead.id,
+    followupAt: lead.leadDate || lead.createdAt || new Date().toISOString(),
+    followupBy: lead.owner,
+    followupType: 'import',
+    concern: lead.latestConcern,
+    communicationNote: lead.latestConclusion,
+    statusAfter: lead.rawStatus,
+    conclusion: lead.latestConclusion,
+    nextFollowupAt: lead.nextFollowupAt,
+    nextAction: lead.nextAction
+  });
+}
+function buildLeadDedupKey(input={}){
+  return [
+    cleanLeadText(input.leadDate),
+    cleanLeadText(input.displayName),
+    assertPhone(input.phone||''),
+    cleanLeadText(input.wechatName),
+    cleanLeadText(input.level),
+    cleanLeadText(input.profileNote),
+    cleanLeadText(input.source),
+    cleanLeadText(input.consultType),
+    cleanLeadText(input.intentLevel),
+    cleanLeadText(input.owner),
+    cleanLeadText(input.rawStatus),
+    cleanLeadText(input.trialAtRaw),
+    cleanLeadText(input.enrollAtRaw),
+    cleanLeadText(input.latestConcern),
+    cleanLeadText(input.latestConclusion),
+    input.convertedFlag===true?'1':'0',
+    cleanLeadText(input.formalCoach),
+    cleanLeadText(input.lostReason)
+  ].join('|');
+}
+function dedupeLeadRows(rows=[]){
+  const seen=new Set();
+  const next=[];
+  for(const row of rows||[]){
+    const key=buildLeadDedupKey(row);
+    if(seen.has(key))continue;
+    seen.add(key);
+    next.push(row);
+  }
+  return next;
+}
+function leadNameCandidates(lead){
+  return [lead.displayName,lead.wechatName].map(cleanLeadText).filter(Boolean);
+}
+function matchLeadToStudent(lead,students=[]){
+  const phone=assertPhone(lead.phone||'');
+  if(phone){
+    const exact=(students||[]).find(student=>assertPhone(student.phone||'')===phone);
+    if(exact)return {matchType:'auto',record:exact};
+  }
+  const names=leadNameCandidates(lead);
+  if(!names.length)return {matchType:'none',record:null};
+  const exactName=(students||[]).find(student=>names.includes(cleanLeadText(student.name)));
+  return exactName?{matchType:'possible',record:exactName}:{matchType:'none',record:null};
+}
+function matchLeadToCourt(lead,courts=[]){
+  const phone=assertPhone(lead.phone||'');
+  if(phone){
+    const exact=(courts||[]).find(court=>assertPhone(court.phone||'')===phone);
+    if(exact)return {matchType:'auto',record:exact};
+  }
+  const names=leadNameCandidates(lead);
+  if(!names.length)return {matchType:'none',record:null};
+  const exactName=(courts||[]).find(court=>names.includes(cleanLeadText(court.name)));
+  return exactName?{matchType:'possible',record:exactName}:{matchType:'none',record:null};
+}
+function matchLeadToMembership(courtId,membershipAccounts=[]){
+  if(!cleanLeadText(courtId))return null;
+  return (membershipAccounts||[]).find(account=>String(account.courtId||'')===String(courtId) && account.status!=='voided')||null;
+}
+function leadImportPreviewSummary(rows=[]){
+  return rows.reduce((acc,row)=>{
+    acc.totalRows++;
+    acc.importableRows++;
+    if(row.studentMatchType==='auto')acc.autoLinkedStudents++;
+    if(row.courtMatchType==='auto')acc.autoLinkedCourts++;
+    if(row.studentMatchType==='possible'||row.courtMatchType==='possible')acc.possibleMatches++;
+    if(row.studentMatchType==='none'&&row.courtMatchType==='none')acc.unmatchedRows++;
+    acc.byStatus[row.systemStatus]=(acc.byStatus[row.systemStatus]||0)+1;
+    return acc;
+  },{totalRows:0,importableRows:0,errorRows:0,autoLinkedStudents:0,autoLinkedCourts:0,possibleMatches:0,unmatchedRows:0,byStatus:{}});
+}
+function buildLeadImportPreviewRows(leads,{students=[],courts=[],membershipAccounts=[]}={}){
+  return (leads||[]).map(lead=>{
+    const studentMatch=matchLeadToStudent(lead,students);
+    const courtMatch=matchLeadToCourt(lead,courts);
+    const membershipMatch=courtMatch.matchType==='auto'
+      ? matchLeadToMembership(courtMatch.record?.id||'',membershipAccounts)
+      : null;
+    return {
+      ...lead,
+      studentId: studentMatch.matchType==='auto' ? studentMatch.record.id : '',
+      courtId: courtMatch.matchType==='auto' ? courtMatch.record.id : '',
+      membershipAccountId: membershipMatch?.id||'',
+      isCourseConverted: studentMatch.matchType==='auto',
+      isCourtConverted: courtMatch.matchType==='auto',
+      isMembershipConverted: !!membershipMatch,
+      studentMatchType: studentMatch.matchType,
+      studentMatchId: studentMatch.record?.id||'',
+      studentMatchName: studentMatch.record?.name||'',
+      courtMatchType: courtMatch.matchType,
+      courtMatchId: courtMatch.record?.id||'',
+      courtMatchName: courtMatch.record?.name||'',
+      systemStatus: deriveLeadSystemStatus({
+        ...lead,
+        studentId: studentMatch.matchType==='auto' ? studentMatch.record?.id : '',
+        courtId: courtMatch.matchType==='auto' ? courtMatch.record?.id : ''
+      })
+    };
+  });
+}
+function createLeadImportService({storage,idFactory=uuidv4,now=()=>new Date().toISOString()}={}){
+  if(!storage)throw new Error('缺少线索导入存储实现');
+  const nextNow=()=>String(now());
+  const nextId=()=>String(idFactory());
+  return {
+    previewImport({csvText='',rows=[],students=[],courts=[],membershipAccounts=[]}={}){
+      const leads=normalizeLeadImportRows(Array.isArray(rows)&&rows.length?{rows}:{csvText});
+      const previewRows=buildLeadImportPreviewRows(leads,{students,courts,membershipAccounts});
+      return {rows:previewRows,summary:leadImportPreviewSummary(previewRows)};
+    },
+    async commitImport({batchKey='',previewRows=[],csvText='',students=[],courts=[],membershipAccounts=[]}={}){
+      const finalBatchKey=cleanLeadText(batchKey)||`batch:${Buffer.from(String(csvText||'')).toString('base64').slice(0,32)}`;
+      const existing=await storage.get(T_LEAD_IMPORT_BATCHES,finalBatchKey);
+      if(existing)return existing;
+      const preview=Array.isArray(previewRows)&&previewRows.length
+        ? {rows:previewRows,summary:leadImportPreviewSummary(previewRows)}
+        : this.previewImport({csvText,students,courts,membershipAccounts});
+      const existingLeads=await storage.scan(T_LEADS).catch(()=>[]);
+      const existingKeys=new Set((existingLeads||[]).map(buildLeadDedupKey));
+      const rowsToCreate=dedupeLeadRows(preview.rows).filter(row=>!existingKeys.has(buildLeadDedupKey(row)));
+      const createdLeads=[];
+      const createdFollowups=[];
+      for(const row of rowsToCreate){
+        const nowValue=nextNow();
+        const leadId=nextId();
+        const lead=normalizeLeadRecord({...row,id:leadId,createdAt:nowValue},{id:leadId,now:nowValue});
+        const followupId=nextId();
+        const followup=normalizeLeadFollowupRecord({...buildLeadInitialFollowup(lead),id:followupId,leadId:lead.id,createdAt:nowValue},{id:followupId,now:nowValue});
+        await storage.put(T_LEADS,lead.id,lead);
+        await storage.put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        createdLeads.push(lead);
+        createdFollowups.push(followup);
+      }
+      const result={
+        batchKey:finalBatchKey,
+        leadCount:createdLeads.length,
+        followupCount:createdFollowups.length,
+        skippedDuplicates:(preview.rows||[]).length-rowsToCreate.length,
+        summary:{...preview.summary,importableRows:rowsToCreate.length}
+      };
+      await storage.put(T_LEAD_IMPORT_BATCHES,finalBatchKey,result);
+      return result;
+    }
+  };
+}
+function buildLeadStudentRecord(lead,{id=uuidv4(),now=new Date().toISOString()}={}){
+  return {
+    id,
+    name: cleanLeadText(lead.wechatName||lead.displayName)||'未命名线索',
+    phone: assertPhone(lead.phone||''),
+    primaryCoach: cleanLeadText(lead.formalCoach||''),
+    type: cleanLeadText(lead.consultType).includes('青少') ? '青少年' : '成人',
+    source: cleanLeadText(lead.source),
+    activityRange: '',
+    campus: '',
+    notes: [cleanLeadText(lead.profileNote),cleanLeadText(lead.latestConcern),cleanLeadText(lead.latestConclusion)].filter(Boolean).join('；'),
+    createdAt: now,
+    updatedAt: now
+  };
+}
+function buildLeadCourtRecord(lead,{studentId='',id=uuidv4(),now=new Date().toISOString()}={}){
+  return normalizeCourtRecord({
+    id,
+    name: cleanLeadText(lead.wechatName||lead.displayName)||'未命名线索',
+    phone: assertPhone(lead.phone||''),
+    studentId: cleanLeadText(studentId),
+    studentIds: studentId?[studentId]:[],
+    campus: '',
+    owner: cleanLeadText(lead.owner),
+    notes: [cleanLeadText(lead.profileNote),cleanLeadText(lead.latestConcern),cleanLeadText(lead.latestConclusion)].filter(Boolean).join('；'),
+    history: [],
+    status: 'active',
+    createdAt: now,
+    updatedAt: now
+  });
+}
+function createLeadConversionService({storage,idFactory=uuidv4,now=()=>new Date().toISOString()}={}){
+  if(!storage)throw new Error('缺少线索转化存储实现');
+  const nextNow=()=>String(now());
+  const nextId=()=>String(idFactory());
+  async function getLeadOrThrow(leadId){
+    const lead=await storage.get(T_LEADS,String(leadId));
+    if(!lead)throw new Error('线索不存在');
+    return lead;
+  }
+  async function getMembershipAccountByCourtId(courtId){
+    const rows=await storage.scan(T_MEMBERSHIP_ACCOUNTS);
+    return (rows||[]).find(account=>String(account.courtId||'')===String(courtId)&&account.status!=='voided')||null;
+  }
+  async function persistLead(lead){
+    await storage.put(T_LEADS,lead.id,lead);
+    return lead;
+  }
+  return {
+    async convertStudent(leadId,{studentId=''}={}){
+      const lead=await getLeadOrThrow(leadId);
+      if(lead.studentId){
+        return {lead,student:await storage.get(T_STUDENTS,lead.studentId),created:false};
+      }
+      let student=cleanLeadText(studentId)?await storage.get(T_STUDENTS,studentId):null;
+      const nowValue=nextNow();
+      if(!student){
+        student=buildLeadStudentRecord(lead,{id:nextId(),now:nowValue});
+        await storage.put(T_STUDENTS,student.id,student);
+      }
+      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now:nowValue});
+      await persistLead(nextLead);
+      return {lead:nextLead,student,created:!cleanLeadText(studentId)};
+    },
+    async convertCourt(leadId,{courtId=''}={}){
+      const lead=await getLeadOrThrow(leadId);
+      if(lead.courtId){
+        return {lead,court:await storage.get(T_COURTS,lead.courtId),created:false};
+      }
+      let court=cleanLeadText(courtId)?await storage.get(T_COURTS,courtId):null;
+      const nowValue=nextNow();
+      if(!court){
+        court=buildLeadCourtRecord(lead,{studentId:lead.studentId,id:nextId(),now:nowValue});
+        await storage.put(T_COURTS,court.id,court);
+      }
+      const membershipAccount=await getMembershipAccountByCourtId(court.id);
+      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now:nowValue});
+      await persistLead(nextLead);
+      return {lead:nextLead,court,membershipAccount,created:!cleanLeadText(courtId)};
+    },
+    async linkStudent(leadId,studentId){
+      const lead=await getLeadOrThrow(leadId);
+      const student=await storage.get(T_STUDENTS,String(studentId));
+      if(!student)throw new Error('学员不存在');
+      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now:nextNow()});
+      await persistLead(nextLead);
+      return {lead:nextLead,student};
+    },
+    async linkCourt(leadId,courtId){
+      const lead=await getLeadOrThrow(leadId);
+      const court=await storage.get(T_COURTS,String(courtId));
+      if(!court)throw new Error('订场用户不存在');
+      const membershipAccount=await getMembershipAccountByCourtId(court.id);
+      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now:nextNow()});
+      await persistLead(nextLead);
+      return {lead:nextLead,court,membershipAccount};
+    }
+  };
 }
 function defaultMabaoPricePlans(){
   const venue=[
@@ -4639,7 +5180,9 @@ module.exports = async (req, res) => {
     if(path==='/load-all'&&method==='GET'){
       await init();
       await maybeRepairImportedLedgerDuplicates();
-      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
+      const [leads,leadFollowups,rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
+        timed('load-all scan leads',()=>scan(T_LEADS).catch(()=>[])),
+        timed('load-all scan lead followups',()=>scan(T_LEAD_FOLLOWUPS).catch(()=>[])),
         timed('load-all scan courts',()=>scan(T_COURTS)),
         timed('load-all scan students',()=>scan(T_STUDENTS)),
         timed('load-all scan products',()=>scan(T_PRODUCTS)),
@@ -4667,6 +5210,8 @@ module.exports = async (req, res) => {
       const reconciled=await runMembershipReconcile({accounts:membershipAccounts,courts:rawCourts});
       const courts=reconciled.courts||rawCourts;
       const loaded=filterLoadAllForUser({
+        leads:Array.isArray(leads)?leads:[],
+        leadFollowups:Array.isArray(leadFollowups)?leadFollowups:[],
         courts:Array.isArray(courts)?courts:[],
         students:Array.isArray(students)?students:[],
         products:Array.isArray(products)?products:[],
@@ -4689,6 +5234,14 @@ module.exports = async (req, res) => {
         feedbacks:Array.isArray(feedbacks)?feedbacks:[]
       },user);
       return sendJson(res,{...loaded,user});
+    }
+    if(path==='/lead-followups'&&method==='GET'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const leadId=cleanLeadText(query.get('leadId'));
+      const rows=await getCachedScan(T_LEAD_FOLLOWUPS).catch(()=>[]);
+      return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
     }
     if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
     if(path==='/price-plans'){
@@ -5284,6 +5837,199 @@ module.exports = async (req, res) => {
         stats
       });
     }
+    if(path==='/leads'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      if(method==='GET'){
+        const rows=await getCachedScan(T_LEADS).catch(()=>[]);
+        const q=cleanLeadText(query.get('q')).toLowerCase();
+        const source=cleanLeadText(query.get('source'));
+        const consultType=cleanLeadText(query.get('consultType'));
+        const owner=cleanLeadText(query.get('owner'));
+        const systemStatus=cleanLeadText(query.get('systemStatus'));
+        const waiting=cleanLeadText(query.get('waiting'));
+        const dateFrom=cleanLeadText(query.get('dateFrom'));
+        const dateTo=cleanLeadText(query.get('dateTo'));
+        const todayStr=new Date().toISOString().slice(0,10);
+        const filtered=rows.filter(row=>{
+          if(q&&!searchHit(q,row.displayName,row.wechatName,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
+          if(source&&row.source!==source)return false;
+          if(consultType&&row.consultType!==consultType)return false;
+          if(owner&&row.owner!==owner)return false;
+          if(systemStatus&&row.systemStatus!==systemStatus)return false;
+          if(dateFrom&&String(row.leadDate||'')<dateFrom)return false;
+          if(dateTo&&String(row.leadDate||'')>dateTo)return false;
+          if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
+          if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
+          return true;
+        }).sort((a,b)=>String(b.lastFollowupAt||b.leadDate||'').localeCompare(String(a.lastFollowupAt||a.leadDate||'')));
+        return sendJson(res,filtered);
+      }
+      if(method==='POST'){
+        const now=new Date().toISOString();
+        const lead=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
+        await put(T_LEADS,lead.id,lead);
+        const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
+        if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        return sendJson(res,{lead,followup});
+      }
+    }
+    const leadIdM=path.match(/^\/leads\/([^/]+)$/);
+    if(leadIdM){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await ensureLeadTables();
+      const leadId=leadIdM[1];
+      if(method==='PUT'){
+        await init();
+        const old=await get(T_LEADS,leadId).catch(()=>null);
+        if(!old)return sendJson(res,{error:'线索不存在'},404);
+        const next=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
+        await put(T_LEADS,leadId,next);
+        return sendJson(res,next);
+      }
+    }
+    const leadFollowupsM=path.match(/^\/leads\/([^/]+)\/followups$/);
+    if(leadFollowupsM){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const leadId=leadFollowupsM[1];
+      const lead=await get(T_LEADS,leadId).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      if(method==='GET'){
+        const rows=(await getCachedScan(T_LEAD_FOLLOWUPS).catch(()=>[]))
+          .filter(row=>String(row.leadId||'')===String(leadId))
+          .sort((a,b)=>String(b.followupAt||b.createdAt||'').localeCompare(String(a.followupAt||a.createdAt||'')));
+        return sendJson(res,rows);
+      }
+      if(method==='POST'){
+        const followup=normalizeLeadFollowupRecord({...body,leadId,followupBy:body.followupBy||user.name||''},{now:new Date().toISOString()});
+        await put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        const nextLead=applyLeadFollowupSnapshot(lead,followup);
+        await put(T_LEADS,leadId,nextLead);
+        return sendJson(res,{followup,lead:nextLead});
+      }
+    }
+    if(path==='/leads/import-preview'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const leads=normalizeLeadImportRows(body);
+      const [students,courts,membershipAccounts]=await Promise.all([
+        getCachedScan(T_STUDENTS).catch(()=>[]),
+        getCachedScan(T_COURTS).catch(()=>[]),
+        getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])
+      ]);
+      const rows=buildLeadImportPreviewRows(leads,{students,courts,membershipAccounts});
+      return sendJson(res,{rows,summary:leadImportPreviewSummary(rows)});
+    }
+    if(path==='/leads/import-commit'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const batchKey=cleanLeadText(body.batchKey)||`preview:${Buffer.from(String(body.csvText||'')).toString('base64').slice(0,48)}`;
+      const existingBatch=await get(T_LEAD_IMPORT_BATCHES,batchKey).catch(()=>null);
+      if(existingBatch)return sendJson(res,existingBatch);
+      const previewRows=Array.isArray(body.rows)&&body.rows.length?body.rows:buildLeadImportPreviewRows(normalizeLeadImportRows(body),{
+        students:await getCachedScan(T_STUDENTS).catch(()=>[]),
+        courts:await getCachedScan(T_COURTS).catch(()=>[]),
+        membershipAccounts:await getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])
+      });
+      const existingLeads=await getCachedScan(T_LEADS).catch(()=>[]);
+      const existingKeys=new Set((existingLeads||[]).map(buildLeadDedupKey));
+      const rowsToCreate=dedupeLeadRows(previewRows).filter(row=>!existingKeys.has(buildLeadDedupKey(row)));
+      const createdLeads=[];
+      const createdFollowups=[];
+      for(const row of rowsToCreate){
+        const lead=normalizeLeadRecord(row,{id:row.id,now:new Date().toISOString()});
+        await put(T_LEADS,lead.id,lead);
+        createdLeads.push(lead);
+        const followup=buildLeadInitialFollowup(lead);
+        await put(T_LEAD_FOLLOWUPS,followup.id,followup);
+        createdFollowups.push(followup);
+      }
+      const result={
+        batchKey,
+        importedAt:new Date().toISOString(),
+        leadCount:createdLeads.length,
+        followupCount:createdFollowups.length,
+        skippedDuplicates:(previewRows||[]).length-rowsToCreate.length,
+        summary:{...leadImportPreviewSummary(previewRows),importableRows:rowsToCreate.length}
+      };
+      await put(T_LEAD_IMPORT_BATCHES,batchKey,result);
+      return sendJson(res,result);
+    }
+    const leadConvertStudentM=path.match(/^\/leads\/([^/]+)\/convert-student$/);
+    if(leadConvertStudentM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const leadId=leadConvertStudentM[1];
+      const lead=await get(T_LEADS,leadId).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      if(lead.studentId){
+        const student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
+        return sendJson(res,{lead,student,created:false});
+      }
+      let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
+      if(!student){
+        student=buildLeadStudentRecord(lead,{now:new Date().toISOString()});
+        await put(T_STUDENTS,student.id,student);
+      }
+      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,student,created:!body.studentId});
+    }
+    const leadConvertCourtM=path.match(/^\/leads\/([^/]+)\/convert-court$/);
+    if(leadConvertCourtM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const leadId=leadConvertCourtM[1];
+      const lead=await get(T_LEADS,leadId).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      if(lead.courtId){
+        const court=await get(T_COURTS,lead.courtId).catch(()=>null);
+        return sendJson(res,{lead,court,created:false});
+      }
+      let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
+      if(!court){
+        court=buildLeadCourtRecord(lead,{studentId:lead.studentId,now:new Date().toISOString()});
+        await put(T_COURTS,court.id,court);
+      }
+      const membershipAccount=(await getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
+      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,court,created:!body.courtId});
+    }
+    const leadLinkStudentM=path.match(/^\/leads\/([^/]+)\/link-student$/);
+    if(leadLinkStudentM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const lead=await get(T_LEADS,leadLinkStudentM[1]).catch(()=>null);
+      const student=await get(T_STUDENTS,body.studentId).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      if(!student)return sendJson(res,{error:'学员不存在'},404);
+      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,student});
+    }
+    const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
+    if(leadLinkCourtM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const lead=await get(T_LEADS,leadLinkCourtM[1]).catch(()=>null);
+      const court=await get(T_COURTS,body.courtId).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      if(!court)return sendJson(res,{error:'订场用户不存在'},404);
+      const membershipAccount=(await getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
+      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,court,membershipAccount});
+    }
     if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,rows);const schedule=await getCachedScan(T_SCHEDULE).catch(()=>[]);return sendJson(res,filterLoadAllForUser({classes:rows,schedule},user).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(path==='/campuses'){await init();if(method==='GET')return sendJson(res,await listCampusesWithDefaults());if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}}
@@ -5295,6 +6041,23 @@ module.exports = async (req, res) => {
 module.exports._test={
   MEMBERSHIP_TABLES,
   TEST_DATA_RESET_TABLES,
+  deriveLeadSystemStatus,
+  normalizeLeadRecord,
+  normalizeLeadFollowupRecord,
+  applyLeadFollowupSnapshot,
+  normalizeLeadImportRows,
+  buildLeadInitialFollowup,
+  buildLeadDedupKey,
+  dedupeLeadRows,
+  buildLeadImportPreviewRows,
+  leadImportPreviewSummary,
+  matchLeadToStudent,
+  matchLeadToCourt,
+  createLeadService,
+  createLeadImportService,
+  createLeadConversionService,
+  buildLeadStudentRecord,
+  buildLeadCourtRecord,
   scheduleLessonDelta,
   effectiveScheduleStatus,
   scheduleLessonChargeStatus,
@@ -5359,6 +6122,12 @@ module.exports._test={
   extractWechatOpenId,
   buildWechatBoundUser,
   buildWechatUnboundUser,
+  extractLeadPhoneMeta,
+  deriveLeadSystemStatus,
+  normalizeLeadRecord,
+  normalizeLeadFollowupRecord,
+  applyLeadFollowupSnapshot,
+  createLeadService,
   buildAdminUserView,
   buildWechatAccessTokenUrl,
   extractWechatAccessToken,

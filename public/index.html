@@ -42,6 +42,7 @@
   </div>
   <!-- 管理员视角 -->
   <div id="sbAdminView">
+  <div class="sb-item" onclick="goPage('leads',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></span>线索池</div>
   <div class="sb-sec">教学管理</div>
   <div class="sb-item active" onclick="goPage('students',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>学员信息</div>
   <div class="sb-item" onclick="goPage('classes',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>班次管理</div>
@@ -77,6 +78,30 @@
     <button class="coach-top-logout" id="coachTopLogout" onclick="doLogout()">退出</button>
   </div>
   <div class="content">
+    <!-- 线索池 -->
+    <div class="page-section" id="page-leads">
+      <div class="tms-toolbar">
+        <div class="tms-filters">
+          <div class="tms-search-wrapper">
+            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号、微信名" oninput="onLeadFilterChange()">
+          </div>
+          <div id="leadSourceFilterHost"></div>
+          <div id="leadConsultFilterHost"></div>
+          <div id="leadStatusFilterHost"></div>
+          <div id="leadOwnerFilterHost"></div>
+        </div>
+        <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-ghost" onclick="openLeadImportPreviewModal()">导入预览</button>
+          <button class="tms-btn tms-btn-primary" onclick="openLeadModal(null)">＋ 新增线索</button>
+        </div>
+      </div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">线索时间</th><th style="width:120px">微信名</th><th style="width:130px">电话</th><th style="width:90px">水平</th><th style="width:110px">线索渠道</th><th style="width:150px">咨询需求</th><th style="width:90px">意向类型</th><th style="width:220px">基本信息</th><th style="width:100px">跟进人</th><th style="width:90px">跟进次数</th><th style="width:100px">当前状态</th><th style="width:120px">最近跟进</th><th style="width:120px">转化结果</th><th style="width:260px">沟通情况</th><th class="tms-sticky-r" style="width:150px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="leadTbody"></tbody></table></div>
+        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="leadPagerInfo">共 0 条</span><div id="leadPageSize"></div></div><div class="tms-page-numbers" id="leadPagerBtns"></div></div>
+      </div>
+    </div>
     <!-- 学员信息 -->
     <div class="page-section active" id="page-students">
       <div class="tms-stats-row" id="studentStatsRow"></div>
@@ -647,6 +672,7 @@
 <script src="/assets/scripts/pages/admin-users.js?v=20260421-wechat-bindings"></script>
 <script src="/assets/scripts/pages/coaches.js"></script>
 <script src="/assets/scripts/pages/campusmgr.js"></script>
+<script src="/assets/scripts/pages/leads.js"></script>
 <script src="/assets/scripts/pages/students.js"></script>
 <script src="/assets/scripts/pages/schedule.js"></script>
 <script src="/assets/scripts/pages/classes.js"></script>

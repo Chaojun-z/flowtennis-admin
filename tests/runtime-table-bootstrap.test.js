@@ -15,13 +15,16 @@ assert.deepStrictEqual(
     'ft_entitlement_ledger',
     'ft_class_nos',
     'ft_price_plans',
+    'ft_leads',
+    'ft_lead_followups',
+    'ft_lead_import_batches',
     'ft_membership_plans',
     'ft_membership_accounts',
     'ft_membership_orders',
     'ft_membership_benefit_ledger',
     'ft_membership_account_events'
   ],
-  'runtime ensured tables should cover feedback, course package, and membership tables'
+  'runtime ensured tables should cover feedback, course package, lead, and membership tables'
 );
 
 console.log('runtime table bootstrap tests passed');

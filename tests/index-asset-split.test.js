@@ -16,6 +16,7 @@ assert.match(html, /assets\/scripts\/core\/bootstrap\.js/, 'index.html should lo
 assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should load admin-users page module');
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
+assert.match(html, /assets\/scripts\/pages\/leads\.js/, 'index.html should load leads page module');
 assert.match(html, /assets\/scripts\/pages\/classes\.js/, 'index.html should load classes page module');
 assert.match(html, /assets\/scripts\/pages\/plans\.js/, 'index.html should load plans page module');
 assert.match(html, /assets\/scripts\/pages\/products\.js/, 'index.html should load products page module');
@@ -27,6 +28,8 @@ assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should lo
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
+assert.match(html, /goPage\('leads',this\)[\s\S]*线索池/, 'index.html should render the leads sidebar entry');
+assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 
 assert.doesNotMatch(html, /<style>[\s\S]*<\/style>/, 'index.html should no longer keep inline style blocks');
 assert.doesNotMatch(html, /<script>[\s\S]*<\/script>/, 'index.html should no longer keep one giant inline script block');
