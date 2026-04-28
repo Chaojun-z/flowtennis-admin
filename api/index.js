@@ -5721,7 +5721,14 @@ module.exports = async (req, res) => {
             if(nextDelta)lessonApplied=true;
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-            const notification=await notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message}));
+          const notification=await timed(
+            'schedule create coach notification',
+            ()=>withTimeout(
+              notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message})),
+              5000,
+              {sent:false,error:'微信通知超时'}
+            )
+          );
             Object.assign(r,buildScheduleNotificationUpdate(r,notification,'schedule_created',new Date().toISOString()));
             await put(T_SCHEDULE,id,r);
             await syncCoachScheduleIndexes(null,r);
@@ -5749,7 +5756,11 @@ module.exports = async (req, res) => {
           const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
             const risk=await validateScheduleSave(r,ex);
             assertScheduleEntitlementRequired(r);
-            assertScheduleEditableAfterFeedback(ex,r,await scanFeedbacks().catch(()=>[]));
+            assertScheduleEditableAfterFeedback(
+              ex,
+              r,
+              await timed('schedule update feedback guard',()=>withTimeout(scanFeedbacks().catch(()=>[]),3000,[]))
+            );
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
             const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
             const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
