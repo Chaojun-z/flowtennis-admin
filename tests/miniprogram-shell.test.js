@@ -25,7 +25,8 @@ assert.strictEqual(appConfig.__usePrivacyCheck__, true, 'mini program should ena
 const indexWxml = readText('wechat-miniprogram/miniprogram/pages/index/index.wxml');
 assert.match(indexWxml, /网球兄弟/, 'index page should render the Gemini login title');
 assert.match(indexWxml, /FLOWTENNIS · 管理系统/, 'index page should render the Gemini login subtitle');
-assert.match(indexWxml, /请输入账号ID（不是姓名）/, 'index page should render the mapped account input');
+assert.match(indexWxml, /请输入账号或手机号/, 'index page should render the unified account input');
+assert.doesNotMatch(indexWxml, /请输入账号ID（不是姓名）/, 'index page should not force account-id-only copy');
 assert.match(indexWxml, /请输入密码/, 'index page should render the mapped password input');
 assert.match(indexWxml, /checkbox/, 'index page should render an agreement checkbox');
 assert.match(indexWxml, /我已阅读并同意/, 'index page should render the agreement consent copy');
@@ -43,10 +44,11 @@ assert.match(indexJs, /SCHEDULE_TEMPLATE_ID/, 'index page should read the schedu
 assert.match(indexJs, /COURSE_REMINDER_TEMPLATE_ID/, 'index page should read the course reminder subscribe template ID from config');
 assert.match(indexJs, /loginWithPassword/, 'index page should call the real account password login helper');
 assert.match(indexJs, /bindWechatAfterLogin/, 'index page should bind the current mini program WeChat account after password login');
-assert.match(indexJs, /function shouldBindWechatAfterLogin/, 'index page should decide whether WeChat bind is still needed after password login');
 assert.match(indexJs, /function assertCoachLoginUser/, 'index page should validate coach role before entering the coach mini program');
 assert.match(indexJs, /user\.role !== 'editor'/, 'index page should reject non-coach accounts on the login page');
-assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*shouldBindWechatAfterLogin\(data\.user \|\| \{\}\)\s*\? bindWechatAfterLogin\(\)\s*: Promise\.resolve\(\)/, 'index page should skip repeated WeChat bind when the coach account is already bound');
+assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*bindWechatAfterLogin\(\)/, 'index page should always attempt mini program WeChat bind after password login');
+assert.doesNotMatch(indexJs, /function shouldBindWechatAfterLogin/, 'index page should not keep stale conditional bind helper');
+assert.doesNotMatch(indexJs, /wechatBound/, 'index page should not depend on cached wechatBound state to decide binding');
 assert.match(indexJs, /wx\.requestSubscribeMessage/, 'index page should request schedule subscribe permission from a tap');
 assert.match(indexJs, /tmplIds:\s*\[SCHEDULE_TEMPLATE_ID,\s*COURSE_REMINDER_TEMPLATE_ID\]/, 'index page should request both schedule and course reminder templates');
 assert.match(indexJs, /pages\/schedule\/schedule/, 'index page should navigate into the native schedule page after the tap');

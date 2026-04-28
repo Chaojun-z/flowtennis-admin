@@ -77,23 +77,25 @@ function hasScheduleFeedback(item = {}) {
 
 function workbenchTodoState(item = {}, now = new Date()) {
   if (item.status === '已取消') return null;
-  if (item.workbenchState && item.workbenchState.code) {
-    const code = String(item.workbenchState.code || '');
-    const label = String(item.workbenchState.label || '');
-    if (code === 'pending') return { code, label, className: 'tag-danger' };
-    if (code === 'live') return { code, label, className: 'tag-green' };
-    if (code === 'upcoming' || code === 'travel') return { code, label, className: 'tag-green' };
-    return null;
-  }
   const start = parseDate(item.startTime);
   const end = parseDate(item.endTime || item.startTime);
-  if (start && start > now) {
-    const diff = Math.round((start.getTime() - now.getTime()) / 60000);
-    if (diff <= 30) return { code: 'upcoming', label: '即将开始', className: 'tag-green' };
-    return null;
+  if (start && end && start <= now && now < end) {
+    return { code: 'live', label: '进行中', className: 'tag-green' };
   }
   if (end && end <= now && !hasScheduleFeedback(item)) {
     return { code: 'pending', label: '待反馈', className: 'tag-danger' };
+  }
+  if (start && start > now) {
+    const diff = Math.round((start.getTime() - now.getTime()) / 60000);
+    if (diff <= 30) return { code: 'upcoming', label: '即将开始', className: 'tag-green' };
+  }
+  if (item.workbenchState && item.workbenchState.code) {
+    const code = String(item.workbenchState.code || '');
+    const label = String(item.workbenchState.label || '');
+    if (code === 'travel' && start && start > now) return { code, label, className: 'tag-green' };
+    if (code === 'upcoming' && start && start > now) return { code, label, className: 'tag-green' };
+    if (code === 'live' && start && end && start <= now && now < end) return { code, label, className: 'tag-green' };
+    if (code === 'pending' && end && end <= now && !hasScheduleFeedback(item)) return { code, label, className: 'tag-danger' };
   }
   return null;
 }

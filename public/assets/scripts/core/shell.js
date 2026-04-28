@@ -1,3 +1,21 @@
+let globalLiveClockTimer=null;
+function formatGlobalLiveClock(now=shanghaiNow()){
+  return `${now.getMonth()+1}/${now.getDate()} ${['周日','周一','周二','周三','周四','周五','周六'][now.getDay()]} ${now.toTimeString().slice(0,8)}`;
+}
+function renderGlobalLiveClock(){
+  const el=document.getElementById('globalLiveClock');
+  if(!el)return;
+  if(!currentUser){
+    el.textContent='';
+    return;
+  }
+  el.innerHTML=`<span class="live-dot"></span>${formatGlobalLiveClock()}`;
+}
+function ensureGlobalLiveClock(){
+  renderGlobalLiveClock();
+  if(globalLiveClockTimer)return;
+  globalLiveClockTimer=setInterval(renderGlobalLiveClock,1000);
+}
 function renderRoleShell(){
   const isAdmin=currentUser?.role==='admin';
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
@@ -7,6 +25,7 @@ function renderRoleShell(){
   const campusMgr=document.getElementById('sbCampusMgr');
   if(campusMgr)campusMgr.style.display=isAdmin?'':'none';
   syncViewportMode();
+  ensureGlobalLiveClock();
 }
 function showApp(){
   dataRequestVersion++;

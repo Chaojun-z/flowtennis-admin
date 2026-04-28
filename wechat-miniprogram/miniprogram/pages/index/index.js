@@ -2,8 +2,10 @@ const { SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID } = require('../../con
 const { loginWithPassword, bindWechatAfterLogin, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 
 function enterCoachPortal() {
-  wx.navigateTo({ url: '/pages/schedule/schedule' });
+  wx.redirectTo({ url: '/pages/schedule/schedule' });
 }
+
+function noop() {}
 
 function assertCoachLoginUser(user = {}) {
   if (user.role !== 'editor') {
@@ -37,9 +39,9 @@ Page({
     wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
   requestScheduleNotice() {
+    if (!wx.requestSubscribeMessage) return;
     wx.requestSubscribeMessage({
-      tmplIds: [SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID],
-      complete: enterCoachPortal
+      tmplIds: [SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID]
     });
   },
   submitLogin() {
@@ -60,11 +62,15 @@ Page({
         assertCoachLoginUser(data.user || {});
         return data;
       })
-      .then(() => bindWechatAfterLogin())
       .then(() => {
         const app = getApp();
         if (app && app.globalData) app.globalData.privacyAccepted = true;
-        this.requestScheduleNotice();
+        enterCoachPortal();
+        bindWechatAfterLogin()
+          .catch(noop)
+          .finally(() => {
+            this.requestScheduleNotice();
+          });
       })
       .catch((error) => {
         wx.showToast({

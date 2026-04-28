@@ -35,11 +35,16 @@ assert.match(fnBody('openAdminUserModal'), /au_role/, 'account modal should incl
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
 assert.match(fnBody('openAdminUserModal'), /au_match_ops/, 'account modal should configure match ops permission');
 assert.match(fnBody('openAdminUserModal'), /au_match_finance/, 'account modal should configure match finance permission');
+assert.match(fnBody('openAdminUserModal'), /账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。/, 'account create modal should describe login by account in neutral wording');
+assert.doesNotMatch(fnBody('openAdminUserModal'), /请用这里的账号ID登录，不是姓名/, 'account create modal should not force account-id-only wording');
 assert.match(fnBody('saveAdminUser'), /matchPermissions/, 'account save should submit match permissions');
 assert.match(fnBody('saveAdminUser'), /\/admin\/create-user/, 'account create should call create-user api');
 assert.match(fnBody('saveAdminUser'), /\/admin\/update-user/, 'account edit should call update-user api');
+assert.match(fnBody('saveAdminUser'), /账号创建成功 ✓/, 'account create should keep the success toast');
+assert.doesNotMatch(fnBody('saveAdminUser'), /请用账号ID/, 'account create success toast should not force account-id wording');
 assert.match(fnBody('toggleAdminUserStatus'), /\/admin\/update-user/, 'account status toggle should reuse update-user api');
 assert.match(fnBody('toggleAdminUserStatus'), /status/, 'account status toggle should send status field');
 assert.match(fnBody('unbindAdminUserWechat'), /clearWechat/, 'wechat unbind should send clearWechat flag');
+assert.doesNotMatch(source, /function defaultLandingPageForUser/, 'admin login flow should no longer force a landing page before shell bootstrap');
 
 console.log('admin users page tests passed');

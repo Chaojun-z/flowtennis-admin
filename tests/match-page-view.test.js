@@ -10,6 +10,7 @@ assert.match(html, /goPage\('matches'/, 'sidebar should expose match management'
 assert.match(html, /id="page-matches"/, 'admin should include match page section');
 assert.match(html, /约球管理[\s\S]*这里只看球局、订场、AA 收款和日志/, 'match page should show a clear page header instead of extra finance cards');
 assert.match(html, /id="matchTbody"/, 'match page should include a table body');
+assert.match(html, /id="matchStatusFilterHost"/, 'match page should keep the shared status filter host');
 assert.match(html, /assets\/scripts\/pages\/matches\.js/, 'index should load match page script');
 assert.match(state, /matches:\['matchesPage'\]/, 'match page should load match API data');
 assert.match(state, /matchesPage:\(\)=>apiCall\('GET','\/admin\/matches'\)/, 'match dataset loader should call admin match API');

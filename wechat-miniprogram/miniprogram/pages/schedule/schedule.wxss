@@ -1176,6 +1176,16 @@ button::after {
   --course-bg: #f0fae8;
 }
 
+.tt-course-ended {
+  --course-accent: #94a3b8;
+  --course-bg: #f1f5f9;
+}
+
+.tt-course-ended .tt-course-name,
+.tt-course-ended .tt-course-meta {
+  color: #64748b;
+}
+
 .tt-course-top {
   display: flex;
   justify-content: space-between;
@@ -2579,31 +2589,55 @@ button::after {
 .poster-sheet-body {
   flex: 1;
   min-height: 0;
-  padding: 0 32rpx 28rpx;
+  height: 0;
+  padding: 0 32rpx;
   box-sizing: border-box;
 }
 
-.poster-preview {
-  position: relative;
-  width: 560rpx;
-  min-height: 960rpx;
-  margin: 0 auto;
-  border-radius: 32rpx;
-  overflow: hidden;
-  background: #2b3a55;
-  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.12);
+.poster-sheet-content {
+  padding-bottom: 32rpx;
   box-sizing: border-box;
 }
 
 .feedback-poster-canvas {
   display: block;
   width: 560rpx;
-  height: 996rpx;
   margin: 0 auto;
   border-radius: 32rpx;
   overflow: hidden;
   background: #fff;
   box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.12);
+}
+
+.feedback-poster-image {
+  display: block;
+  width: 560rpx;
+  margin: 0 auto;
+  border-radius: 32rpx;
+  background: #fff;
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.12);
+}
+
+.poster-render-canvas {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.poster-preview-loading {
+  width: 560rpx;
+  min-height: 360rpx;
+  margin: 0 auto;
+  border-radius: 32rpx;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.08);
 }
 
 .poster-preview-top {
@@ -2758,6 +2792,8 @@ button::after {
   background: #fff;
   box-shadow: 0 -4rpx 12rpx rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .poster-action-btn {

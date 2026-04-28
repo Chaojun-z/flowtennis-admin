@@ -16,9 +16,9 @@ function classHasNextLessonWithinDays(cls,days){
   const now=Date.now(),limit=now+(parseInt(days)||0)*86400000;
   return classSchedules(cls).some(s=>{const t=new Date(String(s.startTime).replace(' ','T')).getTime();return t>=now&&t<=limit;});
 }
-function classRemainingLessons(cls){return (parseInt(cls?.totalLessons)||0)-(parseInt(cls?.usedLessons)||0);}
+function classRemainingLessons(cls){return lessonValue(cls?.totalLessons)-lessonValue(cls?.usedLessons);}
 function classRiskTags(cls){
-  const tags=[],status=cls?.status||'已排班',total=parseInt(cls?.totalLessons)||0,rem=classRemainingLessons(cls),last=classLastLesson(cls),now=Date.now();
+  const tags=[],status=cls?.status||'已排班',total=lessonValue(cls?.totalLessons),rem=classRemainingLessons(cls),last=classLastLesson(cls),now=Date.now();
   const alreadyStarted=!cls?.startDate||String(cls.startDate)<=today();
   if(status==='已排班'&&total>0&&rem<=3)tags.push('即将结课');
   if(status==='已排班'&&!classHasNextLessonWithinDays(cls,7))tags.push('未安排下次课');
@@ -93,13 +93,13 @@ function renderClasses(){
     const ids=parseArr(c.studentIds);
     const names=ids.map(sid=>{const st=students.find(x=>x.id===sid);return st?esc(st.name):esc(sid);}).join('、')||'—';
     const days=parseArr(c.scheduleDays).join(' ')||'—';
-    const tl=parseInt(c.totalLessons)||0,ul=parseInt(c.usedLessons)||0,rem=tl-ul;
+    const tl=lessonValue(c.totalLessons),ul=lessonValue(c.usedLessons),rem=tl-ul;
     const pct=tl>0?Math.round(rem/tl*100):0,pc=pct>40?'pf-gold':pct>15?'pf-warn':'pf-red';
     const last=classLastLesson(c),next=classNextLesson(c);
     const displayName=classDisplayName(c);
     const displayStatus=classDisplayStatus(c);
     const typeText=prod?.type||c.sourceType||'-';
-    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(displayName)}</div></td><td>${renderCourtCellText(c.classNo,false)}</td><td><div class="tms-text-primary">${esc(prod?.name||c.productName||'-')}</div></td><td><span class="tms-tag ${productTypeTagClass(typeText)}">${esc(typeText)}</span></td><td>${renderCourtCellText(c.startDate,false)}</td><td>${renderCourtCellText(c.endDate,false)}</td><td>${renderCourtCellText(cn(c.campus))}</td><td><div class="tms-text-remark" title="${names}">${names}</div></td><td>${renderCourtCellText(c.coach)}</td><td>${renderCourtCellText(days)}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td>${renderCourtCellText(next?.startTime?fmtDt(next.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${ul}/${tl} 剩${rem}</span></div></td><td><span class="tms-tag ${ss[displayStatus]||'tms-tag-tier-slate'}">${displayStatus}</span></td><td class="tms-sticky-r tms-action-cell" style="width:160px;padding-right:20px"><span class="tms-action-link" onclick="openClassDetail('${c.id}')">查看</span><span class="tms-action-link" onclick="openClassModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(displayName)}','class')">删除</span></td></tr>`;
+    return `<tr><td style="padding-left:20px"><div class="tms-text-primary">${esc(displayName)}</div></td><td>${renderCourtCellText(c.classNo,false)}</td><td><div class="tms-text-primary">${esc(prod?.name||c.productName||'-')}</div></td><td><span class="tms-tag ${productTypeTagClass(typeText)}">${esc(typeText)}</span></td><td>${renderCourtCellText(c.startDate,false)}</td><td>${renderCourtCellText(c.endDate,false)}</td><td>${renderCourtCellText(cn(c.campus))}</td><td><div class="tms-text-remark" title="${names}">${names}</div></td><td>${renderCourtCellText(c.coach)}</td><td>${renderCourtCellText(days)}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td>${renderCourtCellText(next?.startTime?fmtDt(next.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${lessonQty(ul)}/${lessonQty(tl)} 剩${lessonQty(rem)}</span></div></td><td><span class="tms-tag ${ss[displayStatus]||'tms-tag-tier-slate'}">${displayStatus}</span></td><td class="tms-sticky-r tms-action-cell" style="width:160px;padding-right:20px"><span class="tms-action-link" onclick="openClassDetail('${c.id}')">查看</span><span class="tms-action-link" onclick="openClassModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(displayName)}','class')">删除</span></td></tr>`;
   }).join(''):'<tr><td colspan="15"><div class="empty"><div class="empty-ico">📋</div><p>暂无班次</p></div></td></tr>';
 }
 function openClassDetail(id){

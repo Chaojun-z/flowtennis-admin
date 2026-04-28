@@ -221,7 +221,7 @@
                 <view wx:for="{{timetableDays}}" wx:key="key" class="tt-day-column {{item.columnClass}}">
                   <view wx:for="{{timetableHours}}" wx:key="*this" class="tt-grid-hour"></view>
                   <view wx:if="{{!item.items.length}}" class="tt-empty">暂无课程</view>
-                  <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course {{course.accentClass}}" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
+                  <view wx:for="{{item.items}}" wx:for-item="course" wx:key="id" class="tt-course {{course.accentClass}} {{course.endedClass}}" style="{{course.blockStyle}}" data-id="{{course.id}}" bindtap="openDetail">
                     <view class="tt-course-top"><text class="tt-course-time">{{course.timeText}}</text><text class="tt-course-type">{{course.courseTagText}}</text></view>
                     <view class="tt-course-name-row">
                       <text class="tt-course-name">{{course.student}}</text>
@@ -766,14 +766,18 @@
         </view>
       </scroll-view>
       <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="poster-sheet-body">
-        <canvas type="2d" id="feedbackPosterCanvas" class="feedback-poster-canvas"></canvas>
-        <view class="poster-save-tip">👉 手机端可直接长按海报保存</view>
+        <view class="poster-sheet-content">
+          <image wx:if="{{posterPreviewImage}}" class="feedback-poster-image" src="{{posterPreviewImage}}" mode="widthFix"></image>
+          <view wx:else class="poster-preview-loading">海报生成中...</view>
+          <view class="poster-save-tip">👉 手机端可直接长按海报保存</view>
+        </view>
       </scroll-view>
       <view class="poster-sheet-actions">
         <button class="poster-action-btn is-back" bindtap="closePoster">返回</button>
         <button class="poster-action-btn is-save" bindtap="savePosterToAlbum">保存相册</button>
         <button class="poster-action-btn is-send" bindtap="sharePoster">分享海报</button>
       </view>
+      <canvas type="2d" id="feedbackPosterCanvas" class="feedback-poster-canvas poster-render-canvas" style="height:{{posterCanvasHeightRpx}}rpx;"></canvas>
     </view>
   </block>
 </view>

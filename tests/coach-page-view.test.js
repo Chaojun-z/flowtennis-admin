@@ -19,9 +19,10 @@ assert.match(html, /id="page-coaches"[\s\S]*class="tms-toolbar"/, 'coach page sh
 assert.match(html, /id="coachSearch"[\s\S]*placeholder="搜索教练姓名、电话或备注"/, 'coach page should use the court-style search field');
 assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openCoachModal\(null\)"/, 'coach add button should use the court-style primary button');
 assert.match(html, /id="page-coaches"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'coach page should use the court-style table shell');
-assert.match(html, /id="page-myschedule"[\s\S]*id="myScheduleWeekSection"/, 'my schedule should keep the week overview shell');
+assert.match(html, /id="page-workbench"[\s\S]*id="workbenchBody"/, 'workbench should host the coach schedule shell');
+assert.doesNotMatch(html, /id="page-myschedule"/, 'standalone my schedule page should be removed');
 assert.doesNotMatch(html, /id="myScheduleStats"|id="mySchedulePrimarySection"|id="myScheduleSideSection"|id="myMobileSchedule"/, 'my schedule should remove the duplicate stat and list areas');
-assert.match(fnBody('renderMySchedule'), /本周总览/, 'my schedule should label the week overview as a secondary section');
+assert.match(fnBody('workbenchScheduleShell'), /看本周课程时间、类型和场地安排，点击课程块可直接查看详情。/, 'workbench schedule shell should show the weekly guide text next to the week controls');
 assert.match(fnBody('renderMySchedule'), /slice\(11,16\)\}\$\{s\.endTime\?' - '\+s\.endTime\.slice\(11,16\)/, 'my schedule week cards should render the time range');
 assert.match(fnBody('renderMySchedule'), /scheduleCourseType\(s\).*scheduleLocationText\(s\).*scheduleFeedbackLabel\(s\)/s, 'my schedule week cards should show course type, location, and feedback');
 assert.match(pagesCss, /#page-coaches \.tms-table\s*\{[^}]*min-width:1000px/s, 'coach table should not inherit the wide court table min width');

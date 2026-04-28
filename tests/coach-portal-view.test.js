@@ -19,6 +19,16 @@ assert.match(
   /goPage\('workbench',this\)[\s\S]*?工作台/,
   'coach sidebar should expose the new workbench entry'
 );
+assert.match(
+  source,
+  /goPage\('postfeedback',this\)[\s\S]*?课后评价/,
+  'coach sidebar should expose the new post-class feedback entry'
+);
+assert.doesNotMatch(
+  source,
+  /goPage\('myschedule',this\)[\s\S]*?我的课表/,
+  'coach sidebar should no longer keep a dedicated my-schedule entry'
+);
 
 assert.match(
   source,
@@ -30,6 +40,16 @@ assert.match(
   source,
   /id="page-workbench"/,
   'coach workbench page section should exist'
+);
+assert.match(
+  source,
+  /id="page-postfeedback"/,
+  'coach post-class feedback page section should exist'
+);
+assert.doesNotMatch(
+  source,
+  /id="page-myschedule"/,
+  'coach portal should remove the standalone my-schedule page section'
 );
 
 assert.match(
@@ -64,14 +84,14 @@ assert.match(
 
 assert.match(
   fnBody('renderWorkbench'),
-  /coach-wb-page-header[\s\S]*本周课程待办[\s\S]*coach-wb-current-time[\s\S]*coach-wb-board/,
-  'coach workbench should render the weekly shell directly'
+  /coach-wb-stats-row[\s\S]*workbenchScheduleShell/,
+  'coach workbench should render stat cards plus the shared weekly schedule shell'
 );
 
 assert.match(
   fnBody('renderWorkbench'),
-  /本周课程待办（\$\{weekLabel\}）/,
-  'coach workbench should expose dynamic weekly progress text'
+  /renderMySchedule\(\)/,
+  'coach workbench should hydrate the shared weekly schedule after rendering the shell'
 );
 
 assert.match(
@@ -104,9 +124,15 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  fnBody('renderWorkbench'),
-  /coach-wb-day-section[\s\S]*coach-wb-day-label[\s\S]*coach-wb-grid/,
-  'coach workbench should group cards by week day'
+  source,
+  /function renderPostClassFeedback\(/,
+  'coach portal should expose a dedicated post-class feedback renderer'
+);
+
+assert.match(
+  fnBody('renderPostClassFeedback'),
+  /coach-wb-board/,
+  'post-class feedback page should render the migrated weekly feedback board'
 );
 
 assert.match(
@@ -168,6 +194,11 @@ assert.match(
   /scheduleAbsentText/,
   'coach weekly schedule should show absent count for class schedules'
 );
+assert.match(
+  fnBody('renderMySchedule'),
+  /is-ended/,
+  'coach weekly schedule should mark ended lessons with a dedicated ended-state class'
+);
 
 assert.match(
   fnBody('renderMySchedule'),
@@ -176,21 +207,27 @@ assert.match(
 );
 
 assert.match(
-  html,
-  /my-schedule-mobile-list/,
-  'coach schedule should provide a mobile-friendly list for phones'
+  fnBody('workbenchScheduleShell'),
+  /workbenchScheduleMobileList/,
+  'coach workbench should provide a mobile-friendly week schedule list for phones'
 );
 
 assert.match(
-  html,
-  /id="myScheduleMobileList"[^>]*coach-mobile-list/,
-  'coach mobile schedule list should use the dedicated mobile card container'
+  fnBody('workbenchScheduleShell'),
+  /id="workbenchScheduleMobileList"[^>]*coach-mobile-list/,
+  'coach workbench mobile schedule list should use the dedicated mobile card container'
+);
+
+assert.match(
+  fnBody('workbenchScheduleShell'),
+  /看本周课程时间、类型和场地安排，点击课程块可直接查看详情。[\s\S]*workbenchMetricHelpHtml/,
+  'coach workbench should place the weekly guide text and metric help beside the week controls'
 );
 
 assert.match(
   pagesCss,
-  /coach-mobile-week-timeline[\s\S]*coach-mobile-time-rail[\s\S]*coach-mobile-day-column/,
-  'coach mobile schedule should provide an ios-like timeline with a left time rail and day columns'
+  /\.my-schedule-week \.wg-block\.is-ended\{[\s\S]*background:[\s\S]*border-color:[\s\S]*color:/,
+  'coach weekly schedule should render ended lesson blocks as grey cards'
 );
 
 assert.match(
@@ -201,13 +238,13 @@ assert.match(
 
 assert.match(
   pagesCss,
-  /body\.coach-mobile #page-workbench \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
+  /body\.coach-mobile #page-workbench \.coach-wb-stats-row,body\.coach-mobile #page-postfeedback \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
   'coach workbench should switch to a true mobile two-column stat grid'
 );
 
 assert.match(
   pagesCss,
-  /body\.coach-mobile #page-workbench \.coach-wb-grid\{grid-template-columns:1fr/,
+  /body\.coach-mobile #page-workbench \.coach-wb-grid,body\.coach-mobile #page-postfeedback \.coach-wb-grid\{grid-template-columns:1fr/,
   'coach workbench cards should stack as single-column cards on mobile'
 );
 
@@ -247,14 +284,20 @@ assert.match(
 
 assert.match(
   source,
-  /function myStudentLessonRecordHtml\(/,
-  'coach portal should expose a my-student lesson record helper'
+  /function workbenchScheduleShell\(/,
+  'coach portal should expose a shared weekly schedule shell helper for workbench'
 );
 
 assert.match(
   fnBody('myStudentLessonCount'),
   /sumScheduleLessonUnits/,
   'coach my students cumulative lessons should count lesson units, not schedule rows'
+);
+
+assert.match(
+  source,
+  /function myStudentLessonRecordHtml\(/,
+  'coach portal should expose a my-student lesson record helper'
 );
 
 assert.match(
@@ -289,7 +332,7 @@ assert.doesNotMatch(
 
 assert.match(
   fnBody('normalizeCurrentPageForRole'),
-  /if\(isCoach\)\{[\s\S]*if\(!\['workbench','myschedule','mystudents','myclasses'\]\.includes\(currentPage\)\)currentPage='workbench'/,
+  /if\(isCoach\)\{[\s\S]*if\(!\['workbench','postfeedback','mystudents','myclasses'\]\.includes\(currentPage\)\)currentPage='workbench'/,
   'quiet sync should keep the current coach page instead of forcing workbench'
 );
 

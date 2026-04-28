@@ -37,7 +37,7 @@ function openPendingScheduleDeepLink(){
   const exists=schedules.some(s=>s.id===scheduleId);
   if(!exists)return;
   sessionStorage.removeItem(PENDING_SCHEDULE_ID_KEY);
-  const page=currentUser?.role==='editor'&&currentUser?.coachName?'myschedule':'schedule';
+  const page=currentUser?.role==='editor'&&currentUser?.coachName?'workbench':'schedule';
   goPage(page,null,true);
   setTimeout(()=>openScheduleDetail(scheduleId),0);
 }
@@ -49,7 +49,16 @@ async function apiCall(method,path,body,timeoutMs=60000){
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
   try{
     const res=await fetch('/api'+path,{method,headers,signal:controller.signal,body:body?JSON.stringify(body):undefined});
-    const data=await res.json();
+    const raw=await res.text();
+    let data={};
+    if(raw){
+      try{
+        data=JSON.parse(raw);
+      }catch(parseErr){
+        const fallback=String(raw).trim().replace(/\s+/g,' ').slice(0,120)||'服务器返回了非 JSON 响应';
+        throw new Error(`${fallback} [${path}]`);
+      }
+    }
     if(!res.ok)throw new Error(`${data.error||'请求失败'} [${path}]`);
     return data;
   }catch(e){

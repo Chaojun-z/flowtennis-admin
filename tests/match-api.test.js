@@ -16,6 +16,7 @@ assert.ok(rules.assertMatchPostInput, 'api._test should expose match post valida
 assert.ok(rules.splitAaFee, 'api._test should expose AA split helper');
 assert.ok(rules.deriveMatchStatus, 'api._test should expose match status helper');
 assert.ok(rules.requireMatchUser, 'api._test should expose match user auth helper');
+assert.ok(rules.ensureMatchUserResponse, 'api._test should expose match user auth response helper');
 assert.ok(rules.requireAdminUser, 'api._test should expose admin auth helper');
 assert.ok(rules.assertMatchBookingInput, 'api._test should expose match booking validation');
 assert.ok(rules.buildMatchFeeLedger, 'api._test should expose match fee ledger builder');
@@ -71,6 +72,11 @@ assert.match(apiSource, /syncMatchFeeSplitToCourtFinance/, 'paid match fee split
 assert.match(apiSource, /syncMatchFeeSplitRefundToCourtFinance/, 'refunded match fee splits should sync refund into court finance ledger');
 assert.match(apiSource, /match-court-finance/, 'match finance should use a dedicated court finance account');
 assert.match(apiSource, /\/admin\/matches\/finance-daily/, 'API should expose match finance daily report endpoint');
+assert.match(apiSource, /\/admin\/matches\/settings/, 'API should expose match settings admin endpoint');
+assert.match(apiSource, /path==='\/match-settings'/, 'API should expose mini match settings endpoint');
+assert.match(apiSource, /MATCH_MINIPROGRAM_APPID/, 'match mini program should use a dedicated appid env');
+assert.match(apiSource, /MATCH_MINIPROGRAM_SECRET/, 'match mini program should use a dedicated secret env');
+assert.match(apiSource, /sendJson\(res,\{error:String\(err\?\.message\|\|'未登录'\)\},401\)/, 'match mini auth failures should return 401 for relogin');
 assert.match(apiSource, /path==='\/my-matches'/, 'API should expose my matches endpoint');
 assert.match(apiSource, /path==='\/match-profile'/, 'API should expose match profile endpoint');
 assert.match(apiSource, /path==='\/match-profile\/phone'/, 'API should expose match phone endpoint');
@@ -79,7 +85,12 @@ assert.match(apiSource, /getuserphonenumber/, 'API should exchange WeChat phone 
 assert.match(apiSource, /matchUpdateM=path\.match/, 'API should expose match update endpoint');
 assert.match(apiSource, /matchCancelM=path\.match/, 'API should expose match cancel endpoint');
 assert.match(apiSource, /path==='\/match-attendance\/creator-confirm'/, 'API should expose creator attendance endpoint');
-assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'self attendance endpoint should not be exposed');
+assert.doesNotMatch(apiSource, /path==='\/match-attendance'&&method==='POST'/, 'API should not expose self attendance endpoint');
+assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'default admin bootstrap password must come from env');
+assert.doesNotMatch(apiSource, /wqxd2026/, 'api source should not hardcode the default bootstrap password');
+assert.match(apiSource, /已超过发起者确认时限，请联系运营处理/, 'creator attendance confirm should enforce ops handoff after timeout');
+assert.match(apiSource, /请先完成全部到场确认，再生成AA/, 'fee generation should block until every active player is confirmed');
+assert.match(apiSource, /已生成AA，不能再修改到场名单/, 'attendance should lock after AA generation');
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
 assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'bootstrap password should come from env instead of hardcoded source');
@@ -88,12 +99,14 @@ assert.match(apiSource, /已超过发起者确认时限，请联系运营处理/
 assert.match(apiSource, /请先完成全部到场确认，再生成AA/, 'AA generation should wait for full attendance confirmation');
 assert.match(apiSource, /已生成AA，不能再修改到场名单/, 'attendance should lock after fee generation');
 assert.match(apiSource, /viewerFeeSplit/, 'match detail should include viewer fee split');
+assert.match(apiSource, /viewerFinalAttendanceStatus/, 'match detail should include viewer final attendance status');
 assert.match(apiSource, /offlinePaymentText/, 'match detail should include offline payment text');
 assert.match(apiSource, /feeSplitsByMatch/, 'admin match list should include fee splits');
 assert.match(apiSource, /operationLogs/, 'admin match list should include operation logs');
 assert.match(apiSource, /match_operation_logs ORDER BY createdAt DESC/, 'admin match list should load latest operation logs');
 assert.match(apiSource, /MATCH_WECHAT_TEMPLATE_ID/, 'match notifications should have a dedicated template id env');
 assert.match(apiSource, /notifyMatchUsers/, 'match operations should trigger subscribe notification helper');
+assert.match(apiSource, /运营接管/, 'match operations should record admin takeover behavior');
 assert.match(apiSource, /levelMode/, 'match posts should persist level mode');
 assert.match(apiSource, /formationStatus/, 'match posts should persist formation status');
 assert.match(apiSource, /prepayDeadlineAt/, 'match posts should persist prepay deadline');
@@ -121,7 +134,11 @@ assert.throws(() => rules.assertMatchPostInput({
   genderPreference: '不限',
   estimatedCourtFee: 0,
   startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00'
+  endTime: '2026-04-22T12:00:00',
+  venueName: '马坡网球馆',
+  venueAddress: '马坡',
+  venueLatitude: 40.1,
+  venueLongitude: 116.6
 }), /费用必须大于 0/);
 assert.throws(() => rules.assertMatchPostInput({
   title: '周末双打',
@@ -165,7 +182,11 @@ const valid = rules.assertMatchPostInput({
   genderPreference: '不限',
   estimatedCourtFee: 500,
   startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00'
+  endTime: '2026-04-22T12:00:00',
+  venueName: '马坡网球馆',
+  venueAddress: '马坡',
+  venueLatitude: 40.1,
+  venueLongitude: 116.6
 });
 assert.equal(valid.status, 'open');
 assert.equal(valid.matchType, 'double');
@@ -244,6 +265,39 @@ const detailResponse = rules.toMatchDetailResponse({ id: 'm1', title: '周末双
 assert.equal(detailResponse.match.id, 'm1');
 assert.equal(detailResponse.registrations.length, 1);
 assert.equal(detailResponse.id, 'm1');
+
+const matchView = rules.toMatchView({
+  id: 'm2',
+  creatorUserId: 'creator',
+  title: '周二双打',
+  matchType: 'double',
+  targetHeadcount: 6,
+  startTime: '2026-04-28T10:00:00.000Z',
+  endTime: '2026-04-28T12:00:00.000Z',
+  venueName: '网球兄弟·马坡',
+  venueAddress: '北京市顺义区白马路65号',
+  venueLatitude: 40.1,
+  venueLongitude: 116.6,
+  ntrpMin: 2.5,
+  ntrpMax: 3,
+  genderPreference: '不限',
+  estimatedCourtFee: 440,
+  status: 'open'
+}, [{
+  id: 'reg-1',
+  userId: 'u1',
+  registrationStatus: 'registered',
+  nickName: '球友A',
+  ntrpLevel: '3.0',
+  confirmedAttendanceCount: 2,
+  attendedCount: 1
+}], 'u1');
+assert.equal(matchView.venueLatitude, 40.1);
+assert.equal(matchView.venueLongitude, 116.6);
+assert.equal(matchView.aaDisplayText, '约 ¥74/人');
+assert.equal(matchView.registrations[0].userName, '球友A');
+assert.equal(matchView.registrations[0].ntrpText, '3.0');
+assert.equal(matchView.registrations[0].attendanceRateText, '50%');
 
 assert.throws(() => rules.assertMatchBookingInput({}), /请填写最终场地费/);
 const booking = rules.assertMatchBookingInput({
@@ -352,7 +406,8 @@ const profileStats = rules.buildMatchProfileStats({
   attendanceRows: [
     { matchId: 'm1', finalStatus: 'attended', matchStatus: 'settled' },
     { matchId: 'm2', finalStatus: 'absent', matchStatus: 'settled' },
-    { matchId: 'm3', finalStatus: 'attended', matchStatus: 'fee_pending' }
+    { matchId: 'm3', finalStatus: 'attended', matchStatus: 'fee_pending' },
+    { matchId: 'm4', finalStatus: 'attended', matchStatus: 'cancelled' }
   ],
   feeSplits: [
     { amount: 167, paidAmount: 167, payStatus: 'paid' },

@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
+const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 
-const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
@@ -11,6 +11,8 @@ function fnBody(name){
   return html.slice(start, next === -1 ? html.length : next);
 }
 
+assert.match(fnBody('scheduleTimeRangeControls'), /refreshScheduleTimeDerivedFields/, 'schedule time range controls should refresh lesson hours when date or time changes');
+assert.match(html, /<th style="width:64px">重复\?<\/th>/, 'schedule table should expose a dedicated repeat column beside course type');
 assert.match(fnBody('toggleCourtDropdown'), /const container=dropdown\.closest\('\.mbody'\)/, 'dropdown opening direction should account for modal body clipping');
 assert.match(fnBody('toggleCourtDropdown'), /containerRect\.bottom/, 'dropdown should compare available space against the modal scroll body');
 assert.match(fnBody('toggleCourtDropdown'), /spaceBelow<menuHeight\+12&&spaceAbove>spaceBelow/, 'dropdown should open upward when modal space below is too small');

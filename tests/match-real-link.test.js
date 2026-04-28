@@ -123,8 +123,8 @@ async function main() {
     await rules.generateMatchFeeLedger(match.id, dandan.id);
     await assert.rejects(
       () => rules.creatorConfirmMatchAttendance(match.id, ids.creator, 'missing-registration', 'attended'),
-      /报名记录不存在/,
-      'creator confirmation should still validate records after AA lock checks'
+      /已生成AA，不能再修改到场名单/,
+      'creator confirmation should refuse any further edits once AA is locked'
     );
     const splits = await pool.query('SELECT userId,amount,payStatus FROM match_fee_splits WHERE matchId=$1 ORDER BY userId', [match.id]);
     assert.deepEqual(splits.rows.map(row => Number(row.amount)).sort((a, b) => b - a), [250, 250], 'AA should include charged booked withdrawal and stay balanced');

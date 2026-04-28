@@ -7,8 +7,9 @@ let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null,finance
 function goPage(pg,el,skipRender=false){
   syncViewportMode();
   if(pg==='entitlements')pg='students';
+  if(pg==='myschedule')pg='workbench';
   const adminPages=['students','leads','classes','plans','schedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr'];
-  const coachPages=['workbench','myschedule','mystudents','myclasses'];
+  const coachPages=['workbench','postfeedback','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
   if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='students';
@@ -26,7 +27,7 @@ function goPage(pg,el,skipRender=false){
     currentPage=pg;
     localStorage.setItem(PAGE_KEY,currentPage);
     document.getElementById('campusTabs').style.display=['students','courts','finance','matches'].includes(pg)?'flex':'none';
-    const t={students:'学员信息',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务中心',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格管理',campusmgr:'校区管理',workbench:'工作台',myschedule:'我的课表',mystudents:'我的学员',myclasses:'我的班次'};
+    const t={students:'学员信息',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务中心',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格管理',campusmgr:'校区管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
     document.getElementById('topTitle').textContent=t[pg]||'';
     if(!skipRender)loadPageDataAndRender(pg,{quiet:true});
   };
@@ -119,12 +120,12 @@ async function doDelete(){
     else if(delType==='student')students=students.filter(u=>u.id!==delId);
     else if(delType==='product')products=products.filter(u=>u.id!==delId);
     else if(delType==='package')packages=packages.filter(u=>u.id!==delId);
-    else if(delType==='purchase'){await loadAll();closeConf();closeModal();toast('已作废','error');return;}
+    else if(delType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});closeConf();closeModal();toast('已作废','error');return;}
     else if(delType==='plan')plans=plans.filter(u=>u.id!==delId);
     else if(delType==='schedule'){schedules=schedules.filter(u=>u.id!==delId);mergeScheduleSaveResult(result,null);}
     else if(delType==='class'){classes=classes.filter(u=>u.id!==delId);plans=plans.filter(p=>p.classId!==delId);}
     else if(delType==='coach')coaches=coaches.filter(u=>u.id!==delId);
-    else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});buildCampusTabs();}
+    else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});buildCampusTabs();}
     else if(delType==='membership-plan')membershipPlans=membershipPlans.filter(u=>u.id!==delId);
     closeConf();closeModal();toast(result?.archived?'已隐藏':'已删除',result?.archived?'warn':'error');renderAll();
   }catch(e){toast('删除失败：'+e.message,'error');closeConf();}

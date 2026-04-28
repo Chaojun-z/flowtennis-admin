@@ -39,6 +39,11 @@ function purchaseHasLedger(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   return entitlementLedger.some(l=>entIds.has(l.entitlementId));
 }
+function patchPurchaseVoidResult(id,reason=''){
+  const now=new Date().toISOString();
+  purchases=purchases.map(row=>row.id===id?{...row,status:'voided',voidedAt:now,voidReason:reason,updatedAt:now}:row);
+  entitlements=entitlements.map(row=>row.purchaseId===id?{...row,status:'voided',updatedAt:now}:row);
+}
 function purchasePackageSnapshotHtml(p){
   const coachText=parseArr(p.coachNames).join('、')||'不限';
   const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
@@ -180,8 +185,11 @@ async function voidPurchase(id){
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='作废中…';
   try{
     await apiCall('DELETE','/purchases/'+id,{reason});
-    await loadAll();
+    patchPurchaseVoidResult(id,reason);
     closeModal();
+    renderStudents();
+    renderPurchases();
+    renderEntitlements();
     toast('购买记录已作废','success');
   }catch(e){toast('作废失败：'+e.message,'error');btn.disabled=false;btn.textContent='确认作废';}
 }
