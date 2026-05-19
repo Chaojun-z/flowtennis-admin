@@ -89,4 +89,91 @@ assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==
 assert.strictEqual(snapshot.financeSettlementRows[0].month, '2026-04', 'finance settlement snapshot should pre-aggregate by month');
 assert.strictEqual(snapshot.financeSettlementRows[0].lessonUnits, 1, 'finance settlement snapshot should count finished lesson units');
 
+const verifiedFinance = {
+  overviewData: {
+    all: {
+      cash: 1000,
+      recognized: 200,
+      deferred: 800,
+      packageIncome: 1000,
+      packageRecognized: 200,
+      storedValueIncome: 0,
+      storedValueConsumed: 0,
+      bookingIncome: 0,
+      bookingRecognized: 0,
+      tradeCount: 10
+    },
+    campuses: []
+  },
+  normalizedRows: [{ id: 'verified-old-row', businessType: '课程', action: '收款', cashDelta: 1000 }]
+};
+
+const merged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  students:[{ id:'stu-import', campus:'mabao' },{ id:'stu-old', campus:'mabao' }],
+  purchases:[{
+    id:'private_lesson_csv_import_20260519_TEST:purchase:张三',
+    studentId:'stu-import',
+    studentName:'张三',
+    packageName:'成人10节课包',
+    amountPaid:4000,
+    purchaseDate:'2026-04-23',
+    payMethod:'微信',
+    status:'active'
+  },{
+    id:'old-purchase-should-not-double-count',
+    studentId:'stu-old',
+    studentName:'老数据',
+    packageName:'成人10节课包',
+    amountPaid:9999,
+    purchaseDate:'2026-04-20',
+    payMethod:'微信',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'private_lesson_csv_import_20260519_TEST:entitlement:张三',
+    purchaseId:'private_lesson_csv_import_20260519_TEST:purchase:张三',
+    studentId:'stu-import',
+    studentName:'张三',
+    packageName:'成人10节课包',
+    totalLessons:10,
+    remainingLessons:9,
+    campusIds:['mabao']
+  },{
+    id:'old-entitlement-should-not-double-count',
+    purchaseId:'old-purchase-should-not-double-count',
+    studentId:'stu-old',
+    totalLessons:10,
+    remainingLessons:0,
+    campusIds:['mabao']
+  }],
+  entitlementLedger:[{
+    id:'private_lesson_csv_import_20260519_TEST:ledger:张三:2026-04',
+    entitlementId:'private_lesson_csv_import_20260519_TEST:entitlement:张三',
+    studentId:'stu-import',
+    purchaseId:'private_lesson_csv_import_20260519_TEST:purchase:张三',
+    lessonDelta:-1,
+    reason:'4月消课',
+    relatedDate:'2026-04-30',
+    createdAt:'2026-04-30T10:00:00.000Z',
+    importSource:'系统导入'
+  },{
+    id:'old-ledger-should-not-double-count',
+    entitlementId:'old-entitlement-should-not-double-count',
+    studentId:'stu-old',
+    lessonDelta:-10,
+    relatedDate:'2026-04-30'
+  }],
+  schedule:[]
+});
+
+assert.strictEqual(merged.normalizedRows.length, 3, 'verified finance should keep base rows and append only import increment receipt/consume rows');
+assert.strictEqual(merged.overviewData.all.cash, 5000, 'finance import increment should add course cash income');
+assert.strictEqual(merged.overviewData.all.packageIncome, 5000, 'finance import increment should add package income');
+assert.strictEqual(merged.overviewData.all.recognized, 600, 'finance import increment should add recognized course income');
+assert.strictEqual(merged.overviewData.all.packageRecognized, 600, 'finance import increment should add package recognized income');
+assert.strictEqual(merged.overviewData.all.deferred, 4400, 'finance import increment should add remaining deferred income');
+assert.strictEqual(merged.overviewData.all.tradeCount, 11, 'finance import increment should add purchase trade count');
+assert.strictEqual(merged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-purchase-should-not-double-count')), false, 'old live purchase rows should not be appended to verified finance');
+
 console.log('finance snapshot tests passed');

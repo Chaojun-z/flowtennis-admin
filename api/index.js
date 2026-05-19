@@ -3274,6 +3274,48 @@ function buildFinancePageSnapshot(source={}){
     financeSettlementRows:buildFinanceSettlementRows(source)
   };
 }
+const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';
+function isFinanceImportIncrementRow(row){
+  return String(row?.id||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX)||String(row?.importBatchId||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX);
+}
+function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
+  const purchaseRows=(source.purchases||[]).filter(isFinanceImportIncrementRow);
+  const purchaseIds=new Set(purchaseRows.map(row=>String(row.id||'')).filter(Boolean));
+  const entitlementRows=(source.entitlements||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||'')));
+  const entitlementIds=new Set(entitlementRows.map(row=>String(row.id||'')).filter(Boolean));
+  const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
+  const incrementRows=buildFinanceUnifiedRows({
+    campuses:source.campuses||[],
+    students:source.students||[],
+    purchases:purchaseRows,
+    entitlements:entitlementRows,
+    entitlementLedger:ledgerRows,
+    schedule:source.schedule||[]
+  });
+  const baseOverview=verifiedFinance?.overviewData||null;
+  if(!baseOverview)return {
+    overviewData:null,
+    normalizedRows:[...(verifiedFinance?.normalizedRows||[]),...incrementRows]
+  };
+  const businessRows=incrementRows.filter(row=>!row.differenceReason);
+  const cashDelta=businessRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const recognizedDelta=businessRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const deferredDelta=businessRows.reduce((sum,row)=>sum+(Number(row.deferredRevenueDelta)||0),0);
+  const packageCashDelta=businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const packageRecognizedDelta=businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const tradeCountDelta=businessRows.filter(row=>row.businessType==='课程'&&row.action==='收款'&&Number(row.cashDelta)>0).length;
+  const all={...(baseOverview.all||{})};
+  all.cash=roundMoney((Number(all.cash)||0)+cashDelta);
+  all.recognized=roundMoney((Number(all.recognized)||0)+recognizedDelta);
+  all.deferred=roundMoney((Number(all.deferred)||0)+deferredDelta);
+  all.packageIncome=roundMoney((Number(all.packageIncome)||0)+packageCashDelta);
+  all.packageRecognized=roundMoney((Number(all.packageRecognized)||0)+packageRecognizedDelta);
+  all.tradeCount=(Number(all.tradeCount)||0)+tradeCountDelta;
+  return {
+    overviewData:{...baseOverview,all},
+    normalizedRows:[...(verifiedFinance.normalizedRows||[]),...incrementRows]
+  };
+}
 function parseSimpleCsv(text=''){
   const rows=[];
   let current='';
@@ -7562,12 +7604,19 @@ module.exports = async (req, res) => {
       await init();
       const campuses=await listCampusesWithDefaults();
       const verifiedFinance=loadVerifiedFinanceArtifacts(campuses);
-      const schedule=isProductionRuntime()?await scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+      const [students,purchases,entitlements,entitlementLedger,schedule]=await Promise.all([
+        getCachedScan(T_STUDENTS).catch(()=>[]),
+        getCachedScan(T_PURCHASES).catch(()=>[]),
+        getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
+        getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+        isProductionRuntime()?scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[])
+      ]);
+      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,schedule});
       const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
       return sendJson(res,{
         campuses,
-        financeOverviewData:verifiedFinance?.overviewData||null,
-        financeNormalizedRows:verifiedFinance?.normalizedRows||[],
+        financeOverviewData:financeWithIncrements.overviewData,
+        financeNormalizedRows:financeWithIncrements.normalizedRows,
         financeSettlementRows,
         generatedAt:''
       });
@@ -8038,6 +8087,7 @@ module.exports._test={
   buildFinanceUnifiedRows,
   buildFinanceSettlementRows,
   buildFinancePageSnapshot,
+  buildVerifiedFinanceWithImportIncrements,
   buildBootstrapSafetyFlags,
   getRuntimeEnsuredTables,
   getTestDataResetTables,
