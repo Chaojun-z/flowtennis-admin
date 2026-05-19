@@ -26,8 +26,8 @@ let courtAccountListViewData=null,courtAccountListViewCompareData=null;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-05-10-finance-hotfix-v3';
-const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','entitlementLedger']);
+const DATA_CACHE_VERSION='2026-05-19-private-lesson-live-fix-v1';
+const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','purchases','entitlements','entitlementLedger']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
 function resolveClientRuntimeStage(){
