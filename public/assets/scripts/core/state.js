@@ -89,7 +89,7 @@ const PAGE_DATA_REQUIREMENTS={
   coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],
   products:['products','classes'],
-  packages:['packages'],
+  packages:['packages','products'],
   purchases:[],
   entitlements:['entitlements','students'],
   coaches:['coaches'],
