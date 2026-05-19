@@ -861,7 +861,10 @@ function studentEntitlementSummaryHtml(stu){
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无已购课包</div>';
   return rows.map(e=>{
     const used=Number(e.usedLessons)||0;
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${esc(e.packageName)||'—'} <span class="badge b-amber" style="font-size:10px">${esc(e.courseType)||'—'}</span></div><div style="margin-top:3px">剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(e.validUntil)||'—'}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div></div>`;
+    const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
+    const purchaseDate=e.purchaseDate||purchase.purchaseDate||String(e.createdAt||purchase.createdAt||'').slice(0,10);
+    const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(e.packageName)||'—'}</span> <span class="badge b-amber" style="font-size:10px">${esc(e.courseType)||'—'}</span>；报名 ${esc(purchaseDate)||'—'}；归属 ${esc(ownerCoach)||'—'}；剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(e.validUntil)||'—'}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div>`;
   }).join('');
 }
 function isHistoricalImportedLedgerRow(row){
