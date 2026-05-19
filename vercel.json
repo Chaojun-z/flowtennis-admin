@@ -2,9 +2,5 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "crons": [
-    { "path": "/api/cron/official-account-reminders", "schedule": "2,12,22,32,42,52 * * * *" },
-    { "path": "/api/cron/official-account-daily-digests", "schedule": "2 20 * * *" }
   ]
 }
