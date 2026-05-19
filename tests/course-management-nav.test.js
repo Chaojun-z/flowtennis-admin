@@ -46,6 +46,8 @@ assert.match(html, /课程类型跟随课程产品/, 'package modal should expla
 assert.match(html, /归属教练不在这里维护，实际售卖时按购买记录选择/, 'package modal should explain owner coach is selected at purchase time');
 assert.match(html, /function productHasReferences/, 'product modal should know whether product is referenced');
 assert.match(html, /function packageHasPurchases/, 'package modal should know whether package is sold');
+assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
+assert.match(html, /function mergePackage\(\)[\s\S]*\/packages\/merge/, 'package merge should call the dedicated merge endpoint');
 assert.match(html, /核心字段已锁定/, 'locked core fields should show operator-facing hint');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');
 assert.match(html, /function openPurchaseEditModal/, 'purchase page should have edit modal');

@@ -17,7 +17,7 @@ function renderPackages(){
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('pkgTypeFilter')?.value||'';
   const sf=document.getElementById('pkgStatusFilter')?.value||'';
-  const list=packages.filter(p=>{if(!searchHit(q,p.name,p.courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName))return false;if(tf&&p.courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;}).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  const list=packages.filter(p=>{if(String(p.status||'active')==='merged')return false;if(!searchHit(q,p.name,p.courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName))return false;if(tf&&p.courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;}).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
   const host=document.getElementById('packageGrid');
   if(!products.length){
     host.innerHTML=`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">还没有课程产品</div><div style="margin-top:8px;font-size:13px;line-height:1.7">先创建课程产品，再基于课程产品创建售卖课包。</div><button class="tms-btn tms-btn-ghost" onclick="goPage('products')">去创建课程产品</button></div>`;
@@ -41,6 +41,36 @@ function packageOpts(sel){
 }
 function purchasePackageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive'||p.id===sel).map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(p.name)} · ¥${fmt(p.price)} · ${p.lessons||0}节${p.status==='inactive'?' · 已停用':''}</option>`).join('');
+}
+function packageMergeOpts(sel){
+  return '<option value="">— 选择课包 —</option>'+packages.filter(p=>p.status!=='merged').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(p.name)} · ¥${fmt(p.price)} · ${p.lessons||0}节</option>`).join('');
+}
+function openPackageMergeModal(){
+  const body=`<div class="tms-audit-note" style="margin-bottom:18px">只支持规则一致的课包合并。并入课包会在后台隐藏，购买记录和课包余额会显示为保留课包。</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留课包 *</label><select class="fselect tms-form-control" id="pkg_merge_master">${packageMergeOpts('')}</select></div><div class="tms-form-item"><label class="tms-form-label">并入课包 *</label><select class="fselect tms-form-control" id="pkg_merge_source">${packageMergeOpts('')}</select></div></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="packageMergeBtn" onclick="mergePackage()">确认合并</button>`;
+  setCourtModalFrame('合并课包',body,footer,'modal-tight');
+}
+async function mergePackage(){
+  const masterPackageId=document.getElementById('pkg_merge_master')?.value||'';
+  const sourcePackageId=document.getElementById('pkg_merge_source')?.value||'';
+  if(!masterPackageId||!sourcePackageId){toast('请选择两个课包','warn');return;}
+  if(masterPackageId===sourcePackageId){toast('请选择两个不同课包','warn');return;}
+  const ok=await appConfirm('确认合并课包？并入课包会隐藏，历史购买记录和课包余额会显示为保留课包。',{title:'确认合并',confirmText:'确认合并'});
+  if(!ok)return;
+  const btn=document.getElementById('packageMergeBtn');if(btn){btn.disabled=true;btn.textContent='合并中…';}
+  try{
+    const res=await apiCall('POST','/packages/merge',{masterPackageId,sourcePackageId},120000);
+    const sourceIndex=packages.findIndex(p=>p.id===res.sourcePackage?.id);
+    if(sourceIndex>=0)packages[sourceIndex]=res.sourcePackage;
+    (res.purchases||[]).forEach(row=>{const i=purchases.findIndex(p=>p.id===row.id);if(i>=0)purchases[i]=row;});
+    (res.entitlements||[]).forEach(row=>{const i=entitlements.findIndex(e=>e.id===row.id);if(i>=0)entitlements[i]=row;});
+    (res.schedules||[]).forEach(row=>{const i=schedules.findIndex(s=>s.id===row.id);if(i>=0)schedules[i]=row;});
+    closeModal();
+    renderPackages();
+    if(currentPage==='purchases')renderPurchases();
+    if(currentPage==='entitlements')renderEntitlements();
+    toast('课包已合并','success');
+  }catch(e){toast('合并失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='确认合并';}}
 }
 function purchaseAllowedCoachChecks(ids,cls='pur-allowed-coach-cb'){
   ids=parseArr(ids);
