@@ -49,6 +49,7 @@ assert.match(html, /function packageHasPurchases/, 'package modal should know wh
 assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
 assert.match(html, /function mergePackage\(\)[\s\S]*\/packages\/merge/, 'package merge should call the dedicated merge endpoint');
 assert.match(html, /openPackageMergeModal[\s\S]*renderCourtDropdownHtml\('pkg_merge_master'[\s\S]*renderCourtDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the shared custom dropdown');
+assert.match(html, /setCourtModalFrame\('合并课包'[\s\S]*modal-merge-package/, 'package merge modal should use the dedicated overflow class');
 assert.doesNotMatch(html, /<select class="fselect tms-form-control" id="pkg_merge_/, 'package merge modal should not use native select controls');
 assert.doesNotMatch(html, /只支持规则一致的课包合并。并入课包会在后台隐藏，购买记录和课包余额会显示为保留课包。/, 'package merge notice should remove the unreadable yellow hint');
 assert.doesNotMatch(html, /课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。/, 'package page should remove the long banner description');

@@ -48,7 +48,7 @@ function openPackageMergeModal(){
   const opts=packageMergeOpts('');
   const body=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留课包 *</label>${renderCourtDropdownHtml('pkg_merge_master','选择课包',opts,'',true)}</div><div class="tms-form-item"><label class="tms-form-label">并入课包 *</label>${renderCourtDropdownHtml('pkg_merge_source','选择课包',opts,'',true)}</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="packageMergeBtn" onclick="mergePackage()">确认合并</button>`;
-  setCourtModalFrame('合并课包',body,footer,'modal-tight');
+  setCourtModalFrame('合并课包',body,footer,'modal-tight modal-merge-package');
 }
 async function mergePackage(){
   const masterPackageId=document.getElementById('pkg_merge_master')?.value||'';

@@ -347,6 +347,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .mclose:hover{background-color:#C0B5AB;color:#5C4D43}
 .modal.modal-court .mbody{padding:0 24px 20px;overflow-y:auto;overflow-x:visible;flex:1;scrollbar-width:none;-ms-overflow-style:none;min-height:0}
 .modal.modal-court .mbody::-webkit-scrollbar{display:none}
+.modal.modal-court.modal-merge-package .mbody{overflow:visible}
 .modal.modal-court .mactions{padding:16px 24px;display:flex;justify-content:space-between;border-radius:0 0 16px 16px;background:#E6E1DC;position:relative;bottom:auto;z-index:5;backdrop-filter:none;flex-shrink:0;border-top:1px solid #D9D0C7}
 .modal.modal-court .mactions.right-align{justify-content:flex-end}
 .tms-pagination .tms-dropdown-display{height:40px;padding:0 14px;font-size:12px;background-color:#FDF7F2;border:1px solid #EAE0D6;box-shadow:none;min-width:120px;border-radius:12px}
