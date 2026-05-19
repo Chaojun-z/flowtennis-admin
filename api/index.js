@@ -965,6 +965,7 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
   const purchaseDate=purchase.purchaseDate||now.slice(0,10);
   const validUntil=pkg.usageEndDate||pkg.validUntil||(pkg.validDays?addDaysKey(purchaseDate,pkg.validDays):'');
   const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
+  const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
   return {
     id,
     studentId:purchase.studentId||student?.id||'',
@@ -986,8 +987,8 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     timeBand:pkg.timeBand||'',
     coachIds:parseArr(pkg.coachIds),
     coachNames:parseArr(pkg.coachNames),
-    ownerCoach:purchase.ownerCoach||'',
-    allowedCoaches:parseArr(purchase.allowedCoaches),
+    ownerCoach:purchase.ownerCoach||pkg.ownerCoach||'',
+    allowedCoaches:parseArr(purchase.allowedCoaches||packageCoaches),
     campusIds:parseArr(pkg.campusIds),
     maxStudents:parseInt(pkg.maxStudents)||0,
     status:'active',
@@ -1003,6 +1004,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
   const priceOverridden=systemAmount!==finalAmount;
   const overrideReason=String(body.overrideReason||'').trim();
   if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
+  const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
   return {
     ...body,
     id:opts.id||body.id||uuidv4(),
@@ -1027,8 +1029,8 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
     coachIds:parseArr(pkg.coachIds),
     coachNames:parseArr(pkg.coachNames),
-    ownerCoach:body.ownerCoach||'',
-    allowedCoaches:parseArr(body.allowedCoaches),
+    ownerCoach:body.ownerCoach||pkg.ownerCoach||'',
+    allowedCoaches:parseArr(body.allowedCoaches||packageCoaches),
     campusIds:parseArr(pkg.campusIds),
     usageStartDate:pkg.usageStartDate||'',
     usageEndDate:pkg.usageEndDate||'',
@@ -1085,6 +1087,11 @@ function validatePackageInput(pkg,refs={}){
     const ok=new Set((refs.coaches||[]).flatMap(c=>[c.id,c.name]).filter(Boolean).map(String));
     if(coachIds.some(id=>!ok.has(String(id))))throw new Error('可用教练不存在');
   }
+  const ownerCoach=String(pkg.ownerCoach||'').trim();
+  if(refs.coaches&&ownerCoach){
+    const ok=new Set((refs.coaches||[]).flatMap(c=>[c.id,c.name]).filter(Boolean).map(String));
+    if(!ok.has(ownerCoach))throw new Error('主归属教练不存在');
+  }
   const campusIds=packageRefIds(pkg.campusIds);
   if(refs.campuses&&campusIds.length){
     const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
@@ -1121,7 +1128,7 @@ function changedCoreFields(oldRec,nextRec,fields){
   return fields.filter(k=>stableRuleValue(oldRec?.[k])!==stableRuleValue(nextRec?.[k]));
 }
 const PACKAGE_MERGE_CORE_FIELDS=[
-  'productId','productName','courseType','price','lessons','validDays',
+  'ownerCoach','courseType','price','lessons','validDays',
   'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
   'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
 ];

@@ -18,6 +18,7 @@ const masterPackage = {
   usageEndDate: '',
   dailyTimeWindows: [{ label: '非黄金时段', startTime: '08:00', endTime: '17:00', daysOfWeek: [] }],
   timeBand: '非黄金时段',
+  ownerCoach: '朝珺',
   coachIds: ['朝珺'],
   coachNames: ['朝珺'],
   campusIds: ['mabao'],
@@ -84,6 +85,12 @@ assert.throws(
   () => rules.assertCanMergePackages(masterPackage, { ...sourcePackage, price: 5000 }),
   /课包规则不一致，不能合并/,
   'different core rules should not be mergeable'
+);
+
+assert.throws(
+  () => rules.assertCanMergePackages(masterPackage, { ...sourcePackage, ownerCoach: '其他教练' }),
+  /课包规则不一致，不能合并/,
+  'different main coach should not be mergeable'
 );
 
 const result = rules.buildPackageMergeUpdates({

@@ -12,7 +12,7 @@ function getFilteredPurchases(){
   const dateFrom=document.getElementById('purDateFrom')?.value||'';
   const dateTo=document.getElementById('purDateTo')?.value||'';
   return purchases.filter(p=>{
-    if(!searchHit(q,p.studentName,p.packageName,p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand))return false;
+    if(!searchHit(q,p.studentName,p.packageName,p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&p.packageId!==packageId)return false;
     if(dateFrom&&String(p.purchaseDate||'')<dateFrom)return false;
     if(dateTo&&String(p.purchaseDate||'')>dateTo)return false;
@@ -48,7 +48,7 @@ function purchasePackageSnapshotHtml(p){
   const coachText=parseArr(p.coachNames).join('、')||'不限';
   const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
   const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
-  return `<div class="sec-ttl">购买时规则快照</div><div class="fgrid"><div class="fg"><div class="flabel">课程产品</div><div class="finput">${esc(p.productName)||'—'}</div></div><div class="fg"><div class="flabel">课程类型</div><div class="finput">${esc(p.courseType)||'—'}</div></div><div class="fg"><div class="flabel">课包课时</div><div class="finput">${parseInt(p.packageLessons)||0} 节</div></div><div class="fg"><div class="flabel">课包标价</div><div class="finput">¥${fmt(p.packagePrice)}</div></div><div class="fg"><div class="flabel">归属教练</div><div class="finput">购买时选择</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(coachText)}</div></div><div class="fg"><div class="flabel">时段类型</div><div class="finput">${esc(p.packageTimeBand)||'全天'}</div></div><div class="fg"><div class="flabel">每日时段</div><div class="finput">${esc(windows)}</div></div><div class="fg"><div class="flabel">可用校区</div><div class="finput">${esc(campusText)}</div></div><div class="fg"><div class="flabel">使用开始</div><div class="finput">${esc(p.usageStartDate)||'—'}</div></div><div class="fg"><div class="flabel">使用结束</div><div class="finput">${esc(p.usageEndDate)||'—'}</div></div></div>`;
+  return `<div class="sec-ttl">购买时规则快照</div><div class="fgrid"><div class="fg"><div class="flabel">课程类型</div><div class="finput">${esc(p.courseType)||'—'}</div></div><div class="fg"><div class="flabel">主归属教练</div><div class="finput">${esc(p.ownerCoach)||'—'}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(coachText)}</div></div><div class="fg"><div class="flabel">课包课时</div><div class="finput">${parseInt(p.packageLessons)||0} 节</div></div><div class="fg"><div class="flabel">课包标价</div><div class="finput">¥${fmt(p.packagePrice)}</div></div><div class="fg"><div class="flabel">时段类型</div><div class="finput">${esc(p.packageTimeBand)||'全天'}</div></div><div class="fg"><div class="flabel">每日时段</div><div class="finput">${esc(windows)}</div></div><div class="fg"><div class="flabel">可用校区</div><div class="finput">${esc(campusText)}</div></div><div class="fg"><div class="flabel">使用开始</div><div class="finput">${esc(p.usageStartDate)||'—'}</div></div><div class="fg"><div class="flabel">使用结束</div><div class="finput">${esc(p.usageEndDate)||'—'}</div></div></div>`;
 }
 function purchaseLedgerHtml(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
@@ -59,6 +59,22 @@ function purchaseLedgerHtml(purchaseId){
 function purchaseSystemAmountForPackage(packageId){
   const pkg=packages.find(x=>x.id===packageId);
   return Number(pkg?.price)||0;
+}
+function syncPurchasePackageMeta(prefix='pur',force=false){
+  syncPurchasePriceFields(prefix,force);
+  const packageId=document.getElementById(`${prefix}_packageId`)?.value||'';
+  const pkg=packages.find(x=>x.id===packageId);
+  const ownerCoachId=`${prefix}_ownerCoach`;
+  const ownerCoachEl=document.getElementById(ownerCoachId);
+  if(ownerCoachEl&&pkg?.ownerCoach&&(force||!ownerCoachEl.value)){
+    setCourtDropdownValue(ownerCoachId,pkg.ownerCoach,pkg.ownerCoach);
+  }
+  if(force&&pkg){
+    const coachValues=new Set(parseArr(pkg.coachNames));
+    document.querySelectorAll(`.${prefix === 'pur' ? 'pur-allowed-coach-cb' : 'pur-edit-allowed-coach-cb'}`).forEach(cb=>{
+      cb.checked=coachValues.has(cb.value);
+    });
+  }
 }
 function syncPurchasePriceFields(prefix='pur',force=false){
   const packageId=document.getElementById(`${prefix}_packageId`)?.value||'';
@@ -131,15 +147,15 @@ function openPurchaseModal(studentId=''){
   fillPurchasePackageMeta();
 }
 function fillPurchasePackageMeta(){
-  syncPurchasePriceFields('pur');
+  syncPurchasePackageMeta('pur');
   purchasePriceOverrideChanged('pur');
 }
 function onPurchasePackageChange(value){
-  syncPurchasePriceFields('pur',true);
+  syncPurchasePackageMeta('pur',true);
   purchasePriceOverrideChanged('pur');
 }
 function onPurchaseEditPackageChange(){
-  syncPurchasePriceFields('pur_edit',true);
+  syncPurchasePackageMeta('pur_edit',true);
   purchasePriceOverrideChanged('pur_edit');
 }
 function openPurchaseDetailModal(id){
@@ -243,10 +259,10 @@ function focusPurchaseByPackage(packageId){
 }
 function exportPurchaseCSV(){
   const list=getFilteredPurchases();
-  let csv='购买日期,学员,售卖课包,课程产品,实收,剩余课时,总课时,有效开始,有效结束,支付方式,状态,备注\n';
+  let csv='购买日期,学员,售卖课包,课程类型,实收,剩余课时,总课时,有效开始,有效结束,支付方式,状态,备注\n';
   csv+=list.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
-    return [p.purchaseDate||'',p.studentName||'',p.packageName||'',p.productName||'',parseFloat(p.amountPaid)||0,Number(ent.remainingLessons)||0,Number(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',p.payMethod||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
+    return [p.purchaseDate||'',p.studentName||'',p.packageName||'',p.courseType||'',parseFloat(p.amountPaid)||0,Number(ent.remainingLessons)||0,Number(ent.totalLessons)||0,ent.validFrom||'',ent.validUntil||'',p.payMethod||'',purchaseStatusText(p),'"'+String(p.notes||'').replace(/"/g,'""')+'"'].join(',');
   }).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_购买记录_'+today()+'.csv';a.click();toast('导出成功','success');
