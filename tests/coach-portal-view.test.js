@@ -94,6 +94,36 @@ assert.match(
   'coach workbench should hydrate the shared weekly schedule after rendering the shell'
 );
 
+assert.doesNotMatch(
+  fnBody('ensureWorkbenchTicker'),
+  /currentPage==='workbench'\)renderWorkbench\(\)/,
+  'coach workbench ticker should not rebuild the full home schedule every second'
+);
+
+assert.match(
+  fnBody('ensureWorkbenchTicker'),
+  /currentPage==='workbench'\)updateWorkbenchScheduleNowLine\(\)/,
+  'coach workbench ticker should only update the current-time indicator'
+);
+
+assert.doesNotMatch(
+  fnBody('updateWorkbenchScheduleNowLine'),
+  /innerHTML|renderMySchedule|renderWorkbench/,
+  'current-time indicator updates should not rebuild the schedule DOM'
+);
+
+assert.match(
+  source,
+  /let myScheduleMobileScrollKey=''/,
+  'coach mobile schedule should remember when it already auto-scrolled'
+);
+
+assert.match(
+  fnBody('renderMySchedule'),
+  /myScheduleMobileScrollKey/,
+  'coach mobile schedule should avoid repeating the initial auto-scroll on every render'
+);
+
 assert.match(
   fnBody('workbenchSection'),
   /coach-wb-card[\s\S]*coach-wb-row1[\s\S]*coach-wb-name[\s\S]*coach-wb-row3[\s\S]*coach-wb-card-footer/,

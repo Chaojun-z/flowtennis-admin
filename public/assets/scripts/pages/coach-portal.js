@@ -76,9 +76,35 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
 function ensureWorkbenchTicker(){
   if(workbenchTicker)return;
   workbenchTicker=setInterval(()=>{
-    if(currentPage==='workbench')renderWorkbench();
+    if(currentPage==='workbench')updateWorkbenchScheduleNowLine();
     if(currentPage==='postfeedback')renderPostClassFeedback();
   },1000);
+}
+function updateWorkbenchScheduleNowLine(){
+  const now=shanghaiNow();
+  const startH=7,endH=22;
+  document.querySelectorAll('#workbenchWeekGrid .wg-now-line').forEach(el=>el.remove());
+  if(now.getHours()>=startH&&now.getHours()<endH){
+    const desktopCells=[...document.querySelectorAll('#workbenchWeekGrid .wg-cell.today')];
+    const desktopCell=desktopCells[now.getHours()-startH];
+    if(desktopCell){
+      const line=document.createElement('div');
+      line.className='wg-now-line';
+      line.style.top=(now.getMinutes()/60*48)+'px';
+      desktopCell.appendChild(line);
+    }
+  }
+  document.querySelectorAll('#workbenchScheduleMobileList .coach-mobile-now-line').forEach(el=>el.remove());
+  const mobileBody=document.querySelector('#workbenchScheduleMobileList .coach-mobile-day-column.today .coach-mobile-day-body');
+  if(mobileBody&&now.getHours()>=startH&&now.getHours()<endH){
+    const line=document.createElement('div');
+    const dot=document.createElement('span');
+    line.className='coach-mobile-now-line';
+    line.style.top=(((now.getHours()-startH)*60+now.getMinutes())/60*56)+'px';
+    dot.className='coach-mobile-now-dot';
+    line.appendChild(dot);
+    mobileBody.appendChild(line);
+  }
 }
 function workbenchScheduleShell(){
   return `<div class="my-schedule-week" id="myScheduleWeekSection"><div class="week-nav"><button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button><span class="week-label" id="workbenchWeekLabel"></span><button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button><button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button><div class="my-schedule-week-sub is-inline">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。${workbenchMetricHelpHtml()}</div></div><div id="workbenchScheduleWeekHeader"></div><div class="my-schedule-week-grid desktop-only"><div class="week-grid" id="workbenchWeekGrid"></div></div><div id="workbenchScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div></div>`;
@@ -150,6 +176,7 @@ function renderPostClassFeedback(){
   host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-board">${weekBoardHtml||'<div class="workbench-empty">本周暂无待评价课程</div>'}</div></div>`;
 }
 let myWeekOffset=0;
+let myScheduleMobileScrollKey='';
 function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}
 function isCoachMobile(){return document.body.classList.contains('coach-mobile');}
 function getWeekDates(offset){
@@ -255,6 +282,9 @@ function renderMySchedule(){
     }).join('');
     mobile.innerHTML=`<div class="coach-mobile-week-timeline" id="cmwTimeline">${timeRail}<div class="coach-mobile-day-columns">${dayColumns}</div></div>`;
     setTimeout(()=>{
+      const scrollKey=`${currentPage}|${cn2}|${todayStr}|${myWeekOffset}`;
+      if(myScheduleMobileScrollKey===scrollKey)return;
+      myScheduleMobileScrollKey=scrollKey;
       const todayCol=mobile.querySelector('.coach-mobile-day-column.today');
       const container=mobile.querySelector('.coach-mobile-day-columns');
       const timeline=mobile.querySelector('.coach-mobile-day-body');
