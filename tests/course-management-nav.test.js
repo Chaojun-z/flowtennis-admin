@@ -59,8 +59,10 @@ assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove t
 assert.match(html, /核心字段已锁定/, 'locked core fields should show operator-facing hint');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');
 assert.match(html, /function openPurchaseEditModal/, 'purchase page should have edit modal');
+assert.match(fnBody('openPurchaseEditModal'), /packages\.filter\(pkg=>\(pkg\.status!=='inactive'&&pkg\.status!=='merged'\)\|\|pkg\.id===p\.packageId\)/, 'purchase edit package picker should hide merged packages except the current saved package');
 assert.match(html, /function savePurchaseEdit/, 'purchase page should save purchase edits');
 assert.match(html, /function openPurchaseModal/, 'purchase page should provide the unified purchase modal');
+assert.match(fnBody('openPurchaseModal'), /packages\.filter\(p=>p\.status!=='inactive'&&p\.status!=='merged'\)/, 'purchase create package picker should hide merged packages');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
 assert.match(html, /id="pur_studentSearch"/, 'purchase modal should provide a student search input');
