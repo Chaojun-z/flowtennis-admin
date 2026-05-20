@@ -84,18 +84,20 @@ function openPackageModal(id,presetProductId=''){
   const windowRow=timeWindows[0]||{};
   const secondWindow=timeWindows[1]||{};
   const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
+  const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
+  const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
   const modal=document.querySelector('#overlay .modal');
   if(modal)modal.className='modal modal-wide';
   document.getElementById('mTitle').textContent=id?'编辑售卖课包':'新增售卖课包';
   document.getElementById('mBody').innerHTML=`
     <div class="form-section">
       <div class="form-section-title">基础信息</div>
-      ${locked?'<div class="inline-help">核心字段已锁定：该课包已有购买记录，只能修改名称、状态和备注。</div>':''}
+      ${locked?'<div class="inline-help">该课包已有购买记录，可修改展示信息和使用规则；价格、课时、有效期、人数、校区和可上课教练已锁定。</div>':''}
       <div class="fgrid cols-4">
         <div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div>
-        <div class="fg"><div class="flabel">课程类型 *</div><select class="fselect modern-select" id="pkg_type"${locked?' disabled':''}>${PRODUCT_TYPES.map(t=>`<option value="${t}"${courseType===t?' selected':''}>${t}</option>`).join('')}</select><div class="inline-help">课程类型直接决定售卖和排课规则。</div></div>
-        <div class="fg"><div class="flabel">主归属教练</div><div${locked?' style="pointer-events:none;opacity:0.7"':''}>${renderCourtDropdownHtml('pkg_ownerCoach','主归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div></div>
+        <div class="fg"><div class="flabel">课程类型 *</div>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true)}<div class="inline-help">课程类型直接决定售卖和排课规则。</div></div>
+        <div class="fg"><div class="flabel">主归属教练</div>${renderCourtDropdownHtml('pkg_ownerCoach','主归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div>
         <div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"${locked?' readonly':''}></div>
         <div class="fg"><div class="flabel">状态</div><select class="fselect modern-select" id="pkg_status"><option value="active"${rv(p,'status','active')==='active'?' selected':''}>启用</option><option value="inactive"${rv(p,'status')==='inactive'?' selected':''}>停用</option></select></div>
       </div>
@@ -135,13 +137,13 @@ function openPackageModal(id,presetProductId=''){
         </div>
         <div class="fg">
           <div class="flabel">时段类型</div>
-          <select class="fselect modern-select" id="pkg_timeBand"${locked?' disabled':''}><option value="全天"${rv(p,'timeBand','全天')==='全天'?' selected':''}>全天</option><option value="黄金时段"${rv(p,'timeBand')==='黄金时段'?' selected':''}>黄金时段</option><option value="非黄金时段"${rv(p,'timeBand')==='非黄金时段'?' selected':''}>非黄金时段</option></select>
+          ${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true)}
         </div>
         <div class="fg span-2">
           <div class="flabel">可用时段</div>
           <div class="time-window-stack">
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"${locked?' readonly':''}><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"${locked?' readonly':''}></div>
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"${locked?' readonly':''}><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"${locked?' readonly':''}></div>
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
+            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
           </div>
         </div>
         <div class="fg">

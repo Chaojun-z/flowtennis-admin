@@ -554,14 +554,68 @@ assert.throws(
   'sold package should not allow changing core lesson count'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertCanEditPackageWithPurchases(
     pkg,
     { ...pkg, dailyTimeWindows: [{ label: '非黄金时段', startTime: '08:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }] },
     [{ id: 'pur-1', packageId: 'pkg-1' }]
   ),
-  /已有购买记录，不能修改核心规则/,
-  'sold package should not allow changing nested time windows'
+  'sold package should allow changing available time windows'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditPackageWithPurchases(
+    pkg,
+    { ...pkg, courseType: '体验课', ownerCoach: 'mira', timeBand: '全天' },
+    [{ id: 'pur-1', packageId: 'pkg-1' }]
+  ),
+  'sold package should allow changing course type, owner coach and time band'
+);
+
+assert.deepStrictEqual(
+  rules.syncSoldPackageRuleSnapshots(
+    {
+      ...pkg,
+      courseType: '体验课',
+      ownerCoach: 'mira',
+      timeBand: '全天',
+      dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }]
+    },
+    [
+      { id: 'pur-1', packageId: 'pkg-1', courseType: '私教课', packageTimeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'pur-voided', packageId: 'pkg-1', status: 'voided' },
+      { id: 'pur-other', packageId: 'pkg-other', status: 'active' }
+    ],
+    [
+      { id: 'ent-1', packageId: 'pkg-1', courseType: '私教课', timeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'ent-voided', packageId: 'pkg-1', status: 'voided' },
+      { id: 'ent-other', packageId: 'pkg-other', status: 'active' }
+    ],
+    '2026-05-20T00:00:00.000Z'
+  ),
+  {
+    purchases: [{
+      id: 'pur-1',
+      packageId: 'pkg-1',
+      courseType: '体验课',
+      packageTimeBand: '全天',
+      dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
+      ownerCoach: 'mira',
+      status: 'active',
+      updatedAt: '2026-05-20T00:00:00.000Z'
+    }],
+    entitlements: [{
+      id: 'ent-1',
+      packageId: 'pkg-1',
+      courseType: '体验课',
+      timeBand: '全天',
+      dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
+      ownerCoach: 'mira',
+      status: 'active',
+      updatedAt: '2026-05-20T00:00:00.000Z'
+    }]
+  },
+  'editing sold package usage rules should sync active purchase and entitlement snapshots'
 );
 
 assert.doesNotThrow(

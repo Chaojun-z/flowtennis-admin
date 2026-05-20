@@ -44,8 +44,14 @@ assert.match(html, /workbench:'工作台'/, 'page title map should include coach
 assert.doesNotMatch(html, /function syncPackageProductMeta/, 'package modal should not sync product metadata anymore');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_productId|课程产品|课程类型跟随课程产品/, 'package modal should no longer require course product selection');
 assert.match(fnBody('openPackageModal'), /课程类型 \*[\s\S]*主归属教练[\s\S]*可上课教练/, 'package modal should expose course type, main coach and teachable coaches');
-assert.match(html, /id="pkg_type"/, 'package modal should allow direct course type selection');
+assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal should allow direct course type selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
+assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal course type should use the shared custom dropdown');
+assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeBand'/, 'package modal time band should use the shared custom dropdown');
+assert.doesNotMatch(fnBody('openPackageModal'), /pkg_type'[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package course type should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /pkg_ownerCoach'[\s\S]{0,160}pointer-events:none/, 'sold package owner coach should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeBand"[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package time band should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeStart"[\s\S]{0,120}\$\{locked\?' readonly'/, 'sold package available time should stay editable');
 assert.match(html, /function productHasReferences/, 'product modal should know whether product is referenced');
 assert.match(html, /function packageHasPurchases/, 'package modal should know whether package is sold');
 assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
@@ -61,7 +67,7 @@ assert.doesNotMatch(html, /id="page-packages"[\s\S]*还没有课程产品|id="pa
 assert.doesNotMatch(html, /关联产品:/, 'package cards should not show linked product subtitle');
 assert.doesNotMatch(fnBody('renderPackages'), /showcase-status-tag[\s\S]*启用/, 'package cards should not show the redundant active status tag');
 assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove the product shortcut button');
-assert.match(html, /核心字段已锁定/, 'locked core fields should show operator-facing hint');
+assert.match(html, /价格、课时、有效期、人数、校区和可上课教练已锁定/, 'locked core fields should show operator-facing hint');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');
 assert.match(html, /function openPurchaseEditModal/, 'purchase page should have edit modal');
 assert.match(fnBody('openPurchaseEditModal'), /packages\.filter\(pkg=>\(pkg\.status!=='inactive'&&pkg\.status!=='merged'\)\|\|pkg\.id===p\.packageId\)/, 'purchase edit package picker should hide merged packages except the current saved package');
