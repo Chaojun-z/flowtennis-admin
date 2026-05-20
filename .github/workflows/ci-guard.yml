@@ -23,12 +23,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: flowtennis-mgmt-main
+        working-directory: .
 
       - name: Run critical tests
         run: npm test
-        working-directory: flowtennis-mgmt-main
+        working-directory: .
 
       - name: Finance regression guard
         run: npm run guard:finance
-        working-directory: flowtennis-mgmt-main
+        working-directory: .
