@@ -176,4 +176,32 @@ assert.strictEqual(merged.overviewData.all.deferred, 4400, 'finance import incre
 assert.strictEqual(merged.overviewData.all.tradeCount, 11, 'finance import increment should add purchase trade count');
 assert.strictEqual(merged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-purchase-should-not-double-count')), false, 'old live purchase rows should not be appended to verified finance');
 
+const membershipMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  membershipOrders:[{
+    id:'membership-import-order-20260520-test',
+    courtId:'court-import',
+    courtName:'订场会员导入',
+    rechargeAmount:2000,
+    purchaseDate:'2026-04-25',
+    payMethod:'会员充值',
+    status:'active'
+  },{
+    id:'old-member-order-should-not-double-count',
+    courtId:'court-old',
+    courtName:'老会员',
+    rechargeAmount:9999,
+    purchaseDate:'2026-04-20',
+    payMethod:'会员充值',
+    status:'active'
+  }]
+});
+
+assert.strictEqual(membershipMerged.normalizedRows.length, 2, 'verified finance should append only imported membership recharge rows');
+assert.strictEqual(membershipMerged.overviewData.all.cash, 3000, 'membership import increment should add stored value cash income');
+assert.strictEqual(membershipMerged.overviewData.all.deferred, 2800, 'membership import increment should add stored value deferred income');
+assert.strictEqual(membershipMerged.overviewData.all.storedValueIncome, 2000, 'membership import increment should add stored value income bucket');
+assert.strictEqual(membershipMerged.overviewData.all.tradeCount, 11, 'membership import increment should add membership trade count');
+assert.strictEqual(membershipMerged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-member-order-should-not-double-count')), false, 'old live membership orders should not be appended to verified finance');
+
 console.log('finance snapshot tests passed');

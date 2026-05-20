@@ -3106,6 +3106,11 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const purchaseMap=new Map((purchases||[]).map(item=>[String(item.id||''),item]));
   const scheduleMap=new Map((schedule||[]).map(item=>[String(item.id||''),item]));
   const courtMap=new Map((courts||[]).map(item=>[String(item.id||''),item]));
+  const courtMembershipOrderIds=new Set();
+  (courts||[]).forEach(court=>normalizeCourtHistory(court.history).forEach(historyRow=>{
+    const membershipOrderId=String(historyRow.membershipOrderId||'').trim();
+    if(membershipOrderId)courtMembershipOrderIds.add(membershipOrderId);
+  }));
   const courseReceiptRows=(purchases||[]).map(purchase=>{
     const entitlement=entitlementByPurchaseId.get(String(purchase.id))||{};
     const student=studentMap.get(String(purchase.studentId||''))||{};
@@ -3148,6 +3153,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   });
   const membershipReceiptRows=(membershipOrders||[])
     .filter(order=>String(order?.status||'active')!=='voided')
+    .filter(order=>!courtMembershipOrderIds.has(String(order?.id||'')))
     .map(order=>{
       const court=courtMap.get(String(order.courtId||''))||{};
       const rowCampusName=campusName.fromHints(court.campus,court.campusName,order.courtName,order.notes,order.membershipPlanName)||'—';
@@ -3289,7 +3295,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       };
     }).filter(Boolean);
   });
-  return [...courseReceiptRows,...courseConsumeRows,...courtRows]
+  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...courtRows]
     .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
 }
 function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){
@@ -3321,8 +3327,12 @@ function buildFinancePageSnapshot(source={}){
   };
 }
 const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';
+const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';
 function isFinanceImportIncrementRow(row){
   return String(row?.id||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX)||String(row?.importBatchId||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX);
+}
+function isFinanceMembershipImportIncrementOrder(row){
+  return String(row?.id||'').startsWith(FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX);
 }
 function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const purchaseRows=(source.purchases||[]).filter(isFinanceImportIncrementRow);
@@ -3330,12 +3340,15 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const entitlementRows=(source.entitlements||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||'')));
   const entitlementIds=new Set(entitlementRows.map(row=>String(row.id||'')).filter(Boolean));
   const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
+  const membershipOrderRows=(source.membershipOrders||[]).filter(isFinanceMembershipImportIncrementOrder);
   const incrementRows=buildFinanceUnifiedRows({
     campuses:source.campuses||[],
     students:source.students||[],
     purchases:purchaseRows,
     entitlements:entitlementRows,
     entitlementLedger:ledgerRows,
+    courts:source.courts||[],
+    membershipOrders:membershipOrderRows,
     schedule:source.schedule||[]
   });
   const baseOverview=verifiedFinance?.overviewData||null;
@@ -3349,13 +3362,17 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const deferredDelta=businessRows.reduce((sum,row)=>sum+(Number(row.deferredRevenueDelta)||0),0);
   const packageCashDelta=businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const packageRecognizedDelta=businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const tradeCountDelta=businessRows.filter(row=>row.businessType==='课程'&&row.action==='收款'&&Number(row.cashDelta)>0).length;
+  const storedValueCashDelta=businessRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const storedValueRecognizedDelta=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const tradeCountDelta=businessRows.filter(row=>['课程','会员储值'].includes(row.businessType)&&row.action==='收款'&&Number(row.cashDelta)>0).length;
   const all={...(baseOverview.all||{})};
   all.cash=roundMoney((Number(all.cash)||0)+cashDelta);
   all.recognized=roundMoney((Number(all.recognized)||0)+recognizedDelta);
   all.deferred=roundMoney((Number(all.deferred)||0)+deferredDelta);
   all.packageIncome=roundMoney((Number(all.packageIncome)||0)+packageCashDelta);
   all.packageRecognized=roundMoney((Number(all.packageRecognized)||0)+packageRecognizedDelta);
+  all.storedValueIncome=roundMoney((Number(all.storedValueIncome)||0)+storedValueCashDelta);
+  all.storedValueConsumed=roundMoney((Number(all.storedValueConsumed)||0)+storedValueRecognizedDelta);
   all.tradeCount=(Number(all.tradeCount)||0)+tradeCountDelta;
   return {
     overviewData:{...baseOverview,all},
@@ -7654,14 +7671,15 @@ module.exports = async (req, res) => {
       await init();
       const campuses=await listCampusesWithDefaults();
       const verifiedFinance=loadVerifiedFinanceArtifacts(campuses);
-      const [students,purchases,entitlements,entitlementLedger,schedule]=await Promise.all([
+      const [students,purchases,entitlements,entitlementLedger,membershipOrders,schedule]=await Promise.all([
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_PURCHASES).catch(()=>[]),
         getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
         getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+        getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
         isProductionRuntime()?scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[])
       ]);
-      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,schedule});
+      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,membershipOrders,schedule});
       const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
       return sendJson(res,{
         campuses,

@@ -46,10 +46,11 @@ assert.match(
 );
 assert.match(
   apiSource,
-  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
-  '财务总览应保留已核对快照，并只叠加已导入课包批次增量'
+  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,membershipOrders,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_MEMBERSHIP_ORDERS\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,membershipOrders,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
+  '财务总览应保留已核对快照，并叠加已导入课包和会员批次增量'
 );
 assert.match(apiSource, /const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';/, '财务页只允许识别私教课导入批次作为快照增量来源');
+assert.match(apiSource, /const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';/, '财务页只允许识别新增会员导入订单作为快照增量来源');
 assert.doesNotMatch(apiSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
 assert.match(
   apiSource,
