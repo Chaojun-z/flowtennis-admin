@@ -20,7 +20,7 @@ function renderPackages(){
   const list=packages.filter(p=>{if(String(p.status||'active')==='merged')return false;if(!searchHit(q,p.name,p.courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName,p.ownerCoach))return false;if(tf&&p.courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;}).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
   const host=document.getElementById('packageGrid');
   host.innerHTML=list.length?list.map(p=>{
-    const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、');
+    const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
     const timeWindow=[p.timeBand||'全天',windows].filter(Boolean).join(' · ');
     const coachText=parseArr(p.coachNames).join('、')||'不限';
     const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
@@ -76,17 +76,63 @@ function packageCampusChecks(ids){
   ids=parseArr(ids);
   return campuses.map(c=>`<label class="choice-tag"><input type="checkbox" value="${c.code||c.id}" class="pkg-campus-cb" ${ids.includes(c.code||c.id)?'checked':''}>${esc(c.name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无校区</span>';
 }
+function packageTimeScopeOptions(){
+  return [{value:'all',label:'每天'},{value:'weekday',label:'工作日'},{value:'weekend',label:'周末'},{value:'custom',label:'自定义'}];
+}
+function packageDaysToScope(days){
+  const key=parseArr(days).map(n=>parseInt(n)).filter(Boolean).sort((a,b)=>a-b).join(',');
+  if(!key)return'all';
+  if(key==='1,2,3,4,5')return'weekday';
+  if(key==='6,7')return'weekend';
+  return'custom';
+}
+function packageTimeScopeToDays(scope,fallback=[]){
+  if(scope==='weekday')return[1,2,3,4,5];
+  if(scope==='weekend')return[6,7];
+  if(scope==='custom')return parseArr(fallback).map(n=>parseInt(n)).filter(Boolean);
+  return[];
+}
+function packageTimeScopeLabel(days){
+  const scope=packageDaysToScope(days);
+  return scope==='weekday'?'工作日':scope==='weekend'?'周末':scope==='custom'?'自定义':'每天';
+}
+function packageTimeWindowText(w){
+  const time=[w?.startTime,w?.endTime].filter(Boolean).join(' - ');
+  return time?`${packageTimeScopeLabel(w.daysOfWeek)} ${time}`:'';
+}
+function packageDefaultTimeWindows(timeBand='全天'){
+  if(timeBand==='黄金时段')return[
+    {label:'黄金时段',startTime:'16:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
+    {label:'黄金时段',startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
+  ];
+  if(timeBand==='非黄金时段')return[
+    {label:'非黄金时段',startTime:'09:00',endTime:'16:00',daysOfWeek:[1,2,3,4,5]}
+  ];
+  return[{label:'全天',startTime:'09:00',endTime:'22:00',daysOfWeek:[]}];
+}
+function setPackageTimeWindow(scopeId,startId,endId,scope,start,end){
+  setCourtDropdownValue(scopeId,scope,packageTimeScopeOptions().find(x=>x.value===scope)?.label||'每天');
+  const startEl=document.getElementById(startId);if(startEl)startEl.value=start||'';
+  const endEl=document.getElementById(endId);if(endEl)endEl.value=end||'';
+}
+function applyPackageTimeBandPreset(value){
+  const rows=packageDefaultTimeWindows(value||document.getElementById('pkg_timeBand')?.value||'全天');
+  setPackageTimeWindow('pkg_timeScope','pkg_timeStart','pkg_timeEnd',packageDaysToScope(rows[0]?.daysOfWeek),rows[0]?.startTime,rows[0]?.endTime);
+  setPackageTimeWindow('pkg_timeScope2','pkg_timeStart2','pkg_timeEnd2',packageDaysToScope(rows[1]?.daysOfWeek),rows[1]?.startTime||'',rows[1]?.endTime||'');
+}
 
 function openPackageModal(id,presetProductId=''){
   editId=id;const p=id?packages.find(x=>x.id===id):null;
   const locked=!!(id&&packageHasPurchases(id));
   const timeWindows=parseArr(p?.dailyTimeWindows);
-  const windowRow=timeWindows[0]||{};
-  const secondWindow=timeWindows[1]||{};
   const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
+  const defaultWindows=packageDefaultTimeWindows(rv(p,'timeBand','全天'));
+  const windowRow=timeWindows[0]||defaultWindows[0]||{};
+  const secondWindow=timeWindows[1]||defaultWindows[1]||{};
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
+  const timeScopeOptions=packageTimeScopeOptions();
   const modal=document.querySelector('#overlay .modal');
   if(modal)modal.className='modal modal-wide';
   document.getElementById('mTitle').textContent=id?'编辑售卖课包':'新增售卖课包';
@@ -137,18 +183,18 @@ function openPackageModal(id,presetProductId=''){
         </div>
         <div class="fg">
           <div class="flabel">时段类型</div>
-          ${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true)}
+          ${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}
         </div>
         <div class="fg span-2">
           <div class="flabel">可用时段</div>
           <div class="time-window-stack">
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','07:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
-            <div class="time-window-row"><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
+            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope','适用日期',timeScopeOptions,packageDaysToScope(windowRow.daysOfWeek),true)}</div><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','09:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
+            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope2','适用日期',timeScopeOptions,packageDaysToScope(secondWindow.daysOfWeek),true)}</div><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
           </div>
         </div>
         <div class="fg">
           <div class="flabel">说明</div>
-          <div class="inline-help">可填写两段黄金/非黄金时段，例如 08:00-10:00、16:00-21:00。</div>
+          <div class="inline-help">黄金：工作日 16:00-22:00、周末 09:00-22:00；非黄：工作日 09:00-16:00。</div>
         </div>
       </div>
     </div>
@@ -159,6 +205,8 @@ function openPackageModal(id,presetProductId=''){
       <div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCampusChecks(rv(p,'campusIds',[]))}</div></div>
     </div>
     <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
+    <input type="hidden" id="pkg_timeScopeCustomDays" value="${esc(JSON.stringify(parseArr(windowRow.daysOfWeek)))}">
+    <input type="hidden" id="pkg_timeScopeCustomDays2" value="${esc(JSON.stringify(parseArr(secondWindow.daysOfWeek)))}">
     <div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="btn-save" onclick="savePackage()">保存</button></div>`;
   document.getElementById('overlay').classList.add('open');
 }
@@ -190,8 +238,8 @@ async function savePackage(){
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   document.getElementById('pkg_notes').value=document.getElementById('pkg_notes_inline').value.trim();
   const timeBand=document.getElementById('pkg_timeBand').value.trim()||'全天';
-  const dailyTimeWindows=[{label:timeBand,startTime:timeStart,endTime:timeEnd,daysOfWeek:[]}];
-  if(timeStart2&&timeEnd2)dailyTimeWindows.push({label:timeBand,startTime:timeStart2,endTime:timeEnd2,daysOfWeek:[]});
+  const dailyTimeWindows=[{label:timeBand,startTime:timeStart,endTime:timeEnd,daysOfWeek:packageTimeScopeToDays(document.getElementById('pkg_timeScope')?.value,parseArr(document.getElementById('pkg_timeScopeCustomDays')?.value))}];
+  if(timeStart2&&timeEnd2)dailyTimeWindows.push({label:timeBand,startTime:timeStart2,endTime:timeEnd2,daysOfWeek:packageTimeScopeToDays(document.getElementById('pkg_timeScope2')?.value,parseArr(document.getElementById('pkg_timeScopeCustomDays2')?.value))});
   const data={name,productId:'',productName:'',courseType,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:parseInt(document.getElementById('pkg_validDays').value)||0,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }

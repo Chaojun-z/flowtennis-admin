@@ -515,7 +515,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .range-pair .coach-date-btn{width:100%;min-width:0}
 .range-dash{font-size:12px;color:var(--td)}
 .time-window-stack{display:flex;flex-direction:column;gap:8px}
-.time-window-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.time-window-row{display:grid;grid-template-columns:minmax(110px,.8fr) minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
 .inline-help{font-size:12px;color:var(--ts);line-height:1.6}
 .close-x{font-size:18px;font-weight:500}
 @media(max-width:1100px){.purchase-filter-bar{grid-template-columns:1fr 1fr 1fr}.purchase-actions{grid-column:1/-1;justify-content:flex-start}}

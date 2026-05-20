@@ -446,6 +446,45 @@ assert.throws(
   'schedule must fit fully inside one available time window'
 );
 
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule({ ...entitlement, dailyTimeWindows: [
+    { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+    { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+  ] }, {
+    id: 'sch-weekend-prime',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coachId: 'coach-1',
+    coach: '朝珺',
+    campus: 'mabao',
+    startTime: '2026-05-09 09:00',
+    endTime: '2026-05-09 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  'prime package should support weekend 09:00-22:00 windows'
+);
+
+assert.throws(
+  () => rules.validateEntitlementForSchedule({ ...entitlement, dailyTimeWindows: [
+    { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+    { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+  ] }, {
+    id: 'sch-weekday-not-prime',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coachId: 'coach-1',
+    coach: '朝珺',
+    campus: 'mabao',
+    startTime: '2026-05-06 09:00',
+    endTime: '2026-05-06 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  /不在课包可用时间段/,
+  'prime package should keep weekday morning outside available windows'
+);
+
 assert.throws(
   () => rules.validateEntitlementForSchedule(entitlement, {
     id: 'sch-4',

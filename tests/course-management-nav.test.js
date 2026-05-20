@@ -48,6 +48,14 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal course type should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeBand'/, 'package modal time band should use the shared custom dropdown');
+assert.match(fnBody('openPackageModal'), /适用日期[\s\S]*pkg_timeScope[\s\S]*工作日[\s\S]*周末/, 'package modal time windows should choose applicable days per row');
+assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeScope'/, 'package modal time window day scope should use the shared custom dropdown');
+assert.match(html, /function applyPackageTimeBandPreset/, 'package modal should apply simple default windows for time band presets');
+assert.match(html, /黄金时段'[\s\S]*16:00[\s\S]*22:00[\s\S]*09:00[\s\S]*22:00/, 'prime preset should be weekday evening plus weekend daytime');
+assert.match(html, /非黄金时段'[\s\S]*09:00[\s\S]*16:00/, 'non-prime preset should be weekday daytime');
+assert.match(fnBody('savePackage'), /packageTimeScopeToDays\(document\.getElementById\('pkg_timeScope'\)\?\.value/, 'package save should persist applicable days for first time window');
+assert.match(fnBody('savePackage'), /packageTimeScopeToDays\(document\.getElementById\('pkg_timeScope2'\)\?\.value/, 'package save should persist applicable days for second time window');
+assert.doesNotMatch(fnBody('savePackage'), /windowRow|secondWindow/, 'package save should not depend on modal-local time window variables');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_type'[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package course type should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_ownerCoach'[\s\S]{0,160}pointer-events:none/, 'sold package owner coach should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeBand"[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package time band should stay editable');

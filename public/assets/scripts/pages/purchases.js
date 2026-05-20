@@ -47,7 +47,7 @@ function patchPurchaseVoidResult(id,reason=''){
 function purchasePackageSnapshotHtml(p){
   const coachText=parseArr(p.coachNames).join('、')||'不限';
   const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
-  const windows=parseArr(p.dailyTimeWindows).map(w=>[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
+  const windows=parseArr(p.dailyTimeWindows).map(w=>typeof packageTimeWindowText==='function'?packageTimeWindowText(w):[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
   return `<div class="sec-ttl">购买时规则快照</div><div class="fgrid"><div class="fg"><div class="flabel">课程类型</div><div class="finput">${esc(p.courseType)||'—'}</div></div><div class="fg"><div class="flabel">主归属教练</div><div class="finput">${esc(p.ownerCoach)||'—'}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(coachText)}</div></div><div class="fg"><div class="flabel">课包课时</div><div class="finput">${parseInt(p.packageLessons)||0} 节</div></div><div class="fg"><div class="flabel">课包标价</div><div class="finput">¥${fmt(p.packagePrice)}</div></div><div class="fg"><div class="flabel">时段类型</div><div class="finput">${esc(p.packageTimeBand)||'全天'}</div></div><div class="fg"><div class="flabel">每日时段</div><div class="finput">${esc(windows)}</div></div><div class="fg"><div class="flabel">可用校区</div><div class="finput">${esc(campusText)}</div></div><div class="fg"><div class="flabel">使用开始</div><div class="finput">${esc(p.usageStartDate)||'—'}</div></div><div class="fg"><div class="flabel">使用结束</div><div class="finput">${esc(p.usageEndDate)||'—'}</div></div></div>`;
 }
 function purchaseLedgerHtml(purchaseId){
