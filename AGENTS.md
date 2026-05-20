@@ -60,7 +60,9 @@
    - Vercel Cron 用于服务号提醒和每日摘要
 4. 主业务数据库：
    - 阿里云 TableStore
-   - 生产实例：`flowtennis`
+   - 生产实例：`flowtennis-ue`
+   - 生产 endpoint：`https://flowtennis-ue.us-east-1.ots.aliyuncs.com`
+   - 历史旧实例：`flowtennis`，禁止作为线上导入、线上核对或生产修数目标
    - staging 实例：`flow-staging`
 5. 约球子系统数据库：
    - PostgreSQL
@@ -106,6 +108,27 @@
 1. 功能开发需求不得顺手修改这些脚本来“顺便修数据”。
 2. 如需执行修数，默认先做 dry-run 或审计输出，再显式进入写模式。
 3. 功能 PR / 需求交付中，如果同时包含功能代码和修数脚本，默认视为越界，需要拆分。
+
+---
+
+## 2.2 生产导入实例校验硬规则
+
+任何生产导入、线上修数、财务补账、会员/课包/权益写入，必须先完成以下校验：
+
+1. 禁止直接信任本地 `.env` 作为生产目标。
+2. 写入前必须请求线上 `https://www.flowtennis.cn/api/diag`，确认线上真实 `TS_ENDPOINT` 和 `TS_INSTANCE`。
+3. 本地将要写入的 `TS_ENDPOINT` / `TS_INSTANCE` 必须和线上 `/api/diag` 完全一致。
+4. 如果两者不一致，必须立刻停止，不允许写入。
+5. 写入前报告必须写清楚：
+   - 本地写入目标实例
+   - 线上读取目标实例
+   - 两者是否一致
+6. 写完后不能只查 TableStore，必须再查线上 API 或线上页面接口确认数据已出现在 `https://www.flowtennis.cn/`。
+7. 导入报告必须记录线上 API 核对结果；如果线上仍不显示，不得宣布导入完成。
+
+已知事故：
+
+- 2026-05-20 订场会员导入误写入历史旧实例 `flowtennis`，线上实际读取 `flowtennis-ue`，导致本地对账通过但线上仍显示旧数据。以后同类任务必须按本节规则先验实例。
 
 ---
 
