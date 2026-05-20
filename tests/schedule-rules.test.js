@@ -688,6 +688,24 @@ assert.strictEqual(
   );
 
   {
+    const result=rules.findOfficialAccountUserByPhone([
+      { id:'admin', name:'管理员', role:'admin', status:'active', phone:'13800138000' },
+      { id:'coach_1', name:'朝珺', role:'editor', status:'active', phone:'13800138000', coachId:'coach-chaojun', coachName:'朝珺' }
+    ],'13800138000');
+    assert.strictEqual(result.user?.id,'coach_1','official account binding should prefer the coach account when an admin shares the same phone');
+  }
+
+  {
+    const result=rules.findOfficialAccountUserByPhone([
+      { id:'admin', name:'管理员', role:'admin', status:'active', phone:'13800138000' },
+      { id:'coach_1', name:'朝珺', role:'editor', status:'active', phone:'', coachId:'coach-chaojun', coachName:'朝珺' }
+    ],'13800138000',[
+      { id:'coach-chaojun', name:'朝珺', phone:'13800138000', status:'active' }
+    ]);
+    assert.strictEqual(result.user?.id,'coach_1','official account binding should find the coach account through the linked coach profile phone');
+  }
+
+  {
     const token='flowtennisoa2026';
     const appId='wx4c76dc29b1d48df3';
     const now=new Date('2026-05-19T20:02:00.000Z');

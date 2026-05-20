@@ -1887,19 +1887,31 @@ function extractOfficialAccountBindingPhone(text){
   if(!match)return '';
   return assertPhone(match[1]);
 }
-function findOfficialAccountUserByPhone(users=[],phone=''){
+function findOfficialAccountUserByPhone(users=[],phone='',coaches=[]){
   const normalized=assertPhone(phone);
   const matches=(users||[]).filter(u=>normalizePhone(u?.phone||'')===normalized);
-  if(matches.length===0)return {user:null,error:'未找到对应的教练账号'};
-  if(matches.length>1)return {user:null,error:'手机号对应多个账号，请先清理后台数据'};
-  const user=matches[0];
-  if(String(user?.role||'')!=='editor')return {user:null,error:'该手机号不是教练账号'};
+  const directCoachMatches=matches.filter(u=>String(u?.role||'')==='editor');
+  const linkedCoachIds=new Set((coaches||[]).filter(c=>normalizePhone(c?.phone||'')===normalized).map(c=>String(c?.id||'').trim()).filter(Boolean));
+  const linkedCoachNames=new Set((coaches||[]).filter(c=>normalizePhone(c?.phone||'')===normalized).map(c=>String(c?.name||'').trim()).filter(Boolean));
+  const linkedCoachMatches=(users||[]).filter(u=>String(u?.role||'')==='editor'&&(
+    linkedCoachIds.has(String(u?.coachId||'').trim())||
+    linkedCoachNames.has(String(u?.coachName||u?.name||'').trim())
+  ));
+  const coachMatches=[...directCoachMatches,...linkedCoachMatches].filter((u,i,arr)=>arr.findIndex(x=>String(x?.id||'')===String(u?.id||''))===i);
+  if(matches.length===0&&coachMatches.length===0)return {user:null,error:'未找到对应的教练账号'};
+  if(coachMatches.length===0)return {user:null,error:'该手机号不是教练账号'};
+  if(coachMatches.length>1)return {user:null,error:'手机号对应多个教练账号，请先清理后台数据'};
+  const user=coachMatches[0];
   if(String(user?.status||'active')==='inactive')return {user:null,error:'该教练账号已停用'};
   return {user};
 }
-async function bindOfficialAccountUserByPhone({phone,openid,now=new Date().toISOString(),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putUser=(id,user)=>put(T_USERS,id,user)}={}){
+async function bindOfficialAccountUserByPhone({phone,openid,now=new Date().toISOString(),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putUser=(id,user)=>put(T_USERS,id,user)}={}){
   const currentUsers=await loadUsers();
-  const targetResult=findOfficialAccountUserByPhone(currentUsers,phone);
+  let targetResult=findOfficialAccountUserByPhone(currentUsers,phone);
+  if(!targetResult.user){
+    const currentCoaches=await loadCoaches();
+    targetResult=findOfficialAccountUserByPhone(currentUsers,phone,currentCoaches);
+  }
   if(!targetResult.user)return {success:false,error:targetResult.error};
   const targetUser=targetResult.user;
   const nextOpenId=String(openid||'').trim();

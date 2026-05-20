@@ -22,6 +22,7 @@ assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account
 assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名、手机号或绑定教练"/, 'account page should provide a search field');
 assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
+assert.match(source, /<th[^>]*>账号<\/th><th[^>]*>姓名<\/th><th[^>]*>手机号<\/th><th[^>]*>角色<\/th><th[^>]*>状态<\/th><th[^>]*>绑定教练<\/th><th[^>]*>通知绑定<\/th><th[^>]*>账号说明<\/th><th[^>]*>操作<\/th>/, 'account table headers should match the nine rendered columns');
 assert.match(fnBody('renderAdminUsers'), /adminUserTbody/, 'account page should render rows into adminUserTbody');
 assert.match(fnBody('renderAdminUsers'), /绑定教练/, 'account rows should show coach binding text');
 assert.match(fnBody('renderAdminUsers'), /手机号/, 'account rows should show phone text');
