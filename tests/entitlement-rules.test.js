@@ -605,10 +605,10 @@ assert.doesNotThrow(
 assert.doesNotThrow(
   () => rules.assertCanEditPackageWithPurchases(
     pkg,
-    { ...pkg, courseType: '体验课', ownerCoach: 'mira', timeBand: '全天' },
+    { ...pkg, courseType: '体验课', ownerCoach: 'mira', timeBand: '全天', validDays: 90, saleStartDate: '2026-05-01', saleEndDate: '2026-06-01', usageStartDate: '2026-05-10', usageEndDate: '2026-08-10' },
     [{ id: 'pur-1', packageId: 'pkg-1' }]
   ),
-  'sold package should allow changing course type, owner coach and time band'
+  'sold package should allow changing course type, owner coach, time band, valid days and date ranges'
 );
 
 assert.deepStrictEqual(
@@ -618,15 +618,20 @@ assert.deepStrictEqual(
       courseType: '体验课',
       ownerCoach: 'mira',
       timeBand: '全天',
+      validDays: 90,
+      saleStartDate: '2026-05-01',
+      saleEndDate: '2026-06-01',
+      usageStartDate: '2026-05-10',
+      usageEndDate: '2026-08-10',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }]
     },
     [
-      { id: 'pur-1', packageId: 'pkg-1', courseType: '私教课', packageTimeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'pur-1', packageId: 'pkg-1', purchaseDate: '2026-05-02', courseType: '私教课', packageTimeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
       { id: 'pur-voided', packageId: 'pkg-1', status: 'voided' },
       { id: 'pur-other', packageId: 'pkg-other', status: 'active' }
     ],
     [
-      { id: 'ent-1', packageId: 'pkg-1', courseType: '私教课', timeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
+      { id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', usageStartDate: '2026-05-01', usageEndDate: '2026-07-01', courseType: '私教课', timeBand: '非黄金时段', dailyTimeWindows: pkg.dailyTimeWindows, ownerCoach: '朝珺', status: 'active' },
       { id: 'ent-voided', packageId: 'pkg-1', status: 'voided' },
       { id: 'ent-other', packageId: 'pkg-other', status: 'active' }
     ],
@@ -640,6 +645,12 @@ assert.deepStrictEqual(
       packageTimeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
+      validDays: 90,
+      saleStartDate: '2026-05-01',
+      saleEndDate: '2026-06-01',
+      usageStartDate: '2026-05-10',
+      usageEndDate: '2026-08-10',
+      purchaseDate: '2026-05-02',
       status: 'active',
       updatedAt: '2026-05-20T00:00:00.000Z'
     }],
@@ -650,11 +661,27 @@ assert.deepStrictEqual(
       timeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
+      purchaseId: 'pur-1',
+      validFrom: '2026-05-02',
+      validUntil: '2026-08-10',
+      usageStartDate: '2026-05-10',
+      usageEndDate: '2026-08-10',
       status: 'active',
       updatedAt: '2026-05-20T00:00:00.000Z'
     }]
   },
   'editing sold package usage rules should sync active purchase and entitlement snapshots'
+);
+
+assert.strictEqual(
+  rules.syncSoldPackageRuleSnapshots(
+    { ...pkg, usageEndDate: '', validDays: 90 },
+    [{ id: 'pur-1', packageId: 'pkg-1', purchaseDate: '2026-05-02', status: 'active' }],
+    [{ id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', status: 'active' }],
+    '2026-05-20T00:00:00.000Z'
+  ).entitlements[0].validUntil,
+  '2026-07-30',
+  'editing sold package valid days should recalculate entitlement valid until when no fixed usage end date exists'
 );
 
 assert.doesNotThrow(

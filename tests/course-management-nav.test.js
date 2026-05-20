@@ -60,6 +60,9 @@ assert.doesNotMatch(fnBody('openPackageModal'), /pkg_type'[\s\S]{0,120}\$\{locke
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_ownerCoach'[\s\S]{0,160}pointer-events:none/, 'sold package owner coach should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeBand"[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package time band should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeStart"[\s\S]{0,120}\$\{locked\?' readonly'/, 'sold package available time should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_validDays"[\s\S]{0,120}\$\{locked\?' readonly'/, 'sold package valid days should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /pkg_saleStartDate_btn[\s\S]{0,180}\$\{locked\?' disabled'/, 'sold package sale start date should stay editable');
+assert.doesNotMatch(fnBody('openPackageModal'), /pkg_usageStartDate_btn[\s\S]{0,180}\$\{locked\?' disabled'/, 'sold package usage start date should stay editable');
 assert.match(html, /function productHasReferences/, 'product modal should know whether product is referenced');
 assert.match(html, /function packageHasPurchases/, 'package modal should know whether package is sold');
 assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
@@ -75,7 +78,7 @@ assert.doesNotMatch(html, /id="page-packages"[\s\S]*还没有课程产品|id="pa
 assert.doesNotMatch(html, /关联产品:/, 'package cards should not show linked product subtitle');
 assert.doesNotMatch(fnBody('renderPackages'), /showcase-status-tag[\s\S]*启用/, 'package cards should not show the redundant active status tag');
 assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove the product shortcut button');
-assert.match(html, /价格、课时、有效期、人数、校区和可上课教练已锁定/, 'locked core fields should show operator-facing hint');
+assert.match(html, /价格、课时、人数、校区和可上课教练已锁定/, 'locked core fields should show operator-facing hint');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');
 assert.match(html, /function openPurchaseEditModal/, 'purchase page should have edit modal');
 assert.match(fnBody('openPurchaseEditModal'), /packages\.filter\(pkg=>\(pkg\.status!=='inactive'&&pkg\.status!=='merged'\)\|\|pkg\.id===p\.packageId\)/, 'purchase edit package picker should hide merged packages except the current saved package');

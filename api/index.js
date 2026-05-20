@@ -1142,28 +1142,47 @@ const PACKAGE_MERGE_CORE_FIELDS=[
   'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
 ];
 const SOLD_PACKAGE_LOCKED_FIELDS=[
-  'price','lessons','validDays',
-  'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
+  'price','lessons',
   'coachIds','coachNames','campusIds','maxStudents'
 ];
+function packageEntitlementValidity(nextPackage,entitlement={},purchase={}){
+  const validFrom=entitlement.validFrom||purchase.purchaseDate||dateKey(entitlement.createdAt)||'';
+  const validUntil=nextPackage.usageEndDate||nextPackage.validUntil||(nextPackage.validDays&&validFrom?addDaysKey(validFrom,nextPackage.validDays):entitlement.validUntil||'');
+  return {
+    validFrom,
+    validUntil,
+    usageStartDate:nextPackage.usageStartDate||validFrom,
+    usageEndDate:nextPackage.usageEndDate||validUntil
+  };
+}
 function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],now=new Date().toISOString()){
   const packageId=String(nextPackage?.id||'');
+  const purchaseById=new Map((purchases||[]).map(p=>[String(p.id||''),p]));
   const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>({
     ...p,
     courseType:nextPackage.courseType||nextPackage.type||'',
     packageTimeBand:nextPackage.timeBand||'',
     dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
     ownerCoach:nextPackage.ownerCoach||'',
+    validDays:parseInt(nextPackage.validDays)||0,
+    saleStartDate:nextPackage.saleStartDate||'',
+    saleEndDate:nextPackage.saleEndDate||'',
+    usageStartDate:nextPackage.usageStartDate||'',
+    usageEndDate:nextPackage.usageEndDate||'',
     updatedAt:now
   }));
-  const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>({
-    ...e,
-    courseType:nextPackage.courseType||nextPackage.type||'',
-    timeBand:nextPackage.timeBand||'',
-    dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
-    ownerCoach:nextPackage.ownerCoach||'',
-    updatedAt:now
-  }));
+  const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>{
+    const validity=packageEntitlementValidity(nextPackage,e,purchaseById.get(String(e.purchaseId||''))||{});
+    return {
+      ...e,
+      courseType:nextPackage.courseType||nextPackage.type||'',
+      timeBand:nextPackage.timeBand||'',
+      dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
+      ownerCoach:nextPackage.ownerCoach||'',
+      ...validity,
+      updatedAt:now
+    };
+  });
   return {purchases:purchaseUpdates,entitlements:entitlementUpdates};
 }
 function assertCanEditProductWithReferences(oldProduct,nextProduct,refs={}){

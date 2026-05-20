@@ -139,7 +139,7 @@ function openPackageModal(id,presetProductId=''){
   document.getElementById('mBody').innerHTML=`
     <div class="form-section">
       <div class="form-section-title">基础信息</div>
-      ${locked?'<div class="inline-help">该课包已有购买记录，可修改展示信息和使用规则；价格、课时、有效期、人数、校区和可上课教练已锁定。</div>':''}
+      ${locked?'<div class="inline-help">该课包已有购买记录，可修改展示信息和使用规则；价格、课时、人数、校区和可上课教练已锁定。</div>':''}
       <div class="fgrid cols-4">
         <div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div>
         <div class="fg"><div class="flabel">课程类型 *</div>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true)}<div class="inline-help">课程类型直接决定售卖和排课规则。</div></div>
@@ -153,7 +153,7 @@ function openPackageModal(id,presetProductId=''){
       <div class="fgrid cols-4">
         <div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"${locked?' readonly':''}></div>
         <div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"${locked?' readonly':''}></div>
-        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"${locked?' readonly':''}></div>
+        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div>
         <div class="fg"><div class="flabel">备注</div><input class="finput" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div>
       </div>
     </div>
@@ -164,22 +164,22 @@ function openPackageModal(id,presetProductId=''){
         <div class="fg span-2">
           <div class="flabel">活动时间</div>
           <div class="range-pair">
-            <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')"${locked?' disabled':''}>${rv(p,'saleStartDate')||'活动开始'}</button>
+            <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">${rv(p,'saleStartDate')||'活动开始'}</button>
             <span class="range-dash">-</span>
-            <button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')"${locked?' disabled':''}>${rv(p,'saleEndDate')||'活动结束'}</button>
+            <button class="coach-date-btn" id="pkg_saleEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">${rv(p,'saleEndDate')||'活动结束'}</button>
           </div>
-          <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')"${locked?' disabled':''}>
-          <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')"${locked?' disabled':''}>
+          <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">
+          <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">
         </div>
         <div class="fg span-2">
           <div class="flabel">使用时间</div>
           <div class="range-pair">
-            <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')"${locked?' disabled':''}>${rv(p,'usageStartDate')||'使用开始'}</button>
+            <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">${rv(p,'usageStartDate')||'使用开始'}</button>
             <span class="range-dash">-</span>
-            <button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')"${locked?' disabled':''}>${rv(p,'usageEndDate')||'使用结束'}</button>
+            <button class="coach-date-btn" id="pkg_usageEndDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">${rv(p,'usageEndDate')||'使用结束'}</button>
           </div>
-          <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')"${locked?' disabled':''}>
-          <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')"${locked?' disabled':''}>
+          <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">
+          <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">
         </div>
         <div class="fg">
           <div class="flabel">时段类型</div>
