@@ -84,6 +84,10 @@ assert.match(source, /实际成交价与系统价格不一致时必填/, 'purcha
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-wrap[\s\S]*purchase-notes-row/, 'purchase modal should leave space between allowed coaches and notes');
 assert.match(source, /购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase record table should split validity and status into compact ordered columns');
-assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(a\.purchaseDate\|\|a\.createdAt\|\|a\.validFrom\|\|''\)\.localeCompare\(String\(b\.purchaseDate\|\|b\.createdAt\|\|b\.validFrom\|\|''\)\)\)/, 'student package purchase records should sort older purchases first');
+assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');
+assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so mabao and 顺义马坡 stay one campus');
+assert.match(source, /sameCampusValue\(s\.campus,campus\)/, 'student page campus filter should treat mabao and 顺义马坡 as the same campus');
+assert.match(source, /const purchaseDate=studentEntitlementPurchaseDate\(e,purchase\);/, 'student package purchase records should use a dedicated purchase date resolver');
+assert.doesNotMatch(source, /const purchaseDate=e\.purchaseDate\|\|purchase\.purchaseDate\|\|String\(e\.createdAt\|\|purchase\.createdAt\|\|''\)\.slice\(0,10\);/, 'student package purchase date should not fall back to import createdAt');
 
 console.log('student page view tests passed');

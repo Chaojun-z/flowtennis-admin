@@ -857,15 +857,18 @@ function scheduleEntitlementSummary(s){
   return `${ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
 }
 function studentEntitlementSummaryHtml(stu){
-  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(a.purchaseDate||a.createdAt||a.validFrom||'').localeCompare(String(b.purchaseDate||b.createdAt||b.validFrom||'')));
+  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{}))));
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无已购课包</div>';
   return rows.map(e=>{
     const used=Number(e.usedLessons)||0;
     const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
-    const purchaseDate=e.purchaseDate||purchase.purchaseDate||String(e.createdAt||purchase.createdAt||'').slice(0,10);
+    const purchaseDate=studentEntitlementPurchaseDate(e,purchase);
     const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
     return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(e.packageName)||'—'}</span> <span class="badge b-amber" style="font-size:10px">${esc(e.courseType)||'—'}</span>；报名 ${esc(purchaseDate)||'—'}；归属 ${esc(ownerCoach)||'—'}；剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(e.validUntil)||'—'}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div>`;
   }).join('');
+}
+function studentEntitlementPurchaseDate(entitlement,purchase={}){
+  return entitlement?.purchaseDate||purchase?.purchaseDate||entitlement?.validFrom||'';
 }
 function isHistoricalImportedLedgerRow(row){
   return !!historicalImportedLedgerMonthKey(row);

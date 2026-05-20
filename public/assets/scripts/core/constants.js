@@ -4,8 +4,16 @@ function campusDisplayName(value){
   const raw=String(value??'').trim();
   if(!raw||raw==='undefined'||raw==='null')return '';
   if(raw==='__external__'||raw==='external')return '外部场馆';
-  if(raw==='mabao'||raw==='顺义马坡')return '马坡';
+  if(raw==='mabao'||raw==='顺义马坡')return '顺义马坡';
   return raw;
+}
+function campusKey(value){
+  const raw=String(value??'').trim();
+  if(raw==='mabao'||raw==='顺义马坡')return 'mabao';
+  return raw;
+}
+function sameCampusValue(a,b){
+  return campusKey(a)===campusKey(b);
 }
 function cn(k){
   const raw=String(k??'').trim();

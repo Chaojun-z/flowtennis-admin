@@ -18,7 +18,7 @@ function renderStudentToolbarFilters(){
   });
 }
 function getStudentBaseList(){
-  return students.filter(s=>campus==='all'||s.campus===campus);
+  return students.filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
 }
 function getFilteredStudents(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
@@ -60,7 +60,7 @@ function studentPageStats(base){
   const todayStr=localDateKey(now);
   const monthKey=todayStr.slice(0,7);
   const ws=weekStart(now),we=addDays(ws,7);
-  const scopedRows=billableSchedules().filter(s=>campus==='all'||s.campus===campus);
+  const scopedRows=billableSchedules().filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
   const endedRows=scopedRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
   const todayEndedRows=endedRows.filter(s=>String(s.startTime||'').slice(0,10)===todayStr);
   const weekEndedRows=endedRows.filter(s=>inRange(s.startTime,ws,we));
