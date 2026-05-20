@@ -6,12 +6,19 @@ function refreshPurchaseFilters(){
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'renderPurchases');
   });
 }
+function isMeaningfulPurchaseRecord(p){
+  if(!p)return false;
+  const hasMainText=String(p.purchaseDate||p.studentName||p.packageName||p.payMethod||p.ownerCoach||'').trim();
+  const hasBusinessValue=(Number(p.amountPaid)||0)>0||(Number(p.packageLessons)||0)>0;
+  return !!(hasMainText||hasBusinessValue);
+}
 function getFilteredPurchases(){
   const q=(document.getElementById('purSearch')?.value||'').toLowerCase();
   const packageId=document.getElementById('purPackageFilter')?.value||'';
   const dateFrom=document.getElementById('purDateFrom')?.value||'';
   const dateTo=document.getElementById('purDateTo')?.value||'';
   return purchases.filter(p=>{
+    if(!isMeaningfulPurchaseRecord(p))return false;
     if(!searchHit(q,p.studentName,p.packageName,p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&p.packageId!==packageId)return false;
     if(dateFrom&&String(p.purchaseDate||'')<dateFrom)return false;

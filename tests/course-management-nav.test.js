@@ -93,6 +93,11 @@ assert.match(html, /id="purchaseEditSaveBtn"[\s\S]*onclick="savePurchaseEdit/, '
 assert.doesNotMatch(fnBody('savePurchase'), /document\.querySelector\('\.btn-save'\)/, 'purchase create save should not depend on the legacy btn-save class');
 assert.doesNotMatch(fnBody('savePurchaseEdit'), /document\.querySelector\('\.btn-save'\)/, 'purchase edit save should not depend on the legacy btn-save class');
 assert.match(html, /function getFilteredPurchases[\s\S]*String\(a\.purchaseDate\|\|a\.createdAt\|\|''\)\.localeCompare\(String\(b\.purchaseDate\|\|b\.createdAt\|\|''\)\)/, 'purchase list should sort older purchase records first');
+assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
+assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
+assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
+assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
+assert.match(fnBody('renderPackages'), /看订单（\$\{packagePurchaseCount\(p\.id\)\}）/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
 assert.match(html, /<th style="width:100px;padding-left:20px">购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase table should split validity and status into compact purchase, balance and owner coach columns');
