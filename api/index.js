@@ -558,6 +558,15 @@ async function timedEndpointMetric(name,fn,meta={}){
 function withTimeout(promise,ms,fallback){
   return Promise.race([promise,new Promise((res)=>setTimeout(()=>res(fallback),ms))]);
 }
+async function withRequiredStorageTimeout(promise,ms,message){
+  const timeoutMarker={__storageTimeout:true};
+  const result=await withTimeout(Promise.resolve(promise),ms,timeoutMarker);
+  if(result===timeoutMarker)throw new Error(message);
+  return result;
+}
+function scheduleSaveErrorStatus(err){
+  return /超时/.test(String(err?.message||err||''))?503:400;
+}
 const FT_STUDENTS_FAST_TIMEOUT_MS=1200;
 async function getFastStudentsRead(options={}){
   const fallback=[];
@@ -1458,7 +1467,7 @@ async function assertScheduleEntitlementCapacity(nextRec,oldRec){
   const oldMap=new Map(oldDeltas.map(d=>[d.entitlementId,d.delta]));
   const checked=[];
   for(const nextDelta of nextDeltas){
-    const ent=await getCachedRow(T_ENTITLEMENTS,nextDelta.entitlementId);
+    const ent=await withRequiredStorageTimeout(getCachedRow(T_ENTITLEMENTS,nextDelta.entitlementId),2500,'课包余额校验超时，请稍后重试');
     if(!ent)throw new Error('课包余额不存在');
     const adjusted=oldMap.has(nextDelta.entitlementId)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+oldMap.get(nextDelta.entitlementId)}:ent;
     validateEntitlementForSchedule(adjusted,{...nextRec,studentIds:[adjusted.studentId].filter(Boolean)});
@@ -2299,8 +2308,8 @@ function buildScheduleNotificationUpdate(schedule,result={},type='schedule_creat
 }
 function collectCourseReminderCandidates(rows=[],now=new Date()){
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
-  const minMs=nowMs+115*60000;
-  const maxMs=nowMs+125*60000;
+  const minMs=nowMs+90*60000;
+  const maxMs=nowMs+150*60000;
   const active=(rows||[]).filter(s=>effectiveScheduleStatus(s,now)==='已排课'&&!s.courseReminderSentAt&&Number.isFinite(dateMs(s.startTime)));
   return active
     .filter(s=>{const start=dateMs(s.startTime);return start>=minMs&&start<=maxMs;})
@@ -2645,14 +2654,14 @@ async function applyStudentIdentityUpdate(oldStudent,nextStudent){
   return updates;
 }
 async function validateScheduleSave(nextRec,oldRec){
-  const schedules=await timed('scan schedule for conflict check',()=>getCachedScan(T_SCHEDULE));
+  const schedules=await timed('scan schedule for conflict check',()=>withRequiredStorageTimeout(getCachedScan(T_SCHEDULE),3500,'排课校验超时，请稍后重试'));
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
   /* hot-cache guard: timed('scan courts for schedule conflict check',()=>getCachedScan(T_COURTS).catch(()=>[])) */
   validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
   const oldDelta=scheduleLessonDelta(oldRec);
   const nextDelta=scheduleLessonDelta(nextRec);
   if(nextRec?.classId&&isBillableSchedule(nextRec)){
-    const cls=await get(T_CLASSES,nextRec.classId);
+    const cls=await withRequiredStorageTimeout(get(T_CLASSES,nextRec.classId),2500,'班次校验超时，请稍后重试');
     assertClassSchedulable(cls,nextRec);
     if(nextDelta){
     assertLessonCapacity(cls,oldDelta,nextDelta);
@@ -7434,10 +7443,11 @@ module.exports = async (req, res) => {
           try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
           const id=uuidv4();
           const r={...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-          const {risk,entitlementDeltas}=await timed('schedule create validate',async()=>{
+          let validation;
+          try{validation=await timed('schedule create validate',async()=>{
             const risk=await validateScheduleSave(r,null);
             assertScheduleEntitlementRequired(r);
-            const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
+            const entitlementRows=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试');
             /* hot-cache guard: const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await getCachedScan(T_ENTITLEMENTS).catch(()=>[])); */
             const coachRefs=LEGACY_STATIC_COACH_REFS;
             const entitlementDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},entitlementRows);
@@ -7445,7 +7455,8 @@ module.exports = async (req, res) => {
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},null);
             return {risk,entitlementDeltas};
-          });
+          });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
+          const {risk,entitlementDeltas}=validation;
           await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
           const nextDelta=scheduleLessonDelta(r);
           const appliedEntitlements=[];
@@ -7529,7 +7540,8 @@ module.exports = async (req, res) => {
               throw err;
             }
           }
-          const {risk,oldEntDeltas,nextEntDeltas}=await timed('schedule update validate',async()=>{
+          let validation;
+          try{validation=await timed('schedule update validate',async()=>{
             const risk=await validateScheduleSave(r,ex);
             assertScheduleEntitlementRequired(r);
             assertScheduleEditableAfterFeedback(
@@ -7539,7 +7551,7 @@ module.exports = async (req, res) => {
             );
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
             const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
-            const entitlementRows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);
+            const entitlementRows=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试');
             const coachRefs=LEGACY_STATIC_COACH_REFS;
             const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
             const nextEntDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},nextBaseRows);
@@ -7547,7 +7559,8 @@ module.exports = async (req, res) => {
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},ex);
             return {risk,oldEntDeltas,nextEntDeltas};
-          });
+          });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
+          const {risk,oldEntDeltas,nextEntDeltas}=validation;
           await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
           const appliedEntitlements=[];
           const appliedClassDeltas=[];

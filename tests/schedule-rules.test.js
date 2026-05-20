@@ -544,23 +544,27 @@ assert.deepStrictEqual(
 
 const reminderRows = [
   { id: 'prev-cross', coach: '朝珺', startTime: '2026-04-20 09:30', endTime: '2026-04-20 10:30', campus: 'mabao', venue: '1号场', status: '已排课' },
+  { id: 'too-late', coach: '朝珺', startTime: '2026-04-20 11:20', endTime: '2026-04-20 12:20', campus: 'mabao', status: '已排课' },
+  { id: 'delayed-edge', coach: '朝珺', startTime: '2026-04-20 11:35', endTime: '2026-04-20 12:35', campus: 'mabao', status: '已排课' },
   { id: 'due-cross', coach: '朝珺', startTime: '2026-04-20 12:00', endTime: '2026-04-20 13:00', campus: 'shunyi', venue: '2号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
   { id: 'too-soon', coach: '朝珺', startTime: '2026-04-20 10:20', endTime: '2026-04-20 11:20', campus: 'mabao', status: '已排课' },
+  { id: 'early-edge', coach: '朝珺', startTime: '2026-04-20 12:29', endTime: '2026-04-20 13:29', campus: 'mabao', status: '已排课' },
+  { id: 'too-early', coach: '朝珺', startTime: '2026-04-20 12:40', endTime: '2026-04-20 13:40', campus: 'mabao', status: '已排课' },
   { id: 'sent', coach: '朝珺', startTime: '2026-04-20 12:05', endTime: '2026-04-20 13:05', campus: 'mabao', status: '已排课', courseReminderSentAt: '2026-04-20T09:50:00.000Z' },
   { id: 'cancelled', coach: '朝珺', startTime: '2026-04-20 12:10', endTime: '2026-04-20 13:10', campus: 'mabao', status: '已取消' }
 ];
 const reminderCandidates = rules.collectCourseReminderCandidates(reminderRows, new Date('2026-04-20T10:00:00+08:00'));
 assert.deepStrictEqual(
   reminderCandidates.map(x => [x.schedule.id, x.crossCampus]),
-  [['due-cross', true]],
-  'course reminder helper should pick unsent active courses starting around two hours later and flag cross-campus travel'
+  [['delayed-edge', false], ['due-cross', true], ['early-edge', false]],
+  'course reminder helper should use a 90-150 minute safety window and flag cross-campus travel'
 );
 
 assert.deepStrictEqual(
   rules.buildCourseReminderSubscribeMessage({
     templateId: 'reminder-tpl',
     openid: 'openid-1',
-    schedule: reminderRows[1],
+    schedule: reminderRows.find(row => row.id === 'due-cross'),
     crossCampus: true
   }),
   {
