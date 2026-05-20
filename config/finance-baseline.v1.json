@@ -1,7 +1,7 @@
 {
   "baselineId": "finance-baseline-v1",
   "confirmedAt": "2026-05-10",
-  "status": "active",
+  "status": "archived",
   "snapshotPath": "fixtures/finance/finance-regression-snapshot.v1.json",
   "metrics": {
     "totalRevenue": 681938,

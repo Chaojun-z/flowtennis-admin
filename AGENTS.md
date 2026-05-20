@@ -85,6 +85,8 @@
 4. **生产环境不得默认开启 bootstrap / repair 类自动写入。**
 5. **修线上数据与发功能必须分流，不允许混在同一交付里。**
 6. **涉及财务相关表、财务页聚合、`api/index.js` 启动/repair 逻辑的改动，提交前必须运行 `npm run guard:finance`。**
+   - 当前默认财务基线：`config/finance-baseline.v2.json`
+   - `finance-baseline-v1` 只作历史审计，不作为默认门禁基线。
 7. **本地预览若需要切到生产变量，必须明确说明原因；默认只允许 `dev/staging` 固定样本或脱敏快照。**
 8. **`ALLOW_PRODUCTION_BOOTSTRAP_WRITES=true` 只允许用于已批准的运维修复，不允许作为日常开发或预览默认配置。**
 

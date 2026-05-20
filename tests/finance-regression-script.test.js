@@ -6,8 +6,8 @@ const { spawnSync } = require('child_process');
 
 const repoRoot = path.join(__dirname, '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'finance-regression.js');
-const baselinePath = path.join(repoRoot, 'config', 'finance-baseline.v1.json');
-const snapshotPath = path.join(repoRoot, 'fixtures', 'finance', 'finance-regression-snapshot.v1.json');
+const baselinePath = path.join(repoRoot, 'config', 'finance-baseline.v2.json');
+const snapshotPath = path.join(repoRoot, 'fixtures', 'finance', 'finance-regression-snapshot.v2.json');
 
 const financeRegression = require(scriptPath);
 
@@ -23,11 +23,11 @@ const comparison = financeRegression.compareMetrics(metrics, baseline.metrics);
 assert.deepStrictEqual(
   metrics,
   {
-    totalRevenue: 681938,
-    packageRevenue: 347900,
+    totalRevenue: 978638,
+    packageRevenue: 644600,
     courtRevenue: 255038,
     membershipRecharge: 79000,
-    transactionCount: 985
+    transactionCount: 1042
   },
   'finance regression fixture should reproduce the confirmed five finance baseline numbers'
 );

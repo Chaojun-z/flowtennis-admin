@@ -1,0 +1,76 @@
+{
+  "snapshotId": "finance-regression-snapshot-v2",
+  "snapshotType": "normalized-fixed-fixture",
+  "capturedAt": "2026-05-19",
+  "notes": "当前固定 fixture 用于财务回归与 CI。V2 基线来自 2026-05-19 私教课 CSV 正式导入后的全量最终对账。",
+  "previousSnapshotId": "finance-regression-snapshot-v1",
+  "packageRevenueRows": [
+    {
+      "id": "pkg-confirmed-001",
+      "status": "confirmed",
+      "recognizedRevenue": 600000,
+      "transactionCount": 500,
+      "source": "fixed-fixture-course"
+    },
+    {
+      "id": "pkg-confirmed-002",
+      "status": "confirmed",
+      "recognizedRevenue": 44600,
+      "transactionCount": 60,
+      "source": "fixed-fixture-course"
+    },
+    {
+      "id": "pkg-voided-001",
+      "status": "voided",
+      "recognizedRevenue": 999999,
+      "transactionCount": 99,
+      "source": "ignored-row"
+    }
+  ],
+  "courtRevenueRows": [
+    {
+      "id": "court-confirmed-001",
+      "status": "confirmed",
+      "recognizedRevenue": 200000,
+      "transactionCount": 280,
+      "source": "fixed-fixture-court"
+    },
+    {
+      "id": "court-settled-001",
+      "status": "settled",
+      "recognizedRevenue": 55038,
+      "transactionCount": 80,
+      "source": "fixed-fixture-court"
+    },
+    {
+      "id": "court-pending-001",
+      "status": "pending",
+      "recognizedRevenue": 111111,
+      "transactionCount": 11,
+      "source": "ignored-row"
+    }
+  ],
+  "membershipRechargeRows": [
+    {
+      "id": "membership-confirmed-001",
+      "status": "confirmed",
+      "recognizedRevenue": 50000,
+      "transactionCount": 80,
+      "source": "fixed-fixture-membership"
+    },
+    {
+      "id": "membership-confirmed-002",
+      "status": "confirmed",
+      "recognizedRevenue": 29000,
+      "transactionCount": 42,
+      "source": "fixed-fixture-membership"
+    },
+    {
+      "id": "membership-refunded-001",
+      "status": "refunded",
+      "recognizedRevenue": 12345,
+      "transactionCount": 12,
+      "source": "ignored-row"
+    }
+  ]
+}

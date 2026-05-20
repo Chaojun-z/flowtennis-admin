@@ -1,0 +1,20 @@
+{
+  "baselineId": "finance-baseline-v2",
+  "confirmedAt": "2026-05-19",
+  "status": "active",
+  "previousBaselineId": "finance-baseline-v1",
+  "reason": "2026-05-19 私教课 CSV 正式导入完成，并完成全量最终对账",
+  "snapshotPath": "fixtures/finance/finance-regression-snapshot.v2.json",
+  "metrics": {
+    "totalRevenue": 978638,
+    "packageRevenue": 644600,
+    "courtRevenue": 255038,
+    "membershipRecharge": 79000,
+    "transactionCount": 1042
+  },
+  "confirmedIncomeMetrics": {
+    "confirmedRevenue": 418138.33,
+    "packageConfirmedRevenue": 147403.33,
+    "unconfirmedRevenue": 560499.67
+  }
+}

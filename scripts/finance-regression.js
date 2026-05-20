@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_BASELINE_PATH = path.join(__dirname, '..', 'config', 'finance-baseline.v1.json');
+const DEFAULT_BASELINE_PATH = path.join(__dirname, '..', 'config', 'finance-baseline.v2.json');
 const CONFIRMED_STATUSES = new Set(['confirmed', 'settled']);
 
 function loadJsonFile(filePath) {
