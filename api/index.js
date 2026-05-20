@@ -2325,20 +2325,26 @@ function buildScheduleNotificationUpdate(schedule,result={},type='schedule_creat
     notificationLogs:[...parseArr(schedule?.notificationLogs),log]
   };
 }
+function officialAccountScheduleMs(value){
+  const raw=String(value||'').trim();
+  if(!raw)return NaN;
+  if(/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw))return dateMs(raw);
+  return dateMs(`${raw.replace(' ','T')}+08:00`);
+}
 function collectCourseReminderCandidates(rows=[],now=new Date()){
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
   const minMs=nowMs+90*60000;
   const maxMs=nowMs+150*60000;
-  const active=(rows||[]).filter(s=>effectiveScheduleStatus(s,now)==='已排课'&&!s.courseReminderSentAt&&Number.isFinite(dateMs(s.startTime)));
+  const active=(rows||[]).filter(s=>effectiveScheduleStatus(s,now)==='已排课'&&!s.courseReminderSentAt&&Number.isFinite(officialAccountScheduleMs(s.startTime)));
   return active
-    .filter(s=>{const start=dateMs(s.startTime);return start>=minMs&&start<=maxMs;})
-    .sort((a,b)=>dateMs(a.startTime)-dateMs(b.startTime))
+    .filter(s=>{const start=officialAccountScheduleMs(s.startTime);return start>=minMs&&start<=maxMs;})
+    .sort((a,b)=>officialAccountScheduleMs(a.startTime)-officialAccountScheduleMs(b.startTime))
     .map(schedule=>{
       const sameCoach=(rows||[]).filter(s=>s.id!==schedule.id&&String(s.coach||'').trim()===String(schedule.coach||'').trim());
       const previous=sameCoach
-        .filter(s=>Number.isFinite(dateMs(s.endTime))&&dateMs(s.endTime)<=dateMs(schedule.startTime))
-        .sort((a,b)=>dateMs(b.endTime)-dateMs(a.endTime))[0]||null;
-      const gap=previous?Math.round((dateMs(schedule.startTime)-dateMs(previous.endTime))/60000):null;
+        .filter(s=>Number.isFinite(officialAccountScheduleMs(s.endTime))&&officialAccountScheduleMs(s.endTime)<=officialAccountScheduleMs(schedule.startTime))
+        .sort((a,b)=>officialAccountScheduleMs(b.endTime)-officialAccountScheduleMs(a.endTime))[0]||null;
+      const gap=previous?Math.round((officialAccountScheduleMs(schedule.startTime)-officialAccountScheduleMs(previous.endTime))/60000):null;
       const crossCampus=!!(previous&&gap!==null&&gap>=0&&gap<=90&&String(previous.campus||'')!==String(schedule.campus||''));
       return {schedule,previous,gap,crossCampus};
     });
