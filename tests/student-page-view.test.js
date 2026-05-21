@@ -37,11 +37,14 @@ assert.match(source, /function studentNoteSummary\(/, 'student list should compu
 assert.match(source, /<table class="tms-table">[\s\S]*<th[^>]*>学员<\/th><th[^>]*>电话<\/th><th[^>]*>类型<\/th><th[^>]*>校区<\/th><th[^>]*>最近上课<\/th><th[^>]*>累计上课<\/th><th[^>]*>负责教练<\/th><th[^>]*>课包\/课时<\/th><th[^>]*>来源<\/th><th[^>]*>备注<\/th><th[^>]*>操作<\/th>/, 'student table should keep the compact standard columns');
 assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should hide the current class column');
 assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
+assert.match(source, /<th style="width:80px">电话<\/th><th style="width:40px">类型<\/th><th style="width:105px">校区<\/th><th style="width:140px">最近上课<\/th><th style="width:100px">累计上课<\/th>/, 'student table should tighten phone/type spacing and widen recent lesson columns');
 assert.match(source, /id="stuPageSize"/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
 assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
-assert.match(css, /#page-students \.tms-pagination\{padding:6px 14px;font-size:11px/, 'student pager should be shorter with smaller text');
+assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
+assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
+assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
 assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
