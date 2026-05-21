@@ -707,7 +707,7 @@ function studentPrimaryClass(stu){
   return all[0]||null;
 }
 function daysAgoText(dateStr){
-  if(!dateStr)return '—';
+  if(!dateStr)return '-';
   const days=Math.max(0,Math.floor((Date.now()-new Date(dateStr))/(86400000)));
   return `${dateStr} · ${days}天前`;
 }
@@ -721,7 +721,7 @@ function lessonValue(value,fallback=0){
 }
 function studentCoachSummary(stu){
   const coachSet=[...new Set([stu?.primaryCoach,...studentActiveClasses(stu).map(c=>String(c.coach||'').trim())].filter(Boolean))];
-  if(!coachSet.length)return '—';
+  if(!coachSet.length)return '-';
   if(coachSet.length===1)return coachSet[0];
   return `${coachSet[0]} 等${coachSet.length}位`;
 }
@@ -812,7 +812,7 @@ function studentNoteSummary(stu){
   const recentFeedback=studentRecentFeedbacks(stu,1)[0];
   if(recentFeedback?.needOpsFollowUp)return recentFeedback.opsFollowUpSuggestion||'需要运营跟进';
   if(recentFeedback?.conversionIntent)return `转化意向：${recentFeedback.conversionIntent}`;
-  return '—';
+  return '-';
 }
 function studentClassSummaryHtml(stu){
   const cls=studentClasses(stu);
@@ -864,7 +864,7 @@ function studentEntitlementSummaryHtml(stu){
     const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
     const purchaseDate=studentEntitlementPurchaseDate(e,purchase);
     const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(e.packageName)||'—'}</span> <span class="badge b-amber" style="font-size:10px">${esc(e.courseType)||'—'}</span>；报名 ${esc(purchaseDate)||'—'}；归属 ${esc(ownerCoach)||'—'}；剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(e.validUntil)||'—'}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div>`;
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(e.packageName))}</span> <span class="badge b-amber" style="font-size:10px">${esc(renderCourtEmptyText(e.courseType))}</span>；报名 ${esc(renderCourtEmptyText(purchaseDate))}；归属 ${esc(renderCourtEmptyText(ownerCoach))}；剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(renderCourtEmptyText(e.validUntil))}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){
@@ -992,7 +992,7 @@ function studentEntitlementLedgerHtml(stu){
     const count=Math.abs(Number(l.lessonDelta)||0);
     const action=(Number(l.lessonDelta)||0)>0?'退回':'扣减';
     const dateText=entitlementLedgerDisplayDate(l);
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${action} ${lessonQty(count)} 节 · ${esc(ent.packageName)||'课包'}</div><div style="margin-top:3px">${esc(l.reason)||'—'} · ${dateText||'—'}</div></div>`;
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${action} ${lessonQty(count)} 节 · ${esc(ent.packageName)||'课包'}</div><div style="margin-top:3px">${esc(renderCourtEmptyText(l.reason))} · ${renderCourtEmptyText(dateText)}</div></div>`;
   }).join('');
 }
 function classScheduleSummaryHtml(cls){

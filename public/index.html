@@ -120,14 +120,14 @@
           <div id="stuTypeFilterHost"></div>
           <div id="stuSourceFilterHost"></div>
           <div id="stuCoachFilterHost"></div>
-          <button class="tms-btn tms-btn-ghost" onclick="exportStudentCSV()">导出</button>
         </div>
         <div class="tms-toolbar-right">
+          <button class="tms-btn tms-btn-ghost" onclick="exportStudentCSV()">导出</button>
           <button class="tms-btn tms-btn-ghost" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
           <button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">＋ 添加学员</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">学员</th><th style="width:80px">电话</th><th style="width:40px">类型</th><th style="width:105px">校区</th><th style="width:140px">最近上课</th><th style="width:100px">累计上课</th><th style="width:110px">负责教练</th><th style="width:80px">课包/课时</th><th style="width:90px">来源</th><th style="width:180px">备注</th><th class="tms-sticky-r" style="width:150px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="stuTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">学员</th><th style="width:94px">电话</th><th style="width:58px">类型</th><th style="width:105px">校区</th><th style="width:140px"><button class="tms-sort-header" data-student-sort="lastLesson" onclick="cycleStudentSort('lastLesson')">最近上课<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:100px"><button class="tms-sort-header" data-student-sort="completedLessons" onclick="cycleStudentSort('completedLessons')">累计上课<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:110px">负责教练</th><th style="width:90px"><button class="tms-sort-header" data-student-sort="packageLessons" onclick="cycleStudentSort('packageLessons')">课时/课包<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:90px">来源</th><th style="width:180px">备注</th><th class="tms-sticky-r" style="width:150px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="stuTbody"></tbody></table></div>
         <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="stuPagerInfo">共 0 条</span><div id="stuPageSize"></div></div><div class="tms-page-numbers" id="stuPagerBtns"></div></div>
       </div>
     </div>
