@@ -245,12 +245,29 @@ function studentRecentFeedbacks(stu,limit=2){
   }).sort((a,b)=>new Date(b.startTime||b.createdAt||0)-new Date(a.startTime||a.createdAt||0)).slice(0,limit);
 }
 function studentLessonRecordHtml(stu){
-  const rows=schedules
-    .filter(x=>scheduleHasStudent(x,stu)&&x.startTime)
-    .sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))
-    .slice(0,12);
+  const rows=studentLessonRecordRows(stu).slice(0,12);
   if(!rows.length)return '暂无上课记录';
-  return rows.map(s=>`${studentLessonRecordTimeText(s)} · ${scheduleCourseType(s)} · ${scheduleClassName(s)} · ${s.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(s))}节 · ${cn(s.campus)||'-'} ${s.venue||''} · ${effectiveScheduleStatus(s)}`).map(esc).join('<br>');
+  return rows.map(item=>item.type==='ledger'
+    ? studentLessonRecordLedgerText(item.row,item.ent)
+    : `${studentLessonRecordTimeText(item.schedule)} · ${cn(item.schedule.campus)||'-'} ${item.schedule.venue||''} · ${item.schedule.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(item.schedule))}节 · ${scheduleCourseType(item.schedule)} · ${scheduleClassName(item.schedule)}`
+  ).map(esc).join('<br>');
+}
+function studentLessonRecordRows(stu){
+  const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
+  const map=new Map();
+  schedules
+    .filter(x=>scheduleHasStudent(x,stu)&&x.startTime)
+    .filter(x=>effectiveScheduleStatus(x)!=='已取消')
+    .forEach(schedule=>map.set(studentLessonRecordKey({studentId:stu?.id,schedule}),{type:'schedule',schedule,sortTime:schedule.startTime}));
+  studentEntitlementLedgerRows(stu)
+    .filter(row=>Number(row.lessonDelta)<0)
+    .forEach(row=>{
+      const schedule=findScheduleForEntitlementLedgerRow(row,stu);
+      const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
+      if(map.has(key))return;
+      map.set(key,{type:'ledger',row,ent:entMap.get(row.entitlementId)||{},sortTime:studentEntitlementLedgerTimeText(row,schedule)});
+    });
+  return [...map.values()].sort((a,b)=>String(b.sortTime||'').localeCompare(String(a.sortTime||'')));
 }
 function studentLessonRecordTimeText(s){
   const date=String(s.startTime||'').slice(0,10);

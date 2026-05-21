@@ -1037,10 +1037,10 @@ function studentEntitlementLedgerTimeText(row,schedule={}){
 }
 function studentEntitlementLedgerLocationText(row,schedule={},ent={}){
   const location=String(row?.location||row?.sourceLocation||'').trim();
-  if(location)return location;
-  const campus=cn(schedule?.campus||schedule?.campusName||row?.campus||row?.campusName||row?.sourceCampus||ent?.campus||parseArr(ent?.campusIds)[0]||'');
   const venue=String(schedule?.venue||schedule?.court||row?.venue||row?.court||row?.courtName||row?.sourceVenue||'').trim();
-  return [campus,venue].filter(Boolean).join('');
+  if(location)return [location,venue].filter(Boolean).join(' ');
+  const campus=cn(schedule?.campus||schedule?.campusName||row?.campus||row?.campusName||row?.sourceCampus||ent?.campus||parseArr(ent?.campusIds)[0]||'');
+  return [campus,venue].filter(Boolean).join(' ');
 }
 function studentEntitlementLedgerSourceText(row){
   const sourceSheet=String(row?.sourceSheet||'').trim();
@@ -1062,6 +1062,19 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
     studentEntitlementLedgerSourceText(row)
   ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
   return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
+}
+function studentLessonRecordLedgerText(row,ent={}){
+  const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
+  const schedule=findScheduleForEntitlementLedgerRow(row,student);
+  const balance=ent?.id?`剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:'';
+  return [
+    studentEntitlementLedgerTimeText(row,schedule),
+    studentEntitlementLedgerLocationText(row,schedule,ent),
+    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    `扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`,
+    balance,
+    ent.packageName||row?.packageName||'课包'
+  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
 }
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
