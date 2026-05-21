@@ -69,6 +69,40 @@ function normalizeCourseType(type=''){
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
   return raw;
 }
+function packageAudienceLabelFromText(texts=[]){
+  const raw=texts.filter(Boolean).join(' ');
+  if(raw.includes('青少年'))return '青少年';
+  if(raw.includes('成人'))return '成人';
+  return '';
+}
+function packageClassSizeLabel(maxStudents=1){
+  return `1v${parseInt(maxStudents)||1}`;
+}
+function packageCoreClassLabel(p={}){
+  const courseType=normalizeCourseType(p.courseType||p.type||'');
+  if(courseType==='私教课')return `${packageClassSizeLabel(p.maxStudents)}私教课`;
+  return courseType||'课包';
+}
+function packageTimeBandShortLabel(timeBand='全天'){
+  if(timeBand==='黄金')return '黄金';
+  if(timeBand==='非黄金')return '非黄金';
+  if(timeBand==='黄金时段')return '黄金';
+  if(timeBand==='非黄金时段')return '非黄金';
+  return '全天';
+}
+function packageStatusText(p={}){
+  const status=String(p.status||'active');
+  if(status==='inactive'||status==='merged')return '已停售';
+  return '';
+}
+function standardPackageLabel(p={},includeStatus=false){
+  const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
+  const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
+  const parts=[packageCoreClassLabel(p),audience,lessons?`${lessons}课时`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean);
+  const status=includeStatus?packageStatusText(p):'';
+  if(status)parts.push(status);
+  return parts.join(' · ');
+}
 function scheduleCourseType(s){
   if(scheduleIsTrial(s))return '体验课';
   return normalizeCourseType(s?.courseType)||'—';
@@ -739,14 +773,17 @@ function studentPackageLessonMeta(stu){
 }
 function studentPackageLessonSummary(stu){
   const meta=studentPackageLessonMeta(stu);
-  return meta.hasPackage?meta.text:'-';
+  if(!meta.hasPackage)return '-';
+  const rows=entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided');
+  return rows.map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||meta.text;
 }
 function studentPackageLessonMiniBar(stu){
   const meta=studentPackageLessonMeta(stu);
   if(!meta.hasPackage)return renderCourtCellText('-',false);
   const remaining=meta.remaining,total=meta.total;
   const text=`${lessonQty(remaining)}/${lessonQty(total)}`;
-  return `<div class="tms-mini-bar student-package-mini" title="${text} 节"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${meta.pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
+  const title=studentPackageLessonSummary(stu);
+  return `<div class="tms-mini-bar student-package-mini" title="${esc(title)}"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${meta.pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
 }
 function studentBookingMembershipSummary(stu){
   const linked=courtsForStudent(stu);
@@ -855,7 +892,7 @@ function scheduleEntitlementSummary(s){
   if(ids.length>1)return `${ids.length}个课包 · ${charge}`;
   const ent=findEntitlementForSchedule(s);
   if(!ent)return charge;
-  return `${ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
+  return `${standardPackageLabel(ent,true)||ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
 }
 function studentEntitlementSummaryHtml(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{}))));
@@ -865,7 +902,7 @@ function studentEntitlementSummaryHtml(stu){
     const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
     const purchaseDate=studentEntitlementPurchaseDate(e,purchase);
     const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(e.packageName))}</span> · ${esc(renderCourtEmptyText(e.courseType))} · 报名 ${esc(renderCourtEmptyText(purchaseDate))} · 归属 ${esc(renderCourtEmptyText(ownerCoach))} · 剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节 · 已扣 ${lessonQty(used)} 节 · 有效至 ${esc(renderCourtEmptyText(e.validUntil))} · ${esc(e.timeBand)||'全天'} · ${entitlementStatusText(e)}</div>`;
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(standardPackageLabel({...e,packageName:e.packageName,packageLessons:e.totalLessons},e.status==='inactive'||e.status==='voided')))}</span> · 报名 ${esc(renderCourtEmptyText(purchaseDate))} · 归属 ${esc(renderCourtEmptyText(ownerCoach))} · 剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节 · 已扣 ${lessonQty(used)} 节 · 有效至 ${esc(renderCourtEmptyText(e.validUntil))} · ${esc(packageTimeBandShortLabel(e.timeBand||'全天'))} · ${entitlementStatusText(e)}</div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){
@@ -1056,7 +1093,7 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
   const schedule=findScheduleForEntitlementLedgerRow(row,student);
   const line=[
     `${lessonQty(Number(row.lessonDelta)||0)}节`,
-    ent.packageName||row?.packageName||'课包',
+    standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided'),
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
     schedule.coach||row?.coach||ent?.ownerCoach||'',
@@ -1074,7 +1111,7 @@ function studentLessonRecordLedgerText(row,ent={}){
     schedule.coach||row?.coach||ent?.ownerCoach||'',
     `扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`,
     balance,
-    ent.packageName||row?.packageName||'课包'
+    standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包'
   ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
 }
 function studentEntitlementLedgerHtml(stu){

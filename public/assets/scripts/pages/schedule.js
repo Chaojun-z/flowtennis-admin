@@ -322,7 +322,7 @@ function handleScheduleStartTimeChange(){
 }
 function scheduleEntitlementLabel(option){
   if(!option?.entitlementId)return option?.label||'自动匹配可用课包';
-  return `${option.packageName} · 剩余${option.remainingLessons}/${option.totalLessons} · ${option.timeBand||'全天'} · 到期${option.validUntil||'-'}`;
+  return `${standardPackageLabel(option,true)||option.packageName} · 剩余${option.remainingLessons}/${option.totalLessons} · ${packageTimeBandShortLabel(option.timeBand||'全天')} · 到期${option.validUntil||'-'}`;
 }
 function renderScheduleEntitlementDropdown(options=[],value='',placeholder='自动匹配可用课包'){
   const list=options.length?options.map(x=>({value:x.entitlementId,label:scheduleEntitlementLabel(x)})):[{value:'',label:placeholder}];
@@ -518,7 +518,7 @@ function applySchEntitlementOptions(res,preferredId=''){
   }else{
     setScheduleCourseTypeReadonly(false);
   }
-  hint.textContent=selected?`已自动匹配：${selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${selected.timeBand||'全天'}，到期 ${selected.validUntil||'-'}`:'';
+  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}，到期 ${selected.validUntil||'-'}`:'';
 }
 function scheduleEntitlementCourseType(option){
   if(!option)return '';
@@ -642,7 +642,7 @@ function scheduleSaveConfirmText(data,selectedEntitlement){
     `校区/场地：${scheduleLocationText(data)}`,
     `课程：${normalizeCourseType(data.courseType)||'—'}`,
     `消课：${data.lessonCount||0} 节`,
-    `扣减课包：${data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?selectedEntitlement.packageName:'未选择可用课包，本次不会扣减课包余额')}`,
+    `扣减课包：${data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额')}`,
     data.coachLateFree?`迟到免费：本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`:'',
     data.status==='已取消'?`取消原因：${data.cancelReason||'未填写'}`:''
   ].join('\n');
@@ -686,7 +686,7 @@ async function saveSchedule(){
   const coachLateFree=!!document.getElementById('sch_coachLateFree')?.checked;
   const lateReason=document.getElementById('sch_lateReason')?.value.trim()||'';
   if(coachLateFree&&!lateReason){toast('请填写迟到原因','warn');return;}
-  const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,isTrial:selectedCourseType==='体验课',coach,coachId:coach,locationType,venue,campus:campusValue,externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,entitlementId:studentIds.length===1?selectedEntitlementId:'',packageName:studentIds.length===1?(selectedEntitlement?.packageName||''):'',purchaseId:studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:studentIds.length===1?(selectedEntitlement?.timeBand||''):'',cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
+  const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,isTrial:selectedCourseType==='体验课',coach,coachId:coach,locationType,venue,campus:campusValue,externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,entitlementId:studentIds.length===1?selectedEntitlementId:'',packageName:studentIds.length===1?(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName||''):''):'',purchaseId:studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:studentIds.length===1?(selectedEntitlement?.timeBand||''):'',cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
   if(!await appConfirm(scheduleSaveConfirmText(data,selectedEntitlement),{title:'确认保存这节课？',confirmText:'确认保存'}))return;
   const btn=document.getElementById('scheduleSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   try{

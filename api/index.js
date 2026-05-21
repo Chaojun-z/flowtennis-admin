@@ -1142,8 +1142,7 @@ const PACKAGE_MERGE_CORE_FIELDS=[
   'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
 ];
 const SOLD_PACKAGE_LOCKED_FIELDS=[
-  'price','lessons',
-  'coachIds','coachNames','campusIds','maxStudents'
+  'price','lessons','maxStudents'
 ];
 function packageEntitlementValidity(nextPackage,entitlement={},purchase={}){
   const validFrom=entitlement.validFrom||purchase.purchaseDate||dateKey(entitlement.createdAt)||'';

@@ -35,7 +35,7 @@ function planEntitlementSummary(p){
   const rows=planEntitlementRows(p);
   if(!rows.length)return '<span style="color:var(--td)">无可用权益</span>';
   const e=rows[0];
-  return `${esc(e.packageName)||'课包'}<div class="udesc">剩 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} · 到期 ${esc(e.validUntil)||'—'}</div>`;
+  return `${esc(standardPackageLabel(e,true)||e.packageName||'课包')}<div class="udesc">剩 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} · 到期 ${esc(e.validUntil)||'—'}</div>`;
 }
 function planFeedbackRows(p,limit=2){
   return feedbacks.filter(f=>f.studentId===p?.studentId||parseArr(f.studentIds).includes(p?.studentId)||planSchedules(p).some(s=>s.id===f.scheduleId)).sort((a,b)=>new Date(b.startTime||b.createdAt||0)-new Date(a.startTime||a.createdAt||0)).slice(0,limit);
@@ -98,7 +98,7 @@ function renderPlans(){
   let list=plans.filter(p=>{
     const stu=students.find(s=>s.id===p.studentId),prod=planProduct(p);
     const accountText=courtsForStudent(stu).map(c=>`${c.name} ${c.phone||''}`).join(' ');
-    if(!searchHit(q,p.studentName,p.studentPhone,p.className,p.productName,prod?.type,p.coach,p.status,cn(p.campus),accountText,planEntitlementRows(p).map(e=>`${e.packageName} ${e.validUntil}`).join(' ')))return false;
+    if(!searchHit(q,p.studentName,p.studentPhone,p.className,p.productName,prod?.type,p.coach,p.status,cn(p.campus),accountText,planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName} ${e.validUntil}`).join(' ')))return false;
     if(sf&&p.status!==sf)return false;
     if(cf&&p.campus!==cf)return false;
     if(coachF&&p.coach!==coachF)return false;
@@ -120,6 +120,6 @@ function renderPlans(){
     const pct=tl>0?Math.round(ul/tl*100):0,pc=rem>3?'pf-gold':rem>1?'pf-warn':'pf-red';
     const w=p.status==='active'&&rem<=2;
     const last=planLastLesson(p);
-    return `<tr class="${w?'warn-row':''}"><td style="padding-left:20px"><div class="tms-text-primary">${esc(p.studentName)||'—'}</div></td><td>${renderCourtCellText(p.studentPhone)}</td><td><div class="tms-text-primary">${esc(p.className)||'—'}</div></td><td><div class="tms-text-primary">${esc(p.productName)||'—'}</div><div class="tms-text-secondary">${esc(planProduct(p)?.type||'-')}</div></td><td>${renderCourtCellText(p.coach)}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${lessonQty(ul)}/${lessonQty(tl)} ${w?'<span class="warn-txt">剩'+lessonQty(rem)+'!</span>':'剩'+lessonQty(rem)}</span></div></td><td><div class="tms-text-remark" style="max-width:240px" title="${esc(planEntitlementRows(p).map(e=>`${e.packageName||'课包'} 剩${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||'无可用权益')}">${planEntitlementSummary(p)}</div></td><td><span class="tms-tag ${ss[p.status]||'tms-tag-tier-slate'}">${sl[p.status]||p.status||'—'}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPlanDetail('${p.id}')">详情</span><span class="tms-action-link" onclick="openPlanStudent('${p.id}')">学员</span><span class="tms-action-link" onclick="openPlanSchedule('${p.id}')">排课</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td style="padding-left:20px"><div class="tms-text-primary">${esc(p.studentName)||'—'}</div></td><td>${renderCourtCellText(p.studentPhone)}</td><td><div class="tms-text-primary">${esc(p.className)||'—'}</div></td><td><div class="tms-text-primary">${esc(p.productName)||'—'}</div><div class="tms-text-secondary">${esc(planProduct(p)?.type||'-')}</div></td><td>${renderCourtCellText(p.coach)}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${lessonQty(ul)}/${lessonQty(tl)} ${w?'<span class="warn-txt">剩'+lessonQty(rem)+'!</span>':'剩'+lessonQty(rem)}</span></div></td><td><div class="tms-text-remark" style="max-width:240px" title="${esc(planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} 剩${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||'无可用权益')}">${planEntitlementSummary(p)}</div></td><td><span class="tms-tag ${ss[p.status]||'tms-tag-tier-slate'}">${sl[p.status]||p.status||'—'}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPlanDetail('${p.id}')">详情</span><span class="tms-action-link" onclick="openPlanStudent('${p.id}')">学员</span><span class="tms-action-link" onclick="openPlanSchedule('${p.id}')">排课</span></td></tr>`;
   }).join(''):'<tr><td colspan="10"><div class="empty"><div class="empty-ico">📚</div><p>暂无学习计划</p></div></td></tr>';
 }

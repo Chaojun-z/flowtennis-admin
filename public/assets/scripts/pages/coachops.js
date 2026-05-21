@@ -666,7 +666,7 @@ function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(
       recognizedAmount,
       confirmType:(Number(row.lessonDelta)||0)<0?'课程确认收入':'消耗回退',
       sourceProject:schedule.id?`${scheduleCourseType(schedule)||'课程'} ${fmtDt(schedule.startTime)}`:(row.reason||'历史导入'),
-      debitTarget:ent.packageName||purchase.packageName||'课包',
+      debitTarget:standardPackageLabel(ent,true)||standardPackageLabel(purchase,true)||ent.packageName||purchase.packageName||'课包',
       systemStatus:row.scheduleId||row.importSource==='系统导入'?'已关联':'待补来源',
       relatedDocument:row.scheduleId?`排课 ${row.scheduleId}`:`课包流水 ${row.id}`
     };
