@@ -16,7 +16,7 @@ function fnBody(name){
 
 assert.match(source, /function buildRepeatScheduleSeeds\(/, 'schedule page should expose a repeat schedule helper');
 assert.match(fnBody('openScheduleModal'), /sch_repeatEnabled/, 'schedule modal should allow enabling repeat scheduling');
-assert.match(fnBody('openScheduleModal'), /每周重复/, 'schedule modal should describe weekly repeat scheduling');
+assert.match(fnBody('openScheduleModal'), /循环排课/, 'schedule modal should describe weekly repeat scheduling');
 assert.match(fnBody('openScheduleModal'), /教练迟到免费/, 'schedule modal should support marking coach-late free lessons');
 assert.match(fnBody('openScheduleModal'), /教练承担场地费/, 'schedule modal should capture coach late field fee');
 assert.match(fnBody('scheduleSaveConfirmText'), /迟到免费/, 'schedule save confirm copy should show coach-late free status');
@@ -44,7 +44,7 @@ assert.match(source, /function syncScheduleFilterOptions\([\s\S]*schCoachFilter[
 assert.doesNotMatch(source, /schCampusFilterHost|schCampusFilter/, 'schedule toolbar should not keep the old campus dropdown filter');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*校区内[\s\S]*校区外/, 'schedule modal should support in-campus and off-campus lesson location types');
-assert.match(fnBody('openScheduleModal'), /schedule-time-course-row[\s\S]*schedule-time-field[\s\S]*sch_courseType/, 'schedule modal should keep time controls compact beside course type');
+assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*sch_entitlement[\s\S]*sch_courseType[\s\S]*上课信息[\s\S]*schedule-time-field/, 'schedule modal should keep package and course type in student info before lesson time');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit on one row with location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
 assert.match(fnBody('scheduleVenueOptionsForCampus'), /shilipu[\s\S]*5号场/, 'shilipu should expose 1-5 courts');
@@ -53,12 +53,21 @@ assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return true/, 'all camp
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
-assert.match(fnBody('openScheduleModal'), /人和课程[\s\S]*本次参与人[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*课程类型[\s\S]*教练[\s\S]*消课节数[\s\S]*扣减课包[\s\S]*地点/, 'schedule modal should follow the simplified create/edit flow');
-assert.match(fnBody('openScheduleModal'), /本次参与人 \*<\/label>[\s\S]*full-width/, 'schedule modal should let participant selection take a full row');
+assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*扣减课包[\s\S]*课程类型[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*消课节数[\s\S]*上课教练[\s\S]*上课地点/, 'schedule modal should follow the upgraded student-first flow');
+assert.match(fnBody('openScheduleModal'), /选择学员 \*<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
+assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*归属：[\s\S]*上次上课：/, 'schedule student metadata should include campus and last lesson inline');
+assert.match(source, /function renderScheduleStudentTags\([\s\S]*scheduleStudentInlineMeta[\s\S]*removeScheduleStudent/, 'selected schedule students should render as removable tags with inline metadata');
+assert.match(source, /function renderScheduleStudentSuggestions\([\s\S]*selectScheduleStudent/, 'schedule student search should render selectable suggestions');
+assert.doesNotMatch(fnBody('openScheduleModal'), /sch_stuPicker|tms-checkbox-matrix|toggleScheduleStudentCheckbox/, 'schedule modal should no longer show the old checkbox matrix');
+assert.doesNotMatch(source, /function toggleScheduleStudentCheckbox/, 'schedule modal should remove the old checkbox selection handler');
 assert.doesNotMatch(fnBody('openScheduleModal'), /关联班次|sch_classId|sch_class_hint/, 'schedule modal should remove the obsolete linked-class field');
 assert.match(source, /function refreshScheduleTimeDerivedFields\(/, 'schedule modal should expose a time-derived refresh helper');
 assert.match(fnBody('openScheduleModal'), /refreshScheduleTimeDerivedFields/, 'schedule modal should refresh lesson units when time changes');
-assert.match(fnBody('openScheduleModal'), /上课日期与时间[\s\S]*课程类型[\s\S]*每周重复/, 'weekly repeat should stay with lesson time settings');
+assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:none/, 'repeat weeks should be hidden until weekly repeat is enabled');
+assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
+assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');
+assert.match(fnBody('applySchEntitlementOptions'), /maxRemain[\s\S]*setScheduleCourseTypeReadonly/, 'schedule entitlement recommendation should default to the package with most remaining lessons and lock course type');
+assert.match(styles, /\.modal\.modal-court \.schedule-student-tags[\s\S]*\.modal\.modal-court \.schedule-student-tag/, 'schedule student tags should have scoped modal styles');
 assert.match(fnBody('openScheduleModal'), /sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external venue schedules should capture venue, court, and notes');
 assert.doesNotMatch(fnBody('openScheduleModal'), /sch_externalAddress|地址/, 'external venue schedules should not ask for an address');
 assert.match(fnBody('openScheduleModal'), /更多设置[\s\S]*教练迟到处理/, 'coach late fields should remain folded as advanced settings');

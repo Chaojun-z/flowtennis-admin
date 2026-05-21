@@ -4,9 +4,10 @@ const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const css = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 
-assert.match(source, /function renderScheduleStudentPicker/, 'schedule modal should provide a dedicated student picker helper');
+assert.match(source, /function renderScheduleStudentSuggestions/, 'schedule modal should provide a dedicated student suggestion helper');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
-assert.match(source, /id="sch_homeCampusSummary"/, 'schedule modal should show selected student home campus separately from lesson location');
+assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*归属：[\s\S]*上次上课：/, 'schedule modal should show selected student home campus inline with the selected tag');
+assert.doesNotMatch(source, /id="sch_homeCampusSummary"/, 'schedule modal should not show home campus as a separate row');
 assert.match(source, /function syncScheduleHomeCampusFromStudents/, 'schedule modal should sync home campus after student selection changes');
 assert.match(source, /function scheduleSelectedStudentCoachMeta/, 'schedule modal should derive the selected student primary coach');
 assert.match(source, /function syncScheduleProfileFromStudents/, 'schedule modal should sync selected student coach and campus defaults');
@@ -14,7 +15,7 @@ assert.match(source, /setCourtDropdownValue\('sch_coach',meta\.coach,meta\.coach
 assert.match(source, /上课校区 \*/, 'schedule own-location field should be labelled as lesson campus, not student home campus');
 assert.match(source, /校区内[\s\S]*校区外/, 'schedule location type copy should separate in-campus and off-campus lessons');
 assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a searchable student input');
-assert.match(source, /id="sch_stuPicker"/, 'schedule modal should provide a student library picker');
+assert.match(source, /id="sch_selectedStudentTags"/, 'schedule modal should show selected students as removable tags');
 assert.doesNotMatch(source, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
 assert.match(source, /function onStudentFilterChange\(\)\{stuPage=1;renderStudents\(\);\}/, 'student filters should reset pagination to first page');
