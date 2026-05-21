@@ -983,16 +983,60 @@ function historicalImportedLessonUnitsForStudent(stu){
     .filter(row=>!!historicalImportedLedgerMonthKey(row))
     .reduce((sum,row)=>sum+Math.abs(Math.min(0,Number(row.lessonDelta)||0)),0);
 }
+function studentEntitlementLedgerTimeText(row,schedule={}){
+  if(schedule?.startTime){
+    const date=String(schedule.startTime).slice(0,10);
+    const start=String(schedule.startTime).slice(11,16);
+    const end=schedule.endTime?String(schedule.endTime).slice(11,16):'';
+    return end?`${date} ${start}-${end}`:entitlementLedgerDisplayDate(row);
+  }
+  const date=String(row?.sourceDate||row?.relatedDate||'').slice(0,10);
+  const band=String(row?.sourceTimeBand||'').trim();
+  if(date&&band){
+    const match=band.match(/(\d{1,2})(?::(\d{2}))?\D+(\d{1,2})(?::(\d{2}))?/);
+    if(match){
+      const start=`${String(match[1]).padStart(2,'0')}:${match[2]||'00'}`;
+      const end=`${String(match[3]).padStart(2,'0')}:${match[4]||'00'}`;
+      return `${date} ${start}-${end}`;
+    }
+    return `${date} ${band}`;
+  }
+  return entitlementLedgerDisplayDate(row);
+}
+function studentEntitlementLedgerLocationText(row,schedule={},ent={}){
+  const location=String(row?.location||row?.sourceLocation||'').trim();
+  if(location)return location;
+  const campus=cn(schedule?.campus||schedule?.campusName||row?.campus||row?.campusName||row?.sourceCampus||ent?.campus||parseArr(ent?.campusIds)[0]||'');
+  const venue=String(schedule?.venue||schedule?.court||row?.venue||row?.court||row?.courtName||row?.sourceVenue||'').trim();
+  return [campus,venue].filter(Boolean).join('');
+}
+function studentEntitlementLedgerSourceText(row){
+  const sourceSheet=String(row?.sourceSheet||'').trim();
+  if(sourceSheet)return sourceSheet.includes('导入')?sourceSheet:`${sourceSheet}导入`;
+  const importSource=String(row?.importSource||'').trim();
+  if(importSource)return importSource;
+  const operator=String(row?.operator||row?.createdBy||'').trim();
+  return operator?`${operator}导入`:'-';
+}
+function studentEntitlementLedgerLineHtml(row,ent={}){
+  const schedule=schedules.find(s=>s.id===row?.scheduleId)||{};
+  const line=[
+    `${lessonQty(Number(row.lessonDelta)||0)}节`,
+    ent.packageName||row?.packageName||'课包',
+    studentEntitlementLedgerTimeText(row,schedule),
+    studentEntitlementLedgerLocationText(row,schedule,ent),
+    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    studentEntitlementLedgerSourceText(row)
+  ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
+}
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
   const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entMap.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无扣课记录</div>';
   return rows.map(l=>{
     const ent=entMap.get(l.entitlementId)||{};
-    const count=Math.abs(Number(l.lessonDelta)||0);
-    const action=(Number(l.lessonDelta)||0)>0?'退回':'扣减';
-    const dateText=entitlementLedgerDisplayDate(l);
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb)"><div style="font-weight:700;color:var(--th)">${action} ${lessonQty(count)} 节 · ${esc(ent.packageName)||'课包'}</div><div style="margin-top:3px">${esc(renderCourtEmptyText(l.reason))} · ${renderCourtEmptyText(dateText)}</div></div>`;
+    return studentEntitlementLedgerLineHtml(l,ent);
   }).join('');
 }
 function classScheduleSummaryHtml(cls){

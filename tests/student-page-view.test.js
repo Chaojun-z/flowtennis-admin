@@ -110,6 +110,10 @@ assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*studentDe
 assert.match(source, /function studentLessonRecordTimeText\([\s\S]*slice\(11,16\)[\s\S]*-\$\{end\}/, 'student lesson records should show start and end time');
 assert.doesNotMatch(source, /function studentEntitlementSummaryHtml[\s\S]*badge b-amber[\s\S]*function studentEntitlementPurchaseDate/, 'student package records should render course type as normal text');
 assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*报名 \$\{esc\(renderCourtEmptyText\(purchaseDate\)\)\} · 归属/, 'student package records should use middle dots instead of semicolon separators');
+assert.match(source, /function studentEntitlementLedgerLineHtml\([\s\S]*\$\{lessonQty\(Number\(row\.lessonDelta\)\|\|0\)\}节[\s\S]*join\(' · '\)/, 'student package consume records should render one compact middle-dot line with signed lesson count');
+assert.match(source, /function studentEntitlementLedgerTimeText\([\s\S]*\$\{date\} \$\{start\}-\$\{end\}/, 'student package consume records should show a lesson time range when available');
+assert.match(source, /function studentEntitlementLedgerSourceText\([\s\S]*sourceSheet[\s\S]*导入/, 'student package consume records should show the import source in the compact line');
+assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*扣减 \$\{lessonQty\(count\)\} 节[\s\S]*function classScheduleSummaryHtml/, 'student package consume records should not use the old two-line charge wording');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前状态[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current status');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前班次[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current class');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*班次进度[\s\S]*function studentOpsInfoHtml/, 'student detail should remove class progress');
