@@ -1,15 +1,16 @@
 // ===== 排课表 =====
+function onScheduleFilterChange(){schPage=1;renderSchedule();}
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'';
   const campusValue=document.getElementById('schCampusFilter')?.value||'';
   const courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'';
-  const statusOptions=[{value:'',label:'全部状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}];
+  const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}];
   const hasExternal=schedules.some(s=>isExternalSchedule(s));
-  const campusOptions=[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id})),...(hasExternal?[{value:'__external__',label:'外部场馆'}]:[])];
-  const courseTypeOptions=[{value:'',label:'全部课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
-  [['schStatusFilterHost','schStatusFilter','全部状态',statusOptions,statusValue],['schCampusFilterHost','schCampusFilter','全部校区',campusOptions,campusValue],['schCourseTypeFilterHost','schCourseTypeFilter','全部课程类型',courseTypeOptions,courseTypeValue]].forEach(([hostId,id,label,options,value])=>{
+  const campusOptions=[{value:'',label:'全部',emptyDisplay:'校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id})),...(hasExternal?[{value:'__external__',label:'外部场馆'}]:[])];
+  const courseTypeOptions=[{value:'',label:'全部',emptyDisplay:'课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
+  [['schStatusFilterHost','schStatusFilter','状态',statusOptions,statusValue],['schCampusFilterHost','schCampusFilter','校区',campusOptions,campusValue],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',courseTypeOptions,courseTypeValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
-    if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'renderSchedule');
+    if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onScheduleFilterChange');
   });
 }
 function isExternalSchedule(s){
@@ -42,14 +43,42 @@ function scheduleRepeatDisplayText(schedule){
   const count=scheduleRepeatGroupRows(schedule).length;
   return count>1?`循环${count}周`:'循环课';
 }
-function renderSchedule(){
-  syncScheduleFilterOptions();
+function schedulePageNumbers(page,pages){
+  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
+  const items=[1];
+  const start=Math.max(2,page-2);
+  const end=Math.min(pages-1,page+2);
+  if(start>2)items.push('...');
+  for(let i=start;i<=end;i++)items.push(i);
+  if(end<pages-1)items.push('...');
+  items.push(pages);
+  return items;
+}
+function renderSchedulePagerControls(total,pages){
+  const pageSizeHost=document.getElementById('schPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('schPageSizeValue',`${schPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(schPageSize),false,'setSchedulePageSize');
+  const btns=document.getElementById('schPagerBtns');
+  if(!btns)return;
+  if(!total||pages<=1){btns.innerHTML='';return;}
+  const pageBtns=schedulePageNumbers(schPage,pages).map(item=>item==='...'
+    ?'<span class="tms-page-ellipsis">...</span>'
+    :`<div class="tms-page-btn${item===schPage?' active':''}" onclick="schPage=${item};renderSchedule()">${item}</div>`
+  ).join('');
+  btns.innerHTML=`<div class="tms-page-btn" onclick="schPage=Math.max(1,schPage-1);renderSchedule()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="schPage=Math.min(${pages},schPage+1);renderSchedule()">下一页</div><span class="tms-page-jump">跳至 <input id="schPageJump" value="${schPage}" onkeydown="if(event.key==='Enter')jumpSchedulePage(this.value)"> 页</span>`;
+}
+function setSchedulePageSize(value){
+  const next=parseInt(value,10);
+  schPageSize=[20,50,100].includes(next)?next:20;
+  schPage=1;
+  renderSchedule();
+}
+function getFilteredSchedules(){
   const q=(document.getElementById('schSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('schStatusFilter')?.value||'';
   const cf=document.getElementById('schCampusFilter')?.value||'';
   const tf=document.getElementById('schCourseTypeFilter')?.value||'';
   const now=new Date();
-  let list=schedules.filter(s=>{
+  return schedules.filter(s=>{
     const cls=s.classId?classes.find(c=>c.id===s.classId):null;
     const effectiveStatus=effectiveScheduleStatus(s,now);
     const stuText=parseArr(s.studentIds).map(sid=>{const st=students.find(x=>x.id===sid);return `${st?.name||sid} ${st?.phone||''}`;}).join(' ');
@@ -58,21 +87,40 @@ function renderSchedule(){
     if(cf&&s.campus!==cf)return false;
     if(tf&&scheduleCourseType(s)!==tf)return false;
     return true;
-  }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)})).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
-  const total=list.length,pages=Math.ceil(total/PAGE_SIZE);
-  if(schPage>Math.max(pages,1))schPage=1;
-  const slice=list.slice((schPage-1)*PAGE_SIZE,schPage*PAGE_SIZE);
+  }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)}));
+}
+function jumpSchedulePage(value){
+  const total=getFilteredSchedules().length;
+  const pages=Math.max(1,Math.ceil(total/schPageSize));
+  schPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  renderSchedule();
+}
+function scheduleHasActiveSearchOrFilter(){
+  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCampusFilter')?.value||document.getElementById('schCourseTypeFilter')?.value);
+}
+function scheduleEmptyStateHtml(){
+  const filtered=scheduleHasActiveSearchOrFilter();
+  const title=filtered?'没有匹配的排课':'暂无排课';
+  const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加排课开始安排课程';
+  return `<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+}
+function renderSchedule(){
+  syncScheduleFilterOptions();
+  let list=getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
+  const total=list.length,pages=Math.max(1,Math.ceil(total/schPageSize));
+  if(schPage>pages)schPage=pages;
+  const slice=list.slice((schPage-1)*schPageSize,schPage*schPageSize);
   const pager=document.querySelector('#page-schedule .tms-pagination');
-  if(pager)pager.style.display=pages>1?'flex':'none';
+  if(pager)pager.style.display=total?'flex':'none';
   document.getElementById('schPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('schPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===schPage?' active':''}" onclick="schPage=${i+1};renderSchedule()">${i+1}</div>`).join('');
+  renderSchedulePagerControls(total,pages);
   document.getElementById('schTbody').innerHTML=slice.length?slice.map(s=>{
     const fb=scheduleFeedback(s);
     const status=s._effectiveStatus||effectiveScheduleStatus(s);
     const dateText=String(s.startTime||'').slice(0,10)||'—';
     const timeText=s.startTime?`${s.startTime.slice(11,16)}-${(s.endTime||'').slice(11,16)}`:'—';
-    return `<tr><td style="padding-left:14px">${renderCourtCellText(dateText,false)}</td><td>${renderCourtCellText(timeText,false)}</td><td>${renderCourtCellText(scheduleDurationText(s),false)}</td><td><div class="tms-cell-text" title="${esc(s.externalNotes||scheduleLocationText(s))}">${esc(scheduleLocationText(s))}</div></td><td>${renderCourtCellText(s.coach,false)}</td><td><div class="tms-text-primary">${esc(scheduleListStudentSummary(s))}</div></td><td><span class="tms-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseType(s))}</span></td><td>${renderCourtCellText(scheduleRepeatDisplayText(s),false)}</td><td><span class="tms-action-link" onclick="openFeedbackModal('${s.id}')">${scheduleFeedbackStatusText(s)}</span></td><td><span class="tms-tag ${scheduleStatusTagClass(status)}">${scheduleStatusLabel(status)}</span>${status==='已取消'&&s.cancelReason?`<div class="tms-text-secondary" style="margin-top:6px">${esc(s.cancelReason)}</div>`:''}</td><td class="tms-sticky-r tms-action-cell schedule-action-cell"><span class="tms-action-link" onclick="openScheduleDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openScheduleModal('${s.id}')">编辑</span><span class="tms-action-link" onclick="openCancelScheduleModal('${s.id}')">取消</span>${scheduleCanDeleteMistake(s)?`<span class="tms-action-link" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</span>`:''}</td></tr>`;
-  }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-ico">📅</div><p>暂无排课</p></div></td></tr>';
+    return `<tr><td class="tms-sticky-l" style="padding-left:14px">${renderCourtCellText(dateText,false)}</td><td>${renderCourtCellText(timeText,false)}</td><td>${renderCourtCellText(scheduleDurationText(s),false)}</td><td><div class="tms-cell-text" title="${esc(s.externalNotes||scheduleLocationText(s))}">${esc(scheduleLocationText(s))}</div></td><td>${renderCourtCellText(s.coach,false)}</td><td><div class="tms-text-primary">${esc(scheduleListStudentSummary(s))}</div></td><td><span class="tms-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseType(s))}</span></td><td>${renderCourtCellText(scheduleRepeatDisplayText(s),false)}</td><td><span class="tms-action-link" onclick="openFeedbackModal('${s.id}')">${scheduleFeedbackStatusText(s)}</span></td><td><span class="tms-tag ${scheduleStatusTagClass(status)}">${scheduleStatusLabel(status)}</span>${status==='已取消'&&s.cancelReason?`<div class="tms-text-secondary" style="margin-top:6px">${esc(s.cancelReason)}</div>`:''}</td><td class="tms-sticky-r tms-action-cell schedule-action-cell"><span class="tms-action-link" onclick="openScheduleDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openScheduleModal('${s.id}')">编辑</span><span class="tms-action-link" onclick="openCancelScheduleModal('${s.id}')">取消</span>${scheduleCanDeleteMistake(s)?`<span class="tms-action-link" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</span>`:''}</td></tr>`;
+  }).join(''):scheduleEmptyStateHtml();
 }
 function scheduleStudentTextByIds(ids){
   return parseArr(ids).map(id=>{

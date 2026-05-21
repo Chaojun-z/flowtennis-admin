@@ -13,7 +13,7 @@
 <title>FlowTennis 网球兄弟工作台</title>
 <link rel="stylesheet" href="/assets/styles/base.css?v=20260508-finance-ledger-v4">
 <link rel="stylesheet" href="/assets/styles/components.css?v=20260508-finance-ledger-v4">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260521-student-detail-plain-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260521-schedule-standard-v1">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -186,7 +186,7 @@
             <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索学员、教练、班次或场地" oninput="renderSchedule()">
+            <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索学员、教练、班次或场地" oninput="onScheduleFilterChange()">
           </div>
           <div id="schStatusFilterHost"></div>
           <div id="schCampusFilterHost"></div>
@@ -196,8 +196,8 @@
           <button class="tms-btn tms-btn-primary" onclick="openScheduleModal(null)">＋ 添加排课</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:84px;padding-left:14px">日期</th><th style="width:92px">上课时间</th><th style="width:52px">时长</th><th style="width:125px">校区/场地</th><th style="width:68px">教练</th><th style="width:120px">学员</th><th style="width:64px">课程类型</th><th style="width:64px">重复?</th><th style="width:52px">反馈</th><th style="width:68px">状态</th><th class="tms-sticky-r" style="width:118px;padding-right:10px;text-align:right">操作</th></tr></thead><tbody id="schTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="schPagerInfo">共 0 条</span></div><div class="tms-page-numbers" id="schPagerBtns"></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:84px;padding-left:14px">日期</th><th style="width:92px">上课时间</th><th style="width:52px">时长</th><th style="width:125px">校区/场地</th><th style="width:68px">教练</th><th style="width:120px">学员</th><th style="width:64px">课程类型</th><th style="width:64px">重复?</th><th style="width:52px">反馈</th><th style="width:68px">状态</th><th class="tms-sticky-r" style="width:118px;padding-right:10px;text-align:right">操作</th></tr></thead><tbody id="schTbody"></tbody></table></div>
+        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="schPagerInfo">共 0 条</span><span id="schPageSize"></span></div><div class="tms-page-numbers" id="schPagerBtns"></div></div>
       </div>
     </div>
     <!-- 教练运营 -->
@@ -643,14 +643,14 @@
 <script src="/assets/scripts/core/utils.js?v=20260521-student-ledger-line-v1"></script>
 <script src="/assets/scripts/core/api.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/core/shell.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/core/state.js?v=20260521-student-state-v1"></script>
-<script src="/assets/scripts/core/bootstrap.js?v=20260508-leads-safe-v2"></script>
+<script src="/assets/scripts/core/state.js?v=20260521-schedule-standard-v1"></script>
+<script src="/assets/scripts/core/bootstrap.js?v=20260521-schedule-standard-v1"></script>
 <script src="/assets/scripts/pages/admin-users.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/campusmgr.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/leads.js?v=20260508-leads-safe-v2"></script>
 <script src="/assets/scripts/pages/students.js?v=20260521-student-detail-fields-v1"></script>
-<script src="/assets/scripts/pages/schedule.js?v=20260508-finance-ledger-v4"></script>
+<script src="/assets/scripts/pages/schedule.js?v=20260521-schedule-standard-v1"></script>
 <script src="/assets/scripts/pages/classes.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/plans.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/products.js?v=20260508-finance-ledger-v4"></script>

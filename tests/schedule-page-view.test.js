@@ -64,6 +64,17 @@ assert.match(fnBody('scheduleStatusLabel'), /已结束[\s\S]*已下课/, 'schedu
 assert.match(fnBody('renderSchedule'), /scheduleStatusLabel/, 'schedule list should render user-facing status text');
 assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
 assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
+assert.match(source, /function onScheduleFilterChange\(\)\{schPage=1;renderSchedule\(\);\}/, 'schedule filters should reset pagination before rendering');
+assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');
+assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 20, 50, and 100 row page sizes');
+assert.match(source, /function scheduleEmptyStateHtml\([\s\S]*没有匹配的排课[\s\S]*暂无排课[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加排课开始安排课程/, 'schedule empty state should distinguish filtered empty results from no data');
+assert.match(source, /id="schPageSize"/, 'schedule pager should expose a page size selector host');
+assert.match(source, /<th class="tms-sticky-l" style="width:84px;padding-left:14px">日期<\/th>/, 'schedule table should keep the date column fixed on the left');
+assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
+assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
+assert.match(styles, /#page-schedule \.tms-pagination\{padding:4px 12px;font-size:11px/, 'schedule pager should use the compact standard pager style');
+assert.match(source, /function renderScheduleTableLoading\([\s\S]*tms-table-loading-state[\s\S]*排课数据加载中/, 'schedule loading state should use the standard table loading style');
+assert.match(source, /function renderScheduleTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'schedule load failure should render an inline retry state');
 assert.match(source, /function openCoachLateSettlementModal\(/, 'schedule page should expose coach late settlement modal');
 assert.match(source, /迟到月结/, 'schedule page should expose coach late monthly settlement entry');
 assert.doesNotMatch(source, /id="page-schedule"[\s\S]*?openCoachLateSettlementModal\(\)[\s\S]*?id="page-coachops"/, 'late monthly settlement should not be a primary schedule-table action');
