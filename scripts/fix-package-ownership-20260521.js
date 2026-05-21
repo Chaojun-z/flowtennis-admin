@@ -111,6 +111,11 @@ function inferTargetName(purchase = {}) {
   return '';
 }
 
+function nowInChinaTime() {
+  const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return `${date.toISOString().slice(0, 19)}+08:00`;
+}
+
 function slug(value) {
   return String(value || '').replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
 }
@@ -279,7 +284,7 @@ function buildVoidedRowsForNotInSystem(purchase, entitlements, now) {
   };
 }
 
-function buildPackageOwnershipPlan({ packages = [], purchases = [], entitlements = [], now = new Date().toISOString() } = {}) {
+function buildPackageOwnershipPlan({ packages = [], purchases = [], entitlements = [], now = nowInChinaTime() } = {}) {
   const plan = { creates: [], purchaseUpdates: [], entitlementUpdates: [], packageDeletes: [], blockers: [], skips: [] };
   const packageById = new Map((packages || []).map((row) => [String(row.id || ''), row]));
   const targetByName = new Map();
