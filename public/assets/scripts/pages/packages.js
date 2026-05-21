@@ -19,13 +19,27 @@ function packageDisplayTitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   return [packageCoreClassLabel(p),lessons?`${lessons}课时`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
 }
+function packageListStatusValue(p){
+  const status=String(p.status||'active');
+  if(status==='inactive'||status==='已停售'||status==='history')return'inactive';
+  if(status==='merged')return'merged';
+  return'active';
+}
+function packageListTitle(p){
+  return packageCoreClassLabel(p)||p.name||'课包';
+}
+function packageListSubtitle(p){
+  const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
+  return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}课时`:'' ].filter(Boolean).join(' · ');
+}
 function packageCreatedDate(p){
   return String(p.createdAt||'').slice(0,10)||'-';
 }
 function packageStatusBadge(p){
-  const status=packageStatusText(p);
-  if(String(p.name||'').includes('历史'))return '<span class="package-status-badge is-off">已停售</span>';
-  return status?'<span class="package-status-badge is-off">已停售</span>':'';
+  const status=packageListStatusValue(p);
+  return status==='inactive'||status==='merged'
+    ?'<span class="package-status-badge is-off">已停售</span>'
+    :'<span class="package-status-badge is-on">售卖中</span>';
 }
 function packageRuleIcon(kind){
   if(kind==='campus')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
@@ -60,10 +74,11 @@ function renderPackages(){
   const list=packages.filter(p=>{
     const courseType=normalizeCourseType(p.courseType);
     const campusIds=parseArr(p.campusIds);
-    if(String(p.status||'active')==='merged')return false;
+    const statusValue=packageListStatusValue(p);
+    if(statusValue==='merged')return false;
     if(!searchHit(q,p.name,packageDisplayTitle(p),courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName,p.ownerCoach))return false;
     if(tf&&courseType!==tf)return false;
-    if(sf&&String(p.status||'active')!==sf)return false;
+    if(sf&&statusValue!==sf)return false;
     if(bf&&String(p.timeBand||'全天')!==bf)return false;
     if(campus&&campus!=='all'&&campusIds.length&&!campusIds.includes(campus))return false;
     return true;
@@ -76,15 +91,35 @@ function renderPackages(){
     const campusTitle=packageCampusTitle(p.campusIds);
     const timeTitle=windows||packageTimeBandShortLabel(p.timeBand||'全天');
     const coachTitle=packageCoachDetail(p);
-    const title=standardPackageLabel(p,true)||courseType||'课包';
-    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div></div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageCreatedDate(p))} 创建<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+    const title=packageListTitle(p);
+    const subtitle=packageListSubtitle(p);
+    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageCreatedDate(p))} 创建<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
   const pkg=packages.find(x=>x.id===packageId)||{};
-  const names=new Set([pkg.name,pkg.originalPackageName,packageDisplayTitle(pkg)].filter(Boolean).map(String));
-  const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>e.packageId===packageId).map(e=>String(e.purchaseId||'')).filter(Boolean));
-  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&(p.packageId===packageId||purchaseIdsByEntitlement.has(String(p.id||''))||names.has(String(p.packageName||''))||names.has(String(p.originalPackageName||'')))).length;
+  const names=new Set([
+    pkg.id,
+    pkg.originalPackageId,
+    pkg.name,
+    pkg.originalPackageName,
+    pkg.productId,
+    pkg.productName,
+    packageDisplayTitle(pkg),
+    standardPackageLabel(pkg,false)
+  ].filter(Boolean).map(String));
+  const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>String(e.packageId||'')===String(packageId)).map(e=>String(e.purchaseId||'')).filter(Boolean));
+  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&(
+    String(p.packageId||'')===String(packageId)||
+    String(p.originalPackageId||'')===String(packageId)||
+    purchaseIdsByEntitlement.has(String(p.id||''))||
+    names.has(String(p.packageId||''))||
+    names.has(String(p.originalPackageId||''))||
+    names.has(String(p.packageName||''))||
+    names.has(String(p.originalPackageName||''))||
+    names.has(String(p.productId||''))||
+    names.has(String(p.productName||''))
+  )).length;
 }
 function packageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(standardPackageLabel(p,false)||p.name)}${p.status==='inactive'?' · 已停售':''}</option>`).join('');
@@ -153,35 +188,24 @@ function packageCampusChecks(ids){
 function packageTimeScopeOptions(){
   return [{value:'weekday',label:'工作日'},{value:'weekend',label:'周末'}];
 }
-function packageDaysToScope(days){
-  const key=parseArr(days).map(n=>parseInt(n)).filter(Boolean).sort((a,b)=>a-b).join(',');
-  if(key==='6,7')return'weekend';
-  return'weekday';
-}
-function packageTimeScopeToDays(scope,fallback=[]){
-  if(scope==='weekend')return[6,7];
-  return[1,2,3,4,5];
-}
-function packageTimeScopeLabel(days){
-  const scope=packageDaysToScope(days);
-  return scope==='weekend'?'周末':'工作日';
+function packageTimeBandPresetWindows(timeBand='全天'){
+  if(timeBand==='黄金时段')return[
+    {label:'工作日',startTime:'16:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
+    {label:'周六日',startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
+  ];
+  if(timeBand==='非黄金时段')return[
+    {label:'工作日',startTime:'09:00',endTime:'16:00',daysOfWeek:[1,2,3,4,5]}
+  ];
+  return[
+    {label:'工作日',startTime:'09:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
+    {label:'周六日',startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
+  ];
 }
 function packageTimeWindowText(w){
   const time=[w?.startTime,w?.endTime].filter(Boolean).join(' - ');
-  return time?`${packageTimeScopeLabel(w.daysOfWeek)} ${time}`:'';
-}
-function packageDefaultTimeWindows(timeBand='全天'){
-  if(timeBand==='黄金时段')return[
-    {label:'黄金时段',startTime:'16:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
-    {label:'黄金时段',startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
-  ];
-  if(timeBand==='非黄金时段')return[
-    {label:'非黄金时段',startTime:'09:00',endTime:'16:00',daysOfWeek:[1,2,3,4,5]}
-  ];
-  return[
-    {label:'全天',startTime:'09:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
-    {label:'全天',startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
-  ];
+  const days=parseArr(w?.daysOfWeek).map(n=>parseInt(n)).filter(Boolean).sort((a,b)=>a-b).join(',');
+  const scope=days==='6,7'?'周六日':'工作日';
+  return time?`${scope} ${time}`:'';
 }
 function setPackageLessonShortcut(value){
   const input=document.getElementById('pkg_lessons');
@@ -194,16 +218,14 @@ function syncPackageClassSize(){
   if(item)item.style.display=type==='私教课'?'':'none';
   if(type!=='私教课')setCourtDropdownValue('pkg_maxStudents','1','1v1');
 }
-function setPackageTimeWindow(scopeId,startId,endId,scope,start,end){
-  const safeScope=scope==='weekend'?'weekend':'weekday';
-  setCourtDropdownValue(scopeId,safeScope,packageTimeScopeOptions().find(x=>x.value===safeScope)?.label||'工作日');
-  setCourtDropdownValue(startId,start||'',start||'开始时间');
-  setCourtDropdownValue(endId,end||'',end||'结束时间');
-}
 function applyPackageTimeBandPreset(value){
-  const rows=packageDefaultTimeWindows(value||document.getElementById('pkg_timeBand')?.value||'全天');
-  setPackageTimeWindow('pkg_timeScope','pkg_timeStart','pkg_timeEnd',packageDaysToScope(rows[0]?.daysOfWeek),rows[0]?.startTime,rows[0]?.endTime);
-  setPackageTimeWindow('pkg_timeScope2','pkg_timeStart2','pkg_timeEnd2',packageDaysToScope(rows[1]?.daysOfWeek),rows[1]?.startTime||'',rows[1]?.endTime||'');
+  const rows=packageTimeBandPresetWindows(value||document.getElementById('pkg_timeBand')?.value||'全天');
+  const host=document.getElementById('pkg_timeWindowsWrap');
+  if(!host)return;
+  host.innerHTML=rows.map((row,idx)=>{
+    const suffix=idx===0?'':'2';
+    return `<div class="time-window-row package-time-window-row"><div class="package-time-window-label">${esc(row.label)}</div>${renderCourtDropdownHtml(`pkg_timeStart${suffix}`,'开始时间',getScheduleTimeOptions(row.startTime||'09:00'),row.startTime||'09:00',true,'refreshPackagePreview')}${'<span class="range-dash">-</span>'}${renderCourtDropdownHtml(`pkg_timeEnd${suffix}`,'结束时间',getScheduleTimeOptions(row.endTime||'22:00'),row.endTime||'22:00',true,'refreshPackagePreview')}</div>`;
+  }).join('');
 }
 
 function openPackageModal(id,presetProductId=''){
@@ -211,7 +233,7 @@ function openPackageModal(id,presetProductId=''){
   const locked=!!(id&&packageHasPurchases(id));
   const timeWindows=parseArr(p?.dailyTimeWindows);
   const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
-  const defaultWindows=packageDefaultTimeWindows(rv(p,'timeBand','全天'));
+  const defaultWindows=packageTimeBandPresetWindows(rv(p,'timeBand','全天'));
   const windowRow=timeWindows[0]||defaultWindows[0]||{};
   const secondWindow=timeWindows[1]||defaultWindows[1]||{};
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
@@ -233,10 +255,7 @@ function openPackageModal(id,presetProductId=''){
       <div class="package-time-section">
         <div class="tms-form-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
         <div class="tms-form-item"><label class="tms-form-label">可用时段</label>
-          <div class="time-window-stack">
-            <div class="time-window-row"><div>适用日期 ${renderCourtDropdownHtml('pkg_timeScope','适用日期',timeScopeOptions,packageDaysToScope(windowRow.daysOfWeek),true)}<span class="filter-hidden-date">工作日 周末</span></div>${renderCourtDropdownHtml('pkg_timeStart','开始时间',getScheduleTimeOptions(rv(windowRow,'startTime','09:00')),rv(windowRow,'startTime','09:00'),true)}<span class="range-dash">-</span>${renderCourtDropdownHtml('pkg_timeEnd','结束时间',getScheduleTimeOptions(rv(windowRow,'endTime','22:00')),rv(windowRow,'endTime','22:00'),true)}</div>
-            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope2','适用日期',timeScopeOptions,packageDaysToScope(secondWindow.daysOfWeek),true)}</div>${renderCourtDropdownHtml('pkg_timeStart2','开始时间',getScheduleTimeOptions(rv(secondWindow,'startTime','')),rv(secondWindow,'startTime',''),true)}<span class="range-dash">-</span>${renderCourtDropdownHtml('pkg_timeEnd2','结束时间',getScheduleTimeOptions(rv(secondWindow,'endTime','')),rv(secondWindow,'endTime',''),true)}</div>
-          </div>
+          <div class="time-window-stack" id="pkg_timeWindowsWrap"></div>
         </div>
       </div>
       <div class="tms-form-row">
@@ -267,13 +286,12 @@ function openPackageModal(id,presetProductId=''){
       <div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pkg_notes_inline" placeholder="可选">${esc(rv(p,'notes'))}</textarea></div></div>
     <input type="hidden" id="pkg_name" value="${esc(rv(p,'name'))}">
     <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
-    <input type="hidden" id="pkg_timeScopeCustomDays" value="${esc(JSON.stringify(parseArr(windowRow.daysOfWeek)))}">
-    <input type="hidden" id="pkg_timeScopeCustomDays2" value="${esc(JSON.stringify(parseArr(secondWindow.daysOfWeek)))}">
     `;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id&&String(p.status||'active')!=='inactive'?`<button class="tms-btn tms-btn-danger" onclick="deactivatePackage('${p.id}')">下架</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
   setCourtModalFrame(id?'编辑课包':'创建课包',body,footer,'modal-wide modal-package-edit');
   syncPackageClassSize();
   setPackageLessonShortcut(rv(p,'lessons',10));
+  applyPackageTimeBandPreset(rv(p,'timeBand','全天'));
 }
 async function savePackage(){
   const courseType=document.getElementById('pkg_type').value.trim();
@@ -303,8 +321,13 @@ async function savePackage(){
   document.getElementById('pkg_notes').value=document.getElementById('pkg_notes_inline').value.trim();
   const timeBand=document.getElementById('pkg_timeBand').value.trim()||'全天';
   const packagePersistedValidDays=parseInt(rv(packages.find(x=>x.id===editId),'validDays',30))||30;
-  const dailyTimeWindows=[{label:timeBand,startTime:timeStart,endTime:timeEnd,daysOfWeek:packageTimeScopeToDays(document.getElementById('pkg_timeScope')?.value,parseArr(document.getElementById('pkg_timeScopeCustomDays')?.value))}];
-  if(timeStart2&&timeEnd2)dailyTimeWindows.push({label:timeBand,startTime:timeStart2,endTime:timeEnd2,daysOfWeek:packageTimeScopeToDays(document.getElementById('pkg_timeScope2')?.value,parseArr(document.getElementById('pkg_timeScopeCustomDays2')?.value))});
+  const presetWindows=packageTimeBandPresetWindows(timeBand);
+  const dailyTimeWindows=presetWindows.map((preset,idx)=>({
+    label:preset.label,
+    startTime:idx===0?timeStart:timeStart2,
+    endTime:idx===0?timeEnd:timeEnd2,
+    daysOfWeek:preset.daysOfWeek
+  })).filter(row=>row.startTime&&row.endTime);
   const data={name,productId:'',productName:'',courseType,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }

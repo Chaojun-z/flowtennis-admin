@@ -606,6 +606,15 @@ assert.throws(
 assert.doesNotThrow(
   () => rules.assertCanEditPackageWithPurchases(
     pkg,
+    { ...pkg, price: 1200, status: 'inactive' },
+    [{ id: 'pur-1', packageId: 'pkg-1' }]
+  ),
+  'sold package should allow changing price and sale status'
+);
+
+assert.doesNotThrow(
+  () => rules.assertCanEditPackageWithPurchases(
+    pkg,
     { ...pkg, dailyTimeWindows: [{ label: '非黄金时段', startTime: '08:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }] },
     [{ id: 'pur-1', packageId: 'pkg-1' }]
   ),
@@ -655,6 +664,8 @@ assert.deepStrictEqual(
       packageTimeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
+      packagePrice: 1000,
+      systemAmount: 1000,
       validDays: 90,
       saleStartDate: '2026-05-01',
       saleEndDate: '2026-06-01',

@@ -55,10 +55,10 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoa
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal course type should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_maxStudents'/, 'package modal class size should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeBand'/, 'package modal time band should use the shared custom dropdown');
-assert.match(fnBody('openPackageModal'), /适用日期[\s\S]*pkg_timeScope[\s\S]*工作日[\s\S]*周末/, 'package modal time windows should choose applicable days per row');
-assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeScope'/, 'package modal time window day scope should use the shared custom dropdown');
-assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeStart'[\s\S]*getScheduleTimeOptions/, 'package modal start time should use the schedule custom time picker');
-assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeEnd'[\s\S]*getScheduleTimeOptions/, 'package modal end time should use the schedule custom time picker');
+assert.doesNotMatch(fnBody('openPackageModal'), /适用日期|pkg_timeScope/, 'package modal should not expose applicable-day selectors');
+assert.match(html, /packageTimeBandPresetWindows[\s\S]*工作日[\s\S]*周六日/, 'package modal should derive applicable days from time band presets');
+assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeStart\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal start time should use the schedule custom time picker');
+assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeEnd\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal end time should use the schedule custom time picker');
 assert.doesNotMatch(fnBody('openPackageModal'), /type="time"/, 'package modal should not use native time inputs');
 assert.doesNotMatch(fnBody('packageTimeScopeOptions'), /value:'custom'|自定义/, 'package time window scope should not include custom');
 assert.match(fnBody('openPackageModal'), /tms-checkbox-matrix purchase-coach-picker package-coach-picker[\s\S]*packageCoachChecks/, 'package allowed coaches should use purchase modal checkbox matrix style');
@@ -68,8 +68,7 @@ assert.match(html, /function setPackageLessonShortcut\(/, 'package modal should 
 assert.match(html, /10课时[\s\S]*20课时[\s\S]*50课时/, 'package modal should expose lesson shortcut chips');
 assert.match(html, /黄金时段'[\s\S]*16:00[\s\S]*22:00[\s\S]*09:00[\s\S]*22:00/, 'prime preset should be weekday evening plus weekend daytime');
 assert.match(html, /非黄金时段'[\s\S]*09:00[\s\S]*16:00/, 'non-prime preset should be weekday daytime');
-assert.match(fnBody('savePackage'), /packageTimeScopeToDays\(document\.getElementById\('pkg_timeScope'\)\?\.value/, 'package save should persist applicable days for first time window');
-assert.match(fnBody('savePackage'), /packageTimeScopeToDays\(document\.getElementById\('pkg_timeScope2'\)\?\.value/, 'package save should persist applicable days for second time window');
+assert.match(fnBody('savePackage'), /presetWindows\.map[\s\S]*daysOfWeek:preset\.daysOfWeek/, 'package save should persist preset applicable days');
 assert.doesNotMatch(fnBody('savePackage'), /windowRow|secondWindow/, 'package save should not depend on modal-local time window variables');
 assert.doesNotMatch(fnBody('savePackage'), /pkg_validDays/, 'package save should not read hidden valid days field');
 assert.match(fnBody('savePackage'), /validDays:\s*packagePersistedValidDays/, 'package save should preserve valid days without showing it');
@@ -97,7 +96,7 @@ assert.doesNotMatch(html, /id="page-packages"[\s\S]*还没有课程产品|id="pa
 assert.doesNotMatch(html, /关联产品:/, 'package cards should not show linked product subtitle');
 assert.doesNotMatch(fnBody('renderPackages'), /showcase-status-tag[\s\S]*启用/, 'package cards should not show the redundant active status tag');
 assert.doesNotMatch(fnBody('renderPackages'), /packageCardTags/, 'package cards should not show duplicate course type tags');
-assert.match(fnBody('packageStatusBadge'), /includes\('历史'\)[\s\S]*已停售/, 'package history state should render as stopped sale');
+assert.match(fnBody('packageStatusBadge'), /packageListStatusValue[\s\S]*已停售/, 'package stopped sale state should render from package status');
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgTimeBandFilter'\)/, 'package cards should filter by time band');
 assert.match(fnBody('renderPackages'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
 assert.match(fnBody('renderPackages'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');

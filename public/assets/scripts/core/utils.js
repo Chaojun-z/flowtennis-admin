@@ -80,7 +80,9 @@ function packageClassSizeLabel(maxStudents=1){
 }
 function packageCoreClassLabel(p={}){
   const courseType=normalizeCourseType(p.courseType||p.type||'');
-  if(courseType==='私教课')return `${packageClassSizeLabel(p.maxStudents)}私教课`;
+  const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
+  const detectedSize=/1v2/.test(text)?2:/1v3/.test(text)?3:p.maxStudents;
+  if(courseType==='私教课')return `${packageClassSizeLabel(detectedSize)}私教课`;
   return courseType||'课包';
 }
 function packageTimeBandShortLabel(timeBand='全天'){
@@ -92,7 +94,7 @@ function packageTimeBandShortLabel(timeBand='全天'){
 }
 function packageStatusText(p={}){
   const status=String(p.status||'active');
-  if(status==='inactive'||status==='merged')return '已停售';
+  if(status==='inactive'||status==='merged'||status==='已停售')return '已停售';
   return '';
 }
 function standardPackageLabel(p={},includeStatus=false){
