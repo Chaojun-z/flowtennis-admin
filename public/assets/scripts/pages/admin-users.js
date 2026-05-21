@@ -7,6 +7,13 @@ function adminUserStatusText(status){
 function adminUserCoachText(user){
   return user.role==='editor'?(user.coachName||coaches.find(c=>c.id===user.coachId)?.name||'未绑定'):'—';
 }
+function adminUserCampusCode(user){
+  const coach=coaches.find(c=>String(c.id||'')===String(user.coachId||'')||String(c.name||'')===String(user.coachName||''));
+  return coach?.campus||'';
+}
+function adminUserMatchesCampus(user){
+  return campus==='all'||sameCampusValue(adminUserCampusCode(user),campus);
+}
 function adminUserPhoneText(user){
   return user.phone||'未填写';
 }
@@ -37,7 +44,7 @@ async function loadAdminUsers(force=false){
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;
   const q=(document.getElementById('adminUserSearch')?.value||'').toLowerCase();
-  const list=adminUsers.filter(u=>searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u)));
+  const list=adminUsers.filter(u=>adminUserMatchesCampus(u)&&searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u)));
   tbody.innerHTML=list.length?list.map(u=>{
     const statusText=adminUserStatusText(u.status);
     const statusClass=u.status==='inactive'?'':'tms-tag-green';

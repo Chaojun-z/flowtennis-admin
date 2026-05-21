@@ -19,11 +19,15 @@ assert.doesNotMatch(coachSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号
 assert.match(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'admin sidebar should expose account management');
 assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
+assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for campus filtering');
+assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\['students','courts','finance','matches','admin-users','coaches'\]\.includes\(pg\)\?'flex':'none'/, 'resource account pages should show top campus tabs');
 assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名、手机号或绑定教练"/, 'account page should provide a search field');
 assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
 assert.match(source, /<th[^>]*>账号<\/th><th[^>]*>姓名<\/th><th[^>]*>手机号<\/th><th[^>]*>角色<\/th><th[^>]*>状态<\/th><th[^>]*>绑定教练<\/th><th[^>]*>通知绑定<\/th><th[^>]*>账号说明<\/th><th[^>]*>操作<\/th>/, 'account table headers should match the nine rendered columns');
 assert.match(fnBody('renderAdminUsers'), /adminUserTbody/, 'account page should render rows into adminUserTbody');
+assert.match(fnBody('renderAdminUsers'), /adminUserMatchesCampus\(u\)/, 'account rows should follow the selected campus tab');
+assert.match(fnBody('setCampus'), /if\(currentPage==='admin-users'\)renderAdminUsers\(\)/, 'campus tab changes should refresh account list');
 assert.match(fnBody('renderAdminUsers'), /绑定教练/, 'account rows should show coach binding text');
 assert.match(fnBody('renderAdminUsers'), /手机号/, 'account rows should show phone text');
 assert.match(fnBody('renderAdminUsers'), /微信通知/, 'account rows should show wechat notification binding text');

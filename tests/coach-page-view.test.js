@@ -46,5 +46,7 @@ assert.match(fnBody('scheduleTimeRangeControls'), /white-space:nowrap/, 'schedul
 assert.match(fnBody('saveCoach'), /hireDate:document\.getElementById\('co_hireDate'\)\.value/, 'coach save should include hire date');
 assert.match(source, /function renderCourtDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
 assert.match(source, /renderCourtDropdownHtml\('co_campus','校区',\[\{value:'',label:'不选择'\},\.\.\.campusOptions\],rv\(c,'campus'\),true\)/, 'coach campus edit should preserve empty campus instead of defaulting to the first campus');
+assert.match(fnBody('renderCoaches'), /campus==='all'\|\|sameCampusValue\(c\.campus,campus\)/, 'coach list should follow the selected campus tab');
+assert.match(fnBody('setCampus'), /if\(currentPage==='coaches'\)renderCoaches\(\)/, 'campus tab changes should refresh coach list');
 
 console.log('coach page view tests passed');

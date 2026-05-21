@@ -34,7 +34,7 @@ function goPage(pg,el,skipRender=false){
     }
     currentPage=pg;
     localStorage.setItem(PAGE_KEY,currentPage);
-    document.getElementById('campusTabs').style.display=['students','courts','finance','matches'].includes(pg)?'flex':'none';
+    document.getElementById('campusTabs').style.display=['students','courts','finance','matches','admin-users','coaches'].includes(pg)?'flex':'none';
     const t={students:'学员管理',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'订场会员','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
     const financeTitleMap={ledger:'财务总览',revenue:'收入流水',recognized:'已入账流水',settlement:'教练结算'};
     document.getElementById('topTitle').textContent=pg==='finance'?(financeTitleMap[financePanel]||t[pg]||''):(t[pg]||'');
@@ -50,7 +50,7 @@ function renderStudentsIfVisible(){
   if(currentPage==='students')renderStudents();
   if(currentPage==='mystudents')renderMyStudents();
 }
-function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;courtPage=1;if(currentPage==='students')renderStudents();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();}
+function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;courtPage=1;if(currentPage==='students')renderStudents();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
 function appConfirm(message,{title='请确认',confirmText='确定',danger=false}={}){

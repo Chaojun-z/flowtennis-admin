@@ -1,6 +1,6 @@
 function renderCoaches(){
   const q=(document.getElementById('coachSearch')?.value||'').toLowerCase();
-  const d=coaches.filter(c=>searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
+  const d=coaches.filter(c=>(campus==='all'||sameCampusValue(c.campus,campus))&&searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
   const tbody=document.getElementById('coachTbody');if(!tbody)return;
   tbody.innerHTML=d.length?d.map(c=>{
     const statusText=c.status==='inactive'?'离职':'在职';
