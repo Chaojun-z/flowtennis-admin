@@ -864,7 +864,7 @@ function studentEntitlementSummaryHtml(stu){
     const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
     const purchaseDate=studentEntitlementPurchaseDate(e,purchase);
     const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(e.packageName))}</span> <span class="badge b-amber" style="font-size:10px">${esc(renderCourtEmptyText(e.courseType))}</span>；报名 ${esc(renderCourtEmptyText(purchaseDate))}；归属 ${esc(renderCourtEmptyText(ownerCoach))}；剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节；已扣 ${lessonQty(used)} 节；有效至 ${esc(renderCourtEmptyText(e.validUntil))}；${esc(e.timeBand)||'全天'}；${entitlementStatusText(e)}</div>`;
+    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(e.packageName))}</span> · ${esc(renderCourtEmptyText(e.courseType))} · 报名 ${esc(renderCourtEmptyText(purchaseDate))} · 归属 ${esc(renderCourtEmptyText(ownerCoach))} · 剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节 · 已扣 ${lessonQty(used)} 节 · 有效至 ${esc(renderCourtEmptyText(e.validUntil))} · ${esc(e.timeBand)||'全天'} · ${entitlementStatusText(e)}</div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){

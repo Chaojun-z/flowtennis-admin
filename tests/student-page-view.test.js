@@ -101,6 +101,15 @@ assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*关联说
 assert.match(css, /\.modal\.modal-court \.tms-detail-grid[\s\S]*\.modal\.modal-court \.tms-detail-value[\s\S]*\.modal\.modal-court \.tms-detail-block/, 'student detail should use dedicated readonly display styles');
 assert.match(source, /function studentDetailBlockHtml\(label,html,options=\{\}\)[\s\S]*options\.hideEmpty&&studentDetailIsEmptyHtml\(html\)/, 'student detail should hide empty long blocks when they add no information');
 assert.match(css, /\.modal\.modal-court \.tms-detail-block\{[^}]*background:transparent[^}]*border:0[^}]*border-radius:0/, 'student detail long content should not look like input boxes');
+assert.match(source, /const leadHtml=studentDetailBlockHtml\('线索摘要',studentLeadSummaryHtml\(s\),\{hideEmpty:true\}\);[\s\S]*leadHtml\?/, 'student detail should hide the linked lead section when there is no lead');
+assert.match(source, /function studentDetailSectionHtml\(/, 'student detail should hide whole empty sections');
+assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*最近活跃[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should remove duplicated recent active field');
+assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*最近订场[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should remove recent booking from ops fields');
+assert.match(source, /function studentConsumptionInfoHtml[\s\S]*const linkedFields=linkedCourts\.length\?[\s\S]*:\s*''/, 'student consumption detail should only show linked account fields when linked data exists');
+assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*studentDetailFieldHtml\('订场 \/ 会员'/, 'student consumption detail should not show unlinked booking membership field');
+assert.match(source, /function studentLessonRecordTimeText\([\s\S]*slice\(11,16\)[\s\S]*-\$\{end\}/, 'student lesson records should show start and end time');
+assert.doesNotMatch(source, /function studentEntitlementSummaryHtml[\s\S]*badge b-amber[\s\S]*function studentEntitlementPurchaseDate/, 'student package records should render course type as normal text');
+assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*报名 \$\{esc\(renderCourtEmptyText\(purchaseDate\)\)\} · 归属/, 'student package records should use middle dots instead of semicolon separators');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前状态[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current status');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前班次[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current class');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*班次进度[\s\S]*function studentOpsInfoHtml/, 'student detail should remove class progress');
