@@ -989,6 +989,32 @@ function historicalImportedLessonUnitsForStudent(stu){
     .filter(row=>!!historicalImportedLedgerMonthKey(row))
     .reduce((sum,row)=>sum+Math.abs(Math.min(0,Number(row.lessonDelta)||0)),0);
 }
+function studentEntitlementLedgerRows(stu){
+  const entIds=new Set(entitlements.filter(e=>e.studentId===stu?.id).map(e=>e.id));
+  return dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(row=>row.studentId===stu?.id||entIds.has(row.entitlementId)));
+}
+function studentLessonRecordKey({studentId='',row={},schedule={}}={}){
+  if(schedule?.id)return `schedule:${schedule.id}`;
+  if(row?.scheduleId)return `schedule:${row.scheduleId}`;
+  if(row?.id)return `ledger:${row.id}`;
+  const date=String(schedule?.startTime||row?.sourceDate||row?.relatedDate||'').slice(0,10);
+  const band=String(row?.sourceTimeBand||'').trim();
+  const start=String(schedule?.startTime||'').slice(11,16);
+  const end=String(schedule?.endTime||'').slice(11,16);
+  return [studentId||row?.studentId||'',date,band||[start,end].filter(Boolean).join('-'),row?.coach||schedule?.coach||''].join('|');
+}
+function findScheduleForEntitlementLedgerRow(row,stu){
+  if(row?.scheduleId)return schedules.find(s=>s.id===row.scheduleId)||{};
+  const date=String(row?.sourceDate||row?.relatedDate||'').slice(0,10);
+  if(!date)return {};
+  const rowCoach=String(row?.coach||'').trim();
+  return schedules.find(s=>{
+    if(String(s.startTime||'').slice(0,10)!==date)return false;
+    if(!scheduleHasStudent(s,stu))return false;
+    if(rowCoach&&String(s.coach||'').trim()!==rowCoach)return false;
+    return true;
+  })||{};
+}
 function studentEntitlementLedgerTimeText(row,schedule={}){
   if(schedule?.startTime){
     const date=String(schedule.startTime).slice(0,10);
@@ -1025,7 +1051,8 @@ function studentEntitlementLedgerSourceText(row){
   return operator?`${operator}导入`:'-';
 }
 function studentEntitlementLedgerLineHtml(row,ent={}){
-  const schedule=schedules.find(s=>s.id===row?.scheduleId)||{};
+  const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
+  const schedule=findScheduleForEntitlementLedgerRow(row,student);
   const line=[
     `${lessonQty(Number(row.lessonDelta)||0)}节`,
     ent.packageName||row?.packageName||'课包',
@@ -1038,7 +1065,7 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
 }
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
-  const rows=dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entMap.has(l.entitlementId))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||'')));
+  const rows=studentEntitlementLedgerRows(stu).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||'')));
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无扣课记录</div>';
   return rows.map(l=>{
     const ent=entMap.get(l.entitlementId)||{};

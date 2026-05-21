@@ -22,11 +22,19 @@ function studentLastLessonDate(stu){
   return row?.startTime?.slice(0,10)||'';
 }
 function studentCompletedLessonUnits(stu){
-  const scheduleUnits=schedules
+  const lessonMap=new Map();
+  schedules
     .filter(x=>scheduleHasStudent(x,stu))
     .filter(x=>effectiveScheduleStatus(x)==='已结束')
-    .reduce((sum,x)=>sum+scheduleLessonUnits(x),0);
-  return scheduleUnits+historicalImportedLessonUnitsForStudent(stu);
+    .forEach(x=>lessonMap.set(studentLessonRecordKey({studentId:stu?.id,schedule:x}),scheduleLessonUnits(x)));
+  studentEntitlementLedgerRows(stu)
+    .filter(x=>Number(x.lessonDelta)<0)
+    .forEach(x=>{
+      const schedule=findScheduleForEntitlementLedgerRow(x,stu);
+      const key=studentLessonRecordKey({studentId:stu?.id,row:x,schedule});
+      if(!lessonMap.has(key))lessonMap.set(key,Math.abs(Number(x.lessonDelta)||0));
+    });
+  return [...lessonMap.values()].reduce((sum,value)=>sum+value,0);
 }
 function studentSortValue(stu,key){
   if(key==='lastLesson')return studentLastLessonDate(stu);

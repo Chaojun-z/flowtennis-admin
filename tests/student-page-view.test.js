@@ -62,6 +62,8 @@ assert.match(css, /#page-students \.tms-empty-state\{[\s\S]*#page-students \.tms
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
 assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
 assert.match(source, /function scheduleLessonUnits\(/, 'lesson stats should use schedule lesson units instead of row counts');
+assert.match(source, /function studentLessonRecordKey\(/, 'student cumulative lessons should share one lesson identity key');
+assert.match(source, /function studentCompletedLessonUnits[\s\S]*const lessonMap=new Map\(\)[\s\S]*studentEntitlementLedgerRows\(stu\)[\s\S]*findScheduleForEntitlementLedgerRow\(x,stu\)[\s\S]*return \[\.\.\.lessonMap\.values\(\)\]\.reduce/, 'student cumulative lessons should merge schedule and package consume records by lesson identity');
 assert.match(source, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the profile field');
 assert.match(source, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
 assert.match(source, /未分配/, 'empty primary coach should display 未分配');
@@ -114,6 +116,7 @@ assert.doesNotMatch(source, /function studentEntitlementSummaryHtml[\s\S]*badge 
 assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*报名 \$\{esc\(renderCourtEmptyText\(purchaseDate\)\)\} · 归属/, 'student package records should use middle dots instead of semicolon separators');
 assert.match(source, /function studentEntitlementLedgerLineHtml\([\s\S]*\$\{lessonQty\(Number\(row\.lessonDelta\)\|\|0\)\}节[\s\S]*join\(' · '\)/, 'student package consume records should render one compact middle-dot line with signed lesson count');
 assert.match(source, /function studentEntitlementLedgerTimeText\([\s\S]*\$\{date\} \$\{start\}-\$\{end\}/, 'student package consume records should show a lesson time range when available');
+assert.match(source, /function findScheduleForEntitlementLedgerRow\([\s\S]*String\(s\.startTime\|\|''\)\.slice\(0,10\)!==date[\s\S]*function studentEntitlementLedgerLineHtml[\s\S]*studentEntitlementLedgerTimeText\(row,schedule\)/, 'student package consume records should use same-day schedule to fill missing start-end time');
 assert.match(source, /function studentEntitlementLedgerSourceText\([\s\S]*sourceSheet[\s\S]*导入/, 'student package consume records should show the import source in the compact line');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*扣减 \$\{lessonQty\(count\)\} 节[\s\S]*function classScheduleSummaryHtml/, 'student package consume records should not use the old two-line charge wording');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前状态[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current status');
