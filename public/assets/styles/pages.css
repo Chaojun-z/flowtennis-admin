@@ -127,13 +127,13 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-dropdown-item.active::before{content:"✓";margin-right:6px;font-weight:400;color:#C06031}
 #page-students .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-students .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
-.tms-sort-header{border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:0;white-space:nowrap}
-.tms-sort-icon{display:inline-flex;flex-direction:column;gap:2px;width:8px;align-items:center}
-.tms-sort-up,.tms-sort-down{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent}
-.tms-sort-up{border-bottom:5px solid #979797}
-.tms-sort-down{border-top:5px solid #979797}
-.tms-sort-header.asc .tms-sort-up{border-bottom-color:#333}
-.tms-sort-header.desc .tms-sort-down{border-top-color:#333}
+#page-students .tms-sort-header{border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:0;white-space:nowrap}
+#page-students .tms-sort-icon{display:inline-flex;flex-direction:column;gap:1px;width:7px;height:auto;margin-left:0;align-items:center;color:inherit;transform:translateY(-1px)}
+#page-students .tms-sort-up,#page-students .tms-sort-down{width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}
+#page-students .tms-sort-up{border-bottom:4px solid #A3968F}
+#page-students .tms-sort-down{border-top:4px solid #A3968F}
+#page-students .tms-sort-header.asc .tms-sort-up{border-bottom-color:#5C4D43}
+#page-students .tms-sort-header.desc .tms-sort-down{border-top-color:#5C4D43}
 .tms-table-card{background-color:#FDF7F2;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden;margin-bottom:20px}
 .tms-table-wrapper{overflow:auto;max-height:calc(100vh - 292px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate}
 .tms-table-wrapper::-webkit-scrollbar{height:8px;width:8px;display:none}
@@ -551,6 +551,16 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .toast{background:var(--card-f);border-radius:11px;padding:11px 16px;box-shadow:var(--shf);display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;min-width:200px;color:var(--th);animation:tIn .24s cubic-bezier(.34,1.56,.64,1);border-left:3.5px solid var(--amber-warm)}.toast.success{border-color:#059669}.toast.error{border-color:#dc2626}.toast.warn{border-color:var(--amber-base)}
 @keyframes tIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
 .empty{text-align:center;padding:52px 20px;color:rgba(120,53,15,0.4)}.empty-ico{display:none}
+#page-students .tms-empty-state{min-height:168px;padding:34px 20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#8C7B6E;background:#FFFCF8}
+#page-students .tms-table-loading-state,#page-students .tms-table-error-state{min-height:168px;padding:34px 20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#8C7B6E;background:#FFFCF8}
+#page-students .tms-empty-title{font-size:14px;font-weight:600;color:#5C4D43;line-height:1.6}
+#page-students .tms-empty-desc{margin-top:4px;font-size:12px;font-weight:400;color:#A3968F;line-height:1.6}
+#page-students .tms-table-loading-state{gap:8px}
+#page-students .tms-table-loading-state p{margin:0;font-size:12px;color:#8C7B6E}
+#page-students .tms-loading-dot{width:14px;height:14px;border:2px solid #E8DCD0;border-top-color:#C06031;border-radius:50%;animation:tmsSpin .8s linear infinite}
+#page-students .tms-state-action{margin-top:12px;height:28px;padding:0 12px;border-radius:6px;border:1px solid #E5D7CA;background:#FFF9F4;color:#C06031;font-size:12px;font-weight:400;cursor:pointer}
+#page-students .tms-state-action:hover{background:#FCECE3;border-color:#E7C8B5}
+@keyframes tmsSpin{to{transform:rotate(360deg)}}
 .sc-icon{display:none}
 .loading{text-align:center;padding:40px;color:var(--ts);font-size:13px}
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:4px}

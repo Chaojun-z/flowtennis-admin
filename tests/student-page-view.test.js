@@ -50,7 +50,14 @@ assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{heigh
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.match(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'selected student filters should use the active dropdown item orange');
+assert.match(css, /#page-students \.tms-sort-icon\{[^}]*width:7px[^}]*transform:translateY\(-1px\)/, 'student sort icon should be smaller and closer to the header text');
 assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*stuSortDir='desc'[\s\S]*stuSortKey='';stuSortDir='';/, 'student sortable headers should cycle asc, desc, and no sort');
+assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');
+assert.match(source, /function renderStudentTableLoading\([\s\S]*tms-table-loading-state[\s\S]*学员数据加载中/, 'student loading state should use the standard table loading style');
+assert.match(source, /function renderStudentTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'student load failure should render an inline retry state');
+assert.match(source, /if\(pg==='students'\)renderStudentTableLoading\(\);/, 'student page should use the dedicated loading renderer');
+assert.match(source, /if\(pg==='students'\)renderStudentTableError\(String\(e\.message\|\|e\)\);/, 'student page load failure should render the dedicated error state');
+assert.match(css, /#page-students \.tms-empty-state\{[\s\S]*#page-students \.tms-state-action/, 'student empty, loading, and error states should have scoped standard styles');
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
 assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
 assert.match(source, /function scheduleLessonUnits\(/, 'lesson stats should use schedule lesson units instead of row counts');

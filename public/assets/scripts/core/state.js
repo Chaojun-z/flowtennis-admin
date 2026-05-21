@@ -300,12 +300,20 @@ function renderTableBodyLoading(id,colspan,text){
   const el=document.getElementById(id);
   if(el)el.innerHTML=`<tr><td colspan="${colspan}"><div class="empty"><p>${esc(text)}</p></div></td></tr>`;
 }
+function renderStudentTableLoading(){
+  const el=document.getElementById('stuTbody');
+  if(el)el.innerHTML='<tr><td colspan="11"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>学员数据加载中...</p></div></td></tr>';
+}
+function renderStudentTableError(message){
+  const el=document.getElementById('stuTbody');
+  if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('students',{force:true})">重新加载</button></div></td></tr>`;
+}
 function renderBlockLoading(id,text){
   const el=document.getElementById(id);
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
 }
 function renderPageLoading(pg){
-  if(pg==='students')renderTableBodyLoading('stuTbody',11,'学员数据加载中...');
+  if(pg==='students')renderStudentTableLoading();
   if(pg==='leads')renderTableBodyLoading('leadTbody',15,'线索数据加载中...');
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
@@ -549,6 +557,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }catch(e){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    if(pg==='students')renderStudentTableError(String(e.message||e));
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');

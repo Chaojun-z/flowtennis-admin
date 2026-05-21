@@ -165,6 +165,15 @@ function getStudentDuplicateCandidates(input,editingId=''){
 function studentCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))];
 }
+function studentHasActiveSearchOrFilter(){
+  return !!((document.getElementById('stuSearch')?.value||'').trim()||document.getElementById('stuTypeFilter')?.value||document.getElementById('stuSourceFilter')?.value||document.getElementById('stuCoachFilter')?.value);
+}
+function studentEmptyStateHtml(){
+  const filtered=studentHasActiveSearchOrFilter();
+  const title=filtered?'没有匹配的学员':'暂无学员';
+  const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加学员开始录入';
+  return `<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+}
 function renderStudents(){
   renderStudentToolbarFilters();
   updateStudentSortHeaders();
@@ -184,7 +193,7 @@ function renderStudents(){
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
-  }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
+  }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){
   const rows=feedbacks.filter(f=>{
