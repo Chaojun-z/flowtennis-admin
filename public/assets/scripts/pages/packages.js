@@ -70,7 +70,7 @@ async function mergePackage(){
 }
 function purchaseAllowedCoachChecks(ids,cls='pur-allowed-coach-cb'){
   ids=parseArr(ids);
-  return activeCoachNames().map(name=>`<label class="choice-tag"><input type="checkbox" value="${esc(name)}" class="${cls}" ${ids.includes(name)?'checked':''}>${esc(name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无教练</span>';
+  return activeCoachNames().map(name=>`<label class="tms-checkbox-wrap"><input type="checkbox" value="${esc(name)}" class="tms-checkbox ${cls}" ${ids.includes(name)?'checked':''}><span>${esc(name)}</span></label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无教练</span>';
 }
 function packageCoachChecks(ids){
   ids=parseArr(ids);

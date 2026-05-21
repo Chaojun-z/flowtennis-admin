@@ -71,7 +71,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-courts thead th{position:sticky;top:0;z-index:5;background:rgba(253,248,241,.96);backdrop-filter:blur(12px)}
 .tms-stats-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;scrollbar-width:none;-ms-overflow-style:none}
 .tms-stats-row::-webkit-scrollbar{display:none}
-.tms-stat-card{flex:1;min-width:0;background-color:#FDF7F2;border-radius:8px;padding:14px 18px 16px 18px;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;flex-direction:column;justify-content:flex-start;position:relative;min-height:88px}
+.tms-stat-card{flex:1;min-width:0;background-color:#FDF7F2;border-radius:8px;padding:12px 16px 14px 16px;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;flex-direction:column;justify-content:flex-start;position:relative;min-height:82px}
 .tms-stat-label{font-size:10px;color:#8C7B6E;margin-bottom:8px;white-space:nowrap;font-weight:400}
 .tms-stat-value{font-size:20px;font-weight:400;color:#332A24;display:flex;align-items:baseline;white-space:nowrap;line-height:1.1}
 .tms-stat-value span{font-size:14px;font-weight:400;margin-left:4px}

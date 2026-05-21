@@ -42,6 +42,7 @@ assert.match(source, /id="stuPageSize"/, 'student pager should expose a page siz
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
 assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
+assert.match(css, /\.tms-stat-card\{[^}]*padding:12px 16px 14px 16px[^}]*min-height:82px/, 'top stat cards should be slightly shorter');
 assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
 assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
@@ -94,7 +95,8 @@ assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'st
 assert.match(source, /选择课包 \*[\s\S]*主归属教练[\s\S]*支付日期[\s\S]*系统价格[\s\S]*实收金额[\s\S]*支付方式/, 'purchase modal should arrange package, owner, payment date, price and pay method in compact rows');
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
-assert.match(source, /purchase-coach-wrap[\s\S]*purchase-notes-row/, 'purchase modal should leave space between allowed coaches and notes');
+assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase allowed coach picker should reuse the student picker block style');
+assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
 assert.match(source, /购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase record table should split validity and status into compact ordered columns');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');
 assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so mabao and 顺义马坡 stay one campus');
