@@ -98,6 +98,19 @@ const SPLIT_PURCHASES = {
   ]
 };
 
+function inferTargetName(purchase = {}) {
+  const studentName = String(purchase.studentName || '').trim();
+  const packageName = String(purchase.packageName || '').trim();
+  const lessons = Number(purchase.packageLessons) || 0;
+  if (studentName === '朦朦') return '成人1v1 黄金时间10课时（历史）';
+  if (studentName === '简先生') return '成人1v1 非黄时间10课时（历史）';
+  if (/淇淇/.test(studentName) || /张佳良/.test(studentName)) return '青少年1v1 黄金时间10课时';
+  if (/青少年1v1/.test(packageName)) return '青少年1v1 黄金时间10课时';
+  if (/成人1v1/.test(packageName) && lessons === 20) return '成人1v1 黄金时间20课时';
+  if (/成人1v1/.test(packageName)) return '成人1v1 非黄时间10课时';
+  return '';
+}
+
 function slug(value) {
   return String(value || '').replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
 }
@@ -303,7 +316,7 @@ function buildPackageOwnershipPlan({ packages = [], purchases = [], entitlements
       plan.entitlementUpdates.push(...split.entitlementUpdates);
       continue;
     }
-    const targetName = PURCHASE_TARGETS[purchase.id];
+    const targetName = PURCHASE_TARGETS[purchase.id] || inferTargetName(purchase);
     if (!targetName) {
       plan.blockers.push(`未明确归属：${purchase.id} ${purchase.studentName || ''} ${purchase.packageName || ''}`.trim());
       continue;
@@ -363,8 +376,8 @@ async function assertProductionTarget() {
   const res = await fetch(PROD_DIAG_URL);
   if (!res.ok) throw new Error(`线上 diag 请求失败：${res.status}`);
   const diag = await res.json();
-  const onlineEndpoint = String(diag.TS_ENDPOINT || '').trim();
-  const onlineInstance = String(diag.TS_INSTANCE || '').trim();
+  const onlineEndpoint = String(diag.TS_ENDPOINT || diag.env?.TS_ENDPOINT || '').trim();
+  const onlineInstance = String(diag.TS_INSTANCE || diag.env?.TS_INSTANCE || '').trim();
   const localEndpoint = String(process.env.TS_ENDPOINT || '').trim();
   const localInstance = String(process.env.TS_INSTANCE || process.env.TARGET_TS_INSTANCE || '').trim();
   if (localEndpoint !== onlineEndpoint || localInstance !== onlineInstance) {
