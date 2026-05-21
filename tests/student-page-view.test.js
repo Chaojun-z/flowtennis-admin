@@ -99,6 +99,8 @@ assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*<input[\s
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*最近订场[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove duplicated recent booking field');
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*关联说明[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove unclear duplicate linked account explanation');
 assert.match(css, /\.modal\.modal-court \.tms-detail-grid[\s\S]*\.modal\.modal-court \.tms-detail-value[\s\S]*\.modal\.modal-court \.tms-detail-block/, 'student detail should use dedicated readonly display styles');
+assert.match(source, /function studentDetailBlockHtml\(label,html,options=\{\}\)[\s\S]*options\.hideEmpty&&studentDetailIsEmptyHtml\(html\)/, 'student detail should hide empty long blocks when they add no information');
+assert.match(css, /\.modal\.modal-court \.tms-detail-block\{[^}]*background:transparent[^}]*border:0[^}]*border-radius:0/, 'student detail long content should not look like input boxes');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前状态[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current status');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*当前班次[\s\S]*function studentOpsInfoHtml/, 'student detail should remove current class');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*班次进度[\s\S]*function studentOpsInfoHtml/, 'student detail should remove class progress');

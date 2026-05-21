@@ -168,7 +168,12 @@ function studentCampusOptions(){
 function studentDetailFieldHtml(label,value){
   return `<div class="tms-detail-field"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-value">${esc(renderCourtEmptyText(value))}</div></div>`;
 }
-function studentDetailBlockHtml(label,html){
+function studentDetailIsEmptyHtml(html){
+  const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
+  return !text||['-','暂无上课记录','暂无课后反馈','暂无已购课包','暂无扣课记录','暂无关联订场账户','暂无关联订场账户会员摘要','未关联线索'].includes(text);
+}
+function studentDetailBlockHtml(label,html,options={}){
+  if(options.hideEmpty&&studentDetailIsEmptyHtml(html))return '';
   return `<div class="tms-detail-field full-width"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-block">${html||'-'}</div></div>`;
 }
 function studentHasActiveSearchOrFilter(){
@@ -241,7 +246,7 @@ function studentTeachingInfoHtml(stu){
   const recentSchedule=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
   const recentFeedbacks=studentRecentFeedbacks(stu,2);
   const feedbackHtml=recentFeedbacks.length?recentFeedbacks.map(f=>`${String(f.startTime||f.createdAt||'').slice(0,10)}：${f.practicedToday||f.knowledgePoint||f.nextTraining||'已填写反馈'}`).map(esc).join('<br>'):'-';
-  return `<div class="tms-section-header">教学信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('负责教练',coachText)}${studentDetailFieldHtml('最近上课',recentSchedule?.startTime?daysAgoText(recentSchedule.startTime.slice(0,10)):'-')}${studentDetailFieldHtml('累计上课',studentCompletedLessonCount(stu))}${studentDetailFieldHtml('课时 / 课包',studentPackageLessonSummary(stu))}${studentDetailBlockHtml('上课记录',studentLessonRecordHtml(stu))}${studentDetailBlockHtml('最近2条课后反馈',feedbackHtml)}</div>`;
+  return `<div class="tms-section-header">教学信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('负责教练',coachText)}${studentDetailFieldHtml('最近上课',recentSchedule?.startTime?daysAgoText(recentSchedule.startTime.slice(0,10)):'-')}${studentDetailFieldHtml('累计上课',studentCompletedLessonCount(stu))}${studentDetailFieldHtml('课时 / 课包',studentPackageLessonSummary(stu))}${studentDetailBlockHtml('上课记录',studentLessonRecordHtml(stu),{hideEmpty:true})}${studentDetailBlockHtml('最近2条课后反馈',feedbackHtml,{hideEmpty:true})}</div>`;
 }
 function studentOpsInfoHtml(stu){
   const recentSchedule=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
@@ -250,10 +255,12 @@ function studentOpsInfoHtml(stu){
   const conversionSummary=recentFeedback?(recentFeedback.conversionIntent||recentFeedback.recommendedProductType||recentFeedback.needOpsFollowUp?'已形成转化判断':'未形成转化判断'):'暂无转化判断';
   const opsNeed=recentFeedback?.needOpsFollowUp?'需要运营跟进':'暂不需要运营跟进';
   const opsConclusion=recentFeedback?esc(renderCourtEmptyText([recentFeedback.mainIssues,recentFeedback.recommendedReason,recentFeedback.opsFollowUpSuggestion].filter(Boolean).join('；'))):'-';
-  return `<div class="tms-section-header">运营信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('来源',stu.source)}${studentDetailFieldHtml('活动范围',stu.activityRange)}${studentDetailFieldHtml('最近活跃',recentSchedule?.startTime?daysAgoText(recentSchedule.startTime.slice(0,10)):latestCourt?daysAgoText(latestCourt):'-')}${studentDetailFieldHtml('最近订场',latestCourt?daysAgoText(latestCourt):'-')}${studentDetailFieldHtml('转化判断',conversionSummary)}${studentDetailFieldHtml('运营跟进',opsNeed)}${studentDetailBlockHtml('最近反馈里的运营结论',opsConclusion)}${studentDetailBlockHtml('运营备注',esc(renderCourtEmptyText(stu.notes)))}</div>`;
+  return `<div class="tms-section-header">运营信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('来源',stu.source)}${studentDetailFieldHtml('活动范围',stu.activityRange)}${studentDetailFieldHtml('最近活跃',recentSchedule?.startTime?daysAgoText(recentSchedule.startTime.slice(0,10)):latestCourt?daysAgoText(latestCourt):'-')}${studentDetailFieldHtml('最近订场',latestCourt?daysAgoText(latestCourt):'-')}${studentDetailFieldHtml('转化判断',conversionSummary)}${studentDetailFieldHtml('运营跟进',opsNeed)}${studentDetailBlockHtml('最近反馈里的运营结论',opsConclusion,{hideEmpty:true})}${studentDetailBlockHtml('运营备注',esc(renderCourtEmptyText(stu.notes)),{hideEmpty:true})}</div>`;
 }
 function studentConsumptionInfoHtml(stu){
-  return `<div class="tms-section-header">消费与关联信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('订场 / 会员',studentBookingMembershipSummary(stu))}${studentDetailBlockHtml('订场账户摘要',`${studentAccountSummaryHtml(stu)}<div class="tms-field-help">关联订场账户在「订场/会员」页面编辑用户时选择「关联学员」。</div>`)}${studentDetailBlockHtml('会员摘要',studentMembershipSummaryHtml(stu))}${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu))}${studentDetailBlockHtml('课包消耗记录',studentEntitlementLedgerHtml(stu))}</div>`;
+  const linkedCourts=courtsForStudent(stu);
+  const accountHtml=linkedCourts.length?`${studentAccountSummaryHtml(stu)}<div class="tms-field-help">关联订场账户在「订场/会员」页面编辑用户时选择「关联学员」。</div>`:'';
+  return `<div class="tms-section-header">消费与关联信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('订场 / 会员',studentBookingMembershipSummary(stu))}${studentDetailBlockHtml('订场账户摘要',accountHtml,{hideEmpty:true})}${studentDetailBlockHtml('会员摘要',studentMembershipSummaryHtml(stu),{hideEmpty:true})}${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu),{hideEmpty:true})}${studentDetailBlockHtml('课包消耗记录',studentEntitlementLedgerHtml(stu),{hideEmpty:true})}</div>`;
 }
 function studentLinkedDetailHtml(s,showAccount=true){
   const latest=schedules.filter(x=>scheduleHasStudent(x,s)).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0))[0];
@@ -284,7 +291,8 @@ function studentLeadSummaryHtml(s){
 }
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('所在校区',cn(s.campus))}</div><div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s))}</div>${studentTeachingInfoHtml(s)}${studentOpsInfoHtml(s)}${studentConsumptionInfoHtml(s)}`;
+  const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
+  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('所在校区',cn(s.campus))}</div>${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentTeachingInfoHtml(s)}${studentOpsInfoHtml(s)}${studentConsumptionInfoHtml(s)}`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
   setCourtModalFrame('学员详情',body,footer,'modal-wide');
 }

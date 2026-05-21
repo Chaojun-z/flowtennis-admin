@@ -482,7 +482,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .tms-detail-field.full-width{grid-column:1/-1}
 .modal.modal-court .tms-detail-label{font-size:11px;color:#8C7B6E;line-height:1.5;margin-bottom:4px}
 .modal.modal-court .tms-detail-value{min-height:22px;font-size:13px;color:#332A24;line-height:1.7;word-break:break-word}
-.modal.modal-court .tms-detail-block{font-size:12px;color:#332A24;line-height:1.7;background:#F7F0EA;border:1px solid rgba(217,208,199,.7);border-radius:8px;padding:10px 12px;min-height:44px;white-space:normal}
+.modal.modal-court .tms-detail-block{font-size:12px;color:#332A24;line-height:1.7;background:transparent;border:0;border-radius:0;padding:2px 0 0;min-height:0;white-space:normal}
 .modal.modal-court .tms-detail-block .tms-readonly-text{min-height:0;padding:0!important}
 .purchase-compact-row{gap:12px}
 .modal.modal-court .purchase-compact-row .tms-form-item{min-width:0}
