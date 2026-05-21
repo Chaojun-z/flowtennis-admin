@@ -245,12 +245,16 @@ function studentRecentFeedbacks(stu,limit=2){
   }).sort((a,b)=>new Date(b.startTime||b.createdAt||0)-new Date(a.startTime||a.createdAt||0)).slice(0,limit);
 }
 function studentLessonRecordHtml(stu){
-  const rows=studentLessonRecordRows(stu).slice(0,12);
+  const rows=studentLessonRecordRows(stu);
   if(!rows.length)return '暂无上课记录';
-  return rows.map(item=>item.type==='ledger'
-    ? studentLessonRecordLedgerText(item.row,item.ent)
+  const limit=studentLessonRecordExpanded(stu)?rows.length:10;
+  const expanded=studentLessonRecordExpanded(stu);
+  const body=rows.slice(0,limit).map(item=>item.type==='ledger'
+    ? studentLessonRecordPackageText(item.row,item.ent)
     : `${studentLessonRecordTimeText(item.schedule)} · ${cn(item.schedule.campus)||'-'} ${item.schedule.venue||''} · ${item.schedule.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(item.schedule))}节 · ${scheduleCourseType(item.schedule)} · ${scheduleClassName(item.schedule)}`
-  ).map(esc).join('<br>');
+  ).map(line=>`<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${esc(line)}</div>`).join('');
+  const more=rows.length>10?`<div style="margin-top:6px"><button class="btn-sec" onclick="toggleStudentLessonRecordExpanded('${stu.id}')">${expanded?'收起':'展开全部'}</button></div>`:'';
+  return body+more;
 }
 function studentLessonRecordRows(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
@@ -263,11 +267,25 @@ function studentLessonRecordRows(stu){
     .filter(row=>Number(row.lessonDelta)<0)
     .forEach(row=>{
       const schedule=findScheduleForEntitlementLedgerRow(row,stu);
+      if(!studentLessonRecordHasConcreteTime(row,schedule))return;
       const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
       if(map.has(key))return;
       map.set(key,{type:'ledger',row,ent:entMap.get(row.entitlementId)||{},sortTime:studentEntitlementLedgerTimeText(row,schedule)});
     });
   return [...map.values()].sort((a,b)=>String(b.sortTime||'').localeCompare(String(a.sortTime||'')));
+}
+function studentLessonRecordHasConcreteTime(row={},schedule={}){
+  if(schedule?.startTime)return true;
+  if(String(row?.sourceTimeBand||'').match(/\d{1,2}:\d{2}/))return true;
+  if(String(row?.scheduleTime||'').match(/\d{1,2}:\d{2}/))return true;
+  return false;
+}
+function studentLessonRecordExpanded(stu){
+  return !!studentLessonRecordExpandedState[stu?.id];
+}
+function toggleStudentLessonRecordExpanded(studentId){
+  studentLessonRecordExpandedState[studentId]=!studentLessonRecordExpandedState[studentId];
+  openStudentDetail(studentId);
 }
 function studentLessonRecordTimeText(s){
   const date=String(s.startTime||'').slice(0,10);
@@ -299,7 +317,7 @@ function studentOpsInfoHtml(stu){
 function studentConsumptionInfoHtml(stu){
   const linkedCourts=courtsForStudent(stu);
   const linkedFields=linkedCourts.length?`${studentDetailBlockHtml('订场账户摘要',`${studentAccountSummaryHtml(stu)}<div class="tms-field-help">关联订场账户在「订场/会员」页面编辑用户时选择「关联学员」。</div>`,{hideEmpty:true})}${studentDetailBlockHtml('会员摘要',studentMembershipSummaryHtml(stu),{hideEmpty:true})}`:'';
-  const packageFields=`${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu),{hideEmpty:true})}${studentDetailBlockHtml('课包消耗记录',studentEntitlementLedgerHtml(stu),{hideEmpty:true})}`;
+  const packageFields=`${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu),{hideEmpty:true})}`;
   return studentDetailSectionHtml('消费与关联信息',`${linkedFields}${packageFields}`);
 }
 function studentLinkedDetailHtml(s,showAccount=true){

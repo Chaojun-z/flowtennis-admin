@@ -113,8 +113,12 @@ assert.match(source, /function studentConsumptionInfoHtml[\s\S]*const linkedFiel
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*studentDetailFieldHtml\('订场 \/ 会员'/, 'student consumption detail should not show unlinked booking membership field');
 assert.match(source, /function studentLessonRecordTimeText\([\s\S]*slice\(11,16\)[\s\S]*-\$\{end\}/, 'student lesson records should show start and end time');
 assert.match(source, /function studentLessonRecordRows\([\s\S]*studentEntitlementLedgerRows\(stu\)[\s\S]*studentLessonRecordKey\(\{studentId:stu\?\.id,row,schedule\}\)/, 'student lesson records should merge schedule rows and package consume rows by one lesson identity');
-assert.match(source, /function studentLessonRecordLedgerText\([\s\S]*lessonQty\(ent\.remainingLessons\)[\s\S]*lessonQty\(ent\.totalLessons\)[\s\S]*扣\$\{lessonQty\(Math\.abs\(Number\(row\.lessonDelta\)\|\|0\)\)\}节[\s\S]*ent\.packageName\|\|row\?\.packageName\|\|'课包'/, 'student lesson record package rows should show deduct lessons, current package balance, and package name');
-assert.match(source, /function studentLessonRecordHtml\([\s\S]*studentLessonRecordRows\(stu\)[\s\S]*studentLessonRecordLedgerText/, 'student lesson record list should render package consume details in the main lesson list');
+assert.match(source, /function studentLessonRecordHasConcreteTime\([\s\S]*sourceTimeBand[\s\S]*scheduleTime[\s\S]*function studentLessonRecordExpanded/, 'student lesson records should hide historical package summary rows that have no concrete time');
+assert.match(source, /studentLessonRecordRows\([\s\S]*studentLessonRecordHasConcreteTime\(row,schedule\)[\s\S]*studentLessonRecordKey/, 'student lesson record rows should only include package ledger rows with a concrete lesson time');
+assert.match(source, /function studentLessonRecordPackageText\([\s\S]*lessonQty\(ent\.remainingLessons\)[\s\S]*lessonQty\(ent\.totalLessons\)[\s\S]*扣\$\{lessonQty\(Math\.abs\(Number\(row\.lessonDelta\)\|\|0\)\)\}节[\s\S]*standardPackageLabel/, 'student lesson record package rows should show deduct lessons, current package balance, and package name');
+assert.match(source, /function studentLessonRecordHtml\([\s\S]*studentLessonRecordRows\(stu\)[\s\S]*studentLessonRecordPackageText[\s\S]*rows\.length>10[\s\S]*收起[\s\S]*展开全部/, 'student lesson record list should use package-record style rows and support expand all');
+assert.match(source, /function toggleStudentLessonRecordExpanded\(studentId\)[\s\S]*openStudentDetail\(studentId\)/, 'student lesson record expand toggle should refresh the open detail modal');
+assert.doesNotMatch(source, /studentDetailBlockHtml\('课包消耗记录'/, 'student detail should not render a second package consume list');
 assert.doesNotMatch(source, /function studentEntitlementSummaryHtml[\s\S]*badge b-amber[\s\S]*function studentEntitlementPurchaseDate/, 'student package records should render course type as normal text');
 assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*报名 \$\{esc\(renderCourtEmptyText\(purchaseDate\)\)\} · 归属/, 'student package records should use middle dots instead of semicolon separators');
 assert.match(source, /function studentEntitlementLedgerLineHtml\([\s\S]*\$\{lessonQty\(Number\(row\.lessonDelta\)\|\|0\)\}节[\s\S]*join\(' · '\)/, 'student package consume records should render one compact middle-dot line with signed lesson count');
@@ -129,7 +133,7 @@ assert.match(source, /上课记录/, 'student detail should provide lesson recor
 assert.match(source, /已购课包/, 'student detail should present purchased packages in plain language');
 assert.match(source, /扣课记录/, 'student detail should expose lesson charge history in the student detail');
 assert.match(source, /课包购买记录/, 'student detail should label package purchase records clearly');
-assert.match(source, /课包消耗记录/, 'student detail should label package consume records clearly');
+assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
 assert.match(source, /关联订场账户在「订场\/会员」页面编辑用户时选择「关联学员」/, 'student detail should explain where to link booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
 assert.match(source, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');

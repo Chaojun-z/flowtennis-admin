@@ -1103,6 +1103,20 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
   ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
   return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
 }
+function studentLessonRecordPackageText(row,ent={}){
+  const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
+  const schedule=findScheduleForEntitlementLedgerRow(row,student);
+  const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
+  const payMethodText=!ent?.id?String(row?.payMethod||row?.paymentChannel||row?.paymentMethod||row?.incomeType||'').trim():'';
+  return [
+    studentEntitlementLedgerTimeText(row,schedule),
+    studentEntitlementLedgerLocationText(row,schedule,ent),
+    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    Number(row.lessonDelta)<0?`扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`:(payMethodText?payMethodText:'课次'),
+    ent?.id?`剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:payMethodText,
+    payText
+  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+}
 function studentLessonRecordLedgerText(row,ent={}){
   const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
   const schedule=findScheduleForEntitlementLedgerRow(row,student);
