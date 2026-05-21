@@ -21,6 +21,7 @@ const targetPackage = {
 const packages = [
   oldPackage,
   { id: 'seed-package-youth-1v2-20', name: '青少年1v2 20节课包' },
+  { id: 'seed-package-youth-1v2-40', name: '青少年1v2 40节课包' },
   targetPackage,
   {
     id: 'pkg-nonprime-10',
@@ -47,7 +48,9 @@ const purchases = [
 
 const entitlements = [
   { id: 'ent-meng', purchaseId: 'seed-purchase-010', packageId: oldPackage.id, packageName: oldPackage.name, totalLessons: 15, usedLessons: 2, remainingLessons: 13 },
-  { id: 'ent-jian', purchaseId: 'seed-purchase-009', packageId: oldPackage.id, packageName: oldPackage.name, totalLessons: 15, usedLessons: 1, remainingLessons: 14 }
+  { id: 'ent-jian', purchaseId: 'seed-purchase-009', packageId: oldPackage.id, packageName: oldPackage.name, totalLessons: 15, usedLessons: 1, remainingLessons: 14 },
+  { id: 'ent-zhao', purchaseId: 'seed-purchase-004', packageId: 'seed-package-youth-1v2-20', packageName: '青少年1v2 20节课包', totalLessons: 20, usedLessons: 1, remainingLessons: 19 },
+  { id: 'ent-halena', purchaseId: 'seed-purchase-012', packageId: 'seed-package-youth-1v2-40', packageName: '青少年1v2 40节课包', totalLessons: 40, usedLessons: 10, remainingLessons: 30 }
 ];
 
 const plan = fix.buildPackageOwnershipPlan({ packages, purchases, entitlements, now });
@@ -60,9 +63,13 @@ const jianEntitlement = plan.entitlementUpdates.find((row) => row.id === 'ent-ji
 assert.strictEqual(jianEntitlement.packageName, '成人1v1 非黄时间10课时（历史）');
 assert.strictEqual(jianEntitlement.totalLessons, 15, '简先生权益课时应保留 15');
 
-assert.ok(plan.skips.some((item) => item.includes('Halena、Willian')), '不进系统名单应跳过');
-assert.ok(plan.blockers.some((item) => item.includes('赵雨桐、赵雨晴')), '赵雨桐、赵雨晴需要拆单，不能静默处理');
-assert.ok(plan.blockers.some((item) => item.includes('旧课包仍有引用')), '旧包仍被引用时不能删除');
+const zhaoSplit = plan.purchaseUpdates.filter((row) => String(row.splitFromPurchaseId || '') === 'seed-purchase-004');
+assert.deepStrictEqual(zhaoSplit.map((row) => row.packageLessons).sort((a, b) => a - b), [10, 10], '赵雨桐、赵雨晴应拆成两个 10 节订单');
+assert.strictEqual(plan.purchaseUpdates.find((row) => row.id === 'seed-purchase-004')?.status, 'voided', '原 1v2 20 节订单应作废');
+
+assert.ok(plan.skips.some((item) => item.includes('Halena、Willian')), '不进系统名单应作废旧订单/权益');
+assert.strictEqual(plan.purchaseUpdates.find((row) => row.id === 'seed-purchase-012')?.packageId, '', '不进系统订单应解除旧课包引用');
+assert.strictEqual(plan.blockers.length, 0, '完整映射后不应再阻塞');
 
 const touchedTables = ['ft_packages', 'ft_purchases', 'ft_entitlements'];
 assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消课流水表');
