@@ -477,6 +477,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-form-control{background-color:#FDF7F2;border:1px solid transparent;border-radius:8px;padding:12px;font-size:14px;color:#332A24;outline:none;box-sizing:border-box;width:100%}
 .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding-top:10px!important;padding-bottom:10px!important}
 .tms-field-help{font-size:12px;color:var(--ts);line-height:1.5;margin-top:6px}
+.modal.modal-court .tms-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px;margin-bottom:4px}
+.modal.modal-court .tms-detail-field{min-width:0}
+.modal.modal-court .tms-detail-field.full-width{grid-column:1/-1}
+.modal.modal-court .tms-detail-label{font-size:11px;color:#8C7B6E;line-height:1.5;margin-bottom:4px}
+.modal.modal-court .tms-detail-value{min-height:22px;font-size:13px;color:#332A24;line-height:1.7;word-break:break-word}
+.modal.modal-court .tms-detail-block{font-size:12px;color:#332A24;line-height:1.7;background:#F7F0EA;border:1px solid rgba(217,208,199,.7);border-radius:8px;padding:10px 12px;min-height:44px;white-space:normal}
+.modal.modal-court .tms-detail-block .tms-readonly-text{min-height:0;padding:0!important}
 .purchase-compact-row{gap:12px}
 .modal.modal-court .purchase-compact-row .tms-form-item{min-width:0}
 .modal.modal-court .modal-footer .tms-btn,.modal.modal-court .mactions .tms-btn{min-width:84px;padding:0 12px}
