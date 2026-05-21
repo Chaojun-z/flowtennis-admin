@@ -224,7 +224,7 @@ function applyPackageTimeBandPreset(value){
   if(!host)return;
   host.innerHTML=rows.map((row,idx)=>{
     const suffix=idx===0?'':'2';
-    return `<div class="time-window-row package-time-window-row"><div class="package-time-window-label">${esc(row.label)}</div>${renderCourtDropdownHtml(`pkg_timeStart${suffix}`,'开始时间',getScheduleTimeOptions(row.startTime||'09:00'),row.startTime||'09:00',true,'refreshPackagePreview')}${'<span class="range-dash">-</span>'}${renderCourtDropdownHtml(`pkg_timeEnd${suffix}`,'结束时间',getScheduleTimeOptions(row.endTime||'22:00'),row.endTime||'22:00',true,'refreshPackagePreview')}</div>`;
+    return `<div class="package-time-window-row"><div class="package-time-window-label">${esc(row.label)}</div><div class="package-time-window-fields">${renderCourtDropdownHtml(`pkg_timeStart${suffix}`,'开始时间',getScheduleTimeOptions(row.startTime||'09:00'),row.startTime||'09:00',true)}<span class="range-dash">-</span>${renderCourtDropdownHtml(`pkg_timeEnd${suffix}`,'结束时间',getScheduleTimeOptions(row.endTime||'22:00'),row.endTime||'22:00',true)}</div></div>`;
   }).join('');
 }
 
