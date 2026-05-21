@@ -93,6 +93,19 @@ function putRow(client, tableName, row) {
   });
 }
 
+function deleteRow(client, tableName, id) {
+  return new Promise((resolve, reject) => {
+    client.deleteRow(
+      {
+        tableName,
+        condition: new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE, null),
+        primaryKey: [{ id: String(id) }]
+      },
+      (err, data) => (err ? reject(err) : resolve(data))
+    );
+  });
+}
+
 function createTableIfMissing(client, tableName) {
   return new Promise((resolve, reject) => {
     client.createTable(
@@ -118,5 +131,6 @@ module.exports = {
   createClientFromEnv,
   scanTable,
   putRow,
+  deleteRow,
   createTableIfMissing
 };
