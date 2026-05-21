@@ -116,4 +116,30 @@ assert.doesNotMatch(
   '最终摘要不应直接带出技术底层英文术语'
 );
 
+const userFacingExamples = [
+  ['add official account webhook flow', '新增公众号通知对接流程'],
+  ['add package merge flow', '新增课包合并流程'],
+  ['add private lesson import finance increments', '新增私教课导入后的财务增量统计'],
+  ['fix package merge dropdown clipping', '修复课包合并下拉菜单被遮挡的问题'],
+  ['fix student page live lesson cache', '修复学员页实时课程缓存问题'],
+  ['Hide merged packages from purchase pickers', '购买选择器不再显示已合并课包'],
+  ['Polish package merge UI', '优化课包合并界面'],
+  ['prevent page refresh clearing datasets', '避免页面刷新时清空数据'],
+  ['restore finance coach settlement rows', '恢复财务页教练结算明细'],
+  ['Show lesson package purchase details inline', '在页面内展示课包购买明细'],
+  ['speed up schedule and package first paint', '提升排课和课包页面首屏加载速度'],
+  ['wait products package page', '等待产品与课包页面数据加载完成'],
+  ['restore coach management data loading', '恢复教练管理数据加载']
+];
+
+for (const [source, expected] of userFacingExamples) {
+  assert.strictEqual(changelog.summarizeText(source), expected, `${source} 应转成中文人话`);
+}
+
+assert.doesNotMatch(
+  userFacingExamples.map(([source]) => changelog.summarizeText(source)).join('\n'),
+  /official|account|webhook|flow|package|private|lesson|import|dropdown|clipping|cache|picker|polish|refresh|datasets|restore|settlement|inline|first paint|products|loading/i,
+  '产品播报不应直接输出普通用户看不懂的英文提交词'
+);
+
 console.log('feishu changelog rules tests passed');
