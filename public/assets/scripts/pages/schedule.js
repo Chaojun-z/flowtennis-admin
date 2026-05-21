@@ -2,13 +2,13 @@
 function onScheduleFilterChange(){schPage=1;renderSchedule();}
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'';
-  const campusValue=document.getElementById('schCampusFilter')?.value||'';
+  const coachValue=document.getElementById('schCoachFilter')?.value||'';
   const courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'';
   const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}];
-  const hasExternal=schedules.some(s=>isExternalSchedule(s));
-  const campusOptions=[{value:'',label:'全部',emptyDisplay:'校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id})),...(hasExternal?[{value:'__external__',label:'外部场馆'}]:[])];
+  const coachNames=[...new Set([...activeCoachNames(),...schedules.map(s=>coachName(s.coach)).filter(Boolean)])];
+  const coachOptions=[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))];
   const courseTypeOptions=[{value:'',label:'全部',emptyDisplay:'课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
-  [['schStatusFilterHost','schStatusFilter','状态',statusOptions,statusValue],['schCampusFilterHost','schCampusFilter','校区',campusOptions,campusValue],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',courseTypeOptions,courseTypeValue]].forEach(([hostId,id,label,options,value])=>{
+  [['schStatusFilterHost','schStatusFilter','状态',statusOptions,statusValue],['schCoachFilterHost','schCoachFilter','教练',coachOptions,coachValue],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',courseTypeOptions,courseTypeValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onScheduleFilterChange');
   });
@@ -75,7 +75,7 @@ function setSchedulePageSize(value){
 function getFilteredSchedules(){
   const q=(document.getElementById('schSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('schStatusFilter')?.value||'';
-  const cf=document.getElementById('schCampusFilter')?.value||'';
+  const coachFilter=document.getElementById('schCoachFilter')?.value||'';
   const tf=document.getElementById('schCourseTypeFilter')?.value||'';
   const now=new Date();
   return schedules.filter(s=>{
@@ -83,8 +83,9 @@ function getFilteredSchedules(){
     const effectiveStatus=effectiveScheduleStatus(s,now);
     const stuText=parseArr(s.studentIds).map(sid=>{const st=students.find(x=>x.id===sid);return `${st?.name||sid} ${st?.phone||''}`;}).join(' ');
     if(!searchHit(q,s.studentName,stuText,s.coach,s.venue,s.externalVenueName,s.externalNotes,effectiveStatus,scheduleStatusLabel(effectiveStatus),scheduleLocationText(s),cn(s.campus),s.notes,cls?.className,cls?.productName,fmtDt(s.startTime),fmtDt(s.endTime),s.cancelReason,s.scheduleSource))return false;
+    if(campus!=='all'&&!sameCampusValue(s.campus,campus))return false;
     if(sf&&effectiveStatus!==sf)return false;
-    if(cf&&s.campus!==cf)return false;
+    if(coachFilter&&coachName(s.coach)!==coachFilter)return false;
     if(tf&&scheduleCourseType(s)!==tf)return false;
     return true;
   }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)}));
@@ -96,7 +97,7 @@ function jumpSchedulePage(value){
   renderSchedule();
 }
 function scheduleHasActiveSearchOrFilter(){
-  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCampusFilter')?.value||document.getElementById('schCourseTypeFilter')?.value);
+  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value);
 }
 function scheduleEmptyStateHtml(){
   const filtered=scheduleHasActiveSearchOrFilter();
@@ -971,7 +972,6 @@ function feedbackSummaryHtml(fb){
 }
 function openScheduleDetail(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
-  const cls=s.classId?classes.find(c=>c.id===s.classId):null;
   const fb=scheduleFeedback(s);
   const ent=findEntitlementForSchedule(s);
   const studentNames=scheduleStudentSummary(s);
@@ -980,9 +980,34 @@ function openScheduleDetail(scheduleId){
   const ownerCoachText=[...new Set(stuRecords.map(st=>myStudentOwnerCoachText(st)).filter(Boolean))].join('、')||'未设置';
   const studentNotes=stuRecords.map(st=>st.notes).filter(Boolean).join('；');
   const recentFeedback=stuRecords.flatMap(st=>feedbacks.filter(item=>item.studentId===st.id||parseArr(item.studentIds).includes(st.id))).filter(item=>item.id!==fb?.id).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,2);
-  const trialSummary=fb&&scheduleIsTrial(s)?`<div class="sec-ttl">体验课内部记录</div><div class="fgrid"><div class="fg"><div class="flabel">学员水平</div><div class="finput">${esc(fb.playerLevel)||'—'}</div></div><div class="fg"><div class="flabel">转化意愿</div><div class="finput">${esc(fb.conversionIntent)||'—'}</div></div><div class="fg"><div class="flabel">推荐产品</div><div class="finput">${esc(fb.recommendedProductType)||'—'}</div></div><div class="fg"><div class="flabel">是否需要跟进</div><div class="finput">${fb.needOpsFollowUp?'是':'否'}</div></div></div>`:'';
-  const lateSummary=s.coachLateFree?`<div class="tms-section-header">教练迟到处理</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">处理结果</label><input class="finput tms-form-control" value="本节免费，不扣学员课时" readonly></div><div class="tms-form-item"><label class="tms-form-label">迟到分钟</label><input class="finput tms-form-control" value="${parseInt(s.lateMinutes)||0} 分钟" readonly></div><div class="tms-form-item"><label class="tms-form-label">教练承担场地费</label><input class="finput tms-form-control" value="¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">原因</label><div class="finput tms-form-control" style="height:auto;min-height:42px;white-space:normal;line-height:1.7">${esc(s.lateReason)||'—'}</div></div></div>`:'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">课程基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">时间</label><input class="finput tms-form-control" value="${fmtDt(s.startTime)}${s.endTime?` - ${fmtDt(s.endTime)}`:''}" readonly></div><div class="tms-form-item"><label class="tms-form-label">校区 / 场地</label><input class="finput tms-form-control" value="${esc(scheduleLocationText(s))}" readonly></div></div>${isExternalSchedule(s)&&s.externalNotes?`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">外部场馆说明</label><input class="finput tms-form-control" value="${esc(s.externalNotes)}" readonly></div></div>`:''}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程类型</label><input class="finput tms-form-control" value="${scheduleCourseType(s)||esc(ent?.courseType)||'-'}" readonly></div><div class="tms-form-item"><label class="tms-form-label">班次</label><input class="finput tms-form-control" value="${esc(scheduleClassName(s))}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员</label><input class="finput tms-form-control" value="${esc(studentNames)}" readonly></div><div class="tms-form-item"><label class="tms-form-label">状态</label><input class="finput tms-form-control" value="${scheduleStatusLabel(effectiveScheduleStatus(s))}${s.cancelReason?` · ${esc(s.cancelReason)}`:''}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label><input class="finput tms-form-control" value="${esc(primaryCoachText)}" readonly></div><div class="tms-form-item"><label class="tms-form-label">归属教练</label><input class="finput tms-form-control" value="${esc(ownerCoachText)}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课包 / 权益</label><input class="finput tms-form-control" value="${esc(scheduleEntitlementSummary(s))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">排课来源</label><input class="finput tms-form-control" value="${esc(s.scheduleSource||'排课表')}" readonly></div></div><div class="tms-section-header">上课前信息</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员备注</label><div class="finput tms-form-control tms-readonly-text">${esc(studentNotes)||'-'}</div></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">历史问题</label><div class="finput tms-form-control tms-readonly-text">${esc(recentFeedback.map(item=>item.knowledgePoint||item.practicedToday).filter(Boolean).join('；'))||'-'}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">教练备注 / 本节关注点</label><div class="finput tms-form-control tms-readonly-text">${esc(s.notes)||'-'}${fb?.nextTraining?`<br>${esc(fb.nextTraining)}`:''}</div></div></div><div class="tms-section-header">课后动作</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">消耗课时</label><input class="finput tms-form-control" value="${parseInt(s.lessonCount)||0} 节" readonly></div><div class="tms-form-item"><label class="tms-form-label">班次剩余课时</label><input class="finput tms-form-control" value="${scheduleRemainingLessons(s)===''?'-':scheduleRemainingLessons(s)+' 节'}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">反馈摘要</label><div class="finput tms-form-control tms-readonly-text">${feedbackSummaryHtml(fb)}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">历史反馈</label><div class="finput tms-form-control tms-readonly-text">${recentFeedback.length?recentFeedback.map(item=>`${String(item.updatedAt||'').slice(0,10)}：${item.practicedToday||item.knowledgePoint||'已填写'}`).map(esc).join('<br>'):'-'}</div></div></div>${lateSummary}${trialSummary}`;
+  const statusText=`${scheduleStatusLabel(effectiveScheduleStatus(s))}${s.cancelReason?` · ${s.cancelReason}`:''}`;
+  const baseFields=[
+    studentDetailFieldHtml('时间',`${fmtDt(s.startTime)}${s.endTime?` - ${fmtDt(s.endTime)}`:''}`),
+    studentDetailFieldHtml('校区 / 场地',scheduleLocationText(s)),
+    isExternalSchedule(s)&&s.externalNotes?studentDetailBlockHtml('外部场馆说明',esc(s.externalNotes),{hideEmpty:true}):'',
+    studentDetailFieldHtml('课程类型',scheduleCourseType(s)||ent?.courseType||'-'),
+    studentDetailFieldHtml('学员',studentNames),
+    studentDetailFieldHtml('状态',statusText),
+    studentDetailFieldHtml('上课教练',s.coach||'-'),
+    studentDetailFieldHtml('负责教练',primaryCoachText),
+    studentDetailFieldHtml('归属教练',ownerCoachText),
+    studentDetailFieldHtml('课包 / 权益',scheduleEntitlementSummary(s)),
+    studentDetailFieldHtml('排课来源',s.scheduleSource||'排课表')
+  ].filter(Boolean).join('');
+  const preLessonFields=[
+    studentNotes?studentDetailBlockHtml('学员备注',esc(studentNotes),{hideEmpty:true}):'',
+    studentDetailBlockHtml('历史问题',esc(recentFeedback.map(item=>item.knowledgePoint||item.practicedToday).filter(Boolean).join('；')),{hideEmpty:true}),
+    studentDetailBlockHtml('教练备注 / 本节关注点',`${esc(s.notes)||''}${fb?.nextTraining?`<br>${esc(fb.nextTraining)}`:''}`,{hideEmpty:true})
+  ].filter(Boolean).join('');
+  const afterLessonFields=[
+    studentDetailFieldHtml('消耗课时',`${lessonQty(s.lessonCount)} 节`),
+    studentDetailFieldHtml('班次剩余课时',scheduleRemainingLessons(s)===''?'-':`${scheduleRemainingLessons(s)} 节`),
+    studentDetailBlockHtml('反馈摘要',esc(renderCourtEmptyText(feedbackSummaryHtml(fb))),{hideEmpty:true}),
+    studentDetailBlockHtml('历史反馈',recentFeedback.length?recentFeedback.map(item=>`${String(item.updatedAt||'').slice(0,10)}：${item.practicedToday||item.knowledgePoint||'已填写'}`).map(esc).join('<br>'):'',{hideEmpty:true})
+  ].filter(Boolean).join('');
+  const lateSummary=s.coachLateFree?`<div class="tms-section-header">教练迟到处理</div><div class="tms-detail-grid">${studentDetailFieldHtml('处理结果','本节免费，不扣学员课时')}${studentDetailFieldHtml('迟到分钟',`${parseInt(s.lateMinutes)||0} 分钟`)}${studentDetailFieldHtml('教练承担场地费',`¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}`)}${studentDetailBlockHtml('原因',esc(s.lateReason),{hideEmpty:true})}</div>`:'';
+  const trialSummary=fb&&scheduleIsTrial(s)?`<div class="tms-section-header">体验课内部记录</div><div class="tms-detail-grid">${studentDetailFieldHtml('学员水平',fb.playerLevel)}${studentDetailFieldHtml('转化意愿',fb.conversionIntent)}${studentDetailFieldHtml('推荐产品',fb.recommendedProductType)}${studentDetailFieldHtml('是否需要跟进',fb.needOpsFollowUp?'是':'否')}</div>`:'';
+  const body=`<div class="tms-section-header" style="margin-top:0;">课程基础信息</div><div class="tms-detail-grid">${baseFields}</div>${preLessonFields?`<div class="tms-section-header">上课前信息</div><div class="tms-detail-grid">${preLessonFields}</div>`:''}<div class="tms-section-header">课后动作</div><div class="tms-detail-grid">${afterLessonFields}</div>${lateSummary}${trialSummary}`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openFeedbackModal('${s.id}')">${fb?'查看/编辑反馈':'填写反馈'}</button>`;
   setCourtModalFrame('排课详情',body,footer,'modal-wide');
 }

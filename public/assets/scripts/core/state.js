@@ -645,8 +645,6 @@ function buildCampusTabs(){
 function renderAll(){
   renderRoleShell();
   initClsCounter();
-  const scf=document.getElementById('schCampusFilter');
-  if(scf)scf.innerHTML='<option value="">全部校区</option>'+campuses.map(c=>`<option value="${c.code||c.id}">${esc(c.name)}</option>`).join('');
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentPage==='myschedule')currentPage='workbench';
   if(isCoach&&!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='workbench';

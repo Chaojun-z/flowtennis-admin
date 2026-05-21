@@ -37,6 +37,11 @@ assert.match(fnBody('confirmScheduleCancel'), /effectiveScheduleStatus\(item\)==
 assert.match(fnBody('confirmScheduleCancel'), /scope==='future'/, 'repeat cancellation should support current-and-future scope');
 assert.doesNotMatch(fnBody('confirmScheduleCancel'), /window\.confirm\(/, 'schedule cancel flow should not fall back to the browser confirm');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
+assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\[[^\]]*'schedule'/, 'schedule page should show the global campus filter tabs');
+assert.match(source, /if\(currentPage==='schedule'\)renderSchedule\(\);/, 'global campus filter should rerender the schedule page');
+assert.match(source, /schCoachFilterHost/, 'schedule toolbar should expose a coach filter host');
+assert.match(source, /function syncScheduleFilterOptions\([\s\S]*schCoachFilter[\s\S]*教练/, 'schedule filters should use coach instead of in-toolbar campus');
+assert.doesNotMatch(source, /schCampusFilterHost|schCampusFilter/, 'schedule toolbar should not keep the old campus dropdown filter');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*校区内[\s\S]*校区外/, 'schedule modal should support in-campus and off-campus lesson location types');
 assert.match(fnBody('openScheduleModal'), /schedule-time-course-row[\s\S]*schedule-time-field[\s\S]*sch_courseType/, 'schedule modal should keep time controls compact beside course type');
@@ -75,6 +80,8 @@ assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-sc
 assert.match(styles, /#page-schedule \.tms-pagination\{padding:4px 12px;font-size:11px/, 'schedule pager should use the compact standard pager style');
 assert.match(source, /function renderScheduleTableLoading\([\s\S]*tms-table-loading-state[\s\S]*排课数据加载中/, 'schedule loading state should use the standard table loading style');
 assert.match(source, /function renderScheduleTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'schedule load failure should render an inline retry state');
+assert.match(fnBody('openScheduleDetail'), /tms-detail-grid[\s\S]*studentDetailFieldHtml[\s\S]*studentDetailBlockHtml/, 'schedule detail should use the same readonly detail display as student detail');
+assert.doesNotMatch(fnBody('openScheduleDetail'), /<input|finput|tms-form-control|<textarea|<select/, 'schedule detail should not look editable');
 assert.match(source, /function openCoachLateSettlementModal\(/, 'schedule page should expose coach late settlement modal');
 assert.match(source, /迟到月结/, 'schedule page should expose coach late monthly settlement entry');
 assert.doesNotMatch(source, /id="page-schedule"[\s\S]*?openCoachLateSettlementModal\(\)[\s\S]*?id="page-coachops"/, 'late monthly settlement should not be a primary schedule-table action');
