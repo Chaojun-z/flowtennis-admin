@@ -64,6 +64,7 @@ function normalizeCourseType(type=''){
   const raw=String(type||'').trim();
   if(!raw)return '';
   if(raw==='私教')return '私教课';
+  if(raw==='半私教课')return '私教课';
   if(raw==='班课'||raw==='专项训练')return '训练营';
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
   return raw;

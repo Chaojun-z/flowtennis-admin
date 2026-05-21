@@ -43,9 +43,14 @@ function packageCreatedDate(p){
   return String(p.createdAt||'').slice(0,10)||'-';
 }
 function packageStatusBadge(p){
-  if(String(p.name||'').includes('历史')||String(p.status||'')==='merged')return'<span class="package-status-badge is-history">历史</span>';
+  if(String(p.name||'').includes('历史')||String(p.status||'')==='merged')return'<span class="package-status-badge is-history">已停售</span>';
   if(String(p.status||'active')==='inactive')return'<span class="package-status-badge is-off">已停售</span>';
   return'<span class="package-status-badge is-on">售卖中</span>';
+}
+function packageRuleIcon(kind){
+  if(kind==='campus')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+  if(kind==='time')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 }
 function packageCoachSummary(p){
   const coaches=parseArr(p.coachNames||p.coachIds).filter(Boolean);
@@ -53,6 +58,10 @@ function packageCoachSummary(p){
   if(p.ownerCoach)return `归属：${p.ownerCoach}`;
   if(coaches.length)return `${coaches.length} 位可用`;
   return '未分配';
+}
+function packageCoachDetail(p){
+  const coaches=parseArr(p.coachNames||p.coachIds).filter(Boolean);
+  return [p.ownerCoach?`归属：${p.ownerCoach}`:'',coaches.length?`可用：${coaches.join('、')}`:''].filter(Boolean).join('\n')||'未分配';
 }
 function packageCampusSummaryText(ids){
   const names=parseArr(ids).map(id=>cn(id)).filter(Boolean);
@@ -85,11 +94,17 @@ function renderPackages(){
     const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
     const timeWindow=[packageTimeBandShortLabel(p.timeBand||'全天'),windows].filter(Boolean).join(' · ');
     const audience=packageAudienceLabel(p);
-    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(packageCoreClassLabel(p)||courseType||'课包')}</div><div class="showcase-card-subtitle">${[audience,`${parseInt(p.lessons)||0} 课时`].filter(Boolean).map(esc).join(' · ')}</div></div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line" title="${esc(packageCampusTitle(p.campusIds))}"><span>${esc(packageCampusSummaryText(p.campusIds))}</span><i>校区</i></div><div class="package-rule-line" title="${esc(timeWindow||'全天')}"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span><i>时段</i></div><div class="package-rule-line" title="${esc([p.ownerCoach,parseArr(p.coachNames||p.coachIds).join('、')].filter(Boolean).join(' / ')||'未分配')}"><span>${esc(packageCoachSummary(p))}</span><i>教练</i></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">创建 ${esc(packageCreatedDate(p))}<span></span><button type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单</button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div></div>`;
+    const campusTitle=packageCampusTitle(p.campusIds);
+    const timeTitle=windows||packageTimeBandShortLabel(p.timeBand||'全天');
+    const coachTitle=packageCoachDetail(p);
+    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(packageCoreClassLabel(p)||courseType||'课包')}</div><div class="showcase-card-subtitle">${[audience,`${parseInt(p.lessons)||0} 课时`].filter(Boolean).map(esc).join(' · ')}</div></div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageCreatedDate(p))} 创建<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
-  return purchases.filter(p=>p.packageId===packageId&&isMeaningfulPurchaseRecord(p)).length;
+  const pkg=packages.find(x=>x.id===packageId)||{};
+  const names=new Set([pkg.name,pkg.originalPackageName,packageDisplayTitle(pkg)].filter(Boolean).map(String));
+  const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>e.packageId===packageId).map(e=>String(e.purchaseId||'')).filter(Boolean));
+  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&(p.packageId===packageId||purchaseIdsByEntitlement.has(String(p.id||''))||names.has(String(p.packageName||''))||names.has(String(p.originalPackageName||'')))).length;
 }
 function packageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(p.name)} · ¥${fmt(p.price)} · ${p.lessons||0}节</option>`).join('');
@@ -127,6 +142,21 @@ async function mergePackage(){
     if(currentPage==='entitlements')renderEntitlements();
     toast('课包已合并','success');
   }catch(e){toast('合并失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='确认合并';}}
+}
+async function deactivatePackage(id){
+  const p=packages.find(x=>x.id===id);
+  if(!p)return;
+  if(String(p.status||'active')==='inactive'){toast('该课包已停售','warn');return;}
+  const ok=await appConfirm('确认下架该课包？下架后不再用于新购买，历史订单和课包余额保留。',{title:'确认下架',confirmText:'确认下架',danger:true});
+  if(!ok)return;
+  try{
+    const data={...p,status:'inactive'};
+    const r=await apiCall('PUT','/packages/'+id,data);
+    const i=packages.findIndex(x=>x.id===id);
+    if(i>=0)packages[i]=r;
+    renderPackages();
+    toast('课包已下架','success');
+  }catch(e){toast('下架失败：'+e.message,'error');}
 }
 function purchaseAllowedCoachChecks(ids,cls='pur-allowed-coach-cb'){
   ids=parseArr(ids);
@@ -220,9 +250,9 @@ function openPackageModal(id,presetProductId=''){
         <div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('pkg_status','状态',[{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],rv(p,'status','active'),true)}</div>
       </div>
     <div class="tms-section-header">上课时间</div>
-      <div class="tms-form-row">
+      <div class="package-time-section">
         <div class="tms-form-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
-        <div class="tms-form-item full-width"><label class="tms-form-label">可用时段</label>
+        <div class="tms-form-item"><label class="tms-form-label">可用时段</label>
           <div class="inline-help">适用日期可选工作日或周末。</div>
           <div class="time-window-stack">
             <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope','适用日期',timeScopeOptions,packageDaysToScope(windowRow.daysOfWeek),true)}<span class="filter-hidden-date">工作日 周末</span></div>${renderCourtDropdownHtml('pkg_timeStart','开始时间',getScheduleTimeOptions(rv(windowRow,'startTime','09:00')),rv(windowRow,'startTime','09:00'),true)}<span class="range-dash">-</span>${renderCourtDropdownHtml('pkg_timeEnd','结束时间',getScheduleTimeOptions(rv(windowRow,'endTime','22:00')),rv(windowRow,'endTime','22:00'),true)}</div>
@@ -261,7 +291,7 @@ function openPackageModal(id,presetProductId=''){
     <input type="hidden" id="pkg_timeScopeCustomDays" value="${esc(JSON.stringify(parseArr(windowRow.daysOfWeek)))}">
     <input type="hidden" id="pkg_timeScopeCustomDays2" value="${esc(JSON.stringify(parseArr(secondWindow.daysOfWeek)))}">
     `;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id?`<button class="tms-btn tms-btn-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id&&String(p.status||'active')!=='inactive'?`<button class="tms-btn tms-btn-danger" onclick="deactivatePackage('${p.id}')">下架</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
   setCourtModalFrame(id?'编辑课包':'创建课包',body,footer,'modal-wide modal-package-edit');
   syncPackageClassSize();
   setPackageLessonShortcut(rv(p,'lessons',10));

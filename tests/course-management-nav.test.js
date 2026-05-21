@@ -36,7 +36,7 @@ assert.match(html, /product-card-shell/, 'product page should render the gemini-
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
 assert.match(html, /function renderPackages[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort newer package records first');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
-assert.match(html, /package-card-meta">创建 \$\{esc\(packageCreatedDate\(p\)\)\}/, 'package cards should keep created time as weak footer metadata');
+assert.match(html, /package-card-meta">\$\{esc\(packageCreatedDate\(p\)\)\} 创建/, 'package cards should keep created time as weak footer metadata');
 assert.doesNotMatch(html, /showcase-kv-label">创建时间/, 'package cards should not show created time as a normal field row');
 assert.match(html, /归属教练[\s\S]*可用校区[\s\S]*可用时段/, 'package card should show owner coach, campus, and time rules');
 assert.doesNotMatch(fnBody('renderPackages'), /活动期|使用期/, 'package cards should not show sale or usage ranges');
@@ -91,13 +91,17 @@ assert.doesNotMatch(html, /课程产品定义上什么课；售卖课包定义�
 assert.doesNotMatch(html, /id="page-packages"[\s\S]*搜索课包名称、课程产品、时段/, 'package search should no longer mention course products');
 assert.match(html, /openPackageModal\(null\)">＋ 创建课包/, 'package page primary action should say create package');
 assert.match(html, /setCourtModalFrame\(id\?'编辑课包':'创建课包'/, 'package modal title should use create package copy');
+assert.match(fnBody('openPackageModal'), /deactivatePackage\('\$\{p\.id\}'\)[\s\S]*下架/, 'package edit modal should use deactivate copy');
 assert.doesNotMatch(html, /id="page-purchases"[\s\S]*搜索学员、课包、课程产品/, 'purchase search should no longer mention course products');
 assert.doesNotMatch(html, /id="page-packages"[\s\S]*还没有课程产品|id="page-packages"[\s\S]*先创建课程产品，再基于课程产品创建售卖课包。/, 'package page should not require course products to create a package');
 assert.doesNotMatch(html, /关联产品:/, 'package cards should not show linked product subtitle');
 assert.doesNotMatch(fnBody('renderPackages'), /showcase-status-tag[\s\S]*启用/, 'package cards should not show the redundant active status tag');
 assert.doesNotMatch(fnBody('renderPackages'), /packageCardTags/, 'package cards should not show duplicate course type tags');
-assert.match(fnBody('packageStatusBadge'), /历史[\s\S]*is-history/, 'package status should render history as a mutually exclusive state');
+assert.match(fnBody('packageStatusBadge'), /includes\('历史'\)[\s\S]*已停售/, 'package history state should render as stopped sale');
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgTimeBandFilter'\)/, 'package cards should filter by time band');
+assert.match(fnBody('renderPackages'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
+assert.match(fnBody('renderPackages'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');
+assert.match(fnBody('renderPackages'), /deactivatePackage\('\$\{p\.id\}'/, 'package card should use deactivate instead of delete');
 assert.match(html, /currentPage==='packages'\)renderPackages\(\)/, 'global campus tabs should refresh packages page');
 assert.match(html, /campusTabs'\)\.style\.display=\[[^\]]*'packages'/, 'global campus tabs should show on packages page');
 assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove the product shortcut button');
@@ -119,6 +123,7 @@ assert.match(html, /function getFilteredPurchases[\s\S]*String\(a\.purchaseDate\
 assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
+assert.match(fnBody('packagePurchaseCount'), /purchaseIdsByEntitlement[\s\S]*packageName[\s\S]*originalPackageName/, 'package order count should match legacy package-name and entitlement-linked purchases');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
@@ -141,5 +146,6 @@ assert.match(html, /训练营/, 'course pages should expose 训练营 as a fixed
 assert.match(html, /大师课/, 'course pages should expose 大师课 as a fixed type');
 assert.doesNotMatch(html, /课程性质/, 'course pages should not mention the removed 课程性质 field');
 assert.doesNotMatch(courseSource, /正式课/, 'course pages should not keep the old 正式课 wording');
+assert.doesNotMatch(courseSource, /半私教课/, 'course pages should not show the old half-private lesson wording');
 
 console.log('course management nav tests passed');
