@@ -183,6 +183,17 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-students .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#FDF7F2}
 #page-students .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
 #page-students .tms-table tbody tr:hover td.tms-sticky-l,#page-students .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
+#page-students .tms-table-wrapper{max-height:calc(100vh - 210px)}
+#page-students .tms-table{min-width:1280px;table-layout:fixed}
+#page-students .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
+#page-students .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
+#page-students .tms-text-primary,#page-students .tms-cell-text,#page-students .tms-text-remark{font-size:12px}
+#page-students .tms-action-link{font-size:12px}
+#page-students .tms-pagination{padding:6px 14px;font-size:11px;min-height:36px}
+#page-students .tms-page-btn{min-width:24px;height:24px;font-size:11px}
+#page-students .tms-page-ellipsis{font-size:11px;color:#A3968F;padding:0 2px}
+#page-students .tms-page-jump{display:inline-flex;align-items:center;gap:4px;color:#8C7B6E;font-size:11px}
+#page-students .tms-page-jump input{width:42px;height:24px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2;color:#5C4D43;text-align:center;font-size:11px}
 #page-purchases .tms-table th.tms-sticky-r,#page-entitlements .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#FDF7F2}
 #page-purchases .tms-table td.tms-sticky-r,#page-entitlements .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
 #page-purchases .tms-table tbody tr:hover td.tms-sticky-r,#page-entitlements .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
@@ -351,6 +362,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .mactions{padding:16px 24px;display:flex;justify-content:space-between;border-radius:0 0 16px 16px;background:#E6E1DC;position:relative;bottom:auto;z-index:5;backdrop-filter:none;flex-shrink:0;border-top:1px solid #D9D0C7}
 .modal.modal-court .mactions.right-align{justify-content:flex-end}
 .tms-pagination .tms-dropdown-display{height:40px;padding:0 14px;font-size:12px;background-color:#FDF7F2;border:1px solid #EAE0D6;box-shadow:none;min-width:120px;border-radius:12px}
+.tms-dropdown.has-value .tms-dropdown-display{color:#332A24;font-weight:600}
 .tms-pagination .tms-dropdown-display:hover{background-color:#fff}
 .tms-pagination .tms-dropdown-menu{top:auto;bottom:calc(100% + 4px)}
 .tms-pagination .tms-dropdown-item{padding:8px 12px;font-size:12px}

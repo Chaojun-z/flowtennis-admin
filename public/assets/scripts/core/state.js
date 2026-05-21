@@ -305,7 +305,7 @@ function renderBlockLoading(id,text){
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
 }
 function renderPageLoading(pg){
-  if(pg==='students')renderTableBodyLoading('stuTbody',13,'学员数据加载中...');
+  if(pg==='students')renderTableBodyLoading('stuTbody',11,'学员数据加载中...');
   if(pg==='leads')renderTableBodyLoading('leadTbody',15,'线索数据加载中...');
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');

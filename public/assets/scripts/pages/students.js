@@ -17,6 +17,41 @@ function renderStudentToolbarFilters(){
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onStudentFilterChange');
   });
 }
+function studentPageNumbers(page,pages){
+  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
+  const items=[1];
+  const start=Math.max(2,page-2);
+  const end=Math.min(pages-1,page+2);
+  if(start>2)items.push('...');
+  for(let i=start;i<=end;i++)items.push(i);
+  if(end<pages-1)items.push('...');
+  items.push(pages);
+  return items;
+}
+function renderStudentPagerControls(total,pages){
+  const pageSizeHost=document.getElementById('stuPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('stuPageSizeValue',`${stuPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(stuPageSize),false,'setStudentPageSize');
+  const btns=document.getElementById('stuPagerBtns');
+  if(!btns)return;
+  if(!total||pages<=1){btns.innerHTML='';return;}
+  const pageBtns=studentPageNumbers(stuPage,pages).map(item=>item==='...'
+    ?'<span class="tms-page-ellipsis">...</span>'
+    :`<div class="tms-page-btn${item===stuPage?' active':''}" onclick="stuPage=${item};renderStudents()">${item}</div>`
+  ).join('');
+  btns.innerHTML=`<div class="tms-page-btn" onclick="stuPage=Math.max(1,stuPage-1);renderStudents()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="stuPage=Math.min(${pages},stuPage+1);renderStudents()">下一页</div><span class="tms-page-jump">跳至 <input id="stuPageJump" value="${stuPage}" onkeydown="if(event.key==='Enter')jumpStudentPage(this.value)"> 页</span>`;
+}
+function setStudentPageSize(value){
+  const next=parseInt(value,10);
+  stuPageSize=[20,50,100].includes(next)?next:20;
+  stuPage=1;
+  renderStudents();
+}
+function jumpStudentPage(value){
+  const total=getFilteredStudents().length;
+  const pages=Math.max(1,Math.ceil(total/stuPageSize));
+  stuPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  renderStudents();
+}
 function getStudentBaseList(){
   return students.filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
 }
@@ -95,25 +130,20 @@ function renderStudents(){
   const base=getStudentBaseList();
   const stats=studentPageStats(base);
   document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员总数</div><div class="tms-stat-value">${stats.total}<span>人</span></div><div class="tms-stat-sub">当前校区口径</div></div><div class="tms-stat-card"><div class="tms-stat-label">今日课时</div><div class="tms-stat-value">${stats.todayLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本周课时</div><div class="tms-stat-value">${stats.weekLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本月课时</div><div class="tms-stat-value">${stats.monthLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本月体验课转化率</div><div class="tms-stat-value">${stats.monthTrialRate}<span>%</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">待转化</div><div class="tms-stat-value">${stats.pendingConversion}<span>人</span></div><div class="tms-stat-sub">上过体验课且无购买/消耗</div></div>`;
-  const total=list.length,pages=Math.ceil(total/PAGE_SIZE);
-  if(stuPage>Math.max(pages,1))stuPage=1;
-  const slice=list.slice((stuPage-1)*PAGE_SIZE,stuPage*PAGE_SIZE);
+  const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
+  if(stuPage>pages)stuPage=pages;
+  const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);
   const pager=document.querySelector('#page-students .tms-pagination');
-  if(pager)pager.style.display=pages>1?'flex':'none';
+  if(pager)pager.style.display=total?'flex':'none';
   document.getElementById('stuPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('stuPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===stuPage?' active':''}" onclick="stuPage=${i+1};renderStudents()">${i+1}</div>`).join('');
+  renderStudentPagerControls(total,pages);
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const stuScheds=schedules.filter(x=>scheduleHasStudent(x,s)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
     const lastLesson=stuScheds.length?stuScheds[0].startTime.slice(0,10):'';
-    const primaryClass=studentPrimaryClass(s);
-    const activeClasses=studentActiveClasses(s);
-    const classText=primaryClass?`${primaryClass.className}${activeClasses.length>1?` · 另有${activeClasses.length-1}个`:''}`:'未入班';
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
-    const bookingText=studentBookingMembershipSummary(s);
-    const bookingClass=bookingText&&bookingText!=='未关联'?' student-summary-strong':'';
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(classText)}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td><div class="tms-text-remark${bookingClass}" title="${esc(bookingText)}">${esc(renderCourtEmptyText(bookingText))}</div></td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
-  }).join(''):'<tr><td colspan="13"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
+  }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-ico">👥</div><p>暂无学员</p></div></td></tr>';
 }
 function studentFeedbackHistoryHtml(s){
   const rows=feedbacks.filter(f=>{

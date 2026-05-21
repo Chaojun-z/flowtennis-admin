@@ -1,5 +1,8 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
+const css = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 
 assert.match(source, /function renderScheduleStudentPicker/, 'schedule modal should provide a dedicated student picker helper');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
@@ -31,7 +34,15 @@ assert.match(source, /pendingConversion:base\.filter\(s=>studentNeedsConversion\
 assert.match(source, /function studentStatusMeta\(/, 'student list should compute business status labels');
 assert.match(source, /上课中[\s\S]*待转化[\s\S]*沉默30天[\s\S]*仅订场[\s\S]*无班次/, 'student status labels should cover the agreed business states');
 assert.match(source, /function studentNoteSummary\(/, 'student list should compute compact ops-style note summary');
-assert.match(source, /<table class="tms-table">[\s\S]*<th[^>]*>学员<\/th><th[^>]*>电话<\/th><th[^>]*>类型<\/th><th[^>]*>校区<\/th><th[^>]*>当前班次<\/th><th[^>]*>最近上课<\/th><th[^>]*>累计上课<\/th><th[^>]*>负责教练<\/th><th[^>]*>课包\/课时<\/th><th[^>]*>订场\/会员<\/th><th[^>]*>来源<\/th><th[^>]*>备注<\/th><th[^>]*>操作<\/th>/, 'student table should add cumulative lesson count beside last lesson');
+assert.match(source, /<table class="tms-table">[\s\S]*<th[^>]*>学员<\/th><th[^>]*>电话<\/th><th[^>]*>类型<\/th><th[^>]*>校区<\/th><th[^>]*>最近上课<\/th><th[^>]*>累计上课<\/th><th[^>]*>负责教练<\/th><th[^>]*>课包\/课时<\/th><th[^>]*>来源<\/th><th[^>]*>备注<\/th><th[^>]*>操作<\/th>/, 'student table should keep the compact standard columns');
+assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should hide the current class column');
+assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
+assert.match(source, /id="stuPageSize"/, 'student pager should expose a page size selector host');
+assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
+assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
+assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
+assert.match(css, /#page-students \.tms-pagination\{padding:6px 14px;font-size:11px/, 'student pager should be shorter with smaller text');
+assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
 assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
 assert.match(source, /function scheduleLessonUnits\(/, 'lesson stats should use schedule lesson units instead of row counts');
@@ -43,13 +54,11 @@ assert.match(source, /function renderCourtCellText[\s\S]*const muted=!raw\|\|raw
 assert.match(source, /function renderCourtEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
-assert.match(source, /课包\/课时<\/th><th style="width:120px">订场\/会员/, 'student package and booking columns should be compact');
 assert.match(source, /<th style="width:80px">课包\/课时<\/th>/, 'student package lesson column should be 40px narrower');
 assert.match(source, /function studentPackageLessonMeta\(/, 'student package lesson summary should expose remaining and total lessons');
 assert.match(source, /function studentPackageLessonMiniBar\(/, 'student package lesson column should render the same mini balance bar as booking accounts');
 assert.match(source, /studentPackageLessonMiniBar\(s\)/, 'student list should render package lessons through the mini balance bar');
 assert.match(source, /\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}/, 'student package lesson text should use remaining over total lesson count without truncating half lessons');
-assert.match(source, /student-summary-strong/, 'student rows should visually distinguish non-empty package and booking summaries');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should prioritize view before edit');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openPurchaseModal\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should expose a direct package purchase shortcut between view and edit');

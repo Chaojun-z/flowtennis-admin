@@ -357,7 +357,8 @@ function renderCourtDropdownHtml(id,label,options,value,isForm=false,onchange=''
   const list=(options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt);
   const active=list.find(opt=>String(opt.value)===String(value))||list.find(opt=>opt.active)||null;
   const displayLabel=active?(active.label||active.value):label;
-  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>`<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(opt.label||opt.value)},event)">${esc(opt.label||opt.value)}</div>`).join('')}</div></div>`;
+  const hasValue=String(active?.value||value||'')!=='';
+  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>`<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(opt.label||opt.value)},event)">${esc(opt.label||opt.value)}</div>`).join('')}</div></div>`;
 }
 function closeCourtDropdowns(){
   document.querySelectorAll('.tms-dropdown.open').forEach(el=>{
@@ -403,6 +404,7 @@ function selectCourtDropdownItem(id,value,label,event){
   if(dropdown){
     const display=dropdown.querySelector('.tms-dropdown-display');
     if(display)display.textContent=label;
+    dropdown.classList.toggle('has-value',String(value||'')!=='');
     dropdown.querySelectorAll('.tms-dropdown-item').forEach(el=>el.classList.remove('active'));
     const current=[...dropdown.querySelectorAll('.tms-dropdown-item')].find(el=>el.textContent===label);
     if(current)current.classList.add('active');
@@ -424,6 +426,7 @@ function setCourtDropdownValue(id,value,label=''){
   if(hit)hit.classList.add('active');
   const display=dropdown.querySelector('.tms-dropdown-display');
   if(display)display.textContent=label||hit?.textContent||dropdown.dataset.label||'';
+  dropdown.classList.toggle('has-value',String(value||'')!=='');
 }
 document.addEventListener('click',closeCourtDropdowns);
 function renderCourtMiniBar(amount,total=0,low=false){
