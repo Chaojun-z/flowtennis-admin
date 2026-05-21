@@ -391,6 +391,8 @@ function toggleCourtDropdown(id,event){
       const spaceAbove=rect.top-Math.max(0,containerRect.top);
       const menuHeight=Math.min(menu.scrollHeight||0,250);
       if(spaceBelow<menuHeight+12&&spaceAbove>spaceBelow)dropdown.classList.add('open-upward');
+      const active=menu.querySelector('.tms-dropdown-item.active');
+      if(active)active.scrollIntoView({block:'nearest'});
     }
   }
   const formItem=dropdown.closest('.tms-form-item');
@@ -457,7 +459,7 @@ function scheduleDateTimeControls(prefix,value='',label='日期'){
   return `<div class="court-date-row"><div style="flex:1">${courtDateButtonHtml(prefix+'_date',datePart,label)}</div><div style="width:132px">${renderCourtDropdownHtml(prefix+'_time','时间',getCourtTimeOptions(timePart||'08:00'),timePart||'08:00',true,'refreshSchEntitlementOptions')}</div></div>`;
 }
 function scheduleTimeRangeControls(dateValue='',startValue='09:00',endValue='10:00'){
-  return `<div class="court-date-row schedule-time-range"><div style="flex:0 0 184px;width:184px">${courtDateButtonHtml('sch_date',dateValue,'上课日期','refreshScheduleTimeDerivedFields()')}</div><div style="flex:0 0 116px;width:116px">${renderCourtDropdownHtml('sch_startTime','开始时间',getCourtTimeOptions(startValue||'09:00'),startValue||'09:00',true,'refreshScheduleTimeDerivedFields')}</div><div style="flex:0 0 auto;align-self:center;color:#8C7B6E;font-size:12px;white-space:nowrap">至</div><div style="flex:0 0 116px;width:116px">${renderCourtDropdownHtml('sch_endTime','结束时间',getCourtTimeOptions(endValue||'10:00'),endValue||'10:00',true,'refreshScheduleTimeDerivedFields')}</div></div>`;
+  return `<div class="court-date-row schedule-time-range"><div style="flex:0 0 184px;width:184px">${courtDateButtonHtml('sch_date',dateValue,'上课日期','refreshScheduleTimeDerivedFields()')}</div><div style="flex:0 0 116px;width:116px">${renderCourtDropdownHtml('sch_startTime','开始时间',getScheduleTimeOptions(startValue||'09:00'),startValue||'09:00',true,'handleScheduleStartTimeChange')}</div><div style="flex:0 0 auto;align-self:center;color:#8C7B6E;font-size:12px;white-space:nowrap">至</div><div style="flex:0 0 116px;width:116px">${renderCourtDropdownHtml('sch_endTime','结束时间',getScheduleTimeOptions(endValue||'10:00'),endValue||'10:00',true,'refreshScheduleTimeDerivedFields')}</div></div>`;
 }
 function scheduleComposeDateTime(dateId,timeId){
   const date=document.getElementById(dateId)?.value||'';
@@ -503,6 +505,15 @@ function renderCourtHistoryItems(hist){
 function getCourtTimeOptions(selected='08:00'){
   const opts=[];
   for(let h=6;h<=22;h++){
+    const hh=String(h).padStart(2,'0');
+    opts.push({value:`${hh}:00`,label:`${hh}:00`});
+    if(h!==22)opts.push({value:`${hh}:30`,label:`${hh}:30`});
+  }
+  return opts.map(opt=>({...opt,active:opt.value===selected}));
+}
+function getScheduleTimeOptions(selected='09:00'){
+  const opts=[];
+  for(let h=7;h<=22;h++){
     const hh=String(h).padStart(2,'0');
     opts.push({value:`${hh}:00`,label:`${hh}:00`});
     if(h!==22)opts.push({value:`${hh}:30`,label:`${hh}:30`});
