@@ -1,32 +1,68 @@
 function syncPackageFilterOptions(){
   const typeValue=document.getElementById('pkgTypeFilter')?.value||'';
   const statusValue=document.getElementById('pkgStatusFilter')?.value||'';
-  const typeOptions=[{value:'',label:'全部类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
-  const statusOptions=[{value:'',label:'全部状态'},{value:'active',label:'启用'},{value:'inactive',label:'停用'}];
+  const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
+  const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}];
   const wrapMap=[
-    ['pkgTypeFilterHost','pkgTypeFilter','全部类型',typeOptions,typeValue],
-    ['pkgStatusFilterHost','pkgStatusFilter','全部状态',statusOptions,statusValue]
+    ['pkgTypeFilterHost','pkgTypeFilter','类型',typeOptions,typeValue],
+    ['pkgStatusFilterHost','pkgStatusFilter','状态',statusOptions,statusValue]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'renderPackages');
   });
 }
+function packageTimeBandShortLabel(timeBand='全天'){
+  if(timeBand==='黄金时段')return'黄金时间';
+  if(timeBand==='非黄金时段')return'非黄金时间';
+  return'全天';
+}
+function packageClassSizeLabel(maxStudents=1,courseType=''){
+  if(courseType==='私教课')return `1v${parseInt(maxStudents)||1}`;
+  return '';
+}
+function packageCoreClassLabel(p){
+  const courseType=normalizeCourseType(p.courseType)||'课包';
+  return [packageClassSizeLabel(p.maxStudents,courseType),courseType].filter(Boolean).join(' ');
+}
+function packageDisplayTitle(p){
+  const lessons=parseInt(p.lessons)||0;
+  const title=[packageCoreClassLabel(p),lessons?`- ${lessons}课时`:'',`(${packageTimeBandShortLabel(p.timeBand||'全天')})`].filter(Boolean).join(' ');
+  return title.trim()||p.name||'课包';
+}
+function packageAudienceLabel(p){
+  const raw=String(p.name||p.notes||'');
+  if(raw.includes('青少年'))return'青少年';
+  if(raw.includes('成人'))return'成人';
+  return '';
+}
+function packageCreatedDate(p){
+  return String(p.createdAt||'').slice(0,10)||'-';
+}
+function packageStatusBadge(p){
+  if(String(p.status||'active')==='inactive')return'<span class="package-status-badge is-off">已停售</span>';
+  return'<span class="package-status-badge is-on">售卖中</span>';
+}
+function packageHistoryBadge(p){
+  return String(p.name||'').includes('历史')?'<span class="package-history-badge">历史</span>':'';
+}
+function packageCardTags(p,courseType){
+  return [packageCoreClassLabel(p),packageAudienceLabel(p)].filter(Boolean).map(t=>`<span class="package-info-tag ${productTypeTagClass(courseType)}">${esc(t)}</span>`).join('');
+}
 function renderPackages(){
   syncPackageFilterOptions();
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('pkgTypeFilter')?.value||'';
   const sf=document.getElementById('pkgStatusFilter')?.value||'';
-  const list=packages.filter(p=>{const courseType=normalizeCourseType(p.courseType);if(String(p.status||'active')==='merged')return false;if(!searchHit(q,p.name,courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName,p.ownerCoach))return false;if(tf&&courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;}).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  const list=packages.filter(p=>{const courseType=normalizeCourseType(p.courseType);if(String(p.status||'active')==='merged')return false;if(!searchHit(q,p.name,packageDisplayTitle(p),courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName,p.ownerCoach))return false;if(tf&&courseType!==tf)return false;if(sf&&String(p.status||'active')!==sf)return false;return true;}).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   const host=document.getElementById('packageGrid');
   host.innerHTML=list.length?list.map(p=>{
     const courseType=normalizeCourseType(p.courseType);
     const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
-    const timeWindow=[p.timeBand||'全天',windows].filter(Boolean).join(' · ');
-    const coachText=parseArr(p.coachNames).join('、')||'不限';
+    const timeWindow=[packageTimeBandShortLabel(p.timeBand||'全天'),windows].filter(Boolean).join(' · ');
     const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
-    return `<div class="package-card-shell"><div class="showcase-card-body"><div class="showcase-card-header"><div class="showcase-card-title-group"><div class="showcase-card-title">${esc(p.name)}<span class="tms-tag ${productTypeTagClass(courseType)}">${esc(courseType||'—')}</span></div></div></div><div class="showcase-highlight"><span class="showcase-highlight-price">¥${fmt(p.price)}</span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.lessons||0}<span class="showcase-highlight-unit">节</span></span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.maxStudents||1}<span class="showcase-highlight-unit">人</span></span></div><div class="showcase-kv-list"><div class="showcase-kv-row"><div class="showcase-kv-label">创建时间</div><div class="showcase-kv-value is-mono">${esc(fmtDt(p.createdAt))}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">主归属教练</div><div class="showcase-kv-value">${esc(p.ownerCoach)||'—'}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">可上课教练</div><div class="showcase-kv-value">${esc(coachText)}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">可用校区</div><div class="showcase-kv-value">${esc(campusText)}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">活动期</div><div class="showcase-kv-value is-mono">${esc(p.saleStartDate||'不限')} <span class="showcase-kv-sep">至</span> ${esc(p.saleEndDate||'不限')}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">使用期</div><div class="showcase-kv-value is-mono">${esc(p.usageStartDate||'不限')} <span class="showcase-kv-sep">至</span> ${esc(p.usageEndDate||'不限')}</div></div><div class="showcase-kv-row"><div class="showcase-kv-label">使用时段</div><div class="showcase-kv-value">${esc(timeWindow||'全天')}</div></div></div></div><div class="showcase-card-footer"><div class="showcase-card-actions"><button class="showcase-action-btn is-primary" onclick="focusPurchaseByPackage('${p.id}')">看订单（${packagePurchaseCount(p.id)}）</button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div></div>`;
-  }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、主归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建售卖课包</button></div>`;
+    return `<div class="package-card-shell"><div class="showcase-card-body"><div class="showcase-card-header"><div class="showcase-card-title-group"><div class="showcase-card-title">${esc(packageDisplayTitle(p))}<span class="tms-tag ${productTypeTagClass(courseType)}">${esc(courseType||'—')}</span>${packageHistoryBadge(p)}</div></div>${packageStatusBadge(p)}</div><div class="showcase-highlight"><span class="showcase-highlight-price">¥${fmt(p.price)}</span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.lessons||0}<span class="showcase-highlight-unit">课时</span></span><span class="showcase-highlight-divider">/</span><span class="showcase-highlight-value">${p.maxStudents||1}<span class="showcase-highlight-unit">人</span></span></div><div class="package-card-tags">${packageCardTags(p,courseType)}</div><div class="package-card-main"><div><span>归属教练</span><strong>${esc(p.ownerCoach)||'-'}</strong></div><div><span>可用校区</span><strong>${esc(campusText)}</strong></div><div class="full"><span>可用时段</span><strong>${esc(timeWindow||'全天')}</strong></div></div></div><div class="showcase-card-footer"><div class="showcase-card-actions"><button class="showcase-action-btn is-primary" onclick="focusPurchaseByPackage('${p.id}')">看订单（${packagePurchaseCount(p.id)}）</button><div class="package-card-created">创建 ${esc(packageCreatedDate(p))}</div></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button></div></div></div>`;
+  }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
   return purchases.filter(p=>p.packageId===packageId&&isMeaningfulPurchaseRecord(p)).length;
@@ -114,6 +150,17 @@ function packageDefaultTimeWindows(timeBand='全天'){
   ];
   return[{label:'全天',startTime:'09:00',endTime:'22:00',daysOfWeek:[]}];
 }
+function setPackageLessonShortcut(value){
+  const input=document.getElementById('pkg_lessons');
+  if(input)input.value=value;
+  document.querySelectorAll('.package-lesson-chip').forEach(btn=>btn.classList.toggle('active',String(btn.dataset.lessons)===String(value)));
+}
+function syncPackageClassSize(){
+  const type=document.getElementById('pkg_type')?.value||'私教课';
+  const item=document.getElementById('pkg_classSizeItem');
+  if(item)item.style.display=type==='私教课'?'':'none';
+  if(type!=='私教课')setCourtDropdownValue('pkg_maxStudents','1','1v1');
+}
 function setPackageTimeWindow(scopeId,startId,endId,scope,start,end){
   setCourtDropdownValue(scopeId,scope,packageTimeScopeOptions().find(x=>x.value===scope)?.label||'每天');
   const startEl=document.getElementById(startId);if(startEl)startEl.value=start||'';
@@ -134,39 +181,38 @@ function openPackageModal(id,presetProductId=''){
   const windowRow=timeWindows[0]||defaultWindows[0]||{};
   const secondWindow=timeWindows[1]||defaultWindows[1]||{};
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
+  const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'}];
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
   const timeScopeOptions=packageTimeScopeOptions();
-  const modal=document.querySelector('#overlay .modal');
-  if(modal)modal.className='modal modal-wide';
-  document.getElementById('mTitle').textContent=id?'编辑售卖课包':'新增售卖课包';
-  document.getElementById('mBody').innerHTML=`
-    <div class="form-section">
-      <div class="form-section-title">基础信息</div>
+  const body=`
+    <div class="tms-section-header" style="margin-top:0;">基础信息</div>
       ${locked?'<div class="inline-help">该课包已有购买记录，可修改展示信息和使用规则；价格、课时、人数、校区和可上课教练已锁定。</div>':''}
-      <div class="fgrid cols-4">
-        <div class="fg full"><div class="flabel">课包名称 *</div><input class="finput" id="pkg_name" value="${rv(p,'name')}" placeholder="例如：五一私教 5 节"></div>
-        <div class="fg"><div class="flabel">课程类型 *</div>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true)}<div class="inline-help">课程类型直接决定售卖和排课规则。</div></div>
-        <div class="fg"><div class="flabel">主归属教练</div>${renderCourtDropdownHtml('pkg_ownerCoach','主归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div>
-        <div class="fg"><div class="flabel">人数限制</div><input class="finput" id="pkg_maxStudents" type="number" value="${rv(p,'maxStudents',1)}"${locked?' readonly':''}></div>
-        <div class="fg"><div class="flabel">状态</div><select class="fselect modern-select" id="pkg_status"><option value="active"${rv(p,'status','active')==='active'?' selected':''}>启用</option><option value="inactive"${rv(p,'status')==='inactive'?' selected':''}>停用</option></select></div>
+      <div class="tms-form-row">
+        <div class="tms-form-item"><label class="tms-form-label">课程类型 *</label>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true,'syncPackageClassSize')}</div>
+        <div class="tms-form-item" id="pkg_classSizeItem"><label class="tms-form-label">上课人数</label>${renderCourtDropdownHtml('pkg_maxStudents','上课人数',classSizeOptions,String(rv(p,'maxStudents',1)),true)}</div>
+        <div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('pkg_status','状态',[{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],rv(p,'status','active'),true)}</div>
       </div>
-    </div>
-    <div class="form-section">
-      <div class="form-section-title">售卖规则</div>
-      <div class="fgrid cols-4">
-        <div class="fg"><div class="flabel">价格</div><input class="finput" id="pkg_price" type="number" value="${rv(p,'price',0)}"${locked?' readonly':''}></div>
-        <div class="fg"><div class="flabel">课时</div><input class="finput" id="pkg_lessons" type="number" value="${rv(p,'lessons',0)}"${locked?' readonly':''}></div>
-        <div class="fg"><div class="flabel">有效天数</div><input class="finput" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div>
-        <div class="fg"><div class="flabel">备注</div><input class="finput" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div>
+      <div class="tms-form-row">
+        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"${locked?' readonly':''}><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button><button type="button" class="package-lesson-chip" data-lessons="50" onclick="setPackageLessonShortcut(50)">50课时</button></div></div>
+        <div class="tms-form-item"><label class="tms-form-label">价格</label><input class="finput tms-form-control" id="pkg_price" type="number" value="${rv(p,'price',0)}"${locked?' readonly':''}></div>
+        <div class="tms-form-item"><label class="tms-form-label">有效天数</label><input class="finput tms-form-control" id="pkg_validDays" type="number" value="${rv(p,'validDays',30)}"></div>
       </div>
-    </div>
-    <div class="form-section">
-      <div class="form-section-title">时间规则</div>
+    <div class="tms-section-header">上课时间</div>
       <div class="inline-help">固定使用结束日优先；不填固定结束日时，按购买日起算有效天数。</div>
-      <div class="fgrid cols-4">
-        <div class="fg span-2">
-          <div class="flabel">活动时间</div>
+      <div class="tms-form-row">
+        <div class="tms-form-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
+        <div class="tms-form-item full-width"><label class="tms-form-label">可用时段</label>
+          <div class="inline-help">适用日期可选工作日或周末。</div>
+          <div class="time-window-stack">
+            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope','适用日期',timeScopeOptions,packageDaysToScope(windowRow.daysOfWeek),true)}<span class="filter-hidden-date">工作日 周末</span></div><input class="finput tms-form-control" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','09:00')}"><span class="range-dash">-</span><input class="finput tms-form-control" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
+            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope2','适用日期',timeScopeOptions,packageDaysToScope(secondWindow.daysOfWeek),true)}</div><input class="finput tms-form-control" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput tms-form-control" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
+          </div>
+        </div>
+      </div>
+      <div class="tms-form-row">
+        <div class="tms-form-item">
+          <label class="tms-form-label">活动时间</label>
           <div class="range-pair">
             <button class="coach-date-btn" id="pkg_saleStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">${rv(p,'saleStartDate')||'活动开始'}</button>
             <span class="range-dash">-</span>
@@ -175,8 +221,8 @@ function openPackageModal(id,presetProductId=''){
           <input class="filter-hidden-date" id="pkg_saleStartDate" type="date" value="${rv(p,'saleStartDate')}" onchange="syncDateButton('pkg_saleStartDate','pkg_saleStartDate_btn','活动开始')">
           <input class="filter-hidden-date" id="pkg_saleEndDate" type="date" value="${rv(p,'saleEndDate')}" onchange="syncDateButton('pkg_saleEndDate','pkg_saleEndDate_btn','活动结束')">
         </div>
-        <div class="fg span-2">
-          <div class="flabel">使用时间</div>
+        <div class="tms-form-item">
+          <label class="tms-form-label">可用时间</label>
           <div class="range-pair">
             <button class="coach-date-btn" id="pkg_usageStartDate_btn" onclick="toggleGlobalDatePicker(event,'pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">${rv(p,'usageStartDate')||'使用开始'}</button>
             <span class="range-dash">-</span>
@@ -185,38 +231,24 @@ function openPackageModal(id,presetProductId=''){
           <input class="filter-hidden-date" id="pkg_usageStartDate" type="date" value="${rv(p,'usageStartDate')}" onchange="syncDateButton('pkg_usageStartDate','pkg_usageStartDate_btn','使用开始')">
           <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">
         </div>
-        <div class="fg">
-          <div class="flabel">时段类型</div>
-          ${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}
-        </div>
-        <div class="fg span-2">
-          <div class="flabel">可用时段</div>
-          <div class="time-window-stack">
-            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope','适用日期',timeScopeOptions,packageDaysToScope(windowRow.daysOfWeek),true)}</div><input class="finput" id="pkg_timeStart" type="time" value="${rv(windowRow,'startTime','09:00')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd" type="time" value="${rv(windowRow,'endTime','22:00')}"></div>
-            <div class="time-window-row"><div>${renderCourtDropdownHtml('pkg_timeScope2','适用日期',timeScopeOptions,packageDaysToScope(secondWindow.daysOfWeek),true)}</div><input class="finput" id="pkg_timeStart2" type="time" value="${rv(secondWindow,'startTime','')}"><span class="range-dash">-</span><input class="finput" id="pkg_timeEnd2" type="time" value="${rv(secondWindow,'endTime','')}"></div>
-          </div>
-        </div>
-        <div class="fg">
-          <div class="flabel">说明</div>
-          <div class="inline-help">黄金：工作日 16:00-22:00、周末 09:00-22:00；非黄：工作日 09:00-16:00。</div>
-        </div>
       </div>
-    </div>
-    <div class="form-section">
-      <div class="form-section-title">适用范围</div>
-      <div class="inline-help">主归属教练用于购买默认值，可上课教练决定排课时能选谁。</div>
-      <div class="fg full"><div class="flabel">可上课教练</div><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCoachChecks(rv(p,'coachNames',[]))}</div></div>
-      <div class="fg full" style="margin-top:12px"><div class="flabel">可用校区</div><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCampusChecks(rv(p,'campusIds',[]))}</div></div>
-    </div>
+    <div class="tms-section-header">教练和场地</div>
+      <div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderCourtDropdownHtml('pkg_ownerCoach','归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="pkg_notes_inline" value="${esc(rv(p,'notes'))}" placeholder="可选"></div></div>
+      <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCoachChecks(rv(p,'coachNames',[]))}</div></div></div>
+      <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">可用校区</label><div class="choice-grid"${locked?' style="pointer-events:none;opacity:0.7"':''}>${packageCampusChecks(rv(p,'campusIds',[]))}</div></div></div>
+    <input type="hidden" id="pkg_name" value="${esc(rv(p,'name'))}">
     <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
     <input type="hidden" id="pkg_timeScopeCustomDays" value="${esc(JSON.stringify(parseArr(windowRow.daysOfWeek)))}">
     <input type="hidden" id="pkg_timeScopeCustomDays2" value="${esc(JSON.stringify(parseArr(secondWindow.daysOfWeek)))}">
-    <div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${id?`<button class="btn-del" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="btn-save" onclick="savePackage()">保存</button></div>`;
-  document.getElementById('overlay').classList.add('open');
+    `;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id?`<button class="tms-btn tms-btn-danger" onclick="confirmDel('${p.id}','${esc(p.name)}','package')">删除</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
+  setCourtModalFrame(id?'编辑课包':'创建课包',body,footer,'modal-wide modal-package-edit');
+  syncPackageClassSize();
+  setPackageLessonShortcut(rv(p,'lessons',10));
 }
 async function savePackage(){
-  const name=document.getElementById('pkg_name').value.trim();if(!name){toast('请输入课包名称','warn');return;}
   const courseType=document.getElementById('pkg_type').value.trim();
+  const name=packageDisplayTitle({courseType,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,timeBand:document.getElementById('pkg_timeBand').value.trim()||'全天'});
   const ownerCoach=document.getElementById('pkg_ownerCoach')?.value||'';
   const saleStartDate=document.getElementById('pkg_saleStartDate').value;
   const saleEndDate=document.getElementById('pkg_saleEndDate').value;
