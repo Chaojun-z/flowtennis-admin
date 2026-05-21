@@ -8,6 +8,7 @@ assert.ok(rules.collectMabaoSeedStaleRowIds, 'api._test should expose mabao seed
 assert.ok(rules.collectMabaoSeedImportedLedgerReplacementIds, 'api._test should expose imported ledger replacement cleanup helper');
 assert.ok(rules.collectDuplicateImportedLedgerIds, 'api._test should expose generic duplicate imported ledger cleanup helper');
 assert.ok(rules.normalizeEntitlementLedgerRowsForView, 'api._test should expose ledger view normalization helper');
+assert.ok(rules.normalizeEntitlementLedgerRowsForDetailView, 'api._test should expose ledger detail view normalization helper');
 
 const pkg = {
   id: 'pkg-1',
@@ -74,6 +75,15 @@ assert.deepStrictEqual(
   rules.normalizeEntitlementLedgerRowsForView([oldImportedLedger, currentImportedLedger]).map(row => ({ id: row.id, lessonDelta: row.lessonDelta })),
   [{ id: 'new-2', lessonDelta: -1.5 }],
   'ledger view should ignore older monthly rows when a current monthly import row exists'
+);
+
+assert.deepStrictEqual(
+  rules.normalizeEntitlementLedgerRowsForDetailView([
+    { ...currentImportedLedger, id: 'lesson-1', lessonDelta: -1, relatedDate: '2026-02-07', notes: '2026-02-07 10:00-11:00' },
+    { ...currentImportedLedger, id: 'lesson-2', lessonDelta: -1, relatedDate: '2026-02-14', notes: '2026-02-14 10:00-11:00' }
+  ]).map(row => row.id),
+  ['lesson-1', 'lesson-2'],
+  'student detail ledger should keep imported lesson rows one by one'
 );
 
 assert.deepStrictEqual(

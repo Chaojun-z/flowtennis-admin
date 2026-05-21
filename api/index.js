@@ -2910,6 +2910,35 @@ function normalizeEntitlementLedgerRowsForView(rows=[]){
   }
   return [...result,...monthlyMap.values()];
 }
+function normalizeEntitlementLedgerRowsForDetailView(rows=[]){
+  const deduped=[];
+  const seen=new Set();
+  for(const row of filterImportedLedgerRowsForView(rows)||[]){
+    const monthKey=importedLedgerMonthKey(row);
+    const key=[
+      row.entitlementId,
+      row.purchaseId,
+      row.studentId,
+      row.scheduleId||'',
+      Number(row.lessonDelta)||0,
+      row.action||'',
+      row.reason||'',
+      row.relatedDate||'',
+      monthKey,
+      row.sourceDate||'',
+      row.sourceTimeBand||'',
+      row.sourceLocation||row.location||'',
+      row.sourceVenue||row.venue||row.courtName||row.court||'',
+      row.coach||'',
+      row.sourceSheet||'',
+      row.notes||''
+    ].join('|');
+    if(seen.has(key))continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+  return deduped;
+}
 function collectMabaoSeedStaleRowIds(existingRows=[],seedRows=[],tag=''){
   const nextIds=new Set((seedRows||[]).map(row=>row.id));
   return (existingRows||[])
@@ -7086,7 +7115,7 @@ module.exports = async (req, res) => {
         packages:Array.isArray(packages)?packages:[],
         purchases:Array.isArray(purchases)?purchases:[],
         entitlements:Array.isArray(entitlements)?entitlements:[],
-        entitlementLedger:normalizeEntitlementLedgerRowsForView(Array.isArray(entitlementLedger)?entitlementLedger:[]),
+        entitlementLedger:normalizeEntitlementLedgerRowsForDetailView(Array.isArray(entitlementLedger)?entitlementLedger:[]),
         financialLedger:Array.isArray(financialLedger)?financialLedger:[],
         membershipPlans:normalizedMembershipPlans,
         membershipAccounts:Array.isArray(reconciled.accounts)?reconciled.accounts:[],
@@ -7436,7 +7465,7 @@ module.exports = async (req, res) => {
     }
     if(path==='/entitlement-ledger'){
       await init();
-      if(method==='GET')return sendJson(res,normalizeEntitlementLedgerRowsForView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[])));
+      if(method==='GET')return sendJson(res,normalizeEntitlementLedgerRowsForDetailView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[])));
     }
     if(path==='/entitlements'){await init();if(method==='GET'){const sid=query.get('studentId')||'';if(user.role==='admin'&&sid)return sendJson(res,await getIndexedActiveEntitlementsForStudents([sid]));const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);if(user.role==='admin')return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});const scoped=filterLoadAllForUser({students,schedule,classes,entitlements:rows,coaches},user,coachRefs).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
     if(path==='/entitlements/recommend'&&method==='POST'){await init();const rows=await getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds));return sendJson(res,recommendEntitlements(rows,{...body,coachRefs:LEGACY_STATIC_COACH_REFS}));}
@@ -8061,6 +8090,7 @@ module.exports._test={
   collectMabaoSeedImportedLedgerReplacementIds,
   collectDuplicateImportedLedgerIds,
   normalizeEntitlementLedgerRowsForView,
+  normalizeEntitlementLedgerRowsForDetailView,
   syncEntitlementFromPurchase,
   writePurchaseAndEntitlementAtomic,
   validateEntitlementForSchedule,

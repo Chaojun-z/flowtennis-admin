@@ -932,6 +932,12 @@ function dedupeEntitlementLedgerForDisplay(rows){
           row.action||'',
           row.reason||'',
           monthKey,
+          row.relatedDate||'',
+          row.sourceDate||'',
+          row.sourceTimeBand||'',
+          row.sourceLocation||row.location||'',
+          row.sourceVenue||row.venue||row.courtName||row.court||'',
+          row.coach||'',
           row.sourceSheet||'',
           row.notes||''
         ].join('|')
@@ -1032,7 +1038,7 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
 }
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
-  const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entMap.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
+  const rows=dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entMap.has(l.entitlementId))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||'')));
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无扣课记录</div>';
   return rows.map(l=>{
     const ent=entMap.get(l.entitlementId)||{};
