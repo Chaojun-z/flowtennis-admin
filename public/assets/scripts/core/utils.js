@@ -1137,7 +1137,7 @@ function studentLessonRecordSectionText(row,ent={}){
   const balance=studentLedgerBalanceNumbersAfter(row,ent);
   const total=balance?.total||Number(ent.totalLessons)||0;
   if(!total)return '';
-  const remainingAfter=balance?.remaining??Number(ent.remainingLessons)||0;
+  const remainingAfter=balance?.remaining??(Number(ent.remainingLessons)||0);
   const count=Math.abs(Number(row.lessonDelta)||0);
   const endNo=Math.max(1,total-remainingAfter);
   const startNo=Math.max(1,endNo-count+1);
