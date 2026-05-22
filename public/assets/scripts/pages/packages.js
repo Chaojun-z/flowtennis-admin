@@ -97,28 +97,11 @@ function renderPackages(){
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
-  const pkg=packages.find(x=>x.id===packageId)||{};
-  const names=new Set([
-    pkg.id,
-    pkg.originalPackageId,
-    pkg.name,
-    pkg.originalPackageName,
-    pkg.productId,
-    pkg.productName,
-    packageDisplayTitle(pkg),
-    standardPackageLabel(pkg,false)
-  ].filter(Boolean).map(String));
   const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>String(e.packageId||'')===String(packageId)).map(e=>String(e.purchaseId||'')).filter(Boolean));
   return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&(
     String(p.packageId||'')===String(packageId)||
     String(p.originalPackageId||'')===String(packageId)||
-    purchaseIdsByEntitlement.has(String(p.id||''))||
-    names.has(String(p.packageId||''))||
-    names.has(String(p.originalPackageId||''))||
-    names.has(String(p.packageName||''))||
-    names.has(String(p.originalPackageName||''))||
-    names.has(String(p.productId||''))||
-    names.has(String(p.productName||''))
+    purchaseIdsByEntitlement.has(String(p.id||''))
   )).length;
 }
 function packageOpts(sel){
