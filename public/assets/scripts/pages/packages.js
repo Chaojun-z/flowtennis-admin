@@ -79,15 +79,17 @@ function packageRuleIcon(kind){
   return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 }
 function packageCoachSummary(p){
-  const coaches=parseArr(p.coachNames||p.coachIds).filter(Boolean);
-  if(p.ownerCoach&&coaches.length>1)return `归属：${p.ownerCoach}（+${coaches.length-1}）`;
-  if(p.ownerCoach)return `归属：${p.ownerCoach}`;
+  const ownerCoach=coachName(p.ownerCoach);
+  const coaches=parseArr(p.coachNames||p.coachIds).map(coachName).filter(Boolean);
+  if(ownerCoach&&coaches.length>1)return `归属：${ownerCoach}（+${coaches.length-1}）`;
+  if(ownerCoach)return `归属：${ownerCoach}`;
   if(coaches.length)return `${coaches.length} 位可用`;
   return '未分配';
 }
 function packageCoachDetail(p){
-  const coaches=parseArr(p.coachNames||p.coachIds).filter(Boolean);
-  return [p.ownerCoach?`归属：${p.ownerCoach}`:'',coaches.length?`可用：${coaches.join('、')}`:''].filter(Boolean).join('\n')||'未分配';
+  const ownerCoach=coachName(p.ownerCoach);
+  const coaches=parseArr(p.coachNames||p.coachIds).map(coachName).filter(Boolean);
+  return [ownerCoach?`归属：${ownerCoach}`:'',coaches.length?`可用：${coaches.join('、')}`:''].filter(Boolean).join('\n')||'未分配';
 }
 function packageCampusSummaryText(ids){
   const names=parseArr(ids).map(id=>cn(id)).filter(Boolean);
@@ -194,11 +196,11 @@ async function deactivatePackage(id){
   }catch(e){toast('下架失败：'+e.message,'error');}
 }
 function purchaseAllowedCoachChecks(ids,cls='pur-allowed-coach-cb'){
-  ids=parseArr(ids);
+  ids=parseArr(ids).map(coachName);
   return activeCoachNames().map(name=>`<label class="tms-checkbox-wrap"><input type="checkbox" value="${esc(name)}" class="tms-checkbox ${cls}" ${ids.includes(name)?'checked':''}><span>${esc(name)}</span></label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无教练</span>';
 }
 function packageCoachChecks(ids){
-  ids=parseArr(ids);
+  ids=parseArr(ids).map(coachName);
   return activeCoachNames().map(name=>`<label class="tms-checkbox-wrap"><input type="checkbox" value="${esc(name)}" class="tms-checkbox pkg-coach-cb" ${ids.includes(name)?'checked':''}><span>${esc(name)}</span></label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无教练</span>';
 }
 function packageCampusChecks(ids){
@@ -306,7 +308,7 @@ function openPackageModal(id,presetProductId=''){
       </div>
     <div class="tms-section-header">教练和场地</div>
       <div class="package-modal-panel package-resource-panel">
-        <div class="package-resource-row"><label class="tms-form-label">归属教练</label><div class="package-resource-content">${renderCourtDropdownHtml('pkg_ownerCoach','归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div></div>
+        <div class="package-resource-row"><label class="tms-form-label">归属教练</label><div class="package-resource-content">${renderCourtDropdownHtml('pkg_ownerCoach','归属教练',ownerCoachOptions,coachName(rv(p,'ownerCoach')),true)}</div></div>
         <div class="package-panel-divider"></div>
         <div class="package-resource-row"><label class="tms-form-label">可用校区</label><div class="package-resource-content"><div class="tms-checkbox-matrix package-campus-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div></div>
         <div class="package-panel-divider"></div>

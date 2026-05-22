@@ -518,7 +518,7 @@ function membershipBenefitLabelForCode(code,account){
   return membershipBenefitRowsForAccount(account).find(x=>x.code===code)?.label||code;
 }
 function membershipBenefitNote(row){
-  const coachNames=parseArr(row.designatedCoachIds).map(id=>coaches.find(c=>c.id===id)?.name||id).filter(Boolean);
+  const coachNames=parseArr(row.designatedCoachIds).map(id=>coachName(coaches.find(c=>c.id===id)?.name||id)).filter(Boolean);
   return coachNames.length?`（${coachNames.join('、')}）`:'';
 }
 function membershipActionVisibility(account){
@@ -757,13 +757,13 @@ function lessonValue(value,fallback=0){
   return Number.isFinite(num)?num:fallback;
 }
 function studentCoachSummary(stu){
-  const coachSet=[...new Set([stu?.primaryCoach,...studentActiveClasses(stu).map(c=>String(c.coach||'').trim())].filter(Boolean))];
+  const coachSet=[...new Set([coachName(stu?.primaryCoach),...studentActiveClasses(stu).map(c=>coachName(c.coach))].filter(Boolean))];
   if(!coachSet.length)return '-';
   if(coachSet.length===1)return coachSet[0];
   return `${coachSet[0]} 等${coachSet.length}位`;
 }
 function studentPrimaryCoachText(stu){
-  return String(stu?.primaryCoach||'').trim()||'未分配';
+  return coachName(stu?.primaryCoach)||'未分配';
 }
 function studentPackageLessonMeta(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided');
@@ -857,7 +857,7 @@ function studentNoteSummary(stu){
 function studentClassSummaryHtml(stu){
   const cls=studentClasses(stu);
   if(!cls.length)return '<div style="color:var(--td);font-size:12px">暂无班次</div>';
-  return cls.map(c=>`<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.className)}：${lessonQty(c.usedLessons)}/${lessonQty(c.totalLessons)}，${esc(c.coach)||'未分配教练'}</div>`).join('');
+  return cls.map(c=>`<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.className)}：${lessonQty(c.usedLessons)}/${lessonQty(c.totalLessons)}，${esc(coachName(c.coach))||'未分配教练'}</div>`).join('');
 }
 function entitlementStatusText(e){
   if(e.status==='voided')return '已作废';
@@ -903,7 +903,7 @@ function studentEntitlementSummaryHtml(stu){
     const used=Number(e.usedLessons)||0;
     const purchase=purchases.find(p=>p.id===e.purchaseId)||{};
     const purchaseDate=studentEntitlementPurchaseDate(e,purchase);
-    const ownerCoach=e.ownerCoach||purchase.ownerCoach||'';
+    const ownerCoach=coachName(e.ownerCoach||purchase.ownerCoach||'');
     return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span style="font-weight:700;color:var(--th)">${esc(renderCourtEmptyText(standardPackageLabel({...e,packageName:e.packageName,packageLessons:e.totalLessons},e.status==='inactive'||e.status==='voided')))}</span> · 报名 ${esc(renderCourtEmptyText(purchaseDate))} · 归属 ${esc(renderCourtEmptyText(ownerCoach))} · 剩余 ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)} 节 · 已扣 ${lessonQty(used)} 节 · 有效至 ${esc(renderCourtEmptyText(e.validUntil))} · ${esc(packageTimeBandShortLabel(e.timeBand||'全天'))} · ${entitlementStatusText(e)}</div>`;
   }).join('');
 }
@@ -1098,7 +1098,7 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
     standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided'),
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
-    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
     studentEntitlementLedgerSourceText(row)
   ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
   return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
@@ -1111,7 +1111,7 @@ function studentLessonRecordPackageText(row,ent={}){
   return [
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
-    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
     Number(row.lessonDelta)<0?`扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`:(payMethodText?payMethodText:'课次'),
     ent?.id?`剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:payMethodText,
     payText
@@ -1124,7 +1124,7 @@ function studentLessonRecordLedgerText(row,ent={}){
   return [
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
-    schedule.coach||row?.coach||ent?.ownerCoach||'',
+    coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
     `扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`,
     balance,
     standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包'

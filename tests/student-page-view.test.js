@@ -11,7 +11,7 @@ assert.doesNotMatch(source, /id="sch_homeCampusSummary"/, 'schedule modal should
 assert.match(source, /function syncScheduleHomeCampusFromStudents/, 'schedule modal should sync home campus after student selection changes');
 assert.match(source, /function scheduleSelectedStudentCoachMeta/, 'schedule modal should derive the selected student primary coach');
 assert.match(source, /function syncScheduleProfileFromStudents/, 'schedule modal should sync selected student coach and campus defaults');
-assert.match(source, /setCourtDropdownValue\('sch_coach',meta\.coach,meta\.coach\)/, 'schedule modal should default coach from selected student profile');
+assert.match(source, /setCourtDropdownValue\('sch_coach',selectedCoach,selectedCoach\)/, 'schedule modal should default coach from selected student profile');
 assert.match(source, /上课校区 \*/, 'schedule own-location field should be labelled as lesson campus, not student home campus');
 assert.match(source, /校区内[\s\S]*校区外/, 'schedule location type copy should separate in-campus and off-campus lessons');
 assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a searchable student input');

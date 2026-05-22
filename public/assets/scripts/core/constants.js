@@ -28,8 +28,18 @@ function venueOpts(sel){
   const extra=sel&&!VENUES.includes(sel)?[`<option value="${esc(sel)}" selected>${esc(sel)}</option>`]:[];
   return [...extra,...VENUES.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');
 }
-const COACHES_LIST=['朝珺','晓哲','Siren','吴教练','Rive','郭教练','代教练','Jack','李韬','孙老师','Zoe','刘朝'];
-function coachName(v){return String(v||'').trim()}
+const COACHES_LIST=['Siren','朝珺','Rive 天昊','晓哲'];
+const COACH_NAME_ALIAS_MAP={
+  '沙琪儿':'Siren','siren':'Siren','Siren':'Siren',
+  '朝珺':'朝珺','甄朝珺':'朝珺','chaojun':'朝珺',
+  'Rive':'Rive 天昊','rive':'Rive 天昊','天昊':'Rive 天昊','Rive 天昊':'Rive 天昊',
+  '晓哲教练':'晓哲','晓哲':'晓哲'
+};
+function canonicalCoachName(v){
+  const raw=String(v||'').trim();
+  return COACH_NAME_ALIAS_MAP[raw]||raw;
+}
+function coachName(v){return canonicalCoachName(v)}
 function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status==='active').map(c=>coachName(c.name)).filter(Boolean))];return live.length?live:COACHES_LIST;}
 const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];

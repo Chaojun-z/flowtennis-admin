@@ -472,7 +472,7 @@ function financeCourseRevenueRows(){
       actualAmount:actual,
       priceDiff:Math.round((receivable-actual)*100)/100,
       priceDiffReason:p.priceDiffReason||p.discountReason||'—',
-      collector:p.operator||p.ownerCoach||'—',
+      collector:p.operator||coachName(p.ownerCoach)||'—',
       systemStatus:purchaseStatusText(p),
       relatedDocument:`购买记录 ${p.id}`,
       notes:p.notes||''
@@ -660,7 +660,7 @@ function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(
       packageName:ent.packageName||purchase.packageName||'—',
       notes:row.notes||ent.notes||purchase.notes||'',
       scheduleTime:schedule.startTime||'',
-      coach:schedule.coach||purchase.ownerCoach||'—',
+      coach:coachName(schedule.coach||purchase.ownerCoach)||'—',
       courseType:scheduleCourseType(schedule)||ent.courseType||purchase.courseType||'—',
       campusName,
       recognizedAmount,

@@ -327,7 +327,7 @@ function myStudentPackageProgressMeta(stu){
   return {progress:total>0?`${lessonQty(used)}/${lessonQty(total)}`:'-',remaining:lessonQty(remaining)};
 }
 function myStudentOwnerCoachText(stu){
-  const ownerSet=[...new Set(entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided').map(e=>String(e.ownerCoach||'').trim()).filter(Boolean))];
+  const ownerSet=[...new Set(entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided').map(e=>coachName(e.ownerCoach)).filter(Boolean))];
   return ownerSet.join('、')||'未设置';
 }
 function myStudentEntitlementProgress(stu){
