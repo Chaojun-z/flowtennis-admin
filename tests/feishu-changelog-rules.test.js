@@ -120,13 +120,24 @@ const userFacingExamples = [
   ['add official account webhook flow', '新增公众号通知对接流程'],
   ['add package merge flow', '新增课包合并流程'],
   ['add private lesson import finance increments', '新增私教课导入后的财务增量统计'],
+  ['fix membership import finance increments', '修复会员导入后的财务增量统计'],
   ['fix package merge dropdown clipping', '修复课包合并下拉菜单被遮挡的问题'],
+  ['fix coach PWA schedule jitter', '修复教练端排课页面抖动问题'],
+  ['fix package order display', '修复课包订单展示问题'],
   ['fix student page live lesson cache', '修复学员页实时课程缓存问题'],
   ['Hide merged packages from purchase pickers', '购买选择器不再显示已合并课包'],
   ['Polish package merge UI', '优化课包合并界面'],
   ['prevent page refresh clearing datasets', '避免页面刷新时清空数据'],
   ['restore finance coach settlement rows', '恢复财务页教练结算明细'],
   ['Show lesson package purchase details inline', '在页面内展示课包购买明细'],
+  ['support sold package usage rule edits', '支持已售课包使用规则修改'],
+  ['support sold package validity edits', '支持已售课包有效期修改'],
+  ['bind official account coach phone', '支持公众号绑定教练手机号'],
+  ['Document finance import display guard', '记录财务导入展示保护逻辑'],
+  ['parse official account reminder times in Beijing timezone', '支持公众号提醒按北京时间解析'],
+  ['Support weekday weekend package time windows', '支持课包区分工作日和周末可用时段'],
+  ['unify mabao campus and package signup dates', '统一玛宝校区和课包报名日期'],
+  ['harden official account reminders', '增强公众号提醒稳定性'],
   ['speed up schedule and package first paint', '提升排课和课包页面首屏加载速度'],
   ['wait products package page', '等待产品与课包页面数据加载完成'],
   ['restore coach management data loading', '恢复教练管理数据加载']
@@ -138,8 +149,65 @@ for (const [source, expected] of userFacingExamples) {
 
 assert.doesNotMatch(
   userFacingExamples.map(([source]) => changelog.summarizeText(source)).join('\n'),
-  /official|account|webhook|flow|package|private|lesson|import|dropdown|clipping|cache|picker|polish|refresh|datasets|restore|settlement|inline|first paint|products|loading/i,
+  /official|account|webhook|flow|package|private|lesson|import|dropdown|clipping|cache|picker|polish|refresh|datasets|restore|settlement|inline|first paint|products|loading|coach|schedule|jitter|sold|usage|rule|edits|bind|document|parse|timezone|weekday|weekend|windows|harden/i,
   '产品播报不应直接输出普通用户看不懂的英文提交词'
+);
+
+assert.deepStrictEqual(
+  changelog.resolveReportDates({
+    now: '2026-05-22T21:00:00+08:00',
+    sentDates: ['2026-05-20']
+  }),
+  ['2026-05-21', '2026-05-22'],
+  '晚上播报当天，昨天漏发时应补昨天'
+);
+
+assert.deepStrictEqual(
+  changelog.resolveReportDates({
+    now: '2026-05-23T21:00:00+08:00',
+    sentDates: ['2026-05-22']
+  }),
+  ['2026-05-23'],
+  '昨天已发时不应重复播报昨天'
+);
+
+assert.strictEqual(
+  changelog.targetDate('2026-05-22T21:00:00+08:00'),
+  '2026-05-22',
+  '晚上应播报当天'
+);
+
+assert.strictEqual(
+  changelog.targetDate('2026-05-22T08:00:00+08:00'),
+  '2026-05-21',
+  '早上手动触发时应播报昨天'
+);
+
+const card = changelog.buildChangelogCard({
+  date: '2026-05-22',
+  entries: changelog.buildBusinessEntries(
+    [
+      {
+        sha: 'c1',
+        subject: 'fix coach PWA schedule jitter',
+        body: '',
+        files: ['public/assets/scripts/pages/coachops.js']
+      },
+      {
+        sha: 'c2',
+        subject: 'bind official account coach phone',
+        body: '',
+        files: ['api/index.js']
+      }
+    ],
+    { prDetailsByNumber: {} }
+  )
+});
+
+assert.doesNotMatch(
+  JSON.stringify(card),
+  /PWA|coach|schedule|jitter|bind|official|account|phone|Git|PR/i,
+  '最终飞书卡片不应残留英文短语'
 );
 
 console.log('feishu changelog rules tests passed');

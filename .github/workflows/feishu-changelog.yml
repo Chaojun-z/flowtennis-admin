@@ -36,6 +36,23 @@ jobs:
         run: npm ci
         working-directory: standalone-services
 
+      - name: Restore changelog sent state
+        uses: actions/cache/restore@v4
+        with:
+          path: standalone-services/changelogs/sent-state.json
+          key: feishu-changelog-sent-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            feishu-changelog-sent-
+
       - name: Send Feishu changelog
         run: node feishu-changelog.js
         working-directory: standalone-services
+        env:
+          CHANGELOG_SENT_STATE: changelogs/sent-state.json
+
+      - name: Save changelog sent state
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: standalone-services/changelogs/sent-state.json
+          key: feishu-changelog-sent-${{ github.run_id }}-${{ github.run_attempt }}

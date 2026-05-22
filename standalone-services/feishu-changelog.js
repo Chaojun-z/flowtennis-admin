@@ -1,5 +1,6 @@
 const axios = require('axios');
 const dayjs = require('dayjs');
+const fs = require('fs');
 const { execFileSync } = require('child_process');
 const path = require('path');
 
@@ -11,15 +12,17 @@ const PLATFORM_ORDER = ['adminWeb', 'coachWeb', 'coachPwa', 'coachMp', 'matchMp'
 const PLATFORM_NAMES = {
   adminWeb: '💻 管理后台',
   coachWeb: '🌐 教练网页版',
-  coachPwa: '📱 教练 PWA',
+  coachPwa: '📱 教练手机端',
   coachMp: '🟢 教练小程序',
   matchMp: '🎾 约球小程序'
 };
 
-function targetDate() {
+function targetDate(nowInput) {
   const raw = String(process.env.CHANGELOG_TARGET_DATE || '').trim();
-  if (raw) return raw;
-  return dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+  if (raw && !nowInput) return raw;
+  const now = nowInput ? dayjs(nowInput) : dayjs();
+  if (now.hour() < 12) return now.subtract(1, 'day').format('YYYY-MM-DD');
+  return now.format('YYYY-MM-DD');
 }
 
 function normalizeText(input) {
@@ -46,6 +49,43 @@ function toTitleCaseWords(input) {
     .join(' ');
 }
 
+function hasEnglishPhrase(input) {
+  return /[A-Za-z][A-Za-z0-9_-]*/.test(String(input || ''));
+}
+
+function fallbackChineseSummary(input) {
+  const lower = cleanSubject(input).toLowerCase();
+  let domain = '系统';
+  if (/official account/.test(lower)) domain = '公众号';
+  else if (/coach/.test(lower)) domain = '教练端';
+  else if (/membership/.test(lower)) domain = '会员';
+  else if (/package/.test(lower)) domain = '课包';
+  else if (/schedule/.test(lower)) domain = '排课';
+  else if (/student/.test(lower)) domain = '学员';
+  else if (/finance/.test(lower)) domain = '财务';
+  else if (/campus|mabao/.test(lower)) domain = '校区';
+  else if (/court/.test(lower)) domain = '订场';
+  else if (/match/.test(lower)) domain = '约球';
+
+  if (/jitter/.test(lower)) return `${domain}页面抖动问题已修复`;
+  if (/display/.test(lower)) return `${domain}展示问题已修复`;
+  if (/loading/.test(lower)) return `${domain}数据加载已恢复`;
+  if (/cache/.test(lower)) return `${domain}缓存问题已修复`;
+  if (/phone/.test(lower)) return `${domain}手机号绑定能力已补齐`;
+  if (/reminder/.test(lower)) return `${domain}提醒稳定性已增强`;
+  if (/time window/.test(lower)) return `${domain}可用时段规则已优化`;
+  if (/validity/.test(lower)) return `${domain}有效期规则已优化`;
+  if (/usage rule/.test(lower)) return `${domain}使用规则已优化`;
+  if (/import/.test(lower) && /finance/.test(lower)) return `${domain}导入后的财务统计已优化`;
+
+  if (/^(fix|repair)/.test(lower)) return `${domain}问题已修复`;
+  if (/^(add|support|allow|bind)/.test(lower)) return `${domain}功能已支持`;
+  if (/^(restore)/.test(lower)) return `${domain}功能已恢复`;
+  if (/^(harden)/.test(lower)) return `${domain}稳定性已增强`;
+  if (/^(unify|refine|polish|prevent|speed up|wait)/.test(lower)) return `${domain}体验已优化`;
+  return `${domain}功能优化`;
+}
+
 function summarizeText(input) {
   let text = cleanSubject(input);
   const lower = text.toLowerCase();
@@ -63,13 +103,24 @@ function summarizeText(input) {
   if (/official account webhook flow/.test(lower)) return '新增公众号通知对接流程';
   if (/package merge flow/.test(lower) || /refine package merge flows/.test(lower)) return '新增课包合并流程';
   if (/private lesson import finance increments/.test(lower)) return '新增私教课导入后的财务增量统计';
+  if (/membership import finance increments/.test(lower)) return '修复会员导入后的财务增量统计';
   if (/package merge dropdown clipping/.test(lower)) return '修复课包合并下拉菜单被遮挡的问题';
+  if (/coach pwa schedule jitter/.test(lower)) return '修复教练端排课页面抖动问题';
+  if (/package order display/.test(lower)) return '修复课包订单展示问题';
   if (/student page live lesson cache/.test(lower)) return '修复学员页实时课程缓存问题';
   if (/hide merged packages from purchase pickers/.test(lower)) return '购买选择器不再显示已合并课包';
   if (/polish package merge ui/.test(lower)) return '优化课包合并界面';
   if (/prevent page refresh clearing datasets/.test(lower)) return '避免页面刷新时清空数据';
   if (/restore finance coach settlement rows/.test(lower)) return '恢复财务页教练结算明细';
   if (/show lesson package purchase details inline/.test(lower)) return '在页面内展示课包购买明细';
+  if (/sold package usage rule edits/.test(lower)) return '支持已售课包使用规则修改';
+  if (/sold package validity edits/.test(lower)) return '支持已售课包有效期修改';
+  if (/bind official account coach phone/.test(lower)) return '支持公众号绑定教练手机号';
+  if (/document finance import display/.test(lower)) return '记录财务导入展示保护逻辑';
+  if (/parse official account reminder times/.test(lower) && /beijing/.test(lower)) return '支持公众号提醒按北京时间解析';
+  if (/weekday weekend package time windows/.test(lower)) return '支持课包区分工作日和周末可用时段';
+  if (/unify mabao/.test(lower) && /package signup dates/.test(lower)) return '统一玛宝校区和课包报名日期';
+  if (/harden official account reminders/.test(lower)) return '增强公众号提醒稳定性';
   if (/speed up schedule and package first paint/.test(lower)) return '提升排课和课包页面首屏加载速度';
   if (/wait products package (page|页面)/.test(lower)) return '等待产品与课包页面数据加载完成';
   if (/restore coach management data loading/.test(lower)) return '恢复教练管理数据加载';
@@ -137,7 +188,7 @@ function summarizeText(input) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return text;
+  return hasEnglishPhrase(text) ? fallbackChineseSummary(input) : text;
 }
 
 function parsePullRequestNumber(text) {
@@ -326,7 +377,7 @@ function buildChangelogCard(payload) {
     elements: [
       {
         tag: 'plain_text',
-        content: '本摘要由 Git 提交与 PR 元信息自动生成；当天无有效产品更新时静默不发。'
+        content: '本摘要由代码提交与合并请求信息自动生成；当天无有效产品更新时静默不发。'
       }
     ]
   });
@@ -391,6 +442,48 @@ function loadGitCommits(date) {
   return parseGitLog(raw);
 }
 
+function readSentDates(statePath) {
+  if (!statePath) return [];
+  try {
+    const raw = fs.readFileSync(path.resolve(__dirname, statePath), 'utf8');
+    const data = JSON.parse(raw);
+    const dates = Array.isArray(data) ? data : data.sentDates;
+    return Array.isArray(dates) ? dates.filter(Boolean) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeSentDates(statePath, dates) {
+  if (!statePath) return;
+  const target = path.resolve(__dirname, statePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(
+    target,
+    JSON.stringify({ sentDates: Array.from(new Set(dates)).sort() }, null, 2) + '\n'
+  );
+}
+
+function resolveReportDates(options = {}) {
+  if (String(process.env.CHANGELOG_TARGET_DATE || '').trim() && !options.now) {
+    return [targetDate()];
+  }
+
+  const now = options.now ? dayjs(options.now) : dayjs();
+  const todayTarget = targetDate(options.now);
+  const sent = new Set(options.sentDates || []);
+  const dates = [todayTarget];
+
+  if (now.hour() >= 12) {
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+    if (!sent.has(yesterday) && yesterday !== todayTarget) {
+      dates.unshift(yesterday);
+    }
+  }
+
+  return Array.from(new Set(dates));
+}
+
 async function fetchPullRequestDetail(number) {
   if (!GITHUB_TOKEN || !GITHUB_REPOSITORY || !number) return null;
   const url = `https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${number}`;
@@ -436,24 +529,40 @@ async function run() {
     throw new Error('缺少环境变量 FEISHU_CHANGELOG_WEBHOOK');
   }
 
-  const date = targetDate();
-  const commits = loadGitCommits(date);
-  if (commits.length === 0) {
-    console.log(`[Info] ${date} 没有检测到提交，静默退出。`);
-    return;
-  }
+  const statePath = String(process.env.CHANGELOG_SENT_STATE || '').trim();
+  const sentDates = readSentDates(statePath);
+  const dates = resolveReportDates({ sentDates });
+  const entries = [];
+  const datesWithEntries = [];
 
-  const prDetailsByNumber = await fetchPullRequestDetails(commits);
-  const entries = buildBusinessEntries(commits, { prDetailsByNumber });
+  for (const date of dates) {
+    const commits = loadGitCommits(date);
+    if (commits.length === 0) {
+      console.log(`[Info] ${date} 没有检测到提交。`);
+      continue;
+    }
+
+    const prDetailsByNumber = await fetchPullRequestDetails(commits);
+    const dayEntries = buildBusinessEntries(commits, { prDetailsByNumber });
+    if (dayEntries.length === 0) {
+      console.log(`[Info] ${date} 没有有效产品更新。`);
+      continue;
+    }
+
+    datesWithEntries.push(date);
+    entries.push(...dayEntries);
+  }
 
   if (entries.length === 0) {
-    console.log(`[Info] ${date} 没有有效产品更新，静默退出。`);
+    writeSentDates(statePath, [...sentDates, ...dates]);
+    console.log(`[Info] ${dates.join('、')} 没有有效产品更新，静默退出。`);
     return;
   }
 
-  const payload = buildChangelogCard({ date, entries });
+  const payload = buildChangelogCard({ date: datesWithEntries.join('、'), entries });
   await sendCard(payload);
-  console.log(`✅ ${date} 产品升级日志发送成功，共 ${entries.length} 项。`);
+  writeSentDates(statePath, [...sentDates, ...dates]);
+  console.log(`✅ ${datesWithEntries.join('、')} 产品升级日志发送成功，共 ${entries.length} 项。`);
 }
 
 if (require.main === module) {
@@ -470,5 +579,8 @@ module.exports = {
   cleanSubject,
   groupEntriesByPlatform,
   isNoiseCommit,
+  readSentDates,
+  resolveReportDates,
+  targetDate,
   summarizeText
 };
