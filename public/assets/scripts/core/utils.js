@@ -766,17 +766,20 @@ function studentPrimaryCoachText(stu){
   return coachName(stu?.primaryCoach)||'未分配';
 }
 function studentPackageLessonMeta(stu){
-  const rows=entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided');
+  const rows=studentActiveEntitlementRows(stu);
   if(!rows.length)return {hasPackage:false,remaining:0,total:0,text:'-'};
   const total=rows.reduce((sum,row)=>sum+(Number(row.totalLessons)||0),0);
   const remaining=rows.reduce((sum,row)=>sum+(Number(row.remainingLessons)||0),0);
   if(total<=0)return {hasPackage:false,remaining:0,total:0,text:'-'};
   return {hasPackage:true,remaining,total,text:`${lessonQty(remaining)}/${lessonQty(total)}`,pct:Math.max(0,Math.min(100,Math.round((remaining/total)*100)))};
 }
+function studentActiveEntitlementRows(stu){
+  return entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided'&&entitlementStatusText(e)==='正常'&&lessonValue(e.remainingLessons)>0);
+}
 function studentPackageLessonSummary(stu){
   const meta=studentPackageLessonMeta(stu);
   if(!meta.hasPackage)return '-';
-  const rows=entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided');
+  const rows=studentActiveEntitlementRows(stu);
   return rows.map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||meta.text;
 }
 function studentPackageLessonMiniBar(stu){
@@ -897,7 +900,7 @@ function scheduleEntitlementSummary(s){
   return `${standardPackageLabel(ent,true)||ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
 }
 function studentEntitlementSummaryHtml(stu){
-  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{}))));
+  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{})))).filter(e=>e.status!=='voided');
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无已购课包</div>';
   return rows.map(e=>{
     const used=Number(e.usedLessons)||0;
@@ -1103,6 +1106,14 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
   ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
   return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
 }
+function studentLedgerBalanceAfter(row,ent={}){
+  if(!ent?.id)return '';
+  const laterDelta=studentEntitlementLedgerRows({id:ent.studentId})
+    .filter(item=>item.entitlementId===ent.id&&String(entitlementLedgerSortDate(item)||'')>String(entitlementLedgerSortDate(row)||''))
+    .reduce((sum,item)=>sum+(Number(item.lessonDelta)||0),0);
+  const balance=(Number(ent.remainingLessons)||0)-laterDelta;
+  return `剩余 ${lessonQty(balance)}/${lessonQty(ent.totalLessons)} 节`;
+}
 function studentLessonRecordPackageText(row,ent={}){
   const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
   const schedule=findScheduleForEntitlementLedgerRow(row,student);
@@ -1113,7 +1124,7 @@ function studentLessonRecordPackageText(row,ent={}){
     studentEntitlementLedgerLocationText(row,schedule,ent),
     coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
     Number(row.lessonDelta)<0?`扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`:(payMethodText?payMethodText:'课次'),
-    ent?.id?`剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:payMethodText,
+    ent?.id?studentLedgerBalanceAfter(row,ent):payMethodText,
     payText
   ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
 }
