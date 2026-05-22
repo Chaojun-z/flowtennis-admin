@@ -65,7 +65,7 @@ function jumpPurchasePage(value){
 }
 function purchasePackageListLabel(p){
   const label=standardPackageLabel(p,true)||p.packageName||'';
-  return renderCourtEmptyText(label.replace(/^1v\d私教课 · /,'').replace(/^私教课 · /,''));
+  return renderCourtEmptyText(label.replace(/\s*·\s*已停售\s*$/,'').replace(/\s*已停售\s*$/,''));
 }
 function purchaseEntitlementMiniBar(ent){
   if(!ent)return renderCourtCellText('-',false);
@@ -92,7 +92,7 @@ function renderPurchases(){
   if(purPage>pages)purPage=pages;
   const slice=list.slice((purPage-1)*purPageSize,purPage*purPageSize);
   const pager=document.querySelector('#page-purchases .tms-pagination');
-  if(pager)pager.style.display=total?'flex':'none';
+  if(pager)pager.style.display=total>purPageSize?'flex':'none';
   const info=document.getElementById('purPagerInfo');
   if(info)info.textContent=`共 ${total} 条`;
   renderPurchasePagerControls(total,pages);

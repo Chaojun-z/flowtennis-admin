@@ -130,7 +130,7 @@ function renderPackages(){
     const coachTitle=packageCoachDetail(p);
     const title=packageListTitle(p);
     const subtitle=packageListSubtitle(p);
-    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageDisplayShortId(p))}<span></span>${esc(packageCreatedDate(p))}<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token package-meta-id">${esc(packageDisplayShortId(p))}</span><span class="package-meta-dot"></span><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
@@ -203,7 +203,7 @@ function packageCoachChecks(ids){
 }
 function packageCampusChecks(ids){
   ids=parseArr(ids);
-  return campuses.map(c=>`<label class="choice-tag"><input type="checkbox" value="${c.code||c.id}" class="pkg-campus-cb" ${ids.includes(c.code||c.id)?'checked':''}>${esc(c.name)}</label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无校区</span>';
+  return campuses.map(c=>`<label class="tms-checkbox-wrap"><input type="checkbox" value="${c.code||c.id}" class="tms-checkbox pkg-campus-cb" ${ids.includes(c.code||c.id)?'checked':''}><span>${esc(c.name)}</span></label>`).join('')||'<span style="color:var(--td);font-size:12px">暂无校区</span>';
 }
 function packageTimeScopeOptions(){
   return [{value:'weekday',label:'工作日'},{value:'weekend',label:'周末'}];
@@ -251,33 +251,29 @@ function applyPackageTimeBandPreset(value){
 function openPackageModal(id,presetProductId=''){
   editId=id;const p=id?packages.find(x=>x.id===id):null;
   const locked=!!(id&&packageHasPurchases(id));
-  const timeWindows=parseArr(p?.dailyTimeWindows);
   const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
-  const defaultWindows=packageTimeBandPresetWindows(rv(p,'timeBand','全天'));
-  const windowRow=timeWindows[0]||defaultWindows[0]||{};
-  const secondWindow=timeWindows[1]||defaultWindows[1]||{};
+  const audience=rv(p,'audience')||packageAudienceLabelFromText([p?.type,p?.productName,p?.name,p?.packageName,p?.notes])||'成人';
+  const audienceOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'}];
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
-  const timeScopeOptions=packageTimeScopeOptions();
   const body=`
-    <div class="tms-section-header" style="margin-top:0;">基础信息</div>
+    <div class="tms-section-header" style="margin-top:0;">基础属性</div>
       ${locked?'<div class="inline-help">该课包已有购买记录，价格、课时、人数、校区和可上课教练已锁定。</div>':''}
       <div class="tms-form-row package-basic-row">
+        <div class="tms-form-item"><label class="tms-form-label">学员类型 *</label>${renderCourtDropdownHtml('pkg_audience','学员类型',audienceOptions,audience,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">课程类型 *</label>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true,'syncPackageClassSize')}</div>
         <div class="tms-form-item" id="pkg_classSizeItem"><label class="tms-form-label">上课人数</label>${renderCourtDropdownHtml('pkg_maxStudents','上课人数',classSizeOptions,String(rv(p,'maxStudents',1)),true)}</div>
-        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button><button type="button" class="package-lesson-chip" data-lessons="50" onclick="setPackageLessonShortcut(50)">50课时</button></div></div>
-        <div class="tms-form-item"><label class="tms-form-label">价格</label><input class="finput tms-form-control" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
         <div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('pkg_status','状态',[{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],rv(p,'status','active'),true)}</div>
       </div>
-    <div class="tms-section-header">上课时间</div>
-      <div class="package-time-section">
-        <div class="tms-form-item package-time-band-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
-        <div class="tms-form-item package-time-windows-item"><label class="tms-form-label">可用时段</label>
-          <div class="time-window-stack" id="pkg_timeWindowsWrap"></div>
-        </div>
+    <div class="tms-section-header">规格与价格</div>
+      <div class="tms-form-row package-spec-row">
+        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button><button type="button" class="package-lesson-chip" data-lessons="50" onclick="setPackageLessonShortcut(50)">50课时</button></div></div>
+        <div class="tms-form-item"><label class="tms-form-label">价格</label><input class="finput tms-form-control" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
       </div>
+    <div class="tms-section-header">上课时间与效期</div>
+      <div class="package-modal-panel">
       <div class="tms-form-row package-date-section">
         <div class="tms-form-item">
           <label class="tms-form-label">活动时间</label>
@@ -300,9 +296,22 @@ function openPackageModal(id,presetProductId=''){
           <input class="filter-hidden-date" id="pkg_usageEndDate" type="date" value="${rv(p,'usageEndDate')}" onchange="syncDateButton('pkg_usageEndDate','pkg_usageEndDate_btn','使用结束')">
         </div>
       </div>
+      <div class="package-panel-divider"></div>
+      <div class="package-time-section">
+        <div class="tms-form-item package-time-band-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
+        <div class="tms-form-item package-time-windows-item"><label class="tms-form-label">可用时段</label>
+          <div class="time-window-stack" id="pkg_timeWindowsWrap"></div>
+        </div>
+      </div>
+      </div>
     <div class="tms-section-header">教练和场地</div>
-      <div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderCourtDropdownHtml('pkg_ownerCoach','归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">可用校区</label><div class="choice-grid package-campus-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div></div>
-      <div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker package-coach-picker">${packageCoachChecks(rv(p,'coachNames',[]))}</div></div></div>
+      <div class="package-modal-panel package-resource-panel">
+        <div class="package-resource-row"><label class="tms-form-label">归属教练</label><div class="package-resource-content">${renderCourtDropdownHtml('pkg_ownerCoach','归属教练',ownerCoachOptions,rv(p,'ownerCoach')||'',true)}</div></div>
+        <div class="package-panel-divider"></div>
+        <div class="package-resource-row"><label class="tms-form-label">可用校区</label><div class="package-resource-content"><div class="tms-checkbox-matrix package-campus-grid">${packageCampusChecks(rv(p,'campusIds',[]))}</div></div></div>
+        <div class="package-panel-divider"></div>
+        <div class="package-resource-row"><label class="tms-form-label">可上课教练</label><div class="package-resource-content"><div class="tms-checkbox-matrix purchase-coach-picker package-coach-picker">${packageCoachChecks(rv(p,'coachNames',[]))}</div></div></div>
+      </div>
       <div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pkg_notes_inline" placeholder="可选">${esc(rv(p,'notes'))}</textarea></div></div>
     <input type="hidden" id="pkg_name" value="${esc(rv(p,'name'))}">
     <textarea class="filter-hidden-date" id="pkg_notes" style="display:none">${esc(rv(p,'notes'))}</textarea>
@@ -315,6 +324,7 @@ function openPackageModal(id,presetProductId=''){
 }
 async function savePackage(){
   const courseType=document.getElementById('pkg_type').value.trim();
+  const audience=document.getElementById('pkg_audience').value;
   const name=standardPackageLabel({courseType,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,timeBand:document.getElementById('pkg_timeBand').value.trim()||'全天'},document.getElementById('pkg_status').value==='inactive');
   const ownerCoach=document.getElementById('pkg_ownerCoach')?.value||'';
   const saleStartDate=document.getElementById('pkg_saleStartDate').value;
@@ -348,6 +358,6 @@ async function savePackage(){
     endTime:idx===0?timeEnd:timeEnd2,
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
-  const data={name,productId:'',productName:'',courseType,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId:'',productName:'',courseType,audience,type:audience,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }

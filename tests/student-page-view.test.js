@@ -151,12 +151,14 @@ assert.match(source, /支付日期<\/th><th style="width:120px">学员<\/th><th 
 assert.match(source, /id="purPagerInfo"[\s\S]*id="purPageSize"[\s\S]*id="purPagerBtns"/, 'purchase record page should expose the standard pager');
 assert.match(source, /function onPurchaseFilterChange\(\)\{purPage=1;renderPurchases\(\);\}/, 'purchase filters should reset pagination before rendering');
 assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
-assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'purchase table should use page-level vertical scrolling like the standard pages');
+assert.match(source, /pager\.style\.display=total>purPageSize\?'flex':'none'/, 'purchase pager should hide when the filtered result fits on one page');
+assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'purchase table height should match the student standard table height');
 assert.match(css, /#page-purchases \.tms-page-btn\{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px\}/, 'purchase pager buttons should match the student page compact style');
 assert.match(css, /#page-purchases \.tms-page-jump input\{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2/, 'purchase pager jump input should match the student page compact style');
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
 assert.match(source, /renderStudentToolbarFilters[\s\S]*const typeOptions=withStandardFilterCounts[\s\S]*const sourceOptions=withStandardFilterCounts[\s\S]*const coachOptions=withStandardFilterCounts/, 'student toolbar filters should use standard count labels');
+assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');
 assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');
 assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so mabao and 顺义马坡 stay one campus');
