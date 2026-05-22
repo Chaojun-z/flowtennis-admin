@@ -578,6 +578,35 @@ const primeTimeRecommendation = rules.recommendEntitlements([
 assert.strictEqual(primeTimeRecommendation.recommended.entitlementId, 'ent-non-prime');
 assert.strictEqual(primeTimeRecommendation.recommended.requiresFieldFee, true, 'prime-time use of non-prime package should be marked for field fee');
 
+const coachSuffixRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-coach-suffix',
+    packageName: '成人1v1 黄金时间10课时',
+    timeBand: '黄金时段',
+    ownerCoach: '晓哲教练',
+    allowedCoaches: ['晓哲教练'],
+    coachIds: ['晓哲教练'],
+    coachNames: ['晓哲教练'],
+    remainingLessons: 3,
+    dailyTimeWindows: [
+      { label: '工作日', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+      { label: '周六日', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+    ]
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: '晓哲',
+  coach: '晓哲',
+  campus: 'mabao',
+  startTime: '2026-05-16 10:00',
+  endTime: '2026-05-16 11:30',
+  lessonCount: 1.5,
+  status: '已排课'
+});
+assert.strictEqual(coachSuffixRecommendation.recommended.entitlementId, 'ent-coach-suffix', 'coach name with 教练 suffix should match the same selected coach');
+
 assert.strictEqual(
   rules.applyEntitlementLessonDelta({ ...entitlement, usedLessons: 1, remainingLessons: 4 }, -1).remainingLessons,
   3,

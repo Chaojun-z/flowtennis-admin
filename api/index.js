@@ -1708,13 +1708,20 @@ function coachRefAliases(value,coachRefs=[]){
   const raw=String(value||'').trim();
   const refs=Array.isArray(coachRefs)?coachRefs:[];
   if(!raw)return [];
+  const base=raw.replace(/教练$/,'').trim();
   const values=new Set([raw]);
+  if(base&&base!==raw)values.add(base);
+  if(base)values.add(`${base}教练`);
   refs.forEach(ref=>{
     const id=String(ref?.id||'').trim();
     const name=String(ref?.name||'').trim();
     if(raw===id||raw===name){
       if(id)values.add(id);
       if(name)values.add(name);
+      const idBase=id.replace(/教练$/,'').trim();
+      const nameBase=name.replace(/教练$/,'').trim();
+      if(idBase){values.add(idBase);values.add(`${idBase}教练`);}
+      if(nameBase){values.add(nameBase);values.add(`${nameBase}教练`);}
     }
   });
   return [...values];
