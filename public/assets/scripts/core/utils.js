@@ -1035,7 +1035,8 @@ function historicalImportedLessonUnitsForStudent(stu){
     .reduce((sum,row)=>sum+Math.abs(Math.min(0,Number(row.lessonDelta)||0)),0);
 }
 function studentEntitlementLedgerRows(stu){
-  const entIds=new Set(entitlements.filter(e=>e.studentId===stu?.id).map(e=>e.id));
+  const activeEntitlements=entitlements.filter(e=>e.studentId===stu?.id&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchases.find(p=>p.id===e.purchaseId)||{})!=='已作废');
+  const entIds=new Set(activeEntitlements.map(e=>e.id));
   return dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(row=>row.studentId===stu?.id||entIds.has(row.entitlementId)));
 }
 function studentLessonRecordKey({studentId='',row={},schedule={}}={}){
