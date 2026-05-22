@@ -38,7 +38,9 @@ assert.match(html, /product-card-shell/, 'product page should render the gemini-
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
 assert.match(html, /function renderPackages[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort newer package records first');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
-assert.match(html, /package-card-meta">\$\{esc\(p\.id\|\|'-'\)\}<span><\/span>\$\{esc\(packageCreatedDate\(p\)\)\}<span><\/span>/, 'package cards should show raw id and created date without labels');
+assert.match(html, /function packageDisplayShortId\(/, 'package cards should expose a short display-only package id helper');
+assert.match(html, /package-card-meta">\$\{esc\(packageDisplayShortId\(p\)\)\}<span><\/span>\$\{esc\(packageCreatedDate\(p\)\)\}<span><\/span>/, 'package cards should show a compact display id and created date without labels');
+assert.doesNotMatch(fnBody('renderPackages'), /\$\{esc\(p\.id\|\|'-'\)\}/, 'package cards should not render the full raw package id');
 assert.doesNotMatch(html, /package-card-meta[^`]*创建/, 'package card footer should not show the created label');
 assert.doesNotMatch(html, /showcase-kv-label">创建时间/, 'package cards should not show created time as a normal field row');
 assert.match(html, /归属教练[\s\S]*可用校区[\s\S]*可用时段/, 'package card should show owner coach, campus, and time rules');
@@ -104,6 +106,11 @@ assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgTimeBandFi
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgCoachFilter'\)/, 'package cards should filter by coach');
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
 assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
+assert.match(fnBody('syncPackageFilterOptions'), /const typeOptions=withStandardFilterCounts[\s\S]*packageMatchesCourseType/, 'package type filter should show per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /const audienceOptions=withStandardFilterCounts[\s\S]*packageMatchesAudience/, 'package audience filter should show per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /const coachOptions=withStandardFilterCounts[\s\S]*packageMatchesCoach/, 'package coach filter should show per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /const statusOptions=withStandardFilterCounts[\s\S]*packageMatchesStatus/, 'package status filter should show per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /const timeBandOptions=withStandardFilterCounts[\s\S]*packageMatchesTimeBand/, 'package time-band filter should show per-option package counts');
 assert.match(fnBody('renderPackages'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
 assert.match(fnBody('renderPackages'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');
 assert.match(fnBody('renderPackages'), /deactivatePackage\('\$\{p\.id\}'/, 'package card should use deactivate instead of delete');
@@ -128,8 +135,10 @@ assert.match(html, /function getFilteredPurchases[\s\S]*String\(a\.purchaseDate\
 assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
-assert.match(fnBody('packagePurchaseCount'), /purchaseIdsByEntitlement[\s\S]*String\(p\.packageId\|\|''\)===String\(packageId\)/, 'package order count should use exact package id and entitlement-linked purchases');
+assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*String\(p\.packageId\|\|''\)===String\(packageId\)/, 'package order count should use exact package id and entitlement-linked purchases');
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
+assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
+assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package filter should include the same purchases counted on package cards');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');

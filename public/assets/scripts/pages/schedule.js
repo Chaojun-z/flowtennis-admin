@@ -4,10 +4,11 @@ function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'';
   const coachValue=document.getElementById('schCoachFilter')?.value||'';
   const courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'';
-  const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}];
+  const baseRows=schedules.filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
+  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}],baseRows,(s,value)=>effectiveScheduleStatus(s)===value);
   const coachNames=[...new Set([...activeCoachNames(),...schedules.map(s=>coachName(s.coach)).filter(Boolean)])];
-  const coachOptions=[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))];
-  const courseTypeOptions=[{value:'',label:'全部',emptyDisplay:'课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
+  const coachOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],baseRows,(s,value)=>coachName(s.coach)===value);
+  const courseTypeOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],baseRows,(s,value)=>scheduleCourseType(s)===value);
   [['schStatusFilterHost','schStatusFilter','状态',statusOptions,statusValue],['schCoachFilterHost','schCoachFilter','教练',coachOptions,coachValue],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',courseTypeOptions,courseTypeValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onScheduleFilterChange');

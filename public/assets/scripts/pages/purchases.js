@@ -1,7 +1,8 @@
 function onPurchaseFilterChange(){purPage=1;renderPurchases();}
 function refreshPurchaseFilters(){
   const packageValue=document.getElementById('purPackageFilter')?.value||'';
-  const packageOptions=[{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))];
+  const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
+  const packageOptions=withStandardFilterCounts([{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))],purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
   [['purPackageFilterHost','purPackageFilter','全部课包',packageOptions,packageValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onPurchaseFilterChange');
@@ -21,7 +22,7 @@ function getFilteredPurchases(){
   return purchases.filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
     if(!searchHit(q,p.studentName,standardPackageLabel(p,true),p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
-    if(packageId&&p.packageId!==packageId)return false;
+    if(packageId&&!purchaseMatchesPackage(p,packageId))return false;
     if(dateFrom&&String(p.purchaseDate||'')<dateFrom)return false;
     if(dateTo&&String(p.purchaseDate||'')>dateTo)return false;
     return true;

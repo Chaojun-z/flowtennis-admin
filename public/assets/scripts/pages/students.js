@@ -4,9 +4,10 @@ function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
-  const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
-  const sourceOptions=[{value:'',label:'全部',emptyDisplay:'来源'},...SOURCES.map(t=>({value:t,label:t}))];
-  const coachOptions=[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
+  const baseRows=getStudentBaseList();
+  const typeOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],baseRows,(s,value)=>s.type===value);
+  const sourceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'来源'},...SOURCES.map(t=>({value:t,label:t}))],baseRows,(s,value)=>s.source===value);
+  const coachOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],baseRows,(s,value)=>value==='__unassigned__'?!s.primaryCoach:coachName(s.primaryCoach)===value);
   const wrapMap=[
     ['stuTypeFilterHost','stuTypeFilter','类型',typeOptions,typeValue],
     ['stuSourceFilterHost','stuSourceFilter','来源',sourceOptions,sourceValue],

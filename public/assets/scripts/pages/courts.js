@@ -353,12 +353,25 @@ function toggleCourtPageSelection(checked){
   document.querySelectorAll('.court-row-cb').forEach(cb=>{cb.checked=checked;if(checked)selectedCourtIds.add(cb.value);else selectedCourtIds.delete(cb.value);});
   updateCourtBatchButton();
 }
+function renderStandardOptionLabel(opt){
+  const label=String(opt?.label??opt?.value??'');
+  return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;
+}
+function withStandardFilterCounts(options,rows,match){
+  const source=Array.isArray(rows)?rows:[];
+  return (options||[]).map(opt=>{
+    const item=typeof opt==='string'?{value:opt,label:opt}:opt;
+    const value=item.value;
+    const count=String(value||'')===''?source.length:source.filter(row=>match(row,value,item)).length;
+    return {...item,count};
+  });
+}
 function renderCourtDropdownHtml(id,label,options,value,isForm=false,onchange=''){
   const list=(options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt);
   const active=list.find(opt=>String(opt.value)===String(value))||list.find(opt=>opt.active)||null;
-  const displayLabel=active?(String(active.value)===''&&active.emptyDisplay?active.emptyDisplay:(active.label||active.value)):label;
+  const displayLabel=active?(String(active.value)===''&&active.emptyDisplay?active.emptyDisplay:renderStandardOptionLabel(active)):label;
   const hasValue=String(active?.value||value||'')!=='';
-  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>`<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(opt.label||opt.value)},event)">${esc(opt.label||opt.value)}</div>`).join('')}</div></div>`;
+  return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-onchange="${onchange}" onclick="toggleCourtDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);return `<div class="tms-dropdown-item ${active&&String(opt.value)===String(active.value)?'active':''}" data-value="${esc(opt.value??'')}" onclick="selectCourtDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)">${esc(optionLabel)}</div>`;}).join('')}</div></div>`;
 }
 function closeCourtDropdowns(){
   document.querySelectorAll('.tms-dropdown.open').forEach(el=>{
@@ -408,7 +421,7 @@ function selectCourtDropdownItem(id,value,label,event){
     if(display)display.textContent=label;
     dropdown.classList.toggle('has-value',String(value||'')!=='');
     dropdown.querySelectorAll('.tms-dropdown-item').forEach(el=>el.classList.remove('active'));
-    const current=[...dropdown.querySelectorAll('.tms-dropdown-item')].find(el=>el.textContent===label);
+    const current=[...dropdown.querySelectorAll('.tms-dropdown-item')].find(el=>String(el.dataset.value||'')===String(value||'')||el.textContent===label);
     if(current)current.classList.add('active');
     dropdown.classList.remove('open');
     const formItem=dropdown.closest('.tms-form-item');
@@ -424,7 +437,7 @@ function setCourtDropdownValue(id,value,label=''){
   if(!dropdown)return;
   const items=[...dropdown.querySelectorAll('.tms-dropdown-item')];
   items.forEach(el=>el.classList.remove('active'));
-  const hit=items.find(el=>el.textContent===String(label||'')||el.textContent===String(value||''));
+  const hit=items.find(el=>String(el.dataset.value||'')===String(value||'')||el.textContent===String(label||'')||el.textContent===String(value||''));
   if(hit)hit.classList.add('active');
   const display=dropdown.querySelector('.tms-dropdown-display');
   if(display)display.textContent=label||hit?.textContent||dropdown.dataset.label||'';

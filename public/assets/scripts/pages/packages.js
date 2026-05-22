@@ -4,12 +4,13 @@ function syncPackageFilterOptions(){
   const coachValue=document.getElementById('pkgCoachFilter')?.value||'';
   const statusValue=document.getElementById('pkgStatusFilter')?.value||'';
   const timeBandValue=document.getElementById('pkgTimeBandFilter')?.value||'';
-  const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
-  const audienceOptions=[{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
+  const baseRows=packageFilterBaseRows();
+  const typeOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],baseRows,packageMatchesCourseType);
+  const audienceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],baseRows,packageMatchesAudience);
   const coachNames=[...new Set([...activeCoachNames(),...packages.flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)]).map(coachName).filter(Boolean)])];
-  const coachOptions=[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))];
-  const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}];
-  const timeBandOptions=[{value:'',label:'全部',emptyDisplay:'时段'},{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金'},{value:'非黄金时段',label:'非黄金'}];
+  const coachOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],baseRows,packageMatchesCoach);
+  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],baseRows,packageMatchesStatus);
+  const timeBandOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'时段'},{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金'},{value:'非黄金时段',label:'非黄金'}],baseRows,packageMatchesTimeBand);
   const wrapMap=[
     ['pkgTypeFilterHost','pkgTypeFilter','类型',typeOptions,typeValue],
     ['pkgAudienceFilterHost','pkgAudienceFilter','学员类型',audienceOptions,audienceValue],
@@ -39,9 +40,33 @@ function packageListSubtitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}课时`:'' ].filter(Boolean).join(' · ');
 }
+function packageDisplayShortId(p){
+  const raw=String(p?.id||'');
+  if(!raw)return '-';
+  let hash=0;
+  for(let i=0;i<raw.length;i++)hash=(hash*31+raw.charCodeAt(i))>>>0;
+  return String(hash%100000000).padStart(8,'0');
+}
 function packageCreatedDate(p){
   return String(p.createdAt||'').slice(0,10)||'-';
 }
+function packageFilterBaseRows(){
+  return packages.filter(p=>{
+    const statusValue=packageListStatusValue(p);
+    const campusIds=parseArr(p.campusIds);
+    if(statusValue==='merged')return false;
+    if(campus&&campus!=='all'&&campusIds.length&&!campusIds.includes(campus))return false;
+    return true;
+  });
+}
+function packageMatchesCourseType(p,value){return normalizeCourseType(p.courseType)===value;}
+function packageMatchesAudience(p,value){return packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])===value;}
+function packageMatchesCoach(p,value){
+  const names=parseArr(p.coachNames||p.coachIds).map(coachName);
+  return coachName(p.ownerCoach)===value||names.includes(value);
+}
+function packageMatchesStatus(p,value){return packageListStatusValue(p)===value;}
+function packageMatchesTimeBand(p,value){return String(p.timeBand||'全天')===value;}
 function packageStatusBadge(p){
   const status=packageListStatusValue(p);
   return status==='inactive'||status==='merged'
@@ -105,16 +130,16 @@ function renderPackages(){
     const coachTitle=packageCoachDetail(p);
     const title=packageListTitle(p);
     const subtitle=packageListSubtitle(p);
-    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(p.id||'-')}<span></span>${esc(packageCreatedDate(p))}<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageDisplayShortId(p))}<span></span>${esc(packageCreatedDate(p))}<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){
+  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&purchaseMatchesPackage(p,packageId)).length;
+}
+function purchaseMatchesPackage(p,packageId){
+  if(!packageId)return true;
   const purchaseIdsByEntitlement=new Set(entitlements.filter(e=>String(e.packageId||'')===String(packageId)).map(e=>String(e.purchaseId||'')).filter(Boolean));
-  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&(
-    String(p.packageId||'')===String(packageId)||
-    String(p.originalPackageId||'')===String(packageId)||
-    purchaseIdsByEntitlement.has(String(p.id||''))
-  )).length;
+  return String(p.packageId||'')===String(packageId)||String(p.originalPackageId||'')===String(packageId)||purchaseIdsByEntitlement.has(String(p.id||''));
 }
 function packageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive').map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(standardPackageLabel(p,false)||p.name)}${p.status==='inactive'?' · 已停售':''}</option>`).join('');
