@@ -42,6 +42,7 @@ function shanghaiNow(){
   const raw=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
   return new Date(raw.replace(' ','T'));
 }
+window.shanghaiNow=shanghaiNow;
 function effectiveScheduleStatus(s,now=new Date()){
   const status=s?.status||'已排课';
   if(status==='已下课')return '已结束';

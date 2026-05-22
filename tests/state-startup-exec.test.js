@@ -4,6 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
+const utilsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/utils.js'), 'utf8');
 
 const context = {
   console,
@@ -81,5 +82,6 @@ assert.strictEqual(typeof context.hydrateDatasetsFromCache, 'function', 'state s
 assert.doesNotThrow(() => {
   context.hydrateDatasetsFromCache();
 }, 'cache hydration should not access uninitialized globals after startup');
+assert.match(utilsSource, /window\.shanghaiNow=shanghaiNow;/, 'shanghaiNow must be exposed for separately loaded page scripts');
 
 console.log('state startup execution tests passed');
