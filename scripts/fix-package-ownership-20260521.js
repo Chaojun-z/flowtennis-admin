@@ -37,6 +37,7 @@ const TARGET_SPECS = {
   '成人1v1 非黄时间50课时（历史）': { lessons: 50, price: 25000, courseType: '私教课', productName: '成人1v1私教课', timeBand: '非黄时间', maxStudents: 1 },
   '青少年1v1 黄金时间20课时（历史）': { lessons: 20, price: 12000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '黄金时间', maxStudents: 1 },
   '青少年1v1 非黄时间10课时': { lessons: 10, price: 4000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '非黄时间', maxStudents: 1 },
+  '青少年1v1 非黄时间10课时（历史）': { lessons: 10, price: 4000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '非黄时间', maxStudents: 1 },
   '青少年1v1 黄金时间10课时': { lessons: 10, price: 4800, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '黄金时间', maxStudents: 1 },
   '青少年1v1 黄金时间10课时（历史）': { lessons: 10, price: 6000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '黄金时间', maxStudents: 1 },
   '成人1v2 黄金时间10课时': { lessons: 10, price: 7000, courseType: '私教课', productName: '成人1v2私教课', timeBand: '黄金时间', maxStudents: 2 },
@@ -200,6 +201,13 @@ function normalizeName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+function normalizeCoachName(value) {
+  const text = normalizeName(value);
+  if (/chaojun|朝珺|甄朝珺/i.test(text)) return '朝珺';
+  if (/siren/i.test(text)) return 'Siren';
+  return text;
+}
+
 function normalizePackageTimeBand(value) {
   const text = normalizeName(value);
   if (text === '黄金时间' || text === '黄金') return '黄金时段';
@@ -341,6 +349,17 @@ function buildPackage(name, now) {
     status: /（历史）/.test(name) ? 'inactive' : 'active',
     sourceType: 'package_ownership_fix_20260521',
     createdAt: now,
+    updatedAt: now
+  };
+}
+
+function normalizeExistingTargetPackage(row, name, now) {
+  const base = buildPackage(name, now);
+  return {
+    ...row,
+    ...base,
+    id: row.id || base.id,
+    createdAt: row.createdAt || base.createdAt,
     updatedAt: now
   };
 }
@@ -574,8 +593,10 @@ function parseConfirmationCsvRows(filePath = DEFAULT_CONFIRMATION_CSV) {
   if (!fs.existsSync(filePath)) return [];
   return parseCsvFile(filePath).slice(1).map((row) => ({
     studentName: normalizeName(row[0]),
+    purchaseType: '首次',
     lessons: toNumber(row[3]),
     paidAmount: toNumber(row[5]),
+    purchaseDate: normalizeSourceDate(row[6]),
     ownerCoach: normalizeName(row[7]),
     targetName: normalizeTargetPackageName(row[8])
   })).filter((row) => row.studentName && row.targetName);
@@ -632,15 +653,18 @@ function findPurchaseForStatsRow(row, indexes) {
   )) || candidates.find((item) => Number(item.packageLessons) === Number(row.lessons)) || null;
 }
 
-function targetNameFromStatsRow(row, confirmationByKey) {
-  const confirmed = confirmationByKey.get(statsRowKey(row));
-  if (confirmed) return confirmed.targetName;
+function targetNameFromStatsRow(row, confirmationByKey, options = {}) {
   const name = normalizeName(row.studentName);
   if (/Halena|Willian|Lam|Loon/i.test(name)) return '';
   if (name === '佑佑') return '青少年1v1 黄金时间20课时（历史）';
   if (['misha', '黄总', '永阳', '马杰', '朱一龙'].includes(name)) return '成人1v1 朝珺黄金10课时（历史）';
   if (['宋缇缇', '宗钰', '艾女士', '🐲L.（瑶瑶）', '宋曦'].includes(name)) return '成人1v1 朝珺非黄金10课时';
   if (name === '晓曼') return '成人1v1 朝珺黄金10课时（历史）';
+  if (name === '赵新阳 田秀楠') return '成人1v1 非黄时间20课时（历史）';
+  if (name === '袁冶') return '成人1v1 非黄时间10课时（历史）';
+  if (name === '小林、德德') return '成人1v1 黄金时间10课时（历史）';
+  const confirmed = confirmationByKey.get(statsRowKey(row));
+  if (confirmed) return confirmed.targetName;
   if (name === '赵雨桐、赵雨晴') return '青少年1v2 黄金时间10课时（历史） + 青少年1v2 非黄时间10课时（历史）';
   if (row.audience === '青少年' && row.classSize === '1v2') return row.purchaseType === '续报' ? '青少年1v2 黄金时间10课时' : '青少年1v2 黄金时间10课时（历史）';
   if (row.audience === '成人' && row.classSize === '1v2') return '成人1v2 黄金时间10课时';
@@ -649,11 +673,15 @@ function targetNameFromStatsRow(row, confirmationByKey) {
   if (name === '丫丫' && row.purchaseType === '首次') return '青少年1v1 非黄时间10课时 + 青少年1v1 黄金时间10课时';
   if (name === '丫丫' && /非黄/.test(row.notes)) return '青少年1v1 非黄时间10课时';
   if (name === '丫丫' && /黄金/.test(row.notes)) return '青少年1v1 黄金时间10课时';
-  if (row.audience === '青少年') return row.lessons >= 20 ? '青少年1v1 黄金时间20课时（历史）' : '青少年1v1 黄金时间10课时';
+  const legacy = options.legacy !== false && row.sourceRowNo < 36;
+  if (row.audience === '青少年') {
+    if (row.lessons >= 20) return legacy ? '青少年1v1 黄金时间20课时（历史）' : '青少年1v1 黄金时间10课时';
+    return legacy ? '青少年1v1 黄金时间10课时（历史）' : '青少年1v1 黄金时间10课时';
+  }
   if (row.lessons === 20) return row.purchaseType === '续报' ? '成人1v1 非黄时间20课时（历史）' : '成人1v1 黄金时间20课时';
   if (row.lessons === 50) return '成人1v1 非黄时间50课时（历史）';
   if (['朦朦', '纪宁（vii）', '·J ·', '魏平涛', '小林、德德'].includes(name)) return '成人1v1 黄金时间10课时（历史）';
-  return row.purchaseType === '首次' && row.sourceRowNo < 36 ? '成人1v1 非黄时间10课时（历史）' : '成人1v1 非黄时间10课时';
+  return legacy && row.purchaseType === '首次' ? '成人1v1 非黄时间10课时（历史）' : '成人1v1 非黄时间10课时';
 }
 
 function packageTargetsForReport(targetName) {
@@ -671,7 +699,7 @@ function buildMappingRowsFromSourceCsv({ packages = [], purchases = [] } = {}, o
   const packageByName = new Map((packages || []).map((row) => [normalizeName(row.name), row]));
   const purchaseIndexes = buildPurchaseIndexes(purchases);
   return statsRows.map((row) => {
-    const targetName = targetNameFromStatsRow(row, confirmationByKey);
+    const targetName = targetNameFromStatsRow(row, confirmationByKey, options);
     const purchase = findPurchaseForStatsRow(row, purchaseIndexes);
     const targets = packageTargetsForReport(targetName);
     const notInSystem = /Halena|Willian|Lam|Loon/i.test(row.studentName);
@@ -690,7 +718,7 @@ function buildMappingRowsFromSourceCsv({ packages = [], purchases = [] } = {}, o
       audience: row.audience,
       classSize: row.classSize,
       timeBand: packageField(targetName, (name, spec) => normalizePackageTimeBand(spec.timeBand || (/黄金/.test(name) ? '黄金时间' : /非黄/.test(name) ? '非黄时间' : ''))),
-      ownerCoach: packageField(targetName, (name, spec) => spec.ownerCoach) || row.ownerCoach,
+      ownerCoach: packageField(targetName, (name, spec) => spec.ownerCoach) || normalizeCoachName(row.ownerCoach),
       campus: packageField(targetName, (_name, spec) => (spec.campusIds || ['mabao']).join('|')) || 'mabao',
       maxStudents: packageField(targetName, (_name, spec) => spec.maxStudents),
       status: notInSystem ? '不录入系统' : (targets.some((name) => /（历史）/.test(name)) ? '已停售' : '售卖中'),
@@ -741,6 +769,179 @@ function buildMappingRows({ packages = [], purchases = [] } = {}) {
   }
   return rows.sort((a, b) => String(a.studentName).localeCompare(String(b.studentName), 'zh-Hans-CN')
     || String(a.targetPackageName).localeCompare(String(b.targetPackageName), 'zh-Hans-CN'));
+}
+
+function purchaseMatchScore(purchase, row) {
+  if (normalizeMatchName(purchase.studentName) !== normalizeMatchName(row.studentName)) return -1;
+  let score = 10;
+  if (Number(purchase.packageLessons) === Number(row.lessons)) score += 8;
+  if (Number(purchase.amountPaid ?? purchase.finalAmount) === Number(row.paidAmount)) score += 8;
+  if (normalizeSourceDate(purchase.purchaseDate) === normalizeSourceDate(row.purchaseDate)) score += 8;
+  const purchaseType = /renewal|renew/.test(String(purchase.id || purchase.sourceType || '')) ? '续报' : '首次';
+  if (purchaseType === row.purchaseType) score += 4;
+  return score;
+}
+
+function findBestPurchaseForSourceRow(row, purchases, usedIds) {
+  const candidates = (purchases || []).filter((purchase) => !usedIds.has(String(purchase.id || ''))
+    && String(purchase.status || 'active') !== 'voided'
+    && normalizeMatchName(purchase.studentName) === normalizeMatchName(row.studentName));
+  return candidates.map((purchase) => ({ purchase, score: purchaseMatchScore(purchase, row) }))
+    .filter((item) => item.score >= 10)
+    .sort((a, b) => b.score - a.score)[0]?.purchase || null;
+}
+
+function findCompositePurchaseForRows(rows, purchases, usedIds) {
+  if (!rows.length) return null;
+  const name = normalizeMatchName(rows[0].studentName);
+  const lessons = rows.reduce((sum, row) => sum + (Number(row.lessons) || 0), 0);
+  const paidAmount = rows.reduce((sum, row) => sum + (Number(row.paidAmount) || 0), 0);
+  return (purchases || []).find((purchase) => !usedIds.has(String(purchase.id || ''))
+    && String(purchase.status || 'active') !== 'voided'
+    && normalizeMatchName(purchase.studentName) === name
+    && Number(purchase.packageLessons) === lessons
+    && Number(purchase.amountPaid ?? purchase.finalAmount) === paidAmount) || null;
+}
+
+function targetPackageForName(targetByName, name) {
+  return targetByName.get(normalizeName(name)) || targetByName.get(name) || null;
+}
+
+function applySourcePackageSnapshot(row, targetPackage, sourceRow, now, kind) {
+  const next = applyPackageSnapshot(row, targetPackage, null, now, kind);
+  next.ownerCoach = targetPackage.ownerCoach || normalizeCoachName(sourceRow.ownerCoach) || next.ownerCoach || '';
+  next.coachNames = targetPackage.coachNames?.length ? targetPackage.coachNames : (next.ownerCoach ? [next.ownerCoach] : next.coachNames || []);
+  next.coachIds = next.coachNames;
+  next.allowedCoaches = next.coachNames;
+  next.campusIds = targetPackage.campusIds || ['mabao'];
+  if (kind === 'purchase') {
+    next.packageName = targetPackage.name || '';
+    next.packageId = targetPackage.id || '';
+    next.packageTimeBand = normalizePackageTimeBand(targetPackage.timeBand);
+    next.packageOwnershipFixedAt = now;
+    next.updatedAt = now;
+  } else {
+    next.packageName = targetPackage.name || '';
+    next.packageId = targetPackage.id || '';
+    next.timeBand = normalizePackageTimeBand(targetPackage.timeBand);
+    next.packageOwnershipFixedAt = now;
+    next.updatedAt = now;
+  }
+  return next;
+}
+
+function buildSourceCsvOwnershipPlan({ packages = [], purchases = [], entitlements = [], now = nowInChinaTime() } = {}, options = {}) {
+  const statsRows = parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
+  const confirmationRows = parseConfirmationCsvRows(options.confirmationCsv || DEFAULT_CONFIRMATION_CSV);
+  const confirmationByKey = new Map(confirmationRows.map((row) => [statsRowKey(row), row]));
+  const targetNames = new Set();
+  for (const row of statsRows) {
+    packageTargetsForReport(targetNameFromStatsRow(row, confirmationByKey, options)).forEach((name) => targetNames.add(name));
+  }
+  const packageByName = new Map((packages || []).map((row) => [normalizeName(row.name), row]));
+  const targetByName = new Map();
+  const plan = { packageUpdates: [], creates: [], purchaseUpdates: [], entitlementUpdates: [], blockers: [], skips: [] };
+  for (const name of targetNames) {
+    if (!TARGET_SPECS[name]) {
+      plan.blockers.push(`缺少目标课包规格：${name}`);
+      continue;
+    }
+    const existing = packageByName.get(normalizeName(name));
+    if (existing) {
+      const fixed = normalizeExistingTargetPackage(existing, name, now);
+      targetByName.set(normalizeName(name), fixed);
+      plan.packageUpdates.push(fixed);
+    } else {
+      const created = buildPackage(name, now);
+      targetByName.set(normalizeName(name), created);
+      plan.creates.push(created);
+    }
+  }
+  const usedPurchaseIds = new Set();
+  for (let idx = 0; idx < statsRows.length; idx += 1) {
+    const row = statsRows[idx];
+    const targetName = targetNameFromStatsRow(row, confirmationByKey, options);
+    const targets = packageTargetsForReport(targetName);
+    if (!targets.length) {
+      plan.skips.push(`${row.studentName} 不录入系统`);
+      continue;
+    }
+    if (targets.length > 1) {
+      plan.skips.push(`${row.studentName} 复合课包需保留已拆分/已有记录`);
+      continue;
+    }
+    const nextRow = statsRows[idx + 1];
+    if (nextRow && normalizeMatchName(nextRow.studentName) === normalizeMatchName(row.studentName) && normalizeSourceDate(nextRow.purchaseDate) === normalizeSourceDate(row.purchaseDate)) {
+      const nextTargets = packageTargetsForReport(targetNameFromStatsRow(nextRow, confirmationByKey, options));
+      const compositePurchase = findCompositePurchaseForRows([row, nextRow], purchases, usedPurchaseIds);
+      if (compositePurchase && targets.length === 1 && nextTargets.length === 1) {
+        const sourceEntitlements = (entitlements || []).filter((item) => String(item.purchaseId || '') === String(compositePurchase.id || ''));
+        plan.purchaseUpdates.push({
+          ...compositePurchase,
+          packageId: '',
+          packageName: `${compositePurchase.packageName || ''}（已拆分）`.trim(),
+          status: 'voided',
+          voidReason: '课包归属修正：按来源表拆分黄金/非黄订单',
+          voidedAt: now,
+          packageOwnershipFixedAt: now,
+          updatedAt: now
+        });
+        plan.entitlementUpdates.push(...sourceEntitlements.map((entitlement) => ({
+          ...entitlement,
+          packageId: '',
+          packageName: `${entitlement.packageName || ''}（已拆分）`.trim(),
+          status: 'voided',
+          voidReason: '课包归属修正：按来源表拆分黄金/非黄权益',
+          voidedAt: now,
+          packageOwnershipFixedAt: now,
+          updatedAt: now
+        })));
+        [row, nextRow].forEach((sourceRow) => {
+          const sourceTargetName = targetNameFromStatsRow(sourceRow, confirmationByKey, options);
+          const sourcePackage = targetPackageForName(targetByName, packageTargetsForReport(sourceTargetName)[0]);
+          if (!sourcePackage) return;
+          const suffix = normalizePackageTimeBand(sourcePackage.timeBand) === '黄金时段' ? 'gold' : 'nonprime';
+          const purchaseId = `${compositePurchase.id}-${suffix}`;
+          plan.purchaseUpdates.push(applySourcePackageSnapshot({
+            ...compositePurchase,
+            id: purchaseId,
+            packageLessons: sourceRow.lessons,
+            amountPaid: sourceRow.paidAmount,
+            finalAmount: sourceRow.paidAmount,
+            splitFromPurchaseId: compositePurchase.id
+          }, sourcePackage, sourceRow, now, 'purchase'));
+          if (sourceEntitlements[0]) {
+            const usedLessons = allocateSplitLessons(sourceEntitlements[0].usedLessons, suffix === 'gold' ? 1 : 0, 2);
+            plan.entitlementUpdates.push(applySourcePackageSnapshot({
+              ...sourceEntitlements[0],
+              id: `${sourceEntitlements[0].id}-${suffix}`,
+              purchaseId,
+              totalLessons: sourceRow.lessons,
+              usedLessons,
+              remainingLessons: Math.max(0, sourceRow.lessons - usedLessons),
+              splitFromEntitlementId: sourceEntitlements[0].id
+            }, sourcePackage, sourceRow, now, 'entitlement'));
+          }
+        });
+        usedPurchaseIds.add(String(compositePurchase.id || ''));
+        idx += 1;
+        continue;
+      }
+    }
+    const targetPackage = targetPackageForName(targetByName, targets[0]);
+    if (!targetPackage) continue;
+    const purchase = findBestPurchaseForSourceRow(row, purchases, usedPurchaseIds);
+    if (!purchase) {
+      plan.skips.push(`${row.studentName} 当前线上未找到订单`);
+      continue;
+    }
+    usedPurchaseIds.add(String(purchase.id || ''));
+    plan.purchaseUpdates.push(applySourcePackageSnapshot(purchase, targetPackage, row, now, 'purchase'));
+    for (const entitlement of (entitlements || []).filter((item) => String(item.purchaseId || '') === String(purchase.id || ''))) {
+      plan.entitlementUpdates.push(applySourcePackageSnapshot(entitlement, targetPackage, row, now, 'entitlement'));
+    }
+  }
+  return plan;
 }
 
 function maybeWriteMappingReport(argv, data) {
@@ -800,6 +1001,7 @@ async function assertProductionTarget() {
 async function run(argv = process.argv.slice(2)) {
   const write = argv.includes('--write');
   const offlineSeed = argv.includes('--offline-seed');
+  const sourceCsvPlan = argv.includes('--source-csv-plan');
   const envArg = argv.find((item) => item.startsWith('--env-file='));
   loadEnvFile(envArg ? envArg.split('=').slice(1).join('=') : '');
 
@@ -817,17 +1019,30 @@ async function run(argv = process.argv.slice(2)) {
     };
   }
 
-  const plan = buildPackageOwnershipPlan(data);
-  printPlan(plan);
+  const plan = sourceCsvPlan ? buildSourceCsvOwnershipPlan(data) : buildPackageOwnershipPlan(data);
+  if (sourceCsvPlan) {
+    console.log(`修正课包主表：${plan.packageUpdates.length}`);
+    console.log(`创建课包：${plan.creates.length}`);
+    console.log(`修正订单：${plan.purchaseUpdates.length}`);
+    console.log(`修正权益：${plan.entitlementUpdates.length}`);
+    if (plan.skips.length) console.log(`跳过：${plan.skips.join('；')}`);
+    if (plan.blockers.length) {
+      console.log('阻塞：');
+      plan.blockers.forEach((item) => console.log(`! ${item}`));
+    }
+  } else {
+    printPlan(plan);
+  }
   maybeWriteMappingReport(argv, data);
   if (plan.blockers.length) throw new Error('存在阻塞项，未写入');
   if (!write) return plan;
   if (offlineSeed) throw new Error('offline-seed 不允许写入');
 
+  for (const row of plan.packageUpdates || []) await putRow(data.client, TABLES.packages, row);
   for (const row of plan.creates) await putRow(data.client, TABLES.packages, row);
   for (const row of plan.purchaseUpdates) await putRow(data.client, TABLES.purchases, row);
   for (const row of plan.entitlementUpdates) await putRow(data.client, TABLES.entitlements, row);
-  for (const row of plan.packageDeletes) await deleteRow(data.client, TABLES.packages, row.id);
+  for (const row of plan.packageDeletes || []) await deleteRow(data.client, TABLES.packages, row.id);
   console.log('写入完成');
   return plan;
 }
@@ -849,6 +1064,7 @@ module.exports = {
   buildPackageOwnershipPlan,
   buildMappingRows,
   buildMappingRowsFromSourceCsv,
+  buildSourceCsvOwnershipPlan,
   applyPackageSnapshot,
   assertProductionTarget
 };

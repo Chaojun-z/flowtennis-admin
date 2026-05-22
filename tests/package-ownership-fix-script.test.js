@@ -86,4 +86,8 @@ assert.ok(sourceRows.find((row) => row.studentName === '暴晓燕' && row.target
 assert.ok(sourceRows.find((row) => row.studentName === 'Lam、Loon' && row.status === '不录入系统'), '不录入系统名单也应出现在 73 行对照中');
 assert.ok(sourceRows.every((row) => row.timeBand !== '黄金时间' && row.timeBand !== '非黄时间'), '时段应使用前端可识别的标准值');
 
+const sourcePlan = fix.buildSourceCsvOwnershipPlan({ packages, purchases, entitlements, now });
+assert.ok(sourcePlan.packageUpdates.find((row) => row.name === '成人1v1 黄金时间10课时（历史）' && row.status === 'inactive'), '已存在历史课包也应修正为已停售');
+assert.ok(sourcePlan.purchaseUpdates.find((row) => row.id === 'seed-purchase-010' && row.packageName === '成人1v1 黄金时间10课时（历史）'), '来源表计划应能重挂订单课包');
+
 console.log('package ownership fix script tests passed');
