@@ -399,12 +399,14 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .package-lesson-chip.active,.package-lesson-chip:hover{background:#FFF4EC;border-color:#FCE1CE;color:#C06031}
 .modal.modal-court.modal-package-edit .package-basic-row{display:grid;grid-template-columns:1.1fr .9fr 1fr 1fr .9fr;gap:12px;align-items:flex-start}
 .modal.modal-court.modal-package-edit .package-basic-row .tms-form-item{min-width:0}
-.modal.modal-court.modal-package-edit .package-time-section{display:grid;grid-template-columns:160px minmax(0,1fr);gap:14px;align-items:start}
-.modal.modal-court.modal-package-edit .package-time-window-row{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center}
+.modal.modal-court.modal-package-edit .package-time-section{display:grid;grid-template-columns:168px minmax(0,1fr);gap:14px;align-items:start;margin-bottom:18px;padding:14px;border:1px solid #EAE0D6;border-radius:8px;background:#FDF7F2}
+.modal.modal-court.modal-package-edit .package-time-band-item,.modal.modal-court.modal-package-edit .package-time-windows-item{min-width:0}
+.modal.modal-court.modal-package-edit .package-time-window-row{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;align-items:center}
 .modal.modal-court.modal-package-edit .package-time-window-label{font-size:12px;color:#8C7B6E;white-space:nowrap}
 .modal.modal-court.modal-package-edit .package-time-window-fields{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
 .modal.modal-court.modal-package-edit .package-time-window-fields .tms-dropdown{width:100%}
 .modal.modal-court.modal-package-edit .time-window-stack{gap:12px}
+.modal.modal-court.modal-package-edit .package-date-section{margin-top:0}
 .modal.modal-court.modal-package-edit .package-campus-grid{min-height:48px;align-items:center}
 .modal.modal-court.modal-package-edit .package-coach-picker{max-height:126px}
 .membership-panel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}

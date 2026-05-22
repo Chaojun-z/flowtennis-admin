@@ -70,8 +70,20 @@ assert.strictEqual(plan.purchaseUpdates.find((row) => row.id === 'seed-purchase-
 assert.ok(plan.skips.some((item) => item.includes('Halena、Willian')), '不进系统名单应作废旧订单/权益');
 assert.strictEqual(plan.purchaseUpdates.find((row) => row.id === 'seed-purchase-012')?.packageId, '', '不进系统订单应解除旧课包引用');
 assert.strictEqual(plan.blockers.length, 0, '完整映射后不应再阻塞');
+assert.ok(plan.creates.find((row) => /（历史）/.test(row.name) && row.status === 'inactive'), '历史目标课包应创建为已停售');
+assert.ok(plan.creates.every((row) => !['黄金时间', '非黄时间'].includes(row.timeBand)), '目标课包主表时段应使用前端可识别值');
 
 const touchedTables = ['ft_packages', 'ft_purchases', 'ft_entitlements'];
 assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消课流水表');
+
+const sourceRows = fix.buildMappingRowsFromSourceCsv({
+  packages: [],
+  purchases: require('../api/seeds/mabao-finance-seed.json').purchases
+});
+assert.strictEqual(sourceRows.length, 73, '离线对照应按课时统计源表导出 73 行');
+assert.ok(sourceRows.find((row) => row.studentName === '佑佑' && row.status === '已停售'), '历史课包应标记已停售');
+assert.ok(sourceRows.find((row) => row.studentName === '暴晓燕' && row.targetPackageName === '成人1v2 黄金时间10课时'), '成人 1v2 应映射到真实课包');
+assert.ok(sourceRows.find((row) => row.studentName === 'Lam、Loon' && row.status === '不录入系统'), '不录入系统名单也应出现在 73 行对照中');
+assert.ok(sourceRows.every((row) => row.timeBand !== '黄金时间' && row.timeBand !== '非黄时间'), '时段应使用前端可识别的标准值');
 
 console.log('package ownership fix script tests passed');

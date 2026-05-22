@@ -13,6 +13,8 @@ const TABLES = {
 };
 
 const PROD_DIAG_URL = 'https://www.flowtennis.cn/api/diag';
+const DEFAULT_STATS_CSV = '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - 私教课课时统计 (1).csv';
+const DEFAULT_CONFIRMATION_CSV = '/Users/shaobaolu/Downloads/导入数据确认 - 课包归属人工确认.csv';
 const OLD_PACKAGE_IDS = new Set([
   'seed-package-adult-1v1-10',
   'seed-package-adult-1v1-history',
@@ -37,8 +39,9 @@ const TARGET_SPECS = {
   '青少年1v1 非黄时间10课时': { lessons: 10, price: 4000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '非黄时间', maxStudents: 1 },
   '青少年1v1 黄金时间10课时': { lessons: 10, price: 4800, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '黄金时间', maxStudents: 1 },
   '青少年1v1 黄金时间10课时（历史）': { lessons: 10, price: 6000, courseType: '私教课', productName: '青少年1v1私教课', timeBand: '黄金时间', maxStudents: 1 },
-  '青少年1v2 黄金时间10课时（历史）': { lessons: 10, price: 7000, courseType: '半私教课', productName: '青少年1v2私教课', timeBand: '黄金时间', maxStudents: 2 },
-  '青少年1v2 非黄时间10课时（历史）': { lessons: 10, price: 6000, courseType: '半私教课', productName: '青少年1v2私教课', timeBand: '非黄时间', maxStudents: 2 }
+  '成人1v2 黄金时间10课时': { lessons: 10, price: 7000, courseType: '私教课', productName: '成人1v2私教课', timeBand: '黄金时间', maxStudents: 2 },
+  '青少年1v2 黄金时间10课时（历史）': { lessons: 10, price: 7000, courseType: '私教课', productName: '青少年1v2私教课', timeBand: '黄金时间', maxStudents: 2 },
+  '青少年1v2 非黄时间10课时（历史）': { lessons: 10, price: 6000, courseType: '私教课', productName: '青少年1v2私教课', timeBand: '非黄时间', maxStudents: 2 }
 };
 
 const PURCHASE_TARGETS = {
@@ -98,6 +101,75 @@ const SPLIT_PURCHASES = {
   ]
 };
 
+const MANUAL_CONFIRMATION_ROWS = [
+  { studentName: '佑佑', targetName: '青少年1v1 黄金时间20课时（历史）', source: '用户文本历史补充' },
+  { studentName: 'misha', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '黄总', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '线熙宇（哈库呐玛塔塔）', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '李嵚', targetName: '成人1v1 黄金时间10课时（历史）', match: { idOrContains: 'initial:2026-01-15' }, source: '用户文本历史补充' },
+  { studentName: '李嵚', targetName: '成人1v1 非黄时间50课时（历史）', match: { idOrContains: 'renew:2026-03-07' }, source: '用户文本历史补充' },
+  { studentName: '丫丫', targetName: '青少年1v1 非黄时间10课时', match: { id: 'seed-purchase-007' }, source: '用户文本历史补充' },
+  { studentName: '丫丫', targetName: '青少年1v1 黄金时间10课时', match: { id: 'seed-renewal-007' }, source: '用户文本历史补充' },
+  { studentName: '润瑾', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '朦朦', targetName: '成人1v1 黄金时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '简先生', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '纪宁（vii）', targetName: '成人1v1 黄金时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '永阳', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '马杰', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '小土豆的姐姐', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '朱一龙', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '用户文本历史补充' },
+  { studentName: 'Oliver', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '·J ·', targetName: '成人1v1 黄金时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '袁博', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '余晓溪', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '葡萄', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '赵新阳 田秀楠', targetName: '成人1v1 非黄时间20课时（历史）', source: '用户文本历史补充' },
+  { studentName: '王玺宁', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: 'Caranee', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '张佳良老大', targetName: '青少年1v1 黄金时间10课时', source: '用户文本历史补充' },
+  { studentName: '张佳良老二', targetName: '青少年1v1 黄金时间10课时', source: '用户文本历史补充' },
+  { studentName: '闫瀚珑AceYan', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '高老师（暖暖爸爸）', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '杨子一', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '魏平涛 18600803917', targetName: '成人1v1 黄金时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '袁冶', targetName: '成人1v1 非黄时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: '小林、德德', targetName: '成人1v1 黄金时间10课时（历史）', source: '用户文本历史补充' },
+  { studentName: 'W.Jing', targetName: '成人1v1 非黄时间20课时（历史）', match: { sourceKeyIncludes: '|renew|' }, source: '用户文本历史补充' },
+  { studentName: '暴晓燕', targetName: '成人1v2 黄金时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '宋缇缇', targetName: '成人1v1 朝珺非黄金10课时', source: '课包归属人工确认CSV' },
+  { studentName: '淇淇（ZT）', targetName: '青少年1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: 'W.Jing', targetName: '成人1v1 非黄时间10课时', match: { sourceKeyIncludes: '|initial|' }, source: '课包归属人工确认CSV' },
+  { studentName: 'W.Jing朋友', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '是锤锤呀', targetName: '成人1v1 黄金时间20课时', source: '课包归属人工确认CSV' },
+  { studentName: '张昊', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '李鹏昊', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '宗钰', targetName: '成人1v1 朝珺非黄金10课时', source: '课包归属人工确认CSV' },
+  { studentName: '李先生（李俊泽）', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '马晨', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: 'kRyst4l', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '莱因哈特', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: 'mjh（小胡）', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '吕瑜 黄晴', targetName: '成人1v2 黄金时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '小土豆的姐姐的朋友', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '晓曼-马坡', targetName: '成人1v1 朝珺黄金10课时（历史）', source: '课包归属人工确认CSV' },
+  { studentName: '熊', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '莲儿（连女士）', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '艾女士', targetName: '成人1v1 朝珺非黄金10课时', source: '课包归属人工确认CSV' },
+  { studentName: '芦先生', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: 'LKY（苏女士）', targetName: '成人1v2 黄金时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '刘贺', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '笑笑', targetName: '青少年1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '璇', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '王麦枘', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: 'M.Z', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '🐲L.（瑶瑶）', targetName: '成人1v1 朝珺非黄金10课时', source: '课包归属人工确认CSV' },
+  { studentName: '葛超、Madison He', targetName: '成人1v2 黄金时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '暴躁壹壹', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '暴躁壹壹男朋友', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV' },
+  { studentName: '宋曦', targetName: '成人1v1 朝珺非黄金10课时', source: '课包归属人工确认CSV' },
+  { studentName: '子杰', targetName: '成人1v1 非黄时间10课时', source: '课包归属人工确认CSV', missingInCurrentBackup: true }
+];
+
 function inferTargetName(purchase = {}) {
   const studentName = String(purchase.studentName || '').trim();
   const packageName = String(purchase.packageName || '').trim();
@@ -128,10 +200,118 @@ function normalizeName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+function normalizePackageTimeBand(value) {
+  const text = normalizeName(value);
+  if (text === '黄金时间' || text === '黄金') return '黄金时段';
+  if (text === '非黄时间' || text === '非黄金时间' || text === '非黄金') return '非黄金时段';
+  return text || '全天';
+}
+
+function packageDailyTimeWindows(timeBand) {
+  const band = normalizePackageTimeBand(timeBand);
+  if (band === '黄金时段') return [
+    { label: '工作日', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+    { label: '周六日', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+  ];
+  if (band === '非黄金时段') return [
+    { label: '工作日', startTime: '09:00', endTime: '16:00', daysOfWeek: [1, 2, 3, 4, 5] }
+  ];
+  return [
+    { label: '工作日', startTime: '09:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+    { label: '周六日', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+  ];
+}
+
+function normalizeMatchName(value) {
+  return normalizeName(value)
+    .replace(/[？?]/g, '')
+    .replace(/（小胡）/g, '小胡')
+    .replace(/（李俊泽）/g, '')
+    .replace(/-马坡/g, '')
+    .replace(/\s*\d{11}\s*/g, '')
+    .toLowerCase();
+}
+
+function parseCsvLine(line) {
+  const row = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      row.push(current.replace(/^\uFEFF/, ''));
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  row.push(current.replace(/^\uFEFF/, ''));
+  return row;
+}
+
+function parseCsvFile(filePath) {
+  return fs.readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .filter((line) => line.length)
+    .map(parseCsvLine);
+}
+
+function toNumber(value) {
+  const num = Number(String(value || '').trim().replace(/,/g, ''));
+  return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeSourceDate(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  let match = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+  match = text.match(/^(\d{1,2})月(\d{1,2})日?$/);
+  if (match) return `2026-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+  match = text.match(/^(\d{1,2})月(\d{1,2})$/);
+  if (match) return `2026-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+  return text;
+}
+
 function findUniquePackage(packages, name) {
   const matches = (packages || []).filter((row) => normalizeName(row.name) === normalizeName(name));
   if (matches.length > 1) return { error: `目标课包重名：${name}` };
   return { package: matches[0] || null };
+}
+
+function targetNameForPurchase(purchase = {}) {
+  const explicit = PURCHASE_TARGETS[purchase.id] || '';
+  if (explicit) return explicit;
+  const studentName = normalizeName(purchase.studentName);
+  const matched = MANUAL_CONFIRMATION_ROWS.find((row) => {
+    if (normalizeName(row.studentName) !== studentName) return false;
+    if (!row.match) return true;
+    return Object.entries(row.match).every(([key, value]) => {
+      if (key === 'sourceKeyIncludes') return String(purchase.sourceKey || '').includes(String(value));
+      if (key === 'idOrContains') return String(purchase.id || '') === String(value) || String(purchase.id || '').includes(String(value));
+      return String(purchase[key] || '') === String(value);
+    });
+  });
+  return matched?.targetName || inferTargetName(purchase);
+}
+
+function csvEscape(value) {
+  const text = String(value ?? '');
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function writeCsv(filePath, headers, rows) {
+  const lines = [headers.map(csvEscape).join(',')];
+  rows.forEach((row) => lines.push(headers.map((key) => csvEscape(row[key])).join(',')));
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${lines.join('\n')}\n`);
 }
 
 function buildPackage(name, now) {
@@ -151,14 +331,14 @@ function buildPackage(name, now) {
     saleEndDate: '',
     usageStartDate: '',
     usageEndDate: '',
-    dailyTimeWindows: [],
-    timeBand: spec.timeBand || '',
+    dailyTimeWindows: packageDailyTimeWindows(spec.timeBand),
+    timeBand: normalizePackageTimeBand(spec.timeBand),
     ownerCoach: spec.ownerCoach || '',
     coachIds: spec.coachNames || [],
     coachNames: spec.coachNames || [],
     campusIds: ['mabao'],
     maxStudents: spec.maxStudents || 1,
-    status: 'active',
+    status: /（历史）/.test(name) ? 'inactive' : 'active',
     sourceType: 'package_ownership_fix_20260521',
     createdAt: now,
     updatedAt: now
@@ -173,8 +353,8 @@ function applyPackageSnapshot(row, targetPackage, sourcePackage, now, kind) {
     productId: targetPackage.productId || row.productId || '',
     productName: targetPackage.productName || row.productName || '',
     courseType: targetPackage.courseType || row.courseType || '',
-    timeBand: kind === 'entitlement' ? (targetPackage.timeBand || row.timeBand || '') : row.timeBand,
-    packageTimeBand: kind === 'purchase' ? (targetPackage.timeBand || row.packageTimeBand || '') : row.packageTimeBand,
+    timeBand: kind === 'entitlement' ? (normalizePackageTimeBand(targetPackage.timeBand) || row.timeBand || '') : row.timeBand,
+    packageTimeBand: kind === 'purchase' ? (normalizePackageTimeBand(targetPackage.timeBand) || row.packageTimeBand || '') : row.packageTimeBand,
     dailyTimeWindows: targetPackage.dailyTimeWindows || [],
     coachIds: targetPackage.coachIds || row.coachIds || [],
     coachNames: targetPackage.coachNames || row.coachNames || [],
@@ -288,7 +468,11 @@ function buildPackageOwnershipPlan({ packages = [], purchases = [], entitlements
   const plan = { creates: [], purchaseUpdates: [], entitlementUpdates: [], packageDeletes: [], blockers: [], skips: [] };
   const packageById = new Map((packages || []).map((row) => [String(row.id || ''), row]));
   const targetByName = new Map();
-  const requiredTargetNames = new Set([...Object.values(PURCHASE_TARGETS), ...Object.values(SPLIT_PURCHASES).flat().map((rule) => rule.targetName)]);
+  const requiredTargetNames = new Set([
+    ...Object.values(PURCHASE_TARGETS),
+    ...MANUAL_CONFIRMATION_ROWS.map((row) => row.targetName),
+    ...Object.values(SPLIT_PURCHASES).flat().map((rule) => rule.targetName)
+  ]);
 
   for (const name of requiredTargetNames) {
     const found = findUniquePackage(packages, name);
@@ -321,7 +505,7 @@ function buildPackageOwnershipPlan({ packages = [], purchases = [], entitlements
       plan.entitlementUpdates.push(...split.entitlementUpdates);
       continue;
     }
-    const targetName = PURCHASE_TARGETS[purchase.id] || inferTargetName(purchase);
+    const targetName = targetNameForPurchase(purchase);
     if (!targetName) {
       plan.blockers.push(`未明确归属：${purchase.id} ${purchase.studentName || ''} ${purchase.packageName || ''}`.trim());
       continue;
@@ -370,6 +554,228 @@ function printPlan(plan) {
   }
 }
 
+function parseStatsCsvRows(filePath = DEFAULT_STATS_CSV) {
+  if (!fs.existsSync(filePath)) return [];
+  return parseCsvFile(filePath).slice(2).map((row, index) => ({
+    sourceRowNo: index + 3,
+    studentName: normalizeName(row[1]),
+    audience: normalizeName(row[2]),
+    classSize: normalizeName(row[3]),
+    purchaseType: normalizeName(row[4]),
+    lessons: toNumber(row[5]),
+    paidAmount: toNumber(row[6]),
+    purchaseDate: normalizeSourceDate(row[7]),
+    ownerCoach: normalizeName(row[8]),
+    notes: normalizeName(row[22])
+  })).filter((row) => row.studentName);
+}
+
+function parseConfirmationCsvRows(filePath = DEFAULT_CONFIRMATION_CSV) {
+  if (!fs.existsSync(filePath)) return [];
+  return parseCsvFile(filePath).slice(1).map((row) => ({
+    studentName: normalizeName(row[0]),
+    lessons: toNumber(row[3]),
+    paidAmount: toNumber(row[5]),
+    ownerCoach: normalizeName(row[7]),
+    targetName: normalizeTargetPackageName(row[8])
+  })).filter((row) => row.studentName && row.targetName);
+}
+
+function normalizeTargetPackageName(value) {
+  const text = normalizeName(value);
+  if (!text) return '';
+  if (text === '成人1v1 非黄时间10课时（朝珺）') return '成人1v1 朝珺非黄金10课时';
+  if (text === '成人1v1 黄金时间10课时（朝珺）') return '成人1v1 朝珺黄金10课时（历史）';
+  return text;
+}
+
+function statsRowKey(row) {
+  const purchaseDate = normalizeSourceDate(row.purchaseDate || row[7]);
+  return [
+    normalizeMatchName(row.studentName),
+    row.purchaseType || row[4] || '',
+    Number(row.lessons) || 0,
+    Number(row.paidAmount) || 0,
+    purchaseDate
+  ].join('|');
+}
+
+function purchaseKey(row) {
+  return [
+    normalizeMatchName(row.studentName),
+    /renewal|renew/.test(String(row.id || '')) ? '续报' : '首次',
+    Number(row.packageLessons) || 0,
+    Number(row.amountPaid ?? row.finalAmount) || 0,
+    normalizeSourceDate(row.purchaseDate)
+  ].join('|');
+}
+
+function buildPurchaseIndexes(purchases = []) {
+  const exact = new Map();
+  const byName = new Map();
+  for (const purchase of purchases) {
+    exact.set(purchaseKey(purchase), purchase);
+    const name = normalizeMatchName(purchase.studentName);
+    if (!byName.has(name)) byName.set(name, []);
+    byName.get(name).push(purchase);
+  }
+  return { exact, byName };
+}
+
+function findPurchaseForStatsRow(row, indexes) {
+  const exact = indexes.exact.get(statsRowKey(row));
+  if (exact) return exact;
+  const candidates = indexes.byName.get(normalizeMatchName(row.studentName)) || [];
+  return candidates.find((item) => (
+    Number(item.packageLessons) === Number(row.lessons)
+    && Number(item.amountPaid ?? item.finalAmount) === Number(row.paidAmount)
+  )) || candidates.find((item) => Number(item.packageLessons) === Number(row.lessons)) || null;
+}
+
+function targetNameFromStatsRow(row, confirmationByKey) {
+  const confirmed = confirmationByKey.get(statsRowKey(row));
+  if (confirmed) return confirmed.targetName;
+  const name = normalizeName(row.studentName);
+  if (/Halena|Willian|Lam|Loon/i.test(name)) return '';
+  if (name === '佑佑') return '青少年1v1 黄金时间20课时（历史）';
+  if (['misha', '黄总', '永阳', '马杰', '朱一龙'].includes(name)) return '成人1v1 朝珺黄金10课时（历史）';
+  if (['宋缇缇', '宗钰', '艾女士', '🐲L.（瑶瑶）', '宋曦'].includes(name)) return '成人1v1 朝珺非黄金10课时';
+  if (name === '晓曼') return '成人1v1 朝珺黄金10课时（历史）';
+  if (name === '赵雨桐、赵雨晴') return '青少年1v2 黄金时间10课时（历史） + 青少年1v2 非黄时间10课时（历史）';
+  if (row.audience === '青少年' && row.classSize === '1v2') return row.purchaseType === '续报' ? '青少年1v2 黄金时间10课时' : '青少年1v2 黄金时间10课时（历史）';
+  if (row.audience === '成人' && row.classSize === '1v2') return '成人1v2 黄金时间10课时';
+  if (name === '李嵚' && row.purchaseType === '续报') return '成人1v1 非黄时间50课时（历史）';
+  if (name === '李嵚') return '成人1v1 黄金时间10课时（历史）';
+  if (name === '丫丫' && row.purchaseType === '首次') return '青少年1v1 非黄时间10课时 + 青少年1v1 黄金时间10课时';
+  if (name === '丫丫' && /非黄/.test(row.notes)) return '青少年1v1 非黄时间10课时';
+  if (name === '丫丫' && /黄金/.test(row.notes)) return '青少年1v1 黄金时间10课时';
+  if (row.audience === '青少年') return row.lessons >= 20 ? '青少年1v1 黄金时间20课时（历史）' : '青少年1v1 黄金时间10课时';
+  if (row.lessons === 20) return row.purchaseType === '续报' ? '成人1v1 非黄时间20课时（历史）' : '成人1v1 黄金时间20课时';
+  if (row.lessons === 50) return '成人1v1 非黄时间50课时（历史）';
+  if (['朦朦', '纪宁（vii）', '·J ·', '魏平涛', '小林、德德'].includes(name)) return '成人1v1 黄金时间10课时（历史）';
+  return row.purchaseType === '首次' && row.sourceRowNo < 36 ? '成人1v1 非黄时间10课时（历史）' : '成人1v1 非黄时间10课时';
+}
+
+function packageTargetsForReport(targetName) {
+  return String(targetName || '').split(' + ').map((name) => normalizeName(name)).filter(Boolean);
+}
+
+function packageField(targetName, getter) {
+  return packageTargetsForReport(targetName).map((name) => getter(name, TARGET_SPECS[name] || {})).filter(Boolean).join(' + ');
+}
+
+function buildMappingRowsFromSourceCsv({ packages = [], purchases = [] } = {}, options = {}) {
+  const statsRows = parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
+  const confirmationRows = parseConfirmationCsvRows(options.confirmationCsv || DEFAULT_CONFIRMATION_CSV);
+  const confirmationByKey = new Map(confirmationRows.map((row) => [statsRowKey(row), row]));
+  const packageByName = new Map((packages || []).map((row) => [normalizeName(row.name), row]));
+  const purchaseIndexes = buildPurchaseIndexes(purchases);
+  return statsRows.map((row) => {
+    const targetName = targetNameFromStatsRow(row, confirmationByKey);
+    const purchase = findPurchaseForStatsRow(row, purchaseIndexes);
+    const targets = packageTargetsForReport(targetName);
+    const notInSystem = /Halena|Willian|Lam|Loon/i.test(row.studentName);
+    const pkgIds = targets.map((name) => (packageByName.get(normalizeName(name)) || {}).id || packageIdForName(name));
+    return {
+      sourceRowNo: row.sourceRowNo,
+      studentName: row.studentName,
+      purchaseId: purchase?.id || '',
+      targetPackageName: targetName || '不录入系统',
+      targetPackageId: pkgIds.join(' + '),
+      currentPackageName: purchase?.packageName || '',
+      currentPackageId: purchase?.packageId || '',
+      lessons: row.lessons,
+      paidAmount: row.paidAmount,
+      purchaseDate: row.purchaseDate,
+      audience: row.audience,
+      classSize: row.classSize,
+      timeBand: packageField(targetName, (name, spec) => normalizePackageTimeBand(spec.timeBand || (/黄金/.test(name) ? '黄金时间' : /非黄/.test(name) ? '非黄时间' : ''))),
+      ownerCoach: packageField(targetName, (name, spec) => spec.ownerCoach) || row.ownerCoach,
+      campus: packageField(targetName, (_name, spec) => (spec.campusIds || ['mabao']).join('|')) || 'mabao',
+      maxStudents: packageField(targetName, (_name, spec) => spec.maxStudents),
+      status: notInSystem ? '不录入系统' : (targets.some((name) => /（历史）/.test(name)) ? '已停售' : '售卖中'),
+      source: `${path.basename(options.statsCsv || DEFAULT_STATS_CSV)}#${row.sourceRowNo}${purchase ? '' : '；当前线上未找到订单'}`
+    };
+  });
+}
+
+function buildMappingRows({ packages = [], purchases = [] } = {}) {
+  const packageByName = new Map((packages || []).map((row) => [normalizeName(row.name), row]));
+  const rows = [];
+  const seenPurchaseIds = new Set();
+  const addRow = (purchase, targetName, source) => {
+    if (!targetName) return;
+      const spec = TARGET_SPECS[targetName] || {};
+      const pkg = packageByName.get(normalizeName(targetName)) || {};
+      rows.push({
+        studentName: purchase?.studentName || '',
+        purchaseId: purchase?.id || '',
+        targetPackageName: targetName,
+        targetPackageId: pkg.id || packageIdForName(targetName),
+        currentPackageName: purchase?.packageName || '',
+        currentPackageId: purchase?.packageId || '',
+        lessons: spec.lessons || purchase?.packageLessons || '',
+        paidAmount: purchase?.amountPaid ?? purchase?.finalAmount ?? '',
+        timeBand: normalizePackageTimeBand(spec.timeBand),
+        ownerCoach: spec.ownerCoach || purchase?.ownerCoach || '',
+        campus: (spec.campusIds || pkg.campusIds || ['mabao']).join('|'),
+        maxStudents: spec.maxStudents || '',
+        status: /（历史）/.test(targetName) ? '已停售' : '售卖中',
+        source
+      });
+      if (purchase?.id) seenPurchaseIds.add(String(purchase.id));
+  };
+  for (const purchase of purchases || []) {
+    if (NOT_IN_SYSTEM.has(String(purchase.id || ''))) continue;
+    if (SPLIT_PURCHASES[purchase.id]) SPLIT_PURCHASES[purchase.id].forEach((rule) => addRow(purchase, rule.targetName, '历史订单拆分'));
+  }
+  for (const row of MANUAL_CONFIRMATION_ROWS) {
+    const purchase = (purchases || []).find((item) => normalizeName(item.studentName) === normalizeName(row.studentName)
+      && (!row.match || Object.entries(row.match).every(([key, value]) => {
+        if (key === 'sourceKeyIncludes') return String(item.sourceKey || '').includes(String(value));
+        if (key === 'idOrContains') return String(item.id || '') === String(value) || String(item.id || '').includes(String(value));
+        return String(item[key] || '') === String(value);
+      })));
+    if (purchase && seenPurchaseIds.has(String(purchase.id || ''))) continue;
+    addRow(purchase || { studentName: row.studentName }, row.targetName, row.missingInCurrentBackup ? `${row.source}；当前备份未找到订单` : row.source);
+  }
+  return rows.sort((a, b) => String(a.studentName).localeCompare(String(b.studentName), 'zh-Hans-CN')
+    || String(a.targetPackageName).localeCompare(String(b.targetPackageName), 'zh-Hans-CN'));
+}
+
+function maybeWriteMappingReport(argv, data) {
+  const outputArg = argv.find((item) => item.startsWith('--mapping-csv='));
+  if (!outputArg) return;
+  const outputPath = outputArg.split('=').slice(1).join('=');
+  const statsCsvArg = argv.find((item) => item.startsWith('--stats-csv='));
+  const confirmationCsvArg = argv.find((item) => item.startsWith('--confirmation-csv='));
+  const rows = buildMappingRowsFromSourceCsv(data, {
+    statsCsv: statsCsvArg ? statsCsvArg.split('=').slice(1).join('=') : DEFAULT_STATS_CSV,
+    confirmationCsv: confirmationCsvArg ? confirmationCsvArg.split('=').slice(1).join('=') : DEFAULT_CONFIRMATION_CSV
+  });
+  writeCsv(path.resolve(outputPath), [
+    'sourceRowNo',
+    'studentName',
+    'purchaseId',
+    'targetPackageName',
+    'targetPackageId',
+    'currentPackageName',
+    'currentPackageId',
+    'lessons',
+    'paidAmount',
+    'purchaseDate',
+    'audience',
+    'classSize',
+    'timeBand',
+    'ownerCoach',
+    'campus',
+    'maxStudents',
+    'status',
+    'source'
+  ], rows);
+  console.log(`映射表：${rows.length} 条 -> ${path.resolve(outputPath)}`);
+}
+
 function loadEnvFile(filePath) {
   if (!filePath) return;
   const resolved = path.resolve(filePath);
@@ -413,6 +819,7 @@ async function run(argv = process.argv.slice(2)) {
 
   const plan = buildPackageOwnershipPlan(data);
   printPlan(plan);
+  maybeWriteMappingReport(argv, data);
   if (plan.blockers.length) throw new Error('存在阻塞项，未写入');
   if (!write) return plan;
   if (offlineSeed) throw new Error('offline-seed 不允许写入');
@@ -438,7 +845,10 @@ module.exports = {
   PURCHASE_TARGETS,
   SPLIT_PURCHASES,
   NOT_IN_SYSTEM,
+  MANUAL_CONFIRMATION_ROWS,
   buildPackageOwnershipPlan,
+  buildMappingRows,
+  buildMappingRowsFromSourceCsv,
   applyPackageSnapshot,
   assertProductionTarget
 };

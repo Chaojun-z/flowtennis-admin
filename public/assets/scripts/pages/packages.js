@@ -253,12 +253,12 @@ function openPackageModal(id,presetProductId=''){
       </div>
     <div class="tms-section-header">上课时间</div>
       <div class="package-time-section">
-        <div class="tms-form-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
-        <div class="tms-form-item"><label class="tms-form-label">可用时段</label>
+        <div class="tms-form-item package-time-band-item"><label class="tms-form-label">时段类型</label>${renderCourtDropdownHtml('pkg_timeBand','时段类型',timeBandOptions,rv(p,'timeBand','全天'),true,'applyPackageTimeBandPreset')}</div>
+        <div class="tms-form-item package-time-windows-item"><label class="tms-form-label">可用时段</label>
           <div class="time-window-stack" id="pkg_timeWindowsWrap"></div>
         </div>
       </div>
-      <div class="tms-form-row">
+      <div class="tms-form-row package-date-section">
         <div class="tms-form-item">
           <label class="tms-form-label">活动时间</label>
           <div class="range-pair">
