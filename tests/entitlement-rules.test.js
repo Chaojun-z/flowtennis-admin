@@ -376,6 +376,22 @@ assert.doesNotThrow(
 );
 
 assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule(entitlement, {
+    id: 'sch-campus-name',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coachId: 'coach-1',
+    coach: '朝珺',
+    campus: '顺义马坡',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  'campus display name should match the same stored campus code'
+);
+
+assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule({ ...entitlement, coachIds: [], coachNames: [], ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
     id: 'sch-owner-allowed',
     studentIds: ['stu-1'],
@@ -422,7 +438,7 @@ assert.throws(
   'sold package allowed coaches should restrict scheduling'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule(entitlement, {
     id: 'sch-2',
     studentIds: ['stu-1'],
@@ -435,11 +451,10 @@ assert.throws(
     lessonCount: 1,
     status: '已排课'
   }),
-  /不在课包可用时间段/,
-  'non-prime package should not be usable during prime time'
+  'non-prime package should still be schedulable during prime time with field fee flag'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule(entitlement, {
     id: 'sch-3',
     studentIds: ['stu-1'],
@@ -452,12 +467,11 @@ assert.throws(
     lessonCount: 1,
     status: '已排课'
   }),
-  /不在课包可用时间段/,
-  'schedule must fit fully inside one available time window'
+  'non-prime package should allow schedules outside the window with field fee flag'
 );
 
 assert.doesNotThrow(
-  () => rules.validateEntitlementForSchedule({ ...entitlement, dailyTimeWindows: [
+  () => rules.validateEntitlementForSchedule({ ...entitlement, timeBand: '黄金时间', packageName: '黄金课包', dailyTimeWindows: [
     { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
     { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
   ] }, {
@@ -476,7 +490,7 @@ assert.doesNotThrow(
 );
 
 assert.throws(
-  () => rules.validateEntitlementForSchedule({ ...entitlement, dailyTimeWindows: [
+  () => rules.validateEntitlementForSchedule({ ...entitlement, timeBand: '黄金时间', packageName: '黄金课包', dailyTimeWindows: [
     { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
     { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
   ] }, {
@@ -547,6 +561,22 @@ assert.deepStrictEqual(
   'ent-soon',
   'system should recommend the soonest expiring matching package'
 );
+
+const primeTimeRecommendation = rules.recommendEntitlements([
+  { ...entitlement, id: 'ent-non-prime', packageName: '私教非黄金课包', validUntil: '2026-07-01', remainingLessons: 3 }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'coach-1',
+  coach: '朝珺',
+  campus: '顺义马坡',
+  startTime: '2026-05-04 18:00',
+  endTime: '2026-05-04 19:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(primeTimeRecommendation.recommended.entitlementId, 'ent-non-prime');
+assert.strictEqual(primeTimeRecommendation.recommended.requiresFieldFee, true, 'prime-time use of non-prime package should be marked for field fee');
 
 assert.strictEqual(
   rules.applyEntitlementLessonDelta({ ...entitlement, usedLessons: 1, remainingLessons: 4 }, -1).remainingLessons,

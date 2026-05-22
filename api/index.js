@@ -79,6 +79,10 @@ const MATCH_PREPAY_WINDOW_HOURS = 2;
 const LEGACY_STATIC_COACH_REFS=[{id:'legacy-coach-tianhao',name:'天昊'}];
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
+const CAMPUS_DISPLAY_NAMES={mabao:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
+const CAMPUS_ALIASES={'顺义马坡':'mabao','马坡':'mabao','mabao':'mabao','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
+function normalizeCampusValue(value){const raw=String(value||'').trim();return CAMPUS_ALIASES[raw]||raw;}
+function displayCampusName(value){const key=normalizeCampusValue(value);return CAMPUS_DISPLAY_NAMES[key]||String(value||'').trim();}
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
@@ -1327,6 +1331,15 @@ function isScheduleInsideDailyTimeWindows(schedule,windows){
     return Number.isFinite(ws)&&Number.isFinite(we)&&start>=ws&&end<=we;
   });
 }
+function isNonPrimeEntitlement(entitlement){
+  const band=String(entitlement?.timeBand||'');
+  if(/非黄|非黄金|非黄金时段|非黄时间/.test(band))return true;
+  if(/黄金时间|黄金时段/.test(band))return false;
+  return /非黄|非黄金|非黄金时段|非黄时间/.test(String(entitlement?.packageName||''));
+}
+function scheduleNeedsFieldFeeForEntitlement(entitlement,schedule){
+  return isBillableSchedule(schedule)&&isNonPrimeEntitlement(entitlement)&&!isScheduleInsideDailyTimeWindows(schedule,entitlement?.dailyTimeWindows);
+}
 function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
@@ -1345,12 +1358,12 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const saleCoachNames=[entitlement.ownerCoach,...parseArr(entitlement.allowedCoaches)].filter(Boolean);
   if(saleCoachNames.length&&schedule.coach&&!saleCoachNames.some(n=>sameCoachName(n,schedule.coach,coachRefs)))throw new Error('课包可上课教练不匹配');
   const campusIds=parseArr(entitlement.campusIds);
-  if(campusIds.length&&schedule.campus&&!campusIds.includes(schedule.campus))throw new Error('课包可用校区不匹配');
+  if(campusIds.length&&schedule.campus&&!campusIds.map(normalizeCampusValue).includes(normalizeCampusValue(schedule.campus)))throw new Error('课包可用校区不匹配');
   const usedDate=dateKey(schedule.startTime);
   const from=entitlement.usageStartDate||entitlement.validFrom;
   const until=entitlement.usageEndDate||entitlement.validUntil;
   if((from&&usedDate<from)||(until&&usedDate>until))throw new Error('不在课包可用日期范围');
-  if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows))throw new Error('不在课包可用时间段');
+  if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
 }
@@ -1402,6 +1415,7 @@ function recommendEntitlements(entitlements,schedule){
     const warnings=[];
     try{validateEntitlementForSchedule(ent,schedule);}
     catch(e){warnings.push(e.message);}
+    const requiresFieldFee=scheduleNeedsFieldFeeForEntitlement(ent,schedule);
     return {
       studentId:ent.studentId||'',
       entitlementId:ent.id,
@@ -1411,6 +1425,8 @@ function recommendEntitlements(entitlements,schedule){
       totalLessons:parseLessonValue(ent.totalLessons),
       validUntil:ent.validUntil||'',
       timeBand:ent.timeBand||'',
+      requiresFieldFee,
+      fieldFeeReason:requiresFieldFee?'非黄金课包排入黄金/周末时段，需补场地费':'',
       selectable:warnings.length===0,
       warnings,
       _source:ent
@@ -2053,7 +2069,7 @@ function truncateWechatValue(value,max=20){
   return text.length>max?text.slice(0,max):text;
 }
 function scheduleNotifyLocation(schedule){
-  return [schedule.campus,schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')||'待确认';
+  return [displayCampusName(schedule.campus),schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')||'待确认';
 }
 function findWechatScheduleRecipient(schedule,users=[]){
   const coachId=String(schedule?.coachId||'').trim();
@@ -2404,7 +2420,7 @@ function buildCoachDailyDigestMessage({coachName='',digestDate='',schedules=[]}=
   return {
     title:`${coachName||'教练'}教练次日课表`,
     summary:`${digestDate} 共 ${rows.length} 节课`,
-    lines:rows.map(schedule=>`${String(schedule.startTime||'').slice(11,16)}-${String(schedule.endTime||'').slice(11,16)} ${schedule.courseType||'课程'}｜${schedule.studentName||'学员'}｜${[schedule.campus,schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')}`)
+    lines:rows.map(schedule=>`${String(schedule.startTime||'').slice(11,16)}-${String(schedule.endTime||'').slice(11,16)} ${schedule.courseType||'课程'}｜${schedule.studentName||'学员'}｜${[displayCampusName(schedule.campus),schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')}`)
   };
 }
 async function fetchOfficialAccountAccessToken(){
@@ -8098,6 +8114,10 @@ module.exports._test={
   writePurchaseAndEntitlementAtomic,
   validateEntitlementForSchedule,
   recommendEntitlements,
+  normalizeCampusValue,
+  displayCampusName,
+  scheduleNotifyLocation,
+  buildCoachDailyDigestMessage,
   scheduleEntitlementDeltas,
   resolveScheduleEntitlementDeltas,
   applyEntitlementLessonDelta,

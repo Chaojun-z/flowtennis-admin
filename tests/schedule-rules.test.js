@@ -444,7 +444,7 @@ assert.deepStrictEqual(
       thing1: { value: '私教课' },
       time2: { value: '2026-04-20 16:00' },
       thing3: { value: '小鹿' },
-      thing4: { value: 'mabao 1号场' }
+      thing4: { value: '顺义马坡 1号场' }
     }
   },
   'schedule subscribe message should build the mini program template payload'
@@ -612,8 +612,8 @@ assert.deepStrictEqual(
     title: '朝珺教练次日课表',
     summary: '2026-05-16 共 2 节课',
     lines: [
-      '09:00-10:00 私教课｜小鹿｜mabao 1号场',
-      '14:00-15:00 双人课｜Misha｜mabao 2号场'
+      '09:00-10:00 私教课｜小鹿｜顺义马坡 1号场',
+      '14:00-15:00 双人课｜Misha｜顺义马坡 2号场'
     ]
   },
   'coach daily digest message should build a concise next-day schedule summary'
@@ -924,6 +924,22 @@ assert.deepStrictEqual(
     fieldFeeAmount: 220
   }],
   'coach late settlement should include monthly fee details'
+);
+
+assert.strictEqual(
+  rules.scheduleNotifyLocation({ campus: 'mabao', venue: '1号场' }),
+  '顺义马坡 1号场',
+  'schedule notification should display campus name instead of internal code'
+);
+
+assert.strictEqual(
+  rules.buildCoachDailyDigestMessage({
+    coachName: 'Siren',
+    digestDate: '2026-05-16',
+    schedules: [{ startTime: '2026-05-16 14:00', endTime: '2026-05-16 15:00', courseType: '私教课', studentName: 'LKY', campus: 'mabao', venue: '1号场' }]
+  }).lines[0],
+  '14:00-15:00 私教课｜LKY｜顺义马坡 1号场',
+  'daily digest should display campus name instead of internal code'
 );
 
 assert.throws(
