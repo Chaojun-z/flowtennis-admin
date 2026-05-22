@@ -137,7 +137,7 @@ assert.match(html, /id="purchaseSaveBtn"[\s\S]*onclick="savePurchase\(\)"/, 'pur
 assert.match(html, /id="purchaseEditSaveBtn"[\s\S]*onclick="savePurchaseEdit/, 'purchase edit save button should have a stable id used by the edit save handler');
 assert.doesNotMatch(fnBody('savePurchase'), /document\.querySelector\('\.btn-save'\)/, 'purchase create save should not depend on the legacy btn-save class');
 assert.doesNotMatch(fnBody('savePurchaseEdit'), /document\.querySelector\('\.btn-save'\)/, 'purchase edit save should not depend on the legacy btn-save class');
-assert.match(html, /function getFilteredPurchases[\s\S]*String\(a\.purchaseDate\|\|a\.createdAt\|\|''\)\.localeCompare\(String\(b\.purchaseDate\|\|b\.createdAt\|\|''\)\)/, 'purchase list should sort older purchase records first');
+assert.match(html, /function getFilteredPurchases[\s\S]*String\(b\.purchaseDate\|\|b\.createdAt\|\|''\)\.localeCompare\(String\(a\.purchaseDate\|\|a\.createdAt\|\|''\)\)/, 'purchase list should sort newer payment dates first');
 assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
@@ -145,6 +145,9 @@ assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*S
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
 assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package filter should include the same purchases counted on package cards');
+assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter should keep a page-level value before the dropdown exists');
+assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
+assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');

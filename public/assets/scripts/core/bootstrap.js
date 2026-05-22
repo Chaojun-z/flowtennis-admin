@@ -2,6 +2,7 @@ let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.g
 let batchDeleteCourtIds=[];
 let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,financeLedgerPage=1;
 let courtSortKey='',courtSortDir='desc',stuSortKey='',stuSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,financeLedgerPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
+let purPackageFilterValue='';
 let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger';
 
 function goPage(pg,el,skipRender=false){

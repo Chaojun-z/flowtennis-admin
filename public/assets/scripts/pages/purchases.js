@@ -1,6 +1,13 @@
-function onPurchaseFilterChange(){purPage=1;renderPurchases();}
+function purchaseSelectedPackageFilter(){
+  return purPackageFilterValue||document.getElementById('purPackageFilter')?.value||'';
+}
+function onPurchaseFilterChange(){
+  purPackageFilterValue=document.getElementById('purPackageFilter')?.value||'';
+  purPage=1;
+  renderPurchases();
+}
 function refreshPurchaseFilters(){
-  const packageValue=document.getElementById('purPackageFilter')?.value||'';
+  const packageValue=purchaseSelectedPackageFilter();
   const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
   const packageOptions=withStandardFilterCounts([{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))],purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
   [['purPackageFilterHost','purPackageFilter','全部课包',packageOptions,packageValue]].forEach(([hostId,id,label,options,value])=>{
@@ -16,7 +23,7 @@ function isMeaningfulPurchaseRecord(p){
 }
 function getFilteredPurchases(){
   const q=(document.getElementById('purSearch')?.value||'').toLowerCase();
-  const packageId=document.getElementById('purPackageFilter')?.value||'';
+  const packageId=purchaseSelectedPackageFilter();
   const dateFrom=document.getElementById('purDateFrom')?.value||'';
   const dateTo=document.getElementById('purDateTo')?.value||'';
   return purchases.filter(p=>{
@@ -26,7 +33,7 @@ function getFilteredPurchases(){
     if(dateFrom&&String(p.purchaseDate||'')<dateFrom)return false;
     if(dateTo&&String(p.purchaseDate||'')>dateTo)return false;
     return true;
-  }).sort((a,b)=>String(a.purchaseDate||a.createdAt||'').localeCompare(String(b.purchaseDate||b.createdAt||'')));
+  }).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
 }
 function purchasePageNumbers(page,pages){
   if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
@@ -77,7 +84,7 @@ function purchaseEntitlementMiniBar(ent){
   return `<div class="tms-mini-bar student-package-mini" title="${esc(title)}"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
 }
 function purchaseHasActiveSearchOrFilter(){
-  return !!((document.getElementById('purSearch')?.value||'').trim()||document.getElementById('purPackageFilter')?.value||document.getElementById('purDateFrom')?.value||document.getElementById('purDateTo')?.value);
+  return !!((document.getElementById('purSearch')?.value||'').trim()||purchaseSelectedPackageFilter()||document.getElementById('purDateFrom')?.value||document.getElementById('purDateTo')?.value);
 }
 function purchaseEmptyStateHtml(){
   const filtered=purchaseHasActiveSearchOrFilter();
@@ -325,11 +332,23 @@ async function savePurchase(){
   }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
 function focusPurchaseByPackage(packageId){
+  purPackageFilterValue=String(packageId||'');
+  clearPurchasePageFiltersForPackageFocus();
   goPage('purchases');
   const pkg=packages.find(p=>String(p.id||'')===String(packageId||''));
   setCourtDropdownValue('purPackageFilter',packageId,standardPackageLabel(pkg||{},true)||pkg?.name||packageId);
   purPage=1;
   renderPurchases();
+}
+function clearPurchasePageFiltersForPackageFocus(){
+  const search=document.getElementById('purSearch');
+  const dateFrom=document.getElementById('purDateFrom');
+  const dateTo=document.getElementById('purDateTo');
+  if(search)search.value='';
+  if(dateFrom)dateFrom.value='';
+  if(dateTo)dateTo.value='';
+  syncDateButton('purDateFrom','purDateFromBtn','开始日期');
+  syncDateButton('purDateTo','purDateToBtn','结束日期');
 }
 function exportPurchaseCSV(){
   const list=getFilteredPurchases();

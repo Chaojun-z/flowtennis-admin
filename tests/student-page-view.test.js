@@ -149,7 +149,8 @@ assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase
 assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
 assert.match(source, /支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase record table should follow the standardized column order');
 assert.match(source, /id="purPagerInfo"[\s\S]*id="purPageSize"[\s\S]*id="purPagerBtns"/, 'purchase record page should expose the standard pager');
-assert.match(source, /function onPurchaseFilterChange\(\)\{purPage=1;renderPurchases\(\);\}/, 'purchase filters should reset pagination before rendering');
+assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=1[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination before rendering');
+assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');
 assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
 assert.match(source, /pager\.style\.display=total>purPageSize\?'flex':'none'/, 'purchase pager should hide when the filtered result fits on one page');
 assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'purchase table height should match the student standard table height');
