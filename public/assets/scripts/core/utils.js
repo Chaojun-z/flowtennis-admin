@@ -94,6 +94,7 @@ function packageTimeBandShortLabel(timeBand='全天'){
 }
 function packageStatusText(p={}){
   const status=String(p.status||'active');
+  if(['voided','已作废','作废'].includes(status))return '已作废';
   if(status==='inactive'||status==='merged'||status==='已停售')return '已停售';
   return '';
 }
@@ -780,7 +781,7 @@ function studentPackageLessonSummary(stu){
   const meta=studentPackageLessonMeta(stu);
   if(!meta.hasPackage)return '-';
   const rows=studentActiveEntitlementRows(stu);
-  return rows.map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} ${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||meta.text;
+  return rows.map(e=>`${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||meta.text;
 }
 function studentPackageLessonMiniBar(stu){
   const meta=studentPackageLessonMeta(stu);
@@ -864,6 +865,7 @@ function studentClassSummaryHtml(stu){
 }
 function entitlementStatusText(e){
   if(e.status==='voided')return '已作废';
+  if(packageStatusText(e)==='已作废')return '已作废';
   if(e.status==='depleted')return '已用完';
   if(e.validUntil&&today()>e.validUntil)return '已过期';
   return '正常';
@@ -900,7 +902,7 @@ function scheduleEntitlementSummary(s){
   return `${standardPackageLabel(ent,true)||ent.packageName||'—'} · ${charge} · 剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`;
 }
 function studentEntitlementSummaryHtml(stu){
-  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{})))).filter(e=>e.status!=='voided');
+  const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{})))).filter(e=>entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchases.find(p=>p.id===e.purchaseId)||{})!=='已作废');
   if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无已购课包</div>';
   return rows.map(e=>{
     const used=Number(e.usedLessons)||0;
@@ -1108,8 +1110,9 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
 }
 function studentLedgerBalanceAfter(row,ent={}){
   if(!ent?.id)return '';
+  const currentTime=studentEntitlementLedgerTimeText(row,findScheduleForEntitlementLedgerRow(row,students.find(s=>s.id===(row?.studentId||ent?.studentId))||{}));
   const laterDelta=studentEntitlementLedgerRows({id:ent.studentId})
-    .filter(item=>item.entitlementId===ent.id&&String(entitlementLedgerSortDate(item)||'')>String(entitlementLedgerSortDate(row)||''))
+    .filter(item=>item.entitlementId===ent.id&&studentEntitlementLedgerTimeText(item,findScheduleForEntitlementLedgerRow(item,students.find(s=>s.id===(item?.studentId||ent?.studentId))||{}))>currentTime)
     .reduce((sum,item)=>sum+(Number(item.lessonDelta)||0),0);
   const balance=(Number(ent.remainingLessons)||0)-laterDelta;
   return `剩余 ${lessonQty(balance)}/${lessonQty(ent.totalLessons)} 节`;
