@@ -83,5 +83,6 @@ assert.doesNotThrow(() => {
   context.hydrateDatasetsFromCache();
 }, 'cache hydration should not access uninitialized globals after startup');
 assert.match(utilsSource, /window\.shanghaiNow=shanghaiNow;/, 'shanghaiNow must be exposed for separately loaded page scripts');
+assert.match(utilsSource, /window\.esc=esc;/, 'esc must be exposed for separately loaded page scripts');
 
 console.log('state startup execution tests passed');

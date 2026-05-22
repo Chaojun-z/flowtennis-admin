@@ -29,6 +29,7 @@ function courtSortMetric(court,key){
 }
 function rv(r,k,d=''){return r&&r[k]!=null?r[k]:d}
 function esc(s){if(s==null)return '';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+window.esc=esc;
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[]}
 function dtObj(v){return v?new Date(String(v).replace(' ','T')):null}
 function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
