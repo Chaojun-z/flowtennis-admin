@@ -36,7 +36,11 @@ assert.match(html, /course-showcase/, 'course product page should use the new sh
 assert.match(html, /course-package-showcase/, 'package page should use the new showcase container');
 assert.match(html, /product-card-shell/, 'product page should render the gemini-style product cards');
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
-assert.match(html, /function renderPackages[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort newer package records first');
+assert.match(html, /function packageSortValue\(/, 'package list should expose a persisted sort value helper');
+assert.match(html, /function renderPackages[\s\S]*packageSortValue\(a\)-packageSortValue\(b\)[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort by persisted package order before falling back to newer records first');
+assert.match(fnBody('renderPackages'), /draggable="true"[\s\S]*onDragStart="startPackageDrag/, 'package cards should be draggable');
+assert.match(html, /async function savePackageOrder\([\s\S]*\/packages\/order/, 'package drag order should save through a dedicated endpoint');
+assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8'), /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
 assert.match(html, /function packageDisplayShortId\(/, 'package cards should expose a short display-only package id helper');
 assert.match(html, /package-card-meta[\s\S]*packageDisplayShortId\(p\)[\s\S]*packageCreatedDate\(p\)[\s\S]*package-order-link/, 'package cards should show a compact display id, created date and order link without labels');
