@@ -24,16 +24,18 @@ function studentLastLessonDate(stu){
 }
 function studentCompletedLessonUnits(stu){
   const lessonMap=new Map();
+  const ledgerItems=studentConcreteLessonLedgerItems(stu);
+  const ledgerKeys=new Set(ledgerItems.map(item=>studentLessonRecordKey({studentId:stu?.id,row:item.row,schedule:item.schedule})));
+  const hasConcretePackageLedger=ledgerItems.length>0;
   schedules
     .filter(x=>scheduleHasStudent(x,stu))
     .filter(x=>effectiveScheduleStatus(x)==='已结束')
+    .filter(x=>studentLessonRecordShouldIncludeSchedule(x,stu,ledgerKeys,hasConcretePackageLedger))
     .forEach(x=>lessonMap.set(studentLessonRecordKey({studentId:stu?.id,schedule:x}),scheduleLessonUnits(x)));
-  studentEntitlementLedgerRows(stu)
-    .filter(x=>Number(x.lessonDelta)<0)
-    .forEach(x=>{
-      const schedule=findScheduleForEntitlementLedgerRow(x,stu);
-      const key=studentLessonRecordKey({studentId:stu?.id,row:x,schedule});
-      if(!lessonMap.has(key))lessonMap.set(key,Math.abs(Number(x.lessonDelta)||0));
+  ledgerItems
+    .forEach(({row,schedule})=>{
+      const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
+      if(!lessonMap.has(key))lessonMap.set(key,Math.abs(Number(row.lessonDelta)||0));
     });
   return [...lessonMap.values()].reduce((sum,value)=>sum+value,0);
 }
@@ -260,20 +262,36 @@ function studentLessonRecordHtml(stu){
 function studentLessonRecordRows(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
   const map=new Map();
+  const ledgerItems=studentConcreteLessonLedgerItems(stu);
+  const ledgerKeys=new Set(ledgerItems.map(({row,schedule})=>studentLessonRecordKey({studentId:stu?.id,row,schedule})));
+  ledgerItems.forEach(({row,schedule})=>{
+    const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
+    map.set(key,{type:'ledger',row,ent:entMap.get(row.entitlementId)||{},sortTime:studentEntitlementLedgerTimeText(row,schedule)});
+  });
   schedules
     .filter(x=>scheduleHasStudent(x,stu)&&x.startTime)
     .filter(x=>effectiveScheduleStatus(x)!=='已取消')
-    .forEach(schedule=>map.set(studentLessonRecordKey({studentId:stu?.id,schedule}),{type:'schedule',schedule,sortTime:schedule.startTime}));
-  studentEntitlementLedgerRows(stu)
-    .filter(row=>Number(row.lessonDelta)<0)
-    .forEach(row=>{
-      const schedule=findScheduleForEntitlementLedgerRow(row,stu);
-      if(!studentLessonRecordHasConcreteTime(row,schedule))return;
-      const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
-      if(map.has(key))return;
-      map.set(key,{type:'ledger',row,ent:entMap.get(row.entitlementId)||{},sortTime:studentEntitlementLedgerTimeText(row,schedule)});
+    .filter(schedule=>studentLessonRecordShouldIncludeSchedule(schedule,stu,ledgerKeys,ledgerItems.length>0))
+    .forEach(schedule=>{
+      const key=studentLessonRecordKey({studentId:stu?.id,schedule});
+      if(!map.has(key))map.set(key,{type:'schedule',schedule,sortTime:schedule.startTime});
     });
   return [...map.values()].sort((a,b)=>String(b.sortTime||'').localeCompare(String(a.sortTime||'')));
+}
+function studentConcreteLessonLedgerItems(stu){
+  return studentEntitlementLedgerRows(stu)
+    .filter(row=>Number(row.lessonDelta)<0)
+    .map(row=>{
+      const schedule=findScheduleForEntitlementLedgerRow(row,stu);
+      return {row,schedule};
+    })
+    .filter(item=>studentLessonRecordHasConcreteTime(item.row,item.schedule));
+}
+function studentLessonRecordShouldIncludeSchedule(schedule,stu,ledgerKeys,hasConcretePackageLedger){
+  const key=studentLessonRecordKey({studentId:stu?.id,schedule});
+  if(ledgerKeys?.has(key))return false;
+  if(!hasConcretePackageLedger)return true;
+  return scheduleCourseType(schedule)==='体验课';
 }
 function studentLessonRecordHasConcreteTime(row={},schedule={}){
   if(schedule?.startTime)return true;

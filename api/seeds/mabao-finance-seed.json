@@ -1476,26 +1476,26 @@
       "studentId": "seed-student-007",
       "studentName": "丫丫",
       "studentPhone": "",
-      "packageId": "seed-package-youth-1v1-10",
-      "packageName": "青少年1v1 10节课包",
+      "packageId": "seed-package-youth-1v1-history",
+      "packageName": "青少年1v1 历史特殊课包",
       "productId": "seed-product-youth-1v1",
       "productName": "青少年1v1私教课",
       "courseType": "私教课",
-      "packageLessons": 10,
-      "packagePrice": 4000,
+      "packageLessons": 20,
+      "packagePrice": 8800,
       "priceSource": "package",
-      "priceSourceId": "seed-package-youth-1v1-10",
-      "priceSourceName": "青少年1v1 10节课包",
+      "priceSourceId": "seed-package-youth-1v1-history",
+      "priceSourceName": "青少年1v1 历史特殊课包",
       "systemAmount": 0,
-      "finalAmount": 4000,
+      "finalAmount": 8800,
       "priceOverridden": true,
       "overrideReason": "历史导入价",
       "coachPriceName": "Siren",
       "coachPriceSnapshot": {
         "coachName": "Siren",
         "source": "历史导入",
-        "amountPaid": 4000,
-        "lessonCount": 10
+        "amountPaid": 8800,
+        "lessonCount": 20
       },
       "packageTimeBand": "全天",
       "dailyTimeWindows": [],
@@ -1513,66 +1513,14 @@
       "usageStartDate": "2026-01-19",
       "usageEndDate": "",
       "purchaseDate": "2026-01-19",
-      "amountPaid": 4000,
+      "amountPaid": 8800,
       "payMethod": "转账",
       "operator": "系统导入",
       "status": "active",
       "sourceType": "initial",
       "seedTag": "mabao-finance-seed-v8",
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "固定周一+周三16点30分-17点30分；2026/01/19 首次购买20课时，已用完",
       "createdAt": "2026-01-19T10:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
-      "id": "seed-renewal-007",
-      "studentId": "seed-student-007",
-      "studentName": "丫丫",
-      "studentPhone": "",
-      "packageId": "seed-package-youth-1v1-10",
-      "packageName": "青少年1v1 10节课包",
-      "productId": "seed-product-youth-1v1",
-      "productName": "青少年1v1私教课",
-      "courseType": "私教课",
-      "packageLessons": 10,
-      "packagePrice": 4000,
-      "priceSource": "package",
-      "priceSourceId": "seed-package-youth-1v1-10",
-      "priceSourceName": "青少年1v1 10节课包",
-      "systemAmount": 0,
-      "finalAmount": 4000,
-      "priceOverridden": true,
-      "overrideReason": "历史导入价",
-      "coachPriceName": "Siren",
-      "coachPriceSnapshot": {
-        "coachName": "Siren",
-        "source": "历史导入",
-        "amountPaid": 4000,
-        "lessonCount": 10
-      },
-      "packageTimeBand": "全天",
-      "dailyTimeWindows": [],
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "ownerCoach": "Siren",
-      "allowedCoaches": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "usageStartDate": "2026-03-31",
-      "usageEndDate": "",
-      "purchaseDate": "2026-03-31",
-      "amountPaid": 4000,
-      "payMethod": "转账",
-      "operator": "系统导入",
-      "status": "active",
-      "sourceType": "renewal",
-      "seedTag": "mabao-finance-seed-v8",
-      "notes": "丫丫爸爸小程序续费10节非黄课包",
-      "createdAt": "2026-03-31T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -5176,13 +5124,13 @@
       "studentId": "seed-student-007",
       "studentName": "丫丫",
       "purchaseId": "seed-purchase-007",
-      "packageId": "seed-package-youth-1v1-10",
-      "packageName": "青少年1v1 10节课包",
+      "packageId": "seed-package-youth-1v1-history",
+      "packageName": "青少年1v1 历史特殊课包",
       "productId": "seed-product-youth-1v1",
       "productName": "青少年1v1私教课",
       "courseType": "私教课",
-      "totalLessons": 10,
-      "usedLessons": 10,
+      "totalLessons": 20,
+      "usedLessons": 20,
       "remainingLessons": 0,
       "validFrom": "2026-01-19",
       "validUntil": "",
@@ -5202,49 +5150,11 @@
         "mabao"
       ],
       "maxStudents": 1,
-      "notes": "固定周一+周三16点30分-17点30分；小程序后台购买10课时",
+      "notes": "固定周一+周三16点30分-17点30分；2026/01/19 首次购买20课时，已用完",
       "status": "active",
       "sourceType": "initial",
       "seedTag": "mabao-finance-seed-v8",
       "createdAt": "2026-01-19T10:00:00.000Z",
-      "updatedAt": "2026-04-18T00:00:00.000Z"
-    },
-    {
-      "id": "seed-renewal-entitlement-007",
-      "studentId": "seed-student-007",
-      "studentName": "丫丫",
-      "purchaseId": "seed-renewal-007",
-      "packageId": "seed-package-youth-1v1-10",
-      "packageName": "青少年1v1 10节课包",
-      "productId": "seed-product-youth-1v1",
-      "productName": "青少年1v1私教课",
-      "courseType": "私教课",
-      "totalLessons": 10,
-      "usedLessons": 10,
-      "remainingLessons": 0,
-      "validFrom": "2026-03-31",
-      "validUntil": "",
-      "usageStartDate": "2026-03-31",
-      "usageEndDate": "",
-      "dailyTimeWindows": [],
-      "timeBand": "全天",
-      "coachIds": [],
-      "coachNames": [
-        "Siren"
-      ],
-      "ownerCoach": "Siren",
-      "allowedCoaches": [
-        "Siren"
-      ],
-      "campusIds": [
-        "mabao"
-      ],
-      "maxStudents": 1,
-      "notes": "丫丫爸爸小程序续费10节非黄课包",
-      "status": "active",
-      "sourceType": "renewal",
-      "seedTag": "mabao-finance-seed-v8",
-      "createdAt": "2026-03-31T10:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
     },
     {
@@ -8596,9 +8506,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-01-1",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-01-1",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8620,9 +8530,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-08-2",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-08-2",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8644,9 +8554,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-13-3",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-13-3",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8668,9 +8578,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-15-4",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-15-4",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8692,9 +8602,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-20-5",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-20-5",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8716,9 +8626,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-22-6",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-22-6",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8740,9 +8650,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-25-7",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-25-7",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8764,9 +8674,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-26-8",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-26-8",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8788,9 +8698,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-27-9",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-27-9",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,
@@ -8812,9 +8722,9 @@
       "seedTag": "mabao-finance-seed-v8"
     },
     {
-      "id": "seed-ledger-detail-renewal-entitlement-007-2026-04-29-10",
-      "entitlementId": "seed-renewal-entitlement-007",
-      "purchaseId": "seed-renewal-007",
+      "id": "seed-ledger-detail-entitlement-007-2026-04-29-10",
+      "entitlementId": "seed-entitlement-007",
+      "purchaseId": "seed-purchase-007",
       "scheduleId": "",
       "studentId": "seed-student-007",
       "lessonDelta": -1.0,

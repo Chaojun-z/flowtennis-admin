@@ -1,8 +1,8 @@
 const assert = require('assert');
 const seed = require('../api/seeds/mabao-finance-seed.json');
 
-assert.strictEqual(seed.purchases.length, 73, 'income report should include the confirmed package buyers and renewals');
-assert.strictEqual(seed.entitlements.length, 73, 'confirmed purchases and renewal rows should create course entitlements');
+assert.strictEqual(seed.purchases.length, 72, 'income report should include the confirmed package buyers and renewals');
+assert.strictEqual(seed.entitlements.length, 72, 'confirmed purchases and renewal rows should create course entitlements');
 assert.strictEqual(seed.products.length, 4, 'course products should stay as the four real course types');
 assert.strictEqual(seed.packages.length, 7, 'imported purchases should link to seven course-product package records');
 assert.deepStrictEqual(
@@ -33,7 +33,7 @@ assert.ok(
 assert.ok(seed.meta.deletePackages.includes('seed-package-001'), 'old per-student package records should be cleaned from online data');
 assert.strictEqual(
   seed.purchases.reduce((sum, row) => sum + (Number(row.amountPaid) || 0), 0),
-  391300,
+  392100,
   'income should include formula amounts and renewal fees without double-counting detailed lesson sheets'
 );
 assert.strictEqual(
@@ -126,6 +126,18 @@ assert.strictEqual(liRenewalEntitlement.remainingLessons, 35.5, '李嵚 renewal 
 
 const majieRows = seed.entitlementLedger.filter(x => x.studentId === 'seed-student-018' && Number(x.lessonDelta) < 0);
 assert.strictEqual(majieRows.length, 7, '马杰 should display seven concrete lesson records');
+
+const yayaInitial = seed.purchases.find(x => x.id === 'seed-purchase-007');
+assert.strictEqual(yayaInitial.packageLessons, 20, '丫丫 2026-01-19 first purchase should be one 20 lesson package');
+assert.strictEqual(yayaInitial.amountPaid, 8800, '丫丫 2026-01-19 first purchase amount should match the 20 lesson package');
+assert.ok(!seed.purchases.some(x => x.id === 'seed-renewal-007'), '丫丫 should not keep the old split 10 lesson renewal row');
+
+const yayaInitialEntitlement = seed.entitlements.find(x => x.id === 'seed-entitlement-007');
+assert.strictEqual(yayaInitialEntitlement.totalLessons, 20, '丫丫 first entitlement should hold 20 lessons');
+assert.strictEqual(yayaInitialEntitlement.usedLessons, 20, '丫丫 first 20 lesson package should be depleted');
+assert.strictEqual(yayaInitialEntitlement.remainingLessons, 0, '丫丫 first 20 lesson package should have no remaining balance');
+assert.ok(!seed.entitlements.some(x => x.id === 'seed-renewal-entitlement-007'), '丫丫 should not keep the old split 10 lesson entitlement row');
+assert.ok(!seed.entitlementLedger.some(x => x.purchaseId === 'seed-renewal-007' || x.entitlementId === 'seed-renewal-entitlement-007'), '丫丫 consumed lessons should point to the real first 20 lesson package');
 
 const misha = seed.purchases.find(x => x.studentName === 'misha');
 assert.ok(misha && /每周四20-21点/.test(misha.notes || ''), 'purchase notes should include notes from 课时统计 remarks column');
