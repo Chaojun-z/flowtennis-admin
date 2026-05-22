@@ -1,8 +1,8 @@
 const assert = require('assert');
 const seed = require('../api/seeds/mabao-finance-seed.json');
 
-assert.strictEqual(seed.purchases.length, 47, 'income report should include initial purchases and renewals');
-assert.strictEqual(seed.entitlements.length, 47, 'initial purchases and renewal rows should create course entitlements');
+assert.strictEqual(seed.purchases.length, 73, 'income report should include the confirmed package buyers and renewals');
+assert.strictEqual(seed.entitlements.length, 73, 'confirmed purchases and renewal rows should create course entitlements');
 assert.strictEqual(seed.products.length, 4, 'course products should stay as the four real course types');
 assert.strictEqual(seed.packages.length, 7, 'imported purchases should link to seven course-product package records');
 assert.deepStrictEqual(
@@ -33,26 +33,32 @@ assert.ok(
 assert.ok(seed.meta.deletePackages.includes('seed-package-001'), 'old per-student package records should be cleaned from online data');
 assert.strictEqual(
   seed.purchases.reduce((sum, row) => sum + (Number(row.amountPaid) || 0), 0),
-  271100,
+  391300,
   'income should include formula amounts and renewal fees without double-counting detailed lesson sheets'
 );
 assert.strictEqual(
   seed.purchases.reduce((sum, row) => sum + (Number(row.packageLessons) || 0), 0),
-  610,
+  890,
   'sold lessons should include renewal lessons'
 );
 assert.strictEqual(
   seed.entitlementLedger.reduce((sum, row) => sum + (Number(row.lessonDelta) < 0 ? Math.abs(Number(row.lessonDelta)) : 0), 0),
-  170.5,
+  302,
   'consume ledger should preserve monthly decimals and detailed lesson history'
 );
 assert.deepStrictEqual(
   [...new Set(seed.entitlementLedger.map(x => x.sourceMonth).filter(Boolean))].sort(),
-  ['2026-01', '2026-02', '2026-03'],
-  'consume ledger should include Jan/Feb/Mar history'
+  ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
+  'consume ledger should include history through the 5/15 cutoff'
 );
-assert.ok(seed.entitlementLedger.length >= 50, 'consume ledger should include monthly consumption rows, not only April rows');
-assert.strictEqual(seed.entitlementLedger.filter(x => x.sourceSheet).length, 22, 'third and fourth sheets should import detailed lesson history');
+assert.ok(seed.entitlementLedger.length >= 190, 'consume ledger should include detailed lesson rows, not only monthly rows');
+assert.strictEqual(seed.entitlementLedger.filter(x => x.sourceSheet === '马坡收入记录').length, 133, 'lesson consume rows should import concrete class times from the MaPo income table');
+assert.ok(
+  seed.entitlementLedger
+    .filter(x => x.sourceSheet === '马坡收入记录' && Number(x.lessonDelta) < 0)
+    .every(x => /\d{2}:\d{2}-\d{2}:\d{2}/.test(x.sourceTimeBand || '')),
+  'imported lesson consume rows should all carry concrete time bands'
+);
 assert.strictEqual(seed.purchases.filter(x => x.sourceType === 'lesson_payment').length, 0, 'detailed lesson sheet transfer rows should stay as notes, not duplicated income');
 
 const ledgerKeys = seed.entitlementLedger.map(row => [
@@ -65,6 +71,10 @@ const ledgerKeys = seed.entitlementLedger.map(row => [
   row.reason || '',
   row.relatedDate || '',
   row.sourceMonth || '',
+  row.sourceDate || '',
+  row.sourceTimeBand || '',
+  row.sourceLocation || '',
+  row.coach || '',
   row.sourceSheet || '',
   row.notes || '',
   row.createdAt || ''
@@ -96,10 +106,26 @@ assert.strictEqual(liRenewal.coachPriceName, '晓哲教练', 'coach price dimens
 
 const wjingRenewal = seed.purchases.find(x => x.studentName === 'W.Jing' && x.sourceType === 'renewal');
 assert.ok(wjingRenewal, 'W.Jing renewal should be imported');
-assert.strictEqual(wjingRenewal.amountPaid, 7600, 'W.Jing renewal fee should be parsed from text');
-assert.strictEqual(wjingRenewal.packageLessons, 20, 'W.Jing renewal lessons should be parsed from text');
-assert.strictEqual(wjingRenewal.packageName, '成人1v1 历史特殊课包', 'W.Jing 20 lesson renewal should stay under adult 1v1 history package');
+assert.strictEqual(wjingRenewal.amountPaid, 3800, 'W.Jing renewal fee should stay split from W.Jing friend');
+assert.strictEqual(wjingRenewal.packageLessons, 10, 'W.Jing renewal lessons should stay split from W.Jing friend');
+assert.strictEqual(wjingRenewal.packageName, '成人1v1 历史特殊课包', 'W.Jing renewal should stay under adult 1v1 history package');
 assert.strictEqual(wjingRenewal.coachPriceName, 'siren', 'coach price dimension should stay on the purchase snapshot');
+
+const wjingFriendRenewal = seed.purchases.find(x => x.studentName === 'W.Jing朋友' && x.sourceType === 'renewal');
+assert.ok(wjingFriendRenewal, 'W.Jing friend second package should be imported separately');
+assert.strictEqual(wjingFriendRenewal.amountPaid, 3800, 'W.Jing friend renewal fee should be imported');
+assert.strictEqual(wjingFriendRenewal.packageLessons, 10, 'W.Jing friend renewal lessons should be imported');
+
+const hammerEntitlement = seed.entitlements.find(x => x.studentName === '是锤锤呀');
+assert.ok(hammerEntitlement, '锤锤 package should be imported');
+assert.strictEqual(hammerEntitlement.usedLessons, 8, '锤锤 should consume 8 lessons through 5/15');
+assert.strictEqual(hammerEntitlement.remainingLessons, 12, '锤锤 should have 12 lessons remaining');
+
+const liRenewalEntitlement = seed.entitlements.find(x => x.id === 'seed-renewal-entitlement-006');
+assert.strictEqual(liRenewalEntitlement.remainingLessons, 35.5, '李嵚 renewal balance should stay 35.5/50');
+
+const majieRows = seed.entitlementLedger.filter(x => x.studentId === 'seed-student-018' && Number(x.lessonDelta) < 0);
+assert.strictEqual(majieRows.length, 7, '马杰 should display seven concrete lesson records');
 
 const misha = seed.purchases.find(x => x.studentName === 'misha');
 assert.ok(misha && /每周四20-21点/.test(misha.notes || ''), 'purchase notes should include notes from 课时统计 remarks column');
