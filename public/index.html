@@ -507,6 +507,8 @@
               <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索课包名称、课程类型、时段" oninput="renderPackages()">
             </div>
             <div id="pkgTypeFilterHost"></div>
+            <div id="pkgAudienceFilterHost"></div>
+            <div id="pkgCoachFilterHost"></div>
             <div id="pkgStatusFilterHost"></div>
             <div id="pkgTimeBandFilterHost"></div>
           </div>
@@ -527,19 +529,21 @@
             <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索学员、课包、课程类型" oninput="renderPurchases()">
+            <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索学员、课包、课程类型" oninput="onPurchaseFilterChange()">
           </div>
           <div id="purPackageFilterHost"></div>
           <button class="tms-btn tms-btn-ghost" onclick="exportPurchaseCSV()">导出</button>
           <button class="tms-btn tms-btn-ghost" onclick="openPurchaseImport()">导入</button>
-          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateFromBtn" onclick="toggleGlobalDatePicker(event,'purDateFrom','purDateFromBtn','开始日期')" type="button">开始日期</button><input class="filter-hidden-date" id="purDateFrom" type="date" onchange="syncDateButton('purDateFrom','purDateFromBtn','开始日期');renderPurchases()"></div>
-          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateToBtn" onclick="toggleGlobalDatePicker(event,'purDateTo','purDateToBtn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="purDateTo" type="date" onchange="syncDateButton('purDateTo','purDateToBtn','结束日期');renderPurchases()"></div>
+          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateFromBtn" onclick="toggleGlobalDatePicker(event,'purDateFrom','purDateFromBtn','开始日期')" type="button">开始日期</button><input class="filter-hidden-date" id="purDateFrom" type="date" onchange="syncDateButton('purDateFrom','purDateFromBtn','开始日期');onPurchaseFilterChange()"></div>
+          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateToBtn" onclick="toggleGlobalDatePicker(event,'purDateTo','purDateToBtn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="purDateTo" type="date" onchange="syncDateButton('purDateTo','purDateToBtn','结束日期');onPurchaseFilterChange()"></div>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-primary" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">购买日期</th><th style="width:120px">学员/支付</th><th style="width:170px">课包/课程</th><th style="width:90px">实收</th><th style="width:95px">余额</th><th style="width:135px">有效期</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">支付日期</th><th style="width:120px">学员</th><th style="width:170px">课包</th><th style="width:90px">实收</th><th style="width:105px">余额</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th style="width:90px">支付方式</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div>
+        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="purPagerInfo">共 0 条</span><div id="purPageSize"></div></div><div class="tms-page-numbers" id="purPagerBtns"></div></div>
+      </div>
     </div>
     <!-- 课包余额（已隐藏入口，仅保留底层审计页） -->
     <div class="page-section" id="page-entitlements">

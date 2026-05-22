@@ -1,9 +1,10 @@
+function onPurchaseFilterChange(){purPage=1;renderPurchases();}
 function refreshPurchaseFilters(){
   const packageValue=document.getElementById('purPackageFilter')?.value||'';
   const packageOptions=[{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))];
   [['purPackageFilterHost','purPackageFilter','全部课包',packageOptions,packageValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
-    if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'renderPurchases');
+    if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onPurchaseFilterChange');
   });
 }
 function isMeaningfulPurchaseRecord(p){
@@ -26,17 +27,80 @@ function getFilteredPurchases(){
     return true;
   }).sort((a,b)=>String(a.purchaseDate||a.createdAt||'').localeCompare(String(b.purchaseDate||b.createdAt||'')));
 }
+function purchasePageNumbers(page,pages){
+  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
+  const items=[1];
+  const start=Math.max(2,page-2);
+  const end=Math.min(pages-1,page+2);
+  if(start>2)items.push('...');
+  for(let i=start;i<=end;i++)items.push(i);
+  if(end<pages-1)items.push('...');
+  items.push(pages);
+  return items;
+}
+function renderPurchasePagerControls(total,pages){
+  const pageSizeHost=document.getElementById('purPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('purPageSizeValue',`${purPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(purPageSize),false,'setPurchasePageSize');
+  const btns=document.getElementById('purPagerBtns');
+  if(!btns)return;
+  if(!total||pages<=1){btns.innerHTML='';return;}
+  const pageBtns=purchasePageNumbers(purPage,pages).map(item=>item==='...'
+    ?'<span class="tms-page-ellipsis">...</span>'
+    :`<div class="tms-page-btn${item===purPage?' active':''}" onclick="purPage=${item};renderPurchases()">${item}</div>`
+  ).join('');
+  btns.innerHTML=`<div class="tms-page-btn" onclick="purPage=Math.max(1,purPage-1);renderPurchases()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="purPage=Math.min(${pages},purPage+1);renderPurchases()">下一页</div><span class="tms-page-jump">跳至 <input id="purPageJump" value="${purPage}" onkeydown="if(event.key==='Enter')jumpPurchasePage(this.value)"> 页</span>`;
+}
+function setPurchasePageSize(value){
+  const next=parseInt(value,10);
+  purPageSize=[20,50,100].includes(next)?next:20;
+  purPage=1;
+  renderPurchases();
+}
+function jumpPurchasePage(value){
+  const total=getFilteredPurchases().length;
+  const pages=Math.max(1,Math.ceil(total/purPageSize));
+  purPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  renderPurchases();
+}
+function purchasePackageListLabel(p){
+  const label=standardPackageLabel(p,true)||p.packageName||'';
+  return renderCourtEmptyText(label.replace(/^1v\d私教课 · /,'').replace(/^私教课 · /,''));
+}
+function purchaseEntitlementMiniBar(ent){
+  if(!ent)return renderCourtCellText('-',false);
+  const remaining=Number(ent.remainingLessons)||0,total=Number(ent.totalLessons)||0;
+  if(total<=0)return renderCourtCellText('-',false);
+  const pct=Math.max(0,Math.min(100,Math.round(remaining/total*100)));
+  const text=`${lessonQty(remaining)}/${lessonQty(total)}`;
+  const title=`${standardPackageLabel(ent,true)||ent.packageName||'课包'} · 剩余 ${text} 节 · 有效期 ${renderCourtEmptyText(ent.validFrom)} - ${renderCourtEmptyText(ent.validUntil)}`;
+  return `<div class="tms-mini-bar student-package-mini" title="${esc(title)}"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
+}
+function purchaseHasActiveSearchOrFilter(){
+  return !!((document.getElementById('purSearch')?.value||'').trim()||document.getElementById('purPackageFilter')?.value||document.getElementById('purDateFrom')?.value||document.getElementById('purDateTo')?.value);
+}
+function purchaseEmptyStateHtml(){
+  const filtered=purchaseHasActiveSearchOrFilter();
+  const title=filtered?'没有匹配的购买记录':'暂无购买记录';
+  const desc=filtered?'调整搜索或筛选后再试':'点击右上角课包购买开始录入';
+  return `<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+}
 function renderPurchases(){
   refreshPurchaseFilters();
   const list=getFilteredPurchases();
-  document.getElementById('purchaseTbody').innerHTML=list.length?list.map(p=>{
+  const total=list.length,pages=Math.max(1,Math.ceil(total/purPageSize));
+  if(purPage>pages)purPage=pages;
+  const slice=list.slice((purPage-1)*purPageSize,purPage*purPageSize);
+  const pager=document.querySelector('#page-purchases .tms-pagination');
+  if(pager)pager.style.display=total?'flex':'none';
+  const info=document.getElementById('purPagerInfo');
+  if(info)info.textContent=`共 ${total} 条`;
+  renderPurchasePagerControls(total,pages);
+  document.getElementById('purchaseTbody').innerHTML=slice.length?slice.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);
-    const remain=ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} 节`:'-';
-    const validRange=ent?`${renderCourtEmptyText(ent.validFrom)} - ${renderCourtEmptyText(ent.validUntil)}`:'-';
     const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.studentName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.payMethod))}</div></td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(standardPackageLabel(p,true)||p.packageName))}</div><div class="tms-text-secondary">${esc(renderCourtEmptyText(p.courseType))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${renderCourtCellText(remain,false)}</td><td><div class="tms-cell-text">${esc(validRange)}</div></td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderCourtCellText(p.ownerCoach)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
-  }).join(''):'<tr><td colspan="9"><div class="empty"><p>暂无购买记录</p></div></td></tr>';
+    return `<tr><td style="padding-left:20px">${renderCourtCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderCourtEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderCourtCellText(p.ownerCoach)}</td><td>${renderCourtCellText(p.payMethod,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+  }).join(''):purchaseEmptyStateHtml();
 }
 
 function purchaseEntitlement(purchaseId){
@@ -260,8 +324,9 @@ async function savePurchase(){
 }
 function focusPurchaseByPackage(packageId){
   goPage('purchases');
-  const pkgEl=document.getElementById('purPackageFilter');
-  if(pkgEl)pkgEl.value=packageId;
+  const pkg=packages.find(p=>String(p.id||'')===String(packageId||''));
+  setCourtDropdownValue('purPackageFilter',packageId,standardPackageLabel(pkg||{},true)||pkg?.name||packageId);
+  purPage=1;
   renderPurchases();
 }
 function exportPurchaseCSV(){

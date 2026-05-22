@@ -1,12 +1,19 @@
 function syncPackageFilterOptions(){
   const typeValue=document.getElementById('pkgTypeFilter')?.value||'';
+  const audienceValue=document.getElementById('pkgAudienceFilter')?.value||'';
+  const coachValue=document.getElementById('pkgCoachFilter')?.value||'';
   const statusValue=document.getElementById('pkgStatusFilter')?.value||'';
   const timeBandValue=document.getElementById('pkgTimeBandFilter')?.value||'';
   const typeOptions=[{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
+  const audienceOptions=[{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
+  const coachNames=[...new Set([...activeCoachNames(),...packages.flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)]).map(coachName).filter(Boolean)])];
+  const coachOptions=[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))];
   const statusOptions=[{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}];
   const timeBandOptions=[{value:'',label:'全部',emptyDisplay:'时段'},{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金'},{value:'非黄金时段',label:'非黄金'}];
   const wrapMap=[
     ['pkgTypeFilterHost','pkgTypeFilter','类型',typeOptions,typeValue],
+    ['pkgAudienceFilterHost','pkgAudienceFilter','学员类型',audienceOptions,audienceValue],
+    ['pkgCoachFilterHost','pkgCoachFilter','教练',coachOptions,coachValue],
     ['pkgStatusFilterHost','pkgStatusFilter','状态',statusOptions,statusValue],
     ['pkgTimeBandFilterHost','pkgTimeBandFilter','时段',timeBandOptions,timeBandValue]
   ];
@@ -69,15 +76,20 @@ function renderPackages(){
   syncPackageFilterOptions();
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('pkgTypeFilter')?.value||'';
+  const af=document.getElementById('pkgAudienceFilter')?.value||'';
+  const cf=document.getElementById('pkgCoachFilter')?.value||'';
   const sf=document.getElementById('pkgStatusFilter')?.value||'';
   const bf=document.getElementById('pkgTimeBandFilter')?.value||'';
   const list=packages.filter(p=>{
     const courseType=normalizeCourseType(p.courseType);
     const campusIds=parseArr(p.campusIds);
+    const coachNames=parseArr(p.coachNames||p.coachIds).map(coachName);
     const statusValue=packageListStatusValue(p);
     if(statusValue==='merged')return false;
     if(!searchHit(q,p.name,packageDisplayTitle(p),courseType,p.price,p.lessons,p.timeBand,p.notes,p.productName,p.ownerCoach))return false;
     if(tf&&courseType!==tf)return false;
+    if(af&&packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])!==af)return false;
+    if(cf&&coachName(p.ownerCoach)!==cf&&!coachNames.includes(cf))return false;
     if(sf&&statusValue!==sf)return false;
     if(bf&&String(p.timeBand||'全天')!==bf)return false;
     if(campus&&campus!=='all'&&campusIds.length&&!campusIds.includes(campus))return false;
@@ -93,7 +105,7 @@ function renderPackages(){
     const coachTitle=packageCoachDetail(p);
     const title=packageListTitle(p);
     const subtitle=packageListSubtitle(p);
-    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(packageCreatedDate(p))} 创建<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+    return `<div class="package-card-shell"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta">${esc(p.id||'-')}<span></span>${esc(packageCreatedDate(p))}<span></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
   }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
 }
 function packagePurchaseCount(packageId){

@@ -147,7 +147,11 @@ assert.match(source, /实际成交价与系统价格不一致时必填/, 'purcha
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase allowed coach picker should reuse the student picker block style');
 assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
-assert.match(source, /购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase record table should split validity and status into compact ordered columns');
+assert.match(source, /支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase record table should follow the standardized column order');
+assert.match(source, /id="purPagerInfo"[\s\S]*id="purPageSize"[\s\S]*id="purPagerBtns"/, 'purchase record page should expose the standard pager');
+assert.match(source, /function onPurchaseFilterChange\(\)\{purPage=1;renderPurchases\(\);\}/, 'purchase filters should reset pagination before rendering');
+assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
+assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');
 assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so mabao and 顺义马坡 stay one campus');
 assert.match(source, /sameCampusValue\(s\.campus,campus\)/, 'student page campus filter should treat mabao and 顺义马坡 as the same campus');

@@ -29,6 +29,8 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
 
 assert.match(html, /id="page-packages"/, 'should have packages page section');
 assert.match(html, /id="pkgTimeBandFilterHost"/, 'package page should expose a time band filter');
+assert.match(html, /id="pkgCoachFilterHost"/, 'package page should expose a coach filter');
+assert.match(html, /id="pkgAudienceFilterHost"/, 'package page should expose an adult/youth filter');
 assert.match(html, /id="page-purchases"/, 'should have purchases page section');
 assert.match(html, /course-showcase/, 'course product page should use the new showcase container');
 assert.match(html, /course-package-showcase/, 'package page should use the new showcase container');
@@ -36,7 +38,8 @@ assert.match(html, /product-card-shell/, 'product page should render the gemini-
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
 assert.match(html, /function renderPackages[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort newer package records first');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
-assert.match(html, /package-card-meta">\$\{esc\(packageCreatedDate\(p\)\)\} 创建/, 'package cards should keep created time as weak footer metadata');
+assert.match(html, /package-card-meta">\$\{esc\(p\.id\|\|'-'\)\}<span><\/span>\$\{esc\(packageCreatedDate\(p\)\)\}<span><\/span>/, 'package cards should show raw id and created date without labels');
+assert.doesNotMatch(html, /package-card-meta[^`]*创建/, 'package card footer should not show the created label');
 assert.doesNotMatch(html, /showcase-kv-label">创建时间/, 'package cards should not show created time as a normal field row');
 assert.match(html, /归属教练[\s\S]*可用校区[\s\S]*可用时段/, 'package card should show owner coach, campus, and time rules');
 assert.doesNotMatch(fnBody('renderPackages'), /活动期|使用期/, 'package cards should not show sale or usage ranges');
@@ -98,6 +101,9 @@ assert.doesNotMatch(fnBody('renderPackages'), /showcase-status-tag[\s\S]*启用/
 assert.doesNotMatch(fnBody('renderPackages'), /packageCardTags/, 'package cards should not show duplicate course type tags');
 assert.match(fnBody('packageStatusBadge'), /packageListStatusValue[\s\S]*已停售/, 'package stopped sale state should render from package status');
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgTimeBandFilter'\)/, 'package cards should filter by time band');
+assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgCoachFilter'\)/, 'package cards should filter by coach');
+assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
+assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
 assert.match(fnBody('renderPackages'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
 assert.match(fnBody('renderPackages'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');
 assert.match(fnBody('renderPackages'), /deactivatePackage\('\$\{p\.id\}'/, 'package card should use deactivate instead of delete');
@@ -128,7 +134,7 @@ assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(html, /<th style="width:100px;padding-left:20px">购买日期<\/th><th style="width:120px">学员\/支付<\/th><th style="width:170px">课包\/课程<\/th><th style="width:90px">实收<\/th><th style="width:95px">余额<\/th><th style="width:135px">有效期<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th>/, 'purchase table should split validity and status into compact purchase, balance and owner coach columns');
+assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should use the standardized purchase record columns');
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
 assert.match(html, /系统价格[\s\S]*成交金额[\s\S]*改价原因/, 'purchase detail should show price snapshot fields');
