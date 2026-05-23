@@ -150,6 +150,7 @@ assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a
 assert.match(source, /关联订场账户在「订场\/会员」页面编辑用户时选择「关联学员」/, 'student detail should explain where to link booking accounts');
 assert.doesNotMatch(source, /function openStudentModal[\s\S]*studentLinkedDetailHtml\(s\)/, 'student edit modal should not embed linked detail summary anymore');
 assert.match(source, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号[\s\S]*负责教练[\s\S]*学员类型[\s\S]*来源[\s\S]*活动范围[\s\S]*所在校区[\s\S]*备注/, 'student edit modal should keep base profile fields and expose primary coach');
+assert.doesNotMatch(source, /placeholder="13800138000"/, 'phone inputs should not show example numbers that look prefilled');
 assert.match(source, /const campusOptions=studentCampusOptions\(\);/, 'student edit modal should build campus options through the shared student helper');
 assert.match(source, /function studentCampusOptions\(/, 'student edit modal should expose all loaded campuses through a helper');
 assert.match(source, /renderCourtDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');

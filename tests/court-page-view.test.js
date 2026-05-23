@@ -61,6 +61,16 @@ assert.match(pagesCss, /#page-courts \.tms-table th\s*\{[^}]*background-color:#F
 assert.match(pagesCss, /#page-courts \.tms-table tbody tr:hover td\.tms-sticky-l[\s\S]*#page-courts \.tms-table tbody tr:hover td\.tms-sticky-r/s, 'court sticky columns should join whole-row hover');
 assert.match(html, /class="tms-action-link"/, 'court page should render action links with the scoped visual style');
 assert.match(html, /function openCourtModal[\s\S]*tms-section-header[\s\S]*tms-form-row/, 'court edit modal should use the upgraded local form layout');
+assert.doesNotMatch(fnBody('openCourtModal'), /placeholder="13800138000"/, 'court phone input should not look prefilled with an example number');
+assert.match(fnBody('openCourtModal'), /id="f_phone"[^>]*placeholder="请输入手机号"/, 'court phone input should use neutral placeholder copy');
+assert.match(fnBody('openCourtModal'), /id="f_studentIds"[\s\S]*id="f_studentSearch"[\s\S]*placeholder="搜索姓名 \/ 手机号"[\s\S]*updateCourtStudentSearch\(\)[\s\S]*id="f_studentSuggest"[\s\S]*id="f_selectedStudentTags"/, 'court linked students should use the searchable student picker');
+assert.match(html, /function renderCourtStudentTags\(/, 'court linked student picker should render selected student tags');
+assert.match(html, /function selectCourtStudent\(/, 'court linked student picker should support selecting a student from search results');
+assert.match(html, /function removeCourtStudent\(/, 'court linked student picker should support removing selected students');
+assert.match(fnBody('saveCourt'), /parseArr\(document\.getElementById\('f_studentIds'\)\?\.value\|\|'\[\]'\)/, 'court save should read linked students from the picker state');
+assert.match(fnBody('openCourtModal'), /tms-panel-tip[\s\S]*tms-detail-grid[\s\S]*累计充值[\s\S]*当前余额[\s\S]*累计消费[\s\S]*累计实收/, 'court readonly finance summary should use the detail-grid readonly style');
+assert.doesNotMatch(fnBody('openCourtModal'), /tms-panel-tip[\s\S]*tms-form-readonly/, 'court readonly finance summary should not look like input fields');
+assert.match(fnBody('openCourtModal'), /court-profile-row[\s\S]*id="f_owner"[\s\S]*id="f_familiarity"[\s\S]*id="f_attitude"/, 'court owner, familiarity and deposit attitude should sit in one row');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');

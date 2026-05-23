@@ -837,13 +837,83 @@ function courtLeadSummaryHtml(court){
     :'';
   return `<div class="tms-readonly-text">${esc(lines.join('；'))}</div>${jumpBtn}`;
 }
+function courtStudentInlineMeta(student){
+  if(typeof scheduleStudentInlineMeta==='function')return scheduleStudentInlineMeta(student);
+  return `归属：${cn(student?.campus)||'未设校区'}`;
+}
+function courtSelectedStudentSearchText(ids=[]){
+  const picked=new Set(parseArr(ids));
+  return students.filter(s=>picked.has(s.id)).map(s=>s.name).filter(Boolean).join(',');
+}
+function syncCourtStudentSearchInput(ids=[]){
+  const input=document.getElementById('f_studentSearch');
+  if(input)input.value=courtSelectedStudentSearchText(ids);
+}
+function courtStudentSearchKeyword(value='',ids=[]){
+  const selectedText=courtSelectedStudentSearchText(ids);
+  let keyword=String(value||'').trim();
+  if(selectedText&&keyword.startsWith(selectedText))keyword=keyword.slice(selectedText.length).replace(/^,+/,'').trim();
+  return keyword.split(',').pop().trim();
+}
+function renderCourtStudentTags(selectedIds=[]){
+  const picked=new Set(parseArr(selectedIds));
+  const rows=students.filter(s=>picked.has(s.id));
+  if(!rows.length)return '';
+  return rows.map(s=>`<span class="schedule-student-tag">${esc(s.name)} <span>${esc(courtStudentInlineMeta(s))}</span><button type="button" onclick="removeCourtStudent(${jsArg(s.id)})">×</button></span>`).join('');
+}
+function renderCourtStudentSuggestions(selectedIds=[],keyword=''){
+  const picked=new Set(parseArr(selectedIds));
+  const q=String(keyword||'').trim().toLowerCase();
+  if(!q)return '';
+  const pickedMatches=students.filter(s=>picked.has(s.id)&&[s.name,s.phone,cn(s.campus)].some(v=>String(v||'').toLowerCase().includes(q)));
+  const rows=students.filter(s=>{
+    if(picked.has(s.id))return false;
+    return [s.name,s.phone,cn(s.campus)].some(v=>String(v||'').toLowerCase().includes(q));
+  }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN')).slice(0,8);
+  if(!rows.length)return pickedMatches.length?'':'<div class="schedule-student-suggest-empty">没有匹配到学员</div>';
+  return `<div class="schedule-student-suggest-list">${rows.map(s=>`<button type="button" onclick="selectCourtStudent(${jsArg(s.id)})"><strong>${esc(s.name)}</strong><span>${esc(s.phone||'-')} · ${esc(courtStudentInlineMeta(s))}</span></button>`).join('')}</div>`;
+}
+function updateCourtStudentSummary(ids){
+  const host=document.getElementById('f_selectedStudentTags');
+  if(host)host.innerHTML=renderCourtStudentTags(ids);
+}
+function setCourtStudentSelection(ids,keepKeyword=false){
+  const normalized=[...new Set(parseArr(ids).filter(Boolean))];
+  const hidden=document.getElementById('f_studentIds');
+  if(hidden)hidden.value=JSON.stringify(normalized);
+  updateCourtStudentSummary(normalized);
+  if(!keepKeyword)syncCourtStudentSearchInput(normalized);
+  const inputValue=document.getElementById('f_studentSearch')?.value||'';
+  const keyword=keepKeyword?courtStudentSearchKeyword(inputValue,normalized):'';
+  const suggest=document.getElementById('f_studentSuggest');
+  if(suggest)suggest.innerHTML=renderCourtStudentSuggestions(normalized,keyword);
+}
+function updateCourtStudentSearch(){
+  const ids=parseArr(document.getElementById('f_studentIds')?.value||'[]');
+  setCourtStudentSelection(ids,true);
+}
+function selectCourtStudent(studentId){
+  const ids=parseArr(document.getElementById('f_studentIds')?.value||'[]');
+  const next=[...ids,studentId];
+  setCourtStudentSelection(next,false);
+  syncCourtStudentSearchInput(next);
+  const suggest=document.getElementById('f_studentSuggest');
+  if(suggest)suggest.innerHTML='';
+}
+function removeCourtStudent(studentId){
+  const ids=parseArr(document.getElementById('f_studentIds')?.value||'[]').filter(id=>id!==studentId);
+  setCourtStudentSelection(ids,false);
+}
 function openCourtModal(id){
   editId=id;_pending=[];const r=id?courts.find(x=>x.id===id):null;
   const fin=courtFinanceLocal(r||{history:[]});
   const linked=findStudentForCourt(r);
   const selectedIds=parseArr(r?.studentIds);if(!selectedIds.length&&linked)selectedIds.push(linked.id);
   const campusList=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="13800138000" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label><div class="tms-checkbox-matrix">${studentChecks(selectedIds)}</div></div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${r?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${courtLeadSummaryHtml(r)}</div></div></div>`:''}<div class="tms-readonly-panel" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">累计充值</label><div class="tms-form-readonly">¥${fmt(fin.totalDeposit)}</div></div><div class="tms-form-item"><label class="tms-form-label">当前余额</label><div class="tms-form-readonly">¥${fmt(fin.balance)}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">累计消费</label><div class="tms-form-readonly">¥${fmt(fin.spentAmount)}</div></div><div class="tms-form-item"><label class="tms-form-label">累计实收</label><div class="tms-form-readonly">¥${fmt(fin.receivedAmount)}</div></div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
+  const selectedStudentValue=esc(JSON.stringify(selectedIds));
+  const linkedStudentPicker=`<input type="hidden" id="f_studentIds" value="${selectedStudentValue}"><input class="finput tms-form-control" id="f_studentSearch" placeholder="搜索姓名 / 手机号" value="${esc(courtSelectedStudentSearchText(selectedIds))}" oninput="updateCourtStudentSearch()" autocomplete="off"><div id="f_studentSuggest" class="schedule-student-suggest"></div><div id="f_selectedStudentTags" class="schedule-student-tags">${renderCourtStudentTags(selectedIds)}</div>`;
+  const financeSummaryHtml=`<div class="tms-readonly-panel court-finance-readonly" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-detail-grid">${studentDetailFieldHtml('累计充值',`¥${fmt(fin.totalDeposit)}`)}${studentDetailFieldHtml('当前余额',`¥${fmt(fin.balance)}`)}${studentDetailFieldHtml('累计消费',`¥${fmt(fin.spentAmount)}`)}${studentDetailFieldHtml('累计实收',`¥${fmt(fin.receivedAmount)}`)}</div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label>${linkedStudentPicker}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${r?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${courtLeadSummaryHtml(r)}</div></div></div>`:''}${financeSummaryHtml}<div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
   const footer=id?`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-default" onclick="openCourtMergeModal('${r.id}')">合并</button><button class="tms-btn tms-btn-danger" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`:`<div style="display:flex;gap:12px;margin-left:auto;"><button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`;
   setCourtModalFrame(id?'编辑订场用户':'添加订场用户',body,footer,'modal-wide');
 }
@@ -852,7 +922,7 @@ async function saveCourt(){
   const phone=document.getElementById('f_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.getElementById('courtSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const rawH=editId?courtBaseHistoryForSave(courts.find(u=>u.id===editId)):[];
-  const studentIds=[...document.querySelectorAll('.court-stu-cb:checked')].map(cb=>cb.value);
+  const studentIds=parseArr(document.getElementById('f_studentIds')?.value||'[]');
   const campusValue=document.getElementById('f_campus').value;
   const rec={name,phone,studentId:studentIds[0]||'',studentIds,campus:campusValue,joinDate:document.getElementById('f_joinDate').value,recentFollowUpDate:document.getElementById('f_recentFollowUpDate').value,nextFollowUpDate:document.getElementById('f_nextFollowUpDate').value,owner:document.getElementById('f_owner').value.trim(),depositAttitude:document.getElementById('f_attitude').value.trim(),familiarity:document.getElementById('f_familiarity').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:'active',history:[...rawH,..._pending]};
   const duplicates=getCourtDuplicateCandidates({name,phone,campus:campusValue},editId);
