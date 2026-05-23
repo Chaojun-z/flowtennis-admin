@@ -58,7 +58,8 @@ async function main() {
       cachedTotalReceived: 500,
       history: [
         { type: '充值', amount: 500, bonusAmount: 0 },
-        { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场' }
+        { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10' },
+        { type: '消费', amount: 200, payMethod: '微信', category: '其他', date: '2026-05-12' }
       ],
       updatedAt: '2026-05-13T10:00:00.000Z',
       createdAt: '2026-05-01T10:00:00.000Z'
@@ -98,6 +99,9 @@ async function main() {
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');
+  assert.strictEqual(view.items[0].bookingCount, 2, '读模型应统计储值订场和散客订场');
+  assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
+  assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });

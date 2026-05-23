@@ -80,6 +80,37 @@ function computeLegacyFinance(court) {
   };
 }
 
+function isCourtBookingHistoryRow(row) {
+  const category = String(row?.category || '');
+  if (category.includes('内部占用')) return false;
+  if (category.includes('订场')) return true;
+  if (['储值扣款', '现场收款', '代用户订场'].includes(String(row?.revenueBucket || ''))) return true;
+  if (row?.startTime && row?.endTime && row?.venue) return true;
+  const payMethod = String(row?.payMethod || '').trim();
+  return row?.type === '消费' && payMethod !== '储值扣款' && (!category || category === '其他');
+}
+
+function computeBookingSummary(court) {
+  const history = normalizeCourtHistory(court?.history);
+  const summary = { bookingCount: 0, bookingAmount: 0, lastBookingDate: '' };
+  history.forEach((row) => {
+    if (!isCourtBookingHistoryRow(row)) return;
+    const amount = money(row?.amount);
+    if (row.type === '消费') {
+      summary.bookingCount += 1;
+      summary.bookingAmount += amount;
+      const date = String(row?.occurredDate || row?.date || '').slice(0, 10);
+      if (date && (!summary.lastBookingDate || date > summary.lastBookingDate)) summary.lastBookingDate = date;
+      return;
+    }
+    if (row.type === '退款' || row.type === '冲正') {
+      summary.bookingAmount -= amount;
+    }
+  });
+  summary.bookingAmount = Math.max(0, money(summary.bookingAmount));
+  return summary;
+}
+
 function membershipStatusText(status) {
   return ({
     active: '正常',
@@ -142,6 +173,7 @@ function buildCourtAccountType(account, finance) {
 
 function buildLegacyItem(court, ctx) {
   const finance = computeLegacyFinance(court);
+  const bookingSummary = computeBookingSummary(court);
   const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
   const studentSummary = linkedStudentSummary(court, ctx.students);
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
@@ -165,6 +197,9 @@ function buildLegacyItem(court, ctx) {
     membershipValidUntil: account && !['voided', 'cleared'].includes(account.status) ? String(account?.validUntil || '').trim() || '-' : '-',
     linkedStudentSummary: studentSummary,
     lowBalance: finance.balance > 0 && finance.balance <= 500,
+    bookingCount: bookingSummary.bookingCount,
+    bookingAmount: bookingSummary.bookingAmount,
+    lastBookingDate: bookingSummary.lastBookingDate,
     balance: money(finance.balance),
     totalDeposit: money(finance.totalDeposit),
     totalSpent: money(finance.spentAmount),
@@ -196,7 +231,9 @@ function buildSummary(items = []) {
     totalBalance: money(items.reduce((sum, item) => sum + money(item?.balance), 0)),
     totalDeposit: money(items.reduce((sum, item) => sum + money(item?.totalDeposit), 0)),
     totalSpent: money(items.reduce((sum, item) => sum + money(item?.totalSpent), 0)),
-    totalReceived: money(items.reduce((sum, item) => sum + money(item?.totalReceived), 0))
+    totalReceived: money(items.reduce((sum, item) => sum + money(item?.totalReceived), 0)),
+    totalBookingCount: items.reduce((sum, item) => sum + (Number(item?.bookingCount) || 0), 0),
+    totalBookingAmount: money(items.reduce((sum, item) => sum + money(item?.bookingAmount), 0))
   };
 }
 

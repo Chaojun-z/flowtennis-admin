@@ -15,9 +15,51 @@ function lessonUnitsText(value){
 }
 function fmtDt(s){if(!s)return '—';return s.replace('T',' ').slice(0,16)}
 function dateMs(v){const d=dtObj(v);return d?d.getTime():NaN}
+function isCourtBookingHistoryRow(row){
+  const category=String(row?.category||'');
+  if(category.includes('内部占用'))return false;
+  if(category.includes('订场'))return true;
+  if(['储值扣款','现场收款','代用户订场'].includes(String(row?.revenueBucket||'')))return true;
+  if(row?.startTime&&row?.endTime&&row?.venue)return true;
+  const payMethod=String(row?.payMethod||'').trim();
+  return row?.type==='消费'&&payMethod!=='储值扣款'&&(!category||category==='其他');
+}
+function courtBookingSummary(court){
+  if(court&&court.bookingCount!=null){
+    return {
+      count:Number(court.bookingCount)||0,
+      amount:Number(court.bookingAmount)||0,
+      lastDate:String(court.lastBookingDate||'').trim()
+    };
+  }
+  const rows=normalizeCourtHistoryLocal(court?.history);
+  const summary={count:0,amount:0,lastDate:''};
+  rows.forEach(h=>{
+    if(!isCourtBookingHistoryRow(h))return;
+    const amount=parseFloat(h.amount)||0;
+    if(h.type==='消费'){
+      summary.count+=1;
+      summary.amount+=amount;
+      const date=String(h.occurredDate||h.date||'').slice(0,10);
+      if(date&&(!summary.lastDate||date>summary.lastDate))summary.lastDate=date;
+    }else if(h.type==='退款'||h.type==='冲正'){
+      summary.amount-=amount;
+    }
+  });
+  summary.amount=Math.max(0,Math.round(summary.amount*100)/100);
+  return summary;
+}
 function courtSortMetric(court,key){
   if(key==='balance')return {empty:false,value:courtFinanceLocal(court).balance};
   if(key==='spentAmount')return {empty:false,value:courtFinanceLocal(court).spentAmount};
+  if(key==='bookingCount')return {empty:false,value:courtBookingSummary(court).count};
+  if(key==='bookingAmount')return {empty:false,value:courtBookingSummary(court).amount};
+  if(key==='lastBookingDate'){
+    const raw=courtBookingSummary(court).lastDate;
+    if(!raw||raw==='-'||raw==='—')return {empty:true,value:0};
+    const timeValue=dateMs(raw);
+    return {empty:Number.isNaN(timeValue),value:Number.isNaN(timeValue)?0:timeValue};
+  }
   if(['validUntil','recentFollowUpDate','nextFollowUpDate'].includes(key)){
     const raw=String((key==='validUntil'?courtMembershipSummary(court).validUntil:court?.[key])||'').trim();
     if(!raw||raw==='-'||raw==='—')return {empty:true,value:0};

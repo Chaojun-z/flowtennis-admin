@@ -37,7 +37,7 @@ assert.match(html, /membershipAccounts=Array\.isArray\(data\?\.membershipAccount
 assert.match(html, /membershipOrders=Array\.isArray\(data\?\.membershipOrders\)\?data\.membershipOrders:\[\]/, 'load-all should store membership orders');
 assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBenefitLedger\)\?data\.membershipBenefitLedger:\[\]/, 'load-all should store membership benefit ledger');
 
-assert.match(html, /账户类型[\s\S]*当前会员[\s\S]*会员状态[\s\S]*当前折扣[\s\S]*会员到期/, 'courts table should show membership status columns');
+assert.match(html, /帐户类型[\s\S]*会员状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期/, 'courts table should show membership status columns');
 assert.match(html, /function courtMembershipSummary/, 'courts page should compute membership summaries');
 assert.match(html, /查看账户/, 'courts table should expose dedicated membership account entry');
 assert.match(html, /编辑资料/, 'courts table should keep profile editing entry');

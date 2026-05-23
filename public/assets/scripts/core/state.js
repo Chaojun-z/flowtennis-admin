@@ -317,6 +317,14 @@ function renderScheduleTableError(message){
   const el=document.getElementById('schTbody');
   if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('schedule',{force:true})">重新加载</button></div></td></tr>`;
 }
+function renderCourtTableLoading(){
+  const el=document.getElementById('courtTbody');
+  if(el)el.innerHTML='<tr><td colspan="16"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>订场用户加载中...</p></div></td></tr>';
+}
+function renderCourtTableError(message){
+  const el=document.getElementById('courtTbody');
+  if(el)el.innerHTML=`<tr><td colspan="16"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('courts',{force:true})">重新加载</button></div></td></tr>`;
+}
 function renderBlockLoading(id,text){
   const el=document.getElementById(id);
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
@@ -336,7 +344,7 @@ function renderPageLoading(pg){
     renderTableBodyLoading('financeAnomalyTbody',4,'异常检查加载中...');
   }
   if(pg==='coaches')renderTableBodyLoading('coachTbody',7,'教练数据加载中...');
-  if(pg==='courts')renderTableBodyLoading('courtTbody',17,'订场用户加载中...');
+  if(pg==='courts')renderCourtTableLoading();
   if(pg==='matches')renderTableBodyLoading('matchTbody',9,'约球数据加载中...');
   if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
   if(pg==='workbench')renderBlockLoading('workbenchBody','教练工作台加载中...');
@@ -569,6 +577,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
     if(pg==='students')renderStudentTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
+    if(pg==='courts')renderCourtTableError(String(e.message||e));
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');

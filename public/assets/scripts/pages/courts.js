@@ -10,10 +10,10 @@ function renderCourtHeaderFilters(base,filterSource=null){
   const accountTypes=Array.isArray(filterSource?.accountTypes)&&filterSource.accountTypes.length
     ? filterSource.accountTypes.map(v=>String(v||'').trim()).filter(Boolean)
     : [...new Set(base.map(c=>String(c.accountType||courtMembershipSummary(c).accountType||'').trim()).filter(Boolean))];
-  const ownerOpts=[{value:'',label:'全部对接人'},...owners.map(v=>({value:v,label:v}))];
-  const accountOpts=[{value:'',label:'全部账户'},...accountTypes.map(v=>({value:v,label:v}))];
-  if(ownerHost)ownerHost.innerHTML=renderCourtDropdownHtml('courtOwnerValue','全部对接人',ownerOpts,courtOwnerFilterValue,false,'onCourtToolbarFilterChange');
-  if(accountHost)accountHost.innerHTML=renderCourtDropdownHtml('courtAccountTypeValue','全部账户',accountOpts,courtAccountTypeFilterValue,false,'onCourtToolbarFilterChange');
+  const ownerOpts=[{value:'',label:'全部',emptyDisplay:'对接人'},...owners.map(v=>({value:v,label:v}))];
+  const accountOpts=[{value:'',label:'全部',emptyDisplay:'帐户类型'},...accountTypes.map(v=>({value:v,label:v}))];
+  if(ownerHost)ownerHost.innerHTML=renderCourtDropdownHtml('courtOwnerValue','对接人',ownerOpts,courtOwnerFilterValue,false,'onCourtToolbarFilterChange');
+  if(accountHost)accountHost.innerHTML=renderCourtDropdownHtml('courtAccountTypeValue','帐户类型',accountOpts,courtAccountTypeFilterValue,false,'onCourtToolbarFilterChange');
   if(moreHost)moreHost.innerHTML=renderCourtDropdownHtml('courtMoreActionValue','更多操作',[
     {value:courtBatchMode?'batch-exit':'batch-select',label:courtBatchMode?'退出批量':'批量选择'},
     {value:'import',label:'导入CSV'},
@@ -456,6 +456,17 @@ function renderCourtCellText(value,mutedWhenEmpty=true){
   const muted=!raw||raw==='-'||raw==='—'||raw==='未开卡'||(mutedWhenEmpty&&raw==='未分配');
   return `<div class="tms-cell-text${muted?' is-muted':''}">${esc(text)}</div>`;
 }
+function renderCourtRecentBookingCell(date){
+  const raw=String(date||'').trim();
+  return renderCourtCellText(raw?daysAgoText(raw):'-',!raw);
+}
+function renderCourtBookingCountCell(value){
+  const count=Number(value)||0;
+  return `<div class="tms-cell-text">${count}<span class="tms-cell-unit">次</span></div>`;
+}
+function renderCourtMoneyCell(value){
+  return `<div class="tms-cell-text">¥${fmt(value)}</div>`;
+}
 function renderCourtEmptyText(value){
   const raw=String(value??'').trim();
   return raw&&raw!=='—'?raw:'-';
@@ -536,6 +547,14 @@ function getScheduleTimeOptions(selected='09:00'){
 function courtAccountListViewSortMetric(item,key){
   if(key==='balance')return {empty:false,value:Number(item?.balance)||0};
   if(key==='spentAmount')return {empty:false,value:Number(item?.totalSpent)||0};
+  if(key==='bookingCount')return {empty:false,value:Number(item?.bookingCount)||0};
+  if(key==='bookingAmount')return {empty:false,value:Number(item?.bookingAmount)||0};
+  if(key==='lastBookingDate'){
+    const raw=String(item?.lastBookingDate||'').trim();
+    if(!raw||raw==='-'||raw==='—')return {empty:true,value:0};
+    const timeValue=dateMs(raw);
+    return {empty:Number.isNaN(timeValue),value:Number.isNaN(timeValue)?0:timeValue};
+  }
   if(['validUntil','recentFollowUpDate','nextFollowUpDate'].includes(key)){
     const raw=String((key==='validUntil'?item?.membershipValidUntil:item?.[key])||'').trim();
     if(!raw||raw==='-'||raw==='—')return {empty:true,value:0};
@@ -551,7 +570,9 @@ function summarizeCourtAccountListItems(items=[]){
     totalBalance:items.reduce((sum,item)=>sum+(Number(item?.balance)||0),0),
     totalDeposit:items.reduce((sum,item)=>sum+(Number(item?.totalDeposit)||0),0),
     totalSpent:items.reduce((sum,item)=>sum+(Number(item?.totalSpent)||0),0),
-    totalReceived:items.reduce((sum,item)=>sum+(Number(item?.totalReceived)||0),0)
+    totalReceived:items.reduce((sum,item)=>sum+(Number(item?.totalReceived)||0),0),
+    totalBookingCount:items.reduce((sum,item)=>sum+(Number(item?.bookingCount)||0),0),
+    totalBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.bookingAmount)||0),0)
   };
 }
 function renderCourtAccountListView(){
@@ -585,7 +606,7 @@ function renderCourtAccountListView(){
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
   const scopedSummary=campus==='all'?summary:summarizeCourtAccountListItems(base);
-  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${Number(scopedSummary.totalCount)||0}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">余额合计</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalBalance)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计充值</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalDeposit)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计消费</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalSpent)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalReceived)}</div></div>`;
+  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${Number(scopedSummary.totalCount)||0}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">累计订场</div><div class="tms-stat-value">${Number(scopedSummary.totalBookingCount)||0}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场消费</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalBookingAmount)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员余额</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalBalance)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalReceived)}</div></div>`;
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
   const slice=sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
@@ -604,8 +625,8 @@ function renderCourtAccountListView(){
     const memberTagClass=courtMembershipTierTagClass(item.membershipTierLabel);
     const statusTagMeta=membershipStatusTagMeta(item.membershipStatusCode||'');
     const memberCell=item.membershipTierLabel&&item.membershipTierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderCourtEmptyText(item.membershipTierLabel))}</span>`:renderCourtCellText('-');
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderCourtCellText(item.phone)}</td><td>${renderCourtCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(item.accountType)}</span></td><td>${memberCell}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${renderCourtCellText(item.membershipDiscountText)}</td><td>${renderCourtCellText(item.membershipValidUntil)}</td><td>${renderCourtCellText(item.owner)}</td><td>${renderCourtCellText(item.familiarity)}</td><td>${renderCourtCellText(item.depositAttitude)}</td><td>${renderCourtCellText(item.recentFollowUpDate)}</td><td>${renderCourtCellText(item.nextFollowUpDate)}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td><div class="tms-cell-text">¥${fmt(item.totalSpent)}</div></td><td><div class="tms-text-remark" title="${esc(item.notesSummary||'')}">${esc(renderCourtEmptyText(item.notesSummary))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:210px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${item.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
-  }).join(''):'<tr><td colspan="17"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderCourtCellText(item.phone)}</td><td>${renderCourtCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(item.accountType)}</span></td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtCellText(item.membershipValidUntil)}</td><td>${renderCourtCellText(item.familiarity)}</td><td>${renderCourtCellText(item.depositAttitude)}</td><td>${renderCourtCellText(item.owner)}</td><td><div class="tms-text-remark" title="${esc(item.notesSummary||'')}">${esc(renderCourtEmptyText(item.notesSummary))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${item.id}')">编辑资料</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
+  }).join(''):'<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts .tms-sortable').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
@@ -643,8 +664,10 @@ function renderCourts(){
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
   const finBase=base.map(courtFinanceLocal);
+  const bookingBase=base.map(courtBookingSummary);
   const totBal=finBase.reduce((s,u)=>s+u.balance,0),totDep=finBase.reduce((s,u)=>s+u.totalDeposit,0),totSpent=finBase.reduce((s,u)=>s+u.spentAmount,0),totReceived=finBase.reduce((s,u)=>s+u.receivedAmount,0);
-  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${base.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">余额合计</div><div class="tms-stat-value">¥${fmt(totBal)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计充值</div><div class="tms-stat-value">¥${fmt(totDep)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计消费</div><div class="tms-stat-value">¥${fmt(totSpent)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(totReceived)}</div></div>`;
+  const bookingCount=bookingBase.reduce((s,u)=>s+u.count,0),bookingAmount=bookingBase.reduce((s,u)=>s+u.amount,0);
+  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${base.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">累计订场</div><div class="tms-stat-value">${bookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场消费</div><div class="tms-stat-value">¥${fmt(bookingAmount)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员余额</div><div class="tms-stat-value">¥${fmt(totBal)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(totReceived)}</div></div>`;
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
   const slice=sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
@@ -660,13 +683,14 @@ function renderCourts(){
   document.getElementById('courtTbody').innerHTML=slice.length?slice.map(u=>{
     const f=courtFinanceLocal(u);
     const m=courtMembershipSummary(u);
+    const b=courtBookingSummary(u);
     const w=f.balance>0&&f.balance<=500;
     const accountTagClass=m.accountType==='会员'?'tms-tag-green':m.accountType==='普通'?'':'tms-tag-red';
     const memberTagClass=courtMembershipTierTagClass(m.tierLabel);
     const statusTagMeta=membershipStatusTagMeta(m.status);
     const memberCell=m.tierLabel&&m.tierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderCourtEmptyText(m.tierLabel))}</span>`:renderCourtCellText('-');
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td>${memberCell}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${renderCourtCellText(m.discount)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtCellText(u.owner)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td>${renderCourtCellText(u.recentFollowUpDate)}</td><td>${renderCourtCellText(u.nextFollowUpDate)}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td><div class="tms-cell-text">¥${fmt(f.spentAmount)}</div></td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(renderCourtEmptyText(u.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:210px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
-  }).join(''):'<tr><td colspan="17"><div class="empty"><div class="empty-ico">🏟️</div><p>暂无订场用户</p></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td>${renderCourtCellText(u.owner)}</td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(renderCourtEmptyText(u.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑资料</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
+  }).join(''):'<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts .tms-sortable').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
