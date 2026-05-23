@@ -39,7 +39,7 @@ assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBe
 
 assert.match(html, /会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期/, 'courts table should show membership status columns');
 assert.match(html, /function courtMembershipSummary/, 'courts page should compute membership summaries');
-assert.match(html, /查看账户/, 'courts table should expose dedicated membership account entry');
+assert.match(html, /会员账户/, 'courts table should expose dedicated membership account entry');
 assert.match(html, /openCourtModal\('\$\{item\.id\}'\)">编辑/, 'courts table should keep the short profile editing entry');
 assert.match(html, /function openCourtMembershipPanel/, 'membership actions should move into dedicated account panel');
 assert.match(html, /function courtMembershipPanelHtml/, 'membership account should render through dedicated panel html');
@@ -118,7 +118,7 @@ assert.match(html, /时间[\s\S]*订场用户[\s\S]*购买批次[\s\S]*权益[\s
 assert.match(html, /此页面仅用于审计与追溯，不用于日常操作/, 'audit modal should explain read-only positioning');
 assert.match(html, /权益有效期固定 12 个月[\s\S]*余额最长按当前系统规则至 24 个月/, 'membership plan form should explain fixed validity rules');
 assert.match(html, /可用权益/, 'membership account list should expose benefit summary');
-assert.match(html, /查看账户/, 'membership account list should expose account detail entry');
+assert.match(fnBody('renderMemberships'), />查看<\/span>/, 'membership account list should expose account detail entry');
 assert.match(html, /function membershipDisplayStatus/, 'frontend should compute display status labels');
 assert.match(html, /function membershipStatusTagMeta/, 'frontend should compute membership status tag styles');
 assert.match(html, /function membershipValidityHint/, 'frontend should compute validity hint text');
@@ -195,6 +195,14 @@ assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
 assert.match(html, /function onMembershipSearchChange\(\)/, 'membership management search should reset to the first page');
 assert.match(html, /id="membershipSearch"[\s\S]*oninput="onMembershipSearchChange\(\)"/, 'membership management search should use the standard search handler');
+assert.match(html, /let membershipTierFilterValue=''/, 'membership management should keep a member type filter value');
+assert.match(html, /id="membershipTierFilter"/, 'membership management should expose a member type filter');
+assert.match(html, /function onMembershipToolbarFilterChange\(\)/, 'membership member type filter should rerender from page one');
+assert.match(fnBody('renderMemberships'), /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
+assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订场次数/, 'membership management should remove old column labels');
+assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
+assert.match(fnBody('renderMemberships'), /membershipBookingCount\(court\)[\s\S]*courtBookingSummary\(court\)\.count/, 'membership management should show member bookings and total bookings separately');
+assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{court\.id\}'\)">订场/, 'membership management should provide view and booking actions');
 assert.match(fnBody('renderMemberships'), /data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable booking count, balance and validity columns');
 assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓名/, 'membership management should freeze the member name column');
 assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');

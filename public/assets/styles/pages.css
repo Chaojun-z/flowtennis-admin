@@ -135,6 +135,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-purchases .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-courts .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-courts .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+#page-memberships .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
+#page-memberships .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-students .tms-sort-header,#page-courts .tms-sort-header{border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:0;white-space:nowrap}
 #page-students .tms-sort-icon,#page-courts .tms-sort-icon{display:inline-flex;flex-direction:column;gap:1px;width:7px;height:auto;margin-left:0;align-items:center;color:inherit;transform:translateY(-1px)}
 #page-students .tms-sort-up,#page-courts .tms-sort-up,#page-students .tms-sort-down,#page-courts .tms-sort-down{width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}
@@ -200,7 +202,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-admin-users .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
 #page-coaches .tms-table{min-width:1000px}
 #page-coaches .tms-table-wrapper{max-height:calc(100vh - 190px)}
-#page-memberships .tms-table{min-width:1360px}
+#page-memberships .tms-table{min-width:1500px}
 #page-memberships .tms-table-wrapper{max-height:calc(100vh - 230px)}
 #page-memberships .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
 #page-memberships .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}

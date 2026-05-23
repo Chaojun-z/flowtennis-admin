@@ -131,6 +131,23 @@ function renderMembershipStats(rows=[]){
   const totalBookingCount=rows.reduce((sum,row)=>sum+membershipBookingCount(row.court||membershipVisibleCourt(row)||{history:[]}),0);
   host.innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">会员数</div><div class="tms-stat-value">${rows.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场次数</div><div class="tms-stat-value">${totalBookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">总余额</div><div class="tms-stat-value">¥${fmt(totalBalance)}</div></div>`;
 }
+function membershipTierForRow(row){
+  const account=row?.account||{};
+  const tierLabel=courtMembershipTierLabel(account);
+  return ['voided','cleared'].includes(account.status)||tierLabel==='-'?'-':tierLabel;
+}
+function renderMembershipHeaderFilters(rows=[]){
+  const host=document.getElementById('membershipTierFilter');
+  if(!host)return;
+  const tiers=[...new Set(rows.map(membershipTierForRow).filter(v=>v&&v!=='-'))];
+  const opts=[{value:'',label:'全部',emptyDisplay:'会员类型'},...tiers.map(v=>({value:v,label:v}))];
+  host.innerHTML=renderCourtDropdownHtml('membershipTierValue','会员类型',withStandardFilterCounts(opts,rows,(row,value)=>membershipTierForRow(row)===value),membershipTierFilterValue,false,'onMembershipToolbarFilterChange');
+}
+function onMembershipToolbarFilterChange(){
+  membershipTierFilterValue=document.getElementById('membershipTierValue')?.value||'';
+  membershipPage=1;
+  renderMemberships();
+}
 function onMembershipSearchChange(){
   membershipPage=1;
   renderMemberships();
@@ -181,7 +198,8 @@ function membershipSortMetric(row,key){
   const court=row.court||{};
   const account=row.account||{};
   if(key==='balance')return {empty:false,value:courtFinanceLocal(court).balance};
-  if(key==='bookingCount')return {empty:false,value:membershipBookingCount(court)};
+  if(key==='memberBookingCount')return {empty:false,value:membershipBookingCount(court)};
+  if(key==='bookingCount')return {empty:false,value:courtBookingSummary(court).count};
   if(key==='validUntil'){
     const raw=String(['voided','cleared'].includes(account.status)?'':account.validUntil||'').trim();
     if(!raw||raw==='-'||raw==='—')return {empty:true,value:0};
@@ -192,10 +210,15 @@ function membershipSortMetric(row,key){
 }
 function getMembershipRows(){
   const q=(document.getElementById('membershipSearch')?.value||'').toLowerCase();
-  return membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account})).filter(row=>searchHit(q,row.court.name,row.court.phone,row.account.courtName,row.account.memberLabel,row.account.phone));
+  const base=membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account}));
+  return base.filter(row=>{
+    if(membershipTierFilterValue&&membershipTierForRow(row)!==membershipTierFilterValue)return false;
+    return searchHit(q,row.court.name,row.court.phone,row.account.courtName,row.account.memberLabel,row.account.phone);
+  });
 }
 function renderMemberships(){
   const host=document.getElementById('membershipTabBody');if(!host)return;
+  renderMembershipHeaderFilters(membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account})));
   const rows=getMembershipRows();
   renderMembershipStats(rows);
   const sortedRows=[...rows];
@@ -210,7 +233,7 @@ function renderMemberships(){
   const total=sortedRows.length,pages=Math.max(1,Math.ceil(total/membershipPageSize));
   if(membershipPage>pages)membershipPage=pages;
   const slice=sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
-  host.innerHTML=`<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">会员姓名</th><th style="width:140px">手机号</th><th style="width:160px">当前会员</th><th style="width:120px">会员状态</th><th style="width:120px"><button class="tms-sort-header" data-membership-sort="balance" onclick="setMembershipSort('balance')">当前余额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:100px">当前折扣</th><th style="width:120px"><button class="tms-sort-header" data-membership-sort="bookingCount" onclick="setMembershipSort('bookingCount')">订场次数<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:360px">可用权益</th><th style="width:150px"><button class="tms-sort-header" data-membership-sort="validUntil" onclick="setMembershipSort('validUntil')">余额有效期<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:150px">清零时间</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${slice.map(({court,account:a})=>{const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const statusMeta=membershipStatusTagMeta(a);const tierLabel=courtMembershipTierLabel(a);const bookingCount=membershipBookingCount(court);return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(courtDisplayName(court)||a.courtName,false)}</td><td>${renderCourtCellText(court.phone)}</td><td>${['voided','cleared'].includes(a.status)||tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td><div class="tms-cell-text">¥${fmt(finance.balance)}</div></td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':(a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':''))}</td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderCourtEmptyText(benefits))}</div></td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':a.validUntil,false)}</td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':a.hardExpireAt,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:160px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${court.id}')">查看账户</span></td></tr>`;}).join('')||'<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>'}</tbody></table></div><div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="membershipPagerInfo">共 ${total} 条</span><div id="membershipPageSize"></div></div><div class="tms-page-numbers" id="membershipPagerBtns"></div></div></div>`;
+  host.innerHTML=`<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">会员姓名</th><th style="width:140px">手机号</th><th style="width:160px">会员类型</th><th style="width:120px">会员状态</th><th style="width:120px"><button class="tms-sort-header" data-membership-sort="balance" onclick="setMembershipSort('balance')">会员余额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:100px">当前折扣</th><th style="width:110px"><button class="tms-sort-header" data-membership-sort="memberBookingCount" onclick="setMembershipSort('memberBookingCount')">会员订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:110px"><button class="tms-sort-header" data-membership-sort="bookingCount" onclick="setMembershipSort('bookingCount')">累计订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:360px">可用权益</th><th style="width:150px"><button class="tms-sort-header" data-membership-sort="validUntil" onclick="setMembershipSort('validUntil')">余额有效期<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:150px">清零时间</th><th class="tms-sticky-r" style="width:168px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${slice.map(({court,account:a})=>{const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const statusMeta=membershipStatusTagMeta(a);const tierLabel=courtMembershipTierLabel(a);const memberBookingCount=membershipBookingCount(court);const bookingCount=courtBookingSummary(court).count;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(courtDisplayName(court)||a.courtName,false)}</td><td>${renderCourtCellText(court.phone)}</td><td>${['voided','cleared'].includes(a.status)||tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':(a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':''))}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderCourtEmptyText(benefits))}</div></td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':a.validUntil,false)}</td><td>${renderCourtCellText(['voided','cleared'].includes(a.status)?'-':a.hardExpireAt,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${court.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${court.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>'}</tbody></table></div><div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="membershipPagerInfo">共 ${total} 条</span><div id="membershipPageSize"></div></div><div class="tms-page-numbers" id="membershipPagerBtns"></div></div></div>`;
   const pager=host.querySelector('.tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
   renderMembershipPagerControls(total,pages);
