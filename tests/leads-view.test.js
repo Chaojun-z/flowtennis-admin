@@ -54,8 +54,13 @@ assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support 
 assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20/, 'leads page size should be limited to 20, 50, and 100');
 assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
+assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
+assert.match(leadsSource, /function leadDetailBlockHtml\(/, 'lead detail should expose readonly block helper');
+assert.match(leadsSource, /function leadDetailSectionHtml\(/, 'lead detail should expose section helper');
 assert.match(leadsSource, /function openLeadDetail\(/, 'leads page should expose the lead detail modal');
-assert.match(leadsSource, /基础信息[\s\S]*当前跟进[\s\S]*跟进时间线[\s\S]*转化关系/, 'lead detail should expose the updated four required sections');
+const leadDetailSource=(leadsSource.match(/function openLeadDetail\([\s\S]*?function openLeadModal/)||[''])[0];
+assert.match(leadDetailSource, /leadDetailSectionHtml\('基础信息'[\s\S]*leadDetailSectionHtml\('当前跟进'[\s\S]*leadDetailSectionHtml\('跟进时间线'[\s\S]*leadDetailSectionHtml\('转化关系'/, 'lead detail should expose the updated four required sections');
+assert.doesNotMatch(leadDetailSource, /<input class="finput tms-form-control"/, 'lead detail should be read-only rather than editable');
 assert.match(leadsSource, /function openLeadFollowupModal\(/, 'leads page should expose the follow-up modal');
 assert.match(leadsSource, /跟进时间[\s\S]*跟进人[\s\S]*跟进方式[\s\S]*沟通内容[\s\S]*用户顾虑[\s\S]*本次结论[\s\S]*当前状态[\s\S]*下次跟进时间[\s\S]*下次动作/, 'follow-up modal should expose the required fields');
 assert.match(leadsSource, /type="datetime-local"/, 'follow-up modal should use a proper datetime-local input');
@@ -67,6 +72,7 @@ assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'leads table should remove internal vertical scrolling and keep horizontal scrolling');
+assert.match(css, /#page-leads \.tms-table td\{padding-top:7px;padding-bottom:7px;vertical-align:middle\}/, 'leads table rows should vertically center cell content');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 

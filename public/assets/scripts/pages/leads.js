@@ -238,10 +238,52 @@ function linkedCourtName(lead){
   const court=courts.find(item=>String(item?.id||'')===String(lead?.courtId||''));
   return court?.name||lead?.courtId||'-';
 }
+function leadDetailFieldHtml(label,value){
+  return `<div class="tms-detail-field"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-value">${esc(renderCourtEmptyText(value))}</div></div>`;
+}
+function leadDetailIsEmptyHtml(html){
+  const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
+  return !text||['-','暂无跟进时间线','暂无线索详情'].includes(text);
+}
+function leadDetailBlockHtml(label,html,options={}){
+  if(options.hideEmpty&&leadDetailIsEmptyHtml(html))return '';
+  return `<div class="tms-detail-field full-width"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-block">${html||'-'}</div></div>`;
+}
+function leadDetailSectionHtml(title,content,first=false){
+  return content?`<div class="tms-section-header"${first?' style="margin-top:0;"':''}>${title}</div><div class="tms-detail-grid">${content}</div>`:'';
+}
 function openLeadDetail(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
-  const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">微信名</label><input class="finput tms-form-control" value="${esc(leadWechatText(lead))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" value="${esc(lead?.phone||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">线索时间</label><input class="finput tms-form-control" value="${esc(lead?.leadDate||'-')}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">水平</label><input class="finput tms-form-control" value="${esc(leadLevelText(lead))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">来源</label><input class="finput tms-form-control" value="${esc(lead?.source||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">咨询需求</label><input class="finput tms-form-control" value="${esc(lead?.consultType||'-')}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><div class="finput tms-form-control tms-readonly-text">${esc(leadProfileText(lead))}</div></div></div><div class="tms-section-header">当前跟进</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" value="${esc(lead?.owner||'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">跟进次数</label><input class="finput tms-form-control" value="${esc(String(leadFollowupCount(lead)))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">当前状态</label><input class="finput tms-form-control" value="${esc(leadSystemStatusText(lead))}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最近跟进</label><input class="finput tms-form-control" value="${esc(lead?.lastFollowupAt?fmtDt(lead.lastFollowupAt):'-')}" readonly></div><div class="tms-form-item"><label class="tms-form-label">转化结果</label><input class="finput tms-form-control" value="${esc(leadConversionText(lead))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">正式课教练</label><input class="finput tms-form-control" value="${esc(lead?.formalCoach||'-')}" readonly></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通情况</label><div class="finput tms-form-control tms-readonly-text">${renderLeadCommunicationBlock(leadCommunicationText(lead))}</div></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">用户顾虑</label><div class="finput tms-form-control tms-readonly-text">${esc(lead?.latestConcern||'-')}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">下一步动作</label><div class="finput tms-form-control tms-readonly-text">${esc(lead?.nextAction||'-')}</div></div></div><div class="tms-section-header">跟进时间线</div>${leadTimelineHtml(lead)}<div class="tms-section-header">转化关系</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员关联</label><input class="finput tms-form-control" value="${esc(linkedStudentName(lead))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">订场关联</label><input class="finput tms-form-control" value="${esc(linkedCourtName(lead))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">未成交原因</label><input class="finput tms-form-control" value="${esc(lead?.lostReason||'-')}" readonly></div></div>`;
+  const body=`
+    ${leadDetailSectionHtml('基础信息',`
+      ${leadDetailFieldHtml('微信名',leadWechatText(lead))}
+      ${leadDetailFieldHtml('电话',lead?.phone||'-')}
+      ${leadDetailFieldHtml('线索时间',lead?.leadDate||'-')}
+      ${leadDetailFieldHtml('水平',leadLevelText(lead))}
+      ${leadDetailFieldHtml('来源',lead?.source||'-')}
+      ${leadDetailFieldHtml('咨询需求',lead?.consultType||'-')}
+      ${leadDetailFieldHtml('意向类型',lead?.intentLevel||'-')}
+      ${leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})}
+    `,true)}
+    ${leadDetailSectionHtml('当前跟进',`
+      ${leadDetailFieldHtml('跟进人',lead?.owner||'-')}
+      ${leadDetailFieldHtml('跟进次数',String(leadFollowupCount(lead)))}
+      ${leadDetailFieldHtml('当前状态',leadSystemStatusText(lead))}
+      ${leadDetailFieldHtml('最近跟进',lead?.lastFollowupAt?fmtDt(lead.lastFollowupAt):'-')}
+      ${leadDetailFieldHtml('转化结果',leadConversionText(lead))}
+      ${leadDetailFieldHtml('正式课教练',lead?.formalCoach||'-')}
+      ${leadDetailBlockHtml('沟通情况',renderLeadCommunicationBlock(leadCommunicationText(lead)),{hideEmpty:true})}
+      ${leadDetailBlockHtml('用户顾虑',esc(lead?.latestConcern||'-'),{hideEmpty:true})}
+      ${leadDetailBlockHtml('下一步动作',esc(lead?.nextAction||'-'),{hideEmpty:true})}
+    `)}
+    ${leadDetailSectionHtml('跟进时间线',`<div class="tms-detail-field full-width"><div class="tms-detail-block">${leadTimelineHtml(lead)}</div></div>`)}
+    ${leadDetailSectionHtml('转化关系',`
+      ${leadDetailFieldHtml('学员关联',linkedStudentName(lead))}
+      ${leadDetailFieldHtml('订场关联',linkedCourtName(lead))}
+      ${leadDetailFieldHtml('未成交原因',lead?.lostReason||'-')}
+    `)}
+  `;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-default" onclick="openLeadFollowupModal('${lead.id}')">新增跟进</button><button class="tms-btn tms-btn-default" onclick="openLeadModal('${lead.id}')">编辑线索</button><button class="tms-btn tms-btn-default" onclick="convertLeadToStudent('${lead.id}')">转为学员</button><button class="tms-btn tms-btn-default" onclick="convertLeadToCourt('${lead.id}')">转为订场用户</button><button class="tms-btn tms-btn-default" onclick="openLeadLinkStudentModal('${lead.id}')">关联已有学员</button><button class="tms-btn tms-btn-primary" onclick="openLeadLinkCourtModal('${lead.id}')">关联已有订场用户</button>`;
   setCourtModalFrame('线索详情',body,actions,'modal-wide');
 }
@@ -539,7 +581,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const conversionText=leadConversionText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(lead?.leadDate||'-',false)}</td><td>${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(lead?.phone||'-',false)}</td><td>${renderCourtCellText(leadLevelText(lead),false)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderCourtCellText(lead?.consultType,false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(leadSystemStatusText(lead),'status')}</td><td>${renderCourtCellText(lead?.lastFollowupAt?fmtDt(lead.lastFollowupAt):'-',false)}</td><td>${renderLeadTag(conversionText,'conversion')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadCommunicationText(lead))}">${esc(renderCourtEmptyText(leadCommunicationText(lead)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(lead?.leadDate||'-',false)}</td><td>${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(lead?.phone||'-',false)}</td><td>${renderCourtCellText(leadLevelText(lead),false)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderCourtCellText(lead?.consultType,false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(leadSystemStatusText(lead),'status')}</td><td>${renderCourtCellText(lead?.lastFollowupAt?fmtDt(lead.lastFollowupAt):'-',false)}</td><td>${renderLeadTag(conversionText,'conversion')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(renderCourtEmptyText(leadCommunicationText(lead)))}">${esc(renderCourtEmptyText(leadCommunicationText(lead)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.textContent=`共 ${total} 条`;

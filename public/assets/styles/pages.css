@@ -668,7 +668,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding:12px 14px}
 #page-leads .tms-table-wrapper{max-height:none;overflow-x:auto;overflow-y:visible}
 #page-leads .tms-table{table-layout:fixed}
-#page-leads .tms-table td{padding-top:7px;padding-bottom:7px;vertical-align:top}
+#page-leads .tms-table td{padding-top:7px;padding-bottom:7px;vertical-align:middle}
 #page-leads .tms-table th{padding-top:9px;padding-bottom:9px}
 #page-leads .tms-text-remark{max-width:none}
 .modal.modal-court textarea.tms-form-control{height:auto;min-height:62px;padding:10px 12px}
