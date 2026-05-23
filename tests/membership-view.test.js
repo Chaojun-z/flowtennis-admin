@@ -138,7 +138,7 @@ assert.match(html, /function effectiveMembershipBenefitSource/, 'membership summ
 assert.match(html, /function membershipOrderEffectiveBenefitSource/, 'frontend should centralize deal snapshot priority for benefit display');
 assert.doesNotMatch(html, /effectiveMembershipBenefitSource\(order\?\.benefitSnapshot,order,order\?\.planBenefitTemplateSnapshot,plan\)/, 'frontend benefit display should not refill omitted rights from the plan after a deal snapshot exists');
 assert.match(html, /const planCount=parseInt\(planSnap\?\.\[item\.code\]\?\.count\)\|\|0;/, 'membership purchase list should compare current order total against plan base count');
-assert.match(html, /const benefits=benefitRows\.length\?benefitRows\.map\(b=>`\$\{b\.label\} \$\{b\.remaining\}\/\$\{b\.total\}`\)\.join\('；'\):'—';/, 'membership account list should show remaining\/total benefit counts');
+assert.match(html, /const benefits=benefitRows\.length\?benefitRows\.map\(b=>`\$\{b\.label\} \$\{b\.remaining\}\/\$\{b\.total\}`\)\.join\('；'\):'-';/, 'membership account list should show remaining\/total benefit counts');
 assert.match(html, /function resetModalActions\(\)/, 'membership modals should clear stale footer actions before using body-level action areas');
 assert.match(html, /function openMembershipOrderModal/, 'membership order modal should remain available');
 assert.match(html, /function openMembershipBenefitActionModal/, 'benefit action modal should remain available');
@@ -156,7 +156,7 @@ assert.match(html, /setInterval\(syncAllQuietly,180000\);/, 'background sync int
 assert.doesNotMatch(html, /membershipBenefitCourtFilter/, 'membership management page should remove the global benefit batch filter');
 assert.doesNotMatch(html, /赠送权益批次 = 每次购买送了什么、还剩多少、何时到期/, 'membership management page should no longer expose global benefit batch explanation');
 assert.doesNotMatch(html, /请选择权益账户，排课必须绑定课包权益/, 'schedule form should not hard-block saving when no entitlement is selected');
-assert.match(html, /会员状态<\/th>[\s\S]*订场次数<\/th>[\s\S]*余额有效期<\/th>[\s\S]*清零时间<\/th>/, 'membership management list should show booking count before validity columns');
+assert.match(html, /会员状态[\s\S]*订场次数[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
 assert.match(html, /function membershipBookingCount\(/, 'membership management should expose a helper to count stored-value bookings');
 assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&String\(h\.payMethod\|\|''\)\.trim\(\)==='储值扣款'&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
 assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:#C06031" onclick="goPage\('membership-orders'\)"/, 'membership management purchase audit entry should use visible accent color');
@@ -164,7 +164,7 @@ assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:
 assert.match(pagesCss, /#page-memberships \.tms-toolbar-right \.tms-action-link-strong[\s\S]*#FEF3C7/s, 'membership audit entries should be readable on the brown background');
 assert.match(html, /const statusMeta=membershipStatusTagMeta\(a\);/, 'membership management rows should derive status tag metadata');
 assert.match(html, /function membershipVisibleCourt/, 'membership management should ignore deleted or archived court users');
-assert.match(fnBody('renderMemberships'), /membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should build rows from membership accounts returned by the API');
+assert.match(fnBody('getMembershipRows'), /membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should build rows from membership accounts returned by the API');
 assert.match(html, /function isActiveCourtRecord\(/, 'frontend should centralize active court filtering');
 assert.match(fnBody('isActiveCourtRecord'), /status!=='inactive'&&status!=='deleted'&&!court\?\.deletedAt&&!court\?\.mergedIntoCourtId/, 'active court filtering should exclude hidden, deleted and merged users');
 assert.match(fnBody('renderMemberships'), /openCourtMembershipPanel\('\$\{court\.id\}'\)/, 'membership account action should open the account for the visible row court');
@@ -191,5 +191,16 @@ assert.match(html, /已消耗/, 'membership account rights should show consumed 
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
 assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
 assert.match(fnBody('membershipBenefitSummaryForOrder'), /const positiveDelta=.*?delta\)\|\|0\)>0[\s\S]*const negativeDelta=.*?delta\)\|\|0\)<0[\s\S]*const total=\(item\.total\|\|0\)\+positiveDelta[\s\S]*remaining:expired\?0:Math\.max\(0,total\+negativeDelta\)/, 'frontend benefit summary should add supplements to both total and remaining');
+assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='bookingCount',membershipSortDir='desc'/, 'membership management should own standard pagination and default sort state');
+assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
+assert.match(html, /function onMembershipSearchChange\(\)/, 'membership management search should reset to the first page');
+assert.match(html, /id="membershipSearch"[\s\S]*oninput="onMembershipSearchChange\(\)"/, 'membership management search should use the standard search handler');
+assert.match(fnBody('renderMemberships'), /data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable booking count, balance and validity columns');
+assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓名/, 'membership management should freeze the member name column');
+assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
+assert.match(fnBody('renderMemberships'), /renderCourtEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
+assert.match(pagesCss, /#page-memberships \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership management table should freeze the left name column');
+assert.match(pagesCss, /#page-memberships \.tms-pagination\{padding:4px 12px;font-size:11px;min-height:32px\}/, 'membership management pager should use the compact standard size');
+assert.match(pagesCss, /#page-memberships \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15\}/, 'membership management rows should use the compact standard row height');
 
 console.log('membership view tests passed');
