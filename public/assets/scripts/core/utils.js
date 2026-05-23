@@ -777,7 +777,7 @@ function studentPackageLessonMeta(stu){
   return {hasPackage:true,remaining,total,text:`${lessonQty(remaining)}/${lessonQty(total)}`,pct:Math.max(0,Math.min(100,Math.round((remaining/total)*100)))};
 }
 function studentActiveEntitlementRows(stu){
-  return entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided'&&entitlementStatusText(e)==='正常'&&lessonValue(e.remainingLessons)>0);
+  return entitlements.filter(e=>e.studentId===stu?.id&&e.status!=='voided'&&['正常','已用完'].includes(entitlementStatusText(e))&&lessonValue(e.totalLessons)>0);
 }
 function studentPackageLessonSummary(stu){
   const meta=studentPackageLessonMeta(stu);
@@ -1134,15 +1134,31 @@ function studentLedgerBalanceNumbersAfter(row,ent={}){
   return {remaining:(Number(ent.remainingLessons)||0)-laterDelta,total:Number(ent.totalLessons)||0};
 }
 function studentLessonRecordSectionText(row,ent={}){
+  if(Number(row.lessonDelta)>=0)return '';
   const balance=studentLedgerBalanceNumbersAfter(row,ent);
   const total=balance?.total||Number(ent.totalLessons)||0;
   if(!total)return '';
   const remainingAfter=balance?.remaining??(Number(ent.remainingLessons)||0);
   const count=Math.abs(Number(row.lessonDelta)||0);
-  const endNo=Math.max(1,total-remainingAfter);
-  const startNo=Math.max(1,endNo-count+1);
-  const pad=n=>String(Math.max(0,Math.round(n))).padStart(2,'0');
-  return `[第${pad(startNo)}-${pad(endNo)}节]`;
+  const usedBefore=Math.max(0,total-remainingAfter-count);
+  const usedAfter=Math.max(0,total-remainingAfter);
+  const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
+  const endNo=usedAfter;
+  const startText=studentLessonSectionMarker(startNo);
+  const endText=studentLessonSectionMarker(endNo);
+  return `[第${startText}${startText===endText?'':`-${endText}`}节]`;
+}
+function studentLessonSectionMarker(value){
+  const num=Number(value)||0;
+  if(Number.isInteger(num))return String(num).padStart(2,'0');
+  const fixed=String(Math.round(num*10)/10);
+  const [whole,decimal]=fixed.split('.');
+  return `${String(Number(whole)||0).padStart(2,'0')}.${decimal}`;
+}
+function studentLessonRecordChargeHtml(row,ent={},balance=null){
+  if(row.freeLesson===true||row.action==='free_lesson'||(Number(row.lessonDelta)===0&&/免费|赠送/.test(String(row.reason||'')+String(row.notes||''))))return '<strong>免费送课</strong>';
+  if(ent?.id)return `<strong>扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节（${lessonQty(balance?.remaining)}/${lessonQty(balance?.total)}）</strong>`;
+  return esc(String(row?.payMethod||row?.paymentChannel||row?.paymentMethod||row?.incomeType||'课次').trim());
 }
 function studentLessonRecordPackageText(row,ent={}){
   const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
@@ -1163,9 +1179,7 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const schedule=findScheduleForEntitlementLedgerRow(row,student);
   const balance=studentLedgerBalanceNumbersAfter(row,ent)||{remaining:Number(ent.remainingLessons)||0,total:Number(ent.totalLessons)||0};
   const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
-  const chargeHtml=ent?.id
-    ? `<strong>扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节（${lessonQty(balance.remaining)}/${lessonQty(balance.total)}）</strong>`
-    : esc(String(row?.payMethod||row?.paymentChannel||row?.paymentMethod||row?.incomeType||'课次').trim());
+  const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance);
   return [
     esc(studentLessonRecordSectionText(row,ent)),
     esc(studentEntitlementLedgerTimeText(row,schedule)),

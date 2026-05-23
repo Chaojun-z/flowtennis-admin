@@ -280,7 +280,7 @@ function studentLessonRecordRows(stu){
 }
 function studentConcreteLessonLedgerItems(stu){
   return studentEntitlementLedgerRows(stu)
-    .filter(row=>Number(row.lessonDelta)<0)
+    .filter(row=>studentLessonRecordLedgerShouldShow(row))
     .map(row=>{
       const schedule=findScheduleForEntitlementLedgerRow(row,stu);
       return {row,schedule};
@@ -298,6 +298,11 @@ function studentLessonRecordHasConcreteTime(row={},schedule={}){
   if(String(row?.sourceTimeBand||'').match(/\d{1,2}:\d{2}/))return true;
   if(String(row?.scheduleTime||'').match(/\d{1,2}:\d{2}/))return true;
   return false;
+}
+function studentLessonRecordLedgerShouldShow(row={}){
+  if(Number(row.lessonDelta)<0)return true;
+  if(row.freeLesson===true||row.action==='free_lesson')return true;
+  return Number(row.lessonDelta)===0&&/免费|赠送/.test(String(row.reason||'')+String(row.notes||''));
 }
 function studentLessonRecordExpanded(stu){
   return !!studentLessonRecordExpandedState[stu?.id];

@@ -43,7 +43,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   seed.entitlementLedger.reduce((sum, row) => sum + (Number(row.lessonDelta) < 0 ? Math.abs(Number(row.lessonDelta)) : 0), 0),
-  302,
+  312,
   'consume ledger should preserve monthly decimals and detailed lesson history'
 );
 assert.deepStrictEqual(
@@ -145,5 +145,24 @@ assert.ok(misha && /每周四20-21点/.test(misha.notes || ''), 'purchase notes 
 const mishaLedger = seed.entitlementLedger.filter(x => x.purchaseId === 'seed-purchase-002');
 assert.ok(mishaLedger.every(x => /每周四20-21点/.test(x.notes || '')), 'consume rows should preserve remarks for traceability');
 assert.ok(mishaLedger.every(x => x.importSource === '系统导入' && x.createdAt === seed.meta.generatedAt), 'imported consume rows should use system import time instead of fake class time');
+
+const songPurchase = seed.purchases.find(x => x.id === 'seed-purchase-036');
+assert.ok(songPurchase, '宋缇缇 purchase should exist');
+assert.strictEqual(songPurchase.packagePrice, 5000, '宋缇缇 should show 5000 payable price');
+assert.strictEqual(songPurchase.systemAmount, 5000, '宋缇缇 should show 5000 system amount');
+assert.strictEqual(songPurchase.finalAmount, 4500, '宋缇缇 should show 4500 actual paid amount');
+assert.strictEqual(songPurchase.amountPaid, 4500, '宋缇缇 paid amount should stay 4500');
+
+const songEntitlement = seed.entitlements.find(x => x.id === 'seed-entitlement-036');
+assert.ok(songEntitlement, '宋缇缇 entitlement should exist');
+assert.strictEqual(songEntitlement.usedLessons, 10, '宋缇缇 package should be fully used on 2026-05-21');
+assert.strictEqual(songEntitlement.remainingLessons, 0, '宋缇缇 package should display 0/10 after depletion');
+
+const songRows = seed.entitlementLedger.filter(x => x.studentId === 'seed-student-036');
+assert.ok(songRows.some(x => x.relatedDate === '2026-04-23' && x.sourceTimeBand === '12:30-13:30' && x.sourceVenue === '2号场' && x.coach === '朝珺' && Number(x.lessonDelta) === -1), '宋缇缇 4/23 should be corrected to one paid lesson on court 2');
+assert.ok(songRows.some(x => x.relatedDate === '2026-05-15' && x.sourceTimeBand === '12:30-13:30' && x.sourceVenue === '2号场' && x.coach === '朝珺' && Number(x.lessonDelta) === -1), '宋缇缇 5/15 should be one paid lesson on court 2');
+assert.ok(songRows.some(x => x.relatedDate === '2026-05-21' && x.sourceTimeBand === '12:30-13:30' && x.sourceVenue === '2号场' && x.coach === '朝珺' && Number(x.lessonDelta) === -1), '宋缇缇 5/21 should be one paid lesson on court 2');
+assert.ok(songRows.some(x => x.relatedDate === '2026-04-24' && x.sourceTimeBand === '12:30-13:30' && x.sourceVenue === '2号场' && x.coach === '小宋' && Number(x.lessonDelta) === 0 && /免费/.test(x.reason + x.notes)), '宋缇缇 4/24 should show the free make-up lesson');
+assert.ok(!songRows.some(x => x.relatedDate === '2026-05-22'), '宋缇缇 should not keep a 5/22 lesson row');
 
 console.log('finance seed data tests passed');
