@@ -309,6 +309,14 @@ function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
   if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('students',{force:true})">重新加载</button></div></td></tr>`;
 }
+function renderLeadTableLoading(){
+  const el=document.getElementById('leadTbody');
+  if(el)el.innerHTML='<tr><td colspan="15"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>线索数据加载中...</p></div></td></tr>';
+}
+function renderLeadTableError(message){
+  const el=document.getElementById('leadTbody');
+  if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
+}
 function renderScheduleTableLoading(){
   const el=document.getElementById('schTbody');
   if(el)el.innerHTML='<tr><td colspan="11"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>排课数据加载中...</p></div></td></tr>';
@@ -332,7 +340,7 @@ function renderBlockLoading(id,text){
 function renderPageLoading(pg){
   if(pg==='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
-  if(pg==='leads')renderTableBodyLoading('leadTbody',15,'线索数据加载中...');
+  if(pg==='leads')renderLeadTableLoading();
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
@@ -576,6 +584,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
     if(pg==='students')renderStudentTableError(String(e.message||e));
+    if(pg==='leads')renderLeadTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
     if(pg==='courts')renderCourtTableError(String(e.message||e));
     toast('加载失败：'+e.message,'error');

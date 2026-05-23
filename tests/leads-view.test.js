@@ -5,6 +5,8 @@ const path = require('path');
 const publicDir = path.join(__dirname, '../public');
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/bootstrap.js'), 'utf8');
+const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
+const css = fs.readFileSync(path.join(publicDir, 'assets/styles/pages.css'), 'utf8');
 const leadsSourcePath = path.join(publicDir, 'assets/scripts/pages/leads.js');
 const leadsSource = fs.existsSync(leadsSourcePath) ? fs.readFileSync(leadsSourcePath, 'utf8') : '';
 
@@ -24,6 +26,13 @@ assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody m
 assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info');
 assert.match(html, /id="leadPageSize"/, 'leads page should provide page size selector host');
 assert.match(html, /id="leadPagerBtns"/, 'leads page should provide pager buttons');
+assert.match(html, /leadSearch[\s\S]*onkeydown="if\(event\.key==='Enter'\)applyLeadSearch\(\)"/, 'leads search should run on enter');
+assert.match(html, /onclick="applyLeadSearch\(\)"[\s\S]*查询/, 'leads toolbar should provide a query button');
+assert.match(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar should provide a reset button');
+assert.match(html, /class="tms-sticky-l"[\s\S]*线索时间/, 'leads table should pin the first identity column');
+assert.match(html, /data-lead-sort="leadDate"[\s\S]*线索时间/, 'leads table should sort by lead date');
+assert.match(html, /data-lead-sort="lastFollowupAt"[\s\S]*最近跟进/, 'leads table should sort by latest follow-up');
+assert.match(html, /data-lead-sort="followupCount"[\s\S]*跟进次数/, 'leads table should sort by follow-up count');
 
 assert.match(bootstrapSource, /'leads'/, 'bootstrap should register leads routing');
 assert.match(bootstrapSource, /leads:'线索池'/, 'bootstrap should map the leads page title');
@@ -34,6 +43,17 @@ assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should exp
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
+assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads search should reset pagination before rendering');
+assert.match(leadsSource, /function resetLeadFilters\(\)[\s\S]*leadSearch[\s\S]*leadSourceFilter[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads reset should clear filters and return to first page');
+assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
+assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
+assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
+assert.match(leadsSource, /function leadPageNumbers\(/, 'leads page should render compact pager numbers');
+assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
+assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
+assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20/, 'leads page size should be limited to 20, 50, and 100');
+assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
+assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function openLeadDetail\(/, 'leads page should expose the lead detail modal');
 assert.match(leadsSource, /基础信息[\s\S]*当前跟进[\s\S]*跟进时间线[\s\S]*转化关系/, 'lead detail should expose the updated four required sections');
 assert.match(leadsSource, /function openLeadFollowupModal\(/, 'leads page should expose the follow-up modal');
@@ -42,5 +62,12 @@ assert.match(leadsSource, /type="datetime-local"/, 'follow-up modal should use a
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
 assert.match(leadsSource, /查看[\s\S]*跟进[\s\S]*转化/, 'lead rows should only expose the three compact actions');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*tms-table-loading-state[\s\S]*线索数据加载中/, 'leads loading state should use the standard table loading style');
+assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
+assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
+assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
+assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'leads table should remove internal vertical scrolling and keep horizontal scrolling');
+assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
+assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 
 console.log('leads view tests passed');
