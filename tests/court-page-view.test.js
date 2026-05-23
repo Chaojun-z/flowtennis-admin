@@ -70,6 +70,8 @@ assert.match(html, /function removeCourtStudent\(/, 'court linked student picker
 assert.match(fnBody('saveCourt'), /parseArr\(document\.getElementById\('f_studentIds'\)\?\.value\|\|'\[\]'\)/, 'court save should read linked students from the picker state');
 assert.match(fnBody('openCourtModal'), /tms-panel-tip[\s\S]*tms-detail-grid[\s\S]*累计充值[\s\S]*当前余额[\s\S]*累计消费[\s\S]*累计实收/, 'court readonly finance summary should use the detail-grid readonly style');
 assert.doesNotMatch(fnBody('openCourtModal'), /tms-panel-tip[\s\S]*tms-form-readonly/, 'court readonly finance summary should not look like input fields');
+assert.match(fnBody('openCourtModal'), /来源线索摘要[\s\S]*tms-detail-grid[\s\S]*线索来源/, 'court lead source should use readonly detail style');
+assert.doesNotMatch(fnBody('openCourtModal'), /来源线索摘要[\s\S]*finput tms-form-control tms-readonly-text/, 'court lead source should not look like an input');
 assert.match(fnBody('openCourtModal'), /court-profile-row[\s\S]*id="f_owner"[\s\S]*id="f_familiarity"[\s\S]*id="f_attitude"/, 'court owner, familiarity and deposit attitude should sit in one row');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
@@ -79,6 +81,9 @@ assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校
 assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
+assert.match(fnBody('openCourtFinanceModal'), /court-finance-summary-grid[\s\S]*当前余额[\s\S]*累计充值[\s\S]*累计消费[\s\S]*累计实收[\s\S]*确认订场收入[\s\S]*本次实收\/现金流入[\s\S]*待确认\/代用户订场[\s\S]*内部占用次数/, 'court finance summary should show 8 readonly fields in one grid');
+assert.doesNotMatch(fnBody('openCourtFinanceModal'), /财务摘要(?:(?!流水录入)[\s\S])*<input[^>]+readonly/, 'court finance summary should not render readonly values as inputs');
+assert.match(pagesCss, /\.modal\.modal-court \.court-finance-summary-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'court finance summary should render four columns per row');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
 assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrType','类型'[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrCategory','项目'[\s\S]*flex:0 0 118px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付'/s, 'court finance modal should narrow the first three selectors to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
