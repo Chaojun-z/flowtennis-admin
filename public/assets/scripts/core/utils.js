@@ -52,6 +52,7 @@ function courtBookingSummary(court){
 function courtSortMetric(court,key){
   if(key==='balance')return {empty:false,value:courtFinanceLocal(court).balance};
   if(key==='spentAmount')return {empty:false,value:courtFinanceLocal(court).spentAmount};
+  if(key==='memberBookingCount')return {empty:false,value:membershipBookingCount(court)};
   if(key==='bookingCount')return {empty:false,value:courtBookingSummary(court).count};
   if(key==='bookingAmount')return {empty:false,value:courtBookingSummary(court).amount};
   if(key==='lastBookingDate'){

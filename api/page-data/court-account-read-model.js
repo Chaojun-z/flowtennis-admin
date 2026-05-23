@@ -111,6 +111,10 @@ function computeBookingSummary(court) {
   return summary;
 }
 
+function computeMemberBookingCount(court) {
+  return normalizeCourtHistory(court?.history).filter((row) => row?.type === '消费' && String(row?.payMethod || '').trim() === '储值扣款' && String(row?.category || '').includes('订场')).length;
+}
+
 function membershipStatusText(status) {
   return ({
     active: '正常',
@@ -197,6 +201,7 @@ function buildLegacyItem(court, ctx) {
     membershipValidUntil: account && !['voided', 'cleared'].includes(account.status) ? String(account?.validUntil || '').trim() || '-' : '-',
     linkedStudentSummary: studentSummary,
     lowBalance: finance.balance > 0 && finance.balance <= 500,
+    memberBookingCount: computeMemberBookingCount(court),
     bookingCount: bookingSummary.bookingCount,
     bookingAmount: bookingSummary.bookingAmount,
     lastBookingDate: bookingSummary.lastBookingDate,

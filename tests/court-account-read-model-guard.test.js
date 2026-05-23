@@ -99,6 +99,7 @@ async function main() {
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');
+  assert.strictEqual(view.items[0].memberBookingCount, 1, '读模型应单独统计会员储值订场');
   assert.strictEqual(view.items[0].bookingCount, 2, '读模型应统计储值订场和散客订场');
   assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');

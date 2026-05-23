@@ -24,13 +24,14 @@ assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped to
 assert.match(pagesCss, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(html, /<div class="tms-stats-row" id="courtStatsRow"><\/div>/, 'court page should use the upgraded tms stats row container');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期[\s\S]*最近订场[\s\S]*累计订场[\s\S]*累计消费金额[\s\S]*对接人[\s\S]*熟悉程度[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费金额[\s\S]*对接人[\s\S]*熟悉程度[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
 assert.match(html, /id="courtAccountTypeFilter"/, 'court toolbar should provide account type filter');
 assert.match(html, /id="courtOwnerFilter"/, 'court toolbar should provide owner filter');
 assert.match(html, /id="courtMoreActions"/, 'court toolbar should provide more actions menu');
 assert.match(html, /批量选择[\s\S]*导入CSV[\s\S]*财务迁移预览[\s\S]*备份/, 'court more actions should include batch select, import, finance migration preview, and backup');
 assert.doesNotMatch(html, /courtMoreActionValue_dropdown[\s\S]*class="tms-dropdown-item[^"]*">更多操作</, 'court more actions menu should not include a redundant self option');
 assert.match(html, /data-court-sort="lastBookingDate"[\s\S]*setCourtSort\('lastBookingDate'\)[\s\S]*最近订场/, 'court table should support sorting by latest booking date');
+assert.match(html, /data-court-sort="memberBookingCount"[\s\S]*setCourtSort\('memberBookingCount'\)[\s\S]*会员订场/, 'court table should support sorting by member booking count');
 assert.match(html, /data-court-sort="bookingCount"[\s\S]*setCourtSort\('bookingCount'\)[\s\S]*累计订场/, 'court table should support sorting by booking count');
 assert.match(html, /data-court-sort="bookingAmount"[\s\S]*setCourtSort\('bookingAmount'\)[\s\S]*累计消费金额/, 'court table should support sorting by booking amount');
 assert.match(html, /data-court-sort="balance"[\s\S]*setCourtSort\('balance'\)[\s\S]*会员余额/, 'court table should keep balance sorting');

@@ -185,7 +185,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-courts .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FDF7F2}
 #page-courts .tms-table tbody tr:hover td.tms-sticky-l,#page-courts .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F4EBE3}
 #page-courts .tms-table-wrapper{max-height:calc(100vh - 210px);overflow-x:auto;overflow-y:auto}
-#page-courts .tms-table{min-width:1900px;table-layout:fixed}
+#page-courts .tms-table{min-width:1992px;table-layout:fixed}
 #page-courts .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
 #page-courts .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-courts .tms-text-primary,#page-courts .tms-cell-text,#page-courts .tms-text-remark{font-size:12px}
