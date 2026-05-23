@@ -413,17 +413,17 @@
         <th class="tms-sticky-l" data-court-name-cell="1" style="width:156px;padding-left:20px"><label class="tms-th-checkbox"><input type="checkbox" class="tms-checkbox" id="courtSelectAll" onchange="toggleCourtPageSelection(this.checked)"><span>姓名</span></label></th>
         <th style="width:124px">手机号</th>
         <th style="width:100px">校区</th>
-        <th style="width:92px">帐户类型</th>
-        <th class="tms-sortable" onclick="setCourtSort('lastBookingDate')" style="width:132px">最近订场 <span class="tms-sort-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.25 3.25 3.5 1.5 1.75 3.25"></path><path d="M3.5 1.5v9"></path><path d="m10.75 12.75 1.75 1.75 1.75-1.75"></path><path d="M12.5 14.5v-9"></path></svg></span></th>
-        <th class="tms-sortable" onclick="setCourtSort('bookingCount')" style="width:92px">累计订场 <span class="tms-sort-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.25 3.25 3.5 1.5 1.75 3.25"></path><path d="M3.5 1.5v9"></path><path d="m10.75 12.75 1.75 1.75 1.75-1.75"></path><path d="M12.5 14.5v-9"></path></svg></span></th>
-        <th class="tms-sortable" onclick="setCourtSort('bookingAmount')" style="width:124px">累计消费金额 <span class="tms-sort-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.25 3.25 3.5 1.5 1.75 3.25"></path><path d="M3.5 1.5v9"></path><path d="m10.75 12.75 1.75 1.75 1.75-1.75"></path><path d="M12.5 14.5v-9"></path></svg></span></th>
-        <th style="width:110px">会员状态</th>
-        <th style="width:118px">会员类型</th>
-        <th class="tms-sortable" onclick="setCourtSort('balance')" style="width:112px">会员余额 <span class="tms-sort-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.25 3.25 3.5 1.5 1.75 3.25"></path><path d="M3.5 1.5v9"></path><path d="m10.75 12.75 1.75 1.75 1.75-1.75"></path><path d="M12.5 14.5v-9"></path></svg></span></th>
-        <th class="tms-sortable" onclick="setCourtSort('validUntil')" style="width:118px">会员到期 <span class="tms-sort-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.25 3.25 3.5 1.5 1.75 3.25"></path><path d="M3.5 1.5v9"></path><path d="m10.75 12.75 1.75 1.75 1.75-1.75"></path><path d="M12.5 14.5v-9"></path></svg></span></th>
-        <th style="width:90px">熟悉程度</th>
-        <th style="width:142px">对储值态度</th>
+        <th style="width:96px">会员状态</th>
+        <th style="width:92px">账户类型</th>
+        <th style="width:100px">会员类型</th>
+        <th style="width:112px"><button class="tms-sort-header" data-court-sort="balance" onclick="setCourtSort('balance')">会员余额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
+        <th style="width:118px"><button class="tms-sort-header" data-court-sort="validUntil" onclick="setCourtSort('validUntil')">会员到期<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
+        <th style="width:132px"><button class="tms-sort-header" data-court-sort="lastBookingDate" onclick="setCourtSort('lastBookingDate')">最近订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
+        <th style="width:92px"><button class="tms-sort-header" data-court-sort="bookingCount" onclick="setCourtSort('bookingCount')">累计订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
+        <th style="width:112px"><button class="tms-sort-header" data-court-sort="bookingAmount" onclick="setCourtSort('bookingAmount')">累计消费金额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
         <th style="width:90px">对接人</th>
+        <th style="width:90px">熟悉程度</th>
+        <th style="width:118px">储值态度</th>
         <th style="width:190px">备注</th>
         <th class="tms-sticky-r" style="width:188px;padding-right:20px;text-align:right">操作</th>
       </tr></thead><tbody id="courtTbody"></tbody></table></div>

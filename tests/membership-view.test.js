@@ -37,10 +37,10 @@ assert.match(html, /membershipAccounts=Array\.isArray\(data\?\.membershipAccount
 assert.match(html, /membershipOrders=Array\.isArray\(data\?\.membershipOrders\)\?data\.membershipOrders:\[\]/, 'load-all should store membership orders');
 assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBenefitLedger\)\?data\.membershipBenefitLedger:\[\]/, 'load-all should store membership benefit ledger');
 
-assert.match(html, /帐户类型[\s\S]*会员状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期/, 'courts table should show membership status columns');
+assert.match(html, /会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期/, 'courts table should show membership status columns');
 assert.match(html, /function courtMembershipSummary/, 'courts page should compute membership summaries');
 assert.match(html, /查看账户/, 'courts table should expose dedicated membership account entry');
-assert.match(html, /编辑资料/, 'courts table should keep profile editing entry');
+assert.match(html, /openCourtModal\('\$\{item\.id\}'\)">编辑/, 'courts table should keep the short profile editing entry');
 assert.match(html, /function openCourtMembershipPanel/, 'membership actions should move into dedicated account panel');
 assert.match(html, /function courtMembershipPanelHtml/, 'membership account should render through dedicated panel html');
 assert.match(html, /当前状态[\s\S]*当前权益[\s\S]*最近开卡[\s\S]*操作/, 'membership account panel should keep one clear rights section and recent purchase context');

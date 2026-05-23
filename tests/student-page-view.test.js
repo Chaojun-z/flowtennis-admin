@@ -51,7 +51,7 @@ assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{heigh
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.match(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'selected student filters should use the active dropdown item orange');
-assert.match(css, /#page-students \.tms-sort-icon\{[^}]*width:7px[^}]*transform:translateY\(-1px\)/, 'student sort icon should be smaller and closer to the header text');
+assert.match(css, /#page-students \.tms-sort-icon,#page-courts \.tms-sort-icon\{[^}]*width:7px[^}]*transform:translateY\(-1px\)/, 'student sort icon should be smaller and closer to the header text');
 assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*stuSortDir='desc'[\s\S]*stuSortKey='';stuSortDir='';/, 'student sortable headers should cycle asc, desc, and no sort');
 assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');
 assert.match(source, /function renderStudentTableLoading\([\s\S]*tms-table-loading-state[\s\S]*学员数据加载中/, 'student loading state should use the standard table loading style');

@@ -11,9 +11,9 @@ function renderCourtHeaderFilters(base,filterSource=null){
     ? filterSource.accountTypes.map(v=>String(v||'').trim()).filter(Boolean)
     : [...new Set(base.map(c=>String(c.accountType||courtMembershipSummary(c).accountType||'').trim()).filter(Boolean))];
   const ownerOpts=[{value:'',label:'全部',emptyDisplay:'对接人'},...owners.map(v=>({value:v,label:v}))];
-  const accountOpts=[{value:'',label:'全部',emptyDisplay:'帐户类型'},...accountTypes.map(v=>({value:v,label:v}))];
+  const accountOpts=[{value:'',label:'全部',emptyDisplay:'账户类型'},...accountTypes.map(v=>({value:v,label:v}))];
   if(ownerHost)ownerHost.innerHTML=renderCourtDropdownHtml('courtOwnerValue','对接人',ownerOpts,courtOwnerFilterValue,false,'onCourtToolbarFilterChange');
-  if(accountHost)accountHost.innerHTML=renderCourtDropdownHtml('courtAccountTypeValue','帐户类型',accountOpts,courtAccountTypeFilterValue,false,'onCourtToolbarFilterChange');
+  if(accountHost)accountHost.innerHTML=renderCourtDropdownHtml('courtAccountTypeValue','账户类型',accountOpts,courtAccountTypeFilterValue,false,'onCourtToolbarFilterChange');
   if(moreHost)moreHost.innerHTML=renderCourtDropdownHtml('courtMoreActionValue','更多操作',[
     {value:courtBatchMode?'batch-exit':'batch-select',label:courtBatchMode?'退出批量':'批量选择'},
     {value:'import',label:'导入CSV'},
@@ -60,6 +60,33 @@ function setCourtSort(key){
   else if(courtSortDir==='desc')courtSortDir='asc';
   else{courtSortKey='';courtSortDir='desc';}
   courtPage=1;
+  renderCourts();
+}
+function courtPageNumbers(page,pages){
+  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
+  const items=[1];
+  const start=Math.max(2,page-2);
+  const end=Math.min(pages-1,page+2);
+  if(start>2)items.push('...');
+  for(let i=start;i<=end;i++)items.push(i);
+  if(end<pages-1)items.push('...');
+  items.push(pages);
+  return items;
+}
+function renderCourtPagerControls(total,pages){
+  const btns=document.getElementById('courtPagerBtns');
+  if(!btns)return;
+  if(!total||pages<=1){btns.innerHTML='';return;}
+  const pageBtns=courtPageNumbers(courtPage,pages).map(item=>item==='...'
+    ?'<span class="tms-page-ellipsis">...</span>'
+    :`<div class="tms-page-btn${item===courtPage?' active':''}" onclick="courtPage=${item};renderCourts()">${item}</div>`
+  ).join('');
+  btns.innerHTML=`<div class="tms-page-btn" onclick="courtPage=Math.max(1,courtPage-1);renderCourts()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="courtPage=Math.min(${pages},courtPage+1);renderCourts()">下一页</div><span class="tms-page-jump">跳至 <input id="courtPageJump" value="${courtPage}" onkeydown="if(event.key==='Enter')jumpCourtPage(this.value)"> 页</span>`;
+}
+function jumpCourtPage(value){
+  const total=(courtAccountListViewData?.items||courts||[]).length;
+  const pages=Math.max(1,Math.ceil(total/courtPageSize));
+  courtPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
   renderCourts();
 }
 
@@ -613,7 +640,7 @@ function renderCourtAccountListView(){
   const pager=document.querySelector('#page-courts .tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
   document.getElementById('courtPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('courtPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===courtPage?' active':''}" onclick="courtPage=${i+1};renderCourts()">${i+1}</div>`).join('');
+  renderCourtPagerControls(total,pages);
   const selectAll=document.getElementById('courtSelectAll');
   if(selectAll){
     selectAll.checked=!!slice.length&&slice.every(item=>selectedCourtIds.has(item.id));
@@ -625,12 +652,12 @@ function renderCourtAccountListView(){
     const memberTagClass=courtMembershipTierTagClass(item.membershipTierLabel);
     const statusTagMeta=membershipStatusTagMeta(item.membershipStatusCode||'');
     const memberCell=item.membershipTierLabel&&item.membershipTierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderCourtEmptyText(item.membershipTierLabel))}</span>`:renderCourtCellText('-');
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderCourtCellText(item.phone)}</td><td>${renderCourtCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(item.accountType)}</span></td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtCellText(item.membershipValidUntil)}</td><td>${renderCourtCellText(item.familiarity)}</td><td>${renderCourtCellText(item.depositAttitude)}</td><td>${renderCourtCellText(item.owner)}</td><td><div class="tms-text-remark" title="${esc(item.notesSummary||'')}">${esc(renderCourtEmptyText(item.notesSummary))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${item.id}')">编辑资料</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderCourtCellText(item.phone)}</td><td>${renderCourtCellText(item.campusName)}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td><span class="tms-tag ${accountTagClass}">${esc(item.accountType)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtCellText(item.membershipValidUntil)}</td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td>${renderCourtCellText(item.owner)}</td><td>${renderCourtCellText(item.familiarity)}</td><td>${renderCourtCellText(item.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(item.notesSummary||'')}">${esc(renderCourtEmptyText(item.notesSummary))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${item.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
   }).join(''):'<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
-  document.querySelectorAll('#page-courts .tms-sortable').forEach(el=>el.classList.remove('asc','desc'));
+  document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
-    const active=document.querySelector(`#page-courts .tms-sortable[onclick="setCourtSort('${courtSortKey}')"]`);
+    const active=document.querySelector(`#page-courts [data-court-sort="${courtSortKey}"]`);
     if(active)active.classList.add(courtSortDir);
   }
 }
@@ -674,7 +701,7 @@ function renderCourts(){
   const pager=document.querySelector('#page-courts .tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
   document.getElementById('courtPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('courtPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===courtPage?' active':''}" onclick="courtPage=${i+1};renderCourts()">${i+1}</div>`).join('');
+  renderCourtPagerControls(total,pages);
   const selectAll=document.getElementById('courtSelectAll');
   if(selectAll){
     selectAll.checked=!!slice.length&&slice.every(u=>selectedCourtIds.has(u.id));
@@ -689,12 +716,12 @@ function renderCourts(){
     const memberTagClass=courtMembershipTierTagClass(m.tierLabel);
     const statusTagMeta=membershipStatusTagMeta(m.status);
     const memberCell=m.tierLabel&&m.tierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderCourtEmptyText(m.tierLabel))}</span>`:renderCourtCellText('-');
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td>${renderCourtCellText(u.owner)}</td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(renderCourtEmptyText(u.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑资料</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderCourtCellText(u.phone)}</td><td>${renderCourtCellText(cn(u.campus))}</td><td><span class="tms-tag ${statusTagMeta.tagClass}">${statusTagMeta.text}</span></td><td><span class="tms-tag ${accountTagClass}">${esc(m.accountType)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtCellText(m.validUntil)}</td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td>${renderCourtCellText(u.owner)}</td><td>${renderCourtCellText(u.familiarity)}</td><td>${renderCourtCellText(u.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(u.notes||'')}">${esc(renderCourtEmptyText(u.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
   }).join(''):'<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
-  document.querySelectorAll('#page-courts .tms-sortable').forEach(el=>el.classList.remove('asc','desc'));
+  document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
-    const active=document.querySelector(`#page-courts .tms-sortable[onclick="setCourtSort('${courtSortKey}')"]`);
+    const active=document.querySelector(`#page-courts [data-court-sort="${courtSortKey}"]`);
     if(active)active.classList.add(courtSortDir);
   }
 }
