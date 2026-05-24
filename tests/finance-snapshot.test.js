@@ -204,4 +204,36 @@ assert.strictEqual(membershipMerged.overviewData.all.storedValueIncome, 2000, 'm
 assert.strictEqual(membershipMerged.overviewData.all.tradeCount, 11, 'membership import increment should add membership trade count');
 assert.strictEqual(membershipMerged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-member-order-should-not-double-count')), false, 'old live membership orders should not be appended to verified finance');
 
+const courtMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  courts:[{
+    id:'court-import',
+    name:'马坡订场导入',
+    campus:'mabao',
+    history:[{
+      id:'private_lesson_csv_import_20260524-court-test',
+      seedTag:'mabao-finance-import-20260524',
+      date:'2026-05-22',
+      type:'消费',
+      category:'订场',
+      payMethod:'小程序',
+      amount:180,
+      sourceCategory:'散客纯定场（小程序）'
+    },{
+      id:'old-court-history-should-not-count',
+      date:'2026-05-22',
+      type:'消费',
+      category:'订场',
+      payMethod:'小程序',
+      amount:999
+    }]
+  }]
+});
+
+assert.strictEqual(courtMerged.overviewData.all.cash, 1180, 'MaPo court import should add booking cash income');
+assert.strictEqual(courtMerged.overviewData.all.recognized, 380, 'MaPo court import should add booking recognized income');
+assert.strictEqual(courtMerged.overviewData.all.bookingIncome, 180, 'MaPo court import should update booking income bucket');
+assert.strictEqual(courtMerged.overviewData.all.bookingRecognized, 180, 'MaPo court import should update booking recognized bucket');
+assert.strictEqual(courtMerged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-court-history-should-not-count')), false, 'old court history should not be appended as verified finance increment');
+
 console.log('finance snapshot tests passed');

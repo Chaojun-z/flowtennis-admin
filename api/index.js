@@ -239,6 +239,7 @@ const FINANCE_PAGE_COURT_PROJECTION_FIELDS=[
   'receivedAmount',
   'storedValueSpent',
   'directPaidSpent',
+  'history',
   'cachedBalance',
   'cachedTotalDeposit',
   'cachedTotalSpent',
@@ -3407,11 +3408,16 @@ function buildFinancePageSnapshot(source={}){
 }
 const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';
 const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';
+const MABAO_FINAL_IMPORT_TAG='mabao-finance-import-20260524';
 function isFinanceImportIncrementRow(row){
   return String(row?.id||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX)||String(row?.importBatchId||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX);
 }
 function isFinanceMembershipImportIncrementOrder(row){
   return String(row?.id||'').startsWith(FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX);
+}
+function courtWithFinanceImportHistory(court){
+  const history=normalizeCourtHistory(court?.history).filter(row=>String(row?.seedTag||'')===MABAO_FINAL_IMPORT_TAG||String(row?.id||'').startsWith('private_lesson_csv_import_20260524-court-'));
+  return history.length?{...court,history}:{...court,history:[]};
 }
 function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const purchaseRows=(source.purchases||[]).filter(isFinanceImportIncrementRow);
@@ -3420,13 +3426,14 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const entitlementIds=new Set(entitlementRows.map(row=>String(row.id||'')).filter(Boolean));
   const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
   const membershipOrderRows=(source.membershipOrders||[]).filter(isFinanceMembershipImportIncrementOrder);
+  const courtRows=(source.courts||[]).map(courtWithFinanceImportHistory).filter(row=>normalizeCourtHistory(row.history).length);
   const incrementRows=buildFinanceUnifiedRows({
     campuses:source.campuses||[],
     students:source.students||[],
     purchases:purchaseRows,
     entitlements:entitlementRows,
     entitlementLedger:ledgerRows,
-    courts:source.courts||[],
+    courts:courtRows,
     membershipOrders:membershipOrderRows,
     schedule:source.schedule||[]
   });
@@ -3443,6 +3450,8 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const packageRecognizedDelta=businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const storedValueCashDelta=businessRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const storedValueRecognizedDelta=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const bookingCashDelta=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const bookingRecognizedDelta=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const tradeCountDelta=businessRows.filter(row=>['课程','会员储值'].includes(row.businessType)&&row.action==='收款'&&Number(row.cashDelta)>0).length;
   const all={...(baseOverview.all||{})};
   all.cash=roundMoney((Number(all.cash)||0)+cashDelta);
@@ -3452,6 +3461,8 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   all.packageRecognized=roundMoney((Number(all.packageRecognized)||0)+packageRecognizedDelta);
   all.storedValueIncome=roundMoney((Number(all.storedValueIncome)||0)+storedValueCashDelta);
   all.storedValueConsumed=roundMoney((Number(all.storedValueConsumed)||0)+storedValueRecognizedDelta);
+  all.bookingIncome=roundMoney((Number(all.bookingIncome)||0)+bookingCashDelta);
+  all.bookingRecognized=roundMoney((Number(all.bookingRecognized)||0)+bookingRecognizedDelta);
   all.tradeCount=(Number(all.tradeCount)||0)+tradeCountDelta;
   return {
     overviewData:{...baseOverview,all},
