@@ -164,6 +164,7 @@ function leadTagClass(kind,value=''){
     if(text==='转化跟进中')return 'tms-tag-lead-converting';
     if(text==='已转课程'||text==='已转订场'||text==='已转课程+订场')return 'tms-tag-green';
     if(text==='已约体验')return 'tms-tag-tier-teal';
+    if(text==='已约体验课')return 'tms-tag-lead-trial-booked';
     return 'tms-tag-tier-gold';
   }
   return 'tms-tag-tier-slate';
@@ -189,6 +190,19 @@ function leadConsultOptions(){
 }
 function leadOwnerOptions(){
   return Array.from(new Set([...leadRows().map(item=>String(item?.owner||'').trim()).filter(Boolean),...activeCoachNames()])).map(value=>({value,label:value}));
+}
+function leadStatusOptionValues(rows){
+  const preferred=['体验课完成','体验课预约','无意向','新线索','已报名-私教','已报名-随到随学','已报名-训练营','已报名-专项','已订场','已对接其他校区','已沟通','已流失','转化跟进中'];
+  const current=Array.from(new Set((Array.isArray(rows)?rows:[]).map(item=>leadFollowupStatusText(item)).map(item=>String(item||'').trim()).filter(Boolean)));
+  const seen=new Set();
+  const values=[];
+  preferred.forEach(value=>{
+    if(current.includes(value)&&!seen.has(value)){values.push(value);seen.add(value);}
+  });
+  current.forEach(value=>{
+    if(!seen.has(value)){values.push(value);seen.add(value);}
+  });
+  return values;
 }
 function leadSortDateValue(value,lead={}){
   const raw=String(value||'').trim().replace(' 00:00:00','').replace('00:00:00','').replace('//','/');
@@ -264,12 +278,14 @@ function getFilteredLeads(){
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const statusValue=document.getElementById('leadStatusFilter')?.value||'';
+  const convertedValue=document.getElementById('leadConvertedFilter')?.value||'';
   const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
   return leadRows().filter(lead=>{
     if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName,lead?.source,lead?.consultType,lead?.owner,lead?.profileNote))return false;
     if(sourceValue&&String(lead?.source||'')!==sourceValue)return false;
     if(consultValue&&String(lead?.consultType||'')!==consultValue)return false;
-    if(statusValue&&leadSystemStatusText(lead)!==statusValue)return false;
+    if(statusValue&&leadFollowupStatusText(lead)!==statusValue)return false;
+    if(convertedValue&&leadConvertedYesNo(lead)!==convertedValue)return false;
     if(ownerValue&&String(lead?.owner||'')!==ownerValue)return false;
     return true;
   }).sort((a,b)=>{
@@ -285,15 +301,19 @@ function renderLeadToolbarFilters(){
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const statusValue=document.getElementById('leadStatusFilter')?.value||'';
+  const convertedValue=document.getElementById('leadConvertedFilter')?.value||'';
   const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
   const sourceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'来源'},...Array.from(new Set(rows.map(item=>String(item?.source||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.source||'')===String(value));
   const consultOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'咨询需求'},...Array.from(new Set(rows.map(item=>String(item?.consultType||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.consultType||'')===String(value));
-  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}],rows,(lead,value)=>leadSystemStatusText(lead)===String(value));
+  const statusValues=leadStatusOptionValues(rows);
+  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},...statusValues.map(value=>({value,label:value}))],rows,(lead,value)=>leadFollowupStatusText(lead)===String(value));
+  const convertedOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'是否转化'},{value:'是',label:'是'},{value:'否',label:'否'}],rows,(lead,value)=>leadConvertedYesNo(lead)===String(value));
   const ownerOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'跟进人'},...Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.owner||'')===String(value));
   const configs=[
     ['leadSourceFilterHost','leadSourceFilter','全部来源',sourceOptions,sourceValue],
     ['leadConsultFilterHost','leadConsultFilter','全部咨询需求',consultOptions,consultValue],
     ['leadStatusFilterHost','leadStatusFilter','全部状态',statusOptions,statusValue],
+    ['leadConvertedFilterHost','leadConvertedFilter','全部是否转化',convertedOptions,convertedValue],
     ['leadOwnerFilterHost','leadOwnerFilter','全部跟进人',ownerOptions,ownerValue]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
@@ -629,7 +649,7 @@ function jumpToLeadDetail(leadId){
   setTimeout(()=>openLeadDetail(leadId),120);
 }
 function leadHasActiveSearchOrFilter(){
-  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStatusFilter')?.value||document.getElementById('leadOwnerFilter')?.value);
+  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStatusFilter')?.value||document.getElementById('leadConvertedFilter')?.value||document.getElementById('leadOwnerFilter')?.value);
 }
 function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
@@ -686,7 +706,7 @@ function onLeadFilterChange(){
   renderLeads();
 }
 function resetLeadFilters(){
-  const ids=['leadSearch','leadSourceFilter','leadConsultFilter','leadStatusFilter','leadOwnerFilter'];
+  const ids=['leadSearch','leadSourceFilter','leadConsultFilter','leadStatusFilter','leadConvertedFilter','leadOwnerFilter'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   leadPage=1;
   renderLeads();

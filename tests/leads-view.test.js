@@ -15,10 +15,11 @@ assert.match(html, /id="page-leads"[\s\S]*id="leadSearch"[\s\S]*placeholder="搜
 assert.match(html, /id="leadSourceFilterHost"/, 'leads page should provide source filter host');
 assert.match(html, /id="leadConsultFilterHost"/, 'leads page should provide consult filter host');
 assert.match(html, /id="leadStatusFilterHost"/, 'leads page should provide status filter host');
+assert.match(html, /id="leadConvertedFilterHost"/, 'leads page should provide converted filter host');
 assert.match(html, /id="leadOwnerFilterHost"/, 'leads page should provide owner filter host');
 assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove the follow-up todo filter host');
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
-assert.match(html, /导入预览/, 'leads toolbar should expose the import preview entry');
+assert.match(html, /onclick="openLeadImportPreviewModal\(\)">导入<\/button>/, 'leads toolbar should expose the import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
 assert.doesNotMatch(html, /id="leadStatsRow"/, 'leads page should remove the top stat cards');
 assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
@@ -27,7 +28,7 @@ assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info')
 assert.match(html, /id="leadPageSize"/, 'leads page should provide page size selector host');
 assert.match(html, /id="leadPagerBtns"/, 'leads page should provide pager buttons');
 assert.match(html, /leadSearch[\s\S]*onkeydown="if\(event\.key==='Enter'\)applyLeadSearch\(\)"/, 'leads search should run on enter');
-assert.match(html, /onclick="applyLeadSearch\(\)"[\s\S]*查询/, 'leads toolbar should provide a query button');
+assert.doesNotMatch(html, /onclick="applyLeadSearch\(\)">查询/, 'leads toolbar should remove the query button');
 assert.match(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar should provide a reset button');
 assert.match(html, /class="tms-sticky-l"[\s\S]*微信名/, 'leads table should pin the first identity column');
 assert.match(html, /data-lead-sort="leadDate"[\s\S]*线索时间/, 'leads table should sort by lead date');
@@ -47,10 +48,13 @@ assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page sho
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
+assert.match(leadsSource, /leadFollowupStatusText\(lead\)/, 'leads page should keep the status filter aligned with the displayed follow-up status');
+assert.match(leadsSource, /leadConvertedYesNo\(lead\)/, 'leads page should expose the converted yes\/no helper to filters');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
+assert.match(leadsSource, /function leadStatusOptionValues\(/, 'leads page should derive status filters from the latest data');
 assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads search should reset pagination before rendering');
-assert.match(leadsSource, /function resetLeadFilters\(\)[\s\S]*leadSearch[\s\S]*leadSourceFilter[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads reset should clear filters and return to first page');
+assert.match(leadsSource, /function resetLeadFilters\(\)[\s\S]*leadSearch[\s\S]*leadSourceFilter[\s\S]*leadConvertedFilter[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads reset should clear filters and return to first page');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
@@ -58,7 +62,7 @@ assert.match(leadsSource, /function leadPageNumbers\(/, 'leads page should rende
 assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
 assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
 assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20/, 'leads page size should be limited to 20, 50, and 100');
-assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
+assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*convertedOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
 assert.match(leadsSource, /function leadDetailBlockHtml\(/, 'lead detail should expose readonly block helper');
@@ -77,11 +81,13 @@ assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*tms-table-loa
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
-assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'leads table should remove internal vertical scrolling and keep horizontal scrolling');
+assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:10px\}/, 'leads table header should match the standard table height and font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
+assert.match(html, /style="width:240px"><button class="tms-sort-header" data-lead-sort="trialLessonAt"/, 'lead trial lesson column should be wide enough for the full date/time text');
 assert.match(html, /style="width:220px">咨询需求/, 'lead consult column should be wide enough for longer tags');
 assert.match(css, /#page-leads \.tms-text-primary,#page-leads \.tms-cell-text,#page-leads \.tms-text-remark\{font-size:12px\}/, 'leads nested table text should match the student page font size');
+assert.match(css, /#page-leads \.tms-tag-lead-communicated\{background:#E3F0ED;color:#2E766E\}/, 'leads tags should use grounded colors instead of purple');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 
