@@ -1,0 +1,48 @@
+{
+  "mode": "write",
+  "importBatch": "mabao_leads_patch_20260524",
+  "target": {
+    "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "onlineInstance": "flowtennis-ue",
+    "localEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
+    "localInstance": "flowtennis-ue"
+  },
+  "before": {
+    "leads": 237,
+    "followups": 336
+  },
+  "plan": {
+    "total": 76,
+    "update": 62,
+    "create": 14,
+    "protect": 19,
+    "leadWrites": 76,
+    "followupWrites": 76
+  },
+  "after": {
+    "leads": 251,
+    "followups": 412
+  },
+  "addedLeads": 14,
+  "addedFollowups": 76,
+  "protectedKept": 19,
+  "createdNames": [
+    "hai",
+    "金旭熙",
+    "玛丽叔叔",
+    "京宝",
+    "Ashen",
+    "顾昀泽",
+    "张楠",
+    "YOU",
+    "陈浩@Phoenix",
+    "未知号码来电",
+    "友和",
+    "Ppk",
+    "吴金辉",
+    "大雨"
+  ],
+  "missingLeadIds": [],
+  "missingFollowupIds": [],
+  "generatedAt": "2026-05-24T04:17:36.918Z"
+}
