@@ -266,6 +266,7 @@ const COURTS_PAGE_COURT_PROJECTION_FIELDS=[
   'receivedAmount',
   'storedValueSpent',
   'directPaidSpent',
+  'history',
   'cachedBalance',
   'cachedTotalDeposit',
   'cachedTotalSpent',
@@ -7762,15 +7763,16 @@ module.exports = async (req, res) => {
       await init();
       const campuses=await listCampusesWithDefaults();
       const verifiedFinance=loadVerifiedFinanceArtifacts(campuses);
-      const [students,purchases,entitlements,entitlementLedger,membershipOrders,schedule]=await Promise.all([
+      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule]=await Promise.all([
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_PURCHASES).catch(()=>[]),
         getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
         getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+        getCachedScan(T_COURTS,{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
         isProductionRuntime()?scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[])
       ]);
-      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,membershipOrders,schedule});
+      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule});
       const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
       return sendJson(res,{
         campuses,

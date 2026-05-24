@@ -46,8 +46,8 @@ assert.match(
 );
 assert.match(
   apiSource,
-  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,membershipOrders,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_MEMBERSHIP_ORDERS\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,membershipOrders,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
-  '财务总览应保留已核对快照，并叠加已导入课包和会员批次增量'
+  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_COURTS,\{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
+  '财务总览应保留已核对快照，并叠加已导入课包、会员和马坡订场增量'
 );
 assert.match(apiSource, /const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';/, '财务页只允许识别私教课导入批次作为快照增量来源');
 assert.match(apiSource, /const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';/, '财务页只允许识别新增会员导入订单作为快照增量来源');
@@ -59,6 +59,11 @@ assert.match(
 );
 
 assert.match(apiSource, /const COURTS_PAGE_COURT_PROJECTION_FIELDS=\[/, '订场用户页应定义首屏轻投影字段');
+assert.match(
+  apiSource,
+  /const COURTS_PAGE_COURT_PROJECTION_FIELDS=\[[\s\S]*'history'[\s\S]*\];/,
+  '订场用户页必须读取 history，否则累计订场和消费金额会显示为 0'
+);
 assert.match(apiSource, /const COURTS_PAGE_STUDENT_PROJECTION_FIELDS=\[/, '订场用户页应定义首屏学员轻投影字段');
 assert.match(apiSource, /const FT_STUDENTS_FAST_TIMEOUT_MS=1200;/, 'ft_students 快路读取应定义明确超时时间');
 assert.match(
