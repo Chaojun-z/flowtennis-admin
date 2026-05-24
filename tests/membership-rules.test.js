@@ -848,4 +848,97 @@ assert.throws(
   'court merge should reject when both source and target already have membership accounts'
 );
 
+let importedMerged = rules.mergeCourtRecords({
+  targetCourt: {
+    id: 'court-sky',
+    name: 'sky',
+    phone: '18813066492',
+    campus: 'mabao',
+    history: [
+      { id: 'sky-topup', date: '2026-04-13', type: '充值', amount: 5000, bonusAmount: 0, payMethod: '会员充值', category: '会员充值' }
+    ]
+  },
+  sourceCourt: {
+    id: 'court-sky-import-1',
+    name: 'sky 订场',
+    campus: 'mabao',
+    history: [
+      { id: 'sky-import-1', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
+    ]
+  },
+  now: '2026-05-24T10:00:00.000Z'
+});
+importedMerged = rules.mergeCourtRecords({
+  targetCourt: importedMerged.targetCourt,
+  sourceCourt: {
+    id: 'court-sky-import-2',
+    name: 'Sky',
+    campus: 'mabao',
+    history: [
+      { id: 'sky-import-2', seedTag: 'mabao-finance-import-20260524', date: '2026-05-19', type: '消费', amount: 224, payMethod: '储值扣款', category: '订场' }
+    ]
+  },
+  now: '2026-05-24T10:00:00.000Z'
+});
+
+assert.deepStrictEqual(
+  {
+    name: importedMerged.targetCourt.name,
+    historyCount: importedMerged.targetCourt.history.length,
+    spentAmount: importedMerged.targetCourt.spentAmount,
+    balance: importedMerged.targetCourt.balance,
+    sourceStatus: importedMerged.sourceCourt.status,
+    mergedInto: importedMerged.sourceCourt.mergedIntoCourtId
+  },
+  {
+    name: 'sky',
+    historyCount: 3,
+    spentAmount: 616,
+    balance: 4384,
+    sourceStatus: 'inactive',
+    mergedInto: 'court-sky'
+  },
+  'imported duplicate court rows should merge into the member account and recalculate booking spend'
+);
+
+const orderedImportedMerge = rules.mergeCourtRecords({
+  targetCourt: {
+    id: 'court-member',
+    name: '会员用户',
+    history: [
+      { id: 'consume-first-in-array', date: '2026-05-17', type: '消费', amount: 112, payMethod: '储值扣款', category: '订场' },
+      { id: 'topup-late-in-array', date: '2026-04-13', type: '充值', amount: 5000, payMethod: '会员充值', category: '会员充值' }
+    ]
+  },
+  sourceCourt: {
+    id: 'court-member-import',
+    name: '会员用户 订场',
+    history: [
+      { id: 'consume-early-date', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
+    ]
+  },
+  now: '2026-05-24T10:00:00.000Z'
+});
+assert.strictEqual(orderedImportedMerge.targetCourt.balance, 4496, 'court merge should order recharge before imported stored-value consumption');
+
+const negativeImportedMerge = rules.mergeCourtRecords({
+  targetCourt: {
+    id: 'court-sky-low',
+    name: 'sky',
+    history: [
+      { id: 'sky-topup-low', date: '2026-04-13', type: '充值', amount: 500, payMethod: '会员充值', category: '会员充值' },
+      { id: 'sky-used-low', date: '2026-04-20', type: '消费', amount: 108, payMethod: '储值扣款', category: '订场' }
+    ]
+  },
+  sourceCourt: {
+    id: 'court-sky-import-overdraw',
+    name: 'sky 订场',
+    history: [
+      { id: 'sky-overdraw', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 784, payMethod: '储值扣款', category: '订场' }
+    ]
+  },
+  now: '2026-05-24T10:00:00.000Z'
+});
+assert.strictEqual(negativeImportedMerge.targetCourt.balance, -392, 'historical import merge should keep stored-value consumption on one user even when it reveals a negative balance');
+
 console.log('membership rules tests passed');

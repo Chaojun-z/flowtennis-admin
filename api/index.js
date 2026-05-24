@@ -5482,6 +5482,7 @@ function isMembershipExpiryClearRow(row){
 }
 function computeCourtFinance(input){
   const history=normalizeCourtHistory(input.history);
+  const allowNegativeBalance=input?.allowNegativeBalance===true;
   if(!history.length){
     return {
       balance:normalizeMoney(input.balance),
@@ -5509,7 +5510,7 @@ function computeCourtFinance(input){
       if(h.payMethod==='储值扣款'){
         totals.storedValueSpent+=amount;
         totals.balance-=amount;
-        if(totals.balance<0)throw new Error('余额不足，不能使用储值扣款');
+        if(totals.balance<0&&!allowNegativeBalance)throw new Error('余额不足，不能使用储值扣款');
       }else{
         totals.directPaidSpent+=amount;
         totals.receivedAmount+=amount;
@@ -6036,6 +6037,9 @@ function mergeCourtNotes(targetCourt,sourceCourt){
   if(!sourceNotes)return [targetNotes,sourceMark].filter(Boolean).join('\n');
   return [targetNotes,`${sourceMark} ${sourceNotes}`].filter(Boolean).join('\n');
 }
+function courtHistorySortKey(row){
+  return `${String(row?.occurredDate||row?.date||'9999-12-31').slice(0,10)} ${String(row?.startTime||row?.recordedAt||row?.createdAt||'').slice(11,19)} ${String(row?.id||'')}`;
+}
 function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],now=new Date().toISOString()}={}){
   if(!targetCourt?.id||!sourceCourt?.id)throw new Error('请选择要合并的订场用户');
   if(String(targetCourt.id)===String(sourceCourt.id))throw new Error('不能合并到自己');
@@ -6043,7 +6047,7 @@ function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],member
   const sourceActiveAccount=(membershipAccounts||[]).find(row=>String(row.courtId||'')===String(sourceCourt.id)&&row.status!=='voided');
   if(targetActiveAccount&&sourceActiveAccount)throw new Error('两个订场用户都已有会员账户，当前暂不支持直接合并，请先处理会员账户');
   const mergedStudentIds=[...new Set([...normalizeStudentIds(targetCourt),...normalizeStudentIds(sourceCourt)])];
-  const mergedHistory=[...buildLegacyCourtOpeningHistory(targetCourt),...buildLegacyCourtOpeningHistory(sourceCourt)];
+  const mergedHistory=[...buildLegacyCourtOpeningHistory(targetCourt),...buildLegacyCourtOpeningHistory(sourceCourt)].sort((a,b)=>courtHistorySortKey(a).localeCompare(courtHistorySortKey(b)));
   const mergedTarget=normalizeCourtRecord({
     ...sourceCourt,
     ...targetCourt,
@@ -6063,7 +6067,7 @@ function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],member
     status:'active',
     history:mergedHistory,
     updatedAt:now
-  });
+  },{allowNegativeBalance:true});
   const rewriteCourtLink=row=>({...row,courtId:targetCourt.id,courtName:mergedTarget.name||targetCourt.name||targetCourt.id,phone:mergedTarget.phone||'',studentIds:mergedStudentIds,updatedAt:now});
   return {
     targetCourt:mergedTarget,
@@ -6142,7 +6146,7 @@ function normalizeCourtRecord(input,refs={}){
   const currentHistory=normalizeCourtHistory(input.history);
   const history=normalizeCourtBookingHistoryRows(normalizedInput,currentHistory.length?currentHistory:buildLegacyCourtOpeningHistory(normalizedInput));
   if(Array.isArray(refs.schedules))assertCourtBookingHistoryAgainstSchedules({...normalizedInput,history},refs.schedules);
-  const finance=computeCourtFinance({...normalizedInput,history});
+  const finance=computeCourtFinance({...normalizedInput,history,allowNegativeBalance:refs.allowNegativeBalance===true});
   const studentIds=normalizeStudentIds(normalizedInput);
   return {
     ...normalizedInput,
