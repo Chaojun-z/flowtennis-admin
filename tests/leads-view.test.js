@@ -39,8 +39,10 @@ assert.match(html, /data-lead-sort="formalSignupAt"[\s\S]*正式课报名时间/
 
 assert.match(bootstrapSource, /'leads'/, 'bootstrap should register leads routing');
 assert.match(bootstrapSource, /leads:'线索池'/, 'bootstrap should map the leads page title');
+assert.match(bootstrapSource, /campusTabs'\)\.style\.display=\['students','leads','schedule','courts','finance','matches','admin-users','coaches','packages'\]\.includes\(pg\)\?'flex':'none'/, 'lead page should expose the top campus filter');
 
 assert.match(leadsSource, /function renderLeads\(/, 'leads page should expose the list renderer');
+assert.match(leadsSource, /function leadDedupKey\(/, 'leads page should deduplicate repeated lead rows');
 assert.match(leadsSource, /function renderLeadTag\(/, 'leads page should render tag-style lead cells');
 assert.match(leadsSource, /function leadTrialDateText\(/, 'leads page should format trial lesson date with relative days');
 assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should format recent follow-up date with relative days');
@@ -70,17 +72,21 @@ assert.match(leadsSource, /function leadDetailSectionHtml\(/, 'lead detail shoul
 assert.match(leadsSource, /function openLeadDetail\(/, 'leads page should expose the lead detail modal');
 const leadDetailSource=(leadsSource.match(/function openLeadDetail\([\s\S]*?function openLeadModal/)||[''])[0];
 assert.match(leadDetailSource, /leadDetailSectionHtml\('基础信息'[\s\S]*leadDetailSectionHtml\('当前跟进'[\s\S]*leadDetailSectionHtml\('跟进时间线'[\s\S]*leadDetailSectionHtml\('转化关系'/, 'lead detail should expose the updated four required sections');
+assert.match(leadDetailSource, /leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)/, 'lead detail should expose the campus field');
 assert.doesNotMatch(leadDetailSource, /<input class="finput tms-form-control"/, 'lead detail should be read-only rather than editable');
 assert.match(leadsSource, /function openLeadFollowupModal\(/, 'leads page should expose the follow-up modal');
 assert.match(leadsSource, /跟进时间[\s\S]*跟进人[\s\S]*跟进方式[\s\S]*沟通内容[\s\S]*用户顾虑[\s\S]*本次结论[\s\S]*当前状态[\s\S]*下次跟进时间[\s\S]*下次动作/, 'follow-up modal should expose the required fields');
 assert.match(leadsSource, /type="datetime-local"/, 'follow-up modal should use a proper datetime-local input');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
+assert.match(leadsSource, /modal-wide modal-leads-form/, 'lead create and edit modal should use the leads-specific shell');
+assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
 assert.match(leadsSource, /查看[\s\S]*跟进[\s\S]*转化/, 'lead rows should only expose the three compact actions');
 assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*tms-table-loading-state[\s\S]*线索数据加载中/, 'leads loading state should use the standard table loading style');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
+assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:10px\}/, 'leads table header should match the standard table height and font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
@@ -88,6 +94,8 @@ assert.match(html, /style="width:240px"><button class="tms-sort-header" data-lea
 assert.match(html, /style="width:220px">咨询需求/, 'lead consult column should be wide enough for longer tags');
 assert.match(css, /#page-leads \.tms-text-primary,#page-leads \.tms-cell-text,#page-leads \.tms-text-remark\{font-size:12px\}/, 'leads nested table text should match the student page font size');
 assert.match(css, /#page-leads \.tms-tag-lead-communicated\{background:#E3F0ED;color:#2E766E\}/, 'leads tags should use grounded colors instead of purple');
+assert.match(css, /\.modal\.modal-court\.modal-leads-form \.mbody\{overflow:visible\}/, 'lead form modal should keep dropdowns from being clipped');
+assert.match(css, /#page-leads \.lead-timeline-head\{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;min-width:0\}/, 'lead timeline should stay in one line without odd wrapping');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 

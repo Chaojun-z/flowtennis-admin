@@ -83,7 +83,7 @@ function shouldBypassDatasetCache(name){
 }
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students'],
-  leads:['leads'],
+  leads:['campuses','leads'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
   schedule:['campuses','students','schedule','coaches'],
