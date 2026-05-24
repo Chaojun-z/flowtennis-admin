@@ -44,6 +44,7 @@ assert.match(leadsSource, /function renderLeadTag\(/, 'leads page should render 
 assert.match(leadsSource, /function leadTrialDateText\(/, 'leads page should format trial lesson date with relative days');
 assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should format recent follow-up date with relative days');
 assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page should format formal signup date');
+assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
@@ -79,6 +80,8 @@ assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.me
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'leads table should remove internal vertical scrolling and keep horizontal scrolling');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:10px\}/, 'leads table header should match the standard table height and font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
+assert.match(html, /style="width:220px">咨询需求/, 'lead consult column should be wide enough for longer tags');
+assert.match(css, /#page-leads \.tms-text-primary,#page-leads \.tms-cell-text,#page-leads \.tms-text-remark\{font-size:12px\}/, 'leads nested table text should match the student page font size');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 

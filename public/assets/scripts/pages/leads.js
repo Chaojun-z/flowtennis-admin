@@ -55,22 +55,69 @@ function leadProfileText(lead){
 function leadLevelText(lead){
   return String(lead?.level||'').trim()||'-';
 }
-function leadDateOnly(value){
+function leadFallbackYear(lead={}){
+  const match=String(lead?.leadDate||lead?.createdAt||'').match(/^(\d{4})/);
+  return match?match[1]:String(new Date().getFullYear());
+}
+function leadDateParts(value,lead={}){
   const raw=String(value||'').trim();
-  if(!raw)return '';
-  const m=raw.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-  if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
-  return raw.slice(0,10);
+  if(!raw)return null;
+  let m=raw.match(/(\d{4})[年\/.-](\d{1,2})[月\/.-](\d{1,2})/);
+  if(m)return {year:m[1],month:m[2],day:m[3],end:m.index+m[0].length};
+  m=raw.match(/(^|[^\d])(\d{1,2})[月.\/-](\d{1,2})(?:日)?/);
+  if(m)return {year:leadFallbackYear(lead),month:m[2],day:m[3],end:m.index+m[0].length};
+  return null;
+}
+function leadDateOnly(value,lead={}){
+  const parts=leadDateParts(value,lead);
+  if(!parts)return '';
+  return `${parts.year}-${String(parts.month).padStart(2,'0')}-${String(parts.day).padStart(2,'0')}`;
+}
+function leadTimeRangeText(value,lead={}){
+  const raw=String(value||'').trim();
+  const parts=leadDateParts(raw,lead);
+  const rest=parts?raw.slice(parts.end):raw;
+  const m=rest.match(/(\d{1,2})(?:[:点](\d{1,2}))?\s*(?:-|~|–|—|至|到)\s*(\d{1,2})(?:[:点](\d{1,2}))?/);
+  if(!m)return '';
+  const start=`${String(m[1]).padStart(2,'0')}:${String(m[2]||'00').padStart(2,'0')}`;
+  const end=`${String(m[3]).padStart(2,'0')}:${String(m[4]||'00').padStart(2,'0')}`;
+  return `${start}-${end}`;
+}
+function leadDaysAgoOnly(date){
+  const text=daysAgoText(date);
+  const match=String(text||'').match(/(\d+天前)$/);
+  return match?match[1]:'';
 }
 function leadRecentDateText(value){
   const date=leadDateOnly(value);
   return date?daysAgoText(date):'-';
 }
 function leadTrialDateText(lead){
-  return leadRecentDateText(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt);
+  const raw=lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt;
+  const date=leadDateOnly(raw,lead);
+  if(!date)return '-';
+  const time=leadTimeRangeText(raw,lead);
+  const ago=leadDaysAgoOnly(date);
+  return [date,time,ago].filter(Boolean).join(' ');
+}
+function leadCourseConverted(lead){
+  const status=String(lead?.rawStatus||lead?.systemStatus||'');
+  return !!(lead?.studentId||lead?.isCourseConverted||/已报名|已转课程/.test(status));
+}
+function leadPurchaseSignupDate(lead){
+  if(!leadCourseConverted(lead))return '';
+  const studentId=String(lead?.studentId||'').trim();
+  if(!studentId)return '';
+  const rows=(Array.isArray(purchases)?purchases:[])
+    .filter(item=>String(item?.studentId||'')===studentId)
+    .filter(item=>!['voided','refunded','deleted'].includes(String(item?.status||'').trim()))
+    .map(item=>leadDateOnly(item?.purchaseDate||item?.createdAt,lead))
+    .filter(Boolean)
+    .sort();
+  return rows[0]||'';
 }
 function leadFormalSignupDateText(lead){
-  return leadDateOnly(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt)||'-';
+  return leadPurchaseSignupDate(lead)||leadDateOnly(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt,lead)||'-';
 }
 function leadFollowupCount(lead){
   return leadFollowupRows(lead?.id).length;
@@ -143,19 +190,22 @@ function leadConsultOptions(){
 function leadOwnerOptions(){
   return Array.from(new Set([...leadRows().map(item=>String(item?.owner||'').trim()).filter(Boolean),...activeCoachNames()])).map(value=>({value,label:value}));
 }
-function leadSortDateValue(value){
+function leadSortDateValue(value,lead={}){
   const raw=String(value||'').trim().replace(' 00:00:00','').replace('00:00:00','').replace('//','/');
   if(!raw)return 0;
-  const m=raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
-  if(m)return new Date(Number(m[1]), Number(m[2])-1, Number(m[3])).getTime();
+  const date=leadDateOnly(raw,lead);
+  if(date){
+    const m=date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(m)return new Date(Number(m[1]), Number(m[2])-1, Number(m[3])).getTime();
+  }
   const parsed=Date.parse(raw);
   return Number.isFinite(parsed)?parsed:0;
 }
 function leadSortValue(lead,key){
-  if(key==='leadDate')return leadSortDateValue(lead?.leadDate);
-  if(key==='trialLessonAt')return leadSortDateValue(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt);
-  if(key==='lastFollowupAt')return leadSortDateValue(lead?.lastFollowupAt);
-  if(key==='formalSignupAt')return leadSortDateValue(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt);
+  if(key==='leadDate')return leadSortDateValue(lead?.leadDate,lead);
+  if(key==='trialLessonAt')return leadSortDateValue(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt,lead);
+  if(key==='lastFollowupAt')return leadSortDateValue(lead?.lastFollowupAt,lead);
+  if(key==='formalSignupAt')return leadSortDateValue(leadPurchaseSignupDate(lead)||lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt,lead);
   if(key==='followupCount')return leadFollowupCount(lead);
   return '';
 }
@@ -585,7 +635,7 @@ function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的线索':'暂无线索';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
-  return `<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
@@ -621,7 +671,7 @@ function renderLeads(){
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
     const formalDate=leadFormalSignupDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td>${renderCourtCellText(lead?.lastFollowupAt?leadRecentDateText(lead.lastFollowupAt):'-',!lead?.lastFollowupAt)}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderCourtCellText(formalDate,formalDate==='-')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td>${renderCourtCellText(lead?.lastFollowupAt?leadRecentDateText(lead.lastFollowupAt):'-',!lead?.lastFollowupAt)}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderCourtCellText(formalDate,formalDate==='-')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.textContent=`共 ${total} 条`;

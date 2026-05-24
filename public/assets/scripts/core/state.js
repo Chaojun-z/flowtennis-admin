@@ -110,7 +110,7 @@ const PAGE_DATA_REQUIREMENTS={
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
-  leads:['leadFollowups'],
+  leads:['leadFollowups','purchases'],
   plans:['plansPage'],
   packages:[],
   purchases:['purchasesPage'],
@@ -311,11 +311,11 @@ function renderStudentTableError(message){
 }
 function renderLeadTableLoading(){
   const el=document.getElementById('leadTbody');
-  if(el)el.innerHTML='<tr><td colspan="15"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>线索数据加载中...</p></div></td></tr>';
+  if(el)el.innerHTML='<tr><td colspan="16"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>线索数据加载中...</p></div></td></tr>';
 }
 function renderLeadTableError(message){
   const el=document.getElementById('leadTbody');
-  if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
+  if(el)el.innerHTML=`<tr><td colspan="16"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderScheduleTableLoading(){
   const el=document.getElementById('schTbody');

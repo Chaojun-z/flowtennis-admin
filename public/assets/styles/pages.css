@@ -670,6 +670,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-leads .tms-table{table-layout:fixed}
 #page-leads .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15;vertical-align:middle}
 #page-leads .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
+#page-leads .tms-text-primary,#page-leads .tms-cell-text,#page-leads .tms-text-remark{font-size:12px}
 #page-leads .tms-text-remark{max-width:none}
 #page-leads .tms-tag-lead-trial-done{background:#EAF4EA;color:#2F7D32}
 #page-leads .tms-tag-lead-trial-booked{background:#E3F5F1;color:#0F766E}
