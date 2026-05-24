@@ -367,13 +367,13 @@ assert.match(
 );
 
 assert.doesNotMatch(
-  html,
+  `${fnBody('renderMyClasses')}\n${fnBody('openFeedbackModal')}`,
   /正式课/,
   'coach portal should not keep the old 正式课 wording'
 );
 
 assert.match(
-  html,
+  `${fnBody('renderMyClasses')}\n${fnBody('openFeedbackModal')}`,
   /私教课|体验课|训练营|大师课/,
   'coach portal should render the fixed course type labels'
 );

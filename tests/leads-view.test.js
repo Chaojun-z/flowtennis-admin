@@ -21,7 +21,7 @@ assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove t
 assert.match(html, /导入预览/, 'leads toolbar should expose the import preview entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
 assert.doesNotMatch(html, /id="leadStatsRow"/, 'leads page should remove the top stat cards');
-assert.match(html, /<table class="tms-table">[\s\S]*线索时间[\s\S]*微信名[\s\S]*电话[\s\S]*水平[\s\S]*线索渠道[\s\S]*咨询需求[\s\S]*意向类型[\s\S]*基本信息[\s\S]*跟进人[\s\S]*跟进次数[\s\S]*当前状态[\s\S]*最近跟进[\s\S]*转化结果[\s\S]*沟通情况[\s\S]*操作/, 'leads table should expose the agreed columns');
+assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody mount');
 assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info');
 assert.match(html, /id="leadPageSize"/, 'leads page should provide page size selector host');
@@ -29,16 +29,21 @@ assert.match(html, /id="leadPagerBtns"/, 'leads page should provide pager button
 assert.match(html, /leadSearch[\s\S]*onkeydown="if\(event\.key==='Enter'\)applyLeadSearch\(\)"/, 'leads search should run on enter');
 assert.match(html, /onclick="applyLeadSearch\(\)"[\s\S]*查询/, 'leads toolbar should provide a query button');
 assert.match(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar should provide a reset button');
-assert.match(html, /class="tms-sticky-l"[\s\S]*线索时间/, 'leads table should pin the first identity column');
+assert.match(html, /class="tms-sticky-l"[\s\S]*微信名/, 'leads table should pin the first identity column');
 assert.match(html, /data-lead-sort="leadDate"[\s\S]*线索时间/, 'leads table should sort by lead date');
+assert.match(html, /data-lead-sort="trialLessonAt"[\s\S]*体验课时间/, 'leads table should sort by trial lesson date');
 assert.match(html, /data-lead-sort="lastFollowupAt"[\s\S]*最近跟进/, 'leads table should sort by latest follow-up');
 assert.match(html, /data-lead-sort="followupCount"[\s\S]*跟进次数/, 'leads table should sort by follow-up count');
+assert.match(html, /data-lead-sort="formalSignupAt"[\s\S]*正式课报名时间/, 'leads table should sort by formal signup date');
 
 assert.match(bootstrapSource, /'leads'/, 'bootstrap should register leads routing');
 assert.match(bootstrapSource, /leads:'线索池'/, 'bootstrap should map the leads page title');
 
 assert.match(leadsSource, /function renderLeads\(/, 'leads page should expose the list renderer');
 assert.match(leadsSource, /function renderLeadTag\(/, 'leads page should render tag-style lead cells');
+assert.match(leadsSource, /function leadTrialDateText\(/, 'leads page should format trial lesson date with relative days');
+assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should format recent follow-up date with relative days');
+assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page should format formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
@@ -72,7 +77,8 @@ assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:none;overflow-x:auto;overflow-y:visible\}/, 'leads table should remove internal vertical scrolling and keep horizontal scrolling');
-assert.match(css, /#page-leads \.tms-table td\{padding-top:7px;padding-bottom:7px;vertical-align:middle\}/, 'leads table rows should vertically center cell content');
+assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:10px\}/, 'leads table header should match the standard table height and font size');
+assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 

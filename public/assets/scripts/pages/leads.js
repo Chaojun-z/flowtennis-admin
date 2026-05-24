@@ -19,12 +19,18 @@ function leadDisplayName(lead){
 function leadSystemStatusText(lead){
   return String(lead?.systemStatus||lead?.rawStatus||'跟进中').trim()||'跟进中';
 }
+function leadFollowupStatusText(lead){
+  return String(lead?.rawStatus||lead?.systemStatus||'新线索').trim()||'新线索';
+}
 function leadConversionText(lead){
   if(lead?.studentId&&lead?.courtId)return '已转课程+订场';
   if(lead?.studentId||lead?.isCourseConverted)return '已转课程';
   if(lead?.courtId||lead?.isCourtConverted)return '已转订场';
   if(lead?.isMembershipConverted)return '已升级会员';
   return '未转化';
+}
+function leadConvertedYesNo(lead){
+  return lead?.convertedFlag===true||lead?.studentId||lead?.courtId||lead?.isCourseConverted||lead?.isCourtConverted||lead?.isMembershipConverted?'是':'否';
 }
 function leadCommunicationText(lead){
   const latest=leadFollowupRows(lead?.id)[0]||null;
@@ -49,6 +55,23 @@ function leadProfileText(lead){
 function leadLevelText(lead){
   return String(lead?.level||'').trim()||'-';
 }
+function leadDateOnly(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  const m=raw.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+  if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return raw.slice(0,10);
+}
+function leadRecentDateText(value){
+  const date=leadDateOnly(value);
+  return date?daysAgoText(date):'-';
+}
+function leadTrialDateText(lead){
+  return leadRecentDateText(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt);
+}
+function leadFormalSignupDateText(lead){
+  return leadDateOnly(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt)||'-';
+}
 function leadFollowupCount(lead){
   return leadFollowupRows(lead?.id).length;
 }
@@ -67,9 +90,11 @@ function leadInputToStorageValue(value){
 }
 function leadTagClass(kind,value=''){
   const text=String(value||'').trim();
-  if(kind==='source')return text==='大众点评'?'tms-tag-tier-blue':text==='线下到店'?'tms-tag-tier-gold':'tms-tag-tier-slate';
-  if(kind==='intent')return /^高/.test(text)?'tms-tag-green':/^中/.test(text)?'tms-tag-tier-blue':/^低/.test(text)?'tms-tag-tier-slate':'tms-tag-tier-slate';
+  if(kind==='source')return text==='大众点评'?'tms-tag-tier-blue':text==='小红书'?'tms-tag-red':text==='线下到店'?'tms-tag-tier-gold':text==='转介绍'?'tms-tag-tier-teal':'tms-tag-tier-slate';
+  if(kind==='consult')return /私教/.test(text)?'tms-tag-green':/随到随学|小班/.test(text)?'tms-tag-tier-blue':/训练营/.test(text)?'tms-tag-tier-gold':/订场|场地/.test(text)?'tms-tag-tier-teal':/专项/.test(text)?'tms-tag-red':'tms-tag-tier-slate';
+  if(kind==='intent')return /^高/.test(text)?'tms-tag-green':/^中/.test(text)?'tms-tag-tier-blue':/^低/.test(text)?'tms-tag-tier-gold':/沉默/.test(text)?'tms-tag-tier-slate':'tms-tag-tier-slate';
   if(kind==='owner')return 'tms-tag-tier-teal';
+  if(kind==='converted')return text==='是'?'tms-tag-green':'tms-tag-tier-slate';
   if(kind==='conversion'){
     if(text==='已转课程+订场')return 'tms-tag-tier-gold';
     if(text==='已转课程')return 'tms-tag-green';
@@ -77,9 +102,21 @@ function leadTagClass(kind,value=''){
     return 'tms-tag-tier-slate';
   }
   if(kind==='status'){
-    if(text==='已流失')return 'tms-tag-tier-slate';
+    if(text==='体验课完成')return 'tms-tag-lead-trial-done';
+    if(text==='体验课预约')return 'tms-tag-lead-trial-booked';
+    if(text==='无意向')return 'tms-tag-lead-no-intent';
+    if(text==='新线索')return 'tms-tag-lead-new';
+    if(text==='已报名-私教')return 'tms-tag-lead-private';
+    if(text==='已报名-随到随学')return 'tms-tag-lead-dropin';
+    if(text==='已报名-训练营')return 'tms-tag-lead-camp';
+    if(text==='已报名-专项')return 'tms-tag-lead-special';
+    if(text==='已订场')return 'tms-tag-lead-court';
+    if(text==='已对接其他校区')return 'tms-tag-lead-campus';
+    if(text==='已沟通')return 'tms-tag-lead-communicated';
+    if(text==='已流失')return 'tms-tag-lead-lost';
+    if(text==='转化跟进中')return 'tms-tag-lead-converting';
     if(text==='已转课程'||text==='已转订场'||text==='已转课程+订场')return 'tms-tag-green';
-    if(text==='已约体验')return 'tms-tag-tier-blue';
+    if(text==='已约体验')return 'tms-tag-tier-teal';
     return 'tms-tag-tier-gold';
   }
   return 'tms-tag-tier-slate';
@@ -116,7 +153,9 @@ function leadSortDateValue(value){
 }
 function leadSortValue(lead,key){
   if(key==='leadDate')return leadSortDateValue(lead?.leadDate);
+  if(key==='trialLessonAt')return leadSortDateValue(lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt);
   if(key==='lastFollowupAt')return leadSortDateValue(lead?.lastFollowupAt);
+  if(key==='formalSignupAt')return leadSortDateValue(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt);
   if(key==='followupCount')return leadFollowupCount(lead);
   return '';
 }
@@ -580,8 +619,9 @@ function renderLeads(){
   const tbody=document.getElementById('leadTbody');
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
-    const conversionText=leadConversionText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(lead?.leadDate||'-',false)}</td><td>${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(lead?.phone||'-',false)}</td><td>${renderCourtCellText(leadLevelText(lead),false)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderCourtCellText(lead?.consultType,false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(leadSystemStatusText(lead),'status')}</td><td>${renderCourtCellText(lead?.lastFollowupAt?fmtDt(lead.lastFollowupAt):'-',false)}</td><td>${renderLeadTag(conversionText,'conversion')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(renderCourtEmptyText(leadCommunicationText(lead)))}">${esc(renderCourtEmptyText(leadCommunicationText(lead)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
+    const trialDate=leadTrialDateText(lead);
+    const formalDate=leadFormalSignupDateText(lead);
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td>${renderCourtCellText(lead?.lastFollowupAt?leadRecentDateText(lead.lastFollowupAt):'-',!lead?.lastFollowupAt)}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderCourtCellText(formalDate,formalDate==='-')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.textContent=`共 ${total} 条`;
