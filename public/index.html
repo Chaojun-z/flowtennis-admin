@@ -13,7 +13,7 @@
 <title>FlowTennis 网球兄弟工作台</title>
 <link rel="stylesheet" href="/assets/styles/base.css?v=20260508-finance-ledger-v4">
 <link rel="stylesheet" href="/assets/styles/components.css?v=20260508-finance-ledger-v4">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260525-leads-campus-line-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260525-leads-date-scope-v2">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -92,11 +92,11 @@
           <button type="button" class="lead-date-preset" data-lead-date-preset="week" onclick="setLeadDatePreset('week')">本周</button>
           <button type="button" class="lead-date-preset" data-lead-date-preset="month" onclick="setLeadDatePreset('month')">本月</button>
           <button type="button" class="lead-date-preset" data-lead-date-preset="custom" onclick="setLeadDatePreset('custom')">自定义</button>
-        </div>
-        <div class="lead-date-custom" id="leadDateCustomRange">
-          <input class="lead-date-input" id="leadDateFrom" type="date" onchange="setLeadCustomDateRange()">
-          <span class="lead-date-sep">至</span>
-          <input class="lead-date-input" id="leadDateTo" type="date" onchange="setLeadCustomDateRange()">
+          <div class="lead-date-custom" id="leadDateCustomRange">
+            <div class="filter-date-wrap"><button class="coach-date-btn lead-date-btn" id="leadDateFrom_btn" onclick="toggleGlobalDatePicker(event,'leadDateFrom','leadDateFrom_btn','开始日期')" type="button">开始日期</button><input class="filter-hidden-date" id="leadDateFrom" type="hidden" onchange="syncDateButton('leadDateFrom','leadDateFrom_btn','开始日期');setLeadCustomDateRange()"></div>
+            <span class="lead-date-sep">至</span>
+            <div class="filter-date-wrap"><button class="coach-date-btn lead-date-btn" id="leadDateTo_btn" onclick="toggleGlobalDatePicker(event,'leadDateTo','leadDateTo_btn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="leadDateTo" type="hidden" onchange="syncDateButton('leadDateTo','leadDateTo_btn','结束日期');setLeadCustomDateRange()"></div>
+          </div>
         </div>
       </div>
       <div class="tms-stats-row" id="leadStatsRow"></div>
@@ -689,7 +689,7 @@
 <script src="/assets/scripts/pages/admin-users.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/campusmgr.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/leads.js?v=20260525-leads-followups-v2"></script>
+<script src="/assets/scripts/pages/leads.js?v=20260525-leads-date-scope-v2"></script>
 <script src="/assets/scripts/pages/students.js?v=20260522-global-utils-v1"></script>
 <script src="/assets/scripts/pages/schedule.js?v=20260521-schedule-filter-detail-v1"></script>
 <script src="/assets/scripts/pages/classes.js?v=20260508-finance-ledger-v4"></script>

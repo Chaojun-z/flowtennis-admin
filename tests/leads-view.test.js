@@ -21,8 +21,9 @@ assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove t
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(html, /onclick="openLeadImportPreviewModal\(\)">导入<\/button>/, 'leads toolbar should expose the import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
-assert.match(html, /id="leadDateScopeBar"[\s\S]*线索时间[\s\S]*setLeadDatePreset\('today'\)[\s\S]*今日[\s\S]*setLeadDatePreset\('week'\)[\s\S]*本周[\s\S]*setLeadDatePreset\('month'\)[\s\S]*本月[\s\S]*setLeadDatePreset\('custom'\)[\s\S]*自定义/, 'leads page should expose a global lead date scope filter above stats');
-assert.match(html, /id="leadDateFrom"[\s\S]*id="leadDateTo"/, 'leads page should expose custom lead date range inputs');
+assert.match(html, /id="leadDateScopeBar"[\s\S]*线索时间[\s\S]*setLeadDatePreset\('today'\)[\s\S]*今日[\s\S]*setLeadDatePreset\('week'\)[\s\S]*本周[\s\S]*setLeadDatePreset\('month'\)[\s\S]*本月[\s\S]*setLeadDatePreset\('custom'\)[\s\S]*自定义[\s\S]*id="leadDateCustomRange"/, 'custom lead date controls should sit next to the custom preset');
+assert.match(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'custom lead date controls should use the shared drawn date picker');
+assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(html, /id="leadStatsRow"/, 'leads page should expose the top stats row');
 assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*所属校区[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody mount');
@@ -113,5 +114,7 @@ assert.match(css, /\.modal\.modal-court \.lead-form-row-4\{display:grid;grid-tem
 assert.match(css, /\.modal\.modal-court \.lead-timeline-item\{[^}]*white-space:nowrap[^}]*overflow:hidden[^}]*text-overflow:ellipsis/, 'lead timeline should stay in one line inside the modal');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
+assert.match(css, /#page-leads \.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(7,minmax\(0,1fr\)\)[^}]*overflow:visible/, 'lead stats should fit seven cards in one row');
+assert.match(css, /#page-leads \.tms-stat-card\{[^}]*min-height:82px/, 'lead stat cards should stay compact');
 
 console.log('leads view tests passed');

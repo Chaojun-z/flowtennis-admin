@@ -69,6 +69,10 @@ assert.deepStrictEqual(
   JSON.parse(JSON.stringify(context.leadDateRangeForPreset('month'))),
   { start: '2026-05-01', end: '2026-05-31' }
 );
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(context.leadDefaultCustomDateRange())),
+  { start: '2026-05-21', end: '2026-05-28' }
+);
 assert.strictEqual(
   context.leadInDateRange({ leadDate: '2026-05-26' }, { start: '2026-05-25', end: '2026-05-31' }),
   true

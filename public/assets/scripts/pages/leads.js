@@ -352,6 +352,14 @@ function leadDateRangeForPreset(preset){
   if(preset==='custom')return {start:leadDateCustomStart,end:leadDateCustomEnd};
   return {start:'',end:''};
 }
+function leadDefaultCustomDateRange(){
+  const current=today();
+  const date=leadDateFromKey(current);
+  const day=date?date.getDay():4;
+  const offset=day>=4?4-day:-(day+3);
+  const start=leadDateAdd(current,offset);
+  return {start,end:leadDateAdd(start,7)};
+}
 function getLeadDateFilterRange(){
   return leadDateRangeForPreset(leadDatePreset);
 }
@@ -375,12 +383,15 @@ function renderLeadDateScopeControls(){
   const to=document.getElementById('leadDateTo');
   if(from&&from.value!==leadDateCustomStart)from.value=leadDateCustomStart;
   if(to&&to.value!==leadDateCustomEnd)to.value=leadDateCustomEnd;
+  syncDateButton('leadDateFrom','leadDateFrom_btn','开始日期');
+  syncDateButton('leadDateTo','leadDateTo_btn','结束日期');
 }
 function setLeadDatePreset(preset){
   leadDatePreset=['all','today','week','month','custom'].includes(preset)?preset:'all';
   if(leadDatePreset==='custom'&&!leadDateCustomStart&&!leadDateCustomEnd){
-    leadDateCustomStart=today();
-    leadDateCustomEnd=today();
+    const range=leadDefaultCustomDateRange();
+    leadDateCustomStart=range.start;
+    leadDateCustomEnd=range.end;
   }
   if(leadDatePreset!=='custom'){
     leadDateCustomStart='';
