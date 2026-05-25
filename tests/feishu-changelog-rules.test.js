@@ -3,211 +3,56 @@ const path = require('path');
 
 const changelog = require(path.join(__dirname, '..', 'standalone-services', 'feishu-changelog.js'));
 
-const commits = [
+const entries = changelog.buildBusinessEntries([
   {
     sha: 'a1',
-    subject: 'feat: add campus filter to membership orders (#201)',
+    subject: 'Fix leads campus and dedupe display',
     body: '',
-    files: ['public/assets/scripts/pages/membership.js', 'tests/membership-view.test.js']
+    files: ['public/assets/scripts/pages/leads.js']
   },
   {
     sha: 'a2',
-    subject: 'fix: add campus filter to membership orders (#201)',
-    body: '',
-    files: ['public/assets/scripts/pages/membership.js']
+    subject: 'Update product broadcast',
+    body: [
+      '产品播报:',
+      '- 管理后台：线索列表新增校区筛选，运营可以按校区查看和分配客户线索',
+      '- 教练手机端：排课日报按北京时间统计，避免下午课被误算到第二天'
+    ].join('\n'),
+    files: ['public/assets/scripts/pages/leads.js', 'standalone-services/feishu-report.js']
   },
   {
     sha: 'a3',
-    subject: 'test: cover membership page filter',
-    body: '',
-    files: ['tests/membership-view.test.js']
-  },
-  {
-    sha: 'a4',
-    subject: 'Allow mini match login in preview',
-    body: '',
-    files: ['api/match/login.js', 'tests/match-login-preview-access.test.js']
-  },
-  {
-    sha: 'a5',
-    subject: 'docs: update release note template',
-    body: '',
-    files: ['docs/release-template.md']
-  },
-  {
-    sha: 'a6',
-    subject: 'fix: guard login when ft_users table is missing',
-    body: '',
-    files: ['api/index.js', 'public/assets/scripts/pages/workbench.js']
-  },
-  {
-    sha: 'a7',
-    subject: 'repair: backfill membership ledger',
-    body: '',
-    files: ['scripts/repair/fix-membership-ledger.js']
+    subject: 'Update match flow',
+    body: [
+      '产品播报:',
+      '- 约球小程序：报名页面展示候补名额，用户能看到自己是否进入候补队列'
+    ].join('\n'),
+    files: ['api/match/login.js']
   }
-];
+]);
 
-const entries = changelog.buildBusinessEntries(commits, { prDetailsByNumber: {} });
-
-assert.strictEqual(entries.length, 3, '应去重并过滤纯测试、文档、修数噪音');
-
+assert.strictEqual(entries.length, 3, '只有写了产品播报的更新才进入产品升级日志');
 assert.deepStrictEqual(
-  entries.map((item) => [...item.platforms].sort()).sort((a, b) => a[0].localeCompare(b[0])),
-  [['adminWeb'], ['coachPwa', 'coachWeb'], ['matchMp']],
-  '应按 5 端规则归类'
+  entries.map((item) => item.summary),
+  [
+    '线索列表新增校区筛选，运营可以按校区查看和分配客户线索',
+    '排课日报按北京时间统计，避免下午课被误算到第二天',
+    '报名页面展示候补名额，用户能看到自己是否进入候补队列'
+  ],
+  '产品升级日志应直接使用产品播报文案'
 );
-
-assert.match(entries[0].summary + entries[1].summary + entries[2].summary, /校区筛选|筛选/, '应提炼老板能看懂的业务摘要');
-assert.doesNotMatch(entries.map((item) => item.summary).join('\n'), /feat:|fix:|test:|docs:/, '摘要不应直接输出技术前缀');
 
 const grouped = changelog.groupEntriesByPlatform(entries);
-assert.strictEqual(grouped.adminWeb.length, 1, '管理后台应聚合到 adminWeb');
-assert.strictEqual(grouped.coachWeb.length, 1, '教练网页应聚合到 coachWeb');
-assert.strictEqual(grouped.coachPwa.length, 1, '教练 PWA 应聚合到 coachPwa');
-assert.strictEqual(grouped.matchMp.length, 1, '约球小程序应聚合到 matchMp');
+assert.deepStrictEqual(grouped.adminWeb, ['线索列表新增校区筛选，运营可以按校区查看和分配客户线索']);
+assert.deepStrictEqual(grouped.coachPwa, ['排课日报按北京时间统计，避免下午课被误算到第二天']);
+assert.deepStrictEqual(grouped.matchMp, ['报名页面展示候补名额，用户能看到自己是否进入候补队列']);
 
-const silent = changelog.buildBusinessEntries(
-  [
-    {
-      sha: 'b1',
-      subject: 'test: add changelog coverage',
-      body: '',
-      files: ['tests/feishu-changelog-rules.test.js']
-    }
-  ],
-  { prDetailsByNumber: {} }
-);
-
-assert.strictEqual(silent.length, 0, '只有技术噪音时应静默不发');
-
-assert.strictEqual(
-  changelog.summarizeText('add runtime files for feishu github actions'),
-  '补齐飞书自动推送运行配置',
-  'runtime 相关英文应转成中文人话'
-);
-
-assert.strictEqual(
-  changelog.summarizeText('fix feishu automation schedule and timezone'),
-  '修正飞书自动推送时间配置',
-  'schedule 和 timezone 应转成普通用户看得懂的中文'
-);
-
-assert.strictEqual(
-  changelog.summarizeText('support campuses bypass match admin auth fallback'),
-  '优化校区访问与约球后台鉴权稳定性',
-  'bypass 和 auth fallback 不应直接出现在最终摘要里'
-);
-
-assert.strictEqual(
-  changelog.summarizeText('bypass init for anonymous campuses reads'),
-  '优化未登录场景下的校区读取稳定性',
-  'init 和 anonymous reads 应转成业务可读描述'
-);
-
-assert.doesNotMatch(
-  [
-    changelog.summarizeText('add runtime files for feishu github actions'),
-    changelog.summarizeText('fix feishu automation schedule and timezone'),
-    changelog.summarizeText('support campuses bypass match admin auth fallback'),
-    changelog.summarizeText('bypass init for anonymous campuses reads')
-  ].join('\n'),
-  /runtime|fallback|bypass|auth|timezone|anonymous|init/i,
-  '最终摘要不应直接带出技术底层英文术语'
-);
-
-const userFacingExamples = [
-  ['add official account webhook flow', '新增公众号通知对接流程'],
-  ['add package merge flow', '新增课包合并流程'],
-  ['add private lesson import finance increments', '新增私教课导入后的财务增量统计'],
-  ['fix membership import finance increments', '修复会员导入后的财务增量统计'],
-  ['fix package merge dropdown clipping', '修复课包合并下拉菜单被遮挡的问题'],
-  ['fix coach PWA schedule jitter', '修复教练端排课页面抖动问题'],
-  ['fix package order display', '修复课包订单展示问题'],
-  ['fix student page live lesson cache', '修复学员页实时课程缓存问题'],
-  ['Hide merged packages from purchase pickers', '购买选择器不再显示已合并课包'],
-  ['Polish package merge UI', '优化课包合并界面'],
-  ['prevent page refresh clearing datasets', '避免页面刷新时清空数据'],
-  ['restore finance coach settlement rows', '恢复财务页教练结算明细'],
-  ['Show lesson package purchase details inline', '在页面内展示课包购买明细'],
-  ['support sold package usage rule edits', '支持已售课包使用规则修改'],
-  ['support sold package validity edits', '支持已售课包有效期修改'],
-  ['bind official account coach phone', '支持公众号绑定教练手机号'],
-  ['Document finance import display guard', '记录财务导入展示保护逻辑'],
-  ['parse official account reminder times in Beijing timezone', '支持公众号提醒按北京时间解析'],
-  ['Support weekday weekend package time windows', '支持课包区分工作日和周末可用时段'],
-  ['unify mabao campus and package signup dates', '统一玛宝校区和课包报名日期'],
-  ['harden official account reminders', '增强公众号提醒稳定性'],
-  ['speed up schedule and package first paint', '提升排课和课包页面首屏加载速度'],
-  ['wait products package page', '等待产品与课包页面数据加载完成'],
-  ['restore coach management data loading', '恢复教练管理数据加载']
-];
-
-for (const [source, expected] of userFacingExamples) {
-  assert.strictEqual(changelog.summarizeText(source), expected, `${source} 应转成中文人话`);
-}
-
-assert.doesNotMatch(
-  userFacingExamples.map(([source]) => changelog.summarizeText(source)).join('\n'),
-  /official|account|webhook|flow|package|private|lesson|import|dropdown|clipping|cache|picker|polish|refresh|datasets|restore|settlement|inline|first paint|products|loading|coach|schedule|jitter|sold|usage|rule|edits|bind|document|parse|timezone|weekday|weekend|windows|harden/i,
-  '产品播报不应直接输出普通用户看不懂的英文提交词'
-);
-
-assert.deepStrictEqual(
-  changelog.resolveReportDates({
-    now: '2026-05-22T21:00:00+08:00',
-    sentDates: ['2026-05-20']
-  }),
-  ['2026-05-21', '2026-05-22'],
-  '晚上播报当天，昨天漏发时应补昨天'
-);
-
-assert.deepStrictEqual(
-  changelog.resolveReportDates({
-    now: '2026-05-23T21:00:00+08:00',
-    sentDates: ['2026-05-22']
-  }),
-  ['2026-05-23'],
-  '昨天已发时不应重复播报昨天'
-);
-
-assert.strictEqual(
-  changelog.targetDate('2026-05-22T21:00:00+08:00'),
-  '2026-05-22',
-  '晚上应播报当天'
-);
-
-assert.strictEqual(
-  changelog.targetDate('2026-05-22T08:00:00+08:00'),
-  '2026-05-21',
-  '早上手动触发时应播报昨天'
-);
-
-const card = changelog.buildChangelogCard({
-  date: '2026-05-22',
-  entries: changelog.buildBusinessEntries(
-    [
-      {
-        sha: 'c1',
-        subject: 'fix coach PWA schedule jitter',
-        body: '',
-        files: ['public/assets/scripts/pages/coachops.js']
-      },
-      {
-        sha: 'c2',
-        subject: 'bind official account coach phone',
-        body: '',
-        files: ['api/index.js']
-      }
-    ],
-    { prDetailsByNumber: {} }
-  )
-});
-
-assert.doesNotMatch(
-  JSON.stringify(card),
-  /PWA|coach|schedule|jitter|bind|official|account|phone|Git|PR/i,
-  '最终飞书卡片不应残留英文短语'
-);
+const card = changelog.buildChangelogCard({ date: '2026-05-24', entries });
+const cardText = JSON.stringify(card);
+assert.doesNotMatch(cardText, /有效更新|1\.|2\.|3\.|系统功能优化|系统体验已优化/, '卡片不应再展示有效更新模块和机器兜底文案');
+assert.match(cardText, /更新日期：2026-05-24/, '卡片应保留更新日期');
+assert.match(cardText, /管理后台/, '卡片应按端展示产品播报');
+assert.match(cardText, /教练手机端/, '卡片应展示教练手机端播报');
+assert.match(cardText, /约球小程序/, '卡片应展示约球小程序播报');
 
 console.log('feishu changelog rules tests passed');

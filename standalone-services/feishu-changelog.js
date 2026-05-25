@@ -16,6 +16,17 @@ const PLATFORM_NAMES = {
   coachMp: '🟢 教练小程序',
   matchMp: '🎾 约球小程序'
 };
+const BROADCAST_PLATFORM_ALIASES = {
+  管理后台: 'adminWeb',
+  后台: 'adminWeb',
+  教练网页版: 'coachWeb',
+  教练网页: 'coachWeb',
+  教练手机端: 'coachPwa',
+  教练PWA: 'coachPwa',
+  教练小程序: 'coachMp',
+  约球小程序: 'matchMp',
+  约球: 'matchMp'
+};
 
 function targetDate(nowInput) {
   const raw = String(process.env.CHANGELOG_TARGET_DATE || '').trim();
@@ -285,21 +296,54 @@ function classifyPlatforms(commit) {
 }
 
 function buildCandidate(commit, prDetails) {
-  const title = normalizeText(prDetails?.title || commit.subject);
-  const body = normalizeText(prDetails?.body || commit.body);
-  const summary = summarizeText(title || body);
-  const platforms = classifyPlatforms(commit);
+  const items = extractProductBroadcastItems(`${prDetails?.body || ''}\n${commit.body || ''}`, commit);
+  if (!items.length) return [];
 
-  if (!summary || platforms.length === 0) return null;
-
-  return {
-    key: prDetails?.number ? `pr-${prDetails.number}` : normalizeKey(title || commit.subject),
-    summary,
-    platforms,
-    sourceTitle: title || commit.subject,
+  return items.map((item, index) => ({
+    key: `${prDetails?.number ? `pr-${prDetails.number}` : commit.sha || normalizeKey(commit.subject)}-${index}`,
+    summary: item.summary,
+    platforms: item.platforms,
+    sourceTitle: prDetails?.title || commit.subject,
     prNumber: prDetails?.number || commit.prNumber || null,
     files: commit.files || []
-  };
+  }));
+}
+
+function extractProductBroadcastLines(input) {
+  const lines = String(input || '').replace(/\r/g, '').split('\n');
+  const result = [];
+  let inBlock = false;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!inBlock) {
+      if (/^产品播报\s*[:：]\s*$/.test(line)) inBlock = true;
+      continue;
+    }
+    if (!line) {
+      if (result.length) break;
+      continue;
+    }
+    if (!/^[-*]\s+/.test(line)) break;
+    result.push(line.replace(/^[-*]\s+/, '').trim());
+  }
+  return result;
+}
+
+function parseBroadcastLine(line, commit) {
+  const text = normalizeText(line);
+  if (!text) return null;
+  const match = text.match(/^([^：:]{2,12})[：:]\s*(.+)$/);
+  const platform = match ? BROADCAST_PLATFORM_ALIASES[match[1].trim()] : '';
+  const summary = match && platform ? normalizeText(match[2]) : text;
+  const platforms = platform ? [platform] : classifyPlatforms(commit);
+  if (!summary || platforms.length === 0) return null;
+  return { summary, platforms };
+}
+
+function extractProductBroadcastItems(input, commit) {
+  return extractProductBroadcastLines(input)
+    .map((line) => parseBroadcastLine(line, commit))
+    .filter(Boolean);
 }
 
 function buildBusinessEntries(commits, options = {}) {
@@ -309,22 +353,19 @@ function buildBusinessEntries(commits, options = {}) {
   for (const commit of commits) {
     if (isNoiseCommit(commit)) continue;
     const prDetails = commit.prNumber ? prDetailsByNumber[commit.prNumber] : null;
-    const candidate = buildCandidate(commit, prDetails);
-    if (!candidate) continue;
+    const candidates = buildCandidate(commit, prDetails);
 
-    if (deduped.has(candidate.key)) {
-      const existing = deduped.get(candidate.key);
-      existing.platforms = PLATFORM_ORDER.filter((key) => new Set([...existing.platforms, ...candidate.platforms]).has(key));
-      if (existing.summary.length > candidate.summary.length) {
-        existing.summary = candidate.summary;
+    for (const candidate of candidates) {
+      if (deduped.has(candidate.key)) {
+        const existing = deduped.get(candidate.key);
+        existing.platforms = PLATFORM_ORDER.filter((key) => new Set([...existing.platforms, ...candidate.platforms]).has(key));
+        continue;
       }
-      continue;
+      deduped.set(candidate.key, candidate);
     }
-
-    deduped.set(candidate.key, candidate);
   }
 
-  return Array.from(deduped.values()).sort((a, b) => a.summary.localeCompare(b.summary, 'zh-CN'));
+  return Array.from(deduped.values());
 }
 
 function groupEntriesByPlatform(entries) {
@@ -356,11 +397,10 @@ function buildTopSummary(entries) {
 function buildChangelogCard(payload) {
   const grouped = groupEntriesByPlatform(payload.entries);
   const blocks = [];
-  const topSummary = buildTopSummary(payload.entries);
 
   blocks.push({
     tag: 'markdown',
-    content: `**📅 更新日期：${payload.date}**\n**📦 有效更新：${payload.entries.length} 项**\n\n${topSummary.join('\n')}`
+    content: `**📅 更新日期：${payload.date}**`
   });
 
   for (const platform of PLATFORM_ORDER) {
@@ -377,7 +417,7 @@ function buildChangelogCard(payload) {
     elements: [
       {
         tag: 'plain_text',
-        content: '本摘要由代码提交与合并请求信息自动生成；当天无有效产品更新时静默不发。'
+        content: '本摘要只读取提交或合并请求中的“产品播报”内容；当天无产品播报时静默不发。'
       }
     ]
   });
@@ -577,6 +617,7 @@ module.exports = {
   buildChangelogCard,
   classifyPlatforms,
   cleanSubject,
+  extractProductBroadcastItems,
   groupEntriesByPlatform,
   isNoiseCommit,
   readSentDates,
