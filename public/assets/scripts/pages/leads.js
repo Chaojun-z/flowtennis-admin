@@ -17,6 +17,51 @@ function leadDedupText(value){
 function leadDedupDate(value,lead={}){
   return leadDateOnly(value,lead)||String(value||'').trim();
 }
+function leadFollowupDateText(item){
+  return leadDateOnly(item?.followupAt||item?.createdAt)||String(item?.followupAt||item?.createdAt||'').slice(0,10)||'-';
+}
+function leadFollowupPersonText(item){
+  return String(item?.followupBy||'未填写').replace(/^@+/,'').trim()||'未填写';
+}
+function leadFollowupNoteText(item){
+  const note=String(item?._mergedFollowupNote||item?.communicationNote||'').trim();
+  const conclusion=String(item?.conclusion||'').trim();
+  if(note&&conclusion&&leadDedupText(note)!==leadDedupText(conclusion)&&!leadDedupText(note).includes(leadDedupText(conclusion)))return `${note}；${conclusion}`;
+  return note||conclusion||'-';
+}
+function leadMergeFollowupNotes(items){
+  const texts=(items||[]).map(leadFollowupNoteText).filter(text=>text&&text!=='-').sort((a,b)=>b.length-a.length);
+  const merged=[];
+  texts.forEach(text=>{
+    const key=leadDedupText(text);
+    if(!key)return;
+    if(merged.some(item=>{
+      const existing=leadDedupText(item);
+      return existing.includes(key)||key.includes(existing);
+    }))return;
+    merged.push(text);
+  });
+  return merged.join('；')||'-';
+}
+function leadMergeFollowupGroup(items){
+  const rows=Array.isArray(items)?items:[];
+  const mergedNote=leadMergeFollowupNotes(rows);
+  const base=[...rows].sort((a,b)=>leadFollowupNoteText(b).length-leadFollowupNoteText(a).length)[0]||{};
+  return {
+    ...base,
+    followupAt:leadFollowupDateText(base),
+    followupBy:leadFollowupPersonText(base),
+    _mergedFollowupNote:mergedNote
+  };
+}
+function leadFollowupGroupKey(item){
+  return [
+    item?.leadId||'',
+    leadFollowupDateText(item),
+    leadDedupText(leadFollowupPersonText(item)),
+    leadFollowupConvertedText(item)
+  ].join('|');
+}
 function leadDedupKey(lead){
   const phone=leadDedupPhone(lead);
   const name=leadIdentityName(lead?.displayName||lead?.wechatName||lead?.name);
@@ -46,26 +91,18 @@ function leadRows(){
   });
 }
 function leadFollowupRows(leadId){
-  const seen=new Set();
-  return (Array.isArray(leadFollowups)?leadFollowups:[])
+  const groups=new Map();
+  (Array.isArray(leadFollowups)?leadFollowups:[])
     .filter(item=>item?.leadId===leadId)
-    .sort((a,b)=>String(b?.followupAt||b?.createdAt||'').localeCompare(String(a?.followupAt||a?.createdAt||'')))
-    .filter(item=>{
-      const key=[
-        leadDedupDate(item?.followupAt||item?.createdAt),
-        leadDedupText(item?.followupBy),
-        leadDedupText(item?.followupType),
-        leadDedupText(item?.communicationNote),
-        leadDedupText(item?.concern),
-        leadDedupText(item?.conclusion),
-        leadDedupText(item?.statusAfter),
-        leadDedupDate(item?.nextFollowupAt),
-        leadDedupText(item?.nextAction)
-      ].join('|');
-      if(seen.has(key))return false;
-      seen.add(key);
-      return true;
+    .forEach(item=>{
+      const key=leadFollowupGroupKey(item);
+      const rows=groups.get(key)||[];
+      rows.push(item);
+      groups.set(key,rows);
     });
+  return [...groups.values()]
+    .map(leadMergeFollowupGroup)
+    .sort((a,b)=>leadSortDateValue(b?.followupAt||b?.createdAt||'')-leadSortDateValue(a?.followupAt||a?.createdAt||'')||String(b?.createdAt||b?.id||'').localeCompare(String(a?.createdAt||a?.id||'')));
 }
 function leadById(leadId){
   return leadRawRows().find(item=>String(item?.id||'')===String(leadId))||null;
@@ -405,11 +442,15 @@ function leadTimelineHtml(lead){
   return `<div class="lead-timeline-list">${rows.map(item=>`<div class="lead-timeline-item">${esc(leadTimelineLineText(item))}</div>`).join('')}</div>`;
 }
 function leadTimelineLineText(item){
-  const date=String(item?.followupAt||item?.createdAt||'').slice(0,10)||'-';
-  const by=String(item?.followupBy||'未填写').trim()||'未填写';
+  const date=leadFollowupDateText(item);
+  const by=leadFollowupPersonText(item);
   const status=leadFollowupConvertedText(item);
-  const note=String(item?.communicationNote||item?.conclusion||'-').trim()||'-';
-  return `${date}@${by}${status} ${note}`;
+  const note=leadFollowupNoteText(item);
+  const parts=note.split(/[；;]/).map(part=>part.trim()).filter(Boolean);
+  if(parts.length>1&&parts[0].length<=12&&!/[，,。]/.test(parts[0])){
+    return `${date} · [${by}跟进 · ${status}] · ${parts[0]}：${parts.slice(1).join('；')}`;
+  }
+  return `${date} · [${by}跟进 · ${status}]：${note}`;
 }
 function linkedStudentName(lead){
   const stu=students.find(item=>String(item?.id||'')===String(lead?.studentId||''));
