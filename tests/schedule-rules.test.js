@@ -572,7 +572,7 @@ assert.deepStrictEqual(
     template_id: 'reminder-tpl',
     page: 'pages/detail/detail?scheduleId=due-cross',
     data: {
-      time3: { value: '2026-04-20 12:00' },
+      time3: { value: '12:00-13:00' },
       thing4: { value: 'shunyi 2号场' },
       const7: { value: '私教课' },
       thing2: { value: '朝珺' },

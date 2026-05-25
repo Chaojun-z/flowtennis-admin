@@ -2385,12 +2385,15 @@ function collectCourseReminderCandidates(rows=[],now=new Date()){
 }
 function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCampus=false}){
   const scheduleId=encodeURIComponent(String(schedule?.id||''));
+  const startClock=String(schedule?.startTime||'').trim().slice(11,16);
+  const endClock=String(schedule?.endTime||'').trim().slice(11,16);
+  const timeText=startClock&&endClock?`${startClock}-${endClock}`:String(schedule?.startTime||'').trim();
   return {
     touser:openid,
     template_id:templateId,
     page:`pages/detail/detail${scheduleId?`?scheduleId=${scheduleId}`:''}`,
     data:{
-      time3:{value:String(schedule?.startTime||'').trim()},
+      time3:{value:timeText},
       thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
       const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
       thing2:{value:truncateWechatValue(schedule?.coach||'教练')},
