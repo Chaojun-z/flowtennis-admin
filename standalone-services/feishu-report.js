@@ -9,6 +9,51 @@ const path = require('path');
 const FEISHU_WEBHOOK_URL = String(process.env.FEISHU_WEBHOOK_URL || '').trim();
 const DATA_PATH = path.join(__dirname, 'daily-report-data.json'); // 必须由主系统生成
 
+function compactText(parts, separator = ' · ') {
+  return parts.map((item) => String(item || '').trim()).filter(Boolean).join(separator);
+}
+
+function lessonStudentText(lesson) {
+  const names = Array.isArray(lesson.studentNames) && lesson.studentNames.length
+    ? lesson.studentNames
+    : (Array.isArray(lesson.studentLabels) ? lesson.studentLabels : []);
+  return names.map((item) => String(item || '').trim()).filter(Boolean).join('、');
+}
+
+function formatTomorrowLessonLine(lesson) {
+  const start = dayjs(lesson.startTime).format('HH:mm');
+  const end = dayjs(lesson.endTime).format('HH:mm');
+  const locationText = compactText([lesson.campusName, lesson.venue]);
+  const studentCourseText = compactText([lessonStudentText(lesson), lesson.courseType]);
+  return `${start} - ${end}  · [${locationText}] · [${studentCourseText}] · ${lesson.studentCount}人`;
+}
+
+function lessonDurationMinutes(lesson) {
+  const start = dayjs(lesson.startTime);
+  const end = dayjs(lesson.endTime);
+  const minutes = end.diff(start, 'minute');
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : 0;
+}
+
+function formatHours(totalMinutes) {
+  const hours = totalMinutes / 60;
+  return `${Number.isInteger(hours) ? hours : Number(hours.toFixed(1))}小时`;
+}
+
+function formatTomorrowSchedule(rows) {
+  const groups = new Map();
+  rows.forEach((lesson) => {
+    const coachName = String(lesson.coachName || '').trim() || '未分配';
+    if (!groups.has(coachName)) groups.set(coachName, []);
+    groups.get(coachName).push(lesson);
+  });
+  return [...groups.entries()].map(([coachName, lessons]) => {
+    const totalMinutes = lessons.reduce((sum, lesson) => sum + lessonDurationMinutes(lesson), 0);
+    const header = `${coachName}教练（共${lessons.length}节 · ${formatHours(totalMinutes)}）`;
+    return [header, ...lessons.map(formatTomorrowLessonLine)].join('\n');
+  }).join('\n\n');
+}
+
 // ==========================================
 // 2. 数据处理逻辑（完全适配 Codex 真实 Schema）
 // ==========================================
@@ -44,11 +89,7 @@ function generateReport(data) {
   // 按时间早晚排序
   tomorrowValidRows.sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf());
 
-  let tomorrowScheduleStr = tomorrowValidRows.map(l => {
-    const start = dayjs(l.startTime).format('HH:mm');
-    const end = dayjs(l.endTime).format('HH:mm');
-    return `${start} - ${end} ${l.coachName}教练 · ${l.campusName} · ${l.courseType} · ${l.studentCount}人`;
-  }).join('\n');
+  let tomorrowScheduleStr = formatTomorrowSchedule(tomorrowValidRows);
 
   if (tomorrowValidRows.length === 0) {
     tomorrowScheduleStr = "明天暂无排课";
@@ -135,5 +176,13 @@ async function run() {
   }
 }
 
-// 立即触发
-run();
+if (require.main === module) {
+  run();
+}
+
+module.exports = {
+  buildFeishuCard,
+  formatTomorrowSchedule,
+  formatTomorrowLessonLine,
+  generateReport
+};

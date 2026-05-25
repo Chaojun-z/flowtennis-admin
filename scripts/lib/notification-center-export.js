@@ -23,6 +23,23 @@ function toChinaDateKey(input) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+function parseScheduleTimeMs(input) {
+  const text = String(input || '').trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (match) {
+    const [, year, month, day, hour, minute, second = '0'] = match;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) - 8, Number(minute), Number(second));
+  }
+  return new Date(input || '').getTime();
+}
+
+function scheduleDateKey(input) {
+  const text = String(input || '').trim();
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T]/);
+  if (match) return match[1];
+  return toChinaDateKey(input);
+}
+
 function addDays(dateKey, amount) {
   const base = new Date(`${dateKey}T00:00:00+08:00`);
   base.setUTCDate(base.getUTCDate() + amount);
@@ -50,14 +67,14 @@ function effectiveStatus(row, now) {
   const status = String(row?.status || '已排课').trim() || '已排课';
   if (status === '已取消') return '已取消';
   if (status === '已结束' || status === '已下课') return '已结束';
-  const endMs = new Date(row?.endTime || '').getTime();
+  const endMs = parseScheduleTimeMs(row?.endTime || '');
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (status === '已排课' && Number.isFinite(endMs) && Number.isFinite(nowMs) && endMs < nowMs) return '待确认完成';
   return status;
 }
 
 function sortByStartTime(items) {
-  return [...items].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  return [...items].sort((a, b) => parseScheduleTimeMs(a.startTime) - parseScheduleTimeMs(b.startTime));
 }
 
 function normalizeLesson(row, campusMap, now) {
@@ -76,6 +93,7 @@ function normalizeLesson(row, campusMap, now) {
     courseType: String(row.courseType || '').trim(),
     status: effectiveStatus(row, now),
     studentCount: studentNames.length || studentIds.length || 0,
+    studentNames,
     studentLabels: studentNames.map(maskStudentLabel)
   };
 }
@@ -128,8 +146,8 @@ function buildNotificationCenterSnapshot({
     .map((row) => String(row?.name || row?.id || '').trim())
     .filter(Boolean));
   const normalized = sortByStartTime(scheduleRows.map((row) => normalizeLesson(row, campusMap, now)));
-  const todayLessonDetails = normalized.filter((row) => row.startTime && toChinaDateKey(row.startTime) === today);
-  const tomorrowLessonDetails = normalized.filter((row) => row.startTime && toChinaDateKey(row.startTime) === tomorrow);
+  const todayLessonDetails = normalized.filter((row) => row.startTime && scheduleDateKey(row.startTime) === today);
+  const tomorrowLessonDetails = normalized.filter((row) => row.startTime && scheduleDateKey(row.startTime) === tomorrow);
   const activeTodayCoachNames = new Set(todayLessonDetails
     .filter((row) => row.status !== '已取消')
     .map((row) => row.coachName)
