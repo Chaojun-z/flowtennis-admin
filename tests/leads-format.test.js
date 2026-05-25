@@ -11,6 +11,9 @@ const context = {
     if (date === '2026-05-08') return '2026-05-08 · 16天前';
     if (date === '2026-03-18') return '2026-03-18 · 67天前';
     return `${date} · 0天前`;
+  },
+  today() {
+    return '2026-05-25';
   }
 };
 vm.createContext(context);
@@ -36,6 +39,25 @@ context.purchases = [
 assert.strictEqual(
   context.leadFormalSignupDateText({ studentId: 'stu-1', rawStatus: '已报名-私教' }),
   '2026-05-10'
+);
+
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(context.leadStatsData([
+    { rawStatus: '体验课完成' },
+    { trialAtRaw: '2026-05-20 10:00-11:00', studentId: 'stu-1' },
+    { trialAtRaw: '2026-06-01 10:00-11:00' },
+    { trialAtRaw: '2026-05-10 10:00-11:00', convertedFlag: true },
+    { courtId: 'court-1' }
+  ]))),
+  {
+    total: 5,
+    trialDone: 3,
+    trialConverted: 2,
+    trialConversionRate: '66.7%',
+    converted: 3,
+    leadConversionRate: '60%',
+    trialPendingConversion: 1
+  }
 );
 
 console.log('leads format tests passed');

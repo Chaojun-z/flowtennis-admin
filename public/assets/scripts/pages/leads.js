@@ -437,18 +437,52 @@ function renderLeadToolbarFilters(){
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onLeadFilterChange');
   });
 }
-function renderLeadStats(list){
+function leadConverted(lead){
+  return leadConvertedYesNo(lead)==='是';
+}
+function leadTrialDoneByStatus(lead){
+  return [lead?.rawStatus,lead?.systemStatus].some(value=>String(value||'').trim()==='体验课完成');
+}
+function leadTrialDoneByTime(lead){
+  const raw=lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt;
+  const date=leadDateOnly(raw,lead);
+  return !!date&&date<=today();
+}
+function leadTrialDone(lead){
+  return leadTrialDoneByStatus(lead)||leadTrialDoneByTime(lead);
+}
+function leadRateText(value,total){
+  if(!total)return '0%';
+  const percent=(value/total)*100;
+  return `${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
+}
+function leadStatsData(list){
   const base=Array.isArray(list)?list:[];
+  const trialDoneRows=base.filter(leadTrialDone);
+  const convertedRows=base.filter(leadConverted);
+  const trialConvertedRows=trialDoneRows.filter(leadConverted);
+  return {
+    total:base.length,
+    trialDone:trialDoneRows.length,
+    trialConverted:trialConvertedRows.length,
+    trialConversionRate:leadRateText(trialConvertedRows.length,trialDoneRows.length),
+    converted:convertedRows.length,
+    leadConversionRate:leadRateText(convertedRows.length,base.length),
+    trialPendingConversion:trialDoneRows.length-trialConvertedRows.length
+  };
+}
+function renderLeadStats(list){
+  const stats=leadStatsData(list);
   const cardData=[
-    ['新线索',base.filter(item=>leadSystemStatusText(item)==='新线索').length],
-    ['今日待跟进',base.filter(item=>String(item?.nextFollowupAt||'').slice(0,10)===today()&&leadSystemStatusText(item)!=='已流失').length],
-    ['已逾期未跟进',base.filter(item=>leadNeedsFollowup(item)&&String(item?.nextFollowupAt||'').slice(0,10)<today()).length],
-    ['已转课程',base.filter(item=>leadConversionText(item)==='已转课程'||leadConversionText(item)==='已转课程+订场').length],
-    ['已转订场',base.filter(item=>leadConversionText(item)==='已转订场'||leadConversionText(item)==='已转课程+订场').length],
-    ['已流失',base.filter(item=>leadSystemStatusText(item)==='已流失').length]
+    ['线索数',stats.total],
+    ['已上体验课数',stats.trialDone],
+    ['体验课转化率',stats.trialConversionRate],
+    ['已转化线索数',stats.converted],
+    ['线索转化率',stats.leadConversionRate],
+    ['已体验待转化数',stats.trialPendingConversion]
   ];
   const host=document.getElementById('leadStatsRow');
-  if(host)host.innerHTML=cardData.map(([label,value])=>`<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`).join('');
+  if(host)host.innerHTML=cardData.map(([label,value])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div></div>`).join('');
 }
 function leadTimelineHtml(lead){
   const rows=leadFollowupRows(lead?.id);
@@ -811,6 +845,7 @@ function renderLeads(){
   renderLeadToolbarFilters();
   updateLeadSortHeaders();
   const list=getSortedLeads(getFilteredLeads());
+  renderLeadStats(list);
   const total=list.length;
   const pageSize=leadPageSize||20;
   const pages=Math.max(1,Math.ceil(total/pageSize));

@@ -21,7 +21,7 @@ assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove t
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(html, /onclick="openLeadImportPreviewModal\(\)">导入<\/button>/, 'leads toolbar should expose the import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
-assert.doesNotMatch(html, /id="leadStatsRow"/, 'leads page should remove the top stat cards');
+assert.match(html, /id="leadStatsRow"/, 'leads page should expose the top stats row');
 assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*所属校区[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody mount');
 assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info');
@@ -49,6 +49,9 @@ assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should fo
 assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page should format formal signup date');
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
+assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
+assert.match(leadsSource, /线索数[\s\S]*已上体验课数[\s\S]*体验课转化率[\s\S]*已转化线索数[\s\S]*线索转化率[\s\S]*已体验待转化数/, 'lead stats should expose the required six metrics');
+assert.match(leadsSource, /function renderLeads\([\s\S]*const list=getSortedLeads\(getFilteredLeads\(\)\)[\s\S]*renderLeadStats\(list\)/, 'lead stats should follow the current lead filters and campus scope');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /leadFollowupStatusText\(lead\)/, 'leads page should keep the status filter aligned with the displayed follow-up status');
 assert.match(leadsSource, /leadConvertedYesNo\(lead\)/, 'leads page should expose the converted yes\/no helper to filters');
