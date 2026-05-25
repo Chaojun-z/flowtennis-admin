@@ -127,7 +127,8 @@ function renderMembershipStats(rows=[]){
   const visibleCourtIds=new Set(rows.map(row=>row.court?.id||row.courtId));
   const validOrders=membershipOrders.filter(o=>visibleCourtIds.has(o.courtId)&&o.status!=='voided'&&o.status!=='refunded');
   const totalIncome=validOrders.reduce((sum,o)=>sum+(parseFloat(o.rechargeAmount)||0),0);
-  const totalBalance=rows.reduce((sum,row)=>sum+courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}).balance,0);
+  const activeRows=rows.filter(row=>!['voided','cleared'].includes(String(row.account?.status||'')));
+  const totalBalance=activeRows.reduce((sum,row)=>sum+courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}).balance,0);
   const totalBookingCount=rows.reduce((sum,row)=>sum+membershipBookingCount(row.court||membershipVisibleCourt(row)||{history:[]}),0);
   host.innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">会员数</div><div class="tms-stat-value">${rows.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场次数</div><div class="tms-stat-value">${totalBookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">总余额</div><div class="tms-stat-value">¥${fmt(totalBalance)}</div></div>`;
 }
@@ -698,9 +699,10 @@ function courtAccountListViewSortMetric(item,key){
   return {empty:false,value:Number.isFinite(numeric)?numeric:0};
 }
 function summarizeCourtAccountListItems(items=[]){
+  const memberItems=items.filter(item=>item?.membershipStatusCode&&!['voided','cleared'].includes(String(item.membershipStatusCode)));
   return {
     totalCount:items.length,
-    totalBalance:items.reduce((sum,item)=>sum+(Number(item?.balance)||0),0),
+    totalBalance:memberItems.reduce((sum,item)=>sum+(Number(item?.balance)||0),0),
     totalDeposit:items.reduce((sum,item)=>sum+(Number(item?.totalDeposit)||0),0),
     totalSpent:items.reduce((sum,item)=>sum+(Number(item?.totalSpent)||0),0),
     totalReceived:items.reduce((sum,item)=>sum+(Number(item?.totalReceived)||0),0),

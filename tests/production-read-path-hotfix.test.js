@@ -46,7 +46,7 @@ assert.match(
 );
 assert.match(
   apiSource,
-  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_COURTS,\{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
+  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_COURTS,\{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\),[\s\S]*getCachedScan\(T_MEMBERSHIP_ACCOUNTS\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
   '财务总览应保留已核对快照，并叠加已导入课包、会员和马坡订场增量'
 );
 assert.match(apiSource, /const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';/, '财务页只允许识别私教课导入批次作为快照增量来源');

@@ -135,6 +135,7 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_PURCHASES,
   T_ENTITLEMENTS,
   T_ENTITLEMENT_LEDGER,
+  T_MEMBERSHIP_ACCOUNTS,
   T_MEMBERSHIP_ORDERS,
   T_SCHEDULE,
   T_CAMPUSES
@@ -3421,8 +3422,30 @@ function isFinanceMembershipImportIncrementOrder(row){
   return String(row?.id||'').startsWith(FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX);
 }
 function courtWithFinanceImportHistory(court){
+  if(String(court?.status||'active')==='inactive'||court?.mergedIntoCourtId||court?.deletedAt)return {...court,history:[]};
   const history=normalizeCourtHistory(court?.history).filter(row=>String(row?.seedTag||'')===MABAO_FINAL_IMPORT_TAG||String(row?.id||'').startsWith('private_lesson_csv_import_20260524-court-'));
   return history.length?{...court,history}:{...court,history:[]};
+}
+function membershipStoredValueOverview({courts=[],membershipAccounts=[]}={}){
+  const courtMap=new Map((courts||[]).map(court=>[String(court.id||''),court]));
+  const activeAccounts=(membershipAccounts||[]).filter(account=>!['voided','cleared'].includes(String(account?.status||'')));
+  const courtIds=new Set(activeAccounts.map(account=>String(account?.courtId||'')).filter(Boolean));
+  const rows=[...courtIds].map(id=>courtMap.get(id)).filter(court=>court&&String(court?.status||'active')!=='inactive'&&!court?.mergedIntoCourtId&&!court?.deletedAt);
+  const totals=rows.reduce((sum,court)=>{
+    const finance=computeCourtFinance({...court,allowNegativeBalance:true});
+    sum.balance+=Number(finance.balance)||0;
+    sum.totalDeposit+=Number(finance.totalDeposit)||0;
+    sum.bonus+=normalizeCourtHistory(court.history).filter(row=>row.type==='充值').reduce((rowSum,row)=>rowSum+(Number(row.bonusAmount)||0),0);
+    sum.consumed+=Number(finance.storedValueSpent)||0;
+    return sum;
+  },{balance:0,totalDeposit:0,bonus:0,consumed:0});
+  return {
+    storedValueBalance:roundMoney(totals.balance),
+    storedValueAccountTotal:roundMoney(totals.balance+totals.consumed),
+    storedValueConsumed:roundMoney(totals.consumed),
+    storedValueDeposit:roundMoney(totals.totalDeposit),
+    storedValueBonus:roundMoney(totals.bonus)
+  };
 }
 function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const purchaseRows=(source.purchases||[]).filter(isFinanceImportIncrementRow);
@@ -3469,6 +3492,9 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   all.bookingIncome=roundMoney((Number(all.bookingIncome)||0)+bookingCashDelta);
   all.bookingRecognized=roundMoney((Number(all.bookingRecognized)||0)+bookingRecognizedDelta);
   all.tradeCount=(Number(all.tradeCount)||0)+tradeCountDelta;
+  if(Array.isArray(source.membershipAccounts)){
+    Object.assign(all,membershipStoredValueOverview({courts:source.courts||[],membershipAccounts:source.membershipAccounts||[]}));
+  }
   return {
     overviewData:{...baseOverview,all},
     normalizedRows:[...(verifiedFinance.normalizedRows||[]),...incrementRows]
@@ -7797,16 +7823,17 @@ module.exports = async (req, res) => {
       await init();
       const campuses=await listCampusesWithDefaults();
       const verifiedFinance=loadVerifiedFinanceArtifacts(campuses);
-      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule]=await Promise.all([
+      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule]=await Promise.all([
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_PURCHASES).catch(()=>[]),
         getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
         getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
         getCachedScan(T_COURTS,{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
+        getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
         isProductionRuntime()?scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[])
       ]);
-      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule});
+      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule});
       const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
       return sendJson(res,{
         campuses,

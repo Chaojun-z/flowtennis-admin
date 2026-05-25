@@ -204,6 +204,31 @@ assert.strictEqual(membershipMerged.overviewData.all.storedValueIncome, 2000, 'm
 assert.strictEqual(membershipMerged.overviewData.all.tradeCount, 11, 'membership import increment should add membership trade count');
 assert.strictEqual(membershipMerged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-member-order-should-not-double-count')), false, 'old live membership orders should not be appended to verified finance');
 
+const membershipBalanceMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
+  courts:[{
+    id:'court-active-member',
+    history:[
+      { id:'topup-1', type:'充值', amount:1000, bonusAmount:100 },
+      { id:'spent-1', type:'消费', amount:200, payMethod:'储值扣款', category:'订场' }
+    ]
+  },{
+    id:'court-cleared-member',
+    history:[{ id:'topup-cleared', type:'充值', amount:900 }]
+  },{
+    id:'court-non-member',
+    history:[{ id:'topup-non-member', type:'充值', amount:5000 }]
+  }],
+  membershipAccounts:[
+    { id:'account-active', courtId:'court-active-member', status:'active' },
+    { id:'account-cleared', courtId:'court-cleared-member', status:'cleared' }
+  ]
+});
+
+assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueBalance, 900, 'finance overview member balance should come from active membership courts only');
+assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueConsumed, 200, 'finance overview member consumed amount should come from active membership courts only');
+assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueDeposit, 1000, 'finance overview member deposit should ignore non-member and cleared courts');
+assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueBonus, 100, 'finance overview member bonus should ignore non-member and cleared courts');
+
 const courtMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
   courts:[{
@@ -221,6 +246,20 @@ const courtMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinan
       sourceCategory:'散客纯定场（小程序）'
     },{
       id:'old-court-history-should-not-count',
+      date:'2026-05-22',
+      type:'消费',
+      category:'订场',
+      payMethod:'小程序',
+      amount:999
+    }]
+  },{
+    id:'court-archived-import',
+    name:'已合并旧账户',
+    campus:'mabao',
+    status:'inactive',
+    history:[{
+      id:'private_lesson_csv_import_20260524-court-archived',
+      seedTag:'mabao-finance-import-20260524',
       date:'2026-05-22',
       type:'消费',
       category:'订场',

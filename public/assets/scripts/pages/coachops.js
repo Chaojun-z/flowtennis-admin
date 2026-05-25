@@ -918,6 +918,7 @@ function renderFinanceOverview(){
   const packageIncome=overview?Number(overview.packageIncome||0):positiveCashRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const packageRecognized=overview?Number(overview.packageRecognized||0):businessRows.filter(row=>row.businessType==='课程').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const storedValueIncome=overview?Number(overview.storedValueIncome||0):positiveCashRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const storedValueBalance=overview&&overview.storedValueBalance!==undefined?Number(overview.storedValueBalance||0):storedValueIncome;
   const storedValueRecognized=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const bookingIncome=positiveCashRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const bookingRecognized=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
@@ -930,7 +931,7 @@ function renderFinanceOverview(){
     {label:'总已入账',value:financeCardValue(recognized)},
     {label:'总未入账',value:financeCardValue(deferred)},
     {label:'课包收入 / 已入账',value:financeCardValue(packageIncome,packageRecognized),split:true},
-    {label:'会员储值 / 已入账',value:financeCardValue(storedValueIncome,finalStoredValueRecognized),split:true},
+    {label:'会员余额 / 已入账',value:financeCardValue(storedValueBalance,finalStoredValueRecognized),split:true},
     {label:'订场收入 / 已入账',value:financeCardValue(finalBookingIncome,finalBookingRecognized),split:true}
   ]);
   secondaryHost.innerHTML='';

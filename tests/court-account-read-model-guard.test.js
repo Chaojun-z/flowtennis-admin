@@ -63,6 +63,13 @@ async function main() {
       ],
       updatedAt: '2026-05-13T10:00:00.000Z',
       createdAt: '2026-05-01T10:00:00.000Z'
+    }, {
+      id: 'court-non-member',
+      name: '散客负余额',
+      campus: 'mabao',
+      cachedBalance: -60,
+      history: [],
+      status: 'active'
     }],
     membershipAccounts: [{
       id: 'ma-1',
@@ -93,7 +100,7 @@ async function main() {
 
   const view = await loadView();
   assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'meta'], '读模型应返回 summary/filters/items/meta');
-  assert.strictEqual(view.items.length, 1, '读模型应返回可渲染列表项');
+  assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
   assert.strictEqual(view.items[0].accountType, '会员');
   assert.strictEqual(view.items[0].membershipStatus, '正常');
@@ -104,6 +111,7 @@ async function main() {
   assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
+  assert.strictEqual(view.summary.totalBalance, 100, '订场用户页会员余额只统计有效会员账户余额，不混入散客余额');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });
   assert.deepStrictEqual(Object.keys(compare), ['meta', 'summaryDiffs', 'items'], 'compare 输出应返回 meta/summaryDiffs/items');

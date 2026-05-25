@@ -231,9 +231,10 @@ function buildReadModelItem(court, ctx) {
 }
 
 function buildSummary(items = []) {
+  const memberItems = items.filter((item) => item?.membershipStatusCode && !['voided', 'cleared'].includes(item.membershipStatusCode));
   return {
     totalCount: items.length,
-    totalBalance: money(items.reduce((sum, item) => sum + money(item?.balance), 0)),
+    totalBalance: money(memberItems.reduce((sum, item) => sum + money(item?.balance), 0)),
     totalDeposit: money(items.reduce((sum, item) => sum + money(item?.totalDeposit), 0)),
     totalSpent: money(items.reduce((sum, item) => sum + money(item?.totalSpent), 0)),
     totalReceived: money(items.reduce((sum, item) => sum + money(item?.totalReceived), 0)),
