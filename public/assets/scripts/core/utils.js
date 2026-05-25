@@ -1176,8 +1176,27 @@ function studentLedgerBalanceNumbersAfter(row,ent={}){
     .reduce((sum,item)=>sum+(Number(item.lessonDelta)||0),0);
   return {remaining:(Number(ent.remainingLessons)||0)-laterDelta,total:Number(ent.totalLessons)||0};
 }
+function studentCumulativeLessonSectionText(row,ent={}){
+  const studentId=String(row?.studentId||ent?.studentId||'').trim();
+  if(!studentId||Number(row.lessonDelta)>=0)return '';
+  const currentTime=studentEntitlementLedgerTimeText(row,findScheduleForEntitlementLedgerRow(row,students.find(s=>s.id===studentId)||{}));
+  const earlierDelta=studentEntitlementLedgerRows({id:studentId})
+    .filter(item=>Number(item.lessonDelta)<0)
+    .filter(item=>studentEntitlementLedgerTimeText(item,findScheduleForEntitlementLedgerRow(item,students.find(s=>s.id===(item?.studentId||studentId))||{}))<currentTime)
+    .reduce((sum,item)=>sum+Math.abs(Number(item.lessonDelta)||0),0);
+  const count=Math.abs(Number(row.lessonDelta)||0);
+  const usedAfter=earlierDelta+count;
+  if(!usedAfter)return '';
+  const usedBefore=earlierDelta;
+  const startNo=Number.isInteger(usedBefore)?usedBefore+1:usedBefore;
+  const startText=studentLessonSectionMarker(startNo);
+  const endText=studentLessonSectionMarker(usedAfter);
+  return `[第${startText}${startText===endText?'':`-${endText}`}节]`;
+}
 function studentLessonRecordSectionText(row,ent={}){
   if(Number(row.lessonDelta)>=0)return '';
+  const cumulativeText=studentCumulativeLessonSectionText(row,ent);
+  if(cumulativeText)return cumulativeText;
   const balance=studentLedgerBalanceNumbersAfter(row,ent);
   const total=balance?.total||Number(ent.totalLessons)||0;
   if(!total)return '';

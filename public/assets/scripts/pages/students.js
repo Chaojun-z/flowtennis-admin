@@ -277,7 +277,15 @@ function studentLessonRecordRows(stu){
   const ledgerKeys=new Set(ledgerItems.map(({row,schedule})=>studentLessonRecordKey({studentId:stu?.id,row,schedule})));
   ledgerItems.forEach(({row,schedule})=>{
     const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
-    map.set(key,{type:'ledger',row,ent:entMap.get(row.entitlementId)||{},sortTime:studentEntitlementLedgerTimeText(row,schedule)});
+    const ent=entMap.get(row.entitlementId)||{};
+    const sortTime=studentEntitlementLedgerTimeText(row,schedule);
+    const existing=map.get(key);
+    if(existing?.type==='ledger'){
+      const preferred=studentLedgerPreferredDisplayEntitlement(existing.ent,ent);
+      map.set(key,{type:'ledger',row:{...(preferred===ent?row:existing.row),lessonDelta:(Number(existing.row.lessonDelta)||0)+(Number(row.lessonDelta)||0)},ent:preferred,sortTime:existing.sortTime||sortTime});
+      return;
+    }
+    map.set(key,{type:'ledger',row,ent,sortTime});
   });
   schedules
     .filter(x=>scheduleHasStudent(x,stu)&&x.startTime)
@@ -288,6 +296,11 @@ function studentLessonRecordRows(stu){
       if(!map.has(key))map.set(key,{type:'schedule',schedule,sortTime:schedule.startTime});
     });
   return [...map.values()].sort((a,b)=>String(b.sortTime||'').localeCompare(String(a.sortTime||'')));
+}
+function studentLedgerPreferredDisplayEntitlement(left={},right={}){
+  const leftDate=studentEntitlementPurchaseDate(left,purchases.find(p=>p.id===left.purchaseId)||{});
+  const rightDate=studentEntitlementPurchaseDate(right,purchases.find(p=>p.id===right.purchaseId)||{});
+  return String(rightDate||'')>=String(leftDate||'')?right:left;
 }
 function studentConcreteLessonLedgerItems(stu){
   return studentEntitlementLedgerRows(stu)
