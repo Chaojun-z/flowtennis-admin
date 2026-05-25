@@ -1391,6 +1391,17 @@ assert.throws(
   'schedule with entitlement ledger should not be deletable'
 );
 
+assert.doesNotThrow(
+  () => rules.assertCanDeleteSchedule({ id: 'sch-1', status: '已取消' }, [], [{ id: 'led-1', scheduleId: 'sch-1', entitlementId: 'ent-1' }]),
+  'cancelled schedule with entitlement ledger can be deleted after refund'
+);
+
+assert.throws(
+  () => rules.assertCanDeleteSchedule({ id: 'sch-1', status: '已排课' }, [], [{ id: 'led-1', scheduleId: 'sch-1', entitlementId: 'ent-1' }]),
+  /请先取消排课再删除/,
+  'active schedule with entitlement ledger should require cancellation before deletion'
+);
+
 assert.throws(
   () => rules.validateCourtBookingConflicts(
     {

@@ -6064,9 +6064,11 @@ function assertCanEditClassWithSchedules(oldClass,nextClass,schedules){
   if(oldStatus!==nextStatus&&nextStatus==='已取消')throw new Error('该班次已有排课，不能直接取消');
   if(oldStatus!==nextStatus&&nextStatus==='已结课'&&classRemainingLessonsForRecord(nextClass)>0)throw new Error('该班次仍有剩余课时，不能直接结课');
 }
-function assertCanDeleteSchedule(scheduleId,feedbacks,ledger=[]){
+function assertCanDeleteSchedule(schedule,feedbacks,ledger=[]){
+  const scheduleId=typeof schedule==='string'?schedule:schedule?.id;
+  const isCancelled=typeof schedule==='string'?false:effectiveScheduleStatus(schedule)==='已取消';
   if((feedbacks||[]).some(f=>f.scheduleId===scheduleId))throw new Error('该排课已有课后反馈，不能直接删除');
-  if((ledger||[]).some(l=>l.scheduleId===scheduleId))throw new Error('该排课已有权益消耗记录，不能直接删除，请取消排课');
+  if(!isCancelled&&(ledger||[]).some(l=>l.scheduleId===scheduleId))throw new Error('该排课已有权益消耗记录，请先取消排课再删除');
 }
 function assertCanDeleteStudent(studentId,data){
   if(!studentId)return;
@@ -7782,14 +7784,24 @@ module.exports = async (req, res) => {
       if(method==='DELETE'){
         const ex=await get(T_SCHEDULE,id).catch(()=>null);
         const oldDelta=scheduleLessonDelta(ex);
-        assertCanDeleteSchedule(id,await scanFeedbacks(),await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]));
+        const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
+        const scheduleLedger=allLedger.filter(row=>row.scheduleId===id);
+        assertCanDeleteSchedule(ex||id,await scanFeedbacks(),allLedger);
         await del(T_SCHEDULE,id);
+        const deletedLedger=[];
         try{
+          if(ex&&effectiveScheduleStatus(ex)==='已取消'){
+            for(const row of scheduleLedger){
+              await del(T_ENTITLEMENT_LEDGER,row.id);
+              deletedLedger.push(row);
+            }
+          }
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
           await syncCoachScheduleIndexes(ex,null);
           return sendJson(res,{success:true,...(lessonUpdate||{})});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
+          for(const row of deletedLedger||[])await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
           if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);
           throw err;
         }

@@ -36,6 +36,10 @@ assert.match(fnBody('openCancelScheduleModal'), /schedule-cancel-scope/, 'schedu
 assert.match(fnBody('confirmScheduleCancel'), /effectiveScheduleStatus\(item\)==='已排课'/, 'repeat cancellation should only touch not-yet-started lessons');
 assert.match(fnBody('confirmScheduleCancel'), /scope==='future'/, 'repeat cancellation should support current-and-future scope');
 assert.doesNotMatch(fnBody('confirmScheduleCancel'), /window\.confirm\(/, 'schedule cancel flow should not fall back to the browser confirm');
+assert.match(fnBody('renderSchedule'), /const isCancelled=status==='已取消'/, 'cancelled schedule rows should derive a dedicated action state');
+assert.match(fnBody('renderSchedule'), /!\s*isCancelled\?`<span class="tms-action-link" onclick="openCancelScheduleModal\('\$\{s\.id\}'\)">取消<\/span>`:''/, 'cancelled schedule rows should not keep showing cancel action');
+assert.match(fnBody('renderSchedule'), /isCancelled\|\|scheduleCanDeleteMistake\(s\)/, 'cancelled schedule rows should expose delete action');
+assert.match(fnBody('openScheduleModal'), /scheduleModalCanDelete/, 'schedule modal should reuse delete visibility for cancelled schedules');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
 assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\[[^\]]*'schedule'/, 'schedule page should show the global campus filter tabs');
 assert.match(source, /if\(currentPage==='schedule'\)renderSchedule\(\);/, 'global campus filter should rerender the schedule page');
