@@ -84,6 +84,21 @@
   <div class="content">
     <!-- 线索池 -->
     <div class="page-section" id="page-leads">
+      <div class="lead-date-scope-bar" id="leadDateScopeBar">
+        <div class="lead-date-scope-main">
+          <span class="lead-date-scope-label">线索时间</span>
+          <button type="button" class="lead-date-preset active" data-lead-date-preset="all" onclick="setLeadDatePreset('all')">全部</button>
+          <button type="button" class="lead-date-preset" data-lead-date-preset="today" onclick="setLeadDatePreset('today')">今日</button>
+          <button type="button" class="lead-date-preset" data-lead-date-preset="week" onclick="setLeadDatePreset('week')">本周</button>
+          <button type="button" class="lead-date-preset" data-lead-date-preset="month" onclick="setLeadDatePreset('month')">本月</button>
+          <button type="button" class="lead-date-preset" data-lead-date-preset="custom" onclick="setLeadDatePreset('custom')">自定义</button>
+        </div>
+        <div class="lead-date-custom" id="leadDateCustomRange">
+          <input class="lead-date-input" id="leadDateFrom" type="date" onchange="setLeadCustomDateRange()">
+          <span class="lead-date-sep">至</span>
+          <input class="lead-date-input" id="leadDateTo" type="date" onchange="setLeadCustomDateRange()">
+        </div>
+      </div>
       <div class="tms-stats-row" id="leadStatsRow"></div>
       <div class="tms-toolbar">
         <div class="tms-filters">

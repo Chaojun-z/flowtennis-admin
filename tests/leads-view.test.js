@@ -21,6 +21,8 @@ assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove t
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(html, /onclick="openLeadImportPreviewModal\(\)">导入<\/button>/, 'leads toolbar should expose the import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
+assert.match(html, /id="leadDateScopeBar"[\s\S]*线索时间[\s\S]*setLeadDatePreset\('today'\)[\s\S]*今日[\s\S]*setLeadDatePreset\('week'\)[\s\S]*本周[\s\S]*setLeadDatePreset\('month'\)[\s\S]*本月[\s\S]*setLeadDatePreset\('custom'\)[\s\S]*自定义/, 'leads page should expose a global lead date scope filter above stats');
+assert.match(html, /id="leadDateFrom"[\s\S]*id="leadDateTo"/, 'leads page should expose custom lead date range inputs');
 assert.match(html, /id="leadStatsRow"/, 'leads page should expose the top stats row');
 assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*所属校区[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody mount');
@@ -50,7 +52,12 @@ assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page sho
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
-assert.match(leadsSource, /线索数[\s\S]*已上体验课数[\s\S]*体验课转化率[\s\S]*已转化线索数[\s\S]*线索转化率[\s\S]*已体验待转化数/, 'lead stats should expose the required six metrics');
+assert.match(leadsSource, /线索数[\s\S]*已上体验课数[\s\S]*体验课完成率[\s\S]*已转化线索数[\s\S]*线索转化率[\s\S]*体验课转化率[\s\S]*已体验待转化数/, 'lead stats should expose the required seven metrics');
+assert.match(leadsSource, /已上体验课 \/ 线索数[\s\S]*已转化线索 \/ 线索数[\s\S]*已体验且已转化 \/ 已上体验课[\s\S]*已上体验课 - 已体验且已转化/, 'lead stats should explain the formulas under rate and pending cards');
+assert.match(leadsSource, /function leadDateRangeForPreset\(/, 'leads page should expose date preset range helper');
+assert.match(leadsSource, /function setLeadDatePreset\(/, 'leads page should expose lead date preset switching');
+assert.match(leadsSource, /function setLeadCustomDateRange\(/, 'leads page should expose custom lead date range switching');
+assert.match(leadsSource, /if\(!leadInDateRange\(lead,getLeadDateFilterRange\(\)\)\)return false;/, 'lead filtering should apply the global lead date scope');
 assert.match(leadsSource, /function renderLeads\([\s\S]*const list=getSortedLeads\(getFilteredLeads\(\)\)[\s\S]*renderLeadStats\(list\)/, 'lead stats should follow the current lead filters and campus scope');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /leadFollowupStatusText\(lead\)/, 'leads page should keep the status filter aligned with the displayed follow-up status');

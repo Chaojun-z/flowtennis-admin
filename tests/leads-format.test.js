@@ -52,12 +52,30 @@ assert.deepStrictEqual(
   {
     total: 5,
     trialDone: 3,
+    trialCompletionRate: '60%',
     trialConverted: 2,
     trialConversionRate: '66.7%',
     converted: 3,
     leadConversionRate: '60%',
     trialPendingConversion: 1
   }
+);
+
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(context.leadDateRangeForPreset('week'))),
+  { start: '2026-05-25', end: '2026-05-31' }
+);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(context.leadDateRangeForPreset('month'))),
+  { start: '2026-05-01', end: '2026-05-31' }
+);
+assert.strictEqual(
+  context.leadInDateRange({ leadDate: '2026-05-26' }, { start: '2026-05-25', end: '2026-05-31' }),
+  true
+);
+assert.strictEqual(
+  context.leadInDateRange({ leadDate: '2026-06-01' }, { start: '2026-05-25', end: '2026-05-31' }),
+  false
 );
 
 console.log('leads format tests passed');

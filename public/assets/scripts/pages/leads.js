@@ -1,4 +1,5 @@
 let leadImportState={fileName:'',fileSize:0,fileModified:0,csvText:'',previewRows:[],summary:null,error:''};
+let leadDatePreset='all',leadDateCustomStart='',leadDateCustomEnd='';
 function leadRawRows(){
   return Array.isArray(leads)?leads:[];
 }
@@ -318,6 +319,83 @@ function leadStatusOptionValues(rows){
   });
   return values;
 }
+function leadDateKeyFromDate(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function leadDateFromKey(value){
+  const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return null;
+  return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+}
+function leadDateAdd(value,days){
+  const date=leadDateFromKey(value);
+  if(!date)return '';
+  date.setDate(date.getDate()+days);
+  return leadDateKeyFromDate(date);
+}
+function leadMonthEnd(value){
+  const date=leadDateFromKey(value);
+  if(!date)return '';
+  return leadDateKeyFromDate(new Date(date.getFullYear(),date.getMonth()+1,0));
+}
+function leadDateRangeForPreset(preset){
+  const current=today();
+  if(preset==='today')return {start:current,end:current};
+  if(preset==='week'){
+    const date=leadDateFromKey(current);
+    const day=date?date.getDay():1;
+    const offset=day===0?-6:1-day;
+    const start=leadDateAdd(current,offset);
+    return {start,end:leadDateAdd(start,6)};
+  }
+  if(preset==='month')return {start:`${current.slice(0,7)}-01`,end:leadMonthEnd(current)};
+  if(preset==='custom')return {start:leadDateCustomStart,end:leadDateCustomEnd};
+  return {start:'',end:''};
+}
+function getLeadDateFilterRange(){
+  return leadDateRangeForPreset(leadDatePreset);
+}
+function leadInDateRange(lead,range){
+  const start=String(range?.start||'');
+  const end=String(range?.end||'');
+  if(!start&&!end)return true;
+  const date=leadDateOnly(lead?.leadDate,lead);
+  if(!date)return false;
+  if(start&&date<start)return false;
+  if(end&&date>end)return false;
+  return true;
+}
+function renderLeadDateScopeControls(){
+  document.querySelectorAll('#leadDateScopeBar [data-lead-date-preset]').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.leadDatePreset===leadDatePreset);
+  });
+  const custom=document.getElementById('leadDateCustomRange');
+  if(custom)custom.classList.toggle('active',leadDatePreset==='custom');
+  const from=document.getElementById('leadDateFrom');
+  const to=document.getElementById('leadDateTo');
+  if(from&&from.value!==leadDateCustomStart)from.value=leadDateCustomStart;
+  if(to&&to.value!==leadDateCustomEnd)to.value=leadDateCustomEnd;
+}
+function setLeadDatePreset(preset){
+  leadDatePreset=['all','today','week','month','custom'].includes(preset)?preset:'all';
+  if(leadDatePreset==='custom'&&!leadDateCustomStart&&!leadDateCustomEnd){
+    leadDateCustomStart=today();
+    leadDateCustomEnd=today();
+  }
+  if(leadDatePreset!=='custom'){
+    leadDateCustomStart='';
+    leadDateCustomEnd='';
+  }
+  leadPage=1;
+  renderLeads();
+}
+function setLeadCustomDateRange(){
+  leadDatePreset='custom';
+  leadDateCustomStart=document.getElementById('leadDateFrom')?.value||'';
+  leadDateCustomEnd=document.getElementById('leadDateTo')?.value||'';
+  leadPage=1;
+  renderLeads();
+}
 function leadSortDateValue(value,lead={}){
   const raw=String(value||'').trim().replace(' 00:00:00','').replace('00:00:00','').replace('//','/');
   if(!raw)return 0;
@@ -396,6 +474,7 @@ function getFilteredLeads(){
   const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
   const campusValue=campus;
   return leadRows().filter(lead=>{
+    if(!leadInDateRange(lead,getLeadDateFilterRange()))return false;
     if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName,lead?.source,lead?.consultType,lead?.owner,lead?.profileNote))return false;
     if(sourceValue&&String(lead?.source||'')!==sourceValue)return false;
     if(consultValue&&String(lead?.consultType||'')!==consultValue)return false;
@@ -464,6 +543,7 @@ function leadStatsData(list){
   return {
     total:base.length,
     trialDone:trialDoneRows.length,
+    trialCompletionRate:leadRateText(trialDoneRows.length,base.length),
     trialConverted:trialConvertedRows.length,
     trialConversionRate:leadRateText(trialConvertedRows.length,trialDoneRows.length),
     converted:convertedRows.length,
@@ -476,13 +556,14 @@ function renderLeadStats(list){
   const cardData=[
     ['线索数',stats.total],
     ['已上体验课数',stats.trialDone],
-    ['体验课转化率',stats.trialConversionRate],
+    ['体验课完成率',stats.trialCompletionRate,'已上体验课 / 线索数'],
     ['已转化线索数',stats.converted],
-    ['线索转化率',stats.leadConversionRate],
-    ['已体验待转化数',stats.trialPendingConversion]
+    ['线索转化率',stats.leadConversionRate,'已转化线索 / 线索数'],
+    ['体验课转化率',stats.trialConversionRate,'已体验且已转化 / 已上体验课'],
+    ['已体验待转化数',stats.trialPendingConversion,'已上体验课 - 已体验且已转化']
   ];
   const host=document.getElementById('leadStatsRow');
-  if(host)host.innerHTML=cardData.map(([label,value])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div></div>`).join('');
+  if(host)host.innerHTML=cardData.map(([label,value,sub])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div>${sub?`<div class="tms-stat-sub">${sub}</div>`:''}</div>`).join('');
 }
 function leadTimelineHtml(lead){
   const rows=leadFollowupRows(lead?.id);
@@ -842,6 +923,7 @@ function jumpLeadPage(value){
   renderLeads();
 }
 function renderLeads(){
+  renderLeadDateScopeControls();
   renderLeadToolbarFilters();
   updateLeadSortHeaders();
   const list=getSortedLeads(getFilteredLeads());
@@ -873,6 +955,9 @@ function onLeadFilterChange(){
 function resetLeadFilters(){
   const ids=['leadSearch','leadSourceFilter','leadConsultFilter','leadStatusFilter','leadConvertedFilter','leadOwnerFilter'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  leadDatePreset='all';
+  leadDateCustomStart='';
+  leadDateCustomEnd='';
   leadPage=1;
   renderLeads();
 }
