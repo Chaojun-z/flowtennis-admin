@@ -276,7 +276,7 @@ function studentLessonRecordRows(stu){
   const ledgerItems=studentConcreteLessonLedgerItems(stu);
   const ledgerKeys=new Set(ledgerItems.map(({row,schedule})=>studentLessonRecordKey({studentId:stu?.id,row,schedule})));
   ledgerItems.forEach(({row,schedule})=>{
-    const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
+    const key=studentLessonRecordMergeKey({studentId:stu?.id,row,schedule});
     const ent=entMap.get(row.entitlementId)||{};
     const sortTime=studentEntitlementLedgerTimeText(row,schedule);
     const existing=map.get(key);

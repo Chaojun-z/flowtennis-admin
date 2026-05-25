@@ -11,6 +11,7 @@ const {
 } = require('../scripts/repair-liqin-package-20260525');
 
 const oldRenewalLedgerId = 'old-renewal-20260323';
+const oldWrongRenewalLedgerId = 'old-renewal-20260416';
 const plan = buildPlan({
   purchases: [
     { id: INITIAL_PURCHASE_ID, studentId: STUDENT_ID },
@@ -26,6 +27,7 @@ const plan = buildPlan({
   ],
   entitlementLedger: [
     { id: oldRenewalLedgerId, studentId: STUDENT_ID, entitlementId: RENEWAL_ENTITLEMENT_ID, relatedDate: '2026-03-23', lessonDelta: -1 },
+    { id: oldWrongRenewalLedgerId, studentId: STUDENT_ID, entitlementId: RENEWAL_ENTITLEMENT_ID, relatedDate: '2026-04-16', lessonDelta: -1.5 },
     { id: CORRECT_LESSONS[1].id, studentId: STUDENT_ID, entitlementId: INITIAL_ENTITLEMENT_ID, createdAt: 'keep-ledger-created' }
   ]
 });
@@ -33,9 +35,16 @@ const plan = buildPlan({
 assert.deepStrictEqual(
   plan.putEntitlements.map(row => ({ id: row.id, total: row.totalLessons, used: row.usedLessons, remaining: row.remainingLessons, status: row.status })),
   [
-    { id: INITIAL_ENTITLEMENT_ID, total: 10, used: 9.5, remaining: 0.5, status: 'active' },
-    { id: RENEWAL_ENTITLEMENT_ID, total: 50, used: 0.5, remaining: 49.5, status: 'active' }
+    { id: INITIAL_ENTITLEMENT_ID, total: 10, used: 10, remaining: 0, status: 'depleted' },
+    { id: RENEWAL_ENTITLEMENT_ID, total: 50, used: 17, remaining: 33, status: 'active' }
   ]
+);
+
+assert.strictEqual(
+  CORRECT_LESSONS.filter(row => row.entitlementId === RENEWAL_ENTITLEMENT_ID)
+    .reduce((sum, row) => sum + Math.abs(Number(row.lessonDelta) || 0), 0),
+  17,
+  'renewal package should include every confirmed 50-lesson deduction through 2026-05-21'
 );
 
 assert.deepStrictEqual(
@@ -64,6 +73,7 @@ assert.deepStrictEqual(
 );
 
 assert.ok(plan.deleteLedger.includes(oldRenewalLedgerId), 'old 2026-03-23 renewal-only ledger should be removed before split rewrite');
-assert.deepStrictEqual(plan.putIndexes[0].entitlementIds, [INITIAL_ENTITLEMENT_ID, RENEWAL_ENTITLEMENT_ID]);
+assert.ok(plan.deleteLedger.includes(oldWrongRenewalLedgerId), 'old renewal ledger in the corrected date range should be rewritten from confirmed rows');
+assert.deepStrictEqual(plan.putIndexes[0].entitlementIds, [RENEWAL_ENTITLEMENT_ID]);
 
 console.log('liqin package repair script tests passed');

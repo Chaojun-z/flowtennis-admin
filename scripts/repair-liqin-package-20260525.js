@@ -28,7 +28,26 @@ const CORRECT_LESSONS = [
   { id: 'liqin-correct-lesson-20260316-1030', scheduleId: 'liqin-correct-schedule-20260316-1030', entitlementId: INITIAL_ENTITLEMENT_ID, purchaseId: INITIAL_PURCHASE_ID, startTime: '2026-03-16 10:30', endTime: '2026-03-16 11:30', relatedDate: '2026-03-16', sourceTimeBand: '10:30-11:30', venue: '4号场', coach: 'Siren', lessonDelta: -1 },
   { id: 'liqin-correct-lesson-20260319-1000', scheduleId: 'liqin-correct-schedule-20260319-1000', entitlementId: INITIAL_ENTITLEMENT_ID, purchaseId: INITIAL_PURCHASE_ID, startTime: '2026-03-19 10:00', endTime: '2026-03-19 11:30', relatedDate: '2026-03-19', sourceTimeBand: '10:00-11:30', venue: '4号场', coach: '晓哲', lessonDelta: -1.5 },
   { id: 'liqin-correct-lesson-20260323-1000-initial', scheduleId: 'liqin-correct-schedule-20260323-1000', entitlementId: INITIAL_ENTITLEMENT_ID, purchaseId: INITIAL_PURCHASE_ID, startTime: '2026-03-23 10:00', endTime: '2026-03-23 11:00', relatedDate: '2026-03-23', sourceTimeBand: '10:00-11:00', venue: '3号场', coach: 'Siren', lessonDelta: -0.5 },
-  { id: 'liqin-correct-lesson-20260323-1000-renewal', scheduleId: 'liqin-correct-schedule-20260323-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-03-23 10:00', endTime: '2026-03-23 11:00', relatedDate: '2026-03-23', sourceTimeBand: '10:00-11:00', venue: '3号场', coach: 'Siren', lessonDelta: -0.5 }
+  { id: 'liqin-correct-lesson-20260323-1000-renewal', scheduleId: 'liqin-correct-schedule-20260323-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-03-23 10:00', endTime: '2026-03-23 11:00', relatedDate: '2026-03-23', sourceTimeBand: '10:00-11:00', venue: '3号场', coach: 'Siren', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260326-1000', scheduleId: 'liqin-correct-schedule-20260326-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-03-26 10:00', endTime: '2026-03-26 11:00', relatedDate: '2026-03-26', sourceTimeBand: '10:00-11:00', venue: '4号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260326-1100', scheduleId: 'liqin-correct-schedule-20260326-1100', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-03-26 11:00', endTime: '2026-03-26 11:30', relatedDate: '2026-03-26', sourceTimeBand: '11:00-11:30', venue: '4号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260330-1500', scheduleId: 'liqin-correct-schedule-20260330-1500', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-03-30 15:00', endTime: '2026-03-30 16:00', relatedDate: '2026-03-30', sourceTimeBand: '15:00-16:00', venue: '3号场', coach: 'Siren', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260402-1400', scheduleId: 'liqin-correct-schedule-20260402-1400', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-02 14:00', endTime: '2026-04-02 15:00', relatedDate: '2026-04-02', sourceTimeBand: '14:00-15:00', venue: '4号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260402-1500', scheduleId: 'liqin-correct-schedule-20260402-1500', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-02 15:00', endTime: '2026-04-02 15:30', relatedDate: '2026-04-02', sourceTimeBand: '15:00-15:30', venue: '4号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260409-1000', scheduleId: 'liqin-correct-schedule-20260409-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-09 10:00', endTime: '2026-04-09 11:00', relatedDate: '2026-04-09', sourceTimeBand: '10:00-11:00', venue: '3号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260409-1100', scheduleId: 'liqin-correct-schedule-20260409-1100', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-09 11:00', endTime: '2026-04-09 11:30', relatedDate: '2026-04-09', sourceTimeBand: '11:00-11:30', venue: '3号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260415-1200', scheduleId: 'liqin-correct-schedule-20260415-1200', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-15 12:00', endTime: '2026-04-15 13:00', relatedDate: '2026-04-15', sourceTimeBand: '12:00-13:00', venue: '2号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260416-1030', scheduleId: 'liqin-correct-schedule-20260416-1030', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-16 10:30', endTime: '2026-04-16 11:30', relatedDate: '2026-04-16', sourceTimeBand: '10:30-11:30', venue: '3号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260416-1130', scheduleId: 'liqin-correct-schedule-20260416-1130', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-16 11:30', endTime: '2026-04-16 12:00', relatedDate: '2026-04-16', sourceTimeBand: '11:30-12:00', venue: '3号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260422-1200', scheduleId: 'liqin-correct-schedule-20260422-1200', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-22 12:00', endTime: '2026-04-22 13:00', relatedDate: '2026-04-22', sourceTimeBand: '12:00-13:00', venue: '2号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260422-1300', scheduleId: 'liqin-correct-schedule-20260422-1300', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-22 13:00', endTime: '2026-04-22 13:30', relatedDate: '2026-04-22', sourceTimeBand: '13:00-13:30', venue: '2号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260423-1300', scheduleId: 'liqin-correct-schedule-20260423-1300', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-04-23 13:00', endTime: '2026-04-23 14:00', relatedDate: '2026-04-23', sourceTimeBand: '13:00-14:00', venue: '3号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260507-1000', scheduleId: 'liqin-correct-schedule-20260507-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-07 10:00', endTime: '2026-05-07 11:00', relatedDate: '2026-05-07', sourceTimeBand: '10:00-11:00', venue: '4号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260507-1100', scheduleId: 'liqin-correct-schedule-20260507-1100', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-07 11:00', endTime: '2026-05-07 11:30', relatedDate: '2026-05-07', sourceTimeBand: '11:00-11:30', venue: '4号场', coach: '晓哲', lessonDelta: -0.5 },
+  { id: 'liqin-correct-lesson-20260513-1200', scheduleId: 'liqin-correct-schedule-20260513-1200', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-13 12:00', endTime: '2026-05-13 13:00', relatedDate: '2026-05-13', sourceTimeBand: '12:00-13:00', venue: '2号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260514-1300', scheduleId: 'liqin-correct-schedule-20260514-1300', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-14 13:00', endTime: '2026-05-14 14:00', relatedDate: '2026-05-14', sourceTimeBand: '13:00-14:00', venue: '3号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260520-1300', scheduleId: 'liqin-correct-schedule-20260520-1300', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-20 13:00', endTime: '2026-05-20 14:00', relatedDate: '2026-05-20', sourceTimeBand: '13:00-14:00', venue: '2号场', coach: '晓哲', lessonDelta: -1 },
+  { id: 'liqin-correct-lesson-20260521-1000', scheduleId: 'liqin-correct-schedule-20260521-1000', entitlementId: RENEWAL_ENTITLEMENT_ID, purchaseId: RENEWAL_PURCHASE_ID, startTime: '2026-05-21 10:00', endTime: '2026-05-21 11:30', relatedDate: '2026-05-21', sourceTimeBand: '10:00-11:30', venue: '3号场', coach: '晓哲', lessonDelta: -1.5 }
 ];
 
 function loadEnv() {
@@ -100,6 +119,11 @@ function normalizePurchase(row = {}, type) {
 
 function normalizeEntitlement(row = {}, type) {
   const isInitial = type === 'initial';
+  const totalLessons = isInitial ? 10 : 50;
+  const usedLessons = CORRECT_LESSONS
+    .filter(lesson => lesson.entitlementId === (isInitial ? INITIAL_ENTITLEMENT_ID : RENEWAL_ENTITLEMENT_ID))
+    .reduce((sum, lesson) => sum + Math.abs(Number(lesson.lessonDelta) || 0), 0);
+  const remainingLessons = Math.max(0, totalLessons - usedLessons);
   return {
     ...row,
     studentId: STUDENT_ID,
@@ -108,10 +132,10 @@ function normalizeEntitlement(row = {}, type) {
     packageName: isInitial ? '成人1v1 黄金时间10课时（历史）' : '成人1v1 黄金时间50课时（历史）',
     productName: '成人1v1私教课',
     courseType: '私教课',
-    totalLessons: isInitial ? 10 : 50,
-    usedLessons: isInitial ? 9.5 : 0.5,
-    remainingLessons: isInitial ? 0.5 : 49.5,
-    status: 'active',
+    totalLessons,
+    usedLessons,
+    remainingLessons,
+    status: remainingLessons <= 0 ? 'depleted' : 'active',
     ownerCoach: '晓哲',
     allowedCoaches: ['晓哲', 'Siren'],
     coachIds: ['晓哲', 'Siren'],
@@ -191,12 +215,12 @@ function buildPlan(data) {
   const keepLedgerIds = new Set(CORRECT_LESSONS.map(row => row.id));
   const deleteSchedule = data.schedule
     .filter(row => liqinSchedule(row))
-    .filter(row => String(row.startTime || '').slice(0,10) >= '2026-01-22' && String(row.startTime || '').slice(0,10) <= '2026-03-23')
+    .filter(row => String(row.startTime || '').slice(0,10) >= '2026-01-22' && String(row.startTime || '').slice(0,10) <= '2026-05-21')
     .filter(row => !keepScheduleIds.has(row.id))
     .map(row => row.id);
   const deleteLedger = data.entitlementLedger
     .filter(row => liqinLedger(row))
-    .filter(row => String(row.relatedDate || row.sourceDate || '').slice(0,10) >= '2026-01-22' && String(row.relatedDate || row.sourceDate || '').slice(0,10) <= '2026-03-23')
+    .filter(row => String(row.relatedDate || row.sourceDate || '').slice(0,10) >= '2026-01-22' && String(row.relatedDate || row.sourceDate || '').slice(0,10) <= '2026-05-21')
     .filter(row => !keepLedgerIds.has(row.id))
     .map(row => row.id);
   return {
@@ -204,7 +228,7 @@ function buildPlan(data) {
     putEntitlements: [normalizeEntitlement(initialEntitlement, 'initial'), normalizeEntitlement(renewalEntitlement, 'renewal')],
     putSchedule: [...new Map(CORRECT_LESSONS.map(lesson => [lesson.scheduleId, lesson])).values()].map(lesson => buildSchedule(scheduleById.get(lesson.scheduleId) || {}, lesson, lessonsBySchedule.get(lesson.scheduleId) || Math.abs(Number(lesson.lessonDelta) || 0))),
     putLedger: CORRECT_LESSONS.map(lesson => buildLedger(ledgerById.get(lesson.id) || {}, lesson)),
-    putIndexes: [{ id: STUDENT_ID, studentId: STUDENT_ID, entitlementIds: [INITIAL_ENTITLEMENT_ID, RENEWAL_ENTITLEMENT_ID], updatedAt: new Date().toISOString() }],
+    putIndexes: [{ id: STUDENT_ID, studentId: STUDENT_ID, entitlementIds: [RENEWAL_ENTITLEMENT_ID], updatedAt: new Date().toISOString() }],
     deleteSchedule: [...new Set(deleteSchedule.filter(Boolean))],
     deleteLedger: [...new Set(deleteLedger.filter(Boolean))]
   };

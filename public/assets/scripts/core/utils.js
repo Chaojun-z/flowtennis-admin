@@ -1099,6 +1099,13 @@ function studentLessonRecordKey({studentId='',row={},schedule={}}={}){
   const end=String(schedule?.endTime||'').slice(11,16);
   return [studentId||row?.studentId||'',date,band||[start,end].filter(Boolean).join('-'),row?.coach||schedule?.coach||''].join('|');
 }
+function studentLessonRecordMergeKey({studentId='',row={},schedule={}}={}){
+  if(Number(row?.lessonDelta)>=0)return studentLessonRecordKey({studentId,row,schedule});
+  const date=String(schedule?.startTime||row?.sourceDate||row?.relatedDate||'').slice(0,10);
+  const venue=String(schedule?.venue||schedule?.court||row?.sourceVenue||row?.venue||'').trim();
+  const coach=String(schedule?.coach||row?.coach||'').trim();
+  return [studentId||row?.studentId||'',date,venue,coach].join('|');
+}
 function findScheduleForEntitlementLedgerRow(row,stu){
   if(row?.scheduleId)return schedules.find(s=>s.id===row.scheduleId)||{};
   const date=String(row?.sourceDate||row?.relatedDate||'').slice(0,10);
