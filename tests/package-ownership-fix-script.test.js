@@ -79,8 +79,10 @@ assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消�
 const sourceRows = fix.buildMappingRowsFromSourceCsv({
   packages: [],
   purchases: require('../api/seeds/mabao-finance-seed.json').purchases
+}, {
+  statsRows: fix.buildStatsRowsFromSeedPurchases(require('../api/seeds/mabao-finance-seed.json').purchases)
 });
-assert.strictEqual(sourceRows.length, 73, '离线对照应按课时统计源表导出 73 行');
+assert.strictEqual(sourceRows.length, 72, '离线对照应按种子订单导出 72 行');
 assert.ok(sourceRows.find((row) => row.studentName === '佑佑' && row.status === '已停售'), '历史课包应标记已停售');
 assert.ok(sourceRows.find((row) => row.studentName === '暴晓燕' && row.targetPackageName === '成人1v2 黄金时间10课时'), '成人 1v2 应映射到真实课包');
 assert.ok(sourceRows.find((row) => row.studentName === 'Lam、Loon' && row.status === '不录入系统'), '不录入系统名单也应出现在 73 行对照中');

@@ -589,6 +589,21 @@ function parseStatsCsvRows(filePath = DEFAULT_STATS_CSV) {
   })).filter((row) => row.studentName);
 }
 
+function buildStatsRowsFromSeedPurchases(purchases = []) {
+  return (purchases || []).map((purchase, index) => ({
+    sourceRowNo: index + 1,
+    studentName: normalizeName(purchase.studentName),
+    audience: /青少年/.test(purchase.productName || purchase.packageName || '') ? '青少年' : '成人',
+    classSize: /1v2/.test(purchase.productName || purchase.packageName || '') ? '1v2' : '1v1',
+    purchaseType: /renewal|renew/.test(String(purchase.id || '')) ? '续报' : '首次',
+    lessons: Number(purchase.packageLessons) || 0,
+    paidAmount: Number(purchase.amountPaid ?? purchase.finalAmount) || 0,
+    purchaseDate: normalizeSourceDate(purchase.purchaseDate),
+    ownerCoach: normalizeName(purchase.ownerCoach || (purchase.coachNames || [])[0] || ''),
+    notes: normalizeName(purchase.notes)
+  })).filter((row) => row.studentName);
+}
+
 function parseConfirmationCsvRows(filePath = DEFAULT_CONFIRMATION_CSV) {
   if (!fs.existsSync(filePath)) return [];
   return parseCsvFile(filePath).slice(1).map((row) => ({
@@ -693,7 +708,7 @@ function packageField(targetName, getter) {
 }
 
 function buildMappingRowsFromSourceCsv({ packages = [], purchases = [] } = {}, options = {}) {
-  const statsRows = parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
+  const statsRows = options.statsRows || parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
   const confirmationRows = parseConfirmationCsvRows(options.confirmationCsv || DEFAULT_CONFIRMATION_CSV);
   const confirmationByKey = new Map(confirmationRows.map((row) => [statsRowKey(row), row]));
   const packageByName = new Map((packages || []).map((row) => [normalizeName(row.name), row]));
@@ -1064,6 +1079,7 @@ module.exports = {
   buildPackageOwnershipPlan,
   buildMappingRows,
   buildMappingRowsFromSourceCsv,
+  buildStatsRowsFromSeedPurchases,
   buildSourceCsvOwnershipPlan,
   applyPackageSnapshot,
   assertProductionTarget
