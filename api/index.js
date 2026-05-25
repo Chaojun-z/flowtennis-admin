@@ -5554,7 +5554,7 @@ function computeCourtFinance(input){
     const amount=normalizeMoney(h.amount);
     const bonus=normalizeMoney(h.bonusAmount);
     if(h.type==='消费'&&h.category==='内部占用')continue;
-    if(amount<=0)throw new Error('流水金额必须大于0');
+    if(amount<0)throw new Error('流水金额不能小于0');
     if(h.type==='充值'){
       totals.totalDeposit+=amount;
       totals.receivedAmount+=amount;

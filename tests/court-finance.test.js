@@ -78,6 +78,31 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   computeCourtFinance({
     history: [
+      recharge,
+      {
+        id: 'gift-booking',
+        date: '2026-04-12',
+        type: '消费',
+        payMethod: '储值扣款',
+        category: '会员订场',
+        amount: 0
+      }
+    ]
+  }),
+  {
+    balance: 5000,
+    totalDeposit: 5000,
+    spentAmount: 0,
+    receivedAmount: 5000,
+    storedValueSpent: 0,
+    directPaidSpent: 0
+  },
+  'zero amount gifted member booking should be retained without changing finance totals'
+);
+
+assert.deepStrictEqual(
+  computeCourtFinance({
+    history: [
       {
         id: 'm-recharge',
         date: '2026-04-12',
