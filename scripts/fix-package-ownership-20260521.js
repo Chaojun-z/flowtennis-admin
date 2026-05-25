@@ -846,7 +846,7 @@ function applySourcePackageSnapshot(row, targetPackage, sourceRow, now, kind) {
 }
 
 function buildSourceCsvOwnershipPlan({ packages = [], purchases = [], entitlements = [], now = nowInChinaTime() } = {}, options = {}) {
-  const statsRows = parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
+  const statsRows = options.statsRows || parseStatsCsvRows(options.statsCsv || DEFAULT_STATS_CSV);
   const confirmationRows = parseConfirmationCsvRows(options.confirmationCsv || DEFAULT_CONFIRMATION_CSV);
   const confirmationByKey = new Map(confirmationRows.map((row) => [statsRowKey(row), row]));
   const targetNames = new Set();

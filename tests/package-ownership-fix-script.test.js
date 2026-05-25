@@ -76,11 +76,14 @@ assert.ok(plan.creates.every((row) => !['黄金时间', '非黄时间'].includes
 const touchedTables = ['ft_packages', 'ft_purchases', 'ft_entitlements'];
 assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消课流水表');
 
+const seedPurchases = require('../api/seeds/mabao-finance-seed.json').purchases;
+const seedStatsRows = fix.buildStatsRowsFromSeedPurchases(seedPurchases);
+
 const sourceRows = fix.buildMappingRowsFromSourceCsv({
   packages: [],
-  purchases: require('../api/seeds/mabao-finance-seed.json').purchases
+  purchases: seedPurchases
 }, {
-  statsRows: fix.buildStatsRowsFromSeedPurchases(require('../api/seeds/mabao-finance-seed.json').purchases)
+  statsRows: seedStatsRows
 });
 assert.strictEqual(sourceRows.length, 72, '离线对照应按种子订单导出 72 行');
 assert.ok(sourceRows.find((row) => row.studentName === '佑佑' && row.status === '已停售'), '历史课包应标记已停售');
@@ -88,7 +91,7 @@ assert.ok(sourceRows.find((row) => row.studentName === '暴晓燕' && row.target
 assert.ok(sourceRows.find((row) => row.studentName === 'Lam、Loon' && row.status === '不录入系统'), '不录入系统名单也应出现在 73 行对照中');
 assert.ok(sourceRows.every((row) => row.timeBand !== '黄金时间' && row.timeBand !== '非黄时间'), '时段应使用前端可识别的标准值');
 
-const sourcePlan = fix.buildSourceCsvOwnershipPlan({ packages, purchases, entitlements, now });
+const sourcePlan = fix.buildSourceCsvOwnershipPlan({ packages, purchases, entitlements, now }, { statsRows: seedStatsRows });
 assert.ok(sourcePlan.packageUpdates.find((row) => row.name === '成人1v1 黄金时间10课时（历史）' && row.status === 'inactive'), '已存在历史课包也应修正为已停售');
 assert.ok(sourcePlan.purchaseUpdates.find((row) => row.id === 'seed-purchase-010' && row.packageName === '成人1v1 黄金时间10课时（历史）'), '来源表计划应能重挂订单课包');
 
