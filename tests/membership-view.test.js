@@ -24,7 +24,7 @@ assert.match(html, /查看购买记录[\s\S]*查看权益总流水/, 'membership
 assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership management page should remove the scheme config shortcut');
 assert.match(html, /id="membershipStatsRow"/, 'membership management page should expose summary stat cards');
 assert.match(html, /function renderMembershipStats/, 'membership management page should compute summary stat cards');
-assert.match(html, /会员数[\s\S]*订场次数[\s\S]*总收入金额[\s\S]*总余额/, 'membership summary should show booking count instead of purchase count');
+assert.match(html, /会员数[\s\S]*订场次数[\s\S]*总收入金额[\s\S]*已入账金额[\s\S]*会员储值余额/, 'membership summary should show the five owner-facing finance cards');
 assert.match(html, /id="page-memberships"[\s\S]*class="tms-toolbar"/, 'membership management page should use the court-style toolbar');
 assert.match(html, /id="page-memberships"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'membership management page should use the court-style table shell');
 assert.match(html, /id="membershipSearch"[\s\S]*placeholder="搜索会员姓名、手机号或方案"/, 'membership management search should use the new unified copy');

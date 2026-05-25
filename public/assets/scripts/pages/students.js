@@ -143,24 +143,35 @@ function studentPageTrialConvertedByPurchase(schedule){
   });
 }
 function studentPageStats(base){
-  const now=shanghaiNow();
-  const todayStr=localDateKey(now);
-  const monthKey=todayStr.slice(0,7);
-  const ws=weekStart(now),we=addDays(ws,7);
-  const scopedRows=billableSchedules().filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
-  const endedRows=scopedRows.filter(s=>{const end=dtObj(s.endTime||s.startTime);return end&&end<=now;});
-  const todayEndedRows=endedRows.filter(s=>String(s.startTime||'').slice(0,10)===todayStr);
-  const weekEndedRows=endedRows.filter(s=>inRange(s.startTime,ws,we));
-  const monthEndedRows=endedRows.filter(s=>String(s.startTime||'').slice(0,7)===monthKey);
-  const monthTrialRows=monthEndedRows.filter(s=>scheduleIsTrial(s));
-  const monthTrialConverted=monthTrialRows.filter(s=>studentPageTrialConvertedByPurchase(s)).length;
+  const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
+  const validEntitlements=entitlements.filter(e=>studentIds.has(String(e.studentId||''))&&entitlementStatusText(e)!=='已作废');
+  const validEntitlementIds=new Set(validEntitlements.map(e=>String(e.id||'')));
+  const purchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
+  const validPurchases=purchases.filter(p=>{
+    if(purchaseStatusText(p)==='已作废')return false;
+    return studentIds.has(String(p.studentId||''))||purchaseIds.has(String(p.id||''));
+  });
+  const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
+  const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
+  const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.finalAmount??p.amountPaid??0)||0),0);
+  const recognized=dedupeEntitlementLedgerForDisplay(entitlementLedger)
+    .filter(row=>Number(row.lessonDelta||0)<0)
+    .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||studentIds.has(String(row.studentId||'')))
+    .reduce((sum,row)=>{
+      const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
+      const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
+      const lessonDelta=Math.abs(Number(row.lessonDelta)||0);
+      const totalLessons=Math.max(1,Number(entitlement.totalLessons)||Number(purchase.packageLessons)||lessonDelta||1);
+      const amountPaid=Number(purchase.finalAmount??purchase.amountPaid??0)||0;
+      if(!amountPaid||!lessonDelta)return sum;
+      return sum+Math.round((amountPaid/totalLessons)*lessonDelta*100)/100;
+    },0);
   return {
     total:base.length,
-    todayLessons:lessonUnitsText(sumScheduleLessonUnits(todayEndedRows)),
-    weekLessons:lessonUnitsText(sumScheduleLessonUnits(weekEndedRows)),
-    monthLessons:lessonUnitsText(sumScheduleLessonUnits(monthEndedRows)),
-    monthTrialRate:monthTrialRows.length?Math.round(monthTrialConverted/monthTrialRows.length*100):0,
-    pendingConversion:base.filter(s=>studentNeedsConversion(s)).length
+    packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
+    totalIncome:Math.round(totalIncome*100)/100,
+    recognized:Math.round(recognized*100)/100,
+    packageBalance:Math.round((totalIncome-recognized)*100)/100
   };
 }
 function getStudentDuplicateCandidates(input,editingId=''){
@@ -205,7 +216,7 @@ function renderStudents(){
   let list=getSortedStudents(getFilteredStudents());
   const base=getStudentBaseList();
   const stats=studentPageStats(base);
-  document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员总数</div><div class="tms-stat-value">${stats.total}<span>人</span></div><div class="tms-stat-sub">当前校区口径</div></div><div class="tms-stat-card"><div class="tms-stat-label">今日课时</div><div class="tms-stat-value">${stats.todayLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本周课时</div><div class="tms-stat-value">${stats.weekLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本月课时</div><div class="tms-stat-value">${stats.monthLessons}<span>节</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">本月体验课转化率</div><div class="tms-stat-value">${stats.monthTrialRate}<span>%</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">待转化</div><div class="tms-stat-value">${stats.pendingConversion}<span>人</span></div><div class="tms-stat-sub">上过体验课且无购买/消耗</div></div>`;
+  document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员数</div><div class="tms-stat-value">${stats.total}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">有课包学员数</div><div class="tms-stat-value">${stats.packageStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(stats.totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">已入账金额</div><div class="tms-stat-value">¥${fmt(stats.recognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包余额</div><div class="tms-stat-value">¥${fmt(stats.packageBalance)}</div></div>`;
   const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
   if(stuPage>pages)stuPage=pages;
   const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);

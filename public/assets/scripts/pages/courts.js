@@ -128,9 +128,11 @@ function renderMembershipStats(rows=[]){
   const validOrders=membershipOrders.filter(o=>visibleCourtIds.has(o.courtId)&&o.status!=='voided'&&o.status!=='refunded');
   const totalIncome=validOrders.reduce((sum,o)=>sum+(parseFloat(o.rechargeAmount)||0),0);
   const activeRows=rows.filter(row=>!['voided','cleared'].includes(String(row.account?.status||'')));
-  const totalBalance=activeRows.reduce((sum,row)=>sum+courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}).balance,0);
+  const activeFinances=activeRows.map(row=>courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}));
+  const totalRecognized=activeFinances.reduce((sum,finance)=>sum+(Number(finance.storedValueSpent)||0),0);
+  const totalBalance=activeFinances.reduce((sum,finance)=>sum+(Number(finance.balance)||0),0);
   const totalBookingCount=rows.reduce((sum,row)=>sum+membershipBookingCount(row.court||membershipVisibleCourt(row)||{history:[]}),0);
-  host.innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">会员数</div><div class="tms-stat-value">${rows.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场次数</div><div class="tms-stat-value">${totalBookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">总余额</div><div class="tms-stat-value">¥${fmt(totalBalance)}</div></div>`;
+  host.innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">会员数</div><div class="tms-stat-value">${rows.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场次数</div><div class="tms-stat-value">${totalBookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">已入账金额</div><div class="tms-stat-value">¥${fmt(totalRecognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员储值余额</div><div class="tms-stat-value">¥${fmt(totalBalance)}</div></div>`;
 }
 function membershipTierForRow(row){
   const account=row?.account||{};
