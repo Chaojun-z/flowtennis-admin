@@ -572,10 +572,11 @@ assert.deepStrictEqual(
     template_id: 'reminder-tpl',
     page: 'pages/detail/detail?scheduleId=due-cross',
     data: {
-      thing1: { value: '跨校区，请预留通勤时间' },
       time3: { value: '2026-04-20 12:00' },
-      thing3: { value: '小鹿' },
-      thing4: { value: '私教课' }
+      thing4: { value: 'shunyi 2号场' },
+      const7: { value: '私教课' },
+      thing2: { value: '朝珺' },
+      thing6: { value: '小鹿' }
     }
   },
   'course reminder message should use the selected class reminder template fields'
@@ -617,6 +618,35 @@ assert.deepStrictEqual(
     ]
   },
   'coach daily digest message should build a concise next-day schedule summary'
+);
+
+assert.deepStrictEqual(
+  rules.buildOfficialAccountDigestTemplatePayload({
+    templateId: 'digest-tpl',
+    openid: 'oa-openid',
+    message: {
+      title: '明日排课汇总',
+      coachName: '朝珺',
+      digestDate: '2026-05-16',
+      lessonCount: 2,
+      lines: [
+        '09:00-10:00 私教课｜小鹿｜顺义马坡 1号场',
+        '14:00-15:00 双人课｜Misha｜顺义马坡 2号场'
+      ]
+    }
+  }),
+  {
+    touser: 'oa-openid',
+    template_id: 'digest-tpl',
+    data: {
+      thing1: { value: '明日排课汇总' },
+      phrase2: { value: '朝珺' },
+      time4: { value: '2026-05-16' },
+      thing7: { value: '09:00-10:00 私教课｜小鹿｜顺' },
+      character_string11: { value: '2' }
+    }
+  },
+  'official account digest payload should match the selected daily digest template fields'
 );
 
 assert.strictEqual(

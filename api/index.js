@@ -2390,10 +2390,11 @@ function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCa
     template_id:templateId,
     page:`pages/detail/detail${scheduleId?`?scheduleId=${scheduleId}`:''}`,
     data:{
-      thing1:{value:truncateWechatValue(crossCampus?'跨校区，请预留通勤时间':'即将上课，请提前准备')},
       time3:{value:String(schedule?.startTime||'').trim()},
-      thing3:{value:truncateWechatValue(schedule?.studentName||'学员')},
-      thing4:{value:truncateWechatValue(schedule?.courseType||'课程')}
+      thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
+      const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
+      thing2:{value:truncateWechatValue(schedule?.coach||'教练')},
+      thing6:{value:truncateWechatValue(schedule?.studentName||'学员')}
     }
   };
 }
@@ -2480,14 +2481,16 @@ async function sendOfficialAccountTemplateMessage(message){
   return data;
 }
 function buildOfficialAccountDigestTemplatePayload({templateId,openid,message}){
+  const lines=Array.isArray(message?.lines)?message.lines:[];
   return {
     touser:openid,
     template_id:templateId,
     data:{
-      first:{value:message.title},
-      keyword1:{value:message.digestDate||message.summary.split(' 共 ')[0]||''},
-      keyword2:{value:message.summary},
-      remark:{value:message.lines.join('\n')}
+      thing1:{value:truncateWechatValue(message?.title||'明日排课汇总')},
+      phrase2:{value:truncateWechatValue(message?.coachName||'教练',5)},
+      time4:{value:String(message?.digestDate||'').trim()},
+      thing7:{value:truncateWechatValue(lines.join('；')||message?.summary||'暂无排课')},
+      character_string11:{value:String(message?.lessonCount??lines.length??'')}
     }
   };
 }
@@ -2573,7 +2576,7 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
       await sendTemplate(buildOfficialAccountDigestTemplatePayload({
         templateId,
         openid:recipient.officialAccountOpenId,
-        message:{...digestMessage,digestDate:item.digestDate}
+        message:{...digestMessage,digestDate:item.digestDate,coachName:item.coachName,lessonCount:item.lessonCount}
       }));
       await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
         ...(((resolvedRows||[]).find(row=>String(row.id||'')===String(scheduleId)))||{}),
@@ -8274,6 +8277,7 @@ module.exports._test={
   buildCourseReminderSubscribeMessage,
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,
+  buildOfficialAccountDigestTemplatePayload,
   resolveOfficialAccountSendMode,
   sendOfficialAccountTemplateMessage,
   sendOfficialAccountCourseReminders,
