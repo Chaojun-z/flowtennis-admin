@@ -72,6 +72,8 @@ const WECHAT_OFFICIAL_ACCOUNT_DIGEST_TEMPLATE_ID = process.env.WECHAT_OFFICIAL_A
 const WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND = readBooleanEnv(process.env,'WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND');
 const WECHAT_OFFICIAL_ACCOUNT_TOKEN = process.env.WECHAT_OFFICIAL_ACCOUNT_TOKEN || '';
 const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY || '';
+const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
+const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
@@ -2456,6 +2458,17 @@ async function fetchOfficialAccountAccessToken(){
   return token;
 }
 async function sendOfficialAccountTemplateMessage(message){
+  if(String(WECHAT_OFFICIAL_ACCOUNT_PROXY_URL||'').trim()&&String(WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET||'').trim()){
+    const res=await fetch(WECHAT_OFFICIAL_ACCOUNT_PROXY_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET}`},
+      body:JSON.stringify(message)
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(`服务号代理发送失败：${data.error||res.status}`);
+    if(data.errcode&&data.errcode!==0)throw new Error(`服务号代理发送失败：${data.errmsg||data.errcode}`);
+    return data;
+  }
   const token=await fetchOfficialAccountAccessToken();
   const res=await fetch(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${encodeURIComponent(token)}`,{
     method:'POST',
@@ -8262,6 +8275,7 @@ module.exports._test={
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,
   resolveOfficialAccountSendMode,
+  sendOfficialAccountTemplateMessage,
   sendOfficialAccountCourseReminders,
   sendOfficialAccountDailyDigests,
   normalizeVenue,
