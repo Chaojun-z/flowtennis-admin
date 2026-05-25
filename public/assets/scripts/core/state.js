@@ -55,7 +55,7 @@ function shouldUseCourtReadModelByDefault(){
   if(queryMode==='legacy')return false;
   if(queryMode==='read-model')return true;
   if(COURT_GUARD_QUERY.get('courtCompare')==='1')return true;
-  return localStorage.getItem(COURT_READ_MODEL_STORAGE_KEY)==='read-model';
+  return true;
 }
 function isCourtReadModelPreviewEnabled(){
   return shouldUseCourtReadModelByDefault();

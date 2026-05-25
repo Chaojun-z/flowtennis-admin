@@ -36,7 +36,7 @@ assert.match(source,/renderFinanceConsumeReport\(\)">查询/,'consume date filte
 assert.doesNotMatch(source,/未入账明细/,'ledger should no longer show a second prepaid detail table');
 assert.match(source,/总收入（实收）[\s\S]*总已入账[\s\S]*总未入账/,'ledger summary should use plain-language owner terms');
 assert.doesNotMatch(source,/总流水笔数/,'ledger summary should not keep total flow count card');
-assert.match(source,/课包收入 \/ 已入账[\s\S]*会员余额 \/ 已入账[\s\S]*订场收入 \/ 已入账/,'ledger summary should keep the three owner-facing business cards in the latest wording');
+assert.match(source,/课包收入 \/ 已入账[\s\S]*会员收入 \/ 已入账[\s\S]*订场收入 \/ 已入账/,'ledger summary should keep the three owner-facing business cards in the latest wording');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/const businessRows=rows\.filter\(row=>!row\.differenceReason\);[\s\S]*const diffRows=rows\.filter\(row=>row\.differenceReason\);[\s\S]*bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category and split diff rows');

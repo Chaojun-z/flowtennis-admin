@@ -13,6 +13,7 @@ assert.match(indexSource, /\/page-data\/court-account-list-view-compare/, 'api/i
 assert.match(stateSource, /const COURT_READ_MODEL_STORAGE_KEY='ft_court_read_model_mode';/, '前端应保留隐藏验证模式存储键');
 assert.match(stateSource, /const COURT_READ_MODEL_FORCE_LEGACY_KEY='ft_court_read_model_force_legacy';/, '前端应保留全局强退开关存储键');
 assert.match(stateSource, /if\(COURT_GUARD_QUERY\.get\('courtCompare'\)==='1'\)return true;/, 'courtCompare=1 仍应能拉起隐藏验收链');
+assert.match(stateSource, /if\(queryMode==='legacy'\)return false;[\s\S]*return true;/, '订场用户页默认应走会员读模型，保证会员余额口径一致');
 assert.match(stateSource, /function shouldUseCourtReadModelByDefault\(/, '前端应暴露订场用户页新链总开关判断');
 assert.match(stateSource, /function isCourtReadModelPreviewEnabled\(/, '前端应暴露隐藏验证开关判断');
 assert.match(stateSource, /function isCourtReadModelRollbackForced\(/, '前端应暴露全局强退开关判断');
