@@ -31,6 +31,10 @@ assert.strictEqual(lead.id, 'lead-1');
 assert.strictEqual(lead.phone, '13800138000');
 assert.strictEqual(lead.wechatName, 'Leah');
 assert.strictEqual(lead.systemStatus, '跟进中');
+assert.strictEqual(
+  rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08T00:00:00.000Z' }).campus,
+  'mabao'
+);
 
 const updated = rules.applyLeadFollowupSnapshot(lead, rules.normalizeLeadFollowupRecord({
   leadId: 'lead-1',
@@ -44,5 +48,10 @@ const updated = rules.applyLeadFollowupSnapshot(lead, rules.normalizeLeadFollowu
 assert.strictEqual(updated.lastFollowupAt, '2026-05-09 10:00');
 assert.strictEqual(updated.latestConcern, '时间');
 assert.strictEqual(updated.systemStatus, '已约体验');
+
+assert.strictEqual(
+  rules.buildLeadDedupKey({ displayName: 'Leah 13800138000', leadDate: '2026/4/7', source: '大众点评', consultType: '成人私教' }),
+  rules.buildLeadDedupKey({ wechatName: 'Leah', phone: '13800138000', leadDate: '2026-04-07', source: '大众点评 ', consultType: ' 成人私教' })
+);
 
 console.log('leads rules tests passed');

@@ -146,6 +146,7 @@ const LEAD_LIST_PROJECTION_FIELDS=[
   'phone',
   'leadDate',
   'source',
+  'campus',
   'consultType',
   'intentLevel',
   'profileNote',
@@ -4956,6 +4957,7 @@ function normalizeLeadRecord(input={},opts={}){
     level:cleanLeadText(input.level??input['水平']),
     profileNote:cleanLeadText(input.profileNote??input['其他信息（包含年纪等）']),
     source:cleanLeadText(input.source??input['线索渠道']),
+    campus:normalizeCampusValue(cleanLeadText(input.campus??input['所属校区'])),
     consultType:cleanLeadText(input.consultType??input['咨询需求']),
     intentLevel:cleanLeadText(input.intentLevel??input['意向类型']),
     owner:cleanLeadText(input.owner??input['跟进人']),
@@ -5089,9 +5091,34 @@ function buildLeadInitialFollowup(lead){
   });
 }
 function buildLeadDedupKey(input={}){
+  const phone=normalizeLeadDedupPhone(input);
+  const name=normalizeLeadIdentityName(input.displayName||input.wechatName);
+  const identity=phone?`phone:${phone}`:(name?`name:${name}`:`id:${cleanLeadText(input.id||input.sourceRowNo||input['序号'])}`);
   return [
-    cleanLeadText(input.leadDate),cleanLeadText(input.displayName),assertPhone(input.phone||''),cleanLeadText(input.wechatName),cleanLeadText(input.level),cleanLeadText(input.profileNote),cleanLeadText(input.source),cleanLeadText(input.consultType),cleanLeadText(input.intentLevel),cleanLeadText(input.owner),cleanLeadText(input.rawStatus),cleanLeadText(input.trialAtRaw),cleanLeadText(input.enrollAtRaw),cleanLeadText(input.latestConcern),cleanLeadText(input.latestConclusion),input.convertedFlag===true?'1':'0',cleanLeadText(input.formalCoach),cleanLeadText(input.lostReason)
+    identity,
+    normalizeLeadKeyDate(input.leadDate),
+    normalizeLeadKeyText(input.source),
+    normalizeLeadKeyText(input.consultType)
   ].join('|');
+}
+function normalizeLeadDedupPhone(input={}){
+  const direct=cleanLeadText(input.phone);
+  if(direct)return assertPhone(direct);
+  return extractLeadPhoneMeta(input.displayName||input.wechatName||input.name||input.contactRaw||'').phone;
+}
+function normalizeLeadIdentityName(value){
+  return cleanLeadText(value).replace(/1[3-9]\d{9}/g,'').toLowerCase().replace(/\s+/g,'').replace(/[·.。_\-\/|｜，,;；]/g,'');
+}
+function normalizeLeadKeyText(value){
+  return cleanLeadText(value).toLowerCase().replace(/\s+/g,'');
+}
+function normalizeLeadKeyDate(value){
+  const raw=cleanLeadText(value);
+  let m=raw.match(/(\d{4})[年\/.-](\d{1,2})[月\/.-](\d{1,2})/);
+  if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m=raw.match(/^(\d{1,2})[月.\/-](\d{1,2})(?:日)?/);
+  if(m)return `${new Date().getFullYear()}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  return raw;
 }
 function dedupeLeadRows(rows=[]){
   const seen=new Set();
@@ -8100,6 +8127,7 @@ module.exports._test={
   normalizeLeadImportRows,
   buildLeadInitialFollowup,
   buildLeadDedupKey,
+  normalizeLeadIdentityName,
   dedupeLeadRows,
   buildLeadImportPreviewRows,
   leadImportPreviewSummary,

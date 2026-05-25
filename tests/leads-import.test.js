@@ -18,6 +18,12 @@ assert.strictEqual(rows[0].source, '大众点评');
 const deduped = rules.dedupeLeadRows(rows);
 assert.strictEqual(deduped.length, 1);
 
+const variantDeduped = rules.dedupeLeadRows([
+  { displayName: 'Leah 13800138000', leadDate: '2026/4/7', source: '大众点评', consultType: '成人私教' },
+  { wechatName: 'Leah', phone: '13800138000', leadDate: '2026-04-07', source: ' 大众点评 ', consultType: '成人私教 ' }
+]);
+assert.strictEqual(variantDeduped.length, 1);
+
 const preview = rules.buildLeadImportPreviewRows(deduped, {
   students: [{ id: 'stu-1', name: 'Leah', phone: '' }],
   courts: [],
