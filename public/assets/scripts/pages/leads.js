@@ -43,23 +43,29 @@ function leadMergeFollowupNotes(items){
   });
   return merged.join('；')||'-';
 }
+function leadFollowupNotesOverlap(a,b){
+  const ak=leadDedupText(leadFollowupNoteText(a));
+  const bk=leadDedupText(leadFollowupNoteText(b));
+  return !!(ak&&bk&&(ak===bk||ak.includes(bk)||bk.includes(ak)));
+}
 function leadMergeFollowupGroup(items){
   const rows=Array.isArray(items)?items:[];
   const mergedNote=leadMergeFollowupNotes(rows);
   const base=[...rows].sort((a,b)=>leadFollowupNoteText(b).length-leadFollowupNoteText(a).length)[0]||{};
+  const personRow=rows.find(item=>leadFollowupPersonText(item)!=='未填写')||base;
+  const convertedRow=rows.find(item=>leadFollowupConvertedText(item)==='已转化')||base;
   return {
     ...base,
     followupAt:leadFollowupDateText(base),
-    followupBy:leadFollowupPersonText(base),
+    followupBy:leadFollowupPersonText(personRow),
+    statusAfter:convertedRow?.statusAfter||base?.statusAfter||'',
     _mergedFollowupNote:mergedNote
   };
 }
-function leadFollowupGroupKey(item){
+function leadFollowupDateGroupKey(item){
   return [
     item?.leadId||'',
-    leadFollowupDateText(item),
-    leadDedupText(leadFollowupPersonText(item)),
-    leadFollowupConvertedText(item)
+    leadFollowupDateText(item)
   ].join('|');
 }
 function leadDedupKey(lead){
@@ -91,16 +97,24 @@ function leadRows(){
   });
 }
 function leadFollowupRows(leadId){
-  const groups=new Map();
+  const dateGroups=new Map();
   (Array.isArray(leadFollowups)?leadFollowups:[])
     .filter(item=>item?.leadId===leadId)
     .forEach(item=>{
-      const key=leadFollowupGroupKey(item);
-      const rows=groups.get(key)||[];
+      const key=leadFollowupDateGroupKey(item);
+      const rows=dateGroups.get(key)||[];
       rows.push(item);
-      groups.set(key,rows);
+      dateGroups.set(key,rows);
     });
-  return [...groups.values()]
+  const clusters=[];
+  [...dateGroups.values()].forEach(rows=>{
+    rows.forEach(item=>{
+      const hit=clusters.find(group=>group.some(existing=>leadFollowupNotesOverlap(existing,item)));
+      if(hit)hit.push(item);
+      else clusters.push([item]);
+    });
+  });
+  return clusters
     .map(leadMergeFollowupGroup)
     .sort((a,b)=>leadSortDateValue(b?.followupAt||b?.createdAt||'')-leadSortDateValue(a?.followupAt||a?.createdAt||'')||String(b?.createdAt||b?.id||'').localeCompare(String(a?.createdAt||a?.id||'')));
 }

@@ -54,12 +54,44 @@ context.leadFollowups = [
     followupBy: '@Mira',
     statusAfter: '已沟通',
     communicationNote: '觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课'
+  },
+  {
+    id: 'missing-owner',
+    leadId: 'lead-1',
+    followupAt: '2026-05-05',
+    followupBy: '',
+    statusAfter: '',
+    communicationNote: '未通过好友申请'
+  },
+  {
+    id: 'named-owner',
+    leadId: 'lead-1',
+    followupAt: '2026/5/5',
+    followupBy: '@Mira',
+    statusAfter: '',
+    communicationNote: '未通过好友申请'
+  },
+  {
+    id: 'converted-long',
+    leadId: 'lead-1',
+    followupAt: '2026-04-29',
+    followupBy: '@Mira',
+    statusAfter: '已报名-私教',
+    communicationNote: '介绍了教练和价格后未回复；约了siren体验课'
+  },
+  {
+    id: 'unconverted-short',
+    leadId: 'lead-1',
+    followupAt: '2026/4/29',
+    followupBy: '@Mira',
+    statusAfter: '已沟通',
+    communicationNote: '介绍了教练和价格后未回复'
   }
 ];
 
 const rows = context.leadFollowupRows('lead-1');
-assert.strictEqual(rows.length, 2, 'same date/person/conversion followups should merge into one row');
-assert.strictEqual(context.leadFollowupCount({ id: 'lead-1' }), 2, 'followup count should use merged structured rows');
+assert.strictEqual(rows.length, 4, 'same date and overlapping content followups should merge into one row');
+assert.strictEqual(context.leadFollowupCount({ id: 'lead-1' }), 4, 'followup count should use merged structured rows');
 assert.strictEqual(
   context.leadTimelineLineText(rows[0]),
   '2026-05-07 · [Mira跟进 · 未转化] · 天昊上课：课后跟进学员上课体验，对方想找单反，还要再考虑；第二次安排刘润扬教练上课，还是要考虑，感觉是白嫖'
@@ -67,6 +99,14 @@ assert.strictEqual(
 assert.strictEqual(
   context.leadTimelineLineText(rows[1]),
   '2026-05-06 · [Mira跟进 · 未转化]：觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课；5月12日，宋教练回学校答辩，无教练上课，改到其他日期'
+);
+assert.strictEqual(
+  context.leadTimelineLineText(rows[2]),
+  '2026-05-05 · [Mira跟进 · 未转化]：未通过好友申请'
+);
+assert.strictEqual(
+  context.leadTimelineLineText(rows[3]),
+  '2026-04-29 · [Mira跟进 · 已转化] · 介绍了教练和价格后未回复：约了siren体验课'
 );
 
 console.log('leads followup structure tests passed');
