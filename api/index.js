@@ -2391,7 +2391,7 @@ function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCa
     page:`pages/detail/detail${scheduleId?`?scheduleId=${scheduleId}`:''}`,
     data:{
       thing1:{value:truncateWechatValue(crossCampus?'跨校区，请预留通勤时间':'即将上课，请提前准备')},
-      time2:{value:String(schedule?.startTime||'').trim()},
+      time3:{value:String(schedule?.startTime||'').trim()},
       thing3:{value:truncateWechatValue(schedule?.studentName||'学员')},
       thing4:{value:truncateWechatValue(schedule?.courseType||'课程')}
     }

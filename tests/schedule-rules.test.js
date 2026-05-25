@@ -573,7 +573,7 @@ assert.deepStrictEqual(
     page: 'pages/detail/detail?scheduleId=due-cross',
     data: {
       thing1: { value: '跨校区，请预留通勤时间' },
-      time2: { value: '2026-04-20 12:00' },
+      time3: { value: '2026-04-20 12:00' },
       thing3: { value: '小鹿' },
       thing4: { value: '私教课' }
     }
