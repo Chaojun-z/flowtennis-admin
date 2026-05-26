@@ -651,16 +651,21 @@ async function refreshSchEntitlementOptions(){
 function scheduleSaveConfirmText(data,selectedEntitlement){
   const absent=parseArr(data.absentStudentIds);
   const packageText=data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额');
-  const row=(label,value,extra='')=>`<div class="schedule-confirm-row ${extra}"><span>${esc(label)}</span><strong>${esc(value||'—')}</strong></div>`;
+  const timeText=()=>{
+    const start=fmtDt(data.startTime),end=fmtDt(data.endTime);
+    const day=start.slice(0,10),startClock=start.slice(11),endClock=end.slice(11);
+    return day&&startClock&&endClock?`${day} · ${startClock} - ${endClock}`:`${start} - ${end}`;
+  };
+  const row=(label,value,extra='')=>`<div class="schedule-confirm-row ${extra}"><span class="schedule-confirm-label">${esc(label)}</span><span class="schedule-confirm-value">${esc(value||'—')}</span></div>`;
   return `<div class="schedule-confirm-card">
-    ${row('时间',`${fmtDt(data.startTime)} - ${fmtDt(data.endTime)}`)}
+    ${row('时间',timeText())}
     ${row('学员',scheduleStudentTextByIds(data.studentIds)||'—')}
     ${absent.length?row('本次缺勤',scheduleStudentTextByIds(absent),'schedule-confirm-warn'):''}
     ${row('教练',data.coach||'—')}
     ${row('场地',scheduleLocationText(data))}
     ${row('课程',normalizeCourseType(data.courseType)||'—')}
     ${row('扣减课包',packageText)}
-    <div class="schedule-confirm-charge"><span>本次扣课</span><strong>${esc(data.lessonCount||0)} 节</strong></div>
+    <div class="schedule-confirm-charge"><span class="schedule-confirm-label">本次扣课</span><span class="schedule-confirm-charge-value">${esc(data.lessonCount||0)} 节</span></div>
     ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
     ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
   </div>`;
