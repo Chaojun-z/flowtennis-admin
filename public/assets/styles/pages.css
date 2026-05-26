@@ -1015,6 +1015,18 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-coachops .tms-stat-value{font-size:30px;color:#2F241E}
 #page-coachops .tms-stat-value span{font-size:14px;color:#7A6B60}
 #page-coachops #coachOpsViewTitle{color:#2F241E;margin:2px 0 10px}
+#page-coachops .tms-table-wrapper{max-height:calc(100vh - 250px);overflow-x:auto;overflow-y:auto}
+#page-coachops .tms-table{min-width:1180px;table-layout:fixed}
+#page-coachops .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
+#page-coachops .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
+#page-coachops .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#FDF7F2}
+#page-coachops .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FDF7F2}
+#page-coachops .tms-table tbody tr:hover td.tms-sticky-l{background-color:#F4EBE3}
+.coach-workload-lessons{display:flex;align-items:center;gap:6px;color:#2F241E;font-weight:700}
+.coach-workload-lessons span{color:#8C7B6E;font-size:11px;font-weight:400}
+.coach-workload-compare{font-size:11px;font-weight:600;color:#8C7B6E}
+.coach-workload-compare.up{color:#15803d}
+.coach-workload-compare.down{color:#b91c1c}
 .late-settlement-modal .mbody{padding-bottom:18px}
 .late-settlement-head{max-width:260px;margin-bottom:14px}
 .late-settlement-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;margin-bottom:12px}

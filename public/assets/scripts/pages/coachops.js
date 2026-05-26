@@ -1,4 +1,5 @@
 // ===== 教练运营 =====
+let coachOpsDraggedName='';
 function setCoachOpsPanel(panel){
   coachOpsPanel=panel==='workload'?'workload':'schedule';
   const schedulePanel=document.getElementById('coachOpsSchedulePanel');
@@ -198,13 +199,108 @@ function openCoachOpsLineCreate(e,coach,date){
   const h=Math.min(22,7+Math.floor(minutes/60)),m=minutes%60;
   openCoachOpsCreateSchedule(coach,date,`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
 }
+function coachOpsDragStart(e,coach){
+  coachOpsDraggedName=coachName(coach);
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',coachOpsDraggedName);
+  }
+}
+function coachOpsDragOver(e){
+  e.preventDefault();
+  if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+}
+function coachOpsDrop(e,targetCoach){
+  e.preventDefault();
+  const source=coachOpsDraggedName||e.dataTransfer?.getData('text/plain')||'';
+  const target=coachName(targetCoach);
+  coachOpsDraggedName='';
+  if(!source||!target||source===target)return;
+  const order=coachOpsRows().map(row=>row.name);
+  const from=order.indexOf(source),to=order.indexOf(target);
+  if(from<0||to<0)return;
+  order.splice(to,0,order.splice(from,1)[0]);
+  saveCoachOpsOrder(order);
+}
+async function saveCoachOpsOrder(order){
+  const byName=new Map(coaches.map(coach=>[coachName(coach.name),coach]));
+  const updates=[];
+  order.forEach((name,index)=>{
+    const coach=byName.get(coachName(name));
+    if(!coach)return;
+    const sortOrder=(index+1)*10;
+    if(Number(coach.sortOrder)!==sortOrder){
+      coach.sortOrder=sortOrder;
+      updates.push(coach);
+    }
+  });
+  if(!updates.length)return;
+  try{
+    await Promise.all(updates.map(coach=>apiCall('PUT','/coaches/'+coach.id,{...coach,sortOrder:coach.sortOrder})));
+    renderCoachOps();
+    toast('教练排序已保存','success');
+  }catch(err){
+    toast('保存教练排序失败：'+err.message,'error');
+    loadData(false).then(()=>currentPage==='coachops'&&renderCoachOps()).catch(()=>null);
+  }
+}
+function coachOpsStudentKeys(s){
+  const ids=[...parseArr(s.studentIds),s.studentId].map(v=>String(v||'').trim()).filter(Boolean);
+  if(ids.length)return ids.map(id=>`id:${id}`);
+  return String(s.studentName||'').split(/[、,，\s/]+/).map(v=>v.trim()).filter(Boolean).map(name=>`name:${name}`);
+}
+function purchaseMatchesCoachTrialStudent(p,key){
+  if(key.startsWith('id:'))return String(p.studentId||'').trim()===key.slice(3);
+  return String(p.studentName||'').trim()===key.slice(5);
+}
+function coachTrialConversionText(coach,rows){
+  const coachKey=coachName(coach);
+  const trialMap=new Map();
+  rows.filter(s=>scheduleIsTrial(s)&&effectiveScheduleStatus(s)==='已结束').forEach(s=>{
+    coachOpsStudentKeys(s).forEach(key=>{
+      const date=String(s.startTime||'').slice(0,10);
+      if(key&&!trialMap.has(key))trialMap.set(key,date);
+    });
+  });
+  const total=trialMap.size;
+  if(!total)return '0/0 0%';
+  const converted=[...trialMap.entries()].filter(([key,trialDate])=>purchases.some(p=>{
+    if(!purchaseMatchesCoachTrialStudent(p,key))return false;
+    if(coachName(p.ownerCoach)!==coachKey)return false;
+    if(['voided','refunded'].includes(String(p.status||'')))return false;
+    const purchaseDate=String(p.purchaseDate||p.createdAt||'').slice(0,10);
+    return !trialDate||!purchaseDate||purchaseDate>=trialDate;
+  })).length;
+  const percent=converted/total*100;
+  return `${converted}/${total} ${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
+}
+function coachCourseTypeDistributionText(rows){
+  const map=new Map();
+  rows.forEach(s=>{
+    const type=scheduleCourseType(s)||'未分类';
+    map.set(type,(map.get(type)||0)+scheduleLessonUnits(s));
+  });
+  return [...map.entries()].sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${type} ${lessonUnitsText(count)}`).join('｜')||'—';
+}
+function coachOpsComparisonText(coach,currentRows,range){
+  const current=sumScheduleLessonUnits(currentRows);
+  const span=range.end.getTime()-range.start.getTime();
+  const prevStart=new Date(range.start.getTime()-span);
+  const prevRows=billableSchedules().filter(s=>coachName(s.coach)===coachName(coach)&&inRange(s.startTime,prevStart,range.start));
+  const previous=sumScheduleLessonUnits(prevRows);
+  if(!previous)return current?'<span class="coach-workload-compare up">新增</span>':'<span class="coach-workload-compare">0%</span>';
+  const pct=(current-previous)/previous*100;
+  const cls=pct>0?'up':pct<0?'down':'';
+  return `<span class="coach-workload-compare ${cls}">${pct>0?'+':''}${pct.toFixed(2)}%</span>`;
+}
 function coachOpsRows(){
   const now=new Date(),todayStr=today();
   const ws=weekStart(now),we=new Date(ws);we.setDate(ws.getDate()+7);
   const ms=monthStart(now),me=new Date(now.getFullYear(),now.getMonth()+1,1);
   const range=rangeBounds(coachOpsMode);
   const all=billableSchedules();
-  const names=[...new Set([...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)])];
+  const names=[...new Set([...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)])]
+    .sort((a,b)=>coachSortValue(a)-coachSortValue(b)||String(a).localeCompare(String(b),'zh-Hans-CN'));
   return names.map(name=>{
     const mine=all.filter(s=>coachName(s.coach)===name);
     const todayRows=mine.filter(s=>s.startTime.slice(0,10)===todayStr);
@@ -214,7 +310,7 @@ function coachOpsRows(){
     const campusMap={};
     rangeRows.forEach(s=>{if(s.campus)campusMap[s.campus]=(campusMap[s.campus]||0)+1});
     const mainCampus=Object.entries(campusMap).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-    return {name,todayRows,weekRows,monthRows,rangeRows,mainCampus,pending:pendingFeedbackCount(rangeRows),risks:coachRiskCount(rangeRows),conflicts:coachOverlapCount(rangeRows)};
+    return {name,todayRows,weekRows,monthRows,rangeRows,mainCampus,pending:pendingFeedbackCount(rangeRows),risks:coachRiskCount(rangeRows),conflicts:coachOverlapCount(rangeRows),sortOrder:coachSortValue(name)};
   });
 }
 function renderCoachOpsRangeFilter(){
@@ -254,6 +350,7 @@ function renderCoachOps(){
     ['未反馈',pending,'节','si-e']
   ].map(([label,val,u])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}<span>${u}</span></div></div>`).join('');
   host.innerHTML=rows.map(r=>{
+    const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
     if(mode==='day'){
       const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
       const blocks=r.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
@@ -264,7 +361,7 @@ function renderCoachOps(){
         const width=Math.max(2,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/opsTotalMin*100);
         return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="left:${left}%;width:${Math.min(width,100-left)}%" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(s.studentName)||esc(classes.find(c=>c.id===s.classId)?.className)||'—'}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
       }).join('');
-      return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-line" onclick="openCoachOpsLineCreate(event,${jsArg(r.name)},'${dateKey(range.start)}')">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
+      return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-line" onclick="openCoachOpsLineCreate(event,${jsArg(r.name)},'${dateKey(range.start)}')">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
     }
     const days=[];
     const gridStart=mode==='month'?weekStart(range.start):range.start;
@@ -275,9 +372,9 @@ function renderCoachOps(){
       const dayRows=r.rangeRows.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
       return `<div class="coach-ops-daycell ${dayRows.length?'has-course':''}" onclick="openCoachOpsCreateSchedule(${jsArg(r.name)},'${ds}')"><strong>${d.getMonth()+1}/${d.getDate()}</strong>${dayRows.length?`${dayRows.length}节<br>${dayRows.slice(0,2).map(s=>s.startTime.slice(11,16)+' '+(s.studentName||'')).join('<br>')}`:'无课'}</div>`;
     }).join('');
-    return `<div class="coach-ops-row"><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
+    return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');
-  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td><div class="uname">${esc(r.name)}</div></td><td>${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))} 节</td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
+  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }

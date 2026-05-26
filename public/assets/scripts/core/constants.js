@@ -40,7 +40,16 @@ function canonicalCoachName(v){
   return COACH_NAME_ALIAS_MAP[raw]||raw;
 }
 function coachName(v){return canonicalCoachName(v)}
-function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status==='active').map(c=>coachName(c.name)).filter(Boolean))];return live.length?live:COACHES_LIST;}
+function coachSortValue(name){
+  const normalized=coachName(name);
+  const row=(Array.isArray(coaches)?coaches:[]).find(c=>coachName(c.name)===normalized);
+  const value=Number(row?.sortOrder);
+  return Number.isFinite(value)?value:9999;
+}
+function activeCoachNames(){
+  const live=[...new Set(coaches.filter(c=>c.status==='active').sort((a,b)=>coachSortValue(a.name)-coachSortValue(b.name)||String(coachName(a.name)).localeCompare(String(coachName(b.name)),'zh-Hans-CN')).map(c=>coachName(c.name)).filter(Boolean))];
+  return live.length?live:COACHES_LIST;
+}
 const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;

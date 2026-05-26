@@ -5,7 +5,7 @@ let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='',stuSortDir=
 let membershipPage=1,membershipPageSize=20,membershipSortKey='bookingCount',membershipSortDir='desc';
 let membershipTierFilterValue='';
 let purPackageFilterValue='';
-let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger';
+let coachOpsMode='week',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger';
 
 function goPage(pg,el,skipRender=false){
   syncViewportMode();

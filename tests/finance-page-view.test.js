@@ -9,7 +9,7 @@ assert.match(source,/id="financeRevenuePanel"/,'finance center should render rev
 assert.match(source,/id="financeRecognizedPanel"/,'finance center should render recognized panel');
 assert.match(source,/id="financeSettlementPanel"/,'finance center should render settlement panel');
 assert.match(source,/function setFinancePanel\(/,'finance center should expose tab switch logic');
-assert.match(source,/let coachOpsMode='day',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger'/,'finance center should default to ledger tab');
+assert.match(source,/financePanel='ledger'/,'finance center should default to ledger tab');
 assert.match(source,/function renderFinanceCenter\(/,'finance center should expose page render logic');
 assert.match(source,/function renderFinanceOverview\(/,'finance center should render summary stats inside ledger tab');
 assert.match(source,/function renderFinanceLedger\(/,'finance center should render ledger table');

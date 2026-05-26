@@ -496,6 +496,11 @@ function cappedScan(t, limit=PRODUCTION_PAGE_READ_LIMITS.default){
   const normalizedLimit=limit===undefined?PRODUCTION_PAGE_READ_LIMITS.default:(PRODUCTION_PAGE_READ_LIMITS[t]||limit);
   return isProductionRuntime() ? scanFirstRows(t, {limit:normalizedLimit}).catch((e) => { console.error('cappedScan err:', e); return []; }) : getCachedScan(t).catch(()=>[]);
 }
+function getFinancePageScheduleRows(){
+  return isProductionRuntime()
+    ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('finance schedule scan err:',e);return [];})
+    : getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+}
 async function getCachedRow(t,id){
   const cfg=HOT_GET_TABLES.get(t);
   if(!cfg)return get(t,id);
@@ -7869,7 +7874,7 @@ module.exports = async (req, res) => {
         getCachedScan(T_COURTS,{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
-        isProductionRuntime()?scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[])
+        getFinancePageScheduleRows()
       ]);
       const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule});
       const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
