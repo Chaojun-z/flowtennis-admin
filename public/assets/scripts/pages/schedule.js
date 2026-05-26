@@ -649,19 +649,21 @@ async function refreshSchEntitlementOptions(){
   },300);
 }
 function scheduleSaveConfirmText(data,selectedEntitlement){
-  return [
-    '确认保存这节课？',
-    `本次参与：${scheduleStudentTextByIds(data.studentIds)||'—'}`,
-    parseArr(data.absentStudentIds).length?`本次缺勤：${scheduleStudentTextByIds(data.absentStudentIds)}`:'',
-    `时间：${fmtDt(data.startTime)} - ${fmtDt(data.endTime)}`,
-    `教练：${data.coach||'—'}`,
-    `校区/场地：${scheduleLocationText(data)}`,
-    `课程：${normalizeCourseType(data.courseType)||'—'}`,
-    `消课：${data.lessonCount||0} 节`,
-    `扣减课包：${data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额')}`,
-    data.coachLateFree?`迟到免费：本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`:'',
-    data.status==='已取消'?`取消原因：${data.cancelReason||'未填写'}`:''
-  ].join('\n');
+  const absent=parseArr(data.absentStudentIds);
+  const packageText=data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额');
+  const row=(label,value,extra='')=>`<div class="schedule-confirm-row ${extra}"><span>${esc(label)}</span><strong>${esc(value||'—')}</strong></div>`;
+  return `<div class="schedule-confirm-card">
+    ${row('时间',`${fmtDt(data.startTime)} - ${fmtDt(data.endTime)}`)}
+    ${row('学员',scheduleStudentTextByIds(data.studentIds)||'—')}
+    ${absent.length?row('本次缺勤',scheduleStudentTextByIds(absent),'schedule-confirm-warn'):''}
+    ${row('教练',data.coach||'—')}
+    ${row('场地',scheduleLocationText(data))}
+    ${row('课程',normalizeCourseType(data.courseType)||'—')}
+    ${row('扣减课包',packageText)}
+    <div class="schedule-confirm-charge"><span>本次扣课</span><strong>${esc(data.lessonCount||0)} 节</strong></div>
+    ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
+    ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
+  </div>`;
 }
 async function saveSchedule(){
   const startTime=scheduleComposeDateTime('sch_date','sch_startTime');
@@ -703,7 +705,7 @@ async function saveSchedule(){
   const lateReason=document.getElementById('sch_lateReason')?.value.trim()||'';
   if(coachLateFree&&!lateReason){toast('请填写迟到原因','warn');return;}
   const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,isTrial:selectedCourseType==='体验课',coach,coachId:coach,locationType,venue,campus:campusKey(campusValue),externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,entitlementId:studentIds.length===1?selectedEntitlementId:'',packageName:studentIds.length===1?(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName||''):''):'',purchaseId:studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:studentIds.length===1?(selectedEntitlement?.timeBand||''):'',requiresFieldFee:!!selectedEntitlement?.requiresFieldFee,fieldFeeReason:selectedEntitlement?.fieldFeeReason||'',cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
-  if(!await appConfirm(scheduleSaveConfirmText(data,selectedEntitlement),{title:'确认保存这节课？',confirmText:'确认保存'}))return;
+  if(!await appConfirm(scheduleSaveConfirmText(data,selectedEntitlement),{title:'确认排课',confirmText:'确认保存',html:true,hideIcon:true,boxClass:'schedule-confirm-box'}))return;
   const btn=document.getElementById('scheduleSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   try{
     let result;

@@ -56,12 +56,14 @@ function renderStudentsIfVisible(){
 function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;leadPage=1;schPage=1;courtPage=1;if(currentPage==='students')renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
-function appConfirm(message,{title='请确认',confirmText='确定',danger=false}={}){
+function appConfirm(message,{title='请确认',confirmText='确定',danger=false,html=false,hideIcon=false,boxClass=''}={}){
   return new Promise(resolve=>{
     const ov=document.getElementById('confOv'),ci=document.getElementById('confInput'),cb=document.getElementById('confYesBtn'),nb=document.getElementById('confNoBtn');
+    const box=ov?.querySelector('.conf-box'),icon=document.getElementById('confIcon'),desc=document.getElementById('confDesc');
+    if(box)box.className=`conf-box ${boxClass||''}`.trim();
     document.getElementById('confTitle').textContent=title;
-    document.getElementById('confDesc').textContent=message;
-    document.getElementById('confIcon').textContent='!';
+    if(desc){if(html)desc.innerHTML=message;else desc.textContent=message;}
+    if(icon){icon.textContent='!';icon.style.display=hideIcon?'none':'flex';}
     if(ci){ci.value='';ci.style.display='none';ci.oninput=null;}
     if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent=confirmText;cb.style.background=danger?'#dc2626':'#2454c5';cb.classList.toggle('neutral',!danger);cb.onclick=function(){closeConf();resolve(true);};}
     if(nb)nb.onclick=function(){closeConf();resolve(false);};
@@ -83,7 +85,7 @@ function openBatchCourtDeleteConfirm(ids){
   if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent='确认处理';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}
   const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;
 }
-function closeConf(){document.getElementById('confOv').classList.remove('open');delId=null;delType=null;batchDeleteCourtIds=[];const ci=document.getElementById('confInput');if(ci){ci.value='';ci.style.display='block';ci.oninput=null;}const cb=document.getElementById('confYesBtn');if(cb){cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;}
+function closeConf(){const ov=document.getElementById('confOv');ov.classList.remove('open');const box=ov?.querySelector('.conf-box');if(box)box.className='conf-box';const icon=document.getElementById('confIcon');if(icon)icon.style.display='flex';delId=null;delType=null;batchDeleteCourtIds=[];const ci=document.getElementById('confInput');if(ci){ci.value='';ci.style.display='block';ci.oninput=null;}const cb=document.getElementById('confYesBtn');if(cb){cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;}
 function resetModalShell(){
   const ov=document.getElementById('overlay');
   const modal=ov.querySelector('.modal');

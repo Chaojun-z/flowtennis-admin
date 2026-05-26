@@ -25,6 +25,12 @@ assert.match(fnBody('saveSchedule'), /buildRepeatScheduleSeeds\(/, 'saving sched
 assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should persist coach late fields');
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
+assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-card/, 'schedule save confirm should render a structured confirmation card');
+assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-row[\s\S]*时间[\s\S]*学员[\s\S]*教练[\s\S]*场地[\s\S]*课程[\s\S]*扣减课包/, 'schedule save confirm should keep all key fields as structured rows');
+assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-charge/, 'schedule save confirm should highlight lesson deduction');
+assert.match(fnBody('saveSchedule'), /html:true[\s\S]*hideIcon:true[\s\S]*boxClass:'schedule-confirm-box'/, 'schedule save confirm should use the compact visual confirm layout');
+assert.match(source, /function appConfirm\([\s\S]*html=false[\s\S]*hideIcon=false[\s\S]*boxClass=''/, 'appConfirm should support structured HTML content for specialized confirmations');
+assert.match(styles, /\.schedule-confirm-box[\s\S]*\.schedule-confirm-charge/, 'schedule save confirm should have dedicated scoped styles');
 assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', '正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
 assert.match(fnBody('saveSchedule'), /resetScheduleSaveButton\(\)/, 'schedule save should restore the save button through the helper');
