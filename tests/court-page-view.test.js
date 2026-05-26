@@ -82,6 +82,7 @@ assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校
 assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
+assert.match(fnBody('renderCourtHistoryItems'), /const meta=\[h\.category,h\.payMethod,recordedText\]/, 'court history rows should show concise category, payment, and recorded time only');
 assert.match(fnBody('openCourtFinanceModal'), /court-finance-summary-grid[\s\S]*当前余额[\s\S]*累计充值[\s\S]*累计消费[\s\S]*累计实收[\s\S]*确认订场收入[\s\S]*本次实收\/现金流入[\s\S]*待确认\/代用户订场[\s\S]*内部占用次数/, 'court finance summary should show 8 readonly fields in one grid');
 assert.doesNotMatch(fnBody('openCourtFinanceModal'), /财务摘要(?:(?!流水录入)[\s\S])*<input[^>]+readonly/, 'court finance summary should not render readonly values as inputs');
 assert.match(pagesCss, /\.modal\.modal-court \.court-finance-summary-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'court finance summary should render four columns per row');

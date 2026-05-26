@@ -656,8 +656,8 @@ function renderCourtHistoryItems(hist){
     const amountCls=type==='充值'?'pos':'neg';
     const sign=type==='充值'?'+':'-';
     const dateText=h.occurredDate||h.date||'—';
-    const recordedText=h.recordedAt||h.createdAt?`录入 ${formatMembershipLedgerTime(h.recordedAt||h.createdAt)}`:'';
-    const meta=[h.revenueBucket,h.payMethod,h.category,h.internalReason,h.note,recordedText].filter(Boolean).join(' · ')||'—';
+    const recordedText=h.recordedAt||h.createdAt?`${formatMembershipLedgerTime(h.recordedAt||h.createdAt)} 导入`:'';
+    const meta=[h.category,h.payMethod,recordedText].filter(Boolean).join(' · ')||'—';
     return `<div class="tms-history-item"><div style="width:110px;">${esc(dateText)}</div><span class="tms-tag ${cls}">${esc(type)}</span><div class="amount ${amountCls}">${sign}¥${fmt(amount)}</div><div class="desc">${esc(meta)}</div></div>`;
   }).join(''):'<div class="empty"><p>暂无记录</p></div>';
 }
