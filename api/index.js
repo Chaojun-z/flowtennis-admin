@@ -2271,8 +2271,9 @@ async function getIndexedActiveEntitlementsForStudents(studentIds=[]){
     parseArr(row.entitlementIds).forEach(id=>{ if(id)entitlementIds.add(id); });
   });
   const indexedRows=(await Promise.all([...entitlementIds].map(id=>getCachedRow(T_ENTITLEMENTS,id).catch(()=>null)))).filter(row=>row&&normalized.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
-  if(!missingStudentIds.length)return indexedRows;
-  const fallbackRows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(row=>missingStudentIds.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
+  const needsFallback=missingStudentIds.length>0||!indexedRows.length;
+  if(!needsFallback)return indexedRows;
+  const fallbackRows=(await getCachedScan(T_ENTITLEMENTS).catch(()=>[])).filter(row=>normalized.includes(String(row.studentId||'').trim())&&isActiveEntitlementForIndex(row));
   const merged=new Map(indexedRows.map(row=>[row.id,row]));
   fallbackRows.forEach(row=>merged.set(row.id,row));
   return [...merged.values()];
