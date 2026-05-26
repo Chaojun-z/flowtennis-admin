@@ -41,7 +41,7 @@ function canonicalCoachName(v){
 }
 function coachName(v){return canonicalCoachName(v)}
 function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status==='active').map(c=>coachName(c.name)).filter(Boolean))];return live.length?live:COACHES_LIST;}
-const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','其他'];
+const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
 const PRODUCT_TYPES=['私教课','体验课','训练营','大师课'];

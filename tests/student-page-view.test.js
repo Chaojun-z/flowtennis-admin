@@ -67,7 +67,7 @@ assert.match(source, /function studentCompletedLessonUnits[\s\S]*const lessonMap
 assert.match(source, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the profile field');
 assert.match(source, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
 assert.match(source, /未分配/, 'empty primary coach should display 未分配');
-assert.match(source, /const SOURCES=\['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','其他'\]/, 'student source options should keep the unified ops order');
+assert.match(source, /const SOURCES=\['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'\]/, 'student source options should keep the unified ops order');
 assert.match(source, /function renderCourtCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
 assert.match(source, /function renderCourtEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
