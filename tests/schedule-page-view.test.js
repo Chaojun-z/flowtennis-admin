@@ -72,6 +72,9 @@ assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal 
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
 assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*扣减课包[\s\S]*课程类型[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*消课节数[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
+assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','训练营','大师课','小班课'\]/, 'all course type dropdowns should share PRODUCT_TYPES including small group lessons');
+assert.match(fnBody('syncScheduleFilterOptions'), /PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule course type filter should use the shared course type source');
+assert.match(fnBody('openScheduleModal'), /const courseTypeOptions=PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule modal course type dropdown should use the shared course type source');
 assert.match(fnBody('openScheduleModal'), /设置迟到/, 'schedule modal should expose late settings beside coach');
 assert.match(fnBody('openScheduleModal'), /schedule-late-row[\s\S]*full-width[\s\S]*\$\{lateSettings\}/, 'late settings should expand as a full-width row under the lesson module');
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-late-field">\$\{lateSettings\}/, 'late settings should not expand inside the coach row field');

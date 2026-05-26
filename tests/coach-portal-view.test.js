@@ -374,8 +374,20 @@ assert.doesNotMatch(
 
 assert.match(
   `${fnBody('renderMyClasses')}\n${fnBody('openFeedbackModal')}`,
-  /私教课|体验课|训练营|大师课/,
+  /私教课|体验课|训练营|大师课|小班课/,
   'coach portal should render the fixed course type labels'
+);
+
+assert.match(
+  source,
+  /function coachPortalCourseTypeClass\([\s\S]*小班课[\s\S]*sage/,
+  'coach portal should use one helper to style small group course types'
+);
+
+assert.match(
+  fnBody('myScheduleBlockTitle'),
+  /小班课/,
+  'coach schedule title should treat small group lessons as class lessons'
 );
 
 console.log('coach portal view tests passed');

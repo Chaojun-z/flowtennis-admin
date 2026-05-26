@@ -839,6 +839,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .today-card.type-trial{background:#FFF3E8;border-color:#F2CAA2}
 .today-card.type-camp{background:#EDF8EE;border-color:#C2DEC6}
 .today-card.type-master{background:#F6ECE4;border-color:#D7BEAD}
+.today-card.type-small{background:#EEF8F4;border-color:#A8D3C6}
 .today-card.is-live{box-shadow:0 14px 34px rgba(76,125,224,.16)}
 .today-card.is-upcoming{box-shadow:0 14px 34px rgba(215,122,45,.16)}
 .today-card.is-pending{box-shadow:0 14px 34px rgba(191,84,44,.14)}
@@ -980,6 +981,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-mobile-event.type-trial{background:#FFF2E2;border-color:#E7B57C;color:#9A5622}
 .coach-mobile-event.type-camp{background:#EAF7EA;border-color:#B9D8BC;color:#2E6E37}
 .coach-mobile-event.type-master{background:#F5ECE6;border-color:#DAB8A1;color:#73452D}
+.coach-mobile-event.type-small{background:#EEF3F0;border-color:#B9D8BC;color:#3A4B40}
 .coach-mobile-event.type-partner{background:#E6F7F6;border-color:#A5E1DE;color:#0D6E66}
 .coach-mobile-event-time{font-size:12px;font-weight:800;line-height:1.15}
 .coach-mobile-event-title{font-size:13px;font-weight:800;line-height:1.25;margin-top:4px}
@@ -1000,6 +1002,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-legend-dot.trial{background:#D77A2D}
 .coach-ops-legend-dot.camp{background:#5E9F61}
 .coach-ops-legend-dot.master{background:#8E5A3C}
+.coach-ops-legend-dot.small{background:#3A8B74}
 .coach-ops-legend-dot.partner{background:#14B8A6}
 .coach-ops-toolbar .tms-dropdown-display{height:34px;min-width:110px;border-radius:6px;background:#fff;color:#2F241E;font-size:13px;font-weight:400;box-shadow:0 2px 8px rgba(60,20,0,0.04);border:1px solid #E7DBCE}
 .coach-ops-toolbar .tms-dropdown-display:hover{background:#F8F3EE;border-color:#D8C8B8}
@@ -1043,6 +1046,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-block.type-trial{background:#FFF1E5;border-left-color:#D77A2D}
 .coach-ops-block.type-camp{background:#ECF8EE;border-left-color:#5E9F61}
 .coach-ops-block.type-master{background:#F6ECE4;border-left-color:#8E5A3C}
+.coach-ops-block.type-small{background:#EEF8F4;border-left-color:#3A8B74}
 .coach-ops-time{font-weight:800;color:var(--amber-base);margin-bottom:2px;font-size:9px}
 .coach-ops-student{font-size:9px;font-weight:600;color:#2F241E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .coach-ops-location{font-size:9px;color:#6E6259;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1067,6 +1071,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .my-schedule-card.type-trial{border-left-color:#D77A2D}
 .my-schedule-card.type-camp{border-left-color:#5E9F61}
 .my-schedule-card.type-master{border-left-color:#8E5A3C}
+.my-schedule-card.type-small{border-left-color:#3A8B74}
 .my-schedule-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .my-schedule-time{font-size:18px;font-weight:800;color:#2F241E}
 .my-schedule-status{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 10px;border-radius:999px;background:#F1EAE2;color:#8C7B6E;font-size:11px;font-weight:700;white-space:nowrap}
@@ -1101,6 +1106,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .my-schedule-week .wg-block.type-trial{background:#FFF2E2;border-color:#E7B57C;color:#9A5622}
 .my-schedule-week .wg-block.type-camp{background:#EAF7EA;border-color:#B9D8BC;color:#2E6E37}
 .my-schedule-week .wg-block.type-master{background:#F5ECE6;border-color:#DAB8A1;color:#73452D}
+.my-schedule-week .wg-block.type-small{background:#EEF8F4;border-color:#A8D3C6;color:#2F6657}
 .my-schedule-week .wg-block.is-ended{background:#ECE8E3;border-color:#CFC7BF;color:#6B625A}
 .my-schedule-week .wg-block.is-ended .wgb-info{color:inherit;opacity:.9}
 .my-schedule-week .wgb-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}

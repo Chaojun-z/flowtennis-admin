@@ -80,6 +80,12 @@ assert.match(
   'schedule views should expose 大师课 as a fixed course type'
 );
 
+assert.match(
+  source,
+  /小班课/,
+  'schedule views should expose 小班课 from the shared course type source'
+);
+
 assert.doesNotMatch(
   source,
   /仅正式课/,
@@ -162,6 +168,18 @@ assert.match(
   html,
   /function coachOpsCourseTypeTagClass\(/,
   'coach ops should expose a shared course type color helper'
+);
+
+assert.match(
+  html,
+  /coachOpsCourseTypeLegendHtml\(\)[\s\S]*PRODUCT_TYPES\.map/,
+  'coach ops legend should render from the shared course type source'
+);
+
+assert.match(
+  html,
+  /normalized==='小班课'[\s\S]*type-small/,
+  'coach ops should color small group lessons as their own course type'
 );
 
 assert.doesNotMatch(

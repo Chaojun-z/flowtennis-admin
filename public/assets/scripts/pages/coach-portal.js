@@ -60,7 +60,7 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
     const state=workbenchScheduleState(s,sorted[i-1],now);
     if(!state)return '';
     const courseType=scheduleCourseType(s);
-    const typeClass=courseType==='训练营'?'rust':courseType==='体验课'?'caramel':courseType==='班课'?'sage':'stone';
+    const typeClass=coachPortalCourseTypeClass(courseType);
     const stateClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
     const badgeClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
     const alertText=state.code==='travel'?'⚠️ 跨校区，建议立即出发换场':state.code==='live'?'课程正在进行中':state.code==='pending'?'已下课，待填写反馈':(s.notes||'');
@@ -159,7 +159,7 @@ function renderPostClassFeedback(){
       const state=workbenchScheduleState(s,dayRows[idx-1],now);
       if(!state)return '';
       const courseType=scheduleCourseType(s);
-      const typeClass=courseType==='训练营'?'rust':courseType==='体验课'?'caramel':courseType==='班课'?'sage':'stone';
+      const typeClass=coachPortalCourseTypeClass(courseType);
       const stateClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
       const badgeClass=stateClass;
       const isAlertWarn=state.code==='travel'||state.code==='live'||state.code==='pending';
@@ -189,6 +189,13 @@ function myScheduleStatusClass(schedule){
   const ended=effectiveScheduleStatus(schedule)==='已结束';
   return ended&&!hasScheduleFeedback(schedule)?'pending':'';
 }
+function coachPortalCourseTypeClass(type){
+  const normalized=normalizeCourseType(type);
+  if(normalized==='训练营')return 'rust';
+  if(normalized==='体验课')return 'caramel';
+  if(normalized==='小班课')return 'sage';
+  return 'stone';
+}
 function sortMyScheduleRows(rows=[]){
   return rows.slice().sort((a,b)=>{
     const aPending=effectiveScheduleStatus(a)==='已结束'&&!hasScheduleFeedback(a);
@@ -203,7 +210,7 @@ function myScheduleTravelGap(prev,current){
 }
 function myScheduleBlockTitle(schedule){
   const type=scheduleCourseType(schedule);
-  if(type==='班课'||type==='训练营'||type==='大师课')return scheduleClassName(schedule);
+  if(type==='小班课'||type==='训练营'||type==='大师课')return scheduleClassName(schedule);
   return scheduleStudentSummary(schedule);
 }
 function myScheduleTypeText(schedule){

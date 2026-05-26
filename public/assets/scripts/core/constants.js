@@ -44,7 +44,7 @@ function activeCoachNames(){const live=[...new Set(coaches.filter(c=>c.status===
 const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
-const PRODUCT_TYPES=['私教课','体验课','训练营','大师课'];
+const PRODUCT_TYPES=['私教课','体验课','训练营','大师课','小班课'];
 const SCH_STATUSES=['已排课','已结束','已取消'];
 const SCH_CANCEL_REASONS=['学员请假','教练请假','天气 / 场地','临时调整','体验课未到','其他'];
 const SCH_NOTIFY_STATUSES=['未通知','已通知学员','已通知教练','都已通知'];

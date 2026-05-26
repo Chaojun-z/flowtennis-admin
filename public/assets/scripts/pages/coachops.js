@@ -13,7 +13,7 @@ function setCoachOpsPanel(panel){
   if(scheduleTab)scheduleTab.classList.toggle('active',coachOpsPanel==='schedule');
   if(workloadTab)workloadTab.classList.toggle('active',coachOpsPanel==='workload');
   if(scheduleControls)scheduleControls.style.display='flex';
-  if(legend)legend.style.display='';
+  if(legend){legend.style.display='';legend.innerHTML=coachOpsCourseTypeLegendHtml();}
   if(quickBtn)quickBtn.style.display=coachOpsPanel==='schedule'?'':'none';
 }
 function setFinancePanel(panel){
@@ -172,8 +172,17 @@ function coachOpsCourseTypeTagClass(type){
   if(normalized==='体验课')return 'type-trial';
   if(normalized==='训练营')return 'type-camp';
   if(normalized==='大师课')return 'type-master';
+  if(normalized==='小班课')return 'type-small';
   if(normalized==='陪打')return 'type-partner';
   return 'type-private';
+}
+function coachOpsLegendDotClass(type){
+  return coachOpsCourseTypeTagClass(type).replace(/^type-/,'');
+}
+function coachOpsCourseTypeLegendHtml(){
+  return PRODUCT_TYPES.map(type=>`<span class="coach-ops-legend-item"><i class="coach-ops-legend-dot ${coachOpsLegendDotClass(type)}"></i>${esc(type)}</span>`)
+    .concat(`<span class="coach-ops-legend-item"><i class="coach-ops-legend-dot partner"></i>陪打</span>`)
+    .join('');
 }
 function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
   const h=Math.min(22,parseInt(startTime.slice(0,2))||9),m=startTime.slice(3,5)||'00';
