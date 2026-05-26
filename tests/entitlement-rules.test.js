@@ -607,6 +607,31 @@ const coachSuffixRecommendation = rules.recommendEntitlements([
 });
 assert.strictEqual(coachSuffixRecommendation.recommended.entitlementId, 'ent-coach-suffix', 'coach name with 教练 suffix should match the same selected coach');
 
+const anyCoachRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-any-coach',
+    packageName: '成人1v1 非黄时间20课时',
+    timeBand: '非黄金时段',
+    ownerCoach: '不固定',
+    allowedCoaches: ['不固定'],
+    coachIds: ['不固定'],
+    coachNames: ['不固定'],
+    remainingLessons: 8
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: '晓哲',
+  coach: '晓哲',
+  campus: 'mabao',
+  startTime: '2026-05-26 10:00',
+  endTime: '2026-05-26 11:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(anyCoachRecommendation.recommended.entitlementId, 'ent-any-coach', '不固定 coach packages should match any selected coach');
+
 assert.strictEqual(
   rules.applyEntitlementLessonDelta({ ...entitlement, usedLessons: 1, remainingLessons: 4 }, -1).remainingLessons,
   3,

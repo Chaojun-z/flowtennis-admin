@@ -1358,13 +1358,13 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const studentIds=parseArr(schedule.studentIds);
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
-  const coachIds=parseArr(entitlement.coachIds);
-  const coachNames=parseArr(entitlement.coachNames);
+  const coachIds=filterFixedCoachValues(entitlement.coachIds);
+  const coachNames=filterFixedCoachValues(entitlement.coachNames);
   const coachRefs=Array.isArray(schedule?.coachRefs)?schedule.coachRefs:[];
   const scheduleCoachRefs=[schedule.coachId,schedule.coach].filter(Boolean);
   if(coachIds.length&&scheduleCoachRefs.length&&!coachIds.some(ref=>scheduleCoachRefs.some(current=>sameCoachName(ref,current,coachRefs))))throw new Error('课包可用教练不匹配');
   if(coachNames.length&&schedule.coach&&!coachNames.some(n=>sameCoachName(n,schedule.coach,coachRefs)))throw new Error('课包可用教练不匹配');
-  const saleCoachNames=[entitlement.ownerCoach,...parseArr(entitlement.allowedCoaches)].filter(Boolean);
+  const saleCoachNames=[entitlement.ownerCoach,...parseArr(entitlement.allowedCoaches)].filter(value=>value&&!isAnyCoachPackageValue(value));
   if(saleCoachNames.length&&schedule.coach&&!saleCoachNames.some(n=>sameCoachName(n,schedule.coach,coachRefs)))throw new Error('课包可上课教练不匹配');
   const campusIds=parseArr(entitlement.campusIds);
   if(campusIds.length&&schedule.campus&&!campusIds.map(normalizeCampusValue).includes(normalizeCampusValue(schedule.campus)))throw new Error('课包可用校区不匹配');
@@ -1375,6 +1375,12 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
+}
+function isAnyCoachPackageValue(value){
+  return ['不固定','不限教练','任意教练','全部教练'].includes(String(value||'').trim());
+}
+function filterFixedCoachValues(values){
+  return parseArr(values).filter(value=>!isAnyCoachPackageValue(value));
 }
 function entitlementMatchesCoach(entitlement,coachName){
   const name=String(coachName||'').trim();

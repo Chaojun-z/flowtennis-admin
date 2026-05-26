@@ -40,6 +40,9 @@ assert.match(fnBody('renderSchedule'), /const isCancelled=status==='已取消'/,
 assert.match(fnBody('renderSchedule'), /!\s*isCancelled\?`<span class="tms-action-link" onclick="openCancelScheduleModal\('\$\{s\.id\}'\)">取消<\/span>`:''/, 'cancelled schedule rows should not keep showing cancel action');
 assert.match(fnBody('renderSchedule'), /isCancelled\|\|scheduleCanDeleteMistake\(s\)/, 'cancelled schedule rows should expose delete action');
 assert.match(fnBody('openScheduleModal'), /scheduleModalCanDelete/, 'schedule modal should reuse delete visibility for cancelled schedules');
+assert.match(source, /function scheduleEntitlementUnavailableReason\(/, 'schedule package picker should translate unavailable package reasons into user-facing copy');
+assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementUnavailableReason\(res\.options\|\|\[\]\)/, 'schedule package picker should show why packages are unavailable');
+assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /hint\.textContent=selected\?[^;]+:'';/, 'schedule package picker should not hide unavailable package reasons behind empty hint text');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
 assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\[[^\]]*'schedule'/, 'schedule page should show the global campus filter tabs');
 assert.match(source, /if\(currentPage==='schedule'\)renderSchedule\(\);/, 'global campus filter should rerender the schedule page');

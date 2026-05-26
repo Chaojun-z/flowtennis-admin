@@ -507,6 +507,18 @@ const schEntitlementCache=new Map();
 function scheduleEntitlementCacheKey(payload){
   return JSON.stringify(payload);
 }
+function scheduleEntitlementUnavailableReason(items=[]){
+  const warnings=(items||[]).flatMap(item=>item.warnings||[]).filter(Boolean);
+  if(!warnings.length)return '没有匹配当前排课条件的课包';
+  if(warnings.some(text=>/剩余课时不足/.test(text)))return '课包剩余节数不够本次扣课，请减少扣课节数或先续费';
+  if(warnings.some(text=>/教练不匹配/.test(text)))return '这个课包不支持当前选择的教练';
+  if(warnings.some(text=>/校区不匹配/.test(text)))return '这个课包不支持当前选择的校区';
+  if(warnings.some(text=>/课程类型不匹配/.test(text)))return '这个课包不支持当前课程类型';
+  if(warnings.some(text=>/日期范围/.test(text)))return '当前上课日期不在课包可用日期内';
+  if(warnings.some(text=>/时间段/.test(text)))return '当前上课时间不在课包可用时间段内';
+  if(warnings.some(text=>/人数不匹配/.test(text)))return '当前上课人数不符合课包限制';
+  return '当前排课条件下没有可扣的课包';
+}
 function applySchEntitlementOptions(res,preferredId=''){
   const sel=document.getElementById('sch_entitlement');
   const hint=document.getElementById('sch_ent_hint');
@@ -522,7 +534,7 @@ function applySchEntitlementOptions(res,preferredId=''){
   }else{
     setScheduleCourseTypeReadonly(false);
   }
-  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补场地费':''}，到期 ${selected.validUntil||'-'}`:'';
+  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补场地费':''}，到期 ${selected.validUntil||'-'}`:scheduleEntitlementUnavailableReason(res.options||[]);
 }
 function scheduleEntitlementCourseType(option){
   if(!option)return '';
