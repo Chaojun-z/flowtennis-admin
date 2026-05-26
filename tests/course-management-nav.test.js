@@ -62,6 +62,7 @@ assert.doesNotMatch(fnBody('openPackageModal'), /有效天数|pkg_validDays/, 'p
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal should allow direct course type selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
+assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal should expose a second-level selector for experience courses');
 assert.match(fnBody('savePackage'), /const audience=document\.getElementById\('pkg_audience'\)\.value[\s\S]*const data=\{[\s\S]*audience,type:audience/, 'package save should persist the selected adult or youth type');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal course type should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_maxStudents'/, 'package modal class size should use the shared custom dropdown');
@@ -82,6 +83,7 @@ assert.match(html, /非黄金时段'[\s\S]*09:00[\s\S]*16:00/, 'non-prime preset
 assert.match(fnBody('savePackage'), /presetWindows\.map[\s\S]*daysOfWeek:preset\.daysOfWeek/, 'package save should persist preset applicable days');
 assert.doesNotMatch(fnBody('savePackage'), /windowRow|secondWindow/, 'package save should not depend on modal-local time window variables');
 assert.doesNotMatch(fnBody('savePackage'), /pkg_validDays/, 'package save should not read hidden valid days field');
+assert.match(fnBody('savePackage'), /experienceType:/, 'package save should persist the selected experience subtype');
 assert.match(fnBody('savePackage'), /validDays:\s*packagePersistedValidDays/, 'package save should preserve valid days without showing it');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_type'[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package course type should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_ownerCoach'[\s\S]{0,160}pointer-events:none/, 'sold package owner coach should stay editable');
@@ -149,6 +151,7 @@ assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter shou
 assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
+assert.match(html, /function packageCoreClassLabel\([\s\S]*体验课[\s\S]*experienceType[\s\S]*私教体验课[\s\S]*小班体验课/, 'shared package label should show both experience-course names');
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');

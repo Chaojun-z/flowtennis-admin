@@ -296,8 +296,16 @@ function setPackageLessonShortcut(value){
 function syncPackageClassSize(){
   const type=document.getElementById('pkg_type')?.value||'私教课';
   const item=document.getElementById('pkg_classSizeItem');
+  const experienceItem=document.getElementById('pkg_experienceTypeItem');
+  const experienceEl=document.getElementById('pkg_experienceType');
   if(item)item.style.display=type==='私教课'?'':'none';
-  if(type!=='私教课')setCourtDropdownValue('pkg_maxStudents','1','1v1');
+  if(experienceItem)experienceItem.style.display=type==='体验课'?'':'none';
+  if(type==='私教课'){
+    setCourtDropdownValue('pkg_maxStudents','1','1v1');
+  }else if(type==='体验课'&&experienceEl){
+    const value=experienceEl.value||'私教体验课';
+    setCourtDropdownValue('pkg_experienceType',value,value);
+  }
 }
 function applyPackageTimeBandPreset(value){
   const rows=packageTimeBandPresetWindows(value||document.getElementById('pkg_timeBand')?.value||'全天');
@@ -317,6 +325,8 @@ function openPackageModal(id,presetProductId=''){
   const audienceOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'}];
+  const experienceTypeOptions=[{value:'私教体验课',label:'私教体验课'},{value:'小班体验课',label:'小班体验课'}];
+  const experienceType=rv(p,'experienceType')||packageExperienceTypeLabel(p)||'私教体验课';
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
   const body=`
@@ -326,6 +336,7 @@ function openPackageModal(id,presetProductId=''){
         <div class="tms-form-item"><label class="tms-form-label">学员类型 *</label>${renderCourtDropdownHtml('pkg_audience','学员类型',audienceOptions,audience,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">课程类型 *</label>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true,'syncPackageClassSize')}</div>
         <div class="tms-form-item" id="pkg_classSizeItem"><label class="tms-form-label">上课人数</label>${renderCourtDropdownHtml('pkg_maxStudents','上课人数',classSizeOptions,String(rv(p,'maxStudents',1)),true)}</div>
+        <div class="tms-form-item" id="pkg_experienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderCourtDropdownHtml('pkg_experienceType','体验课类型',experienceTypeOptions,experienceType,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('pkg_status','状态',[{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],rv(p,'status','active'),true)}</div>
       </div>
     <div class="tms-section-header">规格与价格</div>
@@ -386,7 +397,8 @@ function openPackageModal(id,presetProductId=''){
 async function savePackage(){
   const courseType=document.getElementById('pkg_type').value.trim();
   const audience=document.getElementById('pkg_audience').value;
-  const name=standardPackageLabel({courseType,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,timeBand:document.getElementById('pkg_timeBand').value.trim()||'全天'},document.getElementById('pkg_status').value==='inactive');
+  const experienceType=document.getElementById('pkg_experienceType')?.value.trim()||'';
+  const name=standardPackageLabel({courseType,experienceType,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,timeBand:document.getElementById('pkg_timeBand').value.trim()||'全天'},document.getElementById('pkg_status').value==='inactive');
   const ownerCoach=document.getElementById('pkg_ownerCoach')?.value||'';
   const saleStartDate=document.getElementById('pkg_saleStartDate').value;
   const saleEndDate=document.getElementById('pkg_saleEndDate').value;
@@ -419,6 +431,6 @@ async function savePackage(){
     endTime:idx===0?timeEnd:timeEnd2,
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
-  const data={name,productId:'',productName:'',courseType,audience,type:audience,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
 }

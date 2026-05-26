@@ -124,10 +124,20 @@ function packageAudienceLabelFromText(texts=[]){
 function packageClassSizeLabel(maxStudents=1){
   return `1v${parseInt(maxStudents)||1}`;
 }
+function packageExperienceTypeLabel(p={}){
+  if(normalizeCourseType(p.courseType||p.type||'')!=='体验课')return '';
+  const direct=String(p.experienceType||'').trim();
+  if(direct)return direct;
+  const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
+  if(/小班|1v4/.test(text))return '小班体验课';
+  if(/私教|1v1/.test(text))return '私教体验课';
+  return '私教体验课';
+}
 function packageCoreClassLabel(p={}){
   const courseType=normalizeCourseType(p.courseType||p.type||'');
   const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
   const detectedSize=/1v2/.test(text)?2:/1v3/.test(text)?3:p.maxStudents;
+  if(courseType==='体验课')return packageExperienceTypeLabel(p)||'体验课';
   if(courseType==='私教课')return `${packageClassSizeLabel(detectedSize)}私教课`;
   return courseType||'课包';
 }
