@@ -582,7 +582,7 @@ assert.deepStrictEqual(
     template_id: 'reminder-tpl',
     page: 'pages/detail/detail?scheduleId=due-cross',
     data: {
-      time3: { value: '12:00-13:00' },
+      time3: { value: '2026年4月20日 12:00' },
       thing4: { value: 'shunyi 2号场' },
       const7: { value: '私教课' },
       thing2: { value: '朝珺' },
@@ -718,7 +718,7 @@ assert.deepStrictEqual(
     template_id: 'student-reminder-tpl',
     url: 'https://www.flowtennis.cn/student-reminder-detail?scheduleId=stu-rem-48&studentId=stu-1',
     data: {
-      time3: { value: '5月29日 10:00-11:30' },
+      time3: { value: '2026年5月29日 10:00' },
       thing4: { value: '顺义马坡 室内3号场' },
       const7: { value: '1v1 私教正式课' },
       thing2: { value: '课前48小时提醒' },
@@ -969,6 +969,20 @@ assert.strictEqual(
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
+  }
+
+  {
+    const rows=[
+      { id: 'student-due-delayed', startTime: '2026-05-28 12:30', endTime: '2026-05-28 13:30', campus: 'mabao', venue: '1号场', status: '已排课', studentIds: ['stu-1'] }
+    ];
+    const students=[
+      { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' }
+    ];
+    assert.deepStrictEqual(
+      rules.collectStudentCourseReminderCandidates(rows, students, new Date('2026-05-27T13:20:00+08:00')).map(item=>[item.schedule.id,item.student.id,item.stage]),
+      [['student-due-delayed','stu-1','24h']],
+      'student reminders should tolerate delayed cron runs and still send pending 24h reminders'
+    );
   }
 
   {

@@ -2409,6 +2409,16 @@ function officialAccountScheduleMs(value){
   if(/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw))return dateMs(raw);
   return dateMs(`${raw.replace(' ','T')}+08:00`);
 }
+function formatOfficialAccountTemplateTime(value){
+  const raw=String(value||'').trim();
+  const match=raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})/);
+  if(match)return `${match[1]}年${Number(match[2])}月${Number(match[3])}日 ${String(match[4]).padStart(2,'0')}:${match[5]}`;
+  const ms=officialAccountScheduleMs(raw);
+  if(!Number.isFinite(ms))return raw.slice(0,20);
+  const parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ms));
+  const val=type=>parts.find(part=>part.type===type)?.value||'';
+  return `${val('year')}年${Number(val('month'))}月${Number(val('day'))}日 ${val('hour')}:${val('minute')}`;
+}
 function collectCourseReminderCandidates(rows=[],now=new Date()){
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
   const minMs=nowMs+90*60000;
@@ -2429,15 +2439,12 @@ function collectCourseReminderCandidates(rows=[],now=new Date()){
 }
 function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCampus=false}){
   const scheduleId=encodeURIComponent(String(schedule?.id||''));
-  const startClock=String(schedule?.startTime||'').trim().slice(11,16);
-  const endClock=String(schedule?.endTime||'').trim().slice(11,16);
-  const timeText=startClock&&endClock?`${startClock}-${endClock}`:String(schedule?.startTime||'').trim();
   return {
     touser:openid,
     template_id:templateId,
     page:`pages/detail/detail${scheduleId?`?scheduleId=${scheduleId}`:''}`,
     data:{
-      time3:{value:timeText},
+      time3:{value:formatOfficialAccountTemplateTime(schedule?.startTime)},
       thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
       const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
       thing2:{value:truncateWechatValue(schedule?.coach||'教练')},
@@ -2496,14 +2503,7 @@ function buildStudentOfficialAccountUnboundUpdate(student){
   };
 }
 function formatStudentReminderDateTime(schedule){
-  const start=String(schedule?.startTime||'').trim();
-  const end=String(schedule?.endTime||'').trim();
-  const month=String(parseInt(start.slice(5,7),10)||'');
-  const day=String(parseInt(start.slice(8,10),10)||'');
-  const startClock=start.slice(11,16);
-  const endClock=end.slice(11,16);
-  const dateText=month&&day?`${month}月${day}日`:start.slice(0,10);
-  return `${dateText} ${startClock}${endClock?`-${endClock}`:''}`.trim();
+  return formatOfficialAccountTemplateTime(schedule?.startTime);
 }
 function formatStudentReminderLessonCount(value){
   const num=Number(value);
@@ -2528,8 +2528,8 @@ function studentReminderStageForSchedule(schedule,now){
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
   if(!Number.isFinite(start)||!Number.isFinite(nowMs))return '';
   const diffHours=(start-nowMs)/3600000;
-  if(diffHours>=47.5&&diffHours<=48.5)return '48h';
-  if(diffHours>=23.5&&diffHours<=24.5)return '24h';
+  if(diffHours>24.5&&diffHours<=48.5)return '48h';
+  if(diffHours>0&&diffHours<=24.5)return '24h';
   return '';
 }
 function studentCustomReminderStageForSchedule(schedule,student,now){
@@ -2538,7 +2538,7 @@ function studentCustomReminderStageForSchedule(schedule,student,now){
   if(!Number.isFinite(start)||!Number.isFinite(nowMs))return '';
   const hours=normalizeStudentReminderCustomHours(student?.officialAccountReminderCustomHours);
   const diffHours=(start-nowMs)/3600000;
-  return diffHours>=hours-0.5&&diffHours<=hours+0.5?`custom${hours}h`:'';
+  return diffHours>0&&diffHours<=hours+0.5?`custom${hours}h`:'';
 }
 function collectStudentCourseReminderCandidates(rows=[],students=[],now=new Date()){
   const studentById=new Map((students||[]).map(student=>[String(student?.id||''),student]));
@@ -8608,6 +8608,7 @@ module.exports._test={
   normalizeStudentReminderCustomHours,
   findStudentReminderBindTarget,
   collectStudentCourseReminderCandidates,
+  formatOfficialAccountTemplateTime,
   studentReminderStageText,
   buildStudentCourseReminderMessage,
   collectCoachDailyDigestCandidates,
