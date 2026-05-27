@@ -81,7 +81,7 @@ const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 const MATCH_PREPAY_WINDOW_HOURS = 2;
 const LEGACY_STATIC_COACH_REFS=[{id:'legacy-coach-tianhao',name:'天昊'}];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
 const CAMPUS_DISPLAY_NAMES={mabao:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
 const CAMPUS_ALIASES={'顺义马坡':'mabao','马坡':'mabao','mabao':'mabao','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
 function normalizeCampusValue(value){const raw=String(value||'').trim();return CAMPUS_ALIASES[raw]||raw;}
@@ -90,7 +90,7 @@ const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -130,7 +130,8 @@ const HOT_SCAN_TABLES=new Map([
   [T_PRICE_PLANS,{ttlMs:60000}],
   [T_LEADS,{ttlMs:60000}],
   [T_LEAD_FOLLOWUPS,{ttlMs:60000}],
-  [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}]
+  [T_LEAD_IMPORT_BATCHES,{ttlMs:60000}],
+  [T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,{ttlMs:60000}]
 ]);
 const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_COURTS,
@@ -2029,7 +2030,7 @@ async function readRequestText(req){
   }
   return '';
 }
-async function processOfficialAccountCallbackRequest({query,rawBody,loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putUser=(id,user)=>put(T_USERS,id,user),now=new Date(),token=WECHAT_OFFICIAL_ACCOUNT_TOKEN,appId=WECHAT_OFFICIAL_ACCOUNT_APPID,encodingAesKey=WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY}={}){
+async function processOfficialAccountCallbackRequest({query,rawBody,loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadStudents=()=>getCachedScan(T_STUDENTS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadQueryData=async()=>({users:await scan(T_USERS).catch(()=>[]),students:await scan(T_STUDENTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),rows:await scan(T_SCHEDULE).catch(()=>[])}),putUser=(id,user)=>put(T_USERS,id,user),loadQuerySession=(openid)=>loadOfficialAccountQuerySession(openid),putQuerySession=(row)=>saveOfficialAccountQuerySession(row),deleteQuerySession=(openid)=>deleteOfficialAccountQuerySession(openid),now=new Date(),token=WECHAT_OFFICIAL_ACCOUNT_TOKEN,appId=WECHAT_OFFICIAL_ACCOUNT_APPID,encodingAesKey=WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY}={}){
   const bodyText=String(rawBody||'').trim();
   const outerMessage=parseWechatOfficialAccountXml(bodyText);
   const timestamp=String(query?.get('timestamp')||'');
@@ -2063,6 +2064,43 @@ async function processOfficialAccountCallbackRequest({query,rawBody,loadUsers=()
       replyText=bindingResult.success?bindingResult.message:`绑定失败：${bindingResult.error}`;
     }else if(/^#?绑定/.test(content)){
       replyText='请发送 #绑定 手机号，例如 #绑定 13800138000。';
+    }else{
+      const queryChoice=normalizeOfficialAccountQueryChoice(content);
+      const isQueryCommand=content==='查询排课';
+      const querySession=await loadQuerySession(fromOpenId).catch(()=>null);
+      if(querySession&&queryChoice){
+        const {users,students,coaches,rows}=await loadQueryData();
+        const coachUser=findOfficialAccountCoachByOpenId(users,fromOpenId);
+        const student=findOfficialAccountStudentByOpenId(students,fromOpenId);
+        const coachRefs=buildCoachRefs({coaches,users});
+        replyText=buildOfficialAccountScheduleQueryReply({
+          role:queryChoice,
+          coachUser,
+          student,
+          schedules:rows,
+          students,
+          coachRefs,
+          now
+        });
+        await deleteQuerySession(fromOpenId);
+      }else if(querySession){
+        replyText='你同时绑定了教练和学员身份，请回复“教练”或“学员”继续查询。';
+      }else if(isQueryCommand){
+        const {users,students,coaches,rows}=await loadQueryData();
+        const coachUser=findOfficialAccountCoachByOpenId(users,fromOpenId);
+        const student=findOfficialAccountStudentByOpenId(students,fromOpenId);
+        const coachRefs=buildCoachRefs({coaches,users});
+        if(coachUser&&student){
+          await putQuerySession(buildOfficialAccountQuerySessionRow(fromOpenId,now));
+          replyText='你同时绑定了教练和学员身份，请回复“教练”或“学员”继续查询。';
+        }else if(coachUser){
+          replyText=buildOfficialAccountScheduleQueryReply({role:'coach',coachUser,schedules:rows,students,coachRefs,now});
+        }else if(student){
+          replyText=buildOfficialAccountScheduleQueryReply({role:'student',student,schedules:rows,students,coachRefs,now});
+        }else{
+          replyText='请先绑定手机号后再查询排课。';
+        }
+      }
     }
   }else if(msgType==='event'&&String(message.Event||'').toLowerCase()==='subscribe'){
     replyText='请发送 #绑定 手机号 完成绑定，例如 #绑定 13800138000。';
@@ -2155,6 +2193,133 @@ function findOfficialAccountScheduleRecipient(schedule,users=[]){
     if(coachId&&String(u.coachId||'').trim()===coachId)return true;
     return coachName&&String(u.coachName||u.name||'').trim()===coachName;
   })||null;
+}
+const OFFICIAL_ACCOUNT_QUERY_SESSION_TTL_MS=10*60*1000;
+function normalizeOfficialAccountQueryChoice(text){
+  const raw=String(text||'').trim();
+  if(raw==='教练')return 'coach';
+  if(raw==='学员')return 'student';
+  return '';
+}
+function buildOfficialAccountQuerySessionRow(openid,now=new Date()){
+  const id=String(openid||'').trim();
+  const nowText=now instanceof Date?now.toISOString():String(now||'');
+  return {
+    id,
+    openid:id,
+    status:'awaiting_role_choice',
+    createdAt:nowText,
+    updatedAt:nowText,
+    expiresAt:new Date((now instanceof Date?now.getTime():Date.now())+OFFICIAL_ACCOUNT_QUERY_SESSION_TTL_MS).toISOString()
+  };
+}
+async function loadOfficialAccountQuerySession(openid,{loadRow=(id)=>getCachedRow(T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,id).catch(()=>null),deleteRow=(id)=>del(T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,id).catch(()=>null)}={}){
+  const id=String(openid||'').trim();
+  if(!id)return null;
+  const row=await loadRow(id).catch(()=>null);
+  if(!row)return null;
+  const expiresAt=Date.parse(row.expiresAt||'');
+  if(Number.isFinite(expiresAt)&&expiresAt<=Date.now()){
+    await deleteRow(id).catch(()=>null);
+    return null;
+  }
+  return row;
+}
+async function saveOfficialAccountQuerySession(row,{putRow=(id,value)=>put(T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,id,value)}={}){
+  const id=String(row?.id||'').trim();
+  if(!id)return null;
+  try{
+    await putRow(id,row);
+  }catch(err){
+    if(!isTableMissingError(err))throw err;
+    await mkTable(T_OFFICIAL_ACCOUNT_QUERY_SESSIONS);
+    await putRow(id,row);
+  }
+  return row;
+}
+async function deleteOfficialAccountQuerySession(openid,{deleteRow=(id)=>del(T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,id).catch(()=>null)}={}){
+  const id=String(openid||'').trim();
+  if(!id)return;
+  await deleteRow(id).catch(()=>null);
+}
+function findOfficialAccountCoachByOpenId(users=[],openid=''){
+  const key=String(openid||'').trim();
+  if(!key)return null;
+  return (users||[]).find(u=>String(u?.officialAccountOpenId||'').trim()===key&&String(u?.role||'')==='editor')||null;
+}
+function findOfficialAccountStudentByOpenId(students=[],openid=''){
+  const key=String(openid||'').trim();
+  if(!key)return null;
+  return (students||[]).find(student=>String(student?.officialAccountOpenId||'').trim()===key)||null;
+}
+function formatOfficialAccountQueryDateParts(ms){
+  const parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(ms));
+  const val=type=>parts.find(part=>part.type===type)?.value||'';
+  return {month:val('month'),day:val('day'),hour:val('hour'),minute:val('minute')};
+}
+function formatOfficialAccountQueryScheduleTime(schedule){
+  const start=officialAccountScheduleMs(schedule?.startTime);
+  const rawEnd=String(schedule?.endTime||'').trim();
+  const end=rawEnd?officialAccountScheduleMs(rawEnd):NaN;
+  if(!Number.isFinite(start))return String(schedule?.startTime||'').trim();
+  const s=formatOfficialAccountQueryDateParts(start);
+  if(Number.isFinite(end)){
+    const e=formatOfficialAccountQueryDateParts(end);
+    return `${s.month}月${s.day}日 ${s.hour}:${s.minute}-${e.hour}:${e.minute}`;
+  }
+  return `${s.month}月${s.day}日 ${s.hour}:${s.minute}`;
+}
+function scheduleMatchesCoachForOfficialAccount(schedule,user,coachRefs=[]){
+  const coachId=String(user?.coachId||user?.id||user?.username||'').trim();
+  const coachName=String(user?.coachName||user?.name||'').trim();
+  const rowCoachId=String(schedule?.coachId||'').trim();
+  const rowCoachName=String(schedule?.coach||schedule?.coachName||'').trim();
+  if(coachId&&rowCoachId&&sameCoachName(rowCoachId,coachId,coachRefs))return true;
+  if(coachId&&rowCoachName&&sameCoachName(rowCoachName,coachId,coachRefs))return true;
+  return !!(coachName&&rowCoachName&&sameCoachName(rowCoachName,coachName,coachRefs));
+}
+function scheduleMatchesStudentForOfficialAccount(schedule,student){
+  const studentId=String(student?.id||'').trim();
+  if(!studentId)return false;
+  const scheduleStudentIds=parseArr(schedule?.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+  if(scheduleStudentIds.includes(studentId))return true;
+  if(String(schedule?.studentId||'').trim()===studentId)return true;
+  return !scheduleStudentIds.length&&!String(schedule?.studentId||'').trim()&&String(schedule?.studentName||'').trim()===String(student?.name||'').trim();
+}
+function formatOfficialAccountQueryStudentNames(schedule,studentsById){
+  const ids=parseArr(schedule?.studentIds).map(id=>String(id||'').trim()).filter(Boolean);
+  const names=ids.map(id=>String(studentsById.get(id)?.name||'').trim()).filter(Boolean);
+  const unique=[...new Set(names)];
+  if(unique.length)return unique.join('、');
+  return String(schedule?.studentName||'').trim()||'学员';
+}
+function formatOfficialAccountQueryCoachName(schedule){
+  return String(schedule?.coach||schedule?.coachName||schedule?.primaryCoach||schedule?.coachId||'').trim()||'教练';
+}
+function buildOfficialAccountScheduleQueryReply({role,coachUser,student,schedules=[],students=[],coachRefs=[],now=new Date(),limit=5}={}){
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  const studentsById=new Map((students||[]).map(item=>[String(item?.id||'').trim(),item]));
+  const futureRows=(schedules||[])
+    .filter(schedule=>String(effectiveScheduleStatus(schedule,now)||'')==='已排课'&&Number.isFinite(officialAccountScheduleMs(schedule.startTime))&&officialAccountScheduleMs(schedule.startTime)>=nowMs)
+    .filter(schedule=>role==='coach'
+      ?scheduleMatchesCoachForOfficialAccount(schedule,coachUser,coachRefs)
+      :scheduleMatchesStudentForOfficialAccount(schedule,student))
+    .sort((a,b)=>officialAccountScheduleMs(a.startTime)-officialAccountScheduleMs(b.startTime));
+  const roleLabel=role==='coach'?'教练':'学员';
+  const name=role==='coach'
+    ?String(coachUser?.coachName||coachUser?.name||coachUser?.coachId||'教练').trim()||'教练'
+    :String(student?.name||student?.studentName||'学员').trim()||'学员';
+  const total=futureRows.length;
+  const shownRows=futureRows.slice(0,limit);
+  const body=shownRows.length?shownRows.map((schedule,index)=>{
+    const timeText=formatOfficialAccountQueryScheduleTime(schedule);
+    const courseText=String(schedule?.courseType||'课程').trim()||'课程';
+    const campusText=[displayCampusName(schedule?.campus),schedule?.venue||schedule?.externalVenueName||schedule?.externalCourtName].filter(Boolean).join(' ')||'待确认';
+    const partnerText=role==='coach'?formatOfficialAccountQueryStudentNames(schedule,studentsById):formatOfficialAccountQueryCoachName(schedule);
+    return `${index+1}. ${timeText}\n   ${role==='coach'?'学员':'教练'}：${partnerText}\n   课程：${courseText}\n   场地：${campusText}`;
+  }).join('\n\n'):'暂无未来排课';
+  const moreText=total>limit?`\n\n还有 ${total-limit} 节未显示`:'';
+  return `姓名：${name}\n身份：${roleLabel}\n未来共有 ${total} 节\n\n${body}${moreText}`;
 }
 async function putWechatUserIndex(openid,user){
   const key=String(openid||'').trim();
@@ -8596,6 +8761,17 @@ module.exports._test={
   findWechatScheduleRecipient,
   findWechatUserByOpenId,
   findOfficialAccountScheduleRecipient,
+  normalizeOfficialAccountQueryChoice,
+  buildOfficialAccountQuerySessionRow,
+  loadOfficialAccountQuerySession,
+  saveOfficialAccountQuerySession,
+  deleteOfficialAccountQuerySession,
+  findOfficialAccountCoachByOpenId,
+  findOfficialAccountStudentByOpenId,
+  formatOfficialAccountQueryScheduleTime,
+  scheduleMatchesCoachForOfficialAccount,
+  scheduleMatchesStudentForOfficialAccount,
+  buildOfficialAccountScheduleQueryReply,
   buildScheduleSubscribeMessage,
   buildScheduleNotificationUpdate,
   collectCourseReminderCandidates,
