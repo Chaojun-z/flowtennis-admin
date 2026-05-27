@@ -1071,7 +1071,16 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .coach-ops-daycell.has-course strong{color:#0f766e}
 .coach-ops-daycell:hover{border-color:rgba(180,83,9,.35);background:rgba(254,243,199,.28)}
 .coach-ops-daycell.has-course:hover{background:rgba(20,184,166,.24);border-color:rgba(13,148,136,.48)}
-.coach-ops-daycell strong{display:block;color:var(--th);margin-bottom:3px}
+.coach-ops-daycell strong{display:block;color:var(--th);margin-bottom:0}
+.coach-ops-daycell-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.coach-ops-daycell-count{font-weight:700;color:#0f766e;white-space:nowrap}
+.coach-ops-daycell-list{line-height:1.55;cursor:pointer}
+.coach-ops-daycell-list div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coach-ops-daycell-empty{line-height:1.55}
+.coach-ops-day-modal-list{display:flex;flex-direction:column;gap:8px}
+.coach-ops-day-modal-item{width:100%;border:1px solid #E9DED2;border-radius:8px;background:#FFFCF8;padding:10px 12px;text-align:left;cursor:pointer}
+.coach-ops-day-modal-item span{display:block;font-size:14px;font-weight:700;color:var(--th)}
+.coach-ops-day-modal-item small{display:block;margin-top:4px;font-size:12px;color:var(--ts)}
 .risk-text{color:#b45309;font-size:11px;margin-top:4px;font-weight:700}
 .my-schedule-primary{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.95fr);gap:14px;margin-bottom:16px}
 .my-schedule-panel{background:#FCFAF7;border:1px solid #E9DED2;border-radius:18px;box-shadow:0 10px 30px rgba(60,20,0,.05);padding:16px 18px}

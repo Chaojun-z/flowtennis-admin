@@ -8,14 +8,12 @@ function setCoachOpsPanel(panel){
   const workloadTab=document.getElementById('coachOpsTabWorkload');
   const scheduleControls=document.getElementById('coachOpsScheduleControls');
   const legend=document.getElementById('coachOpsLegend');
-  const quickBtn=document.getElementById('coachOpsQuickCreateBtn');
   if(schedulePanel)schedulePanel.style.display=coachOpsPanel==='schedule'?'':'none';
   if(workloadPanel)workloadPanel.style.display=coachOpsPanel==='workload'?'':'none';
   if(scheduleTab)scheduleTab.classList.toggle('active',coachOpsPanel==='schedule');
   if(workloadTab)workloadTab.classList.toggle('active',coachOpsPanel==='workload');
   if(scheduleControls)scheduleControls.style.display='flex';
   if(legend){legend.style.display='';legend.innerHTML=coachOpsCourseTypeLegendHtml();}
-  if(quickBtn)quickBtn.style.display=coachOpsPanel==='schedule'?'':'none';
 }
 function setFinancePanel(panel){
   financePanel=['ledger','revenue','recognized','settlement'].includes(panel)?panel:'ledger';
@@ -190,6 +188,20 @@ function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
   const endH=Math.min(23,h+1);
   const co=coaches.find(c=>coachName(c.name)===coachName(coach));
   openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),campus:co?.campus||'',venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
+}
+function coachOpsScheduleItemText(s){
+  const start=String(s.startTime||'').slice(11,16);
+  const end=s.endTime?String(s.endTime).slice(11,16):'';
+  return `${start}${end?`-${end}`:''} ${scheduleStudentSummary(s)||classes.find(c=>c.id===s.classId)?.className||'—'}`;
+}
+function openCoachOpsDaySchedules(coach,date){
+  const rows=billableSchedules()
+    .filter(s=>coachName(s.coach)===coachName(coach)&&String(s.startTime||'').slice(0,10)===date)
+    .sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+  const body=rows.length
+    ?`<div class="coach-ops-day-modal-list">${rows.map(s=>`<button type="button" class="coach-ops-day-modal-item" onclick="openScheduleDetail('${s.id}')"><span>${esc(coachOpsScheduleItemText(s))}</span><small>${esc(scheduleCourseTypeLabel(s))} · ${esc(scheduleLocationText(s))}</small></button>`).join('')}</div>`
+    :'<div class="empty"><p>当天暂无排课</p></div>';
+  setCourtModalFrame('当天排课',body,'<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>','modal-tight');
 }
 function openCoachOpsLineCreate(e,coach,date){
   if(e.target.closest('.coach-ops-block'))return;
@@ -370,7 +382,9 @@ function renderCoachOps(){
     const cells=days.map(d=>{
       const ds=dateKey(d);
       const dayRows=r.rangeRows.filter(s=>s.startTime.slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
-      return `<div class="coach-ops-daycell ${dayRows.length?'has-course':''}" onclick="openCoachOpsCreateSchedule(${jsArg(r.name)},'${ds}')"><strong>${d.getMonth()+1}/${d.getDate()}</strong>${dayRows.length?`${dayRows.length}节<br>${dayRows.slice(0,2).map(s=>s.startTime.slice(11,16)+' '+(s.studentName||'')).join('<br>')}`:'无课'}</div>`;
+      const lessonCount=lessonUnitsText(sumScheduleLessonUnits(dayRows));
+      const list=dayRows.length?`<div class="coach-ops-daycell-list" onclick="event.stopPropagation();openCoachOpsDaySchedules(${jsArg(r.name)},'${ds}')">${dayRows.slice(0,2).map(s=>`<div>${esc(coachOpsScheduleItemText(s))}</div>`).join('')}</div>`:'<div class="coach-ops-daycell-empty">无课</div>';
+      return `<div class="coach-ops-daycell ${dayRows.length?'has-course':''}" onclick="openCoachOpsCreateSchedule(${jsArg(r.name)},'${ds}')"><div class="coach-ops-daycell-head"><strong>${d.getMonth()+1}/${d.getDate()}</strong>${dayRows.length?`<span class="coach-ops-daycell-count">${lessonCount}节</span>`:''}</div>${list}</div>`;
     }).join('');
     return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');

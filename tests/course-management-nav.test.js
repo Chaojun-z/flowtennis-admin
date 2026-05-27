@@ -63,6 +63,7 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
 assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal should expose a second-level selector for experience courses');
+assert.match(fnBody('packageExperienceTypeLabel'), /p=p\|\|\{\}/, 'package experience label should tolerate creating a package without existing row data');
 assert.match(fnBody('openProductModal'), /p_experienceType/, 'course product modal should expose a second-level selector for experience courses');
 assert.match(fnBody('saveProduct'), /experienceType:/, 'course product save should persist the selected experience subtype');
 assert.match(fnBody('savePackage'), /const audience=document\.getElementById\('pkg_audience'\)\.value[\s\S]*const data=\{[\s\S]*audience,type:audience/, 'package save should persist the selected adult or youth type');

@@ -98,10 +98,10 @@ assert.doesNotMatch(
   'schedule modal should no longer expose a separate course nature field'
 );
 
-assert.match(
+assert.doesNotMatch(
   source,
-  /id="coachOpsQuickCreateBtn"/,
-  'coach ops should expose a quick create button in the toolbar'
+  /id="coachOpsQuickCreateBtn"|去排课表排课/,
+  'coach ops should remove the right-side schedule shortcut button'
 );
 
 assert.match(
@@ -120,6 +120,30 @@ assert.match(
   source,
   /coach-ops-legend/,
   'coach ops toolbar should render a course type legend'
+);
+
+assert.match(
+  source,
+  /function coachOpsScheduleItemText\([\s\S]*slice\(11,16\)[\s\S]*endTime[\s\S]*scheduleStudentSummary/,
+  'coach ops week and month cells should show full lesson time ranges'
+);
+
+assert.match(
+  source,
+  /coach-ops-daycell-head[\s\S]*coach-ops-daycell-count/,
+  'coach ops week and month cells should keep date left and lesson count right on one row'
+);
+
+assert.match(
+  source,
+  /function openCoachOpsDaySchedules\([\s\S]*setCourtModalFrame\('当天排课'/,
+  'coach ops populated cells should open a full daily schedule list'
+);
+
+assert.match(
+  source,
+  /coach-ops-daycell-list[\s\S]*onclick="event\.stopPropagation\(\);openCoachOpsDaySchedules/,
+  'clicking course text should show all schedules while blank cell space still creates a schedule'
 );
 
 assert.doesNotMatch(
@@ -158,10 +182,10 @@ assert.doesNotMatch(
   'coach ops toolbar should not render as a filled white block background'
 );
 
-assert.match(
+assert.doesNotMatch(
   source,
   /class="tms-btn tms-btn-primary" id="coachOpsQuickCreateBtn"/,
-  'coach ops quick create should use the shared primary button style'
+  'coach ops should not keep the removed quick create button style'
 );
 
 assert.match(

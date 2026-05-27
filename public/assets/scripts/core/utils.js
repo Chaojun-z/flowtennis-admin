@@ -141,6 +141,7 @@ function packageClassSizeLabel(maxStudents=1){
   return `1v${parseInt(maxStudents)||1}`;
 }
 function packageExperienceTypeLabel(p={}){
+  p=p||{};
   if(normalizeCourseType(p.courseType||p.type||'')!=='体验课')return '';
   const direct=normalizeExperienceType(p.experienceType,'');
   if(direct)return direct;
