@@ -13,6 +13,13 @@ assert.ok(rules.findWechatScheduleRecipient, 'api._test should expose schedule r
 assert.ok(rules.buildScheduleSubscribeMessage, 'api._test should expose schedule subscribe message builder');
 assert.ok(rules.collectCourseReminderCandidates, 'api._test should expose course reminder candidate helper');
 assert.ok(rules.buildCourseReminderSubscribeMessage, 'api._test should expose course reminder message helper');
+assert.ok(rules.buildStudentReminderBindToken, 'api._test should expose student reminder bind token helper');
+assert.ok(rules.buildStudentReminderLinkUpdate, 'api._test should expose student reminder link update helper');
+assert.ok(rules.buildStudentOfficialAccountBoundUpdate, 'api._test should expose student official account bind helper');
+assert.ok(rules.buildStudentOfficialAccountUnboundUpdate, 'api._test should expose student official account unbind helper');
+assert.ok(rules.normalizeStudentReminderMode, 'api._test should expose student reminder mode normalizer');
+assert.ok(rules.collectStudentCourseReminderCandidates, 'api._test should expose student course reminder collector');
+assert.ok(rules.buildStudentCourseReminderMessage, 'api._test should expose student course reminder message helper');
 assert.ok(rules.buildOfficialAccountBoundUser, 'api._test should expose official account bind helper');
 assert.ok(rules.buildOfficialAccountUnboundUser, 'api._test should expose official account unbind helper');
 assert.ok(rules.findOfficialAccountScheduleRecipient, 'api._test should expose official account recipient finder');
@@ -594,6 +601,108 @@ const digestCandidates = rules.collectCoachDailyDigestCandidates(
   new Date('2026-05-15T21:00:00+08:00')
 );
 
+assert.match(
+  rules.buildStudentReminderBindToken(),
+  /^[a-f0-9]{48}$/,
+  'student reminder bind token should be opaque and random-looking'
+);
+
+assert.deepStrictEqual(
+  rules.buildStudentReminderLinkUpdate(
+    { id: 'stu-1', name: '小鹿', officialAccountBindToken: 'old-token' },
+    'new-token',
+    '2026-05-27T09:00:00.000Z'
+  ),
+  {
+    id: 'stu-1',
+    name: '小鹿',
+    officialAccountBindToken: 'new-token',
+    officialAccountBindTokenCreatedAt: '2026-05-27T09:00:00.000Z',
+    officialAccountReminderMode: 'all'
+  },
+  'student reminder link update should store one active binding token and default to 48+24 reminders'
+);
+
+assert.deepStrictEqual(
+  rules.buildStudentOfficialAccountBoundUpdate(
+    { id: 'stu-1', name: '小鹿', officialAccountBindToken: 'token-1', officialAccountReminderMode: 'only24h' },
+    'oa-student-openid',
+    '2026-05-27T10:00:00.000Z'
+  ),
+  {
+    id: 'stu-1',
+    name: '小鹿',
+    officialAccountBindToken: '',
+    officialAccountBindTokenCreatedAt: '',
+    officialAccountReminderMode: 'only24h',
+    officialAccountOpenId: 'oa-student-openid',
+    officialAccountBoundAt: '2026-05-27T10:00:00.000Z'
+  },
+  'student service account binding should attach openid and consume the one-time token'
+);
+
+assert.deepStrictEqual(
+  rules.buildStudentOfficialAccountUnboundUpdate(
+    { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-student-openid', officialAccountBoundAt: '2026-05-27T10:00:00.000Z', officialAccountReminderMode: 'all' }
+  ),
+  {
+    id: 'stu-1',
+    name: '小鹿',
+    officialAccountOpenId: '',
+    officialAccountBoundAt: '',
+    officialAccountReminderMode: 'off'
+  },
+  'student service account unbind should clear openid and stop reminders'
+);
+
+assert.strictEqual(rules.normalizeStudentReminderMode('only24h'), 'only24h', 'student reminder mode should keep only24h');
+assert.strictEqual(rules.normalizeStudentReminderMode('off'), 'off', 'student reminder mode should keep off');
+assert.strictEqual(rules.normalizeStudentReminderMode('unexpected'), 'all', 'student reminder mode should default to all');
+
+const studentReminderRows = [
+  { id: 'stu-rem-48', startTime: '2026-05-29 10:00', endTime: '2026-05-29 11:30', campus: 'mabao', venue: '室内3号场', courseType: '1v1 私教正式课', lessonCount: 1.5, status: '已排课', studentIds: ['stu-1'] },
+  { id: 'stu-rem-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] },
+  { id: 'stu-rem-off', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '2号场', status: '已排课', studentIds: ['stu-3'] },
+  { id: 'stu-rem-sent', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '3号场', status: '已排课', studentIds: ['stu-1'], studentReminderLogs: [{ studentId: 'stu-1', stage: '24h', status: 'sent', createdAt: '2026-05-27T09:50:00.000Z' }] }
+];
+const studentReminderStudents = [
+  { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' },
+  { id: 'stu-2', name: 'Misha', officialAccountOpenId: 'oa-stu-2', officialAccountReminderMode: 'only24h' },
+  { id: 'stu-3', name: '关闭提醒', officialAccountOpenId: 'oa-stu-3', officialAccountReminderMode: 'off' }
+];
+assert.deepStrictEqual(
+  rules.collectStudentCourseReminderCandidates(studentReminderRows, studentReminderStudents, new Date('2026-05-27T10:00:00+08:00')).map(item => [item.schedule.id, item.student.id, item.stage]).sort(),
+  [
+    ['stu-rem-48', 'stu-1', '48h'],
+    ['stu-rem-24', 'stu-1', '24h'],
+    ['stu-rem-24', 'stu-2', '24h']
+  ].sort(),
+  'student reminder collector should emit 48h and 24h reminders per bound student without leaking other courses'
+);
+
+assert.deepStrictEqual(
+  rules.buildStudentCourseReminderMessage({
+    templateId: 'student-reminder-tpl',
+    openid: 'oa-stu-1',
+    schedule: studentReminderRows[0],
+    student: studentReminderStudents[0],
+    stage: '48h'
+  }),
+  {
+    touser: 'oa-stu-1',
+    template_id: 'student-reminder-tpl',
+    url: 'https://www.flowtennis.cn/student-reminder-detail?scheduleId=stu-rem-48&studentId=stu-1',
+    data: {
+      time3: { value: '5月29日 10:00-11:30' },
+      thing4: { value: '顺义马坡 室内3号场' },
+      const7: { value: '1v1 私教正式课' },
+      thing2: { value: '课前48小时提醒' },
+      thing6: { value: '小鹿 第1.5课时' }
+    }
+  },
+  'student reminder message should use real schedule data and a student-only detail URL'
+);
+
 assert.deepStrictEqual(
   digestCandidates.map(item => [item.coachId, item.digestDate, item.lessonCount, item.scheduleIds.join(',')]),
   [
@@ -835,6 +944,40 @@ assert.strictEqual(
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
+  }
+
+  {
+    const rows=[
+      { id: 'student-due-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] }
+    ];
+    const students=[
+      { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' },
+      { id: 'stu-2', name: 'Misha', officialAccountOpenId: 'oa-stu-2', officialAccountReminderMode: 'only24h' }
+    ];
+    const writes=[];
+    const sent=[];
+    const reminderNow=new Date('2026-05-27T10:00:00+08:00');
+    const result=await rules.sendOfficialAccountStudentCourseReminders({
+      now: reminderNow,
+      rows,
+      students,
+      appId: 'wx-appid',
+      secret: 'secret',
+      templateId: 'student-tpl',
+      forceMock: false,
+      sendTemplate: async message => sent.push(message),
+      putSchedule: async (id,row) => writes.push([id,row])
+    });
+
+    assert.strictEqual(result.sent, 2, 'student official account reminders should send once per bound student');
+    assert.deepStrictEqual(sent.map(message=>message.touser), ['oa-stu-1','oa-stu-2'], 'student reminders should target each student openid');
+    assert.strictEqual(writes.length, 2, 'student reminders should write back after each sent student reminder');
+    assert.deepStrictEqual(
+      writes[1][1].studentReminderLogs.map(log=>[log.studentId,log.stage,log.status]),
+      [['stu-1','24h','sent'],['stu-2','24h','sent']],
+      'student reminder logs should keep per-student send records to prevent duplicates'
+    );
+    assert.strictEqual(writes[1][1].studentReminder24hSentAt, reminderNow.toISOString(), 'student reminder should mark the 24h send time on the schedule');
   }
 
   {

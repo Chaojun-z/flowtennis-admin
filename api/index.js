@@ -74,6 +74,7 @@ const WECHAT_OFFICIAL_ACCOUNT_TOKEN = process.env.WECHAT_OFFICIAL_ACCOUNT_TOKEN 
 const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
+const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
@@ -2079,6 +2080,23 @@ function extractWechatAccessToken(data){
   const msg=data?.errmsg||data?.errcode||'unknown';
   throw new Error(`微信 access_token 获取失败：${msg}`);
 }
+function buildOfficialAccountOAuthUrl({appId=WECHAT_OFFICIAL_ACCOUNT_APPID,redirectUri='',state='',scope='snsapi_base'}={}){
+  return `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}#wechat_redirect`;
+}
+function buildOfficialAccountOAuthTokenUrl({appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,code=''}={}){
+  return `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${encodeURIComponent(appId)}&secret=${encodeURIComponent(secret)}&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+}
+function extractOfficialAccountOAuthOpenId(data){
+  if(data?.openid)return String(data.openid);
+  const msg=data?.errmsg||data?.errcode||'unknown';
+  throw new Error(`服务号授权失败：${msg}`);
+}
+async function fetchOfficialAccountOAuthOpenId(code,{appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET}={}){
+  if(!appId||!secret)throw new Error('缺少服务号网页授权配置');
+  const res=await fetch(buildOfficialAccountOAuthTokenUrl({appId,secret,code}));
+  const data=await res.json();
+  return extractOfficialAccountOAuthOpenId(data);
+}
 async function fetchWechatAccessToken(kind='coach'){
   const config=resolveWechatMiniConfig(kind);
   if(!config.secret)throw new Error(config.errorText);
@@ -2427,6 +2445,116 @@ function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCa
     }
   };
 }
+function buildStudentReminderBindToken(){
+  return crypto.randomBytes(24).toString('hex');
+}
+function normalizeStudentReminderMode(value){
+  const mode=String(value||'').trim();
+  return ['all','only24h','off'].includes(mode)?mode:'all';
+}
+function buildStudentReminderLinkUpdate(student,token=buildStudentReminderBindToken(),now=new Date().toISOString()){
+  return {
+    ...student,
+    officialAccountBindToken:String(token||'').trim(),
+    officialAccountBindTokenCreatedAt:now,
+    officialAccountReminderMode:normalizeStudentReminderMode(student?.officialAccountReminderMode)
+  };
+}
+function buildStudentOfficialAccountBoundUpdate(student,openid,now=new Date().toISOString()){
+  return {
+    ...student,
+    officialAccountBindToken:'',
+    officialAccountBindTokenCreatedAt:'',
+    officialAccountReminderMode:normalizeStudentReminderMode(student?.officialAccountReminderMode),
+    officialAccountOpenId:String(openid||'').trim(),
+    officialAccountBoundAt:now
+  };
+}
+function buildStudentOfficialAccountUnboundUpdate(student){
+  return {
+    ...student,
+    officialAccountOpenId:'',
+    officialAccountBoundAt:'',
+    officialAccountReminderMode:'off'
+  };
+}
+function formatStudentReminderDateTime(schedule){
+  const start=String(schedule?.startTime||'').trim();
+  const end=String(schedule?.endTime||'').trim();
+  const month=String(parseInt(start.slice(5,7),10)||'');
+  const day=String(parseInt(start.slice(8,10),10)||'');
+  const startClock=start.slice(11,16);
+  const endClock=end.slice(11,16);
+  const dateText=month&&day?`${month}月${day}日`:start.slice(0,10);
+  return `${dateText} ${startClock}${endClock?`-${endClock}`:''}`.trim();
+}
+function formatStudentReminderLessonCount(value){
+  const num=Number(value);
+  if(!Number.isFinite(num)||num<=0)return '';
+  return Number.isInteger(num)?String(num):String(num).replace(/\.0$/,'');
+}
+function studentReminderLogs(schedule){
+  return parseArr(schedule?.studentReminderLogs);
+}
+function hasStudentReminderSent(schedule,studentId,stage){
+  const sid=String(studentId||'');
+  const key=String(stage||'');
+  return studentReminderLogs(schedule).some(log=>String(log?.studentId||'')===sid&&String(log?.stage||'')===key&&String(log?.status||'')==='sent');
+}
+function studentIdsForReminderSchedule(schedule){
+  const ids=parseArr(schedule?.studentIds).filter(Boolean);
+  if(!ids.length&&schedule?.studentId)ids.push(schedule.studentId);
+  return [...new Set(ids.map(id=>String(id||'').trim()).filter(Boolean))];
+}
+function studentReminderStageForSchedule(schedule,now){
+  const start=officialAccountScheduleMs(schedule?.startTime);
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  if(!Number.isFinite(start)||!Number.isFinite(nowMs))return '';
+  const diffHours=(start-nowMs)/3600000;
+  if(diffHours>=47.5&&diffHours<=48.5)return '48h';
+  if(diffHours>=23.5&&diffHours<=24.5)return '24h';
+  return '';
+}
+function collectStudentCourseReminderCandidates(rows=[],students=[],now=new Date()){
+  const studentById=new Map((students||[]).map(student=>[String(student?.id||''),student]));
+  const active=(rows||[]).filter(schedule=>effectiveScheduleStatus(schedule,now)==='已排课');
+  const result=[];
+  for(const schedule of active){
+    const stage=studentReminderStageForSchedule(schedule,now);
+    if(!stage)continue;
+    for(const studentId of studentIdsForReminderSchedule(schedule)){
+      const student=studentById.get(studentId);
+      if(!student?.officialAccountOpenId)continue;
+      const mode=normalizeStudentReminderMode(student.officialAccountReminderMode);
+      if(mode==='off')continue;
+      if(mode==='only24h'&&stage==='48h')continue;
+      if(hasStudentReminderSent(schedule,studentId,stage))continue;
+      result.push({schedule,student,stage});
+    }
+  }
+  return result.sort((a,b)=>officialAccountScheduleMs(a.schedule.startTime)-officialAccountScheduleMs(b.schedule.startTime));
+}
+function buildStudentReminderDetailUrl(schedule,student){
+  const scheduleId=encodeURIComponent(String(schedule?.id||''));
+  const studentId=encodeURIComponent(String(student?.id||''));
+  return `${String(STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/$/,'')}/student-reminder-detail?scheduleId=${scheduleId}&studentId=${studentId}`;
+}
+function buildStudentCourseReminderMessage({templateId,openid,schedule,student,stage}){
+  const lesson=formatStudentReminderLessonCount(schedule?.lessonCount);
+  const studentText=[student?.name||schedule?.studentName||'学员',lesson?`第${lesson}课时`:''].filter(Boolean).join(' ');
+  return {
+    touser:openid,
+    template_id:templateId,
+    url:buildStudentReminderDetailUrl(schedule,student),
+    data:{
+      time3:{value:formatStudentReminderDateTime(schedule)},
+      thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
+      const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
+      thing2:{value:truncateWechatValue(stage==='48h'?'课前48小时提醒':'课前24小时提醒')},
+      thing6:{value:truncateWechatValue(studentText)}
+    }
+  };
+}
 function resolveOfficialAccountSendMode({appId='',secret='',templateId='',forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND}={}){
   if(forceMock)return 'mock';
   if(!String(appId||'').trim()||!String(secret||'').trim()||!String(templateId||'').trim())return 'mock';
@@ -2575,6 +2703,45 @@ async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,user
     }
   }
   return result;
+}
+async function sendOfficialAccountStudentCourseReminders({now=new Date(),rows=null,students=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadStudents=()=>getCachedScan(T_STUDENTS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_REMINDER_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+  const [nextRows,nextStudents]=await Promise.all([rows||loadRows(),students||loadStudents()]);
+  const resolvedRows=rows||nextRows;
+  const resolvedStudents=students||nextStudents;
+  const candidates=collectStudentCourseReminderCandidates(resolvedRows,resolvedStudents,now);
+  const mode=resolveOfficialAccountSendMode({appId,secret,templateId,forceMock});
+  const result={success:true,mode,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
+  for(const item of candidates){
+    if(mode==='mock'){
+      result.sent++;
+      result.items.push({id:item.schedule.id,studentId:item.student.id,stage:item.stage,sent:true,mocked:true});
+      continue;
+    }
+    try{
+      const message=buildStudentCourseReminderMessage({templateId,openid:item.student.officialAccountOpenId,schedule:item.schedule,student:item.student,stage:item.stage});
+      await sendTemplate(message);
+      const sentAt=new Date(now).toISOString();
+      const log={type:'student_course_reminder',channel:'official_account',status:'sent',studentId:item.student.id,stage:item.stage,createdAt:sentAt};
+      const update={...item.schedule,studentReminderLogs:[...studentReminderLogs(item.schedule),log],studentReminderLastSentAt:sentAt};
+      if(item.stage==='48h')update.studentReminder48hSentAt=sentAt;
+      if(item.stage==='24h')update.studentReminder24hSentAt=sentAt;
+      await putSchedule(item.schedule.id,update);
+      Object.assign(item.schedule,update);
+      result.sent++;
+      result.items.push({id:item.schedule.id,studentId:item.student.id,stage:item.stage,sent:true});
+    }catch(err){
+      result.failed++;
+      result.items.push({id:item.schedule.id,studentId:item.student.id,stage:item.stage,sent:false,error:err.message});
+    }
+  }
+  return result;
+}
+async function sendOfficialAccountReminderJobs({now=new Date()}={}){
+  const [coach,students]=await Promise.all([
+    sendOfficialAccountCourseReminders({now}),
+    sendOfficialAccountStudentCourseReminders({now})
+  ]);
+  return {success:!!(coach?.success&&students?.success),coach,students};
 }
 async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_DIGEST_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
   const [nextRows,nextUsers]=await Promise.all([rows||loadRows(),users||loadUsers()]);
@@ -6964,6 +7131,29 @@ module.exports = async (req, res) => {
         return sendPlainText(res,String(err?.message||'invalid'),400);
       }
     }
+    if(path==='/student-reminder-bind/oauth-url'&&method==='GET'){
+      const tokenValue=String(query.get('token')||'').trim();
+      const redirectUri=String(query.get('redirectUri')||'').trim();
+      if(!tokenValue)return sendJson(res,{error:'缺少绑定码'},400);
+      if(!redirectUri)return sendJson(res,{error:'缺少回跳地址'},400);
+      if(!WECHAT_OFFICIAL_ACCOUNT_APPID)return sendJson(res,{error:'缺少服务号 AppID 配置'},500);
+      return sendJson(res,{authorizeUrl:buildOfficialAccountOAuthUrl({redirectUri,state:tokenValue})});
+    }
+    if(path==='/student-reminder-bind/complete'&&method==='POST'){
+      await init();
+      const tokenValue=String(body.token||'').trim();
+      const code=String(body.code||'').trim();
+      if(!tokenValue)return sendJson(res,{error:'缺少绑定码'},400);
+      if(!code)return sendJson(res,{error:'缺少微信授权码'},400);
+      const rows=await getCachedScan(T_STUDENTS).catch(()=>[]);
+      const student=(rows||[]).find(row=>String(row?.officialAccountBindToken||'').trim()===tokenValue);
+      if(!student)return sendJson(res,{error:'绑定链接已失效，请联系教练重新发送'},404);
+      const openid=await fetchOfficialAccountOAuthOpenId(code);
+      const now=new Date().toISOString();
+      const next=buildStudentOfficialAccountBoundUpdate(student,openid,now);
+      await put(T_STUDENTS,student.id,next);
+      return sendJson(res,{success:true,student:{id:next.id,name:next.name||'',officialAccountBound:true,officialAccountBoundAt:now,officialAccountReminderMode:next.officialAccountReminderMode}});
+    }
     if(path==='/cron/course-reminders'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');
       if(process.env.CRON_SECRET){
@@ -6984,7 +7174,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{error:'无权限'},403);
       }
       await init();
-      return sendJson(res,await sendOfficialAccountCourseReminders());
+      return sendJson(res,await sendOfficialAccountReminderJobs());
     }
     if(path==='/cron/official-account-daily-digests'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');
@@ -7433,7 +7623,41 @@ module.exports = async (req, res) => {
     }
     const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await getCachedRow(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const schedules=prevHistory===nextHistory?[]:await getCachedScan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(body,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await getCachedRow(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
     if(path==='/students'){await init();if(method==='GET'){const rows=await getFastStudentsRead();if(user.role==='admin')return sendJson(res,rows);/* hot-cache guard: filterLoadAllForUser({students:rows,schedule,classes},user).students */const [schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({students:rows,schedule,classes,coaches},user,coachRefs).students);}if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
-    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){assertStudentWriteAccess(user);const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
+    const studentReminderLinkM=path.match(/^\/students\/([^/]+)\/reminder-link$/);
+    if(studentReminderLinkM&&method==='POST'){
+      assertStudentWriteAccess(user);
+      const id=studentReminderLinkM[1];
+      const student=await get(T_STUDENTS,id).catch(()=>null);
+      if(!student)return sendJson(res,{error:'学员不存在'},404);
+      const tokenValue=buildStudentReminderBindToken();
+      const now=new Date().toISOString();
+      const next={...buildStudentReminderLinkUpdate(student,tokenValue,now),updatedAt:now};
+      await put(T_STUDENTS,id,next);
+      return sendJson(res,{success:true,student:next,bindToken:tokenValue,bindPath:`/student-reminder-bind?t=${encodeURIComponent(tokenValue)}`});
+    }
+    const studentReminderSettingsM=path.match(/^\/students\/([^/]+)\/reminder-settings$/);
+    if(studentReminderSettingsM&&method==='POST'){
+      assertStudentWriteAccess(user);
+      const id=studentReminderSettingsM[1];
+      const student=await get(T_STUDENTS,id).catch(()=>null);
+      if(!student)return sendJson(res,{error:'学员不存在'},404);
+      const now=new Date().toISOString();
+      const next={...student,officialAccountReminderMode:normalizeStudentReminderMode(body.mode),updatedAt:now};
+      await put(T_STUDENTS,id,next);
+      return sendJson(res,{success:true,student:next});
+    }
+    const studentReminderUnbindM=path.match(/^\/students\/([^/]+)\/reminder-unbind$/);
+    if(studentReminderUnbindM&&method==='POST'){
+      assertStudentWriteAccess(user);
+      const id=studentReminderUnbindM[1];
+      const student=await get(T_STUDENTS,id).catch(()=>null);
+      if(!student)return sendJson(res,{error:'学员不存在'},404);
+      const now=new Date().toISOString();
+      const next={...buildStudentOfficialAccountUnboundUpdate(student),updatedAt:now};
+      await put(T_STUDENTS,id,next);
+      return sendJson(res,{success:true,student:next});
+    }
+    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){assertStudentWriteAccess(user);const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
     if(path==='/products'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PRODUCTS).catch(()=>[]));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=uuidv4();const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},null,now);r.createdAt=now;await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
@@ -8296,6 +8520,9 @@ module.exports._test={
   buildAdminUserView,
   buildWechatAccessTokenUrl,
   buildWechatSignature,
+  buildOfficialAccountOAuthUrl,
+  buildOfficialAccountOAuthTokenUrl,
+  extractOfficialAccountOAuthOpenId,
   decryptWechatOfficialAccountMessage,
   resolveOfficialAccountCallbackEcho,
   encryptWechatOfficialAccountMessage,
@@ -8318,12 +8545,21 @@ module.exports._test={
   buildScheduleNotificationUpdate,
   collectCourseReminderCandidates,
   buildCourseReminderSubscribeMessage,
+  buildStudentReminderBindToken,
+  buildStudentReminderLinkUpdate,
+  buildStudentOfficialAccountBoundUpdate,
+  buildStudentOfficialAccountUnboundUpdate,
+  normalizeStudentReminderMode,
+  collectStudentCourseReminderCandidates,
+  buildStudentCourseReminderMessage,
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,
   buildOfficialAccountDigestTemplatePayload,
   resolveOfficialAccountSendMode,
   sendOfficialAccountTemplateMessage,
   sendOfficialAccountCourseReminders,
+  sendOfficialAccountStudentCourseReminders,
+  sendOfficialAccountReminderJobs,
   sendOfficialAccountDailyDigests,
   normalizeVenue,
   rangesOverlap,

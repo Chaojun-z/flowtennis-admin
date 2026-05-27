@@ -368,6 +368,20 @@ function studentConsumptionInfoHtml(stu){
   const packageFields=`${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu),{hideEmpty:true})}`;
   return studentDetailSectionHtml('消费与关联信息',`${linkedFields}${packageFields}`);
 }
+function studentReminderStatusText(stu){
+  if(stu?.officialAccountOpenId)return `已绑定${stu.officialAccountBoundAt?' · '+String(stu.officialAccountBoundAt).slice(0,10):''}`;
+  return '未绑定';
+}
+function studentReminderInfoHtml(stu){
+  const statusClass=stu?.officialAccountOpenId?'tms-tag-green':'tms-tag-tier-slate';
+  const mode=stu?.officialAccountReminderMode||'all';
+  const modeBtn=(value,label)=>`<button class="btn-sec${mode===value?' active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')">${label}</button>`;
+  return studentDetailSectionHtml('服务号上课提醒',[
+    studentDetailBlockHtml('当前状态',`<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span>`,{hideEmpty:true}),
+    studentDetailBlockHtml('提醒频率',`<div style="display:flex;gap:8px;flex-wrap:wrap">${modeBtn('all','48小时+24小时')}${modeBtn('only24h','仅24小时')}${modeBtn('off','不提醒')}</div><div class="tms-field-help">绑定后按排课表自动提醒；关闭后不再推送。</div>`,{hideEmpty:true}),
+    studentDetailBlockHtml('操作',`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="generateStudentReminderBindLink('${stu.id}')">复制绑定链接</button>${stu?.officialAccountOpenId?`<button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">解绑</button>`:''}</div>`,{hideEmpty:true})
+  ].join(''));
+}
 function studentLinkedDetailHtml(s,showAccount=true){
   const latest=schedules.filter(x=>scheduleHasStudent(x,s)).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0))[0];
   const canBuyPackage=currentUser?.role==='admin';
@@ -398,9 +412,46 @@ function studentLeadSummaryHtml(s){
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('所在校区',cn(s.campus))}</div>${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentTeachingInfoHtml(s)}${studentOpsInfoHtml(s)}${studentConsumptionInfoHtml(s)}`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-detail-grid">${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('所在校区',cn(s.campus))}</div>${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentReminderInfoHtml(s)}${studentTeachingInfoHtml(s)}${studentOpsInfoHtml(s)}${studentConsumptionInfoHtml(s)}`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
   setCourtModalFrame('学员详情',body,footer,'modal-wide');
+}
+async function copyStudentReminderText(text){
+  if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return;}
+  const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+}
+function mergeStudentReminderUpdate(row){
+  const i=students.findIndex(x=>x.id===row.id);
+  if(i>=0)students[i]={...students[i],...row};
+}
+async function generateStudentReminderBindLink(studentId){
+  try{
+    const res=await apiCall('POST',`/students/${studentId}/reminder-link`,{});
+    if(res.student)mergeStudentReminderUpdate(res.student);
+    const link=`${window.location.origin}${res.bindPath}`;
+    await copyStudentReminderText(link);
+    toast('绑定链接已复制','success');
+    openStudentDetail(studentId);
+  }catch(e){toast('生成绑定链接失败：'+e.message,'error');}
+}
+async function updateStudentReminderMode(studentId,mode){
+  try{
+    const res=await apiCall('POST',`/students/${studentId}/reminder-settings`,{mode});
+    if(res.student)mergeStudentReminderUpdate(res.student);
+    toast('提醒频率已更新','success');
+    openStudentDetail(studentId);
+  }catch(e){toast('更新提醒频率失败：'+e.message,'error');}
+}
+async function unbindStudentReminder(studentId){
+  const stu=students.find(x=>x.id===studentId);
+  const ok=await appConfirm(`确认解绑「${stu?.name||'学员'}」的服务号上课提醒？`,{title:'解绑服务号提醒',confirmText:'确认解绑',danger:true});
+  if(!ok)return;
+  try{
+    const res=await apiCall('POST',`/students/${studentId}/reminder-unbind`,{});
+    if(res.student)mergeStudentReminderUpdate(res.student);
+    toast('服务号提醒已解绑','success');
+    openStudentDetail(studentId);
+  }catch(e){toast('解绑失败：'+e.message,'error');}
 }
 function openStudentModal(id){
   editId=id;const s=id?students.find(x=>x.id===id):null;

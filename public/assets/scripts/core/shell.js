@@ -40,6 +40,8 @@ function showApp(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   captureWechatLoginCode();
+  if(isStudentReminderBindPage()){renderStudentReminderBindPage();return;}
+  if(isStudentReminderDetailPage()){renderStudentReminderDetailPage();return;}
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
   window.addEventListener('resize',syncViewportMode);
