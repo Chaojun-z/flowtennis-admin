@@ -67,26 +67,27 @@ async function renderStudentReminderBindPage(){
   const render=(title,desc,extra='')=>{if(login)login.innerHTML=`<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">上课提醒绑定</div></div><div style="font-size:18px;font-weight:800;color:var(--th);margin-top:8px">${title}</div><div style="font-size:13px;line-height:1.7;color:var(--ts);margin-top:12px">${desc}</div>${extra}</div>`;};
   if(!tokenValue){render('绑定链接无效','请联系教练重新发送上课提醒绑定链接。');return;}
   if(!code){
-    render('正在打开微信授权','请稍等，完成后会自动绑定服务号提醒。');
+    render('正在确认微信身份','请稍等，确认后会帮你开通上课提醒。');
     try{
       const redirectUri=`${window.location.origin}/student-reminder-bind?t=${encodeURIComponent(tokenValue)}`;
       const data=await apiCall('GET',`/student-reminder-bind/oauth-url?token=${encodeURIComponent(tokenValue)}&redirectUri=${encodeURIComponent(redirectUri)}`,null,15000);
       window.location.href=data.authorizeUrl;
     }catch(e){
-      render('暂时无法打开授权',`请先关注服务号，再重新点击绑定链接。<br>${String(e.message||e)}`);
+      render('暂时无法绑定',`这条链接暂时打不开，请回到教练发给你的消息里重新点一次。<br>${String(e.message||e)}`);
     }
     return;
   }
-  render('正在完成绑定','请稍等，系统正在确认你的服务号身份。');
+  render('正在开通提醒','请稍等，马上就好。');
   try{
     const data=await apiCall('POST','/student-reminder-bind/complete',{token:tokenValue,code},20000);
     const studentName=data.student?.name||'学员';
+    const title=data.alreadyBound?'这条链接已经完成绑定':'绑定成功';
     if(data.officialAccountSubscribed===true){
-      render('绑定成功',`${studentName}的上课提醒已开启。<br>你已关注「网球兄弟」服务号，之后课前会自动提醒你。<br>可以关闭本页面。`);
+      render(title,`${studentName}的上课提醒已开启。<br>你已关注「网球兄弟」服务号，之后有新排课时，会按教练设置的时间提醒你。<br>可以关闭本页面。`);
     }else{
       render(
-        '绑定成功，还差关注服务号',
-        `${studentName}的上课提醒已绑定到当前微信。<br>请长按识别下方二维码，关注「网球兄弟」服务号。<br>关注后无需重新绑定，之后课前48小时和24小时会自动提醒你。<br>如果已经关注过服务号，可以直接关闭本页面。`,
+        data.alreadyBound?'已绑定，还差关注服务号':'绑定成功，还差关注服务号',
+        `${studentName}的上课提醒已绑定到当前微信。<br>请长按识别下方二维码，关注「网球兄弟」服务号。<br>关注后无需重新绑定，之后有新排课时，会按教练设置的时间提醒你。<br>如果已经关注过服务号，可以直接关闭本页面。`,
         `<div style="margin-top:16px;text-align:center"><img src="/qrcode_for_gh_4c6b1a2fe3a9_258.jpg" alt="网球兄弟服务号二维码" style="width:188px;height:188px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px"></div>`
       );
     }
@@ -94,7 +95,7 @@ async function renderStudentReminderBindPage(){
     url.searchParams.delete('state');
     window.history.replaceState({},document.title,url.pathname+url.search);
   }catch(e){
-    render('绑定未完成',`请先关注服务号，再重新点击绑定链接。<br>${String(e.message||e)}`);
+    render('这条链接不能继续使用',`${String(e.message||e)}<br>如果你已经绑定过，不需要重复操作；之后有新排课时，会通过「网球兄弟」服务号提醒你。`);
   }
 }
 

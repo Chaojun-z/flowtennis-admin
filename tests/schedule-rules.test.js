@@ -17,8 +17,10 @@ assert.ok(rules.buildStudentReminderBindToken, 'api._test should expose student 
 assert.ok(rules.buildStudentReminderLinkUpdate, 'api._test should expose student reminder link update helper');
 assert.ok(rules.buildStudentOfficialAccountBoundUpdate, 'api._test should expose student official account bind helper');
 assert.ok(rules.buildStudentOfficialAccountUnboundUpdate, 'api._test should expose student official account unbind helper');
+assert.ok(rules.findStudentReminderBindTarget, 'api._test should expose student reminder bind target resolver');
 assert.ok(rules.normalizeStudentReminderMode, 'api._test should expose student reminder mode normalizer');
 assert.ok(rules.collectStudentCourseReminderCandidates, 'api._test should expose student course reminder collector');
+assert.ok(rules.studentReminderStageText, 'api._test should expose student reminder stage text helper');
 assert.ok(rules.buildStudentCourseReminderMessage, 'api._test should expose student course reminder message helper');
 assert.ok(rules.buildOfficialAccountBoundUser, 'api._test should expose official account bind helper');
 assert.ok(rules.buildOfficialAccountUnboundUser, 'api._test should expose official account unbind helper');
@@ -619,7 +621,8 @@ assert.deepStrictEqual(
     name: '小鹿',
     officialAccountBindToken: 'new-token',
     officialAccountBindTokenCreatedAt: '2026-05-27T09:00:00.000Z',
-    officialAccountReminderMode: 'all'
+    officialAccountReminderMode: 'all',
+    officialAccountReminderCustomHours: 12
   },
   'student reminder link update should store one active binding token and default to 48+24 reminders'
 );
@@ -636,6 +639,7 @@ assert.deepStrictEqual(
     officialAccountBindToken: '',
     officialAccountBindTokenCreatedAt: '',
     officialAccountReminderMode: 'only24h',
+    officialAccountReminderCustomHours: 12,
     officialAccountOpenId: 'oa-student-openid',
     officialAccountBoundAt: '2026-05-27T10:00:00.000Z'
   },
@@ -651,34 +655,52 @@ assert.deepStrictEqual(
     name: '小鹿',
     officialAccountOpenId: '',
     officialAccountBoundAt: '',
-    officialAccountReminderMode: 'off'
+    officialAccountReminderMode: 'off',
+    officialAccountReminderCustomHours: 12
   },
   'student service account unbind should clear openid and stop reminders'
 );
 
 assert.strictEqual(rules.normalizeStudentReminderMode('only24h'), 'only24h', 'student reminder mode should keep only24h');
+assert.strictEqual(rules.normalizeStudentReminderMode('custom'), 'custom', 'student reminder mode should keep custom');
 assert.strictEqual(rules.normalizeStudentReminderMode('off'), 'off', 'student reminder mode should keep off');
 assert.strictEqual(rules.normalizeStudentReminderMode('unexpected'), 'all', 'student reminder mode should default to all');
 assert.strictEqual(rules.extractOfficialAccountSubscribeStatus({ subscribe: 1 }), true, 'service account user info should mark subscribed users');
 assert.strictEqual(rules.extractOfficialAccountSubscribeStatus({ subscribe: 0 }), false, 'service account user info should mark unsubscribed users');
+assert.strictEqual(rules.studentReminderStageText('custom12h'), '课前12小时提醒', 'custom student reminder stages should render the configured hour');
+assert.deepStrictEqual(
+  rules.findStudentReminderBindTarget(
+    [
+      { id: 'stu-1', name: '小鹿', officialAccountBindToken: '', officialAccountOpenId: 'oa-stu-1' },
+      { id: 'stu-2', name: 'Misha', officialAccountBindToken: 'fresh-token', officialAccountOpenId: '' }
+    ],
+    'used-token',
+    'oa-stu-1'
+  ),
+  { student: { id: 'stu-1', name: '小鹿', officialAccountBindToken: '', officialAccountOpenId: 'oa-stu-1' }, alreadyBound: true },
+  'used student bind links should still resolve when the current WeChat is already bound'
+);
 
 const studentReminderRows = [
   { id: 'stu-rem-48', startTime: '2026-05-29 10:00', endTime: '2026-05-29 11:30', campus: 'mabao', venue: '室内3号场', courseType: '1v1 私教正式课', lessonCount: 1.5, status: '已排课', studentIds: ['stu-1'] },
   { id: 'stu-rem-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] },
+  { id: 'stu-rem-custom', startTime: '2026-05-27 22:00', endTime: '2026-05-27 23:00', campus: 'mabao', venue: '5号场', status: '已排课', studentIds: ['stu-4'] },
   { id: 'stu-rem-off', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '2号场', status: '已排课', studentIds: ['stu-3'] },
   { id: 'stu-rem-sent', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '3号场', status: '已排课', studentIds: ['stu-1'], studentReminderLogs: [{ studentId: 'stu-1', stage: '24h', status: 'sent', createdAt: '2026-05-27T09:50:00.000Z' }] }
 ];
 const studentReminderStudents = [
   { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' },
   { id: 'stu-2', name: 'Misha', officialAccountOpenId: 'oa-stu-2', officialAccountReminderMode: 'only24h' },
-  { id: 'stu-3', name: '关闭提醒', officialAccountOpenId: 'oa-stu-3', officialAccountReminderMode: 'off' }
+  { id: 'stu-3', name: '关闭提醒', officialAccountOpenId: 'oa-stu-3', officialAccountReminderMode: 'off' },
+  { id: 'stu-4', name: '自定义提醒', officialAccountOpenId: 'oa-stu-4', officialAccountReminderMode: 'custom', officialAccountReminderCustomHours: 12 }
 ];
 assert.deepStrictEqual(
   rules.collectStudentCourseReminderCandidates(studentReminderRows, studentReminderStudents, new Date('2026-05-27T10:00:00+08:00')).map(item => [item.schedule.id, item.student.id, item.stage]).sort(),
   [
     ['stu-rem-48', 'stu-1', '48h'],
     ['stu-rem-24', 'stu-1', '24h'],
-    ['stu-rem-24', 'stu-2', '24h']
+    ['stu-rem-24', 'stu-2', '24h'],
+    ['stu-rem-custom', 'stu-4', 'custom12h']
   ].sort(),
   'student reminder collector should emit 48h and 24h reminders per bound student without leaking other courses'
 );

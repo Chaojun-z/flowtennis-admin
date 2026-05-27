@@ -2450,14 +2450,29 @@ function buildStudentReminderBindToken(){
 }
 function normalizeStudentReminderMode(value){
   const mode=String(value||'').trim();
-  return ['all','only24h','off'].includes(mode)?mode:'all';
+  return ['all','only24h','custom','off'].includes(mode)?mode:'all';
+}
+function normalizeStudentReminderCustomHours(value){
+  const num=Number(value);
+  if(!Number.isFinite(num))return 12;
+  return Math.min(72,Math.max(1,Math.round(num)));
+}
+function findStudentReminderBindTarget(rows=[],tokenValue='',openid=''){
+  const token=String(tokenValue||'').trim();
+  const openIdText=String(openid||'').trim();
+  const byToken=(rows||[]).find(row=>String(row?.officialAccountBindToken||'').trim()===token);
+  if(byToken)return {student:byToken,alreadyBound:false};
+  const byOpenId=openIdText?(rows||[]).find(row=>String(row?.officialAccountOpenId||'').trim()===openIdText):null;
+  if(byOpenId)return {student:byOpenId,alreadyBound:true};
+  return {student:null,alreadyBound:false};
 }
 function buildStudentReminderLinkUpdate(student,token=buildStudentReminderBindToken(),now=new Date().toISOString()){
   return {
     ...student,
     officialAccountBindToken:String(token||'').trim(),
     officialAccountBindTokenCreatedAt:now,
-    officialAccountReminderMode:normalizeStudentReminderMode(student?.officialAccountReminderMode)
+    officialAccountReminderMode:normalizeStudentReminderMode(student?.officialAccountReminderMode),
+    officialAccountReminderCustomHours:normalizeStudentReminderCustomHours(student?.officialAccountReminderCustomHours)
   };
 }
 function buildStudentOfficialAccountBoundUpdate(student,openid,now=new Date().toISOString()){
@@ -2466,6 +2481,7 @@ function buildStudentOfficialAccountBoundUpdate(student,openid,now=new Date().to
     officialAccountBindToken:'',
     officialAccountBindTokenCreatedAt:'',
     officialAccountReminderMode:normalizeStudentReminderMode(student?.officialAccountReminderMode),
+    officialAccountReminderCustomHours:normalizeStudentReminderCustomHours(student?.officialAccountReminderCustomHours),
     officialAccountOpenId:String(openid||'').trim(),
     officialAccountBoundAt:now
   };
@@ -2475,7 +2491,8 @@ function buildStudentOfficialAccountUnboundUpdate(student){
     ...student,
     officialAccountOpenId:'',
     officialAccountBoundAt:'',
-    officialAccountReminderMode:'off'
+    officialAccountReminderMode:'off',
+    officialAccountReminderCustomHours:normalizeStudentReminderCustomHours(student?.officialAccountReminderCustomHours)
   };
 }
 function formatStudentReminderDateTime(schedule){
@@ -2515,18 +2532,27 @@ function studentReminderStageForSchedule(schedule,now){
   if(diffHours>=23.5&&diffHours<=24.5)return '24h';
   return '';
 }
+function studentCustomReminderStageForSchedule(schedule,student,now){
+  const start=officialAccountScheduleMs(schedule?.startTime);
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  if(!Number.isFinite(start)||!Number.isFinite(nowMs))return '';
+  const hours=normalizeStudentReminderCustomHours(student?.officialAccountReminderCustomHours);
+  const diffHours=(start-nowMs)/3600000;
+  return diffHours>=hours-0.5&&diffHours<=hours+0.5?`custom${hours}h`:'';
+}
 function collectStudentCourseReminderCandidates(rows=[],students=[],now=new Date()){
   const studentById=new Map((students||[]).map(student=>[String(student?.id||''),student]));
   const active=(rows||[]).filter(schedule=>effectiveScheduleStatus(schedule,now)==='已排课');
   const result=[];
   for(const schedule of active){
-    const stage=studentReminderStageForSchedule(schedule,now);
-    if(!stage)continue;
     for(const studentId of studentIdsForReminderSchedule(schedule)){
       const student=studentById.get(studentId);
       if(!student?.officialAccountOpenId)continue;
       const mode=normalizeStudentReminderMode(student.officialAccountReminderMode);
       if(mode==='off')continue;
+      let stage=studentReminderStageForSchedule(schedule,now);
+      if(mode==='custom')stage=studentCustomReminderStageForSchedule(schedule,student,now);
+      if(!stage)continue;
       if(mode==='only24h'&&stage==='48h')continue;
       if(hasStudentReminderSent(schedule,studentId,stage))continue;
       result.push({schedule,student,stage});
@@ -2539,6 +2565,12 @@ function buildStudentReminderDetailUrl(schedule,student){
   const studentId=encodeURIComponent(String(student?.id||''));
   return `${String(STUDENT_REMINDER_PUBLIC_BASE_URL||'https://www.flowtennis.cn').replace(/\/$/,'')}/student-reminder-detail?scheduleId=${scheduleId}&studentId=${studentId}`;
 }
+function studentReminderStageText(stage){
+  const text=String(stage||'');
+  const custom=text.match(/^custom(\d+)h$/);
+  if(custom)return `课前${custom[1]}小时提醒`;
+  return text==='48h'?'课前48小时提醒':'课前24小时提醒';
+}
 function buildStudentCourseReminderMessage({templateId,openid,schedule,student,stage}){
   const lesson=formatStudentReminderLessonCount(schedule?.lessonCount);
   const studentText=[student?.name||schedule?.studentName||'学员',lesson?`第${lesson}课时`:''].filter(Boolean).join(' ');
@@ -2550,7 +2582,7 @@ function buildStudentCourseReminderMessage({templateId,openid,schedule,student,s
       time3:{value:formatStudentReminderDateTime(schedule)},
       thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
       const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
-      thing2:{value:truncateWechatValue(stage==='48h'?'课前48小时提醒':'课前24小时提醒')},
+      thing2:{value:truncateWechatValue(studentReminderStageText(stage))},
       thing6:{value:truncateWechatValue(studentText)}
     }
   };
@@ -7159,19 +7191,23 @@ module.exports = async (req, res) => {
       if(!tokenValue)return sendJson(res,{error:'缺少绑定码'},400);
       if(!code)return sendJson(res,{error:'缺少微信授权码'},400);
       const rows=await getCachedScan(T_STUDENTS).catch(()=>[]);
-      const student=(rows||[]).find(row=>String(row?.officialAccountBindToken||'').trim()===tokenValue);
-      if(!student)return sendJson(res,{error:'绑定链接已失效，请联系教练重新发送'},404);
       const openid=await fetchOfficialAccountOAuthOpenId(code);
+      const bindTarget=findStudentReminderBindTarget(rows,tokenValue,openid);
+      const student=bindTarget.student;
+      if(!student)return sendJson(res,{error:'这条绑定链接已经不能使用了，请联系教练重新发一条新的链接。'},404);
       let officialAccountSubscribed=false;
       try{
         officialAccountSubscribed=await fetchOfficialAccountSubscribeStatus(openid);
       }catch(e){
         console.warn('student reminder subscribe status skipped:',e.message);
       }
+      if(bindTarget.alreadyBound){
+        return sendJson(res,{success:true,alreadyBound:true,officialAccountSubscribed,student:{id:student.id,name:student.name||'',officialAccountBound:true,officialAccountBoundAt:student.officialAccountBoundAt||'',officialAccountReminderMode:normalizeStudentReminderMode(student.officialAccountReminderMode),officialAccountReminderCustomHours:normalizeStudentReminderCustomHours(student.officialAccountReminderCustomHours)}});
+      }
       const now=new Date().toISOString();
       const next=buildStudentOfficialAccountBoundUpdate(student,openid,now);
       await put(T_STUDENTS,student.id,next);
-      return sendJson(res,{success:true,officialAccountSubscribed,student:{id:next.id,name:next.name||'',officialAccountBound:true,officialAccountBoundAt:now,officialAccountReminderMode:next.officialAccountReminderMode}});
+      return sendJson(res,{success:true,alreadyBound:false,officialAccountSubscribed,student:{id:next.id,name:next.name||'',officialAccountBound:true,officialAccountBoundAt:now,officialAccountReminderMode:next.officialAccountReminderMode,officialAccountReminderCustomHours:next.officialAccountReminderCustomHours}});
     }
     if(path==='/cron/course-reminders'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');
@@ -7661,7 +7697,7 @@ module.exports = async (req, res) => {
       const student=await get(T_STUDENTS,id).catch(()=>null);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
       const now=new Date().toISOString();
-      const next={...student,officialAccountReminderMode:normalizeStudentReminderMode(body.mode),updatedAt:now};
+      const next={...student,officialAccountReminderMode:normalizeStudentReminderMode(body.mode),officialAccountReminderCustomHours:normalizeStudentReminderCustomHours(body.customHours),updatedAt:now};
       await put(T_STUDENTS,id,next);
       return sendJson(res,{success:true,student:next});
     }
@@ -8569,7 +8605,10 @@ module.exports._test={
   buildStudentOfficialAccountBoundUpdate,
   buildStudentOfficialAccountUnboundUpdate,
   normalizeStudentReminderMode,
+  normalizeStudentReminderCustomHours,
+  findStudentReminderBindTarget,
   collectStudentCourseReminderCandidates,
+  studentReminderStageText,
   buildStudentCourseReminderMessage,
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,

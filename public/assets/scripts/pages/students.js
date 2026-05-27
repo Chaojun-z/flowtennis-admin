@@ -368,24 +368,41 @@ function studentConsumptionInfoHtml(stu){
   const packageFields=`${studentDetailBlockHtml('课包购买记录',studentEntitlementSummaryHtml(stu),{hideEmpty:true})}`;
   return studentDetailSectionHtml('消费与关联信息',`${linkedFields}${packageFields}`);
 }
-function studentReminderStatusText(stu){
-  if(stu?.officialAccountOpenId)return `已绑定${stu.officialAccountBoundAt?' · '+String(stu.officialAccountBoundAt).slice(0,10):''}`;
-  return '未绑定';
-}
-function studentReminderInfoHtml(stu){
-  const statusClass=stu?.officialAccountOpenId?'tms-tag-green':'tms-tag-tier-slate';
-  const mode=stu?.officialAccountReminderMode||'all';
-  const modeBtn=(value,label)=>`<button class="btn-sec${mode===value?' active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')">${label}</button>`;
-  return studentDetailSectionHtml('服务号上课提醒',[
-    studentDetailBlockHtml('当前状态',`<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span>`,{hideEmpty:true}),
-    studentDetailBlockHtml('提醒频率',`<div style="display:flex;gap:8px;flex-wrap:wrap">${modeBtn('all','48小时+24小时')}${modeBtn('only24h','仅24小时')}${modeBtn('off','不提醒')}</div><div class="tms-field-help">绑定后按排课表自动提醒；关闭后不再推送。</div>`,{hideEmpty:true}),
-    studentDetailBlockHtml('操作',`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="generateStudentReminderBindLink('${stu.id}')">复制绑定链接</button>${stu?.officialAccountOpenId?`<button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">解绑</button>`:''}</div>`,{hideEmpty:true})
-  ].join(''));
-}
 function studentLinkedDetailHtml(s,showAccount=true){
   const latest=schedules.filter(x=>scheduleHasStudent(x,s)).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0))[0];
   const canBuyPackage=currentUser?.role==='admin';
   return `<div class="sec-ttl">关联信息</div><div style="background:rgba(217,119,6,0.06);border:0.5px solid rgba(217,119,6,0.16);border-radius:8px;padding:10px 12px;margin-bottom:12px">${showAccount?`<div class="flabel">订场账户</div>${studentAccountSummaryHtml(s)}<div class="flabel" style="margin-top:8px">关联订场账户会员摘要</div>${studentMembershipSummaryHtml(s)}`:''}<div class="flabel" style="margin-top:${showAccount?8:0}px">所在班次</div>${studentClassSummaryHtml(s)}<div class="flabel" style="margin-top:8px">课包余额</div>${studentEntitlementSummaryHtml(s)}${canBuyPackage?`<div style="margin-top:8px"><button class="btn-sec" onclick="openPurchaseModal('${s.id}')">购买课包</button></div>`:''}<div class="flabel" style="margin-top:8px">最近记录</div><div style="font-size:12px;color:var(--tb)">最近上课：${latest?.startTime?.slice(0,10)||'-'}；最近订场：${latestCourtUseDateForStudent(s)||'-'}</div><div class="flabel" style="margin-top:8px">课后反馈</div>${studentFeedbackHistoryHtml(s)}</div>`;
+}
+function studentReminderStatusText(stu){
+  if(stu?.officialAccountOpenId)return `已绑定${stu.officialAccountBoundAt?' · '+String(stu.officialAccountBoundAt).slice(0,10):''}`;
+  return '未绑定';
+}
+function studentReminderModeText(stu){
+  const mode=stu?.officialAccountReminderMode||'all';
+  if(mode==='only24h')return '课前24小时提醒一次';
+  if(mode==='custom')return `课前${Number(stu?.officialAccountReminderCustomHours)||12}小时提醒一次`;
+  if(mode==='off')return '不提醒';
+  return '课前48小时和24小时各提醒一次';
+}
+function studentReminderModeOptionHtml(stu,value,title,desc){
+  const mode=stu?.officialAccountReminderMode||'all';
+  const checked=mode===value;
+  const customValue=Number(stu?.officialAccountReminderCustomHours)||12;
+  const custom=value==='custom'
+    ?`<div class="student-reminder-custom" onclick="event.stopPropagation()"><span>提前</span><input id="studentReminderCustomHours" type="number" min="1" max="72" value="${customValue}" oninput="if(document.getElementById('studentReminderMode_custom'))document.getElementById('studentReminderMode_custom').checked=true" onchange="updateStudentReminderMode('${stu.id}','custom')"><span>小时</span></div>`
+    :'';
+  return `<label class="student-reminder-option${checked?' is-active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')"><input type="radio" name="studentReminderMode" id="studentReminderMode_${value}" value="${value}" ${checked?'checked':''}><span class="student-reminder-radio"></span><span class="student-reminder-copy"><strong>${title}</strong><em>${desc}</em>${custom}</span></label>`;
+}
+function studentReminderInfoHtml(stu){
+  const statusClass=stu?.officialAccountOpenId?'tms-tag-green':'tms-tag-tier-slate';
+  const linkAction=stu?.officialAccountOpenId
+    ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>重新复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
+    :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制给学员绑定</span><small>学员用微信打开后完成绑定</small></button>`;
+  return studentDetailSectionHtml('服务号上课提醒',[
+    studentDetailBlockHtml('提醒状态',`<div class="student-reminder-status"><span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span><span>${studentReminderModeText(stu)}</span></div>`,{hideEmpty:true}),
+    studentDetailBlockHtml('提醒时间',`<div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div>`,{hideEmpty:true}),
+    studentDetailBlockHtml('发给学员',`<div class="student-reminder-actions">${linkAction}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div>`,{hideEmpty:true})
+  ].join(''));
 }
 function leadRowsForSummary(){
   return typeof leadRows==='function'?leadRows():(Array.isArray(leads)?leads:[]);
@@ -436,11 +453,13 @@ async function generateStudentReminderBindLink(studentId){
 }
 async function updateStudentReminderMode(studentId,mode){
   try{
-    const res=await apiCall('POST',`/students/${studentId}/reminder-settings`,{mode});
+    const customInput=document.getElementById('studentReminderCustomHours');
+    const customHours=customInput?customInput.value:undefined;
+    const res=await apiCall('POST',`/students/${studentId}/reminder-settings`,{mode,customHours});
     if(res.student)mergeStudentReminderUpdate(res.student);
-    toast('提醒频率已更新','success');
+    toast('提醒时间已更新','success');
     openStudentDetail(studentId);
-  }catch(e){toast('更新提醒频率失败：'+e.message,'error');}
+  }catch(e){toast('更新提醒时间失败：'+e.message,'error');}
 }
 async function unbindStudentReminder(studentId){
   const stu=students.find(x=>x.id===studentId);
