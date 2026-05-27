@@ -86,6 +86,10 @@ assert.match(source, /48小时\+24小时[\s\S]*仅24小时[\s\S]*不提醒/, 'st
 assert.match(source, /generateStudentReminderBindLink/, 'student page should call the backend to generate a bind link');
 assert.match(source, /updateStudentReminderMode/, 'student page should let ops update student reminder frequency');
 assert.match(source, /unbindStudentReminder/, 'student page should let ops unbind a student service account recipient');
+assert.match(source, /officialAccountSubscribed/, 'student reminder bind page should read the service account subscribe status');
+assert.match(source, /qrcode_for_gh_4c6b1a2fe3a9_258\.jpg/, 'student reminder bind page should show the official account QR code when follow is still needed');
+assert.match(source, /你已关注「网球兄弟」服务号/, 'student reminder bind page should tell subscribed users they can close the page');
+assert.match(source, /关注后无需重新绑定/, 'student reminder bind page should tell unsubscribed users to follow without rebinding');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should prioritize view before edit');
 assert.match(source, /openStudentDetail\('[^']+'\)[\s\S]*openPurchaseModal\('[^']+'\)[\s\S]*openStudentModal\('[^']+'\)/, 'student row should expose a direct package purchase shortcut between view and edit');
 assert.match(source, /function studentTeachingInfoHtml\(/, 'student detail should render teaching info block');

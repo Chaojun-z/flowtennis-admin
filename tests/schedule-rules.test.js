@@ -22,6 +22,7 @@ assert.ok(rules.collectStudentCourseReminderCandidates, 'api._test should expose
 assert.ok(rules.buildStudentCourseReminderMessage, 'api._test should expose student course reminder message helper');
 assert.ok(rules.buildOfficialAccountBoundUser, 'api._test should expose official account bind helper');
 assert.ok(rules.buildOfficialAccountUnboundUser, 'api._test should expose official account unbind helper');
+assert.ok(rules.extractOfficialAccountSubscribeStatus, 'api._test should expose official account subscribe status extractor');
 assert.ok(rules.findOfficialAccountScheduleRecipient, 'api._test should expose official account recipient finder');
 assert.ok(rules.collectCoachDailyDigestCandidates, 'api._test should expose coach daily digest collector');
 assert.ok(rules.buildCoachDailyDigestMessage, 'api._test should expose coach daily digest message builder');
@@ -658,6 +659,8 @@ assert.deepStrictEqual(
 assert.strictEqual(rules.normalizeStudentReminderMode('only24h'), 'only24h', 'student reminder mode should keep only24h');
 assert.strictEqual(rules.normalizeStudentReminderMode('off'), 'off', 'student reminder mode should keep off');
 assert.strictEqual(rules.normalizeStudentReminderMode('unexpected'), 'all', 'student reminder mode should default to all');
+assert.strictEqual(rules.extractOfficialAccountSubscribeStatus({ subscribe: 1 }), true, 'service account user info should mark subscribed users');
+assert.strictEqual(rules.extractOfficialAccountSubscribeStatus({ subscribe: 0 }), false, 'service account user info should mark unsubscribed users');
 
 const studentReminderRows = [
   { id: 'stu-rem-48', startTime: '2026-05-29 10:00', endTime: '2026-05-29 11:30', campus: 'mabao', venue: '室内3号场', courseType: '1v1 私教正式课', lessonCount: 1.5, status: '已排课', studentIds: ['stu-1'] },

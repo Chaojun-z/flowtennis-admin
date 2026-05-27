@@ -2615,6 +2615,19 @@ async function fetchOfficialAccountAccessToken(){
   wechatAccessTokenCacheByApp.set(cacheKey,{token,expiresAt:now+ttlMs});
   return token;
 }
+function extractOfficialAccountSubscribeStatus(data){
+  if(Number(data?.subscribe)===1)return true;
+  if(Number(data?.subscribe)===0)return false;
+  const msg=data?.errmsg||data?.errcode||'unknown';
+  throw new Error(`服务号关注状态查询失败：${msg}`);
+}
+async function fetchOfficialAccountSubscribeStatus(openid){
+  const token=await fetchOfficialAccountAccessToken();
+  const url=`https://api.weixin.qq.com/cgi-bin/user/info?access_token=${encodeURIComponent(token)}&openid=${encodeURIComponent(openid)}&lang=zh_CN`;
+  const res=await fetch(url);
+  const data=await res.json();
+  return extractOfficialAccountSubscribeStatus(data);
+}
 async function sendOfficialAccountTemplateMessage(message){
   if(String(WECHAT_OFFICIAL_ACCOUNT_PROXY_URL||'').trim()&&String(WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET||'').trim()){
     const res=await fetch(WECHAT_OFFICIAL_ACCOUNT_PROXY_URL,{
@@ -7149,10 +7162,16 @@ module.exports = async (req, res) => {
       const student=(rows||[]).find(row=>String(row?.officialAccountBindToken||'').trim()===tokenValue);
       if(!student)return sendJson(res,{error:'绑定链接已失效，请联系教练重新发送'},404);
       const openid=await fetchOfficialAccountOAuthOpenId(code);
+      let officialAccountSubscribed=false;
+      try{
+        officialAccountSubscribed=await fetchOfficialAccountSubscribeStatus(openid);
+      }catch(e){
+        console.warn('student reminder subscribe status skipped:',e.message);
+      }
       const now=new Date().toISOString();
       const next=buildStudentOfficialAccountBoundUpdate(student,openid,now);
       await put(T_STUDENTS,student.id,next);
-      return sendJson(res,{success:true,student:{id:next.id,name:next.name||'',officialAccountBound:true,officialAccountBoundAt:now,officialAccountReminderMode:next.officialAccountReminderMode}});
+      return sendJson(res,{success:true,officialAccountSubscribed,student:{id:next.id,name:next.name||'',officialAccountBound:true,officialAccountBoundAt:now,officialAccountReminderMode:next.officialAccountReminderMode}});
     }
     if(path==='/cron/course-reminders'&&method==='GET'){
       const ua=String(req.headers['user-agent']||'');
@@ -8556,6 +8575,8 @@ module.exports._test={
   buildCoachDailyDigestMessage,
   buildOfficialAccountDigestTemplatePayload,
   resolveOfficialAccountSendMode,
+  extractOfficialAccountSubscribeStatus,
+  fetchOfficialAccountSubscribeStatus,
   sendOfficialAccountTemplateMessage,
   sendOfficialAccountCourseReminders,
   sendOfficialAccountStudentCourseReminders,

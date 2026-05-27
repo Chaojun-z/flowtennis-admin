@@ -64,7 +64,7 @@ async function renderStudentReminderBindPage(){
   const url=new URL(window.location.href);
   const tokenValue=url.searchParams.get('t')||url.searchParams.get('token')||url.searchParams.get('state')||'';
   const code=url.searchParams.get('code')||'';
-  const render=(title,desc)=>{if(login)login.innerHTML=`<div class="login-card"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">上课提醒绑定</div></div><div style="font-size:18px;font-weight:800;color:var(--th);margin-top:8px">${title}</div><div style="font-size:13px;line-height:1.7;color:var(--ts);margin-top:12px">${desc}</div></div>`;};
+  const render=(title,desc,extra='')=>{if(login)login.innerHTML=`<div class="login-card" style="max-width:420px"><div class="login-logo"><span class="icon"></span><div class="brand">网球兄弟</div><div class="sub">上课提醒绑定</div></div><div style="font-size:18px;font-weight:800;color:var(--th);margin-top:8px">${title}</div><div style="font-size:13px;line-height:1.7;color:var(--ts);margin-top:12px">${desc}</div>${extra}</div>`;};
   if(!tokenValue){render('绑定链接无效','请联系教练重新发送上课提醒绑定链接。');return;}
   if(!code){
     render('正在打开微信授权','请稍等，完成后会自动绑定服务号提醒。');
@@ -80,7 +80,16 @@ async function renderStudentReminderBindPage(){
   render('正在完成绑定','请稍等，系统正在确认你的服务号身份。');
   try{
     const data=await apiCall('POST','/student-reminder-bind/complete',{token:tokenValue,code},20000);
-    render('绑定成功',`${data.student?.name||'学员'}的上课提醒已开启。以后课前会通过服务号提醒你。`);
+    const studentName=data.student?.name||'学员';
+    if(data.officialAccountSubscribed===true){
+      render('绑定成功',`${studentName}的上课提醒已开启。<br>你已关注「网球兄弟」服务号，之后课前会自动提醒你。<br>可以关闭本页面。`);
+    }else{
+      render(
+        '绑定成功，还差关注服务号',
+        `${studentName}的上课提醒已绑定到当前微信。<br>请长按识别下方二维码，关注「网球兄弟」服务号。<br>关注后无需重新绑定，之后课前48小时和24小时会自动提醒你。<br>如果已经关注过服务号，可以直接关闭本页面。`,
+        `<div style="margin-top:16px;text-align:center"><img src="/qrcode_for_gh_4c6b1a2fe3a9_258.jpg" alt="网球兄弟服务号二维码" style="width:188px;height:188px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px"></div>`
+      );
+    }
     url.searchParams.delete('code');
     url.searchParams.delete('state');
     window.history.replaceState({},document.title,url.pathname+url.search);
