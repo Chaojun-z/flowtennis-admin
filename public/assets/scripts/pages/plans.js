@@ -26,7 +26,7 @@ function planEntitlementRows(p){
   const matched=base.filter(e=>{
     if(e.productId&&planClass(p)?.productId)return e.productId===planClass(p).productId;
     if(e.productName&&p?.productName)return e.productName===p.productName;
-    if(e.courseType&&prod?.type)return e.courseType===prod.type;
+    if(e.courseType&&prod?.type)return normalizeCourseType(e.courseType)===normalizeCourseType(prod.type);
     return true;
   });
   return (matched.length?matched:base).sort((a,b)=>String(a.validUntil||'9999-12-31').localeCompare(String(b.validUntil||'9999-12-31')));
@@ -74,7 +74,7 @@ function openPlanClass(planId){
 function openPlanSchedule(planId){
   const p=plans.find(x=>x.id===planId),cls=planClass(p),prod=planProduct(p);
   if(!p)return;
-  openScheduleModal(null,{classId:p.classId,studentIds:[p.studentId],courseType:prod?.type||'',coach:cls?.coach||p.coach||'',campus:cls?.campus||p.campus||'',lessonCount:1,status:'已排课',scheduleSource:'学习计划'});
+  openScheduleModal(null,{classId:p.classId,studentIds:[p.studentId],courseType:prod?.type||'',experienceType:prod?.experienceType||'',coach:cls?.coach||p.coach||'',campus:cls?.campus||p.campus||'',lessonCount:1,status:'已排课',scheduleSource:'学习计划'});
 }
 function openPlanDetail(planId){
   const p=plans.find(x=>x.id===planId);if(!p)return;
@@ -98,11 +98,11 @@ function renderPlans(){
   let list=plans.filter(p=>{
     const stu=students.find(s=>s.id===p.studentId),prod=planProduct(p);
     const accountText=courtsForStudent(stu).map(c=>`${c.name} ${c.phone||''}`).join(' ');
-    if(!searchHit(q,p.studentName,p.studentPhone,p.className,p.productName,prod?.type,p.coach,p.status,cn(p.campus),accountText,planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName} ${e.validUntil}`).join(' ')))return false;
+    if(!searchHit(q,p.studentName,p.studentPhone,p.className,p.productName,courseTypeDisplayLabel(prod||{}),p.coach,p.status,cn(p.campus),accountText,planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName} ${e.validUntil}`).join(' ')))return false;
     if(sf&&p.status!==sf)return false;
     if(cf&&p.campus!==cf)return false;
     if(coachF&&coachName(p.coach)!==coachF)return false;
-    if(typeF&&prod?.type!==typeF)return false;
+    if(typeF&&normalizeCourseType(prod?.type)!==typeF)return false;
     if(stageF&&planStage(p)!==stageF)return false;
     return true;
   });
@@ -120,6 +120,6 @@ function renderPlans(){
     const pct=tl>0?Math.round(ul/tl*100):0,pc=rem>3?'pf-gold':rem>1?'pf-warn':'pf-red';
     const w=p.status==='active'&&rem<=2;
     const last=planLastLesson(p);
-    return `<tr class="${w?'warn-row':''}"><td style="padding-left:20px"><div class="tms-text-primary">${esc(p.studentName)||'—'}</div></td><td>${renderCourtCellText(p.studentPhone)}</td><td><div class="tms-text-primary">${esc(p.className)||'—'}</div></td><td><div class="tms-text-primary">${esc(p.productName)||'—'}</div><div class="tms-text-secondary">${esc(planProduct(p)?.type||'-')}</div></td><td>${renderCourtCellText(coachName(p.coach))}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${lessonQty(ul)}/${lessonQty(tl)} ${w?'<span class="warn-txt">剩'+lessonQty(rem)+'!</span>':'剩'+lessonQty(rem)}</span></div></td><td><div class="tms-text-remark" style="max-width:240px" title="${esc(planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} 剩${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||'无可用权益')}">${planEntitlementSummary(p)}</div></td><td><span class="tms-tag ${ss[p.status]||'tms-tag-tier-slate'}">${sl[p.status]||p.status||'—'}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPlanDetail('${p.id}')">详情</span><span class="tms-action-link" onclick="openPlanStudent('${p.id}')">学员</span><span class="tms-action-link" onclick="openPlanSchedule('${p.id}')">排课</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td style="padding-left:20px"><div class="tms-text-primary">${esc(p.studentName)||'—'}</div></td><td>${renderCourtCellText(p.studentPhone)}</td><td><div class="tms-text-primary">${esc(p.className)||'—'}</div></td><td><div class="tms-text-primary">${esc(p.productName)||'—'}</div><div class="tms-text-secondary">${esc(courseTypeDisplayLabel(planProduct(p)||{}))}</div></td><td>${renderCourtCellText(coachName(p.coach))}</td><td>${renderCourtCellText(last?.startTime?fmtDt(last.startTime):'-',false)}</td><td><div class="prog-wrap"><div class="prog-track"><div class="prog-fill ${pc}" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div><span class="prog-txt">${lessonQty(ul)}/${lessonQty(tl)} ${w?'<span class="warn-txt">剩'+lessonQty(rem)+'!</span>':'剩'+lessonQty(rem)}</span></div></td><td><div class="tms-text-remark" style="max-width:240px" title="${esc(planEntitlementRows(p).map(e=>`${standardPackageLabel(e,true)||e.packageName||'课包'} 剩${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||'无可用权益')}">${planEntitlementSummary(p)}</div></td><td><span class="tms-tag ${ss[p.status]||'tms-tag-tier-slate'}">${sl[p.status]||p.status||'—'}</span></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openPlanDetail('${p.id}')">详情</span><span class="tms-action-link" onclick="openPlanStudent('${p.id}')">学员</span><span class="tms-action-link" onclick="openPlanSchedule('${p.id}')">排课</span></td></tr>`;
   }).join(''):'<tr><td colspan="10"><div class="empty"><div class="empty-ico">📚</div><p>暂无学习计划</p></div></td></tr>';
 }

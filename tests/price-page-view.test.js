@@ -24,6 +24,8 @@ assert.match(appSource, /function renderPrices/, 'price page script should expos
 assert.match(appSource, /function syncPriceFilterOptions/, 'price page script should sync the type filter dropdown');
 assert.match(appSource, /function openPriceModal/, 'price page script should expose openPriceModal');
 assert.match(appSource, /function savePricePlan/, 'price page script should expose savePricePlan');
+assert.match(fnBody('openPriceModal'), /priceExperienceType/, 'price plan modal should expose a trial course subtype when product type is experience course');
+assert.match(fnBody('savePricePlan'), /experienceType:/, 'price plan save should persist trial course subtype');
 assert.match(html, /新增价格/, 'price page should expose one generic create button');
 assert.doesNotMatch(html, /同步默认马坡价格/, 'price page should no longer expose a built-in default sync button');
 assert.match(html, /tms-btn-primary" onclick="openPriceModal/, 'price create button should match student page primary action style');

@@ -7,6 +7,7 @@ assert.match(html, /id="nrSystemAmount"/, 'court finance modal should show syste
 assert.match(html, /id="nrFinalAmount"/, 'court finance modal should expose final transaction amount');
 assert.match(html, /id="nrOverrideReason"/, 'court finance modal should require override reason when price changes');
 assert.match(html, /function refreshCourtFinanceQuote/, 'court finance modal should quote price automatically');
+assert.match(html, /function courtPayMethodOptions\([\s\S]*PAY_METHODS[\s\S]*大众点评券码[\s\S]*抖音券码/, 'court finance payment dropdown should include shared coupon-code pay methods');
 assert.match(html, /priceMode[\s\S]*pricePlanId[\s\S]*systemAmount[\s\S]*finalAmount[\s\S]*overrideReason/, 'saved court finance row should include price snapshot fields');
 
 console.log('court price view tests passed');

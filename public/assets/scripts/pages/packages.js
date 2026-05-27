@@ -318,14 +318,13 @@ function applyPackageTimeBandPreset(value){
 }
 
 function openPackageModal(id,presetProductId=''){
-  editId=id;const p=id?packages.find(x=>x.id===id):null;
+  editId=id;const presetProduct=presetProductId?products.find(x=>x.id===presetProductId):null;const p=id?packages.find(x=>x.id===id):presetProduct?{courseType:presetProduct.type,experienceType:presetProduct.experienceType,audience:presetProduct.audience,maxStudents:presetProduct.maxStudents,price:presetProduct.price,lessons:presetProduct.lessons,productId:presetProduct.id,productName:presetProduct.name}:null;
   const locked=!!(id&&packageHasPurchases(id));
   const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
   const audience=rv(p,'audience')||packageAudienceLabelFromText([p?.type,p?.productName,p?.name,p?.packageName,p?.notes])||'成人';
   const audienceOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'}];
-  const experienceTypeOptions=[{value:'私教体验课',label:'私教体验课'},{value:'小班体验课',label:'小班体验课'}];
   const experienceType=rv(p,'experienceType')||packageExperienceTypeLabel(p)||'私教体验课';
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
@@ -336,7 +335,7 @@ function openPackageModal(id,presetProductId=''){
         <div class="tms-form-item"><label class="tms-form-label">学员类型 *</label>${renderCourtDropdownHtml('pkg_audience','学员类型',audienceOptions,audience,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">课程类型 *</label>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true,'syncPackageClassSize')}</div>
         <div class="tms-form-item" id="pkg_classSizeItem"><label class="tms-form-label">上课人数</label>${renderCourtDropdownHtml('pkg_maxStudents','上课人数',classSizeOptions,String(rv(p,'maxStudents',1)),true)}</div>
-        <div class="tms-form-item" id="pkg_experienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderCourtDropdownHtml('pkg_experienceType','体验课类型',experienceTypeOptions,experienceType,true)}</div>
+        <div class="tms-form-item" id="pkg_experienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderCourtDropdownHtml('pkg_experienceType','体验课类型',experienceTypeOptions(),experienceType,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">状态</label>${renderCourtDropdownHtml('pkg_status','状态',[{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],rv(p,'status','active'),true)}</div>
       </div>
     <div class="tms-section-header">规格与价格</div>

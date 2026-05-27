@@ -212,6 +212,7 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'studentId',
   'studentName',
   'courseType',
+  'experienceType',
   'coach',
   'campus',
   'venue',
@@ -993,7 +994,7 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
   const validUntil=pkg.usageEndDate||pkg.validUntil||(pkg.validDays?addDaysKey(purchaseDate,pkg.validDays):'');
   const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
   const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
-  return {
+  const rec={
     id,
     studentId:purchase.studentId||student?.id||'',
     studentName:purchase.studentName||student?.name||purchase.studentId||'',
@@ -1022,6 +1023,8 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     createdAt:now,
     updatedAt:now
   };
+  if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
+  return rec;
 }
 function buildPurchaseRecord(pkg,body,student,opts={}){
   const now=opts.now||new Date().toISOString();
@@ -1032,7 +1035,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
   const overrideReason=String(body.overrideReason||'').trim();
   if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
   const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
-  return {
+  const rec={
     ...body,
     id:opts.id||body.id||uuidv4(),
     studentId:student.id,
@@ -1069,6 +1072,8 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     createdAt:body.createdAt||now,
     updatedAt:now
   };
+  if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
+  return rec;
 }
 function validateProductInput(product){
   if(!String(product?.name||'').trim())throw new Error('请填写课程名称');
@@ -1176,24 +1181,28 @@ function packageEntitlementValidity(nextPackage,entitlement={},purchase={}){
 function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],now=new Date().toISOString()){
   const packageId=String(nextPackage?.id||'');
   const purchaseById=new Map((purchases||[]).map(p=>[String(p.id||''),p]));
-  const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>({
-    ...p,
-    courseType:nextPackage.courseType||nextPackage.type||'',
-    packagePrice:normalizeMoney(nextPackage.price),
-    systemAmount:normalizeMoney(nextPackage.price),
-    packageTimeBand:nextPackage.timeBand||'',
-    dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
-    ownerCoach:nextPackage.ownerCoach||'',
-    validDays:parseInt(nextPackage.validDays)||0,
-    saleStartDate:nextPackage.saleStartDate||'',
-    saleEndDate:nextPackage.saleEndDate||'',
-    usageStartDate:nextPackage.usageStartDate||'',
-    usageEndDate:nextPackage.usageEndDate||'',
-    updatedAt:now
-  }));
+  const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>{
+    const next={
+      ...p,
+      courseType:nextPackage.courseType||nextPackage.type||'',
+      packagePrice:normalizeMoney(nextPackage.price),
+      systemAmount:normalizeMoney(nextPackage.price),
+      packageTimeBand:nextPackage.timeBand||'',
+      dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
+      ownerCoach:nextPackage.ownerCoach||'',
+      validDays:parseInt(nextPackage.validDays)||0,
+      saleStartDate:nextPackage.saleStartDate||'',
+      saleEndDate:nextPackage.saleEndDate||'',
+      usageStartDate:nextPackage.usageStartDate||'',
+      usageEndDate:nextPackage.usageEndDate||'',
+      updatedAt:now
+    };
+    if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
+    return next;
+  });
   const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>{
     const validity=packageEntitlementValidity(nextPackage,e,purchaseById.get(String(e.purchaseId||''))||{});
-    return {
+    const next={
       ...e,
       courseType:nextPackage.courseType||nextPackage.type||'',
       timeBand:nextPackage.timeBand||'',
@@ -1202,6 +1211,8 @@ function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],n
       ...validity,
       updatedAt:now
     };
+    if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
+    return next;
   });
   return {purchases:purchaseUpdates,entitlements:entitlementUpdates};
 }
@@ -1363,6 +1374,7 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const studentIds=parseArr(schedule.studentIds);
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
+  if(entitlement.courseType==='体验课'&&schedule.courseType==='体验课'&&entitlement.experienceType&&schedule.experienceType&&entitlement.experienceType!==schedule.experienceType)throw new Error('体验课类型不匹配');
   const coachIds=filterFixedCoachValues(entitlement.coachIds);
   const coachNames=filterFixedCoachValues(entitlement.coachNames);
   const coachRefs=Array.isArray(schedule?.coachRefs)?schedule.coachRefs:[];
@@ -1441,6 +1453,8 @@ function recommendEntitlements(entitlements,schedule){
       entitlementId:ent.id,
       id:ent.id,
       packageName:ent.packageName||'',
+      courseType:ent.courseType||'',
+      experienceType:ent.experienceType||'',
       remainingLessons:parseLessonValue(ent.remainingLessons),
       totalLessons:parseLessonValue(ent.totalLessons),
       validUntil:ent.validUntil||'',
@@ -1484,7 +1498,7 @@ function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOStrin
 function assertScheduleEditableAfterFeedback(oldRec,nextRec,feedbacks){
   if(!oldRec||!nextRec)return;
   if(!(feedbacks||[]).some(f=>f.scheduleId===oldRec.id))return;
-  const coreFields=['studentName','classId','entitlementId','startTime','endTime','coach','coachId','campus','venue','courseType','isTrial','lessonCount','status'];
+  const coreFields=['studentName','classId','entitlementId','startTime','endTime','coach','coachId','campus','venue','courseType','experienceType','isTrial','lessonCount','status'];
   const changed=coreFields.filter(k=>String(oldRec[k]??'')!==String(nextRec[k]??''));
   const oldStudents=parseArr(oldRec.studentIds).sort();
   const nextStudents=parseArr(nextRec.studentIds).sort();
@@ -5295,8 +5309,8 @@ function defaultMabaoPricePlans(){
   const products=[
     ['青少年1v1私教体验课','体验课','lesson','1小时',60,199],
     ['成人1v1私教体验课','体验课','lesson','1小时',60,239],
-    ['青少年1v4小班课体验课','小班课','lesson','1-2小时',0,99],
-    ['成人1v4小班课体验课','小班课','lesson','1-2小时',0,129],
+    ['青少年1v4小班课体验课','体验课','lesson','1-2小时',0,99],
+    ['成人1v4小班课体验课','体验课','lesson','1-2小时',0,129],
     ['王牌专项：2.5~3.0多球实战特训','体验课','lesson','1-2小时',0,200],
     ['发接发与实战练习','体验课','lesson','1-2小时',0,260],
     ['削球实战训练','体验课','lesson','1-2小时',0,260],
@@ -5309,7 +5323,7 @@ function defaultMabaoPricePlans(){
     ['闲时特惠 场地预定 1H','订场券','court','1小时',60,140],
     ['刷球时刻 网球发球机畅打 1H','订场券','court','1小时',60,60],
     ['晨练 场地预定 30min','订场券','court','30min',30,50]
-  ].map(([productName,productType,businessType,durationLabel,durationMinutes,salePrice])=>({type:'channel_product',channel:'大众点评',productName,productType,businessType,durationLabel,durationMinutes,salePrice,status:'active',notes:'默认大众点评商品价'}));
+  ].map(([productName,productType,businessType,durationLabel,durationMinutes,salePrice])=>({type:'channel_product',channel:'大众点评',productName,productType,experienceType:productType==='体验课'?(/小班|1v4/.test(productName)?'小班体验课':'私教体验课'):'',businessType,durationLabel,durationMinutes,salePrice,status:'active',notes:'默认大众点评商品价'}));
   return [...venue,...products];
 }
 function normalizeDefaultPriceName(name){
@@ -5361,6 +5375,7 @@ function normalizePricePlan(input={},id=uuidv4(),now=new Date().toISOString(),ol
     createdAt:old?.createdAt||input.createdAt||now,
     updatedAt:now
   };
+  if(input.experienceType!==undefined||old?.experienceType!==undefined)base.experienceType=String(input.experienceType??old?.experienceType??'').trim();
   if(base.type==='venue_rate'){
     base.channel='';
     base.productName='';
@@ -5377,6 +5392,7 @@ function normalizePricePlan(input={},id=uuidv4(),now=new Date().toISOString(),ol
     base.startTime='';
     base.endTime='';
     base.unitPrice=0;
+    if(base.productType!=='体验课')delete base.experienceType;
   }
   assertPricePlanInput(base);
   return base;

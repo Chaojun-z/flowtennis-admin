@@ -265,7 +265,7 @@ function studentLessonRecordHtml(stu){
   const expanded=studentLessonRecordExpanded(stu);
   const body=rows.slice(0,limit).map(item=>item.type==='ledger'
     ? studentLessonRecordPackageHtml(item.row,item.ent)
-    : esc(`${studentLessonRecordTimeText(item.schedule)} · ${cn(item.schedule.campus)||'-'} ${item.schedule.venue||''} · ${item.schedule.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(item.schedule))}节 · ${scheduleCourseType(item.schedule)} · ${scheduleClassName(item.schedule)}`)
+    : esc(`${studentLessonRecordTimeText(item.schedule)} · ${cn(item.schedule.campus)||'-'} ${item.schedule.venue||''} · ${item.schedule.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(item.schedule))}节 · ${scheduleCourseTypeLabel(item.schedule)} · ${scheduleClassName(item.schedule)}`)
   ).map(line=>`<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`).join('');
   const more=rows.length>10?`<div style="margin-top:6px"><button class="btn-sec" onclick="toggleStudentLessonRecordExpanded('${stu.id}')">${expanded?'收起':'展开全部'}</button></div>`:'';
   return body+more;

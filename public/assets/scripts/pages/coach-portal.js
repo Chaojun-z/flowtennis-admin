@@ -60,6 +60,7 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
     const state=workbenchScheduleState(s,sorted[i-1],now);
     if(!state)return '';
     const courseType=scheduleCourseType(s);
+    const courseTypeLabel=scheduleCourseTypeLabel(s);
     const typeClass=coachPortalCourseTypeClass(courseType);
     const stateClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
     const badgeClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
@@ -69,7 +70,7 @@ function workbenchSection(title,rows,buttonText,now,meta={}){
     const primaryAction=state.code==='pending'?`openFeedbackModal('${s.id}')`:`openScheduleDetail('${s.id}')`;
     const alertHtml=alertText?`<div class="coach-wb-row4"><div class="coach-wb-alert">${esc(alertText)}</div></div>`:'';
     const secondaryAction=primaryAction===`openScheduleDetail('${s.id}')`&&primaryLabel==='查看详情'?'':`<button class="coach-wb-action ${primaryClass}" onclick="${primaryAction}">${primaryLabel}</button>`;
-    return `<div class="coach-wb-card ${stateClass}"><div class="coach-wb-card-body"><div class="coach-wb-row1"><div class="coach-wb-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}</div><div class="coach-wb-badge ${badgeClass}">${state.label}</div></div><div class="coach-wb-name">${esc(scheduleStudentSummary(s))}</div><div class="coach-wb-row3"><span class="coach-wb-tag is-${typeClass}">${esc(courseType)}</span><span>${esc(scheduleLocationText(s))}</span></div>${alertHtml}</div><div class="coach-wb-card-footer"><button class="coach-wb-action" onclick="openScheduleDetail('${s.id}')">查看详情</button>${secondaryAction}</div></div>`;
+    return `<div class="coach-wb-card ${stateClass}"><div class="coach-wb-card-body"><div class="coach-wb-row1"><div class="coach-wb-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}</div><div class="coach-wb-badge ${badgeClass}">${state.label}</div></div><div class="coach-wb-name">${esc(scheduleStudentSummary(s))}</div><div class="coach-wb-row3"><span class="coach-wb-tag is-${typeClass}">${esc(courseTypeLabel)}</span><span>${esc(scheduleLocationText(s))}</span></div>${alertHtml}</div><div class="coach-wb-card-footer"><button class="coach-wb-action" onclick="openScheduleDetail('${s.id}')">查看详情</button>${secondaryAction}</div></div>`;
   }).join('');
   return `<div id="${esc(meta.anchor||'workbench-today')}"><div class="coach-wb-group-title">${esc(title)}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:'<div class="workbench-empty">今天暂无课程</div>'}</div>`;
 }
@@ -159,6 +160,7 @@ function renderPostClassFeedback(){
       const state=workbenchScheduleState(s,dayRows[idx-1],now);
       if(!state)return '';
       const courseType=scheduleCourseType(s);
+      const courseTypeLabel=scheduleCourseTypeLabel(s);
       const typeClass=coachPortalCourseTypeClass(courseType);
       const stateClass=state.code==='live'?'is-progress':(state.code==='upcoming'||state.code==='travel')?'is-upcoming':state.code==='pending'?'is-feedback':'is-normal';
       const badgeClass=stateClass;
@@ -169,7 +171,7 @@ function renderPostClassFeedback(){
       const primaryClass=state.code==='pending'?'is-warning':(state.code==='live'||state.code==='upcoming')?'is-primary':'';
       const primaryAction=state.code==='pending'?`openFeedbackModal('${s.id}')`:`openScheduleDetail('${s.id}')`;
       const secondaryAction=primaryAction===`openScheduleDetail('${s.id}')`&&primaryLabel==='查看详情'?'':`<button class="coach-wb-action ${primaryClass}" onclick="${primaryAction}">${primaryLabel}</button>`;
-      return `<div class="coach-wb-card ${stateClass}"><div class="coach-wb-card-body"><div class="coach-wb-row1"><div class="coach-wb-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}</div><div class="coach-wb-badge ${badgeClass}">${state.label}</div></div><div class="coach-wb-name">${esc(scheduleStudentSummary(s))}</div><div class="coach-wb-row3"><span class="coach-wb-tag is-${typeClass}">${esc(courseType)}</span><span>${esc(scheduleLocationText(s))}</span></div>${alertHtml}</div><div class="coach-wb-card-footer"><button class="coach-wb-action" onclick="openScheduleDetail('${s.id}')">查看详情</button>${secondaryAction}</div></div>`;
+      return `<div class="coach-wb-card ${stateClass}"><div class="coach-wb-card-body"><div class="coach-wb-row1"><div class="coach-wb-time">${s.startTime.slice(11,16)}${s.endTime?` - ${s.endTime.slice(11,16)}`:''}</div><div class="coach-wb-badge ${badgeClass}">${state.label}</div></div><div class="coach-wb-name">${esc(scheduleStudentSummary(s))}</div><div class="coach-wb-row3"><span class="coach-wb-tag is-${typeClass}">${esc(courseTypeLabel)}</span><span>${esc(scheduleLocationText(s))}</span></div>${alertHtml}</div><div class="coach-wb-card-footer"><button class="coach-wb-action" onclick="openScheduleDetail('${s.id}')">查看详情</button>${secondaryAction}</div></div>`;
     }).join('');
     return `<div class="coach-wb-day-section${isToday?' is-today':''}"><div class="coach-wb-day-label">${dayLabel}</div>${cards?`<div class="coach-wb-grid">${cards}</div>`:''}</div>`;
   }).join('');
@@ -214,7 +216,7 @@ function myScheduleBlockTitle(schedule){
   return scheduleStudentSummary(schedule);
 }
 function myScheduleTypeText(schedule){
-  return schedule.scheduleSource==='订场陪打'?'陪打':scheduleCourseType(schedule);
+  return schedule.scheduleSource==='订场陪打'?'陪打':scheduleCourseTypeLabel(schedule);
 }
 function myStudentLessonRecordHtml(student){
   const coach=getMyCoachName();

@@ -63,6 +63,8 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
 assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal should expose a second-level selector for experience courses');
+assert.match(fnBody('openProductModal'), /p_experienceType/, 'course product modal should expose a second-level selector for experience courses');
+assert.match(fnBody('saveProduct'), /experienceType:/, 'course product save should persist the selected experience subtype');
 assert.match(fnBody('savePackage'), /const audience=document\.getElementById\('pkg_audience'\)\.value[\s\S]*const data=\{[\s\S]*audience,type:audience/, 'package save should persist the selected adult or youth type');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal course type should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_maxStudents'/, 'package modal class size should use the shared custom dropdown');
@@ -152,6 +154,9 @@ assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
 assert.match(html, /function packageCoreClassLabel\([\s\S]*体验课[\s\S]*experienceType[\s\S]*私教体验课[\s\S]*小班体验课/, 'shared package label should show both experience-course names');
+assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'\]/, 'package purchase pay method should use the shared pay method source with coupon codes');
+assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
+assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('renderPackages'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
