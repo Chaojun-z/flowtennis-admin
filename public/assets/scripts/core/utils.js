@@ -1292,14 +1292,13 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const balance=studentLedgerBalanceNumbersAfter(row,ent)||{remaining:Number(ent.remainingLessons)||0,total:Number(ent.totalLessons)||0};
   const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
   const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance);
-  return [
-    esc(studentLessonRecordSectionText(row,ent)),
-    esc(studentEntitlementLedgerTimeText(row,schedule)),
-    esc(studentEntitlementLedgerLocationText(row,schedule,ent)),
-    esc(coachName(schedule.coach||row?.coach||ent?.ownerCoach||'')),
-    chargeHtml,
-    `[${esc(payText)}]`
-  ].filter(Boolean).join(' · ');
+  const title=[studentLessonRecordSectionText(row,ent),`[${esc(renderCourtEmptyText(payText))}]`].filter(Boolean).join(' · ');
+  const meta=[
+    studentEntitlementLedgerTimeText(row,schedule),
+    studentEntitlementLedgerLocationText(row,schedule,ent),
+    coachName(schedule.coach||row?.coach||ent?.ownerCoach||'')
+  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title)}</div><div class="student-lesson-meta">${meta}</div></div><div class="student-lesson-charge">${chargeHtml}</div></div>`;
 }
 function studentLessonRecordLedgerText(row,ent={}){
   const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};

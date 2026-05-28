@@ -232,6 +232,14 @@ function studentRecentFeedbackSummaryHtml(stu){
   if(!recentFeedbacks.length)return '';
   return recentFeedbacks.map(f=>`<div class="student-feedback-card"><strong>${esc(String(f.startTime||f.createdAt||'').slice(0,10)||'-')}</strong><span>${esc(f.practicedToday||f.knowledgePoint||f.nextTraining||'已填写反馈')}</span></div>`).join('');
 }
+function studentLessonRecordMetaIcon(kind){
+  if(kind==='time')return '<svg class="student-lesson-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="4"/><path d="M3 10h18"/></svg>';
+  if(kind==='site')return '<svg class="student-lesson-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+  return '<svg class="student-lesson-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+}
+function studentLessonRecordMetaItem(kind,text){
+  return `<span class="student-lesson-meta-item">${studentLessonRecordMetaIcon(kind)}<span>${esc(renderCourtEmptyText(text))}</span></span>`;
+}
 function studentHasActiveSearchOrFilter(){
   return !!((document.getElementById('stuSearch')?.value||'').trim()||document.getElementById('stuTypeFilter')?.value||document.getElementById('stuSourceFilter')?.value||document.getElementById('stuCoachFilter')?.value);
 }
@@ -297,7 +305,7 @@ function studentLessonRecordHtml(stu){
   const body=rows.slice(0,limit).map(item=>{
     const line=item.type==='ledger'
       ? studentLessonRecordPackageHtml(item.row,item.ent)
-      : esc(`${studentLessonRecordTimeText(item.schedule)} · ${cn(item.schedule.campus)||'-'} ${item.schedule.venue||''} · ${item.schedule.coach||'-'} · ${lessonUnitsText(scheduleLessonUnits(item.schedule))}节 · ${scheduleCourseTypeLabel(item.schedule)} · ${scheduleClassName(item.schedule)}`);
+      : `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(`[${studentLessonRecordTimeText(item.schedule)}] · ${scheduleCourseTypeLabel(item.schedule)} · ${scheduleClassName(item.schedule)}`)}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',studentLessonRecordTimeText(item.schedule))}${studentLessonRecordMetaItem('site',[cn(item.schedule.campus)||'-',item.schedule.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.schedule.coach||'-')}</div></div></div>`;
     return `<div class="student-lesson-timeline-item"><div class="student-lesson-dot"></div><div class="student-lesson-card">${line}</div></div>`;
   }).join('');
   const more=rows.length>10?`<div style="margin-top:6px"><button class="btn-sec" onclick="toggleStudentLessonRecordExpanded('${stu.id}')">${expanded?'收起':'展开全部'}</button></div>`:'';
@@ -430,7 +438,7 @@ function studentReminderInfoHtml(stu){
   const linkAction=stu?.officialAccountOpenId
     ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>重新复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
     :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制给学员绑定</span><small>学员用微信打开后完成绑定</small></button>`;
-  return studentDetailSectionBlockHtml('服务号提醒偏好',`<div class="student-reminder-compact"><div class="student-reminder-head"><div><strong>服务号提醒偏好</strong><span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-status"><span>${studentReminderModeText(stu)}</span></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div>`,'student-reminder-section');
+  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-status"><span>${studentReminderModeText(stu)}</span></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
 }
 function leadRowsForSummary(){
   return typeof leadRows==='function'?leadRows():(Array.isArray(leads)?leads:[]);
@@ -457,7 +465,7 @@ function studentLeadSummaryHtml(s){
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
-  const body=`<div class="student-detail-shell">${studentDetailHeroHtml(s)}${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentOpsInfoHtml(s)}${studentConsumptionInfoHtml(s)}</div>`;
+  const body=`<div class="student-detail-shell">${studentDetailHeroHtml(s)}${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
   setCourtModalFrame('学员详情',body,footer,'modal-wide modal-student-detail');
 }
