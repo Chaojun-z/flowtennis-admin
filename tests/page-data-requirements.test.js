@@ -5,7 +5,7 @@ const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
 assert.match(source, /students:\['campuses','students'\]/, 'students page should only block on the datasets needed to paint the list immediately');
-assert.match(source, /leads:\['leads'\]/, 'leads page should only block on the leads list dataset for first paint');
+assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
 assert.match(source, /plans:\[\]/, 'plans page should open shell immediately and load data in background');
 assert.match(source, /packages:\['packages','products','purchases','entitlements'\]/, 'packages page should wait for its package-sale dependencies so the empty state is stable');
 assert.match(source, /purchases:\[\]/, 'purchases page should open shell immediately and load data in background');
@@ -18,7 +18,7 @@ assert.match(source, /mystudents:\[\]/, 'coach students should open immediately 
 assert.match(source, /myclasses:\[\]/, 'coach classes should open immediately and load data in background');
 assert.match(source, /schedule:\['campuses','students','schedule','coaches'\]/, 'schedule page should not block first paint on feedback, entitlement, or ledger datasets');
 assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*leads:\['leadFollowups','purchases'\][\s\S]*plans:\['plansPage'\][\s\S]*purchases:\['purchasesPage'\][\s\S]*schedule:\['classes','feedbacks','entitlements','entitlementLedger'\][\s\S]*finance:\['financePage'\][\s\S]*courts:\['courtsPage'\][\s\S]*memberships:\['membershipsPage'\][\s\S]*workbench:\['workbenchPage'\][\s\S]*postfeedback:\['workbenchPage'\][\s\S]*mystudents:\['campuses','students','classes','schedule','feedbacks','entitlements'\][\s\S]*myclasses:\['students','classes'\]/, 'heavy page datasets should move behind first render, and students should only keep the light follow-up chain in the first background batch');
-assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products'\];/, 'students page should delay the heaviest follow-up datasets into a second background batch');
+assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage'\];/, 'students page should delay the heaviest follow-up datasets into a second background batch and load purchase amounts for package summaries');
 assert.match(source, /,plansPage:\(\)=>apiCall\('GET','\/page-data\/plans'\)/, 'plans page should use a dedicated aggregated endpoint');
 assert.match(source, /,purchasesPage:\(\)=>apiCall\('GET','\/page-data\/purchases'\)/, 'purchases page should use a dedicated aggregated endpoint');
 assert.match(source, /,financePage:\(\)=>apiCall\('GET','\/page-data\/finance'\)/, 'finance center should use a dedicated aggregated endpoint');

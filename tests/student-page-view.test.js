@@ -106,7 +106,7 @@ assert.match(source, /function historicalImportedLedgerMonthKey\(/, 'lesson char
 assert.match(source, /reason\.match\(\s*\/\^历史导入\\s\*\(\\d\{1,2\}\)月消课\$\/\s*\)/, 'lesson charge history should fall back to parsing month from reason text when sourceMonth is missing');
 assert.match(source, /dedupeEntitlementLedgerForDisplay/, 'lesson charge history should collapse duplicate ledger rows before display');
 assert.match(source, /function historicalImportedLessonUnitsForStudent\(/, 'student page should expose a historical imported lesson helper');
-assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products'\]/, 'student detail should load package consume ledger data for the consume history block');
+assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage'\]/, 'student detail should load package consume ledger and purchase amount data for the package blocks');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.match(source, /studentCompletedLessonCount[\s\S]*historicalImportedLessonUnitsForStudent/, 'student cumulative lessons should include imported lesson consumption');
 assert.match(source, /教学信息[\s\S]*运营信息[\s\S]*消费与关联信息/, 'student detail should follow the agreed information hierarchy');

@@ -124,7 +124,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
   myclasses:['students','classes']
 };
-const STUDENT_PAGE_DEFERRED_REQUIREMENTS=['entitlements','entitlementLedger','feedbacks','products'];
+const STUDENT_PAGE_DEFERRED_REQUIREMENTS=['entitlements','entitlementLedger','feedbacks','products','purchasesPage'];
 const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
   workbench:['workbenchPage']
