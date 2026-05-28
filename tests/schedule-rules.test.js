@@ -1109,13 +1109,13 @@ assert.strictEqual(
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-openid-dual', officialAccountReminderMode: 'all' }
     ];
     const rows=[
-      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' }
+      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' }
     ];
     let storedSession=null;
     let clearedSessionId='';
     const first=await rules.processOfficialAccountCallbackRequest({
       query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
-      rawBody:`<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-openid-dual]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[查询排课]]></Content></xml>`,
+      rawBody:`<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-openid-dual]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[明天第一节课]]></Content></xml>`,
       loadUsers:async()=>users,
       loadStudents:async()=>students,
       loadCoaches:async()=>[],
@@ -1132,6 +1132,8 @@ assert.strictEqual(
 
     assert.match(first.plainReply, /请回复“教练”或“学员”继续查询。/, 'dual binding should ask the user to choose a role');
     assert.strictEqual(storedSession?.status, 'awaiting_role_choice', 'dual binding should persist a pending choice session');
+    assert.strictEqual(storedSession?.query?.kind, 'tomorrow', 'dual binding should remember the original query range');
+    assert.strictEqual(storedSession?.query?.mode, 'first', 'dual binding should remember first-class mode');
 
     const second=await rules.processOfficialAccountCallbackRequest({
       query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
@@ -1153,8 +1155,105 @@ assert.strictEqual(
     assert.match(second.plainReply, /姓名：小鹿/, 'selected student reply should show the student name');
     assert.match(second.plainReply, /身份：学员/, 'selected student reply should show the student role');
     assert.match(second.plainReply, /教练：朝珺/, 'selected student reply should show the coach name');
+    assert.match(second.plainReply, /这是你明天最早的一节课：/, 'selected role should keep the original query wording');
     assert.strictEqual(clearedSessionId, 'oa-openid-dual', 'selecting a role should clear the pending query session');
     assert.strictEqual(storedSession, null, 'selecting a role should remove the pending query session');
+  }
+
+  {
+    const token='flowtennisoa2026';
+    const appId='wx4c76dc29b1d48df3';
+    const timestamp='1715763720';
+    const nonce='123456';
+    const now=new Date('2026-05-19T06:30:00.000Z'); // 北京时间 14:30
+    const users=[
+      { id: 'coach_1', name: '朝珺', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-query-coach' }
+    ];
+    const students=[
+      { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-query-student' },
+      { id: 'stu-2', name: 'Misha' }
+    ];
+    const rows=[
+      { id: 'today-past', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 09:00', endTime: '2026-05-19 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' },
+      { id: 'today-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'mabao', venue: '2号场', courseType: '双人课', status: '已排课' },
+      { id: 'tomorrow-first', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 08:00', endTime: '2026-05-20 09:00', campus: 'guowang', venue: '1号场', courseType: '私教课', status: '已排课' },
+      { id: 'tomorrow-second', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-20 10:00', endTime: '2026-05-20 11:00', campus: 'mabao', venue: '3号场', courseType: '私教课', status: '已排课' },
+      { id: 'last-week', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-12 18:00', endTime: '2026-05-12 19:00', campus: 'mabao', venue: '4号场', courseType: '私教课', status: '已排课' }
+    ];
+    const ask=content=>rules.processOfficialAccountCallbackRequest({
+      query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
+      rawBody:`<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-query-coach]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[${content}]]></Content></xml>`,
+      loadUsers:async()=>users,
+      loadStudents:async()=>students,
+      loadCoaches:async()=>[],
+      loadQueryData:async()=>({users,students,coaches:[],rows}),
+      loadQuerySession:async()=>null,
+      putQuerySession:async()=>{ throw new Error('unexpected query session write'); },
+      deleteQuerySession:async()=>{ throw new Error('unexpected query session delete'); },
+      now,
+      token,
+      appId,
+      encodingAesKey:''
+    });
+
+    const remaining=await ask('查询今天我有几节课？');
+    assert.match(remaining.plainReply, /这是你今天剩下还没上的课：/, 'today count wording should return remaining classes');
+    assert.match(remaining.plainReply, /共有 1 节/, 'today remaining should only count future classes today');
+    assert.match(remaining.plainReply, /16:00-17:00/, 'today remaining should include later class');
+    assert.doesNotMatch(remaining.plainReply, /09:00-10:00/, 'today remaining should hide already finished class');
+
+    const firstTomorrow=await ask('明天第一节是几点');
+    assert.match(firstTomorrow.plainReply, /这是你明天最早的一节课：/, 'tomorrow first wording should return the first class');
+    assert.match(firstTomorrow.plainReply, /共有 1 节/, 'first-class query should only show one class');
+    assert.match(firstTomorrow.plainReply, /5月20日 08:00-09:00/, 'first-class query should show the earliest class');
+    assert.doesNotMatch(firstTomorrow.plainReply, /10:00-11:00/, 'first-class query should not show later classes');
+
+    const campus=await ask('麻烦查一下，明天 马坡 排课');
+    assert.match(campus.plainReply, /这是你在顺义马坡明天的排课：/, 'campus alias with punctuation and spaces should be recognized');
+    assert.match(campus.plainReply, /10:00-11:00/, 'campus query should include matching campus rows');
+    assert.doesNotMatch(campus.plainReply, /08:00-09:00/, 'campus query should exclude other campus rows');
+
+    const past=await ask('查询过去七天排课');
+    assert.match(past.plainReply, /这是你过去七天的排课：/, 'past query should use past wording');
+    assert.match(past.plainReply, /5月12日 18:00-19:00/, 'past query should include previous classes');
+  }
+
+  {
+    const token='flowtennisoa2026';
+    const appId='wx4c76dc29b1d48df3';
+    const timestamp='1715763720';
+    const nonce='123456';
+    const now=new Date('2026-05-19T06:30:00.000Z');
+    const users=[
+      { id: 'coach_1', name: '朝珺', role: 'editor', coachId: 'coach-chaojun', coachName: '朝珺' }
+    ];
+    const students=[
+      { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-query-student' }
+    ];
+    const rows=[
+      { id: 'student-next', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', status: '已排课' }
+    ];
+    const result=await rules.processOfficialAccountCallbackRequest({
+      query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
+      rawBody:`<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-query-student]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[我下节课在哪？]]></Content></xml>`,
+      loadUsers:async()=>users,
+      loadStudents:async()=>students,
+      loadCoaches:async()=>[],
+      loadQueryData:async()=>({users,students,coaches:[],rows}),
+      loadQuerySession:async()=>null,
+      putQuerySession:async()=>{ throw new Error('unexpected query session write'); },
+      deleteQuerySession:async()=>{ throw new Error('unexpected query session delete'); },
+      now,
+      token,
+      appId,
+      encodingAesKey:''
+    });
+
+    assert.match(result.plainReply, /这是你的下一节课：/, 'student side should support next-class wording');
+    assert.match(result.plainReply, /姓名：小鹿/, 'student side should show student name');
+    assert.match(result.plainReply, /身份：学员/, 'student side should show student role');
+    assert.match(result.plainReply, /教练：朝珺/, 'student side should show coach name');
+    assert.match(result.plainReply, /场地：顺义马坡 2号场/, 'student side next-class query should show location');
   }
 })().catch(err => {
   console.error(err);

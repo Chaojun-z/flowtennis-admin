@@ -2066,7 +2066,7 @@ async function processOfficialAccountCallbackRequest({query,rawBody,loadUsers=()
       replyText='请发送 #绑定 手机号，例如 #绑定 13800138000。';
     }else{
       const queryChoice=normalizeOfficialAccountQueryChoice(content);
-      const isQueryCommand=content==='查询排课';
+      const scheduleQuery=parseOfficialAccountScheduleQuery(content,now);
       const querySession=await loadQuerySession(fromOpenId).catch(()=>null);
       if(querySession&&queryChoice){
         const {users,students,coaches,rows}=await loadQueryData();
@@ -2080,23 +2080,24 @@ async function processOfficialAccountCallbackRequest({query,rawBody,loadUsers=()
           schedules:rows,
           students,
           coachRefs,
-          now
+          now,
+          query:querySession.query||null
         });
         await deleteQuerySession(fromOpenId);
       }else if(querySession){
         replyText='你同时绑定了教练和学员身份，请回复“教练”或“学员”继续查询。';
-      }else if(isQueryCommand){
+      }else if(scheduleQuery){
         const {users,students,coaches,rows}=await loadQueryData();
         const coachUser=findOfficialAccountCoachByOpenId(users,fromOpenId);
         const student=findOfficialAccountStudentByOpenId(students,fromOpenId);
         const coachRefs=buildCoachRefs({coaches,users});
         if(coachUser&&student){
-          await putQuerySession(buildOfficialAccountQuerySessionRow(fromOpenId,now));
+          await putQuerySession({...buildOfficialAccountQuerySessionRow(fromOpenId,now),query:scheduleQuery});
           replyText='你同时绑定了教练和学员身份，请回复“教练”或“学员”继续查询。';
         }else if(coachUser){
-          replyText=buildOfficialAccountScheduleQueryReply({role:'coach',coachUser,schedules:rows,students,coachRefs,now});
+          replyText=buildOfficialAccountScheduleQueryReply({role:'coach',coachUser,schedules:rows,students,coachRefs,now,query:scheduleQuery});
         }else if(student){
-          replyText=buildOfficialAccountScheduleQueryReply({role:'student',student,schedules:rows,students,coachRefs,now});
+          replyText=buildOfficialAccountScheduleQueryReply({role:'student',student,schedules:rows,students,coachRefs,now,query:scheduleQuery});
         }else{
           replyText='请先绑定手机号后再查询排课。';
         }
@@ -2201,6 +2202,107 @@ function normalizeOfficialAccountQueryChoice(text){
   if(raw==='学员')return 'student';
   return '';
 }
+function normalizeOfficialAccountScheduleQueryText(text){
+  return String(text||'').normalize('NFKC').toLowerCase().replace(/[\s,，.。!！?？:：;；、'"“”‘’`~·|/\\()[\]{}<>《》【】_\-—+*=#￥$%^&]+/g,'');
+}
+function shanghaiDateParts(date=new Date()){
+  const d=date instanceof Date?date:new Date(date);
+  const parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(d);
+  const val=type=>Number(parts.find(part=>part.type===type)?.value||0);
+  return {year:val('year'),month:val('month'),day:val('day')};
+}
+function shanghaiYmdFromOffset(base,offsetDays=0){
+  const utc=new Date(Date.UTC(base.year,base.month-1,base.day+offsetDays));
+  return `${utc.getUTCFullYear()}-${String(utc.getUTCMonth()+1).padStart(2,'0')}-${String(utc.getUTCDate()).padStart(2,'0')}`;
+}
+function shanghaiDayStartMs(ymd){
+  return officialAccountScheduleMs(`${ymd} 00:00`);
+}
+function shanghaiDayEndMs(ymd){
+  return officialAccountScheduleMs(`${ymd} 23:59:59`);
+}
+function shanghaiMonthYmd(base,monthOffset=0,day=1){
+  const utc=new Date(Date.UTC(base.year,base.month-1+monthOffset,day));
+  return `${utc.getUTCFullYear()}-${String(utc.getUTCMonth()+1).padStart(2,'0')}-${String(utc.getUTCDate()).padStart(2,'0')}`;
+}
+function officialAccountScheduleQueryRange(kind,now=new Date()){
+  const base=shanghaiDateParts(now);
+  const today=shanghaiYmdFromOffset(base,0);
+  const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  if(kind==='today')return {startMs:shanghaiDayStartMs(today),endMs:shanghaiDayEndMs(today)};
+  if(kind==='today_remaining')return {startMs:nowMs,endMs:shanghaiDayEndMs(today)};
+  if(kind==='tomorrow'){
+    const ymd=shanghaiYmdFromOffset(base,1);
+    return {startMs:shanghaiDayStartMs(ymd),endMs:shanghaiDayEndMs(ymd)};
+  }
+  if(kind==='day_after_tomorrow'){
+    const ymd=shanghaiYmdFromOffset(base,2);
+    return {startMs:shanghaiDayStartMs(ymd),endMs:shanghaiDayEndMs(ymd)};
+  }
+  if(kind==='future_three_days')return {startMs:shanghaiDayStartMs(today),endMs:shanghaiDayEndMs(shanghaiYmdFromOffset(base,2))};
+  if(kind==='this_week'){
+    const dayOfWeek=new Date(Date.UTC(base.year,base.month-1,base.day)).getUTCDay()||7;
+    return {startMs:shanghaiDayStartMs(shanghaiYmdFromOffset(base,1-dayOfWeek)),endMs:shanghaiDayEndMs(shanghaiYmdFromOffset(base,7-dayOfWeek))};
+  }
+  if(kind==='yesterday'){
+    const ymd=shanghaiYmdFromOffset(base,-1);
+    return {startMs:shanghaiDayStartMs(ymd),endMs:shanghaiDayEndMs(ymd)};
+  }
+  if(kind==='past_three_days')return {startMs:shanghaiDayStartMs(shanghaiYmdFromOffset(base,-3)),endMs:shanghaiDayEndMs(today)};
+  if(kind==='past_seven_days')return {startMs:shanghaiDayStartMs(shanghaiYmdFromOffset(base,-7)),endMs:shanghaiDayEndMs(today)};
+  if(kind==='last_week'){
+    const dayOfWeek=new Date(Date.UTC(base.year,base.month-1,base.day)).getUTCDay()||7;
+    return {startMs:shanghaiDayStartMs(shanghaiYmdFromOffset(base,1-dayOfWeek-7)),endMs:shanghaiDayEndMs(shanghaiYmdFromOffset(base,7-dayOfWeek-7))};
+  }
+  if(kind==='last_month'){
+    const first=shanghaiMonthYmd(base,-1,1);
+    const next=shanghaiMonthYmd(base,0,1);
+    return {startMs:shanghaiDayStartMs(first),endMs:shanghaiDayStartMs(next)-1};
+  }
+  return {startMs:nowMs,endMs:Infinity};
+}
+function findOfficialAccountQueryCampus(text){
+  const normalized=normalizeOfficialAccountScheduleQueryText(text);
+  const aliases=[
+    ['顺义马坡','mabao'],['马坡','mabao'],['mabao','mabao'],
+    ['朝阳十里堡','shilipu'],['十里堡','shilipu'],['shilipu','shilipu'],
+    ['国家网球中心','guowang'],['国网','guowang'],['guowang','guowang'],
+    ['蓝色港湾','langang'],['蓝港','langang'],['langang','langang'],
+    ['朝珺私教','chaojun'],['朝珺','chaojun'],['chaojun','chaojun']
+  ];
+  const hit=aliases.find(([alias])=>normalized.includes(normalizeOfficialAccountScheduleQueryText(alias)));
+  return hit?hit[1]:'';
+}
+function parseOfficialAccountScheduleQuery(content,now=new Date()){
+  const normalized=normalizeOfficialAccountScheduleQueryText(content);
+  if(!normalized)return null;
+  const hasScheduleWord=/排课|课表|课|节|安排|上课/.test(normalized);
+  const campus=findOfficialAccountQueryCampus(content);
+  const hasRangeWord=/今天|今日|明天|明日|后天|本周|这周|昨天|昨日|过去|最近|上周|上个月|未来|接下来/.test(normalized);
+  const hasQueryIntent=/查|查询|几节|几点|在哪|哪里|什么时候|什么|哪些|有课吗|要上课吗|第一节|下一节|下节|下次|最近|最早/.test(normalized);
+  if(normalized!=='查询排课'&&!(hasScheduleWord&&(hasQueryIntent||hasRangeWord||campus)))return null;
+  let kind='future';
+  let title='未来的排课';
+  let mode='list';
+  if(/上个月/.test(normalized)){kind='last_month';title='上个月的排课';}
+  else if(/上周/.test(normalized)){kind='last_week';title='上周的排课';}
+  else if(/过去七天|最近七天|过去一周/.test(normalized)){kind='past_seven_days';title='过去七天的排课';}
+  else if(/过去三天|最近三天/.test(normalized)){kind='past_three_days';title='过去三天的排课';}
+  else if(/昨天|昨日/.test(normalized)){kind='yesterday';title='昨天的排课';}
+  else if(/未来三天|接下来三天|这三天/.test(normalized)){kind='future_three_days';title='未来三天的排课';}
+  else if(/本周|这周/.test(normalized)){kind='this_week';title='本周的排课';}
+  else if(/后天/.test(normalized)){kind='day_after_tomorrow';title='后天的排课';}
+  else if(/明天|明日/.test(normalized)){kind='tomorrow';title='明天的排课';}
+  else if(/今天|今日/.test(normalized)){
+    if(/还有|剩|没上|有几节课|几节课/.test(normalized)){kind='today_remaining';title='今天剩下还没上的课';}
+    else{kind='today';title='今天的排课';}
+  }
+  if(/第一节|最早/.test(normalized)){mode='first';title=kind==='tomorrow'?'明天最早的一节课':`${title.replace(/的排课$/,'')}最早的一节课`;}
+  else if(/下一节|下节|下次|最近/.test(normalized)){mode='first';if(kind==='today_remaining')title='今天下一节课';else if(kind==='this_week')title='本周下一节课';else title=campus?`在${displayCampusName(campus)}的下一节课`:'下一节课';}
+  if(campus&&mode!=='first')title=`在${displayCampusName(campus)}${title}`;
+  const {startMs,endMs}=officialAccountScheduleQueryRange(kind,now);
+  return {kind,title,mode,campus,startMs,endMs};
+}
 function buildOfficialAccountQuerySessionRow(openid,now=new Date()){
   const id=String(openid||'').trim();
   const nowText=now instanceof Date?now.toISOString():String(now||'');
@@ -2296,15 +2398,24 @@ function formatOfficialAccountQueryStudentNames(schedule,studentsById){
 function formatOfficialAccountQueryCoachName(schedule){
   return String(schedule?.coach||schedule?.coachName||schedule?.primaryCoach||schedule?.coachId||'').trim()||'教练';
 }
-function buildOfficialAccountScheduleQueryReply({role,coachUser,student,schedules=[],students=[],coachRefs=[],now=new Date(),limit=5}={}){
+function buildOfficialAccountScheduleQueryReply({role,coachUser,student,schedules=[],students=[],coachRefs=[],now=new Date(),limit=5,query=null}={}){
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
+  const q=query||parseOfficialAccountScheduleQuery('查询排课',now);
   const studentsById=new Map((students||[]).map(item=>[String(item?.id||'').trim(),item]));
-  const futureRows=(schedules||[])
-    .filter(schedule=>String(effectiveScheduleStatus(schedule,now)||'')==='已排课'&&Number.isFinite(officialAccountScheduleMs(schedule.startTime))&&officialAccountScheduleMs(schedule.startTime)>=nowMs)
+  const matchedRows=(schedules||[])
+    .filter(schedule=>String(schedule?.status||'已排课')==='已排课'&&Number.isFinite(officialAccountScheduleMs(schedule.startTime)))
     .filter(schedule=>role==='coach'
       ?scheduleMatchesCoachForOfficialAccount(schedule,coachUser,coachRefs)
       :scheduleMatchesStudentForOfficialAccount(schedule,student))
+    .filter(schedule=>{
+      const start=officialAccountScheduleMs(schedule.startTime);
+      if(start<(q?.startMs??nowMs))return false;
+      if(Number.isFinite(q?.endMs)&&start>q.endMs)return false;
+      if(q?.campus&&normalizeCampusValue(schedule?.campus)!==q.campus)return false;
+      return true;
+    })
     .sort((a,b)=>officialAccountScheduleMs(a.startTime)-officialAccountScheduleMs(b.startTime));
+  const futureRows=q?.mode==='first'?matchedRows.slice(0,1):matchedRows;
   const roleLabel=role==='coach'?'教练':'学员';
   const name=role==='coach'
     ?String(coachUser?.coachName||coachUser?.name||coachUser?.coachId||'教练').trim()||'教练'
@@ -2317,9 +2428,12 @@ function buildOfficialAccountScheduleQueryReply({role,coachUser,student,schedule
     const campusText=[displayCampusName(schedule?.campus),schedule?.venue||schedule?.externalVenueName||schedule?.externalCourtName].filter(Boolean).join(' ')||'待确认';
     const partnerText=role==='coach'?formatOfficialAccountQueryStudentNames(schedule,studentsById):formatOfficialAccountQueryCoachName(schedule);
     return `${index+1}. ${timeText}\n   ${role==='coach'?'学员':'教练'}：${partnerText}\n   课程：${courseText}\n   场地：${campusText}`;
-  }).join('\n\n'):'暂无未来排课';
+  }).join('\n\n'):`暂无${q?.title||'未来的排课'}`;
   const moreText=total>limit?`\n\n还有 ${total-limit} 节未显示`:'';
-  return `姓名：${name}\n身份：${roleLabel}\n未来共有 ${total} 节\n\n${body}${moreText}`;
+  const countLabel=q?.kind==='future'?'未来共有':'共有';
+  const title=q?.title||'未来的排课';
+  const prefix=/^(在|今天|明天|后天|本周|上周|昨天|过去|上个月|未来)/.test(title)?`这是你${title}：`:`这是你的${title}：`;
+  return `${prefix}\n\n姓名：${name}\n身份：${roleLabel}\n${countLabel} ${total} 节\n\n${body}${moreText}`;
 }
 async function putWechatUserIndex(openid,user){
   const key=String(openid||'').trim();
@@ -8762,6 +8876,8 @@ module.exports._test={
   findWechatUserByOpenId,
   findOfficialAccountScheduleRecipient,
   normalizeOfficialAccountQueryChoice,
+  normalizeOfficialAccountScheduleQueryText,
+  parseOfficialAccountScheduleQuery,
   buildOfficialAccountQuerySessionRow,
   loadOfficialAccountQuerySession,
   saveOfficialAccountQuerySession,
