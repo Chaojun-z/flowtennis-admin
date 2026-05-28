@@ -438,7 +438,7 @@ function studentReminderInfoHtml(stu){
   const linkAction=stu?.officialAccountOpenId
     ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>重新复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
     :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制给学员绑定</span><small>学员用微信打开后完成绑定</small></button>`;
-  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-status"><span>${studentReminderModeText(stu)}</span></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
+  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
 }
 function leadRowsForSummary(){
   return typeof leadRows==='function'?leadRows():(Array.isArray(leads)?leads:[]);
@@ -467,7 +467,7 @@ function openStudentDetail(id){
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
   const body=`<div class="student-detail-shell">${studentDetailHeroHtml(s)}${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
-  setCourtModalFrame('学员详情',body,footer,'modal-wide modal-student-detail');
+  setCourtModalFrame('',body,footer,'modal-wide modal-student-detail');
 }
 async function copyStudentReminderText(text){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return;}
