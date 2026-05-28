@@ -358,6 +358,61 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .student-reminder-copy-btn span{font-size:14px;font-weight:700}
 .student-reminder-copy-btn small{font-size:11.5px;font-weight:400;color:rgba(255,255,255,0.82)}
 .student-reminder-copy-btn:hover{background:#A94F29}
+.modal.modal-court.modal-student-detail .mbody{padding:0 24px 18px}
+.modal.modal-court.modal-student-detail .mhead{background:#fff;border-radius:16px 16px 0 0;border-bottom:1px solid #EFE8E1}
+.modal.modal-court.modal-student-detail .mactions{background:#F8F5F1}
+.modal.modal-court.modal-student-detail{background:#fff}
+.modal.modal-court.modal-student-detail .student-detail-shell{display:flex;flex-direction:column;gap:22px;padding-top:18px}
+.student-detail-hero{padding-bottom:2px}
+.student-detail-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.student-detail-title-row h3{margin:0;font-size:22px;line-height:1.2;color:#1F2937;font-weight:800}
+.student-detail-tag{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:7px;font-size:12px;font-weight:700}
+.student-detail-tag.warm{background:#F5E7DD;color:#B45309}
+.student-detail-tag.slate{background:#F3F4F6;color:#4B5563}
+.student-detail-hero-meta{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:14px;color:#667085;font-size:13px;line-height:1.5}
+.student-detail-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.student-detail-metric{min-height:94px;border:1px solid #ECE7E1;border-radius:10px;background:#FAFAFA;padding:18px 18px 14px}
+.student-detail-metric-label{font-size:13px;color:#6B7280;font-weight:700;margin-bottom:10px}
+.student-detail-metric-value{font-size:22px;line-height:1.2;font-weight:800;color:#1F2937}
+.student-detail-metric-value span{font-size:14px;color:#98A2B3;font-weight:600;margin-left:4px}
+.student-detail-section h4{margin:0 0 12px;font-size:14px;color:#98A2B3;font-weight:800}
+.student-package-card{display:flex;gap:14px;align-items:flex-start;border:1px solid #ECE7E1;border-radius:9px;background:#fff;padding:14px 16px;margin-bottom:12px}
+.student-package-card:hover{border-color:#E0BFA8}
+.student-package-card.is-depleted{background:#FAFAFA;opacity:.72;filter:grayscale(.2)}
+.student-package-icon{width:28px;height:28px;border-radius:7px;background:#F8F5F1;border:1px solid #EEE7DF;flex:0 0 auto;position:relative}
+.student-package-icon::before{content:"";position:absolute;left:7px;right:7px;top:8px;height:9px;border:1.5px solid #7A8699;border-radius:2px}
+.student-package-main{min-width:0;flex:1}
+.student-package-title{font-size:14px;line-height:1.5;font-weight:800;color:#1F2937;margin-bottom:6px}
+.student-package-meta{display:flex;align-items:center;gap:0;flex-wrap:wrap;color:#667085;font-size:12px;line-height:1.7}
+.student-package-meta>*{display:inline-flex;align-items:center}
+.student-package-meta>*+*::before{content:"";width:1px;height:12px;background:#E5E7EB;margin:0 10px}
+.student-package-meta strong{color:#B45309;font-weight:800}
+.student-package-status{color:#16A34A;font-weight:700}
+.student-package-card.is-depleted .student-package-status{color:#6B7280;background:#EEF0F2;border-radius:5px;padding:0 5px}
+.student-lesson-timeline{display:flex;flex-direction:column;gap:12px}
+.student-lesson-timeline-item{display:grid;grid-template-columns:12px minmax(0,1fr);gap:10px;position:relative}
+.student-lesson-timeline-item::before{content:"";position:absolute;left:5px;top:20px;bottom:-18px;width:1px;background:#ECE7E1}
+.student-lesson-timeline-item:last-child::before{display:none}
+.student-lesson-dot{width:10px;height:10px;border:2px solid #C06031;border-radius:50%;background:#fff;margin-top:16px;z-index:1}
+.student-lesson-card{border:1px solid #ECE7E1;border-radius:9px;background:#fff;padding:12px 14px;color:#4B5563;font-size:12px;line-height:1.7}
+.student-lesson-card strong{color:#B45309;background:#F5E7DD;border-radius:5px;padding:2px 6px}
+.student-feedback-card{border:1px solid #ECE7E1;border-radius:9px;background:#fff;padding:10px 12px;color:#4B5563;font-size:12px;line-height:1.6;margin-bottom:8px}
+.student-feedback-card strong{display:block;color:#1F2937;margin-bottom:3px}
+.student-feedback-card span{display:block;color:#667085}
+.student-reminder-compact{display:flex;flex-direction:column;gap:12px}
+.student-reminder-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.student-reminder-head>div:first-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#1F2937;font-size:14px}
+.student-reminder-compact .student-reminder-options{display:flex;grid-template-columns:none;gap:10px;flex-wrap:wrap;max-width:none}
+.student-reminder-compact .student-reminder-option{min-height:0;padding:9px 14px;align-items:center;border-color:#E5E7EB;background:#F9FAFB}
+.student-reminder-compact .student-reminder-copy em{display:none}
+.student-reminder-compact .student-reminder-copy strong{font-size:13px;color:#4B5563}
+.student-reminder-compact .student-reminder-option.is-active{background:#F5E7DD;border-color:#C06031;box-shadow:none}
+.student-reminder-compact .student-reminder-option.is-active .student-reminder-copy strong{color:#B45309}
+.student-reminder-compact .student-reminder-copy-btn{min-width:auto;padding:8px 12px;background:#fff;color:#4B5563;border-color:#E5E7EB;box-shadow:0 4px 12px rgba(15,23,42,.06)}
+.student-reminder-compact .student-reminder-copy-btn:hover{border-color:#C06031;color:#B45309;background:#fff}
+.student-reminder-compact .student-reminder-copy-btn small{display:none}
+.student-reminder-compact .btn-sec{height:34px}
+.student-detail-empty{font-size:12px;color:#98A2B3;padding:12px 0}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-amber{background:rgba(217,119,6,0.15);color:var(--amber-base);border:0.5px solid rgba(217,119,6,0.25)}.b-cream{background:var(--cream-soft);color:#92400E;border:0.5px solid rgba(146,64,14,0.2)}.b-green{background:rgba(5,150,105,0.1);color:#065f46;border:0.5px solid rgba(5,150,105,0.2)}.b-red{background:rgba(220,38,38,0.1);color:#991b1b;border:0.5px solid rgba(220,38,38,0.18)}.b-gray{background:rgba(107,114,128,0.1);color:#4b5563;border:0.5px solid rgba(107,114,128,0.15)}.b-blue{background:rgba(59,130,246,0.1);color:#1d4ed8;border:0.5px solid rgba(59,130,246,0.2)}.b-purple{background:rgba(139,92,246,0.1);color:#6d28d9;border:0.5px solid rgba(139,92,246,0.2)}
 .campus-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(217,119,6,0.12);color:var(--amber-base);border:0.5px solid rgba(217,119,6,0.22);border-radius:7px;padding:3px 7px;font-size:11.5px;font-weight:500;white-space:nowrap}

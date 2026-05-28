@@ -80,6 +80,12 @@ assert.match(source, /function studentPackageLessonMiniBar\(/, 'student package 
 assert.match(source, /studentPackageLessonMiniBar\(s\)/, 'student list should render package lessons through the mini balance bar');
 assert.match(source, /\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}/, 'student package lesson text should use remaining over total lesson count without truncating half lessons');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
+assert.match(source, /student-detail-shell/, 'student detail should use the clearer card-based shell');
+assert.match(source, /student-detail-hero/, 'student detail should use a clearer header layout');
+assert.match(source, /student-detail-metrics/, 'student detail should use summary metric cards');
+assert.match(source, /student-package-card/, 'student detail should render package purchases as cards');
+assert.match(source, /student-lesson-timeline/, 'student detail should render lesson records as a timeline');
+assert.match(source, /student-reminder-compact/, 'student detail should render reminder preferences in a compact block');
 assert.match(source, /服务号上课提醒/, 'student detail should expose the official account lesson reminder block');
 assert.match(source, /复制绑定链接/, 'student detail should let ops copy a student-specific binding link');
 assert.match(source, /name="studentReminderMode"/, 'student detail reminder frequency should use single-choice controls instead of loose action buttons');
@@ -119,6 +125,7 @@ assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*<input[\s
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*最近订场[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove duplicated recent booking field');
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*关联说明[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove unclear duplicate linked account explanation');
 assert.match(css, /\.modal\.modal-court \.tms-detail-grid[\s\S]*\.modal\.modal-court \.tms-detail-value[\s\S]*\.modal\.modal-court \.tms-detail-block/, 'student detail should use dedicated readonly display styles');
+assert.match(css, /\.modal\.modal-court\.modal-student-detail[\s\S]*\.student-detail-metric[\s\S]*\.student-package-card[\s\S]*\.student-lesson-timeline[\s\S]*\.student-reminder-compact/, 'student detail layout should have scoped visual styles');
 assert.match(source, /function studentDetailBlockHtml\(label,html,options=\{\}\)[\s\S]*options\.hideEmpty&&studentDetailIsEmptyHtml\(html\)/, 'student detail should hide empty long blocks when they add no information');
 assert.match(css, /\.modal\.modal-court \.tms-detail-block\{[^}]*background:transparent[^}]*border:0[^}]*border-radius:0/, 'student detail long content should not look like input boxes');
 assert.match(source, /const leadHtml=studentDetailBlockHtml\('线索摘要',studentLeadSummaryHtml\(s\),\{hideEmpty:true\}\);[\s\S]*leadHtml\?/, 'student detail should hide the linked lead section when there is no lead');
@@ -141,7 +148,7 @@ assert.match(source, /function studentLessonRecordChargeHtml\([\s\S]*<strong>扣
 assert.match(source, /function studentCumulativeLessonSectionText\([\s\S]*studentEntitlementLedgerRows\(\{id:studentId\}\)[\s\S]*Number\(item\.lessonDelta\)<0[\s\S]*earlierDelta[\s\S]*function studentLessonRecordSectionText\([\s\S]*studentCumulativeLessonSectionText\(row,ent\)/, 'student lesson record section numbers should continue across multiple packages for the same student');
 assert.match(source, /function studentLessonRecordRows\([\s\S]*existing\?\.type==='ledger'[\s\S]*lessonDelta:\(Number\(existing\.row\.lessonDelta\)\|\|0\)\+\(Number\(row\.lessonDelta\)\|\|0\)[\s\S]*function studentLedgerPreferredDisplayEntitlement/, 'student lesson record rows should merge split package deductions for one lesson into one display line');
 assert.match(source, /function studentLessonRecordMergeKey\([\s\S]*relatedDate[\s\S]*sourceVenue[\s\S]*return \[studentId[\s\S]*function studentLessonRecordRows\([\s\S]*studentLessonRecordMergeKey\(\{studentId:stu\?\.id,row,schedule\}\)/, 'student lesson records should merge same-day same-court continuous package deductions into one display line');
-assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*报名<\/span> · \[.*应付\$\{fmt\(systemAmount\)\} · 实付\$\{fmt\(paidAmount\)\}.*<strong>已扣 \$\{lessonQty\(used\)\}节（\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}）<\/strong>/, 'student package purchase records should show signup, price, owner, and bold used balance');
+assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*student-package-card[\s\S]*报名[\s\S]*应付\$\{fmt\(systemAmount\)\} · 实付\$\{fmt\(paidAmount\)\}[\s\S]*归属 \$\{esc\(renderCourtEmptyText\(ownerCoach\)\)\}[\s\S]*<strong>已扣 \$\{lessonQty\(used\)\}节（\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}）<\/strong>/, 'student package purchase records should show signup, price, owner, and bold used balance');
 assert.match(source, /function studentLessonRecordHtml\([\s\S]*studentLessonRecordRows\(stu\)[\s\S]*studentLessonRecordPackageHtml[\s\S]*rows\.length>10[\s\S]*收起[\s\S]*展开全部/, 'student lesson record list should use package-record style rows and support expand all');
 assert.match(source, /function toggleStudentLessonRecordExpanded\(studentId\)[\s\S]*openStudentDetail\(studentId\)/, 'student lesson record expand toggle should refresh the open detail modal');
 assert.doesNotMatch(source, /studentDetailBlockHtml\('课包消耗记录'/, 'student detail should not render a second package consume list');
@@ -150,7 +157,7 @@ assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*e\.studentI
 assert.match(source, /function packageStatusText\([\s\S]*\['voided','已作废','作废'\]\.includes\(status\)/, 'student purchase records should treat Chinese voided status as voided too');
 assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*purchaseStatusText\(purchases\.find\(p=>p\.id===e\.purchaseId\)\|\|\{\}\)!=='已作废'/, 'student purchase records should hide rows whose linked purchase is voided');
 assert.match(source, /function studentEntitlementLedgerRows\(stu\)\{[\s\S]*entitlementStatusText\(e\)!=='已作废'[\s\S]*purchaseStatusText\(purchases\.find\(p=>p\.id===e\.purchaseId\)\|\|\{\}\)!=='已作废'/, 'student lesson records should ignore ledger rows from voided entitlements or purchases');
-assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*报名<\/span> · \[/, 'student package records should use middle dots instead of semicolon separators');
+assert.match(source, /function studentEntitlementSummaryHtml[\s\S]*student-package-meta[\s\S]*应付\$\{fmt\(systemAmount\)\} · 实付\$\{fmt\(paidAmount\)\}/, 'student package records should keep compact middle-dot price text');
 assert.match(source, /function studentEntitlementLedgerLineHtml\([\s\S]*\$\{lessonQty\(Number\(row\.lessonDelta\)\|\|0\)\}节[\s\S]*join\(' · '\)/, 'student package consume records should render one compact middle-dot line with signed lesson count');
 assert.match(source, /function studentEntitlementLedgerTimeText\([\s\S]*\$\{date\} \$\{start\}-\$\{end\}/, 'student package consume records should show a lesson time range when available');
 assert.match(source, /function findScheduleForEntitlementLedgerRow\([\s\S]*String\(s\.startTime\|\|''\)\.slice\(0,10\)!==date[\s\S]*function studentEntitlementLedgerLineHtml[\s\S]*studentEntitlementLedgerTimeText\(row,schedule\)/, 'student package consume records should use same-day schedule to fill missing start-end time');

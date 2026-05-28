@@ -989,7 +989,7 @@ function scheduleEntitlementSummary(s){
 }
 function studentEntitlementSummaryHtml(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{})))).filter(e=>entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchases.find(p=>p.id===e.purchaseId)||{})!=='已作废');
-  if(!rows.length)return '<div style="color:var(--td);font-size:12px">暂无已购课包</div>';
+  if(!rows.length)return '<div class="student-detail-empty">暂无已购课包</div>';
   return rows.map(e=>{
     const used=Number(e.usedLessons)||0;
     const total=Number(e.totalLessons)||0;
@@ -1000,7 +1000,9 @@ function studentEntitlementSummaryHtml(stu){
     const packageText=standardPackageLabel({...e,packageName:e.packageName,packageLessons:e.totalLessons},e.status==='inactive'||e.status==='voided');
     const systemAmount=Number(purchase.systemAmount??purchase.packagePrice??0)||0;
     const paidAmount=Number(purchase.finalAmount??purchase.amountPaid??0)||0;
-    return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65"><span>${esc(renderCourtEmptyText(purchaseDate))} 报名</span> · [${esc(renderCourtEmptyText(packageText))}] · [应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}] · 归属 ${esc(renderCourtEmptyText(ownerCoach))} · <strong>已扣 ${lessonQty(used)}节（${lessonQty(remaining)}/${lessonQty(total)}）</strong> · ${entitlementStatusText(e)}</div>`;
+    const statusText=entitlementStatusText(e);
+    const depleted=remaining<=0||statusText==='已用完';
+    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"></div><div class="student-package-main"><div class="student-package-title">[${esc(renderCourtEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderCourtEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>归属 ${esc(renderCourtEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}节（${lessonQty(remaining)}/${lessonQty(total)}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){
