@@ -30,6 +30,8 @@ assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-row[\s\S]*时�
 assert.match(fnBody('scheduleSaveConfirmText'), /`\$\{day\} · \$\{startClock\} - \$\{endClock\}`/, 'schedule save confirm should show same-day time as date dot time range');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /<strong>/, 'schedule save confirm should not force bold values');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-charge/, 'schedule save confirm should highlight lesson deduction');
+assert.match(fnBody('saveSchedule'), /const lc=parseFloat\(document\.getElementById\('sch_lc'\)\.value\)\|\|1;/, 'schedule save should preserve half-lesson counts');
+assert.doesNotMatch(fnBody('saveSchedule'), /const lc=parseInt\(document\.getElementById\('sch_lc'\)\.value\)\|\|1;/, 'schedule save should not truncate half-lesson counts');
 assert.match(fnBody('saveSchedule'), /html:true[\s\S]*hideIcon:true[\s\S]*boxClass:'schedule-confirm-box'/, 'schedule save confirm should use the compact visual confirm layout');
 assert.match(source, /function appConfirm\([\s\S]*html=false[\s\S]*hideIcon=false[\s\S]*boxClass=''/, 'appConfirm should support structured HTML content for specialized confirmations');
 assert.match(styles, /\.schedule-confirm-box[\s\S]*\.schedule-confirm-charge/, 'schedule save confirm should have dedicated scoped styles');

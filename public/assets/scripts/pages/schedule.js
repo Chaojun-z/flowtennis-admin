@@ -740,7 +740,7 @@ async function saveSchedule(){
   if(endTime&&endTime<=startTime){toast('下课时间不能早于上课时间','warn');return;}
   if(endTime&&startTime.slice(0,10)!==endTime.slice(0,10)){toast('上课时间不能跨天','warn');return;}
   const classId=document.getElementById('sch_classId')?.value||'';
-  const lc=parseInt(document.getElementById('sch_lc').value)||1;
+  const lc=parseFloat(document.getElementById('sch_lc').value)||1;
   const studentIds=parseArr(document.getElementById('sch_stuIds').value);
   const expectedStudentIds=parseArr(document.getElementById('sch_expectedStuIds')?.value||'[]');
   const expectedBase=expectedStudentIds.length?expectedStudentIds:studentIds;
