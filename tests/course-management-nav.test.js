@@ -63,6 +63,10 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoach'/, 'package modal should allow direct main coach selection');
 assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal should expose a second-level selector for experience courses');
+assert.match(fnBody('openPackageModal'), /pkg_smallClassType/, 'package modal should expose a second-level selector for small group packages');
+assert.match(courseSource, /function applySmallClassPackagePreset\(/, 'package modal should define small group package presets');
+assert.match(fnBody('applySmallClassPackagePreset'), /bootcamp:\{price:1999,lessons:6,timeBand:'黄金时段',maxStudents:'4'\}/, 'small group bootcamp preset should match business rules');
+assert.match(fnBody('savePackage'), /freeAbsenceLimit[\s\S]*smallClassType==='bootcamp'\?1:0/, 'small group bootcamp package should persist one free absence');
 assert.match(fnBody('packageExperienceTypeLabel'), /p=p\|\|\{\}/, 'package experience label should tolerate creating a package without existing row data');
 assert.match(fnBody('openProductModal'), /p_experienceType/, 'course product modal should expose a second-level selector for experience courses');
 assert.match(fnBody('saveProduct'), /experienceType:/, 'course product save should persist the selected experience subtype');

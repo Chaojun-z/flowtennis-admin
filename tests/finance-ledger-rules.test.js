@@ -12,5 +12,6 @@ assert.match(source, /function financeSettlementRows\(\)\{[\s\S]*financeSettleme
 assert.match(source, /return financeLegacySettlementRows\(\);/, 'finance settlement should only fall back to raw schedules when snapshot rows are unavailable');
 assert.match(apiSource, /getFinancePageScheduleRows\(\)/, 'finance page should load schedule rows through a dedicated helper');
 assert.doesNotMatch(apiSource, /const \[students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\]=await Promise\.all\([\s\S]*scanFirstRows\(T_SCHEDULE,\{limit:PRODUCTION_PAGE_READ_LIMITS\.schedule/, 'finance page settlement should not be capped to the generic schedule page limit');
+assert.match(apiSource, /normalizeEntitlementLedgerRowsForView\(entitlementLedger\|\|\[\]\)\.filter\(row=>Number\(row\.lessonDelta\|\|0\)!==0\)/, 'finance course consumption should ignore zero-delta bookkeeping rows such as free absences');
 
 console.log('finance ledger rules tests passed');

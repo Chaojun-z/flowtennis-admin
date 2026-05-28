@@ -213,8 +213,11 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'studentIds',
   'studentId',
   'studentName',
+  'expectedStudentIds',
+  'absentStudentIds',
   'courseType',
   'experienceType',
+  'smallClassType',
   'coach',
   'campus',
   'venue',
@@ -684,6 +687,34 @@ function parseLessonValue(v,fallback=0){
   return Number.isFinite(n)?n:fallback;
 }
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
+const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
+function isSmallGroupCourse(row={}){
+  return String(row.courseType||row.type||'').trim()==='小班课';
+}
+function normalizeSmallClassType(value='',fallback='single'){
+  const raw=String(value||'').trim();
+  if(SMALL_CLASS_TYPES.includes(raw))return raw;
+  if(/训练营/.test(raw))return 'bootcamp';
+  if(/随到随学/.test(raw))return 'dropin';
+  if(/单次/.test(raw))return 'single';
+  return fallback;
+}
+function smallGroupLessonCountForStudentCount(count){
+  const n=parseInt(count)||0;
+  if(n===2)return 1;
+  if(n===3)return 1.5;
+  if(n===4)return 2;
+  return 0;
+}
+function smallGroupRuleSnapshot(source={}){
+  if(!isSmallGroupCourse(source))return {};
+  const smallClassType=normalizeSmallClassType(source.smallClassType||source.packageSubType||source.subType,parseInt(source.lessons||source.totalLessons||source.packageLessons)===6?'bootcamp':'single');
+  const maxStudents=parseInt(source.maxStudents)||4;
+  const fixedStudentCount=smallClassType==='bootcamp'?4:(parseInt(source.fixedStudentCount)||0);
+  const minAttendStudents=smallClassType==='bootcamp'?2:(parseInt(source.minAttendStudents)||2);
+  const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0);
+  return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};
+}
 function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree;}
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
@@ -1026,6 +1057,10 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     updatedAt:now
   };
   if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
+  if(isSmallGroupCourse(rec)){
+    Object.assign(rec,smallGroupRuleSnapshot({...pkg,...purchase,courseType:rec.courseType}));
+    rec.freeAbsenceUsed=parseInt(purchase.freeAbsenceUsed??pkg.freeAbsenceUsed??0)||0;
+  }
   return rec;
 }
 function buildPurchaseRecord(pkg,body,student,opts={}){
@@ -1075,6 +1110,7 @@ function buildPurchaseRecord(pkg,body,student,opts={}){
     updatedAt:now
   };
   if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
+  if(isSmallGroupCourse(rec))Object.assign(rec,smallGroupRuleSnapshot({...pkg,courseType:rec.courseType}));
   return rec;
 }
 function validateProductInput(product){
@@ -1110,6 +1146,24 @@ function validatePackageInput(pkg,refs={}){
   if(normalizeMoney(pkg.price)<=0)throw new Error('价格必须大于 0');
   if((parseInt(pkg.validDays)||0)<=0)throw new Error('有效天数必须大于 0');
   if((parseInt(pkg.maxStudents)||0)<=0)throw new Error('人数限制必须大于 0');
+  if(isSmallGroupCourse(pkg)){
+    const rule=smallGroupRuleSnapshot(pkg);
+    if(!SMALL_CLASS_TYPES.includes(rule.smallClassType))throw new Error('请选择小班课类型');
+    if(rule.smallClassType==='single'){
+      if((parseInt(pkg.lessons)||0)!==1)throw new Error('小班单次必须是 1 次');
+      if(normalizeMoney(pkg.price)!==260)throw new Error('小班单次价格必须是 260 元');
+    }
+    if(rule.smallClassType==='bootcamp'){
+      if((parseInt(pkg.lessons)||0)!==6)throw new Error('训练营必须是 6 次');
+      if(normalizeMoney(pkg.price)!==1999)throw new Error('训练营价格必须是 1999 元');
+      if(String(pkg.timeBand||'')!=='黄金时段')throw new Error('训练营必须是黄金时段');
+      if(rule.fixedStudentCount!==4||parseInt(pkg.maxStudents)!==4)throw new Error('训练营固定 4 人');
+    }
+    if(rule.smallClassType==='dropin'){
+      if((parseInt(pkg.lessons)||0)!==6)throw new Error('随到随学必须是 6 次');
+      if(normalizeMoney(pkg.price)!==1499)throw new Error('随到随学价格必须是 1499 元');
+    }
+  }
   if(pkg.saleStartDate&&pkg.saleEndDate&&pkg.saleEndDate<pkg.saleStartDate)throw new Error('活动结束时间不能早于活动开始时间');
   if(pkg.usageStartDate&&pkg.usageEndDate&&pkg.usageEndDate<pkg.usageStartDate)throw new Error('可用结束时间不能早于可用开始时间');
   for(const w of parseArr(pkg.dailyTimeWindows)){
@@ -1147,6 +1201,7 @@ function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOStrin
     status:base.status||'active',
     updatedAt:now
   };
+  if(isSmallGroupCourse(r))Object.assign(r,smallGroupRuleSnapshot(base));
   validatePackageInput(r,refs);
   return r;
 }
@@ -1312,6 +1367,7 @@ function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId
 }
 function assertScheduleEntitlementRequired(rec){
   if(!isBillableSchedule(rec))return;
+  assertSmallGroupScheduleRules(rec);
 }
 function scheduleParticipantSummary(rec){
   const actual=parseArr(rec?.studentIds).filter(Boolean);
@@ -1324,11 +1380,21 @@ function scheduleParticipantSummary(rec){
     absentCount:base.filter(id=>!actualSet.has(id)).length
   };
 }
+function assertSmallGroupScheduleRules(rec){
+  if(!isSmallGroupCourse(rec)||!isBillableSchedule(rec))return;
+  const actual=parseArr(rec.studentIds).filter(Boolean);
+  const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
+  const smallClassType=normalizeSmallClassType(rec.smallClassType||rec.packageSubType||rec.subType,expected.length===4?'bootcamp':'single');
+  if(actual.length>4)throw new Error('小班课最多 4 人');
+  if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
+  if(smallClassType==='bootcamp'&&expected.length&&expected.length!==4)throw new Error('训练营固定 4 人');
+}
 function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
   const used=parseLessonValue(oldEnt?.usedLessons);
   const next=buildEntitlementFromPurchase(pkg,purchase,student,oldEnt?.id||uuidv4(),now);
   if(oldEnt?.createdAt)next.createdAt=oldEnt.createdAt;
   next.usedLessons=used;
+  if(isSmallGroupCourse(next))next.freeAbsenceUsed=parseInt(oldEnt?.freeAbsenceUsed)||0;
   next.remainingLessons=parseLessonValue(next.totalLessons)-used;
   if(next.remainingLessons<0)throw new Error('该购买记录已有消耗，不能改成课时不足的课包');
   next.status=oldEnt?.status==='voided'?'voided':(next.remainingLessons<=0?'depleted':'active');
@@ -1394,6 +1460,11 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
+  if(isSmallGroupCourse(entitlement)&&isSmallGroupCourse(schedule)){
+    const entType=normalizeSmallClassType(entitlement.smallClassType);
+    const schType=normalizeSmallClassType(schedule.smallClassType||schedule.packageSubType||schedule.subType,entType);
+    if(entType&&schType&&entType!==schType)throw new Error('小班课类型不匹配');
+  }
 }
 function isAnyCoachPackageValue(value){
   return ['不固定','不限教练','任意教练','全部教练'].includes(String(value||'').trim());
@@ -1481,13 +1552,30 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
   const explicit=scheduleEntitlementDeltas(rec);
   if(explicit.length)return explicit;
   if(!rec||!isBillableSchedule(rec))return[];
+  assertSmallGroupScheduleRules(rec);
   const lessonCount=parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
-  return parseArr(rec.studentIds).filter(Boolean).map(studentId=>{
+  const attendIds=parseArr(rec.studentIds).filter(Boolean);
+  const attendDeltas=attendIds.map(studentId=>{
     const options=(entitlements||[]).filter(e=>e.studentId===studentId);
     const {recommended}=recommendEntitlements(options,{...rec,studentIds:[studentId]});
     return recommended?{studentId,entitlementId:recommended.entitlementId,delta:lessonCount}:null;
   }).filter(Boolean);
+  if(!isSmallGroupCourse(rec))return attendDeltas;
+  const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
+  const absent=parseArr(rec.absentStudentIds).filter(Boolean);
+  const absentBase=absent.length?absent:expected.filter(id=>!attendIds.includes(id));
+  const absentDeltas=absentBase.map(studentId=>{
+    const options=(entitlements||[]).filter(e=>e.studentId===studentId);
+    const {recommended}=recommendEntitlements(options,{...rec,studentIds:[studentId]});
+    if(!recommended)return null;
+    const ent=(entitlements||[]).find(e=>e.id===recommended.entitlementId)||{};
+    const limit=parseInt(ent.freeAbsenceLimit)||0;
+    const used=parseInt(ent.freeAbsenceUsed)||0;
+    if(used<limit)return null;
+    return {studentId,entitlementId:recommended.entitlementId,delta:lessonCount,absenceCharged:true};
+  }).filter(Boolean);
+  return [...attendDeltas,...absentDeltas];
 }
 function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOString()){
   const total=parseLessonValue(entitlement.totalLessons);
@@ -1496,6 +1584,16 @@ function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOStrin
   const remaining=Math.max(0,total-used);
   const status=remaining<=0?'depleted':(entitlement.status==='depleted'?'active':(entitlement.status||'active'));
   return {...entitlement,usedLessons:used,remainingLessons:remaining,status,updatedAt:now};
+}
+function applyEntitlementFreeAbsence(entitlement,now=new Date().toISOString()){
+  const limit=parseInt(entitlement?.freeAbsenceLimit)||0;
+  const used=parseInt(entitlement?.freeAbsenceUsed)||0;
+  if(used>=limit)return entitlement;
+  return {...entitlement,freeAbsenceUsed:used+1,updatedAt:now};
+}
+function returnEntitlementFreeAbsence(entitlement,now=new Date().toISOString()){
+  const used=parseInt(entitlement?.freeAbsenceUsed)||0;
+  return {...entitlement,freeAbsenceUsed:Math.max(0,used-1),updatedAt:now};
 }
 function assertScheduleEditableAfterFeedback(oldRec,nextRec,feedbacks){
   if(!oldRec||!nextRec)return;
@@ -1568,6 +1666,59 @@ async function applyEntitlementDelta(entitlementId,scheduleId,delta,action,reaso
   };
   await put(T_ENTITLEMENT_LEDGER,ledger.id,ledger);
   return {entitlement:next,ledger};
+}
+async function applySmallGroupFreeAbsences(schedule,entitlements=[],user){
+  if(!isSmallGroupCourse(schedule)||!isBillableSchedule(schedule))return[];
+  const deltas=resolveScheduleEntitlementDeltas(schedule,entitlements);
+  const chargedAbsent=new Set(deltas.filter(d=>d.absenceCharged).map(d=>d.studentId));
+  const attending=new Set(parseArr(schedule.studentIds).filter(Boolean));
+  const expected=parseArr(schedule.expectedStudentIds).filter(Boolean);
+  const absent=parseArr(schedule.absentStudentIds).filter(Boolean);
+  const absentBase=(absent.length?absent:expected.filter(id=>!attending.has(id))).filter(id=>!chargedAbsent.has(id));
+  const rows=[];
+  for(const studentId of absentBase){
+    const ent=(entitlements||[]).find(e=>e.studentId===studentId&&isSmallGroupCourse(e)&&parseInt(e.freeAbsenceUsed)<(parseInt(e.freeAbsenceLimit)||0));
+    if(!ent)continue;
+    const next=applyEntitlementFreeAbsence(ent);
+    await put(T_ENTITLEMENTS,ent.id,next);
+    await syncStudentActiveEntitlementIndexes(ent,next);
+    rows.push({
+      id:uuidv4(),
+      entitlementId:ent.id,
+      studentId:ent.studentId||studentId,
+      scheduleId:schedule.id||'',
+      lessonDelta:0,
+      action:'free_absence',
+      reason:'小班课免费请假',
+      operator:user?.name||'',
+      createdAt:new Date().toISOString()
+    });
+    await put(T_ENTITLEMENT_LEDGER,rows[rows.length-1].id,rows[rows.length-1]);
+  }
+  return rows;
+}
+async function rollbackSmallGroupFreeAbsences(ledgerRows=[]){
+  for(const row of ledgerRows||[]){
+    if(row?.action!=='free_absence'||!row.entitlementId)continue;
+    const ent=await getCachedRow(T_ENTITLEMENTS,row.entitlementId).catch(()=>null);
+    if(!ent)continue;
+    const next=returnEntitlementFreeAbsence(ent);
+    await put(T_ENTITLEMENTS,ent.id,next).catch(()=>null);
+    await syncStudentActiveEntitlementIndexes(ent,next).catch(()=>null);
+    await del(T_ENTITLEMENT_LEDGER,row.id).catch(()=>null);
+  }
+}
+async function restoreSmallGroupFreeAbsenceLedgerRows(ledgerRows=[]){
+  for(const row of ledgerRows||[]){
+    if(row?.action!=='free_absence'||!row.entitlementId)continue;
+    const ent=await getCachedRow(T_ENTITLEMENTS,row.entitlementId).catch(()=>null);
+    if(ent){
+      const next=applyEntitlementFreeAbsence(ent);
+      await put(T_ENTITLEMENTS,ent.id,next).catch(()=>null);
+      await syncStudentActiveEntitlementIndexes(ent,next).catch(()=>null);
+    }
+    await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
+  }
 }
 function collectScheduleRiskWarnings(candidate,schedules,excludeId){
   if(!isBillableSchedule(candidate)||!candidate.coach||!candidate.campus||!candidate.startTime||!candidate.endTime)return[];
@@ -3808,7 +3959,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         debitTarget:'会员储值余额'
       };
     });
-  const courseConsumeRows=aggregateFinanceHistoricalMonthlyLedgerRows(normalizeEntitlementLedgerRowsForView(entitlementLedger||[])).map(row=>{
+  const courseConsumeRows=aggregateFinanceHistoricalMonthlyLedgerRows(normalizeEntitlementLedgerRowsForView(entitlementLedger||[]).filter(row=>Number(row.lessonDelta||0)!==0)).map(row=>{
     const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
     const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
     const scheduleRow=scheduleMap.get(String(row.scheduleId||''))||{};
@@ -8245,6 +8396,11 @@ module.exports = async (req, res) => {
                 if(update)changed.push(update);
                 appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'排课保存失败退回'});
               }
+              const freeAbsenceRows=await applySmallGroupFreeAbsences(r,entitlementRows,user);
+              freeAbsenceRows.forEach(ledger=>{
+                changed.push({entitlement:null,ledger});
+                appliedEntitlements.push({...ledger,action:'free_absence'});
+              });
               return changed;
             });
             const lessonUpdate=nextDelta?await timed('schedule create lesson writes',()=>applyLessonDelta(nextDelta.classId,nextDelta.delta,r.studentIds)):null;
@@ -8265,6 +8421,7 @@ module.exports = async (req, res) => {
             return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
+            await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
             if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
             throw err;
@@ -8287,7 +8444,9 @@ module.exports = async (req, res) => {
           if(isCancelOnlyUpdate&&ex){
             const feedbacks=await timed('schedule cancel feedback guard',()=>withTimeout(scanFeedbacks().catch(()=>[]),1500,[]));
             assertScheduleEditableAfterFeedback(ex,r,feedbacks);
+            const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
+            const oldFreeAbsenceLedger=allLedger.filter(row=>row.scheduleId===id&&row.action==='free_absence');
             await timed('schedule cancel persist',()=>put(T_SCHEDULE,id,r));
             const appliedEntitlements=[];
             const appliedClassDeltas=[];
@@ -8302,6 +8461,7 @@ module.exports = async (req, res) => {
                   appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'取消排课失败重新扣回权益'});
                 }
               }
+              await rollbackSmallGroupFreeAbsences(oldFreeAbsenceLedger);
               let lessonUpdate=null;
               if(oldDelta){
                 lessonUpdate=await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds));
@@ -8311,6 +8471,7 @@ module.exports = async (req, res) => {
               return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),warnings:[]});
             }catch(err){
               await put(T_SCHEDULE,id,ex).catch(()=>null);
+              await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
               for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
               for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
               throw err;
@@ -8325,18 +8486,25 @@ module.exports = async (req, res) => {
               r,
               await timed('schedule update feedback guard',()=>withTimeout(scanFeedbacks().catch(()=>[]),3000,[]))
             );
+            const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
+            const oldFreeAbsenceLedger=allLedger.filter(row=>row.scheduleId===id&&row.action==='free_absence');
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
             const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
             const entitlementRows=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试');
             const coachRefs=LEGACY_STATIC_COACH_REFS;
-            const nextBaseRows=entitlementRows.map(ent=>oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent);
+            const freeAbsenceReturnIds=new Set(oldFreeAbsenceLedger.map(row=>row.entitlementId).filter(Boolean));
+            const nextBaseRows=entitlementRows.map(ent=>{
+              let next=oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent;
+              if(freeAbsenceReturnIds.has(ent.id))next=returnEntitlementFreeAbsence(next);
+              return next;
+            });
             const nextEntDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},nextBaseRows);
             r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},ex);
-            return {risk,oldEntDeltas,nextEntDeltas};
+            return {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows};
           });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
-          const {risk,oldEntDeltas,nextEntDeltas}=validation;
+          const {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows}=validation;
           await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
           const appliedEntitlements=[];
           const appliedClassDeltas=[];
@@ -8347,6 +8515,12 @@ module.exports = async (req, res) => {
               const entDiff=diffScheduleEntitlementDeltas(oldEntDeltas,nextEntDeltas);
               for(const oldEntDelta of entDiff.returns){rows.push(await applyEntitlementDelta(oldEntDelta.entitlementId,id,oldEntDelta.delta,'return','编辑排课退回旧权益',user));appliedEntitlements.push({entitlementId:oldEntDelta.entitlementId,delta:-oldEntDelta.delta,action:'rollback',reason:'编辑排课失败重新扣旧权益'});}
               for(const nextEntDelta of entDiff.consumes){rows.push(await applyEntitlementDelta(nextEntDelta.entitlementId,id,-nextEntDelta.delta,'consume','编辑排课消课',user));appliedEntitlements.push({entitlementId:nextEntDelta.entitlementId,delta:nextEntDelta.delta,action:'rollback',reason:'编辑排课失败退回新权益'});}
+              await rollbackSmallGroupFreeAbsences(oldFreeAbsenceLedger);
+              const freeAbsenceRows=await applySmallGroupFreeAbsences(r,nextBaseRows,user);
+              freeAbsenceRows.forEach(ledger=>{
+                rows.push({entitlement:null,ledger});
+                appliedEntitlements.push({...ledger,action:'free_absence'});
+              });
               return rows;
             });
             await timed('schedule update lesson writes',async()=>{
@@ -8361,6 +8535,8 @@ module.exports = async (req, res) => {
             return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
+            await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
+            await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
             for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
             for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
             throw err;
@@ -8785,6 +8961,8 @@ module.exports._test={
   isScheduleLessonCharged,
   normalizeCoachLateInfo,
   buildCoachLateSettlementRows,
+  smallGroupLessonCountForStudentCount,
+  assertSmallGroupScheduleRules,
   assertClassSchedulable,
   assertLessonCapacity,
   validateScheduleConflicts,

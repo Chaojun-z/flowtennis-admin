@@ -277,6 +277,93 @@ assert.throws(
   'inactive package cannot be newly purchased'
 );
 
+const smallGroupBootcampPackage = {
+  ...pkg,
+  id: 'pkg-small-bootcamp',
+  name: '小班训练营',
+  productId: '',
+  productName: '',
+  courseType: '小班课',
+  smallClassType: 'bootcamp',
+  price: 1999,
+  lessons: 6,
+  timeBand: '黄金时段',
+  maxStudents: 4,
+  fixedStudentCount: 4,
+  minAttendStudents: 2,
+  freeAbsenceLimit: 1
+};
+
+assert.doesNotThrow(
+  () => rules.validatePackageInput(smallGroupBootcampPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  'small group bootcamp package should be a valid package-only small class product'
+);
+
+assert.throws(
+  () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons: 5 }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  /训练营必须是 6 次/,
+  'small group bootcamp should require six lessons'
+);
+
+const smallGroupPurchase = rules.buildPurchaseRecord(
+  smallGroupBootcampPackage,
+  { ...purchase, id: 'pur-small-1', amountPaid: 1999 },
+  { id: 'stu-small-1', name: '小班学员', phone: '13800000001' },
+  { id: 'pur-small-1', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+);
+
+assert.deepStrictEqual(
+  {
+    courseType: smallGroupPurchase.courseType,
+    smallClassType: smallGroupPurchase.smallClassType,
+    packageLessons: smallGroupPurchase.packageLessons,
+    packagePrice: smallGroupPurchase.packagePrice,
+    maxStudents: smallGroupPurchase.maxStudents,
+    fixedStudentCount: smallGroupPurchase.fixedStudentCount,
+    minAttendStudents: smallGroupPurchase.minAttendStudents,
+    freeAbsenceLimit: smallGroupPurchase.freeAbsenceLimit
+  },
+  {
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    packageLessons: 6,
+    packagePrice: 1999,
+    maxStudents: 4,
+    fixedStudentCount: 4,
+    minAttendStudents: 2,
+    freeAbsenceLimit: 1
+  },
+  'small group purchase should keep the bootcamp rule snapshot'
+);
+
+const smallGroupEntitlement = rules.buildEntitlementFromPurchase(
+  smallGroupBootcampPackage,
+  smallGroupPurchase,
+  { id: 'stu-small-1', name: '小班学员' },
+  'ent-small-1',
+  '2026-04-12T00:00:00.000Z'
+);
+
+assert.deepStrictEqual(
+  {
+    courseType: smallGroupEntitlement.courseType,
+    smallClassType: smallGroupEntitlement.smallClassType,
+    totalLessons: smallGroupEntitlement.totalLessons,
+    freeAbsenceLimit: smallGroupEntitlement.freeAbsenceLimit,
+    freeAbsenceUsed: smallGroupEntitlement.freeAbsenceUsed,
+    minAttendStudents: smallGroupEntitlement.minAttendStudents
+  },
+  {
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    totalLessons: 6,
+    freeAbsenceLimit: 1,
+    freeAbsenceUsed: 0,
+    minAttendStudents: 2
+  },
+  'small group entitlement should initialize free absence counters'
+);
+
 assert.deepStrictEqual(
   rules.collectMabaoSeedStaleRowIds(
     [

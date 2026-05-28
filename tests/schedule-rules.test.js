@@ -1296,6 +1296,97 @@ assert.deepStrictEqual(
   'active schedule should preserve fractional package deductions'
 );
 
+assert.strictEqual(
+  rules.smallGroupLessonCountForStudentCount(2),
+  1,
+  'small group two-person lesson should consume one lesson unit'
+);
+
+assert.strictEqual(
+  rules.smallGroupLessonCountForStudentCount(3),
+  1.5,
+  'small group three-person lesson should consume one and a half lesson units'
+);
+
+assert.strictEqual(
+  rules.smallGroupLessonCountForStudentCount(4),
+  2,
+  'small group four-person lesson should consume two lesson units'
+);
+
+assert.throws(
+  () => rules.assertSmallGroupScheduleRules({
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    studentIds: ['stu-1'],
+    expectedStudentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'],
+    status: '已排课'
+  }),
+  /小班课至少 2 人到场才能开课/,
+  'small group bootcamp should reject opening class with only one attendee'
+);
+
+assert.throws(
+  () => rules.assertSmallGroupScheduleRules({
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    studentIds: ['stu-1', 'stu-2'],
+    expectedStudentIds: ['stu-1', 'stu-2', 'stu-3'],
+    status: '已排课'
+  }),
+  /训练营固定 4 人/,
+  'small group bootcamp should require a fixed four-person expected roster'
+);
+
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-1',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    lessonCount: 1,
+    studentIds: ['stu-1', 'stu-2', 'stu-3'],
+    expectedStudentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'],
+    absentStudentIds: ['stu-4']
+  }, [
+    { id: 'ent-1', studentId: 'stu-1', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-2', studentId: 'stu-2', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-3', studentId: 'stu-3', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-4', studentId: 'stu-4', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 }
+  ]),
+  [
+    { studentId: 'stu-1', entitlementId: 'ent-1', delta: 1 },
+    { studentId: 'stu-2', entitlementId: 'ent-2', delta: 1 },
+    { studentId: 'stu-3', entitlementId: 'ent-3', delta: 1 }
+  ],
+  'first small group bootcamp absence should be free and not consume that student package'
+);
+
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-2',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'bootcamp',
+    lessonCount: 1,
+    studentIds: ['stu-1', 'stu-2', 'stu-3'],
+    expectedStudentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'],
+    absentStudentIds: ['stu-4']
+  }, [
+    { id: 'ent-1', studentId: 'stu-1', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-2', studentId: 'stu-2', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-3', studentId: 'stu-3', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 0 },
+    { id: 'ent-4', studentId: 'stu-4', status: 'active', courseType: '小班课', smallClassType: 'bootcamp', totalLessons: 6, remainingLessons: 6, freeAbsenceLimit: 1, freeAbsenceUsed: 1 }
+  ]),
+  [
+    { studentId: 'stu-1', entitlementId: 'ent-1', delta: 1 },
+    { studentId: 'stu-2', entitlementId: 'ent-2', delta: 1 },
+    { studentId: 'stu-3', entitlementId: 'ent-3', delta: 1 },
+    { studentId: 'stu-4', entitlementId: 'ent-4', delta: 1, absenceCharged: true }
+  ],
+  'second small group bootcamp absence should consume one package lesson'
+);
+
 const fractionalEntitlement = rules.applyEntitlementLessonDelta({ totalLessons: 10, usedLessons: 3.5 }, -1.5);
 assert.strictEqual(fractionalEntitlement.totalLessons, 10, 'fractional entitlement total lessons should stay unchanged');
 assert.strictEqual(fractionalEntitlement.usedLessons, 5, 'entitlement deltas should preserve fractional used lessons');

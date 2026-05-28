@@ -151,12 +151,18 @@ function packageExperienceTypeLabel(p={}){
 function packageCoreClassLabel(p={}){
   const courseType=normalizeCourseType(p.courseType||p.type||'');
   const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
-  const detectedSize=/1v2/.test(text)?2:/1v3/.test(text)?3:p.maxStudents;
+  const detectedSize=/1v4/.test(text)?4:/1v3/.test(text)?3:/1v2/.test(text)?2:p.maxStudents;
   if(courseType==='体验课'){
     const experienceType=packageExperienceTypeLabel(p)||'私教体验课';
     return experienceType==='小班体验课'?'小班体验课':'私教体验课';
   }
   if(courseType==='私教课')return `${packageClassSizeLabel(detectedSize)}私教课`;
+  if(courseType==='小班课'){
+    const smallType=String(p.smallClassType||p.packageSubType||p.subType||'').trim();
+    if(smallType==='bootcamp'||/训练营/.test(text))return '小班训练营';
+    if(smallType==='dropin'||/随到随学/.test(text))return '小班随到随学';
+    return '小班单次课';
+  }
   return courseType||'课包';
 }
 function packageTimeBandShortLabel(timeBand='全天'){
