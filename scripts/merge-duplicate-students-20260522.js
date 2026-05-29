@@ -12,6 +12,7 @@ const TABLES = {
   schedule: 'ft_schedule',
   plans: 'ft_plans',
   feedbacks: 'ft_feedbacks',
+  leads: 'ft_leads',
   activeEntitlementIndex: INDEX_TABLES.activeEntitlementIndex
 };
 
@@ -63,7 +64,8 @@ function buildStudentMergePlan({ keepStudentId, mergeStudentIds, data, now = new
     ...row,
     studentId: fromIds.has(String(row.studentId)) ? keepStudentId : row.studentId,
     studentIds: replaceIds(row.studentIds, fromIds, keepStudentId),
-    studentName: String(row.studentName || '').replace(/宋缇缇/g, keep.name || '宋缇缇'),
+    expectedStudentIds: replaceIds(row.expectedStudentIds, fromIds, keepStudentId),
+    studentName: keep.name || row.studentName || '',
     updatedAt: now
   }));
   const feedbackUpdates = (data.feedbacks || []).filter((row) => parseArr(row.studentIds).some((id) => fromIds.has(String(id))) || fromIds.has(String(row.studentId))).map((row) => ({
@@ -73,6 +75,7 @@ function buildStudentMergePlan({ keepStudentId, mergeStudentIds, data, now = new
     studentName: keep.name || row.studentName || '',
     updatedAt: now
   }));
+  const leadUpdates = (data.leads || []).filter((row) => fromIds.has(String(row.studentId))).map(touchStudent);
   const nextEntitlements = (data.entitlements || []).map((row) => entitlementUpdates.find((item) => item.id === row.id) || row);
   const indexRows = buildIndexRows(nextEntitlements, now).filter((row) => row.id === keepStudentId || fromIds.has(row.id));
   return {
@@ -82,6 +85,7 @@ function buildStudentMergePlan({ keepStudentId, mergeStudentIds, data, now = new
     scheduleUpdates,
     planUpdates,
     feedbackUpdates,
+    leadUpdates,
     indexRows,
     deleteStudentIds: [...fromIds],
     deleteIndexIds: [...fromIds]
@@ -97,6 +101,7 @@ function printPlan(plan) {
       schedule: plan.scheduleUpdates.length,
       plans: plan.planUpdates.length,
       feedbacks: plan.feedbackUpdates.length,
+      leads: plan.leadUpdates.length,
       indexes: plan.indexRows.length,
       deleteIndexes: plan.deleteIndexIds.length,
       deleteStudents: plan.deleteStudentIds.length
@@ -134,7 +139,8 @@ async function run(argv = process.argv.slice(2)) {
     entitlements: await scanTable(client, TABLES.entitlements),
     schedule: await scanTable(client, TABLES.schedule),
     plans: await scanTable(client, TABLES.plans),
-    feedbacks: await scanTable(client, TABLES.feedbacks)
+    feedbacks: await scanTable(client, TABLES.feedbacks),
+    leads: await scanTable(client, TABLES.leads)
   };
   const plan = buildStudentMergePlan({ keepStudentId, mergeStudentIds, data });
   printPlan(plan);
@@ -145,6 +151,7 @@ async function run(argv = process.argv.slice(2)) {
   for (const row of plan.scheduleUpdates) await putRow(client, TABLES.schedule, row);
   for (const row of plan.planUpdates) await putRow(client, TABLES.plans, row);
   for (const row of plan.feedbackUpdates) await putRow(client, TABLES.feedbacks, row);
+  for (const row of plan.leadUpdates) await putRow(client, TABLES.leads, row);
   for (const row of plan.indexRows) await putRow(client, TABLES.activeEntitlementIndex, row);
   for (const id of plan.deleteIndexIds) await deleteRow(client, TABLES.activeEntitlementIndex, id);
   for (const id of plan.deleteStudentIds) await deleteRow(client, TABLES.students, id);
