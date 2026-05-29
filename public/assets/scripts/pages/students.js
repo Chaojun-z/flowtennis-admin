@@ -429,16 +429,16 @@ function studentReminderModeOptionHtml(stu,value,title,desc){
   const checked=mode===value;
   const customValue=Number(stu?.officialAccountReminderCustomHours)||12;
   const custom=value==='custom'
-    ?`<div class="student-reminder-custom" onclick="event.stopPropagation()"><span>提前</span><input id="studentReminderCustomHours" type="number" min="1" max="72" value="${customValue}" oninput="if(document.getElementById('studentReminderMode_custom'))document.getElementById('studentReminderMode_custom').checked=true" onchange="updateStudentReminderMode('${stu.id}','custom')"><span>小时</span></div>`
+    ?`<span class="student-reminder-custom" onclick="event.stopPropagation()"><input id="studentReminderCustomHours" type="number" min="1" max="72" value="${customValue}" oninput="if(document.getElementById('studentReminderMode_custom'))document.getElementById('studentReminderMode_custom').checked=true" onchange="updateStudentReminderMode('${stu.id}','custom')"><span>小时</span></span>`
     :'';
-  return `<label class="student-reminder-option${checked?' is-active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')"><input type="radio" name="studentReminderMode" id="studentReminderMode_${value}" value="${value}" ${checked?'checked':''}><span class="student-reminder-radio"></span><span class="student-reminder-copy"><strong>${title}</strong><em>${desc}</em>${custom}</span></label>`;
+  return `<label class="student-reminder-option${checked?' is-active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')"><input type="radio" name="studentReminderMode" id="studentReminderMode_${value}" value="${value}" ${checked?'checked':''}><span class="student-reminder-radio"></span><span class="student-reminder-copy-text">${title}</span>${custom}</label>`;
 }
 function studentReminderInfoHtml(stu){
   const statusClass=stu?.officialAccountOpenId?'tms-tag-green':'tms-tag-tier-slate';
   const linkAction=stu?.officialAccountOpenId
     ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>重新复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
     :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制给学员绑定</span><small>学员用微信打开后完成绑定</small></button>`;
-  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','课前48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅课前24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义时间','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
+  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
 }
 function leadRowsForSummary(){
   return typeof leadRows==='function'?leadRows():(Array.isArray(leads)?leads:[]);
@@ -465,9 +465,10 @@ function studentLeadSummaryHtml(s){
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
-  const body=`<div class="student-detail-shell">${studentDetailHeroHtml(s)}${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
+  const body=`<div class="student-detail-shell">${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
   setCourtModalFrame('',body,footer,'modal-wide modal-student-detail');
+  document.getElementById('mTitle').innerHTML=studentDetailHeroHtml(s);
 }
 async function copyStudentReminderText(text){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return;}

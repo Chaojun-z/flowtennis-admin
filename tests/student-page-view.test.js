@@ -91,10 +91,11 @@ assert.match(source, /student-reminder-head-title/, 'student detail should keep 
 assert.doesNotMatch(source, /studentDetailSectionBlockHtml\('服务号提醒偏好'/, 'student detail should not wrap the reminder block with an extra section title');
 assert.doesNotMatch(source, /student-reminder-status/, 'student detail should not show a redundant reminder status line');
 assert.match(source, /setCourtModalFrame\('',body,footer,'modal-wide modal-student-detail'\)/, 'student detail should keep the modal header title empty');
+assert.match(source, /document\.getElementById\('mTitle'\)\.innerHTML=studentDetailHeroHtml\(s\)/, 'student detail should move the profile summary into the modal header');
 assert.match(source, /服务号上课提醒/, 'student detail should expose the official account lesson reminder block');
 assert.match(source, /复制绑定链接/, 'student detail should let ops copy a student-specific binding link');
 assert.match(source, /name="studentReminderMode"/, 'student detail reminder frequency should use single-choice controls instead of loose action buttons');
-assert.match(source, /48小时 \+ 24小时[\s\S]*仅课前24小时[\s\S]*自定义时间[\s\S]*不提醒/, 'student detail should expose standard, custom and off reminder frequency modes');
+assert.match(source, /48小时 \+ 24小时[\s\S]*仅24小时[\s\S]*自定义[\s\S]*不提醒/, 'student detail should expose standard, custom and off reminder frequency modes');
 assert.match(source, /studentReminderCustomHours/, 'student detail should let ops set custom reminder hours');
 assert.match(source, /复制给学员绑定/, 'student detail should make copy binding link the primary action');
 assert.match(source, /generateStudentReminderBindLink/, 'student page should call the backend to generate a bind link');
@@ -130,7 +131,13 @@ assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*<input[\s
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*最近订场[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove duplicated recent booking field');
 assert.doesNotMatch(source, /function studentConsumptionInfoHtml[\s\S]*关联说明[\s\S]*function studentLinkedDetailHtml/, 'student consumption detail should remove unclear duplicate linked account explanation');
 assert.match(css, /\.modal\.modal-court \.tms-detail-grid[\s\S]*\.modal\.modal-court \.tms-detail-value[\s\S]*\.modal\.modal-court \.tms-detail-block/, 'student detail should use dedicated readonly display styles');
-assert.match(css, /\.modal\.modal-court\.modal-student-detail \.mhead\{[^}]*justify-content:flex-end[^}]*\}[\s\S]*\.modal\.modal-court\.modal-student-detail \.mtitle\{display:none\}[\s\S]*\.student-detail-metric[\s\S]*\.student-package-icon-svg[\s\S]*\.student-lesson-title\{[^}]*font-size:14px[\s\S]*\.student-lesson-charge strong\{[^}]*font-size:12px[^}]*background:transparent/, 'student detail layout should keep the modal shell and compact typography consistent');
+assert.match(css, /\.modal\.modal-court\.modal-student-detail \.mhead\{[^}]*justify-content:space-between[^}]*align-items:flex-start/, 'student detail header should sit inside the modal title bar');
+assert.match(css, /\.modal\.modal-court\.modal-student-detail \.mtitle\{display:block/, 'student detail should render the profile summary in the title area');
+assert.match(css, /\.student-package-icon\{[^}]*background:transparent/, 'student detail package icon should be a bare folder glyph');
+assert.match(css, /\.student-reminder-compact \.student-reminder-options\{[^}]*flex-wrap:nowrap/, 'student reminder options should stay on one row');
+assert.match(css, /\.student-reminder-compact \.student-reminder-copy-btn span\{font-size:12px;font-weight:400\}/, 'student reminder copy button should use a smaller label');
+assert.match(css, /\.student-lesson-title\{[^}]*font-size:14px/, 'student lesson title should stay compact');
+assert.match(css, /\.student-lesson-charge strong\{[^}]*font-size:12px[^}]*background:transparent/, 'student lesson charge badge should stay compact and unboxed');
 assert.match(source, /function studentDetailBlockHtml\(label,html,options=\{\}\)[\s\S]*options\.hideEmpty&&studentDetailIsEmptyHtml\(html\)/, 'student detail should hide empty long blocks when they add no information');
 assert.match(css, /\.modal\.modal-court \.tms-detail-block\{[^}]*background:transparent[^}]*border:0[^}]*border-radius:0/, 'student detail long content should not look like input boxes');
 assert.match(source, /const leadHtml=studentDetailBlockHtml\('线索摘要',studentLeadSummaryHtml\(s\),\{hideEmpty:true\}\);[\s\S]*leadHtml\?/, 'student detail should hide the linked lead section when there is no lead');
