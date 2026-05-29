@@ -266,14 +266,32 @@ assert.doesNotMatch(
 
 assert.match(
   html,
-  /<th style="width:120px">已反馈<\/th>[\s\S]*<th style="width:90px">未反馈<\/th>[\s\S]*<th style="width:150px">校区分布<\/th>[\s\S]*<th style="width:120px">时间段<\/th>/,
+  /<th style="width:90px">已反馈<\/th>[\s\S]*<th style="width:90px">未反馈<\/th>[\s\S]*<th style="width:150px">校区分布<\/th>[\s\S]*<th style="width:120px">时间段<\/th>/,
   'coach workload table should add 已反馈 before 未反馈 and keep the time/campus columns'
+);
+
+assert.match(
+  coachOpsSource,
+  /function renderCoachOpsWorkloadHeader\(\)/,
+  'coach workload header should be refreshed from the script to avoid stale column layouts'
 );
 
 assert.doesNotMatch(
   html,
   /<th style="width:120px">风险<\/th>/,
   'coach workload table should drop the risk column'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /risks:coachRiskCount/,
+  'coach workload row data should no longer keep the removed risk column'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /<span class="badge [^"]*">\$\{r\.(?:feedback|pending)\}<\/span>/,
+  'coach workload feedback counts should render as normal numbers instead of badges'
 );
 
 assert.match(
@@ -304,6 +322,24 @@ assert.match(
   styles,
   /#page-coachops \.coach-workload-lessons\{display:flex;align-items:center;gap:6px;color:#2F241E;font-size:12px;font-weight:600\}/,
   'coach workload lesson counts should use the same row font'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.coach-workload-rate\{font-size:11px;font-weight:600\}/,
+  'coach trial conversion percentage should use the requested 11px font'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.coach-workload-course-types\{font-size:12px;line-height:1.4\}/,
+  'coach workload course type distribution should use the requested 12px font'
+);
+
+assert.match(
+  styles,
+  /body\.admin-mobile #page-coachops \.stats-row\{grid-template-columns:repeat\(4,minmax\(120px,1fr\)\)/,
+  'coach ops top four stats should stay in one row on mobile admin view'
 );
 
 assert.match(
