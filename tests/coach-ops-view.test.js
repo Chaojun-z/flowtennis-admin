@@ -1,11 +1,27 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
+const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const coachOpsSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'coachops.js'), 'utf8');
 const html = source;
 
 assert.match(
   source,
   /mode==='week'\|\|mode==='month'/,
   'month view should use the weekday header like week view'
+);
+
+assert.match(
+  source,
+  /const COACH_OPS_ORDER_STORAGE_KEY='ft_coach_ops_order'/,
+  'coach ops should persist a manual order for names that are not in the coach table'
+);
+
+assert.match(
+  source,
+  /function coachOpsStoredOrderIndex\(/,
+  'coach ops should expose a stored-order lookup helper'
 );
 
 assert.doesNotMatch(
@@ -18,6 +34,18 @@ assert.match(
   source,
   /function dateMs\(v\)/,
   'coach ops day view needs dateMs so schedule blocks render instead of interrupting the table'
+);
+
+assert.match(
+  source,
+  /if\(coachOpsMode==='week'\)return dtObj\(raw\)\|\|new Date\(\)/,
+  'coach ops week view should use a custom start date instead of an ISO week key'
+);
+
+assert.match(
+  source,
+  /if\(kind==='week'\)return \{start, end, label:`\$\{dateKey\(start\)\} 至 \$\{dateKey\(addDays\(end,-1\)\)\}`\};/,
+  'coach ops week range should always cover the chosen 7-day span'
 );
 
 assert.match(
@@ -136,6 +164,12 @@ assert.match(
 
 assert.match(
   source,
+  /weekActive=coachOpsMode==='week'&&ds>=selectedKey&&ds<dateKey\(addDays\(selected,7\)\)/,
+  'coach ops week picker should highlight the selected 7-day window'
+);
+
+assert.match(
+  source,
   /function openCoachOpsDaySchedules\([\s\S]*setCourtModalFrame\('当天排课'/,
   'coach ops populated cells should open a full daily schedule list'
 );
@@ -216,6 +250,60 @@ assert.match(
   html,
   /校区.*场地/,
   'coach ops day cards should show campus and venue together'
+);
+
+assert.match(
+  html,
+  /今日上课[\s\S]*本周上课[\s\S]*本月上课[\s\S]*累计上课/,
+  'coach ops top cards should show today, week, month, and cumulative lessons'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /document\.getElementById\('coachOpsStats'\)\.innerHTML=\[[\s\S]*'未反馈'/,
+  'coach ops top cards should not keep the unfinished feedback metric'
+);
+
+assert.match(
+  html,
+  /<th style="width:120px">已反馈<\/th>[\s\S]*<th style="width:90px">未反馈<\/th>[\s\S]*<th style="width:150px">校区分布<\/th>[\s\S]*<th style="width:120px">时间段<\/th>/,
+  'coach workload table should add 已反馈 before 未反馈 and keep the time/campus columns'
+);
+
+assert.doesNotMatch(
+  html,
+  /<th style="width:120px">风险<\/th>/,
+  'coach workload table should drop the risk column'
+);
+
+assert.match(
+  html,
+  /class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">/,
+  'coach workload should use the same table shell as the student and schedule lists'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.tms-table-wrapper\{max-height:calc\(100vh - 250px\);overflow-x:auto;overflow-y:auto\}/,
+  'coach workload table should scroll horizontally inside the shared table wrapper'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.tms-table\{min-width:1240px;table-layout:fixed\}/,
+  'coach workload table should be wide enough for horizontal scrolling'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.tms-text-primary,#page-coachops \.tms-cell-text,#page-coachops \.tms-text-remark\{font-size:12px;line-height:1.4\}/,
+  'coach workload rows should use one compact font scale'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.coach-workload-lessons\{display:flex;align-items:center;gap:6px;color:#2F241E;font-size:12px;font-weight:600\}/,
+  'coach workload lesson counts should use the same row font'
 );
 
 assert.match(

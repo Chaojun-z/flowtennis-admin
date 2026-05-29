@@ -35,13 +35,32 @@ const COACH_NAME_ALIAS_MAP={
   'Rive':'Rive 天昊','rive':'Rive 天昊','天昊':'Rive 天昊','Rive 天昊':'Rive 天昊',
   '晓哲教练':'晓哲','晓哲':'晓哲'
 };
+const COACH_OPS_ORDER_STORAGE_KEY='ft_coach_ops_order';
 function canonicalCoachName(v){
   const raw=String(v||'').trim();
   return COACH_NAME_ALIAS_MAP[raw]||raw;
 }
 function coachName(v){return canonicalCoachName(v)}
+function coachOpsStoredOrder(){
+  try{
+    const raw=localStorage.getItem(COACH_OPS_ORDER_STORAGE_KEY);
+    if(!raw)return [];
+    const parsed=JSON.parse(raw);
+    return Array.isArray(parsed)?parsed.map(v=>coachName(v)).filter(Boolean):[];
+  }catch(e){return []}
+}
+function coachOpsStoredOrderIndex(name){
+  return coachOpsStoredOrder().findIndex(item=>coachName(item)===coachName(name));
+}
+function saveCoachOpsStoredOrder(order){
+  try{
+    localStorage.setItem(COACH_OPS_ORDER_STORAGE_KEY,JSON.stringify([...new Set((Array.isArray(order)?order:[]).map(item=>coachName(item)).filter(Boolean))]));
+  }catch(e){}
+}
 function coachSortValue(name){
   const normalized=coachName(name);
+  const storedIndex=coachOpsStoredOrderIndex(normalized);
+  if(storedIndex>=0)return storedIndex;
   const row=(Array.isArray(coaches)?coaches:[]).find(c=>coachName(c.name)===normalized);
   const value=Number(row?.sortOrder);
   return Number.isFinite(value)?value:9999;

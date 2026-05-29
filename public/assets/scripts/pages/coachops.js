@@ -129,13 +129,12 @@ function renderCoachOpsPicker(){
   const first=new Date(base.getFullYear(),base.getMonth(),1);
   const gridStart=addDays(first,-((first.getDay()+6)%7));
   const selectedKey=dateKey(selected);
-  const weekKey=coachOpsMode==='week'?isoWeekValue(selected):'';
   const days=Array.from({length:42},(_,i)=>{
     const d=addDays(gridStart,i),ds=dateKey(d);
     const muted=d.getMonth()!==base.getMonth();
     const active=coachOpsMode==='day'&&ds===selectedKey;
-    const weekActive=coachOpsMode==='week'&&isoWeekValue(d)===weekKey;
-    const clickValue=coachOpsMode==='week'?isoWeekValue(d):ds;
+    const weekActive=coachOpsMode==='week'&&ds>=selectedKey&&ds<dateKey(addDays(selected,7));
+    const clickValue=ds;
     return `<button class="coach-picker-day ${muted?'muted':''} ${ds===today()?'today':''} ${active?'active':''} ${weekActive?'week-active':''}" onclick="pickCoachOpsDate('${clickValue}')">${d.getDate()}</button>`;
   }).join('');
   pop.innerHTML=`<div class="coach-picker-head"><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(-1)">‹</button><div class="coach-picker-title">${base.getFullYear()} 年 ${base.getMonth()+1} 月</div><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(1)">›</button></div><div class="coach-picker-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div class="coach-picker-grid">${days}</div>`;
@@ -246,9 +245,9 @@ async function saveCoachOpsOrder(order){
       updates.push(coach);
     }
   });
-  if(!updates.length)return;
   try{
-    await Promise.all(updates.map(coach=>apiCall('PUT','/coaches/'+coach.id,{...coach,sortOrder:coach.sortOrder})));
+    if(updates.length)await Promise.all(updates.map(coach=>apiCall('PUT','/coaches/'+coach.id,{...coach,sortOrder:coach.sortOrder})));
+    saveCoachOpsStoredOrder(order);
     renderCoachOps();
     toast('教练排序已保存','success');
   }catch(err){
@@ -322,7 +321,8 @@ function coachOpsRows(){
     const campusMap={};
     rangeRows.forEach(s=>{if(s.campus)campusMap[s.campus]=(campusMap[s.campus]||0)+1});
     const mainCampus=Object.entries(campusMap).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-    return {name,todayRows,weekRows,monthRows,rangeRows,mainCampus,pending:pendingFeedbackCount(rangeRows),risks:coachRiskCount(rangeRows),conflicts:coachOverlapCount(rangeRows),sortOrder:coachSortValue(name)};
+    const completedRows=rangeRows.filter(s=>effectiveScheduleStatus(s)==='已结束');
+    return {name,todayRows,weekRows,monthRows,rangeRows,mainCampus,pending:pendingFeedbackCount(rangeRows),feedback:completedRows.filter(hasScheduleFeedback).length,risks:coachRiskCount(rangeRows),conflicts:coachOverlapCount(rangeRows),sortOrder:coachSortValue(name)};
   });
 }
 function renderCoachOpsRangeFilter(){
@@ -352,14 +352,16 @@ function renderCoachOps(){
   const title=document.getElementById('coachOpsViewTitle');
   if(title)title.textContent=mode==='day'?`${range.label} 教练排课（7:00-22:00）`:mode==='week'?`${dateKey(range.start)} 至 ${dateKey(addDays(range.end,-1))} 教练周视图`:`${range.label} 教练月视图`;
   const rows=coachOpsRows();
+  const allRows=billableSchedules();
   const todayTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.todayRows),0));
   const weekTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.weekRows),0));
-  const rangeTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.rangeRows),0));
-  const pending=rows.reduce((n,r)=>n+r.pending,0);
+  const monthTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.monthRows),0));
+  const totalTotal=lessonUnitsText(sumScheduleLessonUnits(allRows));
   document.getElementById('coachOpsStats').innerHTML=[
-    [mode==='day'?'当日上课':'今日上课',mode==='day'?rangeTotal:todayTotal,'节','si-a'],
+    ['今日上课',todayTotal,'节','si-a'],
     ['本周上课',weekTotal,'节','si-b'],
-    ['未反馈',pending,'节','si-e']
+    ['本月上课',monthTotal,'节','si-d'],
+    ['累计上课',totalTotal,'节','si-c']
   ].map(([label,val,u])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}<span>${u}</span></div></div>`).join('');
   host.innerHTML=rows.map(r=>{
     const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
@@ -388,7 +390,7 @@ function renderCoachOps(){
     }).join('');
     return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${esc(r.name)}</div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
   }).join('');
-  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td><td>${r.conflicts?`<span class="badge b-red">冲突 ${r.conflicts}</span>`:r.risks?`<span class="badge b-amber">跨校区紧 ${r.risks}</span>`:'<span class="badge b-green">正常</span>'}</td></tr>`).join('');
+  document.getElementById('coachOpsTbody').innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="badge ${r.feedback?'b-green':'b-green'}">${r.feedback}</span></td><td><span class="badge ${r.pending?'b-red':'b-green'}">${r.pending}</span></td><td>${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</td><td>${distText(r.rangeRows,timeBand)}</td></tr>`).join('');
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }

@@ -264,7 +264,7 @@ function dateFromIsoWeek(v){
 }
 function coachOpsInputValue(d,mode){
   if(mode==='month')return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  if(mode==='week')return isoWeekValue(d);
+  if(mode==='week')return dateKey(d);
   return dateKey(d);
 }
 function coachOpsInputDate(){
@@ -274,14 +274,14 @@ function coachOpsInputDate(){
     const m=String(raw).match(/^(\d{4})-(\d{2})$/);
     if(m)return new Date(Number(m[1]),Number(m[2])-1,1);
   }
-  if(coachOpsMode==='week')return dateFromIsoWeek(raw)||new Date();
+  if(coachOpsMode==='week')return dtObj(raw)||new Date();
   return dtObj(raw)||new Date();
 }
 function coachOpsDateLabel(){
   const d=coachOpsInputDate();
   if(coachOpsMode==='month')return `${d.getFullYear()} 年 ${d.getMonth()+1} 月`;
   if(coachOpsMode==='week'){
-    const s=weekStart(d),e=addDays(s,6);
+    const s=dayStart(d),e=addDays(s,6);
     return `${s.getMonth()+1}/${s.getDate()} - ${e.getMonth()+1}/${e.getDate()}`;
   }
   return `${d.getFullYear()} / ${String(d.getMonth()+1).padStart(2,'0')} / ${String(d.getDate()).padStart(2,'0')}`;
@@ -314,7 +314,8 @@ function rangeBounds(kind){
   const now=coachOpsInputDate();
   if(kind==='day'){const start=dayStart(now),end=addDays(start,1);return {start,end,label:dateKey(start)};}
   if(kind==='month')return {start:monthStart(now),end:new Date(now.getFullYear(),now.getMonth()+1,1),label:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`};
-  const start=weekStart(now),end=addDays(start,7);
+  const start=dayStart(now),end=addDays(start,7);
+  if(kind==='week')return {start, end, label:`${dateKey(start)} 至 ${dateKey(addDays(end,-1))}`};
   return {start,end,label:`${dateKey(start)} 至 ${dateKey(addDays(end,-1))}`};
 }
 function distText(list,keyFn){
