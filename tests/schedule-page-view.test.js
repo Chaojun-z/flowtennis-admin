@@ -26,7 +26,7 @@ assert.match(fnBody('saveSchedule'), /coachLateFree/, 'saving schedules should p
 assert.match(fnBody('saveSchedule'), /await appConfirm\(/, 'saving schedules should use app confirm instead of browser confirm');
 assert.doesNotMatch(fnBody('saveSchedule'), /window\.confirm\(/, 'saving schedules should not use browser confirm');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-card/, 'schedule save confirm should render a structured confirmation card');
-assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-row[\s\S]*时间[\s\S]*学员[\s\S]*教练[\s\S]*场地[\s\S]*课程[\s\S]*扣减课包/, 'schedule save confirm should keep all key fields as structured rows');
+assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-row[\s\S]*时间[\s\S]*学员[\s\S]*教练[\s\S]*场地[\s\S]*课程[\s\S]*结算方式/, 'schedule save confirm should keep all key fields as structured rows');
 assert.match(fnBody('scheduleSaveConfirmText'), /`\$\{day\} · \$\{startClock\} - \$\{endClock\}`/, 'schedule save confirm should show same-day time as date dot time range');
 assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /<strong>/, 'schedule save confirm should not force bold values');
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-charge/, 'schedule save confirm should highlight lesson deduction');
@@ -147,6 +147,10 @@ assert.match(fnBody('openCoachLateSettlementModal'), /迟到分钟/, 'late settl
 assert.match(fnBody('openCoachLateSettlementModal'), /承担合计/, 'late settlement summary should include payable total');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-table/, 'late settlement modal should use a scoped compact table');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-empty/, 'late settlement modal should use a compact empty state');
+assert.match(fnBody('openScheduleModal'), /课包扣减[\s\S]*直接收款[\s\S]*赠送\/免费[\s\S]*sch_settlementType/, 'schedule modal should let ops choose package, direct payment, or gift settlement');
+assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*sch_paidAmount/, 'schedule modal should collect payment method and amount for direct paid lessons');
+assert.match(fnBody('saveSchedule'), /settlementType[\s\S]*paidAmount[\s\S]*payMethod/, 'schedule save should send settlement and payment fields to backend');
+assert.match(fnBody('refreshSchEntitlementOptions'), /currentScheduleSettlementType\(\)!=='package'/, 'non-package settlement should not try to match entitlements');
 assert.match(source, /const FEEDBACK_POSTER_TEMPLATES\s*=/, 'feedback poster should define fixed template configs');
 assert.match(source, /blueGreenDiagonal[\s\S]*minimalDarkGreen[\s\S]*retroCourt[\s\S]*blueprintBlue[\s\S]*minimalRacket[\s\S]*activeGreen/, 'feedback poster should expose the selected Gemini template styles');
 assert.doesNotMatch(source, /粉蓝笔刷|专业白\(拍网\)|深蓝撞色|波普斜切/, 'feedback poster should remove the rejected poster styles');

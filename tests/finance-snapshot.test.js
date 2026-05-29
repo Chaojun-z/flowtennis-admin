@@ -89,6 +89,47 @@ assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==
 assert.strictEqual(snapshot.financeSettlementRows[0].month, '2026-04', 'finance settlement snapshot should pre-aggregate by month');
 assert.strictEqual(snapshot.financeSettlementRows[0].lessonUnits, 1, 'finance settlement snapshot should count finished lesson units');
 
+const directScheduleSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  schedule:[{
+    id:'sch-direct-1',
+    studentName:'点评体验用户',
+    coach:'Siren',
+    campus:'mabao',
+    courseType:'体验课',
+    experienceType:'私教体验课',
+    lessonCount:1,
+    status:'已结束',
+    startTime:'2026-05-29 09:00',
+    endTime:'2026-05-29 10:00',
+    settlementType:'direct',
+    payMethod:'大众点评券码',
+    paidAmount:99,
+    notes:'大众点评券码 DP123'
+  },{
+    id:'sch-gift-1',
+    studentName:'赠送体验用户',
+    coach:'Siren',
+    campus:'mabao',
+    courseType:'体验课',
+    lessonCount:1,
+    status:'已结束',
+    startTime:'2026-05-29 10:00',
+    endTime:'2026-05-29 11:00',
+    settlementType:'gift',
+    payMethod:'赠送',
+    paidAmount:0
+  }]
+});
+
+const directIncome = directScheduleSnapshot.financeNormalizedRows.find(row=>row.sourceDocument==='排课 sch-direct-1'&&row.action==='收款');
+assert.ok(directIncome, 'direct paid schedule should create a course income row');
+assert.strictEqual(directIncome.cashDelta, 99, 'direct paid schedule should increase cash income');
+assert.strictEqual(directIncome.recognizedRevenueDelta, 99, 'direct paid schedule should be recognized immediately');
+assert.strictEqual(directIncome.deferredRevenueDelta, 0, 'direct paid schedule should not create deferred revenue');
+assert.strictEqual(directIncome.paymentChannel, '大众点评券码', 'direct paid schedule should keep payment method');
+assert.strictEqual(directScheduleSnapshot.financeNormalizedRows.some(row=>row.sourceDocument==='排课 sch-gift-1'), false, 'gift schedule should not create finance rows');
+
 const verifiedFinance = {
   overviewData: {
     all: {
@@ -175,6 +216,29 @@ assert.strictEqual(merged.overviewData.all.packageRecognized, 600, 'finance impo
 assert.strictEqual(merged.overviewData.all.deferred, 4400, 'finance import increment should add remaining deferred income');
 assert.strictEqual(merged.overviewData.all.tradeCount, 11, 'finance import increment should add purchase trade count');
 assert.strictEqual(merged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-purchase-should-not-double-count')), false, 'old live purchase rows should not be appended to verified finance');
+
+const directScheduleMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  schedule:[{
+    id:'sch-direct-merge',
+    studentName:'点评体验用户',
+    coach:'Siren',
+    campus:'mabao',
+    courseType:'体验课',
+    status:'已结束',
+    startTime:'2026-05-29 09:00',
+    endTime:'2026-05-29 10:00',
+    settlementType:'direct',
+    payMethod:'大众点评券码',
+    paidAmount:99
+  }]
+});
+
+assert.strictEqual(directScheduleMerged.overviewData.all.cash, 1099, 'direct paid schedule should add total cash income');
+assert.strictEqual(directScheduleMerged.overviewData.all.recognized, 299, 'direct paid schedule should add recognized income');
+assert.strictEqual(directScheduleMerged.overviewData.all.packageIncome, 1099, 'direct paid schedule should add course income bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.packageRecognized, 299, 'direct paid schedule should add course recognized bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.tradeCount, 11, 'direct paid schedule should add one trade');
 
 const membershipMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],

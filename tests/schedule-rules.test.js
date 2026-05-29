@@ -90,6 +90,29 @@ assert.strictEqual(
 
 assert.strictEqual(
   rules.scheduleLessonChargeStatus(
+    { id: 'sch-direct', status: '已排课', settlementType: 'direct', paidAmount: 99, lessonCount: 1 },
+    []
+  ),
+  '直接收款',
+  'direct paid schedule should not be treated as missing entitlement'
+);
+
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas(
+    { id: 'sch-direct', status: '已排课', settlementType: 'direct', paidAmount: 99, lessonCount: 1, studentIds: ['stu-1'] },
+    [{ id: 'ent-1', studentId: 'stu-1', status: 'active', courseType: '体验课', totalLessons: 1, remainingLessons: 1 }]
+  ),
+  [],
+  'direct paid schedule should not consume entitlement balance'
+);
+
+assert.doesNotThrow(
+  () => rules.assertScheduleEntitlementRequired({ id: 'sch-direct', status: '已排课', settlementType: 'direct', paidAmount: 99, lessonCount: 1, studentIds: ['stu-1'] }),
+  'direct paid schedule should save without a package entitlement'
+);
+
+assert.strictEqual(
+  rules.scheduleLessonChargeStatus(
     { id: 'sch-1', status: '已取消', entitlementId: 'ent-1', lessonCount: 1 },
     [{ scheduleId: 'sch-1', entitlementId: 'ent-1', lessonDelta: 1 }]
   ),

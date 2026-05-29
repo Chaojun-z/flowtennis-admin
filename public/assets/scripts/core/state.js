@@ -241,6 +241,12 @@ function setDatasetValue(name,data,{persist=true}={}){
 }
 function noteScheduleLocalMutation(){
   scheduleLocalMutationAt=Date.now();
+  if(loadedDatasets.has('financePage')){
+    loadedDatasets.delete('financePage');
+    financeOverviewData=null;
+    financeNormalizedLedgerRows=[];
+    financeSettlementSummaryRows=[];
+  }
 }
 function setScheduleRowsFromRemote(rows,{persist=true}={}){
   const next=Array.isArray(rows)?rows:[];

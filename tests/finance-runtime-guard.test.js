@@ -10,5 +10,6 @@ assert.match(stateSource, /function financeSettlementRowsFromSnapshot\(\)\{\s*re
 assert.match(stateSource, /financeNormalizedLedgerRows=Array\.isArray\(data\.financeNormalizedRows\)\?data\.financeNormalizedRows:\[\];/, 'finance page data load should accept backend normalized ledger snapshot rows');
 assert.match(stateSource, /financeSettlementSummaryRows=Array\.isArray\(data\.financeSettlementRows\)\?data\.financeSettlementRows:\[\];/, 'finance page data load should accept backend settlement snapshot rows');
 assert.match(stateSource, /financeOverviewData=null;financeNormalizedLedgerRows=\[\];financeSettlementSummaryRows=\[\];/, 'finance state reset should clear the whole finance snapshot');
+assert.match(stateSource, /function noteScheduleLocalMutation\(\)\{[\s\S]*loadedDatasets\.delete\('financePage'\)[\s\S]*financeNormalizedLedgerRows=\[\];[\s\S]*financeSettlementSummaryRows=\[\];/, 'schedule mutations should invalidate finance snapshot data');
 
 console.log('finance runtime guard tests passed');

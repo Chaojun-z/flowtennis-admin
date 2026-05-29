@@ -687,6 +687,14 @@ function parseLessonValue(v,fallback=0){
   return Number.isFinite(n)?n:fallback;
 }
 function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
+function scheduleSettlementType(rec){
+  const raw=String(rec?.settlementType||rec?.paymentType||'').trim();
+  if(['direct','直接收款','paid'].includes(raw))return 'direct';
+  if(['gift','free','赠送','免费'].includes(raw))return 'gift';
+  return 'package';
+}
+function isPackageSettlementSchedule(rec){return scheduleSettlementType(rec)==='package';}
+function isDirectPaidSchedule(rec){return scheduleSettlementType(rec)==='direct';}
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
 function isSmallGroupCourse(row={}){
   return String(row.courseType||row.type||'').trim()==='小班课';
@@ -715,7 +723,7 @@ function smallGroupRuleSnapshot(source={}){
   const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0);
   return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};
 }
-function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree;}
+function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree&&isPackageSettlementSchedule(rec);}
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
   const cls=await getCachedRow(T_CLASSES,classId);
@@ -762,6 +770,8 @@ function effectiveScheduleStatus(rec,now=new Date()){
 function scheduleLessonChargeStatus(rec,ledger=[]){
   if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
   if(rec.coachLateFree)return '迟到免费';
+  if(isDirectPaidSchedule(rec))return '直接收款';
+  if(scheduleSettlementType(rec)==='gift')return '赠送免费';
   if(parseLessonValue(rec.lessonCount)<=0)return '不扣课';
   if(!rec.entitlementId)return '未扣课';
   const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&parseLessonValue(l.lessonDelta)<0);
@@ -1367,6 +1377,7 @@ function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId
 }
 function assertScheduleEntitlementRequired(rec){
   if(!isBillableSchedule(rec))return;
+  if(!isPackageSettlementSchedule(rec))return;
   assertSmallGroupScheduleRules(rec);
 }
 function scheduleParticipantSummary(rec){
@@ -1551,7 +1562,7 @@ function recommendEntitlements(entitlements,schedule){
 function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
   const explicit=scheduleEntitlementDeltas(rec);
   if(explicit.length)return explicit;
-  if(!rec||!isBillableSchedule(rec))return[];
+  if(!rec||!isBillableSchedule(rec)||!isPackageSettlementSchedule(rec))return[];
   assertSmallGroupScheduleRules(rec);
   const lessonCount=parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
@@ -3993,6 +4004,38 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:entitlement.packageName||purchase.packageName||'课包'
     };
   });
+  const directScheduleRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&isDirectPaidSchedule(item)&&roundMoney(item.paidAmount||item.paymentAmount)>0).map(item=>{
+    const amount=roundMoney(item.paidAmount||item.paymentAmount);
+    const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
+    const businessDate=String(item.startTime||item.createdAt||'').slice(0,10);
+    const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
+    return {
+      id:`schedule-direct-${item.id}`,
+      businessDate,
+      weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+      timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+      customer:item.studentName||'—',
+      campusName:campusName.fromValue(item.campus)||'—',
+      businessType:'课程',
+      action:'收款',
+      cashDelta:amount,
+      recognizedRevenueDelta:amount,
+      deferredRevenueDelta:0,
+      paymentChannel:payMethod,
+      sourceDocument:`排课 ${item.id}`,
+      notes:item.notes||'',
+      incomeType:courseLabel,
+      packageName:'',
+      collector:item.operator||item.createdBy||item.coach||'系统记录',
+      differenceReason:'',
+      systemStatus:'正常',
+      totalLessons:Number(item.lessonCount)||0,
+      usedLessons:Number(item.lessonCount)||0,
+      remainingLessons:0,
+      sourceProject:`${courseLabel} ${financeDateTimeText(item.startTime)}`,
+      debitTarget:'直接收款'
+    };
+  });
   const courtRows=(courts||[]).flatMap(court=>{
     const baseCampusName=campusName.fromHints(court.campus,court.campusName,court.name,court.notes);
     return normalizeCourtHistory(court.history).map(historyRow=>{
@@ -4068,7 +4111,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       };
     }).filter(Boolean);
   });
-  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...courtRows]
+  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...courtRows]
     .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
 }
 function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){
@@ -4142,6 +4185,7 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
   const membershipOrderRows=(source.membershipOrders||[]).filter(isFinanceMembershipImportIncrementOrder);
   const courtRows=(source.courts||[]).map(courtWithFinanceImportHistory).filter(row=>normalizeCourtHistory(row.history).length);
+  const directScheduleRows=(source.schedule||[]).filter(row=>isDirectPaidSchedule(row)&&roundMoney(row.paidAmount||row.paymentAmount)>0);
   const incrementRows=buildFinanceUnifiedRows({
     campuses:source.campuses||[],
     students:source.students||[],
@@ -4150,7 +4194,7 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
     entitlementLedger:ledgerRows,
     courts:courtRows,
     membershipOrders:membershipOrderRows,
-    schedule:source.schedule||[]
+    schedule:directScheduleRows
   });
   const baseOverview=verifiedFinance?.overviewData||null;
   if(!baseOverview)return {
