@@ -302,14 +302,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachops \.tms-table-wrapper\{max-height:calc\(100vh - 250px\);overflow-x:auto;overflow-y:auto\}/,
-  'coach workload table should scroll horizontally inside the shared table wrapper'
+  /#page-coachops \.tms-table-wrapper\{max-height:calc\(100vh - 250px\);overflow-x:hidden;overflow-y:auto\}/,
+  'coach workload table should not rely on horizontal scrolling'
 );
 
 assert.match(
   styles,
-  /#page-coachops \.tms-table\{min-width:1240px;table-layout:fixed\}/,
-  'coach workload table should be wide enough for horizontal scrolling'
+  /#page-coachops \.tms-table\{width:100%;min-width:0;table-layout:fixed\}/,
+  'coach workload table should fit the container instead of forcing a scroll width'
 );
 
 assert.match(
@@ -332,8 +332,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachops \.coach-workload-course-types\{font-size:12px;line-height:1.4\}/,
-  'coach workload course type distribution should use the requested 12px font'
+  /#page-coachops \.coach-workload-wrap\{white-space:normal;overflow:visible;word-break:break-word;overflow-wrap:anywhere;line-height:1.35\}/,
+  'coach workload long text columns should wrap instead of being cut off'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.coach-workload-course-types\{font-size:12px\}/,
+  'coach workload course type distribution should keep the requested 12px font'
+);
+
+assert.match(
+  styles,
+  /#page-coachops \.coach-workload-campus,#page-coachops \.coach-workload-timeband\{font-size:12px;color:#2F241E\}/,
+  'coach workload campus and time columns should show the full text in the shared font size'
 );
 
 assert.match(

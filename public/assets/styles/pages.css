@@ -1099,10 +1099,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-coachops .tms-stat-value{font-size:30px;color:#2F241E}
 #page-coachops .tms-stat-value span{font-size:14px;color:#7A6B60}
 #page-coachops #coachOpsViewTitle{color:#2F241E;margin:2px 0 10px}
-#page-coachops .tms-table-wrapper{max-height:calc(100vh - 250px);overflow-x:auto;overflow-y:auto}
-#page-coachops .tms-table{min-width:1240px;table-layout:fixed}
+#page-coachops .tms-table-wrapper{max-height:calc(100vh - 250px);overflow-x:hidden;overflow-y:auto}
+#page-coachops .tms-table{width:100%;min-width:0;table-layout:fixed}
 #page-coachops .tms-table th{padding-top:8px;padding-bottom:8px;font-size:10px}
-#page-coachops .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
+#page-coachops .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15;vertical-align:top}
 #page-coachops .tms-text-primary,#page-coachops .tms-cell-text,#page-coachops .tms-text-remark{font-size:12px;line-height:1.4}
 #page-coachops .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#FDF7F2}
 #page-coachops .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FDF7F2}
@@ -1116,7 +1116,9 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-coachops .coach-workload-rate.up{color:#15803d}
 #page-coachops .coach-workload-rate.down{color:#b91c1c}
 #page-coachops .coach-workload-count{font-size:12px;color:#2F241E;font-weight:600}
-#page-coachops .coach-workload-course-types{font-size:12px;line-height:1.4}
+#page-coachops .coach-workload-wrap{white-space:normal;overflow:visible;word-break:break-word;overflow-wrap:anywhere;line-height:1.35}
+#page-coachops .coach-workload-course-types{font-size:12px}
+#page-coachops .coach-workload-campus,#page-coachops .coach-workload-timeband{font-size:12px;color:#2F241E}
 .late-settlement-modal .mbody{padding-bottom:18px}
 .late-settlement-head{max-width:260px;margin-bottom:14px}
 .late-settlement-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;margin-bottom:12px}
