@@ -801,7 +801,7 @@ async function saveSchedule(){
     closeModal();toast(editId?'修改成功 ✓':'排课成功 ✓','success');
     if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
     renderSchedule();renderClasses();renderPlans();renderCoachOps();renderMySchedule();
-  }catch(e){toast('保存失败：'+e.message,'error');resetScheduleSaveButton();}
+  }catch(e){toast('保存失败：'+scheduleSaveErrorText(e),'error');resetScheduleSaveButton();}
 }
 function resetScheduleSaveButton(){
   const btn=document.getElementById('scheduleSaveBtn');
@@ -811,6 +811,46 @@ function scheduleRemainingLessons(s){
   const cls=s?.classId?classes.find(c=>c.id===s.classId):null;
   if(!cls)return '';
   return Math.max(0,(parseInt(cls.totalLessons)||0)-(parseInt(cls.usedLessons)||0));
+}
+function scheduleSaveErrorText(err){
+  const raw=String(err?.message||err||'').replace(/\s*\[[^\]]+\]$/,'').trim();
+  if(!raw)return '系统有点忙，请稍后再试';
+  const exactMap={
+    '请选择上课时间':'请选择上课时间，再保存',
+    '请选择下课时间，系统需要用它校验冲突':'请选择下课时间，再保存',
+    '上课时间不能跨天':'上课时间和下课时间不能跨天，请改成同一天',
+    '下课时间不能早于上课时间':'下课时间要晚于上课时间，请重新选择',
+    '学员此时间已有课程':'这个时间学员已经有课了，请换时间或换学员',
+    '课程类型不匹配':'课程类型和课包不一致，请换课包或改课程类型',
+    '体验课类型不匹配':'体验课类型不一致，请重新选择体验课类型',
+    '课包可用校区不匹配':'这个校区不在课包可用范围内，请换校区或换课包',
+    '课包可用教练不匹配':'这个教练不在课包可用范围内，请换教练或换课包',
+    '课包可上课教练不匹配':'这个教练不在课包可用范围内，请换教练或换课包',
+    '不在课包可用日期范围':'这节课不在课包可用日期内，请换时间或换课包',
+    '不在课包可用时间段':'这节课不在课包可用时段内，请换时间或换课包',
+    '课包适用人数不匹配':'这节课的人数和课包要求不一致，请重新选择课包',
+    '小班课类型不匹配':'小班课类型和课包不一致，请重新选择课包',
+    '课包余额不存在':'这个课包不可用，请重新选择课包',
+    '课包余额不可用':'这个课包不可用，请重新选择课包',
+    '课包剩余课时不足':'这个课包剩余课时不够，请换课包或减少课时',
+    '关联班次不存在':'关联班次不存在，请重新选择班次',
+    '该班次已取消，不能继续排课':'这个班次已经取消了，不能继续排课',
+    '该班次已结课，不能继续排课':'这个班次已经结课了，不能继续排课',
+    '小班课至少 2 人到场才能开课':'小班课至少要 2 人到场才能开课',
+    '小班课最多选择 4 名学员':'小班课最多只能选 4 名学员',
+    '训练营固定 4 人':'训练营必须固定 4 人',
+    '请填写迟到原因':'请先填写迟到原因再保存',
+    '请先从学员库中选择学员':'请先从学员库中选择学员',
+    '请选择教练':'请先选择教练再保存',
+    '请选择校区':'请先选择校区再保存',
+    '请选择场地':'请先选择场地再保存',
+    '请选择取消原因':'请先选择取消原因再保存'
+  };
+  if(exactMap[raw])return exactMap[raw];
+  if(/^教练「.+」此时间已有课程$/.test(raw))return '这个时间教练已经有课了，请换教练或改时间';
+  if(/^场地「.+」此时间已被占用$/.test(raw))return '这个时间场地已经被占用，请换场地或改时间';
+  if(/^场地「.+」\d{2}:\d{2}-\d{2}:\d{2} 已被订场用户「.+」订场$/.test(raw))return '这个时间场地已经被占用，请换场地或改时间';
+  return raw;
 }
 const FEEDBACK_POSTER_TEMPLATES={
   blueGreenDiagonal:{name:'蓝绿对角',type:'diagonalSplit',bg1:'#1F4287',bg2:'#278EA5',ink:'#FFFFFF',muted:'rgba(255,255,255,0.7)',accent:'#BCE84A',soft:'rgba(255,255,255,0.08)',cardTitle:'#BCE84A',highlight:'#BCE84A',nameColor:'#FFFFFF',subColor:'rgba(255,255,255,0.7)'},

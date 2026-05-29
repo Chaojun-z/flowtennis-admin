@@ -419,6 +419,39 @@ function openPackageModal(id,presetProductId=''){
   setPackageLessonShortcut(rv(p,'lessons',10));
   applyPackageTimeBandPreset(rv(p,'timeBand','全天'));
 }
+function packageSaveErrorText(err){
+  const raw=String(err?.message||err||'').replace(/\s*\[[^\]]+\]$/,'').trim();
+  if(!raw)return '系统有点忙，请稍后再试';
+  const exactMap={
+    '请填写课包名称':'课包信息不完整，请重新检查后再保存',
+    '请填写课程类型':'课程类型还没选，请先选择课程类型',
+    '课程产品不存在':'关联的课程产品已经不存在，请重新选择',
+    '课时必须大于 0':'课时请填大于 0 的数字',
+    '价格必须大于 0':'价格请填大于 0 的数字',
+    '有效天数必须大于 0':'可用天数请填大于 0 的数字',
+    '人数限制必须大于 0':'上课人数请填大于 0 的数字',
+    '请选择小班课类型':'小班课类型还没选，请先选择小班课类型',
+    '小班单次必须是 1 次':'单次小班课请把课时改成 1',
+    '小班单次价格必须是 260 元':'单次小班课请把价格改成 260 元',
+    '训练营必须是 6 次':'训练营请把课时改成 6',
+    '训练营价格必须是 1999 元':'训练营请把价格改成 1999 元',
+    '训练营必须是黄金时段':'训练营只能选黄金时段',
+    '训练营固定 4 人':'训练营人数必须是 4 人',
+    '随到随学必须是 6 次':'随到随学请把课时改成 6',
+    '随到随学价格必须是 1499 元':'随到随学请把价格改成 1499 元',
+    '活动结束时间不能早于活动开始时间':'活动时间结束日期不能早于开始日期',
+    '可用结束时间不能早于可用开始时间':'可用时间结束日期不能早于开始日期',
+    '可用时段请填写完整':'请把可用时段的开始和结束时间都填完整',
+    '可用结束时间必须晚于开始时间':'可用时段结束时间要晚于开始时间',
+    '可用教练不存在':'可上课教练里有已删除的教练，请重新勾选',
+    '主归属教练不存在':'归属教练已经不存在，请重新选择',
+    '可用校区不存在':'可用校区里有已删除的校区，请重新勾选',
+    '该课包已有购买记录，不能修改核心规则':'这个课包已经有人买过了，价格、课时、人数、时间、教练和校区这些核心规则不能改。要改请新建一个课包',
+    '该课包已停用':'这个课包已经停售，不能继续保存'
+  };
+  if(exactMap[raw])return exactMap[raw];
+  return raw;
+}
 async function savePackage(){
   const courseType=document.getElementById('pkg_type').value.trim();
   const audience=document.getElementById('pkg_audience').value;
@@ -458,5 +491,5 @@ async function savePackage(){
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
   const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',fixedStudentCount:courseType==='小班课'&&smallClassType==='bootcamp'?4:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
-  try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+  try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+packageSaveErrorText(e),'error');btn.disabled=false;btn.textContent='保存';}
 }
