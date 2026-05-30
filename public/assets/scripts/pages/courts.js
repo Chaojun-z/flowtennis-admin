@@ -1269,18 +1269,20 @@ async function saveCourtFinanceRecord(){
   const internalReason=document.getElementById('nrInternalReason')?.value||'';
   const startTime=document.getElementById('nrStartTime')?.value||'',endTime=document.getElementById('nrEndTime')?.value||'',venue=document.getElementById('nrVenue')?.value||'',recCampus=document.getElementById('nrCampus')?.value||court.campus||'',lessonCount=parseInt(document.getElementById('nrLessonCount')?.value)||0;
   const priceMode=document.getElementById('nrPriceMode')?.value||'manual',pricePlanId=document.getElementById('nrPricePlanId')?.value||'',channelProduct=selectedChannelProduct();
-  const systemAmount=parseFloat(document.getElementById('nrSystemAmount')?.value)||0,finalAmount=parseFloat(document.getElementById('nrFinalAmount')?.value)||amt||0,overrideReason=document.getElementById('nrOverrideReason')?.value.trim()||'';
+  const systemRaw=parseFloat(document.getElementById('nrSystemAmount')?.value),finalRaw=parseFloat(document.getElementById('nrFinalAmount')?.value);
+  const systemAmount=Number.isFinite(systemRaw)?systemRaw:0,finalAmount=Number.isFinite(finalRaw)?finalRaw:(Number.isFinite(amt)?amt:0),overrideReason=document.getElementById('nrOverrideReason')?.value.trim()||'';
   if(!date){toast('请选择日期','warn');return;}
-  if(category!=='内部占用'&&(!amt||isNaN(amt))){toast('请输入金额','warn');return;}
+  if(category!=='内部占用'&&!Number.isFinite(amt)){toast('请输入金额','warn');return;}
   if(type==='消费'&&(category==='订场'||category==='内部占用')){
     if(!startTime||!endTime||!venue){toast('订场记录请填写时间和场地','warn');return;}
     if(endTime<=startTime){toast('订场结束时间不能早于开始时间','warn');return;}
   }
   if(category==='内部占用'&&!internalReason){toast('请选择占用原因','warn');return;}
-  if(type==='消费'&&category==='订场'&&systemAmount&&finalAmount&&systemAmount!==finalAmount&&!overrideReason){toast('请填写改价原因','warn');return;}
+  const priceOverridden=category==='订场'&&(systemAmount>0?systemAmount!==finalAmount:finalAmount===0);
+  if(type==='消费'&&priceOverridden&&!overrideReason){toast('请填写改价原因','warn');return;}
   const now=new Date().toISOString();
   const revenueBucket=category==='内部占用'?'内部占用':category==='订场'?(payMethod==='储值扣款'?'储值扣款':payMethod==='代用户订场'?'代用户订场':'现场收款'):'';
-  const h={id:uid(),date,occurredDate:date,createdAt:now,recordedAt:now,type,category,payMethod:category==='内部占用'?'其他':payMethod,studentId,amount:category==='内部占用'?0:Math.abs(finalAmount||amt),note,startTime,endTime,venue,campus:recCampus,lessonCount,internalReason,revenueBucket,priceMode,pricePlanId,channel:channelProduct?.channel||'',channelOrderNo:document.getElementById('nrChannelOrderNo')?.value?.trim?.()||'',redeemCode:document.getElementById('nrRedeemCode')?.value?.trim?.()||'',systemAmount,finalAmount,priceOverridden:!!(systemAmount&&finalAmount&&systemAmount!==finalAmount),overrideReason,memberDiscount:priceMode==='venue_rate'&&payMethod==='储值扣款'?currentCourtMemberDiscount(court):1};
+  const h={id:uid(),date,occurredDate:date,createdAt:now,recordedAt:now,type,category,payMethod:category==='内部占用'?'其他':payMethod,studentId,amount:category==='内部占用'?0:Math.abs(finalAmount),note,startTime,endTime,venue,campus:recCampus,lessonCount,internalReason,revenueBucket,priceMode,pricePlanId,channel:channelProduct?.channel||'',channelOrderNo:document.getElementById('nrChannelOrderNo')?.value?.trim?.()||'',redeemCode:document.getElementById('nrRedeemCode')?.value?.trim?.()||'',systemAmount,finalAmount,priceOverridden,overrideReason,memberDiscount:priceMode==='venue_rate'&&payMethod==='储值扣款'?currentCourtMemberDiscount(court):1};
   const hist=[...courtBaseHistoryForSave(court),h];
   const preview=courtFinanceLocal({...court,history:hist});
   if(preview.balance<0){toast('余额不足，不能使用储值扣款','warn');return;}

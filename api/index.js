@@ -6218,7 +6218,7 @@ function normalizeFinancePriceSnapshot(row){
   if(!hasSnapshot)return row;
   const systemAmount=normalizeMoney(row.systemAmount);
   const finalAmount=normalizeMoney(row.finalAmount!==undefined?row.finalAmount:row.amount);
-  const priceOverridden=systemAmount>0&&finalAmount>0&&systemAmount!==finalAmount;
+  const priceOverridden=row.category==='订场'&&(systemAmount>0?systemAmount!==finalAmount:finalAmount===0);
   const overrideReason=String(row.overrideReason||'').trim();
   if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
   return {

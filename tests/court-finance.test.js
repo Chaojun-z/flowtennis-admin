@@ -386,6 +386,49 @@ assert.throws(
 
 assert.throws(
   () => normalizeCourtRecord({
+    name: '订场 0 元改价未填原因',
+    history: [{
+      id: 'priced-booking-zero-no-reason',
+      date: '2026-04-20',
+      type: '消费',
+      category: '订场',
+      payMethod: '微信',
+      amount: 0,
+      priceMode: 'venue_rate',
+      pricePlanId: 'weekday-prime',
+      systemAmount: 440,
+      finalAmount: 0
+    }]
+  }),
+  /请填写改价原因/,
+  'zero final booking price requires a reason'
+);
+
+const zeroPricedBooking = normalizeCourtRecord({
+  name: '订场 0 元改价',
+  history: [{
+    id: 'priced-booking-zero',
+    date: '2026-04-20',
+    type: '消费',
+    category: '订场',
+    payMethod: '微信',
+    amount: 0,
+    priceMode: 'venue_rate',
+    pricePlanId: 'weekday-prime',
+    systemAmount: 360,
+    finalAmount: 0,
+    overrideReason: '免单'
+  }]
+});
+
+assert.strictEqual(zeroPricedBooking.history[0].amount, 0);
+assert.strictEqual(zeroPricedBooking.history[0].finalAmount, 0);
+assert.strictEqual(zeroPricedBooking.history[0].priceOverridden, true);
+assert.strictEqual(computeCourtFinance(zeroPricedBooking).spentAmount, 0);
+assert.strictEqual(computeCourtFinance(zeroPricedBooking).receivedAmount, 0);
+
+assert.throws(
+  () => normalizeCourtRecord({
     name: '订场用户冲突',
     phone: '15001010368',
     campus: 'mabao',
