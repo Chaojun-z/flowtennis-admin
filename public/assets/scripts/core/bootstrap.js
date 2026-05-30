@@ -1,7 +1,7 @@
 let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',editId=null,delId=null,delType=null,_pending=[];
 let batchDeleteCourtIds=[];
-let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,financeLedgerPage=1;
-let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='',stuSortDir='',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,financeLedgerPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
+let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,financeLedgerPage=1,adminUserPage=1;
+let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='',stuSortDir='',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,financeLedgerPageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
 let membershipPage=1,membershipPageSize=20,membershipSortKey='bookingCount',membershipSortDir='desc';
 let membershipTierFilterValue='';
 let purPackageFilterValue='';
@@ -53,7 +53,7 @@ function renderStudentsIfVisible(){
   if(currentPage==='students')renderStudents();
   if(currentPage==='mystudents')renderMyStudents();
 }
-function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;leadPage=1;schPage=1;courtPage=1;if(currentPage==='students')renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();}
+function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=1;leadPage=1;schPage=1;courtPage=1;adminUserPage=1;if(currentPage==='students')renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
 function appConfirm(message,{title='请确认',confirmText='确定',danger=false,html=false,hideIcon=false,boxClass=''}={}){

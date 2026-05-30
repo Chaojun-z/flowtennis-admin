@@ -22,7 +22,7 @@ assert.match(
 
 assert.match(
   apiSource,
-  /const all=isProductionRuntime\(\)\?await scanFirstRows\(T_USERS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_USERS,\{columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\);return sendJson\(res,all\.map\(buildAdminUserView\)\);/,
+  /const all=isProductionRuntime\(\)\?await scanFirstRows\(T_USERS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_USERS,\{columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\);return sendJson\(res,all\.filter\(isVisibleAdminUser\)\.map\(buildAdminUserView\)\);/,
   '账号管理首屏应在 production 改成限量轻投影读取'
 );
 

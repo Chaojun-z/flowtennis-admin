@@ -2043,6 +2043,9 @@ function buildAdminUserView(u){
     officialAccountBoundAt:u.officialAccountBoundAt||''
   };
 }
+function isVisibleAdminUser(u){
+  return String(u?.id||'')!=='pkgmergeadmin';
+}
 function buildWechatAccessTokenUrl(appid,secret){
   return `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}`;
 }
@@ -7905,7 +7908,8 @@ module.exports = async (req, res) => {
     }
     if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');const matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions||[]});const phone=assertPhone(body.phone||'');await put(T_USERS,id,{id,name,phone,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountOpenId:'',officialAccountBoundAt:'',matchPermissions});return sendJson(res,{success:true,id,name,phone,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountBound:false,officialAccountBoundAt:'',matchPermissions});}
     if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;if(Object.prototype.hasOwnProperty.call(body,'phone'))updates.phone=assertPhone(body.phone||'');updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(Array.isArray(body.matchPermissions)||Array.isArray(body.permissions))updates.matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions});if(body.clearWechat){await unbindWechatUserWithIndex(updates);return sendJson(res,{success:true});}if(body.clearOfficialAccount){updates=buildOfficialAccountUnboundUser(updates);}await put(T_USERS,id,updates);return sendJson(res,{success:true});}
-    if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=isProductionRuntime()?await scanFirstRows(T_USERS,{limit:PRODUCTION_PAGE_READ_LIMITS.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_USERS,{columns:ADMIN_USER_LIST_PROJECTION_FIELDS});return sendJson(res,all.map(buildAdminUserView));}
+    if(path==='/admin/reset-user-password'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,password}=body;if(!id||!password)return sendJson(res,{error:'缺少账号或新密码'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);await put(T_USERS,id,{...u,password:await bcrypt.hash(password,10),updatedAt:new Date().toISOString()});return sendJson(res,{success:true});}
+    if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=isProductionRuntime()?await scanFirstRows(T_USERS,{limit:PRODUCTION_PAGE_READ_LIMITS.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_USERS,{columns:ADMIN_USER_LIST_PROJECTION_FIELDS});return sendJson(res,all.filter(isVisibleAdminUser).map(buildAdminUserView));}
     if(path==='/admin/clear-test-data'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       if(body.confirm!=='CLEAR_TEST_DATA')return sendJson(res,{error:'缺少清空确认'},400);
