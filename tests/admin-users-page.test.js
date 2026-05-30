@@ -49,8 +49,14 @@ assert.match(fnBody('openAdminUserModal'), /au_password/, 'account modal should 
 assert.match(fnBody('openAdminUserModal'), /au_role/, 'account modal should include role field');
 assert.match(fnBody('openAdminUserModal'), /au_phone/, 'account modal should include phone field');
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
+assert.match(fnBody('openAdminUserModal'), /<input type="hidden" id="au_role" value="\$\{rv\(user,'role','editor'\)\}">/, 'account edit modal should keep the real role value for coach binding visibility');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /au_officialAccountOpenId/, 'account modal should not expose manual official account openid input');
 assert.match(fnBody('openAdminUserModal'), /请在服务号内发送 #绑定 手机号 完成绑定/, 'account modal should explain the real binding flow');
+{
+  const officialBindingRow = fnBody('openAdminUserModal').match(/const officialBindingRow=`[^`]+`;/)?.[0] || '';
+  assert.match(officialBindingRow, /admin-user-readonly-line/, 'official account binding should use readonly display text');
+  assert.doesNotMatch(officialBindingRow, /<input/, 'official account binding should not look editable');
+}
 assert.match(fnBody('openAdminUserModal'), /au_match_ops/, 'account modal should configure match ops permission');
 assert.match(fnBody('openAdminUserModal'), /au_match_finance/, 'account modal should configure match finance permission');
 assert.match(fnBody('openAdminUserModal'), /账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。/, 'account create modal should describe login by account in neutral wording');
