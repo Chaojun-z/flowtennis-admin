@@ -8429,9 +8429,9 @@ module.exports = async (req, res) => {
             r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},null);
-            return {risk,entitlementDeltas};
+            return {risk,entitlementDeltas,entitlementRows};
           });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
-          const {risk,entitlementDeltas}=validation;
+          const {risk,entitlementDeltas,entitlementRows}=validation;
           await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
           const nextDelta=scheduleLessonDelta(r);
           const appliedEntitlements=[];
