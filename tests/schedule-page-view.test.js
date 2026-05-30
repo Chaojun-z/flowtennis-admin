@@ -111,6 +111,10 @@ assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:non
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
 assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');
 assert.match(fnBody('applySchEntitlementOptions'), /maxRemain[\s\S]*setScheduleCourseTypeReadonly/, 'schedule entitlement recommendation should default to the package with most remaining lessons and lock course type');
+assert.match(source, /function scheduleEntitlementSmallClassType\(/, 'schedule package picker should read small group subtype from the selected package');
+assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementSmallClassType\(selected\)[\s\S]*setCourtDropdownValue\('sch_smallClassType'/, 'schedule entitlement recommendation should force the package small group subtype');
+assert.match(fnBody('handleScheduleEntitlementChange'), /scheduleEntitlementSmallClassType\(\{entitlementId:sel\.value\}\)[\s\S]*setCourtDropdownValue\('sch_smallClassType'/, 'manual package selection should force the package small group subtype');
+assert.match(fnBody('setScheduleSmallClassTypeReadonly'), /pointerEvents=readonly\?'none':'auto'/, 'small group subtype should become readonly when a package determines it');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /当前没有可用课包/, 'empty package state should not repeat the no-package message below the dropdown');
 assert.match(styles, /\.modal\.modal-court \.schedule-student-tags[\s\S]*\.modal\.modal-court \.schedule-student-tag/, 'schedule student tags should have scoped modal styles');
 assert.match(fnBody('openScheduleModal'), /sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external venue schedules should capture venue, court, and notes');

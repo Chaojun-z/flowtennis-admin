@@ -384,7 +384,7 @@ function toggleScheduleSettlementFields(){
   const directFields=document.getElementById('sch_directPaymentFields');
   if(packageItem)packageItem.style.display=type==='package'?'':'none';
   if(directFields)directFields.style.display=type==='direct'?'':'none';
-  if(type!=='package')setScheduleCourseTypeReadonly(false);
+  if(type!=='package'){setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);}
   refreshSchEntitlementOptions();
 }
 // schedule modal field ids: id="sch_date" id="sch_startTime" id="sch_endTime" id="sch_cancelReason" id="sch_scheduleSource"
@@ -591,11 +591,17 @@ function applySchEntitlementOptions(res,preferredId=''){
     setCourtDropdownValue('sch_courseType',courseType,courseType);
     const experienceType=scheduleEntitlementExperienceType(selected);
     if(experienceType)setCourtDropdownValue('sch_experienceType',experienceType,experienceType);
+    const smallClassType=courseType==='小班课'?scheduleEntitlementSmallClassType(selected):'';
+    if(smallClassType)setCourtDropdownValue('sch_smallClassType',smallClassType,scheduleSmallClassTypeLabel(smallClassType));
     syncScheduleExperienceType();
+    syncScheduleSmallClassType();
     setScheduleCourseTypeReadonly(true);
+    setScheduleSmallClassTypeReadonly(!!smallClassType);
   }else{
     syncScheduleExperienceType();
+    syncScheduleSmallClassType();
     setScheduleCourseTypeReadonly(false);
+    setScheduleSmallClassTypeReadonly(false);
   }
   hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补场地费':''}，到期 ${selected.validUntil||'-'}`:scheduleEntitlementUnavailableReason(res.options||[]);
 }
@@ -609,8 +615,29 @@ function scheduleEntitlementExperienceType(option){
   const local=entitlements.find(e=>e.id===option.entitlementId||e.id===option.id);
   return normalizeExperienceType(option.experienceType||local?.experienceType||option.packageName||local?.packageName,'');
 }
+function scheduleSmallClassTypeLabel(value){
+  return ({single:'单次',bootcamp:'训练营',dropin:'随到随学'})[value]||value||'';
+}
+function scheduleEntitlementSmallClassType(option){
+  if(!option)return '';
+  const local=entitlements.find(e=>e.id===option.entitlementId||e.id===option.id);
+  const raw=String(option.smallClassType||option.packageSubType||option.subType||local?.smallClassType||local?.packageSubType||local?.subType||'').trim();
+  if(raw)return raw;
+  const text=String(option.packageName||local?.packageName||'');
+  if(/训练营/.test(text))return 'bootcamp';
+  if(/随到随学/.test(text))return 'dropin';
+  if(/小班/.test(text))return 'single';
+  return '';
+}
 function setScheduleCourseTypeReadonly(readonly){
   const dropdown=document.getElementById('sch_courseType_dropdown');
+  if(!dropdown)return;
+  dropdown.style.pointerEvents=readonly?'none':'auto';
+  dropdown.style.opacity=readonly?'.72':'';
+  dropdown.classList.toggle('tms-dropdown-readonly',!!readonly);
+}
+function setScheduleSmallClassTypeReadonly(readonly){
+  const dropdown=document.getElementById('sch_smallClassType_dropdown');
   if(!dropdown)return;
   dropdown.style.pointerEvents=readonly?'none':'auto';
   dropdown.style.opacity=readonly?'.72':'';
@@ -625,11 +652,17 @@ function handleScheduleEntitlementChange(){
     setCourtDropdownValue('sch_courseType',courseType,courseType);
     const experienceType=scheduleEntitlementExperienceType({entitlementId:sel.value});
     if(experienceType)setCourtDropdownValue('sch_experienceType',experienceType,experienceType);
+    const smallClassType=courseType==='小班课'?scheduleEntitlementSmallClassType({entitlementId:sel.value}):'';
+    if(smallClassType)setCourtDropdownValue('sch_smallClassType',smallClassType,scheduleSmallClassTypeLabel(smallClassType));
     syncScheduleExperienceType();
+    syncScheduleSmallClassType();
     setScheduleCourseTypeReadonly(true);
+    setScheduleSmallClassTypeReadonly(!!smallClassType);
   }else{
     syncScheduleExperienceType();
+    syncScheduleSmallClassType();
     setScheduleCourseTypeReadonly(false);
+    setScheduleSmallClassTypeReadonly(false);
   }
 }
 function readSchEntitlementPayload(ids,startRaw,endRaw){
@@ -693,13 +726,14 @@ async function refreshSchEntitlementOptions(){
     setScheduleEntitlementDropdown([], '', currentScheduleSettlementType()==='direct'?'直接收款，不扣课包':'赠送/免费，不扣课包');
     hint.textContent='';
     setScheduleCourseTypeReadonly(false);
+    setScheduleSmallClassTypeReadonly(false);
     return;
   }
   const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');
   const startRaw=scheduleComposeDateTime('sch_date','sch_startTime');
   const endRaw=scheduleComposeDateTime('sch_date','sch_endTime');
-  if(!ids.length||!startRaw||!endRaw){setScheduleEntitlementDropdown([], '', '自动匹配可用课包');hint.textContent='';setScheduleCourseTypeReadonly(false);return;}
-  if(ids.length>1){setScheduleEntitlementDropdown([], '', '系统按参与学员自动扣课');hint.textContent='多人小班会按到场学员分别扣各自可用课包；训练营第 1 次请假免费，第 2 次起扣课。';setScheduleCourseTypeReadonly(false);return;}
+  if(!ids.length||!startRaw||!endRaw){setScheduleEntitlementDropdown([], '', '自动匹配可用课包');hint.textContent='';setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);return;}
+  if(ids.length>1){setScheduleEntitlementDropdown([], '', '系统按参与学员自动扣课');hint.textContent='多人小班会按到场学员分别扣各自可用课包；训练营第 1 次请假免费，第 2 次起扣课。';setScheduleCourseTypeReadonly(false);setScheduleSmallClassTypeReadonly(false);return;}
   const keepValue=sel.dataset.keep||sel.value||'';
   const editId=window.editScheduleId||'';
   const payload={
@@ -729,6 +763,7 @@ async function refreshSchEntitlementOptions(){
       if(refreshSeq!==schEntitlementRefreshSeq)return;
       setScheduleEntitlementDropdown([], '', '无可用课包');
       setScheduleCourseTypeReadonly(false);
+      setScheduleSmallClassTypeReadonly(false);
       hint.textContent=e.message;
     }
   },300);
