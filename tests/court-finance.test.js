@@ -226,6 +226,33 @@ assert.strictEqual(normalized.totalDeposit, 5000);
 assert.strictEqual(normalized.spentAmount, 300);
 assert.strictEqual(normalized.receivedAmount, 5000);
 
+const normalizedOutOfOrderMembershipOpening = normalizeCourtRecord({
+  name: '毛彬 订场',
+  history: [
+    {
+      id: 'booking-before-in-array',
+      date: '2026-05-22',
+      type: '消费',
+      payMethod: '储值扣款',
+      category: '订场',
+      amount: 224
+    },
+    {
+      id: 'membership-recharge-after-in-array',
+      date: '2026-04-11',
+      type: '充值',
+      payMethod: '会员充值',
+      category: '会员充值',
+      amount: 5000,
+      bonusAmount: 800
+    }
+  ]
+});
+
+assert.strictEqual(normalizedOutOfOrderMembershipOpening.balance, 5576);
+assert.strictEqual(normalizedOutOfOrderMembershipOpening.history[0].id, 'membership-recharge-after-in-array');
+assert.strictEqual(normalizedOutOfOrderMembershipOpening.history[1].id, 'booking-before-in-array');
+
 const pricedBooking = normalizeCourtRecord({
   name: '订场价格快照',
   history: [{

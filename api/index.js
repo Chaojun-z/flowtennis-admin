@@ -6832,7 +6832,8 @@ function mergeCourtNotes(targetCourt,sourceCourt){
   return [targetNotes,`${sourceMark} ${sourceNotes}`].filter(Boolean).join('\n');
 }
 function courtHistorySortKey(row){
-  return `${String(row?.occurredDate||row?.date||'9999-12-31').slice(0,10)} ${String(row?.startTime||row?.recordedAt||row?.createdAt||'').slice(11,19)} ${String(row?.id||'')}`;
+  const typeOrder={充值:'0',消费:'1',退款:'2',冲正:'3'};
+  return `${String(row?.occurredDate||row?.date||'9999-12-31').slice(0,10)} ${String(row?.startTime||row?.recordedAt||row?.createdAt||'').slice(11,19)} ${typeOrder[row?.type]||'9'} ${String(row?.id||'')}`;
 }
 function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],now=new Date().toISOString()}={}){
   if(!targetCourt?.id||!sourceCourt?.id)throw new Error('请选择要合并的订场用户');
@@ -6938,7 +6939,7 @@ function normalizeCourtRecord(input,refs={}){
     if(spent>0&&total>0)normalizedInput.balance=Math.max(0,total-spent);
   }
   const currentHistory=normalizeCourtHistory(input.history);
-  const history=normalizeCourtBookingHistoryRows(normalizedInput,currentHistory.length?currentHistory:buildLegacyCourtOpeningHistory(normalizedInput));
+  const history=normalizeCourtBookingHistoryRows(normalizedInput,currentHistory.length?currentHistory:buildLegacyCourtOpeningHistory(normalizedInput)).sort((a,b)=>courtHistorySortKey(a).localeCompare(courtHistorySortKey(b)));
   if(Array.isArray(refs.schedules))assertCourtBookingHistoryAgainstSchedules({...normalizedInput,history},refs.schedules);
   const finance=computeCourtFinance({...normalizedInput,history,allowNegativeBalance:refs.allowNegativeBalance===true});
   const studentIds=normalizeStudentIds(normalizedInput);
