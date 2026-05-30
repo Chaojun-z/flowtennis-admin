@@ -191,8 +191,9 @@ assert.match(html, /已消耗/, 'membership account rights should show consumed 
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
 assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
 assert.match(fnBody('membershipBenefitSummaryForOrder'), /const positiveDelta=.*?delta\)\|\|0\)>0[\s\S]*const negativeDelta=.*?delta\)\|\|0\)<0[\s\S]*const total=\(item\.total\|\|0\)\+positiveDelta[\s\S]*remaining:expired\?0:Math\.max\(0,total\+negativeDelta\)/, 'frontend benefit summary should add supplements to both total and remaining');
-assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='bookingCount',membershipSortDir='desc'/, 'membership management should own standard pagination and default sort state');
+assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='asc'/, 'membership management should default to first-open date ascending');
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
+assert.match(html, /function membershipFirstOpenDate/, 'membership management should compute first-open date from membership orders');
 assert.match(html, /function onMembershipSearchChange\(\)/, 'membership management search should reset to the first page');
 assert.match(html, /id="membershipSearch"[\s\S]*oninput="onMembershipSearchChange\(\)"/, 'membership management search should use the standard search handler');
 assert.match(html, /let membershipTierFilterValue=''/, 'membership management should keep a member type filter value');
@@ -203,7 +204,7 @@ assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订�
 assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
 assert.match(fnBody('renderMemberships'), /membershipBookingCount\(court\)[\s\S]*courtBookingSummary\(court\)\.count/, 'membership management should show member bookings and total bookings separately');
 assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{court\.id\}'\)">订场/, 'membership management should provide view and booking actions');
-assert.match(fnBody('renderMemberships'), /data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable booking count, balance and validity columns');
+assert.match(fnBody('renderMemberships'), /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
 assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓名/, 'membership management should freeze the member name column');
 assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
 assert.match(fnBody('renderMemberships'), /renderCourtEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
