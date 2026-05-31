@@ -1,4 +1,5 @@
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const TIMETABLE_START_HOUR = 7;
 const CAMPUS_DISPLAY = {
   mabao: '顺义马坡',
   shilipu: '朝阳十里堡',
@@ -153,9 +154,9 @@ function clockMinutes(value) {
 
 function classBlockStyle(item) {
   const hourHeight = 150;
-  const start = clockMinutes(item.startTime);
-  const end = clockMinutes(item.endTime);
-  const top = Math.max(0, Math.round((start / 60) * hourHeight));
+  const start = Math.max(TIMETABLE_START_HOUR * 60, clockMinutes(item.startTime));
+  const end = Math.max(start + 60, clockMinutes(item.endTime));
+  const top = Math.max(0, Math.round(((start - TIMETABLE_START_HOUR * 60) / 60) * hourHeight));
   const height = Math.max(128, Math.round(((Math.max(end, start + 60) - start) / 60) * hourHeight) - 4);
   return { top, height };
 }

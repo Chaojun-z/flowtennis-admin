@@ -1,9 +1,10 @@
 const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, scheduleLocationText } = require('../../utils/schedule');
 
-const timetableHours = Array.from({ length: 25 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+const TIMETABLE_START_HOUR = 7;
+const TIMETABLE_END_HOUR = 22;
+const timetableHours = Array.from({ length: TIMETABLE_END_HOUR - TIMETABLE_START_HOUR + 1 }, (_, i) => `${String(TIMETABLE_START_HOUR + i).padStart(2, '0')}:00`);
 const avatarClasses = ['avatar-warm', 'avatar-teal', 'avatar-green', 'avatar-purple'];
-const TIMETABLE_START_HOUR = 0;
 const TIMETABLE_HOUR_HEIGHT_RPX = 150;
 const TIMETABLE_DAY_WIDTH_RPX = 228;
 
@@ -1276,8 +1277,8 @@ function currentTimeMarker(now = new Date()) {
 }
 
 function timetableNowLineStyle(now = new Date()) {
-  const minutes = ((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes();
-  const top = Math.max(0, Math.round((minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX));
+  const minutes = clamp(((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes(), 0, (TIMETABLE_END_HOUR - TIMETABLE_START_HOUR) * 60);
+  const top = Math.round((minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX);
   return `top:${top}rpx;`;
 }
 
@@ -1290,8 +1291,8 @@ function timetableNowSolidLineStyle(days = [], now = new Date(), isCurrentWeek =
 
 function timetableScrollTop(now = new Date(), isCurrentWeek = true) {
   if (!isCurrentWeek) return 0;
-  const minutes = ((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes();
-  const lineTopPx = rpxToPx(Math.max(0, (minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX));
+  const minutes = clamp(((now.getHours() - TIMETABLE_START_HOUR) * 60) + now.getMinutes(), 0, (TIMETABLE_END_HOUR - TIMETABLE_START_HOUR) * 60);
+  const lineTopPx = rpxToPx((minutes / 60) * TIMETABLE_HOUR_HEIGHT_RPX);
   return Math.max(0, Math.round(lineTopPx - 260));
 }
 

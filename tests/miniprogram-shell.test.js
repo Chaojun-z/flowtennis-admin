@@ -181,8 +181,9 @@ assert.match(scheduleJs, /if\s*\(\s*day\.isToday\s*&&\s*todayShownIds\.has\(Stri
 assert.match(scheduleJs, /decorateTimetableDays\(buildTimetableDays\(schedule,\s*weekOffset,\s*now\)\)/, 'mini program timetable should build its window from the full schedule dataset so current week can preview next-week days');
 assert.match(scheduleJs, /currentTimeText/, 'mini program schedule page should compute the current-time marker text');
 assert.match(scheduleJs, /todayLabel:\s*today \? today\.label\.replace\(\s*\/\\s\+\/,\s*' '\s*\)/, 'dashboard today date should keep exactly one space between weekday and date');
-assert.match(scheduleJs, /Array\.from\(\{\s*length:\s*25\s*\}[\s\S]*String\(i\)\.padStart\(2,\s*'0'\)/, 'mini program timetable should expose a 00:00-24:00 time axis');
-assert.match(scheduleJs, /TIMETABLE_START_HOUR\s*=\s*0/, 'mini program current-time marker should use a midnight-based timetable axis');
+assert.match(scheduleJs, /TIMETABLE_START_HOUR\s*=\s*7/, 'mini program current-time marker should use a 07:00-based timetable axis');
+assert.match(scheduleJs, /TIMETABLE_END_HOUR\s*=\s*22/, 'mini program timetable should end at 22:00');
+assert.match(scheduleJs, /Array\.from\(\{\s*length:\s*TIMETABLE_END_HOUR - TIMETABLE_START_HOUR \+ 1\s*\}/, 'mini program timetable hours should derive from the business-hour range');
 assert.match(scheduleJs, /timetableNowSolidLineStyle/, 'mini program current-time marker should expose a solid segment for today');
 assert.match(scheduleJs, /lastScheduleId:\s*lastClass && lastClass\.id/, 'mini program students should still carry their latest class id for summaries');
 assert.doesNotMatch(scheduleWxml, /进入完整教练端/, 'native schedule page should not expose the old webview fallback entry');
@@ -203,8 +204,8 @@ assert.doesNotMatch(scheduleJs, /firstNonEmpty\(item\.remark,\s*item\.note,\s*it
 const scheduleUtils = require('../wechat-miniprogram/miniprogram/utils/schedule');
 assert.strictEqual(
   scheduleUtils.classBlockStyle({ startTime: '2026-04-22 09:00', endTime: '2026-04-22 10:00' }).top,
-  1350,
-  'timetable course blocks should be positioned from 00:00'
+  300,
+  'timetable course blocks should be positioned from 07:00'
 );
 const todoNow = new Date('2026-04-21T12:00:00+08:00');
 assert.strictEqual(
@@ -392,7 +393,8 @@ assert.match(scheduleWxss, /\.mini-metric text\s*\{[\s\S]*transform:\s*translate
 assert.match(scheduleWxss, /\.mini-metric text\.danger\s*\{[\s\S]*color:\s*#D97706;/, 'dashboard pending feedback metric should use the requested warning color');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'empty conversion value should use the requested muted regular style with enough specificity');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
-assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*13px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should use requested 13px muted regular style');
+assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*flex-start;/, 'conversion number should align the percent unit inline without overflow');
+assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*11px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should shrink to 11px and keep a tighter line-height');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*height:\s*38px;[\s\S]*margin-top:\s*12px;[\s\S]*border:\s*0\.8px solid #e2e8f0;/i, 'dashboard reminder bar should match the requested size and border token');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*line-height:\s*1;/i, 'dashboard reminder bar content should be vertically centered');
 assert.match(scheduleWxss, /\.reminder-bar \.summary-icon\s*\{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;[\s\S]*background-image:[\s\S]*circle cx='8' cy='8' r='6\.5'/, 'dashboard reminder icon should reuse the shifts reminder icon');
@@ -408,6 +410,9 @@ assert.match(scheduleWxss, /\.week-task-status\s*\{[\s\S]*transform:\s*translate
 assert.match(scheduleWxss, /\.week-task-time-row\s*\{[\s\S]*transform:\s*translateY\(-2px\);/, 'dashboard week todo time row should use the requested vertical offset');
 assert.match(scheduleWxss, /\.week-task-location\s*\{[\s\S]*transform:\s*translateY\(-7px\);/, 'dashboard week todo meta row should use the requested vertical offset');
 assert.match(scheduleWxss, /\.week-task-divider\s*\{[\s\S]*width:\s*325px;[\s\S]*height:\s*1px;[\s\S]*margin-top:\s*8px;[\s\S]*transform:\s*translateY\(-6px\);/, 'dashboard week todo divider should match requested size and spacing');
+assert.match(scheduleWxml, /button class="switch-btn switch-prev" bindtap="prevWeek"[\s\S]*button class="switch-btn switch-next" bindtap="nextWeek"/, 'timetable header should keep explicit previous and next week buttons');
+assert.match(scheduleWxss, /\.switch-btn\s*\{[\s\S]*width:\s*32px;[\s\S]*height:\s*36px;/, 'week switch buttons should expose a larger tap target');
+assert.match(scheduleWxss, /\.switch-btn::before\s*\{[\s\S]*left:\s*50%;[\s\S]*top:\s*50%;[\s\S]*transform:\s*translate\(-50%,\s*-50%\);/, 'week switch icons should stay centered inside the larger tap target');
 assert.match(scheduleWxss, /\.week-task-actions\s*\{[\s\S]*transform:\s*translateY\(-8px\);/, 'dashboard week todo actions should use the requested vertical offset');
 assert.match(scheduleWxss, /\.week-task-outline\s*\{[\s\S]*width:\s*70px;[\s\S]*height:\s*28px;[\s\S]*border:\s*1px solid #e2e8f0;/i, 'dashboard week todo outline button should match requested token');
 assert.match(scheduleWxss, /\.week-task-status\s*\{[\s\S]*width:\s*48px;[\s\S]*height:\s*24px;[\s\S]*background:\s*#fef3c7;/i, 'dashboard pending feedback tag should match requested token');

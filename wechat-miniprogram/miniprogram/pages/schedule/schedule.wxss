@@ -230,6 +230,8 @@ page {
   color: #0f172a;
   font-size: 24px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: flex-start;
 }
 
 .reminder-bar {
@@ -288,8 +290,9 @@ page {
 }
 
 .conversion-unit {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 400;
+  line-height: 1.2;
   color: #64748B;
 }
 
@@ -907,9 +910,9 @@ button::after {
 
 .switch-btn {
   position: relative;
-  width: 8px;
-  height: 10px;
-  line-height: 10px;
+  width: 32px;
+  height: 36px;
+  line-height: 36px;
   padding: 0;
   background: transparent;
   color: transparent;
@@ -924,22 +927,22 @@ button::after {
 .switch-btn::before {
   content: "";
   position: absolute;
-  top: 0;
+  left: 50%;
+  top: 50%;
   width: 8px;
   height: 10px;
   box-sizing: border-box;
   background-repeat: no-repeat;
   background-position: center;
   background-size: 8px 10px;
+  transform: translate(-50%, -50%);
 }
 
 .switch-prev::before {
-  left: 0;
   background-image: url("data:image/svg+xml,%3Csvg width='8' height='10' viewBox='0 0 8 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.75 0.75L0.75 4.75L6.75 8.75' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .switch-next::before {
-  right: 0;
   background-image: url("data:image/svg+xml,%3Csvg width='8' height='10' viewBox='0 0 8 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.75 0.75L6.75 4.75L0.75 8.75' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
