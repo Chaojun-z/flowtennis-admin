@@ -130,7 +130,7 @@ page {
 }
 
 .agreement-row checkbox {
-  transform: scale(0.85);
+  transform: scale(0.75);
   transform-origin: left top;
 }
 
@@ -152,25 +152,25 @@ page {
   width: 4px;
 }
 
-.match-divider {
+.alt-login-divider {
   margin-top: 18px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.match-divider-line {
+.alt-login-divider-line {
   flex: 1;
   height: 1px;
   background: rgba(43, 58, 85, 0.14);
 }
 
-.match-divider-text {
+.alt-login-divider-text {
   color: #7b8794;
   font-size: 12px;
 }
 
-.match-btn {
+.wechat-login-btn {
   width: 100%;
   height: 48px;
   margin-top: 14px;
@@ -184,11 +184,11 @@ page {
   justify-content: center;
 }
 
-.match-btn::after {
+.wechat-login-btn::after {
   border: 0;
 }
 
-.match-spinner {
+.wechat-login-spinner {
   width: 16px;
   height: 16px;
   margin-right: 8px;

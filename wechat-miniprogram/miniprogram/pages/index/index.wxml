@@ -32,15 +32,15 @@
       <text>登录</text>
     </button>
 
-    <view class="match-divider">
-      <text class="match-divider-line"></text>
-      <text class="match-divider-text">约球入口</text>
-      <text class="match-divider-line"></text>
+    <view class="alt-login-divider">
+      <text class="alt-login-divider-line"></text>
+      <text class="alt-login-divider-text">其他登录方式</text>
+      <text class="alt-login-divider-line"></text>
     </view>
 
-    <button class="match-btn" bindtap="enterMatchMini">
-      <view wx:if="{{matchLoggingIn}}" class="match-spinner"></view>
-      <text>微信进入约球</text>
+    <button class="wechat-login-btn" bindtap="submitWechatLogin">
+      <view wx:if="{{wechatLoggingIn}}" class="wechat-login-spinner"></view>
+      <text>微信快捷登录</text>
     </button>
   </view>
 </view>

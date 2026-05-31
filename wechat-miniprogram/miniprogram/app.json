@@ -3,8 +3,6 @@
     "pages/index/index",
     "pages/schedule/schedule",
     "pages/detail/detail",
-    "pages/profile/index",
-    "pages/match-create/index",
     "pages/agreement/agreement",
     "pages/privacy/privacy"
   ],

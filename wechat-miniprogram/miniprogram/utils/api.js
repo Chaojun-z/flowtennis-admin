@@ -2,8 +2,6 @@ const { API_BASE_URL, ACTIVE_ENV } = require('../config');
 
 const TOKEN_KEY = 'ft_mini_token';
 const USER_KEY = 'ft_mini_user';
-const MATCH_TOKEN_KEY = 'ft_mini_match_token';
-const MATCH_USER_KEY = 'ft_mini_match_user';
 
 function readMiniProgramEnvVersion() {
   try {
@@ -16,7 +14,7 @@ function readMiniProgramEnvVersion() {
 
 function buildClientHeaders() {
   return {
-    'X-FlowTennis-Client': 'mini-match',
+    'X-FlowTennis-Client': 'coach-mini',
     'X-FlowTennis-Client-Env': String(ACTIVE_ENV || '').trim() || 'production',
     'X-FlowTennis-Wechat-Env-Version': readMiniProgramEnvVersion() || 'release'
   };
@@ -81,60 +79,6 @@ function loginWithPassword(username, password) {
   });
 }
 
-function loginMatchWithWechat() {
-  return new Promise((resolve, reject) => {
-    wx.login({
-      success(res) {
-        if (!res.code) return reject(new Error('微信登录失败'));
-        request('/auth/wechat-mini-login', { method: 'POST', data: { code: res.code } })
-          .then((data) => {
-            wx.setStorageSync(MATCH_TOKEN_KEY, data.token);
-            wx.setStorageSync(MATCH_USER_KEY, data.user);
-            resolve(data);
-          })
-          .catch(reject);
-      },
-      fail(err) {
-        reject(new Error(err.errMsg || '微信登录失败'));
-      }
-    });
-  });
-}
-
-function loadMatchProfile() {
-  return requestWithTokenKey('/match-profile', {}, MATCH_TOKEN_KEY).then((data) => {
-    if (data && data.user) {
-      wx.setStorageSync(MATCH_USER_KEY, {
-        ...data.user,
-        canCreateMatch: !!data.user.canCreateMatch
-      });
-    }
-    return data;
-  });
-}
-
-function bindMatchPhoneByCode(code) {
-  return requestWithTokenKey('/match-profile/phone-code', {
-    method: 'POST',
-    data: { code }
-  }, MATCH_TOKEN_KEY).then((data) => {
-    if (data && data.user) {
-      wx.setStorageSync(MATCH_USER_KEY, {
-        ...data.user,
-        canCreateMatch: !!data.user.canCreateMatch
-      });
-    }
-    return data;
-  });
-}
-
-function createMatch(payload = {}) {
-  return requestWithTokenKey('/matches', {
-    method: 'POST',
-    data: payload
-  }, MATCH_TOKEN_KEY);
-}
-
 function bindWechatAfterLogin() {
   return new Promise((resolve, reject) => {
     wx.login({
@@ -173,14 +117,8 @@ module.exports = {
   loginWithWechat,
   loadCoachWorkbench,
   saveCoachFeedback,
-  loginMatchWithWechat,
-  loadMatchProfile,
-  bindMatchPhoneByCode,
-  createMatch,
   request,
   requestWithTokenKey,
   TOKEN_KEY,
-  USER_KEY,
-  MATCH_TOKEN_KEY,
-  MATCH_USER_KEY
+  USER_KEY
 };

@@ -1,5 +1,7 @@
 const { SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID } = require('../../config');
-const { loginWithPassword, bindWechatAfterLogin, loginMatchWithWechat, loadMatchProfile, TOKEN_KEY, USER_KEY } = require('../../utils/api');
+const { loginWithPassword, loginWithWechat, bindWechatAfterLogin, TOKEN_KEY, USER_KEY } = require('../../utils/api');
+
+const AGREEMENT_ACCEPTED_KEY = 'ft_mini_agreement_accepted_v1';
 
 function enterCoachPortal() {
   wx.redirectTo({ url: '/pages/schedule/schedule' });
@@ -21,7 +23,32 @@ Page({
     password: '',
     agreed: false,
     loggingIn: false,
-    matchLoggingIn: false
+    wechatLoggingIn: false
+  },
+  onLoad() {
+    const agreed = !!wx.getStorageSync(AGREEMENT_ACCEPTED_KEY);
+    this.setData({ agreed });
+    if (agreed) this.markPrivacyAccepted();
+    if (this.hasStoredCoachSession()) enterCoachPortal();
+  },
+  hasStoredCoachSession() {
+    const token = wx.getStorageSync(TOKEN_KEY);
+    const user = wx.getStorageSync(USER_KEY) || {};
+    if (!token || !user.role) return false;
+    try {
+      assertCoachLoginUser(user);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+  markPrivacyAccepted() {
+    const app = getApp();
+    if (app && app.globalData) app.globalData.privacyAccepted = true;
+  },
+  saveAgreementAccepted() {
+    wx.setStorageSync(AGREEMENT_ACCEPTED_KEY, true);
+    this.markPrivacyAccepted();
   },
   onAccountInput(event) {
     this.setData({ account: event.detail.value });
@@ -31,7 +58,9 @@ Page({
   },
   onAgreementChange(event) {
     const values = event.detail.value || [];
-    this.setData({ agreed: values.includes('agree') });
+    const agreed = values.includes('agree');
+    this.setData({ agreed });
+    if (agreed) this.saveAgreementAccepted();
   },
   openAgreement() {
     wx.navigateTo({ url: '/pages/agreement/agreement' });
@@ -64,8 +93,7 @@ Page({
         return data;
       })
       .then(() => {
-        const app = getApp();
-        if (app && app.globalData) app.globalData.privacyAccepted = true;
+        this.saveAgreementAccepted();
         enterCoachPortal();
         bindWechatAfterLogin()
           .catch(noop)
@@ -83,32 +111,29 @@ Page({
         this.setData({ loggingIn: false });
       });
   },
-  enterMatchMini() {
+  submitWechatLogin() {
     if (!this.data.agreed) {
       wx.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' });
       return;
     }
-    if (this.data.matchLoggingIn) return;
-    this.setData({ matchLoggingIn: true });
-    loginMatchWithWechat()
-      .then(async (data) => {
-        const app = getApp();
-        const profile = await loadMatchProfile().catch(() => ({ user: data.user || {} }));
-        if (app && app.globalData) {
-          app.globalData.privacyAccepted = true;
-          app.globalData.matchUser = (profile && profile.user) || data.user || null;
-          app.globalData.matchProfile = profile || null;
-        }
-        wx.navigateTo({ url: '/pages/profile/index' });
+    if (this.data.wechatLoggingIn) return;
+    this.setData({ wechatLoggingIn: true });
+    loginWithWechat()
+      .then((data) => {
+        assertCoachLoginUser(data.user || {});
+        this.saveAgreementAccepted();
+        enterCoachPortal();
+        this.requestScheduleNotice();
       })
       .catch((error) => {
+        const message = error.message || '微信登录失败';
         wx.showToast({
-          title: error.message || '进入约球失败',
+          title: /未绑定/.test(message) ? '请先用账号密码登录一次，系统会自动绑定微信' : message,
           icon: 'none'
         });
       })
       .finally(() => {
-        this.setData({ matchLoggingIn: false });
+        this.setData({ wechatLoggingIn: false });
       });
   }
 });

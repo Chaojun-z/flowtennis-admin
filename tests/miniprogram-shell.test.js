@@ -17,7 +17,7 @@ assert.strictEqual(projectConfig.miniprogramRoot, 'miniprogram/', 'project.confi
 assert.strictEqual(projectConfig.appid, 'wx7acb7603ee803923', 'project.config.json should use the real mini program AppID');
 
 const appConfig = readJson('wechat-miniprogram/miniprogram/app.json');
-assert.deepStrictEqual(appConfig.pages, ['pages/index/index', 'pages/schedule/schedule', 'pages/detail/detail', 'pages/profile/index', 'pages/match-create/index', 'pages/agreement/agreement', 'pages/privacy/privacy'], 'mini program should register coach pages plus the match mini entry pages');
+assert.deepStrictEqual(appConfig.pages, ['pages/index/index', 'pages/schedule/schedule', 'pages/detail/detail', 'pages/agreement/agreement', 'pages/privacy/privacy'], 'mini program should register coach pages only');
 assert.strictEqual(appConfig.sitemapLocation, 'sitemap.json', 'mini program should include sitemap config');
 assert.strictEqual(appConfig.lazyCodeLoading, 'requiredComponents', 'mini program should enable component lazy injection');
 assert.strictEqual(appConfig.__usePrivacyCheck__, true, 'mini program should enable the WeChat privacy check mechanism');
@@ -33,6 +33,9 @@ assert.match(indexWxml, /我已阅读并同意/, 'index page should render the a
 assert.match(indexWxml, /用户协议/, 'index page should expose the user agreement link');
 assert.match(indexWxml, /隐私政策/, 'index page should expose the privacy policy link');
 assert.match(indexWxml, /bindtap="submitLogin"[\s\S]*登录/, 'index login button should use the real account login submit handler');
+assert.match(indexWxml, /其他登录方式/, 'index page should label the secondary area as other login methods');
+assert.match(indexWxml, /bindtap="submitWechatLogin"[\s\S]*微信快捷登录/, 'index page should expose coach WeChat quick login');
+assert.doesNotMatch(indexWxml, /约球入口|微信进入约球/, 'index page should not expose match mini-program copy');
 assert.match(indexWxml, /login-spinner/, 'index login button should render a centered custom loading spinner');
 assert.doesNotMatch(indexWxml, /loading="\{\{loggingIn\}\}"/, 'index login button should not use the native button loading layout');
 assert.doesNotMatch(indexWxml, /disabled="\{\{loggingIn\}\}"/, 'index login button should keep its visual style while logging in');
@@ -43,7 +46,9 @@ const indexJs = readText('wechat-miniprogram/miniprogram/pages/index/index.js');
 assert.match(indexJs, /SCHEDULE_TEMPLATE_ID/, 'index page should read the schedule subscribe template ID from config');
 assert.match(indexJs, /COURSE_REMINDER_TEMPLATE_ID/, 'index page should read the course reminder subscribe template ID from config');
 assert.match(indexJs, /loginWithPassword/, 'index page should call the real account password login helper');
+assert.match(indexJs, /loginWithWechat/, 'index page should call the coach WeChat login helper');
 assert.match(indexJs, /bindWechatAfterLogin/, 'index page should bind the current mini program WeChat account after password login');
+assert.match(indexJs, /AGREEMENT_ACCEPTED_KEY/, 'index page should persist the agreement consent state');
 assert.match(indexJs, /function assertCoachLoginUser/, 'index page should validate coach role before entering the coach mini program');
 assert.match(indexJs, /user\.role !== 'editor'/, 'index page should reject non-coach accounts on the login page');
 assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*bindWechatAfterLogin\(\)/, 'index page should always attempt mini program WeChat bind after password login');
@@ -52,9 +57,11 @@ assert.doesNotMatch(indexJs, /wechatBound/, 'index page should not depend on cac
 assert.match(indexJs, /wx\.requestSubscribeMessage/, 'index page should request schedule subscribe permission from a tap');
 assert.match(indexJs, /tmplIds:\s*\[SCHEDULE_TEMPLATE_ID,\s*COURSE_REMINDER_TEMPLATE_ID\]/, 'index page should request both schedule and course reminder templates');
 assert.match(indexJs, /pages\/schedule\/schedule/, 'index page should navigate into the native schedule page after the tap');
+assert.match(indexJs, /wx\.getStorageSync\(TOKEN_KEY\)[\s\S]*wx\.getStorageSync\(USER_KEY\)[\s\S]*enterCoachPortal\(\)/, 'index page should skip the login form when a valid coach session exists');
 assert.match(indexJs, /agreed/, 'index page should track the agreement checkbox state');
 assert.match(indexJs, /openAgreement/, 'index page should open the agreement page from the login page');
 assert.match(indexJs, /openPrivacy/, 'index page should open the privacy page from the login page');
+assert.doesNotMatch(indexJs, /loginMatchWithWechat|loadMatchProfile|enterMatchMini|matchLoggingIn/, 'index page should not keep match mini-program login behavior');
 assert.doesNotMatch(indexJs, /enterWithoutNotice/, 'index page should no longer keep the fake direct-enter handler');
 assert.doesNotMatch(indexJs, /passwordVisible|togglePasswordVisible/, 'index page should remove password visibility dead code');
 assert.doesNotMatch(indexWxml, /passwordVisible/, 'index page should not bind removed password visibility state');
@@ -68,6 +75,7 @@ assert.match(indexWxss, /\.entry-input\s*\{(?=[\s\S]*height:\s*48px;)(?=[\s\S]*b
 assert.match(indexWxss, /\.login-btn\s*\{(?=[\s\S]*height:\s*48px;)(?=[\s\S]*background:\s*#2b3a55;)(?=[\s\S]*border-radius:\s*999px;)(?=[\s\S]*font-size:\s*16px;)(?=[\s\S]*letter-spacing:\s*4px;)/i, 'login button should match the Gemini button token');
 assert.match(indexWxss, /\.login-btn\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*center;/i, 'login button content should be vertically centered');
 assert.match(indexWxss, /\.login-spinner\s*\{[\s\S]*animation:\s*loginSpin 0\.8s linear infinite;/i, 'login page should use a custom centered loading spinner');
+assert.match(indexWxss, /\.agreement-row checkbox\s*\{[\s\S]*transform:\s*scale\(0\.75\);/, 'agreement checkbox should be slightly smaller');
 
 const scheduleWxml = readText('wechat-miniprogram/miniprogram/pages/schedule/schedule.wxml');
 assert.match(scheduleWxml, /本周|下周/, 'native schedule page should provide week navigation');
@@ -298,9 +306,13 @@ const miniApiJs = readText('wechat-miniprogram/miniprogram/utils/api.js');
 assert.match(miniApiJs, /function saveCoachFeedback/, 'mini program API helper should provide feedback save');
 assert.match(miniApiJs, /request\('\/feedbacks'/, 'mini program feedback save should call the feedback API');
 assert.match(miniApiJs, /function loginWithPassword/, 'mini program API helper should provide account password login');
+assert.match(miniApiJs, /function loginWithWechat/, 'mini program API helper should provide coach WeChat login');
 assert.match(miniApiJs, /function bindWechatAfterLogin/, 'mini program API helper should provide WeChat bind after login');
+assert.match(miniApiJs, /'X-FlowTennis-Client':\s*'coach-mini'/, 'mini program API helper should identify as the coach mini program');
 assert.match(miniApiJs, /\/auth\/login/, 'mini program API helper should call the account login API');
+assert.match(miniApiJs, /\/auth\/wechat-login/, 'mini program API helper should call the coach WeChat login API');
 assert.match(miniApiJs, /\/auth\/wechat-bind/, 'mini program API helper should call the WeChat bind API');
+assert.doesNotMatch(miniApiJs, /mini-match|MATCH_TOKEN_KEY|MATCH_USER_KEY|loginMatchWithWechat|loadMatchProfile|bindMatchPhoneByCode|createMatch|\/auth\/wechat-mini-login|\/match-profile/, 'mini program API helper should not keep match mini-program helpers');
 assert.doesNotMatch(miniApiJs, /function saveCoachSchedule/, 'mini program API helper should not keep coach schedule write helper');
 assert.doesNotMatch(miniApiJs, /request\('\/schedule'/, 'mini program API helper should not call schedule write APIs');
 assert.doesNotMatch(miniApiJs, /request\(`\/schedule\//, 'mini program API helper should not call schedule update APIs');
