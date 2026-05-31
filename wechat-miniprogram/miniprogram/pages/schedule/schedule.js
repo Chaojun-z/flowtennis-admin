@@ -172,12 +172,44 @@ function buildWeekTodoCards(groups = []) {
 }
 
 function studentIdsOf(item = {}) {
-  return Array.isArray(item.studentIds) ? item.studentIds.filter(Boolean) : [];
+  if (Array.isArray(item.studentIds)) return item.studentIds.filter(Boolean);
+  if (typeof item.studentIds === 'string' && item.studentIds) {
+    try {
+      const parsed = JSON.parse(item.studentIds);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function studentRelatedClassIds(studentId = '', classes = []) {
+  return (classes || [])
+    .filter(item => studentIdsOf(item).includes(studentId))
+    .map(item => String(item.id || '').trim())
+    .filter(Boolean);
+}
+
+function scheduleMatchesStudent(student = {}, scheduleItem = {}, relatedClassIds = []) {
+  const ids = studentIdsOf(scheduleItem);
+  const studentId = String(student.id || '').trim();
+  const studentName = String(student.name || '').trim();
+  const scheduleStudentName = String(scheduleItem.student || scheduleItem.studentName || '').trim();
+  const scheduleClassId = String(scheduleItem.classId || '').trim();
+  if (ids.includes(studentId)) return true;
+  if (String(scheduleItem.studentId || '').trim() === studentId) return true;
+  if (relatedClassIds.includes(scheduleClassId)) return true;
+  return !ids.length && !!studentName && scheduleStudentName === studentName;
 }
 
 function lessonUnitsText(value) {
   const n = Number(value) || 0;
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
+}
+
+function lessonRecordCountText(recordCount = 0, lessonUnits = 0) {
+  return `${recordCount}条 / ${lessonUnitsText(lessonUnits)}节`;
 }
 
 function scheduleLessonUnits(item = {}) {
@@ -347,11 +379,9 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
 
 function buildStudentCards(students = [], classes = [], schedule = [], coachName = '') {
   return (students || []).map((student, index) => {
-    const relatedClasses = (classes || []).filter(item => studentIdsOf(item).includes(student.id));
-    const relatedSchedule = (schedule || []).filter(item => {
-      const ids = studentIdsOf(item);
-      return ids.includes(student.id) || (!ids.length && String(item.studentName || '').trim() === String(student.name || '').trim());
-    });
+    const relatedClassIds = studentRelatedClassIds(student.id, classes);
+    const relatedClasses = (classes || []).filter(item => relatedClassIds.includes(String(item.id || '').trim()));
+    const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
     const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
     const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
     const lessonUnitsCompleted = student.lessonUnitsCompleted != null
@@ -359,6 +389,9 @@ function buildStudentCards(students = [], classes = [], schedule = [], coachName
       : validSchedule
         .filter(item => String(item.status || '') === '已结束' || String(item.status || '') === '已下课')
         .reduce((sum, item) => sum + scheduleLessonUnits(item), 0);
+    const lessonRecordCount = validSchedule
+      .filter(item => String(item.status || '') === '已结束' || String(item.status || '') === '已下课')
+      .length;
     const lastClass = validSchedule
       .slice()
       .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
@@ -372,7 +405,7 @@ function buildStudentCards(students = [], classes = [], schedule = [], coachName
       avatarClass: avatarClasses[index % avatarClasses.length],
       type: isOwner ? '负责学员' : '代课学员',
       tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
-      cumulative: lessonUnitsText(lessonUnitsCompleted),
+      cumulative: lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted),
       packageText: totalLessons ? `${usedLessons}/${totalLessons}` : '',
       showPackage: !!totalLessons,
       lastScheduleId: lastClass && lastClass.id,
@@ -1193,7 +1226,8 @@ function studentScheduleMeta(item = {}, linkedClass = null) {
 
 function studentDetailLessonRecordTitle(total = 0, expanded = false) {
   if (!total) return '';
-  if (total <= STUDENT_DETAIL_RECORD_PREVIEW_COUNT || expanded) return `（共${total}条）`;
+  if (expanded) return '（全部）';
+  if (total <= STUDENT_DETAIL_RECORD_PREVIEW_COUNT) return '（全部）';
   return `（最近${Math.min(STUDENT_DETAIL_RECORD_PREVIEW_COUNT, total)}条）`;
 }
 
@@ -1204,7 +1238,8 @@ function studentDetailLessonRecordView(detail = {}, expanded = false) {
     showAllLessonRecords: expanded,
     lessonRecordsShown: expanded ? lessonRecords : lessonRecords.slice(0, STUDENT_DETAIL_RECORD_PREVIEW_COUNT),
     hasMoreLessonRecords: lessonRecords.length > STUDENT_DETAIL_RECORD_PREVIEW_COUNT,
-    lessonRecordTitleSub: studentDetailLessonRecordTitle(lessonRecords.length, expanded),
+    lessonRecordTitleSub: lessonRecordCountText(lessonRecords.length, detail.lessonUnitsCompleted || 0),
+    lessonRecordPreviewSub: studentDetailLessonRecordTitle(lessonRecords.length, expanded),
     lessonRecordToggleText: expanded ? '收起上课记录' : '查看全部上课记录'
   };
 }
@@ -1214,11 +1249,9 @@ function buildStudentDetailData(student, context = {}) {
   const classes = Array.isArray(context.classes) ? context.classes : [];
   const schedule = Array.isArray(context.schedule) ? context.schedule : [];
   const coachName = String(context.coachName || '').trim();
-  const relatedClasses = classes.filter(item => studentIdsOf(item).includes(student.id));
-  const relatedSchedule = schedule.filter(item => {
-    const ids = studentIdsOf(item);
-    return ids.includes(student.id) || (!ids.length && String(item.student || item.studentName || '').trim() === String(student.name || '').trim());
-  });
+  const relatedClassIds = studentRelatedClassIds(student.id, classes);
+  const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
+  const relatedSchedule = schedule.filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
   const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
   const lessonUnitsCompleted = student.lessonUnitsCompleted != null
@@ -1275,7 +1308,7 @@ function buildStudentDetailData(student, context = {}) {
       classEmpty: !activeClass,
       lastClass: latestClass ? formatStudentClassTime(latestClass) : '暂无记录',
       lastClassEmpty: !latestClass,
-      cumulative: `${lessonUnitsText(lessonUnitsCompleted)} 节`,
+      cumulative: `${lessonRecordCountText(lessonRecords.length, lessonUnitsCompleted)}`,
       packageProgress: totalLessons ? `${usedLessons}/${totalLessons}` : '暂无记录',
       packageEmpty: !totalLessons
     },
@@ -1294,7 +1327,8 @@ function buildStudentDetailData(student, context = {}) {
     } : null,
     hasLatest: !!latestClass,
     hasLessonRecords: lessonRecords.length > 0,
-    lessonRecords
+    lessonRecords,
+    lessonUnitsCompleted
   };
   return studentDetailLessonRecordView(detail, false);
 }
@@ -1560,8 +1594,8 @@ Page({
         pending: mergedStats.pendingFeedbackCount || 0,
         conversionText: showOverallTrialStats
           ? String(mergedStats.overallTrialConversionRate || 0)
-          : (hasOverallTrialStats ? '-' : (Number(mergedStats.monthTrialLessonCount) > 0 ? String(mergedStats.trialConversionRate || 0) : '-')),
-        conversionUnit: showOverallTrialStats || (!hasOverallTrialStats && Number(mergedStats.monthTrialLessonCount) > 0) ? '%' : '',
+          : (hasOverallTrialStats ? '-' : '-'),
+        conversionUnit: showOverallTrialStats ? '%' : '',
         nextTime: nextClass ? nextClass.timeText : '暂无',
         nextText: nextClass ? `${nextClass.timeText} · ${nextClass.locationText}` : '暂无',
         todo: todoItems.length

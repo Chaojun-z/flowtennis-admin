@@ -232,6 +232,12 @@ page {
   flex-wrap: nowrap;
   gap: 4rpx;
   white-space: nowrap;
+  margin-top: 8px;
+}
+
+.conversion-row text {
+  transform: none;
+  margin-top: 0;
 }
 
 .mini-metric text.conversion-value.has-data {
@@ -296,11 +302,12 @@ page {
   font-weight: 700;
 }
 
-.conversion-unit {
+.mini-metric text.conversion-unit {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.2;
   color: #64748B;
+  margin-top: 0;
 }
 
 .reminder-chip.is-danger .reminder-value {

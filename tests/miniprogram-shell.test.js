@@ -81,6 +81,7 @@ const scheduleWxml = readText('wechat-miniprogram/miniprogram/pages/schedule/sch
 assert.match(scheduleWxml, /本周|下周/, 'native schedule page should provide week navigation');
 assert.match(scheduleWxml, /bindtap="openDetail"/, 'native schedule cards should open native detail');
 assert.match(scheduleWxml, /student-card"[^>]*data-id="\{\{item\.id\}\}"[^>]*bindtap="openStudentDetail"/, 'native student cards should open the mapped student detail sheet');
+assert.match(scheduleWxml, /累计课时：<text class="student-strong">{{item\.cumulative}}<\/text>/, 'student list should render the combined record and lesson summary');
 assert.match(scheduleWxml, /今日排课/, 'native workbench should keep the today schedule section');
 assert.match(scheduleWxml, /本周待办/, 'native workbench should also show a weekly todo section');
 assert.match(scheduleWxml, /今日课程[\s\S]*本周课时[\s\S]*本月课时[\s\S]*本月反馈[\s\S]*未反馈[\s\S]*体验课转化/, 'native workbench should keep the six original web metrics in the requested order');
@@ -135,7 +136,7 @@ assert.match(scheduleWxml, /feedback-course-time[\s\S]*selectedClassDetail\.basi
 assert.match(scheduleWxml, /scroll-top="\{\{feedbackSheetScrollTop\}\}"/, 'feedback sheet should reset its scroll position when opened from any entry');
 assert.match(scheduleWxml, /今天练习了/, 'feedback sheet first field should use the requested label copy');
 assert.match(scheduleWxml, /poster-sheet[\s\S]*生成反馈海报[\s\S]*posterStyles[\s\S]*feedbackPosterCanvas[\s\S]*手机端可直接长按海报保存[\s\S]*保存相册[\s\S]*分享海报/, 'poster sheet should render the real six-template canvas poster shell');
-assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*教练视角摘要[\s\S]*学员备注[\s\S]*上课记录[\s\S]*查看全部上课记录[\s\S]*关闭/, 'student detail sheet should render the SVG-mapped student profile sections and lesson history expansion entry');
+assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*教练视角摘要[\s\S]*学员备注[\s\S]*上课记录[\s\S]*selectedStudentDetail\.lessonRecordTitleSub[\s\S]*查看全部上课记录[\s\S]*关闭/, 'student detail sheet should render the SVG-mapped student profile sections and lesson history expansion entry');
 assert.match(scheduleWxml, /shift-detail-sheet[\s\S]*班级详情[\s\S]*基础信息[\s\S]*班级概览[\s\S]*班级备注[\s\S]*最近一次排课[\s\S]*关闭/, 'shift detail sheet should render the mapped class profile sections');
 assert.match(scheduleWxml, /wx:elif="\{\{!shiftsList\.length\}\}"[\s\S]*暂无班次/, 'shift page should render an empty state instead of mock cards when classes are empty');
 assert.doesNotMatch(scheduleWxml, /编辑排课|取消排课|去排课|保存排课|确认取消/, 'coach mini program should not expose schedule create, edit, or cancel actions');
@@ -172,6 +173,9 @@ assert.match(scheduleJs, /buildStudentDetailData/, 'student detail sheet should 
 assert.match(scheduleJs, /selectedStudentDetail/, 'student detail sheet should keep its selected student data separately');
 assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use its own visibility state');
 assert.match(scheduleJs, /formatStudentClassTime[\s\S]*endText[\s\S]*`\$\{dateText\} \$\{startText\}-\$\{endText\}`/, 'student detail latest class should show the full start-end time range');
+assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summarize lesson history with both record count and lesson units');
+assert.match(scheduleJs, /cumulative:\s*lessonRecordCountText\(/, 'student list should show record count and lesson units in one summary');
+assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecords\.length,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
 assert.match(scheduleJs, /toggleStudentLessonRecords\(\)/, 'student detail should let the coach expand all lesson records');
@@ -198,7 +202,8 @@ assert.match(scheduleJs, /workbenchState/, 'mini program workbench should use th
 assert.match(scheduleJs, /function buildLocalWorkbenchStats/, 'mini program workbench should have a local stats fallback from the loaded schedule rows');
 assert.match(scheduleJs, /mergeWorkbenchStats\(coachWorkbenchStats,\s*buildLocalWorkbenchStats\(schedule,\s*this\.data\.feedbacks,\s*now\)\)/, 'mini program workbench should fall back to local schedule stats when backend stats are still zero');
 assert.match(scheduleJs, /overallTrialConversionRate/, 'mini program workbench should read the overall coach trial conversion fields');
-assert.match(scheduleJs, /conversionText:[\s\S]*showOverallTrialStats[\s\S]*mergedStats\.overallTrialConversionRate/, 'mini program workbench should show the overall coach trial conversion percent when backend data exists');
+assert.match(scheduleJs, /conversionText:[\s\S]*showOverallTrialStats[\s\S]*mergedStats\.overallTrialConversionRate[\s\S]*: \(hasOverallTrialStats \? '-' : '-'\)/, 'mini program workbench should fall back to - instead of the old month trial percent when overall stats are unavailable');
+assert.match(scheduleJs, /relatedClassIds/, 'student detail should match lesson history through linked class ids as well as direct student ids');
 assert.match(scheduleJs, /feedback:\s*mergedStats\.monthFeedbackCount \|\| 0/, 'mini program workbench should render backend or locally derived month feedback count');
 assert.doesNotMatch(scheduleJs, /feedback:\s*'-'/, 'mini program workbench should not show a placeholder for month feedback count');
 assert.doesNotMatch(scheduleJs, /item\.courseContent \|\| item\.productName \|\| item\.type/, 'shift cards should no longer guess course content from mixed front-end fields');
@@ -398,9 +403,10 @@ assert.match(scheduleWxss, /\.mini-metric text\s*\{[\s\S]*transform:\s*translate
 assert.match(scheduleWxss, /\.mini-metric text\.danger\s*\{[\s\S]*color:\s*#D97706;/, 'dashboard pending feedback metric should use the requested warning color');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'empty conversion value should use the requested muted regular style with enough specificity');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
-assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;/, 'conversion value row should stay on one line without wrapping');
+assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*margin-top:\s*8px;/, 'conversion value row should sit on its own metric line without wrapping');
+assert.match(scheduleWxss, /\.conversion-row text\s*\{[\s\S]*transform:\s*none;[\s\S]*margin-top:\s*0;/, 'conversion value row should cancel the generic metric text offset so the number does not overlap the label');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*line-height:\s*1;/, 'conversion number should keep a tight line-height when data exists');
-assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should reuse the label-sized muted style');
+assert.match(scheduleWxss, /\.mini-metric text\.conversion-unit\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should reuse the label-sized muted style with stronger specificity');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*height:\s*38px;[\s\S]*margin-top:\s*12px;[\s\S]*border:\s*0\.8px solid #e2e8f0;/i, 'dashboard reminder bar should match the requested size and border token');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*line-height:\s*1;/i, 'dashboard reminder bar content should be vertically centered');
 assert.match(scheduleWxss, /\.reminder-bar \.summary-icon\s*\{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;[\s\S]*background-image:[\s\S]*circle cx='8' cy='8' r='6\.5'/, 'dashboard reminder icon should reuse the shifts reminder icon');

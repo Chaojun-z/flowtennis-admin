@@ -221,6 +221,21 @@ assert.deepStrictEqual(
 );
 
 {
+  const decoratedStudents = rules.decorateWorkbenchStudents(
+    [{ id: 'stu-class', name: '团课学员' }],
+    [
+      { id: 'sch-class-1', classId: 'class-1', startTime: '2026-04-10 19:00', endTime: '2026-04-10 21:00', status: '已结束', lessonCount: 2, studentIds: '["stu-class"]' }
+    ],
+    new Date('2026-04-23T12:00:00+08:00')
+  );
+  assert.strictEqual(
+    decoratedStudents[0].lessonUnitsCompleted,
+    2,
+    'workbench student decoration should read stringified studentIds arrays from backend rows'
+  );
+}
+
+{
   const scoped = rules.filterLoadAllForUser(
     {
       schedule: [

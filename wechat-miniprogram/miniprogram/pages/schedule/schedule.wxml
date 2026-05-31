@@ -466,6 +466,7 @@
             <view class="student-detail-section-bar"></view>
             <text>上课记录</text>
             <text wx:if="{{selectedStudentDetail.lessonRecordTitleSub}}" class="student-detail-title-sub">{{selectedStudentDetail.lessonRecordTitleSub}}</text>
+            <text wx:if="{{selectedStudentDetail.lessonRecordPreviewSub}}" class="student-detail-title-sub">{{selectedStudentDetail.lessonRecordPreviewSub}}</text>
           </view>
           <view wx:if="{{selectedStudentDetail.hasLessonRecords}}">
             <view class="student-record-list">
