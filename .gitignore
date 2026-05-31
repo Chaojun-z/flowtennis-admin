@@ -6,3 +6,4 @@ node_modules
 .vercel-home
 docs/
 .worktrees/
+var/finance-snapshots/
