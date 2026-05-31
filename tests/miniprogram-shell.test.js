@@ -173,9 +173,9 @@ assert.match(scheduleJs, /buildStudentDetailData/, 'student detail sheet should 
 assert.match(scheduleJs, /selectedStudentDetail/, 'student detail sheet should keep its selected student data separately');
 assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use its own visibility state');
 assert.match(scheduleJs, /formatStudentClassTime[\s\S]*endText[\s\S]*`\$\{dateText\} \$\{startText\}-\$\{endText\}`/, 'student detail latest class should show the full start-end time range');
-assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summarize lesson history with both record count and lesson units');
+assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summarize lesson history with both lesson units and record count');
 assert.match(scheduleJs, /cumulative:\s*lessonRecordCountText\(/, 'student list should show record count and lesson units in one summary');
-assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecords\.length,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
+assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecordCount,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
 assert.match(scheduleJs, /toggleStudentLessonRecords\(\)/, 'student detail should let the coach expand all lesson records');
@@ -403,7 +403,7 @@ assert.match(scheduleWxss, /\.mini-metric text\s*\{[\s\S]*transform:\s*translate
 assert.match(scheduleWxss, /\.mini-metric text\.danger\s*\{[\s\S]*color:\s*#D97706;/, 'dashboard pending feedback metric should use the requested warning color');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'empty conversion value should use the requested muted regular style with enough specificity');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
-assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*margin-top:\s*8px;/, 'conversion value row should sit on its own metric line without wrapping');
+assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;[\s\S]*margin-top:\s*8px;[\s\S]*transform:\s*translateY\(-6px\);/, 'conversion value row should sit on the same vertical rhythm as other metric numbers without wrapping');
 assert.match(scheduleWxss, /\.conversion-row text\s*\{[\s\S]*transform:\s*none;[\s\S]*margin-top:\s*0;/, 'conversion value row should cancel the generic metric text offset so the number does not overlap the label');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*line-height:\s*1;/, 'conversion number should keep a tight line-height when data exists');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-unit\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should reuse the label-sized muted style with stronger specificity');

@@ -209,7 +209,20 @@ function lessonUnitsText(value) {
 }
 
 function lessonRecordCountText(recordCount = 0, lessonUnits = 0) {
-  return `${recordCount}条 / ${lessonUnitsText(lessonUnits)}节`;
+  return `${lessonUnitsText(lessonUnits)}课时 / ${recordCount}节课`;
+}
+
+function completedStudentSchedules(schedule = []) {
+  return (schedule || []).filter(item => scheduleEnded(item));
+}
+
+function studentCompletedLessonSummary(schedule = []) {
+  const completedSchedule = completedStudentSchedules(schedule);
+  return {
+    completedSchedule,
+    lessonRecordCount: completedSchedule.length,
+    lessonUnitsCompleted: completedSchedule.reduce((sum, item) => sum + scheduleLessonUnits(item), 0)
+  };
 }
 
 function scheduleLessonUnits(item = {}) {
@@ -384,14 +397,7 @@ function buildStudentCards(students = [], classes = [], schedule = [], coachName
     const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
     const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
     const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
-    const lessonUnitsCompleted = student.lessonUnitsCompleted != null
-      ? Number(student.lessonUnitsCompleted) || 0
-      : validSchedule
-        .filter(item => String(item.status || '') === '已结束' || String(item.status || '') === '已下课')
-        .reduce((sum, item) => sum + scheduleLessonUnits(item), 0);
-    const lessonRecordCount = validSchedule
-      .filter(item => String(item.status || '') === '已结束' || String(item.status || '') === '已下课')
-      .length;
+    const { lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
     const lastClass = validSchedule
       .slice()
       .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
@@ -1238,7 +1244,7 @@ function studentDetailLessonRecordView(detail = {}, expanded = false) {
     showAllLessonRecords: expanded,
     lessonRecordsShown: expanded ? lessonRecords : lessonRecords.slice(0, STUDENT_DETAIL_RECORD_PREVIEW_COUNT),
     hasMoreLessonRecords: lessonRecords.length > STUDENT_DETAIL_RECORD_PREVIEW_COUNT,
-    lessonRecordTitleSub: lessonRecordCountText(lessonRecords.length, detail.lessonUnitsCompleted || 0),
+    lessonRecordTitleSub: lessonRecordCountText(detail.lessonRecordCount || lessonRecords.length, detail.lessonUnitsCompleted || 0),
     lessonRecordPreviewSub: studentDetailLessonRecordTitle(lessonRecords.length, expanded),
     lessonRecordToggleText: expanded ? '收起上课记录' : '查看全部上课记录'
   };
@@ -1254,13 +1260,9 @@ function buildStudentDetailData(student, context = {}) {
   const relatedSchedule = schedule.filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
   const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
-  const lessonUnitsCompleted = student.lessonUnitsCompleted != null
-    ? Number(student.lessonUnitsCompleted) || 0
-    : validSchedule
-      .filter(item => String(item.status || '') === '已结束' || String(item.status || '') === '已下课')
-      .reduce((sum, item) => sum + scheduleLessonUnits(item), 0);
+  const { completedSchedule, lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
   const now = new Date();
-  const pastSchedule = validSchedule.filter(item => {
+  const pastSchedule = completedSchedule.filter(item => {
     const end = parseLocalDate(item.endTime || item.startTime);
     return end && end <= now;
   });
@@ -1308,7 +1310,7 @@ function buildStudentDetailData(student, context = {}) {
       classEmpty: !activeClass,
       lastClass: latestClass ? formatStudentClassTime(latestClass) : '暂无记录',
       lastClassEmpty: !latestClass,
-      cumulative: `${lessonRecordCountText(lessonRecords.length, lessonUnitsCompleted)}`,
+      cumulative: `${lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted)}`,
       packageProgress: totalLessons ? `${usedLessons}/${totalLessons}` : '暂无记录',
       packageEmpty: !totalLessons
     },
@@ -1328,7 +1330,8 @@ function buildStudentDetailData(student, context = {}) {
     hasLatest: !!latestClass,
     hasLessonRecords: lessonRecords.length > 0,
     lessonRecords,
-    lessonUnitsCompleted
+    lessonUnitsCompleted,
+    lessonRecordCount
   };
   return studentDetailLessonRecordView(detail, false);
 }
