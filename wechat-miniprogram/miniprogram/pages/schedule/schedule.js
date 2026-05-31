@@ -269,10 +269,16 @@ function studentPackageProgressText(entitlements = []) {
   return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}，剩${lessonUnitsText(summary.remaining)}`;
 }
 
+function studentPackageBalanceText(entitlements = []) {
+  const summary = entitlementSummary(entitlements);
+  if (summary.total <= 0) return '';
+  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
+}
+
 function studentPackageListText(entitlements = []) {
   const summary = entitlementSummary(entitlements);
   if (summary.total <= 0) return '';
-  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
+  return `${lessonUnitsText(summary.remaining)}/${lessonUnitsText(summary.total)}`;
 }
 
 function scheduleEntitlements(schedule = {}, entitlements = []) {
@@ -480,15 +486,15 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '') {
+function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '', entitlementLedger = []) {
   return (students || []).map((student, index) => {
     const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
     const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
-    const { completedSchedule, lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
-    const lastClass = completedSchedule
-      .slice()
-      .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
-    const lastClassAt = String(lastClass && lastClass.startTime || '');
+    const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
+    const lessonUnitsCompleted = lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+    const lessonRecordCount = lessonRecords.length;
+    const lastRecord = lessonRecords[0] || null;
+    const lastClassAt = String(lastRecord && lastRecord.sortTime || '');
     const packageText = studentPackageListText(studentEntitlements(student.id, entitlements));
     const isOwner = String(student.primaryCoach || '').trim() === coachName;
     return {
@@ -496,20 +502,20 @@ function buildStudentCards(students = [], entitlements = [], schedule = [], coac
       name: student.name || '未命名学员',
       avatarText: avatarText(student.name),
       avatarClass: avatarClasses[index % avatarClasses.length],
-      type: isOwner ? '归属学员' : '代课学员',
+      type: isOwner ? '归属' : '代课',
       tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
       cumulative: lessonRecordUnitsCompactText(lessonRecordCount, lessonUnitsCompleted),
       packageText,
       showPackage: isOwner && !!packageText,
-      lastScheduleId: lastClass && lastClass.id,
-      lastClassText: formatMonthDay(lastClass && lastClass.startTime),
+      lastScheduleId: lastRecord && lastRecord.scheduleId,
+      lastClassText: formatMonthDay(lastRecord && lastRecord.sortTime),
       lastClassAt,
-      showLastClass: !!lastClass
+      showLastClass: !!lastRecord
     };
   }).sort((a, b) => {
     const lastClassCompare = String(b.lastClassAt || '').localeCompare(String(a.lastClassAt || ''));
     if (lastClassCompare) return lastClassCompare;
-    if (a.type !== b.type) return a.type === '归属学员' ? -1 : 1;
+    if (a.type !== b.type) return a.type === '归属' ? -1 : 1;
     return a.name.localeCompare(b.name, 'zh-Hans-CN');
   });
 }
@@ -1320,6 +1326,102 @@ function studentScheduleMeta(item = {}, linkedClass = null) {
   ].filter(Boolean);
 }
 
+function normalizeLedgerTimeBand(text = '') {
+  const matched = String(text || '').match(/(\d{1,2})(?::(\d{2}))?\D+(\d{1,2})(?::(\d{2}))?/);
+  if (!matched) return '';
+  const start = `${String(matched[1]).padStart(2, '0')}:${matched[2] || '00'}`;
+  const end = `${String(matched[3]).padStart(2, '0')}:${matched[4] || '00'}`;
+  return `${start}-${end}`;
+}
+
+function studentLedgerTimeText(row = {}, schedule = {}) {
+  if (schedule && schedule.startTime) return formatStudentClassTime(schedule);
+  const date = String(row.sourceDate || row.relatedDate || row.createdAt || '').slice(0, 10);
+  if (!date) return '';
+  const band = normalizeLedgerTimeBand(row.sourceTimeBand || row.scheduleTime || '');
+  return band ? `${date} ${band}` : date;
+}
+
+function studentLedgerSortTime(row = {}, schedule = {}) {
+  if (schedule && schedule.startTime) return schedule.startTime;
+  const date = String(row.sourceDate || row.relatedDate || row.createdAt || '').slice(0, 10);
+  const band = normalizeLedgerTimeBand(row.sourceTimeBand || row.scheduleTime || '');
+  const start = band ? band.slice(0, 5) : '00:00';
+  return date ? `${date} ${start}` : '';
+}
+
+function studentLedgerLessonUnits(row = {}, schedule = {}) {
+  const consumed = Math.abs(Number(row.lessonDelta) || 0);
+  const planned = schedule && schedule.startTime ? scheduleLessonUnits(schedule) : 0;
+  return Math.max(consumed, planned);
+}
+
+function studentLedgerRecordKey(studentId = '', row = {}, schedule = {}) {
+  if (schedule && schedule.id) return `schedule:${schedule.id}`;
+  if (row.scheduleId) return `schedule:${row.scheduleId}`;
+  if (row.id) return `ledger:${row.id}`;
+  return [studentId, row.sourceDate || row.relatedDate || '', row.sourceTimeBand || row.scheduleTime || '', row.coach || ''].join('|');
+}
+
+function studentLedgerRows(student = {}, entitlements = [], entitlementLedger = []) {
+  const studentId = String(student.id || '').trim();
+  const entIds = new Set(studentEntitlements(studentId, entitlements).map(item => String(item.id || '').trim()).filter(Boolean));
+  return (entitlementLedger || []).filter(row => {
+    if (Number(row.lessonDelta) >= 0) return false;
+    if (String(row.studentId || '').trim() === studentId) return true;
+    return entIds.has(String(row.entitlementId || '').trim());
+  });
+}
+
+function buildStudentLessonRecords(student = {}, context = {}) {
+  const schedule = Array.isArray(context.schedule) ? context.schedule : [];
+  const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
+  const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
+  const scheduleById = new Map(schedule.map(item => [String(item.id || ''), item]).filter(([id]) => id));
+  const map = new Map();
+  studentLedgerRows(student, entitlements, entitlementLedger).forEach(row => {
+    const linkedSchedule = scheduleById.get(String(row.scheduleId || '')) || {};
+    const timeText = studentLedgerTimeText(row, linkedSchedule);
+    const sortTime = studentLedgerSortTime(row, linkedSchedule);
+    if (!timeText || !sortTime) return;
+    const key = studentLedgerRecordKey(student.id, row, linkedSchedule);
+    map.set(key, {
+      scheduleId: linkedSchedule.id || '',
+      time: timeText,
+      sortTime,
+      courseType: dashboardCourseTag(linkedSchedule).text || '课包',
+      courseTypeClass: dashboardCourseTag(linkedSchedule).className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
+      status: '已结束',
+      statusClass: 'detail-tag-muted',
+      lessonUnits: studentLedgerLessonUnits(row, linkedSchedule),
+      metaParts: [
+        row.sourceVenue || row.venue || row.courtName || row.court || linkedSchedule.venue || linkedSchedule.loc || linkedSchedule.locationText,
+        row.coach || linkedSchedule.coach
+      ].filter(Boolean)
+    });
+  });
+  completedStudentSchedules(schedule)
+    .filter(item => String(item.status || '') !== '已取消')
+    .forEach(item => {
+      const key = studentLedgerRecordKey(student.id, {}, item);
+      if (map.has(key)) return;
+      const courseTag = dashboardCourseTag(item);
+      const statusMeta = studentScheduleStatusMeta(item);
+      map.set(key, {
+        scheduleId: item.id,
+        time: formatStudentClassTime(item),
+        sortTime: item.startTime || '',
+        courseType: courseTag.text,
+        courseTypeClass: courseTag.className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
+        status: statusMeta.text,
+        statusClass: statusMeta.className,
+        lessonUnits: scheduleLessonUnits(item),
+        metaParts: studentScheduleMeta(item, null)
+      });
+    });
+  return [...map.values()].sort((a, b) => String(b.sortTime || '').localeCompare(String(a.sortTime || '')));
+}
+
 function studentDetailLessonRecordTitle(total = 0, expanded = false) {
   if (!total) return '';
   if (expanded) return '（全部）';
@@ -1345,44 +1447,22 @@ function buildStudentDetailData(student, context = {}) {
   const classes = Array.isArray(context.classes) ? context.classes : [];
   const schedule = Array.isArray(context.schedule) ? context.schedule : [];
   const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
+  const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
   const coachName = String(context.coachName || '').trim();
   const relatedClassIds = studentRelatedClassIds(student.id, classes);
   const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
   const relatedSchedule = schedule.filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
   const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
   const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
-  const { completedSchedule, lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
-  const now = new Date();
-  const pastSchedule = completedSchedule.filter(item => {
-    const end = parseLocalDate(item.endTime || item.startTime);
-    return end && end <= now;
-  });
-  const latestClass = pastSchedule
-    .slice()
-    .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
-  const packageText = studentPackageProgressText(studentEntitlements(student.id, entitlements));
-  const latestCourseTag = latestClass ? dashboardCourseTag(latestClass) : { text: '', className: '' };
-  const latestStatus = latestClass ? studentScheduleStatusMeta(latestClass) : { text: '', className: '' };
+  const lessonRecords = buildStudentLessonRecords(student, { schedule: validSchedule, entitlements, entitlementLedger });
+  const lessonUnitsCompleted = lessonRecords.reduce((sum, item) => sum + (Number(item.lessonUnits) || 0), 0);
+  const lessonRecordCount = lessonRecords.length;
+  const latestRecord = lessonRecords[0] || null;
+  const packageText = studentPackageBalanceText(studentEntitlements(student.id, entitlements));
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
   const responsibleCoach = firstNonEmpty(student.primaryCoach, activeClass && activeClass.coach, coachName);
-  const campus = firstNonEmpty(student.campus, latestClass && latestClass.campus, activeClass && activeClass.campus);
+  const campus = firstNonEmpty(student.campus, activeClass && activeClass.campus);
   const remark = firstNonEmpty(student.remark);
-  const lessonRecords = pastSchedule
-    .slice()
-    .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))
-    .map(item => {
-      const courseTag = dashboardCourseTag(item);
-      const statusMeta = studentScheduleStatusMeta(item);
-      return {
-        scheduleId: item.id,
-        time: formatStudentClassTime(item),
-        courseType: courseTag.text,
-        courseTypeClass: courseTag.className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
-        status: statusMeta.text,
-        statusClass: statusMeta.className,
-        metaParts: studentScheduleMeta(item, activeClass)
-      };
-    });
   const detail = {
     studentId: student.id,
     basic: {
@@ -1398,8 +1478,8 @@ function buildStudentDetailData(student, context = {}) {
       owner: ownerCoach || '未设置',
       className: firstNonEmpty(activeClass && activeClass.className, activeClass && activeClass.classNo) || '暂无记录',
       classEmpty: !activeClass,
-      lastClass: latestClass ? formatStudentClassTime(latestClass) : '暂无记录',
-      lastClassEmpty: !latestClass,
+      lastClass: latestRecord ? latestRecord.time : '暂无记录',
+      lastClassEmpty: !latestRecord,
       cumulative: `${lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted)}`,
       packageProgress: packageText || '暂无记录',
       packageEmpty: !packageText
@@ -1408,16 +1488,16 @@ function buildStudentDetailData(student, context = {}) {
       text: remark || '暂无记录',
       isEmpty: !remark
     },
-    latest: latestClass ? {
-      scheduleId: latestClass.id,
-      time: formatStudentClassTime(latestClass),
-      courseType: latestCourseTag.text,
-      courseTypeClass: latestCourseTag.className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
-      status: latestStatus.text,
-      statusClass: latestStatus.className,
-      metaParts: studentScheduleMeta(latestClass, activeClass)
+    latest: latestRecord ? {
+      scheduleId: latestRecord.scheduleId,
+      time: latestRecord.time,
+      courseType: latestRecord.courseType,
+      courseTypeClass: latestRecord.courseTypeClass,
+      status: latestRecord.status,
+      statusClass: latestRecord.statusClass,
+      metaParts: latestRecord.metaParts
     } : null,
-    hasLatest: !!latestClass,
+    hasLatest: !!latestRecord,
     hasLessonRecords: lessonRecords.length > 0,
     lessonRecords,
     lessonUnitsCompleted,
@@ -1502,6 +1582,7 @@ Page({
     classesRaw: [],
     entitlementsRaw: [],
     entitlementLedgerRaw: [],
+    studentScheduleRaw: [],
     visibleClasses: [],
     dashboardClasses: [],
     weekTodoGroups: [],
@@ -1608,10 +1689,12 @@ Page({
       const coachMenuId = currentCoachId();
       const now = new Date();
       const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
-      const studentsList = buildStudentCards(data.students || [], data.entitlements || [], schedule, coachName);
+      const studentSchedule = adaptSchedule(data.studentSchedule || data.schedule || [], data.feedbacks || []);
+      const studentsList = buildStudentCards(data.students || [], data.entitlements || [], studentSchedule, coachName, data.entitlementLedger || []);
       const shiftsList = [];
       this.setData({
         schedule,
+        studentScheduleRaw: studentSchedule,
         coachWorkbenchStats: data.stats || {},
         feedbacks: data.feedbacks || [],
         campusesRaw: data.campuses || [],
@@ -1804,8 +1887,9 @@ Page({
     if (!student) return;
     const selectedStudentDetail = buildStudentDetailData(student, {
       classes: this.data.classesRaw,
-      schedule: this.data.schedule,
+      schedule: this.data.studentScheduleRaw,
       entitlements: this.data.entitlementsRaw,
+      entitlementLedger: this.data.entitlementLedgerRaw,
       coachName: currentCoachName()
     });
     this.setData({

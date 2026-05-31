@@ -262,10 +262,11 @@
                 <text class="student-name">{{item.name}}</text>
                 <text class="student-tag {{item.tagClass}}">{{item.type}}</text>
               </view>
-              <text wx:if="{{item.showLastClass}}" class="student-last-class">最后{{item.lastClassText}}</text>
+              <text wx:if="{{item.showLastClass}}" class="student-last-class">最后 {{item.lastClassText}}</text>
             </view>
             <view class="student-meta-line">
               <text class="student-meta">累计上课（节/课时）：<text class="student-strong">{{item.cumulative}}</text></text>
+              <text wx:if="{{item.showPackage}}" class="student-meta-separator">·</text>
               <text wx:if="{{item.showPackage}}" class="student-meta">课包：<text class="student-strong">{{item.packageText}}</text></text>
             </view>
           </view>

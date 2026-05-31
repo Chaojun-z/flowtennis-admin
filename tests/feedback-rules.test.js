@@ -95,6 +95,7 @@ const isolated = rules.filterLoadAllForUser(
     entitlements: [{ id: 'ent-1', studentId: 'stu-1', packageName: '五一私教课包', totalLessons: 5, usedLessons: 1, remainingLessons: 4, amountPaid: 1000 }],
     entitlementLedger: [
       { id: 'led-1', entitlementId: 'ent-1', studentId: 'stu-1', scheduleId: 'sch-1', lessonDelta: -1, operator: '管理员' },
+      { id: 'led-old', entitlementId: 'ent-1', studentId: 'stu-1', scheduleId: 'sch-old', lessonDelta: -1, operator: '管理员', sourceDate: '2026-04-10', sourceTimeBand: '13:00-14:00', sourceVenue: '顺义马坡 3号场', coach: 'Siren' },
       { id: 'led-import', entitlementId: 'ent-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -2, operator: '管理员', sourceMonth: '2026-03', importSource: '系统导入', relatedDate: '2026-03-31' }
     ],
     plans: [{ id: 'plan-1', studentId: 'stu-1', classId: 'class-1' }, { id: 'plan-2', studentId: 'stu-2', classId: 'class-2' }],
@@ -124,5 +125,7 @@ assert.strictEqual(isolated.purchases[0].operator, undefined, 'coach purchase su
 assert.strictEqual(isolated.entitlements[0].amountPaid, undefined, 'coach entitlement summary should not expose paid amount');
 assert.strictEqual(isolated.entitlementLedger[0].operator, undefined, 'coach entitlement ledger should not expose operator');
 assert.ok(isolated.entitlementLedger.some(x=>x.id==='led-import'), 'coach load-all should retain imported historical consume rows for linked students');
+assert.ok(isolated.entitlementLedger.some(x=>x.id==='led-old'), 'coach load-all should retain concrete ledger rows for linked students even when the schedule row is not in the coach index');
+assert.ok(isolated.entitlementLedger.some(x=>x.sourceDate==='2026-04-10'&&x.sourceTimeBand==='13:00-14:00'), 'coach load-all should retain safe concrete lesson time fields for mini student details');
 
 console.log('feedback rules tests passed');

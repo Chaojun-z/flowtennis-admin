@@ -1956,12 +1956,13 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
   const safeEntitlements=normalized.entitlements.filter(e=>studentIds.has(e.studentId)).map(e=>({
     id:e.id,studentId:e.studentId,studentName:e.studentName,packageName:e.packageName,courseType:e.courseType,totalLessons:e.totalLessons,usedLessons:e.usedLessons,remainingLessons:e.remainingLessons,validFrom:e.validFrom,validUntil:e.validUntil,timeBand:e.timeBand,status:e.status,ownerCoach:e.ownerCoach,allowedCoaches:parseArr(e.allowedCoaches)
   }));
-  const safeLedger=normalized.entitlementLedger.filter(l=>
-    scheduleIds.has(l.scheduleId)||(
-      studentIds.has(l.studentId)&&!l.scheduleId&&!!importedLedgerMonthKey(l)&&Number(l.lessonDelta)<0
-    )
-  ).map(l=>({
-    id:l.id,entitlementId:l.entitlementId,studentId:l.studentId,scheduleId:l.scheduleId,lessonDelta:l.lessonDelta,action:l.action,reason:l.reason,createdAt:l.createdAt,relatedDate:l.relatedDate,sourceMonth:l.sourceMonth,importSource:l.importSource,notes:l.notes
+  const visibleEntitlementIds=new Set(normalized.entitlements.filter(e=>studentIds.has(e.studentId)).map(e=>e.id).filter(Boolean));
+  const safeLedger=normalized.entitlementLedger.filter(l=>{
+    if(scheduleIds.has(l.scheduleId))return true;
+    if(Number(l.lessonDelta)>=0)return false;
+    return studentIds.has(l.studentId)||visibleEntitlementIds.has(l.entitlementId);
+  }).map(l=>({
+    id:l.id,entitlementId:l.entitlementId,studentId:l.studentId,scheduleId:l.scheduleId,lessonDelta:l.lessonDelta,action:l.action,reason:l.reason,createdAt:l.createdAt,relatedDate:l.relatedDate,sourceMonth:l.sourceMonth,importSource:l.importSource,notes:l.notes,sourceDate:l.sourceDate,sourceTimeBand:l.sourceTimeBand,sourceVenue:l.sourceVenue,venue:l.venue,courtName:l.courtName,court:l.court,coach:l.coach,scheduleTime:l.scheduleTime
   }));
   const safePurchases=normalized.purchases.filter(p=>studentIds.has(p.studentId)).map(p=>({
     id:p.id,
@@ -1978,7 +1979,7 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     packages:[],
     purchases:safePurchases,
     entitlements:safeEntitlements,
-    entitlementLedger:normalizeEntitlementLedgerRowsForView(safeLedger),
+    entitlementLedger:normalizeEntitlementLedgerRowsForDetailView(safeLedger),
     membershipPlans:[],
     membershipAccounts:[],
     membershipOrders:[],
@@ -8871,6 +8872,14 @@ module.exports = async (req, res) => {
         const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
         const decoratedSchedule=decorateWorkbenchScheduleRows(scoped.schedule||[],decoratedFeedbacks,scoped.purchases||[],now);
+        const scheduleIds=new Set((scoped.schedule||[]).map(row=>String(row.id||'')).filter(Boolean));
+        const studentScheduleIds=[...new Set((scoped.entitlementLedger||[]).map(row=>String(row.scheduleId||'')).filter(id=>id&&!scheduleIds.has(id)))];
+        const extraStudentSchedule=studentScheduleIds.length
+          ? (await Promise.all(studentScheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean).map(row=>projectScheduleListRow(row))
+          : [];
+        const decoratedStudentSchedule=extraStudentSchedule.length
+          ? decorateWorkbenchScheduleRows([...(scoped.schedule||[]),...extraStudentSchedule],decoratedFeedbacks,scoped.purchases||[],now)
+          : decoratedSchedule;
         const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,purchases:scoped.purchases||[],now});
         return sendJson(res,{
@@ -8878,6 +8887,7 @@ module.exports = async (req, res) => {
           students:decoratedStudents,
           classes:decoratedClasses,
           schedule:decoratedSchedule,
+          studentSchedule:decoratedStudentSchedule,
           feedbacks:decoratedFeedbacks,
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],

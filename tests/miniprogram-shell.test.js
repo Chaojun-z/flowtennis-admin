@@ -81,8 +81,9 @@ const scheduleWxml = readText('wechat-miniprogram/miniprogram/pages/schedule/sch
 assert.match(scheduleWxml, /本周|下周/, 'native schedule page should provide week navigation');
 assert.match(scheduleWxml, /bindtap="openDetail"/, 'native schedule cards should open native detail');
 assert.match(scheduleWxml, /student-card"[^>]*data-id="\{\{item\.id\}\}"[^>]*bindtap="openStudentDetail"/, 'native student cards should open the mapped student detail sheet');
-assert.match(scheduleWxml, /student-row[\s\S]*student-name[\s\S]*student-tag[\s\S]*最后\{\{item\.lastClassText\}\}/, 'student list first row should show name, ownership tag, and latest lesson date');
+assert.match(scheduleWxml, /student-row[\s\S]*student-name[\s\S]*student-tag[\s\S]*最后 \{\{item\.lastClassText\}\}/, 'student list first row should show name, ownership tag, and latest lesson date');
 assert.match(scheduleWxml, /累计上课（节\/课时）：<text class="student-strong">\{\{item\.cumulative\}\}<\/text>/, 'student list should render record count before lesson units');
+assert.match(scheduleWxml, /student-meta-separator">·<\/text>/, 'student list should separate lesson and package data with a middle dot');
 assert.match(scheduleWxml, /wx:if="\{\{item\.showPackage\}\}" class="student-meta">课包：<text class="student-strong">\{\{item\.packageText\}\}<\/text>/, 'student list should render package progress only when allowed');
 assert.match(scheduleWxml, /归属学员/, 'student summary should use ownership wording');
 assert.match(scheduleWxml, /今日排课/, 'native workbench should keep the today schedule section');
@@ -180,15 +181,18 @@ assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summari
 assert.match(scheduleJs, /cumulative:\s*lessonRecordUnitsCompactText\(/, 'student list should show record count before lesson units');
 assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecordCount,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
 assert.match(scheduleJs, /return `\$\{recordCount\}\/\$\{lessonUnitsText\(lessonUnits\)\}`/, 'student list compact lesson summary should render records before lesson units');
-assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.used\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package summary should render used over total without remaining text');
-assert.match(scheduleJs, /type:\s*isOwner \? '归属学员' : '代课学员'/, 'student list tags should use ownership/substitute wording');
+assert.match(scheduleJs, /function studentPackageListText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student list package summary should render remaining over total without extra text');
+assert.match(scheduleJs, /function studentPackageBalanceText[\s\S]*return `\$\{lessonUnitsText\(summary\.remaining\)\}\/\$\{lessonUnitsText\(summary\.total\)\}`/, 'student detail package progress should render remaining over total like the web');
+assert.match(scheduleJs, /type:\s*isOwner \? '归属' : '代课'/, 'student list tags should use compact ownership/substitute wording');
 assert.match(scheduleJs, /showPackage:\s*isOwner && !!packageText/, 'substitute students should not show package data');
+assert.match(scheduleJs, /function buildStudentLessonRecords[\s\S]*studentLedgerRows[\s\S]*completedStudentSchedules/, 'student detail should merge package ledger rows with schedule rows like the web');
+assert.match(scheduleJs, /studentScheduleRaw/, 'mini program should keep a student-detail schedule set separate from the timetable schedule');
 assert.match(scheduleJs, /function scheduleDurationLessonUnits[\s\S]*Math\.round\(\(end - start\) \/ 360000\) \/ 10/, 'mini program lesson units should derive a precise duration fallback from start and end time');
 assert.match(scheduleJs, /function scheduleLessonUnits[\s\S]*Math\.max\(count,\s*durationUnits\)/, 'mini program lesson units should not let a stale lower lessonCount override a longer real lesson duration');
 assert.match(scheduleJs, /function studentScheduleMeta[\s\S]*scheduleLessonUnits\(item\)/, 'student lesson record meta should display normalized lesson units');
-assert.match(scheduleJs, /function buildStudentCards[\s\S]*const \{ completedSchedule, lessonUnitsCompleted, lessonRecordCount \}[\s\S]*lastClassAt[\s\S]*String\(b\.lastClassAt \|\| ''\)\.localeCompare\(String\(a\.lastClassAt \|\| ''\)\)/, 'mini program student cards should sort by latest completed lesson time descending');
+assert.match(scheduleJs, /function buildStudentCards[\s\S]*buildStudentLessonRecords[\s\S]*lastClassAt[\s\S]*String\(b\.lastClassAt \|\| ''\)\.localeCompare\(String\(a\.lastClassAt \|\| ''\)\)/, 'mini program student cards should sort by latest completed lesson time descending');
 assert.match(scheduleJs, /studentPackageProgressText/, 'student cards should derive package progress from entitlement balances');
-assert.match(scheduleJs, /buildStudentCards\(data\.students \|\| \[\], data\.entitlements \|\| \[\], schedule, coachName\)/, 'student cards should consume entitlements instead of class progress');
+assert.match(scheduleJs, /buildStudentCards\(data\.students \|\| \[\], data\.entitlements \|\| \[\], studentSchedule, coachName, data\.entitlementLedger \|\| \[\]\)/, 'student cards should consume entitlements and ledger-backed student schedules');
 assert.doesNotMatch(scheduleJs, /packageText:\s*totalLessons \? `\$\{usedLessons\}\/\$\{totalLessons\}`/, 'student cards should not derive package progress from class usedLessons');
 assert.match(scheduleJs, /scheduleConsumedLessonText\(selectedClass, entitlementLedger\)/, 'schedule detail should derive consumed lessons from entitlement ledger rows');
 assert.match(scheduleJs, /const shiftsList = \[\];/, 'my classes tab should intentionally stay as an empty page after removing class concepts');
@@ -208,7 +212,7 @@ assert.match(scheduleJs, /TIMETABLE_START_HOUR\s*=\s*7/, 'mini program current-t
 assert.match(scheduleJs, /TIMETABLE_END_HOUR\s*=\s*22/, 'mini program timetable should end at 22:00');
 assert.match(scheduleJs, /Array\.from\(\{\s*length:\s*TIMETABLE_END_HOUR - TIMETABLE_START_HOUR \+ 1\s*\}/, 'mini program timetable hours should derive from the business-hour range');
 assert.match(scheduleJs, /timetableNowSolidLineStyle/, 'mini program current-time marker should expose a solid segment for today');
-assert.match(scheduleJs, /lastScheduleId:\s*lastClass && lastClass\.id/, 'mini program students should still carry their latest class id for summaries');
+assert.match(scheduleJs, /lastScheduleId:\s*lastRecord && lastRecord\.scheduleId/, 'mini program students should still carry their latest class id for summaries');
 assert.doesNotMatch(scheduleWxml, /进入完整教练端/, 'native schedule page should not expose the old webview fallback entry');
 assert.doesNotMatch(scheduleJs, /openWebview\(\)/, 'native schedule page should not keep the old webview jump handler');
 assert.match(scheduleJs, /openAgreement\(\)/, 'schedule page should expose the user agreement menu action');
@@ -332,6 +336,7 @@ assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should 
 assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENT_LEDGER\)/, 'workbench API should read entitlement consume ledger for the mini program');
 assert.match(apiServerJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
 assert.match(apiServerJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
+assert.match(apiServerJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');
 
 const miniApiJs = readText('wechat-miniprogram/miniprogram/utils/api.js');
 assert.match(miniApiJs, /function saveCoachFeedback/, 'mini program API helper should provide feedback save');
@@ -556,6 +561,7 @@ assert.match(scheduleWxss, /\.shift-empty\s*\{[\s\S]*height:\s*160px;[\s\S]*bord
 assert.match(scheduleWxss, /\.student-detail-card\s*\{[\s\S]*padding:\s*40rpx;[\s\S]*border-radius:\s*32rpx;[\s\S]*background:\s*#fff;/, 'student detail cards should match the white rounded mapped sections');
 assert.match(scheduleWxss, /\.student-detail-btn\s*\{[\s\S]*height:\s*96rpx;[\s\S]*border-radius:\s*48rpx;[\s\S]*background:\s*#f8fafc;/, 'student detail close button should match the bottom pill token');
 assert.match(scheduleWxss, /\.student-record-toggle\s*\{[\s\S]*margin-top:\s*24rpx;[\s\S]*color:\s*#2b3a55;/, 'student detail should style the expand-all lesson history action as a clear inline button');
+assert.match(scheduleWxss, /\.student-strong\s*\{[\s\S]*font-weight:\s*400;/, 'student list lesson and package values should use regular weight');
 assert.match(scheduleWxss, /\.coach-title-row\s*\{[\s\S]*align-items:\s*center;/, 'mini program coach name row should vertically center the dropdown arrow');
 assert.doesNotMatch(scheduleWxss, /\.dashboard-topbar\s*\{/, 'mini program workbench should not keep the removed custom top bar styles');
 assert.doesNotMatch(scheduleWxss, /\.coach-status-pill\s*\{/, 'mini program workbench should not keep the removed connection pill styles');
