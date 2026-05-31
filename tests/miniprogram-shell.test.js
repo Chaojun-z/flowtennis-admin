@@ -81,11 +81,12 @@ const scheduleWxml = readText('wechat-miniprogram/miniprogram/pages/schedule/sch
 assert.match(scheduleWxml, /本周|下周/, 'native schedule page should provide week navigation');
 assert.match(scheduleWxml, /bindtap="openDetail"/, 'native schedule cards should open native detail');
 assert.match(scheduleWxml, /student-card"[^>]*data-id="\{\{item\.id\}\}"[^>]*bindtap="openStudentDetail"/, 'native student cards should open the mapped student detail sheet');
-assert.match(scheduleWxml, /student-row[\s\S]*student-name[\s\S]*student-tag[\s\S]*最后 \{\{item\.lastClassText\}\}/, 'student list first row should show name, ownership tag, and latest lesson date');
+assert.match(scheduleWxml, /student-row[\s\S]*student-name[\s\S]*student-tag[\s\S]*最近 \{\{item\.lastClassText\}\}/, 'student list first row should show name, ownership tag, and latest lesson date');
 assert.match(scheduleWxml, /累计上课（节\/课时）：<text class="student-strong">\{\{item\.cumulative\}\}<\/text>/, 'student list should render record count before lesson units');
 assert.match(scheduleWxml, /student-meta-separator">·<\/text>/, 'student list should separate lesson and package data with a middle dot');
 assert.match(scheduleWxml, /wx:if="\{\{item\.showPackage\}\}" class="student-meta">课包：<text class="student-strong">\{\{item\.packageText\}\}<\/text>/, 'student list should render package progress only when allowed');
-assert.match(scheduleWxml, /归属学员/, 'student summary should use ownership wording');
+assert.match(scheduleWxml, /studentStats\.ownerCount[\s\S]*归属学员[\s\S]*studentStats\.substituteCount[\s\S]*代课学员/, 'student summary should use owner and substitute counts');
+assert.doesNotMatch(scheduleWxml, /可见学员/, 'student summary should not show visible-student wording');
 assert.match(scheduleWxml, /今日排课/, 'native workbench should keep the today schedule section');
 assert.match(scheduleWxml, /本周待办/, 'native workbench should also show a weekly todo section');
 assert.match(scheduleWxml, /今日课程[\s\S]*本周课时[\s\S]*本月课时[\s\S]*本月反馈[\s\S]*未反馈[\s\S]*体验课转化/, 'native workbench should keep the six original web metrics in the requested order');
@@ -155,6 +156,7 @@ assert.match(scheduleJs, /coachMenuId/, 'mini program schedule page should prepa
 assert.match(scheduleJs, /logout\(\)\s*\{[\s\S]*wx\.reLaunch\(\{ url: '\/pages\/index\/index' \}\)/, 'coach logout should clear storage and return to the login page');
 assert.doesNotMatch(scheduleJs, /const studentsList = \[/, 'mini program students should not stay on hardcoded local list data');
 assert.doesNotMatch(scheduleJs, /const shiftsList = \[\s*\{/, 'mini program classes should not stay on hardcoded local list data');
+assert.match(scheduleJs, /function buildStudentStats[\s\S]*ownerCount[\s\S]*substituteCount[\s\S]*return \{ ownerCount, substituteCount \}/, 'student stats should only expose owner and substitute counts');
 assert.match(scheduleJs, /onShow\(\)\s*\{[\s\S]*this\.load\(/, 'mini program schedule page should refresh when returning to the page');
 assert.match(scheduleJs, /onPullDownRefresh\(\)\s*\{[\s\S]*this\.load\(/, 'mini program schedule page should support pull-down refresh');
 assert.match(scheduleJs, /saveCoachFeedback/, 'mini program schedule page should expose a real feedback save action');
@@ -562,6 +564,7 @@ assert.match(scheduleWxss, /\.student-detail-card\s*\{[\s\S]*padding:\s*40rpx;[\
 assert.match(scheduleWxss, /\.student-detail-btn\s*\{[\s\S]*height:\s*96rpx;[\s\S]*border-radius:\s*48rpx;[\s\S]*background:\s*#f8fafc;/, 'student detail close button should match the bottom pill token');
 assert.match(scheduleWxss, /\.student-record-toggle\s*\{[\s\S]*margin-top:\s*24rpx;[\s\S]*color:\s*#2b3a55;/, 'student detail should style the expand-all lesson history action as a clear inline button');
 assert.match(scheduleWxss, /\.student-strong\s*\{[\s\S]*font-weight:\s*400;/, 'student list lesson and package values should use regular weight');
+assert.match(scheduleWxss, /\.student-tag\s*\{[\s\S]*width:\s*80rpx;/, 'student ownership tags should use compact two-character width');
 assert.match(scheduleWxss, /\.coach-title-row\s*\{[\s\S]*align-items:\s*center;/, 'mini program coach name row should vertically center the dropdown arrow');
 assert.doesNotMatch(scheduleWxss, /\.dashboard-topbar\s*\{/, 'mini program workbench should not keep the removed custom top bar styles');
 assert.doesNotMatch(scheduleWxss, /\.coach-status-pill\s*\{/, 'mini program workbench should not keep the removed connection pill styles');

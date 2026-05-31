@@ -560,9 +560,9 @@ function buildShiftCards(classes = [], students = []) {
 }
 
 function buildStudentStats(students = [], coachName = '') {
-  const visibleCount = students.length;
   const ownerCount = students.filter(item => String(item.primaryCoach || '').trim() === coachName).length;
-  return { visibleCount, ownerCount };
+  const substituteCount = Math.max(0, students.length - ownerCount);
+  return { ownerCount, substituteCount };
 }
 
 function buildShiftStats(shifts = []) {
@@ -1591,7 +1591,7 @@ Page({
     nextTravelReminder: false,
     coachWorkbenchStats: {},
     studentsList: [],
-    studentStats: { visibleCount: 0, ownerCount: 0 },
+    studentStats: { ownerCount: 0, substituteCount: 0 },
     shiftsList: [],
     shiftStats: { totalCount: 0, activeCount: 0, totalLessons: 0, usedLessons: 0, remainingLessons: 0 },
     feedbackForm: feedbackFormFromRecord(),

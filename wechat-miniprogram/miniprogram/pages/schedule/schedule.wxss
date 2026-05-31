@@ -1467,7 +1467,7 @@ button::after {
 }
 
 .student-tag {
-  width: 112rpx;
+  width: 80rpx;
   height: 36rpx;
   box-sizing: border-box;
   border-radius: 8rpx;
