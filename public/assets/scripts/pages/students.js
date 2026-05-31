@@ -19,7 +19,7 @@ function renderStudentToolbarFilters(){
   });
 }
 function studentLastLessonDate(stu){
-  const row=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime).sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
+  const row=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime&&effectiveScheduleStatus(x)==='已结束').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
   return row?.startTime?.slice(0,10)||'';
 }
 function studentCompletedLessonUnits(stu){
@@ -35,7 +35,7 @@ function studentCompletedLessonUnits(stu){
   ledgerItems
     .forEach(({row,schedule})=>{
       const key=studentLessonRecordKey({studentId:stu?.id,row,schedule});
-      if(!lessonMap.has(key))lessonMap.set(key,Math.abs(Number(row.lessonDelta)||0));
+      if(!lessonMap.has(key))lessonMap.set(key,studentLedgerLessonUnits(row,schedule));
     });
   return [...lessonMap.values()].reduce((sum,value)=>sum+value,0);
 }

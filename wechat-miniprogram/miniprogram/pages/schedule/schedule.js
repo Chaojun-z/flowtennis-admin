@@ -212,6 +212,10 @@ function lessonRecordCountText(recordCount = 0, lessonUnits = 0) {
   return `${lessonUnitsText(lessonUnits)}课时 / ${recordCount}节课`;
 }
 
+function lessonRecordUnitsCompactText(recordCount = 0, lessonUnits = 0) {
+  return `${recordCount}/${lessonUnitsText(lessonUnits)}`;
+}
+
 function completedStudentSchedules(schedule = []) {
   return (schedule || []).filter(item => scheduleEnded(item));
 }
@@ -265,6 +269,12 @@ function studentPackageProgressText(entitlements = []) {
   return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}，剩${lessonUnitsText(summary.remaining)}`;
 }
 
+function studentPackageListText(entitlements = []) {
+  const summary = entitlementSummary(entitlements);
+  if (summary.total <= 0) return '';
+  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}`;
+}
+
 function scheduleEntitlements(schedule = {}, entitlements = []) {
   const ids = [
     ...studentIdsOf({ studentIds: schedule.entitlementIds }),
@@ -286,18 +296,31 @@ function scheduleConsumedLessonText(schedule = {}, entitlementLedger = []) {
   const consumed = scheduleLedgerRows(schedule, entitlementLedger)
     .filter(item => Number(item.lessonDelta) < 0)
     .reduce((sum, item) => sum + Math.abs(Number(item.lessonDelta) || 0), 0);
-  if (consumed > 0) return `${lessonUnitsText(consumed)} 节`;
+  if (consumed > 0) return `${lessonUnitsText(Math.max(consumed, scheduleLessonUnits(schedule)))} 节`;
   return scheduleEntitlements(schedule, []).length || schedule.entitlementId || studentIdsOf({ studentIds: schedule.entitlementIds }).length
     ? `${lessonUnitsText(scheduleLessonUnits(schedule))} 节`
     : '未关联课包';
 }
 
-function scheduleLessonUnits(item = {}) {
-  const count = Number(item.lessonCount);
-  if (Number.isFinite(count) && count > 0) return count;
+function scheduleDurationLessonUnits(item = {}) {
   const start = parseLocalDate(item.startTime);
   const end = parseLocalDate(item.endTime);
-  if (start && end && end > start) return Math.max(0, (end - start) / 3600000);
+  if (!start || !end || end <= start) return 0;
+  return Math.round((end - start) / 360000) / 10;
+}
+
+function scheduleUsesAttendeeLessonUnits(item = {}) {
+  const type = String(item.courseType || item.type || item.title || '').trim();
+  return /小班/.test(type) && studentIdsOf(item).length >= 2;
+}
+
+function scheduleLessonUnits(item = {}) {
+  const count = Number(item.lessonCount);
+  const durationUnits = scheduleDurationLessonUnits(item);
+  if (Number.isFinite(count) && count > 0) {
+    return scheduleUsesAttendeeLessonUnits(item) ? count : Math.max(count, durationUnits);
+  }
+  if (durationUnits > 0) return durationUnits;
   return 1;
 }
 
@@ -461,28 +484,32 @@ function buildStudentCards(students = [], entitlements = [], schedule = [], coac
   return (students || []).map((student, index) => {
     const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
     const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
-    const { lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
-    const lastClass = validSchedule
+    const { completedSchedule, lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
+    const lastClass = completedSchedule
       .slice()
       .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
-    const packageText = studentPackageProgressText(studentEntitlements(student.id, entitlements));
+    const lastClassAt = String(lastClass && lastClass.startTime || '');
+    const packageText = studentPackageListText(studentEntitlements(student.id, entitlements));
     const isOwner = String(student.primaryCoach || '').trim() === coachName;
     return {
       id: student.id,
       name: student.name || '未命名学员',
       avatarText: avatarText(student.name),
       avatarClass: avatarClasses[index % avatarClasses.length],
-      type: isOwner ? '负责学员' : '代课学员',
+      type: isOwner ? '归属学员' : '代课学员',
       tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
-      cumulative: lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted),
+      cumulative: lessonRecordUnitsCompactText(lessonRecordCount, lessonUnitsCompleted),
       packageText,
-      showPackage: !!packageText,
+      showPackage: isOwner && !!packageText,
       lastScheduleId: lastClass && lastClass.id,
       lastClassText: formatMonthDay(lastClass && lastClass.startTime),
+      lastClassAt,
       showLastClass: !!lastClass
     };
   }).sort((a, b) => {
-    if (a.type !== b.type) return a.type === '负责学员' ? -1 : 1;
+    const lastClassCompare = String(b.lastClassAt || '').localeCompare(String(a.lastClassAt || ''));
+    if (lastClassCompare) return lastClassCompare;
+    if (a.type !== b.type) return a.type === '归属学员' ? -1 : 1;
     return a.name.localeCompare(b.name, 'zh-Hans-CN');
   });
 }
@@ -1289,7 +1316,7 @@ function studentScheduleMeta(item = {}, linkedClass = null) {
   return [
     item.className || item.classNo || (linkedClass && (linkedClass.className || linkedClass.classNo)),
     item.venue || item.loc || item.locationText,
-    item.lessonCount ? `共 ${item.lessonCount} 节` : ''
+    `共 ${lessonUnitsText(scheduleLessonUnits(item))} 节`
   ].filter(Boolean);
 }
 

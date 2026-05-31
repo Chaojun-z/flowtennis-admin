@@ -1,11 +1,21 @@
 function uid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 function durMin(s,e){if(!s||!e)return 0;return Math.round((new Date(e)-new Date(s))/60000)}
 function scheduleDurMin(s){return s?.endTime?durMin(s.startTime,s.endTime):60}
+function scheduleDurationLessonUnits(s){
+  const mins=scheduleDurMin(s);
+  if(!Number.isFinite(mins)||mins<=0)return 0;
+  return Math.max(0,Math.round((mins/60)*10)/10);
+}
+function scheduleUsesAttendeeLessonUnits(s){
+  const type=String(s?.courseType||s?.type||s?.title||'').trim();
+  const ids=parseArr(s?.studentIds);
+  return /小班/.test(type)&&ids.length>=2;
+}
 function scheduleLessonUnits(s){
   const count=Number(s?.lessonCount);
-  if(Number.isFinite(count)&&count>0)return count;
-  const mins=scheduleDurMin(s);
-  if(mins>0)return Math.max(0,mins/60);
+  const durationUnits=scheduleDurationLessonUnits(s);
+  if(Number.isFinite(count)&&count>0)return scheduleUsesAttendeeLessonUnits(s)?count:Math.max(count,durationUnits);
+  if(durationUnits>0)return durationUnits;
   return 1;
 }
 function sumScheduleLessonUnits(rows=[]){return rows.reduce((sum,s)=>sum+scheduleLessonUnits(s),0)}
@@ -1268,9 +1278,14 @@ function studentLessonSectionMarker(value){
   const [whole,decimal]=fixed.split('.');
   return `${String(Number(whole)||0).padStart(2,'0')}.${decimal}`;
 }
-function studentLessonRecordChargeHtml(row,ent={},balance=null){
+function studentLedgerLessonUnits(row={},schedule=null){
+  const consumed=Math.abs(Number(row.lessonDelta)||0);
+  const planned=schedule?.startTime?scheduleLessonUnits(schedule):0;
+  return Number(row.lessonDelta)<0?Math.max(consumed,planned):consumed;
+}
+function studentLessonRecordChargeHtml(row,ent={},balance=null,schedule=null){
   if(row.freeLesson===true||row.action==='free_lesson'||(Number(row.lessonDelta)===0&&/免费|赠送/.test(String(row.reason||'')+String(row.notes||''))))return '<strong>免费送课</strong>';
-  if(ent?.id)return `<strong>扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节（${lessonQty(balance?.remaining)}/${lessonQty(balance?.total)}）</strong>`;
+  if(ent?.id)return `<strong>扣${lessonQty(studentLedgerLessonUnits(row,schedule))}节（${lessonQty(balance?.remaining)}/${lessonQty(balance?.total)}）</strong>`;
   return esc(String(row?.payMethod||row?.paymentChannel||row?.paymentMethod||row?.incomeType||'课次').trim());
 }
 function studentLessonRecordPackageText(row,ent={}){
@@ -1282,7 +1297,7 @@ function studentLessonRecordPackageText(row,ent={}){
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
     coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
-    Number(row.lessonDelta)<0?`扣${lessonQty(Math.abs(Number(row.lessonDelta)||0))}节`:(payMethodText?payMethodText:'课次'),
+    Number(row.lessonDelta)<0?`扣${lessonQty(studentLedgerLessonUnits(row,schedule))}节`:(payMethodText?payMethodText:'课次'),
     ent?.id?studentLedgerBalanceAfter(row,ent):payMethodText,
     payText
   ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
@@ -1292,7 +1307,7 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const schedule=findScheduleForEntitlementLedgerRow(row,student);
   const balance=studentLedgerBalanceNumbersAfter(row,ent)||{remaining:Number(ent.remainingLessons)||0,total:Number(ent.totalLessons)||0};
   const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
-  const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance);
+  const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance,schedule);
   const title=[studentLessonRecordSectionText(row,ent),`[${esc(renderCourtEmptyText(payText))}]`].filter(Boolean).join(' · ');
   const meta=[
     studentEntitlementLedgerTimeText(row,schedule),
