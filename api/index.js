@@ -8854,17 +8854,19 @@ module.exports = async (req, res) => {
       return timedEndpointMetric('pageData.workbench',async()=>{
         await init();
         const indexedSchedule=user.role==='admin'?null:await getCoachIndexedScheduleForUser(user);
-        const [campuses,students,classes,schedule,feedbacks,purchases]=await Promise.all([
+        const [campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([
           listCampusesWithDefaults(),
           cappedScan(T_STUDENTS),
           cappedScan(T_CLASSES),
           Promise.resolve(indexedSchedule||null).then(rows=>rows||cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule)),
           cappedScan(T_FEEDBACKS),
-          cappedScan(T_PURCHASES)
+          cappedScan(T_PURCHASES),
+          cappedScan(T_ENTITLEMENTS),
+          cappedScan(T_ENTITLEMENT_LEDGER)
         ]);
         const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
         const coachRefs=buildCoachRefs({coaches,users});
-        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases,coaches},user,coachRefs);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger,coaches},user,coachRefs);
         const now=new Date();
         const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
@@ -8877,6 +8879,8 @@ module.exports = async (req, res) => {
           classes:decoratedClasses,
           schedule:decoratedSchedule,
           feedbacks:decoratedFeedbacks,
+          entitlements:scoped.entitlements||[],
+          entitlementLedger:scoped.entitlementLedger||[],
           stats
         });
       },{role:user.role||''});

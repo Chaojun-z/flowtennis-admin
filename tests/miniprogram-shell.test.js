@@ -150,7 +150,7 @@ assert.match(scheduleJs, /coachDisplayName/, 'mini program schedule page should 
 assert.match(scheduleJs, /coachMenuId/, 'mini program schedule page should prepare the coach id for the settings action sheet');
 assert.match(scheduleJs, /logout\(\)\s*\{[\s\S]*wx\.reLaunch\(\{ url: '\/pages\/index\/index' \}\)/, 'coach logout should clear storage and return to the login page');
 assert.doesNotMatch(scheduleJs, /const studentsList = \[/, 'mini program students should not stay on hardcoded local list data');
-assert.doesNotMatch(scheduleJs, /const shiftsList = \[/, 'mini program classes should not stay on hardcoded local list data');
+assert.doesNotMatch(scheduleJs, /const shiftsList = \[\s*\{/, 'mini program classes should not stay on hardcoded local list data');
 assert.match(scheduleJs, /onShow\(\)\s*\{[\s\S]*this\.load\(/, 'mini program schedule page should refresh when returning to the page');
 assert.match(scheduleJs, /onPullDownRefresh\(\)\s*\{[\s\S]*this\.load\(/, 'mini program schedule page should support pull-down refresh');
 assert.match(scheduleJs, /saveCoachFeedback/, 'mini program schedule page should expose a real feedback save action');
@@ -176,6 +176,11 @@ assert.match(scheduleJs, /formatStudentClassTime[\s\S]*endText[\s\S]*`\$\{dateTe
 assert.match(scheduleJs, /lessonRecordCountText/, 'student detail should summarize lesson history with both lesson units and record count');
 assert.match(scheduleJs, /cumulative:\s*lessonRecordCountText\(/, 'student list should show record count and lesson units in one summary');
 assert.match(scheduleJs, /cumulative:\s*`\$\{lessonRecordCountText\(lessonRecordCount,\s*lessonUnitsCompleted\)\}`/, 'student detail should show record count and lesson units in one summary');
+assert.match(scheduleJs, /studentPackageProgressText/, 'student cards should derive package progress from entitlement balances');
+assert.match(scheduleJs, /buildStudentCards\(data\.students \|\| \[\], data\.entitlements \|\| \[\], schedule, coachName\)/, 'student cards should consume entitlements instead of class progress');
+assert.doesNotMatch(scheduleJs, /packageText:\s*totalLessons \? `\$\{usedLessons\}\/\$\{totalLessons\}`/, 'student cards should not derive package progress from class usedLessons');
+assert.match(scheduleJs, /scheduleConsumedLessonText\(selectedClass, entitlementLedger\)/, 'schedule detail should derive consumed lessons from entitlement ledger rows');
+assert.match(scheduleJs, /const shiftsList = \[\];/, 'my classes tab should intentionally stay as an empty page after removing class concepts');
 assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
 assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
 assert.match(scheduleJs, /toggleStudentLessonRecords\(\)/, 'student detail should let the coach expand all lesson records');
@@ -312,6 +317,10 @@ assert.match(apiServerJs, /pendingFeedbackCount/, 'workbench API should expose s
 assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
 assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
 assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
+assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
+assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENT_LEDGER\)/, 'workbench API should read entitlement consume ledger for the mini program');
+assert.match(apiServerJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
+assert.match(apiServerJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
 
 const miniApiJs = readText('wechat-miniprogram/miniprogram/utils/api.js');
 assert.match(miniApiJs, /function saveCoachFeedback/, 'mini program API helper should provide feedback save');

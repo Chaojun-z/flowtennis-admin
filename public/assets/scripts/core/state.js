@@ -436,6 +436,8 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('feedbacks',data.feedbacks||[]);
       setDatasetValue('purchases',data.purchases||[]);
+      setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       window.coachWorkbenchStats=data.stats||{};
       loadedDatasets.add('workbenchPage');
       return;

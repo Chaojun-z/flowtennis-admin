@@ -225,6 +225,73 @@ function studentCompletedLessonSummary(schedule = []) {
   };
 }
 
+function isUsableEntitlement(item = {}) {
+  const status = String(item.status || '').trim();
+  return status !== 'voided' && status !== '已作废' && status !== 'cancelled';
+}
+
+function studentEntitlements(studentId = '', entitlements = []) {
+  const id = String(studentId || '').trim();
+  if (!id) return [];
+  return (entitlements || []).filter(item => String(item.studentId || '').trim() === id && isUsableEntitlement(item));
+}
+
+function lessonValue(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function entitlementUsedLessons(item = {}) {
+  const used = lessonValue(item.usedLessons);
+  if (used > 0) return used;
+  const total = lessonValue(item.totalLessons);
+  const remaining = lessonValue(item.remainingLessons);
+  return total > 0 ? Math.max(0, total - remaining) : 0;
+}
+
+function entitlementSummary(entitlements = []) {
+  const rows = (entitlements || []).filter(isUsableEntitlement);
+  return rows.reduce((summary, item) => {
+    summary.total += lessonValue(item.totalLessons);
+    summary.used += entitlementUsedLessons(item);
+    summary.remaining += lessonValue(item.remainingLessons);
+    return summary;
+  }, { total: 0, used: 0, remaining: 0 });
+}
+
+function studentPackageProgressText(entitlements = []) {
+  const summary = entitlementSummary(entitlements);
+  if (summary.total <= 0) return '';
+  return `${lessonUnitsText(summary.used)}/${lessonUnitsText(summary.total)}，剩${lessonUnitsText(summary.remaining)}`;
+}
+
+function scheduleEntitlements(schedule = {}, entitlements = []) {
+  const ids = [
+    ...studentIdsOf({ studentIds: schedule.entitlementIds }),
+    String(schedule.entitlementId || '').trim()
+  ].filter(Boolean);
+  if (ids.length) return (entitlements || []).filter(item => ids.includes(String(item.id || '').trim()) && isUsableEntitlement(item));
+  const studentIds = studentIdsOf(schedule);
+  if (!studentIds.length) return [];
+  return (entitlements || []).filter(item => studentIds.includes(String(item.studentId || '').trim()) && isUsableEntitlement(item));
+}
+
+function scheduleLedgerRows(schedule = {}, entitlementLedger = []) {
+  const scheduleId = String(schedule.id || '').trim();
+  if (!scheduleId) return [];
+  return (entitlementLedger || []).filter(item => String(item.scheduleId || '').trim() === scheduleId);
+}
+
+function scheduleConsumedLessonText(schedule = {}, entitlementLedger = []) {
+  const consumed = scheduleLedgerRows(schedule, entitlementLedger)
+    .filter(item => Number(item.lessonDelta) < 0)
+    .reduce((sum, item) => sum + Math.abs(Number(item.lessonDelta) || 0), 0);
+  if (consumed > 0) return `${lessonUnitsText(consumed)} 节`;
+  return scheduleEntitlements(schedule, []).length || schedule.entitlementId || studentIdsOf({ studentIds: schedule.entitlementIds }).length
+    ? `${lessonUnitsText(scheduleLessonUnits(schedule))} 节`
+    : '未关联课包';
+}
+
 function scheduleLessonUnits(item = {}) {
   const count = Number(item.lessonCount);
   if (Number.isFinite(count) && count > 0) return count;
@@ -390,19 +457,15 @@ function scheduleTimeTextOf(value, fallback = '14:00') {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function buildStudentCards(students = [], classes = [], schedule = [], coachName = '') {
+function buildStudentCards(students = [], entitlements = [], schedule = [], coachName = '') {
   return (students || []).map((student, index) => {
-    const relatedClassIds = studentRelatedClassIds(student.id, classes);
-    const relatedClasses = (classes || []).filter(item => relatedClassIds.includes(String(item.id || '').trim()));
-    const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, relatedClassIds));
-    const activeClass = relatedClasses.find(item => String(item.status || '') !== '已结束' && String(item.status || '') !== '已取消') || relatedClasses[0] || null;
+    const relatedSchedule = (schedule || []).filter(item => scheduleMatchesStudent(student, item, []));
     const validSchedule = relatedSchedule.filter(item => String(item.status || '') !== '已取消');
     const { lessonUnitsCompleted, lessonRecordCount } = studentCompletedLessonSummary(validSchedule);
     const lastClass = validSchedule
       .slice()
       .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
-    const totalLessons = parseInt(activeClass && activeClass.totalLessons, 10) || 0;
-    const usedLessons = parseInt(activeClass && activeClass.usedLessons, 10) || 0;
+    const packageText = studentPackageProgressText(studentEntitlements(student.id, entitlements));
     const isOwner = String(student.primaryCoach || '').trim() === coachName;
     return {
       id: student.id,
@@ -412,8 +475,8 @@ function buildStudentCards(students = [], classes = [], schedule = [], coachName
       type: isOwner ? '负责学员' : '代课学员',
       tagClass: isOwner ? 'student-tag-owner' : 'student-tag-substitute',
       cumulative: lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted),
-      packageText: totalLessons ? `${usedLessons}/${totalLessons}` : '',
-      showPackage: !!totalLessons,
+      packageText,
+      showPackage: !!packageText,
       lastScheduleId: lastClass && lastClass.id,
       lastClassText: formatMonthDay(lastClass && lastClass.startTime),
       showLastClass: !!lastClass
@@ -670,6 +733,8 @@ function buildDetailData(selectedClass, context = {}) {
   if (!selectedClass) return null;
   const students = Array.isArray(context.students) ? context.students : [];
   const classes = Array.isArray(context.classes) ? context.classes : [];
+  const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
+  const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
   const feedbacks = Array.isArray(context.feedbacks) ? context.feedbacks : [];
   const coachName = String(context.coachName || '').trim();
   const studentIds = studentIdsOf(selectedClass);
@@ -694,12 +759,10 @@ function buildDetailData(selectedClass, context = {}) {
   const previousFeedback = studentFeedbacks.find(item => String(item.scheduleId || '') !== String(selectedClass.id)) || null;
   const typeTag = dashboardCourseTag(selectedClass);
   const statusTag = detailStatusMeta(selectedClass);
-  const consumedLessons = currentFeedback ? `${selectedClass.lessonCount || 1} 节` : '-';
-  const remainingLessons = linkedClass && linkedClass.remainingLessons != null
-    ? `${linkedClass.remainingLessons} 节`
-    : (linkedClass && linkedClass.totalLessons != null && linkedClass.usedLessons != null
-      ? `${Math.max(0, Number(linkedClass.totalLessons || 0) - Number(linkedClass.usedLessons || 0))} 节`
-      : '-');
+  const linkedEntitlements = scheduleEntitlements(selectedClass, entitlements);
+  const entitlementBalance = entitlementSummary(linkedEntitlements);
+  const consumedLessons = scheduleConsumedLessonText(selectedClass, entitlementLedger);
+  const remainingLessons = linkedEntitlements.length ? `${lessonUnitsText(entitlementBalance.remaining)} 节` : '-';
   const studentRemark = buildNoticeField(firstNonEmpty(student && student.remark), true);
   const historyIssue = buildNoticeField(firstNonEmpty(student && student.historyIssue));
   const focusNote = buildNoticeField(firstNonEmpty(
@@ -725,8 +788,8 @@ function buildDetailData(selectedClass, context = {}) {
       studentName: selectedClass.student || '学员待确认',
       coachName: firstNonEmpty(selectedClass.coach, coachName) || '待确认',
       coachNote: firstNonEmpty(student && student.primaryCoach, '未设置'),
-      entitlementText: currentFeedback ? consumedLessons : '未扣课',
-      entitlementSource: '来源: 排课表'
+      entitlementText: consumedLessons,
+      entitlementSource: linkedEntitlements.length ? '来源: 课包权益' : '来源: 排课表'
     },
     cancelReason: firstNonEmpty(selectedClass.cancelReason),
     notices: {
@@ -1254,6 +1317,7 @@ function buildStudentDetailData(student, context = {}) {
   if (!student) return null;
   const classes = Array.isArray(context.classes) ? context.classes : [];
   const schedule = Array.isArray(context.schedule) ? context.schedule : [];
+  const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
   const coachName = String(context.coachName || '').trim();
   const relatedClassIds = studentRelatedClassIds(student.id, classes);
   const relatedClasses = classes.filter(item => relatedClassIds.includes(String(item.id || '').trim()));
@@ -1269,8 +1333,7 @@ function buildStudentDetailData(student, context = {}) {
   const latestClass = pastSchedule
     .slice()
     .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))[0] || null;
-  const totalLessons = parseInt(activeClass && activeClass.totalLessons, 10) || 0;
-  const usedLessons = parseInt(activeClass && activeClass.usedLessons, 10) || 0;
+  const packageText = studentPackageProgressText(studentEntitlements(student.id, entitlements));
   const latestCourseTag = latestClass ? dashboardCourseTag(latestClass) : { text: '', className: '' };
   const latestStatus = latestClass ? studentScheduleStatusMeta(latestClass) : { text: '', className: '' };
   const ownerCoach = firstNonEmpty(student.ownerCoach, student.primaryCoach, activeClass && activeClass.coach);
@@ -1311,8 +1374,8 @@ function buildStudentDetailData(student, context = {}) {
       lastClass: latestClass ? formatStudentClassTime(latestClass) : '暂无记录',
       lastClassEmpty: !latestClass,
       cumulative: `${lessonRecordCountText(lessonRecordCount, lessonUnitsCompleted)}`,
-      packageProgress: totalLessons ? `${usedLessons}/${totalLessons}` : '暂无记录',
-      packageEmpty: !totalLessons
+      packageProgress: packageText || '暂无记录',
+      packageEmpty: !packageText
     },
     remark: {
       text: remark || '暂无记录',
@@ -1410,6 +1473,8 @@ Page({
     campusesRaw: [],
     studentsRaw: [],
     classesRaw: [],
+    entitlementsRaw: [],
+    entitlementLedgerRaw: [],
     visibleClasses: [],
     dashboardClasses: [],
     weekTodoGroups: [],
@@ -1495,7 +1560,11 @@ Page({
   },
 
   onShow() {
-    if (this.data.hasLoaded) this.load({ keepLoading: true });
+    if (this.shouldRefreshOnShow()) this.load({ keepLoading: true });
+  },
+
+  shouldRefreshOnShow() {
+    return !!(this.data.hasLoaded && !this.data.savingFeedback && !this.data.showFeedback && !this.data.showPoster);
   },
 
   onPullDownRefresh() {
@@ -1512,8 +1581,8 @@ Page({
       const coachMenuId = currentCoachId();
       const now = new Date();
       const schedule = adaptSchedule(data.schedule || [], data.feedbacks || []);
-      const studentsList = buildStudentCards(data.students || [], data.classes || [], schedule, coachName);
-      const shiftsList = buildShiftCards(data.classes || [], data.students || []);
+      const studentsList = buildStudentCards(data.students || [], data.entitlements || [], schedule, coachName);
+      const shiftsList = [];
       this.setData({
         schedule,
         coachWorkbenchStats: data.stats || {},
@@ -1521,6 +1590,8 @@ Page({
         campusesRaw: data.campuses || [],
         studentsRaw: data.students || [],
         classesRaw: data.classes || [],
+        entitlementsRaw: data.entitlements || [],
+        entitlementLedgerRaw: data.entitlementLedger || [],
         studentsList,
         studentStats: buildStudentStats(data.students || [], coachName),
         shiftsList,
@@ -1687,6 +1758,8 @@ Page({
       selectedClassDetail: buildDetailData(selectedClass, {
         students: this.data.studentsRaw,
         classes: this.data.classesRaw,
+        entitlements: this.data.entitlementsRaw,
+        entitlementLedger: this.data.entitlementLedgerRaw,
         feedbacks: this.data.feedbacks,
         coachName: currentCoachName()
       }),
@@ -1705,6 +1778,7 @@ Page({
     const selectedStudentDetail = buildStudentDetailData(student, {
       classes: this.data.classesRaw,
       schedule: this.data.schedule,
+      entitlements: this.data.entitlementsRaw,
       coachName: currentCoachName()
     });
     this.setData({
@@ -1808,6 +1882,8 @@ Page({
         selectedClassDetail: buildDetailData(selectedClass, {
           classes: this.data.classesRaw,
           students: this.data.studentsRaw,
+          entitlements: this.data.entitlementsRaw,
+          entitlementLedger: this.data.entitlementLedgerRaw,
           feedbacks: this.data.feedbacks,
           coachName: currentCoachName()
         }),
@@ -1868,7 +1944,7 @@ Page({
     const feedbackScope = feedbackScopeForSchedule(selectedClass);
     this.setData({ savingFeedback: true });
     try {
-      await saveCoachFeedback({
+      const savedFeedback = await saveCoachFeedback({
         id: currentFeedback ? currentFeedback.id : '',
         scheduleId: selectedClass.id,
         classId: selectedClass.classId || '',
@@ -1888,13 +1964,26 @@ Page({
         nextTraining
       });
       wx.showToast({ title: '反馈已保存', icon: 'success' });
+      this.applyFeedbackPatch(selectedClass, savedFeedback);
       this.closeSheets();
-      await this.load({ keepLoading: true });
     } catch (err) {
       wx.showToast({ title: err.message || '保存失败', icon: 'none' });
     } finally {
       this.setData({ savingFeedback: false });
     }
+  },
+
+  applyFeedbackPatch(selectedClass, savedFeedback) {
+    const feedback = savedFeedback || {};
+    const feedbacks = (this.data.feedbacks || []).filter(item => String(item.id) !== String(feedback.id));
+    const nextFeedbacks = feedback.id ? feedbacks.concat(feedback) : feedbacks;
+    const schedule = (this.data.schedule || []).map(item => String(item.id) === String(selectedClass.id)
+      ? { ...item, hasFeedback: true, feedbackPending: false }
+      : item);
+    this.setData({
+      feedbacks: nextFeedbacks,
+      schedule
+    }, () => this.renderWeek());
   },
 
   openPoster() {
