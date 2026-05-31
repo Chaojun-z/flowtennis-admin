@@ -135,7 +135,7 @@ assert.match(scheduleWxml, /feedback-course-time[\s\S]*selectedClassDetail\.basi
 assert.match(scheduleWxml, /scroll-top="\{\{feedbackSheetScrollTop\}\}"/, 'feedback sheet should reset its scroll position when opened from any entry');
 assert.match(scheduleWxml, /今天练习了/, 'feedback sheet first field should use the requested label copy');
 assert.match(scheduleWxml, /poster-sheet[\s\S]*生成反馈海报[\s\S]*posterStyles[\s\S]*feedbackPosterCanvas[\s\S]*手机端可直接长按海报保存[\s\S]*保存相册[\s\S]*分享海报/, 'poster sheet should render the real six-template canvas poster shell');
-assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*教练视角摘要[\s\S]*学员备注[\s\S]*上课记录[\s\S]*关闭/, 'student detail sheet should render the SVG-mapped student profile sections');
+assert.match(scheduleWxml, /student-detail-sheet[\s\S]*学员详情[\s\S]*基础信息[\s\S]*教练视角摘要[\s\S]*学员备注[\s\S]*上课记录[\s\S]*查看全部上课记录[\s\S]*关闭/, 'student detail sheet should render the SVG-mapped student profile sections and lesson history expansion entry');
 assert.match(scheduleWxml, /shift-detail-sheet[\s\S]*班级详情[\s\S]*基础信息[\s\S]*班级概览[\s\S]*班级备注[\s\S]*最近一次排课[\s\S]*关闭/, 'shift detail sheet should render the mapped class profile sections');
 assert.match(scheduleWxml, /wx:elif="\{\{!shiftsList\.length\}\}"[\s\S]*暂无班次/, 'shift page should render an empty state instead of mock cards when classes are empty');
 assert.doesNotMatch(scheduleWxml, /编辑排课|取消排课|去排课|保存排课|确认取消/, 'coach mini program should not expose schedule create, edit, or cancel actions');
@@ -172,6 +172,9 @@ assert.match(scheduleJs, /buildStudentDetailData/, 'student detail sheet should 
 assert.match(scheduleJs, /selectedStudentDetail/, 'student detail sheet should keep its selected student data separately');
 assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use its own visibility state');
 assert.match(scheduleJs, /formatStudentClassTime[\s\S]*endText[\s\S]*`\$\{dateText\} \$\{startText\}-\$\{endText\}`/, 'student detail latest class should show the full start-end time range');
+assert.match(scheduleJs, /STUDENT_DETAIL_RECORD_PREVIEW_COUNT\s*=\s*5/, 'student detail should default to showing the latest five lesson records');
+assert.match(scheduleJs, /lessonRecordsShown/, 'student detail should keep a visible subset of lesson records for collapsed state');
+assert.match(scheduleJs, /toggleStudentLessonRecords\(\)/, 'student detail should let the coach expand all lesson records');
 assert.match(scheduleJs, /timetableScrollTop/, 'mini program schedule page should compute a vertical scroll position for the timetable');
 assert.match(scheduleJs, /timetableScrollLeft/, 'mini program schedule page should compute a horizontal scroll position for the timetable');
 assert.match(scheduleJs, /return Math\.max\(0,\s*Math\.round\(rpxToPx\(todayIndex \* TIMETABLE_DAY_WIDTH_RPX\)\)\);/, 'mini program timetable should align today to the first visible day column');
@@ -194,7 +197,8 @@ assert.match(scheduleJs, /coachWorkbenchStats/, 'mini program workbench should k
 assert.match(scheduleJs, /workbenchState/, 'mini program workbench should use the backend workbenchState enum');
 assert.match(scheduleJs, /function buildLocalWorkbenchStats/, 'mini program workbench should have a local stats fallback from the loaded schedule rows');
 assert.match(scheduleJs, /mergeWorkbenchStats\(coachWorkbenchStats,\s*buildLocalWorkbenchStats\(schedule,\s*this\.data\.feedbacks,\s*now\)\)/, 'mini program workbench should fall back to local schedule stats when backend stats are still zero');
-assert.match(scheduleJs, /conversionText:\s*Number\(mergedStats\.monthTrialLessonCount\) > 0 \? String\(mergedStats\.trialConversionRate \|\| 0\) : '-'/, 'mini program workbench should show conversion percent only when trial conversion data exists');
+assert.match(scheduleJs, /overallTrialConversionRate/, 'mini program workbench should read the overall coach trial conversion fields');
+assert.match(scheduleJs, /conversionText:[\s\S]*showOverallTrialStats[\s\S]*mergedStats\.overallTrialConversionRate/, 'mini program workbench should show the overall coach trial conversion percent when backend data exists');
 assert.match(scheduleJs, /feedback:\s*mergedStats\.monthFeedbackCount \|\| 0/, 'mini program workbench should render backend or locally derived month feedback count');
 assert.doesNotMatch(scheduleJs, /feedback:\s*'-'/, 'mini program workbench should not show a placeholder for month feedback count');
 assert.doesNotMatch(scheduleJs, /item\.courseContent \|\| item\.productName \|\| item\.type/, 'shift cards should no longer guess course content from mixed front-end fields');
@@ -301,6 +305,7 @@ assert.match(apiServerJs, /weekFinishedLessonUnits/, 'workbench API should expos
 assert.match(apiServerJs, /todayFinishedLessonUnits/, 'workbench API should expose standard stats fields');
 assert.match(apiServerJs, /pendingFeedbackCount/, 'workbench API should expose standard stats fields');
 assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
+assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
 assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
 
 const miniApiJs = readText('wechat-miniprogram/miniprogram/utils/api.js');
@@ -395,7 +400,7 @@ assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\s*\{[\s\S]*font
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
 assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;/, 'conversion value row should stay on one line without wrapping');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*line-height:\s*1;/, 'conversion number should keep a tight line-height when data exists');
-assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*11px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should shrink to 11px and keep a tighter line-height');
+assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should reuse the label-sized muted style');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*height:\s*38px;[\s\S]*margin-top:\s*12px;[\s\S]*border:\s*0\.8px solid #e2e8f0;/i, 'dashboard reminder bar should match the requested size and border token');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*line-height:\s*1;/i, 'dashboard reminder bar content should be vertically centered');
 assert.match(scheduleWxss, /\.reminder-bar \.summary-icon\s*\{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;[\s\S]*background-image:[\s\S]*circle cx='8' cy='8' r='6\.5'/, 'dashboard reminder icon should reuse the shifts reminder icon');
@@ -524,6 +529,7 @@ assert.match(scheduleWxss, /\.cancel-schedule-sheet\s*\{[\s\S]*height:\s*calc\(1
 assert.match(scheduleWxss, /\.shift-empty\s*\{[\s\S]*height:\s*160px;[\s\S]*border-radius:\s*16px;/, 'shift empty state should use the new native empty panel instead of mock cards');
 assert.match(scheduleWxss, /\.student-detail-card\s*\{[\s\S]*padding:\s*40rpx;[\s\S]*border-radius:\s*32rpx;[\s\S]*background:\s*#fff;/, 'student detail cards should match the white rounded mapped sections');
 assert.match(scheduleWxss, /\.student-detail-btn\s*\{[\s\S]*height:\s*96rpx;[\s\S]*border-radius:\s*48rpx;[\s\S]*background:\s*#f8fafc;/, 'student detail close button should match the bottom pill token');
+assert.match(scheduleWxss, /\.student-record-toggle\s*\{[\s\S]*margin-top:\s*24rpx;[\s\S]*color:\s*#2b3a55;/, 'student detail should style the expand-all lesson history action as a clear inline button');
 assert.match(scheduleWxss, /\.coach-title-row\s*\{[\s\S]*align-items:\s*center;/, 'mini program coach name row should vertically center the dropdown arrow');
 assert.doesNotMatch(scheduleWxss, /\.dashboard-topbar\s*\{/, 'mini program workbench should not keep the removed custom top bar styles');
 assert.doesNotMatch(scheduleWxss, /\.coach-status-pill\s*\{/, 'mini program workbench should not keep the removed connection pill styles');

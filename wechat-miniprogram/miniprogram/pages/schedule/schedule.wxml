@@ -465,23 +465,28 @@
           <view class="student-detail-section-title">
             <view class="student-detail-section-bar"></view>
             <text>上课记录</text>
-            <text class="student-detail-title-sub">（最近一次）</text>
+            <text wx:if="{{selectedStudentDetail.lessonRecordTitleSub}}" class="student-detail-title-sub">{{selectedStudentDetail.lessonRecordTitleSub}}</text>
           </view>
-          <view wx:if="{{selectedStudentDetail.hasLatest}}" class="student-record-card" data-id="{{selectedStudentDetail.latest.scheduleId}}" bindtap="openDetail">
-            <view class="student-record-main">
-              <view class="student-record-head">
-                <text class="student-record-time">{{selectedStudentDetail.latest.time}}</text>
-                <text class="detail-inline-tag {{selectedStudentDetail.latest.courseTypeClass}}">{{selectedStudentDetail.latest.courseType}}</text>
-                <text class="detail-inline-tag {{selectedStudentDetail.latest.statusClass}}">{{selectedStudentDetail.latest.status}}</text>
-              </view>
-              <view class="student-record-meta">
-                <block wx:for="{{selectedStudentDetail.latest.metaParts}}" wx:key="*this">
-                  <text class="student-record-meta-text">{{item}}</text>
-                  <text wx:if="{{index < selectedStudentDetail.latest.metaParts.length - 1}}" class="student-record-meta-divider">｜</text>
-                </block>
+          <view wx:if="{{selectedStudentDetail.hasLessonRecords}}">
+            <view class="student-record-list">
+              <view wx:for="{{selectedStudentDetail.lessonRecordsShown}}" wx:key="scheduleId" class="student-record-card" data-id="{{item.scheduleId}}" bindtap="openDetail">
+                <view class="student-record-main">
+                  <view class="student-record-head">
+                    <text class="student-record-time">{{item.time}}</text>
+                    <text class="detail-inline-tag {{item.courseTypeClass}}">{{item.courseType}}</text>
+                    <text class="detail-inline-tag {{item.statusClass}}">{{item.status}}</text>
+                  </view>
+                  <view class="student-record-meta">
+                    <block wx:for="{{item.metaParts}}" wx:key="*this" wx:for-item="metaPart">
+                      <text class="student-record-meta-text">{{metaPart}}</text>
+                      <text wx:if="{{index < item.metaParts.length - 1}}" class="student-record-meta-divider">｜</text>
+                    </block>
+                  </view>
+                </view>
+                <text class="student-record-arrow">›</text>
               </view>
             </view>
-            <text class="student-record-arrow">›</text>
+            <button wx:if="{{selectedStudentDetail.hasMoreLessonRecords}}" class="student-record-toggle" bindtap="toggleStudentLessonRecords">{{selectedStudentDetail.showAllLessonRecords ? '收起上课记录' : '查看全部上课记录'}}</button>
           </view>
           <view wx:else class="student-record-empty">暂无记录</view>
         </view>

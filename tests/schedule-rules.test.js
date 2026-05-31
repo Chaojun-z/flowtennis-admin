@@ -143,7 +143,10 @@ assert.deepStrictEqual(
     monthFeedbackCount: 4,
     pendingFeedbackCount: 3,
     monthTrialLessonCount: 2,
-    trialConversionRate: 50
+    trialConversionRate: 50,
+    overallTrialStudentCount: 8,
+    overallTrialConvertedStudentCount: 3,
+    overallTrialConversionRate: 37.5
   }),
   {
     monthFinishedLessonUnits: 12,
@@ -152,7 +155,10 @@ assert.deepStrictEqual(
     monthFeedbackCount: 4,
     pendingFeedbackCount: 3,
     monthTrialLessonCount: 2,
-    trialConversionRate: 50
+    trialConversionRate: 50,
+    overallTrialStudentCount: 8,
+    overallTrialConvertedStudentCount: 3,
+    overallTrialConversionRate: 37.5
   },
   'workbench stats helper should keep the standard backend contract'
 );
@@ -174,9 +180,44 @@ assert.deepStrictEqual(
     monthFeedbackCount: 1,
     pendingFeedbackCount: 1,
     monthTrialLessonCount: 0,
-    trialConversionRate: 0
+    trialConversionRate: 0,
+    overallTrialStudentCount: 0,
+    overallTrialConvertedStudentCount: 0,
+    overallTrialConversionRate: 0
   },
   'workbench stats helper should calculate month feedback count from ended schedules with feedback records'
+);
+
+assert.deepStrictEqual(
+  rules.buildWorkbenchStats({
+    now: new Date('2026-04-23T12:00:00+08:00'),
+    schedule: [
+      { id: 't1', coach: '朝珺', startTime: '2026-04-01 09:00', endTime: '2026-04-01 10:00', status: '已结束', courseType: '体验课', studentIds: ['stu-1'], studentName: '学员A' },
+      { id: 't2', coach: '朝珺', startTime: '2026-04-08 09:00', endTime: '2026-04-08 10:00', status: '已结束', courseType: '体验课', studentIds: ['stu-1'], studentName: '学员A' },
+      { id: 't3', coach: '朝珺', startTime: '2026-04-10 09:00', endTime: '2026-04-10 10:00', status: '已结束', courseType: '私教体验课', studentIds: ['stu-2'], studentName: '学员B' },
+      { id: 't4', coach: '朝珺', startTime: '2026-04-15 09:00', endTime: '2026-04-15 10:00', status: '已结束', courseType: '私教课', studentIds: ['stu-3'], studentName: '学员C' }
+    ],
+    purchases: [
+      { id: 'p1', studentId: 'stu-1', studentName: '学员A', ownerCoach: '朝珺', purchaseDate: '2026-04-09', status: 'active' },
+      { id: 'p2', studentId: 'stu-2', studentName: '学员B', ownerCoach: '其他教练', purchaseDate: '2026-04-12', status: 'active' },
+      { id: 'p3', studentId: 'stu-2', studentName: '学员B', ownerCoach: '朝珺', purchaseDate: '2026-04-09', status: 'active' },
+      { id: 'p4', studentId: 'stu-2', studentName: '学员B', ownerCoach: '朝珺', purchaseDate: '2026-04-12', status: 'voided' }
+    ],
+    feedbacks: []
+  }),
+  {
+    monthFinishedLessonUnits: 4,
+    weekFinishedLessonUnits: 0,
+    todayFinishedLessonUnits: 0,
+    monthFeedbackCount: 0,
+    pendingFeedbackCount: 4,
+    monthTrialLessonCount: 3,
+    trialConversionRate: 100,
+    overallTrialStudentCount: 2,
+    overallTrialConvertedStudentCount: 1,
+    overallTrialConversionRate: 50
+  },
+  'workbench stats helper should calculate overall trial conversion by coach-owned unique students'
 );
 
 {

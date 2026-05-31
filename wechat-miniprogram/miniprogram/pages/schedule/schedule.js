@@ -7,6 +7,7 @@ const timetableHours = Array.from({ length: TIMETABLE_END_HOUR - TIMETABLE_START
 const avatarClasses = ['avatar-warm', 'avatar-teal', 'avatar-green', 'avatar-purple'];
 const TIMETABLE_HOUR_HEIGHT_RPX = 150;
 const TIMETABLE_DAY_WIDTH_RPX = 228;
+const STUDENT_DETAIL_RECORD_PREVIEW_COUNT = 5;
 
 function coachDisplayName(name = '') {
   const trimmed = String(name || '').trim();
@@ -241,7 +242,7 @@ function buildLocalWorkbenchStats(schedule = [], feedbacks = [], now = new Date(
 }
 
 function mergeWorkbenchStats(backendStats = {}, localStats = {}) {
-  const backendHasValue = ['monthFinishedLessonUnits', 'weekFinishedLessonUnits', 'todayFinishedLessonUnits', 'monthFeedbackCount', 'pendingFeedbackCount', 'monthTrialLessonCount']
+  const backendHasValue = ['monthFinishedLessonUnits', 'weekFinishedLessonUnits', 'todayFinishedLessonUnits', 'monthFeedbackCount', 'pendingFeedbackCount', 'monthTrialLessonCount', 'overallTrialStudentCount', 'overallTrialConvertedStudentCount']
     .some(key => Number(backendStats[key]) > 0);
   if (backendHasValue) return backendStats;
   return { ...backendStats, ...localStats };
@@ -1190,6 +1191,24 @@ function studentScheduleMeta(item = {}, linkedClass = null) {
   ].filter(Boolean);
 }
 
+function studentDetailLessonRecordTitle(total = 0, expanded = false) {
+  if (!total) return '';
+  if (total <= STUDENT_DETAIL_RECORD_PREVIEW_COUNT || expanded) return `（共${total}条）`;
+  return `（最近${Math.min(STUDENT_DETAIL_RECORD_PREVIEW_COUNT, total)}条）`;
+}
+
+function studentDetailLessonRecordView(detail = {}, expanded = false) {
+  const lessonRecords = Array.isArray(detail.lessonRecords) ? detail.lessonRecords : [];
+  return {
+    ...detail,
+    showAllLessonRecords: expanded,
+    lessonRecordsShown: expanded ? lessonRecords : lessonRecords.slice(0, STUDENT_DETAIL_RECORD_PREVIEW_COUNT),
+    hasMoreLessonRecords: lessonRecords.length > STUDENT_DETAIL_RECORD_PREVIEW_COUNT,
+    lessonRecordTitleSub: studentDetailLessonRecordTitle(lessonRecords.length, expanded),
+    lessonRecordToggleText: expanded ? '收起上课记录' : '查看全部上课记录'
+  };
+}
+
 function buildStudentDetailData(student, context = {}) {
   if (!student) return null;
   const classes = Array.isArray(context.classes) ? context.classes : [];
@@ -1223,7 +1242,23 @@ function buildStudentDetailData(student, context = {}) {
   const responsibleCoach = firstNonEmpty(student.primaryCoach, activeClass && activeClass.coach, coachName);
   const campus = firstNonEmpty(student.campus, latestClass && latestClass.campus, activeClass && activeClass.campus);
   const remark = firstNonEmpty(student.remark);
-  return {
+  const lessonRecords = pastSchedule
+    .slice()
+    .sort((a, b) => String(b.startTime || '').localeCompare(String(a.startTime || '')))
+    .map(item => {
+      const courseTag = dashboardCourseTag(item);
+      const statusMeta = studentScheduleStatusMeta(item);
+      return {
+        scheduleId: item.id,
+        time: formatStudentClassTime(item),
+        courseType: courseTag.text,
+        courseTypeClass: courseTag.className === 'is-trial' ? 'detail-tag-trial' : 'detail-tag-private',
+        status: statusMeta.text,
+        statusClass: statusMeta.className,
+        metaParts: studentScheduleMeta(item, activeClass)
+      };
+    });
+  const detail = {
     studentId: student.id,
     basic: {
       name: student.name || '未命名学员',
@@ -1257,8 +1292,11 @@ function buildStudentDetailData(student, context = {}) {
       statusClass: latestStatus.className,
       metaParts: studentScheduleMeta(latestClass, activeClass)
     } : null,
-    hasLatest: !!latestClass
+    hasLatest: !!latestClass,
+    hasLessonRecords: lessonRecords.length > 0,
+    lessonRecords
   };
+  return studentDetailLessonRecordView(detail, false);
 }
 
 function rpxToPx(value) {
@@ -1470,6 +1508,8 @@ Page({
     const { weekOffset, schedule, coachWorkbenchStats } = this.data;
     const now = new Date();
     const mergedStats = mergeWorkbenchStats(coachWorkbenchStats, buildLocalWorkbenchStats(schedule, this.data.feedbacks, now));
+    const hasOverallTrialStats = Object.prototype.hasOwnProperty.call(mergedStats, 'overallTrialStudentCount');
+    const showOverallTrialStats = hasOverallTrialStats && Number(mergedStats.overallTrialStudentCount) > 0;
     const days = buildWeekDays(schedule, weekOffset);
     const visibleClasses = days.reduce((all, day) => all.concat(day.items.map(item => ({ ...item, dayKey: day.key }))), []);
     const today = days.find(day => day.isToday);
@@ -1518,8 +1558,10 @@ Page({
         today: mergedStats.todayFinishedLessonUnits || 0,
         feedback: mergedStats.monthFeedbackCount || 0,
         pending: mergedStats.pendingFeedbackCount || 0,
-        conversionText: Number(mergedStats.monthTrialLessonCount) > 0 ? String(mergedStats.trialConversionRate || 0) : '-',
-        conversionUnit: Number(mergedStats.monthTrialLessonCount) > 0 ? '%' : '',
+        conversionText: showOverallTrialStats
+          ? String(mergedStats.overallTrialConversionRate || 0)
+          : (hasOverallTrialStats ? '-' : (Number(mergedStats.monthTrialLessonCount) > 0 ? String(mergedStats.trialConversionRate || 0) : '-')),
+        conversionUnit: showOverallTrialStats || (!hasOverallTrialStats && Number(mergedStats.monthTrialLessonCount) > 0) ? '%' : '',
         nextTime: nextClass ? nextClass.timeText : '暂无',
         nextText: nextClass ? `${nextClass.timeText} · ${nextClass.locationText}` : '暂无',
         todo: todoItems.length
@@ -1636,6 +1678,14 @@ Page({
     });
     wx.nextTick(() => {
       this.setData({ studentDetailScrollTop: 0 });
+    });
+  },
+
+  toggleStudentLessonRecords() {
+    const detail = this.data.selectedStudentDetail;
+    if (!detail) return;
+    this.setData({
+      selectedStudentDetail: studentDetailLessonRecordView(detail, !detail.showAllLessonRecords)
     });
   },
 

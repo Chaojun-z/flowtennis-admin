@@ -804,6 +804,54 @@ function workbenchTrialConvertedByPurchaseRecord(schedule,purchases=[]){
     return !!studentName&&String(item?.studentName||'').trim()===studentName;
   });
 }
+function workbenchTrialStudentKeys(schedule){
+  const ids=[...parseArr(schedule?.studentIds),schedule?.studentId]
+    .map(value=>String(value||'').trim())
+    .filter(Boolean);
+  if(ids.length)return ids.map(id=>`id:${id}`);
+  return String(schedule?.studentName||'')
+    .split(/[、,，\s/]+/)
+    .map(value=>value.trim())
+    .filter(Boolean)
+    .map(name=>`name:${name}`);
+}
+function workbenchPurchaseMatchesTrialStudent(purchase,key){
+  if(String(key||'').startsWith('id:'))return String(purchase?.studentId||'').trim()===String(key).slice(3);
+  return String(purchase?.studentName||'').trim()===String(key).slice(5);
+}
+function buildWorkbenchOverallTrialStats(scheduleRows=[],purchases=[]){
+  const trialMap=new Map();
+  (Array.isArray(scheduleRows)?scheduleRows:[])
+    .filter(item=>scheduleIsTrialLesson(item)&&effectiveScheduleStatus(item)==='已结束')
+    .forEach(item=>{
+      const coachKey=String(item?.coach||'').trim();
+      const trialDate=dateKey(item?.endTime||item?.startTime);
+      workbenchTrialStudentKeys(item).forEach(studentKey=>{
+        if(!studentKey)return;
+        const mapKey=`${coachKey}__${studentKey}`;
+        const existing=trialMap.get(mapKey);
+        if(!existing||(!existing.trialDate&&trialDate)||(trialDate&&trialDate<existing.trialDate)){
+          trialMap.set(mapKey,{studentKey,coachKey,trialDate});
+        }
+      });
+    });
+  const total=trialMap.size;
+  const converted=[...trialMap.values()].filter(({ studentKey, coachKey, trialDate })=>{
+    return (Array.isArray(purchases)?purchases:[]).some(item=>{
+      if(!workbenchPurchaseMatchesTrialStudent(item,studentKey))return false;
+      if(['voided','refunded'].includes(String(item?.status||'').trim()))return false;
+      if(coachKey&&String(item?.ownerCoach||'').trim()!==coachKey)return false;
+      const purchaseDate=dateKey(item?.purchaseDate||item?.createdAt);
+      return !trialDate||!purchaseDate||purchaseDate>=trialDate;
+    });
+  }).length;
+  const rate=total?Math.round(converted/total*1000)/10:0;
+  return {
+    overallTrialStudentCount:total,
+    overallTrialConvertedStudentCount:converted,
+    overallTrialConversionRate:Number.isInteger(rate)?rate:rate
+  };
+}
 function resolveWorkbenchState(schedule,prevSchedule,now=new Date(),feedbacks=[]){
   const fromBackend=schedule?.workbenchState;
   if(fromBackend&&typeof fromBackend==='object'&&fromBackend.code&&fromBackend.label){
@@ -845,6 +893,9 @@ function buildWorkbenchStats(input={}){
     ||Object.prototype.hasOwnProperty.call(input,'pendingFeedbackCount')
     ||Object.prototype.hasOwnProperty.call(input,'monthTrialLessonCount')
     ||Object.prototype.hasOwnProperty.call(input,'trialConversionRate')
+    ||Object.prototype.hasOwnProperty.call(input,'overallTrialStudentCount')
+    ||Object.prototype.hasOwnProperty.call(input,'overallTrialConvertedStudentCount')
+    ||Object.prototype.hasOwnProperty.call(input,'overallTrialConversionRate')
   ){
     return {
       monthFinishedLessonUnits:parseLessonValue(input.monthFinishedLessonUnits),
@@ -853,7 +904,10 @@ function buildWorkbenchStats(input={}){
       monthFeedbackCount:parseInt(input.monthFeedbackCount,10)||0,
       pendingFeedbackCount:parseInt(input.pendingFeedbackCount,10)||0,
       monthTrialLessonCount:parseInt(input.monthTrialLessonCount,10)||0,
-      trialConversionRate:parseLessonValue(input.trialConversionRate)
+      trialConversionRate:parseLessonValue(input.trialConversionRate),
+      overallTrialStudentCount:parseInt(input.overallTrialStudentCount,10)||0,
+      overallTrialConvertedStudentCount:parseInt(input.overallTrialConvertedStudentCount,10)||0,
+      overallTrialConversionRate:parseLessonValue(input.overallTrialConversionRate)
     };
   }
   const now=input.now instanceof Date?input.now:new Date();
@@ -876,6 +930,7 @@ function buildWorkbenchStats(input={}){
   const todayEndedRows=endedRows.filter(item=>dateKey(item.startTime)===dayKey);
   const monthTrialRows=monthEndedRows.filter(scheduleIsTrialLesson);
   const monthTrialConverted=monthTrialRows.filter(item=>workbenchTrialConvertedByPurchaseRecord(item,purchases)).length;
+  const overallTrialStats=buildWorkbenchOverallTrialStats(scheduleRows,purchases);
   return {
     monthFinishedLessonUnits:monthEndedRows.reduce((sum,item)=>sum+parseLessonValue(item.lessonCount,1),0),
     weekFinishedLessonUnits:weekEndedRows.reduce((sum,item)=>sum+parseLessonValue(item.lessonCount,1),0),
@@ -883,7 +938,10 @@ function buildWorkbenchStats(input={}){
     monthFeedbackCount:monthEndedRows.filter(item=>scheduleHasFeedbackRecord(item,feedbacks)).length,
     pendingFeedbackCount:endedRows.filter(item=>!scheduleHasFeedbackRecord(item,feedbacks)).length,
     monthTrialLessonCount:monthTrialRows.length,
-    trialConversionRate:monthTrialRows.length?Math.round(monthTrialConverted/monthTrialRows.length*100):0
+    trialConversionRate:monthTrialRows.length?Math.round(monthTrialConverted/monthTrialRows.length*100):0,
+    overallTrialStudentCount:overallTrialStats.overallTrialStudentCount,
+    overallTrialConvertedStudentCount:overallTrialStats.overallTrialConvertedStudentCount,
+    overallTrialConversionRate:overallTrialStats.overallTrialConversionRate
   };
 }
 function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now=new Date()){
