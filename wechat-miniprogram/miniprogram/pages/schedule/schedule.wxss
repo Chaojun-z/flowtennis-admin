@@ -226,12 +226,19 @@ page {
   font-weight: 400;
 }
 
+.conversion-row {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 4rpx;
+  white-space: nowrap;
+}
+
 .mini-metric text.conversion-value.has-data {
   color: #0f172a;
   font-size: 24px;
   font-weight: 700;
-  display: inline-flex;
-  align-items: flex-start;
+  line-height: 1;
 }
 
 .reminder-bar {
@@ -894,23 +901,23 @@ button::after {
 }
 
 .week-switch {
-  width: 160px;
+  width: 188px;
   min-width: 0;
   height: 36px;
-  padding: 0;
+  padding: 0 36px;
   border-radius: 999rpx;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  position: relative;
   box-sizing: border-box;
 }
 
 .switch-btn {
-  position: relative;
-  width: 32px;
+  position: absolute;
+  width: 44px;
   height: 36px;
   line-height: 36px;
   padding: 0;
@@ -918,6 +925,14 @@ button::after {
   color: transparent;
   font-size: 0;
   font-weight: 500;
+}
+
+.switch-prev {
+  left: 0;
+}
+
+.switch-next {
+  right: 0;
 }
 
 .switch-btn::after {
@@ -950,6 +965,7 @@ button::after {
   color: #fff;
   font-size: 15px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .back-week-btn {
@@ -1019,6 +1035,12 @@ button::after {
   position: sticky;
   left: 0;
   z-index: 30;
+}
+
+.tt-time-axis,
+.tt-day-columns {
+  padding-bottom: 32rpx;
+  box-sizing: border-box;
 }
 
 .tt-time-axis::after {
@@ -1114,6 +1136,10 @@ button::after {
   color: #94a3b8;
   font-size: 11px;
   font-weight: 400;
+}
+
+.tt-hour-cell:first-child text {
+  margin-top: 8rpx;
 }
 
 .tt-day-columns,

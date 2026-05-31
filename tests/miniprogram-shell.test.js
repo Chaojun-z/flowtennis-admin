@@ -84,7 +84,7 @@ assert.match(scheduleWxml, /student-card"[^>]*data-id="\{\{item\.id\}\}"[^>]*bin
 assert.match(scheduleWxml, /今日排课/, 'native workbench should keep the today schedule section');
 assert.match(scheduleWxml, /本周待办/, 'native workbench should also show a weekly todo section');
 assert.match(scheduleWxml, /今日课程[\s\S]*本周课时[\s\S]*本月课时[\s\S]*本月反馈[\s\S]*未反馈[\s\S]*体验课转化/, 'native workbench should keep the six original web metrics in the requested order');
-assert.match(scheduleWxml, /stats\.conversionText[\s\S]*stats\.conversionUnit[\s\S]*conversion-unit/, 'native workbench should render conversion percent with a separate small unit');
+assert.match(scheduleWxml, /conversion-row[\s\S]*stats\.conversionText[\s\S]*conversion-unit/, 'native workbench should render conversion percent in a dedicated single-line row');
 assert.match(scheduleWxml, /dashboard-hero/, 'native workbench should render the recreated SVG hero header');
 assert.match(scheduleWxml, /dashboard-grid/, 'native workbench should render the two-row three-column metric grid');
 assert.match(scheduleWxml, /today-lesson-card/, 'native workbench should render the larger today lesson card style');
@@ -393,7 +393,8 @@ assert.match(scheduleWxss, /\.mini-metric text\s*\{[\s\S]*transform:\s*translate
 assert.match(scheduleWxss, /\.mini-metric text\.danger\s*\{[\s\S]*color:\s*#D97706;/, 'dashboard pending feedback metric should use the requested warning color');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\s*\{[\s\S]*font-size:\s*12px;[\s\S]*font-weight:\s*400;[\s\S]*color:\s*#64748B;/, 'empty conversion value should use the requested muted regular style with enough specificity');
 assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*color:\s*#0f172a;[\s\S]*font-size:\s*24px;[\s\S]*font-weight:\s*700;/, 'conversion number should keep the normal metric number style when data exists');
-assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*flex-start;/, 'conversion number should align the percent unit inline without overflow');
+assert.match(scheduleWxss, /\.conversion-row\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*align-items:\s*baseline;[\s\S]*flex-wrap:\s*nowrap;/, 'conversion value row should stay on one line without wrapping');
+assert.match(scheduleWxss, /\.mini-metric text\.conversion-value\.has-data\s*\{[\s\S]*line-height:\s*1;/, 'conversion number should keep a tight line-height when data exists');
 assert.match(scheduleWxss, /\.conversion-unit\s*\{[\s\S]*font-size:\s*11px;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*1\.2;[\s\S]*color:\s*#64748B;/, 'conversion percent unit should shrink to 11px and keep a tighter line-height');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*height:\s*38px;[\s\S]*margin-top:\s*12px;[\s\S]*border:\s*0\.8px solid #e2e8f0;/i, 'dashboard reminder bar should match the requested size and border token');
 assert.match(scheduleWxss, /\.reminder-bar\s*\{[\s\S]*align-items:\s*center;[\s\S]*line-height:\s*1;/i, 'dashboard reminder bar content should be vertically centered');
@@ -411,8 +412,14 @@ assert.match(scheduleWxss, /\.week-task-time-row\s*\{[\s\S]*transform:\s*transla
 assert.match(scheduleWxss, /\.week-task-location\s*\{[\s\S]*transform:\s*translateY\(-7px\);/, 'dashboard week todo meta row should use the requested vertical offset');
 assert.match(scheduleWxss, /\.week-task-divider\s*\{[\s\S]*width:\s*325px;[\s\S]*height:\s*1px;[\s\S]*margin-top:\s*8px;[\s\S]*transform:\s*translateY\(-6px\);/, 'dashboard week todo divider should match requested size and spacing');
 assert.match(scheduleWxml, /button class="switch-btn switch-prev" bindtap="prevWeek"[\s\S]*button class="switch-btn switch-next" bindtap="nextWeek"/, 'timetable header should keep explicit previous and next week buttons');
-assert.match(scheduleWxss, /\.switch-btn\s*\{[\s\S]*width:\s*32px;[\s\S]*height:\s*36px;/, 'week switch buttons should expose a larger tap target');
+assert.match(scheduleWxss, /\.week-switch\s*\{(?=[\s\S]*position:\s*relative;)(?=[\s\S]*padding:\s*0 36px;)/, 'week switch should reserve center space for the date label');
+assert.match(scheduleWxss, /\.week-range\s*\{[\s\S]*white-space:\s*nowrap;/, 'week range text should stay on one line');
+assert.match(scheduleWxss, /\.switch-btn\s*\{[\s\S]*position:\s*absolute;[\s\S]*width:\s*44px;[\s\S]*height:\s*36px;/, 'week switch buttons should use larger absolute-positioned tap targets');
+assert.match(scheduleWxss, /\.switch-prev\s*\{[\s\S]*left:\s*0;/, 'previous-week button should sit on the left edge of the switch shell');
+assert.match(scheduleWxss, /\.switch-next\s*\{[\s\S]*right:\s*0;/, 'next-week button should sit on the right edge of the switch shell');
 assert.match(scheduleWxss, /\.switch-btn::before\s*\{[\s\S]*left:\s*50%;[\s\S]*top:\s*50%;[\s\S]*transform:\s*translate\(-50%,\s*-50%\);/, 'week switch icons should stay centered inside the larger tap target');
+assert.match(scheduleWxss, /\.tt-hour-cell:first-child text\s*\{[\s\S]*margin-top:\s*8rpx;/, 'first visible timetable hour should keep a top safety space');
+assert.match(scheduleWxss, /\.tt-time-axis,\s*\.tt-day-columns\s*\{[\s\S]*padding-bottom:\s*32rpx;/, 'timetable body should keep bottom safety space for the final hour label');
 assert.match(scheduleWxss, /\.week-task-actions\s*\{[\s\S]*transform:\s*translateY\(-8px\);/, 'dashboard week todo actions should use the requested vertical offset');
 assert.match(scheduleWxss, /\.week-task-outline\s*\{[\s\S]*width:\s*70px;[\s\S]*height:\s*28px;[\s\S]*border:\s*1px solid #e2e8f0;/i, 'dashboard week todo outline button should match requested token');
 assert.match(scheduleWxss, /\.week-task-status\s*\{[\s\S]*width:\s*48px;[\s\S]*height:\s*24px;[\s\S]*background:\s*#fef3c7;/i, 'dashboard pending feedback tag should match requested token');
@@ -428,8 +435,7 @@ assert.match(scheduleWxss, /\.tab-schedule-icon\.active\s*\{[\s\S]*rect x='4' y=
 assert.match(scheduleWxss, /\.tab-schedule-icon:not\(\.active\)\s*\{[\s\S]*rect x='4' y='5' width='16' height='15' rx='2' stroke='%2394A3B8' stroke-width='2'[\s\S]*M8 3v4M16 3v4M4 11h16[\s\S]*stroke='%2394A3B8' stroke-width='2'/, 'inactive schedule tab should use the latest outline calendar SVG');
 assert.match(scheduleWxss, /\.tab-classes-icon\.active\s*\{[\s\S]*fill='%23FFFFFF'/, 'active classes tab should preserve the white negative-space SVG detail');
 assert.match(scheduleWxss, /\.timetable-top\s*\{[\s\S]*height:\s*210px;[\s\S]*padding:\s*115px 16px 0;[\s\S]*background:\s*linear-gradient\(135deg,\s*#2b3a55 0%,\s*#1e2a38 100%\)/i, 'timetable top should match the requested dark header shell');
-assert.match(scheduleWxss, /\.week-switch\s*\{[\s\S]*width:\s*160px;[\s\S]*height:\s*36px;[\s\S]*border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.1\);[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.15\);/i, 'timetable week switch should match the SVG 160x36 translucent pill');
-assert.match(scheduleWxss, /\.week-switch\s*\{[^}]*gap:\s*20px;/, 'timetable week switch should keep 20px spacing around the date text');
+assert.match(scheduleWxss, /\.week-switch\s*\{[\s\S]*width:\s*188px;[\s\S]*height:\s*36px;[\s\S]*border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.1\);[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.15\);/i, 'timetable week switch should keep the translucent pill shell while leaving enough room for the date text');
 assert.match(scheduleWxss, /\.switch-btn::before\s*\{[\s\S]*width:\s*8px;[\s\S]*height:\s*10px;[\s\S]*background-image:\s*url\("data:image\/svg\+xml/, 'timetable switch arrows should use the provided SVG chevron shape without distortion');
 assert.match(scheduleWxss, /\.week-range\s*\{[\s\S]*font-size:\s*15px;[\s\S]*font-weight:\s*500;/, 'timetable week range text should use 15px medium');
 assert.match(scheduleWxss, /\.back-week-btn\s*\{[\s\S]*width:\s*80px;[\s\S]*height:\s*36px;[\s\S]*font-size:\s*13px;[\s\S]*font-weight:\s*500;/, 'timetable back-to-week button should match the SVG token');
