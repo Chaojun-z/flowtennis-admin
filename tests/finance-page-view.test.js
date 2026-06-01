@@ -41,7 +41,13 @@ assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeU
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/const businessRows=rows\.filter\(row=>!row\.differenceReason\);[\s\S]*const diffRows=rows\.filter\(row=>row\.differenceReason\);[\s\S]*bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category and split diff rows');
 assert.match(source,/storedValueRecognized=businessRows\.filter\(row=>row\.businessType==='会员订场'\)/,'stored value recognized amount should use member booking consumption rows');
-assert.doesNotMatch(source,/resetFinanceRevenuePage\(|resetFinanceConsumePage\(|financeRevenuePagerInfo|financeConsumePagerInfo/,'finance center should not import unfinished revenue/recognized pagination hooks');
+assert.match(source,/id="financeRevenuePagerInfo"/,'revenue should expose pager info');
+assert.match(source,/id="financeRevenuePageSize"/,'revenue should expose page size selector');
+assert.match(source,/id="financeRevenuePagerBtns"/,'revenue should expose pager buttons');
+assert.match(source,/function setFinanceRevenuePageSize\(/,'revenue should support switching page size');
+assert.match(source,/function setFinanceRevenuePage\(/,'revenue should support switching pages');
+assert.match(source,/function resetFinanceRevenuePage\(/,'revenue filters should reset to the first page');
+assert.match(source,/renderCourtDropdownHtml\('financeRevenuePageSizeValue',`\$\{financeRevenuePageSize\}条\/页`/,'revenue page size selector should reuse shared dropdown style');
 assert.match(source,/id="financeLedgerPagerInfo"/,'ledger should expose pager info');
 assert.match(source,/id="financeLedgerPageSize"/,'ledger should expose page size selector');
 assert.match(source,/id="financeLedgerPagerBtns"/,'ledger should expose pager buttons');
