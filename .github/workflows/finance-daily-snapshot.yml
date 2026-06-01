@@ -1,0 +1,36 @@
+name: Finance Daily Snapshot
+
+on:
+  schedule:
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TS_ENDPOINT: ${{ secrets.FLOWTENNIS_TS_ENDPOINT }}
+      TS_INSTANCE: ${{ secrets.FLOWTENNIS_TS_INSTANCE }}
+      ALIYUN_ACCESS_KEY_ID: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_ID }}
+      ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.FLOWTENNIS_ALIYUN_ACCESS_KEY_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create finance snapshot
+        run: npm run snapshot:finance
+
+      - name: Upload finance snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-daily-snapshot-${{ github.run_id }}
+          path: var/finance-snapshots/
+          retention-days: 30
+          if-no-files-found: error

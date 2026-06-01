@@ -5,5 +5,10 @@ node_modules
 .npm-cache
 .vercel-home
 docs/
+!/docs/
+/docs/*
+!/docs/财务每日快照取用手册.md
+!/docs/财务真实操作演练手册.md
+!/docs/财务批次回滚后续方案.md
 .worktrees/
 var/finance-snapshots/
