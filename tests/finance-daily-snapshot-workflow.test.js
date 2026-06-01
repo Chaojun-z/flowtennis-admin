@@ -16,8 +16,8 @@ assert.match(source, /npm ci/, 'workflow should install dependencies from lockfi
 assert.match(source, /npm run snapshot:finance/, 'workflow should run the existing finance snapshot command');
 assert.match(source, /TS_ENDPOINT:\s*\$\{\{\s*secrets\.FLOWTENNIS_TS_ENDPOINT\s*\}\}/, 'workflow should read TS_ENDPOINT from GitHub Secrets');
 assert.match(source, /TS_INSTANCE:\s*\$\{\{\s*secrets\.FLOWTENNIS_TS_INSTANCE\s*\}\}/, 'workflow should read TS_INSTANCE from GitHub Secrets');
-assert.match(source, /ALIYUN_ACCESS_KEY_ID:\s*\$\{\{\s*secrets\.FLOWTENNIS_ALIYUN_ACCESS_KEY_ID\s*\}\}/, 'workflow should read access key id from GitHub Secrets');
-assert.match(source, /ALIYUN_ACCESS_KEY_SECRET:\s*\$\{\{\s*secrets\.FLOWTENNIS_ALIYUN_ACCESS_KEY_SECRET\s*\}\}/, 'workflow should read access key secret from GitHub Secrets');
+assert.match(source, /ALIBABA_CLOUD_ACCESS_KEY_ID:\s*\$\{\{\s*secrets\.FLOWTENNIS_ALIYUN_ACCESS_KEY_ID\s*\}\}/, 'workflow should expose access key id using the name expected by snapshot script');
+assert.match(source, /ALIBABA_CLOUD_ACCESS_KEY_SECRET:\s*\$\{\{\s*secrets\.FLOWTENNIS_ALIYUN_ACCESS_KEY_SECRET\s*\}\}/, 'workflow should expose access key secret using the name expected by snapshot script');
 assert.match(source, /actions\/upload-artifact@v4/, 'workflow should upload snapshot as a private artifact');
 assert.match(source, /retention-days:\s*30/, 'workflow should retain daily snapshots for 30 days');
 assert.doesNotMatch(source, /git add|git commit|git push/, 'workflow must not commit real snapshots to git');
