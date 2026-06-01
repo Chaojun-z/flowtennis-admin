@@ -849,7 +849,7 @@ function renderFinanceRevenueReport(){
   const bookingIncome=businessRows.filter(row=>['会员订场','散客订场','约球局'].includes(row.sourceBusinessCategory)).reduce((sum,row)=>sum+(Number(row.actualAmount)||0),0);
   const storedValueIncome=businessRows.filter(row=>row.sourceBusinessCategory==='会员储值').reduce((sum,row)=>sum+(Number(row.actualAmount)||0),0);
   const finalTotalIncome=overview?Number(overview.cash||0):totalIncome;
-  const courseMetrics=financeCoursePackageMetrics(financeUnifiedRows(),overview);
+  const courseMetrics=overview?financeCoursePackageMetrics([],overview):financeCoursePackageMetrics(financeUnifiedRows(),overview);
   const finalCourseIncome=courseMetrics.courseIncome||courseIncome;
   const finalPackageIncome=courseMetrics.packageIncome||courseIncome;
   const finalDirectCourseIncome=courseMetrics.directIncome||Math.max(0,finalCourseIncome-finalPackageIncome);
@@ -1139,7 +1139,7 @@ function renderFinanceOverview(){
   const rows=overview?[]:financeLedgerRows();
   const businessRows=rows.filter(row=>!row.differenceReason);
   const positiveCashRows=businessRows.filter(row=>Number(row.cashDelta)>0);
-  const courseMetrics=financeCoursePackageMetrics(financeUnifiedRows(),overview);
+  const courseMetrics=overview?financeCoursePackageMetrics([],overview):financeCoursePackageMetrics(financeUnifiedRows(),overview);
   const storedValueIncome=overview?Number(overview.storedValueIncome||0):positiveCashRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const storedValueRecognized=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const bookingIncome=positiveCashRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
