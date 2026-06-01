@@ -10,5 +10,6 @@ docs/
 !/docs/财务每日快照取用手册.md
 !/docs/财务真实操作演练手册.md
 !/docs/财务批次回滚后续方案.md
+!/docs/2026-06-01-课程课包经营可信基线.md
 .worktrees/
 var/finance-snapshots/
