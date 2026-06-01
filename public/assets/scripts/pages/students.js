@@ -142,27 +142,42 @@ function studentPageTrialConvertedByPurchase(schedule){
     return studentName&&String(p.studentName||'').trim()===studentName;
   });
 }
+function studentStatsCampusNameForPurchase(purchase,entitlement={}){
+  const student=students.find(s=>String(s.id||'')===String(purchase?.studentId||entitlement?.studentId||''));
+  return cn(parseArr(entitlement?.campusIds)[0]||entitlement?.campus||purchase?.campus||student?.campus||'');
+}
+function studentStatsMatchesPackageCampus(purchase,entitlement={}){
+  if(!campus||campus==='all')return true;
+  return sameCampusValue(studentStatsCampusNameForPurchase(purchase,entitlement),cn(campus));
+}
 function studentPageStats(base){
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
-  const validEntitlements=entitlements.filter(e=>studentIds.has(String(e.studentId||''))&&entitlementStatusText(e)!=='已作废');
+  const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
+  const validEntitlements=entitlements.filter(e=>{
+    const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
+    return entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废'&&studentStatsMatchesPackageCampus(purchase,e);
+  });
   const validEntitlementIds=new Set(validEntitlements.map(e=>String(e.id||'')));
   const purchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
+  const entitlementByPurchaseId=new Map(validEntitlements.map(e=>[String(e.purchaseId||''),e]).filter(([id])=>id));
   const validPurchases=purchases.filter(p=>{
     if(purchaseStatusText(p)==='已作废')return false;
+    if(!studentStatsMatchesPackageCampus(p,entitlementByPurchaseId.get(String(p.id||''))||{}))return false;
+    if(campus==='all')return true;
     return studentIds.has(String(p.studentId||''))||purchaseIds.has(String(p.id||''));
   });
   const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
   const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
-  const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.finalAmount??p.amountPaid??0)||0),0);
+  const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
   const recognized=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))
     .filter(row=>Number(row.lessonDelta||0)!==0)
-    .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||studentIds.has(String(row.studentId||'')))
+    .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||purchaseIds.has(String(row.purchaseId||'')))
     .reduce((sum,row)=>{
       const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
       const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
       const lessonDelta=Math.abs(Number(row.lessonDelta)||0);
       const totalLessons=Math.max(1,Number(entitlement.totalLessons)||Number(purchase.packageLessons)||lessonDelta||1);
-      const amountPaid=Number(purchase.finalAmount??purchase.amountPaid??0)||0;
+      const amountPaid=Number(purchase.amountPaid??purchase.finalAmount??0)||0;
       if(!amountPaid||!lessonDelta)return sum;
       const sign=Number(row.lessonDelta||0)>0?-1:1;
       return sum+(Math.round((amountPaid/totalLessons)*lessonDelta*100)/100)*sign;
