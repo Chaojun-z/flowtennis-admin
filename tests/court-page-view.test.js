@@ -152,5 +152,11 @@ assert.match(html, /function openCourtMergeModal\(/, 'court page should expose a
 assert.match(html, /function renderCourtMergeTargetOptions\(/, 'court page should expose merge target filtering by search');
 assert.match(html, /id="mergeCourtSearch"[^>]*placeholder="搜索姓名"[^>]*oninput="renderCourtMergeTargetOptions\(\)"/, 'merge modal should support searching target users by name');
 assert.match(html, /function mergeCourtUsers\(/, 'court page should expose a merge submit handler');
+assert.match(html, /function applyCourtMergeResult\(/, 'court merge should apply API result to local page state immediately');
+assert.match(fnBody('mergeCourtUsers'), /const result=await apiCall\('POST','\/courts\/merge'/, 'court merge should keep the API result');
+assert.match(fnBody('mergeCourtUsers'), /applyCourtMergeResult\(result,sourceCourtId,targetCourtId\)/, 'court merge should patch local state before refreshing cached page data');
+assert.match(fnBody('mergeCourtUsers'), /renderCourts\(\);[\s\S]*loadPageDataAndRender\('courts',\{quiet:true,force:true\}\)\.catch/, 'court merge should redraw immediately and refresh cached data in the background');
+assert.match(fnBody('applyCourtMergeResult'), /courtAccountListViewData\.items=courtAccountListViewData\.items/, 'court merge should patch read-model items as well as raw courts');
+assert.match(fnBody('applyCourtMergeResult'), /removedCourtId\|\|sourceCourtId/, 'court merge should hide the source row even when the backend archives instead of deletes');
 
 console.log('court page view tests passed');

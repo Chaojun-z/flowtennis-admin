@@ -926,6 +926,49 @@ function openCourtMergeModal(courtId){
   setCourtModalFrame(`合并订场用户 · ${sourceCourt.name}`,body,footer,'modal-tight');
   renderCourtMergeTargetOptions();
 }
+function applyCourtMergeResult(result={},sourceCourtId='',targetCourtId=''){
+  const targetCourt=result.targetCourt||null;
+  const removedCourtId=result.removedCourtId||sourceCourtId;
+  if(targetCourt?.id){
+    const i=courts.findIndex(c=>String(c.id)===String(targetCourt.id));
+    if(i>=0)courts[i]=targetCourt;
+    else courts.unshift(targetCourt);
+  }
+  courts=courts.map(c=>String(c.id)===String(removedCourtId)?{...c,status:'inactive',mergedIntoCourtId:targetCourt?.id||targetCourtId}:c);
+  if(result.removedCourtId)courts=courts.filter(c=>String(c.id)!==String(result.removedCourtId));
+  if(courtAccountListViewData?.items){
+    courtAccountListViewData.items=courtAccountListViewData.items.filter(item=>String(item.id)!==String(removedCourtId)).map(item=>{
+      if(String(item.id)!==String(targetCourt?.id||targetCourtId))return item;
+      const f=targetCourt?courtFinanceLocal(targetCourt):null;
+      const b=targetCourt?courtBookingSummary(targetCourt):null;
+      return {
+        ...item,
+        displayName:targetCourt?courtDisplayName(targetCourt):item.displayName,
+        phone:targetCourt?.phone||item.phone,
+        campusCode:targetCourt?.campus||item.campusCode,
+        campusName:targetCourt?cn(targetCourt.campus):item.campusName,
+        owner:targetCourt?.owner||item.owner,
+        familiarity:targetCourt?.familiarity||item.familiarity,
+        depositAttitude:targetCourt?.depositAttitude||item.depositAttitude,
+        recentFollowUpDate:targetCourt?.recentFollowUpDate||item.recentFollowUpDate,
+        nextFollowUpDate:targetCourt?.nextFollowUpDate||item.nextFollowUpDate,
+        notesSummary:targetCourt?.notes||item.notesSummary,
+        bookingCount:b?.count??item.bookingCount,
+        bookingAmount:b?.amount??item.bookingAmount,
+        lastBookingDate:b?.lastDate??item.lastBookingDate,
+        balance:f?.balance??item.balance,
+        totalDeposit:f?.totalDeposit??item.totalDeposit,
+        totalSpent:f?.spentAmount??item.totalSpent,
+        totalReceived:f?.receivedAmount??item.totalReceived,
+        lowBalance:f?f.balance>0&&f.balance<=500:item.lowBalance,
+        updatedAt:targetCourt?.updatedAt||item.updatedAt
+      };
+    });
+    courtAccountListViewData.summary=summarizeCourtAccountListItems(courtAccountListViewData.items);
+    window.__courtAccountListViewData=courtAccountListViewData;
+  }
+  selectedCourtIds.delete(removedCourtId);
+}
 async function mergeCourtUsers(sourceCourtId){
   const targetCourtId=document.getElementById('merge_targetCourtId')?.value||'';
   const deleteSource=document.getElementById('merge_deleteSource')?.checked===true;
@@ -937,9 +980,11 @@ async function mergeCourtUsers(sourceCourtId){
   const btn=document.getElementById('courtMergeBtn');
   if(btn){btn.disabled=true;btn.textContent='合并中…';}
   try{
-    await apiCall('POST','/courts/merge',{sourceCourtId,targetCourtId,deleteSource});
+    const result=await apiCall('POST','/courts/merge',{sourceCourtId,targetCourtId,deleteSource});
+    applyCourtMergeResult(result,sourceCourtId,targetCourtId);
     closeModal();
-    await loadPageDataAndRender('courts',{quiet:true,force:true});
+    renderCourts();
+    loadPageDataAndRender('courts',{quiet:true,force:true}).catch(e=>console.warn('court merge background refresh failed',e));
     toast(deleteSource?'合并成功，原用户已删除':'合并成功，原用户已隐藏','success');
   }catch(e){
     toast('合并失败：'+e.message,'error');
