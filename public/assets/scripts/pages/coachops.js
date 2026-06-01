@@ -552,7 +552,7 @@ function financeCoursePackageMetrics(rows=[],overview=null){
   const courseRows=businessRows.filter(row=>row.businessType==='课程'||row.sourceBusinessCategory==='课程');
   if(courseRows.length){
     const packageReceiptRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||row.relatedDocument||'').startsWith('购买记录'));
-    const packageRecognizedRows=courseRows.filter(row=>['消耗','回退'].includes(row.action)&&String(row.paymentChannel||row.payMethod||'')==='课包划扣');
+    const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(row.action)&&String(row.paymentChannel||row.payMethod||'')==='课包划扣');
     const directRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||row.relatedDocument||'').startsWith('排课'));
     const sum=(list,field)=>Math.round(list.reduce((total,row)=>total+(Number(row[field])||0),0)*100)/100;
     const packageIncome=sum(packageReceiptRows,'cashDelta')||sum(packageReceiptRows,'actualAmount');
@@ -573,14 +573,16 @@ function financeCoursePackageMetrics(rows=[],overview=null){
   const packageRecognized=Number(overview?.packageRecognized||0);
   const courseIncome=Number(overview?.courseIncome||overview?.packageIncome||0);
   const courseRecognized=Number(overview?.courseRecognized||overview?.packageRecognized||0);
+  const directCourseIncome=Number(overview?.directCourseIncome??Math.max(0,courseIncome-packageIncome));
+  const directCourseRecognized=Number(overview?.directCourseRecognized??Math.max(0,courseRecognized-packageRecognized));
   return {
     courseIncome,
     courseRecognized,
     packageIncome,
     packageRecognized,
     packageDeferred:Math.round((packageIncome-packageRecognized)*100)/100,
-    directIncome:0,
-    directRecognized:0
+    directIncome:directCourseIncome,
+    directRecognized:directCourseRecognized
   };
 }
 function financeAmountText(value){
@@ -1136,26 +1138,25 @@ function renderFinanceOverview(){
   const rows=overview?[]:financeLedgerRows();
   const businessRows=rows.filter(row=>!row.differenceReason);
   const positiveCashRows=businessRows.filter(row=>Number(row.cashDelta)>0);
-  const cash=overview?Number(overview.cash||0):positiveCashRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const recognized=overview?Number(overview.recognized||0):businessRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const deferred=overview?Number(overview.deferred||0):(cash-recognized);
   const courseMetrics=financeCoursePackageMetrics(financeUnifiedRows(),overview);
   const storedValueIncome=overview?Number(overview.storedValueIncome||0):positiveCashRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const storedValueRecognized=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const bookingIncome=positiveCashRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const bookingRecognized=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const finalStoredValueRecognized=overview?Number(overview.storedValueConsumed||0):storedValueRecognized;
   const finalBookingIncome=overview?Number(overview.bookingIncome||0):bookingIncome;
-  const finalBookingRecognized=overview?Number(overview.bookingRecognized||0):bookingRecognized;
+  const directCourseIncome=Number(courseMetrics.directIncome||0);
+  const directCourseRecognized=Number(courseMetrics.directRecognized||0);
+  const packageIncome=Number(courseMetrics.packageIncome||0);
+  const packageRecognized=Number(courseMetrics.packageRecognized||0);
+  const totalCash=directCourseIncome+packageIncome+storedValueIncome+finalBookingIncome;
+  const totalRecognized=directCourseRecognized+packageRecognized+finalStoredValueRecognized+finalBookingIncome;
   const renderStatCards=items=>items.map(item=>`<div class="tms-stat-card"><div class="tms-stat-label">${item.label}</div><div class="tms-stat-value${item.split?' finance-split-value':''}">${item.value}</div></div>`).join('');
   primaryHost.innerHTML=renderStatCards([
-    {label:'总收入（实收）',value:financeCardValue(cash)},
-    {label:'总已入账',value:financeCardValue(recognized)},
-    {label:'总未入账',value:financeCardValue(deferred)},
-    {label:'课程总收入 / 已入账',value:financeCardValue(courseMetrics.courseIncome,courseMetrics.courseRecognized),split:true},
-    {label:'课包收入 / 已核销',value:financeCardValue(courseMetrics.packageIncome,courseMetrics.packageRecognized),split:true},
+    {label:'实收 / 已入账',value:financeCardValue(totalCash,totalRecognized),split:true},
+    {label:'课程收入',value:financeCardValue(directCourseIncome)},
+    {label:'课包收入 / 已核销',value:financeCardValue(packageIncome,packageRecognized),split:true},
     {label:'会员收入 / 已入账',value:financeCardValue(storedValueIncome,finalStoredValueRecognized),split:true},
-    {label:'订场收入 / 已入账',value:financeCardValue(finalBookingIncome,finalBookingRecognized),split:true}
+    {label:'散客订场',value:financeCardValue(finalBookingIncome)}
   ]);
   secondaryHost.innerHTML='';
   secondaryHost.style.display='none';

@@ -130,8 +130,10 @@ assert.strictEqual(directIncome.deferredRevenueDelta, 0, 'direct paid schedule s
 assert.strictEqual(directIncome.paymentChannel, '大众点评券码', 'direct paid schedule should keep payment method');
 assert.strictEqual(directScheduleSnapshot.financeNormalizedRows.some(row=>row.sourceDocument==='排课 sch-gift-1'), false, 'gift schedule should not create finance rows');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseIncome, 99, 'course total income should include direct paid schedules');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.directCourseIncome, 99, 'direct course income should include only non-package paid schedules');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageIncome, 0, 'package income should not include direct paid schedules');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseRecognized, 99, 'course recognized should include direct paid schedules');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.directCourseRecognized, 99, 'direct course recognized should include only non-package paid schedules');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageRecognized, 0, 'package recognized should stay package-only');
 
 const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
@@ -375,6 +377,8 @@ assert.strictEqual(directScheduleMerged.overviewData.all.cash, 1099, 'direct pai
 assert.strictEqual(directScheduleMerged.overviewData.all.recognized, 299, 'direct paid schedule should add recognized income');
 assert.strictEqual(directScheduleMerged.overviewData.all.courseIncome, 1099, 'direct paid schedule should add course income bucket');
 assert.strictEqual(directScheduleMerged.overviewData.all.courseRecognized, 299, 'direct paid schedule should add course recognized bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.directCourseIncome, 99, 'direct paid schedule should update direct course income bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.directCourseRecognized, 99, 'direct paid schedule should update direct course recognized bucket');
 assert.strictEqual(directScheduleMerged.overviewData.all.packageIncome, 1000, 'direct paid schedule should not add package-only income');
 assert.strictEqual(directScheduleMerged.overviewData.all.packageRecognized, 200, 'direct paid schedule should not add package-only recognized income');
 assert.strictEqual(directScheduleMerged.overviewData.all.tradeCount, 11, 'direct paid schedule should add one trade');

@@ -111,6 +111,7 @@ const derived = snapshot.buildDailyFinanceSnapshot({
       id: 'course-receipt',
       businessType: '课程',
       action: '收款',
+      sourceDocument: '购买记录 purchase-1',
       cashDelta: 1000,
       recognizedRevenueDelta: 0,
       deferredRevenueDelta: 1000
@@ -118,9 +119,18 @@ const derived = snapshot.buildDailyFinanceSnapshot({
       id: 'course-consume',
       businessType: '课程',
       action: '消耗',
+      paymentChannel: '课包划扣',
       cashDelta: 0,
       recognizedRevenueDelta: 100,
       deferredRevenueDelta: -100
+    }, {
+      id: 'direct-course-receipt',
+      businessType: '课程',
+      action: '收款',
+      sourceDocument: '排课 schedule-1',
+      cashDelta: 99,
+      recognizedRevenueDelta: 99,
+      deferredRevenueDelta: 0
     }, {
       id: 'court-receipt',
       businessType: '散客订场',
@@ -132,9 +142,13 @@ const derived = snapshot.buildDailyFinanceSnapshot({
   }
 });
 assert.deepStrictEqual(derived.summary.financeOverview, {
-  cash: 1200,
-  recognized: 300,
+  cash: 1299,
+  recognized: 399,
   deferred: 900,
+  courseIncome: 1099,
+  courseRecognized: 199,
+  directCourseIncome: 99,
+  directCourseRecognized: 99,
   packageIncome: 1000,
   packageRecognized: 100,
   storedValueIncome: 0,
@@ -143,7 +157,7 @@ assert.deepStrictEqual(derived.summary.financeOverview, {
   bookingRecognized: 200,
   courtIncome: 200,
   courtRecognized: 200,
-  tradeCount: 2
+  tradeCount: 3
 });
 
 const outputPath = snapshot.buildSnapshotOutputPath({

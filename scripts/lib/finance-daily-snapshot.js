@@ -81,6 +81,9 @@ function sumRows(rows, predicate, field) {
 function deriveFinanceOverviewFromRows(rows) {
   const businessRows = normalizeRows(rows).filter((row) => !row?.differenceReason);
   const courseRows = businessRows.filter((row) => row.businessType === '课程');
+  const packageReceiptRows = courseRows.filter((row) => row.action === '收款' && String(row.sourceDocument || '').startsWith('购买记录'));
+  const packageRecognizedRows = courseRows.filter((row) => ['消耗', '回退', '已入账'].includes(String(row.action || '')) && String(row.paymentChannel || '') === '课包划扣');
+  const directCourseRows = courseRows.filter((row) => row.action === '收款' && String(row.sourceDocument || '').startsWith('排课'));
   const storedValueRows = businessRows.filter((row) => row.businessType === '会员储值');
   const storedValueConsumedRows = businessRows.filter((row) => row.businessType === '会员订场');
   const bookingRows = businessRows.filter((row) => ['散客订场', '约球局'].includes(row.businessType));
@@ -91,8 +94,12 @@ function deriveFinanceOverviewFromRows(rows) {
     cash: sumRows(businessRows, () => true, 'cashDelta'),
     recognized: sumRows(businessRows, () => true, 'recognizedRevenueDelta'),
     deferred: sumRows(businessRows, () => true, 'deferredRevenueDelta'),
-    packageIncome: sumRows(courseRows, () => true, 'cashDelta'),
-    packageRecognized: sumRows(courseRows, () => true, 'recognizedRevenueDelta'),
+    courseIncome: sumRows(courseRows, () => true, 'cashDelta'),
+    courseRecognized: sumRows(courseRows, () => true, 'recognizedRevenueDelta'),
+    directCourseIncome: sumRows(directCourseRows, () => true, 'cashDelta'),
+    directCourseRecognized: sumRows(directCourseRows, () => true, 'recognizedRevenueDelta'),
+    packageIncome: sumRows(packageReceiptRows, () => true, 'cashDelta'),
+    packageRecognized: sumRows(packageRecognizedRows, () => true, 'recognizedRevenueDelta'),
     storedValueIncome: sumRows(storedValueRows, () => true, 'cashDelta'),
     storedValueConsumed: sumRows(storedValueConsumedRows, () => true, 'recognizedRevenueDelta'),
     bookingIncome,

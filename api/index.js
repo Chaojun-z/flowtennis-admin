@@ -4287,6 +4287,7 @@ function buildFinanceOverviewDataFromRows(rows=[]){
   const courseRows=businessRows.filter(row=>row.businessType==='课程');
   const packageReceiptRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('购买记录'));
   const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(String(row.action||''))&&String(row.paymentChannel||'')==='课包划扣');
+  const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
   const storedValueRows=businessRows.filter(row=>row.businessType==='会员储值');
   const storedValueConsumedRows=businessRows.filter(row=>row.businessType==='会员订场');
   const bookingRows=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType));
@@ -4299,6 +4300,8 @@ function buildFinanceOverviewDataFromRows(rows=[]){
       deferred:sumFinanceRows(businessRows,'deferredRevenueDelta'),
       courseIncome:sumFinanceRows(courseRows,'cashDelta'),
       courseRecognized:sumFinanceRows(courseRows,'recognizedRevenueDelta'),
+      directCourseIncome:sumFinanceRows(directCourseRows,'cashDelta'),
+      directCourseRecognized:sumFinanceRows(directCourseRows,'recognizedRevenueDelta'),
       packageIncome:sumFinanceRows(packageReceiptRows,'cashDelta'),
       packageRecognized:sumFinanceRows(packageRecognizedRows,'recognizedRevenueDelta'),
       storedValueIncome:sumFinanceRows(storedValueRows,'cashDelta'),
@@ -4387,8 +4390,11 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const courseRows=businessRows.filter(row=>row.businessType==='课程');
   const packageReceiptRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('购买记录'));
   const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(String(row.action||''))&&String(row.paymentChannel||'')==='课包划扣');
+  const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
   const courseCashDelta=courseRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const courseRecognizedDelta=courseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const directCourseCashDelta=directCourseRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const directCourseRecognizedDelta=directCourseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const packageCashDelta=packageReceiptRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const packageRecognizedDelta=packageRecognizedRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const storedValueCashDelta=businessRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
@@ -4402,6 +4408,8 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   all.deferred=roundMoney((Number(all.deferred)||0)+deferredDelta);
   all.courseIncome=roundMoney((Number(all.courseIncome??all.packageIncome)||0)+courseCashDelta);
   all.courseRecognized=roundMoney((Number(all.courseRecognized??all.packageRecognized)||0)+courseRecognizedDelta);
+  all.directCourseIncome=roundMoney((Number(all.directCourseIncome)||0)+directCourseCashDelta);
+  all.directCourseRecognized=roundMoney((Number(all.directCourseRecognized)||0)+directCourseRecognizedDelta);
   all.packageIncome=roundMoney((Number(all.packageIncome)||0)+packageCashDelta);
   all.packageRecognized=roundMoney((Number(all.packageRecognized)||0)+packageRecognizedDelta);
   all.storedValueIncome=roundMoney((Number(all.storedValueIncome)||0)+storedValueCashDelta);
@@ -4464,6 +4472,8 @@ function loadVerifiedFinanceArtifacts(campuses=[]){
   const storedValueConsumed=Number(raw?.['分来源汇总']?.['储值扣款已入账']?.['金额']||0);
   const packageRecognized=82773.33;
   const bookingRecognized=255038;
+  const directCourseIncome=0;
+  const directCourseRecognized=0;
   const cash=packageIncome+bookingIncome+storedValueIncome;
   const recognized=packageRecognized+storedValueConsumed+bookingRecognized;
   const deferred=Math.max(0,cash-recognized);
@@ -4545,6 +4555,10 @@ function loadVerifiedFinanceArtifacts(campuses=[]){
         cash,
         recognized,
         deferred,
+        courseIncome:packageIncome,
+        courseRecognized:packageRecognized,
+        directCourseIncome,
+        directCourseRecognized,
         packageIncome,
         packageRecognized,
         storedValueIncome,
