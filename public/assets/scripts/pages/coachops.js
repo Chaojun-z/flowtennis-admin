@@ -571,9 +571,11 @@ function financeCoursePackageMetrics(rows=[],overview=null){
   }
   const packageIncome=Number(overview?.packageIncome||0);
   const packageRecognized=Number(overview?.packageRecognized||0);
+  const courseIncome=Number(overview?.courseIncome||overview?.packageIncome||0);
+  const courseRecognized=Number(overview?.courseRecognized||overview?.packageRecognized||0);
   return {
-    courseIncome:packageIncome,
-    courseRecognized:packageRecognized,
+    courseIncome,
+    courseRecognized,
     packageIncome,
     packageRecognized,
     packageDeferred:Math.round((packageIncome-packageRecognized)*100)/100,

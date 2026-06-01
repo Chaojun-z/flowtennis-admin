@@ -129,6 +129,72 @@ assert.strictEqual(directIncome.recognizedRevenueDelta, 99, 'direct paid schedul
 assert.strictEqual(directIncome.deferredRevenueDelta, 0, 'direct paid schedule should not create deferred revenue');
 assert.strictEqual(directIncome.paymentChannel, '大众点评券码', 'direct paid schedule should keep payment method');
 assert.strictEqual(directScheduleSnapshot.financeNormalizedRows.some(row=>row.sourceDocument==='排课 sch-gift-1'), false, 'gift schedule should not create finance rows');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseIncome, 99, 'course total income should include direct paid schedules');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageIncome, 0, 'package income should not include direct paid schedules');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseRecognized, 99, 'course recognized should include direct paid schedules');
+assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageRecognized, 0, 'package recognized should stay package-only');
+
+const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  students:[{ id:'stu-voided', campus:'mabao' }],
+  purchases:[{
+    id:'purchase-voided',
+    studentId:'stu-voided',
+    studentName:'作废课包',
+    packageName:'成人10节课包',
+    amountPaid:5000,
+    purchaseDate:'2026-06-01',
+    payMethod:'微信',
+    status:'voided'
+  },{
+    id:'purchase-active',
+    studentId:'stu-voided',
+    studentName:'有效课包',
+    packageName:'成人10节课包',
+    amountPaid:3500,
+    purchaseDate:'2026-06-01',
+    payMethod:'微信',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'ent-voided',
+    purchaseId:'purchase-voided',
+    studentId:'stu-voided',
+    studentName:'作废课包',
+    packageName:'成人10节课包',
+    totalLessons:10,
+    remainingLessons:10,
+    status:'voided',
+    campusIds:['mabao']
+  },{
+    id:'ent-active',
+    purchaseId:'purchase-active',
+    studentId:'stu-voided',
+    studentName:'有效课包',
+    packageName:'成人10节课包',
+    totalLessons:10,
+    remainingLessons:10,
+    status:'active',
+    campusIds:['mabao']
+  }],
+  entitlementLedger:[{
+    id:'ledger-voided-marker',
+    entitlementId:'ent-voided',
+    purchaseId:'purchase-voided',
+    studentId:'stu-voided',
+    lessonDelta:0,
+    action:'void_purchase',
+    relatedDate:'2026-06-01',
+    createdAt:'2026-06-01T10:00:00.000Z'
+  }],
+  courts:[],
+  schedule:[]
+});
+
+assert.strictEqual(voidedPurchaseSnapshot.financeOverviewData.all.packageIncome, 3500, 'voided package purchases must not count in package income');
+assert.strictEqual(voidedPurchaseSnapshot.financeOverviewData.all.courseIncome, 3500, 'course total income should only include active package purchase here');
+assert.strictEqual(voidedPurchaseSnapshot.financeOverviewData.all.tradeCount, 1, 'voided package purchase should not count as a trade');
+assert.strictEqual(voidedPurchaseSnapshot.financeNormalizedRows.some(row=>String(row.sourceDocument||'').includes('purchase-voided')), false, 'voided package purchase should not create finance receipt rows');
 
 const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
@@ -279,8 +345,10 @@ const merged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
 
 assert.strictEqual(merged.normalizedRows.length, 3, 'verified finance should keep base rows and append only import increment receipt/consume rows');
 assert.strictEqual(merged.overviewData.all.cash, 5000, 'finance import increment should add course cash income');
+assert.strictEqual(merged.overviewData.all.courseIncome, 5000, 'finance import increment should add course total income');
 assert.strictEqual(merged.overviewData.all.packageIncome, 5000, 'finance import increment should add package income');
 assert.strictEqual(merged.overviewData.all.recognized, 600, 'finance import increment should add recognized course income');
+assert.strictEqual(merged.overviewData.all.courseRecognized, 600, 'finance import increment should add course recognized income');
 assert.strictEqual(merged.overviewData.all.packageRecognized, 600, 'finance import increment should add package recognized income');
 assert.strictEqual(merged.overviewData.all.deferred, 4400, 'finance import increment should add remaining deferred income');
 assert.strictEqual(merged.overviewData.all.tradeCount, 11, 'finance import increment should add purchase trade count');
@@ -305,8 +373,10 @@ const directScheduleMerged = _test.buildVerifiedFinanceWithImportIncrements(veri
 
 assert.strictEqual(directScheduleMerged.overviewData.all.cash, 1099, 'direct paid schedule should add total cash income');
 assert.strictEqual(directScheduleMerged.overviewData.all.recognized, 299, 'direct paid schedule should add recognized income');
-assert.strictEqual(directScheduleMerged.overviewData.all.packageIncome, 1099, 'direct paid schedule should add course income bucket');
-assert.strictEqual(directScheduleMerged.overviewData.all.packageRecognized, 299, 'direct paid schedule should add course recognized bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.courseIncome, 1099, 'direct paid schedule should add course income bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.courseRecognized, 299, 'direct paid schedule should add course recognized bucket');
+assert.strictEqual(directScheduleMerged.overviewData.all.packageIncome, 1000, 'direct paid schedule should not add package-only income');
+assert.strictEqual(directScheduleMerged.overviewData.all.packageRecognized, 200, 'direct paid schedule should not add package-only recognized income');
 assert.strictEqual(directScheduleMerged.overviewData.all.tradeCount, 11, 'direct paid schedule should add one trade');
 
 const membershipMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {

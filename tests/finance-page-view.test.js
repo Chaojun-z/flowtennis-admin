@@ -42,6 +42,8 @@ assert.match(source,/总收入（实收）[\s\S]*总已入账[\s\S]*总未入账
 assert.doesNotMatch(source,/总流水笔数/,'ledger summary should not keep total flow count card');
 assert.match(source,/课程总收入 \/ 已入账[\s\S]*课包收入 \/ 已核销[\s\S]*会员收入 \/ 已入账[\s\S]*订场收入 \/ 已入账/,'ledger summary should split course total from package-only revenue');
 assert.match(source,/function financeCoursePackageMetrics\(/,'finance page should centralize course/package metric splitting');
+assert.match(source,/courseIncome=Number\(overview\?\.courseIncome\|\|overview\?\.packageIncome\|\|0\)/,'finance page should prefer backend course total income when available');
+assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
 assert.match(source,/课程总收入[\s\S]*课包收入[\s\S]*订场收入[\s\S]*会员储值/,'revenue stats should show course total and package-only income separately');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
