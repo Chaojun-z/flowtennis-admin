@@ -852,12 +852,13 @@ function renderFinanceRevenueReport(){
   const courseMetrics=financeCoursePackageMetrics(financeUnifiedRows(),overview);
   const finalCourseIncome=courseMetrics.courseIncome||courseIncome;
   const finalPackageIncome=courseMetrics.packageIncome||courseIncome;
+  const finalDirectCourseIncome=courseMetrics.directIncome||Math.max(0,finalCourseIncome-finalPackageIncome);
   const finalBookingIncome=overview?Number(overview.bookingIncome||0):bookingIncome;
   const finalStoredValueIncome=overview?Number(overview.storedValueIncome||0):storedValueIncome;
   stats.innerHTML=[
     ['成交笔数',overview?Number(overview.tradeCount||0):rows.length,'笔'],
     ['实收合计',`¥${fmt(finalTotalIncome)}`,''],
-    ['课程总收入',`¥${fmt(finalCourseIncome)}`,''],
+    ['课程收入',`¥${fmt(finalDirectCourseIncome)}`,''],
     ['课包收入',`¥${fmt(finalPackageIncome)}`,''],
     ['订场收入',`¥${fmt(finalBookingIncome)}`,''],
     ['会员储值',`¥${fmt(finalStoredValueIncome)}`,''],

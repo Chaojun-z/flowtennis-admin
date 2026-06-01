@@ -46,7 +46,9 @@ assert.match(source,/courseIncome=Number\(overview\?\.courseIncome\|\|overview\?
 assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome/,'finance page should read direct course income separately from package income');
 assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome\)\|\|Math\.max\(0,courseIncome-packageIncome\)/,'finance page should fall back to course minus package when backend direct course field is stale zero');
 assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
-assert.match(source,/课程总收入[\s\S]*课包收入[\s\S]*订场收入[\s\S]*会员储值/,'revenue stats should show course total and package-only income separately');
+assert.match(source,/finalDirectCourseIncome=courseMetrics\.directIncome\|\|Math\.max\(0,finalCourseIncome-finalPackageIncome\)/,'revenue stats should derive direct course income separately from package income');
+assert.match(source,/课程收入[\s\S]*课包收入[\s\S]*订场收入[\s\S]*会员储值/,'revenue stats should show direct course and package-only income separately');
+assert.doesNotMatch(source,/\['课程总收入'/,'revenue stats should not label package-inclusive course income as course revenue');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/const businessRows=rows\.filter\(row=>!row\.differenceReason\);[\s\S]*const diffRows=rows\.filter\(row=>row\.differenceReason\);[\s\S]*bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category and split diff rows');
