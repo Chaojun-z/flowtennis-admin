@@ -13,6 +13,11 @@ assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[/, '线索池应定
 assert.match(apiSource, /const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=\[/, '线索跟进列表应定义轻投影字段，避免继续全量扫描 followups');
 assert.match(apiSource, /const ADMIN_USER_LIST_PROJECTION_FIELDS=\[/, '账号管理应定义首屏轻投影字段，避免继续全量扫描 users 大对象');
 assert.match(apiSource, /const SCHEDULE_LIST_PROJECTION_FIELDS=\[/, '排课表应定义首屏轻投影字段，避免继续全量扫描 schedule 大对象');
+assert.match(
+  apiSource,
+  /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'settlementType'[\s\S]*'paidAmount'[\s\S]*'payMethod'[\s\S]*\];/,
+  '排课轻投影必须包含直接收款字段，否则财务页课程收入会被算成 0'
+);
 
 assert.match(
   apiSource,
