@@ -30,10 +30,10 @@ function venueOpts(sel){
 }
 const COACHES_LIST=['Siren','朝珺','Rive 天昊','晓哲'];
 const COACH_NAME_ALIAS_MAP={
-  '沙琪儿':'Siren','siren':'Siren','Siren':'Siren',
-  '朝珺':'朝珺','甄朝珺':'朝珺','chaojun':'朝珺',
-  'Rive':'Rive 天昊','rive':'Rive 天昊','天昊':'Rive 天昊','Rive 天昊':'Rive 天昊',
-  '晓哲教练':'晓哲','晓哲':'晓哲'
+  '沙琪儿':'Siren 教练','siren':'Siren 教练','Siren':'Siren 教练',
+  '朝珺':'朝珺教练','甄朝珺':'朝珺教练','chaojun':'朝珺教练',
+  'Rive':'Rive 天昊教练','rive':'Rive 天昊教练','天昊':'Rive 天昊教练','Rive 天昊':'Rive 天昊教练',
+  '晓哲':'晓哲教练'
 };
 const COACH_OPS_ORDER_STORAGE_KEY='ft_coach_ops_order';
 function canonicalCoachName(v){

@@ -9,13 +9,13 @@ const context = { Date };
 vm.createContext(context);
 vm.runInContext(constantsSource, context, { filename: 'constants.js' });
 
-assert.strictEqual(context.coachName('沙琪儿'), 'Siren');
-assert.strictEqual(context.coachName('siren'), 'Siren');
-assert.strictEqual(context.coachName('甄朝珺'), '朝珺');
-assert.strictEqual(context.coachName('chaojun'), '朝珺');
-assert.strictEqual(context.coachName('天昊'), 'Rive 天昊');
-assert.strictEqual(context.coachName('rive'), 'Rive 天昊');
-assert.strictEqual(context.coachName('晓哲教练'), '晓哲');
+assert.strictEqual(context.coachName('沙琪儿'), 'Siren 教练');
+assert.strictEqual(context.coachName('siren'), 'Siren 教练');
+assert.strictEqual(context.coachName('甄朝珺'), '朝珺教练');
+assert.strictEqual(context.coachName('chaojun'), '朝珺教练');
+assert.strictEqual(context.coachName('天昊'), 'Rive 天昊教练');
+assert.strictEqual(context.coachName('rive'), 'Rive 天昊教练');
+assert.strictEqual(context.coachName('晓哲'), '晓哲教练');
 
 assert.match(appSource, /function canonicalCoachName\(/, 'frontend should expose one coach display normalizer');
 assert.match(appSource, /function studentPrimaryCoachText\([\s\S]*coachName\(stu\?\.primaryCoach\)/, 'student primary coach display should normalize legacy names');
