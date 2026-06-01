@@ -154,8 +154,8 @@ function studentPageStats(base){
   const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
   const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
   const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.finalAmount??p.amountPaid??0)||0),0);
-  const recognized=dedupeEntitlementLedgerForDisplay(entitlementLedger)
-    .filter(row=>Number(row.lessonDelta||0)<0)
+  const recognized=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))
+    .filter(row=>Number(row.lessonDelta||0)!==0)
     .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||studentIds.has(String(row.studentId||'')))
     .reduce((sum,row)=>{
       const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
@@ -164,7 +164,8 @@ function studentPageStats(base){
       const totalLessons=Math.max(1,Number(entitlement.totalLessons)||Number(purchase.packageLessons)||lessonDelta||1);
       const amountPaid=Number(purchase.finalAmount??purchase.amountPaid??0)||0;
       if(!amountPaid||!lessonDelta)return sum;
-      return sum+Math.round((amountPaid/totalLessons)*lessonDelta*100)/100;
+      const sign=Number(row.lessonDelta||0)>0?-1:1;
+      return sum+(Math.round((amountPaid/totalLessons)*lessonDelta*100)/100)*sign;
     },0);
   return {
     total:base.length,
@@ -255,7 +256,7 @@ function renderStudents(){
   let list=getSortedStudents(getFilteredStudents());
   const base=getStudentBaseList();
   const stats=studentPageStats(base);
-  document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员数</div><div class="tms-stat-value">${stats.total}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">有课包学员数</div><div class="tms-stat-value">${stats.packageStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(stats.totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">已入账金额</div><div class="tms-stat-value">¥${fmt(stats.recognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包余额</div><div class="tms-stat-value">¥${fmt(stats.packageBalance)}</div></div>`;
+  document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员数</div><div class="tms-stat-value">${stats.total}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">有课包学员数</div><div class="tms-stat-value">${stats.packageStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">课包收入金额</div><div class="tms-stat-value">¥${fmt(stats.totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包已核销</div><div class="tms-stat-value">¥${fmt(stats.recognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包余额</div><div class="tms-stat-value">¥${fmt(stats.packageBalance)}</div></div>`;
   const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
   if(stuPage>pages)stuPage=pages;
   const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);

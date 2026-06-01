@@ -29,8 +29,10 @@ assert.match(source, /发现可能重复的学员：/, 'student save flow should
 assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
-assert.match(source, /学员数[\s\S]*有课包学员数[\s\S]*总收入金额[\s\S]*已入账金额[\s\S]*课包余额/, 'student top stats should use the package finance metric set');
+assert.match(source, /学员数[\s\S]*有课包学员数[\s\S]*课包收入金额[\s\S]*课包已核销[\s\S]*课包余额/, 'student top stats should use explicit package finance wording');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
+assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
+assert.match(source, /const sign=Number\(row\.lessonDelta\|\|0\)>0\?-1:1/, 'student package recognized amount should subtract returned lessons');
 assert.match(source, /packageStudentCount:base\.filter\(s=>studentActiveEntitlementRows\(s\)\.length\)\.length/, 'student stats should summarize students with packages');
 assert.match(source, /function studentStatusMeta\(/, 'student list should compute business status labels');
 assert.match(source, /上课中[\s\S]*待转化[\s\S]*沉默30天[\s\S]*仅订场[\s\S]*无班次/, 'student status labels should cover the agreed business states');
