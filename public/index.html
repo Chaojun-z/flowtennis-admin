@@ -13,7 +13,7 @@
 <title>FlowTennis 网球兄弟工作台</title>
 <link rel="stylesheet" href="/assets/styles/base.css?v=20260508-finance-ledger-v4">
 <link rel="stylesheet" href="/assets/styles/components.css?v=20260508-finance-ledger-v4">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260530-admin-users-standard-v2">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260601-finance-revenue-standard-v1">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -287,7 +287,7 @@
       </div>
       <div id="financeRevenuePanel" class="section-stack" style="display:none">
         <div class="tms-stats-row" id="coachOpsRevenueStats"></div>
-        <div class="tms-toolbar">
+        <div class="tms-toolbar finance-revenue-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -303,7 +303,7 @@
             <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
           </div>
         </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:130px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:220px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:140px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
+        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:150px">收入类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:260px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
           <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeRevenuePagerInfo">共 0 条</span><div id="financeRevenuePageSize"></div></div><div class="tms-page-numbers" id="financeRevenuePagerBtns"></div></div>
         </div>
       </div>
@@ -681,7 +681,7 @@
 <script src="/assets/scripts/core/utils.js?v=20260529-coachops-week-v2"></script>
 <script src="/assets/scripts/core/api.js?v=20260527-student-reminder-reuse-v1"></script>
 <script src="/assets/scripts/core/shell.js?v=20260527-student-reminder-v1"></script>
-<script src="/assets/scripts/core/state.js?v=20260525-leads-campus-line-v1"></script>
+<script src="/assets/scripts/core/state.js?v=20260601-finance-revenue-standard-v1"></script>
 <script src="/assets/scripts/core/bootstrap.js?v=20260530-admin-users-standard-v1"></script>
 <script src="/assets/scripts/pages/admin-users.js?v=20260530-admin-users-standard-v2"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
@@ -695,7 +695,7 @@
 <script src="/assets/scripts/pages/packages.js?v=20260527-package-null-v1"></script>
 <script src="/assets/scripts/pages/purchases.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/coachops.js?v=20260529-coachops-workload-v2"></script>
+<script src="/assets/scripts/pages/coachops.js?v=20260601-finance-revenue-standard-v1"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/courts.js?v=20260522-global-utils-v1"></script>
 <script src="/assets/scripts/pages/matches.js?v=20260508-finance-ledger-v4"></script>

@@ -143,6 +143,16 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-students .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-leads .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-leads .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+#page-finance .finance-revenue-toolbar{margin-bottom:10px}
+#page-finance .finance-revenue-toolbar .tms-filters{gap:8px;flex-wrap:nowrap}
+#page-finance .finance-revenue-toolbar .tms-search-wrapper{width:330px;flex:0 0 330px}
+#page-finance .finance-revenue-toolbar .finance-date-host{flex:0 0 150px;min-width:150px}
+#page-finance .finance-revenue-toolbar .tms-toolbar-right{margin-left:auto}
+#page-finance .finance-revenue-toolbar .tms-btn{height:34px;padding:0 14px;border-radius:6px;font-size:13px}
+#page-finance .finance-revenue-toolbar .tms-dropdown-display{height:34px;border-radius:6px;font-size:13px;font-weight:400}
+#page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
+#page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+#page-finance .finance-revenue-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #page-schedule .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-schedule .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-packages .course-package-showcase-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}

@@ -26,7 +26,11 @@ assert.match(source,/id="financeRevenueTypeFilterHost"/,'revenue table should ex
 assert.match(source,/id="financeRevenuePayMethodFilterHost"/,'revenue table should expose pay method filter host');
 assert.match(source,/renderCourtDropdownHtml\('financeRevenueTypeFilter'/,'revenue type filter should reuse shared dropdown style');
 assert.match(source,/renderCourtDropdownHtml\('financeRevenuePayMethodFilter'/,'revenue pay method filter should reuse shared dropdown style');
-assert.match(source,/日期[\s\S]*星期[\s\S]*时间段[\s\S]*客户[\s\S]*收入类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*收款人[\s\S]*备注[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeRevenueTbody/,'revenue table should follow the manual sheet column order');
+assert.match(source,/日期[\s\S]*星期[\s\S]*时间段[\s\S]*客户[\s\S]*收入类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*收款人[\s\S]*备注[\s\S]*校区[\s\S]*状态[\s\S]*financeRevenueTbody/,'revenue table should follow the owner-facing sheet column order');
+assert.doesNotMatch(source,/financeRevenuePanel[\s\S]{0,3000}关联单据/,'revenue table should not expose internal related document column');
+assert.doesNotMatch(source,/financeRevenueTbody[\s\S]{0,1800}class="tms-sticky-r"/,'revenue rows should not keep a sticky right internal document column');
+assert.match(source,/finance-revenue-toolbar/,'revenue toolbar should use the standardized compact toolbar class');
+assert.match(source,/finance-revenue-remark/,'revenue notes should render as a single-line remark');
 assert.match(source,/确认日期[\s\S]*客户[\s\S]*确认类型[\s\S]*来源项目[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeConsumeTbody/,'consume table should explain where recognized revenue comes from');
 assert.match(source,/业务日期[\s\S]*客户[\s\S]*校区[\s\S]*业务类型[\s\S]*动作[\s\S]*实收[\s\S]*已入账[\s\S]*未入账[\s\S]*支付方式[\s\S]*来源单据[\s\S]*备注[\s\S]*financeLedgerTbody/,'ledger table should use plain-language columns');
 assert.match(source,/courtDateButtonHtml\(id,value,label,handler\)/,'finance date controls should refresh reports after selecting a date');

@@ -352,7 +352,7 @@ function renderPageLoading(pg){
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
   if(pg==='finance'){
     renderTableBodyLoading('financeLedgerTbody',11,'总账加载中...');
-    renderTableBodyLoading('financeRevenueTbody',15,'收入表加载中...');
+    renderTableBodyLoading('financeRevenueTbody',14,'收入表加载中...');
     renderTableBodyLoading('financeConsumeTbody',9,'消耗表加载中...');
     renderTableBodyLoading('financePrepaidTbody',6,'预收余额加载中...');
     renderTableBodyLoading('financeAnomalyTbody',4,'异常检查加载中...');

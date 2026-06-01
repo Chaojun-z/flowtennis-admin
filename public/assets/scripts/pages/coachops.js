@@ -516,7 +516,7 @@ function financeRevenueRowsByFilters(rows){
   return (rows||[]).filter(row=>{
     if(incomeTypeFilter&&row.incomeType!==incomeTypeFilter)return false;
     if(payMethodFilter&&String(row.payMethod||'—')!==payMethodFilter)return false;
-    return searchHit(q,row.studentName,row.incomeType,row.payMethod,row.notes,row.collector,row.campusName,row.relatedDocument,row.revenueCategory);
+    return searchHit(q,row.studentName,row.incomeType,row.payMethod,row.notes,row.collector,row.campusName,row.revenueCategory);
   });
 }
 function renderFinanceRevenueFilterDropdowns(baseRows){
@@ -822,7 +822,7 @@ function renderFinanceRevenueReport(){
     ['会员储值',`¥${fmt(finalStoredValueIncome)}`,''],
     ['差异项',`¥${fmt(diffRows.reduce((sum,row)=>sum+(Number(row.actualAmount)||0),0))}`,'']
   ].map(([label,val,unit])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${val}${unit?`<span>${unit}</span>`:''}</div></div>`).join('');
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.purchaseDate,false)}</td><td>${renderCourtCellText(row.weekdayText,false)}</td><td>${renderCourtCellText(row.timeText,false)}</td><td>${renderCourtCellText(row.studentName,false)}</td><td>${renderCourtCellText(row.incomeType,false)}</td><td>${renderCourtCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderCourtCellText(row.priceDiffReason,false)}</td><td>${renderCourtCellText(row.collector,false)}</td><td><div class="tms-text-remark" title="${esc(row.notes||'')}">${esc(renderCourtEmptyText(row.notes))}</div></td><td>${renderCourtCellText(row.campusName,false)}</td><td><span class="tms-tag ${row.status==='voided'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.systemStatus)}</span></td><td class="tms-sticky-r" style="padding-right:20px">${renderCourtCellText(row.relatedDocument,false)}</td></tr>`).join(''):`<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.purchaseDate,false)}</td><td>${renderCourtCellText(row.weekdayText,false)}</td><td>${renderCourtCellText(row.timeText,false)}</td><td>${renderCourtCellText(row.studentName,false)}</td><td>${renderCourtCellText(row.incomeType,false)}</td><td>${renderCourtCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderCourtCellText(row.priceDiffReason,false)}</td><td>${renderCourtCellText(row.collector,false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(row.notes||'')}">${esc(renderCourtEmptyText(row.notes))}</div></td><td>${renderCourtCellText(row.campusName,false)}</td><td><span class="tms-tag ${row.status==='voided'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.systemStatus)}</span></td></tr>`).join(''):`<tr><td colspan="14"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
 }
 function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))){
   return sourceRows.filter(row=>{
@@ -926,8 +926,8 @@ function renderCoachOpsConsumeReport(){
 }
 function exportCoachOpsRevenueCsv(){
   const rows=financeRevenueRows();
-  let csv='日期,星期,时间,客户,收入类型,支付方式,应收,实收,差价,差价说明,收款人,备注,校区,系统状态,关联单据\n';
-  csv+=rows.map(row=>[row.purchaseDate||'',row.weekdayText||'',row.timeText||'',row.studentName||'',row.incomeType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"','"'+String(row.collector||'').replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"',row.campusName||'',row.systemStatus||'',row.relatedDocument||''].join(',')).join('\n');
+  let csv='日期,星期,时间,客户,收入类型,支付方式,应收,实收,差价,差价说明,收款人,备注,校区,系统状态\n';
+  csv+=rows.map(row=>[row.purchaseDate||'',row.weekdayText||'',row.timeText||'',row.studentName||'',row.incomeType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"','"'+String(row.collector||'').replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"',row.campusName||'',row.systemStatus||''].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_收入表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
