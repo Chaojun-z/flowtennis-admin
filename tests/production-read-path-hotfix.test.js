@@ -46,15 +46,14 @@ assert.match(
 );
 assert.match(
   apiSource,
-  /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*const \[students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\]=await Promise\.all\([\s\S]*getCachedScan\(T_COURTS,\{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\),[\s\S]*getCachedScan\(T_MEMBERSHIP_ACCOUNTS\)\.catch\(\(\)=>\[\]\),[\s\S]*const financeWithIncrements=buildVerifiedFinanceWithImportIncrements\(verifiedFinance,\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeOverviewData:financeWithIncrements\.overviewData,[\s\S]*financeNormalizedRows:financeWithIncrements\.normalizedRows/,
-  '财务总览应保留已核对快照，并叠加已导入课包、会员和马坡订场增量'
+  /const financeSnapshot=buildFinancePageSnapshot\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
+  '财务总览应读取生产业务表完整事实账，避免旧基线加白名单增量造成多口径'
 );
-assert.match(apiSource, /const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';/, '财务页只允许识别私教课导入批次作为快照增量来源');
-assert.match(apiSource, /const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';/, '财务页只允许识别新增会员导入订单作为快照增量来源');
+assert.doesNotMatch(apiSource, /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*buildVerifiedFinanceWithImportIncrements/, '财务页不应继续使用旧基线加白名单增量作为主口径');
 assert.doesNotMatch(apiSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
 assert.match(
   apiSource,
-  /const financeSettlementRows=buildFinanceSettlementRows\(\{campuses,schedule\}\);[\s\S]*financeSettlementRows,/,
+  /const financeSnapshot=buildFinancePageSnapshot\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
   '财务接口应返回基于排课轻投影聚合的教练结算数据'
 );
 

@@ -4230,10 +4230,41 @@ function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){
     .filter(row=>row.lessonUnits>0||row.lateCount>0||row.lateFeeAmount>0)
     .sort((a,b)=>String(b.month||'').localeCompare(String(a.month||''))||String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN'));
 }
+function sumFinanceRows(rows=[],field){
+  return Math.round((rows||[]).reduce((sum,row)=>sum+(Number(row?.[field])||0),0)*100)/100;
+}
+function buildFinanceOverviewDataFromRows(rows=[]){
+  const businessRows=(rows||[]).filter(row=>!row?.differenceReason);
+  const courseRows=businessRows.filter(row=>row.businessType==='课程');
+  const storedValueRows=businessRows.filter(row=>row.businessType==='会员储值');
+  const storedValueConsumedRows=businessRows.filter(row=>row.businessType==='会员订场');
+  const bookingRows=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType));
+  const bookingIncome=sumFinanceRows(bookingRows,'cashDelta');
+  const bookingRecognized=sumFinanceRows(bookingRows,'recognizedRevenueDelta');
+  return {
+    all:{
+      cash:sumFinanceRows(businessRows,'cashDelta'),
+      recognized:sumFinanceRows(businessRows,'recognizedRevenueDelta'),
+      deferred:sumFinanceRows(businessRows,'deferredRevenueDelta'),
+      packageIncome:sumFinanceRows(courseRows,'cashDelta'),
+      packageRecognized:sumFinanceRows(courseRows,'recognizedRevenueDelta'),
+      storedValueIncome:sumFinanceRows(storedValueRows,'cashDelta'),
+      storedValueConsumed:sumFinanceRows(storedValueConsumedRows,'recognizedRevenueDelta'),
+      bookingIncome,
+      bookingRecognized,
+      courtIncome:bookingIncome,
+      courtRecognized:bookingRecognized,
+      tradeCount:businessRows.filter(row=>row.action==='收款'&&Number(row.cashDelta)>0).length
+    },
+    campuses:[]
+  };
+}
 function buildFinancePageSnapshot(source={}){
+  const financeNormalizedRows=buildFinanceUnifiedRows(source);
   return {
     generatedAt:new Date().toISOString(),
-    financeNormalizedRows:buildFinanceUnifiedRows(source),
+    financeOverviewData:buildFinanceOverviewDataFromRows(financeNormalizedRows),
+    financeNormalizedRows,
     financeSettlementRows:buildFinanceSettlementRows(source)
   };
 }
@@ -8777,7 +8808,6 @@ module.exports = async (req, res) => {
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       const campuses=await listCampusesWithDefaults();
-      const verifiedFinance=loadVerifiedFinanceArtifacts(campuses);
       const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule]=await Promise.all([
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_PURCHASES).catch(()=>[]),
@@ -8788,13 +8818,12 @@ module.exports = async (req, res) => {
         getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
         getFinancePageScheduleRows()
       ]);
-      const financeWithIncrements=buildVerifiedFinanceWithImportIncrements(verifiedFinance,{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule});
-      const financeSettlementRows=buildFinanceSettlementRows({campuses,schedule});
+      const financeSnapshot=buildFinancePageSnapshot({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule});
       return sendJson(res,{
         campuses,
-        financeOverviewData:financeWithIncrements.overviewData,
-        financeNormalizedRows:financeWithIncrements.normalizedRows,
-        financeSettlementRows,
+        financeOverviewData:financeSnapshot.financeOverviewData,
+        financeNormalizedRows:financeSnapshot.financeNormalizedRows,
+        financeSettlementRows:financeSnapshot.financeSettlementRows,
         generatedAt:''
       });
     }

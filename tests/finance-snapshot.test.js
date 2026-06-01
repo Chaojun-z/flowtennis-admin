@@ -130,6 +130,75 @@ assert.strictEqual(directIncome.deferredRevenueDelta, 0, 'direct paid schedule s
 assert.strictEqual(directIncome.paymentChannel, '大众点评券码', 'direct paid schedule should keep payment method');
 assert.strictEqual(directScheduleSnapshot.financeNormalizedRows.some(row=>row.sourceDocument==='排课 sch-gift-1'), false, 'gift schedule should not create finance rows');
 
+const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  students:[{ id:'stu-live', campus:'mabao' }],
+  purchases:[{
+    id:'old-live-purchase-now-counts',
+    studentId:'stu-live',
+    studentName:'实时课包',
+    packageName:'成人10节课包',
+    amountPaid:9999,
+    purchaseDate:'2026-04-20',
+    payMethod:'微信',
+    status:'active'
+  },{
+    id:'private_lesson_csv_import_20260519_TEST:purchase:实时导入',
+    studentId:'stu-live',
+    studentName:'实时导入',
+    packageName:'成人10节课包',
+    amountPaid:4000,
+    purchaseDate:'2026-04-23',
+    payMethod:'微信',
+    status:'active'
+  }],
+  entitlements:[{
+    id:'old-live-entitlement-now-counts',
+    purchaseId:'old-live-purchase-now-counts',
+    studentId:'stu-live',
+    studentName:'实时课包',
+    packageName:'成人10节课包',
+    totalLessons:10,
+    remainingLessons:9,
+    campusIds:['mabao']
+  },{
+    id:'private_lesson_csv_import_20260519_TEST:entitlement:实时导入',
+    purchaseId:'private_lesson_csv_import_20260519_TEST:purchase:实时导入',
+    studentId:'stu-live',
+    studentName:'实时导入',
+    packageName:'成人10节课包',
+    totalLessons:10,
+    remainingLessons:9,
+    campusIds:['mabao']
+  }],
+  entitlementLedger:[{
+    id:'old-live-ledger-now-counts',
+    entitlementId:'old-live-entitlement-now-counts',
+    studentId:'stu-live',
+    lessonDelta:-1,
+    relatedDate:'2026-04-30',
+    createdAt:'2026-04-30T10:00:00.000Z'
+  }],
+  courts:[{
+    id:'court-live',
+    name:'实时订场',
+    campus:'mabao',
+    history:[{
+      id:'old-court-history-now-counts',
+      date:'2026-05-22',
+      type:'消费',
+      category:'订场',
+      payMethod:'小程序',
+      amount:180
+    }]
+  }],
+  schedule:[]
+});
+
+assert.strictEqual(realTimeOverviewSnapshot.financeOverviewData.all.packageIncome, 13999, 'finance page overview should count all live package purchases, not only import whitelist increments');
+assert.strictEqual(realTimeOverviewSnapshot.financeOverviewData.all.bookingIncome, 180, 'finance page overview should count all live court finance rows, not only MaPo import whitelist rows');
+assert.strictEqual(realTimeOverviewSnapshot.financeOverviewData.all.tradeCount, 3, 'finance page overview should count live receipt rows from the normalized fact ledger');
+
 const verifiedFinance = {
   overviewData: {
     all: {
