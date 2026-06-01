@@ -573,8 +573,8 @@ function financeCoursePackageMetrics(rows=[],overview=null){
   const packageRecognized=Number(overview?.packageRecognized||0);
   const courseIncome=Number(overview?.courseIncome||overview?.packageIncome||0);
   const courseRecognized=Number(overview?.courseRecognized||overview?.packageRecognized||0);
-  const directCourseIncome=Number(overview?.directCourseIncome??Math.max(0,courseIncome-packageIncome));
-  const directCourseRecognized=Number(overview?.directCourseRecognized??Math.max(0,courseRecognized-packageRecognized));
+  const directCourseIncome=Number(overview?.directCourseIncome)||Math.max(0,courseIncome-packageIncome);
+  const directCourseRecognized=Number(overview?.directCourseRecognized)||Math.max(0,courseRecognized-packageRecognized);
   return {
     courseIncome,
     courseRecognized,

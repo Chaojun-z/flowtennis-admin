@@ -44,6 +44,7 @@ assert.doesNotMatch(source,/总收入（实收）|总已入账|总未入账|课�
 assert.match(source,/function financeCoursePackageMetrics\(/,'finance page should centralize course/package metric splitting');
 assert.match(source,/courseIncome=Number\(overview\?\.courseIncome\|\|overview\?\.packageIncome\|\|0\)/,'finance page should prefer backend course total income when available');
 assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome/,'finance page should read direct course income separately from package income');
+assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome\)\|\|Math\.max\(0,courseIncome-packageIncome\)/,'finance page should fall back to course minus package when backend direct course field is stale zero');
 assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
 assert.match(source,/课程总收入[\s\S]*课包收入[\s\S]*订场收入[\s\S]*会员储值/,'revenue stats should show course total and package-only income separately');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
