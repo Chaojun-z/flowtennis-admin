@@ -136,7 +136,7 @@ function renderMembershipStats(rows=[]){
   const bonusRecognized=Math.round(totalRecognized-realRecognized);
   const pendingReal=Math.max(0,totalIncome-realRecognized);
   const totalAvailable=Math.max(0,totalIncome+totalBonus-totalRecognized);
-  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
+  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span>/</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
   host.innerHTML=[
     splitCard('会员与储值',`${rows.length} 人`,`${validOrders.length} 次`,'会员人数 / 储值次数'),
     splitCard('充值现金池',`¥${fmt(totalIncome)}`,`¥${fmt(totalBonus)}`,'累计实收 / 累计赠送'),
