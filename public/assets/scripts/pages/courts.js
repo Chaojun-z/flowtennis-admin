@@ -748,16 +748,17 @@ function summarizeCourtAccountListItems(items=[]){
     totalBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.bookingAmount)||0),0)
   };
 }
-function courtRatioText(part,total){
+function courtRatioText(part,total,digits=0){
   const safeTotal=Number(total)||0;
   if(safeTotal<=0)return '0%';
-  return `${Math.round(((Number(part)||0)/safeTotal)*100)}%`;
+  const ratio=((Number(part)||0)/safeTotal)*100;
+  return `${Number(ratio.toFixed(digits))}%`;
 }
 function courtStatValuePair(left,right){
   return `<div class="tms-stat-value court-split-value"><span>${left}</span><span class="court-stat-slash">/</span><span>${right}</span></div>`;
 }
-function courtStatPercent(value){
-  return `<span class="court-stat-percent">(${courtRatioText(value.part,value.total)})</span>`;
+function courtStatPercent(value,digits=0){
+  return `<span class="court-stat-percent">(${courtRatioText(value.part,value.total,digits)})</span>`;
 }
 function renderCourtStatsCards(summary={}){
   const totalUsers=Number(summary.totalCount)||0;
@@ -773,11 +774,11 @@ function renderCourtStatsCards(summary={}){
   const card=(title,value,caption,extraClass='')=>`<div class="tms-stat-card court-dashboard-card ${extraClass}"><div class="tms-stat-label">${title}</div>${value}<div class="tms-stat-sub">${caption}</div></div>`;
   document.getElementById('courtStatsRow').classList.add('court-dashboard-stats');
   document.getElementById('courtStatsRow').innerHTML=[
-    card('订场用户结构',courtStatValuePair(`${totalUsers} 人`,`${memberUsers} 人`),'总订场用户 / 会员用户数'),
-    card('场地利用大盘',courtStatValuePair(`${bookingCount} 次`,`${fmt(bookingHours)} 小时`),'总订场次数 / 总订场时长'),
-    card('客群次数对比盘',courtStatValuePair(`${guestBookingCount}次${courtStatPercent({part:guestBookingCount,total:bookingCount})}`,`${memberBookingCount}次${courtStatPercent({part:memberBookingCount,total:bookingCount})}`),'散客次数占比 / 会员次数占比'),
-    card('订场财务大盘',courtStatValuePair(`¥${fmt(totalReceived)}`,`¥${fmt(bookingAmount)}`),'总实收金额 / 实际订场消费','court-stat-wide-left'),
-    card('客群金额对比盘',courtStatValuePair(`¥${fmt(guestBookingAmount)}${courtStatPercent({part:guestBookingAmount,total:bookingAmount})}`,`¥${fmt(memberBookingAmount)}${courtStatPercent({part:memberBookingAmount,total:bookingAmount})}`),'散客消费占比 / 会员消费占比','court-stat-wide-right')
+    card('订场用户结构',courtStatValuePair(`${totalUsers} 人`,`${memberUsers} 人${courtStatPercent({part:memberUsers,total:totalUsers},1)}`),'总订场用户 / 会员用户占比'),
+    card('场地利用',courtStatValuePair(`${bookingCount} 次`,`${fmt(bookingHours)} 小时`),'总订场次数 / 总订场时长'),
+    card('课群次数对比',courtStatValuePair(`${guestBookingCount}次${courtStatPercent({part:guestBookingCount,total:bookingCount})}`,`${memberBookingCount}次${courtStatPercent({part:memberBookingCount,total:bookingCount})}`),'散客次数占比 / 会员次数占比'),
+    card('订场财务大盘',courtStatValuePair(`¥${fmt(totalReceived)}`,`¥${fmt(bookingAmount)}${courtStatPercent({part:bookingAmount,total:totalReceived})}`),'总实收金额 / 实际订场消费占比','court-stat-wide-left'),
+    card('课群金额对比盘',courtStatValuePair(`¥${fmt(guestBookingAmount)}${courtStatPercent({part:guestBookingAmount,total:bookingAmount})}`,`¥${fmt(memberBookingAmount)}${courtStatPercent({part:memberBookingAmount,total:bookingAmount})}`),'散客消费占比 / 会员消费占比','court-stat-wide-right')
   ].join('');
 }
 function renderCourtAccountListView(){
