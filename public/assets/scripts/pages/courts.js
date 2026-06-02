@@ -732,6 +732,8 @@ function courtAccountListViewSortMetric(item,key){
 }
 function summarizeCourtAccountListItems(items=[]){
   const memberItems=items.filter(item=>item?.membershipStatusCode&&!['voided','cleared'].includes(String(item.membershipStatusCode)));
+  const totalBookingAmount=items.reduce((sum,item)=>sum+(Number(item?.bookingAmount)||0),0);
+  const totalMemberBookingAmount=items.reduce((sum,item)=>sum+(Number(item?.memberBookingAmount)||0),0);
   return {
     totalCount:items.length,
     totalMemberCount:memberItems.length,
@@ -742,10 +744,10 @@ function summarizeCourtAccountListItems(items=[]){
     totalBookingCount:items.reduce((sum,item)=>sum+(Number(item?.bookingCount)||0),0),
     totalBookingHours:items.reduce((sum,item)=>sum+(Number(item?.bookingHours)||0),0),
     totalMemberBookingCount:items.reduce((sum,item)=>sum+(Number(item?.memberBookingCount)||0),0),
-    totalMemberBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.memberBookingAmount)||0),0),
+    totalMemberBookingAmount,
     totalGuestBookingCount:items.reduce((sum,item)=>sum+(Number(item?.guestBookingCount)||0),0),
-    totalGuestBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.guestBookingAmount)||0),0),
-    totalBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.bookingAmount)||0),0)
+    totalGuestBookingAmount:Math.max(0,totalBookingAmount-totalMemberBookingAmount),
+    totalBookingAmount
   };
 }
 function courtRatioText(part,total,digits=0){
@@ -789,7 +791,6 @@ function renderCourtAccountListView(){
   const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
   const base=visibleItems.filter(item=>campus==='all'||item.campusCode===campus);
   const filters=courtAccountListViewData?.filters||{};
-  const summary=courtAccountListViewData?.summary||{};
   const scopedFilters={
     owners:campus==='all'?filters.owners:[...new Set(base.map(item=>String(item.owner||'').trim()).filter(Boolean))],
     accountTypes:campus==='all'?filters.accountTypes:[...new Set(base.map(item=>String(item.accountType||'').trim()).filter(Boolean))]
@@ -812,7 +813,7 @@ function renderCourtAccountListView(){
   }else{
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
-  const scopedSummary=campus==='all'?summary:summarizeCourtAccountListItems(base);
+  const scopedSummary=summarizeCourtAccountListItems(base);
   renderCourtStatsCards(scopedSummary);
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
