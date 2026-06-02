@@ -127,12 +127,22 @@ function renderMembershipStats(rows=[]){
   const visibleCourtIds=new Set(rows.map(row=>row.court?.id||row.courtId));
   const validOrders=membershipOrders.filter(o=>visibleCourtIds.has(o.courtId)&&o.status!=='voided'&&o.status!=='refunded');
   const totalIncome=validOrders.reduce((sum,o)=>sum+(parseFloat(o.rechargeAmount)||0),0);
+  const totalBonus=validOrders.reduce((sum,o)=>sum+(parseFloat(o.bonusAmount)||0),0);
   const activeRows=rows.filter(row=>!['voided','cleared'].includes(String(row.account?.status||'')));
   const activeFinances=activeRows.map(row=>courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}));
   const totalRecognized=activeFinances.reduce((sum,finance)=>sum+(Number(finance.storedValueSpent)||0),0);
-  const totalBalance=activeFinances.reduce((sum,finance)=>sum+(Number(finance.balance)||0),0);
-  const totalBookingCount=rows.reduce((sum,row)=>sum+membershipBookingCount(row.court||membershipVisibleCourt(row)||{history:[]}),0);
-  host.innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">会员数</div><div class="tms-stat-value">${rows.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场次数</div><div class="tms-stat-value">${totalBookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">总收入金额</div><div class="tms-stat-value">¥${fmt(totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">已入账金额</div><div class="tms-stat-value">¥${fmt(totalRecognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员储值余额</div><div class="tms-stat-value">¥${fmt(totalBalance)}</div></div>`;
+  const poolTotal=totalIncome+totalBonus;
+  const realRecognized=poolTotal>0?Math.round(totalRecognized*totalIncome/poolTotal):0;
+  const bonusRecognized=Math.round(totalRecognized-realRecognized);
+  const pendingReal=Math.max(0,totalIncome-realRecognized);
+  const totalAvailable=Math.max(0,totalIncome+totalBonus-totalRecognized);
+  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
+  host.innerHTML=[
+    splitCard('会员与储值',`${rows.length} 人`,`${validOrders.length} 次`,'会员人数 / 储值次数'),
+    splitCard('充值现金池',`¥${fmt(totalIncome)}`,`¥${fmt(totalBonus)}`,'累计实收 / 累计赠送'),
+    splitCard('消费核销池',`¥${fmt(realRecognized)}`,`¥${fmt(bonusRecognized)}`,'真实核销 / 赠送核销'),
+    splitCard('待履约与余额',`¥${fmt(pendingReal)}`,`¥${fmt(totalAvailable)}`,'待履约真金 / 会员可用总额')
+  ].join('');
 }
 function membershipTierForRow(row){
   const account=row?.account||{};
