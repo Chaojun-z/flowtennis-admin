@@ -41,6 +41,14 @@ function canonicalCoachName(v){
   return COACH_NAME_ALIAS_MAP[raw]||raw;
 }
 function coachName(v){return canonicalCoachName(v)}
+function findCoachByName(value){
+  const normalized=coachName(value);
+  return (Array.isArray(coaches)?coaches:[]).find(c=>coachName(c.name)===normalized)||null;
+}
+function coachIdValue(value){
+  const row=findCoachByName(value);
+  return String(row?.id||value||'').trim();
+}
 function coachOpsStoredOrder(){
   try{
     const raw=localStorage.getItem(COACH_OPS_ORDER_STORAGE_KEY);

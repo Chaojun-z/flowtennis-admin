@@ -694,6 +694,33 @@ const coachSuffixRecommendation = rules.recommendEntitlements([
 });
 assert.strictEqual(coachSuffixRecommendation.recommended.entitlementId, 'ent-coach-suffix', 'coach name with 教练 suffix should match the same selected coach');
 
+const coachUuidRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-coach-uuid',
+    packageName: '成人1v1 UUID 教练课包',
+    ownerCoach: 'Siren 教练',
+    allowedCoaches: ['Siren 教练'],
+    coachIds: ['coach-siren-uuid'],
+    coachNames: ['Siren 教练'],
+    remainingLessons: 6,
+    campusIds: ['mabao'],
+    timeBand: '非黄金时段'
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'Siren 教练',
+  coach: 'Siren 教练',
+  campus: 'mabao',
+  startTime: '2026-05-26 10:00',
+  endTime: '2026-05-26 11:00',
+  lessonCount: 1,
+  status: '已排课',
+  coachRefs: [{ id: 'coach-siren-uuid', name: 'Siren 教练' }]
+});
+assert.strictEqual(coachUuidRecommendation.recommended.entitlementId, 'ent-coach-uuid', 'coach uuid should match the selected coach display name when coach refs are available');
+
 const anyCoachRecommendation = rules.recommendEntitlements([
   {
     ...entitlement,
