@@ -52,10 +52,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .page-section{display:none}.page-section.active{display:block}
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 #courtStatsRow{grid-template-columns:repeat(5,minmax(0,1fr))}
-#courtStatsRow.court-dashboard-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;overflow:visible}
-#courtStatsRow.court-dashboard-stats .court-dashboard-card{grid-column:span 2;min-width:0}
-#courtStatsRow.court-dashboard-stats .court-stat-wide-left{grid-column:2 / span 2}
-#courtStatsRow.court-dashboard-stats .court-stat-wide-right{grid-column:4 / span 2}
+#courtStatsRow.court-dashboard-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;overflow:visible}
+#courtStatsRow.court-dashboard-stats .court-dashboard-card{min-width:0}
 #page-courts .court-split-value{gap:8px}
 #page-courts .court-split-value>span{font-size:20px;margin-left:0}
 #page-courts .court-stat-slash{color:#8C7B6E;font-weight:400}
