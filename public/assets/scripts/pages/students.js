@@ -142,6 +142,52 @@ function studentPageTrialConvertedByPurchase(schedule){
     return studentName&&String(p.studentName||'').trim()===studentName;
   });
 }
+function studentRoundMoney(value){
+  return Math.round((Number(value)||0)*100)/100;
+}
+function studentScheduleSettlementType(schedule){
+  const raw=String(schedule?.settlementType||schedule?.paymentType||'').trim();
+  if(['direct','直接收款','paid'].includes(raw))return 'direct';
+  if(['gift','free','赠送','免费'].includes(raw))return 'gift';
+  return 'package';
+}
+function studentStatsMatchesCampusName(value){
+  if(!campus||campus==='all')return true;
+  return sameCampusValue(cn(value),cn(campus));
+}
+function studentStatsDirectCourseRows(){
+  return schedules.filter(row=>{
+    if(!row||row.status==='已取消')return false;
+    if(studentScheduleSettlementType(row)!=='direct')return false;
+    if(!studentStatsMatchesCampusName(row.campus))return false;
+    return studentRoundMoney(row.paidAmount||row.paymentAmount)>0;
+  });
+}
+function studentTrialKeys(schedule){
+  const ids=[...parseArr(schedule?.studentIds),schedule?.studentId].map(v=>String(v||'').trim()).filter(Boolean);
+  if(ids.length)return ids.map(id=>`id:${id}`);
+  return String(scheduleStudentSummary(schedule)||schedule?.studentName||'').split(/[、,，\s/]+/).map(v=>v.trim()).filter(Boolean).map(name=>`name:${name}`);
+}
+function studentPurchaseMatchesTrialKey(purchase,key){
+  if(key.startsWith('id:'))return String(purchase.studentId||'').trim()===key.slice(3);
+  return String(purchase.studentName||'').trim()===key.slice(5);
+}
+function studentTrialStats(){
+  const trialMap=new Map();
+  schedules
+    .filter(s=>scheduleCourseType(s)==='体验课'&&effectiveScheduleStatus(s)==='已结束'&&studentStatsMatchesCampusName(s.campus))
+    .forEach(s=>{
+      const date=String(s.startTime||s.endTime||'').slice(0,10);
+      studentTrialKeys(s).forEach(key=>{if(key&&!trialMap.has(key))trialMap.set(key,date);});
+    });
+  const converted=[...trialMap.entries()].filter(([key,trialDate])=>purchases.some(p=>{
+    if(['voided','refunded','deleted'].includes(String(p.status||'')))return false;
+    if(!studentPurchaseMatchesTrialKey(p,key))return false;
+    const purchaseDate=String(p.purchaseDate||p.createdAt||'').slice(0,10);
+    return !trialDate||!purchaseDate||purchaseDate>=trialDate;
+  })).length;
+  return {trialStudentCount:trialMap.size,trialConvertedCount:converted};
+}
 function studentStatsCampusNameForPurchase(purchase,entitlement={}){
   const student=students.find(s=>String(s.id||'')===String(purchase?.studentId||entitlement?.studentId||''));
   return cn(parseArr(entitlement?.campusIds)[0]||entitlement?.campus||purchase?.campus||student?.campus||'');
@@ -169,6 +215,7 @@ function studentPageStats(base){
   const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
   const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
   const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
+  const directCourseIncome=studentStatsDirectCourseRows().reduce((sum,row)=>sum+studentRoundMoney(row.paidAmount||row.paymentAmount),0);
   const recognized=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))
     .filter(row=>Number(row.lessonDelta||0)!==0)
     .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||purchaseIds.has(String(row.purchaseId||'')))
@@ -187,8 +234,15 @@ function studentPageStats(base){
     packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
     totalIncome:Math.round(totalIncome*100)/100,
     recognized:Math.round(recognized*100)/100,
-    packageBalance:Math.round((totalIncome-recognized)*100)/100
+    packageBalance:Math.round((totalIncome-recognized)*100)/100,
+    directCourseIncome:Math.round(directCourseIncome*100)/100,
+    courseIncome:Math.round((totalIncome+directCourseIncome)*100)/100,
+    courseRecognized:Math.round((recognized+directCourseIncome)*100)/100,
+    ...studentTrialStats()
   };
+}
+function studentStatSplitCard(title,primary,secondary,caption){
+  return `<div class="tms-stat-card student-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value student-stat-pair"><span>${primary}</span><span class="student-stat-divider">/</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
 }
 function getStudentDuplicateCandidates(input,editingId=''){
   const name=String(input?.name||'').trim();
@@ -271,7 +325,12 @@ function renderStudents(){
   let list=getSortedStudents(getFilteredStudents());
   const base=getStudentBaseList();
   const stats=studentPageStats(base);
-  document.getElementById('studentStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">学员数</div><div class="tms-stat-value">${stats.total}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">有课包学员数</div><div class="tms-stat-value">${stats.packageStudentCount}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">课包收入金额</div><div class="tms-stat-value">¥${fmt(stats.totalIncome)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包已核销</div><div class="tms-stat-value">¥${fmt(stats.recognized)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">课包余额</div><div class="tms-stat-value">¥${fmt(stats.packageBalance)}</div></div>`;
+  document.getElementById('studentStatsRow').innerHTML=[
+    studentStatSplitCard('课程财务大盘',`¥${fmt(stats.courseIncome)}`,`¥${fmt(stats.courseRecognized)}`,'总现金进账 / 总核销收入'),
+    studentStatSplitCard('课包专项存量',`¥${fmt(stats.totalIncome)}`,`¥${fmt(stats.packageBalance)}`,'课包实收 / 课包当前余额'),
+    studentStatSplitCard('学员结构基本盘',`${stats.total} 人`,`${stats.packageStudentCount} 人`,'总学员数 / 有课包学员数'),
+    studentStatSplitCard('体验新客转化',`${stats.trialStudentCount} 人`,`${stats.trialConvertedCount} 人`,'体验课人数 / 体验转正人数')
+  ].join('');
   const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
   if(stuPage>pages)stuPage=pages;
   const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);

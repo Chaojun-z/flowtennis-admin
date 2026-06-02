@@ -79,6 +79,10 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-memberships .membership-stat-card{min-width:240px}
 #page-memberships .membership-split-value{gap:10px;font-size:20px}
 #page-memberships .membership-split-value span{font-size:20px;margin-left:0}
+#page-students .student-stat-card{min-width:210px}
+#page-students .student-stat-pair{gap:10px;font-size:20px}
+#page-students .student-stat-pair span{font-size:20px;margin-left:0}
+#page-students .student-stat-divider{color:#8C7B6E}
 .lead-date-scope-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .lead-date-scope-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .lead-date-scope-label{font-size:12px;color:#FDF7F2;font-weight:600;margin-right:2px}

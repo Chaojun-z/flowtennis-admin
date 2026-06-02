@@ -29,7 +29,9 @@ assert.match(source, /发现可能重复的学员：/, 'student save flow should
 assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
-assert.match(source, /学员数[\s\S]*有课包学员数[\s\S]*课包收入金额[\s\S]*课包已核销[\s\S]*课包余额/, 'student top stats should use explicit package finance wording');
+assert.match(source, /课程财务大盘[\s\S]*课包专项存量[\s\S]*学员结构基本盘[\s\S]*体验新客转化/, 'student top stats should use the four confirmed student dashboard cards');
+assert.match(source, /总现金进账[\s\S]*总核销收入[\s\S]*课包实收[\s\S]*课包当前余额[\s\S]*总学员数[\s\S]*有课包学员数[\s\S]*体验课人数[\s\S]*体验转正人数/, 'student top stat cards should explain the paired metrics');
+assert.match(source, /student-stat-divider/, 'student paired stat cards should render a slash divider between the two values');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
 assert.match(source, /const sign=Number\(row\.lessonDelta\|\|0\)>0\?-1:1/, 'student package recognized amount should subtract returned lessons');
