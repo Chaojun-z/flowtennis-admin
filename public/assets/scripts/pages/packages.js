@@ -343,13 +343,14 @@ function applyPackageTimeBandPreset(value){
 function openPackageModal(id,presetProductId=''){
   editId=id;const presetProduct=presetProductId?products.find(x=>x.id===presetProductId):null;const p=id?packages.find(x=>x.id===id):presetProduct?{courseType:presetProduct.type,experienceType:presetProduct.experienceType,audience:presetProduct.audience,maxStudents:presetProduct.maxStudents,price:presetProduct.price,lessons:presetProduct.lessons,productId:presetProduct.id,productName:presetProduct.name}:null;
   const locked=!!(id&&packageHasPurchases(id));
-  const courseType=rv(p,'courseType')||PRODUCT_TYPES[0];
+  const courseTypeForm=normalizeCourseTypeForForm(p);
+  const courseType=courseTypeForm.courseType;
   const audience=rv(p,'audience')||packageAudienceLabelFromText([p?.type,p?.productName,p?.name,p?.packageName,p?.notes])||'成人';
   const audienceOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
   const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'},{value:'4',label:'1v4'}];
-  const experienceType=rv(p,'experienceType')||packageExperienceTypeLabel(p)||'私教体验课';
-  const smallClassType=rv(p,'smallClassType')||'single';
+  const experienceType=courseTypeForm.experienceType||packageExperienceTypeLabel(p)||'私教体验课';
+  const smallClassType=courseTypeForm.smallClassType||'single';
   const smallClassOptions=[{value:'single',label:'单次'},{value:'bootcamp',label:'训练营'},{value:'dropin',label:'随到随学'}];
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
@@ -490,6 +491,6 @@ async function savePackage(){
     endTime:idx===0?timeEnd:timeEnd2,
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
-  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',fixedStudentCount:courseType==='小班课'&&smallClassType==='bootcamp'?4:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:courseType==='小班课'&&smallClassType==='bootcamp'?4:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:packagePersistedValidDays,saleStartDate,saleEndDate,usageStartDate,usageEndDate,timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+packageSaveErrorText(e),'error');btn.disabled=false;btn.textContent='保存';}
 }

@@ -9,6 +9,7 @@ const path = require('path');
 const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('./lib/perf-metrics');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('./page-data/court-account-read-model.js');
+const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
@@ -3983,6 +3984,20 @@ function financeDifferenceReason(text=''){
 function financeNeutralActionLabel(text=''){
   return /免费|赠送/.test(String(text||''))?'赠送':'记录';
 }
+function applyStandardFinanceFields(row){
+  const business=businessTaxonomy.normalizeBusinessType(row);
+  const transactionType=businessTaxonomy.normalizeTransactionType(row);
+  return {
+    ...row,
+    transactionType,
+    businessTypeLevel1:business.level1,
+    businessTypeLevel2:business.level2,
+    businessTypeLevel3:business.level3,
+    displayBusinessType:business.display,
+    normalizedPaymentMethod:businessTaxonomy.normalizePaymentMethod(row.paymentChannel||row.payMethod),
+    transactionAmount:businessTaxonomy.transactionAmount(row)
+  };
+}
 function financeCourtHistoryBusinessType(row){
   const category=String(row?.category||'');
   const sourceCategory=String(row?.sourceCategory||'');
@@ -4262,6 +4277,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     }).filter(Boolean);
   });
   return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...courtRows]
+    .map(applyStandardFinanceFields)
     .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
 }
 function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){

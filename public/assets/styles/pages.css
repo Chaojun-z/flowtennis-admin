@@ -109,7 +109,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .finance-date-host{flex:0 0 152px;min-width:152px}
 #page-finance .coach-ops-tabs{margin-bottom:0}
 #page-finance .tms-stats-row{margin-bottom:18px}
-#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;overflow:visible}
+#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow:visible}
 #page-finance .finance-ledger-stats .tms-stat-card{min-width:0}
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:17px;min-width:0;overflow:hidden}
@@ -117,6 +117,12 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-ledger-stats .finance-main-number{font-size:17px;font-weight:500;overflow:hidden;text-overflow:ellipsis}
 #page-finance .finance-ledger-stats .finance-split-sep{font-size:12px;color:#A3968F;flex:0 0 auto}
 #page-finance .finance-ledger-stats .finance-sub-number{font-size:13px;color:#8C7B6E;overflow:hidden;text-overflow:ellipsis}
+#page-finance .finance-card-percent{display:block;margin-top:6px;text-align:right;font-size:12px;color:#8C7B6E}
+#page-finance .finance-amount{font-weight:700;font-variant-numeric:tabular-nums}
+#page-finance .finance-amount-income{color:#3F946D}
+#page-finance .finance-amount-consume{color:#1F2937}
+#page-finance .finance-amount-refund{color:#D6455D}
+#page-finance .finance-amount-void{color:#AAB3C2;text-decoration:line-through}
 .finance-loading-card{background:rgba(255,255,255,0.92);border:1px solid rgba(234,224,214,.9);border-radius:16px;padding:56px 24px;text-align:center;color:#5C4D43;box-shadow:0 8px 24px rgba(60,20,0,.08)}
 .finance-loading-title{font-size:18px;font-weight:700;color:#332A24;margin-bottom:8px}
 .finance-loading-desc{font-size:13px;color:#8C7B6E;line-height:1.7}

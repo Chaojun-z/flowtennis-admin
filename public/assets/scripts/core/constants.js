@@ -72,7 +72,7 @@ function activeCoachNames(){
 const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'];
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
-const PRODUCT_TYPES=['私教课','体验课','训练营','大师课','小班课'];
+const PRODUCT_TYPES=['私教课','小班课','体验课','大师课'];
 const EXPERIENCE_TYPES=['私教体验课','小班体验课'];
 const PAY_METHODS=['微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'];
 const SCH_STATUSES=['已排课','已结束','已取消'];

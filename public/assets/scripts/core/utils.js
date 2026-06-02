@@ -147,9 +147,30 @@ function normalizeCourseType(type=''){
   if(raw==='私教')return '私教课';
   if(raw==='半私教课')return '私教课';
   if(raw==='班课')return '小班课';
-  if(raw==='专项训练')return '训练营';
+  if(raw==='训练营')return '小班课';
+  if(raw==='专项训练')return '小班课';
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
   return raw;
+}
+function courseTypeLevel2Label(courseType,experienceType='',smallClassType=''){
+  if(courseType==='体验课')return normalizeExperienceType(experienceType,'私教体验课');
+  if(courseType==='小班课')return ({single:'单次',bootcamp:'训练营',dropin:'随到随学'})[smallClassType]||smallClassType||'单次';
+  return '';
+}
+function standardCourseTypeLabel(courseType,experienceType='',smallClassType=''){
+  const level2=courseTypeLevel2Label(courseType,experienceType,smallClassType);
+  return level2?`${courseType} / ${level2}`:courseType;
+}
+function normalizeCourseTypeForForm(row={}){
+  const source=typeof row==='string'?{courseType:row}:(row||{});
+  const raw=String(source.courseType||source.type||source.productType||'').trim();
+  const smallText=[source.smallClassType,source.courseTypeLevel2,source.packageSubType,source.subType,source.name,source.packageName,source.productName,raw].filter(Boolean).join(' ');
+  const experienceText=[source.experienceType,source.courseTypeLevel2,source.name,source.packageName,source.productName,raw].filter(Boolean).join(' ');
+  const courseType=normalizeCourseType(raw)||PRODUCT_TYPES[0];
+  const smallClassType=/训练营/.test(smallText)?'bootcamp':/随到随学/.test(smallText)?'dropin':(source.smallClassType||'single');
+  const experienceType=normalizeExperienceType(experienceText,'私教体验课');
+  const courseTypeLevel2=courseTypeLevel2Label(courseType,experienceType,smallClassType);
+  return {courseType,experienceType,smallClassType,courseTypeLevel2,standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType)};
 }
 function experienceTypeOptions(){return EXPERIENCE_TYPES.map(t=>({value:t,label:t}));}
 function payMethodOptions(){return PAY_METHODS.map(t=>({value:t,label:t}));}
