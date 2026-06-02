@@ -65,6 +65,40 @@ function setFinanceLedgerPage(page){
 function resetFinanceLedgerPage(){
   financeLedgerPage=1;
 }
+function financeLedgerExactTimeText(row){
+  const businessDate=String(row?.businessDate||'').trim().replace('T',' ');
+  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(11,19);
+  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(11,16)}:00`;
+  const timeText=String(row?.timeText||'').trim();
+  const match=timeText.match(/(\d{2}:\d{2})(?::\d{2})?/);
+  return match?`${match[1]}:00`:'00:00:00';
+}
+function financeDateTimeDisplayText(row){
+  const businessDate=String(row?.businessDate||'').trim().replace('T',' ');
+  if(!businessDate)return '-';
+  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(0,19);
+  if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;
+  return `${businessDate.slice(0,10)} ${financeLedgerExactTimeText(row)}`;
+}
+function financeOperatorDisplayText(row){
+  const collector=String(row?.collector||row?.operator||'').trim();
+  const importHint=String(row?.importSource||'').trim()==='系统导入'||/导入/.test(`${row?.sourceProject||''} ${row?.notes||''} ${row?.sourceDocument||''}`);
+  if(importHint)return '系统导入';
+  if(collector&&collector!=='系统记录')return collector;
+  return '-';
+}
+function financeLedgerSortKey(row){
+  return `${String(row?.businessDate||'').slice(0,10)} ${financeLedgerExactTimeText(row)}`;
+}
+function financeLedgerPageNumbers(page,pages){
+  return financeRevenuePageNumbers(page,pages);
+}
+function jumpFinanceLedgerPage(value){
+  const total=financeLedgerRows().length;
+  const pages=Math.max(1,Math.ceil(total/financeLedgerPageSize));
+  financeLedgerPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  renderFinanceLedger();
+}
 function renderFinanceRevenuePageSizeFilter(){
   const host=document.getElementById('financeRevenuePageSize');
   if(!host)return;
@@ -1137,7 +1171,7 @@ function financeLedgerRows(){
     if(businessTypeFilter&&row.displayBusinessType!==businessTypeFilter)return false;
     if(payMethodFilter&&String(row.normalizedPaymentMethod||'其他')!==payMethodFilter)return false;
     return searchHit(q,row.customer,row.displayBusinessType,row.transactionType,row.normalizedPaymentMethod,row.notes,row.campusName);
-  }).sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||'')));
+  }).sort((a,b)=>financeLedgerSortKey(b).localeCompare(financeLedgerSortKey(a))||String(b.id||'').localeCompare(String(a.id||'')));
 }
 function financeLedgerDataReady(){
   return loadedDatasets.has('financialLedger')||loadedDatasets.has('financePage');
@@ -1193,16 +1227,34 @@ function renderFinanceLedgerFilterDropdowns(baseRows){
   const currentTransaction=String(document.getElementById('financeLedgerTransactionTypeFilter')?.value||'').trim();
   const currentPayMethod=String(document.getElementById('financeLedgerPayMethodFilter')?.value||'').trim();
   const visibleRows=(baseRows||[]).filter(row=>!row.differenceReason);
-  const businessOptions=[{ value:'', label:'全部业务类型' },...Array.from(new Set(visibleRows.map(row=>row.displayBusinessType).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN')).map(item=>({ value:item, label:item }))];
-  const transactionOptions=[{ value:'', label:'全部交易类型' },...Array.from(new Set(visibleRows.map(row=>row.transactionType).filter(Boolean))).filter(item=>['收款','消耗','退款','废弃'].includes(item)).sort((a,b)=>['收款','消耗','退款','废弃'].indexOf(a)-['收款','消耗','退款','废弃'].indexOf(b)).map(item=>({ value:item, label:item }))];
-  const payMethodOptions=[{ value:'', label:'全部支付方式' },...Array.from(new Set(visibleRows.map(row=>row.normalizedPaymentMethod||'其他').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN')).map(item=>({ value:item, label:item }))];
-  businessHost.innerHTML=renderCourtDropdownHtml('financeLedgerBusinessTypeFilter','全部业务类型',businessOptions,businessOptions.some(item=>item.value===currentBusiness)?currentBusiness:'',false,'renderFinanceLedgerFilterChange');
-  transactionHost.innerHTML=renderCourtDropdownHtml('financeLedgerTransactionTypeFilter','全部交易类型',transactionOptions,transactionOptions.some(item=>item.value===currentTransaction)?currentTransaction:'',false,'renderFinanceLedgerFilterChange');
-  payMethodHost.innerHTML=renderCourtDropdownHtml('financeLedgerPayMethodFilter','全部支付方式',payMethodOptions,payMethodOptions.some(item=>item.value===currentPayMethod)?currentPayMethod:'',false,'renderFinanceLedgerFilterChange');
+  const businessValues=Array.from(new Set(visibleRows.map(row=>row.displayBusinessType).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
+  const transactionOrder=['收款','消耗','退款','废弃'];
+  const transactionValues=Array.from(new Set(visibleRows.map(row=>row.transactionType).filter(Boolean))).filter(item=>transactionOrder.includes(item)).sort((a,b)=>transactionOrder.indexOf(a)-transactionOrder.indexOf(b));
+  const payMethodValues=Array.from(new Set(visibleRows.map(row=>row.normalizedPaymentMethod||'其他').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
+  const businessOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'业务类型' },...businessValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>row.displayBusinessType===value);
+  const transactionOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'交易类型' },...transactionValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>row.transactionType===value);
+  const payMethodOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'支付方式' },...payMethodValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>String(row.normalizedPaymentMethod||'其他')===String(value));
+  businessHost.innerHTML=renderCourtDropdownHtml('financeLedgerBusinessTypeFilter','业务类型',businessOptions,businessOptions.some(item=>item.value===currentBusiness)?currentBusiness:'',false,'renderFinanceLedgerFilterChange');
+  transactionHost.innerHTML=renderCourtDropdownHtml('financeLedgerTransactionTypeFilter','交易类型',transactionOptions,transactionOptions.some(item=>item.value===currentTransaction)?currentTransaction:'',false,'renderFinanceLedgerFilterChange');
+  payMethodHost.innerHTML=renderCourtDropdownHtml('financeLedgerPayMethodFilter','支付方式',payMethodOptions,payMethodOptions.some(item=>item.value===currentPayMethod)?currentPayMethod:'',false,'renderFinanceLedgerFilterChange');
 }
 function renderFinanceLedgerFilterChange(){
   resetFinanceLedgerPage();
   renderFinanceLedger();
+}
+function renderFinanceLedgerPager(total,pages){
+  const pager=document.querySelector('#page-finance #financeLedgerPanel .tms-pagination');
+  if(pager)pager.style.display=total>0?'flex':'none';
+  const pagerInfo=document.getElementById('financeLedgerPagerInfo');
+  if(pagerInfo)pagerInfo.textContent=`共 ${total} 条`;
+  const pagerBtns=document.getElementById('financeLedgerPagerBtns');
+  if(!pagerBtns)return;
+  if(!total||pages<=1){pagerBtns.innerHTML='';return;}
+  const pageBtns=financeLedgerPageNumbers(financeLedgerPage,pages).map(item=>item==='...'
+    ?'<span class="tms-page-ellipsis">...</span>'
+    :`<div class="tms-page-btn${item===financeLedgerPage?' active':''}" onclick="setFinanceLedgerPage(${item})">${item}</div>`
+  ).join('');
+  pagerBtns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.max(1,financeLedgerPage-1))">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.min(${pages},financeLedgerPage+1))">下一页</div><span class="tms-page-jump">跳至 <input id="financeLedgerPageJump" value="${financeLedgerPage}" onkeydown="if(event.key==='Enter')jumpFinanceLedgerPage(this.value)"> 页</span>`;
 }
 function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');
@@ -1216,13 +1268,8 @@ function renderFinanceLedger(){
   const pages=Math.max(1,Math.ceil(total/financeLedgerPageSize));
   if(financeLedgerPage>pages)financeLedgerPage=pages;
   const slice=rows.slice((financeLedgerPage-1)*financeLedgerPageSize,financeLedgerPage*financeLedgerPageSize);
-  const pager=document.querySelector('#page-finance #financeLedgerPanel .tms-pagination');
-  if(pager)pager.style.display=total>0?'flex':'none';
-  const pagerInfo=document.getElementById('financeLedgerPagerInfo');
-  if(pagerInfo)pagerInfo.textContent=`共 ${total} 条`;
-  const pagerBtns=document.getElementById('financeLedgerPagerBtns');
-  if(pagerBtns)pagerBtns.innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===financeLedgerPage?' active':''}" onclick="setFinanceLedgerPage(${i+1})">${i+1}</div>`).join('');
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.businessDate,false)}</td><td>${renderCourtCellText(row.customer,false)}</td><td>${renderCourtCellText(row.campusName,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType)}</span></td><td>${renderCourtCellText(row.displayBusinessType,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></td><td>${financeTransactionAmountHtml(row)}</td><td><div class="tms-text-remark" title="${esc(row.notes||'')}">${esc(renderCourtEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty"><p>暂无交易流水</p></div></td></tr>`;
+  renderFinanceLedgerPager(total,pages);
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderCourtCellText(row.customer,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType)}</span></td><td>${financeTransactionAmountHtml(row)}</td><td>${renderCourtCellText(row.displayBusinessType,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></td><td>${renderCourtCellText(row.campusName,false)}</td><td>${renderCourtCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(row.notes||'')}">${esc(renderCourtEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无交易流水</p></div></td></tr>`;
 }
 function renderFinancePrepaidBalance(){
   const body=document.getElementById('financePrepaidTbody');

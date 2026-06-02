@@ -107,6 +107,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tms-filters,.tms-toolbar-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
 .tms-toolbar-right{display:flex;gap:10px;align-items:center;margin-left:auto}
 .finance-date-host{flex:0 0 152px;min-width:152px}
+#page-finance .finance-date-host-compact{flex:0 0 auto;min-width:0}
+#page-finance .finance-date-host-compact .filter-date-wrap{display:inline-flex;width:auto}
+#page-finance .finance-date-host-compact .coach-date-btn{width:auto;min-width:0}
 #page-finance .coach-ops-tabs{margin-bottom:0}
 #page-finance .tms-stats-row{margin-bottom:18px}
 #page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow:visible}
@@ -172,6 +175,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-finance .finance-revenue-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+#page-finance .finance-ledger-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #page-schedule .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-schedule .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-packages .course-package-showcase-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
