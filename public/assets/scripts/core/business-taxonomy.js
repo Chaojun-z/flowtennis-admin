@@ -2,6 +2,7 @@
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.FlowTennisBusinessTaxonomy = api;
+  root.normalizePaymentMethod = api.normalizePaymentMethod;
 })(typeof window !== 'undefined' ? window : globalThis, function() {
   const TRANSACTION_TYPES = ['收款', '消耗', '退款', '废弃'];
   const PAYMENT_METHODS = ['小程序', '微信', '支付宝', '储值扣款', '课包划扣', '大众点评券码', '抖音券码', '其他'];
