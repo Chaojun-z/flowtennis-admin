@@ -24,6 +24,6 @@ assert.match(courtsSource, /function renderCourtAccountListView\(/, '订场用�
 assert.match(courtsSource, /if\(shouldUseCourtReadModelByDefault\(\)&&courtAccountListViewData\)/, '订场用户页只应在隐藏验证开启时使用新读模型，强退时回旧链');
 assert.match(courtsSource, /window\.__courtAccountListViewCompare=/, '前端应暴露最新 compare 输出供内部验证');
 assert.match(courtsSource, /const filters=courtAccountListViewData\?\.filters\|\|\{\};/, '隐藏读模型路径应直接消费后端 filters');
-assert.match(courtsSource, /const scopedSummary=summarizeCourtAccountListItems\(base\);/, '隐藏读模型统计卡应按当前列表本地重算，避免总 summary 口径漂移');
+assert.match(courtsSource, /const scopedSummary=summarizeCourtAccountListItems\(list\);/, '隐藏读模型统计卡应按当前筛选后的列表本地重算，避免总 summary 口径漂移');
 
 console.log('court account guard switch tests passed');

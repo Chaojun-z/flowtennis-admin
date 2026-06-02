@@ -28,6 +28,22 @@ function normalizeCourtHistory(history) {
   }));
 }
 
+function courtHistoryDateKey(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const match = text.match(/(\d{4})[年./-](\d{1,2})[月./-](\d{1,2})/);
+  if (match) return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
+  const shortMatch = text.match(/(^|[^\d])(\d{1,2})[月./-](\d{1,2})(?:日)?/);
+  if (shortMatch) return `${new Date().getFullYear()}-${String(shortMatch[2]).padStart(2, '0')}-${String(shortMatch[3]).padStart(2, '0')}`;
+  const parsed = new Date(text.replace(' ', 'T'));
+  if (Number.isNaN(parsed.getTime())) return '';
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+}
+
+function courtHistoryBusinessDate(row) {
+  return courtHistoryDateKey(row?.occurredDate || row?.date || row?.businessDate || row?.bookingDate || row?.startDate || row?.consumedAt || row?.usedAt || row?.operationAt || row?.recordedAt || row?.createdAt || row?.startTime || '');
+}
+
 function computeLegacyFinance(court) {
   const history = normalizeCourtHistory(court?.history);
   if (!history.length) {
@@ -126,7 +142,7 @@ function computeBookingSummary(court) {
         summary.guestBookingCount += 1;
         summary.guestBookingAmount += amount;
       }
-      const date = String(row?.occurredDate || row?.date || '').slice(0, 10);
+      const date = courtHistoryBusinessDate(row);
       if (date && (!summary.lastBookingDate || date > summary.lastBookingDate)) summary.lastBookingDate = date;
       return;
     }
@@ -214,6 +230,7 @@ function buildLegacyItem(court, ctx) {
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
   return {
     id: court.id,
+    history: normalizeCourtHistory(court?.history),
     displayName: displayName(court, studentSummary),
     phone: String(court?.phone || '').trim(),
     campusCode: String(court?.campus || '').trim(),
@@ -257,6 +274,7 @@ function buildReadModelItem(court, ctx) {
   const totalReceived = court?.cachedTotalReceived === '' || court?.cachedTotalReceived == null ? legacy.totalReceived : money(court?.cachedTotalReceived);
   return {
     ...legacy,
+    history: normalizeCourtHistory(court?.history),
     balance,
     totalDeposit,
     totalSpent,

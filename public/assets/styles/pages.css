@@ -46,6 +46,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .global-live-clock{margin-left:auto;font-family:monospace;font-size:13px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.1);padding:4px 12px;border-radius:100px;display:flex;align-items:center;gap:8px;min-height:32px}
 .coach-top-logout{display:none;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:6px 14px;color:rgba(254,243,199,0.8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}
 .coach-top-logout:hover{background:rgba(255,255,255,0.2);color:#fff}
+.court-top-filterbar{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
+.court-top-filter-item{flex:none}
 .ctab{padding:6px 14px;border-radius:18px;border:0.5px solid rgba(254,243,199,0.2);background:transparent;color:rgba(254,243,199,0.55);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
 .ctab:hover{border-color:rgba(254,243,199,0.4);color:rgba(254,243,199,0.85);background:rgba(255,255,255,0.07)}.ctab.active{background:linear-gradient(135deg,var(--amber-base),var(--amber-warm));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 3px 12px rgba(180,83,9,0.4)}
 .content{flex:1;overflow-y:auto;padding:22px 24px}.content::-webkit-scrollbar{width:4px}.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:2px}
@@ -186,6 +188,45 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-purchases .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-courts .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-courts .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+#campusTabs .court-top-select{position:relative}
+#campusTabs .court-top-select .court-top-display{height:32px;min-width:auto;padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.1);border:0;box-shadow:none;color:rgba(255,255,255,0.9);font-family:monospace;font-size:13px;font-weight:400}
+#campusTabs .court-top-select .court-top-display:hover{background:rgba(0,0,0,0.14)}
+#campusTabs .court-top-select .court-top-display::after{display:none}
+#campusTabs .court-top-display-main{display:flex;align-items:center;gap:6px;min-width:0}
+#campusTabs .court-top-display-icon{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);flex:none}
+#campusTabs .court-top-display-icon svg{width:14px;height:14px;display:block;fill:currentColor}
+#campusTabs .court-top-display-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,0.9);font-family:monospace;font-size:13px;font-weight:400}
+#campusTabs .court-top-display-chevron{margin-left:4px;width:9px;height:9px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.85);flex:none}
+#campusTabs .court-top-display-chevron svg{width:10px;height:10px;display:block;fill:currentColor}
+#campusTabs .court-top-select .tms-dropdown-menu{top:calc(100% + 8px);left:0;right:auto;background-color:#FAF6F2;border:1px solid #EAE0D6;border-radius:14px;box-shadow:0 10px 24px rgba(91,67,49,.14);padding:6px;z-index:120}
+#campusTabs .court-top-select.open .tms-dropdown-menu{display:block}
+#campusTabs .court-top-campus-menu{min-width:136px}
+#campusTabs .court-top-date-menu{min-width:132px;width:max-content;max-width:min(480px,calc(100vw - 32px));max-height:none;padding:0!important;overflow:visible;left:auto!important;right:0!important}
+#campusTabs .court-top-date-menu.is-quick{padding:6px!important}
+#campusTabs .court-top-select .tms-dropdown-item{font-size:13px;font-weight:400}
+#campusTabs .court-date-range-shell{display:flex;background:#FFFCF8;border:1px solid #EAE0D6;border-radius:12px;box-shadow:0 12px 28px rgba(91,67,49,.14);min-height:0}
+#campusTabs .court-date-range-left{width:112px;border-right:1px solid #F0E6DB;padding:6px}
+#campusTabs .court-date-range-right{width:344px;padding:10px 12px 12px}
+#campusTabs .court-date-range-title{font-size:10px;color:#A3968F;font-weight:400;margin:0 0 8px}
+#campusTabs .court-date-range-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#campusTabs .court-date-nav{width:26px;height:26px;border:0;background:#F8F1E8;color:#B96E34;font-size:16px;font-weight:400;line-height:1;cursor:pointer;border-radius:7px;transition:background-color .14s ease,color .14s ease}
+#campusTabs .court-date-nav:hover{background:#F4E8D9;color:#A85F2C}
+#campusTabs .court-date-range-month{font-size:13px;font-weight:400;color:#332A24}
+#campusTabs .court-date-range-week{display:grid;grid-template-columns:repeat(7,42px);justify-content:center;gap:6px;margin-bottom:5px}
+#campusTabs .court-date-weekday{width:42px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8C7B6E;font-weight:400}
+#campusTabs .court-date-range-grid{display:grid;grid-template-columns:repeat(7,42px);grid-auto-rows:42px;justify-content:center;gap:6px;min-height:0}
+#campusTabs .court-date-cell{box-sizing:border-box;width:42px;height:42px;border:0;border-radius:8px;background:#FBF6EF;color:#332A24;font-size:12px;font-weight:400;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background-color .14s ease,color .14s ease,border-color .14s ease;border:1px solid transparent}
+#campusTabs .court-date-cell:hover{background:#F6EBD9;color:#B96E34}
+#campusTabs .court-date-cell.empty,#page-courts .court-date-cell.empty{visibility:hidden}
+#campusTabs .court-date-cell.is-muted{color:#D4C4B5;background:#FBF6EF;cursor:default;pointer-events:none}
+#campusTabs .court-date-cell.is-range{background:#F8F1E8;color:#B96E34}
+#campusTabs .court-date-cell.is-edge{background:#B96E34;color:#fff;border-radius:8px;border-color:#B96E34}
+#campusTabs .court-date-range-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;border-top:1px solid #F3E8DC;padding-top:8px;margin-top:8px}
+#campusTabs .court-date-range-hint{margin-right:auto;font-size:10px;color:#A3968F;font-weight:400}
+#campusTabs .court-date-range-clear{border:0;background:transparent;color:#8C7B6E;font-size:11px;font-weight:400;cursor:pointer;transition:color .14s ease}
+#campusTabs .court-date-range-clear:hover{color:#B96E34}
+#campusTabs .court-date-range-confirm{height:28px;padding:0 12px;border:0;border-radius:7px;background:#E7D7C9;color:#FFFFFF;font-size:11px;font-weight:400;cursor:not-allowed;transition:background-color .14s ease,color .14s ease,opacity .14s ease;opacity:.72}
+#campusTabs .court-date-range-confirm.is-enabled{background:#C47A3A;cursor:pointer;opacity:1}
 #page-memberships .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-memberships .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-students .tms-sort-header,#page-courts .tms-sort-header{border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:0;white-space:nowrap}

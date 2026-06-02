@@ -59,7 +59,7 @@ async function main() {
       history: [
         { type: '充值', amount: 500, bonusAmount: 0 },
         { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10', startTime: '10:00', endTime: '12:00', venue: '1号场' },
-        { type: '消费', amount: 200, payMethod: '微信', category: '其他', date: '2026-05-12', startTime: '14:00', endTime: '15:30', venue: '2号场' }
+        { type: '消费', amount: 200, payMethod: '微信', category: '其他', businessDate: '2026.05.12', startTime: '14:00', endTime: '15:30', venue: '2号场' }
       ],
       updatedAt: '2026-05-13T10:00:00.000Z',
       createdAt: '2026-05-01T10:00:00.000Z'

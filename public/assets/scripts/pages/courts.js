@@ -23,12 +23,312 @@ function renderCourtHeaderFilters(base,filterSource=null){
   if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('courtPageSizeValue',`${courtPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(courtPageSize),false,'setCourtPageSize');
   updateCourtBatchButton();
 }
+function refreshCourtTopFilters(){
+  const host=document.getElementById('campusTabs');
+  if(host&&currentPage==='courts')host.innerHTML=renderCourtTopFilters();
+}
+function courtTopChevronIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M150.3 305.16c14.72-14.72 38.3-15.61 54.08-2.03l2.19 2.03L544.11 642.7l337.54-337.54c14.72-14.74 38.32-15.62 54.1-2.03l2.17 2.03c14.72 14.72 15.61 38.3 2.03 54.08l-2.03 2.19L586.3 713.04c-22.34 22.33-58.22 23.38-81.83 2.39l-2.55-2.39-351.64-351.63c-15.53-15.53-15.53-40.72 0-56.25h0.02z"></path></svg>';
+}
+function courtTopLocationIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M512 249.976471c-99.388235 0-180.705882 81.317647-180.705882 180.705882s81.317647 180.705882 180.705882 180.705882 180.705882-81.317647 180.705882-180.705882-81.317647-180.705882-180.705882-180.705882z m0 301.17647c-66.258824 0-120.470588-54.211765-120.470588-120.470588s54.211765-120.470588 120.470588-120.470588 120.470588 54.211765 120.470588 120.470588-54.211765 120.470588-120.470588 120.470588z"></path><path d="M512 39.152941c-216.847059 0-391.529412 174.682353-391.529412 391.529412 0 349.364706 391.529412 572.235294 391.529412 572.235294s391.529412-222.870588 391.529412-572.235294c0-216.847059-174.682353-391.529412-391.529412-391.529412z m0 891.482353C424.658824 873.411765 180.705882 686.682353 180.705882 430.682353c0-183.717647 147.576471-331.294118 331.294118-331.294118s331.294118 147.576471 331.294118 331.294118c0 256-243.952941 442.729412-331.294118 499.952941z"></path></svg>';
+}
+function courtTopTimeIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M512 64c249.6 0 448 198.4 448 448s-198.4 448-448 448-448-198.4-448-448 198.4-448 448-448z m0 64C300.8 128 128 300.8 128 512s172.8 384 384 384 384-172.8 384-384-172.8-384-384-384z m32 128v224h192v64h-256V256h64z"></path></svg>';
+}
+function renderCourtTopDropdown(id,displayText,iconSvg,menuHtml,menuClass=''){
+  return `<div class="tms-dropdown court-top-select" id="${id}_dropdown" data-target="${id}" onclick="toggleCourtTopDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(displayText)}"><div class="tms-dropdown-display court-top-display"><span class="court-top-display-main"><span class="court-top-display-icon">${iconSvg}</span><span class="court-top-display-text">${esc(displayText)}</span></span><span class="court-top-display-chevron">${courtTopChevronIcon()}</span></div><div class="tms-dropdown-menu ${menuClass}" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${menuHtml}</div></div>`;
+}
+function renderCourtTopFilters(){
+  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
+    value:String(row?.code||row?.id||'').trim(),
+    label:String(row?.name||row?.code||row?.id||'').trim()
+  })).filter(opt=>opt.value&&opt.label));
+  const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectCourtTopCampus('${esc(opt.value)}',event)">${esc(opt.label)}</div>`).join('');
+  const timeMenu=courtDateFilterQuickOptions().map(label=>`<div class="tms-dropdown-item ${((label==='自定义'&&courtDateRangeFilterValue==='自定义')||label===courtDateRangeFilterValue)?'active':''}" data-value="${esc(label)}" onclick="onCourtDateRangeFilterChange('${label}',event)">${esc(label)}</div>`).join('');
+  const dateMenuClass=`court-top-date-menu ${courtDateRangeFilterValue==='自定义'?'is-custom':'is-quick'}`;
+  const dateMenu=courtDateRangeFilterValue==='自定义'
+    ? `<div class="court-date-range-shell"><div class="court-date-range-left">${timeMenu}</div><div class="court-date-range-right">${renderCourtDateRangePanel()}</div></div>`
+    : timeMenu;
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('courtTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderCourtTopDropdown('courtTopDate',currentCourtDateRangeLabel(),courtTopTimeIcon(),dateMenu,dateMenuClass)}</div></div>`;
+}
 function onCourtToolbarFilterChange(){
   courtOwnerFilterValue=document.getElementById('courtOwnerValue')?.value||'';
   courtAccountTypeFilterValue=document.getElementById('courtAccountTypeValue')?.value||'';
   courtPage=1;
   renderCourts();
 }
+function closeCourtTopDropdowns(){
+  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>el.classList.remove('open'));
+}
+function toggleCourtTopDropdown(id,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  if(!dropdown)return;
+  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>{ if(el!==dropdown)el.classList.remove('open'); });
+  dropdown.classList.toggle('open');
+}
+function selectCourtTopCampus(value,event){
+  if(event)event.stopPropagation();
+  campus=value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  courtPage=1;
+  refreshCourtTopFilters();
+  renderCourts();
+  closeCourtTopDropdowns();
+}
+function courtDateFilterQuickOptions(){
+  return ['全部','今日','本周','本月','自定义'];
+}
+function formatCourtDateRangeValue(start,end){
+  if(!start||!end)return '全部时间';
+  return `${start} 至 ${end}`;
+}
+function currentCourtDateRangeLabel(){
+  if(courtDateRangeFilterValue==='全部')return '全部时间';
+  if(courtDateRangeFilterValue&&courtDateRangeFilterValue!=='自定义'){
+    const preset=resolveCourtDatePresetRange(courtDateRangeFilterValue);
+    return formatCourtDateRangeValue(preset.startDate,preset.endDate);
+  }
+  return courtDateRangeFilterValue==='自定义'
+    ? formatCourtDateRangeValue(courtDateRangeStart,courtDateRangeEnd)
+    : courtDateRangeFilterValue;
+}
+function activeCourtDateRange(){
+  if(courtDateRangeFilterValue==='自定义'){
+    return {startDate:courtDateRangeStart,endDate:courtDateRangeEnd};
+  }
+  if(courtDateRangeFilterValue&&courtDateRangeFilterValue!=='全部'){
+    return resolveCourtDatePresetRange(courtDateRangeFilterValue);
+  }
+  return {startDate:'',endDate:''};
+}
+function renderCourtDateRangeFilter(){
+  const selected=currentCourtDateRangeLabel();
+  const leftMenu=courtDateFilterQuickOptions().map(label=>{
+    const active=(label==='自定义'&&courtDateRangeFilterValue==='自定义')||(label===courtDateRangeFilterValue&&label!=='自定义');
+    return `<div class="tms-dropdown-item ${active?'active':''}" data-value="${esc(label)}" onclick="onCourtDateRangeFilterChange('${label}',event)">${esc(label)}</div>`;
+  }).join('');
+  return `<div class="tms-dropdown court-date-range-dropdown ${courtDateRangeFilterValue?'has-value':''}" id="courtDateRangeValue_dropdown" data-target="courtDateRangeValue" onclick="toggleCourtDropdown('courtDateRangeValue',event)"><input type="hidden" id="courtDateRangeValue" value="${esc(courtDateRangeFilterValue)}"><div class="tms-dropdown-display">${esc(selected)}</div><div class="tms-dropdown-menu court-date-range-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()"><div class="court-date-range-shell"><div class="court-date-range-left">${leftMenu}</div><div class="court-date-range-right">${renderCourtDateRangePanel()}</div></div></div></div>`;
+}
+function renderCourtDateRangePanel(){
+  const viewDate=resolveCourtDateRangeViewDate();
+  const year=viewDate.getFullYear();
+  const month=viewDate.getMonth();
+  const title=`${year} 年 ${month+1} 月`;
+  const days=['一','二','三','四','五','六','日'].map(label=>`<div class="court-date-weekday">${label}</div>`).join('');
+  const cells=renderCourtDateRangeCalendarCells(viewDate);
+  const helperText=courtDateRangeFilterValue==='自定义'&&!courtDateRangeEnd?'请选择结束日期':'';
+  const canConfirm=!!courtDateRangeStart&&!!courtDateRangeEnd;
+  return `<div class="court-date-range-title">选择日期范围</div><div class="court-date-range-head"><button type="button" class="court-date-nav" onclick="shiftCourtDateRangeView(-1,event)">‹</button><div class="court-date-range-month">${title}</div><button type="button" class="court-date-nav" onclick="shiftCourtDateRangeView(1,event)">›</button></div><div class="court-date-range-calendar"><div class="court-date-range-week">${days}</div><div class="court-date-range-grid">${cells}</div></div><div class="court-date-range-footer"><div class="court-date-range-hint">${esc(helperText)}</div><button type="button" class="court-date-range-clear" onclick="clearCourtCustomDateRange(event)">清空</button><button type="button" class="court-date-range-confirm ${canConfirm?'is-enabled':''}" ${canConfirm?'':'disabled'} onclick="confirmCourtCustomDateRange(event)">确定</button></div></div>`;
+}
+function resolveCourtDateRangeViewDate(){
+  const anchorText=String(window.__courtDateRangeViewAnchor||'').trim();
+  if(anchorText){
+    const anchorDate=new Date(`${anchorText}T00:00:00`);
+    if(!Number.isNaN(anchorDate.getTime()))return new Date(anchorDate.getFullYear(),anchorDate.getMonth(),1);
+  }
+  const raw=courtDateRangeStart||today();
+  const current=new Date(`${raw}T00:00:00`);
+  if(Number.isNaN(current.getTime()))return new Date();
+  return new Date(current.getFullYear(),current.getMonth(),1);
+}
+function shiftCourtDateRangeView(offset,event){
+  if(event)event.stopPropagation();
+  const base=resolveCourtDateRangeViewDate();
+  const next=new Date(base.getFullYear(),base.getMonth()+offset,1);
+  window.__courtDateRangeViewAnchor=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-01`;
+  refreshCourtTopFilters();
+  const dropdown=document.getElementById('courtTopDate_dropdown');
+  if(dropdown)dropdown.classList.add('open');
+}
+function renderCourtDateRangeCalendarCells(viewDate){
+  const anchorText=String(window.__courtDateRangeViewAnchor||'').trim();
+  const anchorDate=anchorText?new Date(`${anchorText}T00:00:00`):null;
+  const base=anchorDate&&!Number.isNaN(anchorDate.getTime())?anchorDate:viewDate;
+  const year=base.getFullYear();
+  const month=base.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const prevDaysInMonth=new Date(year,month,0).getDate();
+  const firstDay=new Date(year,month,1).getDay();
+  const blanks=(firstDay===0?6:firstDay-1);
+  const cells=[];
+  for(let i=0;i<blanks;i++)cells.push(`<div class="court-date-cell is-muted">${prevDaysInMonth-blanks+i+1}</div>`);
+  for(let day=1;day<=daysInMonth;day++){
+    const date=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isStart=date===courtDateRangeStart;
+    const isEnd=date===courtDateRangeEnd;
+    const inRange=!!courtDateRangeStart&&!!courtDateRangeEnd&&date>courtDateRangeStart&&date<courtDateRangeEnd;
+    cells.push(`<button type="button" class="court-date-cell${isStart||isEnd?' is-edge':''}${inRange?' is-range':''}" onclick="pickCourtCustomDate('${date}',event)">${day}</button>`);
+  }
+  let nextDay=1;
+  while(cells.length%7!==0){
+    cells.push(`<div class="court-date-cell is-muted">${nextDay++}</div>`);
+  }
+  return cells.join('');
+}
+function pickCourtCustomDate(date,event){
+  if(event)event.stopPropagation();
+  courtDateRangeFilterValue='自定义';
+  if(!courtDateRangeStart||courtDateRangeEnd){
+    courtDateRangeStart=date;
+    courtDateRangeEnd='';
+  }else if(date<courtDateRangeStart){
+    courtDateRangeStart=date;
+    courtDateRangeEnd='';
+  }else{
+    courtDateRangeEnd=date;
+  }
+  window.__courtDateRangeViewAnchor=`${date.slice(0,7)}-01`;
+  refreshCourtTopFilters();
+  const dropdown=document.getElementById('courtTopDate_dropdown');
+  if(dropdown)dropdown.classList.add('open');
+}
+function clearCourtCustomDateRange(event){
+  if(event)event.stopPropagation();
+  courtDateRangeStart='';
+  courtDateRangeEnd='';
+  courtDateRangeFilterValue='自定义';
+  refreshCourtTopFilters();
+  const dropdown=document.getElementById('courtTopDate_dropdown');
+  if(dropdown)dropdown.classList.add('open');
+}
+function confirmCourtCustomDateRange(event){
+  if(event)event.stopPropagation();
+  if(!courtDateRangeStart||!courtDateRangeEnd)return;
+  courtDateRangeFilterValue='自定义';
+  courtPage=1;
+  refreshCourtTopFilters();
+  renderCourts();
+  closeCourtTopDropdowns();
+}
+function resolveCourtDatePresetRange(value){
+  const now=new Date(`${today()}T00:00:00`);
+  const padDate=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  if(value==='今日'){
+    const key=padDate(now);
+    return {startDate:key,endDate:key};
+  }
+  if(value==='本周'){
+    const start=weekStart(now);
+    const end=addDays(start,6);
+    return {startDate:padDate(start),endDate:padDate(end)};
+  }
+  if(value==='本月'){
+    const start=monthStart(now);
+    const end=new Date(start.getFullYear(),start.getMonth()+1,0);
+    return {startDate:padDate(start),endDate:padDate(end)};
+  }
+  return {startDate:'',endDate:''};
+}
+function onCourtDateRangeFilterChange(value,event){
+  if(event)event.stopPropagation();
+  if(value==='自定义'){
+    courtDateRangeFilterValue='自定义';
+    if(!courtDateRangeStart&&!courtDateRangeEnd){
+      const preset=resolveCourtDatePresetRange('本月');
+      courtDateRangeStart=preset.startDate;
+      courtDateRangeEnd='';
+      window.__courtDateRangeViewAnchor=`${preset.startDate.slice(0,7)}-01`;
+    }
+    refreshCourtTopFilters();
+    const dropdown=document.getElementById('courtTopDate_dropdown');
+    if(dropdown)dropdown.classList.add('open');
+    return;
+  }
+  courtDateRangeFilterValue=value;
+  if(value==='全部'){
+    courtDateRangeStart='';
+    courtDateRangeEnd='';
+  }else{
+    const preset=resolveCourtDatePresetRange(value);
+    courtDateRangeStart=preset.startDate;
+    courtDateRangeEnd=preset.endDate;
+    window.__courtDateRangeViewAnchor=`${preset.startDate.slice(0,7)}-01`;
+  }
+  courtPage=1;
+  refreshCourtTopFilters();
+  renderCourts();
+  closeCourtTopDropdowns();
+}
+function courtRowHistoryForFilter(row){
+  return Array.isArray(row?.history)?row.history:[];
+}
+function courtDateKeyForFilter(value){
+  const text=String(value||'').trim();
+  if(!text)return '';
+  const match=text.match(/(\d{4})[年./-](\d{1,2})[月./-](\d{1,2})/);
+  if(match)return `${match[1]}-${String(match[2]).padStart(2,'0')}-${String(match[3]).padStart(2,'0')}`;
+  const shortMatch=text.match(/(^|[^\d])(\d{1,2})[月./-](\d{1,2})(?:日)?/);
+  if(shortMatch){
+    const fallbackYear=String(today()).slice(0,4);
+    return `${fallbackYear}-${String(shortMatch[2]).padStart(2,'0')}-${String(shortMatch[3]).padStart(2,'0')}`;
+  }
+  const parsed=new Date(text.replace(' ','T'));
+  if(Number.isNaN(parsed.getTime()))return '';
+  return `${parsed.getFullYear()}-${String(parsed.getMonth()+1).padStart(2,'0')}-${String(parsed.getDate()).padStart(2,'0')}`;
+}
+function courtDateWithinRange(date,start,end){
+  const raw=courtDateKeyForFilter(date);
+  if(!raw)return false;
+  if(start&&raw<start)return false;
+  if(end&&raw>end)return false;
+  return true;
+}
+function courtHistoryDate(row){
+  return courtDateKeyForFilter(row?.occurredDate||row?.date||row?.businessDate||row?.bookingDate||row?.startDate||row?.consumedAt||row?.usedAt||row?.operationAt||row?.recordedAt||row?.createdAt||row?.startTime||'');
+}
+function courtDateMatchedBookingHistory(row,start,end){
+  if(!courtDateWithinRange(courtHistoryDate(row),start,end))return false;
+  if(typeof isCourtBookingHistoryRow==='function')return isCourtBookingHistoryRow(row);
+  return String(row?.category||'').includes('订场')||!!(row?.startTime&&row?.endTime);
+}
+function applyCourtDateRangeFilter(items=[],range={}){
+  const start=String(range?.startDate||'').trim();
+  const end=String(range?.endDate||'').trim();
+  if(!start&&!end)return items;
+  return (items||[]).map(item=>{
+    const rawHistory=courtRowHistoryForFilter(item);
+    const history=typeof normalizeCourtHistoryLocal==='function'?normalizeCourtHistoryLocal(rawHistory):rawHistory;
+    const filteredHistory=history.filter(row=>courtDateWithinRange(courtHistoryDate(row),start,end));
+    const filteredBookingHistory=history.filter(row=>courtDateMatchedBookingHistory(row,start,end));
+    const hasBookingMetrics=Number(item?.bookingCount)||Number(item?.bookingAmount)||Number(item?.bookingHours);
+    const fallbackBookingMatched=courtDateWithinRange(item?.lastBookingDate,start,end)&&hasBookingMetrics;
+    const shouldFallbackToItemMetrics=!filteredBookingHistory.length&&fallbackBookingMatched;
+    const booking=shouldFallbackToItemMetrics
+      ? {
+          count:Number(item?.bookingCount)||0,
+          amount:Number(item?.bookingAmount)||0,
+          hours:Number(item?.bookingHours)||0,
+          memberCount:Number(item?.memberBookingCount)||0,
+          memberAmount:Number(item?.memberBookingAmount)||0,
+          guestCount:Number(item?.guestBookingCount)||Math.max(0,(Number(item?.bookingCount)||0)-(Number(item?.memberBookingCount)||0)),
+          guestAmount:Number(item?.guestBookingAmount)||Math.max(0,(Number(item?.bookingAmount)||0)-(Number(item?.memberBookingAmount)||0)),
+          lastDate:String(item?.lastBookingDate||'').trim()
+        }
+      : courtBookingSummary({history:filteredBookingHistory});
+    if(!booking.lastDate){
+      booking.lastDate=filteredBookingHistory.map(courtHistoryDate).filter(Boolean).sort().pop()||'';
+    }
+    const hasDateMatchedHistory=filteredBookingHistory.length>0;
+    const hasDateMatchedBooking=shouldFallbackToItemMetrics;
+    return {
+      ...item,
+      history:shouldFallbackToItemMetrics?history:filteredHistory,
+      bookingCount:booking.count,
+      bookingHours:booking.hours,
+      memberBookingCount:booking.memberCount,
+      memberBookingAmount:booking.memberAmount,
+      guestBookingCount:booking.guestCount,
+      guestBookingAmount:booking.guestAmount,
+      bookingAmount:booking.amount,
+      lastBookingDate:booking.lastDate||item?.lastBookingDate||'',
+      __hasDateMatchedHistory:hasDateMatchedHistory||hasDateMatchedBooking
+    };
+  }).filter(item=>item.__hasDateMatchedHistory);
+}
+document.addEventListener('click',closeCourtTopDropdowns);
 function setCourtPageSize(value){
   const next=parseInt(value,10)||20;
   courtPageSize=next;
@@ -796,7 +1096,8 @@ function renderCourtAccountListView(){
     accountTypes:campus==='all'?filters.accountTypes:[...new Set(base.map(item=>String(item.accountType||'').trim()).filter(Boolean))]
   };
   renderCourtHeaderFilters(base,scopedFilters);
-  let list=visibleItems.filter(item=>{
+  const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
+  let list=dateScopedBase.filter(item=>{
     if(campus!=='all'&&item.campusCode!==campus)return false;
     if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
     if(courtAccountTypeFilterValue&&item.accountType!==courtAccountTypeFilterValue)return false;
@@ -813,7 +1114,7 @@ function renderCourtAccountListView(){
   }else{
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
-  const scopedSummary=summarizeCourtAccountListItems(base);
+  const scopedSummary=summarizeCourtAccountListItems(list);
   renderCourtStatsCards(scopedSummary);
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
@@ -852,7 +1153,8 @@ function renderCourts(){
   const visibleCourts=courts.filter(c=>isActiveCourtRecord(c)&&c.id!=='match-court-finance');
   const base=visibleCourts.filter(c=>campus==='all'||c.campus===campus);
   renderCourtHeaderFilters(base);
-  let list=visibleCourts.filter(c=>{
+  const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
+  let list=dateScopedBase.filter(c=>{
     if(campus!=='all'&&c.campus!==campus)return false;
     if(courtOwnerFilterValue&&String(c.owner||'').trim()!==courtOwnerFilterValue)return false;
     const linked=findStudentForCourt(c);
@@ -871,12 +1173,12 @@ function renderCourts(){
   }else{
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
-  const finBase=base.map(courtFinanceLocal);
-  const bookingBase=base.map(courtBookingSummary);
+  const finBase=list.map(courtFinanceLocal);
+  const bookingBase=list.map(courtBookingSummary);
   const totBal=finBase.reduce((s,u)=>s+u.balance,0),totDep=finBase.reduce((s,u)=>s+u.totalDeposit,0),totSpent=finBase.reduce((s,u)=>s+u.spentAmount,0),totReceived=finBase.reduce((s,u)=>s+u.receivedAmount,0);
   renderCourtStatsCards({
-    totalCount:base.length,
-    totalMemberCount:base.filter(c=>{const m=courtMembershipSummary(c);return m.account&&m.status!=='已作废'&&m.status!=='已清零';}).length,
+    totalCount:list.length,
+    totalMemberCount:list.filter(c=>{const m=courtMembershipSummary(c);return m.account&&m.status!=='已作废'&&m.status!=='已清零';}).length,
     totalBalance:totBal,
     totalDeposit:totDep,
     totalSpent:totSpent,
