@@ -209,6 +209,7 @@ function buildLegacyItem(court, ctx) {
   const finance = computeLegacyFinance(court);
   const bookingSummary = computeBookingSummary(court);
   const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
+  const isActiveMember = !!account && ['active', 'extended'].includes(String(account.status || '').trim());
   const studentSummary = linkedStudentSummary(court, ctx.students);
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
   return {
@@ -231,12 +232,12 @@ function buildLegacyItem(court, ctx) {
     membershipValidUntil: account && !['voided', 'cleared'].includes(account.status) ? String(account?.validUntil || '').trim() || '-' : '-',
     linkedStudentSummary: studentSummary,
     lowBalance: finance.balance > 0 && finance.balance <= 500,
-    memberBookingCount: computeMemberBookingCount(court),
+    memberBookingCount: isActiveMember ? bookingSummary.bookingCount : 0,
     bookingCount: bookingSummary.bookingCount,
     bookingHours: bookingSummary.bookingHours,
-    memberBookingAmount: bookingSummary.memberBookingAmount,
-    guestBookingCount: bookingSummary.guestBookingCount,
-    guestBookingAmount: bookingSummary.guestBookingAmount,
+    memberBookingAmount: isActiveMember ? bookingSummary.bookingAmount : 0,
+    guestBookingCount: isActiveMember ? 0 : bookingSummary.bookingCount,
+    guestBookingAmount: isActiveMember ? 0 : bookingSummary.bookingAmount,
     bookingAmount: bookingSummary.bookingAmount,
     lastBookingDate: bookingSummary.lastBookingDate,
     balance: money(finance.balance),
