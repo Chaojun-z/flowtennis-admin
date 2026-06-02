@@ -325,6 +325,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance #financeRevenuePanel .tms-page-ellipsis{font-size:11px;color:#A3968F;padding:0 2px}
 #page-finance #financeRevenuePanel .tms-page-jump{display:inline-flex;align-items:center;gap:4px;color:#8C7B6E;font-size:11px}
 #page-finance #financeRevenuePanel .tms-page-jump input{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2;color:#5C4D43;text-align:center;font-size:11px;font-weight:400}
+#page-finance #financeLedgerPanel .tms-page-ellipsis{font-size:11px;color:#A3968F;padding:0 2px}
+#page-finance #financeLedgerPanel .tms-page-jump{display:inline-flex;align-items:center;gap:4px;color:#8C7B6E;font-size:11px}
+#page-finance #financeLedgerPanel .tms-page-jump input{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2;color:#5C4D43;text-align:center;font-size:11px;font-weight:400}
 #page-schedule .tms-pagination{padding:4px 12px;font-size:11px;min-height:32px}
 #page-schedule .tms-pagination .tms-dropdown-display{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400;border-radius:9px}
 #page-schedule .tms-dropdown.has-value .tms-dropdown-display{font-weight:400}
@@ -350,6 +353,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-memberships .tms-pagination .tms-dropdown-display{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400;border-radius:9px}
 #page-memberships .tms-dropdown.has-value .tms-dropdown-display{font-weight:400}
 #page-memberships .tms-page-btn{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px}
+#page-finance #financeLedgerPanel .tms-table-wrapper{max-height:calc(100vh - 210px)}
 #page-finance #financeLedgerPanel .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-finance #financeLedgerPanel .tms-text-primary,#page-finance #financeLedgerPanel .tms-cell-text,#page-finance #financeLedgerPanel .tms-text-remark{font-size:12px}
 #page-finance #financeLedgerPanel .finance-amount{font-size:12px;font-weight:400}
