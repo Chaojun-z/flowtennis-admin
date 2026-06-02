@@ -117,6 +117,11 @@ assert.match(html, /renderCourtDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',
 assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use browser confirm');
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
+assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
+assert.match(fnBody('renderCourtStatsCards'), /订场用户结构[\s\S]*场地利用大盘[\s\S]*客群次数对比盘[\s\S]*订场财务大盘[\s\S]*客群金额对比盘/, 'court stats should show the requested five grouped dashboards');
+assert.match(html, /court-stat-percent/, 'court stats should render percentages with a smaller muted style');
+assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/, 'court stats should use a dashboard grid layout');
+assert.match(pagesCss, /#page-courts \.court-stat-percent\{[^}]*font-size:12px[^}]*color:#8C7B6E/, 'court stat percentages should be smaller and muted');
 assert.match(html, /function courtMembershipTierLabel\(/, 'court membership display should use membership tier label');
 assert.match(html, /function courtMembershipTierTagClass\(/, 'court member tier should use tier-specific tag colors');
 assert.match(fnBody('renderCourts'), /m\.tierLabel&&m\.tierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');

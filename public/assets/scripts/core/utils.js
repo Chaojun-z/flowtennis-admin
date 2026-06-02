@@ -34,29 +34,54 @@ function isCourtBookingHistoryRow(row){
   const payMethod=String(row?.payMethod||'').trim();
   return row?.type==='消费'&&payMethod!=='储值扣款'&&(!category||category==='其他');
 }
+function courtBookingClockMinutes(value){
+  const text=String(value||'').trim();
+  const clock=text.includes(' ')?text.slice(11,16):text.slice(0,8);
+  const match=clock.match(/(\d{1,2})(?::|点)?(\d{1,2})?/);
+  if(!match)return null;
+  const hour=parseInt(match[1],10);
+  const minute=parseInt(match[2]||'0',10);
+  if(!Number.isFinite(hour)||!Number.isFinite(minute))return null;
+  return hour*60+minute;
+}
+function courtBookingDurationHours(row){
+  const start=courtBookingClockMinutes(row?.startTime);
+  const end=courtBookingClockMinutes(row?.endTime);
+  if(start===null||end===null||end<=start)return 0;
+  return Math.round(((end-start)/60)*100)/100;
+}
 function courtBookingSummary(court){
   if(court&&court.bookingCount!=null){
     return {
       count:Number(court.bookingCount)||0,
       amount:Number(court.bookingAmount)||0,
+      hours:Number(court.bookingHours)||0,
+      memberCount:Number(court.memberBookingCount)||0,
+      memberAmount:Number(court.memberBookingAmount)||0,
+      guestCount:Number(court.guestBookingCount)||Math.max(0,(Number(court.bookingCount)||0)-(Number(court.memberBookingCount)||0)),
+      guestAmount:Number(court.guestBookingAmount)||0,
       lastDate:String(court.lastBookingDate||'').trim()
     };
   }
   const rows=normalizeCourtHistoryLocal(court?.history);
-  const summary={count:0,amount:0,lastDate:''};
+  const summary={count:0,amount:0,hours:0,memberCount:0,memberAmount:0,guestCount:0,guestAmount:0,lastDate:''};
   rows.forEach(h=>{
     if(!isCourtBookingHistoryRow(h))return;
     const amount=parseFloat(h.amount)||0;
     if(h.type==='消费'){
+      const isMemberBooking=String(h.payMethod||'').trim()==='储值扣款'&&String(h.category||'').includes('订场');
       summary.count+=1;
       summary.amount+=amount;
+      summary.hours+=courtBookingDurationHours(h);
+      if(isMemberBooking){summary.memberCount+=1;summary.memberAmount+=amount;}
+      else{summary.guestCount+=1;summary.guestAmount+=amount;}
       const date=String(h.occurredDate||h.date||'').slice(0,10);
       if(date&&(!summary.lastDate||date>summary.lastDate))summary.lastDate=date;
     }else if(h.type==='退款'||h.type==='冲正'){
       summary.amount-=amount;
     }
   });
-  summary.amount=Math.max(0,Math.round(summary.amount*100)/100);
+  ['amount','hours','memberAmount','guestAmount'].forEach(k=>summary[k]=Math.max(0,Math.round(summary[k]*100)/100));
   return summary;
 }
 function courtSortMetric(court,key){

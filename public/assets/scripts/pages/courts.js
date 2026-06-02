@@ -734,13 +734,51 @@ function summarizeCourtAccountListItems(items=[]){
   const memberItems=items.filter(item=>item?.membershipStatusCode&&!['voided','cleared'].includes(String(item.membershipStatusCode)));
   return {
     totalCount:items.length,
+    totalMemberCount:memberItems.length,
     totalBalance:memberItems.reduce((sum,item)=>sum+(Number(item?.balance)||0),0),
     totalDeposit:items.reduce((sum,item)=>sum+(Number(item?.totalDeposit)||0),0),
     totalSpent:items.reduce((sum,item)=>sum+(Number(item?.totalSpent)||0),0),
     totalReceived:items.reduce((sum,item)=>sum+(Number(item?.totalReceived)||0),0),
     totalBookingCount:items.reduce((sum,item)=>sum+(Number(item?.bookingCount)||0),0),
+    totalBookingHours:items.reduce((sum,item)=>sum+(Number(item?.bookingHours)||0),0),
+    totalMemberBookingCount:items.reduce((sum,item)=>sum+(Number(item?.memberBookingCount)||0),0),
+    totalMemberBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.memberBookingAmount)||0),0),
+    totalGuestBookingCount:items.reduce((sum,item)=>sum+(Number(item?.guestBookingCount)||0),0),
+    totalGuestBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.guestBookingAmount)||0),0),
     totalBookingAmount:items.reduce((sum,item)=>sum+(Number(item?.bookingAmount)||0),0)
   };
+}
+function courtRatioText(part,total){
+  const safeTotal=Number(total)||0;
+  if(safeTotal<=0)return '0%';
+  return `${Math.round(((Number(part)||0)/safeTotal)*100)}%`;
+}
+function courtStatValuePair(left,right){
+  return `<div class="tms-stat-value court-split-value"><span>${left}</span><span class="court-stat-slash">/</span><span>${right}</span></div>`;
+}
+function courtStatPercent(value){
+  return `<span class="court-stat-percent">(${courtRatioText(value.part,value.total)})</span>`;
+}
+function renderCourtStatsCards(summary={}){
+  const totalUsers=Number(summary.totalCount)||0;
+  const memberUsers=Number(summary.totalMemberCount)||0;
+  const bookingCount=Number(summary.totalBookingCount)||0;
+  const bookingHours=Number(summary.totalBookingHours)||0;
+  const memberBookingCount=Number(summary.totalMemberBookingCount)||0;
+  const guestBookingCount=Number(summary.totalGuestBookingCount)||Math.max(0,bookingCount-memberBookingCount);
+  const bookingAmount=Number(summary.totalBookingAmount)||0;
+  const memberBookingAmount=Number(summary.totalMemberBookingAmount)||0;
+  const guestBookingAmount=Number(summary.totalGuestBookingAmount)||Math.max(0,bookingAmount-memberBookingAmount);
+  const totalReceived=Number(summary.totalReceived)||0;
+  const card=(title,value,caption,extraClass='')=>`<div class="tms-stat-card court-dashboard-card ${extraClass}"><div class="tms-stat-label">${title}</div>${value}<div class="tms-stat-sub">${caption}</div></div>`;
+  document.getElementById('courtStatsRow').classList.add('court-dashboard-stats');
+  document.getElementById('courtStatsRow').innerHTML=[
+    card('订场用户结构',courtStatValuePair(`${totalUsers} 人`,`${memberUsers} 人`),'总订场用户 / 会员用户数'),
+    card('场地利用大盘',courtStatValuePair(`${bookingCount} 次`,`${fmt(bookingHours)} 小时`),'总订场次数 / 总订场时长'),
+    card('客群次数对比盘',courtStatValuePair(`${guestBookingCount}次${courtStatPercent({part:guestBookingCount,total:bookingCount})}`,`${memberBookingCount}次${courtStatPercent({part:memberBookingCount,total:bookingCount})}`),'散客次数占比 / 会员次数占比'),
+    card('订场财务大盘',courtStatValuePair(`¥${fmt(totalReceived)}`,`¥${fmt(bookingAmount)}`),'总实收金额 / 实际订场消费','court-stat-wide-left'),
+    card('客群金额对比盘',courtStatValuePair(`¥${fmt(guestBookingAmount)}${courtStatPercent({part:guestBookingAmount,total:bookingAmount})}`,`¥${fmt(memberBookingAmount)}${courtStatPercent({part:memberBookingAmount,total:bookingAmount})}`),'散客消费占比 / 会员消费占比','court-stat-wide-right')
+  ].join('');
 }
 function renderCourtAccountListView(){
   const q=(document.getElementById('courtSearch')?.value||'').toLowerCase();
@@ -773,7 +811,7 @@ function renderCourtAccountListView(){
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
   const scopedSummary=campus==='all'?summary:summarizeCourtAccountListItems(base);
-  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${Number(scopedSummary.totalCount)||0}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">累计订场</div><div class="tms-stat-value">${Number(scopedSummary.totalBookingCount)||0}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场消费</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalBookingAmount)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员余额</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalBalance)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(scopedSummary.totalReceived)}</div></div>`;
+  renderCourtStatsCards(scopedSummary);
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
   const slice=sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
@@ -833,8 +871,21 @@ function renderCourts(){
   const finBase=base.map(courtFinanceLocal);
   const bookingBase=base.map(courtBookingSummary);
   const totBal=finBase.reduce((s,u)=>s+u.balance,0),totDep=finBase.reduce((s,u)=>s+u.totalDeposit,0),totSpent=finBase.reduce((s,u)=>s+u.spentAmount,0),totReceived=finBase.reduce((s,u)=>s+u.receivedAmount,0);
-  const bookingCount=bookingBase.reduce((s,u)=>s+u.count,0),bookingAmount=bookingBase.reduce((s,u)=>s+u.amount,0);
-  document.getElementById('courtStatsRow').innerHTML=`<div class="tms-stat-card"><div class="tms-stat-label">订场用户</div><div class="tms-stat-value">${base.length}<span>人</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">累计订场</div><div class="tms-stat-value">${bookingCount}<span>次</span></div></div><div class="tms-stat-card"><div class="tms-stat-label">订场消费</div><div class="tms-stat-value">¥${fmt(bookingAmount)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">会员余额</div><div class="tms-stat-value">¥${fmt(totBal)}</div></div><div class="tms-stat-card"><div class="tms-stat-label">累计实收</div><div class="tms-stat-value">¥${fmt(totReceived)}</div></div>`;
+  renderCourtStatsCards({
+    totalCount:base.length,
+    totalMemberCount:base.filter(c=>{const m=courtMembershipSummary(c);return m.account&&m.status!=='已作废'&&m.status!=='已清零';}).length,
+    totalBalance:totBal,
+    totalDeposit:totDep,
+    totalSpent:totSpent,
+    totalReceived:totReceived,
+    totalBookingCount:bookingBase.reduce((s,u)=>s+u.count,0),
+    totalBookingHours:bookingBase.reduce((s,u)=>s+(Number(u.hours)||0),0),
+    totalMemberBookingCount:bookingBase.reduce((s,u)=>s+(Number(u.memberCount)||0),0),
+    totalMemberBookingAmount:bookingBase.reduce((s,u)=>s+(Number(u.memberAmount)||0),0),
+    totalGuestBookingCount:bookingBase.reduce((s,u)=>s+(Number(u.guestCount)||0),0),
+    totalGuestBookingAmount:bookingBase.reduce((s,u)=>s+(Number(u.guestAmount)||0),0),
+    totalBookingAmount:bookingBase.reduce((s,u)=>s+u.amount,0)
+  });
   const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
   const slice=sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);

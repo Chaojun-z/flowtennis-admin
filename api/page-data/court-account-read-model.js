@@ -90,15 +90,42 @@ function isCourtBookingHistoryRow(row) {
   return row?.type === '消费' && payMethod !== '储值扣款' && (!category || category === '其他');
 }
 
+function clockMinutes(value) {
+  const text = String(value || '').trim();
+  const clock = text.includes(' ') ? text.slice(11, 16) : text.slice(0, 8);
+  const match = clock.match(/(\d{1,2})(?::|点)?(\d{1,2})?/);
+  if (!match) return null;
+  const hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2] || '0', 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  return hour * 60 + minute;
+}
+
+function bookingDurationHours(row) {
+  const start = clockMinutes(row?.startTime);
+  const end = clockMinutes(row?.endTime);
+  if (start === null || end === null || end <= start) return 0;
+  return money((end - start) / 60);
+}
+
 function computeBookingSummary(court) {
   const history = normalizeCourtHistory(court?.history);
-  const summary = { bookingCount: 0, bookingAmount: 0, lastBookingDate: '' };
+  const summary = { bookingCount: 0, bookingAmount: 0, bookingHours: 0, memberBookingCount: 0, memberBookingAmount: 0, guestBookingCount: 0, guestBookingAmount: 0, lastBookingDate: '' };
   history.forEach((row) => {
     if (!isCourtBookingHistoryRow(row)) return;
     const amount = money(row?.amount);
     if (row.type === '消费') {
+      const isMemberBooking = String(row?.payMethod || '').trim() === '储值扣款' && String(row?.category || '').includes('订场');
       summary.bookingCount += 1;
       summary.bookingAmount += amount;
+      summary.bookingHours += bookingDurationHours(row);
+      if (isMemberBooking) {
+        summary.memberBookingCount += 1;
+        summary.memberBookingAmount += amount;
+      } else {
+        summary.guestBookingCount += 1;
+        summary.guestBookingAmount += amount;
+      }
       const date = String(row?.occurredDate || row?.date || '').slice(0, 10);
       if (date && (!summary.lastBookingDate || date > summary.lastBookingDate)) summary.lastBookingDate = date;
       return;
@@ -108,6 +135,9 @@ function computeBookingSummary(court) {
     }
   });
   summary.bookingAmount = Math.max(0, money(summary.bookingAmount));
+  summary.bookingHours = Math.max(0, money(summary.bookingHours));
+  summary.memberBookingAmount = Math.max(0, money(summary.memberBookingAmount));
+  summary.guestBookingAmount = Math.max(0, money(summary.guestBookingAmount));
   return summary;
 }
 
@@ -203,6 +233,10 @@ function buildLegacyItem(court, ctx) {
     lowBalance: finance.balance > 0 && finance.balance <= 500,
     memberBookingCount: computeMemberBookingCount(court),
     bookingCount: bookingSummary.bookingCount,
+    bookingHours: bookingSummary.bookingHours,
+    memberBookingAmount: bookingSummary.memberBookingAmount,
+    guestBookingCount: bookingSummary.guestBookingCount,
+    guestBookingAmount: bookingSummary.guestBookingAmount,
     bookingAmount: bookingSummary.bookingAmount,
     lastBookingDate: bookingSummary.lastBookingDate,
     balance: money(finance.balance),
@@ -234,11 +268,17 @@ function buildSummary(items = []) {
   const memberItems = items.filter((item) => item?.membershipStatusCode && !['voided', 'cleared'].includes(item.membershipStatusCode));
   return {
     totalCount: items.length,
+    totalMemberCount: memberItems.length,
     totalBalance: money(memberItems.reduce((sum, item) => sum + money(item?.balance), 0)),
     totalDeposit: money(items.reduce((sum, item) => sum + money(item?.totalDeposit), 0)),
     totalSpent: money(items.reduce((sum, item) => sum + money(item?.totalSpent), 0)),
     totalReceived: money(items.reduce((sum, item) => sum + money(item?.totalReceived), 0)),
     totalBookingCount: items.reduce((sum, item) => sum + (Number(item?.bookingCount) || 0), 0),
+    totalBookingHours: money(items.reduce((sum, item) => sum + money(item?.bookingHours), 0)),
+    totalMemberBookingCount: items.reduce((sum, item) => sum + (Number(item?.memberBookingCount) || 0), 0),
+    totalMemberBookingAmount: money(items.reduce((sum, item) => sum + money(item?.memberBookingAmount), 0)),
+    totalGuestBookingCount: items.reduce((sum, item) => sum + (Number(item?.guestBookingCount) || 0), 0),
+    totalGuestBookingAmount: money(items.reduce((sum, item) => sum + money(item?.guestBookingAmount), 0)),
     totalBookingAmount: money(items.reduce((sum, item) => sum + money(item?.bookingAmount), 0))
   };
 }

@@ -58,8 +58,8 @@ async function main() {
       cachedTotalReceived: 500,
       history: [
         { type: '充值', amount: 500, bonusAmount: 0 },
-        { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10' },
-        { type: '消费', amount: 200, payMethod: '微信', category: '其他', date: '2026-05-12' }
+        { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10', startTime: '10:00', endTime: '12:00', venue: '1号场' },
+        { type: '消费', amount: 200, payMethod: '微信', category: '其他', date: '2026-05-12', startTime: '14:00', endTime: '15:30', venue: '2号场' }
       ],
       updatedAt: '2026-05-13T10:00:00.000Z',
       createdAt: '2026-05-01T10:00:00.000Z'
@@ -108,9 +108,16 @@ async function main() {
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');
   assert.strictEqual(view.items[0].memberBookingCount, 1, '读模型应单独统计会员储值订场');
   assert.strictEqual(view.items[0].bookingCount, 2, '读模型应统计储值订场和散客订场');
+  assert.strictEqual(view.items[0].bookingHours, 3.5, '读模型应统计订场总时长');
   assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
+  assert.strictEqual(view.summary.totalMemberCount, 1, '读模型汇总应统计有效会员人数');
+  assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计订场总时长');
+  assert.strictEqual(view.summary.totalMemberBookingCount, 1, '读模型汇总应统计会员订场次数');
+  assert.strictEqual(view.summary.totalMemberBookingAmount, 300, '读模型汇总应统计会员订场金额');
+  assert.strictEqual(view.summary.totalGuestBookingCount, 1, '读模型汇总应统计散客订场次数');
+  assert.strictEqual(view.summary.totalGuestBookingAmount, 200, '读模型汇总应统计散客订场金额');
   assert.strictEqual(view.summary.totalBalance, 100, '订场用户页会员余额只统计有效会员账户余额，不混入散客余额');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });
