@@ -752,7 +752,8 @@ function courtRatioText(part,total,digits=0){
   const safeTotal=Number(total)||0;
   if(safeTotal<=0)return '0%';
   const ratio=((Number(part)||0)/safeTotal)*100;
-  return `${Number(ratio.toFixed(digits))}%`;
+  if(digits>0&&ratio<10)return `${Number(ratio.toFixed(digits))}%`;
+  return `${Math.round(ratio)}%`;
 }
 function courtStatValuePair(left,right){
   return `<div class="tms-stat-value court-split-value"><span>${left}</span><span class="court-stat-slash">/</span><span>${right}</span></div>`;
