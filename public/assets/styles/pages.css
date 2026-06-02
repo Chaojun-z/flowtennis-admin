@@ -174,6 +174,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-revenue-toolbar .tms-dropdown-display{height:34px;border-radius:6px;font-size:13px;font-weight:400}
 #page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
 #page-finance .finance-revenue-toolbar .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+#page-finance #financeLedgerPanel .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
+#page-finance #financeLedgerPanel .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-finance .finance-revenue-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #page-finance .finance-ledger-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #page-schedule .tms-filters .tms-dropdown:not(.has-value) .tms-dropdown-display{color:#8C7B6E}
@@ -316,6 +318,10 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance #financeRevenuePanel .tms-pagination .tms-dropdown-display{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400;border-radius:9px}
 #page-finance #financeRevenuePanel .tms-dropdown.has-value .tms-dropdown-display{font-weight:400}
 #page-finance #financeRevenuePanel .tms-page-btn{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px}
+#page-finance #financeLedgerPanel .tms-pagination{padding:4px 12px;font-size:11px;min-height:32px}
+#page-finance #financeLedgerPanel .tms-pagination .tms-dropdown-display{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400;border-radius:9px}
+#page-finance #financeLedgerPanel .tms-dropdown.has-value .tms-dropdown-display{font-weight:400}
+#page-finance #financeLedgerPanel .tms-page-btn{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px}
 #page-finance #financeRevenuePanel .tms-page-ellipsis{font-size:11px;color:#A3968F;padding:0 2px}
 #page-finance #financeRevenuePanel .tms-page-jump{display:inline-flex;align-items:center;gap:4px;color:#8C7B6E;font-size:11px}
 #page-finance #financeRevenuePanel .tms-page-jump input{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2;color:#5C4D43;text-align:center;font-size:11px;font-weight:400}
@@ -344,6 +350,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-memberships .tms-pagination .tms-dropdown-display{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400;border-radius:9px}
 #page-memberships .tms-dropdown.has-value .tms-dropdown-display{font-weight:400}
 #page-memberships .tms-page-btn{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px}
+#page-finance #financeLedgerPanel .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
+#page-finance #financeLedgerPanel .tms-text-primary,#page-finance #financeLedgerPanel .tms-cell-text,#page-finance #financeLedgerPanel .tms-text-remark{font-size:12px}
+#page-finance #financeLedgerPanel .finance-amount{font-size:12px;font-weight:400}
 #page-memberships .tms-page-ellipsis{font-size:11px;color:#A3968F;padding:0 2px}
 #page-memberships .tms-page-jump{display:inline-flex;align-items:center;gap:4px;color:#8C7B6E;font-size:11px}
 #page-memberships .tms-page-jump input{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2;color:#5C4D43;text-align:center;font-size:11px;font-weight:400}

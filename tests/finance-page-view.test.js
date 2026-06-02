@@ -47,6 +47,8 @@ assert.match(source,/financeOperatorDisplayText/,'ledger should normalize operat
 assert.match(source,/financeDateTimeDisplayText/,'ledger should render full Beijing datetime text');
 assert.match(source,/finance-ledger-remark/,'ledger notes should render as a single-line remark');
 assert.match(source,/finance-date-host finance-date-host-compact/,'ledger date filters should use the compact width wrapper');
+assert.match(source,/id="financeLedgerPageSize"/,'ledger should keep the same page-size host structure as student page');
+assert.match(source,/id="financeLedgerPagerBtns"/,'ledger should keep the same pager button host structure as student page');
 assert.match(source,/courtDateButtonHtml\(id,value,label,handler\)/,'finance date controls should refresh reports after selecting a date');
 assert.match(source,/renderFinanceLedgerReport\(\)">查询|renderFinanceLedger\(\)">查询/,'ledger date filters should have an explicit query button');
 assert.match(source,/renderFinanceRevenueReport\(\)">查询/,'revenue date filters should have an explicit query button');
