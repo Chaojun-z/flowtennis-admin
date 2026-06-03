@@ -655,10 +655,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .package-sales-header{min-height:34px}
 .package-sales-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
 .package-sales-title{font-size:13px;font-weight:700;gap:0}
-.package-time-band-badge{display:inline-block;background:#F1EAE2;color:#8C7B6E;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:400;white-space:nowrap;line-height:1.5}
-.package-time-band-badge.is-all{background:#EEF6FF;color:#2563EB;border:1px solid #D6E8FF}
-.package-time-band-badge.is-prime{background:#F7E8C8;color:#9A5B00;border:0}
-.package-time-band-badge.is-offpeak{background:#F7E8C8;color:#9A5B00;border:0}
+.package-time-band-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:16.65px;padding:0;border:0;border-radius:6px;font-size:11px;font-weight:400;line-height:1;white-space:nowrap}
+.package-time-band-badge.is-prime{background:#F7E8C8;color:#9A5B00}
+.package-time-band-badge.is-offpeak{background:#E7F1E9;color:#3F7E2B;width:47px;height:15.65px}
+.package-time-band-badge.is-all{background:#E5EEF9;color:#355C8A}
 .package-sales-core{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .package-sales-price{font-size:23px;line-height:1;font-weight:700;color:#C06031;letter-spacing:0}
 .package-sales-rules{display:flex;flex-direction:column;gap:6px;min-width:0;flex:0 1 48%;align-items:flex-end}
@@ -669,7 +669,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .package-rule-icon{width:14px;height:14px;color:#9CA3AF;flex:0 0 auto}
 .package-rule-tooltip{position:absolute;right:22px;bottom:calc(100% + 8px);width:max-content;max-width:240px;background:#111827;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6;box-shadow:0 14px 30px rgba(0,0,0,.16);opacity:0;visibility:hidden;transform:translateY(4px);transition:all .15s;white-space:pre-wrap;text-align:left;z-index:20}
 .package-rule-line:hover .package-rule-tooltip{opacity:1;visibility:visible;transform:translateY(0)}
-.package-sales-footer{gap:8px;min-height:44px;align-items:center;padding:10px 12px}
+.package-sales-footer{gap:8px;min-height:44px;align-items:center;padding:8px 12px}
 .package-sales-footer .showcase-card-actions{flex:0 0 auto;gap:6px}
 .package-sales-footer .showcase-action-btn{width:40px;height:25px;min-width:40px;padding:0;font-size:11px;white-space:nowrap}
 .package-card-meta{display:flex;align-items:center;gap:5px;flex:1 1 auto;min-width:0;max-width:100%;color:#A3968F;font-size:10px;line-height:1;white-space:nowrap;overflow:hidden}

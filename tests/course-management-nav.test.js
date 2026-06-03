@@ -196,11 +196,12 @@ assert.match(pagesCss, /package-sales-subtitle\{[^}]*font-size:11px/, 'package a
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px/, 'package campus and coach text should use 11px');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*font-size:11px/, 'package edit and deactivate buttons should use 11px');
 assert.match(pagesCss, /package-card-meta\{[^}]*font-size:10px/, 'package created date and order count should use 10px');
-assert.match(pagesCss, /package-time-band-badge\{[^}]*padding:2px 7px[^}]*border-radius:6px[^}]*font-size:11px[^}]*font-weight:400/, 'package time band tag should reuse the full lead follow-up tag shape');
+assert.match(pagesCss, /package-time-band-badge\{[^}]*width:36px[^}]*height:16\.65px[^}]*padding:0[^}]*border-radius:6px[^}]*font-size:11px[^}]*font-weight:400/, 'package time band tag should use the compact lead follow-up badge shape');
 assert.match(pagesCss, /package-status-badge\{[^}]*font-size:10px/, 'package sale status should use 10px');
-assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#F7E8C8;color:#9A5B00/, 'package prime tag should reuse lead follow-up status styling');
-assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#F7E8C8;color:#9A5B00/, 'package off-peak tag should reuse lead follow-up status styling');
-assert.match(pagesCss, /package-sales-footer\{[^}]*padding:10px 12px/, 'package footer should use 12px horizontal padding');
+assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#F7E8C8;color:#9A5B00/, 'package prime tag should use the gold follow-up colorway');
+assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#E7F1E9;color:#3F7E2B/, 'package off-peak tag should use the green follow-up colorway');
+assert.match(pagesCss, /package-time-band-badge\.is-all\{background:#E5EEF9;color:#355C8A/, 'package all-day tag should use the blue follow-up colorway');
+assert.match(pagesCss, /package-sales-footer\{[^}]*padding:8px 12px/, 'package footer should use 8px vertical and 12px horizontal padding');
 assert.match(pagesCss, /package-sales-title\{font-size:13px/, 'package title should use 13px');
 assert.match(pagesCss, /package-sales-core\{[^}]*align-items:center/, 'package price and rule block should vertically align in the middle');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{width:40px;height:25px/, 'package action buttons should be 40 by 25');
