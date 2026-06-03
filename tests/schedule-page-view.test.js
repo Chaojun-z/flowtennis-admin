@@ -67,7 +67,7 @@ assert.match(source, /function syncScheduleFilterOptions\([\s\S]*schCoachFilter[
 assert.doesNotMatch(source, /schCampusFilterHost|schCampusFilter/, 'schedule toolbar should not keep the old campus dropdown filter');
 assert.match(source, /function scheduleLocationText\(/, 'schedule page should centralize location display');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*校区内[\s\S]*校区外/, 'schedule modal should support in-campus and off-campus lesson location types');
-assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*sch_entitlementHost[\s\S]*sch_courseType[\s\S]*上课信息[\s\S]*schedule-time-field/, 'schedule modal should keep package and course type in student info before lesson time');
+assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*sch_courseType[\s\S]*sch_settlementType[\s\S]*sch_entitlementHost[\s\S]*上课信息[\s\S]*schedule-time-field/, 'schedule modal should keep course type, settlement and package in student info before lesson time');
 assert.doesNotMatch(fnBody('openScheduleModal'), /<select[^>]+id="sch_entitlement"/, 'schedule entitlement should use the standard custom dropdown instead of native select');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit on one row with location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
@@ -77,7 +77,7 @@ assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return true/, 'all camp
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
-assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*扣减课包[\s\S]*课程类型[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*消课节数[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
+assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*消课节数[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
 assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
 assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
 assert.match(fnBody('syncScheduleFilterOptions'), /PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule course type filter should use the shared course type source');

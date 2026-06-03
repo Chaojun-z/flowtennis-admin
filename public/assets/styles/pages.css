@@ -907,6 +907,18 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .tms-checkbox-matrix .tms-checkbox-wrap,.modal.modal-court .tms-checkbox-matrix .tms-checkbox-wrap span{font-size:10px;font-weight:400}
 .modal.modal-court .court-date-row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
 .modal.modal-court .court-date-row > *{min-width:0}
+.modal.modal-court .schedule-settlement-row{align-items:flex-start;gap:12px;flex-wrap:nowrap}
+.modal.modal-court .schedule-course-type-item,.modal.modal-court .schedule-settlement-type-item{flex:0 0 160px;max-width:160px}
+.modal.modal-court .schedule-entitlement-item{flex:1 1 auto;min-width:420px}
+.modal.modal-court .schedule-direct-payment-item{flex:1 1 auto;min-width:360px}
+.modal.modal-court .schedule-subtype-item{flex:0 0 160px;max-width:160px}
+.modal.modal-court .schedule-field-fee-section{margin:4px 0 18px}
+.modal.modal-court .schedule-field-fee-main-row{gap:12px;margin-bottom:12px}
+.modal.modal-court .schedule-field-fee-toggle{flex:1 1 280px}
+.modal.modal-court .schedule-field-fee-amount,.modal.modal-court .schedule-field-fee-pay{flex:0 0 160px;max-width:160px}
+.modal.modal-court .schedule-field-fee-toggle-control{display:flex;align-items:center;gap:10px;white-space:normal;line-height:1.4}
+.modal.modal-court .schedule-field-fee-note-row{margin-bottom:0}
+.modal.modal-court .schedule-field-fee-note{width:100%;min-height:54px;line-height:1.5;resize:vertical}
 .modal.modal-court .schedule-time-course-row{align-items:flex-end;gap:18px}
 .modal.modal-court .schedule-time-field{flex:0 0 452px;min-width:0}
 .modal.modal-court .schedule-course-field{flex:1;min-width:180px}

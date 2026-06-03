@@ -6,6 +6,7 @@ const courseSource = [
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'products.js'), 'utf8'),
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'packages.js'), 'utf8')
 ].join('\n');
+const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
@@ -78,6 +79,12 @@ assert.doesNotMatch(fnBody('openPackageModal'), /适用日期|pkg_timeScope/, 'p
 assert.match(html, /function courseSurchargePayMethodOptions\(\)[\s\S]*payMethodOptions\(\)\.filter/, 'schedule surcharge payment should reuse shared payment methods');
 assert.match(fnBody('courseSurchargePayMethodOptions'), /\['储值扣款','课包划扣','大众点评券码','抖音券码','其他'\]\.includes\(option\.value\)/, 'schedule surcharge payment should hide non-cash payment methods');
 assert.match(fnBody('openScheduleModal'), /renderCourtDropdownHtml\('sch_fieldFeePayMethod','支付方式',courseSurchargePayMethodOptions\(\)/, 'schedule surcharge field should use filtered shared payment methods');
+assert.match(fnBody('openScheduleModal'), /schedule-settlement-row[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包/, 'schedule modal should order course type, settlement type, then package deduction');
+assert.match(fnBody('openScheduleModal'), /schedule-course-type-item[\s\S]*schedule-settlement-type-item[\s\S]*schedule-entitlement-item/, 'schedule modal should give course and settlement compact columns and package a wide column');
+assert.match(fnBody('openScheduleModal'), /schedule-field-fee-section[\s\S]*schedule-field-fee-main-row[\s\S]*是否收补差[\s\S]*补差金额[\s\S]*支付方式[\s\S]*schedule-field-fee-note-row[\s\S]*补差说明/, 'schedule surcharge fields should split main fields and note into separate rows');
+assert.match(fnBody('openScheduleModal'), /textarea class="finput tms-form-control schedule-field-fee-note" id="sch_fieldFeeNote"/, 'schedule surcharge note should use a readable full-width textarea');
+assert.match(pagesCss, /schedule-course-type-item[\s\S]*flex:0 0 160px[\s\S]*schedule-entitlement-item[\s\S]*min-width:420px/, 'schedule modal should keep package deduction wider than course and settlement fields');
+assert.match(pagesCss, /schedule-field-fee-note[\s\S]*min-height:54px/, 'schedule surcharge note should have readable height');
 assert.match(html, /packageTimeBandPresetWindows[\s\S]*工作日[\s\S]*周六日/, 'package modal should derive applicable days from time band presets');
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeStart\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal start time should use the schedule custom time picker');
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeEnd\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal end time should use the schedule custom time picker');
