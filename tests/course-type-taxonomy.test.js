@@ -11,7 +11,7 @@ function fnBody(name){
   return source.slice(start, next === -1 ? source.length : next);
 }
 
-assert.match(source, /const PRODUCT_TYPES=\['私教课','小班课','体验课','大师课'\]/, 'course type level1 options should use the new four-type standard');
+assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'course type level1 options should use the five-type standard order');
 assert.doesNotMatch(source, /const PRODUCT_TYPES=\[[^\]]*'训练营'[^\]]*\]/, '训练营 should not be a level1 course type');
 assert.match(fnBody('openScheduleModal'), /smallClassOptions=\[\{value:'single',label:'单次'\},\{value:'bootcamp',label:'训练营'\},\{value:'dropin',label:'随到随学'\}\]/, 'schedule modal should keep 训练营 as a small-class subtype');
 assert.match(fnBody('openPackageModal'), /smallClassOptions=\[\{value:'single',label:'单次'\},\{value:'bootcamp',label:'训练营'\},\{value:'dropin',label:'随到随学'\}\]/, 'package modal should keep 训练营 as a small-class subtype');

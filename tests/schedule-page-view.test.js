@@ -78,7 +78,7 @@ assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal 
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
 assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*扣减课包[\s\S]*课程类型[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*消课节数[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
-assert.match(source, /const PRODUCT_TYPES=\['私教课','小班课','体验课','大师课'\]/, 'all course type dropdowns should share the standard level1 course types');
+assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
 assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
 assert.match(fnBody('syncScheduleFilterOptions'), /PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule course type filter should use the shared course type source');
 assert.match(fnBody('openScheduleModal'), /const courseTypeOptions=PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule modal course type dropdown should use the shared course type source');

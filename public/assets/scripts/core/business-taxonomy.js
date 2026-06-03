@@ -13,7 +13,8 @@
     { level1: '小班课', level2: '随到随学' },
     { level1: '体验课', level2: '私教体验课' },
     { level1: '体验课', level2: '小班体验课' },
-    { level1: '大师课', level2: '' }
+    { level1: '大师课', level2: '' },
+    { level1: '陪打', level2: '' }
   ];
 
   function text(value) {
@@ -63,6 +64,7 @@
     if (includesAny(haystack, ['小班体验'])) return { level1: '体验课', level2: '小班体验课' };
     if (includesAny(haystack, ['私教体验', '体验课'])) return { level1: '体验课', level2: '私教体验课' };
     if (includesAny(haystack, ['大师课'])) return { level1: '大师课', level2: '' };
+    if (includesAny(haystack, ['陪打'])) return { level1: '陪打', level2: '' };
     if (courseType === '小班课' || includesAny(haystack, ['小班', '班课'])) return { level1: '小班课', level2: '单次' };
     return { level1: '私教课', level2: '' };
   }

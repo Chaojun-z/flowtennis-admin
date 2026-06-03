@@ -23,6 +23,16 @@ assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '体验课', e
   level1: '体验课',
   level2: '私教体验课'
 });
+assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '订场陪打' }), {
+  level1: '陪打',
+  level2: ''
+});
+assert.deepStrictEqual(taxonomy.normalizeBusinessType({ courseType: '陪打' }), {
+  level1: '课程',
+  level2: '陪打',
+  level3: '',
+  display: '课程 / 陪打'
+});
 
 assert.deepStrictEqual(taxonomy.normalizeBusinessType({ businessType: '会员储值' }), {
   level1: '储值',

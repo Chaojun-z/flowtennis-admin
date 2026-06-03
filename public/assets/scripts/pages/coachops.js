@@ -231,9 +231,7 @@ function coachOpsLegendDotClass(type){
   return coachOpsCourseTypeTagClass(type).replace(/^type-/,'');
 }
 function coachOpsCourseTypeLegendHtml(){
-  return PRODUCT_TYPES.map(type=>`<span class="coach-ops-legend-item"><i class="coach-ops-legend-dot ${coachOpsLegendDotClass(type)}"></i>${esc(type)}</span>`)
-    .concat(`<span class="coach-ops-legend-item"><i class="coach-ops-legend-dot partner"></i>陪打</span>`)
-    .join('');
+  return PRODUCT_TYPES.map(type=>`<span class="coach-ops-legend-item"><i class="coach-ops-legend-dot ${coachOpsLegendDotClass(type)}"></i>${esc(type)}</span>`).join('');
 }
 function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
   const h=Math.min(22,parseInt(startTime.slice(0,2))||9),m=startTime.slice(3,5)||'00';

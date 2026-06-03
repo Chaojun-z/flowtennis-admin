@@ -149,6 +149,7 @@ function normalizeCourseType(type=''){
   if(raw==='班课')return '小班课';
   if(raw==='训练营')return '小班课';
   if(raw==='专项训练')return '小班课';
+  if(raw==='订场陪打')return '陪打';
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
   return raw;
 }
@@ -946,6 +947,7 @@ function productTypeTagClass(type){
   if(normalized==='训练营')return 'tms-tag-green';
   if(normalized==='大师课')return 'tms-tag-tier-slate';
   if(normalized==='小班课')return 'tms-tag-green';
+  if(normalized==='陪打')return 'tms-tag-tier-blue';
   return 'tms-tag-tier-slate';
 }
 function classDisplayName(cls){
