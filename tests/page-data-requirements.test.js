@@ -42,7 +42,7 @@ assert.match(source, /function hydrateDatasetsFromCache\(\)/, 'state should hydr
 assert.match(source, /function persistDatasetCache\(name,data\)/, 'state should cache every successful dataset load');
 assert.doesNotMatch(source, /function persistDatasetCache\(name,data\)\{\s*return;\s*\}/, 'dataset cache persistence should not be disabled');
 assert.doesNotMatch(source, /function readDatasetCache\(name\)\{\s*return null;\s*\}/, 'dataset cache reads should not be disabled');
-assert.match(source, /const DATASETS_EXCLUDED_FROM_CACHE=new Set\(\['leads','leadFollowups','students','packages','purchases','entitlements','entitlementLedger'\]\);/, 'volatile lead, package, purchase, and ledger datasets should stay network-only while normal lists use refresh cache');
+assert.match(source, /const DATASETS_EXCLUDED_FROM_CACHE=new Set\(\['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger'\]\);/, 'volatile lead, schedule, package, purchase, and ledger datasets should stay network-only while normal lists use refresh cache');
 assert.match(source, /function missingRequiredDatasetsForPage\(pg\)/, 'state should be able to detect when the current page still lacks blocking datasets');
 assert.match(source, /function missingInitialDatasetsForPage\(pg\)/, 'state should detect empty-shell pages waiting for their first background dataset');
 assert.match(source, /function renderPageLoading\(pg\)/, 'state should render inline loading placeholders instead of empty pages');
