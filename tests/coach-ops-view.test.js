@@ -38,14 +38,14 @@ assert.match(
 
 assert.match(
   source,
-  /if\(coachOpsMode==='week'\)return dtObj\(raw\)\|\|new Date\(\)/,
-  'coach ops week view should use a custom start date instead of an ISO week key'
+  /if\(coachOpsMode==='week'\)return weekStart\(dtObj\(raw\)\|\|new Date\(\)\)/,
+  'coach ops week view should normalize the selected date to Monday'
 );
 
 assert.match(
   source,
-  /if\(kind==='week'\)return \{start, end, label:`\$\{dateKey\(start\)\} 至 \$\{dateKey\(addDays\(end,-1\)\)\}`\};/,
-  'coach ops week range should always cover the chosen 7-day span'
+  /const start=weekStart\(now\),end=addDays\(start,7\);[\s\S]*if\(kind==='week'\)return \{start, end, label:`\$\{dateKey\(start\)\} 至 \$\{dateKey\(addDays\(end,-1\)\)\}`\};/,
+  'coach ops week range should always cover Monday to Sunday'
 );
 
 assert.match(
@@ -164,8 +164,8 @@ assert.match(
 
 assert.match(
   source,
-  /weekActive=coachOpsMode==='week'&&ds>=selectedKey&&ds<dateKey\(addDays\(selected,7\)\)/,
-  'coach ops week picker should highlight the selected 7-day window'
+  /const selectedWeekStart=weekStart\(selected\);[\s\S]*weekActive=coachOpsMode==='week'&&ds>=dateKey\(selectedWeekStart\)&&ds<dateKey\(addDays\(selectedWeekStart,7\)\)/,
+  'coach ops week picker should highlight Monday to Sunday'
 );
 
 assert.match(

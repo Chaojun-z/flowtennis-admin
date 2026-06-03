@@ -855,13 +855,29 @@ assert.deepStrictEqual(
     template_id: 'digest-tpl',
     data: {
       thing1: { value: '明日排课汇总' },
-      phrase2: { value: '朝珺' },
+      phrase2: { value: '次日课表' },
       time4: { value: '2026-05-16' },
       thing7: { value: '09:00-10:00 私教课｜小鹿｜顺' },
       character_string11: { value: '2' }
     }
   },
   'official account digest payload should match the selected daily digest template fields'
+);
+
+assert.strictEqual(
+  rules.buildOfficialAccountDigestTemplatePayload({
+    templateId: 'digest-tpl',
+    openid: 'oa-openid',
+    message: {
+      title: 'Siren 教练教练次日课表',
+      coachName: 'Siren 教练',
+      digestDate: '2026-06-03',
+      lessonCount: 6,
+      lines: ['12:00-13:00 私教课｜葡萄｜顺义马坡']
+    }
+  }).data.phrase2.value,
+  '次日课表',
+  'official account digest phrase field should not contain coach names'
 );
 
 assert.strictEqual(

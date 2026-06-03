@@ -3266,7 +3266,7 @@ function buildOfficialAccountDigestTemplatePayload({templateId,openid,message}){
     template_id:templateId,
     data:{
       thing1:{value:truncateWechatValue(message?.title||'明日排课汇总')},
-      phrase2:{value:truncateWechatValue(message?.coachName||'教练',5)},
+      phrase2:{value:'次日课表'},
       time4:{value:String(message?.digestDate||'').trim()},
       thing7:{value:truncateWechatValue(lines.join('；')||message?.summary||'暂无排课')},
       character_string11:{value:String(message?.lessonCount??lines.length??'')}

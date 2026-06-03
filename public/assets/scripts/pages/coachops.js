@@ -181,11 +181,12 @@ function renderCoachOpsPicker(){
   const first=new Date(base.getFullYear(),base.getMonth(),1);
   const gridStart=addDays(first,-((first.getDay()+6)%7));
   const selectedKey=dateKey(selected);
+  const selectedWeekStart=weekStart(selected);
   const days=Array.from({length:42},(_,i)=>{
     const d=addDays(gridStart,i),ds=dateKey(d);
     const muted=d.getMonth()!==base.getMonth();
     const active=coachOpsMode==='day'&&ds===selectedKey;
-    const weekActive=coachOpsMode==='week'&&ds>=selectedKey&&ds<dateKey(addDays(selected,7));
+    const weekActive=coachOpsMode==='week'&&ds>=dateKey(selectedWeekStart)&&ds<dateKey(addDays(selectedWeekStart,7));
     const clickValue=ds;
     return `<button class="coach-picker-day ${muted?'muted':''} ${ds===today()?'today':''} ${active?'active':''} ${weekActive?'week-active':''}" onclick="pickCoachOpsDate('${clickValue}')">${d.getDate()}</button>`;
   }).join('');

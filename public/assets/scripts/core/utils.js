@@ -330,7 +330,7 @@ function coachOpsInputDate(){
     const m=String(raw).match(/^(\d{4})-(\d{2})$/);
     if(m)return new Date(Number(m[1]),Number(m[2])-1,1);
   }
-  if(coachOpsMode==='week')return dtObj(raw)||new Date();
+  if(coachOpsMode==='week')return weekStart(dtObj(raw)||new Date());
   return dtObj(raw)||new Date();
 }
 function coachOpsDateLabel(){
@@ -370,7 +370,7 @@ function rangeBounds(kind){
   const now=coachOpsInputDate();
   if(kind==='day'){const start=dayStart(now),end=addDays(start,1);return {start,end,label:dateKey(start)};}
   if(kind==='month')return {start:monthStart(now),end:new Date(now.getFullYear(),now.getMonth()+1,1),label:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`};
-  const start=dayStart(now),end=addDays(start,7);
+  const start=weekStart(now),end=addDays(start,7);
   if(kind==='week')return {start, end, label:`${dateKey(start)} 至 ${dateKey(addDays(end,-1))}`};
   return {start,end,label:`${dateKey(start)} 至 ${dateKey(addDays(end,-1))}`};
 }
