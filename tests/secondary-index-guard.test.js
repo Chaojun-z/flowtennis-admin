@@ -7,8 +7,10 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 assert.match(apiSource, /T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index'/, '必须声明教练排课索引表');
 assert.match(apiSource, /T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index'/, '必须声明学员活跃课包索引表');
 assert.match(apiSource, /async function getCoachIndexedScheduleForUser\(user\)\{/, '必须提供教练排课索引读取 helper');
+assert.match(apiSource, /async function getCoachScheduleRowsForUser\(user,coachRefs=\[\]\)\{/, '必须提供教练排课索引加主表兜底读取 helper');
 assert.match(apiSource, /async function getIndexedActiveEntitlementsForStudents\(studentIds=\[\]\)\{/, '必须提供学员活跃课包索引读取 helper');
-assert.match(apiSource, /const indexedSchedule=user\.role==='admin'\?null:await getCoachIndexedScheduleForUser\(user\);[\s\S]*Promise\.resolve\(indexedSchedule\|\|null\)\.then\(rows=>rows\|\|cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)\)/, '教练端工作台必须优先走教练排课索引');
+assert.match(apiSource, /const indexedRows=await getCoachIndexedScheduleForUser\(user\);[\s\S]*const fallbackRows=filterLoadAllForUser\(\{schedule:await getScheduleListRows\(\)\},user,coachRefs\)\.schedule;[\s\S]*return \[\.\.\.merged\.values\(\)\];/, '教练排课读取必须合并索引和主排课表兜底，避免索引漏数据');
+assert.match(apiSource, /const scheduleRowsPromise=user\.role==='admin'\?getScheduleListRows\(\):getCoachScheduleRowsForUser\(user,coachRefs\);/, '教练端工作台必须走索引加主表兜底');
 assert.match(apiSource, /syncCoachScheduleIndexes\(null,r\)\.catch\(/, '新建排课索引同步失败不能回滚已保存排课');
 assert.match(apiSource, /syncCoachScheduleIndexes\(ex,r\)\.catch\(/, '编辑排课索引同步失败不能回滚已保存排课');
 assert.match(apiSource, /syncCoachScheduleIndexes\(ex,null\)\.catch\(/, '删除排课索引同步失败不能回滚已删除排课');

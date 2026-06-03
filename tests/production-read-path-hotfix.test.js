@@ -15,14 +15,19 @@ assert.match(apiSource, /const ADMIN_USER_LIST_PROJECTION_FIELDS=\[/, '账号管
 assert.match(apiSource, /const SCHEDULE_LIST_PROJECTION_FIELDS=\[/, '排课表应定义首屏轻投影字段，避免继续全量扫描 schedule 大对象');
 assert.match(
   apiSource,
+  /function getScheduleListRows\(\)\{[\s\S]*scan\(T_SCHEDULE,\{columns:SCHEDULE_LIST_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_SCHEDULE,\{columns:SCHEDULE_LIST_PROJECTION_FIELDS\}\)/,
+  '排课表应读取完整轻投影，避免固定 800 条导致刷新后漏课'
+);
+assert.match(
+  apiSource,
   /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'settlementType'[\s\S]*'paidAmount'[\s\S]*'payMethod'[\s\S]*\];/,
   '排课轻投影必须包含直接收款字段，否则财务页课程收入会被算成 0'
 );
 
 assert.match(
   apiSource,
-  /if\(method==='GET'\)\{if\(user\.role==='admin'\)return sendJson\(res,isProductionRuntime\(\)\?await scanFirstRows\(T_SCHEDULE,\{limit:PRODUCTION_PAGE_READ_LIMITS\.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_SCHEDULE,\{columns:SCHEDULE_LIST_PROJECTION_FIELDS\}\)\);/,
-  '管理员排课表首屏应在 production 改成限量轻投影读取'
+  /if\(method==='GET'\)\{if\(user\.role==='admin'\)return sendJson\(res,await getScheduleListRows\(\)\);/,
+  '管理员排课表应读取完整轻投影，不再固定截断'
 );
 
 assert.match(

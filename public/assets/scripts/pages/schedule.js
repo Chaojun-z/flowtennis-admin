@@ -773,6 +773,7 @@ async function refreshSchEntitlementOptions(){
 function scheduleSaveConfirmText(data,selectedEntitlement){
   const absent=parseArr(data.absentStudentIds);
   const packageText=data.settlementType==='direct'?`${data.payMethod} ¥${fmt(data.paidAmount||0)}`:data.settlementType==='gift'?'赠送/免费，收入 ¥0':(data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额'));
+  const chargeText=data.coachLateFree?'本节不扣课':`${data.lessonCount||0} 节`;
   const timeText=()=>{
     const start=fmtDt(data.startTime),end=fmtDt(data.endTime);
     const day=start.slice(0,10),startClock=start.slice(11),endClock=end.slice(11);
@@ -787,7 +788,7 @@ function scheduleSaveConfirmText(data,selectedEntitlement){
     ${row('场地',scheduleLocationText(data))}
     ${row('课程',courseTypeDisplayLabel(data)||'—')}
     ${row('结算方式',`${scheduleSettlementTypeLabel(data.settlementType)} · ${packageText}`)}
-    <div class="schedule-confirm-charge"><span class="schedule-confirm-label">本次扣课</span><span class="schedule-confirm-charge-value">${esc(data.lessonCount||0)} 节</span></div>
+    <div class="schedule-confirm-charge"><span class="schedule-confirm-label">本次扣课</span><span class="schedule-confirm-charge-value">${esc(chargeText)}</span></div>
     ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
     ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
   </div>`;

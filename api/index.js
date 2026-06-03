@@ -509,6 +509,11 @@ function cappedScan(t, limit=PRODUCTION_PAGE_READ_LIMITS.default){
   const normalizedLimit=limit===undefined?PRODUCTION_PAGE_READ_LIMITS.default:(PRODUCTION_PAGE_READ_LIMITS[t]||limit);
   return isProductionRuntime() ? scanFirstRows(t, {limit:normalizedLimit}).catch((e) => { console.error('cappedScan err:', e); return []; }) : getCachedScan(t).catch(()=>[]);
 }
+function getScheduleListRows(){
+  return isProductionRuntime()
+    ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('schedule list scan err:',e);return [];})
+    : getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+}
 function getFinancePageScheduleRows(){
   return isProductionRuntime()
     ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('finance schedule scan err:',e);return [];})
@@ -2831,6 +2836,14 @@ async function getCoachIndexedScheduleForUser(user){
   const scheduleIds=[...new Set(indexRows.flatMap(row=>parseArr(row?.scheduleIds)).filter(Boolean))];
   if(!scheduleIds.length)return [];
   return (await Promise.all(scheduleIds.map(id=>getCachedRow(T_SCHEDULE,id).catch(()=>null)))).filter(Boolean).map(row=>projectScheduleListRow(row));
+}
+async function getCoachScheduleRowsForUser(user,coachRefs=[]){
+  const indexedRows=await getCoachIndexedScheduleForUser(user);
+  const fallbackRows=filterLoadAllForUser({schedule:await getScheduleListRows()},user,coachRefs).schedule;
+  if(!indexedRows)return fallbackRows;
+  const merged=new Map(fallbackRows.map(row=>[row.id,row]));
+  indexedRows.forEach(row=>{if(row?.id)merged.set(row.id,row);});
+  return [...merged.values()];
 }
 function projectScheduleListRow(row={}){
   const projected={id:row.id};
@@ -8671,7 +8684,7 @@ module.exports = async (req, res) => {
     }
     if(path==='/schedule'){
       await init();
-      if(method==='GET'){if(user.role==='admin')return sendJson(res,isProductionRuntime()?await scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}));const indexedRows=await getCoachIndexedScheduleForUser(user);if(indexedRows)return sendJson(res,indexedRows);const rows=isProductionRuntime()?await scanFirstRows(T_SCHEDULE,{limit:PRODUCTION_PAGE_READ_LIMITS.schedule,columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS});return sendJson(res,filterLoadAllForUser({schedule:rows},user).schedule);}
+      if(method==='GET'){if(user.role==='admin')return sendJson(res,await getScheduleListRows());const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users})));}
       if(method==='POST'){
         return timedEndpointMetric('schedule.save',async()=>{
           try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
@@ -9004,19 +9017,19 @@ module.exports = async (req, res) => {
     if(path==='/page-data/workbench'&&method==='GET'){
       return timedEndpointMetric('pageData.workbench',async()=>{
         await init();
-        const indexedSchedule=user.role==='admin'?null:await getCoachIndexedScheduleForUser(user);
+        const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
+        const coachRefs=buildCoachRefs({coaches,users});
+        const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
         const [campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([
           listCampusesWithDefaults(),
           cappedScan(T_STUDENTS),
           cappedScan(T_CLASSES),
-          Promise.resolve(indexedSchedule||null).then(rows=>rows||cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule)),
+          scheduleRowsPromise,
           cappedScan(T_FEEDBACKS),
           cappedScan(T_PURCHASES),
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER)
         ]);
-        const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
-        const coachRefs=buildCoachRefs({coaches,users});
         const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger,coaches},user,coachRefs);
         const now=new Date();
         const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
