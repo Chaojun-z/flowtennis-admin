@@ -85,7 +85,9 @@ assert.match(fnBody('openScheduleModal'), /schedule-settlement-row[\s\S]*课程�
 assert.match(fnBody('openScheduleModal'), /schedule-course-type-item[\s\S]*schedule-settlement-type-item[\s\S]*schedule-entitlement-item/, 'schedule modal should give course and settlement compact columns and package a wide column');
 assert.match(fnBody('openScheduleModal'), /schedule-field-fee-section[\s\S]*schedule-field-fee-main-row[\s\S]*是否收补差[\s\S]*补差金额[\s\S]*支付方式[\s\S]*schedule-field-fee-note-row[\s\S]*补差说明/, 'schedule surcharge fields should split main fields and note into separate rows');
 assert.match(fnBody('openScheduleModal'), /textarea class="finput tms-form-control schedule-field-fee-note" id="sch_fieldFeeNote"/, 'schedule surcharge note should use a readable full-width textarea');
-assert.match(pagesCss, /schedule-course-type-item[\s\S]*flex:0 0 160px[\s\S]*schedule-entitlement-item[\s\S]*min-width:420px/, 'schedule modal should keep package deduction wider than course and settlement fields');
+assert.match(pagesCss, /schedule-course-type-item[\s\S]*flex:0 0 120px[\s\S]*max-width:120px/, 'schedule modal course type should use a compact 120px column');
+assert.match(pagesCss, /schedule-settlement-type-item[\s\S]*flex:0 0 120px[\s\S]*max-width:120px/, 'schedule modal settlement type should use a compact 120px column');
+assert.match(pagesCss, /schedule-entitlement-item[\s\S]*flex:1 1 0[\s\S]*min-width:0[\s\S]*max-width:100%/, 'schedule modal package deduction should take the remaining width without overflowing');
 assert.match(pagesCss, /schedule-field-fee-note[\s\S]*min-height:54px/, 'schedule surcharge note should have readable height');
 assert.match(html, /packageTimeBandPresetWindows[\s\S]*工作日[\s\S]*周六日/, 'package modal should derive applicable days from time band presets');
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeStart\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal start time should use the schedule custom time picker');

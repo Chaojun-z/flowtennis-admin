@@ -908,8 +908,9 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .court-date-row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
 .modal.modal-court .court-date-row > *{min-width:0}
 .modal.modal-court .schedule-settlement-row{align-items:flex-start;gap:12px;flex-wrap:nowrap}
-.modal.modal-court .schedule-course-type-item,.modal.modal-court .schedule-settlement-type-item{flex:0 0 160px;max-width:160px}
-.modal.modal-court .schedule-entitlement-item{flex:1 1 auto;min-width:420px}
+.modal.modal-court .schedule-settlement-row > *{min-width:0}
+.modal.modal-court .schedule-course-type-item,.modal.modal-court .schedule-settlement-type-item{flex:0 0 120px;max-width:120px}
+.modal.modal-court .schedule-entitlement-item{flex:1 1 0;min-width:0;max-width:100%}
 .modal.modal-court .schedule-direct-payment-item{flex:1 1 auto;min-width:360px}
 .modal.modal-court .schedule-subtype-item{flex:0 0 160px;max-width:160px}
 .modal.modal-court .schedule-field-fee-section{margin:4px 0 18px}

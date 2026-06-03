@@ -115,8 +115,10 @@ assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:non
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
 assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');
 assert.match(fnBody('applySchEntitlementOptions'), /maxRemain[\s\S]*setScheduleCourseTypeReadonly/, 'schedule entitlement recommendation should default to the package with most remaining lessons and lock course type');
-assert.match(fnBody('scheduleEntitlementLabel'), /requiresFieldFee\?' · 需补差价\/场地费'/, 'field-fee package options should show the price-difference entry in the dropdown');
-assert.match(fnBody('applySchEntitlementOptions'), /requiresFieldFee\?'，需补差价\/场地费'/, 'field-fee package recommendations should show the price-difference hint');
+assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /需补差价\/场地费|到期\$\{option\.validUntil\|\|'-'\}/, 'package options should hide surcharge copy and empty expiry text');
+assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /需补差价\/场地费|到期 \$\{selected\.validUntil\|\|'-'\}/, 'package recommendation hint should hide surcharge copy and empty expiry text');
+assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package picker should avoid repeating the package time-band label when the name already contains it');
+assert.match(source, /function scheduleEntitlementExpiryText\(/, 'package picker should only show expiry text when a real expiry exists');
 assert.match(fnBody('scheduleSaveConfirmText'), /requiresFieldFee[\s\S]*补差价[\s\S]*fieldFeeReason/, 'schedule confirm should show the price-difference entry before saving');
 assert.match(source, /function scheduleEntitlementSmallClassType\(/, 'schedule package picker should read small group subtype from the selected package');
 assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementSmallClassType\(selected\)[\s\S]*setCourtDropdownValue\('sch_smallClassType'/, 'schedule entitlement recommendation should force the package small group subtype');

@@ -336,7 +336,16 @@ function handleScheduleStartTimeChange(){
 }
 function scheduleEntitlementLabel(option){
   if(!option?.entitlementId)return option?.label||'自动匹配可用课包';
-  return `${standardPackageLabel(option,true)||option.packageName} · 剩余${option.remainingLessons}/${option.totalLessons} · ${packageTimeBandShortLabel(option.timeBand||'全天')}${option.requiresFieldFee?' · 需补差价/场地费':''} · 到期${option.validUntil||'-'}`;
+  const title=standardPackageLabel(option,true)||option.packageName||'课包';
+  return [title,`剩余${option.remainingLessons}/${option.totalLessons}`,scheduleEntitlementTimeBandText(option,title),scheduleEntitlementExpiryText(option)].filter(Boolean).join(' · ');
+}
+function scheduleEntitlementTimeBandText(option,title=''){
+  const text=packageTimeBandShortLabel(option?.timeBand||'全天');
+  return text&&!String(title||'').includes(text)?text:'';
+}
+function scheduleEntitlementExpiryText(option){
+  const validUntil=String(option?.validUntil||'').trim();
+  return validUntil&&validUntil!=='-'?`到期${validUntil}`:'';
 }
 function renderScheduleEntitlementDropdown(options=[],value='',placeholder='自动匹配可用课包'){
   const list=options.length?options.map(x=>({value:x.entitlementId,label:scheduleEntitlementLabel(x)})):[{value:'',label:placeholder}];
@@ -612,7 +621,9 @@ function applySchEntitlementOptions(res,preferredId=''){
     setScheduleCourseTypeReadonly(false);
     setScheduleSmallClassTypeReadonly(false);
   }
-  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补差价/场地费':''}，到期 ${selected.validUntil||'-'}`:scheduleEntitlementUnavailableReason(res.options||[]);
+  const selectedTitle=selected?(standardPackageLabel(selected,true)||selected.packageName||'课包'):'';
+  const selectedHintParts=selected?[`已自动匹配：${selectedTitle}`,`剩余 ${selected.remainingLessons}/${selected.totalLessons}`,scheduleEntitlementTimeBandText(selected,selectedTitle),scheduleEntitlementExpiryText(selected)]:[];
+  hint.textContent=selected?selectedHintParts.filter(Boolean).join('，'):scheduleEntitlementUnavailableReason(res.options||[]);
   refreshScheduleFieldFeeFields();
 }
 function scheduleSelectedEntitlementOption(){
