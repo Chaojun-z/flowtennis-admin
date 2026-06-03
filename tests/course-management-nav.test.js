@@ -153,6 +153,10 @@ assert.match(fnBody('openPurchaseEditModal'), /packages\.filter\(pkg=>\(pkg\.sta
 assert.match(html, /function savePurchaseEdit/, 'purchase page should save purchase edits');
 assert.match(html, /function openPurchaseModal/, 'purchase page should provide the unified purchase modal');
 assert.match(fnBody('openPurchaseModal'), /packages\.filter\(p=>p\.status!=='inactive'&&p\.status!=='merged'\)/, 'purchase create package picker should hide merged packages');
+assert.match(html, /function purchasePackagePickerLabel/, 'purchase package picker should have a dedicated display label');
+assert.match(fnBody('purchasePackagePickerLabel'), /standardPackageLabel\(p,true\)[\s\S]*Number\(p\.price\)[\s\S]*\$\{price\}元[\s\S]*coachName\(p\.ownerCoach\)/, 'purchase package picker label should include package price and bound owner coach');
+assert.match(fnBody('openPurchaseModal'), /label:purchasePackagePickerLabel\(p\)/, 'purchase create package picker should show price and bound owner coach');
+assert.match(fnBody('openPurchaseEditModal'), /label:purchasePackagePickerLabel\(pkg\)/, 'purchase edit package picker should show price and bound owner coach');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
 assert.match(html, /id="pur_studentSearch"/, 'purchase modal should provide a student search input');
