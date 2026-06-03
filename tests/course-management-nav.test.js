@@ -70,7 +70,9 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_ownerCoa
 assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal should expose a second-level selector for experience courses');
 assert.match(fnBody('openPackageModal'), /pkg_smallClassType/, 'package modal should expose a second-level selector for small group packages');
 assert.match(courseSource, /function applySmallClassPackagePreset\(/, 'package modal should define small group package presets');
-assert.match(fnBody('applySmallClassPackagePreset'), /bootcamp:\{price:1999,lessons:6,timeBand:'黄金时段',maxStudents:'4'\}/, 'small group bootcamp preset should match business rules');
+assert.match(fnBody('applySmallClassPackagePreset'), /bootcamp:\{price:1999,lessons:10,timeBand:'黄金时段',maxStudents:'4'\}/, 'small group bootcamp preset should default to 10 lessons');
+assert.match(fnBody('openPackageModal'), /data-lessons="10"[\s\S]*10课时[\s\S]*data-lessons="20"[\s\S]*20课时/, 'package modal should expose 10 and 20 lesson shortcuts');
+assert.doesNotMatch(fnBody('openPackageModal'), /data-lessons="6"[\s\S]*6课时/, 'package modal should not force six lesson packages');
 assert.match(fnBody('savePackage'), /freeAbsenceLimit[\s\S]*smallClassType==='bootcamp'\?1:0/, 'small group bootcamp package should persist one free absence');
 assert.match(fnBody('packageExperienceTypeLabel'), /p=p\|\|\{\}/, 'package experience label should tolerate creating a package without existing row data');
 assert.match(fnBody('openProductModal'), /p_experienceType/, 'course product modal should expose a second-level selector for experience courses');
@@ -100,7 +102,8 @@ assert.match(fnBody('openPackageModal'), /tms-checkbox-matrix purchase-coach-pic
 assert.match(fnBody('packageCoachChecks'), /pkg-coach-cb/, 'package allowed coach checks should keep the save selector class');
 assert.match(html, /function applyPackageTimeBandPreset/, 'package modal should apply simple default windows for time band presets');
 assert.match(html, /function setPackageLessonShortcut\(/, 'package modal should provide lesson shortcuts');
-assert.match(html, /10课时[\s\S]*20课时[\s\S]*50课时/, 'package modal should expose lesson shortcut chips');
+assert.match(html, /10课时[\s\S]*20课时/, 'package modal should expose lesson shortcut chips');
+assert.doesNotMatch(html, /50课时/, 'package modal should leave non-standard lesson counts to manual input');
 assert.match(html, /黄金时段'[\s\S]*16:00[\s\S]*22:00[\s\S]*09:00[\s\S]*22:00/, 'prime preset should be weekday evening plus weekend daytime');
 assert.match(html, /非黄金时段'[\s\S]*09:00[\s\S]*16:00/, 'non-prime preset should be weekday daytime');
 assert.match(fnBody('savePackage'), /presetWindows\.map[\s\S]*daysOfWeek:preset\.daysOfWeek/, 'package save should persist preset applicable days');

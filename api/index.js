@@ -1275,7 +1275,6 @@ function validatePackageInput(pkg,refs={}){
       if(normalizeMoney(pkg.price)!==260)throw new Error('小班单次价格必须是 260 元');
     }
     if(rule.smallClassType==='bootcamp'){
-      if((parseInt(pkg.lessons)||0)!==6)throw new Error('训练营必须是 6 次');
       if(normalizeMoney(pkg.price)!==1999)throw new Error('训练营价格必须是 1999 元');
       if(String(pkg.timeBand||'')!=='黄金时段')throw new Error('训练营必须是黄金时段');
       if(rule.fixedStudentCount!==4||parseInt(pkg.maxStudents)!==4)throw new Error('训练营固定 4 人');

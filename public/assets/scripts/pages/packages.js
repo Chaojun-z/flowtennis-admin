@@ -343,7 +343,7 @@ function applySmallClassPackagePreset(){
   const sub=document.getElementById('pkg_smallClassType')?.value||'single';
   const presets={
     single:{price:260,lessons:1,timeBand:'全天',maxStudents:'4'},
-    bootcamp:{price:1999,lessons:6,timeBand:'黄金时段',maxStudents:'4'},
+    bootcamp:{price:1999,lessons:10,timeBand:'黄金时段',maxStudents:'4'},
     dropin:{price:1499,lessons:6,timeBand:'全天',maxStudents:'4'}
   };
   const preset=presets[sub]||presets.single;
@@ -411,7 +411,7 @@ function openPackageModal(id,presetProductId=''){
       </div>
     <div class="tms-section-header">规格与价格</div>
       <div class="tms-form-row package-spec-row">
-        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button><button type="button" class="package-lesson-chip" data-lessons="50" onclick="setPackageLessonShortcut(50)">50课时</button></div></div>
+        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button></div></div>
         <div class="tms-form-item"><label class="tms-form-label">价格</label><input class="finput tms-form-control" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
       </div>
     <div class="tms-section-header">上课时间与效期</div>
@@ -478,7 +478,6 @@ function packageSaveErrorText(err){
     '请选择小班课类型':'小班课类型还没选，请先选择小班课类型',
     '小班单次必须是 1 次':'单次小班课请把课时改成 1',
     '小班单次价格必须是 260 元':'单次小班课请把价格改成 260 元',
-    '训练营必须是 6 次':'训练营请把课时改成 6',
     '训练营价格必须是 1999 元':'训练营请把价格改成 1999 元',
     '训练营必须是黄金时段':'训练营只能选黄金时段',
     '训练营固定 4 人':'训练营人数必须是 4 人',

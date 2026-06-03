@@ -286,7 +286,7 @@ const smallGroupBootcampPackage = {
   courseType: '小班课',
   smallClassType: 'bootcamp',
   price: 1999,
-  lessons: 6,
+  lessons: 10,
   timeBand: '黄金时段',
   maxStudents: 4,
   fixedStudentCount: 4,
@@ -299,11 +299,12 @@ assert.doesNotThrow(
   'small group bootcamp package should be a valid package-only small class product'
 );
 
-assert.throws(
-  () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons: 5 }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
-  /训练营必须是 6 次/,
-  'small group bootcamp should require six lessons'
-);
+for(const lessons of [10,20,12]){
+  assert.doesNotThrow(
+    () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+    `small group bootcamp should allow ${lessons} lessons`
+  );
+}
 
 const smallGroupPurchase = rules.buildPurchaseRecord(
   smallGroupBootcampPackage,
@@ -326,7 +327,7 @@ assert.deepStrictEqual(
   {
     courseType: '小班课',
     smallClassType: 'bootcamp',
-    packageLessons: 6,
+    packageLessons: 10,
     packagePrice: 1999,
     maxStudents: 4,
     fixedStudentCount: 4,
@@ -356,7 +357,7 @@ assert.deepStrictEqual(
   {
     courseType: '小班课',
     smallClassType: 'bootcamp',
-    totalLessons: 6,
+    totalLessons: 10,
     freeAbsenceLimit: 1,
     freeAbsenceUsed: 0,
     minAttendStudents: 2
