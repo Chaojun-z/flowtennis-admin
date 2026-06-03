@@ -237,16 +237,41 @@ function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
   const h=Math.min(22,parseInt(startTime.slice(0,2))||9),m=startTime.slice(3,5)||'00';
   const endH=Math.min(23,h+1);
   const co=coaches.find(c=>coachName(c.name)===coachName(coach));
-  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),campus:co?.campus||'',venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
+  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),campus:campus==='all'?(co?.campus||''):campus,venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
 }
 function coachOpsScheduleItemText(s){
   const start=String(s.startTime||'').slice(11,16);
   const end=s.endTime?String(s.endTime).slice(11,16):'';
   return `${start}${end?`-${end}`:''} ${scheduleStudentSummary(s)||classes.find(c=>c.id===s.classId)?.className||'—'}`;
 }
+function coachOpsCampusMatchesSchedule(s){
+  if(campus==='all')return true;
+  return String(s?.campus||'').trim()===campus;
+}
+function renderCoachOpsTopFilters(){
+  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
+    value:String(row?.code||row?.id||'').trim(),
+    label:String(row?.name||row?.code||row?.id||'').trim()
+  })).filter(opt=>opt.value&&opt.label));
+  const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectCoachOpsTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
+}
+function selectCoachOpsTopCampus(value,event){
+  if(event)event.stopPropagation();
+  campus=value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  refreshCoachOpsTopFilters();
+  renderCoachOps();
+  closeCourtTopDropdowns();
+}
+function refreshCoachOpsTopFilters(){
+  const host=document.getElementById('campusTabs');
+  if(host&&currentPage==='coachops')host.innerHTML=renderCoachOpsTopFilters();
+}
 function openCoachOpsDaySchedules(coach,date){
   const rows=billableSchedules()
-    .filter(s=>coachName(s.coach)===coachName(coach)&&String(s.startTime||'').slice(0,10)===date)
+    .filter(s=>coachOpsCampusMatchesSchedule(s)&&coachName(s.coach)===coachName(coach)&&String(s.startTime||'').slice(0,10)===date)
     .sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
   const body=rows.length
     ?`<div class="coach-ops-day-modal-list">${rows.map(s=>`<button type="button" class="coach-ops-day-modal-item" onclick="openScheduleDetail('${s.id}')"><span>${esc(coachOpsScheduleItemText(s))}</span><small>${esc(scheduleCourseTypeLabel(s))} · ${esc(scheduleLocationText(s))}</small></button>`).join('')}</div>`
@@ -349,7 +374,7 @@ function coachOpsComparisonText(coach,currentRows,range){
   const current=sumScheduleLessonUnits(currentRows);
   const span=range.end.getTime()-range.start.getTime();
   const prevStart=new Date(range.start.getTime()-span);
-  const prevRows=billableSchedules().filter(s=>coachName(s.coach)===coachName(coach)&&inRange(s.startTime,prevStart,range.start));
+  const prevRows=billableSchedules().filter(s=>coachOpsCampusMatchesSchedule(s)&&coachName(s.coach)===coachName(coach)&&inRange(s.startTime,prevStart,range.start));
   const previous=sumScheduleLessonUnits(prevRows);
   if(!previous)return current?'<span class="coach-workload-compare up">新增</span>':'<span class="coach-workload-compare">0%</span>';
   const pct=(current-previous)/previous*100;
@@ -361,8 +386,9 @@ function coachOpsRows(){
   const ws=weekStart(now),we=new Date(ws);we.setDate(ws.getDate()+7);
   const ms=monthStart(now),me=new Date(now.getFullYear(),now.getMonth()+1,1);
   const range=rangeBounds(coachOpsMode);
-  const all=billableSchedules();
-  const names=[...new Set([...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)])]
+  const all=billableSchedules().filter(coachOpsCampusMatchesSchedule);
+  const nameSource=campus==='all'?[...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)]:all.map(s=>coachName(s.coach)).filter(Boolean);
+  const names=[...new Set(nameSource)]
     .sort((a,b)=>coachSortValue(a)-coachSortValue(b)||String(a).localeCompare(String(b),'zh-Hans-CN'));
   return names.map(name=>{
     const mine=all.filter(s=>coachName(s.coach)===name);

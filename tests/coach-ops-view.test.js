@@ -138,6 +138,36 @@ assert.match(
   'coach ops should render the shared custom dropdown host for view switching'
 );
 
+assert.match(
+  source,
+  /campusTabs'\)\.style\.display=\[[^\]]*'coachops'/,
+  'coach ops should show the shared top campus filter'
+);
+
+assert.match(
+  source,
+  /if\(currentPage==='coachops'\)renderCoachOps\(\);/,
+  'campus filter changes should refresh coach operations'
+);
+
+assert.match(
+  source,
+  /currentPage==='coachops'[\s\S]*renderCoachOpsTopFilters\(\)/,
+  'coach ops should reuse the court-style top campus dropdown'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsCampusMatchesSchedule\([\s\S]*campus==='all'[\s\S]*String\(s\?\.campus\|\|''\)\.trim\(\)===campus/,
+  'coach ops campus filter should match schedules by lesson campus'
+);
+
+assert.match(
+  coachOpsSource,
+  /const all=billableSchedules\(\)\.filter\(coachOpsCampusMatchesSchedule\);/,
+  'coach ops rows and stats should only use schedules from the selected campus'
+);
+
 assert.doesNotMatch(
   source,
   /<select class="coach-ops-select" id="coachOpsRange"/,
