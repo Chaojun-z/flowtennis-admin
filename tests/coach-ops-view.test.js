@@ -168,6 +168,24 @@ assert.match(
   'coach ops rows and stats should only use schedules from the selected campus'
 );
 
+assert.match(
+  coachOpsSource,
+  /function coachOpsHomeCampusCoachNames\([\s\S]*String\(c\.campus\|\|''\)\.trim\(\)===campus/,
+  'selected campus should always show active coaches whose home campus matches the selected campus'
+);
+
+assert.match(
+  coachOpsSource,
+  /const rangeScheduleCoachNames=currentRangeRows\.map\(s=>coachName\(s\.coach\)\)\.filter\(Boolean\);/,
+  'selected campus should only add visiting coaches from schedules in the current date range'
+);
+
+assert.match(
+  coachOpsSource,
+  /const nameSource=campus==='all'\?\[[\s\S]*\]:\[\.\.\.coachOpsHomeCampusCoachNames\(\),\.\.\.rangeScheduleCoachNames\];/,
+  'selected campus coach list should combine home-campus coaches and current-range visiting coaches'
+);
+
 assert.doesNotMatch(
   source,
   /<select class="coach-ops-select" id="coachOpsRange"/,

@@ -370,6 +370,10 @@ function coachCourseTypeDistributionText(rows){
   });
   return [...map.entries()].sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${type} ${lessonUnitsText(count)}`).join('｜')||'—';
 }
+function coachOpsHomeCampusCoachNames(){
+  if(campus==='all')return activeCoachNames();
+  return [...new Set(coaches.filter(c=>c.status==='active'&&String(c.campus||'').trim()===campus).map(c=>coachName(c.name)).filter(Boolean))];
+}
 function coachOpsComparisonText(coach,currentRows,range){
   const current=sumScheduleLessonUnits(currentRows);
   const span=range.end.getTime()-range.start.getTime();
@@ -387,7 +391,9 @@ function coachOpsRows(){
   const ms=monthStart(now),me=new Date(now.getFullYear(),now.getMonth()+1,1);
   const range=rangeBounds(coachOpsMode);
   const all=billableSchedules().filter(coachOpsCampusMatchesSchedule);
-  const nameSource=campus==='all'?[...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)]:all.map(s=>coachName(s.coach)).filter(Boolean);
+  const currentRangeRows=all.filter(s=>inRange(s.startTime,range.start,range.end));
+  const rangeScheduleCoachNames=currentRangeRows.map(s=>coachName(s.coach)).filter(Boolean);
+  const nameSource=campus==='all'?[...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)]:[...coachOpsHomeCampusCoachNames(),...rangeScheduleCoachNames];
   const names=[...new Set(nameSource)]
     .sort((a,b)=>coachSortValue(a)-coachSortValue(b)||String(a).localeCompare(String(b),'zh-Hans-CN'));
   return names.map(name=>{
@@ -436,7 +442,7 @@ function renderCoachOps(){
   const title=document.getElementById('coachOpsViewTitle');
   if(title)title.textContent=mode==='day'?`${range.label} 教练排课（7:00-22:00）`:mode==='week'?`${dateKey(range.start)} 至 ${dateKey(addDays(range.end,-1))} 教练周视图`:`${range.label} 教练月视图`;
   const rows=coachOpsRows();
-  const allRows=billableSchedules();
+  const allRows=billableSchedules().filter(coachOpsCampusMatchesSchedule);
   const todayTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.todayRows),0));
   const weekTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.weekRows),0));
   const monthTotal=lessonUnitsText(rows.reduce((n,r)=>n+sumScheduleLessonUnits(r.monthRows),0));
