@@ -45,9 +45,11 @@ assert.match(html, /async function savePackageOrder\([\s\S]*\/packages\/order/, 
 assert.match(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
 assert.match(apiSource, /const id=decodeURIComponent\(pkgM\[1\]\)/, 'package update route should decode URL-encoded package ids before reading TableStore');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
-assert.match(html, /function packageDisplayShortId\(/, 'package cards should expose a short display-only package id helper');
-assert.match(html, /package-card-meta[\s\S]*packageDisplayShortId\(p\)[\s\S]*packageCreatedDate\(p\)[\s\S]*package-order-link/, 'package cards should show a compact display id, created date and order link without labels');
+assert.match(html, /function packageTimeBandBadgeClass\([\s\S]*黄金[\s\S]*非黄金[\s\S]*全天/, 'package time band badge should expose three visual states');
+assert.match(fnBody('packageBoardCardHtml'), /package-sales-title-row[\s\S]*packageTimeBandBadgeHtml\(p\)/, 'package cards should show the time band tag next to the title');
+assert.match(html, /package-card-meta[\s\S]*packageCreatedDate\(p\)[\s\S]*package-order-link/, 'package cards should keep created date and order link without labels');
 assert.doesNotMatch(fnBody('packageBoardCardHtml'), /\$\{esc\(p\.id\|\|'-'\)\}/, 'package cards should not render the full raw package id');
+assert.doesNotMatch(fnBody('packageBoardCardHtml'), /packageDisplayShortId\(p\)|package-meta-id/, 'package cards should not show package id in the footer');
 assert.doesNotMatch(html, /package-card-meta[^`]*创建/, 'package card footer should not show the created label');
 assert.doesNotMatch(html, /showcase-kv-label">创建时间/, 'package cards should not show created time as a normal field row');
 assert.match(html, /归属教练[\s\S]*可用校区[\s\S]*可用时段/, 'package card should show owner coach, campus, and time rules');
@@ -145,6 +147,7 @@ assert.match(fnBody('syncPackageFilterOptions'), /const coachOptions=withStandar
 assert.match(fnBody('syncPackageFilterOptions'), /const statusOptions=withStandardFilterCounts[\s\S]*packageMatchesStatus/, 'package status filter should show per-option package counts');
 assert.match(fnBody('syncPackageFilterOptions'), /const timeBandOptions=withStandardFilterCounts[\s\S]*packageMatchesTimeBand/, 'package time-band filter should show per-option package counts');
 assert.match(fnBody('packageBoardCardHtml'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
+assert.doesNotMatch(fnBody('packageBoardCardHtml'), /packageRuleIcon\('time'\)/, 'package cards should move time band out of the rules area');
 assert.match(fnBody('packageBoardCardHtml'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');
 assert.match(fnBody('packageBoardCardHtml'), /deactivatePackage\('\$\{p\.id\}'/, 'package card should use deactivate instead of delete');
 assert.match(html, /currentPage==='packages'\)renderPackages\(\)/, 'global campus tabs should refresh packages page');
@@ -185,6 +188,7 @@ assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
+assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:16px 18px/, 'package cards should use tighter internal spacing');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
 assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should use the standardized purchase record columns');
