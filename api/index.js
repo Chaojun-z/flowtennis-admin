@@ -447,7 +447,10 @@ function scanLatestRowsDesc(t,{limit=200,columns=[]}={}){
     });
   }));
 }
-function invalidateHotScanCache(t){hotScanCache.delete(t);}
+function invalidateHotScanCache(t){
+  const prefix=`${t}:`;
+  for(const key of hotScanCache.keys())if(key.startsWith(prefix))hotScanCache.delete(key);
+}
 function hotScanCacheKey(t,columns){
   const projection=Array.isArray(columns)&&columns.length?columns.map(String).join('\u0001'):'*';
   return `${t}:${projection}`;

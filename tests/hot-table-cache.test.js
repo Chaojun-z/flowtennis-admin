@@ -12,6 +12,7 @@ assert.doesNotMatch(apiSource, /columns\.map\(column=>\(\{columnName:column\}\)\
 assert.match(apiSource, /function getCachedScan\(t,options=\{\}\)/, 'api should expose a cached scan helper');
 assert.match(apiSource, /function getCachedRow\(t,id\)/, 'api should expose a cached row helper');
 assert.match(apiSource, /function invalidateHotScanCache\(t\)/, 'api should expose cache invalidation');
+assert.match(apiSource, /const prefix=`\$\{t\}:`;[\s\S]*hotScanCache\.keys\(\)[\s\S]*key\.startsWith\(prefix\)[\s\S]*hotScanCache\.delete\(key\)/, 'hot table invalidation should remove all projection cache entries for the table');
 assert.match(apiSource, /function invalidateHotGetCache\(t,id\)/, 'api should expose row cache invalidation');
 assert.match(apiSource, /if\(HOT_SCAN_TABLES\.has\(t\)\)invalidateHotScanCache\(t\);/, 'writes should invalidate hot table cache');
 assert.match(apiSource, /if\(HOT_GET_TABLES\.has\(t\)\)invalidateHotGetCache\(t,id\);/, 'writes should invalidate hot row cache');
