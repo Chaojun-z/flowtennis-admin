@@ -7583,6 +7583,46 @@ function summarizeMembershipBenefits({orders=[],ledger=[],today=new Date().toISO
     return {...item,total,used:Math.abs(negativeDelta),adjusted:positiveDelta,remaining:expired?0:Math.max(0,total+negativeDelta),status:expired?'expired':'active'};
   }));
 }
+const STUDENT_BENEFIT_TYPES=[
+  {benefitCode:'courtBooking',benefitLabel:'订场',unit:'次'},
+  {benefitCode:'ballMachine',benefitLabel:'发球机',unit:'次'}
+];
+function studentBenefitTypeMeta(benefitCode){
+  return STUDENT_BENEFIT_TYPES.find(item=>item.benefitCode===benefitCode)||null;
+}
+function summarizeStudentBenefits({studentId='',ledger=[]}={}){
+  const id=String(studentId||'').trim();
+  if(!id)return [];
+  return STUDENT_BENEFIT_TYPES.map(type=>{
+    const rows=(ledger||[]).filter(row=>String(row?.studentId||'')===id&&row?.benefitCode===type.benefitCode&&row?.action!=='grant');
+    const total=rows.filter(row=>(parseInt(row.delta)||0)>0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0);
+    const consumed=Math.abs(rows.filter(row=>(parseInt(row.delta)||0)<0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0));
+    return {...type,total,used:consumed,remaining:Math.max(0,total-consumed)};
+  }).filter(row=>row.total>0||row.remaining>0);
+}
+function buildStudentBenefitLedgerRecord(input,opts={}){
+  if(!input?.studentId)throw new Error('学员权益流水必须关联学员');
+  const meta=studentBenefitTypeMeta(input.benefitCode);
+  if(!meta)throw new Error('学员权益仅支持订场和发球机');
+  const delta=parseInt(input.delta)||0;
+  if(!delta)throw new Error('权益变动次数不能为 0');
+  return {
+    ...input,
+    id:opts.id||input.id||uuidv4(),
+    studentId:String(input.studentId||'').trim(),
+    studentName:input.studentName||'',
+    benefitCode:meta.benefitCode,
+    benefitLabel:input.benefitLabel||meta.benefitLabel,
+    unit:input.unit||meta.unit,
+    delta,
+    action:input.action||(delta<0?'consume':'supplement'),
+    reason:input.reason||(delta<0?'学员权益使用':'学员权益赠送'),
+    operator:input.operator||'',
+    notes:input.notes||'',
+    relatedDate:input.relatedDate||opts.now?.slice(0,10)||new Date().toISOString().slice(0,10),
+    createdAt:input.createdAt||opts.now||new Date().toISOString()
+  };
+}
 function buildMembershipGrantLedgerRows(order,opts={}){
   return membershipBenefitItemsFromOrder(order).map(item=>buildMembershipBenefitLedgerRecord({
     membershipOrderId:order.id,
@@ -8709,6 +8749,20 @@ module.exports = async (req, res) => {
         const now=new Date().toISOString();
         const account=body.membershipAccountId?await getCachedRow(T_MEMBERSHIP_ACCOUNTS,body.membershipAccountId).catch(()=>null):null;
         const operator=body.operator||operatorAccountName(user);
+        if(body.studentId&&!body.membershipAccountId){
+          if(body.action==='consume'||parseInt(body.delta)<0){
+            const ledger=await getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]);
+            const current=summarizeStudentBenefits({studentId:body.studentId,ledger}).find(row=>row.benefitCode===body.benefitCode);
+            const need=Math.abs(parseInt(body.delta)||0)||Math.abs(parseInt(body.consumeCount)||0);
+            if(!need)return sendJson(res,{error:'权益变动次数不能为 0'},400);
+            if((parseInt(current?.remaining)||0)<need)return sendJson(res,{error:'剩余权益不足'},400);
+            body.delta=-need;
+          }
+          const operationTrace=buildOperationTrace({operationType:'student-benefit-ledger',operator,now});
+          const r=buildStudentBenefitLedgerRecord({...body,operator,...operationTrace},{id:uuidv4(),now});
+          await put(T_MEMBERSHIP_BENEFIT_LEDGER,r.id,r);
+          return sendJson(res,r);
+        }
         if(account&&['voided','cleared'].includes(account.status)&&['consume','supplement'].includes(body.action))return sendJson(res,{error:'当前会员状态不可再消耗或补发权益，请先重新开卡'},400);
         if(!body.membershipOrderId&&(body.action==='consume'||parseInt(body.delta)<0)){
           const [orders,ledger]=await Promise.all([getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])]);
@@ -9576,6 +9630,8 @@ module.exports._test={
   isDuplicateMembershipOrderSubmission,
   buildMembershipAccountEventRecord,
   buildMembershipBenefitLedgerRecord,
+  buildStudentBenefitLedgerRecord,
+  summarizeStudentBenefits,
   buildMembershipGrantLedgerRows,
   allocateMembershipBenefitUsage,
   reconcileMembershipAccounts,

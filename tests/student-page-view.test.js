@@ -96,6 +96,10 @@ assert.match(source, /function openStudentDetail\(/, 'student list should provid
 assert.match(source, /student-detail-shell/, 'student detail should use the clearer card-based shell');
 assert.match(source, /student-detail-hero/, 'student detail should use a clearer header layout');
 assert.match(source, /student-detail-metrics/, 'student detail should use summary metric cards');
+assert.match(source, /function studentBenefitRows\(/, 'student detail should derive student benefit rows separately from package lessons');
+assert.match(source, /studentBenefitRows\(s\)\.length\?studentDetailSectionBlockHtml\('当前权益',studentBenefitSummaryHtml\(s\),'student-benefit-section'\):''[\s\S]*studentDetailSectionBlockHtml\('课包购买记录'/, 'student detail should show current benefits above package purchase records only when benefits exist');
+assert.match(source, /openStudentBenefitPickerModal\('\$\{s\.id\}','supplement'\)[\s\S]*openStudentBenefitPickerModal\('\$\{s\.id\}','consume'\)/, 'student detail footer should expose supplement and consume benefit actions');
+assert.match(source, /const STUDENT_BENEFIT_TYPES=\[[\s\S]*benefitCode:'courtBooking'[\s\S]*benefitCode:'ballMachine'[\s\S]*\]/, 'student benefit actions should only support booking and ball-machine benefits');
 assert.match(source, /student-package-card/, 'student detail should render package purchases as cards');
 assert.match(source, /student-package-icon-svg/, 'student detail should use a folder-style package icon');
 assert.match(source, /student-lesson-timeline/, 'student detail should render lesson records as a timeline');
@@ -131,7 +135,7 @@ assert.match(source, /function historicalImportedLedgerMonthKey\(/, 'lesson char
 assert.match(source, /reason\.match\(\s*\/\^历史导入\\s\*\(\\d\{1,2\}\)月消课\$\/\s*\)/, 'lesson charge history should fall back to parsing month from reason text when sourceMonth is missing');
 assert.match(source, /dedupeEntitlementLedgerForDisplay/, 'lesson charge history should collapse duplicate ledger rows before display');
 assert.match(source, /function historicalImportedLessonUnitsForStudent\(/, 'student page should expose a historical imported lesson helper');
-assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage'\]/, 'student detail should load package consume ledger and purchase amount data for the package blocks');
+assert.match(source, /STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'\]/, 'student detail should load package consume ledger, purchase amount data, and student benefits');
 assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggregateHistoricalMonthlyLedgerRows[\s\S]*function classScheduleSummaryHtml/, 'student consume history should show imported lesson rows one by one instead of monthly aggregation');
 assert.match(source, /studentCompletedLessonCount[\s\S]*historicalImportedLessonUnitsForStudent/, 'student cumulative lessons should include imported lesson consumption');
 assert.match(source, /教学信息[\s\S]*消费与关联信息/, 'student detail should keep the teaching and consumption sections');

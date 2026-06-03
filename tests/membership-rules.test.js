@@ -602,6 +602,33 @@ assert.throws(
   'benefit consumption should reject requests that exceed remaining batches'
 );
 
+assert.deepStrictEqual(
+  rules.summarizeStudentBenefits({
+    studentId: 'stu-benefit-1',
+    ledger: [
+      { studentId: 'stu-benefit-1', benefitCode: 'courtBooking', benefitLabel: '订场', delta: 3, action: 'supplement' },
+      { studentId: 'stu-benefit-1', benefitCode: 'courtBooking', benefitLabel: '订场', delta: -1, action: 'consume' },
+      { studentId: 'stu-benefit-1', benefitCode: 'ballMachine', benefitLabel: '发球机', delta: 2, action: 'supplement' },
+      { studentId: 'other-stu', benefitCode: 'courtBooking', benefitLabel: '订场', delta: 9, action: 'supplement' }
+    ]
+  }).map(row => ({ code: row.benefitCode, total: row.total, remaining: row.remaining })),
+  [
+    { code: 'courtBooking', total: 3, remaining: 2 },
+    { code: 'ballMachine', total: 2, remaining: 2 }
+  ],
+  'student benefits should summarize only booking and ball-machine rows for that student'
+);
+
+assert.throws(
+  () => rules.buildStudentBenefitLedgerRecord({
+    studentId: 'stu-benefit-1',
+    benefitCode: 'publicLesson',
+    delta: 1
+  }),
+  /学员权益仅支持订场和发球机/,
+  'student benefit ledger should reject membership-only benefit types'
+);
+
 assert.strictEqual(
   rules.isDuplicateMembershipOrderSubmission({
     courtId: 'court-1',

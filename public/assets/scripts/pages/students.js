@@ -297,6 +297,61 @@ function studentDetailMetricsHtml(stu){
 function studentDetailSectionBlockHtml(title,content,extraClass=''){
   return content?`<section class="student-detail-section ${extraClass}"><h4>${esc(title)}</h4>${content}</section>`:'';
 }
+const STUDENT_BENEFIT_TYPES=[
+  {benefitCode:'courtBooking',label:'订场',unit:'次'},
+  {benefitCode:'ballMachine',label:'发球机',unit:'次'}
+];
+function studentBenefitTypeMeta(benefitCode){
+  return STUDENT_BENEFIT_TYPES.find(item=>item.benefitCode===benefitCode)||null;
+}
+function studentBenefitRows(stu){
+  const studentId=String(stu?.id||'');
+  if(!studentId)return [];
+  return STUDENT_BENEFIT_TYPES.map(type=>{
+    const rows=membershipBenefitLedger.filter(row=>String(row?.studentId||'')===studentId&&row?.benefitCode===type.benefitCode&&row?.action!=='grant');
+    const total=rows.filter(row=>(parseInt(row.delta)||0)>0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0);
+    const used=Math.abs(rows.filter(row=>(parseInt(row.delta)||0)<0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0));
+    return {...type,total,used,remaining:Math.max(0,total-used)};
+  }).filter(row=>row.total>0||row.remaining>0);
+}
+function studentBenefitSummaryHtml(stu){
+  const rows=studentBenefitRows(stu);
+  if(!rows.length)return '';
+  return rows.map(row=>`<div class="membership-rights-row"><div style="font-size:13px;color:#332A24;font-weight:600;white-space:nowrap">${esc(row.label)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">共 ${row.total}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">已消耗 ${row.used}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">剩余 ${row.remaining}${esc(row.unit)}</div><div style="font-size:12px;color:#8C7B6E;text-align:right;white-space:nowrap">学员权益</div></div>`).join('');
+}
+function openStudentBenefitPickerModal(studentId,mode){
+  const stu=students.find(x=>x.id===studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
+  const currentRows=studentBenefitRows(stu);
+  const rows=mode==='consume'?currentRows:STUDENT_BENEFIT_TYPES.map(type=>{const current=currentRows.find(row=>row.benefitCode===type.benefitCode);return {...type,total:current?.total||0,remaining:current?.remaining||0};});
+  if(mode==='consume'&&!rows.length){toast('该学员当前没有可消耗权益','warn');return;}
+  const actionText=mode==='consume'?'消耗':'赠送';
+  const body=`<div class="tms-section-header" style="margin-top:0;">选择权益类型</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper" style="max-height:360px"><table class="tms-table" style="min-width:620px"><thead><tr><th style="padding-left:20px">权益</th><th style="width:140px">当前剩余</th><th style="width:120px;text-align:right;padding-right:20px">操作</th></tr></thead><tbody>${rows.map(row=>`<tr><td style="padding-left:20px">${renderCourtCellText(row.label,false)}</td><td>${renderCourtCellText(`${row.remaining}/${row.total}${row.unit}`,false)}</td><td style="text-align:right;padding-right:20px"><span class="tms-action-link" onclick="openStudentBenefitActionModal('${studentId}','${row.benefitCode}','${mode}')">${actionText}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+  setCourtModalFrame(`${actionText}权益`,body,`<button class="tms-btn tms-btn-default" onclick="openStudentDetail('${studentId}')">返回学员详情</button>`,'modal-wide');
+}
+function openStudentBenefitActionModal(studentId,benefitCode,mode){
+  const stu=students.find(x=>x.id===studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
+  const meta=studentBenefitTypeMeta(benefitCode);if(!meta){toast('学员权益仅支持订场和发球机','warn');return;}
+  const row=studentBenefitRows(stu).find(item=>item.benefitCode===benefitCode)||{remaining:0,total:0,unit:meta.unit};
+  const actionText=mode==='consume'?'消耗':'赠送';
+  resetModalActions();
+  document.getElementById('mTitle').textContent=mode==='consume'?`消耗 1 次 · ${meta.label}`:`赠送权益 · ${meta.label}`;
+  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">权益名称</div><div class="finput">${esc(meta.label)}</div></div><div class="fg"><div class="flabel">次数</div><input class="finput" id="sb_count" type="number" value="1"></div>${mode==='consume'?`<div class="fg full"><div class="flabel">当前剩余</div><div style="font-size:12px;color:var(--tb);background:rgba(255,255,255,0.45);border:0.5px solid rgba(180,83,9,0.12);border-radius:8px;padding:10px 12px">当前可消耗：${row.remaining}/${row.total}${esc(row.unit)}</div></div>`:''}<div class="fg full"><div class="flabel">原因</div><input class="finput" id="sb_reason" value="${mode==='consume'?'学员权益使用':'学员权益赠送'}"></div></div><div class="mactions"><button class="btn-cancel" onclick="openStudentBenefitPickerModal('${studentId}','${mode}')">返回选择权益</button><button class="btn-save" id="studentBenefitSaveBtn" onclick="saveStudentBenefit('${studentId}','${mode}','${benefitCode}')">${mode==='consume'?'确认消耗':'确认赠送'}</button></div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+async function saveStudentBenefit(studentId,mode,benefitCode){
+  const stu=students.find(x=>x.id===studentId);if(!stu)return;
+  const meta=studentBenefitTypeMeta(benefitCode);if(!meta)return;
+  const count=Math.abs(parseInt(document.getElementById('sb_count')?.value)||1);
+  const data={studentId,studentName:stu.name||'',benefitCode:meta.benefitCode,benefitLabel:meta.label,unit:meta.unit,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('sb_reason')?.value.trim()||'',relatedDate:today()};
+  const btn=document.getElementById('studentBenefitSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    const r=await apiCall('POST','/membership-benefit-ledger',data);
+    const rows=Array.isArray(r?.records)?r.records:[r];
+    rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+    toast('学员权益已保存','success');
+    openStudentDetail(studentId);
+  }catch(e){if(btn){btn.disabled=false;btn.textContent=mode==='consume'?'确认消耗':'确认赠送';}toast('保存失败：'+e.message,'error');}
+}
 function studentRecentFeedbackSummaryHtml(stu){
   const recentFeedbacks=studentRecentFeedbacks(stu,2);
   if(!recentFeedbacks.length)return '';
@@ -540,8 +595,9 @@ function studentLeadSummaryHtml(s){
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
-  const body=`<div class="student-detail-shell">${studentDetailMetricsHtml(s)}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
+  const benefitHtml=studentBenefitRows(s).length?studentDetailSectionBlockHtml('当前权益',studentBenefitSummaryHtml(s),'student-benefit-section'):'';
+  const body=`<div class="student-detail-shell">${studentDetailMetricsHtml(s)}${benefitHtml}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','supplement')">赠送权益</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','consume')">消耗权益</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
   setCourtModalFrame('',body,footer,'modal-wide modal-student-detail');
   document.getElementById('mTitle').innerHTML=studentDetailHeroHtml(s);
 }
