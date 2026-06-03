@@ -42,6 +42,9 @@ assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDrop
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
 assert.match(fnBody('saveSchedule'), /resetScheduleSaveButton\(\)/, 'schedule save should restore the save button through the helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
+assert.match(source, /function renderAfterScheduleMutation\(\)/, 'schedule save should render follow-up views through a safe helper');
+assert.match(fnBody('renderAfterScheduleMutation'), /try\{renderSchedule\(\);renderClasses\(\);renderPlans\(\);renderCoachOps\(\);renderMySchedule\(\);\}catch\(err\)/, 'post-save render failures should not be reported as save failures');
+assert.doesNotMatch(fnBody('saveSchedule'), /renderSchedule\(\);renderClasses\(\);renderPlans\(\);renderCoachOps\(\);renderMySchedule\(\);[\s\S]*catch\(e\)\{toast\('保存失败：'/, 'successful API saves should not be caught as failed saves when rendering fails');
 assert.match(fnBody('openCancelScheduleModal'), /确认取消/, 'schedule cancel should use a dedicated confirm modal instead of reopening the edit form');
 assert.match(fnBody('openCancelScheduleModal'), /取消本节及后续未上课的循环课/, 'repeat schedules should expose a future-lessons cancel option');
 assert.match(fnBody('openCancelScheduleModal'), /schedule-cancel-summary/, 'schedule cancel modal should use a readable summary block instead of low-contrast warning text');

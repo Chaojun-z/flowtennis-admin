@@ -848,8 +848,8 @@ async function saveSchedule(){
   const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,experienceType:selectedExperienceType,smallClassType:selectedSmallClassType,courseTypeLevel2:courseTypeLevel2Label(selectedCourseType,selectedExperienceType,selectedSmallClassType),standardCourseType:standardCourseTypeLabel(selectedCourseType,selectedExperienceType,selectedSmallClassType),isTrial:selectedCourseType==='体验课',coach,coachId,locationType,venue,campus:campusKey(campusValue),externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,settlementType,payMethod,paidAmount:settlementType==='direct'?paidAmount:0,entitlementId:settlementType==='package'&&studentIds.length===1?selectedEntitlementId:'',packageName:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName||''):''):'',purchaseId:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.timeBand||''):'',requiresFieldFee:settlementType==='package'&&!!selectedEntitlement?.requiresFieldFee,fieldFeeReason:settlementType==='package'?(selectedEntitlement?.fieldFeeReason||''):'',cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
   if(!await appConfirm(scheduleSaveConfirmText(data,selectedEntitlement),{title:'确认排课',confirmText:'确认保存',html:true,hideIcon:true,boxClass:'schedule-confirm-box'}))return;
   const btn=document.getElementById('scheduleSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  let result;
   try{
-    let result;
     if(editId){
       result=await apiCall('PUT','/schedule/'+editId,data);
       mergeScheduleSaveResult(result,editId);
@@ -865,11 +865,17 @@ async function saveSchedule(){
       }
       if(result)result.warnings=warnings;
     }
-    noteScheduleLocalMutation();
-    closeModal();toast(editId?'修改成功 ✓':'排课成功 ✓','success');
-    if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
-    renderSchedule();renderClasses();renderPlans();renderCoachOps();renderMySchedule();
-  }catch(e){toast('保存失败：'+scheduleSaveErrorText(e),'error');resetScheduleSaveButton();}
+  }catch(e){toast('保存失败：'+scheduleSaveErrorText(e),'error');resetScheduleSaveButton();return;}
+  noteScheduleLocalMutation();
+  closeModal();toast(editId?'修改成功 ✓':'排课成功 ✓','success');
+  if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
+  renderAfterScheduleMutation();
+}
+function renderAfterScheduleMutation(){
+  try{renderSchedule();renderClasses();renderPlans();renderCoachOps();renderMySchedule();}catch(err){
+    console.error('schedule post-save render failed:',err);
+    toast('排课已保存，页面刷新异常，请手动刷新页面','warn');
+  }
 }
 function resetScheduleSaveButton(){
   const btn=document.getElementById('scheduleSaveBtn');
