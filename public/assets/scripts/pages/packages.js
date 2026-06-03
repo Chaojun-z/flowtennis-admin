@@ -55,6 +55,26 @@ function packageSortValue(p){
   return Number.isFinite(n)&&n>0?n:999999999;
 }
 let packageDragId='';
+function packageBoardColumnKey(p={}){
+  const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
+  const baseType=normalizeCourseType(p.courseType||p.type);
+  let courseGroup=baseType;
+  if(baseType==='体验课'){
+    const experienceType=packageExperienceTypeLabel(p)||'私教体验课';
+    courseGroup=experienceType==='小班体验课'?'小班课':'私教课';
+  }
+  if((audience==='青少年'||audience==='成人')&&(courseGroup==='私教课'||courseGroup==='小班课'))return `${audience}-${courseGroup}`;
+  return 'other';
+}
+function packageBoardColumns(rows=[]){
+  const columns=[
+    {key:'青少年-私教课',title:'青少年 · 私教课'},
+    {key:'青少年-小班课',title:'青少年 · 小班课'},
+    {key:'成人-私教课',title:'成人 · 私教课'},
+    {key:'成人-小班课',title:'成人 · 小班课'}
+  ];
+  return rows.some(p=>packageBoardColumnKey(p)==='other')?[...columns,{key:'other',title:'其他'}]:columns;
+}
 function packageFilterBaseRows(){
   return packages.filter(p=>{
     const statusValue=packageListStatusValue(p);
@@ -104,6 +124,15 @@ function packageCampusSummaryText(ids){
 function packageCampusTitle(ids){
   return parseArr(ids).map(id=>cn(id)).filter(Boolean).join('、')||'不限校区';
 }
+function packageBoardCardHtml(p){
+  const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
+  const campusTitle=packageCampusTitle(p.campusIds);
+  const timeTitle=windows||packageTimeBandShortLabel(p.timeBand||'全天');
+  const coachTitle=packageCoachDetail(p);
+  const title=packageListTitle(p);
+  const subtitle=packageListSubtitle(p);
+  return `<div class="package-card-shell" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token package-meta-id">${esc(packageDisplayShortId(p))}</span><span class="package-meta-dot"></span><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+}
 function renderPackages(){
   syncPackageFilterOptions();
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
@@ -131,20 +160,23 @@ function renderPackages(){
     return orderDiff||String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
   const host=document.getElementById('packageGrid');
-  host.innerHTML=list.length?list.map(p=>{
-    const courseType=normalizeCourseType(p.courseType);
-    const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
-    const timeWindow=[packageTimeBandShortLabel(p.timeBand||'全天'),windows].filter(Boolean).join(' · ');
-    const campusTitle=packageCampusTitle(p.campusIds);
-    const timeTitle=windows||packageTimeBandShortLabel(p.timeBand||'全天');
-    const coachTitle=packageCoachDetail(p);
-    const title=packageListTitle(p);
-    const subtitle=packageListSubtitle(p);
-    return `<div class="package-card-shell" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price">¥${fmt(p.price)}</div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageTimeBandShortLabel(p.timeBand||'全天'))}</span>${packageRuleIcon('time')}<div class="package-rule-tooltip">${esc(timeTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token package-meta-id">${esc(packageDisplayShortId(p))}</span><span class="package-meta-dot"></span><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
-  }).join(''):`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
+  if(!list.length){
+    host.innerHTML=`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
+    return;
+  }
+  const groups=new Map();
+  list.forEach(p=>{
+    const key=packageBoardColumnKey(p);
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(p);
+  });
+  host.innerHTML=packageBoardColumns(list).map(col=>{
+    const rows=groups.get(col.key)||[];
+    return `<div class="package-board-column" data-package-column="${esc(col.key)}"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
+  }).join('');
 }
-function packageOrderedRows(){
-  return packages.filter(p=>packageListStatusValue(p)!=='merged').sort((a,b)=>{
+function packageOrderedRows(columnKey=''){
+  return packages.filter(p=>packageListStatusValue(p)!=='merged'&&(!columnKey||packageBoardColumnKey(p)===columnKey)).sort((a,b)=>{
     const orderDiff=packageSortValue(a)-packageSortValue(b);
     return orderDiff||String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
@@ -168,7 +200,10 @@ async function dropPackageCard(event,targetId){
   const draggedId=packageDragId||event.dataTransfer.getData('text/plain');
   endPackageDrag();
   if(!draggedId||!targetId||draggedId===targetId)return;
-  const ordered=packageOrderedRows();
+  const dragged=packages.find(p=>String(p.id)===String(draggedId));
+  const target=packages.find(p=>String(p.id)===String(targetId));
+  if(!dragged||!target||packageBoardColumnKey(dragged)!==packageBoardColumnKey(target))return;
+  const ordered=packageOrderedRows(packageBoardColumnKey(target));
   const from=ordered.findIndex(p=>String(p.id)===String(draggedId));
   const to=ordered.findIndex(p=>String(p.id)===String(targetId));
   if(from<0||to<0)return;
