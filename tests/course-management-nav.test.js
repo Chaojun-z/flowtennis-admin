@@ -75,6 +75,9 @@ assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_maxStudents'/, 'package modal class size should use the shared custom dropdown');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_timeBand'/, 'package modal time band should use the shared custom dropdown');
 assert.doesNotMatch(fnBody('openPackageModal'), /适用日期|pkg_timeScope/, 'package modal should not expose applicable-day selectors');
+assert.match(html, /function courseSurchargePayMethodOptions\(\)[\s\S]*payMethodOptions\(\)\.filter/, 'schedule surcharge payment should reuse shared payment methods');
+assert.match(fnBody('courseSurchargePayMethodOptions'), /\['储值扣款','课包划扣','大众点评券码','抖音券码','其他'\]\.includes\(option\.value\)/, 'schedule surcharge payment should hide non-cash payment methods');
+assert.match(fnBody('openScheduleModal'), /renderCourtDropdownHtml\('sch_fieldFeePayMethod','支付方式',courseSurchargePayMethodOptions\(\)/, 'schedule surcharge field should use filtered shared payment methods');
 assert.match(html, /packageTimeBandPresetWindows[\s\S]*工作日[\s\S]*周六日/, 'package modal should derive applicable days from time band presets');
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeStart\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal start time should use the schedule custom time picker');
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeEnd\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal end time should use the schedule custom time picker');

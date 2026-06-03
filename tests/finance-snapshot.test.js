@@ -136,6 +136,36 @@ assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseRecogniz
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.directCourseRecognized, 99, 'direct course recognized should include only non-package paid schedules');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageRecognized, 0, 'package recognized should stay package-only');
 
+const surchargeScheduleSnapshot = _test.buildFinancePageSnapshot({
+  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  schedule:[{
+    id:'sch-surcharge-1',
+    studentId:'stu-surcharge',
+    studentName:'补差学员',
+    coach:'Siren',
+    campus:'mabao',
+    courseType:'私教课',
+    lessonCount:1,
+    status:'已排课',
+    startTime:'2026-06-03 18:00',
+    endTime:'2026-06-03 19:00',
+    settlementType:'package',
+    entitlementId:'ent-nonprime',
+    packageName:'成人1v1 非黄金10课时',
+    requiresFieldFee:true,
+    fieldFeeAmount:80,
+    fieldFeePayMethod:'微信',
+    fieldFeeNote:'非黄金课包排入黄金时段补差'
+  }]
+});
+
+const surchargeIncome = surchargeScheduleSnapshot.financeNormalizedRows.find(row=>row.sourceDocument==='排课 sch-surcharge-1'&&row.incomeType==='课程补差收入');
+assert.ok(surchargeIncome, 'non-prime package surcharge should create a course finance income row');
+assert.strictEqual(surchargeIncome.cashDelta, 80, 'surcharge should increase cash income');
+assert.strictEqual(surchargeIncome.recognizedRevenueDelta, 80, 'surcharge should be recognized immediately');
+assert.strictEqual(surchargeIncome.paymentChannel, '微信', 'surcharge should keep the selected system payment method');
+assert.strictEqual(surchargeScheduleSnapshot.financeOverviewData.all.courseIncome, 80, 'course total income should include surcharge income');
+
 const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
   students:[{ id:'stu-voided', campus:'mabao' }],

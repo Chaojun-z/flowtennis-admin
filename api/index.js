@@ -1577,6 +1577,65 @@ function isScheduleInsideEntitlementTimeWindows(schedule,entitlement){
 function scheduleNeedsFieldFeeForEntitlement(entitlement,schedule){
   return isBillableSchedule(schedule)&&isNonPrimeEntitlement(entitlement)&&!isScheduleInsideEntitlementTimeWindows(schedule,entitlement);
 }
+function normalizeScheduleFieldFee(input={}){
+  const requiresFieldFee=!!input.requiresFieldFee;
+  const amount=requiresFieldFee?roundMoney(input.fieldFeeAmount||0):0;
+  return {
+    requiresFieldFee,
+    fieldFeeReason:requiresFieldFee?String(input.fieldFeeReason||'非黄金课包排入黄金时段，需补差价/场地费').trim():'',
+    fieldFeeAmount:amount,
+    fieldFeePayMethod:amount>0?String(input.fieldFeePayMethod||'').trim():'',
+    fieldFeeNote:amount>0?String(input.fieldFeeNote||'非黄金课包排入黄金时段补差').trim():''
+  };
+}
+function assertScheduleFieldFeeInput(schedule){
+  if(!schedule?.requiresFieldFee)return;
+  const amount=roundMoney(schedule.fieldFeeAmount||0);
+  if(amount<=0)return;
+  if(!String(schedule.fieldFeePayMethod||'').trim())throw new Error('请选择补差支付方式');
+  if(['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(String(schedule.fieldFeePayMethod||'').trim()))throw new Error('补差支付方式不可用');
+}
+function buildScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date().toISOString()){
+  const amount=roundMoney(schedule?.fieldFeeAmount||0);
+  if(!schedule?.requiresFieldFee||amount<=0)return null;
+  return {
+    id:`schedule-field-fee-${schedule.id}`,
+    ledgerType:'course_surcharge',
+    status:'active',
+    sourceType:'schedule',
+    sourceId:schedule.id,
+    businessDate:String(schedule.startTime||now).slice(0,10),
+    userId:String(schedule.studentId||parseArr(schedule.studentIds)[0]||''),
+    userName:schedule.studentName||'',
+    campus:schedule.campus||'',
+    productSnapshotName:'课程补差收入',
+    businessType:'课程',
+    action:'收款',
+    paymentChannel:String(schedule.fieldFeePayMethod||'').trim(),
+    cashDelta:Math.round(amount*100),
+    recognizedRevenueDelta:Math.round(amount*100),
+    deferredRevenueDelta:0,
+    notes:schedule.fieldFeeNote||schedule.fieldFeeReason||'非黄金课包排入黄金时段补差',
+    createdBy:user.name||'系统记录',
+    createdAt:now,
+    updatedAt:now
+  };
+}
+async function syncScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date().toISOString()){
+  const row=buildScheduleFieldFeeFinancialLedger(schedule,user,now);
+  const id=`schedule-field-fee-${schedule.id}`;
+  if(row){
+    await put(T_FINANCIAL_LEDGER,id,row);
+    return row;
+  }
+  const existing=await get(T_FINANCIAL_LEDGER,id).catch(()=>null);
+  if(existing){
+    const voided={...existing,status:'voided',updatedAt:now,voidedAt:now,voidedBy:user.name||'系统记录'};
+    await put(T_FINANCIAL_LEDGER,id,voided);
+    return voided;
+  }
+  return null;
+}
 function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
@@ -4260,6 +4319,36 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:'直接收款'
     };
   });
+  const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
+    const amount=roundMoney(item.fieldFeeAmount);
+    const businessDate=String(item.startTime||item.createdAt||'').slice(0,10);
+    return {
+      id:`schedule-field-fee-${item.id}`,
+      businessDate,
+      weekdayText:financeWeekdayText(item.startTime||item.createdAt),
+      timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
+      customer:item.studentName||'—',
+      campusName:campusName.fromValue(item.campus)||'—',
+      businessType:'课程',
+      action:'收款',
+      cashDelta:amount,
+      recognizedRevenueDelta:amount,
+      deferredRevenueDelta:0,
+      paymentChannel:item.fieldFeePayMethod||'—',
+      sourceDocument:`排课 ${item.id}`,
+      notes:item.fieldFeeNote||item.fieldFeeReason||'非黄金课包排入黄金时段补差',
+      incomeType:'课程补差收入',
+      packageName:item.packageName||'',
+      collector:item.operator||item.createdBy||item.coach||'系统记录',
+      differenceReason:'',
+      systemStatus:'正常',
+      totalLessons:0,
+      usedLessons:0,
+      remainingLessons:0,
+      sourceProject:`课程补差 ${financeDateTimeText(item.startTime)}`,
+      debitTarget:'补差收入'
+    };
+  });
   const courtRows=(courts||[]).flatMap(court=>{
     const baseCampusName=campusName.fromHints(court.campus,court.campusName,court.name,court.notes);
     return normalizeCourtHistory(court.history).map(historyRow=>{
@@ -4335,7 +4424,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       };
     }).filter(Boolean);
   });
-  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...courtRows]
+  return [...courseReceiptRows,...membershipReceiptRows,...courseConsumeRows,...directScheduleRows,...scheduleFieldFeeRows,...courtRows]
     .map(applyStandardFinanceFields)
     .sort((a,b)=>String(b.businessDate||'').localeCompare(String(a.businessDate||''))||String(b.id||'').localeCompare(String(a.id||'')));
 }
@@ -4448,7 +4537,7 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
   const membershipOrderRows=(source.membershipOrders||[]).filter(isFinanceMembershipImportIncrementOrder);
   const courtRows=(source.courts||[]).map(courtWithFinanceImportHistory).filter(row=>normalizeCourtHistory(row.history).length);
-  const directScheduleRows=(source.schedule||[]).filter(row=>isDirectPaidSchedule(row)&&roundMoney(row.paidAmount||row.paymentAmount)>0);
+  const directScheduleRows=(source.schedule||[]).filter(row=>(isDirectPaidSchedule(row)&&roundMoney(row.paidAmount||row.paymentAmount)>0)||roundMoney(row.fieldFeeAmount)>0);
   const incrementRows=buildFinanceUnifiedRows({
     campuses:source.campuses||[],
     students:source.students||[],
@@ -8716,11 +8805,12 @@ module.exports = async (req, res) => {
           const id=uuidv4();
           const now=new Date().toISOString();
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now});
-          const r=withOperationTrace({...body,...normalizeCoachLateInfo(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:now,updatedAt:now},operationTrace);
+          const r=withOperationTrace({...body,...normalizeCoachLateInfo(body),...normalizeScheduleFieldFee(body),studentIds:parseArr(body.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue),id,status:body.status||'已排课',cancelReason:body.cancelReason||'',notifyStatus:body.notifyStatus||'未通知',confirmStatus:body.confirmStatus||'待确认',scheduleSource:body.scheduleSource||'排课表',createdBy:user.name,createdAt:now,updatedAt:now},operationTrace);
           let validation;
           try{validation=await timed('schedule create validate',async()=>{
             const risk=await validateScheduleSave(r,null);
             assertScheduleEntitlementRequired(r);
+            assertScheduleFieldFeeInput(r);
             const [entitlementRows,coaches,users]=await Promise.all([
               withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试'),
               getCachedScan(T_COACHES).catch(()=>[]),
@@ -8758,6 +8848,7 @@ module.exports = async (req, res) => {
             if(nextDelta)lessonApplied=true;
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
+            const financialLedger=await timed('schedule create field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,now));
           let notification=await timed(
             'schedule create coach notification',
             ()=>withTimeout(
@@ -8773,7 +8864,7 @@ module.exports = async (req, res) => {
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
             });
-            return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
+            return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
@@ -8794,7 +8885,7 @@ module.exports = async (req, res) => {
           const ex=await get(T_SCHEDULE,id).catch(()=>null);
           const isCancelOnlyUpdate=String(body.status||'').trim()==='已取消'&&Object.keys(body||{}).every(key=>['status','cancelReason'].includes(key));
           const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
-          const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()},operationTrace);
+          const r=withOperationTrace({...ex,...body,...normalizeCoachLateInfo({...ex,...body}),...normalizeScheduleFieldFee({...ex,...body}),studentIds:parseArr(body.studentIds??ex?.studentIds).filter(Boolean),expectedStudentIds:parseArr(body.expectedStudentIds??ex?.expectedStudentIds).filter(Boolean),absentStudentIds:parseArr(body.absentStudentIds??ex?.absentStudentIds).filter(Boolean),venue:normalizeVenue(body.venue??ex?.venue),id,updatedAt:new Date().toISOString()},operationTrace);
           const oldDelta=scheduleLessonDelta(ex);
           const nextDelta=scheduleLessonDelta(r);
           if(isCancelOnlyUpdate&&ex){
@@ -8837,6 +8928,7 @@ module.exports = async (req, res) => {
           try{validation=await timed('schedule update validate',async()=>{
             const risk=await validateScheduleSave(r,ex);
             assertScheduleEntitlementRequired(r);
+            assertScheduleFieldFeeInput(r);
             assertScheduleEditableAfterFeedback(
               ex,
               r,
@@ -8891,8 +8983,9 @@ module.exports = async (req, res) => {
             const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
+            const financialLedger=await timed('schedule update field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,new Date().toISOString()));
             await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
-            return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
+            return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
