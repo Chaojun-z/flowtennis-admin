@@ -188,7 +188,16 @@ assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
-assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:16px 18px/, 'package cards should use tighter internal spacing');
+assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:12px/, 'package cards should use 12px internal spacing');
+assert.match(pagesCss, /package-sales-subtitle\{[^}]*font-size:11px/, 'package audience and lesson text should use 11px');
+assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px/, 'package campus and coach text should use 11px');
+assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*font-size:11px/, 'package edit and deactivate buttons should use 11px');
+assert.match(pagesCss, /package-card-meta\{[^}]*font-size:10px/, 'package created date and order count should use 10px');
+assert.match(pagesCss, /package-time-band-badge\{[^}]*font-size:10px/, 'package time band tag should use 10px');
+assert.match(pagesCss, /package-status-badge\{[^}]*font-size:10px/, 'package sale status should use 10px');
+assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#F7E8C8;color:#9A5B00/, 'package prime tag should reuse lead follow-up status styling');
+assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#F7E8C8;color:#9A5B00/, 'package off-peak tag should reuse lead follow-up status styling');
+assert.match(pagesCss, /package-sales-footer\{[^}]*padding:10px 12px/, 'package footer should use 12px horizontal padding');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
 assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should use the standardized purchase record columns');
