@@ -760,7 +760,10 @@ const compoundCoachPlusRecommendation = rules.recommendEntitlements([
   endTime: '2026-05-09 17:00',
   lessonCount: 1,
   status: '已排课',
-  coachRefs: [{ id: '老吴', name: '刘润扬教练' }]
+  coachRefs: [
+    { id: 'c69e1bae-1d14-4be3-bb61-64755e4ccd55', name: '刘润扬教练' },
+    { id: '老吴', name: '刘润扬教练' }
+  ]
 });
 assert.strictEqual(compoundCoachPlusRecommendation.recommended.entitlementId, 'ent-compound-plus-coach', 'plus-separated legacy coach names should match coach aliases from refs');
 
