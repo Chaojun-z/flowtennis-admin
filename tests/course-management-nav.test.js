@@ -6,6 +6,7 @@ const courseSource = [
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'products.js'), 'utf8'),
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'packages.js'), 'utf8')
 ].join('\n');
+const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 
 function fnBody(name){
@@ -41,7 +42,8 @@ assert.match(html, /function packageSortValue\(/, 'package list should expose a 
 assert.match(html, /function renderPackages[\s\S]*packageSortValue\(a\)-packageSortValue\(b\)[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort by persisted package order before falling back to newer records first');
 assert.match(fnBody('renderPackages'), /draggable="true"[\s\S]*onDragStart="startPackageDrag/, 'package cards should be draggable');
 assert.match(html, /async function savePackageOrder\([\s\S]*\/packages\/order/, 'package drag order should save through a dedicated endpoint');
-assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8'), /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
+assert.match(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
+assert.match(apiSource, /const id=decodeURIComponent\(pkgM\[1\]\)/, 'package update route should decode URL-encoded package ids before reading TableStore');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
 assert.match(html, /function packageDisplayShortId\(/, 'package cards should expose a short display-only package id helper');
 assert.match(html, /package-card-meta[\s\S]*packageDisplayShortId\(p\)[\s\S]*packageCreatedDate\(p\)[\s\S]*package-order-link/, 'package cards should show a compact display id, created date and order link without labels');
