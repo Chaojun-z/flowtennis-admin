@@ -1539,8 +1539,29 @@ function isNonPrimeEntitlement(entitlement){
   if(/黄金时间|黄金时段/.test(band))return false;
   return /非黄|非黄金|非黄金时段|非黄时间/.test(String(entitlement?.packageName||''));
 }
+function entitlementTimeBandKind(entitlement){
+  const band=String(entitlement?.timeBand||'');
+  if(/非黄|非黄金|非黄金时段|非黄时间/.test(band))return 'nonprime';
+  if(/黄金时间|黄金时段/.test(band))return 'prime';
+  return '';
+}
+function standardTimeBandWindows(kind){
+  if(kind==='prime')return [
+    {startTime:'16:00',endTime:'22:00',daysOfWeek:[1,2,3,4,5]},
+    {startTime:'09:00',endTime:'22:00',daysOfWeek:[6,7]}
+  ];
+  if(kind==='nonprime')return [
+    {startTime:'09:00',endTime:'16:00',daysOfWeek:[1,2,3,4,5]}
+  ];
+  return [];
+}
+function isScheduleInsideEntitlementTimeWindows(schedule,entitlement){
+  const kind=entitlementTimeBandKind(entitlement);
+  const windows=standardTimeBandWindows(kind);
+  return isScheduleInsideDailyTimeWindows(schedule,windows.length?windows:entitlement?.dailyTimeWindows);
+}
 function scheduleNeedsFieldFeeForEntitlement(entitlement,schedule){
-  return isBillableSchedule(schedule)&&isNonPrimeEntitlement(entitlement)&&!isScheduleInsideDailyTimeWindows(schedule,entitlement?.dailyTimeWindows);
+  return isBillableSchedule(schedule)&&isNonPrimeEntitlement(entitlement)&&!isScheduleInsideEntitlementTimeWindows(schedule,entitlement);
 }
 function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
@@ -1566,7 +1587,7 @@ function validateEntitlementForSchedule(entitlement,schedule){
   const from=entitlement.usageStartDate||entitlement.validFrom;
   const until=entitlement.usageEndDate||entitlement.validUntil;
   if((from&&usedDate<from)||(until&&usedDate>until))throw new Error('不在课包可用日期范围');
-  if(!isScheduleInsideDailyTimeWindows(schedule,entitlement.dailyTimeWindows)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
+  if(!isScheduleInsideEntitlementTimeWindows(schedule,entitlement)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
   if(isSmallGroupCourse(entitlement)&&isSmallGroupCourse(schedule)){
@@ -8695,7 +8716,7 @@ module.exports = async (req, res) => {
             if(nextDelta)lessonApplied=true;
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-          const notification=await timed(
+          let notification=await timed(
             'schedule create coach notification',
             ()=>withTimeout(
               notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message})),
@@ -8704,8 +8725,12 @@ module.exports = async (req, res) => {
             )
           );
             Object.assign(r,buildScheduleNotificationUpdate(r,notification,'schedule_created',new Date().toISOString()));
-            await put(T_SCHEDULE,id,r);
-            await syncCoachScheduleIndexes(null,r);
+            await put(T_SCHEDULE,id,r).catch(err=>{
+              notification={...(notification||{}),sent:false,error:`排课通知状态更新失败：${err.message}`};
+            });
+            await syncCoachScheduleIndexes(null,r).catch(err=>{
+              notification={...(notification||{}),sent:false,indexError:err.message};
+            });
             return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
@@ -8756,7 +8781,7 @@ module.exports = async (req, res) => {
                 lessonUpdate=await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds));
                 appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});
               }
-              await syncCoachScheduleIndexes(ex,r);
+              await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule cancel index sync failed:',err));
               return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),warnings:[]});
             }catch(err){
               await put(T_SCHEDULE,id,ex).catch(()=>null);
@@ -8820,7 +8845,7 @@ module.exports = async (req, res) => {
             const plans=changed.filter(Boolean).flatMap(x=>x.plans||[]);
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
-            await syncCoachScheduleIndexes(ex,r);
+            await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
             return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
@@ -8848,7 +8873,7 @@ module.exports = async (req, res) => {
             }
           }
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
-          await syncCoachScheduleIndexes(ex,null);
+          await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
           return sendJson(res,{success:true,...(lessonUpdate||{})});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);

@@ -665,6 +665,29 @@ const primeTimeRecommendation = rules.recommendEntitlements([
 assert.strictEqual(primeTimeRecommendation.recommended.entitlementId, 'ent-non-prime');
 assert.strictEqual(primeTimeRecommendation.recommended.requiresFieldFee, true, 'prime-time use of non-prime package should be marked for field fee');
 
+const staleWindowGoldRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-gold-stale-window',
+    packageName: '成人1v1 黄金时间10课时',
+    timeBand: '黄金时间',
+    remainingLessons: 3,
+    dailyTimeWindows: [{ label: '旧非黄窗口', startTime: '09:00', endTime: '16:00', daysOfWeek: [1, 2, 3, 4, 5] }]
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'coach-1',
+  coach: '朝珺',
+  campus: 'mabao',
+  startTime: '2026-05-04 18:00',
+  endTime: '2026-05-04 19:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(staleWindowGoldRecommendation.recommended.entitlementId, 'ent-gold-stale-window', 'gold package should use gold time-band rules even when stale non-prime windows remain');
+assert.strictEqual(staleWindowGoldRecommendation.options[0].requiresFieldFee, false, 'gold package in gold time should not require field fee');
+
 const coachSuffixRecommendation = rules.recommendEntitlements([
   {
     ...entitlement,
