@@ -232,6 +232,8 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'entitlementId',
   'entitlementIds',
   'purchaseId',
+  'requiresFieldFee',
+  'fieldFeeReason',
   'settlementType',
   'paymentType',
   'paidAmount',
@@ -1562,6 +1564,7 @@ function standardTimeBandWindows(kind){
 }
 function isScheduleInsideEntitlementTimeWindows(schedule,entitlement){
   const kind=entitlementTimeBandKind(entitlement);
+  if(kind==='prime')return true;
   const windows=standardTimeBandWindows(kind);
   return isScheduleInsideDailyTimeWindows(schedule,windows.length?windows:entitlement?.dailyTimeWindows);
 }
@@ -1668,7 +1671,7 @@ function recommendEntitlements(entitlements,schedule){
       validUntil:ent.validUntil||'',
       timeBand:ent.timeBand||'',
       requiresFieldFee,
-      fieldFeeReason:requiresFieldFee?'非黄金课包排入黄金/周末时段，需补场地费':'',
+      fieldFeeReason:requiresFieldFee?'非黄金课包排入黄金/周末时段，需补差价/场地费':'',
       selectable:warnings.length===0,
       warnings,
       _source:ent
@@ -2027,24 +2030,40 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId))
   };
 }
+function addCoachAliasValue(values,value){
+  const raw=String(value||'').trim();
+  if(!raw)return;
+  const base=raw.replace(/教练$/,'').trim();
+  [raw,base,base?`${base}教练`:''].filter(Boolean).forEach(item=>values.add(item));
+}
+function coachAliasParts(value){
+  const raw=String(value||'').trim();
+  if(!raw)return [];
+  const candidates=[raw,raw.replace(/教练$/,'').trim()];
+  const parts=[];
+  candidates.forEach(item=>{
+    String(item||'').split(/[\/+、,，;；|]/).forEach(part=>{
+      const text=part.trim();
+      if(!text)return;
+      parts.push(text);
+      text.split(/\s+/).forEach(word=>{if(word)parts.push(word);});
+    });
+  });
+  return [...new Set(parts)];
+}
 function coachRefAliases(value,coachRefs=[]){
   const raw=String(value||'').trim();
   const refs=Array.isArray(coachRefs)?coachRefs:[];
   if(!raw)return [];
-  const base=raw.replace(/教练$/,'').trim();
-  const values=new Set([raw]);
-  if(base&&base!==raw)values.add(base);
-  if(base)values.add(`${base}教练`);
+  const values=new Set();
+  coachAliasParts(raw).forEach(part=>addCoachAliasValue(values,part));
   refs.forEach(ref=>{
     const id=String(ref?.id||'').trim();
     const name=String(ref?.name||'').trim();
-    if(raw===id||raw===name){
-      if(id)values.add(id);
-      if(name)values.add(name);
-      const idBase=id.replace(/教练$/,'').trim();
-      const nameBase=name.replace(/教练$/,'').trim();
-      if(idBase){values.add(idBase);values.add(`${idBase}教练`);}
-      if(nameBase){values.add(nameBase);values.add(`${nameBase}教练`);}
+    const current=[...values];
+    if(current.includes(id)||current.includes(name)){
+      coachAliasParts(id).forEach(part=>addCoachAliasValue(values,part));
+      coachAliasParts(name).forEach(part=>addCoachAliasValue(values,part));
     }
   });
   return [...values];

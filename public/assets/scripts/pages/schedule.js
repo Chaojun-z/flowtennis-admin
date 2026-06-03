@@ -336,7 +336,7 @@ function handleScheduleStartTimeChange(){
 }
 function scheduleEntitlementLabel(option){
   if(!option?.entitlementId)return option?.label||'自动匹配可用课包';
-  return `${standardPackageLabel(option,true)||option.packageName} · 剩余${option.remainingLessons}/${option.totalLessons} · ${packageTimeBandShortLabel(option.timeBand||'全天')}${option.requiresFieldFee?' · 需补场地费':''} · 到期${option.validUntil||'-'}`;
+  return `${standardPackageLabel(option,true)||option.packageName} · 剩余${option.remainingLessons}/${option.totalLessons} · ${packageTimeBandShortLabel(option.timeBand||'全天')}${option.requiresFieldFee?' · 需补差价/场地费':''} · 到期${option.validUntil||'-'}`;
 }
 function renderScheduleEntitlementDropdown(options=[],value='',placeholder='自动匹配可用课包'){
   const list=options.length?options.map(x=>({value:x.entitlementId,label:scheduleEntitlementLabel(x)})):[{value:'',label:placeholder}];
@@ -604,7 +604,7 @@ function applySchEntitlementOptions(res,preferredId=''){
     setScheduleCourseTypeReadonly(false);
     setScheduleSmallClassTypeReadonly(false);
   }
-  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补场地费':''}，到期 ${selected.validUntil||'-'}`:scheduleEntitlementUnavailableReason(res.options||[]);
+  hint.textContent=selected?`已自动匹配：${standardPackageLabel(selected,true)||selected.packageName}，剩余 ${selected.remainingLessons}/${selected.totalLessons}，${packageTimeBandShortLabel(selected.timeBand||'全天')}${selected.requiresFieldFee?'，需补差价/场地费':''}，到期 ${selected.validUntil||'-'}`:scheduleEntitlementUnavailableReason(res.options||[]);
 }
 function scheduleEntitlementCourseType(option){
   if(!option)return '';
@@ -789,6 +789,7 @@ function scheduleSaveConfirmText(data,selectedEntitlement){
     ${row('课程',courseTypeDisplayLabel(data)||'—')}
     ${row('结算方式',`${scheduleSettlementTypeLabel(data.settlementType)} · ${packageText}`)}
     <div class="schedule-confirm-charge"><span class="schedule-confirm-label">本次扣课</span><span class="schedule-confirm-charge-value">${esc(chargeText)}</span></div>
+    ${data.requiresFieldFee?row('补差价',data.fieldFeeReason||'需补差价/场地费','schedule-confirm-warn'):''}
     ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
     ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
   </div>`;

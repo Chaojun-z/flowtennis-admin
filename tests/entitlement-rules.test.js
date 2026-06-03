@@ -576,7 +576,7 @@ assert.doesNotThrow(
   'prime package should support weekend 09:00-22:00 windows'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule({ ...entitlement, timeBand: '黄金时间', packageName: '黄金课包', dailyTimeWindows: [
     { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
     { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
@@ -592,8 +592,7 @@ assert.throws(
     lessonCount: 1,
     status: '已排课'
   }),
-  /不在课包可用时间段/,
-  'prime package should keep weekday morning outside available windows'
+  'prime package should also cover weekday non-prime time without field fee'
 );
 
 assert.throws(
@@ -687,6 +686,83 @@ const staleWindowGoldRecommendation = rules.recommendEntitlements([
 });
 assert.strictEqual(staleWindowGoldRecommendation.recommended.entitlementId, 'ent-gold-stale-window', 'gold package should use gold time-band rules even when stale non-prime windows remain');
 assert.strictEqual(staleWindowGoldRecommendation.options[0].requiresFieldFee, false, 'gold package in gold time should not require field fee');
+
+const goldToNonPrimeRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-gold-to-nonprime',
+    packageName: '成人1v1 黄金时间10课时',
+    timeBand: '黄金时间',
+    remainingLessons: 3,
+    dailyTimeWindows: [
+      { label: '黄金时段', startTime: '16:00', endTime: '22:00', daysOfWeek: [1, 2, 3, 4, 5] },
+      { label: '黄金时段', startTime: '09:00', endTime: '22:00', daysOfWeek: [6, 7] }
+    ]
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'coach-1',
+  coach: '朝珺',
+  campus: 'mabao',
+  startTime: '2026-05-06 09:00',
+  endTime: '2026-05-06 10:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(goldToNonPrimeRecommendation.recommended.entitlementId, 'ent-gold-to-nonprime', 'gold package should be selectable in weekday non-prime time');
+assert.strictEqual(goldToNonPrimeRecommendation.options[0].requiresFieldFee, false, 'gold package in non-prime time should not require field fee');
+
+const compoundCoachSlashRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-compound-slash-coach',
+    packageName: '成人1v1 朝珺非黄金10课时',
+    ownerCoach: 'Siren/天昊',
+    allowedCoaches: ['Siren/天昊'],
+    coachIds: ['Siren/天昊'],
+    coachNames: ['Siren/天昊'],
+    remainingLessons: 5
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'Rive 天昊教练',
+  coach: 'Rive 天昊教练',
+  campus: 'mabao',
+  startTime: '2026-05-04 18:00',
+  endTime: '2026-05-04 19:00',
+  lessonCount: 1,
+  status: '已排课'
+});
+assert.strictEqual(compoundCoachSlashRecommendation.recommended.entitlementId, 'ent-compound-slash-coach', 'slash-separated legacy coach names should match the selected coach');
+assert.strictEqual(compoundCoachSlashRecommendation.recommended.requiresFieldFee, true, 'slash-separated coach package should keep non-prime to prime field-fee flag');
+
+const compoundCoachPlusRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-compound-plus-coach',
+    packageName: '成人1v1 朝珺黄金10课时（历史）',
+    timeBand: '黄金时段',
+    ownerCoach: 'Siren+老吴',
+    allowedCoaches: ['Siren+老吴'],
+    coachIds: ['Siren+老吴'],
+    coachNames: ['Siren+老吴'],
+    remainingLessons: 3
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: '刘润扬教练',
+  coach: '刘润扬教练',
+  campus: 'mabao',
+  startTime: '2026-05-09 16:00',
+  endTime: '2026-05-09 17:00',
+  lessonCount: 1,
+  status: '已排课',
+  coachRefs: [{ id: '老吴', name: '刘润扬教练' }]
+});
+assert.strictEqual(compoundCoachPlusRecommendation.recommended.entitlementId, 'ent-compound-plus-coach', 'plus-separated legacy coach names should match coach aliases from refs');
 
 const coachSuffixRecommendation = rules.recommendEntitlements([
   {
