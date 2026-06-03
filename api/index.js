@@ -8696,9 +8696,13 @@ module.exports = async (req, res) => {
           try{validation=await timed('schedule create validate',async()=>{
             const risk=await validateScheduleSave(r,null);
             assertScheduleEntitlementRequired(r);
-            const entitlementRows=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试');
+            const [entitlementRows,coaches,users]=await Promise.all([
+              withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试'),
+              getCachedScan(T_COACHES).catch(()=>[]),
+              getCachedScan(T_USERS).catch(()=>[])
+            ]);
             /* hot-cache guard: const entitlementDeltas=resolveScheduleEntitlementDeltas(r,await getCachedScan(T_ENTITLEMENTS).catch(()=>[])); */
-            const coachRefs=LEGACY_STATIC_COACH_REFS;
+            const coachRefs=buildCoachRefs({coaches,users});
             const entitlementDeltas=resolveScheduleEntitlementDeltas({...r,coachRefs},entitlementRows);
             r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
@@ -8817,8 +8821,12 @@ module.exports = async (req, res) => {
             const oldFreeAbsenceLedger=allLedger.filter(row=>row.scheduleId===id&&row.action==='free_absence');
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
             const oldEntIds=new Set(oldEntDeltas.map(d=>d.entitlementId));
-            const entitlementRows=await withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试');
-            const coachRefs=LEGACY_STATIC_COACH_REFS;
+            const [entitlementRows,coaches,users]=await Promise.all([
+              withRequiredStorageTimeout(getCachedScan(T_ENTITLEMENTS).catch(()=>[]),3500,'课包余额校验超时，请稍后重试'),
+              getCachedScan(T_COACHES).catch(()=>[]),
+              getCachedScan(T_USERS).catch(()=>[])
+            ]);
+            const coachRefs=buildCoachRefs({coaches,users});
             const freeAbsenceReturnIds=new Set(oldFreeAbsenceLedger.map(row=>row.entitlementId).filter(Boolean));
             const nextBaseRows=entitlementRows.map(ent=>{
               let next=oldEntIds.has(ent.id)?{...ent,status:'active',remainingLessons:parseLessonValue(ent.remainingLessons)+(oldEntDeltas.find(d=>d.entitlementId===ent.id)?.delta||0)}:ent;

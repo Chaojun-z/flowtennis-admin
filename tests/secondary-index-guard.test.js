@@ -15,6 +15,7 @@ assert.match(apiSource, /syncCoachScheduleIndexes\(null,r\)\.catch\(/, '新建�
 assert.match(apiSource, /syncCoachScheduleIndexes\(ex,r\)\.catch\(/, '编辑排课索引同步失败不能回滚已保存排课');
 assert.match(apiSource, /syncCoachScheduleIndexes\(ex,null\)\.catch\(/, '删除排课索引同步失败不能回滚已删除排课');
 assert.match(apiSource, /if\(path==='\/entitlements\/recommend'&&method==='POST'\)\{await init\(\);const \[rows,coaches,users\]=await Promise\.all\(\[getIndexedActiveEntitlementsForStudents\(parseArr\(body\.studentIds\)\),getCachedScan\(T_COACHES\)\.catch\(\(\)=>\[\]\),getCachedScan\(T_USERS\)\.catch\(\(\)=>\[\]\)\]\);/, '课包推荐必须优先走学员活跃课包索引');
+assert.match(apiSource, /const \[entitlementRows,coaches,users\]=await Promise\.all\(\[[\s\S]*getCachedScan\(T_ENTITLEMENTS\)[\s\S]*getCachedScan\(T_COACHES\)[\s\S]*getCachedScan\(T_USERS\)[\s\S]*\]\);[\s\S]*const coachRefs=buildCoachRefs\(\{coaches,users\}\);[\s\S]*resolveScheduleEntitlementDeltas\(\{\.\.\.r,coachRefs\},entitlementRows\)/, '排课保存扣课校验必须使用完整教练映射，避免教练改名后课包不匹配');
 assert.match(apiSource, /const needsFallback=missingStudentIds\.length>0\|\|!indexedRows\.length;[\s\S]*const fallbackRows=\(await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)\)\.filter\(row=>normalized\.includes\(String\(row\.studentId\|\|''\)\.trim\(\)\)&&isActiveEntitlementForIndex\(row\)\);/, '课包推荐在索引缺失或空洞时必须回退全量课包扫描');
 assert.match(apiSource, /await syncStudentActiveEntitlementIndexes\(ent,next\);/, '课包扣减后必须同步学员活跃课包索引');
 assert.match(apiSource, /await syncStudentActiveEntitlementIndexes\(old,null\);/, '课包删除后必须同步学员活跃课包索引');
