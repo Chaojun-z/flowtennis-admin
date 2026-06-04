@@ -145,7 +145,7 @@ assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgCoachFilte
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
 assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
 assert.match(html, /const PACKAGE_BOARD_COLUMNS=\[[\s\S]*青少年 · 私教课[\s\S]*青少年 · 小班课[\s\S]*成人 · 私教课[\s\S]*成人 · 小班课[\s\S]*朝珺/, 'package board should render the four teaching columns plus a Chaojun column');
-assert.match(html, /function packageIsChaojunOnlyOwned\([\s\S]*ownerCoach[\s\S]*朝珺/, 'package board should identify packages owned only by Chaojun');
+assert.match(html, /function packageIsChaojunOnlyOwned\([\s\S]*ownerCoach[\s\S]*includes\('朝珺'\)/, 'package board should identify packages whose owner coach name includes Chaojun');
 assert.doesNotMatch(fnBody('packageIsChaojunOnlyOwned'), /coachNames|coachIds/, 'package board should not move packages into Chaojun just because Chaojun is an available coach');
 assert.match(html, /function packageBoardColumnKey\([\s\S]*packageIsChaojunOnlyOwned\(p\)[\s\S]*chaojun[\s\S]*小班体验课[\s\S]*小班课[\s\S]*私教课[\s\S]*other/, 'package board should classify Chaojun-owner packages before the normal teaching columns and keep an other fallback');
 assert.doesNotMatch(html, /function packageBoardColumnKey\([\s\S]*boardColumn/, 'package board classification should not be overridden by stale saved board columns');
@@ -157,7 +157,10 @@ assert.match(fnBody('dropPackageCard'), /savePackageBoardOrder\(ordered\)/, 'pac
 assert.match(fnBody('savePackageBoardOrder'), /savePackageOrder\(orderedIds\)/, 'package drag sorting should persist order only');
 assert.match(fnBody('packageBoardCardHtml'), /ondrop="dropPackageCard\(event,'\$\{p\.id\}'\)"/, 'package cards should accept package drops');
 assert.match(fnBody('renderPackages'), /draggable="true"[\s\S]*startPackageColumnDrag\(event,'\$\{esc\(col\.key\)\}'\)[\s\S]*dropPackageColumn\(event,'\$\{esc\(col\.key\)\}'\)/, 'package board columns should support drag sorting between columns');
-assert.match(html, /function dropPackageColumn\([\s\S]*PACKAGE_BOARD_COLUMN_ORDER_KEY[\s\S]*renderPackages\(\)/, 'package board should persist column order locally and rerender');
+assert.match(html, /async function dropPackageColumn\([\s\S]*apiCall\('PUT','\/package-board-preferences',\{columnOrder:next\}\)/, 'package board should persist column order through the backend');
+assert.match(apiSource, /path==='\/package-board-preferences'&&method==='GET'[\s\S]*getPackageBoardPreferences/, 'package board should load saved column order from the backend');
+assert.match(apiSource, /path==='\/package-board-preferences'&&method==='PUT'[\s\S]*savePackageBoardPreferences/, 'package board should save column order to the backend');
+assert.match(html, /packageBoardPreferences:\(\)=>apiCall\('GET','\/package-board-preferences'\)/, 'package page should request board preferences while loading data');
 assert.doesNotMatch(html, /async function dropPackageToColumn\(/, 'package board should not support dragging cards into another column');
 assert.doesNotMatch(fnBody('savePackageOrder'), /boardColumnById/, 'package order save should not send board column placement');
 assert.doesNotMatch(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*boardColumnById/, 'package order endpoint should not persist card column placement');

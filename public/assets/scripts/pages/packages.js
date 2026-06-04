@@ -93,7 +93,7 @@ function packageValidBoardColumnKey(value){
   return '';
 }
 function packageIsChaojunOnlyOwned(p={}){
-  return coachName(p.ownerCoach)==='朝珺';
+  return coachName(p.ownerCoach).includes('朝珺');
 }
 function packageBoardColumnKey(p={}){
   if(packageIsChaojunOnlyOwned(p))return'chaojun';
@@ -113,6 +113,9 @@ function packageBaseBoardColumns(rows=[]){
 }
 function packageSavedBoardColumnOrder(columns=[]){
   const valid=new Set(columns.map(col=>col.key));
+  if(Array.isArray(packageBoardColumnOrder)&&packageBoardColumnOrder.length){
+    return packageBoardColumnOrder.map(packageValidBoardColumnKey).filter(key=>key&&valid.has(key));
+  }
   try{
     const raw=JSON.parse(localStorage.getItem(PACKAGE_BOARD_COLUMN_ORDER_KEY)||'[]');
     return Array.isArray(raw)?raw.map(packageValidBoardColumnKey).filter(key=>key&&valid.has(key)):[];
@@ -307,7 +310,7 @@ function endPackageColumnDrag(){
   packageColumnDragKey='';
   document.querySelectorAll('.package-board-column.is-column-dragging,.package-board-column.is-column-drag-over').forEach(el=>el.classList.remove('is-column-dragging','is-column-drag-over'));
 }
-function dropPackageColumn(event,targetColumnKey){
+async function dropPackageColumn(event,targetColumnKey){
   if(!isPackageColumnDragEvent(event))return;
   event.preventDefault();
   event.stopPropagation();
@@ -322,8 +325,20 @@ function dropPackageColumn(event,targetColumnKey){
   const next=current.slice();
   const [moved]=next.splice(from,1);
   next.splice(to,0,moved);
+  const previous=Array.isArray(packageBoardColumnOrder)?packageBoardColumnOrder.slice():[];
+  packageBoardColumnOrder=next;
   localStorage.setItem(PACKAGE_BOARD_COLUMN_ORDER_KEY,JSON.stringify(next));
   renderPackages();
+  try{
+    const res=await apiCall('PUT','/package-board-preferences',{columnOrder:next});
+    packageBoardColumnOrder=Array.isArray(res.columnOrder)?res.columnOrder:next;
+    localStorage.setItem(PACKAGE_BOARD_COLUMN_ORDER_KEY,JSON.stringify(packageBoardColumnOrder));
+  }catch(e){
+    packageBoardColumnOrder=previous;
+    localStorage.setItem(PACKAGE_BOARD_COLUMN_ORDER_KEY,JSON.stringify(previous));
+    renderPackages();
+    toast('保存列顺序失败：'+e.message,'error');
+  }
 }
 async function dropPackageCard(event,targetId){
   if(isPackageColumnDragEvent(event))return;

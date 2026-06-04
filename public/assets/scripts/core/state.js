@@ -7,6 +7,7 @@ function syncViewportMode(){
 
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
+let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 let studentLessonRecordExpandedState={};
 function financeNormalizedRows(){
@@ -91,7 +92,7 @@ const PAGE_DATA_REQUIREMENTS={
   coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],
   products:['products','classes'],
-  packages:['packages','products','purchases','entitlements'],
+  packages:['packages','products','purchases','entitlements','packageBoardPreferences'],
   purchases:[],
   entitlements:['entitlements','students'],
   coaches:['campuses','coaches'],
@@ -144,6 +145,7 @@ const DATASET_LOADERS={
   students:()=>apiCall('GET','/students'),
   products:()=>apiCall('GET','/products'),
   packages:()=>apiCall('GET','/packages'),
+  packageBoardPreferences:()=>apiCall('GET','/package-board-preferences'),
   purchases:()=>apiCall('GET','/purchases'),
   entitlements:()=>apiCall('GET','/entitlements'),
   entitlementLedger:()=>apiCall('GET','/entitlement-ledger'),
@@ -221,6 +223,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='students')students=rows;
   if(name==='products')products=rows;
   if(name==='packages')packages=rows;
+  if(name==='packageBoardPreferences')packageBoardColumnOrder=Array.isArray(data?.columnOrder)?data.columnOrder:[];
   if(name==='purchases')purchases=rows;
   if(name==='entitlements')entitlements=rows;
   if(name==='entitlementLedger')entitlementLedger=rows;
@@ -389,7 +392,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       loadedDatasets.add('plansPage');
       return;
     }
-    if(name==='purchasesPage'){
+  if(name==='purchasesPage'){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
       setDatasetValue('students',data.students||[]);
@@ -492,6 +495,7 @@ function clearLoadedData(){
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
+  packageBoardColumnOrder=[];
   loadedDatasets=new Set();
 }
 function normalizeCurrentPageForRole(){
@@ -514,6 +518,7 @@ function applyLoadedData(data){
   students=Array.isArray(data?.students)?data.students:[];
   products=Array.isArray(data?.products)?data.products:[];
   packages=Array.isArray(data?.packages)?data.packages:[];
+  packageBoardColumnOrder=Array.isArray(data?.packageBoardPreferences?.columnOrder)?data.packageBoardPreferences.columnOrder:[];
   purchases=Array.isArray(data?.purchases)?data.purchases:[];
   entitlements=Array.isArray(data?.entitlements)?data.entitlements:[];
   entitlementLedger=Array.isArray(data?.entitlementLedger)?data.entitlementLedger:[];
