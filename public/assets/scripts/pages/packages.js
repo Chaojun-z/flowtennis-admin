@@ -77,6 +77,9 @@ function packageSortValue(p){
   return Number.isFinite(n)&&n>0?n:999999999;
 }
 let packageDragId='';
+let packageColumnDragKey='';
+const PACKAGE_BOARD_COLUMN_ORDER_KEY='flowtennis.packageBoardColumnOrder.v1';
+const PACKAGE_COLUMN_DND_TYPE='application/x-flowtennis-package-column';
 const PACKAGE_BOARD_COLUMNS=[
   {key:'青少年-私教课',title:'青少年 · 私教课'},
   {key:'青少年-小班课',title:'青少年 · 小班课'},
@@ -89,16 +92,11 @@ function packageValidBoardColumnKey(value){
   if(PACKAGE_BOARD_COLUMNS.some(col=>col.key===key)||key==='other')return key;
   return '';
 }
-function packageStoredBoardColumnKey(p={}){
-  return packageValidBoardColumnKey(p.boardColumn||p.packageBoardColumn||'');
-}
 function packageIsChaojunOwned(p={}){
   const names=[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)].map(coachName).filter(Boolean);
   return names.includes('朝珺');
 }
 function packageBoardColumnKey(p={}){
-  const stored=packageStoredBoardColumnKey(p);
-  if(stored)return stored;
   if(packageIsChaojunOwned(p))return'chaojun';
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
   const baseType=normalizeCourseType(p.courseType||p.type);
@@ -110,9 +108,25 @@ function packageBoardColumnKey(p={}){
   if((audience==='青少年'||audience==='成人')&&(courseGroup==='私教课'||courseGroup==='小班课'))return `${audience}-${courseGroup}`;
   return 'other';
 }
-function packageBoardColumns(rows=[]){
+function packageBaseBoardColumns(rows=[]){
   const columns=PACKAGE_BOARD_COLUMNS;
   return rows.some(p=>packageBoardColumnKey(p)==='other')?[...columns,{key:'other',title:'其他'}]:columns;
+}
+function packageSavedBoardColumnOrder(columns=[]){
+  const valid=new Set(columns.map(col=>col.key));
+  try{
+    const raw=JSON.parse(localStorage.getItem(PACKAGE_BOARD_COLUMN_ORDER_KEY)||'[]');
+    return Array.isArray(raw)?raw.map(packageValidBoardColumnKey).filter(key=>key&&valid.has(key)):[];
+  }catch(e){
+    return [];
+  }
+}
+function packageBoardColumns(rows=[]){
+  const columns=packageBaseBoardColumns(rows);
+  const saved=packageSavedBoardColumnOrder(columns);
+  if(!saved.length)return columns;
+  const byKey=new Map(columns.map(col=>[col.key,col]));
+  return [...saved.map(key=>byKey.get(key)).filter(Boolean),...columns.filter(col=>!saved.includes(col.key))];
 }
 function packageFilterBaseRows(){
   return packages.filter(p=>{
@@ -248,7 +262,7 @@ function renderPackages(){
   });
   host.innerHTML=packageBoardColumns(list).map(col=>{
     const rows=groups.get(col.key)||[];
-    return `<div class="package-board-column" data-package-column="${esc(col.key)}"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack" ondragover="allowPackageDrop(event)" ondrop="dropPackageToColumn(event,'${esc(col.key)}')">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
+    return `<div class="package-board-column" data-package-column="${esc(col.key)}" draggable="true" ondragstart="startPackageColumnDrag(event,'${esc(col.key)}')" ondragover="allowPackageColumnDrop(event)" ondrop="dropPackageColumn(event,'${esc(col.key)}')" ondragend="endPackageColumnDrag()"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
   }).join('');
 }
 function packageOrderedRows(columnKey=''){
@@ -259,19 +273,61 @@ function packageOrderedRows(columnKey=''){
 }
 function startPackageDrag(event,id){
   packageDragId=id;
+  event.stopPropagation();
   event.currentTarget?.classList.add('is-dragging');
   event.dataTransfer.effectAllowed='move';
   event.dataTransfer.setData('text/plain',id);
 }
+function isPackageColumnDragEvent(event){
+  const types=Array.from(event?.dataTransfer?.types||[]);
+  return !!packageColumnDragKey||types.includes(PACKAGE_COLUMN_DND_TYPE);
+}
 function allowPackageDrop(event){
+  if(isPackageColumnDragEvent(event))return;
   event.preventDefault();
+  event.stopPropagation();
   event.currentTarget?.classList.add('is-drag-over');
 }
 function endPackageDrag(){
   packageDragId='';
   document.querySelectorAll('.package-card-shell.is-dragging,.package-card-shell.is-drag-over,.package-board-stack.is-drag-over').forEach(el=>el.classList.remove('is-dragging','is-drag-over'));
 }
+function startPackageColumnDrag(event,key){
+  packageColumnDragKey=packageValidBoardColumnKey(key);
+  event.currentTarget?.classList.add('is-column-dragging');
+  event.dataTransfer.effectAllowed='move';
+  event.dataTransfer.setData(PACKAGE_COLUMN_DND_TYPE,packageColumnDragKey);
+  event.dataTransfer.setData('text/plain',`column:${packageColumnDragKey}`);
+}
+function allowPackageColumnDrop(event){
+  if(!isPackageColumnDragEvent(event))return;
+  event.preventDefault();
+  event.currentTarget?.classList.add('is-column-drag-over');
+}
+function endPackageColumnDrag(){
+  packageColumnDragKey='';
+  document.querySelectorAll('.package-board-column.is-column-dragging,.package-board-column.is-column-drag-over').forEach(el=>el.classList.remove('is-column-dragging','is-column-drag-over'));
+}
+function dropPackageColumn(event,targetColumnKey){
+  if(!isPackageColumnDragEvent(event))return;
+  event.preventDefault();
+  event.stopPropagation();
+  const draggedKey=packageValidBoardColumnKey(packageColumnDragKey||event.dataTransfer.getData(PACKAGE_COLUMN_DND_TYPE)||String(event.dataTransfer.getData('text/plain')||'').replace(/^column:/,''));
+  targetColumnKey=packageValidBoardColumnKey(targetColumnKey);
+  endPackageColumnDrag();
+  if(!draggedKey||!targetColumnKey||draggedKey===targetColumnKey)return;
+  const current=packageBoardColumns(packageFilterBaseRows()).map(col=>col.key);
+  const from=current.indexOf(draggedKey);
+  const to=current.indexOf(targetColumnKey);
+  if(from<0||to<0)return;
+  const next=current.slice();
+  const [moved]=next.splice(from,1);
+  next.splice(to,0,moved);
+  localStorage.setItem(PACKAGE_BOARD_COLUMN_ORDER_KEY,JSON.stringify(next));
+  renderPackages();
+}
 async function dropPackageCard(event,targetId){
+  if(isPackageColumnDragEvent(event))return;
   event.preventDefault();
   event.stopPropagation();
   const draggedId=packageDragId||event.dataTransfer.getData('text/plain');
@@ -280,47 +336,34 @@ async function dropPackageCard(event,targetId){
   const dragged=packages.find(p=>String(p.id)===String(draggedId));
   const target=packages.find(p=>String(p.id)===String(targetId));
   if(!dragged||!target)return;
+  if(packageBoardColumnKey(dragged)!==packageBoardColumnKey(target))return;
   const targetColumnKey=packageBoardColumnKey(target);
   const ordered=packageOrderedRows(targetColumnKey);
   const from=ordered.findIndex(p=>String(p.id)===String(draggedId));
   const to=ordered.findIndex(p=>String(p.id)===String(targetId));
-  if(to<0)return;
-  const moved=from>=0?ordered.splice(from,1)[0]:dragged;
+  if(from<0||to<0)return;
+  const moved=ordered.splice(from,1)[0];
   const insertAfter=from>=0&&from<to;
   const nextTo=ordered.findIndex(p=>String(p.id)===String(targetId));
   ordered.splice(insertAfter?nextTo+1:nextTo,0,moved);
-  await savePackageBoardMove(ordered,targetColumnKey);
+  await savePackageBoardOrder(ordered);
 }
-async function dropPackageToColumn(event,targetColumnKey){
-  event.preventDefault();
-  const draggedId=packageDragId||event.dataTransfer.getData('text/plain');
-  endPackageDrag();
-  targetColumnKey=packageValidBoardColumnKey(targetColumnKey);
-  if(!draggedId||!targetColumnKey)return;
-  const dragged=packages.find(p=>String(p.id)===String(draggedId));
-  if(!dragged)return;
-  const ordered=packageOrderedRows(targetColumnKey).filter(p=>String(p.id)!==String(draggedId));
-  ordered.push(dragged);
-  await savePackageBoardMove(ordered,targetColumnKey);
-}
-async function savePackageBoardMove(ordered,targetColumnKey){
+async function savePackageBoardOrder(ordered){
   const orderedIds=ordered.map(p=>p.id);
-  const columnById={};
-  orderedIds.forEach(id=>{columnById[id]=targetColumnKey;});
-  const previous=new Map(packages.map(p=>[p.id,{sortOrder:p.sortOrder,boardColumn:p.boardColumn}]));
-  orderedIds.forEach((id,idx)=>{const p=packages.find(row=>row.id===id);if(p){p.sortOrder=(idx+1)*10;p.boardColumn=targetColumnKey;}});
+  const previous=new Map(packages.map(p=>[p.id,p.sortOrder]));
+  orderedIds.forEach((id,idx)=>{const p=packages.find(row=>row.id===id);if(p)p.sortOrder=(idx+1)*10;});
   renderPackages();
   try{
-    await savePackageOrder(orderedIds,columnById);
+    await savePackageOrder(orderedIds);
     toast('课包顺序已保存','success');
   }catch(e){
-    packages.forEach(p=>{const prev=previous.get(p.id);if(prev){p.sortOrder=prev.sortOrder;p.boardColumn=prev.boardColumn;}});
+    packages.forEach(p=>{if(previous.has(p.id))p.sortOrder=previous.get(p.id);});
     renderPackages();
     toast('保存排序失败：'+e.message,'error');
   }
 }
-async function savePackageOrder(orderedIds,columnById={}){
-  const res=await apiCall('PUT','/packages/order',{orderedIds,boardColumnById:columnById});
+async function savePackageOrder(orderedIds){
+  const res=await apiCall('PUT','/packages/order',{orderedIds});
   (res.packages||[]).forEach(row=>{const i=packages.findIndex(p=>p.id===row.id);if(i>=0)packages[i]=row;});
   return res;
 }
