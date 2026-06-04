@@ -49,6 +49,30 @@ assert.match(
 );
 
 assert.match(
+  coachOpsSource,
+  /if\(!el\.value\)\{el\.value=coachOpsInputValue\(new Date\(\),coachOpsMode\);el\.dataset\.coachOpsAutoDate='1';\}/,
+  'coach schedule default date should be marked as automatic until the user selects a time'
+);
+
+assert.match(
+  coachOpsSource,
+  /const base=mode==='day'&&d\?\.dataset\?\.coachOpsAutoDate==='1'\?new Date\(\):coachOpsInputDate\(\);/,
+  'switching from the default week view to day view should use today instead of the week start'
+);
+
+assert.match(
+  coachOpsSource,
+  /const nowHeadHtml=showNowLine\?`<span class="coach-ops-now-head" style="left:\$\{nowLineLeft\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/span>`:'';/,
+  'coach schedule current time label should render in the header'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /coach-ops-now-line[^`]*<i>/,
+  'coach schedule body current time line should not repeat time labels in each coach row'
+);
+
+assert.match(
   source,
   /function openCoachOpsCreateSchedule/,
   'coach ops should expose a grid click entry for creating schedules'
@@ -788,8 +812,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #F24822;z-index:12;pointer-events:none\}/,
-  'coach schedule current-time line should be visible in day view'
+  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba\(242,72,34,\.5\);z-index:12;pointer-events:none\}/,
+  'coach schedule current-time body line should be 1px at 50% opacity'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:4px;left:8px;height:16px;padding:0 5px;border-radius:999px;background:#F24822/,
+  'coach schedule current-time label should live in the day header'
 );
 
 assert.doesNotMatch(

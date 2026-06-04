@@ -169,6 +169,7 @@ function moveCoachOpsPickerMonth(step){coachOpsPickerMonth=addMonths(coachOpsPic
 function pickCoachOpsDate(value){
   const el=coachOpsDateInput();if(!el)return;
   el.value=value;
+  delete el.dataset.coachOpsAutoDate;
   closeCoachOpsPicker();
   renderCoachOps();
 }
@@ -200,17 +201,18 @@ function renderCoachOpsPicker(){
 }
 function ensureCoachOpsDate(){
   const el=coachOpsDateInput();if(!el)return;
-  if(!el.value)el.value=coachOpsInputValue(new Date(),coachOpsMode);
+  if(!el.value){el.value=coachOpsInputValue(new Date(),coachOpsMode);el.dataset.coachOpsAutoDate='1';}
   updateCoachOpsDateButton();
 }
 function setCoachOpsMode(mode){
-  const base=coachOpsInputDate();
+  const d=coachOpsDateInput();
+  const base=mode==='day'&&d?.dataset?.coachOpsAutoDate==='1'?new Date():coachOpsInputDate();
   coachOpsMode=['day','week','month'].includes(mode)?mode:'day';
-  const d=coachOpsDateInput();if(d)d.value=coachOpsInputValue(base,coachOpsMode);
+  if(d)d.value=coachOpsInputValue(base,coachOpsMode);
   closeCoachOpsPicker();
   renderCoachOps();
 }
-function setCoachOpsToday(){const el=coachOpsDateInput();if(el)el.value=coachOpsInputValue(new Date(),coachOpsMode);renderCoachOps();}
+function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}renderCoachOps();}
 function shiftCoachOpsDate(step){
   const el=coachOpsDateInput();if(!el)return;
   const mode=coachOpsMode;
@@ -218,9 +220,10 @@ function shiftCoachOpsDate(step){
   if(mode==='month')el.value=coachOpsInputValue(addMonths(base,step),mode);
   else if(mode==='week')el.value=coachOpsInputValue(addDays(base,step*7),mode);
   else el.value=dateKey(addDays(base,step));
+  delete el.dataset.coachOpsAutoDate;
   renderCoachOps();
 }
-function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d)d.value=ds;renderCoachOps();}
+function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}renderCoachOps();}
 function coachOpsQuickCreate(){
   openScheduleModal(null,{scheduleSource:'教练运营'});
 }
@@ -503,7 +506,8 @@ function renderCoachOps(){
   const nowMinutes=(nowForGrid.getHours()-7)*60+nowForGrid.getMinutes()+nowForGrid.getSeconds()/60;
   const showNowLine=dayIsToday&&nowMinutes>=0&&nowMinutes<=(22-7)*60;
   const nowLineLeft=showNowLine?nowMinutes/60*120:0;
-  const nowLineHtml=showNowLine?`<span class="coach-ops-now-line" style="left:${nowLineLeft}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i></span>`:'';
+  const nowLineHtml=showNowLine?`<span class="coach-ops-now-line" style="left:${nowLineLeft}px"></span>`:'';
+  const nowHeadHtml=showNowLine?`<span class="coach-ops-now-head" style="left:${nowLineLeft}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></span>`:'';
   const gridCard=document.querySelector('#page-coachschedule .coach-ops-grid-card');
   if(gridCard){
     gridCard.classList.toggle('mode-day',mode==='day');
@@ -515,7 +519,7 @@ function renderCoachOps(){
   if(hourHost){
     hourHost.classList.toggle('week',mode==='week'||mode==='month');
     hourHost.innerHTML=mode==='day'
-      ?Array.from({length:opsEndH-opsStartH+1},(_,i)=>`<span>${i+opsStartH}:00</span>`).join('')
+      ?Array.from({length:opsEndH-opsStartH+1},(_,i)=>`<span>${i+opsStartH}:00</span>`).join('')+nowHeadHtml
       :mode==='week'
         ?Array.from({length:7},(_,i)=>{const d=addDays(range.start,i),ds=dateKey(d);return `<span class="${ds===todayKey?'is-today':''}">周${'一二三四五六日'[i]} ${d.getMonth()+1}/${d.getDate()}</span>`;}).join('')
         :['周一','周二','周三','周四','周五','周六','周日'].map((d,i)=>{

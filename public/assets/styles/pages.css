@@ -1659,9 +1659,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-coachschedule .coach-ops-daycell.is-today.has-course:hover{background:#fff}
 #page-coachschedule .coach-ops-daycell.is-today .coach-ops-daycell-head strong{color:#6E6259}
 #page-coachschedule .coach-ops-line.is-today{background-color:#FFFDFC}
-#page-coachschedule .coach-ops-now-line{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #F24822;z-index:12;pointer-events:none}
-#page-coachschedule .coach-ops-now-line::before{content:"";position:absolute;left:-5px;top:50%;width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95);transform:translateY(-50%)}
-#page-coachschedule .coach-ops-now-line i{position:absolute;top:6px;left:6px;height:16px;padding:0 5px;border-radius:999px;background:#F24822;color:#fff;font-size:10px;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(242,72,34,.22)}
+#page-coachschedule .coach-ops-now-line{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba(242,72,34,.5);z-index:12;pointer-events:none}
+#page-coachschedule .coach-ops-hours{position:relative;overflow:visible}
+#page-coachschedule .coach-ops-now-head{position:absolute;top:0;bottom:0;width:0;z-index:20;pointer-events:none}
+#page-coachschedule .coach-ops-now-head i{position:absolute;top:4px;left:8px;height:16px;padding:0 5px;border-radius:999px;background:#F24822;color:#fff;font-size:10px;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(242,72,34,.22)}
+#page-coachschedule .coach-ops-now-head b{position:absolute;left:-4px;bottom:-4px;width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
 .my-schedule-primary{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.95fr);gap:14px;margin-bottom:16px}
 .my-schedule-panel{background:#FCFAF7;border:1px solid #E9DED2;border-radius:18px;box-shadow:0 10px 30px rgba(60,20,0,.05);padding:16px 18px}
 .my-schedule-panel h3{font-size:18px;color:#2F241E;margin-bottom:4px}
