@@ -27,6 +27,23 @@ function packageDisplayTitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   return [packageCoreClassLabel(p),lessons?`${lessons}课时`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
 }
+function renderPackageTopFilters(){
+  if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function')return '';
+  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
+    value:String(row?.code||row?.id||'').trim(),
+    label:String(row?.name||row?.code||row?.id||'').trim()
+  })).filter(opt=>opt.value&&opt.label));
+  const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectPackageTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('packageTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
+}
+function selectPackageTopCampus(value,event){
+  if(event)event.stopPropagation();
+  campus=value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  renderPackages();
+  closeCourtTopDropdowns();
+}
 function packageListStatusValue(p){
   const status=String(p.status||'active');
   if(status==='inactive'||status==='已停售'||status==='history')return'inactive';

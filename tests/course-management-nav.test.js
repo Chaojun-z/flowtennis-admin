@@ -143,6 +143,8 @@ assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audie
 assert.match(html, /function packageBoardColumns\([\s\S]*青少年 · 私教课[\s\S]*青少年 · 小班课[\s\S]*成人 · 私教课[\s\S]*成人 · 小班课/, 'package board should render the four agreed teaching columns');
 assert.match(html, /function packageBoardColumnKey\([\s\S]*小班体验课[\s\S]*小班课[\s\S]*私教课[\s\S]*other/, 'package board should classify experience packages by private or small-group subtype and keep an other fallback');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*package-board-title[\s\S]*package-board-count[\s\S]*packageBoardCardHtml/, 'package page should render a Notion-style board with column counts and package cards');
+assert.match(fnBody('buildCampusTabs'), /currentPage==='packages'[\s\S]*renderPackageTopFilters/, 'package page should reuse the coach ops top campus dropdown');
+assert.match(html, /function selectPackageTopCampus\([\s\S]*renderPackages\(\)[\s\S]*closeCourtTopDropdowns\(\)/, 'package top campus dropdown should refresh package board');
 assert.match(fnBody('dropPackageCard'), /packageBoardColumnKey\(dragged\)!==packageBoardColumnKey\(target\)[\s\S]*return/, 'package drag sorting should stay within the same board column');
 assert.match(fnBody('syncPackageFilterOptions'), /const typeOptions=withStandardFilterCounts[\s\S]*packageMatchesCourseType/, 'package type filter should show per-option package counts');
 assert.match(fnBody('syncPackageFilterOptions'), /const audienceOptions=withStandardFilterCounts[\s\S]*packageMatchesAudience/, 'package audience filter should show per-option package counts');
@@ -167,6 +169,7 @@ assert.match(html, /function purchasePackagePickerLabel/, 'purchase package pick
 assert.match(fnBody('purchasePackagePickerLabel'), /standardPackageLabel\(p,true\)[\s\S]*Number\(p\.price\)[\s\S]*\$\{price\}元[\s\S]*coachName\(p\.ownerCoach\)/, 'purchase package picker label should include package price and bound owner coach');
 assert.match(fnBody('openPurchaseModal'), /label:purchasePackagePickerLabel\(p\)/, 'purchase create package picker should show price and bound owner coach');
 assert.match(fnBody('openPurchaseEditModal'), /label:purchasePackagePickerLabel\(pkg\)/, 'purchase edit package picker should show price and bound owner coach');
+assert.match(fnBody('refreshPurchaseFilters'), /label:purchasePackagePickerLabel\(p\)/, 'purchase record package filter should show price and owner coach');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
 assert.match(html, /id="pur_studentSearch"/, 'purchase modal should provide a student search input');
@@ -191,12 +194,18 @@ assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
-assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:12px/, 'package cards should use 12px internal spacing');
+assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wrapper\{width:280px/, 'package search should use 280px width');
+assert.match(pagesCss, /#pkgTypeFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package type filter should default to 60px');
+assert.match(pagesCss, /#pkgCoachFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package coach filter should default to 60px');
+assert.match(pagesCss, /#pkgStatusFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package status filter should default to 60px');
+assert.match(pagesCss, /#pkgTimeBandFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package time band filter should default to 60px');
+assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:10px/, 'package cards should use 10px internal spacing');
+assert.match(pagesCss, /package-board-count\{[^}]*font-size:12px[^}]*font-weight:400/, 'package board count should use 12px regular text');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*font-size:11px/, 'package audience and lesson text should use 11px');
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px/, 'package campus and coach text should use 11px');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*font-size:11px/, 'package edit and deactivate buttons should use 11px');
 assert.match(pagesCss, /package-card-meta\{[^}]*font-size:10px/, 'package created date and order count should use 10px');
-assert.match(pagesCss, /package-time-band-badge\{[^}]*width:36px[^}]*height:16\.65px[^}]*padding:0[^}]*border-radius:6px[^}]*font-size:11px[^}]*font-weight:400/, 'package time band tag should use the compact lead follow-up badge shape');
+assert.match(pagesCss, /package-time-band-badge\{[^}]*width:36px[^}]*height:16\.65px[^}]*padding:0[^}]*border-radius:6px[^}]*font-size:10px[^}]*font-weight:400/, 'package time band tag should use the compact lead follow-up badge shape');
 assert.match(pagesCss, /package-status-badge\{[^}]*font-size:10px/, 'package sale status should use 10px');
 assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#F7E8C8;color:#9A5B00/, 'package prime tag should use the gold follow-up colorway');
 assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#E7F1E9;color:#3F7E2B/, 'package off-peak tag should use the green follow-up colorway');
@@ -205,6 +214,7 @@ assert.match(pagesCss, /package-sales-footer\{[^}]*padding:8px 12px/, 'package f
 assert.match(pagesCss, /package-sales-title\{font-size:13px/, 'package title should use 13px');
 assert.match(pagesCss, /package-sales-core\{[^}]*align-items:center/, 'package price and rule block should vertically align in the middle');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{width:40px;height:25px/, 'package action buttons should be 40 by 25');
+assert.match(pagesCss, /#page-purchases \.tms-filters \.coach-date-btn\{[^}]*min-width:105px[^}]*width:105px/, 'purchase date filters should use 105px width');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
 assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should use the standardized purchase record columns');

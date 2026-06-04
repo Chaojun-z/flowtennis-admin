@@ -9,7 +9,7 @@ function onPurchaseFilterChange(){
 function refreshPurchaseFilters(){
   const packageValue=purchaseSelectedPackageFilter();
   const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
-  const packageOptions=withStandardFilterCounts([{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))],purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
+  const packageOptions=withStandardFilterCounts([{value:'',label:'全部课包'},...packages.map(p=>({value:p.id,label:purchasePackagePickerLabel(p)}))],purchaseRows,(p,value)=>purchaseMatchesPackage(p,value));
   [['purPackageFilterHost','purPackageFilter','全部课包',packageOptions,packageValue]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onPurchaseFilterChange');
