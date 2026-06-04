@@ -12,6 +12,7 @@ const snapshot = _test.buildFinancePageSnapshot({
     courseType: '训练营',
     amountPaid: 3000,
     purchaseDate: '2026-06-01',
+    createdAt: '2026-06-01T08:09:10.000Z',
     payMethod: '微信转账支付',
     status: 'active'
   }],
@@ -30,6 +31,7 @@ const snapshot = _test.buildFinancePageSnapshot({
     entitlementId: 'ent-1',
     studentId: 'stu-1',
     lessonDelta: -1,
+    scheduleId: 'schedule-1',
     relatedDate: '2026-06-02',
     createdAt: '2026-06-02T10:00:00.000Z'
   }],
@@ -43,7 +45,8 @@ const snapshot = _test.buildFinancePageSnapshot({
       type: '消费',
       category: '订场',
       payMethod: '储值扣款',
-      amount: 200
+      amount: 200,
+      startTime: '2026-06-03T12:34:56.000Z'
     }, {
       id: 'h2',
       date: '2026-06-04',
@@ -53,7 +56,16 @@ const snapshot = _test.buildFinancePageSnapshot({
       amount: 200
     }]
   }],
-  schedule: []
+  schedule: [{
+    id: 'schedule-1',
+    studentName: '张三',
+    coach: '王教练',
+    campus: 'mabao',
+    courseType: '私教',
+    startTime: '2026-06-02T15:30:45.000Z',
+    endTime: '2026-06-02T16:30:45.000Z',
+    status: '已结束'
+  }]
 });
 
 const purchase = snapshot.financeNormalizedRows.find(row => row.id === 'purchase-purchase-1');
@@ -63,15 +75,18 @@ assert.strictEqual(purchase.businessTypeLevel1, '课程');
 assert.strictEqual(purchase.businessTypeLevel2, '小班课');
 assert.strictEqual(purchase.businessTypeLevel3, '训练营');
 assert.strictEqual(purchase.displayBusinessType, '课程 / 小班课 / 训练营');
+assert.strictEqual(purchase.businessDate, '2026-06-01 08:09:10');
 
 const consume = snapshot.financeNormalizedRows.find(row => row.id === 'consume-ledger-1');
 assert.strictEqual(consume.transactionType, '消耗');
 assert.strictEqual(consume.normalizedPaymentMethod, '课包划扣');
+assert.strictEqual(consume.businessDate, '2026-06-02 15:30:45');
 
 const storedConsume = snapshot.financeNormalizedRows.find(row => row.id.includes('court-1-h1'));
 assert.strictEqual(storedConsume.transactionType, '消耗');
 assert.strictEqual(storedConsume.normalizedPaymentMethod, '储值扣款');
 assert.strictEqual(storedConsume.displayBusinessType, '场地 / 会员订场');
+assert.strictEqual(storedConsume.businessDate, '2026-06-03 12:34:56');
 
 const reverse = snapshot.financeNormalizedRows.find(row => row.id.includes('court-1-h2'));
 assert.strictEqual(reverse.transactionType, '退款');
