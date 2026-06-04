@@ -192,6 +192,7 @@ assert.match(html, /function getFilteredPurchases[\s\S]*String\(b\.purchaseDate\
 assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
+assert.match(fnBody('packagePurchaseCount'), /p\.status!=='voided'/, 'package card order count should exclude voided purchases');
 assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*String\(p\.packageId\|\|''\)===String\(packageId\)/, 'package order count should use exact package id and entitlement-linked purchases');
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
@@ -255,6 +256,7 @@ assert.match(html, /function showPackageRuleTooltip\(/, 'package rule tooltip sh
 assert.match(fnBody('packageBoardCardHtml'), /onmouseenter="showPackageRuleTooltip\(event\)"[\s\S]*onmouseleave="hidePackageRuleTooltip\(\)"/, 'package rule tooltip should not be clipped inside the scroll column');
 assert.doesNotMatch(purchaseSection, /导出/, 'purchase page should remove export button');
 assert.doesNotMatch(purchaseSection, /导入/, 'purchase page should remove import button');
+assert.match(purchaseSection, /onclick="goPage\('packages'\)"[\s\S]*课包售卖/, 'purchase page should expose a back entry to package sales');
 assert.doesNotMatch(purchaseSection, /purDateFrom/, 'purchase page should remove start date filter');
 assert.doesNotMatch(purchaseSection, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');

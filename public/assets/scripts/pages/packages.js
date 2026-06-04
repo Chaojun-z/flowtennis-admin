@@ -325,7 +325,7 @@ async function savePackageOrder(orderedIds,columnById={}){
   return res;
 }
 function packagePurchaseCount(packageId){
-  return purchases.filter(p=>isMeaningfulPurchaseRecord(p)&&purchaseMatchesPackage(p,packageId)).length;
+  return purchases.filter(p=>p.status!=='voided'&&isMeaningfulPurchaseRecord(p)&&purchaseMatchesPackage(p,packageId)).length;
 }
 function purchaseMatchesPackage(p,packageId){
   if(!packageId)return true;
