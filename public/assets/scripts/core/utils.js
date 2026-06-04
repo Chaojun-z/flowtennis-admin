@@ -326,7 +326,7 @@ function coachOpsInputValue(d,mode){
   return dateKey(d);
 }
 function coachOpsInputDate(){
-  const el=document.getElementById('coachOpsDate');
+  const el=typeof coachOpsDateInput==='function'?coachOpsDateInput():document.getElementById('coachOpsDate');
   const raw=el?.value||today();
   if(coachOpsMode==='month'){
     const m=String(raw).match(/^(\d{4})-(\d{2})$/);

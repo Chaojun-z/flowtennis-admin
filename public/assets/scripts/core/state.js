@@ -87,6 +87,7 @@ const PAGE_DATA_REQUIREMENTS={
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
   schedule:['campuses','students','schedule','coaches'],
+  coachschedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],
   products:['products','classes'],
@@ -676,7 +677,7 @@ function buildCampusTabs(){
     }
     return;
   }
-  if(currentPage==='coachops'){
+  if(currentPage==='coachschedule'||currentPage==='coachops'){
     if(typeof renderCoachOpsTopFilters==='function'){
       el.innerHTML=renderCoachOpsTopFilters();
     }else{
@@ -723,7 +724,7 @@ function renderPageData(pg){
   if(pg==='leads')renderLeads();
   if(pg==='classes')renderClasses();
   if(pg==='schedule')renderSchedule();
-  if(pg==='coachops')renderCoachOps();
+  if(pg==='coachschedule'||pg==='coachops')renderCoachOps();
   if(pg==='finance')renderFinanceCenter();
   if(pg==='products')renderProducts();
   if(pg==='packages')renderPackages();

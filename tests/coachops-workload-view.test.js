@@ -16,7 +16,9 @@ function fnBody(name) {
 }
 
 assert.match(source, /let coachOpsMode='week'/, 'coach operations should default to weekly view');
-assert.match(html, /id="coachOpsWorkloadPanel"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table"[\s\S]*体验课转化率[\s\S]*课程类型分布/, 'coach workload should use the standard table style and expose the new columns');
+assert.match(html, /id="page-coachops"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table"[\s\S]*体验课转化率[\s\S]*课程类型分布/, 'coach workload should use the standard table style and expose the new columns');
+assert.match(html, /id="page-coachschedule"[\s\S]*id="coachOpsTimeline"/, 'coach schedule should live in its own page');
+assert.doesNotMatch(html, /coachOpsTabSchedule|coachOpsTabWorkload|coachOpsStats/, 'coach operations split pages should not keep old tabs or top stats');
 assert.match(styles, /#page-coachops \.tms-table/, 'coach operations should have scoped standard table sizing');
 assert.match(source, /function coachSortValue\(/, 'coach list ordering should use a persisted sort value');
 assert.match(fnBody('activeCoachNames'), /coachSortValue/, 'active coach names should follow persisted coach order');

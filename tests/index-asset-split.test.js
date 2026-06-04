@@ -10,7 +10,7 @@ assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.c
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
-assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260522-global-utils-v1/, 'index.html should bust stale cached utils.js after global helper changes');
+assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260604-coachops-split-v1/, 'index.html should bust stale cached utils.js after coach operations split changes');
 assert.match(html, /assets\/scripts\/core\/api\.js/, 'index.html should load api.js');
 assert.match(html, /assets\/scripts\/core\/state\.js/, 'index.html should load state.js');
 assert.match(html, /assets\/scripts\/core\/shell\.js/, 'index.html should load shell.js');
@@ -29,9 +29,9 @@ assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=/, 'index.html should version coachops.js to avoid stale finance behavior');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
-assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260522-global-utils-v1/, 'index.html should bust stale cached courts.js when global helper dependencies change');
+assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260602-court-filter-v1/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
-assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260522-global-utils-v1/, 'index.html should bust stale cached students.js when student detail helpers change');
+assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260602-student-dashboard-v1/, 'index.html should bust stale cached students.js when student dashboard changes');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
 assert.match(html, /goPage\('leads',this\)[\s\S]*线索池/, 'index.html should render the leads sidebar entry');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');

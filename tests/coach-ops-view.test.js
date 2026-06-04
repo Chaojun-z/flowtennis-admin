@@ -146,8 +146,8 @@ assert.match(
 
 assert.match(
   source,
-  /if\(currentPage==='coachops'\)renderCoachOps\(\);/,
-  'campus filter changes should refresh coach operations'
+  /if\(currentPage==='coachschedule'\|\|currentPage==='coachops'\)renderCoachOps\(\);/,
+  'campus filter changes should refresh coach schedule and workload pages'
 );
 
 assert.match(
@@ -165,7 +165,7 @@ assert.match(
 assert.match(
   coachOpsSource,
   /const all=billableSchedules\(\)\.filter\(coachOpsCampusMatchesSchedule\);/,
-  'coach ops rows and stats should only use schedules from the selected campus'
+  'coach ops rows should only use schedules from the selected campus'
 );
 
 assert.match(
@@ -300,10 +300,10 @@ assert.match(
   'coach ops day cards should show campus and venue together'
 );
 
-assert.match(
+assert.doesNotMatch(
   html,
   /今日上课[\s\S]*本周上课[\s\S]*本月上课[\s\S]*累计上课/,
-  'coach ops top cards should show today, week, month, and cumulative lessons'
+  'coach ops split pages should remove the old top stats cards'
 );
 
 assert.doesNotMatch(
@@ -396,10 +396,10 @@ assert.match(
   'coach workload campus and time columns should show the full text in the shared font size'
 );
 
-assert.match(
+assert.doesNotMatch(
   styles,
   /body\.admin-mobile #page-coachops \.stats-row\{grid-template-columns:repeat\(4,minmax\(120px,1fr\)\)/,
-  'coach ops top four stats should stay in one row on mobile admin view'
+  'coach ops split pages should not keep mobile styles for removed stats cards'
 );
 
 assert.match(
