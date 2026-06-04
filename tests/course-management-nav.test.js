@@ -210,11 +210,15 @@ assert.match(pagesCss, /#pkgCoachFilterHost \.tms-dropdown:not\(\.has-value\) \.
 assert.match(pagesCss, /#pkgStatusFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package status filter should default to 60px');
 assert.match(pagesCss, /#pkgTimeBandFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package time band filter should default to 60px');
 assert.match(pagesCss, /package-board-column\{[^}]*border:1px solid rgba\(255,255,255,\.05\)[^}]*border-radius:12px[^}]*background:rgba\(0,0,0,\.05\)[^}]*padding:12px/, 'package board columns should use the subtle dark slot style');
+assert.match(pagesCss, /#page-packages \.course-package-showcase\{height:calc\(100vh - var\(--topH\) - 44px\);min-height:0\}/, 'package board should stay within the visible page area');
+assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:hidden/, 'package board grid should not scroll vertically as a full page');
+assert.match(pagesCss, /package-board-column\{[^}]*display:flex[^}]*flex-direction:column/, 'package board columns should be flex containers');
+assert.match(pagesCss, /package-board-stack\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/, 'package cards should scroll inside each column');
 assert.match(pagesCss, /package-board-title\{[^}]*color:#FFFFFF[^}]*font-size:15px[^}]*font-weight:600[^}]*letter-spacing:\.025em/, 'package board title should use white semibold tracking');
 assert.match(pagesCss, /package-board-count\{[^}]*background:rgba\(255,255,255,\.2\)[^}]*color:#FFFFFF[^}]*font-size:12px[^}]*font-weight:400/, 'package board count should use white 12px regular text');
 assert.match(pagesCss, /package-card-shell\{[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*box-shadow:0 1px 2px 0 rgba\(0,0,0,\.05\)/, 'package cards should use white rounded shadow-sm style');
 assert.match(pagesCss, /package-card-shell\.is-inactive\{[^}]*opacity:\.9[^}]*border-color:#F3F4F6/, 'inactive package cards should be visually de-emphasized');
-assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:6px/, 'package cards should use 6px internal spacing');
+assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:12px/, 'package card upper content should use 12px internal spacing');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*font-size:11px/, 'package audience and lesson text should use 11px');
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px/, 'package campus and coach text should use 11px');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*font-size:11px/, 'package edit and deactivate buttons should use 11px');
