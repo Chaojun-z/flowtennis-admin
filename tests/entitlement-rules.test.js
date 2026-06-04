@@ -491,7 +491,7 @@ assert.doesNotThrow(
 );
 
 assert.doesNotThrow(
-  () => rules.validateEntitlementForSchedule({ ...entitlement, coachIds: [], coachNames: [], ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
+  () => rules.validateEntitlementForSchedule({ ...entitlement, ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
     id: 'sch-owner-allowed',
     studentIds: ['stu-1'],
     courseType: '私教课',
@@ -521,7 +521,7 @@ assert.doesNotThrow(
   'owner coach id should match the same coach display name during scheduling'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule({ ...entitlement, coachIds: [], coachNames: [], ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
     id: 'sch-owner-block',
     studentIds: ['stu-1'],
@@ -533,8 +533,7 @@ assert.throws(
     lessonCount: 1,
     status: '已排课'
   }),
-  /课包可上课教练不匹配/,
-  'sold package allowed coaches should restrict scheduling'
+  'sold package should allow any coach to teach when the owner coach is unavailable'
 );
 
 assert.doesNotThrow(

@@ -115,6 +115,9 @@ assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:non
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
 assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');
 assert.match(fnBody('applySchEntitlementOptions'), /maxRemain[\s\S]*setScheduleCourseTypeReadonly/, 'schedule entitlement recommendation should default to the package with most remaining lessons and lock course type');
+assert.match(fnBody('applySchEntitlementOptions'), /setScheduleCoachFromEntitlement\(selected\)/, 'schedule entitlement recommendation should default the coach from the selected package owner');
+assert.match(source, /function handleScheduleCoachChange\([\s\S]*dataset\.userChanged='1'[\s\S]*refreshSchEntitlementOptions/, 'manual coach changes should be remembered before refreshing package options');
+assert.match(source, /function setScheduleCoachFromEntitlement\([\s\S]*dataset\.userChanged==='1'[\s\S]*ownerCoach/, 'package owner coach default should not override a manually changed coach');
 assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /需补差价\/场地费|到期\$\{option\.validUntil\|\|'-'\}/, 'package options should hide surcharge copy and empty expiry text');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /需补差价\/场地费|到期 \$\{selected\.validUntil\|\|'-'\}/, 'package recommendation hint should hide surcharge copy and empty expiry text');
 assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package picker should avoid repeating the package time-band label when the name already contains it');

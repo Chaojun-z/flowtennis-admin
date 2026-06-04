@@ -1668,14 +1668,6 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
   if(entitlement.courseType&&schedule.courseType&&entitlement.courseType!==schedule.courseType)throw new Error('课程类型不匹配');
   if(entitlement.courseType==='体验课'&&schedule.courseType==='体验课'&&entitlement.experienceType&&schedule.experienceType&&entitlement.experienceType!==schedule.experienceType)throw new Error('体验课类型不匹配');
-  const coachIds=filterFixedCoachValues(entitlement.coachIds);
-  const coachNames=filterFixedCoachValues(entitlement.coachNames);
-  const coachRefs=Array.isArray(schedule?.coachRefs)?schedule.coachRefs:[];
-  const scheduleCoachRefs=[schedule.coachId,schedule.coach].filter(Boolean);
-  if(coachIds.length&&scheduleCoachRefs.length&&!coachIds.some(ref=>scheduleCoachRefs.some(current=>sameCoachName(ref,current,coachRefs))))throw new Error('课包可用教练不匹配');
-  if(coachNames.length&&schedule.coach&&!coachNames.some(n=>sameCoachName(n,schedule.coach,coachRefs)))throw new Error('课包可用教练不匹配');
-  const saleCoachNames=[entitlement.ownerCoach,...parseArr(entitlement.allowedCoaches)].filter(value=>value&&!isAnyCoachPackageValue(value));
-  if(saleCoachNames.length&&schedule.coach&&!saleCoachNames.some(n=>sameCoachName(n,schedule.coach,coachRefs)))throw new Error('课包可上课教练不匹配');
   const campusIds=parseArr(entitlement.campusIds);
   if(campusIds.length&&schedule.campus&&!campusIds.map(normalizeCampusValue).includes(normalizeCampusValue(schedule.campus)))throw new Error('课包可用校区不匹配');
   const usedDate=dateKey(schedule.startTime);
@@ -1756,6 +1748,7 @@ function recommendEntitlements(entitlements,schedule){
       totalLessons:parseLessonValue(ent.totalLessons),
       validUntil:ent.validUntil||'',
       timeBand:ent.timeBand||'',
+      ownerCoach:ent.ownerCoach||'',
       requiresFieldFee,
       fieldFeeReason:requiresFieldFee?'非黄金课包排入黄金/周末时段，需补差价/场地费':'',
       selectable:warnings.length===0,
