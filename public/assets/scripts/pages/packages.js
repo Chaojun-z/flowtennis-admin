@@ -77,7 +77,29 @@ function packageSortValue(p){
   return Number.isFinite(n)&&n>0?n:999999999;
 }
 let packageDragId='';
+const PACKAGE_BOARD_COLUMNS=[
+  {key:'青少年-私教课',title:'青少年 · 私教课'},
+  {key:'青少年-小班课',title:'青少年 · 小班课'},
+  {key:'成人-私教课',title:'成人 · 私教课'},
+  {key:'成人-小班课',title:'成人 · 小班课'},
+  {key:'chaojun',title:'朝珺'}
+];
+function packageValidBoardColumnKey(value){
+  const key=String(value||'').trim();
+  if(PACKAGE_BOARD_COLUMNS.some(col=>col.key===key)||key==='other')return key;
+  return '';
+}
+function packageStoredBoardColumnKey(p={}){
+  return packageValidBoardColumnKey(p.boardColumn||p.packageBoardColumn||'');
+}
+function packageIsChaojunOwned(p={}){
+  const names=[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)].map(coachName).filter(Boolean);
+  return names.includes('朝珺');
+}
 function packageBoardColumnKey(p={}){
+  const stored=packageStoredBoardColumnKey(p);
+  if(stored)return stored;
+  if(packageIsChaojunOwned(p))return'chaojun';
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
   const baseType=normalizeCourseType(p.courseType||p.type);
   let courseGroup=baseType;
@@ -89,12 +111,7 @@ function packageBoardColumnKey(p={}){
   return 'other';
 }
 function packageBoardColumns(rows=[]){
-  const columns=[
-    {key:'青少年-私教课',title:'青少年 · 私教课'},
-    {key:'青少年-小班课',title:'青少年 · 小班课'},
-    {key:'成人-私教课',title:'成人 · 私教课'},
-    {key:'成人-小班课',title:'成人 · 小班课'}
-  ];
+  const columns=PACKAGE_BOARD_COLUMNS;
   return rows.some(p=>packageBoardColumnKey(p)==='other')?[...columns,{key:'other',title:'其他'}]:columns;
 }
 function packageFilterBaseRows(){
@@ -231,7 +248,7 @@ function renderPackages(){
   });
   host.innerHTML=packageBoardColumns(list).map(col=>{
     const rows=groups.get(col.key)||[];
-    return `<div class="package-board-column" data-package-column="${esc(col.key)}"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
+    return `<div class="package-board-column" data-package-column="${esc(col.key)}"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack" ondragover="allowPackageDrop(event)" ondrop="dropPackageToColumn(event,'${esc(col.key)}')">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
   }).join('');
 }
 function packageOrderedRows(columnKey=''){
@@ -252,39 +269,58 @@ function allowPackageDrop(event){
 }
 function endPackageDrag(){
   packageDragId='';
-  document.querySelectorAll('.package-card-shell.is-dragging,.package-card-shell.is-drag-over').forEach(el=>el.classList.remove('is-dragging','is-drag-over'));
+  document.querySelectorAll('.package-card-shell.is-dragging,.package-card-shell.is-drag-over,.package-board-stack.is-drag-over').forEach(el=>el.classList.remove('is-dragging','is-drag-over'));
 }
 async function dropPackageCard(event,targetId){
   event.preventDefault();
+  event.stopPropagation();
   const draggedId=packageDragId||event.dataTransfer.getData('text/plain');
   endPackageDrag();
   if(!draggedId||!targetId||draggedId===targetId)return;
   const dragged=packages.find(p=>String(p.id)===String(draggedId));
   const target=packages.find(p=>String(p.id)===String(targetId));
-  if(!dragged||!target||packageBoardColumnKey(dragged)!==packageBoardColumnKey(target))return;
-  const ordered=packageOrderedRows(packageBoardColumnKey(target));
+  if(!dragged||!target)return;
+  const targetColumnKey=packageBoardColumnKey(target);
+  const ordered=packageOrderedRows(targetColumnKey);
   const from=ordered.findIndex(p=>String(p.id)===String(draggedId));
   const to=ordered.findIndex(p=>String(p.id)===String(targetId));
-  if(from<0||to<0)return;
-  const [moved]=ordered.splice(from,1);
-  const insertAfter=from<to;
+  if(to<0)return;
+  const moved=from>=0?ordered.splice(from,1)[0]:dragged;
+  const insertAfter=from>=0&&from<to;
   const nextTo=ordered.findIndex(p=>String(p.id)===String(targetId));
   ordered.splice(insertAfter?nextTo+1:nextTo,0,moved);
+  await savePackageBoardMove(ordered,targetColumnKey);
+}
+async function dropPackageToColumn(event,targetColumnKey){
+  event.preventDefault();
+  const draggedId=packageDragId||event.dataTransfer.getData('text/plain');
+  endPackageDrag();
+  targetColumnKey=packageValidBoardColumnKey(targetColumnKey);
+  if(!draggedId||!targetColumnKey)return;
+  const dragged=packages.find(p=>String(p.id)===String(draggedId));
+  if(!dragged)return;
+  const ordered=packageOrderedRows(targetColumnKey).filter(p=>String(p.id)!==String(draggedId));
+  ordered.push(dragged);
+  await savePackageBoardMove(ordered,targetColumnKey);
+}
+async function savePackageBoardMove(ordered,targetColumnKey){
   const orderedIds=ordered.map(p=>p.id);
-  const previous=new Map(packages.map(p=>[p.id,p.sortOrder]));
-  orderedIds.forEach((id,idx)=>{const p=packages.find(row=>row.id===id);if(p)p.sortOrder=(idx+1)*10;});
+  const columnById={};
+  orderedIds.forEach(id=>{columnById[id]=targetColumnKey;});
+  const previous=new Map(packages.map(p=>[p.id,{sortOrder:p.sortOrder,boardColumn:p.boardColumn}]));
+  orderedIds.forEach((id,idx)=>{const p=packages.find(row=>row.id===id);if(p){p.sortOrder=(idx+1)*10;p.boardColumn=targetColumnKey;}});
   renderPackages();
   try{
-    await savePackageOrder(orderedIds);
+    await savePackageOrder(orderedIds,columnById);
     toast('课包顺序已保存','success');
   }catch(e){
-    packages.forEach(p=>{p.sortOrder=previous.get(p.id);});
+    packages.forEach(p=>{const prev=previous.get(p.id);if(prev){p.sortOrder=prev.sortOrder;p.boardColumn=prev.boardColumn;}});
     renderPackages();
     toast('保存排序失败：'+e.message,'error');
   }
 }
-async function savePackageOrder(orderedIds){
-  const res=await apiCall('PUT','/packages/order',{orderedIds});
+async function savePackageOrder(orderedIds,columnById={}){
+  const res=await apiCall('PUT','/packages/order',{orderedIds,boardColumnById:columnById});
   (res.packages||[]).forEach(row=>{const i=packages.findIndex(p=>p.id===row.id);if(i>=0)packages[i]=row;});
   return res;
 }
