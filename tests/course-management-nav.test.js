@@ -145,8 +145,9 @@ assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgCoachFilte
 assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
 assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
 assert.match(html, /const PACKAGE_BOARD_COLUMNS=\[[\s\S]*青少年 · 私教课[\s\S]*青少年 · 小班课[\s\S]*成人 · 私教课[\s\S]*成人 · 小班课[\s\S]*朝珺/, 'package board should render the four teaching columns plus a Chaojun column');
-assert.match(html, /function packageIsChaojunOwned\([\s\S]*朝珺/, 'package board should identify packages owned or teachable by Chaojun');
-assert.match(html, /function packageBoardColumnKey\([\s\S]*packageIsChaojunOwned\(p\)[\s\S]*chaojun[\s\S]*小班体验课[\s\S]*小班课[\s\S]*私教课[\s\S]*other/, 'package board should classify Chaojun packages before the normal teaching columns and keep an other fallback');
+assert.match(html, /function packageIsChaojunOnlyOwned\([\s\S]*ownerCoach[\s\S]*朝珺/, 'package board should identify packages owned only by Chaojun');
+assert.doesNotMatch(fnBody('packageIsChaojunOnlyOwned'), /coachNames|coachIds/, 'package board should not move packages into Chaojun just because Chaojun is an available coach');
+assert.match(html, /function packageBoardColumnKey\([\s\S]*packageIsChaojunOnlyOwned\(p\)[\s\S]*chaojun[\s\S]*小班体验课[\s\S]*小班课[\s\S]*私教课[\s\S]*other/, 'package board should classify Chaojun-owner packages before the normal teaching columns and keep an other fallback');
 assert.doesNotMatch(html, /function packageBoardColumnKey\([\s\S]*boardColumn/, 'package board classification should not be overridden by stale saved board columns');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*package-board-title[\s\S]*package-board-count[\s\S]*packageBoardCardHtml/, 'package page should render a Notion-style board with column counts and package cards');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='packages'[\s\S]*renderPackageTopFilters/, 'package page should reuse the coach ops top campus dropdown');

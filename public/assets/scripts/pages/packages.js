@@ -92,12 +92,11 @@ function packageValidBoardColumnKey(value){
   if(PACKAGE_BOARD_COLUMNS.some(col=>col.key===key)||key==='other')return key;
   return '';
 }
-function packageIsChaojunOwned(p={}){
-  const names=[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)].map(coachName).filter(Boolean);
-  return names.includes('朝珺');
+function packageIsChaojunOnlyOwned(p={}){
+  return coachName(p.ownerCoach)==='朝珺';
 }
 function packageBoardColumnKey(p={}){
-  if(packageIsChaojunOwned(p))return'chaojun';
+  if(packageIsChaojunOnlyOwned(p))return'chaojun';
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
   const baseType=normalizeCourseType(p.courseType||p.type);
   let courseGroup=baseType;
