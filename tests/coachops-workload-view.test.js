@@ -26,6 +26,13 @@ assert.match(fnBody('coachOpsRows'), /coachSortValue/, 'coach operation rows sho
 assert.match(source, /function saveCoachOpsOrder\(/, 'coach schedule order should be saveable');
 assert.match(fnBody('saveCoachOpsOrder'), /apiCall\('PUT','\/coaches\/'\+coach\.id/, 'coach schedule order should persist through the backend coach record');
 assert.match(fnBody('renderCoachOps'), /draggable="true"[\s\S]*ondragstart="coachOpsDragStart/, 'coach schedule rows should support drag sorting');
+assert.match(fnBody('renderCoachOpsRangeFilter'), /coach-ops-mode-segment/, 'coach schedule should use the new segmented view switcher');
+assert.match(fnBody('renderCoachOps'), /coach-ops-more-btn/, 'coach schedule month cells should expose a more popover trigger');
+assert.match(fnBody('renderCoachOps'), /const visibleRows=mode==='week'\?dayRows:dayRows\.slice\(0,3\)/, 'coach schedule week view should list all courses without +more');
+assert.match(fnBody('coachOpsScheduleItemText'), /coachOpsScheduleStudentTitle/, 'coach schedule cards should use the cleaned student title');
+assert.match(fnBody('openCoachOpsMorePopover'), /coach-ops-more-popover/, 'coach schedule more trigger should render a floating popover');
+assert.match(styles, /#page-coachschedule \.coach-ops-head\{[\s\S]*position:sticky[\s\S]*top:0/, 'coach schedule time header should stay fixed while scrolling');
+assert.match(styles, /#page-coachschedule \.coach-ops-name,#page-coachschedule \.coach-ops-corner\{[\s\S]*position:sticky[\s\S]*left:0/, 'coach schedule left coach column should stay fixed while scrolling');
 assert.match(source, /function coachTrialConversionText\(/, 'coach workload should calculate trial conversion by coach');
 assert.match(fnBody('coachTrialConversionText'), /ownerCoach/, 'trial conversion should count later purchases by owner coach');
 assert.match(source, /function coachCourseTypeDistributionText\(/, 'coach workload should show course type distribution');

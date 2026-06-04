@@ -224,8 +224,8 @@ assert.match(
 
 assert.match(
   source,
-  /coach-ops-daycell-list[\s\S]*onclick="event\.stopPropagation\(\);openCoachOpsDaySchedules/,
-  'clicking course text should show all schedules while blank cell space still creates a schedule'
+  /coach-ops-course-card[\s\S]*onclick="event\.stopPropagation\(\);openScheduleDetail/,
+  'clicking a schedule card should open schedule detail while blank cell space still creates a schedule'
 );
 
 assert.doesNotMatch(
@@ -394,6 +394,402 @@ assert.match(
   styles,
   /#page-coachops \.coach-workload-campus,#page-coachops \.coach-workload-timeband\{font-size:12px;color:#2F241E\}/,
   'coach workload campus and time columns should show the full text in the shared font size'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{height:65px;padding:12px 24px;box-sizing:border-box\}/,
+  'coach schedule toolbar should keep the requested 65px height and 12px 24px padding'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head\{height:38px;border-bottom:1px solid #E5E7EB\}/,
+  'coach schedule header row should keep the requested 38px height and divider'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{grid-template-columns:repeat\(16,120px\)\}/,
+  'coach schedule day view should keep 120px hour columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{grid-template-columns:repeat\(7,160px\)\}/,
+  'coach schedule week and month headers should keep 160px columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head,#page-coachschedule \.coach-ops-row\{grid-template-columns:120px minmax\(1120px,1fr\);min-width:1240px\}/,
+  'coach schedule coach column should keep the requested 120px width'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-card-dot\{width:3px;height:8px;border-radius:99px;align-self:center\}/,
+  'coach schedule course type marker should keep the requested 3px by 8px size'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-name\{gap:8px;font-weight:400\}/,
+  'coach schedule coach name should keep 8px drag-icon spacing and normal weight'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-arrow svg\{width:8px;height:8px\}/,
+  'coach schedule date arrows should keep the requested 8px icon size'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head\{background:#FCF7F3;border-bottom:1px solid #E3DDDC;box-shadow:none\}/,
+  'coach schedule header should use the requested warm fill and 1px header divider'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner,#page-coachschedule \.coach-ops-hours,#page-coachschedule \.coach-ops-hours span,#page-coachschedule \.coach-ops-name\{background:#FCF7F3\}/,
+  'coach schedule header and coach column should share the requested default fill'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner:hover,#page-coachschedule \.coach-ops-hours span:hover,#page-coachschedule \.coach-ops-name:hover,#page-coachschedule \.coach-ops-row:hover \.coach-ops-name\{background:#F6F1EB\}/,
+  'coach schedule header and coach column should use the requested hover fill'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-name,#page-coachschedule \.coach-ops-corner\{border-right:\.5px solid #EDE9E8;box-shadow:\.5px 0 0 #EDE9E8\}/,
+  'coach schedule sticky coach column divider should use the requested 0.5px line'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-hours span\{border-right:\.5px solid #EDE9E8\}/,
+  'coach schedule header vertical lines should use the requested 0.5px divider'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-card,#page-coachschedule \.coach-ops-more-course\{display:flex;align-items:center;gap:8px\}/,
+  'coach schedule week and month course markers should align vertically with content'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-time\{opacity:1\}/,
+  'coach schedule day card dot should not be faded by the time row opacity'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-card-dot\{background:#4F81FF\}/,
+  'coach schedule private day card dot should match the legend blue'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-name,#page-coachschedule \.coach-ops-corner\{box-sizing:border-box;width:120px;padding:0 12px\}/,
+  'coach schedule coach column should keep padding inside the fixed 120px column'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-name\{gap:4px\}/,
+  'coach schedule drag handle and coach name should use the tightened spacing'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-drag-handle\{width:8px;height:16px;opacity:\.22\}/,
+  'coach schedule drag handle should use the smaller requested size'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell\.has-course:hover\{background:#fff\}/,
+  'coach schedule filled week and month cells should not use whole-cell hover'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell:not\(\.has-course\):hover\{background:#F6F1EB\}/,
+  'coach schedule empty week and month cells should keep whole-cell hover'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-card\{min-height:17px;margin-bottom:1px;padding:1px 4px;white-space:nowrap;flex-wrap:nowrap;overflow:hidden\}/,
+  'coach schedule week and month course rows should be compact and single-line'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-name\{min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/,
+  'coach schedule long course names should truncate instead of wrapping'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner\{border-bottom:1px solid #E3DDDC\}/,
+  'coach schedule header divider should also cover the left coach header cell'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-toolbar-right\{width:320px;height:28px;flex:0 0 320px;align-items:center;justify-content:center;gap:0\}/,
+  'coach schedule course legend container should keep the requested 320px by 28px size'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-legend\{width:320px;height:28px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:10px;line-height:1\}/,
+  'coach schedule course legend should vertically align dots and labels'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell\{padding:0\}/,
+  'coach schedule week and month cells should not shrink the inner content width with cell padding'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell-list\{box-sizing:border-box;width:100%;padding:10px 0 8px;gap:0;line-height:1\.05\}/,
+  'coach schedule week and month course list should occupy the full column width'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-card\{box-sizing:border-box;width:100%;min-height:16px;margin:0;padding:1px 8px 1px 10px\}/,
+  'coach schedule week and month course rows should keep full-width hover without wrapping'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-empty\{position:static;margin:auto;color:#9CA3AF;font-size:10px;font-style:italic;line-height:1\}/,
+  'coach schedule day empty text should be 10px italic and centered in the grid cell'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head\{background:#F9FAFB;border-bottom:1px solid #E3DDDC\}/,
+  'coach schedule header should use the requested #F9FAFB fill and #E3DDDC divider'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner,#page-coachschedule \.coach-ops-hours,#page-coachschedule \.coach-ops-hours span,#page-coachschedule \.coach-ops-name\{background:#F9FAFB\}/,
+  'coach schedule time header and coach column should use #F9FAFB'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell:not\(\.has-course\):hover\{background:#F9FAFB\}/,
+  'coach schedule empty cell hover should use #F9FAFB'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-course-card:hover,#page-coachschedule \.coach-ops-more-course:hover\{background:#F3F4F6\}/,
+  'coach schedule week and month course row hover should use #F3F4F6'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{border-bottom:1px solid #E3DDDC\}/,
+  'coach schedule filter and grid divider should use 1px #E3DDDC'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours,#page-coachschedule \.coach-ops-week,#page-coachschedule \.coach-ops-month\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\);gap:0;padding:0;border:0\}/,
+  'coach schedule week and month header/content grids should share one exact 1120px layout'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours span,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span,#page-coachschedule \.coach-ops-daycell\{width:160px;min-width:160px;max-width:160px;box-sizing:border-box\}/,
+  'coach schedule week and month header/content cells should share exact 160px columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-empty\{position:absolute;left:0;top:0;bottom:0;width:120px;margin:0;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:10px;font-style:italic;line-height:1\}/,
+  'coach schedule day empty text should sit centered in the first 7-8 time cell'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-skeleton-row/,
+  'coach schedule should render skeleton rows while schedule rows are unavailable'
+);
+
+assert.match(
+  coachOpsSource,
+  /gridCard\.classList\.toggle\('is-compact',rows\.length>0&&rows\.length<=3\)/,
+  'coach schedule should compact the grid height when only up to three coaches are visible'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\{height:calc\(100vh \+ 88px\);overflow:visible\}/,
+  'coach schedule grid should be 200px taller than the previous viewport height'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto\}/,
+  'coach schedule grid should shrink to content for small campus-filtered coach lists'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-date-pop\{z-index:220\}/,
+  'coach schedule date picker should stay above the sticky header'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner,#page-coachschedule \.coach-ops-hours span\{font-size:13px\}/,
+  'coach schedule header labels should use the requested 13px font'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-toolbar-right\{width:290px;height:28px;flex:0 0 290px\}/,
+  'coach schedule legend container should use the requested 290px width'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-drag-handle\{width:10px;height:20px\}/,
+  'coach schedule drag handle should be slightly larger'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-block,#page-coachschedule \.coach-ops-block \*,#page-coachschedule \.coach-ops-course-card,#page-coachschedule \.coach-ops-course-card \*,#page-coachschedule \.coach-ops-more-course,#page-coachschedule \.coach-ops-more-course \*\{font-size:10px\}/,
+  'coach schedule lesson information should use the requested 10px font'
+);
+
+assert.match(
+  html,
+  /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-skeleton-row/,
+  'coach schedule should show a skeleton before the first script render'
+);
+
+assert.match(
+  html,
+  /<div class="coach-ops-grid-card is-loading">/,
+  'coach schedule should start in a full loading state before data renders'
+);
+
+assert.match(
+  html,
+  /<div class="coach-ops-corner"><\/div>/,
+  'coach schedule loading header should not show the coach label before data renders'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsSkeletonRows\(count=8\)/,
+  'coach schedule skeleton should render enough rows to fill the grid'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-now-line/,
+  'coach schedule day view should render a current-time line when viewing today'
+);
+
+assert.match(
+  coachOpsSource,
+  /ds===todayKey\?'is-today'/,
+  'coach schedule week and month cells should mark today'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:relative;z-index:80;overflow:visible\}/,
+  'coach schedule toolbar band should use #FFFCF9'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\{height:calc\(100vh - 112px\);overflow:hidden;background:#fff;border-radius:16px\}/,
+  'coach schedule grid should keep scrolling inside the card instead of the whole page'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto;overflow:hidden\}/,
+  'coach schedule compact campus view should shrink to the visible coaches'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head\{position:sticky;top:0;z-index:60;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  'coach schedule table header should stay fixed in the internal scroll area'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner,#page-coachschedule \.coach-ops-hours,#page-coachschedule \.coach-ops-hours span,#page-coachschedule \.coach-ops-name\{background:#FCF7F3\}/,
+  'coach schedule header and coach column should use #FCF7F3'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:flex;flex-direction:column;min-height:calc\(100vh - 215px\);background:#fff\}/,
+  'coach schedule skeleton should fill the visible grid area'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-hours span\.is-today\{position:relative;background:#FFF4E6!important;color:#B45309;font-weight:600\}/,
+  'coach schedule today header should be visually highlighted'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-hours span\.is-today::after\{display:none\}/,
+  'coach schedule today header should not add an orange dot'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-daycell\.is-today,#page-coachschedule \.coach-ops-daycell\.is-today\.has-course\{background:#fff;box-shadow:none\}/,
+  'coach schedule today state should not highlight the whole column'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-name\{border-bottom:1px solid #EDE9E8\}/,
+  'coach schedule coach column row divider should stay visible'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-more-popover\.is-edge-right\{left:auto;right:8px;transform:none\}/,
+  'coach schedule more popover should avoid clipping on the right edge'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.is-loading \.coach-ops-toolbar-main>\*,#page-coachschedule \.coach-ops-grid-card\.is-loading \.coach-ops-toolbar-right>\*\{visibility:hidden\}/,
+  'coach schedule loading state should hide real toolbar controls'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #F24822;z-index:12;pointer-events:none\}/,
+  'coach schedule current-time line should be visible in day view'
 );
 
 assert.doesNotMatch(

@@ -13,7 +13,7 @@
 <title>FlowTennis 网球兄弟工作台</title>
 <link rel="stylesheet" href="/assets/styles/base.css?v=20260508-finance-ledger-v4">
 <link rel="stylesheet" href="/assets/styles/components.css?v=20260508-finance-ledger-v4">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260604-package-card-title-tooltip-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260604-coachschedule-grid-v12">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -221,28 +221,33 @@
     </div>
     <!-- 教练排课 -->
     <div class="page-section" id="page-coachschedule">
-      <div class="coach-ops-shell">
-      <div class="coach-ops-toolbar">
-        <div class="coach-ops-toolbar-main">
-          <div id="coachOpsRangeHost"></div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段">‹</button>
-          <div class="coach-date-wrap">
-            <input id="coachOpsDate" type="hidden" value="">
-            <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
-            <div class="coach-date-pop" id="coachOpsPicker"></div>
+      <div class="coach-ops-grid-card is-loading">
+        <div class="coach-ops-shell">
+          <div class="coach-ops-toolbar">
+            <div class="coach-ops-toolbar-main">
+              <div id="coachOpsRangeHost"></div>
+              <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
+              <div class="coach-date-wrap">
+                <input id="coachOpsDate" type="hidden" value="">
+                <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
+                <div class="coach-date-pop" id="coachOpsPicker"></div>
+              </div>
+              <button class="coach-ops-nav coach-ops-arrow is-next" onclick="shiftCoachOpsDate(1)" title="下一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
+              <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
+            </div>
+            <div class="coach-ops-toolbar-right">
+              <div class="coach-ops-legend" id="coachOpsLegend"></div>
+            </div>
           </div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(1)" title="下一段">›</button>
-          <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
         </div>
-        <div class="coach-ops-toolbar-right">
-          <div class="coach-ops-legend" id="coachOpsLegend"></div>
+        <div class="coach-ops-scroll">
+          <div class="coach-ops-head"><div class="coach-ops-corner"></div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
+          <div id="coachOpsTimeline" class="is-skeleton">
+            <div class="coach-ops-row coach-ops-skeleton-row"><div class="coach-ops-name"><span class="coach-ops-skeleton-dot"></span><span></span></div><div class="coach-ops-period-line coach-ops-week"><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div></div></div>
+            <div class="coach-ops-row coach-ops-skeleton-row"><div class="coach-ops-name"><span class="coach-ops-skeleton-dot"></span><span></span></div><div class="coach-ops-period-line coach-ops-week"><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div></div></div>
+            <div class="coach-ops-row coach-ops-skeleton-row"><div class="coach-ops-name"><span class="coach-ops-skeleton-dot"></span><span></span></div><div class="coach-ops-period-line coach-ops-week"><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span><i></i></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div><div class="coach-ops-daycell skeleton-cell"><span></span></div></div></div>
+          </div>
         </div>
-      </div>
-      </div>
-      <div style="font-size:14px;font-weight:600;color:var(--cream-pale);margin:4px 0 10px" id="coachOpsViewTitle">教练排课</div>
-      <div class="coach-ops-scroll">
-        <div class="coach-ops-head"><div class="coach-ops-corner">教练</div><div class="coach-ops-hours" id="coachOpsHours"></div></div>
-        <div id="coachOpsTimeline"></div>
       </div>
     </div>
     <!-- 教练工作量 -->
@@ -699,7 +704,7 @@
 <script src="/assets/scripts/pages/packages.js?v=20260604-package-card-title-tooltip-v1"></script>
 <script src="/assets/scripts/pages/purchases.js?v=20260604-purchase-top-filter-v1"></script>
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/coachops.js?v=20260604-coachops-split-v1"></script>
+<script src="/assets/scripts/pages/coachops.js?v=20260604-coachschedule-grid-v12"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/courts.js?v=20260602-court-filter-v1"></script>
 <script src="/assets/scripts/pages/matches.js?v=20260508-finance-ledger-v4"></script>
