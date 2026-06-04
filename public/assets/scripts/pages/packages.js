@@ -37,10 +37,15 @@ function renderPackageTopFilters(){
   const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectPackageTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
   return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('packageTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
 }
+function refreshPackageTopFilters(){
+  const host=document.getElementById('campusTabs');
+  if(host&&currentPage==='packages')host.innerHTML=renderPackageTopFilters();
+}
 function selectPackageTopCampus(value,event){
   if(event)event.stopPropagation();
   campus=value||'all';
   localStorage.setItem(CAMPUS_KEY,campus);
+  refreshPackageTopFilters();
   renderPackages();
   closeCourtTopDropdowns();
 }

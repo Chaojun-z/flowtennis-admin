@@ -692,6 +692,14 @@ function buildCampusTabs(){
     }
     return;
   }
+  if(currentPage==='purchases'){
+    if(typeof renderPurchaseTopFilters==='function'){
+      el.innerHTML=renderPurchaseTopFilters();
+    }else{
+      el.innerHTML='';
+    }
+    return;
+  }
   el.innerHTML='<button class="ctab'+(campus==='all'?' active':'')+'" onclick="setCampus(this,\'all\')">全部</button>'+campuses.map(c=>`<button class="ctab${campus===(c.code||c.id)?' active':''}" onclick="setCampus(this,'${c.code||c.id}')">${esc(c.name)}</button>`).join('');
 }
 function renderAll(){

@@ -5,6 +5,7 @@ let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='lastLesson',s
 let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='asc';
 let membershipTierFilterValue='';
 let purPackageFilterValue='';
+let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPanel='schedule',coachOpsPickerMonth=null,financePanel='ledger';
 
 function goPage(pg,el,skipRender=false){
@@ -37,7 +38,7 @@ function goPage(pg,el,skipRender=false){
     }
     currentPage=pg;
     localStorage.setItem(PAGE_KEY,currentPage);
-    document.getElementById('campusTabs').style.display=['students','leads','schedule','coachops','courts','finance','matches','admin-users','coaches','packages'].includes(pg)?'flex':'none';
+    document.getElementById('campusTabs').style.display=['students','leads','schedule','coachops','courts','finance','matches','admin-users','coaches','packages','purchases'].includes(pg)?'flex':'none';
     if(typeof buildCampusTabs==='function')buildCampusTabs();
     const t={students:'学员管理',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachops:'教练运营',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'订场会员','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
     const financeTitleMap={ledger:'财务总览',revenue:'收入流水',recognized:'已入账流水',settlement:'教练结算'};

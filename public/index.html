@@ -13,7 +13,7 @@
 <title>FlowTennis 网球兄弟工作台</title>
 <link rel="stylesheet" href="/assets/styles/base.css?v=20260508-finance-ledger-v4">
 <link rel="stylesheet" href="/assets/styles/components.css?v=20260508-finance-ledger-v4">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260604-package-filter-tight-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260604-purchase-top-filter-v1">
 </head>
 <body>
 <div class="login-page" id="loginPage">
@@ -564,16 +564,12 @@
             <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索学员、课包、课程类型" oninput="onPurchaseFilterChange()">
           </div>
           <div id="purPackageFilterHost"></div>
-          <button class="tms-btn tms-btn-ghost" onclick="exportPurchaseCSV()">导出</button>
-          <button class="tms-btn tms-btn-ghost" onclick="openPurchaseImport()">导入</button>
-          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateFromBtn" onclick="toggleGlobalDatePicker(event,'purDateFrom','purDateFromBtn','开始日期')" type="button">开始日期</button><input class="filter-hidden-date" id="purDateFrom" type="date" onchange="syncDateButton('purDateFrom','purDateFromBtn','开始日期');onPurchaseFilterChange()"></div>
-          <div class="filter-date-wrap"><button class="coach-date-btn" id="purDateToBtn" onclick="toggleGlobalDatePicker(event,'purDateTo','purDateToBtn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="purDateTo" type="date" onchange="syncDateButton('purDateTo','purDateToBtn','结束日期');onPurchaseFilterChange()"></div>
         </div>
         <div class="tms-toolbar-right">
           <button class="tms-btn tms-btn-primary" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
         </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">支付日期</th><th style="width:120px">学员</th><th style="width:170px">课包</th><th style="width:90px">实收</th><th style="width:105px">余额</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th style="width:90px">支付方式</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">支付日期</th><th style="width:80px">学员</th><th style="width:110px">课包</th><th style="width:90px">实收</th><th style="width:105px">余额</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th style="width:90px">支付方式</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div>
         <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="purPagerInfo">共 0 条</span><div id="purPageSize"></div></div><div class="tms-page-numbers" id="purPagerBtns"></div></div>
       </div>
     </div>
@@ -681,8 +677,8 @@
 <script src="/assets/scripts/core/utils.js?v=20260602-court-dashboard-v1"></script>
 <script src="/assets/scripts/core/api.js?v=20260527-student-reminder-reuse-v1"></script>
 <script src="/assets/scripts/core/shell.js?v=20260527-student-reminder-v1"></script>
-<script src="/assets/scripts/core/state.js?v=20260604-package-top-campus-v1"></script>
-<script src="/assets/scripts/core/bootstrap.js?v=20260602-court-filter-v1"></script>
+<script src="/assets/scripts/core/state.js?v=20260604-purchase-top-filter-v1"></script>
+<script src="/assets/scripts/core/bootstrap.js?v=20260604-purchase-top-filter-v1"></script>
 <script src="/assets/scripts/pages/admin-users.js?v=20260530-admin-users-standard-v2"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/campusmgr.js?v=20260508-finance-ledger-v4"></script>
@@ -692,8 +688,8 @@
 <script src="/assets/scripts/pages/classes.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/plans.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/products.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/packages.js?v=20260604-package-top-campus-v1"></script>
-<script src="/assets/scripts/pages/purchases.js?v=20260604-package-filter-label-v1"></script>
+<script src="/assets/scripts/pages/packages.js?v=20260604-package-campus-refresh-v1"></script>
+<script src="/assets/scripts/pages/purchases.js?v=20260604-purchase-top-filter-v1"></script>
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coachops.js?v=20260603-coachops-campus-v2"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>

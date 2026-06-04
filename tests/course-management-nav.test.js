@@ -8,6 +8,9 @@ const courseSource = [
 ].join('\n');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const purchaseSectionStart = html.indexOf('id="page-purchases"');
+const purchaseSectionEnd = html.indexOf('id="page-entitlements"', purchaseSectionStart);
+const purchaseSection = html.slice(purchaseSectionStart, purchaseSectionEnd === -1 ? html.length : purchaseSectionEnd);
 
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
@@ -144,7 +147,7 @@ assert.match(html, /function packageBoardColumns\([\s\S]*青少年 · 私教课[
 assert.match(html, /function packageBoardColumnKey\([\s\S]*小班体验课[\s\S]*小班课[\s\S]*私教课[\s\S]*other/, 'package board should classify experience packages by private or small-group subtype and keep an other fallback');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*package-board-title[\s\S]*package-board-count[\s\S]*packageBoardCardHtml/, 'package page should render a Notion-style board with column counts and package cards');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='packages'[\s\S]*renderPackageTopFilters/, 'package page should reuse the coach ops top campus dropdown');
-assert.match(html, /function selectPackageTopCampus\([\s\S]*renderPackages\(\)[\s\S]*closeCourtTopDropdowns\(\)/, 'package top campus dropdown should refresh package board');
+assert.match(html, /function selectPackageTopCampus\([\s\S]*refreshPackageTopFilters\(\)[\s\S]*renderPackages\(\)[\s\S]*closeCourtTopDropdowns\(\)/, 'package top campus dropdown should refresh label and package board');
 assert.match(fnBody('dropPackageCard'), /packageBoardColumnKey\(dragged\)!==packageBoardColumnKey\(target\)[\s\S]*return/, 'package drag sorting should stay within the same board column');
 assert.match(fnBody('syncPackageFilterOptions'), /const typeOptions=withStandardFilterCounts[\s\S]*packageMatchesCourseType/, 'package type filter should show per-option package counts');
 assert.match(fnBody('syncPackageFilterOptions'), /const audienceOptions=withStandardFilterCounts[\s\S]*packageMatchesAudience/, 'package audience filter should show per-option package counts');
@@ -185,7 +188,14 @@ assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*S
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
 assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesPackage\(p,packageId\)/, 'purchase package filter should include the same purchases counted on package cards');
+assert.match(fnBody('getFilteredPurchases'), /purchaseMatchesCampus\(p,campus\)/, 'purchase filters should follow the top campus selector');
+assert.match(fnBody('getFilteredPurchases'), /activePurchaseDateRange\(\)[\s\S]*purchaseDateWithinRange/, 'purchase filters should follow the top time selector');
 assert.match(html, /let purPackageFilterValue=''/, 'purchase package filter should keep a page-level value before the dropdown exists');
+assert.match(html, /let purDateRangeFilterValue='全部'/, 'purchase page should keep a top time filter value');
+assert.match(html, /function renderPurchaseTopFilters\([\s\S]*purchaseTopCampus[\s\S]*purchaseTopDate/, 'purchase page should render top campus and time filters');
+assert.match(fnBody('buildCampusTabs'), /currentPage==='purchases'[\s\S]*renderPurchaseTopFilters/, 'purchase page should show top campus and time filters');
+assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopFilters\(\)[\s\S]*renderPurchases\(\)/, 'purchase top campus selector should refresh orders');
+assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*renderPurchases\(\)/, 'purchase top time selector should refresh orders');
 assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('renderPackages'), /const courseType=normalizeCourseType\(p\.courseType\)/, 'package card should normalize legacy course type labels');
@@ -199,7 +209,7 @@ assert.match(pagesCss, /#pkgTypeFilterHost \.tms-dropdown:not\(\.has-value\) \.t
 assert.match(pagesCss, /#pkgCoachFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package coach filter should default to 60px');
 assert.match(pagesCss, /#pkgStatusFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package status filter should default to 60px');
 assert.match(pagesCss, /#pkgTimeBandFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package time band filter should default to 60px');
-assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:10px/, 'package cards should use 10px internal spacing');
+assert.match(pagesCss, /package-sales-card-body\{gap:12px[\s\S]*padding:6px/, 'package cards should use 6px internal spacing');
 assert.match(pagesCss, /package-board-count\{[^}]*font-size:12px[^}]*font-weight:400/, 'package board count should use 12px regular text');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*font-size:11px/, 'package audience and lesson text should use 11px');
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px/, 'package campus and coach text should use 11px');
@@ -214,10 +224,13 @@ assert.match(pagesCss, /package-sales-footer\{[^}]*padding:8px 12px/, 'package f
 assert.match(pagesCss, /package-sales-title\{font-size:13px/, 'package title should use 13px');
 assert.match(pagesCss, /package-sales-core\{[^}]*align-items:center/, 'package price and rule block should vertically align in the middle');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{width:40px;height:25px/, 'package action buttons should be 40 by 25');
-assert.match(pagesCss, /#page-purchases \.tms-filters \.coach-date-btn\{[^}]*min-width:105px[^}]*width:105px/, 'purchase date filters should use 105px width');
+assert.doesNotMatch(purchaseSection, /导出/, 'purchase page should remove export button');
+assert.doesNotMatch(purchaseSection, /导入/, 'purchase page should remove import button');
+assert.doesNotMatch(purchaseSection, /purDateFrom/, 'purchase page should remove start date filter');
+assert.doesNotMatch(purchaseSection, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:120px">学员<\/th><th style="width:170px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should use the standardized purchase record columns');
+assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:80px">学员<\/th><th style="width:110px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should narrow student and package columns');
 assert.doesNotMatch(html, /购买记录用于查账和追溯/, 'purchase page should remove the long audit explanation');
 assert.doesNotMatch(fnBody('purchasePackageListLabel'), /replace\(\s*\/\^1v\\d私教课/, 'purchase package column should keep the 1v1/1v2 prefix');
 assert.match(fnBody('purchasePackageListLabel'), /replace\([^)]*已停售/, 'purchase package column should only remove stopped-sale copy from the package label');

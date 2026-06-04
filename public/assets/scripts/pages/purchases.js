@@ -6,6 +6,60 @@ function onPurchaseFilterChange(){
   purPage=1;
   renderPurchases();
 }
+function purchaseTopCampusOptions(){
+  const campusSource=Array.isArray(campuses)?campuses:[];
+  return [{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
+    value:String(row?.code||row?.id||'').trim(),
+    label:String(row?.name||row?.code||row?.id||'').trim()
+  })).filter(opt=>opt.value&&opt.label));
+}
+function purchaseDateFilterQuickOptions(){
+  return ['全部','今日','本周','本月'];
+}
+function currentPurchaseDateRangeLabel(){
+  if(purDateRangeFilterValue==='全部')return '全部时间';
+  const range=activePurchaseDateRange();
+  return formatCourtDateRangeValue(range.startDate,range.endDate);
+}
+function activePurchaseDateRange(){
+  if(purDateRangeFilterValue&&purDateRangeFilterValue!=='全部'){
+    return typeof resolveCourtDatePresetRange==='function'
+      ? resolveCourtDatePresetRange(purDateRangeFilterValue)
+      : {startDate:purDateRangeStart,endDate:purDateRangeEnd};
+  }
+  return {startDate:'',endDate:''};
+}
+function renderPurchaseTopFilters(){
+  if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function'||typeof courtTopTimeIcon!=='function')return '';
+  const campusOpts=purchaseTopCampusOptions();
+  const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectPurchaseTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
+  const timeMenu=purchaseDateFilterQuickOptions().map(label=>`<div class="tms-dropdown-item ${label===purDateRangeFilterValue?'active':''}" data-value="${esc(label)}" onclick="onPurchaseDateRangeFilterChange(${jsArg(label)},event)">${esc(label)}</div>`).join('');
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('purchaseTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderCourtTopDropdown('purchaseTopDate',currentPurchaseDateRangeLabel(),courtTopTimeIcon(),timeMenu,'court-top-date-menu is-quick')}</div></div>`;
+}
+function refreshPurchaseTopFilters(){
+  const host=document.getElementById('campusTabs');
+  if(host&&currentPage==='purchases')host.innerHTML=renderPurchaseTopFilters();
+}
+function selectPurchaseTopCampus(value,event){
+  if(event)event.stopPropagation();
+  campus=value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  purPage=1;
+  refreshPurchaseTopFilters();
+  renderPurchases();
+  closeCourtTopDropdowns();
+}
+function onPurchaseDateRangeFilterChange(value,event){
+  if(event)event.stopPropagation();
+  purDateRangeFilterValue=value||'全部';
+  const range=activePurchaseDateRange();
+  purDateRangeStart=range.startDate;
+  purDateRangeEnd=range.endDate;
+  purPage=1;
+  refreshPurchaseTopFilters();
+  renderPurchases();
+  closeCourtTopDropdowns();
+}
 function refreshPurchaseFilters(){
   const packageValue=purchaseSelectedPackageFilter();
   const purchaseRows=purchases.filter(isMeaningfulPurchaseRecord);
@@ -14,6 +68,36 @@ function refreshPurchaseFilters(){
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderCourtDropdownHtml(id,label,options,value,false,'onPurchaseFilterChange');
   });
+}
+function purchaseDateWithinRange(value,range={}){
+  const start=String(range.startDate||'').trim();
+  const end=String(range.endDate||'').trim();
+  if(!start&&!end)return true;
+  const raw=typeof courtDateKeyForFilter==='function'?courtDateKeyForFilter(value):String(value||'').slice(0,10);
+  if(!raw)return false;
+  if(start&&raw<start)return false;
+  if(end&&raw>end)return false;
+  return true;
+}
+function purchaseCampusValues(p={}){
+  const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
+  const pkg=packages.find(row=>String(row.id||'')===String(p.packageId||p.originalPackageId||''))||{};
+  const stu=students.find(s=>String(s.id||'')===String(p.studentId||''))||{};
+  return [
+    ...parseArr(p.campusIds),
+    ...parseArr(ent.campusIds),
+    ...parseArr(pkg.campusIds),
+    p.campusId,p.campus,p.campusName,ent.campus,ent.campusId,pkg.campus,pkg.campusId,stu.campus
+  ].map(v=>String(v||'').trim()).filter(Boolean);
+}
+function purchaseCampusValueMatches(value,target){
+  const raw=String(value||'').trim();
+  const expected=String(target||'').trim();
+  return raw===expected||cn(raw)===cn(expected)||raw===cn(expected);
+}
+function purchaseMatchesCampus(p,targetCampus){
+  if(!targetCampus||targetCampus==='all')return true;
+  return purchaseCampusValues(p).some(value=>purchaseCampusValueMatches(value,targetCampus));
 }
 function isMeaningfulPurchaseRecord(p){
   if(!p)return false;
@@ -24,14 +108,13 @@ function isMeaningfulPurchaseRecord(p){
 function getFilteredPurchases(){
   const q=(document.getElementById('purSearch')?.value||'').toLowerCase();
   const packageId=purchaseSelectedPackageFilter();
-  const dateFrom=document.getElementById('purDateFrom')?.value||'';
-  const dateTo=document.getElementById('purDateTo')?.value||'';
+  const dateRange=activePurchaseDateRange();
   return purchases.filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
     if(!searchHit(q,p.studentName,standardPackageLabel(p,true),p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&!purchaseMatchesPackage(p,packageId))return false;
-    if(dateFrom&&String(p.purchaseDate||'')<dateFrom)return false;
-    if(dateTo&&String(p.purchaseDate||'')>dateTo)return false;
+    if(!purchaseMatchesCampus(p,campus))return false;
+    if(!purchaseDateWithinRange(p.purchaseDate||p.createdAt,dateRange))return false;
     return true;
   }).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
 }
@@ -84,7 +167,7 @@ function purchaseEntitlementMiniBar(ent){
   return `<div class="tms-mini-bar student-package-mini" title="${esc(title)}"><div class="tms-mini-bar-bg" style="width:100%"></div><div class="tms-mini-bar-fill" style="width:${pct}%"></div><div class="tms-mini-bar-text">${text}</div></div>`;
 }
 function purchaseHasActiveSearchOrFilter(){
-  return !!((document.getElementById('purSearch')?.value||'').trim()||purchaseSelectedPackageFilter()||document.getElementById('purDateFrom')?.value||document.getElementById('purDateTo')?.value);
+  return !!((document.getElementById('purSearch')?.value||'').trim()||purchaseSelectedPackageFilter()||(campus&&campus!=='all')||(purDateRangeFilterValue&&purDateRangeFilterValue!=='全部'));
 }
 function purchaseEmptyStateHtml(){
   const filtered=purchaseHasActiveSearchOrFilter();

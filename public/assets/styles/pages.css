@@ -652,7 +652,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .package-card-main span{display:block;font-size:12px;color:#8C7B6E;margin-bottom:4px}
 .package-card-main strong{display:block;font-size:13px;color:#332A24;font-weight:600;line-height:1.5;word-break:break-word}
 .package-card-created{align-self:center;font-size:11px;color:#A3968F;margin-left:4px}
-.package-sales-card-body{gap:12px;flex:1;padding:10px}
+.package-sales-card-body{gap:12px;flex:1;padding:6px}
 .package-sales-header{min-height:34px}
 .package-sales-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
 .package-sales-title{font-size:13px;font-weight:700;gap:0}
