@@ -943,6 +943,16 @@ assert.doesNotThrow(
 );
 
 assert.deepStrictEqual(
+  rules.buildPackageDeactivateUpdate(
+    { ...pkg, validDays: undefined, status: 'active', updatedAt: '2026-05-01T00:00:00.000Z' },
+    { ...pkg, validDays: undefined, status: 'inactive' },
+    '2026-06-04T00:00:00.000Z'
+  ),
+  { ...pkg, validDays: undefined, status: 'inactive', updatedAt: '2026-06-04T00:00:00.000Z' },
+  'deactivating a legacy package should only change sale status even when validDays is missing'
+);
+
+assert.deepStrictEqual(
   rules.syncSoldPackageRuleSnapshots(
     {
       ...pkg,
