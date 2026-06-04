@@ -157,6 +157,32 @@ function packageTimeBandBadgeHtml(p={}){
   const crown=label==='黄金'?'<span class="package-time-band-crown" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 18h14l1-10-5 4-3-6-3 6-5-4 1 10Zm0 2h14v2H5v-2Z"/></svg></span>':'';
   return `<span class="package-time-band-badge ${packageTimeBandBadgeClass(label)}">${crown}${esc(label)}</span>`;
 }
+function showPackageRuleTooltip(event){
+  const source=event.currentTarget?.querySelector?.('.package-rule-tooltip');
+  const text=(source?.textContent||'').trim();
+  if(!text)return;
+  let tip=document.getElementById('packageRuleTooltipFloat');
+  if(!tip){
+    tip=document.createElement('div');
+    tip.id='packageRuleTooltipFloat';
+    tip.className='package-rule-tooltip-float';
+    document.body.appendChild(tip);
+  }
+  tip.textContent=text;
+  tip.style.visibility='hidden';
+  tip.classList.add('show');
+  const rect=event.currentTarget.getBoundingClientRect();
+  const tipRect=tip.getBoundingClientRect();
+  const left=Math.max(8,Math.min(window.innerWidth-tipRect.width-8,rect.right-tipRect.width));
+  const top=Math.max(8,rect.top-tipRect.height-8);
+  tip.style.left=`${left}px`;
+  tip.style.top=`${top}px`;
+  tip.style.visibility='visible';
+}
+function hidePackageRuleTooltip(){
+  const tip=document.getElementById('packageRuleTooltipFloat');
+  if(tip)tip.classList.remove('show');
+}
 function packageBoardCardHtml(p){
   const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
   const campusTitle=packageCampusTitle(p.campusIds);
@@ -164,7 +190,7 @@ function packageBoardCardHtml(p){
   const title=packageListTitle(p);
   const subtitle=packageListSubtitle(p);
   const inactive=packageListStatusValue(p)==='inactive';
-  return `<div class="package-card-shell ${inactive?'is-inactive':''}" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${packageTimeBandBadgeHtml(p)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price"><span class="package-sales-currency">¥</span><span class="package-sales-amount">${fmt(p.price)}</span></div><div class="package-sales-rules"><div class="package-rule-line"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+  return `<div class="package-card-shell ${inactive?'is-inactive':''}" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${packageTimeBandBadgeHtml(p)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price"><span class="package-sales-currency">¥</span><span class="package-sales-amount">${fmt(p.price)}</span></div><div class="package-sales-rules"><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageModal('${p.id}')">编辑</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
 }
 function renderPackages(){
   syncPackageFilterOptions();

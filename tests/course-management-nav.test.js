@@ -218,9 +218,9 @@ assert.match(pagesCss, /package-board-stack\{[^}]*scrollbar-width:none[^}]*-ms-o
 assert.match(pagesCss, /package-board-stack::-webkit-scrollbar\{display:none\}/, 'package board column webkit scrollbars should be hidden');
 assert.match(pagesCss, /package-board-title\{[^}]*color:#FFFFFF[^}]*font-size:15px[^}]*font-weight:600[^}]*letter-spacing:\.025em/, 'package board title should use white semibold tracking');
 assert.match(pagesCss, /package-board-count\{[^}]*background:rgba\(255,255,255,\.2\)[^}]*color:#FFFFFF[^}]*font-size:12px[^}]*font-weight:400/, 'package board count should use white 12px regular text');
-assert.match(pagesCss, /package-card-shell\{[^}]*position:relative[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*border-color:#F3F4F6[^}]*padding:16px[^}]*box-shadow:0 1px 2px 0 rgba\(0,0,0,\.05\)/, 'package cards should use white p-4 rounded shadow-sm style');
+assert.match(pagesCss, /package-card-shell\{[^}]*position:relative[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*border-color:#F3F4F6[^}]*padding:12px[^}]*box-shadow:0 1px 2px 0 rgba\(0,0,0,\.05\)/, 'package cards should use white 12px rounded shadow-sm style');
 assert.match(pagesCss, /package-card-shell\.is-inactive\{[^}]*opacity:\.9[^}]*border-color:#F3F4F6/, 'inactive package cards should be visually de-emphasized');
-assert.match(pagesCss, /package-sales-card-body\{[^}]*gap:0[^}]*padding:0/, 'package card upper content should rely on the 16px card padding');
+assert.match(pagesCss, /package-sales-card-body\{[^}]*gap:0[^}]*padding:0/, 'package card upper content should rely on the 12px card padding');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*color:#6B7280[^}]*font-size:13px[^}]*margin-top:4px[^}]*margin-bottom:16px/, 'package audience and lesson text should use 13px gray spacing');
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:12px[^}]*color:#9CA3AF[^}]*line-height:1\.2/, 'package campus and coach text should use 12px compact gray text');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*padding:4px 12px[^}]*background:#FFFFFF[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*font-size:12px/, 'package edit and deactivate buttons should use 12px px-3 py-1 styling');
@@ -230,11 +230,12 @@ assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#FEF9E7;co
 assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#F3F4F6;color:#6B7280;border-color:#E5E7EB/, 'package off-peak tag should use the gray design');
 assert.match(pagesCss, /package-time-band-badge\.is-all\{background:#E6F0FA;color:#4A90E2/, 'package all-day tag should use the blue design');
 assert.match(fnBody('packageTimeBandBadgeHtml'), /package-time-band-crown[\s\S]*packageTimeBandBadgeClass/, 'prime package badge should include a small crown icon');
-assert.match(pagesCss, /package-status-badge\{[^}]*position:absolute[^}]*top:16px[^}]*right:16px[^}]*font-size:11px[^}]*font-weight:500/, 'package sale status should be positioned at the card top right');
+assert.match(pagesCss, /package-status-badge\{[^}]*position:absolute[^}]*top:12px[^}]*right:12px[^}]*font-size:11px[^}]*font-weight:500/, 'package sale status should be positioned at the card top right');
 assert.match(pagesCss, /package-status-badge\.is-on\{background:#F0FDF4;color:#16A34A;border-color:#DCFCE7/, 'active package status should use green badge styling');
 assert.match(pagesCss, /package-status-badge\.is-off\{background:#F9FAFB;color:#9CA3AF;border-color:#E5E7EB/, 'inactive package status should use gray badge styling');
 assert.match(pagesCss, /package-sales-footer\{[^}]*justify-content:space-between[^}]*border-top:1px dashed #E5E7EB[^}]*margin-top:12px[^}]*padding:14px 0 0/, 'package footer should use dashed divider and card-side alignment');
-assert.match(pagesCss, /package-sales-title\{font-size:16px[^}]*font-weight:700[^}]*color:#111827/, 'package title should use 16px bold gray-900');
+assert.match(pagesCss, /package-sales-title\{font-size:13px[^}]*font-weight:600[^}]*color:#111827/, 'package title should use 13px semibold gray-900');
+assert.match(pagesCss, /package-sales-title-row\{[^}]*flex-wrap:nowrap/, 'package time band tag should stay to the right of the title');
 assert.match(pagesCss, /package-sales-price\{[^}]*align-items:baseline[^}]*color:#C2593F[^}]*letter-spacing:-\.025em/, 'package price should use terracotta red and tight baseline layout');
 assert.match(pagesCss, /package-sales-currency\{font-size:14px;font-weight:600;margin-right:2px\}/, 'package currency should use 14px semibold with 2px right spacing');
 assert.match(pagesCss, /package-sales-amount\{font-size:26px;font-weight:700\}/, 'package amount should use 26px bold text');
@@ -242,6 +243,8 @@ assert.match(pagesCss, /package-card-shell\.is-inactive \.package-sales-price\{c
 assert.match(pagesCss, /package-sales-core\{[^}]*align-items:center/, 'package price and rule block should vertically align in the middle');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*border-radius:4px/, 'package edit button should use gray ghost styling');
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\.is-danger\{[^}]*background:#FFFFFF[^}]*color:#EF4444[^}]*border-color:#FEE2E2/, 'package deactivate button should use red ghost styling');
+assert.match(html, /function showPackageRuleTooltip\(/, 'package rule tooltip should use a fixed floating tooltip');
+assert.match(fnBody('packageBoardCardHtml'), /onmouseenter="showPackageRuleTooltip\(event\)"[\s\S]*onmouseleave="hidePackageRuleTooltip\(\)"/, 'package rule tooltip should not be clipped inside the scroll column');
 assert.doesNotMatch(purchaseSection, /导出/, 'purchase page should remove export button');
 assert.doesNotMatch(purchaseSection, /导入/, 'purchase page should remove import button');
 assert.doesNotMatch(purchaseSection, /purDateFrom/, 'purchase page should remove start date filter');
