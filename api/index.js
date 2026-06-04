@@ -1272,16 +1272,13 @@ function validatePackageInput(pkg,refs={}){
     if(!SMALL_CLASS_TYPES.includes(rule.smallClassType))throw new Error('请选择小班课类型');
     if(rule.smallClassType==='single'){
       if((parseInt(pkg.lessons)||0)!==1)throw new Error('小班单次必须是 1 次');
-      if(normalizeMoney(pkg.price)!==260)throw new Error('小班单次价格必须是 260 元');
     }
     if(rule.smallClassType==='bootcamp'){
-      if(normalizeMoney(pkg.price)!==1999)throw new Error('训练营价格必须是 1999 元');
       if(String(pkg.timeBand||'')!=='黄金时段')throw new Error('训练营必须是黄金时段');
       if(rule.fixedStudentCount!==4||parseInt(pkg.maxStudents)!==4)throw new Error('训练营固定 4 人');
     }
     if(rule.smallClassType==='dropin'){
       if((parseInt(pkg.lessons)||0)!==6)throw new Error('随到随学必须是 6 次');
-      if(normalizeMoney(pkg.price)!==1499)throw new Error('随到随学价格必须是 1499 元');
     }
   }
   if(pkg.saleStartDate&&pkg.saleEndDate&&pkg.saleEndDate<pkg.saleStartDate)throw new Error('活动结束时间不能早于活动开始时间');

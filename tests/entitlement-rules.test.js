@@ -285,7 +285,7 @@ const smallGroupBootcampPackage = {
   productName: '',
   courseType: '小班课',
   smallClassType: 'bootcamp',
-  price: 1999,
+  price: 1888,
   lessons: 10,
   timeBand: '黄金时段',
   maxStudents: 4,
@@ -306,9 +306,20 @@ for(const lessons of [10,20,12]){
   );
 }
 
+for(const smallClassPackage of [
+  { ...smallGroupBootcampPackage, smallClassType: 'single', price: 199, lessons: 1, timeBand: '全天', fixedStudentCount: 0 },
+  { ...smallGroupBootcampPackage, smallClassType: 'bootcamp', price: 2888, lessons: 10 },
+  { ...smallGroupBootcampPackage, smallClassType: 'dropin', price: 999, lessons: 6, timeBand: '全天', fixedStudentCount: 0, freeAbsenceLimit: 0 }
+]){
+  assert.doesNotThrow(
+    () => rules.validatePackageInput(smallClassPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+    `${smallClassPackage.smallClassType} small group package should allow custom price`
+  );
+}
+
 const smallGroupPurchase = rules.buildPurchaseRecord(
   smallGroupBootcampPackage,
-  { ...purchase, id: 'pur-small-1', amountPaid: 1999 },
+  { ...purchase, id: 'pur-small-1', amountPaid: 1888 },
   { id: 'stu-small-1', name: '小班学员', phone: '13800000001' },
   { id: 'pur-small-1', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
 );
@@ -328,7 +339,7 @@ assert.deepStrictEqual(
     courseType: '小班课',
     smallClassType: 'bootcamp',
     packageLessons: 10,
-    packagePrice: 1999,
+    packagePrice: 1888,
     maxStudents: 4,
     fixedStudentCount: 4,
     minAttendStudents: 2,

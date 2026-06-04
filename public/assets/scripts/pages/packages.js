@@ -511,6 +511,7 @@ function openPackageModal(id,presetProductId=''){
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id&&String(p.status||'active')!=='inactive'?`<button class="tms-btn tms-btn-danger" onclick="deactivatePackage('${p.id}')">下架</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
   setCourtModalFrame(id?'编辑课包':'创建课包',body,footer,'modal-wide modal-package-edit');
   syncPackageClassSize();
+  if(p&&document.getElementById('pkg_price'))document.getElementById('pkg_price').value=rv(p,'price',0);
   setPackageLessonShortcut(rv(p,'lessons',10));
   applyPackageTimeBandPreset(rv(p,'timeBand','全天'));
 }
@@ -527,12 +528,9 @@ function packageSaveErrorText(err){
     '人数限制必须大于 0':'上课人数请填大于 0 的数字',
     '请选择小班课类型':'小班课类型还没选，请先选择小班课类型',
     '小班单次必须是 1 次':'单次小班课请把课时改成 1',
-    '小班单次价格必须是 260 元':'单次小班课请把价格改成 260 元',
-    '训练营价格必须是 1999 元':'训练营请把价格改成 1999 元',
     '训练营必须是黄金时段':'训练营只能选黄金时段',
     '训练营固定 4 人':'训练营人数必须是 4 人',
     '随到随学必须是 6 次':'随到随学请把课时改成 6',
-    '随到随学价格必须是 1499 元':'随到随学请把价格改成 1499 元',
     '活动结束时间不能早于活动开始时间':'活动时间结束日期不能早于开始日期',
     '可用结束时间不能早于可用开始时间':'可用时间结束日期不能早于开始日期',
     '可用时段请填写完整':'请把可用时段的开始和结束时间都填完整',
