@@ -110,7 +110,7 @@ assert.deepStrictEqual(
     usedLessons: 0,
     remainingLessons: 5,
     validFrom: '2026-05-02',
-    validUntil: '2026-07-01',
+    validUntil: '',
     timeBand: '非黄金时段',
     ownerCoach: '朝珺',
     allowedCoaches: ['mira', '小舟']
@@ -939,7 +939,7 @@ assert.doesNotThrow(
     { ...pkg, courseType: '体验课', ownerCoach: 'mira', timeBand: '全天', validDays: 90, saleStartDate: '2026-05-01', saleEndDate: '2026-06-01', usageStartDate: '2026-05-10', usageEndDate: '2026-08-10' },
     [{ id: 'pur-1', packageId: 'pkg-1' }]
   ),
-  'sold package should allow changing course type, owner coach, time band, valid days and date ranges'
+  'sold package should allow changing course type, owner coach, time band and date ranges'
 );
 
 assert.deepStrictEqual(
@@ -959,11 +959,11 @@ assert.deepStrictEqual(
       courseType: '体验课',
       ownerCoach: 'mira',
       timeBand: '全天',
-      validDays: 90,
+      validDays: 0,
       saleStartDate: '2026-05-01',
       saleEndDate: '2026-06-01',
       usageStartDate: '2026-05-10',
-      usageEndDate: '2026-08-10',
+      usageEndDate: '',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }]
     },
     [
@@ -988,11 +988,11 @@ assert.deepStrictEqual(
       ownerCoach: 'mira',
       packagePrice: 1000,
       systemAmount: 1000,
-      validDays: 90,
+      validDays: 0,
       saleStartDate: '2026-05-01',
       saleEndDate: '2026-06-01',
       usageStartDate: '2026-05-10',
-      usageEndDate: '2026-08-10',
+      usageEndDate: '',
       purchaseDate: '2026-05-02',
       status: 'active',
       updatedAt: '2026-05-20T00:00:00.000Z'
@@ -1006,14 +1006,14 @@ assert.deepStrictEqual(
       ownerCoach: 'mira',
       purchaseId: 'pur-1',
       validFrom: '2026-05-02',
-      validUntil: '2026-08-10',
+      validUntil: '',
       usageStartDate: '2026-05-10',
-      usageEndDate: '2026-08-10',
+      usageEndDate: '',
       status: 'active',
       updatedAt: '2026-05-20T00:00:00.000Z'
     }]
   },
-  'editing sold package usage rules should sync active purchase and entitlement snapshots'
+  'editing sold package usage rules should sync active purchase and entitlement snapshots without expiry'
 );
 
 assert.strictEqual(
@@ -1023,8 +1023,8 @@ assert.strictEqual(
     [{ id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', status: 'active' }],
     '2026-05-20T00:00:00.000Z'
   ).entitlements[0].validUntil,
-  '2026-07-30',
-  'editing sold package valid days should recalculate entitlement valid until when no fixed usage end date exists'
+  '',
+  'editing sold package valid days should not create entitlement expiry'
 );
 
 assert.doesNotThrow(

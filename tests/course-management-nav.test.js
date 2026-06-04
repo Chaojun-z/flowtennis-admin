@@ -114,7 +114,7 @@ assert.match(fnBody('savePackage'), /presetWindows\.map[\s\S]*daysOfWeek:preset\
 assert.doesNotMatch(fnBody('savePackage'), /windowRow|secondWindow/, 'package save should not depend on modal-local time window variables');
 assert.doesNotMatch(fnBody('savePackage'), /pkg_validDays/, 'package save should not read hidden valid days field');
 assert.match(fnBody('savePackage'), /experienceType:/, 'package save should persist the selected experience subtype');
-assert.match(fnBody('savePackage'), /validDays:\s*packagePersistedValidDays/, 'package save should preserve valid days without showing it');
+assert.match(fnBody('savePackage'), /validDays:\s*0/, 'package save should clear package valid days');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_type'[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package course type should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_ownerCoach'[\s\S]{0,160}pointer-events:none/, 'sold package owner coach should stay editable');
 assert.doesNotMatch(fnBody('openPackageModal'), /id="pkg_timeBand"[\s\S]{0,120}\$\{locked\?' disabled'/, 'sold package time band should stay editable');

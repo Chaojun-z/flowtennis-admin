@@ -1013,7 +1013,6 @@ function entitlementStatusText(e){
   if(e.status==='voided')return '已作废';
   if(packageStatusText(e)==='已作废')return '已作废';
   if(e.status==='depleted')return '已用完';
-  if(e.validUntil&&today()>e.validUntil)return '已过期';
   return '正常';
 }
 function purchaseStatusText(p){

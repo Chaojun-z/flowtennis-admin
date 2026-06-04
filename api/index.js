@@ -1168,7 +1168,6 @@ function assertCourtBookingHistoryAgainstSchedules(court,schedules){
 }
 function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new Date().toISOString()){
   const purchaseDate=purchase.purchaseDate||now.slice(0,10);
-  const validUntil=pkg.usageEndDate||pkg.validUntil||(pkg.validDays?addDaysKey(purchaseDate,pkg.validDays):'');
   const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
   const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
   const rec={
@@ -1185,9 +1184,9 @@ function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new D
     usedLessons:0,
     remainingLessons:totalLessons,
     validFrom:purchaseDate,
-    validUntil,
+    validUntil:'',
     usageStartDate:pkg.usageStartDate||purchaseDate,
-    usageEndDate:pkg.usageEndDate||validUntil,
+    usageEndDate:'',
     dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
     timeBand:pkg.timeBand||'',
     coachIds:parseArr(pkg.coachIds),
@@ -1288,7 +1287,6 @@ function validatePackageInput(pkg,refs={}){
   if(pkg?.productId&&refs.products&&!(refs.products||[]).some(p=>p.id===pkg.productId))throw new Error('课程产品不存在');
   if((parseInt(pkg.lessons)||0)<=0)throw new Error('课时必须大于 0');
   if(normalizeMoney(pkg.price)<=0)throw new Error('价格必须大于 0');
-  if((parseInt(pkg.validDays)||0)<=0)throw new Error('有效天数必须大于 0');
   if((parseInt(pkg.maxStudents)||0)<=0)throw new Error('人数限制必须大于 0');
   if(isSmallGroupCourse(pkg)){
     const rule=smallGroupRuleSnapshot(pkg);
@@ -1336,7 +1334,9 @@ function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOStrin
     courseType:String(base.courseType||base.type||'').trim(),
     lessons:parseInt(base.lessons)||0,
     price:normalizeMoney(base.price),
-    validDays:parseInt(base.validDays)||0,
+    validDays:0,
+    validUntil:'',
+    usageEndDate:'',
     maxStudents:parseInt(base.maxStudents)||0,
     status:base.status||'active',
     updatedAt:now
@@ -1367,12 +1367,11 @@ const SOLD_PACKAGE_LOCKED_FIELDS=[
 ];
 function packageEntitlementValidity(nextPackage,entitlement={},purchase={}){
   const validFrom=entitlement.validFrom||purchase.purchaseDate||dateKey(entitlement.createdAt)||'';
-  const validUntil=nextPackage.usageEndDate||nextPackage.validUntil||(nextPackage.validDays&&validFrom?addDaysKey(validFrom,nextPackage.validDays):entitlement.validUntil||'');
   return {
     validFrom,
-    validUntil,
+    validUntil:'',
     usageStartDate:nextPackage.usageStartDate||validFrom,
-    usageEndDate:nextPackage.usageEndDate||validUntil
+    usageEndDate:''
   };
 }
 function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],now=new Date().toISOString()){
@@ -1387,11 +1386,11 @@ function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],n
       packageTimeBand:nextPackage.timeBand||'',
       dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
       ownerCoach:nextPackage.ownerCoach||'',
-      validDays:parseInt(nextPackage.validDays)||0,
+      validDays:0,
       saleStartDate:nextPackage.saleStartDate||'',
       saleEndDate:nextPackage.saleEndDate||'',
       usageStartDate:nextPackage.usageStartDate||'',
-      usageEndDate:nextPackage.usageEndDate||'',
+      usageEndDate:'',
       updatedAt:now
     };
     if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
@@ -1681,8 +1680,7 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(campusIds.length&&schedule.campus&&!campusIds.map(normalizeCampusValue).includes(normalizeCampusValue(schedule.campus)))throw new Error('课包可用校区不匹配');
   const usedDate=dateKey(schedule.startTime);
   const from=entitlement.usageStartDate||entitlement.validFrom;
-  const until=entitlement.usageEndDate||entitlement.validUntil;
-  if((from&&usedDate<from)||(until&&usedDate>until))throw new Error('不在课包可用日期范围');
+  if(from&&usedDate<from)throw new Error('不在课包可用日期范围');
   if(!isScheduleInsideEntitlementTimeWindows(schedule,entitlement)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
   if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
