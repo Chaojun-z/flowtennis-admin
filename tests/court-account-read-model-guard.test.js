@@ -106,20 +106,21 @@ async function main() {
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');
-  assert.strictEqual(view.items[0].memberBookingCount, 2, '读模型应按会员用户统计会员订场次数');
+  assert.strictEqual(view.items[0].memberBookingCount, 1, '读模型应按流水支付方式统计会员订场次数');
   assert.strictEqual(view.items[0].bookingCount, 2, '读模型应统计储值订场和散客订场');
   assert.strictEqual(view.items[0].bookingHours, 3.5, '读模型应统计订场总时长');
   assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
-  assert.strictEqual(view.items[0].memberBookingAmount, 500, '读模型应按会员用户统计会员订场金额');
-  assert.strictEqual(view.items[0].guestBookingAmount, 0, '会员用户的订场金额不应再计入散客金额');
+  assert.strictEqual(view.items[0].memberBookingAmount, 300, '读模型应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.items[0].guestBookingCount, 1, '会员名下的微信订场仍应按散客订场统计');
+  assert.strictEqual(view.items[0].guestBookingAmount, 200, '会员名下的微信订场金额应计入散客金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
   assert.strictEqual(view.items[0].balance, 100, '新读模型应优先读取 cachedBalance');
   assert.strictEqual(view.summary.totalMemberCount, 1, '读模型汇总应统计有效会员人数');
   assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计订场总时长');
-  assert.strictEqual(view.summary.totalMemberBookingCount, 2, '读模型汇总应按会员用户统计会员订场次数');
-  assert.strictEqual(view.summary.totalMemberBookingAmount, 500, '读模型汇总应按会员用户统计会员订场金额');
-  assert.strictEqual(view.summary.totalGuestBookingCount, 0, '读模型汇总应排除会员用户的散客订场次数');
-  assert.strictEqual(view.summary.totalGuestBookingAmount, 0, '读模型汇总应统计总订场金额减会员订场金额后的散客金额');
+  assert.strictEqual(view.summary.totalMemberBookingCount, 1, '读模型汇总应按储值扣款流水统计会员订场次数');
+  assert.strictEqual(view.summary.totalMemberBookingAmount, 300, '读模型汇总应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.summary.totalGuestBookingCount, 1, '读模型汇总应把非储值扣款订场统计为散客次数');
+  assert.strictEqual(view.summary.totalGuestBookingAmount, 200, '读模型汇总应把非储值扣款订场统计为散客金额');
   assert.strictEqual(view.summary.totalBalance, 100, '订场用户页会员余额只统计有效会员账户余额，不混入散客余额');
 
   const compare = await loadCompare({ sampleIds: ['court-1'] });
