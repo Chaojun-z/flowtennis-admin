@@ -40,21 +40,6 @@
   <div class="content">
     <!-- 线索池 -->
     <div class="page-section" id="page-leads">
-      <div class="lead-date-scope-bar" id="leadDateScopeBar">
-        <div class="lead-date-scope-main">
-          <span class="lead-date-scope-label">线索时间</span>
-          <button type="button" class="lead-date-preset active" data-lead-date-preset="all" onclick="setLeadDatePreset('all')">全部</button>
-          <button type="button" class="lead-date-preset" data-lead-date-preset="today" onclick="setLeadDatePreset('today')">今日</button>
-          <button type="button" class="lead-date-preset" data-lead-date-preset="week" onclick="setLeadDatePreset('week')">本周</button>
-          <button type="button" class="lead-date-preset" data-lead-date-preset="month" onclick="setLeadDatePreset('month')">本月</button>
-          <button type="button" class="lead-date-preset" data-lead-date-preset="custom" onclick="setLeadDatePreset('custom')">自定义</button>
-          <div class="lead-date-custom" id="leadDateCustomRange">
-            <div class="filter-date-wrap"><button class="coach-date-btn lead-date-btn" id="leadDateFrom_btn" onclick="toggleGlobalDatePicker(event,'leadDateFrom','leadDateFrom_btn','开始日期')" type="button">开始日期</button><input class="filter-hidden-date" id="leadDateFrom" type="hidden" onchange="syncDateButton('leadDateFrom','leadDateFrom_btn','开始日期');setLeadCustomDateRange()"></div>
-            <span class="lead-date-sep">至</span>
-            <div class="filter-date-wrap"><button class="coach-date-btn lead-date-btn" id="leadDateTo_btn" onclick="toggleGlobalDatePicker(event,'leadDateTo','leadDateTo_btn','结束日期')" type="button">结束日期</button><input class="filter-hidden-date" id="leadDateTo" type="hidden" onchange="syncDateButton('leadDateTo','leadDateTo_btn','结束日期');setLeadCustomDateRange()"></div>
-          </div>
-        </div>
-      </div>
       <div class="tms-stats-row" id="leadStatsRow"></div>
       <div class="tms-toolbar">
         <div class="tms-filters">
@@ -92,7 +77,6 @@
           <div id="stuCoachFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
           <span class="tms-export-action" onclick="exportStudentCSV()">导出</span>
           <button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">添加学员</button>
         </div>

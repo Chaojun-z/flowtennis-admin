@@ -35,8 +35,8 @@ assert.match(source, /发现可能重复的学员：/, 'student save flow should
 assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
-assert.match(source, /课程财务大盘[\s\S]*课包专项存量[\s\S]*学员结构基本盘[\s\S]*体验新客转化/, 'student top stats should use the four confirmed student dashboard cards');
-assert.match(source, /总现金进账[\s\S]*总核销收入[\s\S]*课包实收[\s\S]*课包当前余额[\s\S]*总学员数[\s\S]*有课包学员数[\s\S]*体验课人数[\s\S]*体验转正人数/, 'student top stat cards should explain the paired metrics');
+assert.match(source, /总学员数[\s\S]*有课包学员数[\s\S]*体验课转化[\s\S]*课包实收[\s\S]*课包可用余额/, 'student top stats should use the requested five card labels');
+assert.match(source, /有课包学员数 \/ 总学员数占比[\s\S]*体验课人数 vs 体验课转正人数[\s\S]*课包可用余额 \/ 课包实收占比/, 'student top stat cards should explain the requested formulas');
 assert.match(source, /student-stat-divider/, 'student paired stat cards should render a vertical divider between the two values');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
@@ -83,6 +83,7 @@ assert.match(css, /\.tms-toolbar-right \.tms-btn-primary\{[^}]*width:104px[^}]*h
 assert.match(css, /\.tms-toolbar-right \.tms-btn-primary::before\{[^}]*width:10px[^}]*height:10px/, 'toolbar add buttons should use the shared plus icon size');
 assert.match(css, /\.tms-export-action,.tms-import-action\{[^}]*display:inline-flex[^}]*margin-right:10px[^}]*color:#F1E9E2[^}]*font-size:13px[^}]*font-weight:400/, 'toolbar export and import actions should use the shared text action style');
 assert.match(css, /\.tms-export-action::before,.tms-import-action::before\{[^}]*width:16px[^}]*height:16px[^}]*background:url/, 'toolbar export and import actions should use the shared file icon');
+assert.doesNotMatch(source, /id="page-students"[\s\S]*openPurchaseEntryModal\(\)[\s\S]*id="stuTbody"/, 'student page should remove the global package purchase entry');
 assert.match(source, /class="tms-export-action" onclick="exportStudentCSV\(\)"[\s\S]*>导出<\/span>[\s\S]*class="tms-btn tms-btn-primary" onclick="openStudentModal/, 'student export should sit immediately before the add button as a shared text action');
 assert.match(css, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:90px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:6px[^}]*color:#A08E7E[^}]*font-size:13px[^}]*font-weight:400/, 'shared filter dropdown should use the standard field style');
 assert.match(css, /\.tms-dropdown-display::after\{[^}]*width:16px[^}]*height:16px[^}]*background:url/, 'shared filter dropdown should use the standard svg arrow icon');

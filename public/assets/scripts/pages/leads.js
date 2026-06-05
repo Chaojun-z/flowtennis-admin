@@ -555,6 +555,7 @@ function leadStatsData(list){
   const trialDoneRows=base.filter(leadTrialDone);
   const convertedRows=base.filter(leadConverted);
   const trialConvertedRows=trialDoneRows.filter(leadConverted);
+  const trialPendingConversion=trialDoneRows.length-trialConvertedRows.length;
   return {
     total:base.length,
     trialDone:trialDoneRows.length,
@@ -563,22 +564,21 @@ function leadStatsData(list){
     trialConversionRate:leadRateText(trialConvertedRows.length,trialDoneRows.length),
     converted:convertedRows.length,
     leadConversionRate:leadRateText(convertedRows.length,base.length),
-    trialPendingConversion:trialDoneRows.length-trialConvertedRows.length
+    trialPendingConversion,
+    trialPendingConversionRate:leadRateText(trialPendingConversion,trialDoneRows.length)
   };
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);
   const cardData=[
-    ['线索数',stats.total],
-    ['已上体验课数',stats.trialDone],
-    ['体验课完成率',stats.trialCompletionRate,'已上体验课 / 线索数'],
-    ['已转化线索数',stats.converted],
-    ['线索转化率',stats.leadConversionRate,'已转化线索 / 线索数'],
-    ['体验课转化率',stats.trialConversionRate,'已体验且已转化 / 已上体验课'],
-    ['已体验待转化数',stats.trialPendingConversion,'已上体验课 - 已体验且已转化']
+    {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
+    {label:'全盘最终转化',valueHtml:stats.converted,percent:stats.leadConversionRate,sub:'已转化线索 / 线索数'},
+    {label:'邀约体验课转化',valueHtml:stats.trialDone,percent:stats.trialCompletionRate,sub:'已上体验课 / 线索数'},
+    {label:'体验课成单转化',valueHtml:stats.trialConverted,percent:stats.trialConversionRate,sub:'已体验且转化 / 已上体验课'},
+    {label:'高意向蓄水池',valueHtml:`${stats.trialPendingConversion}<span>人 / ${stats.trialPendingConversionRate}</span>`,sub:'已体验待转化 / 已上体验课'}
   ];
   const host=document.getElementById('leadStatsRow');
-  if(host)host.innerHTML=renderStandardDataCards(cardData.map(([label,value,sub])=>({label,valueHtml:value,sub})));
+  if(host)host.innerHTML=renderStandardDataCards(cardData);
 }
 function leadTimelineHtml(lead){
   const rows=leadFollowupRows(lead?.id);

@@ -22,8 +22,8 @@ assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove t
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(html, /class="tms-import-action" onclick="openLeadImportPreviewModal\(\)">导入<\/span>/, 'leads toolbar should expose the shared text import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
-assert.match(html, /id="leadDateScopeBar"[\s\S]*线索时间[\s\S]*setLeadDatePreset\('today'\)[\s\S]*今日[\s\S]*setLeadDatePreset\('week'\)[\s\S]*本周[\s\S]*setLeadDatePreset\('month'\)[\s\S]*本月[\s\S]*setLeadDatePreset\('custom'\)[\s\S]*自定义[\s\S]*id="leadDateCustomRange"/, 'custom lead date controls should sit next to the custom preset');
-assert.match(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'custom lead date controls should use the shared drawn date picker');
+assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">线索时间/, 'leads page should remove the top lead time scope row');
+assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(html, /id="leadStatsRow"/, 'leads page should expose the top stats row');
 assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*所属校区[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
@@ -54,8 +54,8 @@ assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page sho
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
-assert.match(leadsSource, /线索数[\s\S]*已上体验课数[\s\S]*体验课完成率[\s\S]*已转化线索数[\s\S]*线索转化率[\s\S]*体验课转化率[\s\S]*已体验待转化数/, 'lead stats should expose the required seven metrics');
-assert.match(leadsSource, /已上体验课 \/ 线索数[\s\S]*已转化线索 \/ 线索数[\s\S]*已体验且已转化 \/ 已上体验课[\s\S]*已上体验课 - 已体验且已转化/, 'lead stats should explain the formulas under rate and pending cards');
+assert.match(leadsSource, /线索数[\s\S]*全盘最终转化[\s\S]*邀约体验课转化[\s\S]*体验课成单转化[\s\S]*高意向蓄水池/, 'lead stats should expose the requested five metrics');
+assert.match(leadsSource, /已转化线索 \/ 线索数[\s\S]*已上体验课 \/ 线索数[\s\S]*已体验且转化 \/ 已上体验课[\s\S]*已体验待转化 \/ 已上体验课/, 'lead stats should explain the requested formulas');
 assert.match(leadsSource, /function leadDateRangeForPreset\(/, 'leads page should expose date preset range helper');
 assert.match(leadsSource, /function setLeadDatePreset\(/, 'leads page should expose lead date preset switching');
 assert.match(leadsSource, /function setLeadCustomDateRange\(/, 'leads page should expose custom lead date range switching');
@@ -116,6 +116,6 @@ assert.match(css, /\.modal\.modal-court \.lead-timeline-item\{[^}]*white-space:n
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
 assert.match(css, /#page-leads \.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)[^}]*overflow:visible/, 'lead stats should use the shared adaptive top data card grid');
-assert.match(leadsSource, /renderStandardDataCards\(cardData\.map/, 'lead stats should render through the shared data card helper');
+assert.match(leadsSource, /renderStandardDataCards\(cardData\)/, 'lead stats should render through the shared data card helper');
 
 console.log('leads view tests passed');

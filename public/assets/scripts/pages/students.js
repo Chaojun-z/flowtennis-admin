@@ -245,6 +245,11 @@ function studentPageStats(base){
     ...studentTrialStats()
   };
 }
+function studentPercentText(value,total){
+  if(!total)return '0%';
+  const percent=(Number(value)||0)/(Number(total)||0)*100;
+  return `${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
+}
 function studentStatSplitCard(title,primary,secondary,caption){
   return `<div class="tms-stat-card student-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value student-stat-pair"><span>${primary}</span><span class="student-stat-divider">｜</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
 }
@@ -384,12 +389,13 @@ function renderStudents(){
   let list=getSortedStudents(getFilteredStudents());
   const base=getStudentBaseList();
   const stats=studentPageStats(base);
-  document.getElementById('studentStatsRow').innerHTML=[
-    studentStatSplitCard('课程财务大盘',`¥${fmt(stats.courseIncome)}`,`¥${fmt(stats.courseRecognized)}`,'总现金进账 / 总核销收入'),
-    studentStatSplitCard('课包专项存量',`¥${fmt(stats.totalIncome)}`,`¥${fmt(stats.packageBalance)}`,'课包实收 / 课包当前余额'),
-    studentStatSplitCard('学员结构基本盘',`${stats.total} 人`,`${stats.packageStudentCount} 人`,'总学员数 / 有课包学员数'),
-    studentStatSplitCard('体验新客转化',`${stats.trialStudentCount} 人`,`${stats.trialConvertedCount} 人`,'体验课人数 / 体验转正人数')
-  ].join('');
+  document.getElementById('studentStatsRow').innerHTML=renderStandardDataCards([
+    {label:'总学员数',valueHtml:stats.total},
+    {label:'有课包学员数',valueHtml:stats.packageStudentCount,percent:studentPercentText(stats.packageStudentCount,stats.total),sub:'有课包学员数 / 总学员数占比'},
+    {label:'体验课转化',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'体验课人数 vs 体验课转正人数'},
+    {label:'课包实收',valueHtml:`¥${fmt(stats.totalIncome)}`},
+    {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
+  ]);
   const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
   if(stuPage>pages)stuPage=pages;
   const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);
