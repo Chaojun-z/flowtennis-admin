@@ -4,6 +4,7 @@ const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
 
 const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
+const statusCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/components/status-tags.css'), 'utf8');
 function fnBody(name) {
   const start = html.indexOf(`function ${name}`);
   assert.notStrictEqual(start, -1, `${name} should exist`);
@@ -122,6 +123,20 @@ assert.match(html, /可用权益/, 'membership account list should expose benefi
 assert.match(fnBody('renderMemberships'), />查看<\/span>/, 'membership account list should expose account detail entry');
 assert.match(html, /function membershipDisplayStatus/, 'frontend should compute display status labels');
 assert.match(html, /function membershipStatusTagMeta/, 'frontend should compute membership status tag styles');
+assert.match(html, /assets\/styles\/components\/status-tags\.css/, 'membership status tags should live in the shared component stylesheet');
+assert.match(fnBody('membershipStatusTagMeta'), /tagClass:'tms-member-status is-active'[\s\S]*tagClass:'tms-member-status is-inactive'[\s\S]*tagClass:'tms-member-status is-expired'/, 'membership status tag metadata should use the shared component classes');
+assert.match(fnBody('membershipStatusTagMeta'), /text:'活跃'[\s\S]*text:'未开通'[\s\S]*text:'已过期'/, 'membership status tag labels should use the standard three labels');
+assert.match(statusCss, /\.tms-member-status\{[^}]*display:inline-flex[^}]*height:26px[^}]*min-width:56px[^}]*padding:4px 10px[^}]*border-radius:6px/, 'membership status tag should use the standard size, padding and radius');
+assert.match(statusCss, /\.tms-member-status::before\{[^}]*width:6px[^}]*height:6px[^}]*border-radius:50%/, 'membership status tag should render the standard 6px status dot');
+assert.match(statusCss, /\.tms-member-status\.is-active\{[^}]*background:#ECFDF5[^}]*border-color:#D9F9E6[^}]*color:#047857/, 'active membership tag should use the standard green colors');
+assert.match(statusCss, /\.tms-member-status\.is-active:hover\{background:#D9F9E6\}/, 'active membership tag hover should use the standard green hover color');
+assert.match(statusCss, /\.tms-member-status\.is-active::before\{background:#10B981\}/, 'active membership tag dot should use the standard green dot');
+assert.match(statusCss, /\.tms-member-status\.is-inactive\{[^}]*background:#F4F4F5[^}]*border-color:#E5E5E8[^}]*color:#52525B/, 'inactive membership tag should use the standard gray colors');
+assert.match(statusCss, /\.tms-member-status\.is-inactive:hover\{background:#E5E5E8\}/, 'inactive membership tag hover should use the standard gray hover color');
+assert.match(statusCss, /\.tms-member-status\.is-inactive::before\{background:#A1A1A9\}/, 'inactive membership tag dot should use the standard gray dot');
+assert.match(statusCss, /\.tms-member-status\.is-expired\{[^}]*background:#FCF3F2[^}]*border-color:#FAE3E3[^}]*color:#AA2E26/, 'expired membership tag should use the standard red colors');
+assert.match(statusCss, /\.tms-member-status\.is-expired:hover\{background:#FAE3E3\}/, 'expired membership tag hover should use the standard red hover color');
+assert.match(statusCss, /\.tms-member-status\.is-expired::before\{background:#DD524C\}/, 'expired membership tag dot should use the standard red dot');
 assert.match(html, /function membershipValidityHint/, 'frontend should compute validity hint text');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*开通会员/, 'court edit modal should not include membership open action');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*续充会员/, 'court edit modal should not include membership renew action');

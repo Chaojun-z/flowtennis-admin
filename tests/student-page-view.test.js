@@ -98,6 +98,8 @@ assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-displ
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.doesNotMatch(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'student filter active state should come from the shared filter component');
 assert.match(css, /\.tms-table-card\{[^}]*background-color:#E7DFD6[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'shared table shell should use the standard border and radius');
+assert.match(css, /\.tms-table-wrapper\{[^}]*background:#FBF7F4/, 'shared table scroll wrapper should mask the old card background behind sticky headers');
+assert.match(css, /\.tms-table thead\{[^}]*position:sticky[^}]*top:0[^}]*z-index:130[^}]*background:#F1E9E2/, 'shared table header should stick as a full header layer while scrolling');
 assert.match(css, /\.tms-table th\{[^}]*height:42px[^}]*background-color:#F1E9E2[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'shared table header should use the standard size and color');
 assert.match(css, /\.tms-table td\{[^}]*height:42px[^}]*background-color:#FBF7F4[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'shared table rows should use the standard size and color');
 assert.match(css, /\.tms-table th,.tms-table td\{[^}]*border-bottom:0\.5px solid #E7DFD6/, 'shared table separators should use the standard 0.5px line');

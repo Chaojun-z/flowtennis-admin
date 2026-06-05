@@ -500,10 +500,10 @@ function membershipStatusText(status){
 function membershipStatusTagMeta(input){
   const status=typeof input==='string'?input:(input?.status||'');
   const text=typeof input==='string'?membershipStatusText(status):membershipDisplayStatus(input);
-  if(status==='voided')return {text,tagClass:'tms-tag-red'};
-  if(status==='cleared'||status==='expired'||status==='inactive')return {text,tagClass:'tms-tag-tier-slate'};
-  if(status==='extended')return {text,tagClass:'tms-tag-tier-blue'};
-  return {text,tagClass:'tms-tag-green'};
+  const key=`${status} ${text}`.toLowerCase();
+  if(/active|extended|正常|延续期|30天内到期|活跃/.test(key))return {text:'活跃',tagClass:'tms-member-status is-active'};
+  if(!input||/inactive|未启用|未开卡|未开通|普通|储值/.test(key))return {text:'未开通',tagClass:'tms-member-status is-inactive'};
+  return {text:'已过期',tagClass:'tms-member-status is-expired'};
 }
 function membershipPlanStatusMeta(plan){
   if(!plan)return {text:'-',tagClass:'tms-tag-tier-slate'};

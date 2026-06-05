@@ -1,0 +1,11 @@
+.tms-member-status{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;min-width:56px;width:auto;box-sizing:border-box;padding:4px 10px;border:1px solid transparent;border-radius:6px;font-size:12px;font-weight:400;line-height:16px;white-space:nowrap;transition:background-color .15s ease}
+.tms-member-status::before{content:"";width:6px;height:6px;border-radius:50%;flex:0 0 6px}
+.tms-member-status.is-active{background:#ECFDF5;border-color:#D9F9E6;color:#047857}
+.tms-member-status.is-active:hover{background:#D9F9E6}
+.tms-member-status.is-active::before{background:#10B981}
+.tms-member-status.is-inactive{background:#F4F4F5;border-color:#E5E5E8;color:#52525B}
+.tms-member-status.is-inactive:hover{background:#E5E5E8}
+.tms-member-status.is-inactive::before{background:#A1A1A9}
+.tms-member-status.is-expired{background:#FCF3F2;border-color:#FAE3E3;color:#AA2E26}
+.tms-member-status.is-expired:hover{background:#FAE3E3}
+.tms-member-status.is-expired::before{background:#DD524C}
