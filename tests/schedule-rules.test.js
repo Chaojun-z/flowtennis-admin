@@ -1391,6 +1391,30 @@ assert.deepStrictEqual(
   'active schedule should preserve fractional package deductions'
 );
 
+assert.deepStrictEqual(
+  rules.scheduleEntitlementDeltas({ id: 'sch-small-two-hours', status: '已排课', courseType: '小班课', entitlementId: 'ent-small-1', lessonCount: 2 }),
+  [{ entitlementId: 'ent-small-1', delta: 1 }],
+  'small group package schedules should consume one package count regardless of lesson hours'
+);
+
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-auto',
+    status: '已排课',
+    courseType: '小班课',
+    lessonCount: 3,
+    studentIds: ['stu-small-1', 'stu-small-2']
+  }, [
+    { id: 'ent-small-auto-1', studentId: 'stu-small-1', status: 'active', courseType: '小班课', totalLessons: 6, remainingLessons: 1 },
+    { id: 'ent-small-auto-2', studentId: 'stu-small-2', status: 'active', courseType: '小班课', totalLessons: 6, remainingLessons: 1 }
+  ]),
+  [
+    { studentId: 'stu-small-1', entitlementId: 'ent-small-auto-1', delta: 1 },
+    { studentId: 'stu-small-2', entitlementId: 'ent-small-auto-2', delta: 1 }
+  ],
+  'small group package recommendation should allow one remaining count for multi-hour schedules'
+);
+
 assert.strictEqual(
   rules.smallGroupLessonCountForStudentCount(2),
   1,
