@@ -2,7 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { appSource } = require('./helpers/read-index-bundle');
+const coreDir = path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core');
 const pageDir = path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages');
+const componentsSource = fs.readFileSync(path.join(coreDir, 'components.js'), 'utf8');
+const stateSource = fs.readFileSync(path.join(coreDir, 'state.js'), 'utf8');
 const source = [
   appSource,
   fs.readFileSync(path.join(pageDir, 'leads.js'), 'utf8')
@@ -19,6 +22,9 @@ function fnBody(name){
 }
 
 assert.match(source, /globalDateRangeFilterValue=localStorage\.getItem\(GLOBAL_DATE_RANGE_KEY\)\|\|'全部'/, 'global time filter should persist one shared value');
+assert.match(appSource, /assets\/scripts\/core\/components\.js/, 'index should load the shared components entry');
+assert.match(componentsSource, /function renderGlobalTopFilters\(/, 'top filter component should live in core components');
+assert.doesNotMatch(stateSource, /function renderGlobalTopFilters\(/, 'top filter component should not live in state');
 assert.match(source, /function renderGlobalTopFilters\(/, 'target pages should share one top filter component');
 assert.match(fnBody('buildCampusTabs'), /renderGlobalTopFilters\(\)/, 'shared top host should render the global component');
 assert.match(fnBody('setCampus'), /refreshGlobalTopFilters\(\)/, 'global campus changes should refresh the shared top component');
