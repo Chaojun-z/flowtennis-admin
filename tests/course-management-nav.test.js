@@ -163,7 +163,7 @@ assert.doesNotMatch(html, /<select class="fselect tms-form-control" id="pkg_merg
 assert.doesNotMatch(html, /只支持规则一致的课包合并。并入课包会在后台隐藏，购买记录和课包余额会显示为保留课包。/, 'package merge notice should remove the unreadable yellow hint');
 assert.doesNotMatch(html, /课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。/, 'package page should remove the long banner description');
 assert.doesNotMatch(html, /id="page-packages"[\s\S]*搜索课包名称、课程产品、时段/, 'package search should no longer mention course products');
-assert.match(html, /openPackageModal\(null\)">＋ 创建课包/, 'package page primary action should say create package');
+assert.match(html, /openPackageModal\(null\)">创建课包/, 'package page primary action should say create package');
 assert.match(html, /setCourtModalFrame\(id\?'编辑课包':'创建课包'/, 'package modal title should use create package copy');
 assert.match(fnBody('openPackageModal'), /deactivatePackage\('\$\{p\.id\}'\)[\s\S]*下架/, 'package edit modal should use deactivate copy');
 assert.doesNotMatch(html, /id="page-purchases"[\s\S]*搜索学员、课包、课程产品/, 'purchase search should no longer mention course products');
@@ -252,7 +252,7 @@ assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
-assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wrapper\{width:280px/, 'package search should use 280px width');
+assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wrapper\{width:300px/, 'package search should use the shared 300px width');
 assert.match(pagesCss, /#pkgTypeFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package type filter should default to 60px');
 assert.match(pagesCss, /#pkgCoachFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package coach filter should default to 60px');
 assert.match(pagesCss, /#pkgStatusFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package status filter should default to 60px');

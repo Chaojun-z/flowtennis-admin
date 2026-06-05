@@ -79,14 +79,6 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .tcard{background:var(--card-f);backdrop-filter:var(--bf);border:var(--borf);box-shadow:var(--shf);border-radius:16px;overflow:hidden}
 #page-courts .tcard{overflow:visible}
 #page-courts thead th{position:sticky;top:0;z-index:5;background:rgba(253,248,241,.96);backdrop-filter:blur(12px)}
-.tms-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;overflow:visible;flex-shrink:0;scrollbar-width:none;-ms-overflow-style:none}
-.tms-stats-row::-webkit-scrollbar{display:none}
-.tms-stat-card{height:100px;min-width:0;background-color:#FBF7F4;border:1px solid #E8DFD5;border-radius:8px;padding:18px 16px 14px 22px;box-sizing:border-box;box-shadow:0 8px 20px rgba(0,0,0,.08);display:flex;flex-direction:column;justify-content:flex-start;position:relative}
-.tms-stat-label{font-size:12px;color:#887565;margin-bottom:10px;white-space:nowrap;font-weight:700;line-height:1.2}
-.tms-stat-value{font-size:21px;font-weight:700;color:#3B3026;display:flex;align-items:baseline;white-space:nowrap;line-height:1.1;min-width:0}
-.tms-stat-value span{font-size:10px;font-weight:700;margin-left:4px;color:#A19080}
-.tms-stat-sub{font-size:10px;color:#A19080;position:static;margin-top:8px;white-space:nowrap;font-weight:400;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.tms-stat-divider{color:#A19080!important;font-size:10px!important;font-weight:400!important;margin:0 8px!important}
 #page-memberships .membership-stat-card{min-width:0}
 #page-memberships .membership-split-value{gap:0;font-size:21px}
 #page-memberships .membership-split-value span:not(.tms-stat-divider){font-size:21px;margin-left:0;color:#3B3026;font-weight:700}
@@ -132,17 +124,6 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .finance-loading-desc{font-size:13px;color:#8C7B6E;line-height:1.7}
 .court-batch-toolbar{display:flex;align-items:center;gap:10px}
 .court-batch-count{display:inline-flex;align-items:center;height:36px;padding:0 12px;border-radius:10px;background:#FDF7F2;border:1px solid #EAE0D6;color:#5C4D43;font-size:12px;white-space:nowrap}
-.tms-search-wrapper{position:relative;display:inline-block;width:330px;max-width:100%}
-.tms-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#A3968F;pointer-events:none}
-.tms-search-input{height:34px;padding:0 12px 0 34px;border:1px solid transparent;border-radius:6px;background-color:#fff;color:#5C4D43;font-size:13px;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,.02);width:100%;box-sizing:border-box;transition:border-color .2s;font-family:inherit}
-.tms-search-input:focus{border-color:#EAE0D6}
-.tms-btn{height:34px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border-radius:6px;cursor:pointer;font-size:13px;border:none;transition:all .2s;white-space:nowrap;font-weight:400;font-family:inherit}
-.tms-btn:hover{opacity:.9}
-.tms-btn-ghost{background-color:#fff;color:#C06031;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-.tms-btn-primary{background-color:#e57c42;color:#fff;box-shadow:0 4px 16px rgba(180,83,9,.22)}
-.tms-btn-danger{background-color:#FFF2F0;color:#D32F2F;border:1px solid #FFCCC7;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-.tms-btn-default{background-color:transparent;border:1px solid #D9D0C7;color:#5C4D43}
-.tms-btn-default:hover{background-color:#D9D0C7}
 #page-prices .price-table{min-width:1120px;table-layout:fixed}
 #page-prices .price-table th,#page-prices .price-table td{padding-left:4px;padding-right:4px}
 #page-prices .price-table th:first-child,#page-prices .price-table td:first-child{padding-left:12px}
@@ -168,7 +149,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-leads .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 #page-finance .finance-revenue-toolbar{margin-bottom:10px}
 #page-finance .finance-revenue-toolbar .tms-filters{gap:8px;flex-wrap:nowrap}
-#page-finance .finance-revenue-toolbar .tms-search-wrapper{width:330px;flex:0 0 330px}
+#page-finance .finance-revenue-toolbar .tms-search-wrapper{width:300px;flex:0 0 300px}
 #page-finance .finance-revenue-toolbar .finance-date-host{flex:0 0 150px;min-width:150px}
 #page-finance .finance-revenue-toolbar .tms-toolbar-right{margin-left:auto}
 #page-finance .finance-revenue-toolbar .tms-btn{height:34px;padding:0 14px;border-radius:6px;font-size:13px}
@@ -575,21 +556,21 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .course-showcase-toolbar,.course-package-showcase-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .course-showcase-filters,.course-package-showcase-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
 .course-package-showcase-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.course-showcase .tms-search-wrapper,.course-package-showcase .tms-search-wrapper{width:280px;max-width:100%}
-.course-showcase .tms-search-input,.course-package-showcase .tms-search-input{height:36px;border:1px solid transparent;border-radius:6px;background:#fff;color:#5C4D43;box-shadow:inset 0 1px 2px rgba(0,0,0,.02)}
-.course-showcase .tms-search-input:focus,.course-package-showcase .tms-search-input:focus{border-color:#EAE0D6}
+.course-showcase .tms-search-wrapper,.course-package-showcase .tms-search-wrapper{width:300px;max-width:100%}
+.course-showcase .tms-search-input,.course-package-showcase .tms-search-input{height:36px;border:1px solid #E8DFD5;border-radius:6px;background:#FBF7F4;color:#5A4C41;box-shadow:none}
+.course-showcase .tms-search-input:focus,.course-package-showcase .tms-search-input:focus{border-color:#E8DFD5}
 .course-showcase .tms-btn,.course-package-showcase .tms-btn{height:36px;border-radius:6px;font-size:13px;font-weight:400}
-.course-showcase .tms-btn-primary,.course-package-showcase .tms-btn-primary{background:#DF895E;border:none;color:#fff;box-shadow:none}
+.course-showcase .tms-toolbar-right .tms-btn-primary,.course-package-showcase .tms-toolbar-right .tms-btn-primary{background-color:#D19356;border:none;color:#FFFFFF;box-shadow:none}
 .course-showcase .tms-btn-primary:hover,.course-package-showcase .tms-btn-primary:hover{opacity:.92}
 .course-showcase .tms-btn-ghost,.course-package-showcase .tms-btn-ghost{background:#fff;border:1px solid #EAE0D6;color:#5C4D43;box-shadow:none}
 .course-showcase .tms-btn-ghost:hover,.course-package-showcase .tms-btn-ghost:hover{background:#FAF6F2}
 .course-showcase .tms-dropdown-display,.course-package-showcase .tms-dropdown-display{height:36px;padding:0 12px;border-radius:6px;background:#fff;color:#5C4D43;font-size:13px;border:1px solid transparent;box-shadow:0 1px 2px rgba(0,0,0,.02);min-width:100px}
 .course-showcase .tms-dropdown-display:hover,.course-package-showcase .tms-dropdown-display:hover{background:#FAF6F2}
-#page-packages .course-package-showcase .tms-search-wrapper{width:280px;max-width:100%}
-#page-packages .course-package-showcase .tms-search-input{height:34px;border:1px solid transparent;border-radius:6px;background-color:#fff;color:#5C4D43;box-shadow:inset 0 1px 2px rgba(0,0,0,.02)}
-#page-packages .course-package-showcase .tms-search-input:focus{border-color:#EAE0D6}
+#page-packages .course-package-showcase .tms-search-wrapper{width:300px;max-width:100%}
+#page-packages .course-package-showcase .tms-search-input{height:36px;border:1px solid #E8DFD5;border-radius:6px;background-color:#FBF7F4;color:#5A4C41;box-shadow:none}
+#page-packages .course-package-showcase .tms-search-input:focus{border-color:#E8DFD5}
 #page-packages .course-package-showcase .tms-btn{height:34px;border-radius:6px;font-size:13px;font-weight:400}
-#page-packages .course-package-showcase .tms-btn-primary{background-color:#e57c42;color:#fff;box-shadow:0 4px 16px rgba(180,83,9,.22)}
+#page-packages .course-package-showcase .tms-toolbar-right .tms-btn-primary{background-color:#D19356;color:#FFFFFF;box-shadow:none}
 #page-packages .course-package-showcase .tms-btn-ghost{background-color:#fff;color:#C06031;border:none;box-shadow:0 2px 4px rgba(0,0,0,.05)}
 #page-packages .course-package-showcase .tms-btn-ghost:hover{background-color:#fff}
 #page-packages .course-package-showcase .tms-dropdown-display{height:34px;padding:0 12px;border-radius:6px;background-color:#fff;color:#5C4D43;font-size:13px;border:1px solid transparent;box-shadow:inset 0 1px 2px rgba(0,0,0,.02);min-width:100px}

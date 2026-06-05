@@ -2,7 +2,12 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
-const css = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
+const css = [
+  'assets/styles/components/data-cards.css',
+  'assets/styles/components/search.css',
+  'assets/styles/components/buttons.css',
+  'assets/styles/pages.css'
+].map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
 
 assert.match(source, /function renderScheduleStudentSuggestions/, 'schedule modal should provide a dedicated student suggestion helper');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
@@ -53,6 +58,9 @@ assert.match(source, /function setStudentPageSize\(/, 'student page should suppo
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
 assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
 assert.match(source, /function renderStandardDataCards\(/, 'top data cards should have a shared render helper');
+assert.match(source, /assets\/styles\/components\/data-cards\.css/, 'index should load shared data card styles');
+assert.match(source, /assets\/styles\/components\/search\.css/, 'index should load shared search styles');
+assert.match(source, /assets\/styles\/components\/buttons\.css/, 'index should load shared button styles');
 assert.match(css, /\.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'top data card row should adapt from five to six cards using 200px minimum columns');
 assert.match(css, /\.tms-stat-card\{[^}]*height:100px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'top data cards should match the shared 200 by 100 visual standard');
 assert.match(css, /\.tms-stat-card\{[^}]*padding:18px 16px 14px 22px/, 'top data cards should keep 22px left content padding');
@@ -63,6 +71,12 @@ assert.match(css, /\.tms-stat-value span\{[^}]*font-size:10px[^}]*color:#A19080/
 assert.match(css, /\.tms-stat-sub\{[^}]*font-size:10px[^}]*color:#A19080[^}]*margin-top:8px/, 'top data card explanations should use the shared caption style');
 assert.match(css, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{[^}]*color:#3B3026[^}]*font-weight:700/, 'court top paired stat numbers should keep the shared dark number color');
 assert.match(css, /#page-finance \.finance-ledger-stats \.finance-main-number\{[^}]*color:#3B3026[^}]*font-weight:700/, 'finance top main stat numbers should keep the shared dark number color');
+assert.match(css, /\.tms-search-wrapper\{[^}]*width:300px/, 'shared search component should use the standard 300px width');
+assert.match(css, /\.tms-search-input\{[^}]*height:36px[^}]*border:1px solid #E8DFD5[^}]*background-color:#FBF7F4[^}]*color:#5A4C41[^}]*font-size:13px[^}]*font-weight:400/, 'shared search input should use the standard field style');
+assert.match(css, /\.tms-search-input::placeholder\{[^}]*color:#A08E7E[^}]*font-size:13px[^}]*font-weight:400/, 'shared search placeholder should use the standard muted text style');
+assert.match(css, /\.tms-search-icon\{[^}]*width:16px[^}]*height:16px[^}]*color:#A08E7E/, 'shared search icon should use the standard size and color');
+assert.match(css, /\.tms-toolbar-right \.tms-btn-primary\{[^}]*width:104px[^}]*height:36px[^}]*background-color:#D19356[^}]*border-radius:6px[^}]*color:#FFFFFF[^}]*font-size:13px[^}]*font-weight:400/, 'toolbar add buttons should use the shared add button style');
+assert.match(css, /\.tms-toolbar-right \.tms-btn-primary::before\{[^}]*width:10px[^}]*height:10px/, 'toolbar add buttons should use the shared plus icon size');
 assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
 assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
