@@ -1,8 +1,6 @@
 name: Official Account Daily Digests
 
 on:
-  schedule:
-    - cron: '2 12 * * *'
   workflow_dispatch:
 
 permissions:

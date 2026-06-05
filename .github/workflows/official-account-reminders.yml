@@ -1,8 +1,6 @@
 name: Official Account Reminders
 
 on:
-  schedule:
-    - cron: '2,32 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -18,15 +16,6 @@ jobs:
       TARGET_URL: https://www.flowtennis.cn/api/cron/official-account-reminders
 
     steps:
-      - name: Skip quiet hours
-        shell: bash
-        run: |
-          hour=$(date +%H)
-          if [ "$hour" -ge 23 ] || [ "$hour" -lt 7 ]; then
-            echo "Quiet hours, skip reminder run."
-            exit 0
-          fi
-
       - name: Trigger reminder endpoint
         shell: bash
         run: |

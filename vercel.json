@@ -1,6 +1,8 @@
 {
   "crons": [
-    { "path": "/api/cron/feishu-daily-report", "schedule": "5 12 * * *" }
+    { "path": "/api/cron/feishu-daily-report", "schedule": "5 12 * * *" },
+    { "path": "/api/cron/official-account-daily-digests", "schedule": "2 12 * * *" },
+    { "path": "/api/cron/official-account-reminders", "schedule": "*/30 21-23,0-14 * * *" }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
