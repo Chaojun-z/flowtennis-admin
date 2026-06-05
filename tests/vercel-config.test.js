@@ -8,11 +8,9 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 assert.deepStrictEqual(
   config.crons,
   [
-    { path: '/api/cron/feishu-daily-report', schedule: '5 12 * * *' },
-    { path: '/api/cron/official-account-daily-digests', schedule: '2 12 * * *' },
-    { path: '/api/cron/official-account-reminders', schedule: '*/30 21-23,0-14 * * *' }
+    { path: '/api/cron/feishu-daily-report', schedule: '5 12 * * *' }
   ],
-  '排课和服务号提醒应由 Vercel Cron 触发，避免 GitHub 定时延迟'
+  'Vercel Cron 只保留飞书排课日报，服务号任务回 GitHub Actions'
 );
 
 assert.match(apiSource, /\/cron\/feishu-daily-report/, 'API 应提供 Vercel Cron 调用的排课日报入口');

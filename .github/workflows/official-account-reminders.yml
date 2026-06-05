@@ -1,6 +1,8 @@
 name: Official Account Reminders
 
 on:
+  schedule:
+    - cron: '2,32 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +21,12 @@ jobs:
       - name: Trigger reminder endpoint
         shell: bash
         run: |
+          hour=$(date +%H)
+          if [ "$hour" -ge 23 ] || [ "$hour" -lt 5 ]; then
+            echo "Quiet hours, skip reminder run."
+            exit 0
+          fi
+
           curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
           if [ -n "${CRON_SECRET:-}" ]; then
             curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")

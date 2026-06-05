@@ -12,12 +12,15 @@ const digestWorkflow = fs.readFileSync(
 );
 
 assert.match(remindersWorkflow, /workflow_dispatch:/, 'reminders workflow should keep manual dispatch');
-assert.doesNotMatch(remindersWorkflow, /cron:/, 'reminders workflow should not use GitHub schedule after moving to Vercel Cron');
+assert.match(remindersWorkflow, /cron:\s*'2,32 \* \* \* \*'/, 'reminders workflow should run every 30 minutes from GitHub Actions');
 assert.match(remindersWorkflow, /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/official-account-reminders/, 'reminders workflow should call the reminder endpoint');
 assert.match(remindersWorkflow, /User-Agent:\s*vercel-cron/, 'reminders workflow should mimic Vercel cron user agent');
+assert.match(remindersWorkflow, /hour=\$\(date \+%H\)/, 'reminders workflow should check current hour');
+assert.match(remindersWorkflow, /if \[ "\$hour" -ge 23 \] \|\| \[ "\$hour" -lt 5 \]; then/, 'reminders workflow should skip 23:00-04:59 quiet hours');
+assert.match(remindersWorkflow, /Quiet hours, skip reminder run\./, 'reminders workflow should log quiet hours skip');
 
 assert.match(digestWorkflow, /workflow_dispatch:/, 'digest workflow should keep manual dispatch');
-assert.doesNotMatch(digestWorkflow, /cron:/, 'digest workflow should not use GitHub schedule after moving to Vercel Cron');
+assert.match(digestWorkflow, /cron:\s*'2 12 \* \* \*'/, 'digest workflow should run daily at 20:02 from GitHub Actions');
 assert.match(digestWorkflow, /TARGET_URL:\s*https:\/\/www\.flowtennis\.cn\/api\/cron\/official-account-daily-digests/, 'digest workflow should call the digest endpoint');
 assert.match(digestWorkflow, /User-Agent:\s*vercel-cron/, 'digest workflow should mimic Vercel cron user agent');
 
