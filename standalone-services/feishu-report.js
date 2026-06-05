@@ -25,7 +25,7 @@ function formatTomorrowLessonLine(lesson) {
   const end = dayjs(lesson.endTime).format('HH:mm');
   const locationText = compactText([lesson.campusName, lesson.venue]);
   const studentCourseText = compactText([lessonStudentText(lesson), lesson.courseType]);
-  return `${start} - ${end}  · [${locationText}] · [${studentCourseText}] · ${lesson.studentCount}人`;
+  return `**${start} - ${end}** · [${locationText}] · [${studentCourseText}] · ${lesson.studentCount}人`;
 }
 
 function lessonDurationMinutes(lesson) {
@@ -49,7 +49,7 @@ function formatTomorrowSchedule(rows) {
   });
   return [...groups.entries()].map(([coachName, lessons]) => {
     const totalMinutes = lessons.reduce((sum, lesson) => sum + lessonDurationMinutes(lesson), 0);
-    const header = `${coachName}教练（共${lessons.length}节 · ${formatHours(totalMinutes)}）`;
+    const header = `**${coachName}教练（共${lessons.length}节 · ${formatHours(totalMinutes)}）**`;
     return [header, ...lessons.map(formatTomorrowLessonLine)].join('\n');
   }).join('\n\n');
 }

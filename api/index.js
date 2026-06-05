@@ -10,6 +10,8 @@ const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('./lib/perf-metrics');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('./page-data/court-account-read-model.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
+const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
+const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
@@ -75,6 +77,7 @@ const WECHAT_OFFICIAL_ACCOUNT_TOKEN = process.env.WECHAT_OFFICIAL_ACCOUNT_TOKEN 
 const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
+const FEISHU_DAILY_REPORT_WEBHOOK = String(process.env.FEISHU_DAILY_REPORT_WEBHOOK || process.env.FEISHU_WEBHOOK_URL || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
@@ -3507,6 +3510,42 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
     }
   }
   return result;
+}
+async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAILY_REPORT_WEBHOOK}={}){
+  const targetWebhook=String(webhook||'').trim();
+  if(!targetWebhook)throw new Error('缺少环境变量 FEISHU_DAILY_REPORT_WEBHOOK');
+  const [scheduleRows,coaches,campuses]=await Promise.all([
+    scan(T_SCHEDULE),
+    scan(T_COACHES).catch(()=>[]),
+    scan(T_CAMPUSES).catch(()=>[])
+  ]);
+  const snapshot=buildNotificationCenterSnapshot({
+    scheduleRows,
+    coaches,
+    campuses,
+    targetDate:toChinaDateKey(now),
+    now,
+    generatedAt:new Date(now).toISOString()
+  });
+  const stats=generateFeishuScheduleReport(snapshot);
+  const payload=buildFeishuScheduleCard(stats);
+  const response=await fetch(targetWebhook,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  const responseText=await response.text();
+  let responseData=null;
+  try{responseData=responseText?JSON.parse(responseText):null;}catch{responseData={raw:responseText};}
+  if(!response.ok)throw new Error(`飞书接口 HTTP ${response.status}`);
+  if(responseData&&responseData.code!==undefined&&responseData.code!==0)throw new Error(`飞书接口返回失败：${responseData.msg||responseData.message||responseData.code}`);
+  return {
+    success:true,
+    today:snapshot.today,
+    tomorrow:snapshot.tomorrow,
+    todayStats:snapshot.todayStats,
+    tomorrowStats:snapshot.tomorrowStats
+  };
 }
 async function sendCourseReminders({now=new Date()}={}){
   if(!WECHAT_COURSE_REMINDER_TEMPLATE_ID)return {success:true,skipped:true,reason:'missing_template',sent:0,failed:0};
@@ -8168,6 +8207,17 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendOfficialAccountDailyDigests());
     }
+    if(path==='/cron/feishu-daily-report'&&method==='GET'){
+      const ua=String(req.headers['user-agent']||'');
+      if(process.env.CRON_SECRET){
+        const auth=String(req.headers.authorization||'');
+        if(auth!==`Bearer ${process.env.CRON_SECRET}`)return sendJson(res,{error:'无权限'},403);
+      }else if(!/vercel-cron/i.test(ua)){
+        return sendJson(res,{error:'无权限'},403);
+      }
+      await init();
+      return sendJson(res,await sendFeishuDailyScheduleReport());
+    }
     if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await loadLoginUser(username);if(user?.__loginTimeout)return sendJson(res,{error:LOGIN_STORAGE_TIMEOUT_ERROR},503);if(!user)return sendJson(res,{error:'账号或密码错误'},401);const passwordVerified=await verifyLoginPassword(username,password,user.password);if(passwordVerified?.invalidAccount)return sendJson(res,{error:LOGIN_INVALID_ACCOUNT_ERROR},500);if(!passwordVerified)return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
     if(path==='/auth/wechat-login'&&method==='POST'){
       const code=String(body.code||'').trim();
@@ -9655,6 +9705,7 @@ module.exports._test={
   sendOfficialAccountStudentCourseReminders,
   sendOfficialAccountReminderJobs,
   sendOfficialAccountDailyDigests,
+  sendFeishuDailyScheduleReport,
   normalizeVenue,
   rangesOverlap,
   computeCourtFinance,

@@ -21,8 +21,14 @@ const changelogWorkflow = fs.readFileSync(
 
 assert.match(
   dailyWorkflow,
-  /cron:\s*'3 12 \* \* \*'/,
-  '日报 workflow 应避开整点触发，改为北京时间 20:03'
+  /workflow_dispatch:/,
+  '日报 GitHub workflow 应只保留手动触发，正式定时交给 Vercel Cron'
+);
+
+assert.doesNotMatch(
+  dailyWorkflow,
+  /cron:/,
+  '日报 GitHub workflow 不应再使用 schedule，避免延迟到 23-24 点推送'
 );
 
 assert.match(

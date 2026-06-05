@@ -69,7 +69,7 @@ function effectiveStatus(row, now) {
   if (status === '已结束' || status === '已下课') return '已结束';
   const endMs = parseScheduleTimeMs(row?.endTime || '');
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
-  if (status === '已排课' && Number.isFinite(endMs) && Number.isFinite(nowMs) && endMs < nowMs) return '待确认完成';
+  if (status === '已排课' && Number.isFinite(endMs) && Number.isFinite(nowMs) && endMs < nowMs) return '已结束';
   return status;
 }
 
