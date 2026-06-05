@@ -60,14 +60,25 @@ function onCourtToolbarFilterChange(){
   renderCourts();
 }
 function closeCourtTopDropdowns(){
+  const globalDateDropdown=document.getElementById('globalTopDate_dropdown');
+  const shouldCancelGlobalDraft=!!(globalDateDropdown&&globalDateDropdown.classList.contains('open')&&typeof cancelGlobalCustomDateDraft==='function');
   document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>el.classList.remove('open'));
+  if(shouldCancelGlobalDraft)cancelGlobalCustomDateDraft();
 }
 function toggleCourtTopDropdown(id,event){
   if(event)event.stopPropagation();
   const dropdown=document.getElementById(id+'_dropdown');
   if(!dropdown)return;
-  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>{ if(el!==dropdown)el.classList.remove('open'); });
+  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>{
+    if(el!==dropdown){
+      const shouldCancel=el.id==='globalTopDate_dropdown'&&typeof cancelGlobalCustomDateDraft==='function';
+      el.classList.remove('open');
+      if(shouldCancel)cancelGlobalCustomDateDraft();
+    }
+  });
+  const wasOpen=dropdown.classList.contains('open');
   dropdown.classList.toggle('open');
+  if(wasOpen&&id==='globalTopDate'&&typeof cancelGlobalCustomDateDraft==='function')cancelGlobalCustomDateDraft();
 }
 function selectCourtTopCampus(value,event){
   if(event)event.stopPropagation();
@@ -139,8 +150,9 @@ function shiftCourtDateRangeView(offset,event){
   const base=resolveCourtDateRangeViewDate();
   const next=new Date(base.getFullYear(),base.getMonth()+offset,1);
   window.__courtDateRangeViewAnchor=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-01`;
-  refreshCourtTopFilters();
-  const dropdown=document.getElementById('courtTopDate_dropdown');
+  const isGlobal=globalTopFilterPages().includes(currentPage);
+  if(isGlobal)refreshGlobalTopFilters();else refreshCourtTopFilters();
+  const dropdown=document.getElementById(isGlobal?'globalTopDate_dropdown':'courtTopDate_dropdown');
   if(dropdown)dropdown.classList.add('open');
 }
 function renderCourtDateRangeCalendarCells(viewDate){
@@ -170,6 +182,7 @@ function renderCourtDateRangeCalendarCells(viewDate){
 }
 function pickCourtCustomDate(date,event){
   if(event)event.stopPropagation();
+  const isGlobal=globalTopFilterPages().includes(currentPage);
   courtDateRangeFilterValue='自定义';
   if(!courtDateRangeStart||courtDateRangeEnd){
     courtDateRangeStart=date;
@@ -181,31 +194,36 @@ function pickCourtCustomDate(date,event){
     courtDateRangeEnd=date;
   }
   window.__courtDateRangeViewAnchor=`${date.slice(0,7)}-01`;
-  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
-  if(globalTopFilterPages().includes(currentPage))refreshGlobalTopFilters();else refreshCourtTopFilters();
-  const dropdown=document.getElementById(globalTopFilterPages().includes(currentPage)?'globalTopDate_dropdown':'courtTopDate_dropdown');
+  if(!isGlobal&&typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
+  if(isGlobal)refreshGlobalTopFilters();else refreshCourtTopFilters();
+  const dropdown=document.getElementById(isGlobal?'globalTopDate_dropdown':'courtTopDate_dropdown');
   if(dropdown)dropdown.classList.add('open');
 }
 function clearCourtCustomDateRange(event){
   if(event)event.stopPropagation();
+  if(globalTopFilterPages().includes(currentPage)&&typeof clearGlobalDateRange==='function'){
+    clearGlobalDateRange(event);
+    return;
+  }
   courtDateRangeStart='';
   courtDateRangeEnd='';
-  courtDateRangeFilterValue='自定义';
+  courtDateRangeFilterValue='全部';
   if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
-  if(globalTopFilterPages().includes(currentPage))refreshGlobalTopFilters();else refreshCourtTopFilters();
-  const dropdown=document.getElementById(globalTopFilterPages().includes(currentPage)?'globalTopDate_dropdown':'courtTopDate_dropdown');
-  if(dropdown)dropdown.classList.add('open');
+  refreshCourtTopFilters();
+  renderCourts();
+  closeCourtTopDropdowns();
 }
 function confirmCourtCustomDateRange(event){
   if(event)event.stopPropagation();
   if(!courtDateRangeStart||!courtDateRangeEnd)return;
   courtDateRangeFilterValue='自定义';
   courtPage=1;
-  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
   if(globalTopFilterPages().includes(currentPage)){
+    if(typeof applyGlobalCustomDateRange==='function'&&!applyGlobalCustomDateRange())return;
     refreshGlobalTopFilters();
     renderCurrentGlobalFilterPage();
   }else{
+    if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
     refreshCourtTopFilters();
     renderCourts();
   }
@@ -234,13 +252,9 @@ function onCourtDateRangeFilterChange(value,event){
   if(event)event.stopPropagation();
   if(value==='自定义'){
     courtDateRangeFilterValue='自定义';
-    if(!courtDateRangeStart&&!courtDateRangeEnd){
-      const preset=resolveCourtDatePresetRange('本月');
-      courtDateRangeStart=preset.startDate;
-      courtDateRangeEnd='';
-      window.__courtDateRangeViewAnchor=`${preset.startDate.slice(0,7)}-01`;
-    }
-    if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
+    courtDateRangeStart='';
+    courtDateRangeEnd='';
+    if(typeof today==='function')window.__courtDateRangeViewAnchor=`${today().slice(0,7)}-01`;
     refreshCourtTopFilters();
     const dropdown=document.getElementById('courtTopDate_dropdown');
     if(dropdown)dropdown.classList.add('open');

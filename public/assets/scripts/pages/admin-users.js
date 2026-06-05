@@ -17,7 +17,7 @@ function adminUserCampusCode(user){
   return coach?.campus||'';
 }
 function adminUserMatchesCampus(user){
-  return campus==='all'||sameCampusValue(adminUserCampusCode(user),campus);
+  return true;
 }
 function adminUserPhoneText(user){
   return user.phone||'-';
@@ -106,7 +106,7 @@ function renderAdminUserTableError(message){
 }
 function getFilteredAdminUsers(){
   const q=(document.getElementById('adminUserSearch')?.value||'').toLowerCase();
-  return adminUsers.filter(u=>u.id!=='pkgmergeadmin'&&adminUserMatchesCampus(u)&&globalDateWithinRange(adminUserGlobalDateValue(u))&&searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u),adminUserNoteText(u)));
+  return adminUsers.filter(u=>u.id!=='pkgmergeadmin'&&searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u),adminUserNoteText(u)));
 }
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;

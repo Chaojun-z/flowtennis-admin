@@ -19,8 +19,8 @@ assert.doesNotMatch(coachSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号
 assert.match(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'admin sidebar should expose account management');
 assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
-assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for campus filtering');
-assert.match(source, /globalTopFilterPages\(\)[\s\S]*'admin-users'/, 'resource account pages should show top campus tabs');
+assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for coach binding');
+assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'/, 'account page should not be hidden by global top filters');
 assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名、手机号或绑定教练"/, 'account page should provide a search field');
 assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
@@ -29,7 +29,7 @@ assert.match(source, /id="adminUserPagerInfo"/, 'account page should include sta
 assert.match(source, /id="adminUserPageSize"/, 'account page should include standard page size control');
 assert.match(source, /id="adminUserPagerBtns"/, 'account page should include standard page buttons');
 assert.match(fnBody('renderAdminUsers'), /adminUserTbody/, 'account page should render rows into adminUserTbody');
-assert.match(fnBody('getFilteredAdminUsers'), /adminUserMatchesCampus\(u\)/, 'account rows should follow the selected campus tab');
+assert.doesNotMatch(fnBody('getFilteredAdminUsers'), /adminUserMatchesCampus\(u\)|globalDateWithinRange/, 'account rows should not be hidden by global campus or time filters');
 assert.match(fnBody('getFilteredAdminUsers'), /u\.id!=='pkgmergeadmin'/, 'account list should hide the package merge test admin account');
 assert.match(fnBody('adminUserPhoneText'), /return user\.phone\|\|'-'/, 'empty phone should render as dash');
 assert.match(fnBody('setCampus'), /if\(currentPage==='admin-users'\)renderAdminUsers\(\)/, 'campus tab changes should refresh account list');

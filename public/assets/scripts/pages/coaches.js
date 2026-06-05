@@ -3,7 +3,7 @@ function coachGlobalDateValue(c){
 }
 function getFilteredCoaches(){
   const q=(document.getElementById('coachSearch')?.value||'').toLowerCase();
-  return coaches.filter(c=>(campus==='all'||sameCampusValue(c.campus,campus))&&globalDateWithinRange(coachGlobalDateValue(c))&&searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
+  return coaches.filter(c=>searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
 }
 function renderCoaches(){
   const d=getFilteredCoaches();

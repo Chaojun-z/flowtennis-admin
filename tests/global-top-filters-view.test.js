@@ -31,13 +31,19 @@ assert.match(fnBody('setCampus'), /refreshGlobalTopFilters\(\)/, 'global campus 
 assert.match(source, /function setGlobalDateRangeFilter\(/, 'global time changes should use one setter');
 assert.match(source, /localStorage\.setItem\(GLOBAL_DATE_RANGE_KEY,globalDateRangeFilterValue\)/, 'global time changes should persist to localStorage');
 assert.match(fnBody('setGlobalDateRangeFilter'), /renderCurrentGlobalFilterPage\(\)/, 'global time changes should rerender the current page');
+assert.match(source, /function beginGlobalCustomDateDraft\(/, 'global custom date should use a draft before confirm');
+assert.match(source, /function applyGlobalCustomDateRange\(/, 'global custom date should only apply on confirm');
+assert.match(source, /function cancelGlobalCustomDateDraft\(/, 'global custom date draft should be cancellable when dropdown closes');
+assert.match(fnBody('setGlobalDateRangeFilter'), /if\(value==='自定义'\)[\s\S]*beginGlobalCustomDateDraft\(\)/, 'clicking custom should only begin a draft');
+assert.doesNotMatch(fnBody('setGlobalDateRangeFilter').match(/if\(value==='自定义'\)[\s\S]*?return;/)?.[0]||'', /saveGlobalDateRange|renderCurrentGlobalFilterPage|globalDateRangeFilterValue=value/, 'clicking custom should not save, render data, or change the real filter');
+assert.match(fnBody('confirmCourtCustomDateRange'), /applyGlobalCustomDateRange\(\)/, 'global custom date should apply only after confirm');
+assert.match(fnBody('clearCourtCustomDateRange'), /clearGlobalDateRange\(/, 'global custom clear should return to all time');
+assert.match(fnBody('closeCourtTopDropdowns'), /cancelGlobalCustomDateDraft\(\)/, 'closing the global dropdown should cancel an unconfirmed draft');
 
 [
   'students',
   'leads',
   'schedule',
-  'admin-users',
-  'coaches',
   'finance'
 ].forEach(page=>{
   assert.match(
@@ -46,6 +52,7 @@ assert.match(fnBody('setGlobalDateRangeFilter'), /renderCurrentGlobalFilterPage\
     `${page} should show the shared top filter`
   );
 });
+assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'|'coaches'/, 'account and coach pages should not use global top filters');
 
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopCampus'/, 'global campus filter should reuse the court-style dropdown');
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopDate'/, 'global time filter should reuse the court-style dropdown');
@@ -53,8 +60,8 @@ assert.match(fnBody('renderGlobalTopFilters'), /globalDateRangeFilterValue==='�
 assert.match(fnBody('getFilteredSchedules'), /globalDateWithinRange\(s\.startTime\)/, 'schedule rows should follow the global time filter');
 assert.match(fnBody('getFilteredStudents'), /globalDateWithinRange\(studentGlobalDateValue\(s\)\)/, 'student rows should follow the global time filter');
 assert.match(fnBody('getFilteredLeads'), /globalDateWithinRange\(leadGlobalDateValue\(lead\)\)/, 'lead rows should follow the global time filter');
-assert.match(fnBody('getFilteredAdminUsers'), /globalDateWithinRange\(adminUserGlobalDateValue\(u\)\)/, 'account rows should follow the global time filter');
-assert.match(fnBody('getFilteredCoaches'), /globalDateWithinRange\(coachGlobalDateValue\(c\)\)/, 'coach rows should follow the global time filter');
+assert.doesNotMatch(fnBody('getFilteredAdminUsers'), /globalDateWithinRange/, 'account rows should not follow the global time filter');
+assert.doesNotMatch(fnBody('getFilteredCoaches'), /globalDateWithinRange/, 'coach rows should not follow the global time filter');
 assert.match(fnBody('renderFinanceLedger'), /globalDateWithinRange\(row\.businessDate\)/, 'finance ledger should follow the global time filter');
 assert.match(fnBody('renderFinanceRevenueReport'), /globalDateWithinRange\(row\.purchaseDate\)/, 'finance revenue should follow the global time filter');
 assert.match(fnBody('financeRecognizedRows'), /globalDateWithinRange\(row\.businessDate\)/, 'recognized revenue should follow the global time filter');
