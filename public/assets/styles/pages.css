@@ -139,12 +139,12 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-revenue-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #page-finance .finance-ledger-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 #campusTabs .court-top-select{position:relative}
-#campusTabs .court-top-select .court-top-display{height:32px;min-width:auto;padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.1);border:0;box-shadow:none;color:rgba(255,255,255,0.9);font-family:inherit;font-size:13px;font-weight:400}
+#campusTabs .court-top-select .court-top-display{height:32px;min-width:auto;padding:0 12px;border-radius:100px;background:rgba(0,0,0,0.1);border:0;box-shadow:none;color:rgba(255,255,255,0.9);font-family:inherit;font-size:13px;font-weight:400;display:inline-flex;align-items:center;line-height:1}
 #campusTabs .court-top-select .court-top-display:hover{background:rgba(0,0,0,0.14)}
 #campusTabs .court-top-select .court-top-display::after{display:none}
 #campusTabs .court-top-display-main{display:flex;align-items:center;gap:6px;min-width:0}
 #campusTabs .court-top-display-icon{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);flex:none}
-#campusTabs .court-top-display-icon svg{width:14px;height:14px;display:block;fill:currentColor}
+#campusTabs .court-top-display-icon svg{width:14px;height:14px;display:block;fill:currentColor;vertical-align:middle}
 #campusTabs .court-top-display-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,0.9);font-family:inherit;font-size:13px;font-weight:400}
 #campusTabs .court-top-display-chevron{margin-left:4px;width:9px;height:9px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.85);flex:none}
 #campusTabs .court-top-display-chevron svg{width:10px;height:10px;display:block;fill:currentColor}

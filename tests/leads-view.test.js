@@ -99,9 +99,9 @@ assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit m
 assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|\(campus!=='all'\?campus:'mabao'\)/, 'new leads should default to the current campus or mabao');
 assert.match(leadsSource, /lead-form-row-4[\s\S]*lead_owner[\s\S]*lead_systemStatus[\s\S]*lead_profileNote/, 'lead form should keep status in a four-column row before the remark field');
 assert.match(leadsSource, /查看[\s\S]*跟进[\s\S]*转化/, 'lead rows should only expose the three compact actions');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*tms-table-loading-state[\s\S]*线索数据加载中/, 'leads loading state should use the standard table loading style');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',17,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*colspan="17"/, 'leads loading state should span all visible columns');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',17/, 'leads loading state should pass all visible columns to the skeleton helper');
 assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="17"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');

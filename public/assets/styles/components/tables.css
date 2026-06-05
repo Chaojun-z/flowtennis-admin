@@ -41,3 +41,12 @@
 .tms-sort-icon .tms-sort-down::before{margin-top:-7px;clip-path:path('M7.19619 11.0299L10.4098 8.10857C10.4534 8.06895 10.4839 8.01706 10.4975 7.95973C10.511 7.9024 10.5068 7.84232 10.4856 7.78739C10.4643 7.73246 10.4269 7.68526 10.3783 7.65201C10.3296 7.61875 10.2721 7.60099 10.2132 7.60107H3.78719C3.72829 7.60099 3.67074 7.61875 3.62212 7.65201C3.5735 7.68526 3.53609 7.73246 3.51481 7.78739C3.49353 7.84232 3.48939 7.9024 3.50292 7.95973C3.51644 8.01706 3.54702 8.06895 3.59061 8.10857L6.80419 11.0299C6.85785 11.0786 6.92773 11.1056 7.00019 11.1056C7.07266 11.1056 7.14253 11.0786 7.19619 11.0299Z');background-color:#BDAB9B}
 .tms-sort-header.asc .tms-sort-up::before{background-color:#887565}
 .tms-sort-header.desc .tms-sort-down::before{background-color:#887565}
+.tms-table-skeleton-row-host td{height:252px!important;padding:0!important;border-bottom:0!important;background:#FBF7F4!important}
+.tms-table-skeleton-state{position:absolute;inset:0;z-index:220;background:#FBF7F4;display:flex;flex-direction:column;overflow:hidden;border-radius:8px;color:#A19080}
+.tms-table-skeleton-head{height:42px;background:#F1E9E2;border-bottom:0.5px solid #E7DFD6;display:grid;grid-template-columns:1.1fr .8fr .9fr .8fr .9fr .8fr .7fr .7fr;align-items:center;gap:18px;padding:0 16px;box-sizing:border-box;flex:0 0 42px}
+.tms-table-skeleton-body{display:flex;flex-direction:column;min-height:0;flex:1}
+.tms-table-skeleton-row{height:42px;background:#FBF7F4;border-bottom:0.5px solid #E7DFD6;display:grid;grid-template-columns:1.1fr .8fr .9fr .8fr .9fr .8fr .7fr .7fr;align-items:center;gap:18px;padding:0 16px;box-sizing:border-box;flex:0 0 42px}
+.tms-table-skeleton-line{height:10px;border-radius:999px;background:linear-gradient(90deg,#E8DFD5 0%,#F3ECE5 50%,#E8DFD5 100%);background-size:200% 100%;animation:tmsSkeletonShimmer 1.2s ease-in-out infinite}
+.tms-table-skeleton-line.is-strong{height:12px}
+.tms-table-skeleton-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#A19080;background:rgba(251,247,244,.82);padding:6px 10px;border-radius:6px;pointer-events:none}
+@keyframes tmsSkeletonShimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}

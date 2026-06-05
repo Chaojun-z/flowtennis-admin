@@ -6,6 +6,7 @@ const coreDir = path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core'
 const pageDir = path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages');
 const componentsSource = fs.readFileSync(path.join(coreDir, 'components.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(coreDir, 'state.js'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const source = [
   appSource,
   fs.readFileSync(path.join(pageDir, 'leads.js'), 'utf8')
@@ -63,6 +64,8 @@ assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'|'coaches'/, '
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopCampus'/, 'global campus filter should reuse the court-style dropdown');
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopDate'/, 'global time filter should reuse the court-style dropdown');
 assert.match(fnBody('renderGlobalTopFilters'), /showCustomPanel[\s\S]*renderCourtDateRangePanel\(\)/, 'global time filter should reuse the court custom date panel');
+assert.match(pagesCss, /#campusTabs \.court-top-select \.court-top-display\{[^}]*height:32px[^}]*display:inline-flex[^}]*align-items:center[^}]*line-height:1/, 'global top filter should vertically center icon and text');
+assert.match(pagesCss, /#campusTabs \.court-top-display-icon svg\{[^}]*vertical-align:middle/, 'global top filter icons should not sit below the text baseline');
 assert.match(fnBody('getFilteredSchedules'), /globalDateWithinRange\(s\.startTime\)/, 'schedule rows should follow the global time filter');
 assert.match(fnBody('getFilteredStudents'), /globalDateWithinRange\(studentGlobalDateValue\(s\)\)/, 'student rows should follow the global time filter');
 assert.match(fnBody('getFilteredLeads'), /globalDateWithinRange\(leadGlobalDateValue\(lead\)\)/, 'lead rows should follow the global time filter');

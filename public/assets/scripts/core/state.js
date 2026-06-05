@@ -308,36 +308,40 @@ function pageNeedsInlineLoading(pg){
   return missingInitialDatasetsForPage(pg).length>0;
 }
 function renderTableBodyLoading(id,colspan,text){
+  renderTableSkeletonLoading(id,colspan,text);
+}
+function renderTableSkeletonLoading(id,colspan,text){
   const el=document.getElementById(id);
-  if(el)el.innerHTML=`<tr><td colspan="${colspan}"><div class="empty"><p>${esc(text)}</p></div></td></tr>`;
+  if(!el)return;
+  const safeText=esc(text);
+  const cellCount=Math.max(4,Math.min(8,Number(colspan)||6));
+  const headerCells=Array.from({length:cellCount},(_,idx)=>`<span class="tms-table-skeleton-line ${idx===0?'is-strong':''}"></span>`).join('');
+  const rows=Array.from({length:6},()=>`<div class="tms-table-skeleton-row">${headerCells}</div>`).join('');
+  el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
-  const el=document.getElementById('stuTbody');
-  if(el)el.innerHTML='<tr><td colspan="11"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>学员数据加载中...</p></div></td></tr>';
+  renderTableSkeletonLoading('stuTbody',11,'学员数据加载中...');
 }
 function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
   if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('students',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
-  const el=document.getElementById('leadTbody');
-  if(el)el.innerHTML='<tr><td colspan="17"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>线索数据加载中...</p></div></td></tr>';
+  renderTableSkeletonLoading('leadTbody',17,'线索数据加载中...');
 }
 function renderLeadTableError(message){
   const el=document.getElementById('leadTbody');
   if(el)el.innerHTML=`<tr><td colspan="17"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderScheduleTableLoading(){
-  const el=document.getElementById('schTbody');
-  if(el)el.innerHTML='<tr><td colspan="11"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>排课数据加载中...</p></div></td></tr>';
+  renderTableSkeletonLoading('schTbody',11,'排课数据加载中...');
 }
 function renderScheduleTableError(message){
   const el=document.getElementById('schTbody');
   if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('schedule',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderCourtTableLoading(){
-  const el=document.getElementById('courtTbody');
-  if(el)el.innerHTML='<tr><td colspan="16"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>订场用户加载中...</p></div></td></tr>';
+  renderTableSkeletonLoading('courtTbody',16,'订场用户加载中...');
 }
 function renderCourtTableError(message){
   const el=document.getElementById('courtTbody');

@@ -149,7 +149,7 @@ assert.match(source, /<th class="tms-sticky-l" style="width:84px;padding-left:14
 assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
 assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
 assert.match(styles, /#page-schedule \.tms-pagination\{padding:4px 12px;font-size:11px/, 'schedule pager should use the compact standard pager style');
-assert.match(source, /function renderScheduleTableLoading\([\s\S]*tms-table-loading-state[\s\S]*排课数据加载中/, 'schedule loading state should use the standard table loading style');
+assert.match(source, /function renderScheduleTableLoading\([\s\S]*renderTableSkeletonLoading\('schTbody',11,'排课数据加载中\.\.\.'\)/, 'schedule loading state should use the shared full-table skeleton');
 assert.match(source, /function renderScheduleTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'schedule load failure should render an inline retry state');
 assert.match(fnBody('openScheduleDetail'), /tms-detail-grid[\s\S]*studentDetailFieldHtml[\s\S]*studentDetailBlockHtml/, 'schedule detail should use the same readonly detail display as student detail');
 assert.doesNotMatch(fnBody('openScheduleDetail'), /<input|finput|tms-form-control|<textarea|<select/, 'schedule detail should not look editable');

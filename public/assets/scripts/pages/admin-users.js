@@ -97,8 +97,7 @@ function adminUserEmptyStateHtml(){
   return `<tr><td colspan="10"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderAdminUserTableLoading(){
-  const tbody=document.getElementById('adminUserTbody');
-  if(tbody)tbody.innerHTML='<tr><td colspan="10"><div class="tms-table-loading-state"><span class="tms-loading-dot"></span><p>账号数据加载中...</p></div></td></tr>';
+  renderTableSkeletonLoading('adminUserTbody',10,'账号数据加载中...');
 }
 function renderAdminUserTableError(message){
   const tbody=document.getElementById('adminUserTbody');
