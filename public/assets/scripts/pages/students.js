@@ -246,7 +246,7 @@ function studentPageStats(base){
   };
 }
 function studentStatSplitCard(title,primary,secondary,caption){
-  return `<div class="tms-stat-card student-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value student-stat-pair"><span>${primary}</span><span class="student-stat-divider">/</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
+  return `<div class="tms-stat-card student-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value student-stat-pair"><span>${primary}</span><span class="student-stat-divider">｜</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
 }
 function getStudentDuplicateCandidates(input,editingId=''){
   const name=String(input?.name||'').trim();

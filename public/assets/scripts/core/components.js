@@ -44,6 +44,17 @@ const SIDEBAR_ICON_SVGS={
 function sidebarIcon(name){
   return `<span class="sb-icon">${SIDEBAR_ICON_SVGS[name]||''}</span>`;
 }
+function renderStandardDataCard(item={}){
+  const className=String(item.className||'').replace(/[^\w -]/g,'').trim();
+  const title=esc(item.title||item.label||'');
+  const value=item.valueHtml!=null?String(item.valueHtml):esc(item.value??'');
+  const percent=item.percent?`<span class="tms-stat-percent">${esc(item.percent)}</span>`:'';
+  const sub=esc(item.sub||item.caption||'');
+  return `<div class="tms-stat-card${className?' '+className:''}"><div class="tms-stat-label">${title}</div><div class="tms-stat-value">${value}${percent}</div>${sub?`<div class="tms-stat-sub">${sub}</div>`:''}</div>`;
+}
+function renderStandardDataCards(items=[]){
+  return (Array.isArray(items)?items:[]).map(renderStandardDataCard).join('');
+}
 function renderSidebarShell(){
   return `<aside class="sidebar">
   <div class="sb-logo"><div class="sb-brand">${SHELL_THEME.brandName}</div><div class="sb-tagline">${SHELL_THEME.brandSubline}</div></div>
@@ -59,26 +70,26 @@ function renderSidebarShell(){
   <!-- 管理员视角 -->
   <div id="sbAdminView">
   <div class="sb-sec">用户中心</div>
-  <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
   <div class="sb-item active" onclick="goPage('students',this)">${sidebarIcon('students')}学员管理</div>
+  <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}会员管理</div>
   <div class="sb-item" onclick="goPage('courts',this)">${sidebarIcon('courts')}订场用户</div>
-  <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}订场会员</div>
+  <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
   <div class="sb-sec">教学中心</div>
   <div class="sb-item" onclick="goPage('schedule',this)">${sidebarIcon('schedule')}排课表</div>
   <div class="sb-item" onclick="goPage('coachschedule',this)">${sidebarIcon('coachschedule')}教练排课</div>
+  <div class="sb-item" onclick="goPage('coachops',this)">${sidebarIcon('coachops')}教练工作量</div>
   <div class="sb-item" style="display:none" onclick="goPage('products',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>课程产品</div>
   <div class="sb-item" onclick="goPage('packages',this)">${sidebarIcon('packages')}售卖课包</div>
   <div class="sb-item" style="display:none" onclick="goPage('classes',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>班次管理</div>
   <div class="sb-item" style="display:none" onclick="goPage('plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>学习计划</div>
+  <div class="sb-sec">资源管理</div>
+  <div class="sb-item" onclick="goPage('coaches',this)">${sidebarIcon('coaches')}教练管理</div>
+  <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)">${sidebarIcon('campusmgr')}校区管理</div>
+  <div class="sb-item" onclick="goPage('admin-users',this)">${sidebarIcon('admin-users')}账号管理</div>
   <div class="sb-sec">场地运营</div>
   <div class="sb-item" onclick="goPage('matches',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><path d="M18 3v18"/><path d="M3 8h18"/><path d="M3 16h18"/></svg></span>约球管理</div>
   <div class="sb-item" onclick="goPage('prices',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>价格方案</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg></span>会员方案</div>
-  <div class="sb-sec">资源管理</div>
-  <div class="sb-item" onclick="goPage('admin-users',this)">${sidebarIcon('admin-users')}账号管理</div>
-  <div class="sb-item" id="sbCampusMgr" style="display:none" onclick="goPage('campusmgr',this)">${sidebarIcon('campusmgr')}校区管理</div>
-  <div class="sb-item" onclick="goPage('coaches',this)">${sidebarIcon('coaches')}教练管理</div>
-  <div class="sb-item" onclick="goPage('coachops',this)">${sidebarIcon('coachops')}教练工作量</div>
   <div class="sb-sec">财务中心</div>
   <div class="sb-item" data-nav-page="finance" data-finance-panel="ledger" onclick="setFinancePanel('ledger');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4Z"/></svg></span>财务总览</div>
   <div class="sb-item" data-nav-page="finance" data-finance-panel="revenue" onclick="setFinancePanel('revenue');goPage('finance',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5V19"/><path d="M12 5v1.5"/></svg></span>收入流水</div>

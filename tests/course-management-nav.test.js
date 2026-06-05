@@ -25,6 +25,10 @@ function fnBody(name){
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>/, 'sidebar should group resource pages');
+assert.match(html, /<div class="sb-sec">用户中心<\/div>[\s\S]*?goPage\('students',this\)[\s\S]*?学员管理[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池/, 'user center should order students, memberships, courts, then leads');
+assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课表[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?教练排课[\s\S]*?goPage\('coachops',this\)[\s\S]*?教练工作量[\s\S]*?goPage\('packages',this\)[\s\S]*?售卖课包/, 'teaching center should order schedule, coach schedule, workload, then packages');
+assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?<div class="sb-sec">场地运营<\/div>/, 'resource management should appear before court operations');
+assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?goPage\('coaches',this\)[\s\S]*?教练管理[\s\S]*?goPage\('campusmgr',this\)[\s\S]*?校区管理[\s\S]*?goPage\('admin-users',this\)[\s\S]*?账号管理/, 'resource management should order coaches, campus, then accounts');
 assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNISFLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
 assert.match(html, /function renderTopbarShell\(/, 'topbar should render from the shared shell component');
 assert.doesNotMatch(html, /· TENNIS · FLOW ·/, 'brand subline should not keep side dots');
@@ -39,7 +43,7 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
   ['leads', '线索池'],
   ['students', '学员管理'],
   ['courts', '订场用户'],
-  ['memberships', '订场会员'],
+  ['memberships', '会员管理'],
   ['schedule', '排课表'],
   ['coachschedule', '教练排课'],
   ['packages', '售卖课包'],
@@ -53,9 +57,11 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
 });
 assert.match(pagesCss, /--shell-sidebar-icon-color:#C5B0A2/, 'inactive sidebar icon color should match design');
 assert.match(pagesCss, /--shell-sidebar-active-icon-color:#EFE7E2/, 'active sidebar icon color should match design');
-assert.match(pagesCss, /\.sb-item\{[^}]*height:40px/, 'sidebar selected row height should be tightened to 40px');
+assert.match(pagesCss, /\.sb-item\{[^}]*height:38px/, 'sidebar rows should be tightened to 38px');
 assert.match(pagesCss, /\.sb-item\.active::before\{[^}]*left:0/, 'active sidebar bar should sit inside the selected row');
-assert.match(pagesCss, /\.topbar\{[^}]*background:var\(--shell-app-bg\)[^}]*border-bottom:1px solid var\(--shell-topbar-divider\)/, 'topbar should use shared shell colors');
+assert.match(pagesCss, /\.sb-logo\{[^}]*border-bottom:0\.5px solid var\(--shell-sidebar-divider\)/, 'sidebar logo divider should be 0.5px');
+assert.match(pagesCss, /\.sb-bottom\{[^}]*border-top:0\.5px solid var\(--shell-sidebar-divider\)/, 'sidebar bottom divider should be 0.5px');
+assert.match(pagesCss, /\.topbar\{[^}]*background:var\(--shell-app-bg\)[^}]*border-bottom:0\.5px solid var\(--shell-topbar-divider\)/, 'topbar should use shared shell colors with a 0.5px divider');
 assert.match(pagesCss, /\.content\{[^}]*background:var\(--shell-app-bg\)/, 'content area should use shared shell background');
 
 assert.match(html, /id="page-packages"/, 'should have packages page section');

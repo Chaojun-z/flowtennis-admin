@@ -578,7 +578,7 @@ function renderLeadStats(list){
     ['已体验待转化数',stats.trialPendingConversion,'已上体验课 - 已体验且已转化']
   ];
   const host=document.getElementById('leadStatsRow');
-  if(host)host.innerHTML=cardData.map(([label,value,sub])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${value}</div>${sub?`<div class="tms-stat-sub">${sub}</div>`:''}</div>`).join('');
+  if(host)host.innerHTML=renderStandardDataCards(cardData.map(([label,value,sub])=>({label,valueHtml:value,sub})));
 }
 function leadTimelineHtml(lead){
   const rows=leadFollowupRows(lead?.id);

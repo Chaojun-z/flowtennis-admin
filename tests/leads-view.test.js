@@ -115,7 +115,7 @@ assert.match(css, /\.modal\.modal-court \.lead-form-row-4\{display:grid;grid-tem
 assert.match(css, /\.modal\.modal-court \.lead-timeline-item\{[^}]*white-space:nowrap[^}]*overflow:hidden[^}]*text-overflow:ellipsis/, 'lead timeline should stay in one line inside the modal');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
 assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
-assert.match(css, /#page-leads \.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(7,minmax\(0,1fr\)\)[^}]*overflow:visible/, 'lead stats should fit seven cards in one row');
-assert.match(css, /#page-leads \.tms-stat-card\{[^}]*min-height:82px/, 'lead stat cards should stay compact');
+assert.match(css, /#page-leads \.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)[^}]*overflow:visible/, 'lead stats should use the shared adaptive top data card grid');
+assert.match(leadsSource, /renderStandardDataCards\(cardData\.map/, 'lead stats should render through the shared data card helper');
 
 console.log('leads view tests passed');

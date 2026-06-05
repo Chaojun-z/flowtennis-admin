@@ -11,7 +11,7 @@ function fnBody(name) {
   return html.slice(start, next === -1 ? html.length : next);
 }
 
-assert.match(html, /goPage\('memberships',this\)[\s\S]*?订场会员/, 'sidebar should add membership management entry');
+assert.match(html, /goPage\('memberships',this\)[\s\S]*?会员管理/, 'sidebar should add membership management entry');
 assert.match(html, /goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'sidebar should add membership plan entry');
 assert.match(html, /id="page-memberships"/, 'should have memberships page section');
 assert.match(html, /id="page-membership-plans"/, 'should have dedicated membership plans page section');

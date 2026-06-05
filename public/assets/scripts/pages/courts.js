@@ -469,7 +469,7 @@ function renderMembershipStats(rows=[]){
   const bonusRecognized=Math.round(totalRecognized-realRecognized);
   const pendingReal=Math.max(0,totalIncome-realRecognized);
   const totalAvailable=Math.max(0,totalIncome+totalBonus-totalRecognized);
-  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span>/</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
+  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span class="tms-stat-divider">｜</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
   host.innerHTML=[
     splitCard('会员与储值',`${rows.length} 人`,`${validOrders.length} 次`,'会员人数 / 储值次数'),
     splitCard('充值现金池',`¥${fmt(totalIncome)}`,`¥${fmt(totalBonus)}`,'累计实收 / 累计赠送'),
@@ -1091,7 +1091,7 @@ function courtRatioText(part,total,digits=0){
   return `${Math.round(ratio)}%`;
 }
 function courtStatValuePair(left,right){
-  return `<div class="tms-stat-value court-split-value"><span>${left}</span><span class="court-stat-slash">/</span><span>${right}</span></div>`;
+  return `<div class="tms-stat-value court-split-value"><span>${left}</span><span class="court-stat-slash">｜</span><span>${right}</span></div>`;
 }
 function courtStatPercent(value,digits=0){
   return `<span class="court-stat-percent">(${courtRatioText(value.part,value.total,digits)})</span>`;

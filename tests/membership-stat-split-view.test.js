@@ -6,8 +6,8 @@ const courtsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scri
 
 assert.match(
   courtsSource,
-  /membership-split-value"><span>\$\{primary\}<\/span><span>\/<\/span><span>\$\{secondary\}<\/span>/,
-  '订场会员数据块的两个数值之间应显示斜杠分隔'
+  /membership-split-value"><span>\$\{primary\}<\/span><span class="tms-stat-divider">｜<\/span><span>\$\{secondary\}<\/span>/,
+  '会员管理数据块的两个数值之间应显示竖线分隔'
 );
 
 console.log('membership stat split view test passed');

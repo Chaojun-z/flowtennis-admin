@@ -31,7 +31,7 @@ assert.match(source, /stuCoachFilterHost/, 'student page should include primary 
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /课程财务大盘[\s\S]*课包专项存量[\s\S]*学员结构基本盘[\s\S]*体验新客转化/, 'student top stats should use the four confirmed student dashboard cards');
 assert.match(source, /总现金进账[\s\S]*总核销收入[\s\S]*课包实收[\s\S]*课包当前余额[\s\S]*总学员数[\s\S]*有课包学员数[\s\S]*体验课人数[\s\S]*体验转正人数/, 'student top stat cards should explain the paired metrics');
-assert.match(source, /student-stat-divider/, 'student paired stat cards should render a slash divider between the two values');
+assert.match(source, /student-stat-divider/, 'student paired stat cards should render a vertical divider between the two values');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
 assert.match(source, /const sign=Number\(row\.lessonDelta\|\|0\)>0\?-1:1/, 'student package recognized amount should subtract returned lessons');
@@ -52,7 +52,15 @@ assert.match(source, /id="stuPageSize"/, 'student pager should expose a page siz
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
 assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
-assert.match(css, /\.tms-stat-card\{[^}]*padding:12px 16px 16px 16px[^}]*min-height:86px/, 'top stat cards should be slightly shorter without squeezing the sub text');
+assert.match(source, /function renderStandardDataCards\(/, 'top data cards should have a shared render helper');
+assert.match(css, /\.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'top data card row should adapt from five to six cards using 200px minimum columns');
+assert.match(css, /\.tms-stat-card\{[^}]*height:100px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'top data cards should match the shared 200 by 100 visual standard');
+assert.match(css, /\.tms-stat-card\{[^}]*padding:18px 16px 14px 22px/, 'top data cards should keep 22px left content padding');
+assert.match(css, /\.tms-stat-card\{[^}]*box-shadow:0 8px 20px rgba\(0,0,0,\.08\)/, 'top data cards should use the shared shadow');
+assert.match(css, /\.tms-stat-label\{[^}]*font-size:12px[^}]*color:#887565[^}]*margin-bottom:10px[^}]*font-weight:700/, 'top data card titles should use the shared label style');
+assert.match(css, /\.tms-stat-value\{[^}]*font-size:21px[^}]*font-weight:700[^}]*color:#3B3026/, 'top data card numbers should use the shared value style');
+assert.match(css, /\.tms-stat-value span\{[^}]*font-size:10px[^}]*color:#A19080/, 'top data card unit and percentage text should use the shared small metric style');
+assert.match(css, /\.tms-stat-sub\{[^}]*font-size:10px[^}]*color:#A19080[^}]*margin-top:8px/, 'top data card explanations should use the shared caption style');
 assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
 assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
