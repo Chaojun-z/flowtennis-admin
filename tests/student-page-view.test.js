@@ -61,6 +61,8 @@ assert.match(css, /\.tms-stat-label\{[^}]*font-size:12px[^}]*color:#887565[^}]*m
 assert.match(css, /\.tms-stat-value\{[^}]*font-size:21px[^}]*font-weight:700[^}]*color:#3B3026/, 'top data card numbers should use the shared value style');
 assert.match(css, /\.tms-stat-value span\{[^}]*font-size:10px[^}]*color:#A19080/, 'top data card unit and percentage text should use the shared small metric style');
 assert.match(css, /\.tms-stat-sub\{[^}]*font-size:10px[^}]*color:#A19080[^}]*margin-top:8px/, 'top data card explanations should use the shared caption style');
+assert.match(css, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{[^}]*color:#3B3026[^}]*font-weight:700/, 'court top paired stat numbers should keep the shared dark number color');
+assert.match(css, /#page-finance \.finance-ledger-stats \.finance-main-number\{[^}]*color:#3B3026[^}]*font-weight:700/, 'finance top main stat numbers should keep the shared dark number color');
 assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
 assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');

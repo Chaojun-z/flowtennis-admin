@@ -59,7 +59,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #courtStatsRow.court-dashboard-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;overflow:visible}
 #courtStatsRow.court-dashboard-stats .court-dashboard-card{min-width:0}
 #page-courts .court-split-value{gap:6px}
-#page-courts .court-split-value>span{font-size:21px;margin-left:0}
+#page-courts .court-split-value>span:not(.court-stat-slash){font-size:21px;margin-left:0;color:#3B3026;font-weight:700}
 #page-courts .court-stat-slash{color:#A19080;font-size:10px;font-weight:400}
 #page-courts .court-stat-percent{font-size:10px;color:#A19080;margin-left:3px;font-weight:400}
 .scard{background:var(--card-f);backdrop-filter:var(--bf);border:var(--borf);box-shadow:var(--shf);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:13px;transition:transform .14s}.scard:hover{transform:translateY(-2px)}
@@ -118,7 +118,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:21px;min-width:0;overflow:hidden}
 #page-finance .finance-ledger-stats .tms-stat-value.finance-split-value{gap:6px}
-#page-finance .finance-ledger-stats .finance-main-number{font-size:21px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+#page-finance .finance-ledger-stats .finance-main-number{font-size:21px;color:#3B3026;font-weight:700;overflow:hidden;text-overflow:ellipsis}
 #page-finance .finance-ledger-stats .finance-split-sep{font-size:10px;color:#A19080;flex:0 0 auto}
 #page-finance .finance-ledger-stats .finance-sub-number{font-size:13px;color:#A19080;overflow:hidden;text-overflow:ellipsis}
 #page-finance .finance-card-percent{display:block;margin-top:6px;text-align:right;font-size:10px;color:#A19080}
