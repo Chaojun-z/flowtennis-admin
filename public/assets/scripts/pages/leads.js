@@ -637,8 +637,10 @@ function leadDetailBlockHtml(label,html,options={}){
   if(options.hideEmpty&&leadDetailIsEmptyHtml(html))return '';
   return `<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-block tms-data-block">${html||'-'}</div></div>`;
 }
-function leadReadonlyCardHtml(content){
-  return content?`<div class="tms-readonly-card"><div class="tms-detail-grid">${content}</div></div>`:'';
+function leadReadonlyCardHtml(content,extraClass=''){
+  if(!content)return '';
+  const cls=['tms-readonly-card',extraClass].filter(Boolean).join(' ');
+  return `<div class="${cls}"><div class="tms-detail-grid">${content}</div></div>`;
 }
 function leadDetailSectionHtml(title,content,first=false){
   return content?`<div class="tms-section-header"${first?' style="margin-top:0;"':''}>${title}</div><div class="tms-detail-grid">${content}</div>`:'';
@@ -657,7 +659,7 @@ function openLeadDetail(leadId){
       ${leadDetailFieldHtml('意向类型',lead?.intentLevel||'-')}
       ${leadDetailFieldHtml('跟进人',lead?.owner||'-')}
       ${leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})}
-    `),true)}
+    `,'lead-readonly-card lead-readonly-card-4'),true)}
     ${leadDetailSectionHtml('跟进时间线',`<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-block tms-data-block">${leadTimelineHtml(lead)}</div></div>`)}
   `;
   const actions=`<button class="tms-btn tms-btn-default" onclick="convertLeadToStudent('${lead.id}')">转学员</button><button class="tms-btn tms-btn-default" onclick="convertLeadToCourt('${lead.id}')">转订场</button><button class="tms-btn tms-btn-primary" onclick="openLeadModal('${lead.id}')">编辑</button>`;
