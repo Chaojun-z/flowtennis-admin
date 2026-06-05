@@ -201,9 +201,10 @@ function packageClassSizeLabel(maxStudents=1){
 function packageExperienceTypeLabel(p={}){
   p=p||{};
   if(normalizeCourseType(p.courseType||p.type||'')!=='体验课')return '';
+  const text=[p.experienceType,p.courseTypeLevel2,p.name,p.packageName,p.productName,p.notes,p.courseType,p.type].filter(Boolean).join(' ');
+  if(/小班|1v4/.test(text))return '小班体验课';
   const direct=normalizeExperienceType(p.experienceType,'');
   if(direct)return direct;
-  const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
   return normalizeExperienceType(text,'私教体验课');
 }
 function packageCoreClassLabel(p={}){
@@ -236,10 +237,16 @@ function packageStatusText(p={}){
   if(status==='inactive'||status==='merged'||status==='已停售')return '已停售';
   return '';
 }
+function packageLessonUnitLabel(p={}){
+  const courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||'');
+  if(courseType==='小班课')return '次';
+  if(courseType==='体验课'&&packageExperienceTypeLabel(p)==='小班体验课')return '次';
+  return '课时';
+}
 function standardPackageLabel(p={},includeStatus=false){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
-  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  const unit=packageLessonUnitLabel(p);
   const parts=[packageCoreClassLabel(p),audience,lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean);
   const status=includeStatus?packageStatusText(p):'';
   if(status)parts.push(status);

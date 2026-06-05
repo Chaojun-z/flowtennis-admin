@@ -80,7 +80,7 @@ assert.match(fnBody('packageBoardCardHtml'), /draggable="true"[\s\S]*onDragStart
 assert.match(html, /async function savePackageOrder\([\s\S]*\/packages\/order/, 'package drag order should save through a dedicated endpoint');
 assert.match(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
 assert.match(apiSource, /const id=decodeURIComponent\(pkgM\[1\]\)/, 'package update route should decode URL-encoded package ids before reading TableStore');
-assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*课时[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
+assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*packageLessonUnitLabel[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
 assert.match(html, /function packageTimeBandBadgeClass\([\s\S]*黄金[\s\S]*非黄金[\s\S]*全天/, 'package time band badge should expose three visual states');
 assert.match(fnBody('packageBoardCardHtml'), /package-sales-title-row[\s\S]*packageTimeBandBadgeHtml\(p\)/, 'package cards should show the time band tag next to the title');
 assert.match(html, /package-card-meta[\s\S]*packageCreatedDate\(p\)[\s\S]*package-order-link/, 'package cards should keep created date and order link without labels');
@@ -101,8 +101,8 @@ assert.doesNotMatch(fnBody('openPackageModal'), /pkg_productId|课程产品|课�
 assert.match(fnBody('openPackageModal'), /基础属性[\s\S]*学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*规格与价格[\s\S]*pkg_lessons_label[\s\S]*价格[\s\S]*上课时间与效期[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*教练和场地[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should follow the standardized package creation layout');
 assert.match(fnBody('openPackageModal'), /courseType==='小班课'\?'次数':'课时'/, 'small group package modal should label package amount as count');
 assert.match(fnBody('openPackageModal'), /10\$\{packageUnitLabel\}[\s\S]*20\$\{packageUnitLabel\}/, 'package shortcut chips should follow the current package unit label');
-assert.match(fnBody('standardPackageLabel'), /normalizeCourseType\(p\.courseType\|\|p\.packageCourseType\|\|p\.type\)==='小班课'\?'次':'课时'/, 'small group package labels should show count instead of lesson hours');
-assert.match(fnBody('packageListSubtitle'), /normalizeCourseType\(p\.courseType\|\|p\.packageCourseType\|\|p\.type\)==='小班课'\?'次':'课时'/, 'small group package cards should show count instead of lesson hours');
+assert.match(fnBody('standardPackageLabel'), /packageLessonUnitLabel\(p\)/, 'small group package labels should show count instead of lesson hours');
+assert.match(fnBody('packageListSubtitle'), /packageLessonUnitLabel\(p\)/, 'small group package cards should show count instead of lesson hours');
 assert.doesNotMatch(fnBody('openPackageModal'), /有效天数|pkg_validDays/, 'package modal should hide valid days');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal should allow direct course type selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');

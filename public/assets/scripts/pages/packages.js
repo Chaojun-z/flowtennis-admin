@@ -25,7 +25,7 @@ function syncPackageFilterOptions(){
 }
 function packageDisplayTitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  const unit=packageLessonUnitLabel(p);
   return [packageCoreClassLabel(p),lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
 }
 function renderPackageTopFilters(){
@@ -61,7 +61,7 @@ function packageListTitle(p){
 }
 function packageListSubtitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  const unit=packageLessonUnitLabel(p);
   return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}${unit}`:'' ].filter(Boolean).join(' · ');
 }
 function packageDisplayShortId(p){
