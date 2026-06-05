@@ -54,4 +54,30 @@ assert.strictEqual(
   rules.buildLeadDedupKey({ wechatName: 'Leah', phone: '13800138000', leadDate: '2026-04-07', source: '大众点评 ', consultType: ' 成人私教' })
 );
 
+const sameNameMerged = rules.mergeDuplicateLeadRows([
+  rules.normalizeLeadRecord({
+    displayName: 'MMJUAN',
+    wechatName: 'MMJUAN',
+    leadDate: '2026-06-03',
+    source: '大众点评',
+    consultType: '成人私教',
+    profileNote: '咨询成人私教课',
+    rawStatus: '跟进中'
+  }, { id: 'old-lead', now: '2026-06-03T00:00:00.000Z' }),
+  rules.normalizeLeadRecord({
+    displayName: 'MMJUAN',
+    wechatName: 'MMJUAN',
+    leadDate: '2026-06-05',
+    source: '大众点评',
+    consultType: '成人私教',
+    profileNote: '已经预约6月4日，18-19',
+    rawStatus: '已约体验'
+  }, { id: 'new-lead', now: '2026-06-05T00:00:00.000Z' })
+]);
+assert.strictEqual(sameNameMerged.length, 1, 'same wechat name leads should merge');
+assert.strictEqual(sameNameMerged[0].id, 'old-lead', 'merge should keep the older lead id');
+assert.strictEqual(sameNameMerged[0].leadDate, '2026-06-03', 'merge should keep the original lead date');
+assert.strictEqual(sameNameMerged[0].profileNote, '已经预约6月4日，18-19', 'merge should keep the newer useful profile');
+assert.strictEqual(sameNameMerged[0].systemStatus, '已约体验', 'merge should keep the stronger status');
+
 console.log('leads rules tests passed');

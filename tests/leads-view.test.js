@@ -29,7 +29,7 @@ assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">�
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(html, /id="leadStatsRow"/, 'leads page should expose the top stats row');
-assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*跟进状态[\s\S]*是否转化[\s\S]*体验课时间[\s\S]*未成交原因[\s\S]*最近跟进[\s\S]*跟进次数[\s\S]*意向类型[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*正式课报名时间[\s\S]*正式课教练[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*所属校区[\s\S]*跟进人[\s\S]*操作/, 'leads table should expose the requested reordered columns');
+assert.match(html, /<table class="tms-table">[\s\S]*微信名[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*基本信息[\s\S]*咨询需求[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody mount');
 assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info');
 assert.match(html, /id="leadPageSize"/, 'leads page should provide page size selector host');
@@ -40,9 +40,7 @@ assert.match(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar
 assert.match(html, /class="tms-sticky-l"[\s\S]*微信名/, 'leads table should pin the first identity column');
 assert.match(html, /data-lead-sort="leadDate"[\s\S]*线索时间/, 'leads table should sort by lead date');
 assert.match(html, /data-lead-sort="trialLessonAt"[\s\S]*体验课时间/, 'leads table should sort by trial lesson date');
-assert.match(html, /data-lead-sort="lastFollowupAt"[\s\S]*最近跟进/, 'leads table should sort by latest follow-up');
-assert.match(html, /data-lead-sort="followupCount"[\s\S]*跟进次数/, 'leads table should sort by follow-up count');
-assert.match(html, /data-lead-sort="formalSignupAt"[\s\S]*正式课报名时间/, 'leads table should sort by formal signup date');
+assert.doesNotMatch(html, /最近跟进|跟进次数|正式课报名时间/, 'leads table should remove columns outside the requested order');
 
 assert.match(bootstrapSource, /'leads'/, 'bootstrap should register leads routing');
 assert.match(bootstrapSource, /leads:'线索池'/, 'bootstrap should map the leads page title');
@@ -56,6 +54,7 @@ assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should fo
 assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page should format formal signup date');
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
+assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
 assert.match(leadsSource, /线索数[\s\S]*全盘最终转化[\s\S]*邀约体验课转化[\s\S]*体验课成单转化[\s\S]*高意向蓄水池/, 'lead stats should expose the requested five metrics');
 assert.match(leadsSource, /已转化线索 \/ 线索数[\s\S]*已上体验课 \/ 线索数[\s\S]*已体验且转化 \/ 已上体验课[\s\S]*已体验待转化 \/ 已上体验课/, 'lead stats should explain the requested formulas');
@@ -90,6 +89,8 @@ assert.match(leadDetailSource, /leadDetailSectionHtml\('基础信息'[\s\S]*lead
 assert.match(leadDetailSource, /leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)/, 'lead detail should expose the campus field');
 assert.doesNotMatch(leadDetailSource, /<input class="finput tms-form-control"/, 'lead detail should be read-only rather than editable');
 assert.match(leadsSource, /function openLeadFollowupModal\(/, 'leads page should expose the follow-up modal');
+assert.match(leadsSource, /openLeadFollowupModal\(leadId,followupId=''\)/, 'follow-up modal should support editing existing records');
+assert.match(leadsSource, /apiCall\('PUT',`\/lead-followups\/\$\{followupId\}`/, 'follow-up save should update an existing record when editing');
 assert.match(leadsSource, /跟进时间[\s\S]*跟进人[\s\S]*跟进方式[\s\S]*沟通内容[\s\S]*用户顾虑[\s\S]*本次结论[\s\S]*当前状态[\s\S]*下次跟进时间[\s\S]*下次动作/, 'follow-up modal should expose the required fields');
 assert.match(leadsSource, /type="datetime-local"/, 'follow-up modal should use a proper datetime-local input');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
@@ -99,17 +100,17 @@ assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit m
 assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|\(campus!=='all'\?campus:'mabao'\)/, 'new leads should default to the current campus or mabao');
 assert.match(leadsSource, /lead-form-row-4[\s\S]*lead_owner[\s\S]*lead_systemStatus[\s\S]*lead_profileNote/, 'lead form should keep status in a four-column row before the remark field');
 assert.match(leadsSource, /查看[\s\S]*跟进[\s\S]*转化/, 'lead rows should only expose the three compact actions');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',17,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',12,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',17/, 'leads loading state should pass all visible columns to the skeleton helper');
-assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="17"/, 'leads error state should span all visible columns');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',12/, 'leads loading state should pass all visible columns to the skeleton helper');
+assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="12"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:12px\}/, 'leads table header should match the standard table font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
-assert.match(html, /style="width:240px"><button class="tms-sort-header" data-lead-sort="trialLessonAt"/, 'lead trial lesson column should be wide enough for the full date/time text');
+assert.match(html, /style="width:220px"><button class="tms-sort-header" data-lead-sort="trialLessonAt"/, 'lead trial lesson column should be wide enough for the full date/time text');
 assert.match(html, /style="width:220px">咨询需求/, 'lead consult column should be wide enough for longer tags');
 assert.match(css, /#page-leads \.tms-text-primary,#page-leads \.tms-cell-text,#page-leads \.tms-text-remark\{font-size:12px\}/, 'leads nested table text should match the student page font size');
 assert.match(css, /#page-leads \.tms-tag-lead-communicated\{background:#E3F0ED;color:#2E766E\}/, 'leads tags should use grounded colors instead of purple');

@@ -80,47 +80,68 @@ function leadDedupKey(lead){
     leadDedupText(lead?.consultType)
   ].join('|');
 }
+function leadCanonicalNameKey(lead){
+  const name=leadIdentityName(lead?.wechatName||lead?.displayName||lead?.name);
+  return name?`name:${name}`:`id:${String(lead?.id||'')}`;
+}
+function leadMergeDateValue(value,lead={}){
+  const date=leadDateOnly(value,lead);
+  const parsed=Date.parse(date||value||'');
+  return Number.isFinite(parsed)?parsed:Number.MAX_SAFE_INTEGER;
+}
+function mergeLeadRows(rows=[]){
+  const list=(rows||[]).filter(Boolean);
+  if(!list.length)return null;
+  const primary=[...list].sort((a,b)=>leadMergeDateValue(a?.leadDate,a)-leadMergeDateValue(b?.leadDate,b)||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||'')))[0];
+  const latest=[...list].sort((a,b)=>String(b?.updatedAt||b?.lastFollowupAt||b?.createdAt||'').localeCompare(String(a?.updatedAt||a?.lastFollowupAt||a?.createdAt||'')));
+  const merged={...primary};
+  latest.reverse().forEach(row=>{
+    Object.entries(row||{}).forEach(([key,value])=>{
+      if(['id','createdAt','leadDate'].includes(key))return;
+      if(String(value??'').trim())merged[key]=value;
+    });
+  });
+  merged.id=primary.id;
+  merged.createdAt=primary.createdAt;
+  merged.leadDate=primary.leadDate;
+  merged.updatedAt=latest[0]?.updatedAt||primary.updatedAt||'';
+  merged.lastFollowupAt=latest.map(row=>String(row?.lastFollowupAt||'').trim()).filter(Boolean).sort().pop()||merged.lastFollowupAt||'';
+  merged._mergedLeadIds=Array.from(new Set(list.map(row=>String(row?.id||'').trim()).filter(Boolean)));
+  return merged;
+}
+function mergeDuplicateLeadRows(rows=[]){
+  const groups=new Map();
+  (rows||[]).forEach(row=>{
+    const key=leadCanonicalNameKey(row);
+    const group=groups.get(key)||[];
+    group.push(row);
+    groups.set(key,group);
+  });
+  return Array.from(groups.values()).map(mergeLeadRows).filter(Boolean);
+}
 function leadWechatText(lead){
   return String(lead?.wechatName||lead?.displayName||'-').trim()||'-';
 }
 function leadRows(){
-  const rows=leadRawRows();
-  const seen=new Set();
-  return [...rows].sort((a,b)=>{
-    const updatedDiff=leadSortDateValue(b?.updatedAt||b?.lastFollowupAt||b?.leadDate||b?.createdAt||'')-leadSortDateValue(a?.updatedAt||a?.lastFollowupAt||a?.leadDate||a?.createdAt||'');
-    if(updatedDiff!==0)return updatedDiff;
-    return String(b?.id||'').localeCompare(String(a?.id||''));
-  }).filter(item=>{
-    const key=leadDedupKey(item);
-    if(seen.has(key))return false;
-    seen.add(key);
-    return true;
+  return mergeDuplicateLeadRows(leadRawRows()).sort((a,b)=>{
+    const leadDateDiff=leadSortDateValue(b?.leadDate,b)-leadSortDateValue(a?.leadDate,a);
+    if(leadDateDiff!==0)return leadDateDiff;
+    return String(b?.createdAt||b?.id||'').localeCompare(String(a?.createdAt||a?.id||''));
   });
 }
-function leadFollowupRows(leadId){
-  const dateGroups=new Map();
-  (Array.isArray(leadFollowups)?leadFollowups:[])
-    .filter(item=>item?.leadId===leadId)
-    .forEach(item=>{
-      const key=leadFollowupDateGroupKey(item);
-      const rows=dateGroups.get(key)||[];
-      rows.push(item);
-      dateGroups.set(key,rows);
-    });
-  const clusters=[];
-  [...dateGroups.values()].forEach(rows=>{
-    rows.forEach(item=>{
-      const hit=clusters.find(group=>group.some(existing=>leadFollowupNotesOverlap(existing,item)));
-      if(hit)hit.push(item);
-      else clusters.push([item]);
-    });
-  });
-  return clusters
-    .map(leadMergeFollowupGroup)
+function leadMergedIds(leadRef){
+  const lead=typeof leadRef==='object'?leadRef:leadRows().find(item=>String(item?.id||'')===String(leadRef));
+  const ids=lead?lead._mergedLeadIds:[leadRef];
+  return new Set((Array.isArray(ids)?ids:[lead?.id||leadRef]).map(id=>String(id||'')).filter(Boolean));
+}
+function leadFollowupRows(leadRef){
+  const ids=leadMergedIds(leadRef);
+  return (Array.isArray(leadFollowups)?leadFollowups:[])
+    .filter(item=>ids.has(String(item?.leadId||'')))
     .sort((a,b)=>leadSortDateValue(b?.followupAt||b?.createdAt||'')-leadSortDateValue(a?.followupAt||a?.createdAt||'')||String(b?.createdAt||b?.id||'').localeCompare(String(a?.createdAt||a?.id||'')));
 }
 function leadById(leadId){
-  return leadRawRows().find(item=>String(item?.id||'')===String(leadId))||null;
+  return leadRows().find(item=>String(item?.id||'')===String(leadId))||leadRawRows().find(item=>String(item?.id||'')===String(leadId))||null;
 }
 function leadDisplayName(lead){
   return String(lead?.displayName||lead?.name||lead?.wechatName||lead?.phone||'未命名线索').trim();
@@ -142,7 +163,7 @@ function leadConvertedYesNo(lead){
   return lead?.convertedFlag===true||lead?.studentId||lead?.courtId||lead?.isCourseConverted||lead?.isCourtConverted||lead?.isMembershipConverted?'是':'否';
 }
 function leadCommunicationText(lead){
-  const latest=leadFollowupRows(lead?.id)[0]||null;
+  const latest=leadFollowupRows(lead)[0]||null;
   return String(latest?.communicationNote||lead?.latestConclusion||'').trim()||'-';
 }
 function leadCommunicationLines(text){
@@ -229,7 +250,7 @@ function leadFormalSignupDateText(lead){
   return leadPurchaseSignupDate(lead)||leadDateOnly(lead?.enrollAtRaw||lead?.formalSignupAt||lead?.enrollAt,lead)||'-';
 }
 function leadFollowupCount(lead){
-  return leadFollowupRows(lead?.id).length;
+  return leadFollowupRows(lead).length;
 }
 function leadFollowupConvertedText(followup){
   const status=String(followup?.statusAfter||'').trim();
@@ -243,6 +264,11 @@ function leadNowInputValue(){
 function leadInputToStorageValue(value){
   const text=String(value||'').trim();
   return text?text.replace('T',' '):'';
+}
+function leadStorageToInputValue(value){
+  const text=String(value||'').trim();
+  if(!text)return '';
+  return text.replace(' ','T').slice(0,16);
 }
 function leadTagClass(kind,value=''){
   const text=String(value||'').trim();
@@ -581,9 +607,9 @@ function renderLeadStats(list){
   if(host)host.innerHTML=renderStandardDataCards(cardData);
 }
 function leadTimelineHtml(lead){
-  const rows=leadFollowupRows(lead?.id);
+  const rows=leadFollowupRows(lead);
   if(!rows.length)return '<div class="empty"><p>暂无跟进时间线</p></div>';
-  return `<div class="lead-timeline-list">${rows.map(item=>`<div class="lead-timeline-item">${esc(leadTimelineLineText(item))}</div>`).join('')}</div>`;
+  return `<div class="lead-timeline-list">${rows.map(item=>`<div class="lead-timeline-item"><span>${esc(leadTimelineLineText(item))}</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}','${item.id}')">编辑</span></div>`).join('')}</div>`;
 }
 function leadTimelineLineText(item){
   const date=leadFollowupDateText(item);
@@ -708,15 +734,16 @@ async function saveLead(leadId=''){
     if(btn){btn.disabled=false;btn.textContent='保存';}
   }
 }
-function openLeadFollowupModal(leadId){
+function openLeadFollowupModal(leadId,followupId=''){
   const lead=leadById(leadId)||null;
+  const followup=(Array.isArray(leadFollowups)?leadFollowups:[]).find(item=>String(item?.id||'')===String(followupId))||null;
   const followupTypeOptions=[{value:'电话',label:'电话'},{value:'微信',label:'微信'},{value:'到店',label:'到店'},{value:'面谈',label:'面谈'},{value:'其他',label:'其他'}];
   const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
-  const body=`<div class="tms-section-header" style="margin-top:0;">新增跟进</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label><input type="datetime-local" class="finput tms-form-control" id="lead_followupAt" value="${esc(leadNowInputValue())}"></div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(currentUser?.name||lead?.owner||'')}"></div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderCourtDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote"></textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern"></textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion"></textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_statusAfter','当前状态',statusOptions,leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(lead?.nextAction||'')}"></div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}')">保存跟进</button>`;
-  setCourtModalFrame('新增跟进',body,actions,'modal-wide');
+  const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label><input type="datetime-local" class="finput tms-form-control" id="lead_followupAt" value="${esc(followup?leadStorageToInputValue(followup.followupAt):leadNowInputValue())}"></div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(followup?.followupBy||currentUser?.name||lead?.owner||'')}"></div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderCourtDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
+  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}','${followupId||''}')">保存跟进</button>`;
+  setCourtModalFrame(followup?'编辑跟进':'新增跟进',body,actions,'modal-wide');
 }
-async function saveLeadFollowup(leadId){
+async function saveLeadFollowup(leadId,followupId=''){
   const btn=document.getElementById('leadFollowupSaveBtn');
   if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const payload={
@@ -731,7 +758,8 @@ async function saveLeadFollowup(leadId){
     nextAction:document.getElementById('lead_nextAction')?.value?.trim?.()||''
   };
   try{
-    await apiCall('POST',`/leads/${leadId}/followups`,payload);
+    if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,payload);
+    else await apiCall('POST',`/leads/${leadId}/followups`,payload);
     closeModal();
     await refreshLeadRuntime();
     renderLeads();
@@ -915,7 +943,7 @@ function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的线索':'暂无线索';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
-  return `<tr><td colspan="17"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
@@ -952,8 +980,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    const formalDate=leadFormalSignupDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td>${renderCourtCellText(lead?.lastFollowupAt?leadRecentDateText(lead.lastFollowupAt):'-',!lead?.lastFollowupAt)}</td><td>${renderCourtCellText(String(leadFollowupCount(lead)||0),false)}</td><td>${renderLeadTag(lead?.intentLevel,'intent')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderCourtCellText(formalDate,formalDate==='-')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderCourtCellText(leadCampusText(lead),leadCampusText(lead)==='-')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.textContent=`共 ${total} 条`;

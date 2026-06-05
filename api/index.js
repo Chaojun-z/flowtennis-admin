@@ -6213,6 +6213,19 @@ function applyLeadFollowupSnapshot(lead,followup){
   next.systemStatus=deriveLeadSystemStatus(next);
   return next;
 }
+function latestLeadFollowupSnapshot(followups=[]){
+  return [...(followups||[])].filter(Boolean).sort((a,b)=>
+    String(b.followupAt||b.createdAt||'').localeCompare(String(a.followupAt||a.createdAt||''))||
+    String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))
+  )[0]||null;
+}
+function applyLeadFollowupsSnapshot(lead,followups=[]){
+  const latest=latestLeadFollowupSnapshot(followups);
+  if(latest)return applyLeadFollowupSnapshot(lead,latest);
+  const next={...lead,lastFollowupAt:'',latestConcern:'',latestConclusion:'',nextFollowupAt:'',nextAction:''};
+  next.systemStatus=deriveLeadSystemStatus(next);
+  return next;
+}
 function splitCsvLine(line=''){
   const cells=[];
   let current='';
@@ -6326,6 +6339,53 @@ function dedupeLeadRows(rows=[]){
     next.push(row);
   }
   return next;
+}
+function leadCanonicalNameKey(input={}){
+  const name=normalizeLeadIdentityName(input.wechatName||input.displayName||input.name);
+  return name?`name:${name}`:`id:${cleanLeadText(input.id||'')}`;
+}
+function leadMergeDateValue(value){
+  const normalized=normalizeLeadKeyDate(value);
+  const ts=Date.parse(normalized);
+  return Number.isFinite(ts)?ts:Number.MAX_SAFE_INTEGER;
+}
+function mergeLeadRows(rows=[]){
+  const list=(rows||[]).filter(Boolean);
+  if(!list.length)return null;
+  const primary=[...list].sort((a,b)=>
+    leadMergeDateValue(a.leadDate)-leadMergeDateValue(b.leadDate)||
+    String(a.createdAt||'').localeCompare(String(b.createdAt||''))||
+    String(a.id||'').localeCompare(String(b.id||''))
+  )[0];
+  const latest=[...list].sort((a,b)=>
+    String(b.updatedAt||b.lastFollowupAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.lastFollowupAt||a.createdAt||''))
+  );
+  const merged={...primary};
+  const preserve=new Set(['id','createdAt','leadDate']);
+  latest.reverse().forEach(row=>{
+    Object.entries(row).forEach(([key,value])=>{
+      if(preserve.has(key))return;
+      if(cleanLeadText(value)!=='')merged[key]=value;
+    });
+  });
+  merged.id=primary.id;
+  merged.createdAt=primary.createdAt;
+  merged.leadDate=primary.leadDate;
+  merged.updatedAt=latest[0]?.updatedAt||primary.updatedAt||'';
+  merged.lastFollowupAt=latest.map(row=>cleanLeadText(row.lastFollowupAt)).filter(Boolean).sort().pop()||merged.lastFollowupAt||'';
+  merged._mergedLeadIds=Array.from(new Set(list.map(row=>cleanLeadText(row.id)).filter(Boolean)));
+  merged.systemStatus=deriveLeadSystemStatus(merged);
+  return merged;
+}
+function mergeDuplicateLeadRows(rows=[]){
+  const groups=new Map();
+  (rows||[]).forEach(row=>{
+    const key=leadCanonicalNameKey(row);
+    const group=groups.get(key)||[];
+    group.push(row);
+    groups.set(key,group);
+  });
+  return [...groups.values()].map(mergeLeadRows).filter(Boolean);
 }
 function leadNameCandidates(lead){
   return [lead.displayName,lead.wechatName].map(cleanLeadText).filter(Boolean);
@@ -9352,7 +9412,7 @@ module.exports = async (req, res) => {
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
         const todayStr=new Date().toISOString().slice(0,10);
-        const filtered=rows.filter(row=>{
+        const filtered=mergeDuplicateLeadRows(rows).filter(row=>{
           if(q&&!searchHit(q,row.displayName,row.wechatName,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
           if(source&&row.source!==source)return false;
           if(consultType&&row.consultType!==consultType)return false;
@@ -9363,12 +9423,19 @@ module.exports = async (req, res) => {
           if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
           if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
           return true;
-        }).sort((a,b)=>String(b.lastFollowupAt||b.leadDate||'').localeCompare(String(a.lastFollowupAt||a.leadDate||'')));
+        }).sort((a,b)=>String(b.leadDate||b.createdAt||'').localeCompare(String(a.leadDate||a.createdAt||'')));
         return sendJson(res,filtered);
       }
       if(method==='POST'){
         const now=new Date().toISOString();
         const lead=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
+        const existingLeads=await scan(T_LEADS).catch(()=>[]);
+        const sameName=mergeDuplicateLeadRows(existingLeads).find(row=>leadCanonicalNameKey(row)===leadCanonicalNameKey(lead));
+        if(sameName){
+          const next=mergeLeadRows([sameName,{...lead,id:sameName.id,createdAt:sameName.createdAt,leadDate:sameName.leadDate,updatedAt:now}]);
+          await put(T_LEADS,next.id,next);
+          return sendJson(res,{lead:next,followup:null,merged:true});
+        }
         await put(T_LEADS,lead.id,lead);
         const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
         if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
@@ -9387,6 +9454,26 @@ module.exports = async (req, res) => {
         const next=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
         await put(T_LEADS,leadId,next);
         return sendJson(res,next);
+      }
+    }
+    const leadFollowupIdM=path.match(/^\/lead-followups\/([^/]+)$/);
+    if(leadFollowupIdM){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const followupId=leadFollowupIdM[1];
+      if(method==='PUT'){
+        const oldFollowup=await get(T_LEAD_FOLLOWUPS,followupId).catch(()=>null);
+        if(!oldFollowup)return sendJson(res,{error:'跟进记录不存在'},404);
+        const leadId=cleanLeadText(oldFollowup.leadId);
+        const lead=await get(T_LEADS,leadId).catch(()=>null);
+        if(!lead)return sendJson(res,{error:'线索不存在'},404);
+        const followup=normalizeLeadFollowupRecord({...oldFollowup,...body,id:followupId,leadId,createdAt:oldFollowup.createdAt},{now:new Date().toISOString()});
+        await put(T_LEAD_FOLLOWUPS,followupId,followup);
+        const rows=(await scan(T_LEAD_FOLLOWUPS).catch(()=>[])).filter(row=>String(row.leadId||'')===String(leadId)).map(row=>String(row.id||'')===String(followupId)?followup:row);
+        const nextLead=applyLeadFollowupsSnapshot(lead,rows);
+        await put(T_LEADS,leadId,nextLead);
+        return sendJson(res,{followup,lead:nextLead});
       }
     }
     const leadFollowupsM=path.match(/^\/leads\/([^/]+)\/followups$/);
@@ -9553,11 +9640,15 @@ module.exports._test={
   normalizeLeadRecord,
   normalizeLeadFollowupRecord,
   applyLeadFollowupSnapshot,
+  applyLeadFollowupsSnapshot,
   normalizeLeadImportRows,
   buildLeadInitialFollowup,
   buildLeadDedupKey,
   normalizeLeadIdentityName,
   dedupeLeadRows,
+  leadCanonicalNameKey,
+  mergeLeadRows,
+  mergeDuplicateLeadRows,
   buildLeadImportPreviewRows,
   leadImportPreviewSummary,
   matchLeadToStudent,
