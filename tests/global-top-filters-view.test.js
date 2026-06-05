@@ -36,6 +36,12 @@ assert.match(source, /function applyGlobalCustomDateRange\(/, 'global custom dat
 assert.match(source, /function cancelGlobalCustomDateDraft\(/, 'global custom date draft should be cancellable when dropdown closes');
 assert.match(fnBody('setGlobalDateRangeFilter'), /if\(value==='自定义'\)[\s\S]*beginGlobalCustomDateDraft\(\)/, 'clicking custom should only begin a draft');
 assert.doesNotMatch(fnBody('setGlobalDateRangeFilter').match(/if\(value==='自定义'\)[\s\S]*?return;/)?.[0]||'', /saveGlobalDateRange|renderCurrentGlobalFilterPage|globalDateRangeFilterValue=value/, 'clicking custom should not save, render data, or change the real filter');
+assert.match(fnBody('beginGlobalCustomDateDraft'), /courtDateRangeStart='';[\s\S]*courtDateRangeEnd='';/, 'custom draft should open with no selected dates');
+assert.match(fnBody('beginGlobalCustomDateDraft'), /__globalDateRangeDraftViewAnchor/, 'custom draft should use its own temporary month anchor');
+assert.doesNotMatch(fnBody('beginGlobalCustomDateDraft'), /__courtDateRangeViewAnchor/, 'custom draft should not overwrite the real month anchor');
+assert.match(fnBody('globalTopDateMenuActive'), /if\(globalDateRangeDraftActive\)return label===globalDateRangeFilterValue/, 'custom draft should keep the real quick option checked');
+assert.match(fnBody('cancelGlobalCustomDateDraft'), /__globalDateRangeDraftViewAnchor=''/, 'closing custom draft should clear the temporary month anchor');
+assert.match(fnBody('clearGlobalDateRange'), /__globalDateRangeDraftViewAnchor=''[\s\S]*__courtDateRangeViewAnchor=''/, 'clearing custom date should reset stale month anchors');
 assert.match(fnBody('confirmCourtCustomDateRange'), /applyGlobalCustomDateRange\(\)/, 'global custom date should apply only after confirm');
 assert.match(fnBody('clearCourtCustomDateRange'), /clearGlobalDateRange\(/, 'global custom clear should return to all time');
 assert.match(fnBody('closeCourtTopDropdowns'), /cancelGlobalCustomDateDraft\(\)/, 'closing the global dropdown should cancel an unconfirmed draft');
@@ -56,7 +62,7 @@ assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'|'coaches'/, '
 
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopCampus'/, 'global campus filter should reuse the court-style dropdown');
 assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopDate'/, 'global time filter should reuse the court-style dropdown');
-assert.match(fnBody('renderGlobalTopFilters'), /globalDateRangeFilterValue==='自定义'[\s\S]*renderCourtDateRangePanel\(\)/, 'global time filter should reuse the court custom date panel');
+assert.match(fnBody('renderGlobalTopFilters'), /showCustomPanel[\s\S]*renderCourtDateRangePanel\(\)/, 'global time filter should reuse the court custom date panel');
 assert.match(fnBody('getFilteredSchedules'), /globalDateWithinRange\(s\.startTime\)/, 'schedule rows should follow the global time filter');
 assert.match(fnBody('getFilteredStudents'), /globalDateWithinRange\(studentGlobalDateValue\(s\)\)/, 'student rows should follow the global time filter');
 assert.match(fnBody('getFilteredLeads'), /globalDateWithinRange\(leadGlobalDateValue\(lead\)\)/, 'lead rows should follow the global time filter');

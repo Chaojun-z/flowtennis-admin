@@ -92,6 +92,15 @@ function selectCourtTopCampus(value,event){
 function courtDateFilterQuickOptions(){
   return ['全部','今日','本周','本月','自定义'];
 }
+function isGlobalDateRangeDraftContext(){
+  return typeof globalDateRangeDraftActive!=='undefined'&&globalDateRangeDraftActive&&globalTopFilterPages().includes(currentPage);
+}
+function courtDateRangeViewAnchor(){
+  return isGlobalDateRangeDraftContext()?String(window.__globalDateRangeDraftViewAnchor||'').trim():String(window.__courtDateRangeViewAnchor||'').trim();
+}
+function setCourtDateRangeViewAnchor(value){
+  if(isGlobalDateRangeDraftContext())window.__globalDateRangeDraftViewAnchor=value;else window.__courtDateRangeViewAnchor=value;
+}
 function formatCourtDateRangeValue(start,end){
   if(!start||!end)return '全部时间';
   return `${start} 至 ${end}`;
@@ -135,7 +144,7 @@ function renderCourtDateRangePanel(){
   return `<div class="court-date-range-title">选择日期范围</div><div class="court-date-range-head"><button type="button" class="court-date-nav" onclick="shiftCourtDateRangeView(-1,event)">‹</button><div class="court-date-range-month">${title}</div><button type="button" class="court-date-nav" onclick="shiftCourtDateRangeView(1,event)">›</button></div><div class="court-date-range-calendar"><div class="court-date-range-week">${days}</div><div class="court-date-range-grid">${cells}</div></div><div class="court-date-range-footer"><div class="court-date-range-hint">${esc(helperText)}</div><button type="button" class="court-date-range-clear" onclick="clearCourtCustomDateRange(event)">清空</button><button type="button" class="court-date-range-confirm ${canConfirm?'is-enabled':''}" ${canConfirm?'':'disabled'} onclick="confirmCourtCustomDateRange(event)">确定</button></div></div>`;
 }
 function resolveCourtDateRangeViewDate(){
-  const anchorText=String(window.__courtDateRangeViewAnchor||'').trim();
+  const anchorText=courtDateRangeViewAnchor();
   if(anchorText){
     const anchorDate=new Date(`${anchorText}T00:00:00`);
     if(!Number.isNaN(anchorDate.getTime()))return new Date(anchorDate.getFullYear(),anchorDate.getMonth(),1);
@@ -149,14 +158,14 @@ function shiftCourtDateRangeView(offset,event){
   if(event)event.stopPropagation();
   const base=resolveCourtDateRangeViewDate();
   const next=new Date(base.getFullYear(),base.getMonth()+offset,1);
-  window.__courtDateRangeViewAnchor=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-01`;
+  setCourtDateRangeViewAnchor(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-01`);
   const isGlobal=globalTopFilterPages().includes(currentPage);
   if(isGlobal)refreshGlobalTopFilters();else refreshCourtTopFilters();
   const dropdown=document.getElementById(isGlobal?'globalTopDate_dropdown':'courtTopDate_dropdown');
   if(dropdown)dropdown.classList.add('open');
 }
 function renderCourtDateRangeCalendarCells(viewDate){
-  const anchorText=String(window.__courtDateRangeViewAnchor||'').trim();
+  const anchorText=courtDateRangeViewAnchor();
   const anchorDate=anchorText?new Date(`${anchorText}T00:00:00`):null;
   const base=anchorDate&&!Number.isNaN(anchorDate.getTime())?anchorDate:viewDate;
   const year=base.getFullYear();
@@ -193,7 +202,7 @@ function pickCourtCustomDate(date,event){
   }else{
     courtDateRangeEnd=date;
   }
-  window.__courtDateRangeViewAnchor=`${date.slice(0,7)}-01`;
+  setCourtDateRangeViewAnchor(`${date.slice(0,7)}-01`);
   if(!isGlobal&&typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
   if(isGlobal)refreshGlobalTopFilters();else refreshCourtTopFilters();
   const dropdown=document.getElementById(isGlobal?'globalTopDate_dropdown':'courtTopDate_dropdown');

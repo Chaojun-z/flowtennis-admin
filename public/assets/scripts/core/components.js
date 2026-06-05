@@ -157,7 +157,7 @@ function beginGlobalCustomDateDraft(){
   courtDateRangeFilterValue='自定义';
   courtDateRangeStart='';
   courtDateRangeEnd='';
-  if(typeof today==='function')window.__courtDateRangeViewAnchor=`${today().slice(0,7)}-01`;
+  window.__globalDateRangeDraftViewAnchor=typeof today==='function'?`${today().slice(0,7)}-01`:'';
 }
 function applyGlobalCustomDateRange(){
   if(!courtDateRangeStart||!courtDateRangeEnd)return false;
@@ -165,18 +165,23 @@ function applyGlobalCustomDateRange(){
   globalDateRangeFilterValue='自定义';
   globalDateRangeStart=courtDateRangeStart;
   globalDateRangeEnd=courtDateRangeEnd;
+  window.__globalDateRangeDraftViewAnchor='';
+  window.__courtDateRangeViewAnchor=`${globalDateRangeStart.slice(0,7)}-01`;
   saveGlobalDateRange();
   return true;
 }
 function cancelGlobalCustomDateDraft(){
   if(!globalDateRangeDraftActive)return;
   globalDateRangeDraftActive=false;
+  window.__globalDateRangeDraftViewAnchor='';
   syncCourtDateRangeFromGlobal();
   refreshGlobalTopFilters();
 }
 function clearGlobalDateRange(event){
   if(event)event.stopPropagation();
   globalDateRangeDraftActive=false;
+  window.__globalDateRangeDraftViewAnchor='';
+  window.__courtDateRangeViewAnchor='';
   globalDateRangeFilterValue='全部';
   globalDateRangeStart='';
   globalDateRangeEnd='';
@@ -192,7 +197,8 @@ function saveGlobalDateRange(){
   syncCourtDateRangeFromGlobal();
 }
 function globalTopDateMenuActive(label){
-  if(label==='自定义')return globalDateRangeDraftActive||globalDateRangeFilterValue==='自定义';
+  if(globalDateRangeDraftActive)return label===globalDateRangeFilterValue;
+  if(label==='自定义')return globalDateRangeFilterValue==='自定义';
   return !globalDateRangeDraftActive&&label===globalDateRangeFilterValue;
 }
 function renderGlobalTopFilters(){

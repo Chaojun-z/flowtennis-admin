@@ -11,7 +11,7 @@ function fnBody(name){
   return source.slice(start, next === -1 ? source.length : next);
 }
 
-assert.match(html, /id="campusTabs"/, 'top bar should provide the shared campus tabs host');
+assert.match(source, /id="campusTabs"/, 'top bar should provide the shared campus tabs host');
 assert.match(fnBody('renderCourtTopFilters'), /renderCourtTopDropdown\('courtTopCampus'/, 'court top filters should render the campus dropdown');
 assert.match(fnBody('renderCourtTopFilters'), /renderCourtTopDropdown\('courtTopDate'/, 'court top filters should render the date dropdown');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='courts'[\s\S]*renderCourtTopFilters\(\)/, 'courts page should replace top campus tabs with custom top filters');
