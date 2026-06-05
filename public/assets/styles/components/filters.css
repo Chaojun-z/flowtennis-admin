@@ -1,0 +1,15 @@
+.tms-dropdown{position:relative;display:inline-block}
+.tms-dropdown.tms-dropdown-form{display:block;width:100%}
+.tms-dropdown-display{height:36px;box-sizing:border-box;min-width:90px;padding:0 12px;background-color:#FBF7F4;border:1px solid #E8DFD5;border-radius:6px;color:#A08E7E;font-size:13px;font-weight:400;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:none;user-select:none}
+.tms-dropdown.tms-dropdown-form .tms-dropdown-display{padding:0 12px;font-size:14px;width:100%;background-color:#FDF7F2;border-radius:8px;height:48px;color:#5C4D43}
+.tms-dropdown-display:hover{border-color:#E8DFD5}
+.tms-dropdown-display::after{content:"";width:16px;height:16px;margin-left:8px;flex:0 0 16px;background:url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8.00021 9.15122L4.42521 5.57622C4.36962 5.5202 4.30349 5.47573 4.23063 5.44538C4.15777 5.41504 4.07963 5.39941 4.00071 5.39941C3.92178 5.39941 3.84364 5.41504 3.77078 5.44538C3.69792 5.47573 3.63179 5.5202 3.57621 5.57622C3.52033 5.63179 3.47599 5.69786 3.44573 5.77062C3.41548 5.84339 3.3999 5.92142 3.3999 6.00022C3.3999 6.07903 3.41548 6.15705 3.44573 6.22982C3.47599 6.30258 3.52033 6.36865 3.57621 6.42422L7.57621 10.4242C7.63193 10.48 7.6981 10.5243 7.77094 10.5545C7.84378 10.5847 7.92186 10.6002 8.00071 10.6002C8.07956 10.6002 8.15763 10.5847 8.23047 10.5545C8.30331 10.5243 8.36948 10.48 8.42521 10.4242L12.4252 6.42422C12.5101 6.34063 12.568 6.23361 12.5917 6.11686C12.6153 6.00012 12.6035 5.87898 12.5579 5.76896C12.5122 5.65895 12.4347 5.56508 12.3354 5.49938C12.236 5.43368 12.1193 5.39916 12.0002 5.40022C11.9214 5.39996 11.8433 5.41539 11.7705 5.4456C11.6977 5.47582 11.6317 5.52022 11.5762 5.57622L8.00021 9.15022V9.15122Z' fill='%23A08E7E'/%3E%3C/svg%3E") center/16px 16px no-repeat}
+.tms-dropdown-menu{position:absolute;top:calc(100% + 4px);left:0;background-color:#FAF6F2;border:1px solid #EAE0D6;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:100;display:none;min-width:100%;padding:4px;box-sizing:border-box;max-height:250px;overflow-y:auto;overscroll-behavior:contain}
+.tms-dropdown.open-upward .tms-dropdown-menu{top:auto;bottom:calc(100% + 4px)}
+.tms-dropdown.open .tms-dropdown-menu{display:block}
+.tms-dropdown-item{padding:8px 12px;font-size:13px;color:#5C4D43;cursor:pointer;border-radius:4px;display:flex;align-items:center;white-space:nowrap}
+.tms-dropdown-item:hover{background-color:#F1EAE2}
+.tms-dropdown-item.active{background-color:#FCECE3;color:#C06031;font-weight:400}
+.tms-dropdown-item.active::before{content:"✓";margin-right:6px;font-weight:400;color:#C06031}
+.tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+.course-package-showcase-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}

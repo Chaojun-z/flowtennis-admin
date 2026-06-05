@@ -6,6 +6,7 @@ const css = [
   'assets/styles/components/data-cards.css',
   'assets/styles/components/search.css',
   'assets/styles/components/buttons.css',
+  'assets/styles/components/filters.css',
   'assets/styles/pages.css'
 ].map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
 
@@ -61,6 +62,7 @@ assert.match(source, /function renderStandardDataCards\(/, 'top data cards shoul
 assert.match(source, /assets\/styles\/components\/data-cards\.css/, 'index should load shared data card styles');
 assert.match(source, /assets\/styles\/components\/search\.css/, 'index should load shared search styles');
 assert.match(source, /assets\/styles\/components\/buttons\.css/, 'index should load shared button styles');
+assert.match(source, /assets\/styles\/components\/filters\.css/, 'index should load shared filter dropdown styles');
 assert.match(css, /\.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'top data card row should adapt from five to six cards using 200px minimum columns');
 assert.match(css, /\.tms-stat-card\{[^}]*height:100px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'top data cards should match the shared 200 by 100 visual standard');
 assert.match(css, /\.tms-stat-card\{[^}]*padding:18px 16px 14px 22px/, 'top data cards should keep 22px left content padding');
@@ -77,11 +79,15 @@ assert.match(css, /\.tms-search-input::placeholder\{[^}]*color:#A08E7E[^}]*font-
 assert.match(css, /\.tms-search-icon\{[^}]*width:16px[^}]*height:16px[^}]*color:#A08E7E/, 'shared search icon should use the standard size and color');
 assert.match(css, /\.tms-toolbar-right \.tms-btn-primary\{[^}]*width:104px[^}]*height:36px[^}]*background-color:#D19356[^}]*border-radius:6px[^}]*color:#FFFFFF[^}]*font-size:13px[^}]*font-weight:400/, 'toolbar add buttons should use the shared add button style');
 assert.match(css, /\.tms-toolbar-right \.tms-btn-primary::before\{[^}]*width:10px[^}]*height:10px/, 'toolbar add buttons should use the shared plus icon size');
+assert.match(css, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:90px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:6px[^}]*color:#A08E7E[^}]*font-size:13px[^}]*font-weight:400/, 'shared filter dropdown should use the standard field style');
+assert.match(css, /\.tms-dropdown-display::after\{[^}]*width:16px[^}]*height:16px[^}]*background:url/, 'shared filter dropdown should use the standard svg arrow icon');
+assert.match(css, /\.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*color:#C06031[^}]*font-weight:400/, 'selected filters should use the shared active state');
+assert.match(css, /\.course-package-showcase-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*color:#C06031[^}]*font-weight:400/, 'course package filters should reuse the shared active state');
 assert.match(css, /#page-students \.tms-pagination\{padding:4px 12px;font-size:11px/, 'student pager should be shorter with smaller text');
 assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{height:30px;padding:0 10px;font-size:11px;min-width:88px;font-weight:400/, 'student page size selector should be smaller and not bold');
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
-assert.match(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'selected student filters should use the active dropdown item orange');
+assert.doesNotMatch(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'student filter active state should come from the shared filter component');
 assert.match(css, /#page-students \.tms-sort-icon,#page-courts \.tms-sort-icon\{[^}]*width:7px[^}]*transform:translateY\(-1px\)/, 'student sort icon should be smaller and closer to the header text');
 assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*stuSortDir='desc'[\s\S]*stuSortKey='';stuSortDir='';/, 'student sortable headers should cycle asc, desc, and no sort');
 assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');

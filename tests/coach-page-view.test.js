@@ -3,7 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { html, appSource: source } = require('./helpers/read-index-bundle');
 
-const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
+const pagesCss = [
+  '../public/assets/styles/components/filters.css',
+  '../public/assets/styles/pages.css'
+].map(file=>fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);

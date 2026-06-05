@@ -8,6 +8,7 @@ const courseSource = [
 ].join('\n');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const filtersCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'filters.css'), 'utf8');
 const purchaseSectionStart = html.indexOf('id="page-purchases"');
 const purchaseSectionEnd = html.indexOf('id="page-entitlements"', purchaseSectionStart);
 const purchaseSection = html.slice(purchaseSectionStart, purchaseSectionEnd === -1 ? html.length : purchaseSectionEnd);
@@ -253,10 +254,8 @@ assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create m
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');
 assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wrapper\{width:300px/, 'package search should use the shared 300px width');
-assert.match(pagesCss, /#pkgTypeFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package type filter should default to 60px');
-assert.match(pagesCss, /#pkgCoachFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package coach filter should default to 60px');
-assert.match(pagesCss, /#pkgStatusFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package status filter should default to 60px');
-assert.match(pagesCss, /#pkgTimeBandFilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package time band filter should default to 60px');
+assert.match(filtersCss, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:90px/, 'package filters should inherit the shared 90px dropdown standard');
+assert.doesNotMatch(pagesCss, /#pkg(Type|Coach|Status|TimeBand)FilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package filters should not keep page-level 60px overrides');
 assert.match(pagesCss, /package-board-column\{[^}]*border:1px solid rgba\(255,255,255,\.05\)[^}]*border-radius:12px[^}]*background:rgba\(0,0,0,\.05\)[^}]*padding:12px/, 'package board columns should use the subtle dark slot style');
 assert.match(pagesCss, /#page-packages \.course-package-showcase\{height:calc\(100vh - var\(--topH\) - 44px\);min-height:0\}/, 'package board should stay within the visible page area');
 assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:hidden/, 'package board grid should not scroll vertically as a full page');
