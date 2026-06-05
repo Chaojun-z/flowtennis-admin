@@ -7,7 +7,10 @@ const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const componentsSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/components.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
-const css = fs.readFileSync(path.join(publicDir, 'assets/styles/pages.css'), 'utf8');
+const css = [
+  'assets/styles/pages.css',
+  'assets/styles/components/tables.css'
+].map(file=>fs.readFileSync(path.join(publicDir, file), 'utf8')).join('\n');
 const leadsSourcePath = path.join(publicDir, 'assets/scripts/pages/leads.js');
 const leadsSource = fs.existsSync(leadsSourcePath) ? fs.readFileSync(leadsSourcePath, 'utf8') : '';
 
@@ -104,7 +107,7 @@ assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'lead
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
-assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:10px\}/, 'leads table header should match the standard table height and font size');
+assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:12px\}/, 'leads table header should match the standard table font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
 assert.match(html, /style="width:240px"><button class="tms-sort-header" data-lead-sort="trialLessonAt"/, 'lead trial lesson column should be wide enough for the full date/time text');
 assert.match(html, /style="width:220px">咨询需求/, 'lead consult column should be wide enough for longer tags');
@@ -114,7 +117,7 @@ assert.match(css, /\.modal\.modal-court\.modal-leads-form \.mbody\{overflow:visi
 assert.match(css, /\.modal\.modal-court \.lead-form-row-4\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);gap:14px\}/, 'lead form should use four equal columns');
 assert.match(css, /\.modal\.modal-court \.lead-timeline-item\{[^}]*white-space:nowrap[^}]*overflow:hidden[^}]*text-overflow:ellipsis/, 'lead timeline should stay in one line inside the modal');
 assert.match(css, /#page-leads \.tms-empty-state[\s\S]*#page-leads \.tms-state-action/, 'leads empty, loading, and error states should have scoped standard styles');
-assert.match(css, /#page-leads \.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the standard compact sort style');
+assert.match(css, /\.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'leads sortable headers should use the shared sort style');
 assert.match(css, /#page-leads \.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)[^}]*overflow:visible/, 'lead stats should use the shared adaptive top data card grid');
 assert.match(leadsSource, /renderStandardDataCards\(cardData\)/, 'lead stats should render through the shared data card helper');
 

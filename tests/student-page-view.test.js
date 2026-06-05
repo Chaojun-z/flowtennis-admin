@@ -7,8 +7,9 @@ const css = [
   'assets/styles/components/search.css',
   'assets/styles/components/buttons.css',
   'assets/styles/components/filters.css',
+  'assets/styles/components/tables.css',
   'assets/styles/pages.css'
-].map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
+].filter(file=>fs.existsSync(path.join(__dirname, '../public', file))).map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
 
 assert.match(source, /function renderScheduleStudentSuggestions/, 'schedule modal should provide a dedicated student suggestion helper');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
@@ -63,6 +64,7 @@ assert.match(source, /assets\/styles\/components\/data-cards\.css/, 'index shoul
 assert.match(source, /assets\/styles\/components\/search\.css/, 'index should load shared search styles');
 assert.match(source, /assets\/styles\/components\/buttons\.css/, 'index should load shared button styles');
 assert.match(source, /assets\/styles\/components\/filters\.css/, 'index should load shared filter dropdown styles');
+assert.match(source, /assets\/styles\/components\/tables\.css/, 'index should load shared table styles');
 assert.match(css, /\.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'top data card row should adapt from five to six cards using 200px minimum columns');
 assert.match(css, /\.tms-stat-card\{[^}]*height:100px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'top data cards should match the shared 200 by 100 visual standard');
 assert.match(css, /\.tms-stat-card\{[^}]*padding:18px 16px 14px 22px/, 'top data cards should keep 22px left content padding');
@@ -94,7 +96,20 @@ assert.match(css, /#page-students \.tms-pagination \.tms-dropdown-display\{heigh
 assert.match(css, /#page-students \.tms-dropdown\.has-value \.tms-dropdown-display\{font-weight:400/, 'student selected pager dropdown should not be bold');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.doesNotMatch(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'student filter active state should come from the shared filter component');
-assert.match(css, /#page-students \.tms-sort-icon,#page-courts \.tms-sort-icon\{[^}]*width:7px[^}]*transform:translateY\(-1px\)/, 'student sort icon should be smaller and closer to the header text');
+assert.match(css, /\.tms-table-card\{[^}]*background-color:#E7DFD6[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'shared table shell should use the standard border and radius');
+assert.match(css, /\.tms-table th\{[^}]*height:42px[^}]*background-color:#F1E9E2[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'shared table header should use the standard size and color');
+assert.match(css, /\.tms-table td\{[^}]*height:42px[^}]*background-color:#FBF7F4[^}]*color:#887565[^}]*font-size:12px[^}]*font-weight:400/, 'shared table rows should use the standard size and color');
+assert.match(css, /\.tms-table th,.tms-table td\{[^}]*border-bottom:0\.5px solid #E7DFD6/, 'shared table separators should use the standard 0.5px line');
+assert.match(css, /\.tms-table tbody tr:hover td\{[^}]*background-color:#F6EFE8/, 'shared table hover should use the standard hover color');
+assert.match(css, /\.tms-table tbody tr\.is-selected td\{[^}]*background-color:#EFE7E2/, 'shared table selected rows should use the standard selected color');
+assert.match(css, /\.tms-action-cell \.tms-action-link\+\.tms-action-link\{margin-left:10px\}/, 'shared table action links should keep 10px spacing');
+assert.match(css, /\.tms-mini-bar\{[^}]*width:80px[^}]*height:16px/, 'shared mini progress bar should use the standard size');
+assert.match(css, /\.tms-mini-bar-fill\{[^}]*background-color:#DFBAA0[^}]*border-radius:3px 0 0 3px/, 'shared mini progress fill should use the standard color and left radius');
+assert.match(css, /\.tms-sort-icon\{[^}]*width:14px[^}]*height:14px/, 'shared sort icon should use the standard 14px size');
+assert.match(css, /\.tms-sort-icon \.tms-sort-up::before\{[^}]*M7\.19619 2\.9702[^}]*background-color:#BDAB9B/, 'shared sort icon should use the provided svg path');
+assert.match(css, /\.tms-sort-header\.asc \.tms-sort-up::before\{background-color:#887565\}/, 'ascending sort should highlight only the upper half');
+assert.match(css, /\.tms-sort-header\.desc \.tms-sort-down::before\{background-color:#887565\}/, 'descending sort should highlight only the lower half');
+assert.doesNotMatch(css, /\.tms-sort-up[^{}]*\{[^}]*border-bottom:4px solid/, 'shared sort icon should not use the old css triangle');
 assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*stuSortDir='desc'[\s\S]*stuSortKey='';stuSortDir='';/, 'student sortable headers should cycle asc, desc, and no sort');
 assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');
 assert.match(source, /function renderStudentTableLoading\([\s\S]*tms-table-loading-state[\s\S]*学员数据加载中/, 'student loading state should use the standard table loading style');

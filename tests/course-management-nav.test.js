@@ -299,7 +299,7 @@ assert.match(purchaseSection, /onclick="goPage\('packages'\)"[\s\S]*课包售卖
 assert.doesNotMatch(purchaseSection, /purDateFrom/, 'purchase page should remove start date filter');
 assert.doesNotMatch(purchaseSection, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
-assert.match(html, /＋ 课包购买/, 'purchase page should expose a direct package purchase entry button');
+assert.match(html, /openPurchaseEntryModal\(\)">课包购买/, 'purchase page should expose a direct package purchase entry button');
 assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:80px">学员<\/th><th style="width:110px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should narrow student and package columns');
 assert.doesNotMatch(html, /购买记录用于查账和追溯/, 'purchase page should remove the long audit explanation');
 assert.doesNotMatch(fnBody('purchasePackageListLabel'), /replace\(\s*\/\^1v\\d私教课/, 'purchase package column should keep the 1v1/1v2 prefix');

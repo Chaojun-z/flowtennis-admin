@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const tablesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'tables.css'), 'utf8');
 
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
@@ -17,7 +18,7 @@ assert.match(fnBody('toggleCourtDropdown'), /const container=dropdown\.closest\(
 assert.match(fnBody('toggleCourtDropdown'), /containerRect\.bottom/, 'dropdown should compare available space against the modal scroll body');
 assert.match(fnBody('toggleCourtDropdown'), /spaceBelow<menuHeight\+12&&spaceAbove>spaceBelow/, 'dropdown should open upward when modal space below is too small');
 assert.match(pagesCss, /\.tms-stats-row\s*\{/, 'court page should define scoped tms stats styles');
-assert.match(pagesCss, /\.tms-table-card\s*\{/, 'court page should define scoped tms table card styles');
+assert.match(tablesCss, /\.tms-table-card\s*\{/, 'court page should use shared table card styles');
 assert.match(pagesCss, /\.tms-mini-bar\s*\{/, 'court page should define scoped tms mini bar styles');
 assert.match(pagesCss, /\.tms-record-add-box\s*\{/, 'court page should define scoped modal form layout styles');
 assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped toolbar styles');
@@ -38,8 +39,8 @@ assert.match(html, /data-court-sort="balance"[\s\S]*setCourtSort\('balance'\)[\s
 assert.match(html, /data-court-sort="validUntil"[\s\S]*setCourtSort\('validUntil'\)[\s\S]*会员到期/, 'court table should keep expiry sorting');
 assert.match(html, /courtSortKey='lastBookingDate',courtSortDir='desc'/, 'court table should default to latest booking descending');
 assert.match(fnBody('setCourtSort'), /courtSortKey='';courtSortDir='desc'/, 'court sorting should cycle back to no sort');
-assert.match(pagesCss, /#page-students \.tms-sort-header,#page-courts \.tms-sort-header/, 'court sort header should reuse the student sort button style');
-assert.match(pagesCss, /#page-students \.tms-sort-up,#page-courts \.tms-sort-up/, 'court sort icon should reuse the student triangle icon');
+assert.match(tablesCss, /\.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'court sort header should reuse the shared sort button style');
+assert.match(tablesCss, /\.tms-sort-icon\{[^}]*width:14px[^}]*height:14px/, 'court sort icon should reuse the shared svg icon');
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should freeze the action header');
 assert.match(html, /会员账户[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
@@ -58,7 +59,7 @@ assert.match(html, /class="tms-sticky-l"/, 'court page should freeze the left na
 assert.match(html, /class="tms-sticky-r"/, 'court page should freeze the right action column');
 assert.match(pagesCss, /#page-courts \.tms-table th\.tms-sticky-l\s*\{[^}]*top:0[^}]*left:0[^}]*z-index:140/s, 'court left header should stay fixed on both horizontal and vertical scroll');
 assert.match(pagesCss, /#page-courts \.tms-table th\.tms-sticky-r\s*\{[^}]*top:0[^}]*right:0[^}]*z-index:140/s, 'court right header should stay fixed on both horizontal and vertical scroll');
-assert.match(pagesCss, /#page-courts \.tms-table th\s*\{[^}]*background-color:#FDF7F2/s, 'court sticky and normal headers should share the same background');
+assert.match(tablesCss, /\.tms-table th\{[^}]*background-color:#F1E9E2/s, 'court sticky and normal headers should share the standard header background');
 assert.match(pagesCss, /#page-courts \.tms-table tbody tr:hover td\.tms-sticky-l[\s\S]*#page-courts \.tms-table tbody tr:hover td\.tms-sticky-r/s, 'court sticky columns should join whole-row hover');
 assert.match(html, /class="tms-action-link"/, 'court page should render action links with the scoped visual style');
 assert.match(html, /function openCourtModal[\s\S]*tms-section-header[\s\S]*tms-form-row/, 'court edit modal should use the upgraded local form layout');
@@ -87,7 +88,7 @@ assert.match(fnBody('openCourtFinanceModal'), /court-finance-summary-grid[\s\S]*
 assert.doesNotMatch(fnBody('openCourtFinanceModal'), /财务摘要(?:(?!流水录入)[\s\S])*<input[^>]+readonly/, 'court finance summary should not render readonly values as inputs');
 assert.match(pagesCss, /\.modal\.modal-court \.court-finance-summary-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'court finance summary should render four columns per row');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
-assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrType','类型'[\s\S]*flex:0 0 96px[\s\S]*renderCourtDropdownHtml\('nrCategory','项目'[\s\S]*flex:0 0 118px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付'/s, 'court finance modal should narrow the first three selectors to avoid stacking');
+assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*renderCourtDropdownHtml\('nrType','交易类型'[\s\S]*flex:0 0 128px[\s\S]*renderCourtDropdownHtml\('nrCategory','业务类型'[\s\S]*flex:0 0 128px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付方式'/s, 'court finance modal should keep the first three selectors compact enough to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
@@ -118,12 +119,12 @@ assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
 assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
-assert.match(fnBody('renderCourtStatsCards'), /订场用户结构[\s\S]*场地利用大盘[\s\S]*客群次数对比盘[\s\S]*订场财务大盘[\s\S]*客群金额对比盘/, 'court stats should show the requested five grouped dashboards');
+assert.match(fnBody('renderCourtStatsCards'), /订场用户结构[\s\S]*场地利用[\s\S]*课群次数对比[\s\S]*订场财务大盘[\s\S]*课群金额对比盘/, 'court stats should show the requested five grouped dashboards');
 assert.match(html, /court-stat-percent/, 'court stats should render percentages with a smaller muted style');
-assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'court stats should show five cards in one row');
-assert.match(pagesCss, /#page-courts \.court-split-value>span\{font-size:17px/, 'court stat main numbers should fit five cards in one row');
+assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'court stats should use the shared adaptive card grid');
+assert.match(pagesCss, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{font-size:21px/, 'court stat main numbers should use the shared stat number size');
 assert.match(pagesCss, /#page-courts \.court-stat-slash\{[^}]*font-size:10px[^}]*font-weight:400/, 'court stat slash should match caption slash weight and size');
-assert.match(pagesCss, /#page-courts \.court-stat-percent\{[^}]*font-size:9px[^}]*color:#8C7B6E/, 'court stat percentages should be smaller and muted');
+assert.match(pagesCss, /#page-courts \.court-stat-percent\{[^}]*font-size:10px[^}]*color:#A19080/, 'court stat percentages should use the shared small metric color');
 assert.match(html, /function courtMembershipTierLabel\(/, 'court membership display should use membership tier label');
 assert.match(html, /function courtMembershipTierTagClass\(/, 'court member tier should use tier-specific tag colors');
 assert.match(fnBody('renderCourts'), /m\.tierLabel&&m\.tierLabel!=='-'\?`<span class="tms-tag \$\{memberTagClass\}">/, 'current membership should render empty state without a tag');
@@ -136,7 +137,7 @@ assert.match(html, /data-finance-field="course"/, 'court course-only fields shou
 assert.match(html, /内部占用/, 'court finance modal should support internal occupancy records');
 assert.match(html, /领导打球[\s\S]*活动[\s\S]*测试教学[\s\S]*其他/, 'internal occupancy should provide reason options');
 assert.match(html, /data-finance-field="internal"/, 'court finance modal should scope internal-only fields');
-assert.match(fnBody('renderCourtFinanceFields'), /const isInternal=type==='消费'&&category==='内部占用';/, 'court finance field visibility should recognize internal occupancy');
+assert.match(fnBody('renderCourtFinanceFields'), /const isInternal=type==='消耗'&&\['内部使用','领导订场'\]\.includes\(category\);/, 'court finance field visibility should recognize internal occupancy');
 assert.match(fnBody('courtFinanceLocal'), /const isInternal=String\(h\.category\|\|''\)\.includes\('内部占用'\);/, 'court finance summary should detect internal occupancy rows');
 assert.match(fnBody('courtFinanceLocal'), /else if\(h\.type==='消费'\)\{if\(isInternal\)return;/, 'internal occupancy should not count as direct income or spending totals');
 assert.match(fnBody('courtFinanceLocal'), /const hist=currentHistory\.length\?currentHistory:courtBaseHistoryForSave\(c\);/, 'court finance summary should reuse legacy opening history when old records have no explicit history');
