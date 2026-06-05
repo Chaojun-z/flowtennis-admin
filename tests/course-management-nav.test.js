@@ -25,7 +25,7 @@ function fnBody(name){
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>/, 'sidebar should group resource pages');
-assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNIS FLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
+assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNISFLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
 assert.match(html, /function renderTopbarShell\(/, 'topbar should render from the shared shell component');
 assert.doesNotMatch(html, /· TENNIS · FLOW ·/, 'brand subline should not keep side dots');
 
@@ -53,6 +53,8 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
 });
 assert.match(pagesCss, /--shell-sidebar-icon-color:#C5B0A2/, 'inactive sidebar icon color should match design');
 assert.match(pagesCss, /--shell-sidebar-active-icon-color:#EFE7E2/, 'active sidebar icon color should match design');
+assert.match(pagesCss, /\.sb-item\{[^}]*height:40px/, 'sidebar selected row height should be tightened to 40px');
+assert.match(pagesCss, /\.sb-item\.active::before\{[^}]*left:0/, 'active sidebar bar should sit inside the selected row');
 assert.match(pagesCss, /\.topbar\{[^}]*background:var\(--shell-app-bg\)[^}]*border-bottom:1px solid var\(--shell-topbar-divider\)/, 'topbar should use shared shell colors');
 assert.match(pagesCss, /\.content\{[^}]*background:var\(--shell-app-bg\)/, 'content area should use shared shell background');
 

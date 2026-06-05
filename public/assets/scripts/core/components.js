@@ -1,7 +1,7 @@
 // Shared UI component entry. Start with the global shell and top filters.
 const SHELL_THEME={
   brandName:'网球兄弟',
-  brandSubline:'TENNIS FLOW',
+  brandSubline:'TENNISFLOW',
   brandColor:'#FBF7F4',
   brandSublineColor:'#CAB6A8',
   sidebarBg:'#805435',
