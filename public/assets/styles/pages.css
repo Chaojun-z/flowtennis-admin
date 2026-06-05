@@ -853,8 +853,8 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .schedule-advanced{border:1px solid #D9D0C7;border-radius:10px;padding:0 14px;margin:4px 0 16px;background:rgba(253,247,242,.55)}
 .schedule-advanced summary{cursor:pointer;height:42px;display:flex;align-items:center;font-size:13px;color:#5C4D43;font-weight:600}
 .schedule-advanced[open]{padding-bottom:14px}
-.schedule-action-cell{white-space:nowrap;width:118px!important;padding-left:0!important;padding-right:10px!important}
-.schedule-action-cell .tms-action-link{margin-left:2px;padding-left:4px;padding-right:4px}
+.schedule-action-cell{white-space:nowrap;width:168px!important;padding-left:8px!important;padding-right:12px!important;gap:8px!important}
+.schedule-action-cell .tms-action-link{margin-left:0;padding-left:6px;padding-right:6px}
 .modal.modal-court .tms-record-add-box .tms-form-row{gap:12px;flex-wrap:wrap}
 .modal.modal-court .tms-record-add-box .tms-dropdown-display,.modal.modal-court .tms-record-add-box .tms-form-control{font-size:12px}
 .modal.modal-court .tms-checkbox-matrix{font-size:10px}
@@ -874,10 +874,12 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court .schedule-field-fee-toggle-control{display:flex;align-items:center;gap:10px;white-space:normal;line-height:1.4}
 .modal.modal-court .schedule-field-fee-note-row{margin-bottom:0}
 .modal.modal-court .schedule-field-fee-note{width:100%;min-height:54px;line-height:1.5;resize:vertical}
-.modal.modal-court .schedule-time-course-row{align-items:flex-end;gap:18px}
-.modal.modal-court .schedule-time-field{flex:0 0 452px;min-width:0}
+.modal.modal-court .schedule-time-course-row,.modal.modal-court .schedule-time-row{align-items:flex-end;gap:18px}
+.modal.modal-court .schedule-time-field{flex:1 1 auto;min-width:0}
 .modal.modal-court .schedule-course-field{flex:1;min-width:180px}
 .modal.modal-court .schedule-time-range{gap:8px}
+.modal.modal-court .schedule-repeat-row{align-items:flex-end;gap:18px}
+.modal.modal-court .schedule-repeat-field{flex:1 1 auto;min-width:0}
 .modal.modal-court .schedule-location-row{align-items:flex-end;gap:14px}
 .modal.modal-court .schedule-repeat-control.is-disabled{pointer-events:none;background:#F5EFE8;color:#8C7B6E;opacity:.72}
 .modal.modal-court .schedule-late-row{margin-top:2px}

@@ -98,7 +98,11 @@ assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/,
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
 assert.doesNotMatch(html, /function syncPackageProductMeta/, 'package modal should not sync product metadata anymore');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_productId|课程产品|课程类型跟随课程产品/, 'package modal should no longer require course product selection');
-assert.match(fnBody('openPackageModal'), /基础属性[\s\S]*学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*规格与价格[\s\S]*课时[\s\S]*价格[\s\S]*上课时间与效期[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*教练和场地[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should follow the standardized package creation layout');
+assert.match(fnBody('openPackageModal'), /基础属性[\s\S]*学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*规格与价格[\s\S]*pkg_lessons_label[\s\S]*价格[\s\S]*上课时间与效期[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*教练和场地[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should follow the standardized package creation layout');
+assert.match(fnBody('openPackageModal'), /courseType==='小班课'\?'次数':'课时'/, 'small group package modal should label package amount as count');
+assert.match(fnBody('openPackageModal'), /10\$\{packageUnitLabel\}[\s\S]*20\$\{packageUnitLabel\}/, 'package shortcut chips should follow the current package unit label');
+assert.match(fnBody('standardPackageLabel'), /normalizeCourseType\(p\.courseType\|\|p\.packageCourseType\|\|p\.type\)==='小班课'\?'次':'课时'/, 'small group package labels should show count instead of lesson hours');
+assert.match(fnBody('packageListSubtitle'), /normalizeCourseType\(p\.courseType\|\|p\.packageCourseType\|\|p\.type\)==='小班课'\?'次':'课时'/, 'small group package cards should show count instead of lesson hours');
 assert.doesNotMatch(fnBody('openPackageModal'), /有效天数|pkg_validDays/, 'package modal should hide valid days');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_type'/, 'package modal should allow direct course type selection');
 assert.match(fnBody('openPackageModal'), /renderCourtDropdownHtml\('pkg_audience'/, 'package modal should allow adult or youth selection');
@@ -107,7 +111,7 @@ assert.match(fnBody('openPackageModal'), /pkg_experienceType/, 'package modal sh
 assert.match(fnBody('openPackageModal'), /pkg_smallClassType/, 'package modal should expose a second-level selector for small group packages');
 assert.match(courseSource, /function applySmallClassPackagePreset\(/, 'package modal should define small group package presets');
 assert.match(fnBody('applySmallClassPackagePreset'), /bootcamp:\{price:1999,lessons:10,timeBand:'黄金时段',maxStudents:'4'\}/, 'small group bootcamp preset should default to 10 lessons');
-assert.match(fnBody('openPackageModal'), /data-lessons="10"[\s\S]*10课时[\s\S]*data-lessons="20"[\s\S]*20课时/, 'package modal should expose 10 and 20 lesson shortcuts');
+assert.match(fnBody('openPackageModal'), /data-lessons="10"[\s\S]*10\$\{packageUnitLabel\}[\s\S]*data-lessons="20"[\s\S]*20\$\{packageUnitLabel\}/, 'package modal should expose 10 and 20 package amount shortcuts');
 assert.doesNotMatch(fnBody('openPackageModal'), /data-lessons="6"[\s\S]*6课时/, 'package modal should not force six lesson packages');
 assert.doesNotMatch(courseSource, /小班单次价格必须是 260 元|训练营价格必须是 1999 元|随到随学价格必须是 1499 元/, 'small group package prices should not be locked to preset amounts');
 assert.match(fnBody('savePackage'), /freeAbsenceLimit[\s\S]*smallClassType==='bootcamp'\?1:0/, 'small group bootcamp package should persist one free absence');
@@ -139,7 +143,7 @@ assert.match(fnBody('openPackageModal'), /tms-checkbox-matrix purchase-coach-pic
 assert.match(fnBody('packageCoachChecks'), /pkg-coach-cb/, 'package allowed coach checks should keep the save selector class');
 assert.match(html, /function applyPackageTimeBandPreset/, 'package modal should apply simple default windows for time band presets');
 assert.match(html, /function setPackageLessonShortcut\(/, 'package modal should provide lesson shortcuts');
-assert.match(html, /10课时[\s\S]*20课时/, 'package modal should expose lesson shortcut chips');
+assert.match(fnBody('openPackageModal'), /10\$\{packageUnitLabel\}[\s\S]*20\$\{packageUnitLabel\}/, 'package modal should expose package amount shortcut chips');
 assert.doesNotMatch(html, /50课时/, 'package modal should leave non-standard lesson counts to manual input');
 assert.match(html, /黄金时段'[\s\S]*16:00[\s\S]*22:00[\s\S]*09:00[\s\S]*22:00/, 'prime preset should be weekday evening plus weekend daytime');
 assert.match(html, /非黄金时段'[\s\S]*09:00[\s\S]*16:00/, 'non-prime preset should be weekday daytime');

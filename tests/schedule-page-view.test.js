@@ -77,7 +77,9 @@ assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return true/, 'all camp
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
-assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*消课节数[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
+assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*deductionLabel[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
+assert.match(fnBody('openScheduleModal'), /courseTypeForm\.courseType==='小班课'\?'消耗次数':'消课节数'/, 'small group package schedules should label the deduction field as count');
+assert.match(fnBody('openScheduleModal'), /tms-form-row schedule-time-row[\s\S]*scheduleTimeRangeControls[\s\S]*tms-form-row schedule-repeat-row[\s\S]*sch_repeatEnabled/, 'schedule modal should keep date/time and repeat controls on separate rows');
 assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
 assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
 assert.match(fnBody('syncScheduleFilterOptions'), /PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule course type filter should use the shared course type source');
@@ -94,6 +96,8 @@ assert.match(fnBody('openScheduleModal'), /schedule-late-row[\s\S]*full-width[\s
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-late-field">\$\{lateSettings\}/, 'late settings should not expand inside the coach row field');
 assert.match(fnBody('openScheduleModal'), /schedule-repeat-control \$\{id\?'is-disabled':''\}/, 'edit-mode repeat scheduling should render as visibly disabled');
 assert.match(styles, /\.modal\.modal-court \.schedule-repeat-control\.is-disabled[\s\S]*pointer-events:none/, 'disabled repeat scheduling should be non-clickable');
+assert.match(styles, /\.modal\.modal-court \.schedule-time-field\{flex:1 1 auto/, 'schedule time field should use flexible width instead of forcing cramped fixed controls');
+assert.match(styles, /\.modal\.modal-court \.schedule-repeat-row\{align-items:flex-end;gap:18px\}/, 'schedule repeat controls should have their own row spacing');
 assert.doesNotMatch(fnBody('openScheduleModal'), /上课地点|排课会校验时间冲突|取消勾选的人本次记为缺勤|按周生成多节课/, 'schedule modal should remove the extra notice, separate location section, and old repeat copy');
 assert.match(fnBody('openScheduleModal'), /选择学员 \*<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*归属：[\s\S]*上次上课：/, 'schedule student metadata should include campus and last lesson inline');

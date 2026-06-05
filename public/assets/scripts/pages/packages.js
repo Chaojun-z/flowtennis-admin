@@ -25,7 +25,8 @@ function syncPackageFilterOptions(){
 }
 function packageDisplayTitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  return [packageCoreClassLabel(p),lessons?`${lessons}课时`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
+  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  return [packageCoreClassLabel(p),lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
 }
 function renderPackageTopFilters(){
   if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function')return '';
@@ -60,7 +61,8 @@ function packageListTitle(p){
 }
 function packageListSubtitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}课时`:'' ].filter(Boolean).join(' · ');
+  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}${unit}`:'' ].filter(Boolean).join(' · ');
 }
 function packageDisplayShortId(p){
   const raw=String(p?.id||'');
@@ -480,6 +482,12 @@ function setPackageLessonShortcut(value){
   if(input)input.value=value;
   document.querySelectorAll('.package-lesson-chip').forEach(btn=>btn.classList.toggle('active',String(btn.dataset.lessons)===String(value)));
 }
+function refreshPackageLessonUnitLabel(){
+  const unit=document.getElementById('pkg_type')?.value==='小班课'?'次数':'课时';
+  const label=document.getElementById('pkg_lessons_label');
+  if(label)label.textContent=unit;
+  document.querySelectorAll('.package-lesson-chip').forEach(btn=>{btn.textContent=`${btn.dataset.lessons}${unit}`;});
+}
 function applySmallClassPackagePreset(){
   const type=document.getElementById('pkg_type')?.value||'';
   if(type!=='小班课')return;
@@ -516,6 +524,7 @@ function syncPackageClassSize(){
     const value=experienceEl.value||'私教体验课';
     setCourtDropdownValue('pkg_experienceType',value,value);
   }
+  refreshPackageLessonUnitLabel();
 }
 function applyPackageTimeBandPreset(value){
   const rows=packageTimeBandPresetWindows(value||document.getElementById('pkg_timeBand')?.value||'全天');
@@ -541,6 +550,7 @@ function openPackageModal(id,presetProductId=''){
   const smallClassOptions=[{value:'single',label:'单次'},{value:'bootcamp',label:'训练营'},{value:'dropin',label:'随到随学'}];
   const ownerCoachOptions=[{value:'',label:'— 未分配 —'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const timeBandOptions=[{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金时段'},{value:'非黄金时段',label:'非黄金时段'}];
+  const packageUnitLabel=courseType==='小班课'?'次数':'课时';
   const body=`
     <div class="tms-section-header" style="margin-top:0;">基础属性</div>
       ${locked?'<div class="inline-help">该课包已有购买记录，价格、课时、人数、校区和可上课教练已锁定。</div>':''}
@@ -554,7 +564,7 @@ function openPackageModal(id,presetProductId=''){
       </div>
     <div class="tms-section-header">规格与价格</div>
       <div class="tms-form-row package-spec-row">
-        <div class="tms-form-item"><label class="tms-form-label">课时</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10课时</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20课时</button></div></div>
+        <div class="tms-form-item"><label class="tms-form-label" id="pkg_lessons_label">${packageUnitLabel}</label><input class="finput tms-form-control" id="pkg_lessons" type="number" value="${rv(p,'lessons',10)}"><div class="package-lesson-shortcuts"><button type="button" class="package-lesson-chip" data-lessons="10" onclick="setPackageLessonShortcut(10)">10${packageUnitLabel}</button><button type="button" class="package-lesson-chip" data-lessons="20" onclick="setPackageLessonShortcut(20)">20${packageUnitLabel}</button></div></div>
         <div class="tms-form-item"><label class="tms-form-label">价格</label><input class="finput tms-form-control" id="pkg_price" type="number" value="${rv(p,'price',0)}"></div>
       </div>
     <div class="tms-section-header">上课时间与效期</div>
@@ -604,6 +614,7 @@ function openPackageModal(id,presetProductId=''){
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button>${id&&String(p.status||'active')!=='inactive'?`<button class="tms-btn tms-btn-danger" onclick="deactivatePackage('${p.id}')">下架</button>`:''}<button class="tms-btn tms-btn-primary btn-save" onclick="savePackage()">保存</button>`;
   setCourtModalFrame(id?'编辑课包':'创建课包',body,footer,'modal-wide modal-package-edit');
   syncPackageClassSize();
+  refreshPackageLessonUnitLabel();
   if(p&&document.getElementById('pkg_price'))document.getElementById('pkg_price').value=rv(p,'price',0);
   setPackageLessonShortcut(rv(p,'lessons',10));
   applyPackageTimeBandPreset(rv(p,'timeBand','全天'));

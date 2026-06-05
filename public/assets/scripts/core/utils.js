@@ -239,7 +239,8 @@ function packageStatusText(p={}){
 function standardPackageLabel(p={},includeStatus=false){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
-  const parts=[packageCoreClassLabel(p),audience,lessons?`${lessons}课时`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean);
+  const unit=normalizeCourseType(p.courseType||p.packageCourseType||p.type)==='小班课'?'次':'课时';
+  const parts=[packageCoreClassLabel(p),audience,lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean);
   const status=includeStatus?packageStatusText(p):'';
   if(status)parts.push(status);
   return parts.join(' · ');
