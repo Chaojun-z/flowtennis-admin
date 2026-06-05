@@ -164,7 +164,7 @@ assert.match(
 
 assert.match(
   source,
-  /campusTabs'\)\.style\.display=\[[^\]]*'coachops'/,
+  /campusTabs'\)\.style\.display=[\s\S]*'coachops'/,
   'coach ops should show the shared top campus filter'
 );
 

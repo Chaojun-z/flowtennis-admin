@@ -373,6 +373,9 @@ function leadInDateRange(lead,range){
   if(end&&date>end)return false;
   return true;
 }
+function leadGlobalDateValue(lead){
+  return leadDateOnly(lead?.leadDate,lead)||lead?.createdAt||lead?.updatedAt||lead?.lastFollowupAt;
+}
 function renderLeadDateScopeControls(){
   document.querySelectorAll('#leadDateScopeBar [data-lead-date-preset]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.leadDatePreset===leadDatePreset);
@@ -486,6 +489,7 @@ function getFilteredLeads(){
   const campusValue=campus;
   return leadRows().filter(lead=>{
     if(!leadInDateRange(lead,getLeadDateFilterRange()))return false;
+    if(!globalDateWithinRange(leadGlobalDateValue(lead)))return false;
     if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName,lead?.source,lead?.consultType,lead?.owner,lead?.profileNote))return false;
     if(sourceValue&&String(lead?.source||'')!==sourceValue)return false;
     if(consultValue&&String(lead?.consultType||'')!==consultValue)return false;

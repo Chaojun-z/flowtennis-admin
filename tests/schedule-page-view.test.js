@@ -60,7 +60,7 @@ assert.match(source, /function scheduleEntitlementUnavailableReason\(/, 'schedul
 assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementUnavailableReason\(res\.options\|\|\[\]\)/, 'schedule package picker should show why packages are unavailable');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /hint\.textContent=selected\?[^;]+:'';/, 'schedule package picker should not hide unavailable package reasons behind empty hint text');
 assert.match(fnBody('openScheduleDetail'), /教练迟到处理/, 'schedule detail should show coach late settlement info');
-assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\[[^\]]*'schedule'/, 'schedule page should show the global campus filter tabs');
+assert.match(source, /globalTopFilterPages\(\)\.includes\(pg\)[\s\S]*\?'flex':'none'/, 'schedule page should show the global campus filter tabs');
 assert.match(source, /if\(currentPage==='schedule'\)renderSchedule\(\);/, 'global campus filter should rerender the schedule page');
 assert.match(source, /schCoachFilterHost/, 'schedule toolbar should expose a coach filter host');
 assert.match(source, /function syncScheduleFilterOptions\([\s\S]*schCoachFilter[\s\S]*教练/, 'schedule filters should use coach instead of in-toolbar campus');

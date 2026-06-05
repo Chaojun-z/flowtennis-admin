@@ -181,8 +181,9 @@ function pickCourtCustomDate(date,event){
     courtDateRangeEnd=date;
   }
   window.__courtDateRangeViewAnchor=`${date.slice(0,7)}-01`;
-  refreshCourtTopFilters();
-  const dropdown=document.getElementById('courtTopDate_dropdown');
+  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
+  if(globalTopFilterPages().includes(currentPage))refreshGlobalTopFilters();else refreshCourtTopFilters();
+  const dropdown=document.getElementById(globalTopFilterPages().includes(currentPage)?'globalTopDate_dropdown':'courtTopDate_dropdown');
   if(dropdown)dropdown.classList.add('open');
 }
 function clearCourtCustomDateRange(event){
@@ -190,8 +191,9 @@ function clearCourtCustomDateRange(event){
   courtDateRangeStart='';
   courtDateRangeEnd='';
   courtDateRangeFilterValue='自定义';
-  refreshCourtTopFilters();
-  const dropdown=document.getElementById('courtTopDate_dropdown');
+  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
+  if(globalTopFilterPages().includes(currentPage))refreshGlobalTopFilters();else refreshCourtTopFilters();
+  const dropdown=document.getElementById(globalTopFilterPages().includes(currentPage)?'globalTopDate_dropdown':'courtTopDate_dropdown');
   if(dropdown)dropdown.classList.add('open');
 }
 function confirmCourtCustomDateRange(event){
@@ -199,8 +201,14 @@ function confirmCourtCustomDateRange(event){
   if(!courtDateRangeStart||!courtDateRangeEnd)return;
   courtDateRangeFilterValue='自定义';
   courtPage=1;
-  refreshCourtTopFilters();
-  renderCourts();
+  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
+  if(globalTopFilterPages().includes(currentPage)){
+    refreshGlobalTopFilters();
+    renderCurrentGlobalFilterPage();
+  }else{
+    refreshCourtTopFilters();
+    renderCourts();
+  }
   closeCourtTopDropdowns();
 }
 function resolveCourtDatePresetRange(value){
@@ -232,6 +240,7 @@ function onCourtDateRangeFilterChange(value,event){
       courtDateRangeEnd='';
       window.__courtDateRangeViewAnchor=`${preset.startDate.slice(0,7)}-01`;
     }
+    if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(false);
     refreshCourtTopFilters();
     const dropdown=document.getElementById('courtTopDate_dropdown');
     if(dropdown)dropdown.classList.add('open');
@@ -248,6 +257,7 @@ function onCourtDateRangeFilterChange(value,event){
     window.__courtDateRangeViewAnchor=`${preset.startDate.slice(0,7)}-01`;
   }
   courtPage=1;
+  if(typeof syncGlobalDateRangeFromCourt==='function')syncGlobalDateRangeFromCourt(true);
   refreshCourtTopFilters();
   renderCourts();
   closeCourtTopDropdowns();

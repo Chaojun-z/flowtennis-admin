@@ -1,6 +1,12 @@
-function renderCoaches(){
+function coachGlobalDateValue(c){
+  return c.hireDate||c.createdAt||c.updatedAt||'';
+}
+function getFilteredCoaches(){
   const q=(document.getElementById('coachSearch')?.value||'').toLowerCase();
-  const d=coaches.filter(c=>(campus==='all'||sameCampusValue(c.campus,campus))&&searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
+  return coaches.filter(c=>(campus==='all'||sameCampusValue(c.campus,campus))&&globalDateWithinRange(coachGlobalDateValue(c))&&searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
+}
+function renderCoaches(){
+  const d=getFilteredCoaches();
   const tbody=document.getElementById('coachTbody');if(!tbody)return;
   tbody.innerHTML=d.length?d.map(c=>{
     const statusText=c.status==='inactive'?'离职':'在职';

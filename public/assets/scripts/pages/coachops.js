@@ -982,7 +982,7 @@ function financeBookingOverviewRows(){
 function financeRevenueRows(){
   const from=document.getElementById('coachOpsRevenueFrom')?.value||'';
   const to=document.getElementById('coachOpsRevenueTo')?.value||'';
-  return financeRevenueRowsByFilters(financeRevenueBaseRows().filter(row=>coachOpsDateWithinRange(row.purchaseDate,from,to)))
+  return financeRevenueRowsByFilters(financeRevenueBaseRows().filter(row=>coachOpsDateWithinRange(row.purchaseDate,from,to)&&globalDateWithinRange(row.purchaseDate)))
     .sort((a,b)=>String(b.purchaseDate||'').localeCompare(String(a.purchaseDate||'')));
 }
 function financeRevenuePageNumbers(page,pages){
@@ -1023,7 +1023,7 @@ function renderFinanceRevenueReport(){
   if(!body||!stats)return;
   const from=document.getElementById('coachOpsRevenueFrom')?.value||'';
   const to=document.getElementById('coachOpsRevenueTo')?.value||'';
-  const baseRows=financeRevenueBaseRows().filter(row=>coachOpsDateWithinRange(row.purchaseDate,from,to));
+  const baseRows=financeRevenueBaseRows().filter(row=>coachOpsDateWithinRange(row.purchaseDate,from,to)&&globalDateWithinRange(row.purchaseDate));
   renderFinanceRevenueFilterDropdowns(baseRows);
   const rows=financeRevenueRows();
   const total=rows.length;
@@ -1094,7 +1094,7 @@ function financeRecognizedRows(){
   const from=document.getElementById('coachOpsConsumeFrom')?.value||'';
   const to=document.getElementById('coachOpsConsumeTo')?.value||'';
   return financeUnifiedRows().filter(row=>{
-    if(!coachOpsDateWithinRange(row.businessDate,from,to))return false;
+    if(!coachOpsDateWithinRange(row.businessDate,from,to)||!globalDateWithinRange(row.businessDate))return false;
     if(row.differenceReason)return false;
     if(!Number(row.recognizedRevenueDelta))return false;
     return searchHit(q,row.customer,row.businessType,row.paymentChannel,row.notes,row.sourceDocument,row.sourceProject,row.debitTarget,row.campusName);
@@ -1116,7 +1116,7 @@ function coachOpsConsumeRows(){
   const to=document.getElementById('coachOpsConsumeTo')?.value||'';
   const ledgerRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger));
   return financeConsumeBaseRows(ledgerRows).filter(row=>{
-    if(!coachOpsDateWithinRange(row.relatedDate||row.createdAt,from,to))return false;
+    if(!coachOpsDateWithinRange(row.relatedDate||row.createdAt,from,to)||!globalDateWithinRange(row.businessDate||row.relatedDate||row.createdAt))return false;
     return searchHit(q,row.reason,row.notes,row.operator,row.studentName,row.packageName,row.coach,row.courseType,row.campusName,row.sourceProject,row.debitTarget);
   }).sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')));
 }
@@ -1125,7 +1125,7 @@ function financeConsumeRows(){
     const q=String(document.getElementById('coachOpsConsumeSearch')?.value||'').trim().toLowerCase();
     const from=document.getElementById('coachOpsConsumeFrom')?.value||'';
     const to=document.getElementById('coachOpsConsumeTo')?.value||'';
-    if(!coachOpsDateWithinRange(row.relatedDate||row.createdAt,from,to))return false;
+    if(!coachOpsDateWithinRange(row.relatedDate||row.createdAt,from,to)||!globalDateWithinRange(row.businessDate||row.relatedDate||row.createdAt))return false;
     return searchHit(q,row.reason,row.notes,row.operator,row.studentName,row.packageName,row.coach,row.courseType,row.campusName,row.sourceProject,row.debitTarget);
   }).sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')));
 }
@@ -1301,7 +1301,7 @@ function financeLedgerRows(){
   const transactionTypeFilter=String(document.getElementById('financeLedgerTransactionTypeFilter')?.value||'').trim();
   const payMethodFilter=String(document.getElementById('financeLedgerPayMethodFilter')?.value||'').trim();
   return financeLedgerBaseRows().filter(row=>{
-    if(!coachOpsDateWithinRange(row.businessDate,document.getElementById('financeLedgerFrom')?.value||'',document.getElementById('financeLedgerTo')?.value||''))return false;
+    if(!coachOpsDateWithinRange(row.businessDate,document.getElementById('financeLedgerFrom')?.value||'',document.getElementById('financeLedgerTo')?.value||'')||!globalDateWithinRange(row.businessDate))return false;
     if(row.differenceReason)return false;
     const q=String(document.getElementById('financeLedgerSearch')?.value||'').trim().toLowerCase();
     if(transactionTypeFilter&&row.transactionType!==transactionTypeFilter)return false;
@@ -1397,7 +1397,7 @@ function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');
   if(!body)return;
   if(!syncFinanceLedgerLoadingState())return;
-  const baseRows=financeLedgerBaseRows().filter(row=>coachOpsDateWithinRange(row.businessDate,document.getElementById('financeLedgerFrom')?.value||'',document.getElementById('financeLedgerTo')?.value||''));
+  const baseRows=financeLedgerBaseRows().filter(row=>coachOpsDateWithinRange(row.businessDate,document.getElementById('financeLedgerFrom')?.value||'',document.getElementById('financeLedgerTo')?.value||'')&&globalDateWithinRange(row.businessDate));
   renderFinanceLedgerFilterDropdowns(baseRows);
   renderFinanceLedgerPageSizeFilter();
   const rows=financeLedgerRows();
@@ -1475,7 +1475,7 @@ function renderFinanceSettlementSummary(){
   const host=document.getElementById('financeSettlementStats');
   const body=document.getElementById('financeSettlementTbody');
   if(!host||!body)return;
-  const rows=financeSettlementRows();
+  const rows=financeSettlementRows().filter(row=>financeSettlementMonthWithinGlobalRange(row.month));
   const coachCount=new Set(rows.map(row=>row.coach)).size;
   const totalLessons=rows.reduce((sum,row)=>sum+(Number(row.lessonUnits)||0),0);
   const totalLateCount=rows.reduce((sum,row)=>sum+(Number(row.lateCount)||0),0);

@@ -42,7 +42,7 @@ assert.match(html, /data-lead-sort="formalSignupAt"[\s\S]*正式课报名时间/
 
 assert.match(bootstrapSource, /'leads'/, 'bootstrap should register leads routing');
 assert.match(bootstrapSource, /leads:'线索池'/, 'bootstrap should map the leads page title');
-assert.match(bootstrapSource, /campusTabs'\)\.style\.display=\['students','leads','schedule','courts','finance','matches','admin-users','coaches','packages'\]\.includes\(pg\)\?'flex':'none'/, 'lead page should expose the top campus filter');
+assert.match(bootstrapSource, /globalTopFilterPages\(\)\.includes\(pg\)[\s\S]*\?'flex':'none'/, 'lead page should expose the top campus filter');
 
 assert.match(leadsSource, /function renderLeads\(/, 'leads page should expose the list renderer');
 assert.match(leadsSource, /function leadDedupKey\(/, 'leads page should deduplicate repeated lead rows');

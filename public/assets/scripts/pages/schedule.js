@@ -85,6 +85,7 @@ function getFilteredSchedules(){
     const stuText=parseArr(s.studentIds).map(sid=>{const st=students.find(x=>x.id===sid);return `${st?.name||sid} ${st?.phone||''}`;}).join(' ');
     if(!searchHit(q,s.studentName,stuText,s.coach,s.venue,s.externalVenueName,s.externalNotes,effectiveStatus,scheduleStatusLabel(effectiveStatus),scheduleLocationText(s),cn(s.campus),s.notes,cls?.className,cls?.productName,fmtDt(s.startTime),fmtDt(s.endTime),s.cancelReason,s.scheduleSource))return false;
     if(campus!=='all'&&!sameCampusValue(s.campus,campus))return false;
+    if(!globalDateWithinRange(s.startTime))return false;
     if(sf&&effectiveStatus!==sf)return false;
     if(coachFilter&&coachName(s.coach)!==coachFilter)return false;
     if(tf&&scheduleCourseType(s)!==tf)return false;

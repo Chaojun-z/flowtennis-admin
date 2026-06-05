@@ -111,6 +111,9 @@ function jumpStudentPage(value){
 function getStudentBaseList(){
   return students.filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
 }
+function studentGlobalDateValue(s){
+  return s.createdAt||s.enrollDate||s.registerDate||s.joinDate||studentLastLessonDate(s);
+}
 function getFilteredStudents(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('stuTypeFilter')?.value||'';
@@ -119,6 +122,7 @@ function getFilteredStudents(){
   return getStudentBaseList().filter(s=>{
     const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
     if(!searchHit(q,s.name,s.phone,s.type,s.source,s.activityRange,s.notes,cn(s.campus),accountText,s.primaryCoach))return false;
+    if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&s.source!==sf)return false;
     if(coachFilter==='__unassigned__'&&String(s.primaryCoach||'').trim())return false;

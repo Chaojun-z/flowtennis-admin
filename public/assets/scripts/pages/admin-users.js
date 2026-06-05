@@ -87,6 +87,9 @@ function jumpAdminUserPage(value){
 function adminUserHasActiveSearch(){
   return !!(document.getElementById('adminUserSearch')?.value||'').trim();
 }
+function adminUserGlobalDateValue(user){
+  return user.createdAt||user.updatedAt||user.wechatBoundAt||user.officialAccountBoundAt||'';
+}
 function adminUserEmptyStateHtml(){
   const filtered=adminUserHasActiveSearch();
   const title=filtered?'没有匹配的账号':'暂无账号';
@@ -103,7 +106,7 @@ function renderAdminUserTableError(message){
 }
 function getFilteredAdminUsers(){
   const q=(document.getElementById('adminUserSearch')?.value||'').toLowerCase();
-  return adminUsers.filter(u=>u.id!=='pkgmergeadmin'&&adminUserMatchesCampus(u)&&searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u),adminUserNoteText(u)));
+  return adminUsers.filter(u=>u.id!=='pkgmergeadmin'&&adminUserMatchesCampus(u)&&globalDateWithinRange(adminUserGlobalDateValue(u))&&searchHit(q,u.id,u.name,u.phone,adminUserRoleText(u.role),adminUserStatusText(u.status),u.coachName,adminUserCoachText(u),adminUserPhoneText(u),adminUserWechatText(u),adminUserOfficialAccountText(u),adminUserNoteText(u)));
 }
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;

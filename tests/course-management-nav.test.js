@@ -174,7 +174,7 @@ assert.doesNotMatch(fnBody('packageBoardCardHtml'), /packageRuleIcon\('time'\)/,
 assert.match(fnBody('packageBoardCardHtml'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');
 assert.match(fnBody('packageBoardCardHtml'), /deactivatePackage\('\$\{p\.id\}'/, 'package card should use deactivate instead of delete');
 assert.match(html, /currentPage==='packages'\)renderPackages\(\)/, 'global campus tabs should refresh packages page');
-assert.match(html, /campusTabs'\)\.style\.display=\[[^\]]*'packages'/, 'global campus tabs should show on packages page');
+assert.match(html, /campusTabs'\)\.style\.display=[\s\S]*'packages'/, 'global campus tabs should show on packages page');
 assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove the product shortcut button');
 assert.match(html, /价格、课时、人数、校区和可上课教练已锁定/, 'locked core fields should show operator-facing hint');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');

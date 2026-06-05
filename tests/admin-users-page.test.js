@@ -20,7 +20,7 @@ assert.match(adminSidebar[0], /goPage\('admin-users',this\)[\s\S]*?账号管理/
 assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should provide account management entry');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
 assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for campus filtering');
-assert.match(source, /document\.getElementById\('campusTabs'\)\.style\.display=\[[^\]]*'admin-users'[^\]]*\]\.includes\(pg\)\?'flex':'none'/, 'resource account pages should show top campus tabs');
+assert.match(source, /globalTopFilterPages\(\)[\s\S]*'admin-users'/, 'resource account pages should show top campus tabs');
 assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名、手机号或绑定教练"/, 'account page should provide a search field');
 assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');

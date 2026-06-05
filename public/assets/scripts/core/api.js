@@ -2,6 +2,9 @@ let token=localStorage.getItem('ft_token');
 let currentUser=JSON.parse(localStorage.getItem('ft_user')||'null');
 const PAGE_KEY='ft_current_page';
 const CAMPUS_KEY='ft_current_campus';
+const GLOBAL_DATE_RANGE_KEY='ft_global_date_range';
+const GLOBAL_DATE_RANGE_START_KEY='ft_global_date_range_start';
+const GLOBAL_DATE_RANGE_END_KEY='ft_global_date_range_end';
 const WECHAT_CODE_KEY='ft_wechat_login_code';
 const PENDING_SCHEDULE_ID_KEY='ft_pending_schedule_id';
 
