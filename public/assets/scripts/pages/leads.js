@@ -631,7 +631,7 @@ function linkedCourtName(lead){
   return court?.name||lead?.courtId||'-';
 }
 function leadDetailFieldHtml(label,value){
-  return `<div class="tms-detail-field"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-value">${esc(renderCourtEmptyText(value))}</div></div>`;
+  return `<div class="tms-detail-field tms-data-field"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-value tms-data-value">${esc(renderCourtEmptyText(value))}</div></div>`;
 }
 function leadDetailIsEmptyHtml(html){
   const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
@@ -639,7 +639,7 @@ function leadDetailIsEmptyHtml(html){
 }
 function leadDetailBlockHtml(label,html,options={}){
   if(options.hideEmpty&&leadDetailIsEmptyHtml(html))return '';
-  return `<div class="tms-detail-field full-width"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-block">${html||'-'}</div></div>`;
+  return `<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-block tms-data-block">${html||'-'}</div></div>`;
 }
 function leadDetailSectionHtml(title,content,first=false){
   return content?`<div class="tms-section-header"${first?' style="margin-top:0;"':''}>${title}</div><div class="tms-detail-grid">${content}</div>`:'';
@@ -670,7 +670,7 @@ function openLeadDetail(leadId){
       ${leadDetailBlockHtml('用户顾虑',esc(lead?.latestConcern||'-'),{hideEmpty:true})}
       ${leadDetailBlockHtml('下一步动作',esc(lead?.nextAction||'-'),{hideEmpty:true})}
     `)}
-    ${leadDetailSectionHtml('跟进时间线',`<div class="tms-detail-field full-width"><div class="tms-detail-block">${leadTimelineHtml(lead)}</div></div>`)}
+    ${leadDetailSectionHtml('跟进时间线',`<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-block tms-data-block">${leadTimelineHtml(lead)}</div></div>`)}
     ${leadDetailSectionHtml('转化关系',`
       ${leadDetailFieldHtml('学员关联',linkedStudentName(lead))}
       ${leadDetailFieldHtml('订场关联',linkedCourtName(lead))}
@@ -678,7 +678,7 @@ function openLeadDetail(leadId){
     `)}
   `;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-default" onclick="openLeadFollowupModal('${lead.id}')">新增跟进</button><button class="tms-btn tms-btn-default" onclick="openLeadModal('${lead.id}')">编辑线索</button><button class="tms-btn tms-btn-default" onclick="convertLeadToStudent('${lead.id}')">转为学员</button><button class="tms-btn tms-btn-default" onclick="convertLeadToCourt('${lead.id}')">转为订场用户</button><button class="tms-btn tms-btn-default" onclick="openLeadLinkStudentModal('${lead.id}')">关联已有学员</button><button class="tms-btn tms-btn-primary" onclick="openLeadLinkCourtModal('${lead.id}')">关联已有订场用户</button>`;
-  setCourtModalFrame('线索详情',body,actions,'modal-wide');
+  setCourtModalFrame('线索详情',body,actions,'modal-view modal-lead-detail');
 }
 function openLeadModal(leadId){
   const lead=leadById(leadId)||null;
@@ -687,7 +687,7 @@ function openLeadModal(leadId){
   const campusValue=lead?.campus||(campus!=='all'?campus:'mabao');
   const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名 / 称呼</label><input class="finput tms-form-control" id="lead_displayName" value="${esc(lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">微信名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',lead?.leadDate||today(),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">线索渠道</label>${renderCourtDropdownHtml('lead_source','线索渠道',[{value:'',label:'-'},...leadSourceOptions()],lead?.source||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderCourtDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">咨询需求</label>${renderCourtDropdownHtml('lead_consultType','咨询需求',[{value:'',label:'-'},...leadConsultOptions()],lead?.consultType||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">意向</label>${renderCourtDropdownHtml('lead_intentLevel','意向',intentOptions,lead?.intentLevel||'',true)}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderCourtDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_systemStatus','当前状态',statusOptions,leadSystemStatusText(lead),true)}</div><div class="tms-form-item"></div><div class="tms-form-item"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">其他信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadSaveBtn" onclick="saveLead('${leadId||''}')">保存</button>`;
-  setCourtModalFrame(leadId?'编辑线索':'新增线索',body,actions,'modal-wide modal-leads-form');
+  setCourtModalFrame(leadId?'编辑线索':'新增线索',body,actions,'modal-complex modal-leads-form');
 }
 async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
   const base=['leads','leadFollowups'];

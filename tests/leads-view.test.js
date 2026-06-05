@@ -9,7 +9,8 @@ const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/cor
 const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
 const css = [
   'assets/styles/pages.css',
-  'assets/styles/components/tables.css'
+  'assets/styles/components/tables.css',
+  'assets/styles/components/modals.css'
 ].map(file=>fs.readFileSync(path.join(publicDir, file), 'utf8')).join('\n');
 const leadsSourcePath = path.join(publicDir, 'assets/scripts/pages/leads.js');
 const leadsSource = fs.existsSync(leadsSourcePath) ? fs.readFileSync(leadsSourcePath, 'utf8') : '';
@@ -24,6 +25,7 @@ assert.match(html, /id="leadOwnerFilterHost"/, 'leads page should provide owner 
 assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove the follow-up todo filter host');
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
 assert.match(html, /class="tms-import-action" onclick="openLeadImportPreviewModal\(\)">导入<\/span>/, 'leads toolbar should expose the shared text import entry');
+assert.match(html, /assets\/styles\/components\/modals\.css/, 'index should load shared modal styles');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
 assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">线索时间/, 'leads page should remove the top lead time scope row');
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
@@ -81,13 +83,16 @@ assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20
 assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*convertedOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
+assert.match(leadsSource, /function leadDetailFieldHtml\([\s\S]*tms-data-field[\s\S]*tms-data-label[\s\S]*tms-data-value/, 'lead detail readonly fields should use the shared DataField classes');
 assert.match(leadsSource, /function leadDetailBlockHtml\(/, 'lead detail should expose readonly block helper');
+assert.match(leadsSource, /function leadDetailBlockHtml\([\s\S]*tms-data-field[\s\S]*tms-data-block/, 'lead detail long readonly blocks should use the shared DataField block class');
 assert.match(leadsSource, /function leadDetailSectionHtml\(/, 'lead detail should expose section helper');
 assert.match(leadsSource, /function openLeadDetail\(/, 'leads page should expose the lead detail modal');
 const leadDetailSource=(leadsSource.match(/function openLeadDetail\([\s\S]*?function openLeadModal/)||[''])[0];
 assert.match(leadDetailSource, /leadDetailSectionHtml\('基础信息'[\s\S]*leadDetailSectionHtml\('当前跟进'[\s\S]*leadDetailSectionHtml\('跟进时间线'[\s\S]*leadDetailSectionHtml\('转化关系'/, 'lead detail should expose the updated four required sections');
 assert.match(leadDetailSource, /leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)/, 'lead detail should expose the campus field');
 assert.doesNotMatch(leadDetailSource, /<input class="finput tms-form-control"/, 'lead detail should be read-only rather than editable');
+assert.match(leadDetailSource, /setCourtModalFrame\('线索详情',body,actions,'modal-view modal-lead-detail'\)/, 'lead detail should use the shared 720px view modal');
 assert.match(leadsSource, /function openLeadFollowupModal\(/, 'leads page should expose the follow-up modal');
 assert.match(leadsSource, /openLeadFollowupModal\(leadId,followupId=''\)/, 'follow-up modal should support editing existing records');
 assert.match(leadsSource, /apiCall\('PUT',`\/lead-followups\/\$\{followupId\}`/, 'follow-up save should update an existing record when editing');
@@ -95,7 +100,8 @@ assert.match(leadsSource, /跟进时间[\s\S]*跟进人[\s\S]*跟进方式[\s\S]
 assert.match(leadsSource, /type="datetime-local"/, 'follow-up modal should use a proper datetime-local input');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
-assert.match(leadsSource, /modal-wide modal-leads-form/, 'lead create and edit modal should use the leads-specific shell');
+assert.match(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索',body,actions,'modal-complex modal-leads-form'\)/, 'lead create and edit modal should use the shared 800px complex modal');
+assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索',body,actions,'modal-wide modal-leads-form'\)/, 'lead create and edit modal should not keep the old wide shell');
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
 assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|\(campus!=='all'\?campus:'mabao'\)/, 'new leads should default to the current campus or mabao');
 assert.match(leadsSource, /lead-form-row-4[\s\S]*lead_owner[\s\S]*lead_systemStatus[\s\S]*lead_profileNote/, 'lead form should keep status in a four-column row before the remark field');

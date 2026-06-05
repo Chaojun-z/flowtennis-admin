@@ -8,6 +8,7 @@ const css = [
   'assets/styles/components/buttons.css',
   'assets/styles/components/filters.css',
   'assets/styles/components/tables.css',
+  'assets/styles/components/modals.css',
   'assets/styles/pages.css'
 ].filter(file=>fs.existsSync(path.join(__dirname, '../public', file))).map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
 
@@ -65,6 +66,18 @@ assert.match(source, /assets\/styles\/components\/search\.css/, 'index should lo
 assert.match(source, /assets\/styles\/components\/buttons\.css/, 'index should load shared button styles');
 assert.match(source, /assets\/styles\/components\/filters\.css/, 'index should load shared filter dropdown styles');
 assert.match(source, /assets\/styles\/components\/tables\.css/, 'index should load shared table styles');
+assert.match(source, /assets\/styles\/components\/modals\.css/, 'index should load shared modal styles');
+assert.match(css, /\.modal\.modal-court\{[^}]*background:#F5F2F0[^}]*border-radius:16px[^}]*box-shadow:0 24px 48px -12px rgba\(0,0,0,\.18\)/, 'shared modal shell should use the standard surface, radius, and shadow');
+assert.match(css, /\.modal\.modal-court\.modal-standard\{width:min\(560px,95vw\)\}/, 'standard business modals should use the 560px width');
+assert.match(css, /\.modal\.modal-court\.modal-view\{width:min\(720px,95vw\)\}/, 'detail and audit modals should use the 720px width');
+assert.match(css, /\.modal\.modal-court\.modal-complex\{width:min\(800px,95vw\)\}/, 'complex workflow modals should use the 800px width');
+assert.match(css, /\.modal\.modal-court \.mhead\{[^}]*padding:28px 32px 16px/, 'shared modal header should use the standard padding');
+assert.match(css, /\.modal\.modal-court \.mbody\{[^}]*padding:8px 32px/, 'shared modal body should use the standard padding');
+assert.match(css, /\.modal\.modal-court \.mactions\{[^}]*padding:16px 32px[^}]*gap:12px[^}]*justify-content:flex-end[^}]*background:#F5F2F0[^}]*border-top:1px solid rgba\(230,225,220,\.6\)/, 'shared modal footer should use the standard action bar');
+assert.match(css, /\.modal\.modal-court \.mclose\{[^}]*width:32px[^}]*height:32px[^}]*border-radius:50%[^}]*background:#FFFFFF/, 'shared modal close button should use the standard circular style');
+assert.match(css, /\.modal\.modal-court \.tms-form-control\{[^}]*height:40px[^}]*border:1px solid #E6E1DC[^}]*background:#FFFFFF[^}]*color:#2D241F[^}]*font-size:14px[^}]*border-radius:8px/, 'shared modal form controls should use the standard input style');
+assert.match(css, /\.modal\.modal-court \.tms-form-control:focus\{[^}]*border-color:#D19356[^}]*box-shadow:0 0 0 3px rgba\(209,147,86,\.15\)/, 'shared modal form controls should use the primary focus ring');
+assert.match(css, /\.modal\.modal-court \.tms-data-field[\s\S]*\.modal\.modal-court \.tms-data-label[\s\S]*\.modal\.modal-court \.tms-data-value/, 'shared modal readonly data fields should have component styles');
 assert.match(css, /\.tms-stats-row\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'top data card row should adapt from five to six cards using 200px minimum columns');
 assert.match(css, /\.tms-stat-card\{[^}]*height:100px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:8px/, 'top data cards should match the shared 200 by 100 visual standard');
 assert.match(css, /\.tms-stat-card\{[^}]*padding:18px 16px 14px 22px/, 'top data cards should keep 22px left content padding');
@@ -166,7 +179,7 @@ assert.match(source, /student-reminder-compact/, 'student detail should render r
 assert.match(source, /student-reminder-head-title/, 'student detail should keep the reminder title row compact');
 assert.doesNotMatch(source, /studentDetailSectionBlockHtml\('服务号提醒偏好'/, 'student detail should not wrap the reminder block with an extra section title');
 assert.doesNotMatch(source, /student-reminder-status/, 'student detail should not show a redundant reminder status line');
-assert.match(source, /setCourtModalFrame\('',body,footer,'modal-wide modal-student-detail'\)/, 'student detail should keep the modal header title empty');
+assert.match(source, /setCourtModalFrame\('',body,footer,'modal-view modal-student-detail'\)/, 'student detail should use the shared 720px view modal');
 assert.match(source, /document\.getElementById\('mTitle'\)\.innerHTML=studentDetailHeroHtml\(s\)/, 'student detail should move the profile summary into the modal header');
 assert.match(source, /服务号上课提醒/, 'student detail should expose the official account lesson reminder block');
 assert.match(source, /复制绑定链接/, 'student detail should let ops copy a student-specific binding link');
@@ -199,7 +212,9 @@ assert.doesNotMatch(source, /function studentEntitlementLedgerHtml[\s\S]*aggrega
 assert.match(source, /studentCompletedLessonCount[\s\S]*historicalImportedLessonUnitsForStudent/, 'student cumulative lessons should include imported lesson consumption');
 assert.match(source, /教学信息[\s\S]*消费与关联信息/, 'student detail should keep the teaching and consumption sections');
 assert.match(source, /function studentDetailFieldHtml\(/, 'student detail should render short readonly values without form inputs');
+assert.match(source, /function studentDetailFieldHtml\([\s\S]*tms-data-field[\s\S]*tms-data-label[\s\S]*tms-data-value/, 'student detail readonly fields should use the shared DataField classes');
 assert.match(source, /function studentDetailBlockHtml\(/, 'student detail should render long readonly content as information blocks');
+assert.match(source, /function studentDetailBlockHtml\([\s\S]*tms-data-field[\s\S]*tms-data-block/, 'student detail long readonly blocks should use the shared DataField block class');
 assert.doesNotMatch(source, /function openStudentDetail[\s\S]*<input[\s\S]*function openStudentModal/, 'student detail modal should not use input controls for readonly values');
 assert.doesNotMatch(source, /function studentTeachingInfoHtml[\s\S]*<input[\s\S]*function studentOpsInfoHtml/, 'student teaching detail should not look editable');
 assert.doesNotMatch(source, /function studentOpsInfoHtml[\s\S]*<input[\s\S]*function studentConsumptionInfoHtml/, 'student ops detail should not look editable');
@@ -268,6 +283,7 @@ assert.match(source, /function studentCampusOptions\(/, 'student edit modal shou
 assert.match(source, /renderCourtDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');
 assert.match(source, /const data=\{name,phone,primaryCoach:/, 'student save should submit primary coach');
 assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
+assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(id\?'编辑学员':'添加学员',body,footer,'modal-standard modal-student-form'\)/, 'student add and edit modals should use the shared 560px standard modal');
 assert.match(source, /选择课包 \*[\s\S]*归属教练[\s\S]*支付日期[\s\S]*系统价格[\s\S]*实收金额[\s\S]*支付方式/, 'purchase modal should arrange package, owner, payment date, price and pay method in compact rows');
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');

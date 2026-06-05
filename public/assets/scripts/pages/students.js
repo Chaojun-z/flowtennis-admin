@@ -267,7 +267,7 @@ function studentCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))];
 }
 function studentDetailFieldHtml(label,value){
-  return `<div class="tms-detail-field"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-value">${esc(renderCourtEmptyText(value))}</div></div>`;
+  return `<div class="tms-detail-field tms-data-field"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-value tms-data-value">${esc(renderCourtEmptyText(value))}</div></div>`;
 }
 function studentDetailIsEmptyHtml(html){
   const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
@@ -275,7 +275,7 @@ function studentDetailIsEmptyHtml(html){
 }
 function studentDetailBlockHtml(label,html,options={}){
   if(options.hideEmpty&&studentDetailIsEmptyHtml(html))return '';
-  return `<div class="tms-detail-field full-width"><div class="tms-detail-label">${esc(label)}</div><div class="tms-detail-block">${html||'-'}</div></div>`;
+  return `<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-block tms-data-block">${html||'-'}</div></div>`;
 }
 function studentDetailSectionHtml(title,content){
   return content?`<div class="tms-section-header">${title}</div><div class="tms-detail-grid">${content}</div>`:'';
@@ -608,7 +608,7 @@ function openStudentDetail(id){
   const benefitHtml=studentBenefitRows(s).length?studentDetailSectionBlockHtml('当前权益',studentBenefitSummaryHtml(s),'student-benefit-section'):'';
   const body=`<div class="student-detail-shell">${studentDetailMetricsHtml(s)}${benefitHtml}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','supplement')">赠送权益</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','consume')">消耗权益</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
-  setCourtModalFrame('',body,footer,'modal-wide modal-student-detail');
+  setCourtModalFrame('',body,footer,'modal-view modal-student-detail');
   document.getElementById('mTitle').innerHTML=studentDetailHeroHtml(s);
 }
 async function copyStudentReminderText(text){
@@ -659,7 +659,7 @@ function openStudentModal(id){
   const leadSummary=id?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${studentLeadSummaryHtml(s)}</div></div></div>`:'';
   const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="s_name" value="${rv(s,'name')}" placeholder="学员姓名"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="s_phone" value="${rv(s,'phone')}" placeholder="请输入手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label>${renderCourtDropdownHtml('s_primaryCoach','负责教练',coachOptions,coachName(rv(s,'primaryCoach')),true)}</div><div class="tms-form-item"><label class="tms-form-label">学员类型</label>${renderCourtDropdownHtml('s_type','学员类型',typeOptions,rv(s,'type','成人'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderCourtDropdownHtml('s_source','来源',sourceOptions,rv(s,'source'),true)}</div><div class="tms-form-item"><label class="tms-form-label">活动范围</label><input type="text" class="finput tms-form-control" id="s_range" value="${rv(s,'activityRange')}" placeholder="例：朝阳"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所在校区</label>${renderCourtDropdownHtml('s_campus','校区',campusOptions,rv(s,'campus'),true)}</div></div>${leadSummary}<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="s_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
   const footer=id?`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-danger" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除</button><button class="tms-btn tms-btn-primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`:`<div style="display:flex;gap:12px;margin-left:auto;"><button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`;
-  setCourtModalFrame(id?'编辑学员':'添加学员',body,footer,'modal-tight');
+  setCourtModalFrame(id?'编辑学员':'添加学员',body,footer,'modal-standard modal-student-form');
 }
 async function saveStudent(){
   const name=document.getElementById('s_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
