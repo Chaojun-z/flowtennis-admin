@@ -376,6 +376,46 @@ assert.deepStrictEqual(
   'small group entitlement should initialize free absence counters'
 );
 
+const smallTrialEntitlement = {
+  ...entitlement,
+  id: 'ent-small-trial',
+  studentId: 'stu-small-trial',
+  courseType: '体验课',
+  experienceType: '小班体验课',
+  packageName: '小班体验课 · 成人 · 2次 · 全天',
+  totalLessons: 2,
+  usedLessons: 0,
+  remainingLessons: 2,
+  maxStudents: 4,
+  timeBand: '全天',
+  dailyTimeWindows: [],
+  campusIds: ['mabao']
+};
+const smallTrialSchedule = {
+  id: 'sch-small-trial',
+  studentIds: ['stu-small-trial'],
+  courseType: '体验课',
+  experienceType: '小班体验课',
+  entitlementId: 'ent-small-trial',
+  settlementType: 'package',
+  startTime: '2026-06-04 14:00',
+  endTime: '2026-06-04 15:30',
+  campus: 'mabao',
+  lessonCount: 1.5,
+  status: '已排课'
+};
+
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule(smallTrialEntitlement, smallTrialSchedule),
+  'small group trial lesson should validate against one remaining package count even when scheduled for 1.5 hours'
+);
+
+assert.deepStrictEqual(
+  rules.scheduleEntitlementDeltas(smallTrialSchedule),
+  [{ entitlementId: 'ent-small-trial', delta: 1 }],
+  'small group trial lesson should consume one package count, not scheduled hours'
+);
+
 assert.deepStrictEqual(
   rules.collectMabaoSeedStaleRowIds(
     [

@@ -745,6 +745,14 @@ const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
 function isSmallGroupCourse(row={}){
   return String(row.courseType||row.type||'').trim()==='小班课';
 }
+function isSmallTrialCourse(row={}){
+  const type=String(row.courseType||row.type||'').trim();
+  const text=[row.experienceType,row.courseTypeLevel2,row.packageName,row.name,row.productName].filter(Boolean).join(' ');
+  return type==='体验课'&&/小班|1v4/.test(text);
+}
+function isCountBasedCourse(row={}){
+  return isSmallGroupCourse(row)||isSmallTrialCourse(row);
+}
 function normalizeSmallClassType(value='',fallback='single'){
   const raw=String(value||'').trim();
   if(SMALL_CLASS_TYPES.includes(raw))return raw;
@@ -1665,7 +1673,7 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
   if(entitlement.status&&entitlement.status!=='active')throw new Error('课包余额不可用');
-  const lessonCount=isSmallGroupCourse(schedule)?1:parseLessonValue(schedule.lessonCount,1);
+  const lessonCount=isCountBasedCourse(schedule)?1:parseLessonValue(schedule.lessonCount,1);
   if(parseLessonValue(entitlement.remainingLessons)<lessonCount)throw new Error('课包剩余课时不足');
   const studentIds=parseArr(schedule.studentIds);
   if(entitlement.studentId&&studentIds.length&&!studentIds.includes(entitlement.studentId))throw new Error('课包所属学员不匹配');
@@ -1698,7 +1706,7 @@ function entitlementMatchesCoach(entitlement,coachName){
 }
 function scheduleEntitlementDeltas(rec){
   if(!rec||!isScheduleLessonCharged(rec))return[];
-  const lessonCount=isSmallGroupCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
+  const lessonCount=isCountBasedCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
   const ids=parseArr(rec.entitlementIds).filter(Boolean);
   if(ids.length)return ids.map(entitlementId=>({entitlementId,delta:lessonCount}));
@@ -1773,7 +1781,7 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
   if(explicit.length)return explicit;
   if(!rec||!isBillableSchedule(rec)||!isPackageSettlementSchedule(rec))return[];
   assertSmallGroupScheduleRules(rec);
-  const lessonCount=isSmallGroupCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
+  const lessonCount=isCountBasedCourse(rec)?1:parseLessonValue(rec.lessonCount,1);
   if(lessonCount<=0)return[];
   const attendIds=parseArr(rec.studentIds).filter(Boolean);
   const attendDeltas=attendIds.map(studentId=>{

@@ -78,7 +78,13 @@ assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal 
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
 assert.match(fnBody('openScheduleModal'), /schedule-location-row[\s\S]*sch_locationType[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit on one row with location type');
 assert.match(fnBody('openScheduleModal'), /学员信息[\s\S]*选择学员[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课信息[\s\S]*上课日期与时间[\s\S]*循环排课[\s\S]*每周循环[\s\S]*deductionLabel[\s\S]*上课教练[\s\S]*地点类型/, 'schedule modal should follow the upgraded student-first flow');
-assert.match(fnBody('openScheduleModal'), /courseTypeForm\.courseType==='小班课'\?'消耗次数':'消课节数'/, 'small group package schedules should label the deduction field as count');
+assert.match(fnBody('openScheduleModal'), /const deductionLabel='消课时数'/, 'schedule modal should label scheduled lesson hours as 消课时数');
+assert.match(fnBody('openScheduleModal'), /id="sch_countItem"[\s\S]*上课次数[\s\S]*id="sch_count"[\s\S]*readonly/, 'count-based packages should show a separate readonly lesson count field');
+assert.match(source, /function refreshScheduleCountFields\(/, 'schedule modal should refresh the separate lesson count field when package selection changes');
+assert.match(source, /function scheduleSelectedEntitlementUsesCount\([\s\S]*packageLessonUnitLabel[\s\S]*==='次'/, 'schedule modal should decide the lesson count field from the selected package unit');
+assert.match(fnBody('applySchEntitlementOptions'), /selectedUnit[\s\S]*剩余 \$\{selected\.remainingLessons\}\/\$\{selected\.totalLessons\}\$\{selectedUnit\}/, 'schedule package auto-match hint should show remaining package counts with unit');
+assert.match(fnBody('handleScheduleEntitlementChange'), /refreshScheduleCountFields\(\)/, 'manual package changes should refresh the separate lesson count field');
+assert.doesNotMatch(source, /消课节数/, 'schedule page should stop using 消课节数 wording');
 assert.match(fnBody('openScheduleModal'), /tms-form-row schedule-time-row[\s\S]*scheduleTimeRangeControls[\s\S]*tms-form-row schedule-repeat-row[\s\S]*sch_repeatEnabled/, 'schedule modal should keep date/time and repeat controls on separate rows');
 assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
 assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
@@ -89,7 +95,7 @@ assert.match(fnBody('saveSchedule'), /experienceType:/, 'schedule save should pe
 assert.match(fnBody('openScheduleModal'), /sch_smallClassType/, 'schedule modal should expose a second-level small group course selector');
 assert.match(source, /function syncScheduleSmallClassType\(/, 'schedule modal should sync bootcamp repeat defaults');
 assert.match(fnBody('syncScheduleSmallClassType'), /sch_repeatEnabled[\s\S]*weeks\.value=6/, 'small group bootcamp should default to six weekly schedules');
-assert.match(fnBody('scheduleLessonUnitsFromFields'), /courseType==='小班课'[\s\S]*studentCount===3[\s\S]*return 1\.5[\s\S]*studentCount>=4[\s\S]*return 2/, 'small group lesson units should follow attendee count');
+assert.match(fnBody('scheduleLessonUnitsFromFields'), /durMin\(start,end\)[\s\S]*Math\.round\(\(mins\/60\)\*10\)\/10/, 'scheduled lesson hours should follow the real start-end duration');
 assert.match(fnBody('saveSchedule'), /smallClassType:/, 'schedule save should persist small group subtype');
 assert.match(fnBody('openScheduleModal'), /设置迟到/, 'schedule modal should expose late settings beside coach');
 assert.match(fnBody('openScheduleModal'), /schedule-late-row[\s\S]*full-width[\s\S]*\$\{lateSettings\}/, 'late settings should expand as a full-width row under the lesson module');
