@@ -540,15 +540,19 @@ function renderCoachOps(){
   const rows=coachOpsRows();
   if(gridCard){
     gridCard.classList.toggle('is-compact',rows.length>0&&rows.length<=3);
-    gridCard.classList.toggle('is-loading',!rows.length);
+    gridCard.classList.remove('is-loading');
   }
   const corner=document.querySelector('#page-coachschedule .coach-ops-corner');
-  if(corner)corner.textContent=rows.length?'教练':'';
+  if(corner)corner.textContent='教练';
   const host=document.getElementById('coachOpsTimeline');
   if(host){
-    const renderRows=rows.length?rows:coachOpsSkeletonRows();
-    host.classList.toggle('is-skeleton',!rows.length);
-    host.innerHTML=renderRows.map(r=>{
+    const renderRows=rows;
+    host.classList.toggle('is-skeleton',false);
+    if(!renderRows.length){
+      const emptyText=campus==='all'?'当前日期暂无教练排课':'当前筛选无教练排课';
+      host.innerHTML=`<div class="coach-ops-empty-state"><strong>${emptyText}</strong><span>不是加载中，可切换校区或日期查看</span></div>`;
+    }else{
+      host.innerHTML=renderRows.map(r=>{
       const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
       if(r.skeleton){
         const cells=mode==='day'
@@ -583,7 +587,8 @@ function renderCoachOps(){
         return `<div class="coach-ops-daycell ${mode==='week'?'week-cell':'month-cell'} ${ds===todayKey?'is-today':''} ${dayRows.length?'has-course':''}" onclick="openCoachOpsCreateSchedule(${jsArg(r.name)},'${ds}')">${head}${list}</div>`;
       }).join('');
       return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${coachOpsDragIconHtml()}<span>${esc(r.name)}</span></div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
-    }).join('');
+      }).join('');
+    }
   }
   const workloadBody=document.getElementById('coachOpsTbody');
   if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${distText(r.rangeRows,timeBand)}</div></td></tr>`).join('');

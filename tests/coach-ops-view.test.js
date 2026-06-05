@@ -656,6 +656,18 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /const renderRows=rows;/,
+  'coach schedule should not keep showing skeleton rows after a campus filter has no coach rows'
+);
+
+assert.match(
+  coachOpsSource,
+  /const emptyText=campus==='all'\?'当前日期暂无教练排课':'当前筛选无教练排课';[\s\S]*coach-ops-empty-state/,
+  'coach schedule should show a clear empty state when the selected campus has no coach schedules'
+);
+
+assert.match(
+  coachOpsSource,
   /gridCard\.classList\.toggle\('is-compact',rows\.length>0&&rows\.length<=3\)/,
   'coach schedule should compact the grid height when only up to three coaches are visible'
 );
@@ -812,14 +824,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba\(242,72,34,\.5\);z-index:12;pointer-events:none\}/,
-  'coach schedule current-time body line should be 1px at 50% opacity'
+  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba\(242,72,34,\.25\);z-index:12;pointer-events:none\}/,
+  'coach schedule current-time body line should be 1px at 25% opacity'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:4px;left:8px;height:16px;padding:0 5px;border-radius:999px;background:#F24822/,
-  'coach schedule current-time label should live in the day header'
+  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:calc\(100% \+ 6px\);left:0;transform:translateX\(-50%\);height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
+  'coach schedule current-time label should sit below the header instead of covering hour labels'
 );
 
 assert.doesNotMatch(
