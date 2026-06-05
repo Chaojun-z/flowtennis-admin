@@ -47,14 +47,13 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号、微信名" onkeydown="if(event.key==='Enter')applyLeadSearch()">
+            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号、微信名" oninput="applyLeadSearch()">
           </div>
           <div id="leadSourceFilterHost"></div>
           <div id="leadConsultFilterHost"></div>
           <div id="leadStatusFilterHost"></div>
           <div id="leadConvertedFilterHost"></div>
           <div id="leadOwnerFilterHost"></div>
-          <button class="tms-btn tms-btn-ghost" onclick="resetLeadFilters()">重置</button>
         </div>
         <div class="tms-toolbar-right">
           <span class="tms-import-action" onclick="openLeadImportPreviewModal()">导入</span>

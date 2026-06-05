@@ -126,8 +126,9 @@ assert.match(html, /function membershipStatusTagMeta/, 'frontend should compute 
 assert.match(html, /assets\/styles\/components\/status-tags\.css/, 'membership status tags should live in the shared component stylesheet');
 assert.match(fnBody('membershipStatusTagMeta'), /tagClass:'tms-member-status is-active'[\s\S]*tagClass:'tms-member-status is-inactive'[\s\S]*tagClass:'tms-member-status is-expired'/, 'membership status tag metadata should use the shared component classes');
 assert.match(fnBody('membershipStatusTagMeta'), /text:'活跃'[\s\S]*text:'未开通'[\s\S]*text:'已过期'/, 'membership status tag labels should use the standard three labels');
-assert.match(statusCss, /\.tms-member-status\{[^}]*display:inline-flex[^}]*height:26px[^}]*min-width:56px[^}]*padding:4px 10px[^}]*border-radius:6px/, 'membership status tag should use the standard size, padding and radius');
-assert.match(statusCss, /\.tms-member-status::before\{[^}]*width:6px[^}]*height:6px[^}]*border-radius:50%/, 'membership status tag should render the standard 6px status dot');
+assert.match(statusCss, /\.tms-member-status\{[^}]*display:inline-flex[^}]*height:16px[^}]*min-width:42px[^}]*padding:0 6px[^}]*border-radius:6px[^}]*font-size:10px/, 'membership status tag should use the compact active-tag size');
+assert.match(statusCss, /\.tms-member-status::before\{[^}]*width:4px[^}]*height:4px[^}]*border-radius:50%/, 'membership status tag should render the standard 4px status dot');
+assert.match(statusCss, /\.tms-member-status\.is-inactive,.tms-member-status\.is-expired\{min-width:54px;padding:0 8px\}/, 'longer membership status labels should adapt wider than the active tag');
 assert.match(statusCss, /\.tms-member-status\.is-active\{[^}]*background:#ECFDF5[^}]*border-color:#D9F9E6[^}]*color:#047857/, 'active membership tag should use the standard green colors');
 assert.match(statusCss, /\.tms-member-status\.is-active:hover\{background:#D9F9E6\}/, 'active membership tag hover should use the standard green hover color');
 assert.match(statusCss, /\.tms-member-status\.is-active::before\{background:#10B981\}/, 'active membership tag dot should use the standard green dot');

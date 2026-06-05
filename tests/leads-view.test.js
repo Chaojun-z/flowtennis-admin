@@ -34,9 +34,10 @@ assert.match(html, /id="leadTbody"/, 'leads page should provide the list tbody m
 assert.match(html, /id="leadPagerInfo"/, 'leads page should provide pager info');
 assert.match(html, /id="leadPageSize"/, 'leads page should provide page size selector host');
 assert.match(html, /id="leadPagerBtns"/, 'leads page should provide pager buttons');
-assert.match(html, /leadSearch[\s\S]*onkeydown="if\(event\.key==='Enter'\)applyLeadSearch\(\)"/, 'leads search should run on enter');
+assert.match(html, /leadSearch[\s\S]*oninput="applyLeadSearch\(\)"/, 'leads search should update results immediately while typing');
+assert.doesNotMatch(html, /leadSearch[\s\S]*onkeydown="if\(event\.key==='Enter'\)applyLeadSearch\(\)"/, 'leads search should not wait for enter');
 assert.doesNotMatch(html, /onclick="applyLeadSearch\(\)">查询/, 'leads toolbar should remove the query button');
-assert.match(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar should provide a reset button');
+assert.doesNotMatch(html, /onclick="resetLeadFilters\(\)"[\s\S]*重置/, 'leads toolbar should remove the reset button');
 assert.match(html, /class="tms-sticky-l"[\s\S]*微信名/, 'leads table should pin the first identity column');
 assert.match(html, /data-lead-sort="leadDate"[\s\S]*线索时间/, 'leads table should sort by lead date');
 assert.match(html, /data-lead-sort="trialLessonAt"[\s\S]*体验课时间/, 'leads table should sort by trial lesson date');
@@ -70,7 +71,6 @@ assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should cent
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
 assert.match(leadsSource, /function leadStatusOptionValues\(/, 'leads page should derive status filters from the latest data');
 assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads search should reset pagination before rendering');
-assert.match(leadsSource, /function resetLeadFilters\(\)[\s\S]*leadSearch[\s\S]*leadSourceFilter[\s\S]*leadConvertedFilter[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads reset should clear filters and return to first page');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
