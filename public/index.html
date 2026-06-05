@@ -59,9 +59,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号、微信名" onkeydown="if(event.key==='Enter')applyLeadSearch()">
           </div>
           <div id="leadSourceFilterHost"></div>
@@ -72,7 +70,7 @@
           <button class="tms-btn tms-btn-ghost" onclick="resetLeadFilters()">重置</button>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="openLeadImportPreviewModal()">导入</button>
+          <span class="tms-import-action" onclick="openLeadImportPreviewModal()">导入</span>
           <button class="tms-btn tms-btn-primary" onclick="openLeadModal(null)">新增线索</button>
         </div>
       </div>
@@ -86,9 +84,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="stuSearch" placeholder="搜索姓名、手机号、订场账户" oninput="onStudentFilterChange()">
           </div>
           <div id="stuTypeFilterHost"></div>
@@ -96,8 +92,8 @@
           <div id="stuCoachFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="exportStudentCSV()">导出</button>
           <button class="tms-btn tms-btn-ghost" onclick="openPurchaseEntryModal()">＋ 课包购买</button>
+          <span class="tms-export-action" onclick="exportStudentCSV()">导出</span>
           <button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">添加学员</button>
         </div>
       </div>
@@ -112,9 +108,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="clsSearch" placeholder="搜索班次、学员、课程" oninput="renderClasses()">
           </div>
           <div id="clsStatusFilterHost"></div>
@@ -136,9 +130,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="planSearch" placeholder="搜索学员、班次、关联账户" oninput="renderPlans()">
           </div>
           <div id="planStatusFilterHost"></div>
@@ -157,9 +149,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索学员、教练、班次或场地" oninput="onScheduleFilterChange()">
           </div>
           <div id="schStatusFilterHost"></div>
@@ -236,7 +226,7 @@
           <div class="tms-toolbar">
             <div class="tms-filters">
               <div class="tms-search-wrapper">
-                <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span class="tms-search-icon" aria-hidden="true"></span>
                 <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索姓名、业务类型、支付方式、备注" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
               </div>
               <div id="financeLedgerTransactionTypeFilterHost"></div>
@@ -257,7 +247,7 @@
         <div class="tms-toolbar finance-revenue-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span class="tms-search-icon" aria-hidden="true"></span>
               <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、业务类型、支付方式、备注" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
             </div>
             <div id="financeRevenueTypeFilterHost"></div>
@@ -267,7 +257,7 @@
             <button class="tms-btn tms-btn-ghost" onclick="resetFinanceRevenuePage();renderFinanceRevenueReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
-            <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsRevenueCsv()">导出</button>
+            <span class="tms-export-action" onclick="exportCoachOpsRevenueCsv()">导出</span>
           </div>
         </div>
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:70px">星期</th><th style="width:110px">时间段</th><th style="width:120px">客户</th><th style="width:150px">业务类型</th><th style="width:100px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:90px">收款人</th><th style="width:260px">备注</th><th style="width:100px">校区</th><th style="width:100px">状态</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
@@ -279,7 +269,7 @@
         <div class="tms-toolbar">
           <div class="tms-filters">
             <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span class="tms-search-icon" aria-hidden="true"></span>
               <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="renderFinanceConsumeReport()">
             </div>
             <div class="finance-date-host" id="coachOpsConsumeFromHost"></div>
@@ -287,7 +277,7 @@
             <button class="tms-btn tms-btn-ghost" onclick="renderFinanceConsumeReport()">查询</button>
           </div>
           <div class="tms-toolbar-right">
-            <button class="tms-btn tms-btn-ghost" onclick="exportCoachOpsConsumeCsv()">导出</button>
+            <span class="tms-export-action" onclick="exportCoachOpsConsumeCsv()">导出</span>
           </div>
         </div>
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:120px;padding-left:20px">确认日期</th><th style="width:120px">客户</th><th style="width:100px">确认类型</th><th style="width:150px">来源项目</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">关联单据</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div></div>
@@ -317,9 +307,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索标题、场馆、报名人" oninput="renderMatches()">
           </div>
           <div id="matchStatusFilterHost"></div>
@@ -335,9 +323,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="coachSearch" placeholder="搜索教练姓名、电话或备注" oninput="renderCoaches()">
           </div>
         </div>
@@ -352,9 +338,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="adminUserSearch" placeholder="搜索账号、姓名、手机号或绑定教练" oninput="onAdminUserFilterChange()">
           </div>
         </div>
@@ -372,9 +356,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="courtSearch" placeholder="搜索姓名、手机号、对接人、跟进日期、备注" oninput="onCourtFilterChange()">
           </div>
           <div id="courtAccountTypeFilter"></div>
@@ -387,7 +369,7 @@
           </div>
         </div>
         <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="exportCourtCSV()">导出</button>
+          <span class="tms-export-action" onclick="exportCourtCSV()">导出</span>
           <button class="tms-btn tms-btn-primary" onclick="openCourtModal(null)">添加订场用户</button>
         </div>
       </div>
@@ -419,9 +401,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="membershipSearch" placeholder="搜索会员姓名、手机号或方案" oninput="onMembershipSearchChange()">
           </div>
           <div id="membershipTierFilter"></div>
@@ -460,9 +440,7 @@
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="membershipPlanSearch" placeholder="搜索会员方案" oninput="renderMembershipPlans()">
           </div>
         </div>
@@ -484,9 +462,7 @@
         <div class="course-showcase-toolbar">
           <div class="course-showcase-filters">
             <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+              <span class="tms-search-icon" aria-hidden="true"></span>
               <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索课程名称、类型或备注" oninput="renderProducts()">
             </div>
             <div id="prodTypeFilterHost"></div>
@@ -502,9 +478,7 @@
         <div class="course-package-showcase-toolbar">
           <div class="course-package-showcase-filters">
             <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+              <span class="tms-search-icon" aria-hidden="true"></span>
               <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索课包名称、课程类型、时段" oninput="renderPackages()">
             </div>
             <div id="pkgTypeFilterHost"></div>
@@ -528,9 +502,7 @@
           <button class="tms-btn tms-btn-ghost" onclick="goPage('packages')">课包售卖</button>
           <div class="tms-filters">
             <div class="tms-search-wrapper">
-              <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+              <span class="tms-search-icon" aria-hidden="true"></span>
               <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索学员、课包、课程类型" oninput="onPurchaseFilterChange()">
             </div>
             <div id="purPackageFilterHost"></div>
@@ -550,9 +522,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="entSearch" placeholder="搜索学员、课包或课程类型" oninput="renderEntitlements()">
           </div>
           <div id="entStatusFilterHost"></div>
@@ -587,9 +557,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="campusSearch" placeholder="搜索校区名称或代码" oninput="renderCampuses()">
           </div>
         </div>
@@ -604,9 +572,7 @@
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
-            <svg class="tms-search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span class="tms-search-icon" aria-hidden="true"></span>
             <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索校区、渠道、商品" oninput="renderPrices()">
           </div>
           <div id="priceTypeFilterHost"></div>

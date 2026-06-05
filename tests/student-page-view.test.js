@@ -77,8 +77,13 @@ assert.match(css, /\.tms-search-wrapper\{[^}]*width:300px/, 'shared search compo
 assert.match(css, /\.tms-search-input\{[^}]*height:36px[^}]*border:1px solid #E8DFD5[^}]*background-color:#FBF7F4[^}]*color:#5A4C41[^}]*font-size:13px[^}]*font-weight:400/, 'shared search input should use the standard field style');
 assert.match(css, /\.tms-search-input::placeholder\{[^}]*color:#A08E7E[^}]*font-size:13px[^}]*font-weight:400/, 'shared search placeholder should use the standard muted text style');
 assert.match(css, /\.tms-search-icon\{[^}]*width:16px[^}]*height:16px[^}]*color:#A08E7E/, 'shared search icon should use the standard size and color');
+assert.match(css, /\.tms-search-icon\{[^}]*M5\.77924 3\.57289[^}]*M11\.1648 7\.01855/, 'shared search icon should use the complete provided svg');
+assert.doesNotMatch(source, /<svg class="tms-search-icon"[\s\S]*?<circle cx="11" cy="11" r="8">/, 'search fields should not keep old inline circle icons');
 assert.match(css, /\.tms-toolbar-right \.tms-btn-primary\{[^}]*width:104px[^}]*height:36px[^}]*background-color:#D19356[^}]*border-radius:6px[^}]*color:#FFFFFF[^}]*font-size:13px[^}]*font-weight:400/, 'toolbar add buttons should use the shared add button style');
 assert.match(css, /\.tms-toolbar-right \.tms-btn-primary::before\{[^}]*width:10px[^}]*height:10px/, 'toolbar add buttons should use the shared plus icon size');
+assert.match(css, /\.tms-export-action,.tms-import-action\{[^}]*display:inline-flex[^}]*margin-right:10px[^}]*color:#F1E9E2[^}]*font-size:13px[^}]*font-weight:400/, 'toolbar export and import actions should use the shared text action style');
+assert.match(css, /\.tms-export-action::before,.tms-import-action::before\{[^}]*width:16px[^}]*height:16px[^}]*background:url/, 'toolbar export and import actions should use the shared file icon');
+assert.match(source, /class="tms-export-action" onclick="exportStudentCSV\(\)"[\s\S]*>导出<\/span>[\s\S]*class="tms-btn tms-btn-primary" onclick="openStudentModal/, 'student export should sit immediately before the add button as a shared text action');
 assert.match(css, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:90px[^}]*background-color:#FBF7F4[^}]*border:1px solid #E8DFD5[^}]*border-radius:6px[^}]*color:#A08E7E[^}]*font-size:13px[^}]*font-weight:400/, 'shared filter dropdown should use the standard field style');
 assert.match(css, /\.tms-dropdown-display::after\{[^}]*width:16px[^}]*height:16px[^}]*background:url/, 'shared filter dropdown should use the standard svg arrow icon');
 assert.match(css, /\.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*color:#C06031[^}]*font-weight:400/, 'selected filters should use the shared active state');

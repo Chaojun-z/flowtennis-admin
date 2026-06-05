@@ -20,7 +20,7 @@ assert.match(html, /id="leadConvertedFilterHost"/, 'leads page should provide co
 assert.match(html, /id="leadOwnerFilterHost"/, 'leads page should provide owner filter host');
 assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove the follow-up todo filter host');
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
-assert.match(html, /onclick="openLeadImportPreviewModal\(\)">导入<\/button>/, 'leads toolbar should expose the import entry');
+assert.match(html, /class="tms-import-action" onclick="openLeadImportPreviewModal\(\)">导入<\/span>/, 'leads toolbar should expose the shared text import entry');
 assert.match(html, /新增线索/, 'leads toolbar should expose the create lead entry');
 assert.match(html, /id="leadDateScopeBar"[\s\S]*线索时间[\s\S]*setLeadDatePreset\('today'\)[\s\S]*今日[\s\S]*setLeadDatePreset\('week'\)[\s\S]*本周[\s\S]*setLeadDatePreset\('month'\)[\s\S]*本月[\s\S]*setLeadDatePreset\('custom'\)[\s\S]*自定义[\s\S]*id="leadDateCustomRange"/, 'custom lead date controls should sit next to the custom preset');
 assert.match(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'custom lead date controls should use the shared drawn date picker');
