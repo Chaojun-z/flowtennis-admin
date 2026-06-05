@@ -13,7 +13,7 @@ function fnBody(name){
   return appSource.slice(start, next === -1 ? appSource.length : next);
 }
 
-assert.match(html, /goPage\('prices',this\)[\s\S]*?价格管理/, 'sidebar should expose price management page');
+assert.match(appSource, /goPage\('prices',this\)[\s\S]*?价格方案/, 'sidebar should expose price management page');
 assert.match(html, /id="page-prices"/, 'price management page section should exist');
 assert.match(html, /id="priceTbody"/, 'price page should render one unified price table');
 assert.doesNotMatch(html, /id="priceVenueTbody"/, 'price page should not render a separate venue table');

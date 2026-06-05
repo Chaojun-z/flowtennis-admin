@@ -2,19 +2,19 @@ const assert = require('assert');
 const { html, appSource } = require('./helpers/read-index-bundle');
 
 assert.match(
-  html,
+  appSource,
   /goPage\('leads',this\)[\s\S]*?线索池/,
   'staging candidate should keep the leads pool entry'
 );
 
 assert.doesNotMatch(
-  html,
+  appSource,
   /<div class="sb-item" onclick="goPage\('purchases',this\)">[\s\S]*?购买记录<\/div>/,
   'staging candidate should not expose purchases as a first-level sidebar entry'
 );
 
 assert.match(
-  html,
+  appSource,
   /goPage\('workbench',this\)[\s\S]*?工作台[\s\S]*goPage\('postfeedback',this\)[\s\S]*?课后评价/,
   'coach sidebar should keep post-class feedback as the second entry'
 );

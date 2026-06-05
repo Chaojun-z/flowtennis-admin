@@ -4,9 +4,10 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+const components = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'components.js'), 'utf8');
 const state = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 
-assert.match(html, /goPage\('matches'/, 'sidebar should expose match management');
+assert.match(components, /goPage\('matches'/, 'sidebar should expose match management');
 assert.match(html, /id="page-matches"/, 'admin should include match page section');
 assert.match(html, /约球管理[\s\S]*这里只看球局、订场、AA 收款和日志/, 'match page should show a clear page header instead of extra finance cards');
 assert.match(html, /id="matchTbody"/, 'match page should include a table body');

@@ -17,6 +17,8 @@ function ensureGlobalLiveClock(){
   globalLiveClockTimer=setInterval(renderGlobalLiveClock,1000);
 }
 function renderRoleShell(){
+  if(typeof mountSidebarShell==='function')mountSidebarShell();
+  if(typeof mountTopbarShell==='function')mountTopbarShell();
   const isAdmin=currentUser?.role==='admin';
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   document.getElementById('userNamePill').textContent=(currentUser?.name||'用户');

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+const components = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/components.js'), 'utf8');
 
 assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css');
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
@@ -33,7 +34,12 @@ assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260602-court-filter-
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
 assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260602-student-dashboard-v1/, 'index.html should bust stale cached students.js when student dashboard changes');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
-assert.match(html, /goPage\('leads',this\)[\s\S]*线索池/, 'index.html should render the leads sidebar entry');
+assert.match(html, /id="sidebarHost"/, 'index.html should keep the shared sidebar mount host');
+assert.match(html, /id="topbarHost"/, 'index.html should keep the shared topbar mount host');
+assert.doesNotMatch(html, /goPage\('leads',this\)[\s\S]*线索池/, 'index.html should not keep sidebar entries inline');
+assert.doesNotMatch(html, /<div class="topbar">[\s\S]*id="topTitle"/, 'index.html should not keep topbar markup inline');
+assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.js should render the leads sidebar entry');
+assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');
 

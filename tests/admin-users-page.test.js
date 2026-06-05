@@ -1,9 +1,12 @@
 const assert = require('assert');
 const { html, appSource: source } = require('./helpers/read-index-bundle');
-const coachSidebar = html.match(/<div id="sbCoachView"[\s\S]*?<\/div>\s*<!-- 管理员视角 -->/);
-const adminSidebar = html.match(/<div id="sbAdminView">[\s\S]*?<\/div>\s*<\/div>\s*<div class="sb-bottom">/);
+const coachSidebar = source.match(/<div id="sbCoachView"[\s\S]*?<\/div>\s*<!-- 管理员视角 -->/);
+const adminSidebar = source.match(/<div id="sbAdminView">[\s\S]*?<\/div>\s*<\/div>\s*<div class="sb-bottom">/);
 assert.ok(coachSidebar, 'coach sidebar should exist');
 assert.ok(adminSidebar, 'admin sidebar should exist');
+assert.match(html, /id="sidebarHost"/, 'index should only keep the sidebar mount host');
+assert.doesNotMatch(html, /id="sbAdminView"|id="sbCoachView"/, 'sidebar markup should live in shared components');
+assert.match(source, /function renderSidebarShell\(/, 'sidebar should render from the shared components entry');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);

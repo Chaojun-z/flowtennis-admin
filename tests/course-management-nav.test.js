@@ -25,12 +25,36 @@ function fnBody(name){
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>/, 'sidebar should group resource pages');
+assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNIS FLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
+assert.match(html, /function renderTopbarShell\(/, 'topbar should render from the shared shell component');
+assert.doesNotMatch(html, /· TENNIS · FLOW ·/, 'brand subline should not keep side dots');
 
 assert.match(html, /goPage\('products',this\)[\s\S]*?课程产品/, 'sidebar should keep products page');
 assert.match(html, /goPage\('packages',this\)[\s\S]*?售卖课包/, 'sidebar should add packages page');
 assert.doesNotMatch(html, /<div class="sb-item" onclick="goPage\('purchases',this\)">[\s\S]*?购买记录<\/div>/, 'sidebar should remove purchases as a standalone first-level nav entry');
 assert.match(html, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should add account management page');
 assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, 'sidebar should hide the old entitlement page entry');
+
+[
+  ['leads', '线索池'],
+  ['students', '学员管理'],
+  ['courts', '订场用户'],
+  ['memberships', '订场会员'],
+  ['schedule', '排课表'],
+  ['coachschedule', '教练排课'],
+  ['packages', '售卖课包'],
+  ['admin-users', '账号管理'],
+  ['campusmgr', '校区管理'],
+  ['coaches', '教练管理'],
+  ['coachops', '教练工作量']
+].forEach(([page, label]) => {
+  assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${page}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);
+  assert.match(html, new RegExp(`data-sidebar-icon="${page}"`), `${label} should provide the custom svg`);
+});
+assert.match(pagesCss, /--shell-sidebar-icon-color:#C5B0A2/, 'inactive sidebar icon color should match design');
+assert.match(pagesCss, /--shell-sidebar-active-icon-color:#EFE7E2/, 'active sidebar icon color should match design');
+assert.match(pagesCss, /\.topbar\{[^}]*background:var\(--shell-app-bg\)[^}]*border-bottom:1px solid var\(--shell-topbar-divider\)/, 'topbar should use shared shell colors');
+assert.match(pagesCss, /\.content\{[^}]*background:var\(--shell-app-bg\)/, 'content area should use shared shell background');
 
 assert.match(html, /id="page-packages"/, 'should have packages page section');
 assert.match(html, /id="pkgTimeBandFilterHost"/, 'package page should expose a time band filter');

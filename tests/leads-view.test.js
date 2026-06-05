@@ -4,13 +4,14 @@ const path = require('path');
 
 const publicDir = path.join(__dirname, '../public');
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
+const componentsSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/components.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
 const css = fs.readFileSync(path.join(publicDir, 'assets/styles/pages.css'), 'utf8');
 const leadsSourcePath = path.join(publicDir, 'assets/scripts/pages/leads.js');
 const leadsSource = fs.existsSync(leadsSourcePath) ? fs.readFileSync(leadsSourcePath, 'utf8') : '';
 
-assert.match(html, /goPage\('leads',this\)[\s\S]*线索池/, 'sidebar should expose a leads entry');
+assert.match(componentsSource, /goPage\('leads',this\)[\s\S]*线索池/, 'sidebar should expose a leads entry');
 assert.match(html, /id="page-leads"[\s\S]*id="leadSearch"[\s\S]*placeholder="搜索姓名、手机号、微信名"/, 'leads page should provide the agreed search field');
 assert.match(html, /id="leadSourceFilterHost"/, 'leads page should provide source filter host');
 assert.match(html, /id="leadConsultFilterHost"/, 'leads page should provide consult filter host');
