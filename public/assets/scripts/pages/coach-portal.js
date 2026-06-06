@@ -108,7 +108,7 @@ function updateWorkbenchScheduleNowLine(){
   }
 }
 function workbenchScheduleShell(){
-  return `<div class="my-schedule-week" id="myScheduleWeekSection"><div class="week-nav"><button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button><span class="week-label" id="workbenchWeekLabel"></span><button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button><button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button><div class="my-schedule-week-sub is-inline">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。${workbenchMetricHelpHtml()}</div></div><div id="workbenchScheduleWeekHeader"></div><div id="workbenchMobileDateStrip" class="coach-mobile-only coach-home-date-strip"></div><div id="workbenchMobileTodayList" class="coach-mobile-only coach-home-course-list"></div><div class="my-schedule-week-grid desktop-only"><div class="week-grid" id="workbenchWeekGrid"></div></div><div id="workbenchScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div></div>`;
+  return `<div class="my-schedule-week" id="myScheduleWeekSection"><div class="week-nav"><button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button><span class="week-label" id="workbenchWeekLabel"></span><button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button><button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button><div class="my-schedule-week-sub is-inline">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。${workbenchMetricHelpHtml()}</div></div><div id="workbenchScheduleWeekHeader"></div><div id="workbenchMobileTodayList" class="coach-mobile-only coach-home-course-list"></div><div class="my-schedule-week-grid desktop-only"><div class="week-grid" id="workbenchWeekGrid"></div></div><div id="workbenchScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div></div>`;
 }
 function renderWorkbench(){
   ensureWorkbenchTicker();
@@ -271,16 +271,6 @@ function renderMySchedule(){
   document.getElementById('workbenchWeekGrid').innerHTML=html;
   if(!workbenchSelectedDate||!week.some(d=>d.toISOString().slice(0,10)===workbenchSelectedDate)){
     workbenchSelectedDate=week.some(d=>d.toISOString().slice(0,10)===todayStr)?todayStr:week[0].toISOString().slice(0,10);
-  }
-  const dateStrip=document.getElementById('workbenchMobileDateStrip');
-  if(dateStrip){
-    dateStrip.innerHTML=week.map((d,i)=>{
-      const ds=d.toISOString().slice(0,10);
-      const rows=allMine.filter(s=>s.startTime.slice(0,10)===ds);
-      const active=ds===workbenchSelectedDate;
-      const isToday=ds===todayStr;
-      return `<button type="button" class="coach-home-date-chip${active?' active':''}${isToday?' today':''}" onclick="selectWorkbenchDate('${ds}')"><strong>${WDNAMES[i]}</strong><span>${d.getMonth()+1}/${d.getDate()}</span>${rows.length?`<em>${rows.length}节</em>`:'<em>无课</em>'}</button>`;
-    }).join('');
   }
   const todayList=document.getElementById('workbenchMobileTodayList');
   if(todayList){

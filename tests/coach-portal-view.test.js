@@ -96,14 +96,20 @@ assert.match(
 
 assert.match(
   fnBody('workbenchScheduleShell'),
-  /workbenchMobileDateStrip[\s\S]*workbenchMobileTodayList/,
-  'coach mobile workbench should expose a date strip and today list instead of only the week grid'
+  /workbenchMobileTodayList[\s\S]*workbenchScheduleMobileList/,
+  'coach mobile workbench should expose the today list and week calendar'
 );
 
 assert.match(
   fnBody('renderMySchedule'),
-  /workbenchMobileDateStrip[\s\S]*workbenchMobileTodayList[\s\S]*coach-home-course-card/,
+  /workbenchMobileTodayList[\s\S]*coach-home-course-card/,
   'coach mobile workbench should render day course cards from the selected date'
+);
+
+assert.doesNotMatch(
+  fnBody('workbenchScheduleShell'),
+  /workbenchMobileDateStrip|coach-home-date-strip/,
+  'coach mobile workbench should not render the extra weekday chip row above today courses'
 );
 
 assert.match(

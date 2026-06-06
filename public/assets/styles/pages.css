@@ -1726,14 +1726,6 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   body.coach-mobile .my-schedule-week-title{font-size:16px}
   body.coach-mobile #page-workbench .my-schedule-week{margin-top:0}
   body.coach-mobile #page-workbench .week-nav{display:none}
-  body.coach-mobile #page-workbench .coach-home-date-strip{display:flex!important;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
-  body.coach-mobile #page-workbench .coach-home-date-strip::-webkit-scrollbar{display:none}
-  body.coach-mobile #page-workbench .coach-home-date-chip{flex:0 0 74px;border:1px solid rgba(233,222,210,.9);background:#FCFAF7;color:#5C4D43;border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
-  body.coach-mobile #page-workbench .coach-home-date-chip strong{font-size:12px;line-height:1.1}
-  body.coach-mobile #page-workbench .coach-home-date-chip span{font-size:11px;color:#8C7B6E;line-height:1.1}
-  body.coach-mobile #page-workbench .coach-home-date-chip em{font-style:normal;font-size:10px;color:#A35618;line-height:1.1}
-  body.coach-mobile #page-workbench .coach-home-date-chip.active{background:#FFF1E5;border-color:#D77A2D;color:#733621}
-  body.coach-mobile #page-workbench .coach-home-date-chip.today:not(.active){border-color:rgba(217,119,6,.45)}
   body.coach-mobile #page-workbench .coach-home-course-list{display:flex!important;flex-direction:column;gap:10px;margin-top:4px}
   body.coach-mobile #page-workbench .coach-home-section-title{font-size:14px;font-weight:800;color:#FEF3C7;margin:2px 0 2px}
   body.coach-mobile #page-workbench .coach-home-course-card{background:#FCFAF7;border:1px solid #E9DED2;border-left:4px solid #4C7DE0;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(60,20,0,.05);color:#2F241E}
