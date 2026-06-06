@@ -1403,6 +1403,7 @@ function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],n
     const next={
       ...p,
       courseType:nextPackage.courseType||nextPackage.type||'',
+      packageLessons:parseLessonValue(nextPackage.lessons),
       packagePrice:normalizeMoney(nextPackage.price),
       systemAmount:normalizeMoney(nextPackage.price),
       packageTimeBand:nextPackage.timeBand||'',
@@ -1416,20 +1417,29 @@ function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],n
       updatedAt:now
     };
     if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
+    if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
     return next;
   });
   const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>{
     const validity=packageEntitlementValidity(nextPackage,e,purchaseById.get(String(e.purchaseId||''))||{});
+    const totalLessons=parseLessonValue(nextPackage.lessons);
+    const usedLessons=parseLessonValue(e.usedLessons,Math.max(0,parseLessonValue(e.totalLessons)-parseLessonValue(e.remainingLessons)));
+    const remainingLessons=Math.max(0,totalLessons-usedLessons);
     const next={
       ...e,
       courseType:nextPackage.courseType||nextPackage.type||'',
+      totalLessons,
+      usedLessons,
+      remainingLessons,
       timeBand:nextPackage.timeBand||'',
       dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
       ownerCoach:nextPackage.ownerCoach||'',
       ...validity,
+      status:remainingLessons<=0?'depleted':'active',
       updatedAt:now
     };
     if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
+    if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
     return next;
   });
   return {purchases:purchaseUpdates,entitlements:entitlementUpdates};
@@ -1441,10 +1451,7 @@ function assertCanEditProductWithReferences(oldProduct,nextProduct,refs={}){
   if(changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']).length)throw new Error('该课程产品已有班次或售卖课包使用，不能修改核心字段');
 }
 function assertCanEditPackageWithPurchases(oldPackage,nextPackage,purchases=[]){
-  if(!oldPackage||!nextPackage)return;
-  if(!(purchases||[]).some(p=>p.packageId===oldPackage.id))return;
-  const changed=changedCoreFields(oldPackage,nextPackage,SOLD_PACKAGE_LOCKED_FIELDS);
-  if(changed.length)throw new Error('该课包已有购买记录，不能修改核心规则');
+  return;
 }
 function buildPackageDeactivateUpdate(oldPackage,input={},now=new Date().toISOString()){
   if(!oldPackage||String(input.status||'')!=='inactive'||String(oldPackage.status||'active')==='inactive')return null;

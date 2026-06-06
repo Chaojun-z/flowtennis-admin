@@ -555,7 +555,7 @@ function openPackageModal(id,presetProductId=''){
   const packageUnitLabel=courseType==='小班课'?'次数':'课时';
   const body=`
     <div class="tms-section-header" style="margin-top:0;">基础属性</div>
-      ${locked?'<div class="inline-help">该课包已有购买记录，价格、课时、人数、校区和可上课教练已锁定。</div>':''}
+      ${locked?'<div class="inline-help">该课包已有购买记录，保存后会同步更新已购订单和学员课包余额。</div>':''}
       <div class="tms-form-row package-basic-row">
         <div class="tms-form-item"><label class="tms-form-label">学员类型 *</label>${renderCourtDropdownHtml('pkg_audience','学员类型',audienceOptions,audience,true)}</div>
         <div class="tms-form-item"><label class="tms-form-label">课程类型 *</label>${renderCourtDropdownHtml('pkg_type','课程类型',courseTypeOptions,courseType,true,'syncPackageClassSize')}</div>
@@ -644,7 +644,7 @@ function packageSaveErrorText(err){
     '可用教练不存在':'可上课教练里有已删除的教练，请重新勾选',
     '主归属教练不存在':'归属教练已经不存在，请重新选择',
     '可用校区不存在':'可用校区里有已删除的校区，请重新勾选',
-    '该课包已有购买记录，不能修改核心规则':'这个课包已经有人买过了，价格、课时、人数、时间、教练和校区这些核心规则不能改。要改请新建一个课包',
+    '该课包已有购买记录，不能修改核心规则':'这个课包已经有人买过了，请刷新后重试',
     '该课包已停用':'这个课包已经停售，不能继续保存'
   };
   if(exactMap[raw])return exactMap[raw];

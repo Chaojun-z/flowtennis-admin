@@ -954,14 +954,13 @@ assert.deepStrictEqual(
   'editing purchase should rebuild entitlement snapshot while preserving used lessons'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertCanEditPackageWithPurchases(
     pkg,
     { ...pkg, lessons: 8 },
     [{ id: 'pur-1', packageId: 'pkg-1' }]
   ),
-  /已有购买记录，不能修改核心规则/,
-  'sold package should not allow changing core lesson count'
+  'sold package should allow changing core lesson count'
 );
 
 assert.doesNotThrow(
@@ -1032,6 +1031,7 @@ assert.deepStrictEqual(
       id: 'pur-1',
       packageId: 'pkg-1',
       courseType: '体验课',
+      packageLessons: 5,
       packageTimeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',
@@ -1050,6 +1050,9 @@ assert.deepStrictEqual(
       id: 'ent-1',
       packageId: 'pkg-1',
       courseType: '体验课',
+      totalLessons: 5,
+      usedLessons: 0,
+      remainingLessons: 5,
       timeBand: '全天',
       dailyTimeWindows: [{ label: '全天', startTime: '08:00', endTime: '20:00', daysOfWeek: [] }],
       ownerCoach: 'mira',

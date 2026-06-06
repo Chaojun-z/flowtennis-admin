@@ -213,7 +213,7 @@ assert.match(fnBody('packageBoardCardHtml'), /deactivatePackage\('\$\{p\.id\}'/,
 assert.match(html, /currentPage==='packages'\)renderPackages\(\)/, 'global campus tabs should refresh packages page');
 assert.match(html, /campusTabs'\)\.style\.display=[\s\S]*'packages'/, 'global campus tabs should show on packages page');
 assert.doesNotMatch(html, /查看课程产品/, 'package toolbar should remove the product shortcut button');
-assert.match(html, /价格、课时、人数、校区和可上课教练已锁定/, 'locked core fields should show operator-facing hint');
+assert.match(html, /保存后会同步更新已购订单和学员课包余额/, 'sold package edits should tell operators that saved changes sync existing orders and balances');
 assert.match(html, /function openPurchaseDetailModal/, 'purchase page should have detail modal');
 assert.match(html, /function openPurchaseEditModal/, 'purchase page should have edit modal');
 assert.match(fnBody('openPurchaseEditModal'), /packages\.filter\(pkg=>\(pkg\.status!=='inactive'&&pkg\.status!=='merged'\)\|\|pkg\.id===p\.packageId\)/, 'purchase edit package picker should hide merged packages except the current saved package');
