@@ -46,17 +46,19 @@ function syncPlanFilterOptions(){
   const coachValue=document.getElementById('planCoachFilter')?.value||'';
   const typeValue=document.getElementById('planTypeFilter')?.value||'';
   const stageValue=document.getElementById('planStageFilter')?.value||'';
-  const statusOptions=[{value:'',label:'全部状态'},{value:'active',label:'上课中'},{value:'已取消',label:'已取消'},{value:'已结课',label:'已结课'}];
-  const campusOptions=[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))];
-  const coachOptions=[{value:'',label:'全部教练'},...activeCoachNames().map(c=>({value:c,label:c}))];
-  const typeOptions=[{value:'',label:'全部课程'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
-  const stageOptions=[{value:'',label:'全部阶段'},{value:'new',label:'刚开课'},{value:'ongoing',label:'进行中'},{value:'ending',label:'临近结课'}];
+  const linked=withLinkedFilterCounts([
+    {key:'status',value:statusValue,options:[{value:'',label:'全部状态'},{value:'active',label:'上课中'},{value:'已取消',label:'已取消'},{value:'已结课',label:'已结课'}],match:(p,value)=>p.status===value},
+    {key:'campus',value:campusValue,options:[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))],match:(p,value)=>p.campus===value},
+    {key:'coach',value:coachValue,options:[{value:'',label:'全部教练'},...activeCoachNames().map(c=>({value:c,label:c}))],match:(p,value)=>coachName(p.coach)===value},
+    {key:'type',value:typeValue,options:[{value:'',label:'全部课程'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:(p,value)=>normalizeCourseType(planProduct(p)?.type)===value},
+    {key:'stage',value:stageValue,options:[{value:'',label:'全部阶段'},{value:'new',label:'刚开课'},{value:'ongoing',label:'进行中'},{value:'ending',label:'临近结课'}],match:(p,value)=>planStage(p)===value}
+  ],plans);
   const wrapMap=[
-    ['planStatusFilterHost','planStatusFilter','全部状态',statusOptions,statusValue],
-    ['planCampusFilterHost','planCampusFilter','全部校区',campusOptions,campusValue],
-    ['planCoachFilterHost','planCoachFilter','全部教练',coachOptions,coachValue],
-    ['planTypeFilterHost','planTypeFilter','全部课程',typeOptions,typeValue],
-    ['planStageFilterHost','planStageFilter','全部阶段',stageOptions,stageValue]
+    ['planStatusFilterHost','planStatusFilter','全部状态',linked.status.options,linked.status.value],
+    ['planCampusFilterHost','planCampusFilter','全部校区',linked.campus.options,linked.campus.value],
+    ['planCoachFilterHost','planCoachFilter','全部教练',linked.coach.options,linked.coach.value],
+    ['planTypeFilterHost','planTypeFilter','全部课程',linked.type.options,linked.type.value],
+    ['planStageFilterHost','planStageFilter','全部阶段',linked.stage.options,linked.stage.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);

@@ -40,9 +40,9 @@ assert.match(source,/finance-revenue-remark/,'revenue notes should render as a s
 assert.match(source,/确认日期[\s\S]*客户[\s\S]*确认类型[\s\S]*来源项目[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeConsumeTbody/,'consume table should explain where recognized revenue comes from');
 assert.doesNotMatch(source,/先看总账和顶部汇总/,'finance overview should remove the old guidance note');
 assert.match(source,/交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeLedgerTbody/,'ledger table should use the standardized owner-facing column order');
-assert.match(source,/withStandardFilterCounts\(\[\{ value:'', label:'全部', emptyDisplay:'业务类型' \}/,'ledger business type filter should use the standardized placeholder and count labels');
-assert.match(source,/withStandardFilterCounts\(\[\{ value:'', label:'全部', emptyDisplay:'交易类型' \}/,'ledger transaction type filter should use the standardized placeholder and count labels');
-assert.match(source,/withStandardFilterCounts\(\[\{ value:'', label:'全部', emptyDisplay:'支付方式' \}/,'ledger pay method filter should use the standardized placeholder and count labels');
+assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'业务类型'/,'ledger business type filter should use linked standardized count labels');
+assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'交易类型'/,'ledger transaction type filter should use linked standardized count labels');
+assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'支付方式'/,'ledger pay method filter should use linked standardized count labels');
 assert.match(source,/renderCourtDropdownHtml\('financeLedgerBusinessTypeFilter','业务类型'/,'ledger business type dropdown should show the standardized default label');
 assert.match(source,/renderCourtDropdownHtml\('financeLedgerTransactionTypeFilter','交易类型'/,'ledger transaction type dropdown should show the standardized default label');
 assert.match(source,/renderCourtDropdownHtml\('financeLedgerPayMethodFilter','支付方式'/,'ledger pay method dropdown should show the standardized default label');

@@ -300,8 +300,9 @@ assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh -
 assert.match(css, /#page-purchases \.tms-page-btn\{min-width:22px;height:22px;font-size:11px;font-weight:400;border-radius:5px\}/, 'purchase pager buttons should match the student page compact style');
 assert.match(css, /#page-purchases \.tms-page-jump input\{width:38px;height:22px;border:1px solid #EAE0D6;border-radius:6px;background:#FDF7F2/, 'purchase pager jump input should match the student page compact style');
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');
+assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown filters should support linked count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
-assert.match(source, /renderStudentToolbarFilters[\s\S]*const typeOptions=withStandardFilterCounts[\s\S]*const sourceOptions=withStandardFilterCounts[\s\S]*const coachOptions=withStandardFilterCounts/, 'student toolbar filters should use standard count labels');
+assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'coach'/, 'student toolbar filters should use linked count labels');
 assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');
 assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');

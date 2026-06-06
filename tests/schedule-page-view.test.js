@@ -150,7 +150,7 @@ assert.match(fnBody('renderSchedule'), /scheduleStatusLabel/, 'schedule list sho
 assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
 assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
 assert.match(source, /function onScheduleFilterChange\(\)\{schPage=1;renderSchedule\(\);\}/, 'schedule filters should reset pagination before rendering');
-assert.match(source, /syncScheduleFilterOptions[\s\S]*const statusOptions=withStandardFilterCounts[\s\S]*const coachOptions=withStandardFilterCounts[\s\S]*const courseTypeOptions=withStandardFilterCounts/, 'schedule toolbar filters should use standard count labels');
+assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'status'[\s\S]*key:'coach'[\s\S]*key:'courseType'/, 'schedule toolbar filters should use linked count labels');
 assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');
 assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function scheduleEmptyStateHtml\([\s\S]*没有匹配的排课[\s\S]*暂无排课[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加排课开始安排课程/, 'schedule empty state should distinguish filtered empty results from no data');

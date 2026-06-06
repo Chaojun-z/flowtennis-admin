@@ -32,7 +32,7 @@ assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260602-court-filter-v1/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
-assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260602-student-dashboard-v1/, 'index.html should bust stale cached students.js when student dashboard changes');
+assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260606-linked-filters-v1/, 'index.html should bust stale cached students.js when linked filters change');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');
 assert.match(html, /id="sidebarHost"/, 'index.html should keep the shared sidebar mount host');
 assert.match(html, /id="topbarHost"/, 'index.html should keep the shared topbar mount host');

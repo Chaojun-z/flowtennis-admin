@@ -5,18 +5,20 @@ function syncPackageFilterOptions(){
   const statusValue=document.getElementById('pkgStatusFilter')?.value||'';
   const timeBandValue=document.getElementById('pkgTimeBandFilter')?.value||'';
   const baseRows=packageFilterBaseRows();
-  const typeOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],baseRows,packageMatchesCourseType);
-  const audienceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],baseRows,packageMatchesAudience);
   const coachNames=[...new Set([...activeCoachNames(),...packages.flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)]).map(coachName).filter(Boolean)])];
-  const coachOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],baseRows,packageMatchesCoach);
-  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],baseRows,packageMatchesStatus);
-  const timeBandOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'时段'},{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金'},{value:'非黄金时段',label:'非黄金'}],baseRows,packageMatchesTimeBand);
+  const linked=withLinkedFilterCounts([
+    {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:packageMatchesCourseType},
+    {key:'audience',value:audienceValue,options:[{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:packageMatchesAudience},
+    {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:packageMatchesCoach},
+    {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],match:packageMatchesStatus},
+    {key:'timeBand',value:timeBandValue,options:[{value:'',label:'全部',emptyDisplay:'时段'},{value:'全天',label:'全天'},{value:'黄金时段',label:'黄金'},{value:'非黄金时段',label:'非黄金'}],match:packageMatchesTimeBand}
+  ],baseRows);
   const wrapMap=[
-    ['pkgTypeFilterHost','pkgTypeFilter','类型',typeOptions,typeValue],
-    ['pkgAudienceFilterHost','pkgAudienceFilter','学员类型',audienceOptions,audienceValue],
-    ['pkgCoachFilterHost','pkgCoachFilter','教练',coachOptions,coachValue],
-    ['pkgStatusFilterHost','pkgStatusFilter','状态',statusOptions,statusValue],
-    ['pkgTimeBandFilterHost','pkgTimeBandFilter','时段',timeBandOptions,timeBandValue]
+    ['pkgTypeFilterHost','pkgTypeFilter','类型',linked.type.options,linked.type.value],
+    ['pkgAudienceFilterHost','pkgAudienceFilter','学员类型',linked.audience.options,linked.audience.value],
+    ['pkgCoachFilterHost','pkgCoachFilter','教练',linked.coach.options,linked.coach.value],
+    ['pkgStatusFilterHost','pkgStatusFilter','状态',linked.status.options,linked.status.value],
+    ['pkgTimeBandFilterHost','pkgTimeBandFilter','时段',linked.timeBand.options,linked.timeBand.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);

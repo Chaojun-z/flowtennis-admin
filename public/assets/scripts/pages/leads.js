@@ -533,24 +533,26 @@ function getFilteredLeads(){
   });
 }
 function renderLeadToolbarFilters(){
-  const rows=leadRows();
+  const rows=leadRows().filter(lead=>leadInDateRange(lead,getLeadDateFilterRange())&&globalDateWithinRange(leadGlobalDateValue(lead))&&(campus==='all'||sameCampusValue(lead?.campus,campus)));
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const statusValue=document.getElementById('leadStatusFilter')?.value||'';
   const convertedValue=document.getElementById('leadConvertedFilter')?.value||'';
   const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
-  const sourceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'来源'},...Array.from(new Set(rows.map(item=>String(item?.source||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.source||'')===String(value));
-  const consultOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'咨询需求'},...Array.from(new Set(rows.map(item=>String(item?.consultType||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.consultType||'')===String(value));
   const statusValues=leadStatusOptionValues(rows);
-  const statusOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'状态'},...statusValues.map(value=>({value,label:value}))],rows,(lead,value)=>leadFollowupStatusText(lead)===String(value));
-  const convertedOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'是否转化'},{value:'是',label:'是'},{value:'否',label:'否'}],rows,(lead,value)=>leadConvertedYesNo(lead)===String(value));
-  const ownerOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'跟进人'},...Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],rows,(lead,value)=>String(lead?.owner||'')===String(value));
+  const linked=withLinkedFilterCounts([
+    {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...Array.from(new Set(rows.map(item=>String(item?.source||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.source||'')===String(value)},
+    {key:'consult',value:consultValue,options:[{value:'',label:'全部',emptyDisplay:'咨询需求'},...Array.from(new Set(rows.map(item=>String(item?.consultType||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.consultType||'')===String(value)},
+    {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},...statusValues.map(value=>({value,label:value}))],match:(lead,value)=>leadFollowupStatusText(lead)===String(value)},
+    {key:'converted',value:convertedValue,options:[{value:'',label:'全部',emptyDisplay:'是否转化'},{value:'是',label:'是'},{value:'否',label:'否'}],match:(lead,value)=>leadConvertedYesNo(lead)===String(value)},
+    {key:'owner',value:ownerValue,options:[{value:'',label:'全部',emptyDisplay:'跟进人'},...Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.owner||'')===String(value)}
+  ],rows);
   const configs=[
-    ['leadSourceFilterHost','leadSourceFilter','全部来源',sourceOptions,sourceValue],
-    ['leadConsultFilterHost','leadConsultFilter','全部咨询需求',consultOptions,consultValue],
-    ['leadStatusFilterHost','leadStatusFilter','全部状态',statusOptions,statusValue],
-    ['leadConvertedFilterHost','leadConvertedFilter','全部是否转化',convertedOptions,convertedValue],
-    ['leadOwnerFilterHost','leadOwnerFilter','全部跟进人',ownerOptions,ownerValue]
+    ['leadSourceFilterHost','leadSourceFilter','全部来源',linked.source.options,linked.source.value],
+    ['leadConsultFilterHost','leadConsultFilter','全部咨询需求',linked.consult.options,linked.consult.value],
+    ['leadStatusFilterHost','leadStatusFilter','全部状态',linked.status.options,linked.status.value],
+    ['leadConvertedFilterHost','leadConvertedFilter','全部是否转化',linked.converted.options,linked.converted.value],
+    ['leadOwnerFilterHost','leadOwnerFilter','全部跟进人',linked.owner.options,linked.owner.value]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);

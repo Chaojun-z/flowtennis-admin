@@ -4,14 +4,16 @@ function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
-  const baseRows=getStudentBaseList();
-  const typeOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],baseRows,(s,value)=>s.type===value);
-  const sourceOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'来源'},...SOURCES.map(t=>({value:t,label:t}))],baseRows,(s,value)=>s.source===value);
-  const coachOptions=withStandardFilterCounts([{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],baseRows,(s,value)=>value==='__unassigned__'?!s.primaryCoach:coachName(s.primaryCoach)===value);
+  const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
+  const linked=withLinkedFilterCounts([
+    {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:(s,value)=>s.type===value},
+    {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...SOURCES.map(t=>({value:t,label:t}))],match:(s,value)=>s.source===value},
+    {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],match:(s,value)=>value==='__unassigned__'?!s.primaryCoach:coachName(s.primaryCoach)===value}
+  ],baseRows);
   const wrapMap=[
-    ['stuTypeFilterHost','stuTypeFilter','类型',typeOptions,typeValue],
-    ['stuSourceFilterHost','stuSourceFilter','来源',sourceOptions,sourceValue],
-    ['stuCoachFilterHost','stuCoachFilter','负责教练',coachOptions,coachValue]
+    ['stuTypeFilterHost','stuTypeFilter','类型',linked.type.options,linked.type.value],
+    ['stuSourceFilterHost','stuSourceFilter','来源',linked.source.options,linked.source.value],
+    ['stuCoachFilterHost','stuCoachFilter','负责教练',linked.coach.options,linked.coach.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);

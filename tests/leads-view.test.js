@@ -80,7 +80,7 @@ assert.match(leadsSource, /function leadPageNumbers\(/, 'leads page should rende
 assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
 assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
 assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20/, 'leads page size should be limited to 20, 50, and 100');
-assert.match(leadsSource, /withStandardFilterCounts[\s\S]*sourceOptions[\s\S]*consultOptions[\s\S]*statusOptions[\s\S]*convertedOptions[\s\S]*ownerOptions/, 'leads toolbar filters should use standard count labels');
+assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'converted'[\s\S]*key:'owner'/, 'leads toolbar filters should use linked count labels');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
 assert.match(leadsSource, /function leadDetailFieldHtml\([\s\S]*tms-data-field[\s\S]*tms-data-label[\s\S]*tms-data-value/, 'lead detail readonly fields should use the shared DataField classes');

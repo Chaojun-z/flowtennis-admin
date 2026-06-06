@@ -45,15 +45,17 @@ function syncClassFilterOptions(){
   const campusValue=document.getElementById('clsCampusFilter')?.value||'';
   const coachValue=document.getElementById('clsCoachFilter')?.value||'';
   const typeValue=document.getElementById('clsTypeFilter')?.value||'';
-  const statusOptions=[{value:'',label:'全部状态'},{value:'已排班',label:'已排班'},{value:'已取消',label:'已取消'},{value:'已结课',label:'已结课'}];
-  const campusOptions=[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))];
-  const coachOptions=[{value:'',label:'全部教练'},...activeCoachNames().map(c=>({value:c,label:c}))];
-  const typeOptions=[{value:'',label:'全部课程'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))];
+  const linked=withLinkedFilterCounts([
+    {key:'status',value:statusValue,options:[{value:'',label:'全部状态'},{value:'已排班',label:'已排班'},{value:'已取消',label:'已取消'},{value:'已结课',label:'已结课'}],match:(c,value)=>c.status===value},
+    {key:'campus',value:campusValue,options:[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))],match:(c,value)=>c.campus===value},
+    {key:'coach',value:coachValue,options:[{value:'',label:'全部教练'},...activeCoachNames().map(c=>({value:c,label:c}))],match:(c,value)=>coachName(c.coach)===value},
+    {key:'type',value:typeValue,options:[{value:'',label:'全部课程'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:(c,value)=>normalizeCourseType(products.find(x=>x.id===c.productId)?.type)===value}
+  ],classes);
   const wrapMap=[
-    ['clsStatusFilterHost','clsStatusFilter','全部状态',statusOptions,statusValue],
-    ['clsCampusFilterHost','clsCampusFilter','全部校区',campusOptions,campusValue],
-    ['clsCoachFilterHost','clsCoachFilter','全部教练',coachOptions,coachValue],
-    ['clsTypeFilterHost','clsTypeFilter','全部课程',typeOptions,typeValue]
+    ['clsStatusFilterHost','clsStatusFilter','全部状态',linked.status.options,linked.status.value],
+    ['clsCampusFilterHost','clsCampusFilter','全部校区',linked.campus.options,linked.campus.value],
+    ['clsCoachFilterHost','clsCoachFilter','全部教练',linked.coach.options,linked.coach.value],
+    ['clsTypeFilterHost','clsTypeFilter','全部课程',linked.type.options,linked.type.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);

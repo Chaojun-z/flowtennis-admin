@@ -1373,12 +1373,14 @@ function renderFinanceLedgerFilterDropdowns(baseRows){
   const transactionOrder=['收款','消耗','退款','废弃'];
   const transactionValues=Array.from(new Set(visibleRows.map(row=>row.transactionType).filter(Boolean))).filter(item=>transactionOrder.includes(item)).sort((a,b)=>transactionOrder.indexOf(a)-transactionOrder.indexOf(b));
   const payMethodValues=Array.from(new Set(visibleRows.map(row=>row.normalizedPaymentMethod||'其他').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
-  const businessOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'业务类型' },...businessValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>row.displayBusinessType===value);
-  const transactionOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'交易类型' },...transactionValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>row.transactionType===value);
-  const payMethodOptions=withStandardFilterCounts([{ value:'', label:'全部', emptyDisplay:'支付方式' },...payMethodValues.map(item=>({ value:item, label:item }))],visibleRows,(row,value)=>String(row.normalizedPaymentMethod||'其他')===String(value));
-  businessHost.innerHTML=renderCourtDropdownHtml('financeLedgerBusinessTypeFilter','业务类型',businessOptions,businessOptions.some(item=>item.value===currentBusiness)?currentBusiness:'',false,'renderFinanceLedgerFilterChange');
-  transactionHost.innerHTML=renderCourtDropdownHtml('financeLedgerTransactionTypeFilter','交易类型',transactionOptions,transactionOptions.some(item=>item.value===currentTransaction)?currentTransaction:'',false,'renderFinanceLedgerFilterChange');
-  payMethodHost.innerHTML=renderCourtDropdownHtml('financeLedgerPayMethodFilter','支付方式',payMethodOptions,payMethodOptions.some(item=>item.value===currentPayMethod)?currentPayMethod:'',false,'renderFinanceLedgerFilterChange');
+  const linked=withLinkedFilterCounts([
+    {key:'business',value:currentBusiness,options:[{ value:'', label:'全部', emptyDisplay:'业务类型' },...businessValues.map(item=>({ value:item, label:item }))],match:(row,value)=>row.displayBusinessType===value},
+    {key:'transaction',value:currentTransaction,options:[{ value:'', label:'全部', emptyDisplay:'交易类型' },...transactionValues.map(item=>({ value:item, label:item }))],match:(row,value)=>row.transactionType===value},
+    {key:'payMethod',value:currentPayMethod,options:[{ value:'', label:'全部', emptyDisplay:'支付方式' },...payMethodValues.map(item=>({ value:item, label:item }))],match:(row,value)=>String(row.normalizedPaymentMethod||'其他')===String(value)}
+  ],visibleRows);
+  businessHost.innerHTML=renderCourtDropdownHtml('financeLedgerBusinessTypeFilter','业务类型',linked.business.options,linked.business.value,false,'renderFinanceLedgerFilterChange');
+  transactionHost.innerHTML=renderCourtDropdownHtml('financeLedgerTransactionTypeFilter','交易类型',linked.transaction.options,linked.transaction.value,false,'renderFinanceLedgerFilterChange');
+  payMethodHost.innerHTML=renderCourtDropdownHtml('financeLedgerPayMethodFilter','支付方式',linked.payMethod.options,linked.payMethod.value,false,'renderFinanceLedgerFilterChange');
 }
 function renderFinanceLedgerFilterChange(){
   resetFinanceLedgerPage();

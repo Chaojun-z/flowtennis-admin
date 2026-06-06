@@ -201,11 +201,11 @@ assert.match(html, /packageBoardPreferences:\(\)=>apiCall\('GET','\/package-boar
 assert.doesNotMatch(html, /async function dropPackageToColumn\(/, 'package board should not support dragging cards into another column');
 assert.doesNotMatch(fnBody('savePackageOrder'), /boardColumnById/, 'package order save should not send board column placement');
 assert.doesNotMatch(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*boardColumnById/, 'package order endpoint should not persist card column placement');
-assert.match(fnBody('syncPackageFilterOptions'), /const typeOptions=withStandardFilterCounts[\s\S]*packageMatchesCourseType/, 'package type filter should show per-option package counts');
-assert.match(fnBody('syncPackageFilterOptions'), /const audienceOptions=withStandardFilterCounts[\s\S]*packageMatchesAudience/, 'package audience filter should show per-option package counts');
-assert.match(fnBody('syncPackageFilterOptions'), /const coachOptions=withStandardFilterCounts[\s\S]*packageMatchesCoach/, 'package coach filter should show per-option package counts');
-assert.match(fnBody('syncPackageFilterOptions'), /const statusOptions=withStandardFilterCounts[\s\S]*packageMatchesStatus/, 'package status filter should show per-option package counts');
-assert.match(fnBody('syncPackageFilterOptions'), /const timeBandOptions=withStandardFilterCounts[\s\S]*packageMatchesTimeBand/, 'package time-band filter should show per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*packageMatchesCourseType/, 'package type filter should show linked per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /withLinkedFilterCounts\(\[[\s\S]*key:'audience'[\s\S]*packageMatchesAudience/, 'package audience filter should show linked per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /withLinkedFilterCounts\(\[[\s\S]*key:'coach'[\s\S]*packageMatchesCoach/, 'package coach filter should show linked per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /withLinkedFilterCounts\(\[[\s\S]*key:'status'[\s\S]*packageMatchesStatus/, 'package status filter should show linked per-option package counts');
+assert.match(fnBody('syncPackageFilterOptions'), /withLinkedFilterCounts\(\[[\s\S]*key:'timeBand'[\s\S]*packageMatchesTimeBand/, 'package time-band filter should show linked per-option package counts');
 assert.match(fnBody('packageBoardCardHtml'), /package-rule-line[\s\S]*packageRuleIcon[\s\S]*package-rule-tooltip/, 'package cards should show icon rules with hover tooltip');
 assert.doesNotMatch(fnBody('packageBoardCardHtml'), /packageRuleIcon\('time'\)/, 'package cards should move time band out of the rules area');
 assert.match(fnBody('packageBoardCardHtml'), /package-order-link[\s\S]*package-order-chevron/, 'package order count should show a hover chevron affordance');

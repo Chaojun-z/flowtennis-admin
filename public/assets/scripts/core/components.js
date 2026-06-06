@@ -55,6 +55,42 @@ function renderStandardDataCard(item={}){
 function renderStandardDataCards(items=[]){
   return (Array.isArray(items)?items:[]).map(renderStandardDataCard).join('');
 }
+function renderStandardOptionLabel(opt){
+  const label=String(opt?.label??opt?.value??'');
+  return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;
+}
+function withStandardFilterCounts(options,rows,match){
+  const source=Array.isArray(rows)?rows:[];
+  return (options||[]).map(opt=>{
+    const item=typeof opt==='string'?{value:opt,label:opt}:opt;
+    const value=item.value;
+    const count=String(value||'')===''?source.length:source.filter(row=>match(row,value,item)).length;
+    return {...item,count};
+  });
+}
+function withLinkedFilterCounts(filters,rows){
+  const source=Array.isArray(rows)?rows:[];
+  const list=(filters||[]).map(item=>({
+    ...item,
+    value:String(item?.value||''),
+    options:(item?.options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt)
+  }));
+  return list.reduce((acc,field)=>{
+    const scopedRows=source.filter(row=>list.every(other=>{
+      if(other.key===field.key||!other.value)return true;
+      return other.match(row,other.value,other);
+    }));
+    const counted=withStandardFilterCounts(field.options,scopedRows,field.match);
+    const active=counted.find(opt=>String(opt.value||'')===field.value);
+    const value=field.value&&active&&active.count>0?field.value:'';
+    const options=counted.filter(opt=>{
+      const optionValue=String(opt.value||'');
+      return optionValue===''||opt.count>0||optionValue===value;
+    });
+    acc[field.key]={...field,value,options};
+    return acc;
+  },{});
+}
 function renderSidebarShell(){
   return `<aside class="sidebar">
   <div class="sb-logo"><div class="sb-brand">${SHELL_THEME.brandName}</div><div class="sb-tagline">${SHELL_THEME.brandSubline}</div></div>
