@@ -65,9 +65,15 @@ assert.match(
 );
 
 assert.match(
-  source,
-  /本月课时[\s\S]*?本周课时[\s\S]*?今天课时[\s\S]*?本月反馈[\s\S]*?未反馈[\s\S]*?本月体验课转化率/,
-  'coach workbench should show the six manager-facing summary cards'
+  fnBody('renderWorkbench'),
+  /今天课时[\s\S]*?本周课时[\s\S]*?本月体验课转化率/,
+  'coach workbench should show the three mobile-first summary cards'
+);
+
+assert.doesNotMatch(
+  fnBody('renderWorkbench'),
+  /本月反馈|未反馈|本月课时/,
+  'coach workbench home stats should not show feedback or monthly lesson cards'
 );
 
 assert.match(
@@ -86,6 +92,18 @@ assert.match(
   fnBody('renderWorkbench'),
   /coach-wb-stats-row[\s\S]*workbenchScheduleShell/,
   'coach workbench should render stat cards plus the shared weekly schedule shell'
+);
+
+assert.match(
+  fnBody('workbenchScheduleShell'),
+  /workbenchMobileDateStrip[\s\S]*workbenchMobileTodayList/,
+  'coach mobile workbench should expose a date strip and today list instead of only the week grid'
+);
+
+assert.match(
+  fnBody('renderMySchedule'),
+  /workbenchMobileDateStrip[\s\S]*workbenchMobileTodayList[\s\S]*coach-home-course-card/,
+  'coach mobile workbench should render day course cards from the selected date'
 );
 
 assert.match(
@@ -268,8 +286,8 @@ assert.match(
 
 assert.match(
   pagesCss,
-  /body\.coach-mobile #page-workbench \.coach-wb-stats-row,body\.coach-mobile #page-postfeedback \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,
-  'coach workbench should switch to a true mobile two-column stat grid'
+  /body\.coach-mobile #page-workbench \.coach-wb-stats-row\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
+  'coach workbench should switch to a true mobile three-column stat grid'
 );
 
 assert.match(

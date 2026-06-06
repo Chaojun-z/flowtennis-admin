@@ -108,7 +108,7 @@ function updateWorkbenchScheduleNowLine(){
   }
 }
 function workbenchScheduleShell(){
-  return `<div class="my-schedule-week" id="myScheduleWeekSection"><div class="week-nav"><button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button><span class="week-label" id="workbenchWeekLabel"></span><button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button><button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button><div class="my-schedule-week-sub is-inline">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。${workbenchMetricHelpHtml()}</div></div><div id="workbenchScheduleWeekHeader"></div><div class="my-schedule-week-grid desktop-only"><div class="week-grid" id="workbenchWeekGrid"></div></div><div id="workbenchScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div></div>`;
+  return `<div class="my-schedule-week" id="myScheduleWeekSection"><div class="week-nav"><button onclick="myWeekOffset--;renderMySchedule()">◀ 上一周</button><span class="week-label" id="workbenchWeekLabel"></span><button onclick="myWeekOffset++;renderMySchedule()">下一周 ▶</button><button onclick="myWeekOffset=0;renderMySchedule()">回到本周</button><div class="my-schedule-week-sub is-inline">看本周课程时间、类型和场地安排，点击课程块可直接查看详情。${workbenchMetricHelpHtml()}</div></div><div id="workbenchScheduleWeekHeader"></div><div id="workbenchMobileDateStrip" class="coach-mobile-only coach-home-date-strip"></div><div id="workbenchMobileTodayList" class="coach-mobile-only coach-home-course-list"></div><div class="my-schedule-week-grid desktop-only"><div class="week-grid" id="workbenchWeekGrid"></div></div><div id="workbenchScheduleMobileList" class="coach-mobile-only coach-mobile-list my-schedule-mobile-list"></div></div>`;
 }
 function renderWorkbench(){
   ensureWorkbenchTicker();
@@ -116,11 +116,8 @@ function renderWorkbench(){
   const host=document.getElementById('workbenchBody');
   if(!host)return;
   const statsHtml=[
-    ['本月课时',lessonUnitsText(coachWorkbenchStats.monthFinishedLessonUnits||0),'节',false],
-    ['本周课时',lessonUnitsText(coachWorkbenchStats.weekFinishedLessonUnits||0),'节',false],
     ['今天课时',lessonUnitsText(coachWorkbenchStats.todayFinishedLessonUnits||0),'节',false],
-    ['本月反馈',coachWorkbenchStats.monthFeedbackCount||0,'节',false],
-    ['未反馈',coachWorkbenchStats.pendingFeedbackCount||0,'节',(coachWorkbenchStats.pendingFeedbackCount||0)>0],
+    ['本周课时',lessonUnitsText(coachWorkbenchStats.weekFinishedLessonUnits||0),'节',false],
     ['本月体验课转化率',coachWorkbenchStats.trialConversionRate||0,'%',false]
   ].map(([label,val,u,accent])=>`<div class="coach-wb-stat-card"><div class="coach-wb-stat-label">${label}</div><div class="coach-wb-stat-value"${accent?' style="color:#8C4A32;"':''}>${val}<span>${u}</span></div></div>`).join('');
   host.innerHTML=`<div class="coach-wb-container"><div class="coach-wb-stats-row">${statsHtml}</div>${workbenchScheduleShell()}</div>`;
@@ -179,6 +176,7 @@ function renderPostClassFeedback(){
 }
 let myWeekOffset=0;
 let myScheduleMobileScrollKey='';
+let workbenchSelectedDate='';
 function getMyCoachName(){return coachName(currentUser?.coachName||currentUser?.name||'');}
 function isCoachMobile(){return document.body.classList.contains('coach-mobile');}
 function getWeekDates(offset){
@@ -217,6 +215,10 @@ function myScheduleBlockTitle(schedule){
 }
 function myScheduleTypeText(schedule){
   return schedule.scheduleSource==='订场陪打'?'陪打':scheduleCourseTypeLabel(schedule);
+}
+function selectWorkbenchDate(dateKey){
+  workbenchSelectedDate=dateKey;
+  renderMySchedule();
 }
 function myStudentLessonRecordHtml(student){
   const coach=getMyCoachName();
@@ -267,6 +269,35 @@ function renderMySchedule(){
     });
   }
   document.getElementById('workbenchWeekGrid').innerHTML=html;
+  if(!workbenchSelectedDate||!week.some(d=>d.toISOString().slice(0,10)===workbenchSelectedDate)){
+    workbenchSelectedDate=week.some(d=>d.toISOString().slice(0,10)===todayStr)?todayStr:week[0].toISOString().slice(0,10);
+  }
+  const dateStrip=document.getElementById('workbenchMobileDateStrip');
+  if(dateStrip){
+    dateStrip.innerHTML=week.map((d,i)=>{
+      const ds=d.toISOString().slice(0,10);
+      const rows=allMine.filter(s=>s.startTime.slice(0,10)===ds);
+      const active=ds===workbenchSelectedDate;
+      const isToday=ds===todayStr;
+      return `<button type="button" class="coach-home-date-chip${active?' active':''}${isToday?' today':''}" onclick="selectWorkbenchDate('${ds}')"><strong>${WDNAMES[i]}</strong><span>${d.getMonth()+1}/${d.getDate()}</span>${rows.length?`<em>${rows.length}节</em>`:'<em>无课</em>'}</button>`;
+    }).join('');
+  }
+  const todayList=document.getElementById('workbenchMobileTodayList');
+  if(todayList){
+    const selectedDate=workbenchSelectedDate||todayStr;
+    const selectedRows=allMine.filter(s=>s.startTime.slice(0,10)===selectedDate).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+    const selectedDateObj=dtObj(`${selectedDate} 00:00:00`)||new Date(selectedDate);
+    const title=selectedDate===todayStr?'今天课程':`${WDNAMES[(selectedDateObj.getDay()+6)%7]}课程`;
+    const cards=selectedRows.map(s=>{
+      const cc=coachOpsCourseTypeTagClass(scheduleCourseType(s));
+      const state=workbenchScheduleState(s,null,now);
+      const endedClass=effectiveScheduleStatus(s,now)==='已结束'?' is-ended':'';
+      const stateHtml=state?`<span class="coach-home-course-state">${esc(state.label)}</span>`:'';
+      const action=state?.code==='pending'?`<button type="button" class="coach-home-course-action" onclick="event.stopPropagation();openFeedbackModal('${s.id}')">填写反馈</button>`:'';
+      return `<div class="coach-home-course-card ${cc}${endedClass}" onclick="openScheduleDetail('${s.id}')"><div class="coach-home-course-main"><div><div class="coach-home-course-time">${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-home-course-title">${esc(myScheduleBlockTitle(s))}</div></div>${stateHtml}</div><div class="coach-home-course-meta">${esc(myScheduleTypeText(s))} · ${esc(scheduleLocationText(s))}</div>${action}</div>`;
+    }).join('');
+    todayList.innerHTML=`<div class="coach-home-section-title">${esc(title)}</div>${cards||'<div class="coach-home-empty">当天暂无课程</div>'}`;
+  }
   const mobile=document.getElementById('workbenchScheduleMobileList');
   if(mobile){
     const mobileHourHeight=56;
