@@ -761,6 +761,17 @@ function normalizeSmallClassType(value='',fallback='single'){
   if(/单次/.test(raw))return 'single';
   return fallback;
 }
+function inferSmallClassType(source={},fallback='single'){
+  const lessons=parseInt(source.lessons||source.totalLessons||source.packageLessons)||0;
+  const price=normalizeMoney(source.price||source.packagePrice||source.amountPaid);
+  const explicit=String(source.smallClassType||source.packageSubType||source.subType||'').trim();
+  if(explicit&&!(explicit==='single'&&price===1499&&lessons!==1))return normalizeSmallClassType(explicit,fallback);
+  const text=[source.courseTypeLevel2,source.name,source.packageName,source.productName].filter(Boolean).join(' ');
+  if(/随到随学/.test(text)||(price===1499&&lessons!==1))return 'dropin';
+  if(/训练营/.test(text))return 'bootcamp';
+  if(/单次/.test(text))return 'single';
+  return fallback;
+}
 function smallGroupLessonCountForStudentCount(count){
   const n=parseInt(count)||0;
   if(n===2)return 1;
@@ -770,7 +781,7 @@ function smallGroupLessonCountForStudentCount(count){
 }
 function smallGroupRuleSnapshot(source={}){
   if(!isSmallGroupCourse(source))return {};
-  const smallClassType=normalizeSmallClassType(source.smallClassType||source.packageSubType||source.subType,parseInt(source.lessons||source.totalLessons||source.packageLessons)===6?'bootcamp':'single');
+  const smallClassType=inferSmallClassType(source,parseInt(source.lessons||source.totalLessons||source.packageLessons)===6?'bootcamp':'single');
   const maxStudents=parseInt(source.maxStudents)||4;
   const fixedStudentCount=smallClassType==='bootcamp'?4:(parseInt(source.fixedStudentCount)||0);
   const minAttendStudents=smallClassType==='bootcamp'?2:(parseInt(source.minAttendStudents)||2);

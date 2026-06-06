@@ -162,13 +162,23 @@ function standardCourseTypeLabel(courseType,experienceType='',smallClassType='')
   const level2=courseTypeLevel2Label(courseType,experienceType,smallClassType);
   return level2?`${courseType} / ${level2}`:courseType;
 }
+function inferSmallClassTypeForForm(source={},fallback='single'){
+  const lessons=parseInt(source.lessons||source.totalLessons||source.packageLessons)||0;
+  const price=Number(source.price||source.packagePrice||source.amountPaid)||0;
+  const explicit=String(source.smallClassType||source.packageSubType||source.subType||'').trim();
+  if(explicit&&!(explicit==='single'&&price===1499&&lessons!==1))return explicit;
+  const text=[source.courseTypeLevel2,source.name,source.packageName,source.productName].filter(Boolean).join(' ');
+  if(/随到随学/.test(text)||(price===1499&&lessons!==1))return 'dropin';
+  if(/训练营/.test(text))return 'bootcamp';
+  if(/单次/.test(text))return 'single';
+  return fallback;
+}
 function normalizeCourseTypeForForm(row={}){
   const source=typeof row==='string'?{courseType:row}:(row||{});
   const raw=String(source.courseType||source.type||source.productType||'').trim();
-  const smallText=[source.smallClassType,source.courseTypeLevel2,source.packageSubType,source.subType,source.name,source.packageName,source.productName,raw].filter(Boolean).join(' ');
   const experienceText=[source.experienceType,source.courseTypeLevel2,source.name,source.packageName,source.productName,raw].filter(Boolean).join(' ');
   const courseType=normalizeCourseType(raw)||PRODUCT_TYPES[0];
-  const smallClassType=/训练营/.test(smallText)?'bootcamp':/随到随学/.test(smallText)?'dropin':(source.smallClassType||'single');
+  const smallClassType=inferSmallClassTypeForForm(source,'single');
   const experienceType=normalizeExperienceType(experienceText,'私教体验课');
   const courseTypeLevel2=courseTypeLevel2Label(courseType,experienceType,smallClassType);
   return {courseType,experienceType,smallClassType,courseTypeLevel2,standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType)};
@@ -217,7 +227,7 @@ function packageCoreClassLabel(p={}){
   }
   if(courseType==='私教课')return `${packageClassSizeLabel(detectedSize)}私教课`;
   if(courseType==='小班课'){
-    const smallType=String(p.smallClassType||p.packageSubType||p.subType||'').trim();
+    const smallType=inferSmallClassTypeForForm(p,'single');
     if(smallType==='bootcamp'||/训练营/.test(text))return '小班训练营';
     if(smallType==='dropin'||/随到随学/.test(text))return '小班随到随学';
     return '小班单次课';

@@ -77,6 +77,28 @@ assert.strictEqual(
   'small group trial package card subtitle should use count unit'
 );
 
+const staleDropinPackage = {
+  id: 'pkg-stale-dropin',
+  courseType: '小班课',
+  smallClassType: 'single',
+  name: '小班单次课 · 12次 · 全天',
+  audience: '成人',
+  price: 1499,
+  lessons: 12,
+  timeBand: '全天'
+};
+
+assert.strictEqual(
+  context.normalizeCourseTypeForForm(staleDropinPackage).smallClassType,
+  'dropin',
+  '1499 stale small group package should reopen as dropin instead of single'
+);
+assert.strictEqual(
+  context.packageDisplayTitle(staleDropinPackage),
+  '小班随到随学 · 12次 · 全天',
+  '1499 stale small group package title should show dropin instead of single'
+);
+
 context.packages = [smallTrialPackage];
 context.entitlements = [];
 assert.strictEqual(

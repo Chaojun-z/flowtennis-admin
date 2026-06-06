@@ -317,6 +317,16 @@ for(const smallClassPackage of [
   );
 }
 
+assert.strictEqual(
+  rules.normalizePackageRecord(
+    { ...smallGroupBootcampPackage, smallClassType: 'single', name: '小班单次课 · 12次 · 全天', price: 1499, lessons: 6, timeBand: '全天', fixedStudentCount: 0, freeAbsenceLimit: 0 },
+    null,
+    { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }
+  ).smallClassType,
+  'dropin',
+  '1499 small group package should be corrected to dropin when changing the count back to 6'
+);
+
 const smallGroupPurchase = rules.buildPurchaseRecord(
   smallGroupBootcampPackage,
   { ...purchase, id: 'pur-small-1', amountPaid: 1888 },
