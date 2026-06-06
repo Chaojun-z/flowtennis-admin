@@ -1,4 +1,3 @@
-const { SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID } = require('../../config');
 const { loginWithPassword, loginWithWechat, bindWechatAfterLogin, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 
 const AGREEMENT_ACCEPTED_KEY = 'ft_mini_agreement_accepted_v1';
@@ -68,12 +67,6 @@ Page({
   openPrivacy() {
     wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
-  requestScheduleNotice() {
-    if (!wx.requestSubscribeMessage) return;
-    wx.requestSubscribeMessage({
-      tmplIds: [SCHEDULE_TEMPLATE_ID, COURSE_REMINDER_TEMPLATE_ID]
-    });
-  },
   submitLogin() {
     const account = String(this.data.account || '').trim();
     const password = String(this.data.password || '');
@@ -96,10 +89,7 @@ Page({
         this.saveAgreementAccepted();
         enterCoachPortal();
         bindWechatAfterLogin()
-          .catch(noop)
-          .finally(() => {
-            this.requestScheduleNotice();
-          });
+          .catch(noop);
       })
       .catch((error) => {
         wx.showToast({
@@ -123,7 +113,6 @@ Page({
         assertCoachLoginUser(data.user || {});
         this.saveAgreementAccepted();
         enterCoachPortal();
-        this.requestScheduleNotice();
       })
       .catch((error) => {
         const message = error.message || '微信登录失败';

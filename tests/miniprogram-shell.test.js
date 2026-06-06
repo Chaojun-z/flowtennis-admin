@@ -43,8 +43,7 @@ assert.doesNotMatch(indexWxml, /<web-view/, 'index page should stay native so su
 assert.doesNotMatch(indexWxml, /password-eye/, 'login page should remove the password eye icon');
 
 const indexJs = readText('wechat-miniprogram/miniprogram/pages/index/index.js');
-assert.match(indexJs, /SCHEDULE_TEMPLATE_ID/, 'index page should read the schedule subscribe template ID from config');
-assert.match(indexJs, /COURSE_REMINDER_TEMPLATE_ID/, 'index page should read the course reminder subscribe template ID from config');
+assert.doesNotMatch(indexJs, /requestSubscribeMessage/, 'mini program login should not request one-time schedule subscription messages');
 assert.match(indexJs, /loginWithPassword/, 'index page should call the real account password login helper');
 assert.match(indexJs, /loginWithWechat/, 'index page should call the coach WeChat login helper');
 assert.match(indexJs, /bindWechatAfterLogin/, 'index page should bind the current mini program WeChat account after password login');
@@ -54,8 +53,7 @@ assert.match(indexJs, /user\.role !== 'editor'/, 'index page should reject non-c
 assert.match(indexJs, /loginWithPassword\(account, password\)[\s\S]*assertCoachLoginUser\(data\.user \|\| \{\}\)[\s\S]*bindWechatAfterLogin\(\)/, 'index page should always attempt mini program WeChat bind after password login');
 assert.doesNotMatch(indexJs, /function shouldBindWechatAfterLogin/, 'index page should not keep stale conditional bind helper');
 assert.doesNotMatch(indexJs, /wechatBound/, 'index page should not depend on cached wechatBound state to decide binding');
-assert.match(indexJs, /wx\.requestSubscribeMessage/, 'index page should request schedule subscribe permission from a tap');
-assert.match(indexJs, /tmplIds:\s*\[SCHEDULE_TEMPLATE_ID,\s*COURSE_REMINDER_TEMPLATE_ID\]/, 'index page should request both schedule and course reminder templates');
+assert.doesNotMatch(indexJs, /SCHEDULE_TEMPLATE_ID|COURSE_REMINDER_TEMPLATE_ID/, 'mini program login should leave course reminders to official account messages');
 assert.match(indexJs, /pages\/schedule\/schedule/, 'index page should navigate into the native schedule page after the tap');
 assert.match(indexJs, /wx\.getStorageSync\(TOKEN_KEY\)[\s\S]*wx\.getStorageSync\(USER_KEY\)[\s\S]*enterCoachPortal\(\)/, 'index page should skip the login form when a valid coach session exists');
 assert.match(indexJs, /agreed/, 'index page should track the agreement checkbox state');
@@ -302,6 +300,8 @@ assert.match(detailWxml, /返回课表/, 'native detail page should let coaches 
 const detailJs = readText('wechat-miniprogram/miniprogram/pages/detail/detail.js');
 assert.doesNotMatch(detailWxml, /完整工作台|进入完整教练端/, 'native detail page should not expose the old webview fallback entry');
 assert.doesNotMatch(detailJs, /openWebview\(\)/, 'native detail page should not keep the old webview jump handler');
+assert.match(detailJs, /function hasStoredCoachSession/, 'native detail page should reuse stored coach session before WeChat login');
+assert.match(detailJs, /if \(!hasStoredCoachSession\(\)\) await loginWithWechat\(\)/, 'native detail page should only call WeChat login when local token is missing');
 
 const apiJs = readText('public/assets/scripts/core/api.js');
 assert.match(apiJs, /WECHAT_CODE_KEY/, 'web app should keep the mini program login code until account login succeeds');
@@ -313,8 +313,7 @@ assert.match(stateJs, /openPendingScheduleDeepLink/, 'page data load should try 
 
 const configJs = readText('wechat-miniprogram/miniprogram/config.js');
 assert.match(configJs, /API_BASE_URL:\s*'https:\/\/www\.flowtennis\.cn\/api'/, 'config should expose the API base URL for native pages');
-assert.match(configJs, /SCHEDULE_TEMPLATE_ID:\s*'H_BIzR4Ca7aKldMWAlajgSwTWSos80lDZskEM4p8taI'/, 'config should include the selected schedule subscribe template ID');
-assert.match(configJs, /COURSE_REMINDER_TEMPLATE_ID:\s*'ME_OpZIFDLRwN-ENibuFk4g4Dtdi8x43TAQR2nKkoUs'/, 'config should include the selected course reminder subscribe template ID');
+assert.doesNotMatch(configJs, /SCHEDULE_TEMPLATE_ID|COURSE_REMINDER_TEMPLATE_ID/, 'config should not keep one-time subscribe message template IDs');
 assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no longer keep the removed webview URL');
 
 const apiServerJs = readText('api/index.js');

@@ -3156,6 +3156,18 @@ function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCa
     }
   };
 }
+function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,appId=WECHAT_MINIPROGRAM_APPID}){
+  const mini=buildCourseReminderSubscribeMessage({templateId,openid,schedule});
+  return {
+    touser:openid,
+    template_id:templateId,
+    miniprogram:{
+      appid:String(appId||WECHAT_MINIPROGRAM_APPID),
+      pagepath:mini.page
+    },
+    data:mini.data
+  };
+}
 function buildStudentReminderBindToken(){
   return crypto.randomBytes(24).toString('hex');
 }
@@ -3386,11 +3398,15 @@ async function sendOfficialAccountTemplateMessage(message){
   if(data.errcode&&data.errcode!==0)throw new Error(`服务号模板消息发送失败：${data.errmsg||data.errcode}`);
   return data;
 }
-function buildOfficialAccountDigestTemplatePayload({templateId,openid,message}){
+function buildOfficialAccountDigestTemplatePayload({templateId,openid,message,appId=WECHAT_MINIPROGRAM_APPID}){
   const lines=Array.isArray(message?.lines)?message.lines:[];
   return {
     touser:openid,
     template_id:templateId,
+    miniprogram:{
+      appid:String(appId||WECHAT_MINIPROGRAM_APPID),
+      pagepath:'pages/schedule/schedule'
+    },
     data:{
       thing1:{value:truncateWechatValue(message?.title||'明日排课汇总')},
       phrase2:{value:'次日课表'},
@@ -3441,7 +3457,7 @@ async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,user
       continue;
     }
     try{
-      const message=buildCourseReminderSubscribeMessage({templateId,openid:recipient.officialAccountOpenId,schedule:item.schedule,crossCampus:item.crossCampus});
+      const message=buildOfficialAccountCourseReminderMessage({templateId,openid:recipient.officialAccountOpenId,schedule:item.schedule,appId});
       await sendTemplate(message);
       await putSchedule(item.schedule.id,{...item.schedule,courseReminderSentAt:new Date(now).toISOString(),courseReminderCrossCampus:item.crossCampus?'true':'false'});
       result.sent++;
@@ -3521,7 +3537,8 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
       await sendTemplate(buildOfficialAccountDigestTemplatePayload({
         templateId,
         openid:recipient.officialAccountOpenId,
-        message:{...digestMessage,digestDate:item.digestDate,coachName:item.coachName,lessonCount:item.lessonCount}
+        message:{...digestMessage,digestDate:item.digestDate,coachName:item.coachName,lessonCount:item.lessonCount},
+        appId
       }));
       await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
         ...(((resolvedRows||[]).find(row=>String(row.id||'')===String(scheduleId)))||{}),
@@ -3574,25 +3591,7 @@ async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAIL
   };
 }
 async function sendCourseReminders({now=new Date()}={}){
-  if(!WECHAT_COURSE_REMINDER_TEMPLATE_ID)return {success:true,skipped:true,reason:'missing_template',sent:0,failed:0};
-  const [rows,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-  const candidates=collectCourseReminderCandidates(rows,now);
-  const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
-  for(const item of candidates){
-    const recipient=findWechatScheduleRecipient(item.schedule,users);
-    if(!recipient){result.skipped++;result.items.push({id:item.schedule.id,skipped:true,reason:'missing_openid'});continue;}
-    try{
-      const message=buildCourseReminderSubscribeMessage({templateId:WECHAT_COURSE_REMINDER_TEMPLATE_ID,openid:recipient.wechatOpenId,schedule:item.schedule,crossCampus:item.crossCampus});
-      await sendWechatSubscribeMessage(message);
-      await put(T_SCHEDULE,item.schedule.id,{...item.schedule,courseReminderSentAt:new Date().toISOString(),courseReminderCrossCampus:item.crossCampus?'true':'false'});
-      result.sent++;
-      result.items.push({id:item.schedule.id,sent:true,crossCampus:item.crossCampus});
-    }catch(err){
-      result.failed++;
-      result.items.push({id:item.schedule.id,sent:false,error:err.message});
-    }
-  }
-  return result;
+  return {success:true,skipped:true,reason:'official_account_reminder_only',sent:0,failed:0};
 }
 function operatorAccountName(user){
   return String(user?.username||user?.id||user?.name||'').trim();
@@ -9080,18 +9079,7 @@ module.exports = async (req, res) => {
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
             const financialLedger=await timed('schedule create field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,now));
-          let notification=await timed(
-            'schedule create coach notification',
-            ()=>withTimeout(
-              notifyCoachScheduleCreated(r).catch(err=>({sent:false,error:err.message})),
-              5000,
-              {sent:false,error:'微信通知超时'}
-            )
-          );
-            Object.assign(r,buildScheduleNotificationUpdate(r,notification,'schedule_created',new Date().toISOString()));
-            await put(T_SCHEDULE,id,r).catch(err=>{
-              notification={...(notification||{}),sent:false,error:`排课通知状态更新失败：${err.message}`};
-            });
+          let notification={skipped:true,reason:'official_account_reminder_only'};
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
             });
@@ -9800,6 +9788,7 @@ module.exports._test={
   buildScheduleNotificationUpdate,
   collectCourseReminderCandidates,
   buildCourseReminderSubscribeMessage,
+  buildOfficialAccountCourseReminderMessage,
   buildStudentReminderBindToken,
   buildStudentReminderLinkUpdate,
   buildStudentOfficialAccountBoundUpdate,

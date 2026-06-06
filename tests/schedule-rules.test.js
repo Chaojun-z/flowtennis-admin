@@ -673,6 +673,31 @@ assert.deepStrictEqual(
   'course reminder message should use the selected class reminder template fields'
 );
 
+assert.ok(rules.buildOfficialAccountCourseReminderMessage, 'api._test should expose official account course reminder message helper');
+assert.deepStrictEqual(
+  rules.buildOfficialAccountCourseReminderMessage({
+    templateId: 'official-reminder-tpl',
+    openid: 'oa-openid-1',
+    schedule: reminderRows.find(row => row.id === 'due-cross')
+  }),
+  {
+    touser: 'oa-openid-1',
+    template_id: 'official-reminder-tpl',
+    miniprogram: {
+      appid: 'wx7acb7603ee803923',
+      pagepath: 'pages/detail/detail?scheduleId=due-cross'
+    },
+    data: {
+      time3: { value: '2026年4月20日 12:00' },
+      thing4: { value: 'shunyi 2号场' },
+      const7: { value: '私教课' },
+      thing2: { value: '朝珺' },
+      thing6: { value: '小鹿' }
+    }
+  },
+  'official account course reminder should jump to the coach mini program'
+);
+
 const digestCandidates = rules.collectCoachDailyDigestCandidates(
   [
     { id: 'dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 09:00', endTime: '2026-05-16 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
@@ -853,6 +878,10 @@ assert.deepStrictEqual(
   {
     touser: 'oa-openid',
     template_id: 'digest-tpl',
+    miniprogram: {
+      appid: 'wx7acb7603ee803923',
+      pagepath: 'pages/schedule/schedule'
+    },
     data: {
       thing1: { value: '明日排课汇总' },
       phrase2: { value: '次日课表' },
@@ -1064,6 +1093,7 @@ assert.strictEqual(
 
     assert.strictEqual(result.sent, 1, 'official account course reminder should send once');
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
+    assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-appid', pagepath: 'pages/detail/detail?scheduleId=due-1' }, 'official account course reminder should use mini program jump');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
   }
