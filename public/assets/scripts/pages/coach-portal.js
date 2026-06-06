@@ -135,7 +135,7 @@ function renderPostClassFeedback(){
   const weekLabel=`${week[0].getMonth()+1}/${week[0].getDate()} — ${week[6].getMonth()+1}/${week[6].getDate()}`;
   if(currentPage==='postfeedback'){
     const title=document.getElementById('topTitle');
-    if(title)title.textContent=`课后评价（${weekLabel}）`;
+    if(title)title.textContent=isCoachMobile()?'课后评价':`课后评价（${weekLabel}）`;
   }
   const weekRows=myRows
     .filter(s=>{

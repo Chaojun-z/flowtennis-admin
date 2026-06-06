@@ -190,6 +190,12 @@ assert.match(
 );
 
 assert.match(
+  fnBody('renderPostClassFeedback'),
+  /isCoachMobile\(\)\?'课后评价':`课后评价（\$\{weekLabel\}）`/,
+  'coach mobile post-class feedback title should stay short to avoid topbar crowding'
+);
+
+assert.match(
   source,
   /function hasTrialConversionDecision\(fb\)/,
   'coach portal should expose a helper for trial conversion completion'
