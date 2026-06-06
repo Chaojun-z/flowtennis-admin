@@ -1726,7 +1726,6 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
   body.coach-mobile .my-schedule-week-title{font-size:16px}
   body.coach-mobile #page-workbench .my-schedule-week{margin-top:0}
   body.coach-mobile #page-workbench .week-nav{display:none}
-  body.coach-mobile #page-workbench #workbenchScheduleMobileList{display:none!important}
   body.coach-mobile #page-workbench .coach-home-date-strip{display:flex!important;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
   body.coach-mobile #page-workbench .coach-home-date-strip::-webkit-scrollbar{display:none}
   body.coach-mobile #page-workbench .coach-home-date-chip{flex:0 0 74px;border:1px solid rgba(233,222,210,.9);background:#FCFAF7;color:#5C4D43;border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}

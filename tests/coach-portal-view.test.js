@@ -266,6 +266,12 @@ assert.match(
   'coach workbench mobile schedule list should use the dedicated mobile card container'
 );
 
+assert.doesNotMatch(
+  pagesCss,
+  /#workbenchScheduleMobileList\{display:none!important\}/,
+  'coach mobile week calendar should stay visible on the workbench'
+);
+
 assert.match(
   fnBody('workbenchScheduleShell'),
   /看本周课程时间、类型和场地安排，点击课程块可直接查看详情。[\s\S]*workbenchMetricHelpHtml/,
