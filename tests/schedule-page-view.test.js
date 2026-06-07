@@ -88,7 +88,7 @@ assert.doesNotMatch(source, /消课节数/, 'schedule page should stop using 消
 assert.match(fnBody('openScheduleModal'), /tms-form-row schedule-time-row[\s\S]*scheduleTimeRangeControls[\s\S]*tms-form-row schedule-repeat-row[\s\S]*sch_repeatEnabled/, 'schedule modal should keep date/time and repeat controls on separate rows');
 assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
 assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
-assert.match(fnBody('syncScheduleFilterOptions'), /PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule course type filter should use the shared course type source');
+assert.match(fnBody('syncScheduleFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/, 'schedule course type filter should use the shared standard subtype source');
 assert.match(fnBody('openScheduleModal'), /const courseTypeOptions=PRODUCT_TYPES\.map\(t=>\(\{value:t,label:t\}\)\)/, 'schedule modal course type dropdown should use the shared course type source');
 assert.match(fnBody('openScheduleModal'), /sch_experienceType/, 'schedule modal should expose a second-level trial course selector');
 assert.match(fnBody('saveSchedule'), /experienceType:/, 'schedule save should persist trial course subtype');

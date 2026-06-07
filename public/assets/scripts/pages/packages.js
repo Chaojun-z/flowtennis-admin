@@ -7,7 +7,7 @@ function syncPackageFilterOptions(){
   const baseRows=packageFilterBaseRows();
   const coachNames=[...new Set([...activeCoachNames(),...packages.flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames||p.coachIds)]).map(coachName).filter(Boolean)])];
   const linked=withLinkedFilterCounts([
-    {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:packageMatchesCourseType},
+    {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},...STANDARD_COURSE_TYPE_OPTIONS],match:packageMatchesCourseType},
     {key:'audience',value:audienceValue,options:[{value:'',label:'全部',emptyDisplay:'学员类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:packageMatchesAudience},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:packageMatchesCoach},
     {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},{value:'active',label:'售卖中'},{value:'inactive',label:'已停售'}],match:packageMatchesStatus},
@@ -143,7 +143,7 @@ function packageFilterBaseRows(){
     return true;
   });
 }
-function packageMatchesCourseType(p,value){return normalizeCourseType(p.courseType)===value;}
+function packageMatchesCourseType(p,value){return standardCourseTypeFilterValue(p)===value;}
 function packageMatchesAudience(p,value){return packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])===value;}
 function packageMatchesCoach(p,value){
   const names=parseArr(p.coachNames||p.coachIds).map(coachName);
@@ -238,7 +238,7 @@ function renderPackages(){
   const sf=document.getElementById('pkgStatusFilter')?.value||'';
   const bf=document.getElementById('pkgTimeBandFilter')?.value||'';
   const list=packages.filter(p=>{
-    const courseType=normalizeCourseType(p.courseType);
+    const courseType=standardCourseTypeFilterValue(p);
     const campusIds=parseArr(p.campusIds);
     const coachNames=parseArr(p.coachNames||p.coachIds).map(coachName);
     const statusValue=packageListStatusValue(p);

@@ -183,6 +183,15 @@ function normalizeCourseTypeForForm(row={}){
   const courseTypeLevel2=courseTypeLevel2Label(courseType,experienceType,smallClassType);
   return {courseType,experienceType,smallClassType,courseTypeLevel2,standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType)};
 }
+function standardCourseTypeFilterValue(row={}){
+  const direct=String(row?.standardCourseType||'').trim();
+  if(STANDARD_COURSE_TYPE_OPTIONS.some(opt=>opt.value===direct))return direct;
+  if(typeof FlowTennisBusinessTaxonomy==='object'&&FlowTennisBusinessTaxonomy?.normalizeCourseType){
+    const normalized=FlowTennisBusinessTaxonomy.normalizeCourseType(row);
+    if(normalized?.level1)return normalized.level2?`${normalized.level1} / ${normalized.level2}`:normalized.level1;
+  }
+  return normalizeCourseTypeForForm(row).standardCourseType;
+}
 function experienceTypeOptions(){return EXPERIENCE_TYPES.map(t=>({value:t,label:t}));}
 function payMethodOptions(){return PAY_METHODS.map(t=>({value:t,label:t}));}
 function courseSurchargePayMethodOptions(){return payMethodOptions().filter(option=>!['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(option.value));}

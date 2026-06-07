@@ -9,7 +9,7 @@ function syncScheduleFilterOptions(){
   const linked=withLinkedFilterCounts([
     {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}],match:(s,value)=>effectiveScheduleStatus(s)===value},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:(s,value)=>coachName(s.coach)===value},
-    {key:'courseType',value:courseTypeValue,options:[{value:'',label:'全部',emptyDisplay:'课程类型'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:(s,value)=>scheduleCourseType(s)===value}
+    {key:'courseType',value:courseTypeValue,options:[{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],match:(s,value)=>standardCourseTypeFilterValue(s)===value}
   ],baseRows);
   [['schStatusFilterHost','schStatusFilter','状态',linked.status.options,linked.status.value],['schCoachFilterHost','schCoachFilter','教练',linked.coach.options,linked.coach.value],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',linked.courseType.options,linked.courseType.value]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
@@ -90,7 +90,7 @@ function getFilteredSchedules(){
     if(!globalDateWithinRange(s.startTime))return false;
     if(sf&&effectiveStatus!==sf)return false;
     if(coachFilter&&coachName(s.coach)!==coachFilter)return false;
-    if(tf&&scheduleCourseType(s)!==tf)return false;
+    if(tf&&standardCourseTypeFilterValue(s)!==tf)return false;
     return true;
   }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)}));
 }

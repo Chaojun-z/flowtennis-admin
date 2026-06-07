@@ -81,6 +81,7 @@ const SOURCES=['转介绍','小红书','大众点评','视频号','抖音','播�
 const WEEKDAYS=['周一','周二','周三','周四','周五','周六','周日'];
 const PAGE_SIZE=15;
 const PRODUCT_TYPES=['私教课','体验课','小班课','大师课','陪打'];
+const STANDARD_COURSE_TYPE_OPTIONS=[{value:'私教课',label:'私教课'},{value:'体验课 / 私教体验课',label:'体验课 / 私教体验课'},{value:'体验课 / 小班体验课',label:'体验课 / 小班体验课'},{value:'小班课 / 单次',label:'小班课 / 单次'},{value:'小班课 / 训练营',label:'小班课 / 训练营'},{value:'小班课 / 随到随学',label:'小班课 / 随到随学'},{value:'大师课',label:'大师课'},{value:'陪打',label:'陪打'}];
 const EXPERIENCE_TYPES=['私教体验课','小班体验课'];
 const PAY_METHODS=['微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'];
 const SCH_STATUSES=['已排课','已结束','已取消'];

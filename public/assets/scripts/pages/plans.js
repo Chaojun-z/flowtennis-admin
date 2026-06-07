@@ -3,6 +3,10 @@ function planProduct(p){
   const cls=planClass(p);
   return (cls?.productId?products.find(x=>x.id===cls.productId):null)||products.find(x=>x.name===p?.productName)||null;
 }
+function planStandardCourseTypeValue(p){
+  const prod=planProduct(p)||{};
+  return standardCourseTypeFilterValue({...prod,courseType:prod.courseType||prod.type||p?.courseType||p?.productName});
+}
 function planSchedules(p){
   return schedules.filter(s=>s.classId===p?.classId&&parseArr(s.studentIds).includes(p?.studentId)&&s.status!=='已取消'&&s.startTime).sort((a,b)=>new Date(String(b.startTime).replace(' ','T'))-new Date(String(a.startTime).replace(' ','T')));
 }
@@ -50,7 +54,7 @@ function syncPlanFilterOptions(){
     {key:'status',value:statusValue,options:[{value:'',label:'全部状态'},{value:'active',label:'上课中'},{value:'已取消',label:'已取消'},{value:'已结课',label:'已结课'}],match:(p,value)=>p.status===value},
     {key:'campus',value:campusValue,options:[{value:'',label:'全部校区'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))],match:(p,value)=>p.campus===value},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部教练'},...activeCoachNames().map(c=>({value:c,label:c}))],match:(p,value)=>coachName(p.coach)===value},
-    {key:'type',value:typeValue,options:[{value:'',label:'全部课程'},...PRODUCT_TYPES.map(t=>({value:t,label:t}))],match:(p,value)=>normalizeCourseType(planProduct(p)?.type)===value},
+    {key:'type',value:typeValue,options:[{value:'',label:'全部课程'},...STANDARD_COURSE_TYPE_OPTIONS],match:(p,value)=>planStandardCourseTypeValue(p)===value},
     {key:'stage',value:stageValue,options:[{value:'',label:'全部阶段'},{value:'new',label:'刚开课'},{value:'ongoing',label:'进行中'},{value:'ending',label:'临近结课'}],match:(p,value)=>planStage(p)===value}
   ],plans);
   const wrapMap=[
@@ -104,7 +108,7 @@ function renderPlans(){
     if(sf&&p.status!==sf)return false;
     if(cf&&p.campus!==cf)return false;
     if(coachF&&coachName(p.coach)!==coachF)return false;
-    if(typeF&&normalizeCourseType(prod?.type)!==typeF)return false;
+    if(typeF&&planStandardCourseTypeValue(p)!==typeF)return false;
     if(stageF&&planStage(p)!==stageF)return false;
     return true;
   });
