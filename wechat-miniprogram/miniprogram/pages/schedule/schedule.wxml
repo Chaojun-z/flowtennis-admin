@@ -694,13 +694,6 @@
             </view>
             <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.teachingGoal.text}}</text>
           </view>
-          <view class="detail-note-block">
-            <text class="detail-note-label">教学组织</text>
-            <view wx:if="{{selectedClassDetail.proposal.teachingOrganization.useBox}}" class="detail-note-box">
-              <text>{{selectedClassDetail.proposal.teachingOrganization.text}}</text>
-            </view>
-            <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.teachingOrganization.text}}</text>
-          </view>
           <view class="detail-note-block" wx:if="{{selectedClassDetail.proposal.progressions.length}}">
             <text class="detail-note-label">3级进阶</text>
             <view class="detail-note-box">
@@ -808,12 +801,6 @@
           <view class="feedback-field-label">教学目标 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
           <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'teachingGoal' ? 'is-active' : ''}}">
             <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.teachingGoal}}" data-field="teachingGoal" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
-          </view>
-        </view>
-        <view class="feedback-field">
-          <view class="feedback-field-label">教学组织 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
-          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'teachingOrganization' ? 'is-active' : ''}}">
-            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.teachingOrganization}}" data-field="teachingOrganization" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
           </view>
         </view>
         <view class="feedback-field">

@@ -869,7 +869,8 @@ async function refreshSchEntitlementOptions(){
 function scheduleSaveConfirmText(data,selectedEntitlement){
   const absent=parseArr(data.absentStudentIds);
   const packageText=data.settlementType==='direct'?`${data.payMethod} ¥${fmt(data.paidAmount||0)}`:data.settlementType==='gift'?'赠送/免费，收入 ¥0':(data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额'));
-  const chargeText=data.coachLateFree?'本节不扣课':`${data.lessonCount||0} 节`;
+  const chargeUnit=scheduleSaveChargeUnit(data,selectedEntitlement);
+  const chargeText=data.coachLateFree?'本次不扣课':`${data.lessonCount||0} ${chargeUnit}`;
   const timeText=()=>{
     const start=fmtDt(data.startTime),end=fmtDt(data.endTime);
     const day=start.slice(0,10),startClock=start.slice(11),endClock=end.slice(11);
@@ -889,6 +890,10 @@ function scheduleSaveConfirmText(data,selectedEntitlement){
     ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
     ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
   </div>`;
+}
+function scheduleSaveChargeUnit(data={},selectedEntitlement=null){
+  if(scheduleCourseType(data)==='小班课')return '次';
+  return packageBalanceUnitLabel({...selectedEntitlement,courseType:data.courseType||selectedEntitlement?.courseType,experienceType:data.experienceType||selectedEntitlement?.experienceType});
 }
 async function saveSchedule(){
   const startTime=scheduleComposeDateTime('sch_date','sch_startTime');
@@ -1381,7 +1386,6 @@ function coachProposalSummaryHtml(p){
     ['学员级别',p.studentLevel],
     ['学员数量',p.studentCount],
     ['教学目标',p.teachingGoal],
-    ['教学组织',p.teachingOrganization],
     ['进阶1',p.progression1],
     ['进阶2',p.progression2],
     ['进阶3',p.progression3],
@@ -1399,7 +1403,7 @@ function openCoachProposalModal(scheduleId){
   if(!isSmallGroupSchedule(s)){toast('只有小班课需要填写教练提案','warn');return;}
   const p=scheduleCoachProposal(s)||{};
   const studentCount=parseArr(s.studentIds).length||p.studentCount||'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">教练提案</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程名称 *</label><input class="finput tms-form-control" id="cp_courseName" value="${proposalValue(p,'courseName',s.className||s.productName||'小班课')}"></div><div class="tms-form-item"><label class="tms-form-label">学员级别 *</label><input class="finput tms-form-control" id="cp_studentLevel" value="${proposalValue(p,'studentLevel')}" placeholder="例：1.5-2.0"></div><div class="tms-form-item"><label class="tms-form-label">学员数量 *</label><input class="finput tms-form-control" id="cp_studentCount" type="number" min="1" value="${proposalValue(p,'studentCount',studentCount)}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学目标 *</label><textarea class="finput tms-form-control" id="cp_teachingGoal">${proposalValue(p,'teachingGoal')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学组织 *</label><textarea class="finput tms-form-control" id="cp_teachingOrganization">${proposalValue(p,'teachingOrganization')}</textarea></div></div><div class="tms-section-header">3级进阶</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶1 *</label><textarea class="finput tms-form-control" id="cp_progression1">${proposalValue(p,'progression1')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶2 *</label><textarea class="finput tms-form-control" id="cp_progression2">${proposalValue(p,'progression2')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶3 *</label><textarea class="finput tms-form-control" id="cp_progression3">${proposalValue(p,'progression3')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶逻辑 *</label><textarea class="finput tms-form-control" id="cp_progressionLogic">${proposalValue(p,'progressionLogic')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">结语 *</label><textarea class="finput tms-form-control" id="cp_conclusion">${proposalValue(p,'conclusion')}</textarea></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">教练提案</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程名称 *</label><input class="finput tms-form-control" id="cp_courseName" value="${proposalValue(p,'courseName',s.className||s.productName||'小班课')}"></div><div class="tms-form-item"><label class="tms-form-label">学员级别 *</label><input class="finput tms-form-control" id="cp_studentLevel" value="${proposalValue(p,'studentLevel')}" placeholder="例：1.5-2.0"></div><div class="tms-form-item"><label class="tms-form-label">学员数量 *</label><input class="finput tms-form-control" id="cp_studentCount" type="number" min="1" value="${proposalValue(p,'studentCount',studentCount)}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学目标 *</label><textarea class="finput tms-form-control" id="cp_teachingGoal">${proposalValue(p,'teachingGoal')}</textarea></div></div><div class="tms-section-header">教学组织 · 3级进阶</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶1 *</label><textarea class="finput tms-form-control" id="cp_progression1">${proposalValue(p,'progression1')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶2 *</label><textarea class="finput tms-form-control" id="cp_progression2">${proposalValue(p,'progression2')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶3 *</label><textarea class="finput tms-form-control" id="cp_progression3">${proposalValue(p,'progression3')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶逻辑 *</label><textarea class="finput tms-form-control" id="cp_progressionLogic">${proposalValue(p,'progressionLogic')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">结语 *</label><textarea class="finput tms-form-control" id="cp_conclusion">${proposalValue(p,'conclusion')}</textarea></div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openScheduleDetail('${s.id}')">返回详情</button><button class="tms-btn tms-btn-primary" id="coachProposalSaveBtn" onclick="saveCoachProposal('${s.id}')">保存提案</button>`;
   setCourtModalFrame(p.id?'修改教练提案':'填写教练提案',body,footer,'modal-wide');
 }
@@ -1407,9 +1411,9 @@ async function saveCoachProposal(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
   const p=scheduleCoachProposal(s);
   const value=id=>document.getElementById(id)?.value.trim()||'';
-  const required=['cp_courseName','cp_studentLevel','cp_studentCount','cp_teachingGoal','cp_teachingOrganization','cp_progression1','cp_progression2','cp_progression3','cp_progressionLogic','cp_conclusion'];
+  const required=['cp_courseName','cp_studentLevel','cp_studentCount','cp_teachingGoal','cp_progression1','cp_progression2','cp_progression3','cp_progressionLogic','cp_conclusion'];
   if(required.some(id=>!value(id))){toast('请填写完整教练提案','warn');return;}
-  const data={scheduleId:s.id,classId:s.classId||'',coach:s.coach||'',courseType:scheduleCourseType(s),courseName:value('cp_courseName'),studentLevel:value('cp_studentLevel'),studentCount:value('cp_studentCount'),teachingGoal:value('cp_teachingGoal'),teachingOrganization:value('cp_teachingOrganization'),progression1:value('cp_progression1'),progression2:value('cp_progression2'),progression3:value('cp_progression3'),progressionLogic:value('cp_progressionLogic'),conclusion:value('cp_conclusion')};
+  const data={scheduleId:s.id,classId:s.classId||'',coach:s.coach||'',courseType:scheduleCourseType(s),courseName:value('cp_courseName'),studentLevel:value('cp_studentLevel'),studentCount:value('cp_studentCount'),teachingGoal:value('cp_teachingGoal'),teachingOrganization:'',progression1:value('cp_progression1'),progression2:value('cp_progression2'),progression3:value('cp_progression3'),progressionLogic:value('cp_progressionLogic'),conclusion:value('cp_conclusion')};
   const btn=document.getElementById('coachProposalSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   try{
     const saved=p?.id?await apiCall('PUT','/coach-proposals/'+p.id,data):await apiCall('POST','/coach-proposals',data);

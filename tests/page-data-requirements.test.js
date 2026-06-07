@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/co
 assert.match(source, /students:\['campuses','students'\]/, 'students page should only block on the datasets needed to paint the list immediately');
 assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
 assert.match(source, /plans:\[\]/, 'plans page should open shell immediately and load data in background');
-assert.match(source, /packages:\['packages','products','purchases','entitlements'\]/, 'packages page should wait for its package-sale dependencies so the empty state is stable');
+assert.match(source, /packages:\['packages','products','purchases','entitlements','packageBoardPreferences'\]/, 'packages page should wait for its package-sale dependencies so the empty state is stable');
 assert.match(source, /purchases:\[\]/, 'purchases page should open shell immediately and load data in background');
 assert.match(source, /finance:\[\]/, 'finance center should open shell immediately and load aggregated data in background');
 assert.match(source, /courts:\[\]/, 'courts page should open shell immediately and load data in background');
@@ -16,7 +16,7 @@ assert.match(source, /workbench:\[\]/, 'coach workbench should open immediately 
 assert.match(source, /postfeedback:\[\]/, 'coach post-class feedback should open immediately and load data in background');
 assert.match(source, /mystudents:\[\]/, 'coach students should open immediately and load data in background');
 assert.match(source, /myclasses:\[\]/, 'coach classes should open immediately and load data in background');
-assert.match(source, /schedule:\['campuses','students','schedule','coaches'\]/, 'schedule page should not block first paint on feedback, entitlement, or ledger datasets');
+assert.match(source, /schedule:\['campuses','students','schedule','coaches','coachProposals'\]/, 'schedule page should not block first paint on feedback, entitlement, or ledger datasets');
 assert.match(source, /const PAGE_DATA_BACKGROUND_REQUIREMENTS=\{[\s\S]*students:\['classes','schedule','courts'\][\s\S]*leads:\['leadFollowups','purchases'\][\s\S]*plans:\['plansPage'\][\s\S]*purchases:\['purchasesPage'\][\s\S]*schedule:\['classes','feedbacks','entitlements','entitlementLedger'\][\s\S]*finance:\['financePage'\][\s\S]*courts:\['courtsPage'\][\s\S]*memberships:\['membershipsPage'\][\s\S]*workbench:\['workbenchPage'\][\s\S]*postfeedback:\['workbenchPage'\][\s\S]*mystudents:\['campuses','students','classes','schedule','feedbacks','entitlements'\][\s\S]*myclasses:\['students','classes'\]/, 'heavy page datasets should move behind first render, and students should only keep the light follow-up chain in the first background batch');
 assert.match(source, /const STUDENT_PAGE_DEFERRED_REQUIREMENTS=\['entitlements','entitlementLedger','feedbacks','products','purchasesPage','membershipBenefitLedger'\];/, 'students page should delay the heaviest follow-up datasets into a second background batch and load student benefits');
 assert.match(source, /,plansPage:\(\)=>apiCall\('GET','\/page-data\/plans'\)/, 'plans page should use a dedicated aggregated endpoint');
@@ -42,7 +42,7 @@ assert.match(source, /function hydrateDatasetsFromCache\(\)/, 'state should hydr
 assert.match(source, /function persistDatasetCache\(name,data\)/, 'state should cache every successful dataset load');
 assert.doesNotMatch(source, /function persistDatasetCache\(name,data\)\{\s*return;\s*\}/, 'dataset cache persistence should not be disabled');
 assert.doesNotMatch(source, /function readDatasetCache\(name\)\{\s*return null;\s*\}/, 'dataset cache reads should not be disabled');
-assert.match(source, /const DATASETS_EXCLUDED_FROM_CACHE=new Set\(\['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger'\]\);/, 'volatile lead, schedule, package, purchase, and ledger datasets should stay network-only while normal lists use refresh cache');
+assert.match(source, /const DATASETS_EXCLUDED_FROM_CACHE=new Set\(\['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals'\]\);/, 'volatile lead, schedule, package, purchase, ledger, and coach proposal datasets should stay network-only while normal lists use refresh cache');
 assert.match(source, /function missingRequiredDatasetsForPage\(pg\)/, 'state should be able to detect when the current page still lacks blocking datasets');
 assert.match(source, /function missingInitialDatasetsForPage\(pg\)/, 'state should detect empty-shell pages waiting for their first background dataset');
 assert.match(source, /function renderPageLoading\(pg\)/, 'state should render inline loading placeholders instead of empty pages');

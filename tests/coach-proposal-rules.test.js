@@ -38,6 +38,24 @@ assert.match(
   'schedule detail should render coach proposal fields'
 );
 
+assert.doesNotMatch(
+  source,
+  /id="cp_teachingOrganization"|cp_teachingOrganization/,
+  'admin coach proposal form should not require a standalone teaching organization field'
+);
+
+assert.doesNotMatch(
+  source,
+  /const required=\[[^\]]*cp_teachingOrganization/,
+  'admin coach proposal save should not require teaching organization'
+);
+
+assert.match(
+  source,
+  /DATASETS_EXCLUDED_FROM_CACHE=new Set\(\[[^\]]*'coachProposals'/,
+  'coach proposals should bypass local dataset cache so hard refresh shows submitted proposals'
+);
+
 assert.match(
   source,
   /coachOpsCoachFilter/,
@@ -66,6 +84,18 @@ assert.match(
   miniScheduleWxml,
   /教练提案[\s\S]*保存提案/,
   'mini program should render coach proposal sheet'
+);
+
+assert.doesNotMatch(
+  miniScheduleWxml,
+  /data-field="teachingOrganization"/,
+  'mini program coach proposal sheet should not ask for standalone teaching organization'
+);
+
+assert.doesNotMatch(
+  miniScheduleJs,
+  /const required = \[[^\]]*'teachingOrganization'/,
+  'mini program coach proposal save should not require teaching organization'
 );
 
 console.log('coach proposal rules tests passed');

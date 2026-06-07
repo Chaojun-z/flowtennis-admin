@@ -2077,7 +2077,7 @@ Page({
     const selectedClass = this.data.selectedClass;
     if (!selectedClass || this.data.savingProposal) return;
     const form = this.data.proposalForm || {};
-    const required = ['courseName', 'studentLevel', 'studentCount', 'teachingGoal', 'teachingOrganization', 'progression1', 'progression2', 'progression3', 'progressionLogic', 'conclusion'];
+    const required = ['courseName', 'studentLevel', 'studentCount', 'teachingGoal', 'progression1', 'progression2', 'progression3', 'progressionLogic', 'conclusion'];
     if (required.some(key => !String(form[key] || '').trim())) {
       wx.showToast({ title: '请填写完整提案', icon: 'none' });
       return;
@@ -2091,7 +2091,8 @@ Page({
         classId: selectedClass.classId || '',
         coach: currentCoachName(),
         courseType: selectedClass.type || selectedClass.title || '',
-        ...form
+        ...form,
+        teachingOrganization: ''
       });
       wx.showToast({ title: '提案已保存', icon: 'success' });
       this.applyProposalPatch(selectedClass, savedProposal);
