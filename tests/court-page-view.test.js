@@ -45,9 +45,10 @@ assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should 
 assert.match(html, /会员账户[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
 assert.match(html, /id="courtPageSize"/, 'court table should support page size selection');
-assert.match(html, /20条\/页[\s\S]*50条\/页[\s\S]*100条\/页/, 'court page size selector should offer 20, 50, and 100 rows per page');
+assert.match(html, /renderPageSizeSelectorHtml\('courtPageSizeValue',courtPageSize,'setCourtPageSize'\)/, 'court page size selector should reuse the shared numeric page-size dropdown');
 assert.match(html, /function renderCourtPagerControls\(/, 'court page should use the standard pager renderer');
-assert.match(fnBody('renderCourtPagerControls'), /renderPagerChevron\('prev'\)[\s\S]*renderPagerChevron\('next'\)[\s\S]*jumpCourtPage/, 'court pager should match the shared chevron pager interaction');
+assert.match(fnBody('renderCourtPagerControls'), /renderPagerChevron\('prev'\)[\s\S]*renderPagerChevron\('next'\)/, 'court pager should match the shared chevron pager interaction');
+assert.doesNotMatch(fnBody('renderCourtPagerControls'), /jumpCourtPage|跳至/, 'court pager should not keep jump-to-page controls');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');

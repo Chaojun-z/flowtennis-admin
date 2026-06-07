@@ -88,7 +88,7 @@ function studentPageNumbers(page,pages){
 }
 function renderStudentPagerControls(total,pages){
   const pageSizeHost=document.getElementById('stuPageSize');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('stuPageSizeValue',`${stuPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(stuPageSize),false,'setStudentPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('stuPageSizeValue',stuPageSize,'setStudentPageSize');
   const btns=document.getElementById('stuPagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -96,7 +96,7 @@ function renderStudentPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===stuPage?' active':''}" onclick="stuPage=${item};renderStudents()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="stuPage=Math.max(1,stuPage-1);renderStudents()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="stuPage=Math.min(${pages},stuPage+1);renderStudents()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="stuPageJump" value="${stuPage}" onkeydown="if(event.key==='Enter')jumpStudentPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="stuPage=Math.max(1,stuPage-1);renderStudents()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="stuPage=Math.min(${pages},stuPage+1);renderStudents()">${renderPagerChevron('next')}</div>`;
 }
 function setStudentPageSize(value){
   const next=parseInt(value,10);

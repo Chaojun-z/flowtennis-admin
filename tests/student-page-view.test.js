@@ -107,7 +107,7 @@ assert.match(css, /\.tms-dropdown-display::after\{[^}]*width:16px[^}]*height:16p
 assert.match(css, /\.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*color:#C06031[^}]*font-weight:400/, 'selected filters should use the shared active state');
 assert.match(css, /\.course-package-showcase-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*color:#C06031[^}]*font-weight:400/, 'course package filters should reuse the shared active state');
 assert.match(css, /\.tms-pagination\{[^}]*font-size:12px[^}]*line-height:16px[^}]*color:#78716C/, 'shared pager footer should use the new 12px stone standard');
-assert.match(css, /\.tms-pagination \.tms-dropdown::before\{[^}]*width:1px[^}]*height:12px[^}]*background:#E7E5E4[^}]*left:-12px/, 'pager footer should use the standard vertical divider before the page-size dropdown');
+assert.match(css, /\.pager-divider\{[^}]*width:1px[^}]*height:12px[^}]*background:#E7E5E4[^}]*margin:0 12px/, 'pager footer should use the standard vertical divider before the page-size dropdown');
 assert.match(css, /\.tms-pagination \.tms-dropdown-display\{[^}]*padding:2px 6px[^}]*border-radius:4px[^}]*color:#44403C[^}]*font-weight:500[^}]*transition:all 150ms ease/, 'page-size trigger should match the compact custom trigger standard');
 assert.match(css, /\.tms-pagination \.tms-dropdown-menu\{[^}]*bottom:calc\(100% \+ 6px\)[^}]*width:72px[^}]*background:rgba\(242,242,247,\.95\)[^}]*backdrop-filter:blur\(24px\)[^}]*box-shadow:0 8px 24px rgba\(0,0,0,\.12\)/, 'page-size popover should match the apple-like floating panel standard');
 assert.match(css, /\.tms-pagination \.tms-dropdown\.open \.tms-dropdown-menu\{[^}]*animation:tmsPagerMenuIn 100ms ease/, 'page-size popover should fade and zoom in');
@@ -116,7 +116,12 @@ assert.match(css, /\.tms-pagination \.tms-dropdown-check svg\{[^}]*width:14px[^}
 assert.match(css, /\.tms-page-btn\{[^}]*min-width:24px[^}]*height:24px[^}]*font-weight:500[^}]*border-radius:6px[^}]*color:#57534E/, 'shared page buttons should use the new compact page button standard');
 assert.match(css, /\.tms-page-btn\.active\{[^}]*background-color:#8C6D53[^}]*color:#FFFFFF[^}]*box-shadow:0 1px 2px rgba\(0,0,0,\.08\)/, 'active page button should use the brand color and subtle shadow');
 assert.match(source, /class="tms-dropdown-check"[\s\S]*stroke-width="3"/, 'custom dropdown should render the selected checkmark through the shared component');
-assert.match(source, /pager-strong/, 'pager info should wrap emphasized numbers for the new footer standard');
+assert.match(source, /function renderPagerInfoHtml\(total\)\{\s*return `共 \$\{Number\(total\)\|\|0\} 条`;\s*\}/, 'pager info should keep total number the same style as surrounding text');
+assert.doesNotMatch(source, /pager-strong/, 'pager info should not emphasize total count');
+assert.match(source, /function renderPageSizeSelectorHtml\(id,pageSize,onchange\)[\s\S]*pager-divider[\s\S]*每页[\s\S]*renderCourtDropdownHtml\(id,String\(pageSize\),\[\{value:'20',label:'20'\},\{value:'50',label:'50'\},\{value:'100',label:'100'\}\][\s\S]*条/, 'pager page-size control should render text around a numeric-only dropdown');
+assert.match(css, /\.tms-page-chevron\{[^}]*width:14px[^}]*height:14px[^}]*mask:url\("data:image\/svg\+xml/, 'pager arrows should use the filter chevron glyph at 14px');
+assert.match(css, /\.tms-page-chevron-prev\{transform:rotate\(90deg\)\}[\s\S]*\.tms-page-chevron-next\{transform:rotate\(-90deg\)\}/, 'pager arrows should rotate the filter chevron left and right');
+assert.doesNotMatch(source, /跳至 <input/, 'pager should not render jump-to-page controls');
 assert.match(css, /\.tms-pagination \.tms-dropdown\.has-value \.tms-dropdown-display\{[^}]*font-weight:500/, 'student selected pager dropdown should use the new medium trigger weight');
 assert.match(css, /\.tms-dropdown\.has-value \.tms-dropdown-display/, 'selected filters should look different from the default all state');
 assert.doesNotMatch(css, /#page-students \.tms-filters \.tms-dropdown\.has-value \.tms-dropdown-display\{color:#C06031;font-weight:400\}/, 'student filter active state should come from the shared filter component');
@@ -307,7 +312,7 @@ assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page sh
 assert.match(source, /pager\.style\.display=total>purPageSize\?'flex':'none'/, 'purchase pager should hide when the filtered result fits on one page');
 assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'purchase table height should match the student standard table height');
 assert.match(css, /\.tms-page-btn\{[^}]*min-width:24px[^}]*height:24px[^}]*font-weight:500[^}]*border-radius:6px/, 'purchase pager buttons should inherit the shared compact page button style');
-assert.match(css, /\.tms-page-jump input\{width:38px;height:24px;border:1px solid #E7E5E4;border-radius:6px;background:#fff/, 'purchase pager jump input should inherit the shared compact jump input style');
+assert.doesNotMatch(css, /\.tms-page-jump input/, 'purchase pager should not keep jump input styles');
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');
 assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown filters should support linked count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');

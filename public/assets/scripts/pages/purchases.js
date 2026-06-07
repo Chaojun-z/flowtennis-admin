@@ -131,7 +131,7 @@ function purchasePageNumbers(page,pages){
 }
 function renderPurchasePagerControls(total,pages){
   const pageSizeHost=document.getElementById('purPageSize');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('purPageSizeValue',`${purPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(purPageSize),false,'setPurchasePageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('purPageSizeValue',purPageSize,'setPurchasePageSize');
   const btns=document.getElementById('purPagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -139,7 +139,7 @@ function renderPurchasePagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===purPage?' active':''}" onclick="purPage=${item};renderPurchases()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="purPage=Math.max(1,purPage-1);renderPurchases()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="purPage=Math.min(${pages},purPage+1);renderPurchases()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="purPageJump" value="${purPage}" onkeydown="if(event.key==='Enter')jumpPurchasePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="purPage=Math.max(1,purPage-1);renderPurchases()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="purPage=Math.min(${pages},purPage+1);renderPurchases()">${renderPagerChevron('next')}</div>`;
 }
 function setPurchasePageSize(value){
   const next=parseInt(value,10);

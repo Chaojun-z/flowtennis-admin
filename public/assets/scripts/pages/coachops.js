@@ -54,7 +54,7 @@ let financePrepaidFilter='all';
 function renderFinanceLedgerPageSizeFilter(){
   const host=document.getElementById('financeLedgerPageSize');
   if(!host)return;
-  host.innerHTML=renderCourtDropdownHtml('financeLedgerPageSizeValue',`${financeLedgerPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(financeLedgerPageSize),false,'setFinanceLedgerPageSize');
+  host.innerHTML=renderPageSizeSelectorHtml('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize');
 }
 function setFinanceLedgerPageSize(value){
   financeLedgerPageSize=parseInt(value,10)||20;
@@ -105,7 +105,7 @@ function jumpFinanceLedgerPage(value){
 function renderFinanceRevenuePageSizeFilter(){
   const host=document.getElementById('financeRevenuePageSize');
   if(!host)return;
-  host.innerHTML=renderCourtDropdownHtml('financeRevenuePageSizeValue',`${financeRevenuePageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(financeRevenuePageSize),false,'setFinanceRevenuePageSize');
+  host.innerHTML=renderPageSizeSelectorHtml('financeRevenuePageSizeValue',financeRevenuePageSize,'setFinanceRevenuePageSize');
 }
 function setFinanceRevenuePageSize(value){
   const next=parseInt(value,10);
@@ -1040,7 +1040,7 @@ function renderFinanceRevenuePager(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===financeRevenuePage?' active':''}" onclick="setFinanceRevenuePage(${item})">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.max(1,financeRevenuePage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.min(${pages},financeRevenuePage+1))">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="financeRevenuePageJump" value="${financeRevenuePage}" onkeydown="if(event.key==='Enter')jumpFinanceRevenuePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.max(1,financeRevenuePage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.min(${pages},financeRevenuePage+1))">${renderPagerChevron('next')}</div>`;
 }
 function renderFinanceRevenueReport(){
   const body=document.getElementById('financeRevenueTbody');
@@ -1418,7 +1418,7 @@ function renderFinanceLedgerPager(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===financeLedgerPage?' active':''}" onclick="setFinanceLedgerPage(${item})">${item}</div>`
   ).join('');
-  pagerBtns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.max(1,financeLedgerPage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.min(${pages},financeLedgerPage+1))">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="financeLedgerPageJump" value="${financeLedgerPage}" onkeydown="if(event.key==='Enter')jumpFinanceLedgerPage(this.value)"> 页</span>`;
+  pagerBtns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.max(1,financeLedgerPage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.min(${pages},financeLedgerPage+1))">${renderPagerChevron('next')}</div>`;
 }
 function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');

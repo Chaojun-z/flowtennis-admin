@@ -933,7 +933,7 @@ function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
   if(pager)pager.style.display=total>leadPageSize?'flex':'none';
   const pageSizeHost=document.getElementById('leadPageSize');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('leadPageSizeValue',`${leadPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(leadPageSize),false,'setLeadPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('leadPageSizeValue',leadPageSize,'setLeadPageSize');
   const btns=document.getElementById('leadPagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -941,7 +941,7 @@ function renderLeadPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===leadPage?' active':''}" onclick="leadPage=${item};renderLeads()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="leadPage=Math.max(1,leadPage-1);renderLeads()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="leadPage=Math.min(${pages},leadPage+1);renderLeads()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="leadPageJump" value="${leadPage}" onkeydown="if(event.key==='Enter')jumpLeadPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="leadPage=Math.max(1,leadPage-1);renderLeads()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="leadPage=Math.min(${pages},leadPage+1);renderLeads()">${renderPagerChevron('next')}</div>`;
 }
 function jumpLeadPage(value){
   const total=getFilteredLeads().length;

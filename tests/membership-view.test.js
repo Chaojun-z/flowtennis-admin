@@ -176,12 +176,11 @@ assert.doesNotMatch(html, /请选择权益账户，排课必须绑定课包权�
 assert.match(html, /会员状态[\s\S]*会员订场[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
 assert.match(html, /function membershipBookingCount\(/, 'membership management should expose a helper to count stored-value bookings');
 assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&String\(h\.payMethod\|\|''\)\.trim\(\)==='储值扣款'&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
-assert.match(html, /class="tms-toolbar-secondary-btn tms-toolbar-secondary-btn-orders" onclick="goPage\('membership-orders'\)"/, 'membership purchase audit entry should use the shared toolbar secondary button');
-assert.match(html, /class="tms-toolbar-secondary-btn tms-toolbar-secondary-btn-ledger" onclick="goPage\('membership-ledger'\)"/, 'membership ledger audit entry should use the shared toolbar secondary button');
+assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-orders" onclick="goPage\('membership-orders'\)"[\s\S]*历史订单/, 'membership purchase audit entry should use the new history order entry');
+assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-ledger" onclick="goPage\('membership-ledger'\)"[\s\S]*权益消耗记录/, 'membership ledger audit entry should use the new benefit consume entry');
 assert.match(pagesCss, /\.tms-toolbar-secondary-actions\{display:flex;align-items:center;gap:8px\}/, 'toolbar secondary button container should keep 8px spacing');
-assert.match(pagesCss, /\.tms-toolbar-secondary-btn\{[^}]*display:inline-flex[^}]*align-items:center[^}]*gap:6px[^}]*padding:6px 12px[^}]*border-radius:8px[^}]*font-size:14px[^}]*font-weight:500[^}]*color:#78716C[^}]*background:transparent/, 'toolbar secondary buttons should match the default standard');
-assert.match(pagesCss, /\.tms-toolbar-secondary-btn:hover\{[^}]*background:#F5F5F4[^}]*color:#1C1917/, 'toolbar secondary buttons should use the standard hover state');
-assert.match(pagesCss, /\.tms-toolbar-secondary-btn:active\{[^}]*background:#E7E5E4[^}]*transform:scale\(\.95\)/, 'toolbar secondary buttons should use the pressed micro-interaction');
+assert.match(pagesCss, /\.tms-membership-audit-action\{[^}]*display:inline-flex[^}]*align-items:center[^}]*gap:6px[^}]*color:#F1E9E2[^}]*font-size:13px[^}]*font-weight:400[^}]*line-height:36px/, 'membership audit entries should match import/export text action style');
+assert.match(pagesCss, /\.tms-membership-audit-action svg\{[^}]*width:16px[^}]*height:16px[^}]*color:#F1E9E2/, 'membership audit icons should use 16px cream icons');
 assert.match(html, /const statusMeta=membershipStatusTagMeta\(a\);/, 'membership management rows should derive status tag metadata');
 assert.match(html, /function membershipVisibleCourt/, 'membership management should ignore deleted or archived court users');
 assert.match(fnBody('getMembershipRows'), /membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should build rows from membership accounts returned by the API');

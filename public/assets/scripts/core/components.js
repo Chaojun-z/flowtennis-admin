@@ -60,10 +60,14 @@ function renderStandardOptionLabel(opt){
   return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;
 }
 function renderPagerInfoHtml(total){
-  return `共 <span class="pager-strong">${Number(total)||0}</span> 条`;
+  return `共 ${Number(total)||0} 条`;
+}
+function renderPageSizeSelectorHtml(id,pageSize,onchange){
+  return `<span class="pager-divider"></span><span>每页</span>${renderCourtDropdownHtml(id,String(pageSize),[{value:'20',label:'20'},{value:'50',label:'50'},{value:'100',label:'100'}],String(pageSize),false,onchange)}<span>条</span>`;
 }
 function renderPagerChevron(direction){
-  return `<span class="tms-page-chevron" aria-hidden="true">${direction==='prev'?'‹':'›'}</span>`;
+  const cls=direction==='prev'?'tms-page-chevron-prev':'tms-page-chevron-next';
+  return `<span class="tms-page-chevron ${cls}" aria-hidden="true"></span>`;
 }
 function withStandardFilterCounts(options,rows,match){
   const source=Array.isArray(rows)?rows:[];

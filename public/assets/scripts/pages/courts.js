@@ -20,7 +20,7 @@ function renderCourtHeaderFilters(base,filterSource=null){
     {value:'migration',label:'财务迁移预览'},
     {value:'backup',label:'备份'}
   ],'',false,'handleCourtMoreAction');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('courtPageSizeValue',`${courtPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(courtPageSize),false,'setCourtPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('courtPageSizeValue',courtPageSize,'setCourtPageSize');
   updateCourtBatchButton();
 }
 function refreshCourtTopFilters(){
@@ -414,7 +414,7 @@ function renderCourtPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===courtPage?' active':''}" onclick="courtPage=${item};renderCourts()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="courtPage=Math.max(1,courtPage-1);renderCourts()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="courtPage=Math.min(${pages},courtPage+1);renderCourts()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="courtPageJump" value="${courtPage}" onkeydown="if(event.key==='Enter')jumpCourtPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="courtPage=Math.max(1,courtPage-1);renderCourts()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="courtPage=Math.min(${pages},courtPage+1);renderCourts()">${renderPagerChevron('next')}</div>`;
 }
 function jumpCourtPage(value){
   const total=(courtAccountListViewData?.items||courts||[]).length;
@@ -528,7 +528,7 @@ function membershipPageNumbers(page,pages){
 }
 function renderMembershipPagerControls(total,pages){
   const pageSizeHost=document.getElementById('membershipPageSize');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('membershipPageSizeValue',`${membershipPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(membershipPageSize),false,'setMembershipPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('membershipPageSizeValue',membershipPageSize,'setMembershipPageSize');
   const btns=document.getElementById('membershipPagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -536,7 +536,7 @@ function renderMembershipPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===membershipPage?' active':''}" onclick="membershipPage=${item};renderMemberships()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="membershipPage=Math.max(1,membershipPage-1);renderMemberships()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="membershipPage=Math.min(${pages},membershipPage+1);renderMemberships()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="membershipPageJump" value="${membershipPage}" onkeydown="if(event.key==='Enter')jumpMembershipPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="membershipPage=Math.max(1,membershipPage-1);renderMemberships()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="membershipPage=Math.min(${pages},membershipPage+1);renderMemberships()">${renderPagerChevron('next')}</div>`;
 }
 function jumpMembershipPage(value){
   const total=getMembershipRows().length;

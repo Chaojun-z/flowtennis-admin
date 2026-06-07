@@ -83,13 +83,13 @@ assert.match(source,/id="financeRevenuePagerBtns"/,'revenue should expose pager 
 assert.match(source,/function setFinanceRevenuePageSize\(/,'revenue should support switching page size');
 assert.match(source,/function setFinanceRevenuePage\(/,'revenue should support switching pages');
 assert.match(source,/function resetFinanceRevenuePage\(/,'revenue filters should reset to the first page');
-assert.match(source,/renderCourtDropdownHtml\('financeRevenuePageSizeValue',`\$\{financeRevenuePageSize\}条\/页`/,'revenue page size selector should reuse shared dropdown style');
+assert.match(source,/renderPageSizeSelectorHtml\('financeRevenuePageSizeValue',financeRevenuePageSize,'setFinanceRevenuePageSize'\)/,'revenue page size selector should reuse shared numeric page-size dropdown');
 assert.match(source,/id="financeLedgerPagerInfo"/,'ledger should expose pager info');
 assert.match(source,/id="financeLedgerPageSize"/,'ledger should expose page size selector');
 assert.match(source,/id="financeLedgerPagerBtns"/,'ledger should expose pager buttons');
 assert.match(source,/function setFinanceLedgerPageSize\(/,'ledger should support switching page size');
 assert.match(source,/function setFinanceLedgerPage\(/,'ledger should support switching pages');
-assert.match(source,/20条\/页[\s\S]*50条\/页[\s\S]*100条\/页/,'ledger page size selector should offer 20, 50, and 100 rows per page');
+assert.match(source,/renderPageSizeSelectorHtml\('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize'\)/,'ledger page size selector should reuse shared numeric page-size dropdown');
 assert.match(source,/查看迟到月结/,'finance center should expose late settlement entry');
 
 console.log('finance page view tests passed');

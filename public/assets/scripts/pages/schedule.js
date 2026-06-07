@@ -59,7 +59,7 @@ function schedulePageNumbers(page,pages){
 }
 function renderSchedulePagerControls(total,pages){
   const pageSizeHost=document.getElementById('schPageSize');
-  if(pageSizeHost)pageSizeHost.innerHTML=renderCourtDropdownHtml('schPageSizeValue',`${schPageSize}条/页`,[{value:'20',label:'20条/页'},{value:'50',label:'50条/页'},{value:'100',label:'100条/页'}],String(schPageSize),false,'setSchedulePageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('schPageSizeValue',schPageSize,'setSchedulePageSize');
   const btns=document.getElementById('schPagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -67,7 +67,7 @@ function renderSchedulePagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===schPage?' active':''}" onclick="schPage=${item};renderSchedule()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="schPage=Math.max(1,schPage-1);renderSchedule()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="schPage=Math.min(${pages},schPage+1);renderSchedule()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="schPageJump" value="${schPage}" onkeydown="if(event.key==='Enter')jumpSchedulePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="schPage=Math.max(1,schPage-1);renderSchedule()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="schPage=Math.min(${pages},schPage+1);renderSchedule()">${renderPagerChevron('next')}</div>`;
 }
 function setSchedulePageSize(value){
   const next=parseInt(value,10);
