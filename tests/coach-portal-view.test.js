@@ -426,4 +426,46 @@ assert.match(
   'coach schedule title should treat small group lessons as class lessons'
 );
 
+assert.match(
+  source,
+  /function isCoachPortalUser\(/,
+  'schedule detail drawer should expose a coach portal role helper'
+);
+
+assert.match(
+  fnBody('openScheduleDetail'),
+  /const isCoachDetail=isCoachPortalUser\(\)[\s\S]*section:isCoachDetail\?'':'schedule-form'/,
+  'coach-side schedule detail info should be readonly without the manager edit action'
+);
+
+assert.match(
+  fnBody('scheduleDetailProposalHtml'),
+  /isCoachPortalUser\(\)[\s\S]*scheduleDetailEditingSection==='proposal'[\s\S]*scheduleDetailProposalCardsHtml\(s,\{\},\{section,scheduleId\}\)/,
+  'coach-side missing small-group proposal should turn into the same editable card form'
+);
+
+assert.match(
+  fnBody('scheduleDetailProposalEmptyHtml'),
+  /请填写本节课教练提案。/,
+  'coach-side missing small-group proposal should ask the coach to fill it'
+);
+
+assert.match(
+  fnBody('openScheduleDetail'),
+  /const feedbackCanEdit=!!fb\|\|isCoachDetail/,
+  'coach-side schedule detail should allow filling feedback when it is missing'
+);
+
+assert.match(
+  fnBody('scheduleDetailFeedbackHtml'),
+  /!fb&&isCoachPortalUser\(\)&&scheduleDetailEditingSection==='feedback'[\s\S]*scheduleDetailFeedbackFormHtml\(s,\{\}\)/,
+  'coach-side missing feedback should turn into the original editable feedback form'
+);
+
+assert.match(
+  fnBody('renderScheduleDetailCard'),
+  /openFeedbackPosterModal\('\$\{feedbackId\}','\$\{scheduleId\}'\)[\s\S]*生成海报/,
+  'coach-side submitted feedback should keep the poster generation entry'
+);
+
 console.log('coach portal view tests passed');

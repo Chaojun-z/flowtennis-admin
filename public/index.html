@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/assets/styles/components/search.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/buttons.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/filters.css?v=20260605-ui-components-v1">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260606-smallclass-count-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260607-schedule-drawer-v16">
 <link rel="stylesheet" href="/assets/styles/components/tables.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/status-tags.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/modals.css?v=20260605-ui-components-v1">
@@ -577,7 +577,7 @@
 <div class="page-loading" id="pageLoading"><div class="ios-spinner-box"><div class="ios-spinner"></div><div class="ios-spinner-text">加载数据...</div></div></div>
 
 <div class="overlay" id="overlay">
-  <div class="modal"><div class="mhead"><div class="mtitle" id="mTitle">操作</div><button class="mclose close-x" type="button" aria-label="关闭" title="关闭" onclick="closeModal()">×</button></div><div class="mbody" id="mBody"></div><div class="mactions" id="mActions" style="display:none"></div></div>
+  <div class="modal"><div class="mhead"><div class="mtitle" id="mTitle">操作</div><button class="mclose close-x" type="button" aria-label="关闭" title="关闭" onclick="closeModal()"><svg class="mclose-svg" width="9" height="9" viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.4978 3.7938L8.1458 0.145803C8.23916 0.052447 8.36578 -3.11063e-09 8.4978 0C8.62983 3.11063e-09 8.75645 0.052447 8.8498 0.145803C8.94316 0.239159 8.99561 0.365778 8.99561 0.497803C8.99561 0.629829 8.94316 0.756447 8.8498 0.849804L5.2018 4.4978L8.8498 8.1458C8.94316 8.23916 8.99561 8.36578 8.99561 8.4978C8.99561 8.62983 8.94316 8.75645 8.8498 8.8498C8.75645 8.94316 8.62983 8.99561 8.4978 8.99561C8.36578 8.99561 8.23916 8.94316 8.1458 8.8498L4.4978 5.2018L0.849803 8.8498C0.756447 8.94316 0.629829 8.99561 0.497803 8.99561C0.365778 8.99561 0.239159 8.94316 0.145803 8.8498C0.052447 8.75645 9.83668e-10 8.62983 0 8.4978C-9.83667e-10 8.36578 0.052447 8.23916 0.145803 8.1458L3.7938 4.4978L0.145803 0.849804C0.052447 0.756447 -1.96733e-09 0.629829 0 0.497803C1.96734e-09 0.365778 0.052447 0.239159 0.145803 0.145803C0.239159 0.052447 0.365778 1.96734e-09 0.497803 0C0.629829 -1.96733e-09 0.756447 0.052447 0.849803 0.145803L4.4978 3.7938Z" fill="currentColor"/></svg></button></div><div class="mbody" id="mBody"></div><div class="mactions" id="mActions" style="display:none"></div></div>
 </div>
 <div class="overlay" id="importOv">
   <div class="modal">
@@ -597,18 +597,18 @@
 <div class="global-date-pop" id="globalDatePicker"></div>
 <script src="/assets/scripts/core/business-taxonomy.js?v=20260602-finance-standard-v1"></script>
 <script src="/assets/scripts/core/constants.js?v=20260529-coachops-order-v2"></script>
-<script src="/assets/scripts/core/utils.js?v=20260606-smalltrial-count-v2"></script>
+<script src="/assets/scripts/core/utils.js?v=20260607-schedule-student-name-v1"></script>
 <script src="/assets/scripts/core/api.js?v=20260527-student-reminder-reuse-v1"></script>
 <script src="/assets/scripts/core/shell.js?v=20260527-student-reminder-v1"></script>
 <script src="/assets/scripts/core/components.js?v=20260606-linked-filters-v1"></script>
 <script src="/assets/scripts/core/state.js?v=20260604-coachops-split-v1"></script>
-<script src="/assets/scripts/core/bootstrap.js?v=20260604-coachops-split-v1"></script>
+<script src="/assets/scripts/core/bootstrap.js?v=20260607-schedule-drawer-v2"></script>
 <script src="/assets/scripts/pages/admin-users.js?v=20260530-admin-users-standard-v2"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/campusmgr.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/leads.js?v=20260606-linked-filters-v1"></script>
 <script src="/assets/scripts/pages/students.js?v=20260606-linked-filters-v1"></script>
-<script src="/assets/scripts/pages/schedule.js?v=20260606-linked-filters-v1"></script>
+<script src="/assets/scripts/pages/schedule.js?v=20260607-schedule-drawer-v19"></script>
 <script src="/assets/scripts/pages/classes.js?v=20260606-linked-filters-v1"></script>
 <script src="/assets/scripts/pages/plans.js?v=20260606-linked-filters-v1"></script>
 <script src="/assets/scripts/pages/products.js?v=20260508-finance-ledger-v4"></script>
@@ -617,7 +617,7 @@
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coachops.js?v=20260606-linked-filters-v1"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>
-<script src="/assets/scripts/pages/courts.js?v=20260602-court-filter-v1"></script>
+<script src="/assets/scripts/pages/courts.js?v=20260607-schedule-drawer-v2"></script>
 <script src="/assets/scripts/pages/matches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coach-portal.js?v=20260526-course-type-v1"></script>
 </body>
