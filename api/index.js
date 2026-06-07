@@ -88,7 +88,7 @@ const LEGACY_STATIC_COACH_REFS=[
   {id:'老吴',name:'刘润扬教练'}
 ];
 
-const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
+const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
 const CAMPUS_DISPLAY_NAMES={mabao:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
 const CAMPUS_ALIASES={'顺义马坡':'mabao','马坡':'mabao','mabao':'mabao','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
 function normalizeCampusValue(value){const raw=String(value||'').trim();return CAMPUS_ALIASES[raw]||raw;}
@@ -98,7 +98,7 @@ const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const PACKAGE_BOARD_PREFERENCES_ROW_ID='package-board-preferences';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
-const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,...MEMBERSHIP_TABLES];
+const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
   T_COURTS,
   T_STUDENTS,
@@ -108,6 +108,7 @@ const TEST_DATA_RESET_TABLES=[
   T_CLASSES,
   T_CLASS_NOS,
   T_FEEDBACKS,
+  T_COACH_PROPOSALS,
   T_PACKAGES,
   T_PURCHASES,
   T_ENTITLEMENTS,
@@ -718,6 +719,21 @@ async function putFeedback(id,row){
 }
 async function scanFeedbacks(){
   try{return await scan(T_FEEDBACKS);}
+  catch(err){
+    if(!isTableMissingError(err))throw err;
+    return [];
+  }
+}
+async function putCoachProposal(id,row){
+  try{return await put(T_COACH_PROPOSALS,id,row);}
+  catch(err){
+    if(!isTableMissingError(err))throw err;
+    await mkTable(T_COACH_PROPOSALS);
+    return put(T_COACH_PROPOSALS,id,row);
+  }
+}
+async function scanCoachProposals(){
+  try{return await scan(T_COACH_PROPOSALS);}
   catch(err){
     if(!isTableMissingError(err))throw err;
     return [];
@@ -2033,6 +2049,40 @@ function buildFeedbackRecord(body,base,user){
     createdAt:base.createdAt||now
   };
 }
+function buildCoachProposalRecord(body,base,user,schedule={}){
+  if(!body.scheduleId)throw new Error('缺少排课ID');
+  const now=new Date().toISOString();
+  const studentIds=parseArr(schedule.studentIds||body.studentIds).filter(Boolean);
+  const courseName=String(body.courseName||schedule.className||schedule.productName||schedule.courseType||'小班课').trim();
+  const studentCount=body.studentCount==null||body.studentCount===''?studentIds.length:(parseInt(body.studentCount)||0);
+  return {
+    ...base,
+    scheduleId:body.scheduleId,
+    classId:schedule.classId||body.classId||'',
+    coachId:schedule.coachId||body.coachId||user?.coachId||'',
+    coachName:schedule.coach||body.coachName||body.coach||user?.coachName||user?.name||'',
+    courseType:schedule.courseType||body.courseType||'小班课',
+    courseName,
+    studentLevel:String(body.studentLevel||'').trim(),
+    studentCount,
+    teachingGoal:String(body.teachingGoal||'').trim(),
+    teachingOrganization:String(body.teachingOrganization||'').trim(),
+    progression1:String(body.progression1||'').trim(),
+    progression2:String(body.progression2||'').trim(),
+    progression3:String(body.progression3||'').trim(),
+    progressionLogic:String(body.progressionLogic||'').trim(),
+    conclusion:String(body.conclusion||'').trim(),
+    status:'submitted',
+    submittedAt:base.submittedAt||now,
+    updatedBy:user?.name||'',
+    updatedAt:now,
+    createdAt:base.createdAt||now
+  };
+}
+function assertCanWriteCoachProposal(user,schedule,coachRefs=[]){
+  if(!isSmallGroupCourse(schedule))throw new Error('只有小班课需要填写教练提案');
+  assertCanWriteFeedback(user,schedule,coachRefs);
+}
 function assertCanWriteFeedback(user,schedule,coachRefs=[]){
   if(user?.role==='admin')return;
   const coachId=String(user?.coachId||user?.id||user?.username||'').trim();
@@ -2072,7 +2122,8 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     coaches:Array.isArray(data?.coaches)?data.coaches:[],
     classes:Array.isArray(data?.classes)?data.classes:[],
     campuses:Array.isArray(data?.campuses)?data.campuses:[],
-    feedbacks:Array.isArray(data?.feedbacks)?data.feedbacks:[]
+    feedbacks:Array.isArray(data?.feedbacks)?data.feedbacks:[],
+    coachProposals:Array.isArray(data?.coachProposals)?data.coachProposals:[]
   };
   if(user?.role==='admin')return normalized;
   const coachId=String(user?.coachId||user?.id||'').trim();
@@ -2135,7 +2186,8 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     coaches:normalized.coaches.filter(c=>sameCoachName(c.id||c.name,coachId||coachName,coachRefs)),
     classes:ownClasses,
     campuses:normalized.campuses,
-    feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId))
+    feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId)),
+    coachProposals:normalized.coachProposals.filter(p=>scheduleIds.has(p.scheduleId))
   };
 }
 function addCoachAliasValue(values,value){
@@ -4890,7 +4942,7 @@ async function init(){
     }
     if(ENABLE_TABLE_BOOTSTRAP){
       let stepStartedAt=Date.now();
-      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
+      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_COACH_PROPOSALS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
       console.log(`[api-init] ensure bootstrap tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       stepStartedAt=Date.now();
       await bootstrapDefaultUsers();
@@ -8545,7 +8597,7 @@ module.exports = async (req, res) => {
     if(path==='/auth/me')return sendJson(res,user);
     if(path==='/load-all'&&method==='GET'){
       await init();
-      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks]=await Promise.all([
+      const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks,coachProposals]=await Promise.all([
         timed('load-all scan courts',()=>cappedScan(T_COURTS)),
         timed('load-all scan students',()=>cappedScan(T_STUDENTS)),
         timed('load-all scan products',()=>cappedScan(T_PRODUCTS)),
@@ -8565,7 +8617,8 @@ module.exports = async (req, res) => {
         timed('load-all scan coaches',()=>cappedScan(T_COACHES)),
         timed('load-all scan classes',()=>cappedScan(T_CLASSES)),
         timed('load-all scan campuses',()=>listCampusesWithDefaults()),
-        timed('load-all scan feedbacks',()=>cappedScan(T_FEEDBACKS))
+        timed('load-all scan feedbacks',()=>cappedScan(T_FEEDBACKS)),
+        timed('load-all scan coach proposals',()=>scanCoachProposals())
       ]);
       const normalizedMembershipPlans=(Array.isArray(membershipPlans)?membershipPlans:[]).map(normalizeMembershipPlanViewRecord);
       const membershipPlanMap=new Map(normalizedMembershipPlans.map(p=>[p.id,p]));
@@ -8592,7 +8645,8 @@ module.exports = async (req, res) => {
         coaches:Array.isArray(coaches)?coaches:[],
         classes:Array.isArray(classes)?classes:[],
         campuses:Array.isArray(campuses)?campuses:[],
-        feedbacks:Array.isArray(feedbacks)?feedbacks:[]
+        feedbacks:Array.isArray(feedbacks)?feedbacks:[],
+        coachProposals:Array.isArray(coachProposals)?coachProposals:[]
       },user);
       return sendJson(res,{...loaded,user});
     }
@@ -8992,6 +9046,45 @@ module.exports = async (req, res) => {
     const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await getCachedRow(T_ENTITLEMENTS,id).catch(()=>null);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);await syncStudentActiveEntitlementIndexes(old,null);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
+    if(path==='/coach-proposals'){
+      await init();
+      if(method==='GET'){
+        const rows=await withTimeout(getCachedScan(T_COACH_PROPOSALS).catch(()=>[]),3000,[]);
+        if(user.role==='admin')return sendJson(res,rows);
+        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
+        const scheduleRows=await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users}));
+        const scheduleIds=new Set(scheduleRows.map(row=>String(row.id||'')).filter(Boolean));
+        return sendJson(res,rows.filter(row=>scheduleIds.has(String(row.scheduleId||''))));
+      }
+      if(method==='POST'){
+        const id=uuidv4();
+        const schedule=await get(T_SCHEDULE,body.scheduleId).catch(()=>null);
+        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
+        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
+        try{assertCanWriteCoachProposal(user,schedule,buildCoachRefs({coaches,users}));}
+        catch(e){return sendJson(res,{error:e.message},400);}
+        const r=buildCoachProposalRecord(body,{id},user,schedule);
+        await putCoachProposal(id,r);
+        return sendJson(res,r);
+      }
+    }
+    const cpM=path.match(/^\/coach-proposals\/(.+)$/);
+    if(cpM){
+      const id=cpM[1];
+      if(method==='GET')return sendJson(res,await get(T_COACH_PROPOSALS,id));
+      if(method==='PUT'){
+        const ex=await get(T_COACH_PROPOSALS,id).catch(()=>null);
+        if(!ex)return sendJson(res,{error:'教练提案不存在'},404);
+        const schedule=await get(T_SCHEDULE,body.scheduleId||ex.scheduleId).catch(()=>null);
+        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
+        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
+        try{assertCanWriteCoachProposal(user,schedule,buildCoachRefs({coaches,users}));}
+        catch(e){return sendJson(res,{error:e.message},400);}
+        const r=buildCoachProposalRecord({...ex,...body},{...ex,id},user,schedule);
+        await putCoachProposal(id,r);
+        return sendJson(res,r);
+      }
+    }
     if(path==='/feedbacks'){
       await init();
       if(method==='GET')return sendJson(res,await withTimeout(getCachedScan(T_FEEDBACKS).catch(()=>[]),3000,[]));
@@ -9365,17 +9458,18 @@ module.exports = async (req, res) => {
         const [coaches,users]=await Promise.all([cappedScan(T_COACHES),cappedScan(T_USERS, PRODUCTION_PAGE_READ_LIMITS.adminUsers)]);
         const coachRefs=buildCoachRefs({coaches,users});
         const scheduleRowsPromise=user.role==='admin'?getScheduleListRows():getCoachScheduleRowsForUser(user,coachRefs);
-        const [campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([
+        const [campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger]=await Promise.all([
           listCampusesWithDefaults(),
           cappedScan(T_STUDENTS),
           cappedScan(T_CLASSES),
           scheduleRowsPromise,
           cappedScan(T_FEEDBACKS),
+          scanCoachProposals(),
           cappedScan(T_PURCHASES),
           cappedScan(T_ENTITLEMENTS),
           cappedScan(T_ENTITLEMENT_LEDGER)
         ]);
-        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,purchases,entitlements,entitlementLedger,coaches},user,coachRefs);
+        const scoped=filterLoadAllForUser({campuses,students,classes,schedule,feedbacks,coachProposals,purchases,entitlements,entitlementLedger,coaches},user,coachRefs);
         const now=new Date();
         const decoratedStudents=decorateWorkbenchStudents(scoped.students||[],scoped.schedule||[],now);
         const decoratedFeedbacks=decorateWorkbenchFeedbacks(scoped.feedbacks||[]);
@@ -9397,6 +9491,7 @@ module.exports = async (req, res) => {
           schedule:decoratedSchedule,
           studentSchedule:decoratedStudentSchedule,
           feedbacks:decoratedFeedbacks,
+          coachProposals:scoped.coachProposals||[],
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],
           stats

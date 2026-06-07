@@ -1368,6 +1368,57 @@ async function copyFeedbackDraft(scheduleId){
   try{await copyText(feedbackDraftText(s));toast('反馈文案已复制','success');}
   catch(e){toast('复制失败，请手动复制','error');}
 }
+function isSmallGroupSchedule(s){
+  return scheduleCourseType(s)==='小班课';
+}
+function scheduleCoachProposal(s){
+  return coachProposals.find(p=>String(p.scheduleId||'')===String(s?.id||''))||null;
+}
+function coachProposalSummaryHtml(p){
+  if(!p)return '<span class="detail-feedback-pending">未提交</span>';
+  const rows=[
+    ['课程名称',p.courseName],
+    ['学员级别',p.studentLevel],
+    ['学员数量',p.studentCount],
+    ['教学目标',p.teachingGoal],
+    ['教学组织',p.teachingOrganization],
+    ['进阶1',p.progression1],
+    ['进阶2',p.progression2],
+    ['进阶3',p.progression3],
+    ['进阶逻辑',p.progressionLogic],
+    ['结语',p.conclusion],
+    ['提交时间',p.submittedAt?fmtDt(p.submittedAt):'']
+  ];
+  return `<div class="tms-detail-grid">${rows.map(([label,value])=>studentDetailBlockHtml(label,esc(renderCourtEmptyText(value)),{hideEmpty:false})).join('')}</div>`;
+}
+function proposalValue(p,key,fallback=''){
+  return esc(p?.[key]??fallback??'');
+}
+function openCoachProposalModal(scheduleId){
+  const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
+  if(!isSmallGroupSchedule(s)){toast('只有小班课需要填写教练提案','warn');return;}
+  const p=scheduleCoachProposal(s)||{};
+  const studentCount=parseArr(s.studentIds).length||p.studentCount||'';
+  const body=`<div class="tms-section-header" style="margin-top:0;">教练提案</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程名称 *</label><input class="finput tms-form-control" id="cp_courseName" value="${proposalValue(p,'courseName',s.className||s.productName||'小班课')}"></div><div class="tms-form-item"><label class="tms-form-label">学员级别 *</label><input class="finput tms-form-control" id="cp_studentLevel" value="${proposalValue(p,'studentLevel')}" placeholder="例：1.5-2.0"></div><div class="tms-form-item"><label class="tms-form-label">学员数量 *</label><input class="finput tms-form-control" id="cp_studentCount" type="number" min="1" value="${proposalValue(p,'studentCount',studentCount)}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学目标 *</label><textarea class="finput tms-form-control" id="cp_teachingGoal">${proposalValue(p,'teachingGoal')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学组织 *</label><textarea class="finput tms-form-control" id="cp_teachingOrganization">${proposalValue(p,'teachingOrganization')}</textarea></div></div><div class="tms-section-header">3级进阶</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶1 *</label><textarea class="finput tms-form-control" id="cp_progression1">${proposalValue(p,'progression1')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶2 *</label><textarea class="finput tms-form-control" id="cp_progression2">${proposalValue(p,'progression2')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶3 *</label><textarea class="finput tms-form-control" id="cp_progression3">${proposalValue(p,'progression3')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶逻辑 *</label><textarea class="finput tms-form-control" id="cp_progressionLogic">${proposalValue(p,'progressionLogic')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">结语 *</label><textarea class="finput tms-form-control" id="cp_conclusion">${proposalValue(p,'conclusion')}</textarea></div></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="openScheduleDetail('${s.id}')">返回详情</button><button class="tms-btn tms-btn-primary" id="coachProposalSaveBtn" onclick="saveCoachProposal('${s.id}')">保存提案</button>`;
+  setCourtModalFrame(p.id?'修改教练提案':'填写教练提案',body,footer,'modal-wide');
+}
+async function saveCoachProposal(scheduleId){
+  const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
+  const p=scheduleCoachProposal(s);
+  const value=id=>document.getElementById(id)?.value.trim()||'';
+  const required=['cp_courseName','cp_studentLevel','cp_studentCount','cp_teachingGoal','cp_teachingOrganization','cp_progression1','cp_progression2','cp_progression3','cp_progressionLogic','cp_conclusion'];
+  if(required.some(id=>!value(id))){toast('请填写完整教练提案','warn');return;}
+  const data={scheduleId:s.id,classId:s.classId||'',coach:s.coach||'',courseType:scheduleCourseType(s),courseName:value('cp_courseName'),studentLevel:value('cp_studentLevel'),studentCount:value('cp_studentCount'),teachingGoal:value('cp_teachingGoal'),teachingOrganization:value('cp_teachingOrganization'),progression1:value('cp_progression1'),progression2:value('cp_progression2'),progression3:value('cp_progression3'),progressionLogic:value('cp_progressionLogic'),conclusion:value('cp_conclusion')};
+  const btn=document.getElementById('coachProposalSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    const saved=p?.id?await apiCall('PUT','/coach-proposals/'+p.id,data):await apiCall('POST','/coach-proposals',data);
+    const i=coachProposals.findIndex(row=>row.id===saved.id);if(i>=0)coachProposals[i]=saved;else coachProposals.unshift(saved);
+    toast('教练提案已保存','success');
+    renderSchedule();renderCoachOps();renderWorkbench();renderMySchedule();
+    openScheduleDetail(s.id);
+  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存提案';}}
+}
 async function saveFeedback(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
   const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
@@ -1391,6 +1442,7 @@ function feedbackSummaryHtml(fb){
 function openScheduleDetail(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
   const fb=scheduleFeedback(s);
+  const proposal=scheduleCoachProposal(s);
   const ent=findEntitlementForSchedule(s);
   const studentNames=scheduleStudentSummary(s);
   const stuRecords=parseArr(s.studentIds).map(id=>students.find(st=>st.id===id)).filter(Boolean);
@@ -1425,7 +1477,9 @@ function openScheduleDetail(scheduleId){
   ].filter(Boolean).join('');
   const lateSummary=s.coachLateFree?`<div class="tms-section-header">教练迟到处理</div><div class="tms-detail-grid">${studentDetailFieldHtml('处理结果','本节免费，不扣学员课时')}${studentDetailFieldHtml('迟到分钟',`${parseInt(s.lateMinutes)||0} 分钟`)}${studentDetailFieldHtml('教练承担场地费',`¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}`)}${studentDetailBlockHtml('原因',esc(s.lateReason),{hideEmpty:true})}</div>`:'';
   const trialSummary=fb&&scheduleIsTrial(s)?`<div class="tms-section-header">体验课内部记录</div><div class="tms-detail-grid">${studentDetailFieldHtml('学员水平',fb.playerLevel)}${studentDetailFieldHtml('转化意愿',fb.conversionIntent)}${studentDetailFieldHtml('推荐产品',fb.recommendedProductType)}${studentDetailFieldHtml('是否需要跟进',fb.needOpsFollowUp?'是':'否')}</div>`:'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">课程基础信息</div><div class="tms-detail-grid">${baseFields}</div>${preLessonFields?`<div class="tms-section-header">上课前信息</div><div class="tms-detail-grid">${preLessonFields}</div>`:''}<div class="tms-section-header">课后动作</div><div class="tms-detail-grid">${afterLessonFields}</div>${lateSummary}${trialSummary}`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-primary" onclick="openFeedbackModal('${s.id}')">${fb?'查看/编辑反馈':'填写反馈'}</button>`;
+  const proposalSummary=isSmallGroupSchedule(s)?`<div class="tms-section-header">教练提案</div>${coachProposalSummaryHtml(proposal)}`:'';
+  const body=`<div class="tms-section-header" style="margin-top:0;">课程基础信息</div><div class="tms-detail-grid">${baseFields}</div>${preLessonFields?`<div class="tms-section-header">上课前信息</div><div class="tms-detail-grid">${preLessonFields}</div>`:''}${proposalSummary}<div class="tms-section-header">课后动作</div><div class="tms-detail-grid">${afterLessonFields}</div>${lateSummary}${trialSummary}`;
+  const proposalBtn=isSmallGroupSchedule(s)&&currentUser?.role==='editor'?`<button class="tms-btn tms-btn-default" onclick="openCoachProposalModal('${s.id}')">${proposal?'查看/修改教练提案':'填写教练提案'}</button>`:'';
+  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>${proposalBtn}<button class="tms-btn tms-btn-primary" onclick="openFeedbackModal('${s.id}')">${fb?'查看/编辑反馈':'填写反馈'}</button>`;
   setCourtModalFrame('排课详情',body,footer,'modal-wide');
 }

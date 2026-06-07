@@ -1,4 +1,4 @@
-const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, TOKEN_KEY, USER_KEY } = require('../../utils/api');
+const { loginWithWechat, loadCoachWorkbench, saveCoachFeedback, saveCoachProposal, TOKEN_KEY, USER_KEY } = require('../../utils/api');
 const { buildWeekDays, formatScheduleItem, weekRangeText, buildTimetableDays, classBlockStyle, workbenchTodoState, scheduleLocationText } = require('../../utils/schedule');
 
 const TIMETABLE_START_HOUR = 7;
@@ -28,6 +28,10 @@ function dashboardCourseTag(item = {}) {
   if (item.isTrial || /体验/.test(text)) return { text, className: 'is-trial' };
   if (/陪打|小班/.test(text)) return { text, className: 'is-group' };
   return { text, className: 'is-private' };
+}
+
+function isSmallGroupSchedule(item = {}) {
+  return /小班/.test(String(item.type || item.title || item.courseType || ''));
 }
 
 function timetableCourseTag(item = {}) {
@@ -684,12 +688,39 @@ function findFeedbackByScheduleId(feedbacks = [], scheduleId = '') {
   return (feedbacks || []).find(item => String(item.scheduleId) === String(scheduleId)) || null;
 }
 
+function findProposalByScheduleId(proposals = [], scheduleId = '') {
+  return (proposals || []).find(item => String(item.scheduleId) === String(scheduleId)) || null;
+}
+
 function feedbackFormFromRecord(feedback = null) {
   return {
     practicedToday: feedback ? (feedback.practicedToday || feedback.focus || feedback.performance || '') : '',
     knowledgePoint: feedback ? (feedback.knowledgePoint || feedback.problems || '') : '',
     nextTraining: feedback ? (feedback.nextTraining || feedback.nextAdvice || '') : ''
   };
+}
+
+function proposalFormFromRecord(proposal = null, schedule = {}) {
+  const studentCount = Array.isArray(schedule.studentIds) ? schedule.studentIds.length : 0;
+  return {
+    courseName: proposal ? (proposal.courseName || '') : (schedule.className || schedule.productName || '小班课'),
+    studentLevel: proposal ? (proposal.studentLevel || '') : '',
+    studentCount: proposal ? String(proposal.studentCount || '') : (studentCount ? String(studentCount) : ''),
+    teachingGoal: proposal ? (proposal.teachingGoal || '') : '',
+    teachingOrganization: proposal ? (proposal.teachingOrganization || '') : '',
+    progression1: proposal ? (proposal.progression1 || '') : '',
+    progression2: proposal ? (proposal.progression2 || '') : '',
+    progression3: proposal ? (proposal.progression3 || '') : '',
+    progressionLogic: proposal ? (proposal.progressionLogic || '') : '',
+    conclusion: proposal ? (proposal.conclusion || '') : ''
+  };
+}
+
+function proposalCountsOf(form = {}) {
+  return Object.keys(proposalFormFromRecord()).reduce((acc, key) => {
+    acc[key] = String(form[key] || '').length;
+    return acc;
+  }, {});
 }
 
 function feedbackCountsOf(form = {}) {
@@ -769,6 +800,7 @@ function buildDetailData(selectedClass, context = {}) {
   const entitlements = Array.isArray(context.entitlements) ? context.entitlements : [];
   const entitlementLedger = Array.isArray(context.entitlementLedger) ? context.entitlementLedger : [];
   const feedbacks = Array.isArray(context.feedbacks) ? context.feedbacks : [];
+  const coachProposals = Array.isArray(context.coachProposals) ? context.coachProposals : [];
   const coachName = String(context.coachName || '').trim();
   const studentIds = studentIdsOf(selectedClass);
   const student = students.find(item => studentIds.includes(item.id))
@@ -778,6 +810,7 @@ function buildDetailData(selectedClass, context = {}) {
     || (!selectedClass.classId && classes.find(item => firstNonEmpty(item.className, item.classNo) === firstNonEmpty(selectedClass.className, selectedClass.classNo)))
     || null;
   const currentFeedback = findFeedbackByScheduleId(feedbacks, selectedClass.id);
+  const currentProposal = findProposalByScheduleId(coachProposals, selectedClass.id);
   const currentStudentId = String(student && student.id || '');
   const currentClassId = String(selectedClass && selectedClass.classId || '').trim();
   const studentFeedbacks = feedbacks
@@ -810,7 +843,10 @@ function buildDetailData(selectedClass, context = {}) {
   return {
     scheduleId: selectedClass.id,
     hasFeedback: !!currentFeedback,
+    isSmallGroup: isSmallGroupSchedule(selectedClass),
+    hasProposal: !!currentProposal,
     actionText: currentFeedback ? '查看反馈' : '填写反馈',
+    proposalActionText: currentProposal ? '查看/修改提案' : '填写提案',
     basicInfo: {
       datetime: formatDetailDateTime(selectedClass),
       location: scheduleLocationText(selectedClass),
@@ -837,6 +873,22 @@ function buildDetailData(selectedClass, context = {}) {
       summary: feedbackSummary,
       history: previousFeedbackSummary,
       sectionClass: hasFeedbackContent ? 'is-filled' : 'is-empty-state'
+    },
+    proposal: {
+      sectionClass: currentProposal ? 'is-filled' : 'is-empty-state',
+      statusText: currentProposal ? '已填写' : '未填写',
+      courseName: firstNonEmpty(currentProposal && currentProposal.courseName, '未提交'),
+      studentLevel: firstNonEmpty(currentProposal && currentProposal.studentLevel, '未提交'),
+      studentCount: firstNonEmpty(currentProposal && currentProposal.studentCount, '未提交'),
+      teachingGoal: buildNoticeField(firstNonEmpty(currentProposal && currentProposal.teachingGoal), true),
+      teachingOrganization: buildNoticeField(firstNonEmpty(currentProposal && currentProposal.teachingOrganization), true),
+      progressions: [
+        firstNonEmpty(currentProposal && currentProposal.progression1),
+        firstNonEmpty(currentProposal && currentProposal.progression2),
+        firstNonEmpty(currentProposal && currentProposal.progression3)
+      ].filter(Boolean),
+      progressionLogic: buildNoticeField(firstNonEmpty(currentProposal && currentProposal.progressionLogic), true),
+      conclusion: buildNoticeField(firstNonEmpty(currentProposal && currentProposal.conclusion), true)
     }
   };
 }
@@ -1577,6 +1629,7 @@ Page({
     timetableNowSolidLineStyle: '',
     schedule: [],
     feedbacks: [],
+    coachProposals: [],
     campusesRaw: [],
     studentsRaw: [],
     classesRaw: [],
@@ -1596,9 +1649,14 @@ Page({
     shiftStats: { totalCount: 0, activeCount: 0, totalLessons: 0, usedLessons: 0, remainingLessons: 0 },
     feedbackForm: feedbackFormFromRecord(),
     feedbackCounts: feedbackCountsOf(),
+    proposalForm: proposalFormFromRecord(),
+    proposalCounts: proposalCountsOf(),
     feedbackHasSaved: false,
+    proposalHasSaved: false,
+    proposalEditing: false,
     feedbackEditing: false,
     feedbackFocusedField: '',
+    proposalFocusedField: '',
     feedbackContextParts: [],
     feedbackSheetScrollTop: 0,
     studentDetailScrollTop: 0,
@@ -1607,6 +1665,7 @@ Page({
     cancelScheduleScrollTop: 0,
     posterDate: '',
     savingFeedback: false,
+    savingProposal: false,
     savingShiftSchedule: false,
     savingCancelSchedule: false,
     stats: { month: 0, week: 0, today: 0, feedback: 0, pending: 0, conversionText: '-', conversionUnit: '', nextTime: '暂无', nextText: '暂无', todo: 0 },
@@ -1618,6 +1677,7 @@ Page({
     selectedScheduleForEdit: null,
     showDetail: false,
     showFeedback: false,
+    showProposal: false,
     showPoster: false,
     showStudentDetail: false,
     showShiftDetail: false,
@@ -1626,6 +1686,7 @@ Page({
     showCoachMenu: false,
     detailSheetClass: '',
     feedbackSheetClass: '',
+    proposalSheetClass: '',
     posterSheetClass: '',
     studentDetailSheetClass: '',
     shiftDetailSheetClass: '',
@@ -1697,6 +1758,7 @@ Page({
         studentScheduleRaw: studentSchedule,
         coachWorkbenchStats: data.stats || {},
         feedbacks: data.feedbacks || [],
+        coachProposals: data.coachProposals || [],
         campusesRaw: data.campuses || [],
         studentsRaw: data.students || [],
         classesRaw: data.classes || [],
@@ -1871,6 +1933,7 @@ Page({
         entitlements: this.data.entitlementsRaw,
         entitlementLedger: this.data.entitlementLedgerRaw,
         feedbacks: this.data.feedbacks,
+        coachProposals: this.data.coachProposals,
         coachName: currentCoachName()
       }),
       showDetail: true,
@@ -1937,19 +2000,26 @@ Page({
     this.setData({
       showDetail: false,
       showFeedback: false,
+      showProposal: false,
       showPoster: false,
       showStudentDetail: false,
       showShiftDetail: false,
       detailSheetClass: '',
       feedbackSheetClass: '',
+      proposalSheetClass: '',
       posterSheetClass: '',
       studentDetailSheetClass: '',
       shiftDetailSheetClass: '',
       feedbackForm: feedbackFormFromRecord(),
       feedbackCounts: feedbackCountsOf(),
+      proposalForm: proposalFormFromRecord(),
+      proposalCounts: proposalCountsOf(),
       feedbackHasSaved: false,
+      proposalHasSaved: false,
+      proposalEditing: false,
       feedbackEditing: false,
       feedbackFocusedField: '',
+      proposalFocusedField: '',
       feedbackContextParts: [],
       studentDetailScrollTop: 0,
       shiftDetailScrollTop: 0,
@@ -1960,6 +2030,77 @@ Page({
       selectedShiftForSchedule: null,
       selectedScheduleForEdit: null
     });
+  },
+
+  openProposal() {
+    if (!this.data.selectedClass || !isSmallGroupSchedule(this.data.selectedClass)) return;
+    const currentProposal = findProposalByScheduleId(this.data.coachProposals, this.data.selectedClass.id);
+    const proposalForm = proposalFormFromRecord(currentProposal, this.data.selectedClass);
+    this.setData({
+      showDetail: false,
+      showProposal: true,
+      detailSheetClass: '',
+      proposalSheetClass: 'sheet-show',
+      proposalForm,
+      proposalCounts: proposalCountsOf(proposalForm),
+      proposalHasSaved: !!currentProposal,
+      proposalEditing: false,
+      proposalFocusedField: ''
+    });
+  },
+
+  onProposalFocus(event) {
+    this.setData({ proposalFocusedField: event.currentTarget.dataset.field || '' });
+  },
+
+  onProposalBlur() {
+    this.setData({ proposalFocusedField: '' });
+  },
+
+  onProposalInput(event) {
+    const field = event.currentTarget.dataset.field || 'courseName';
+    const proposalForm = {
+      ...this.data.proposalForm,
+      [field]: event.detail.value
+    };
+    this.setData({
+      proposalForm,
+      proposalCounts: proposalCountsOf(proposalForm)
+    });
+  },
+
+  editProposal() {
+    this.setData({ proposalEditing: true, proposalFocusedField: '' });
+  },
+
+  async saveProposal() {
+    const selectedClass = this.data.selectedClass;
+    if (!selectedClass || this.data.savingProposal) return;
+    const form = this.data.proposalForm || {};
+    const required = ['courseName', 'studentLevel', 'studentCount', 'teachingGoal', 'teachingOrganization', 'progression1', 'progression2', 'progression3', 'progressionLogic', 'conclusion'];
+    if (required.some(key => !String(form[key] || '').trim())) {
+      wx.showToast({ title: '请填写完整提案', icon: 'none' });
+      return;
+    }
+    const currentProposal = findProposalByScheduleId(this.data.coachProposals, selectedClass.id);
+    this.setData({ savingProposal: true });
+    try {
+      const savedProposal = await saveCoachProposal({
+        id: currentProposal ? currentProposal.id : '',
+        scheduleId: selectedClass.id,
+        classId: selectedClass.classId || '',
+        coach: currentCoachName(),
+        courseType: selectedClass.type || selectedClass.title || '',
+        ...form
+      });
+      wx.showToast({ title: '提案已保存', icon: 'success' });
+      this.applyProposalPatch(selectedClass, savedProposal);
+      this.closeSheets();
+    } catch (err) {
+      wx.showToast({ title: err.message || '保存失败', icon: 'none' });
+    } finally {
+      this.setData({ savingProposal: false });
+    }
   },
 
   openFeedback() {
@@ -1996,6 +2137,7 @@ Page({
           entitlements: this.data.entitlementsRaw,
           entitlementLedger: this.data.entitlementLedgerRaw,
           feedbacks: this.data.feedbacks,
+          coachProposals: this.data.coachProposals,
           coachName: currentCoachName()
         }),
         showDetail: false,
@@ -2094,6 +2236,24 @@ Page({
     this.setData({
       feedbacks: nextFeedbacks,
       schedule
+    }, () => this.renderWeek());
+  },
+
+  applyProposalPatch(selectedClass, savedProposal) {
+    const proposal = savedProposal || {};
+    const coachProposals = (this.data.coachProposals || []).filter(item => String(item.id) !== String(proposal.id));
+    const nextProposals = proposal.id ? coachProposals.concat(proposal) : coachProposals;
+    this.setData({
+      coachProposals: nextProposals,
+      selectedClassDetail: buildDetailData(selectedClass, {
+        students: this.data.studentsRaw,
+        classes: this.data.classesRaw,
+        entitlements: this.data.entitlementsRaw,
+        entitlementLedger: this.data.entitlementLedgerRaw,
+        feedbacks: this.data.feedbacks,
+        coachProposals: nextProposals,
+        coachName: currentCoachName()
+      })
     }, () => this.renderWeek());
   },
 

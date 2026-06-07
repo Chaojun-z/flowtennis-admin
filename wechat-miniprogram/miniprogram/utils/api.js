@@ -111,12 +111,21 @@ function saveCoachFeedback(payload = {}) {
   return request('/feedbacks', { method: 'POST', data: payload });
 }
 
+function saveCoachProposal(payload = {}) {
+  const proposalId = payload.id || '';
+  if (proposalId) {
+    return request(`/coach-proposals/${proposalId}`, { method: 'PUT', data: payload });
+  }
+  return request('/coach-proposals', { method: 'POST', data: payload });
+}
+
 module.exports = {
   loginWithPassword,
   bindWechatAfterLogin,
   loginWithWechat,
   loadCoachWorkbench,
   saveCoachFeedback,
+  saveCoachProposal,
   request,
   requestWithTokenKey,
   TOKEN_KEY,

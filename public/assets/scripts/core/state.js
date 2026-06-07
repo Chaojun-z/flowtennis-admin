@@ -6,7 +6,7 @@ function syncViewportMode(){
 }
 
 let leads=[],leadFollowups=[];
-let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],adminUsers=[],matches=[];
+let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 let studentLessonRecordExpandedState={};
@@ -28,7 +28,7 @@ let courtAccountListViewData=null,courtAccountListViewCompareData=null;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-06-03-schedule-network-only-v1';
+const DATA_CACHE_VERSION='2026-06-06-coach-proposals-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
@@ -87,9 +87,9 @@ const PAGE_DATA_REQUIREMENTS={
   leads:['campuses','leads'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
-  schedule:['campuses','students','schedule','coaches'],
-  coachschedule:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
-  coachops:['campuses','students','classes','schedule','feedbacks','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  schedule:['campuses','students','schedule','coaches','coachProposals'],
+  coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],
   products:['products','classes'],
   packages:['packages','products','purchases','entitlements','packageBoardPreferences'],
@@ -160,6 +160,7 @@ const DATASET_LOADERS={
   classes:()=>apiCall('GET','/classes'),
   campuses:()=>apiCall('GET','/campuses'),
   feedbacks:()=>apiCall('GET','/feedbacks')
+  ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,plansPage:()=>apiCall('GET','/page-data/plans')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
   ,financePage:()=>apiCall('GET','/page-data/finance')
@@ -239,6 +240,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='classes')classes=rows;
   if(name==='campuses')campuses=rows;
   if(name==='feedbacks')feedbacks=rows;
+  if(name==='coachProposals')coachProposals=rows;
   if(name==='matches')matches=rows;
   loadedDatasets.add(name);
   if(persist)persistDatasetCache(name,rows);
@@ -443,6 +445,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('classes',data.classes||[]);
       setDatasetValue('schedule',data.schedule||[]);
       setDatasetValue('feedbacks',data.feedbacks||[]);
+      setDatasetValue('coachProposals',data.coachProposals||[]);
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
@@ -496,7 +499,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
 function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
-  plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];adminUsers=[];matches=[];adminUsersLoaded=false;
+  plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
@@ -538,11 +541,12 @@ function applyLoadedData(data){
   classes=Array.isArray(data?.classes)?data.classes:[];
   campuses=Array.isArray(data?.campuses)?data.campuses.map(row=>({...row,name:campusDisplayName(row?.name||row?.code||row?.id)})):[];
   feedbacks=Array.isArray(data?.feedbacks)?data.feedbacks:[];
+  coachProposals=Array.isArray(data?.coachProposals)?data.coachProposals:[];
   matches=Array.isArray(data?.matches)?data.matches:[];
   financeOverviewData=data?.financeOverviewData||null;
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
-  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','matches']);
+  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches']);
   if(data?.user){
     currentUser=data.user;
     localStorage.setItem('ft_user',JSON.stringify(currentUser));

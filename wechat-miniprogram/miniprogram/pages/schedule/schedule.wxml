@@ -671,6 +671,61 @@
           </view>
         </view>
 
+        <view wx:if="{{selectedClassDetail.isSmallGroup}}" class="detail-section-card {{selectedClassDetail.proposal.sectionClass}}">
+          <view class="detail-section-title">
+            <view class="detail-section-bar"></view>
+            <text>教练提案</text>
+            <text class="detail-feedback-pending"> · {{selectedClassDetail.proposal.statusText}}</text>
+          </view>
+          <view class="detail-note-grid">
+            <view class="detail-note-col">
+              <text class="detail-note-label">课程名称</text>
+              <text class="detail-note-text">{{selectedClassDetail.proposal.courseName}}</text>
+            </view>
+            <view class="detail-note-col">
+              <text class="detail-note-label">学员级别 / 数量</text>
+              <text class="detail-note-text">{{selectedClassDetail.proposal.studentLevel}} / {{selectedClassDetail.proposal.studentCount}}</text>
+            </view>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">教学目标</text>
+            <view wx:if="{{selectedClassDetail.proposal.teachingGoal.useBox}}" class="detail-note-box">
+              <text>{{selectedClassDetail.proposal.teachingGoal.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.teachingGoal.text}}</text>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">教学组织</text>
+            <view wx:if="{{selectedClassDetail.proposal.teachingOrganization.useBox}}" class="detail-note-box">
+              <text>{{selectedClassDetail.proposal.teachingOrganization.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.teachingOrganization.text}}</text>
+          </view>
+          <view class="detail-note-block" wx:if="{{selectedClassDetail.proposal.progressions.length}}">
+            <text class="detail-note-label">3级进阶</text>
+            <view class="detail-note-box">
+              <block wx:for="{{selectedClassDetail.proposal.progressions}}" wx:key="*this">
+                <text>{{index + 1}}. {{item}}</text>
+                <text wx:if="{{index < selectedClassDetail.proposal.progressions.length - 1}}">\n</text>
+              </block>
+            </view>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">进阶逻辑</text>
+            <view wx:if="{{selectedClassDetail.proposal.progressionLogic.useBox}}" class="detail-note-box">
+              <text>{{selectedClassDetail.proposal.progressionLogic.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.progressionLogic.text}}</text>
+          </view>
+          <view class="detail-note-block">
+            <text class="detail-note-label">结语</text>
+            <view wx:if="{{selectedClassDetail.proposal.conclusion.useBox}}" class="detail-note-box">
+              <text>{{selectedClassDetail.proposal.conclusion.text}}</text>
+            </view>
+            <text wx:else class="detail-note-text is-empty">{{selectedClassDetail.proposal.conclusion.text}}</text>
+          </view>
+        </view>
+
         <view class="detail-section-card detail-feedback-card {{selectedClassDetail.feedback.sectionClass}}">
           <view class="detail-section-title">
             <view class="detail-section-bar"></view>
@@ -704,7 +759,102 @@
       </scroll-view>
       <view class="detail-sheet-actions">
         <button class="detail-sheet-btn is-ghost" bindtap="closeSheets">关闭</button>
+        <button wx:if="{{selectedClassDetail.isSmallGroup}}" class="detail-sheet-btn is-outline" bindtap="openProposal">{{selectedClassDetail.proposalActionText}}</button>
         <button class="detail-sheet-btn is-primary" bindtap="openFeedback">{{selectedClassDetail.actionText}}</button>
+      </view>
+    </view>
+
+    <view class="sheet feedback-sheet {{proposalSheetClass}}" catchtouchmove="stopMove">
+      <view class="sheet-handle feedback-sheet-handle"></view>
+      <view class="feedback-sheet-head">
+        <text class="feedback-sheet-title">教练提案</text>
+        <button class="feedback-sheet-close" bindtap="closeSheets">×</button>
+      </view>
+      <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="feedback-sheet-body">
+        <view class="feedback-course-card">
+          <view class="feedback-course-bar"></view>
+          <view class="feedback-course-content">
+            <text class="feedback-course-time">{{selectedClassDetail.basicInfo.datetime}}</text>
+            <view class="feedback-course-meta">
+              <text>{{selectedClassDetail.basicInfo.courseType}}</text>
+              <text class="feedback-course-separator">｜</text>
+              <text>{{selectedClassDetail.basicInfo.location}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="feedback-divider">
+          <text>{{proposalHasSaved && !proposalEditing ? '提案详情' : '教练提案'}}</text>
+          <view></view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">课程名称 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'courseName' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="80" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.courseName}}" data-field="courseName" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">学员级别 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'studentLevel' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="40" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.studentLevel}}" data-field="studentLevel" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">学员数量 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}}">
+            <textarea class="feedback-input" maxlength="4" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.studentCount}}" data-field="studentCount" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">教学目标 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'teachingGoal' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.teachingGoal}}" data-field="teachingGoal" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">教学组织 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'teachingOrganization' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.teachingOrganization}}" data-field="teachingOrganization" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">进阶1 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'progression1' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.progression1}}" data-field="progression1" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">进阶2 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'progression2' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.progression2}}" data-field="progression2" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">进阶3 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'progression3' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.progression3}}" data-field="progression3" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">进阶逻辑 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'progressionLogic' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.progressionLogic}}" data-field="progressionLogic" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+        <view class="feedback-field">
+          <view class="feedback-field-label">结语 <text wx:if="{{!proposalHasSaved || proposalEditing}}">*</text></view>
+          <view class="feedback-input-wrap {{proposalHasSaved && !proposalEditing ? 'is-readonly' : ''}} {{proposalFocusedField === 'conclusion' ? 'is-active' : ''}}">
+            <textarea class="feedback-input" maxlength="300" disabled="{{proposalHasSaved && !proposalEditing}}" value="{{proposalForm.conclusion}}" data-field="conclusion" bindfocus="onProposalFocus" bindblur="onProposalBlur" bindinput="onProposalInput" />
+          </view>
+        </view>
+      </scroll-view>
+      <view class="feedback-sheet-actions">
+        <block wx:if="{{proposalHasSaved && !proposalEditing}}">
+          <button class="feedback-action-btn is-primary" bindtap="editProposal">编辑提案</button>
+        </block>
+        <block wx:else>
+          <button class="feedback-action-btn is-ghost" bindtap="closeSheets">取消</button>
+          <button class="feedback-action-btn is-primary" bindtap="saveProposal" loading="{{savingProposal}}">保存提案</button>
+        </block>
       </view>
     </view>
 

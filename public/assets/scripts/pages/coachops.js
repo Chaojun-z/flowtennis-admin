@@ -1,5 +1,7 @@
 // ===== 教练运营 =====
 let coachOpsDraggedName='';
+const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
+let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 function isCoachSchedulePage(){
   return currentPage==='coachschedule';
 }
@@ -286,12 +288,29 @@ function renderCoachOpsTopFilters(){
     label:String(row?.name||row?.code||row?.id||'').trim()
   })).filter(opt=>opt.value&&opt.label));
   const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectCoachOpsTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
-  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
+  const coachOpts=[{value:'',label:'全部教练'}].concat(coachOpsHomeCampusCoachNames().map(name=>({value:name,label:name})));
+  const coachMenu=coachOpts.map(opt=>`<div class="tms-dropdown-item ${coachOpsSelectedCoach===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectCoachOpsCoachFilter(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
+  const coachLabel=coachOpts.find(opt=>opt.value===coachOpsSelectedCoach)?.label||'全部教练';
+  const coachIcon=typeof courtTopCoachIcon==='function'?courtTopCoachIcon():courtTopLocationIcon();
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsCoachFilter',coachLabel,coachIcon,coachMenu,'court-top-campus-menu')}</div></div>`;
 }
 function selectCoachOpsTopCampus(value,event){
   if(event)event.stopPropagation();
   campus=value||'all';
   localStorage.setItem(CAMPUS_KEY,campus);
+  if(coachOpsSelectedCoach&&!coachOpsHomeCampusCoachNames().includes(coachOpsSelectedCoach)){
+    coachOpsSelectedCoach='';
+    localStorage.removeItem(COACH_OPS_COACH_FILTER_KEY);
+  }
+  refreshCoachOpsTopFilters();
+  renderCoachOps();
+  closeCourtTopDropdowns();
+}
+function selectCoachOpsCoachFilter(value,event){
+  if(event)event.stopPropagation();
+  coachOpsSelectedCoach=value||'';
+  if(coachOpsSelectedCoach)localStorage.setItem(COACH_OPS_COACH_FILTER_KEY,coachOpsSelectedCoach);
+  else localStorage.removeItem(COACH_OPS_COACH_FILTER_KEY);
   refreshCoachOpsTopFilters();
   renderCoachOps();
   closeCourtTopDropdowns();
@@ -453,6 +472,7 @@ function coachOpsRows(){
   const rangeScheduleCoachNames=currentRangeRows.map(s=>coachName(s.coach)).filter(Boolean);
   const nameSource=campus==='all'?[...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)]:[...coachOpsHomeCampusCoachNames(),...rangeScheduleCoachNames];
   const names=[...new Set(nameSource)]
+    .filter(name=>!coachOpsSelectedCoach||coachName(name)===coachName(coachOpsSelectedCoach))
     .sort((a,b)=>coachSortValue(a)-coachSortValue(b)||String(a).localeCompare(String(b),'zh-Hans-CN'));
   return names.map(name=>{
     const mine=all.filter(s=>coachName(s.coach)===name);
