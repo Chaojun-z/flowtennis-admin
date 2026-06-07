@@ -1032,7 +1032,7 @@ function renderFinanceRevenuePager(total,pages){
   const pager=document.querySelector('#page-finance #financeRevenuePanel .tms-pagination');
   if(pager)pager.style.display=total>0?'flex':'none';
   const info=document.getElementById('financeRevenuePagerInfo');
-  if(info)info.textContent=`共 ${total} 条`;
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
   const btns=document.getElementById('financeRevenuePagerBtns');
   if(!btns)return;
   if(!total||pages<=1){btns.innerHTML='';return;}
@@ -1040,7 +1040,7 @@ function renderFinanceRevenuePager(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===financeRevenuePage?' active':''}" onclick="setFinanceRevenuePage(${item})">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.max(1,financeRevenuePage-1))">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.min(${pages},financeRevenuePage+1))">下一页</div><span class="tms-page-jump">跳至 <input id="financeRevenuePageJump" value="${financeRevenuePage}" onkeydown="if(event.key==='Enter')jumpFinanceRevenuePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.max(1,financeRevenuePage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceRevenuePage(Math.min(${pages},financeRevenuePage+1))">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="financeRevenuePageJump" value="${financeRevenuePage}" onkeydown="if(event.key==='Enter')jumpFinanceRevenuePage(this.value)"> 页</span>`;
 }
 function renderFinanceRevenueReport(){
   const body=document.getElementById('financeRevenueTbody');
@@ -1410,7 +1410,7 @@ function renderFinanceLedgerPager(total,pages){
   const pager=document.querySelector('#page-finance #financeLedgerPanel .tms-pagination');
   if(pager)pager.style.display=total>0?'flex':'none';
   const pagerInfo=document.getElementById('financeLedgerPagerInfo');
-  if(pagerInfo)pagerInfo.textContent=`共 ${total} 条`;
+  if(pagerInfo)pagerInfo.innerHTML=renderPagerInfoHtml(total);
   const pagerBtns=document.getElementById('financeLedgerPagerBtns');
   if(!pagerBtns)return;
   if(!total||pages<=1){pagerBtns.innerHTML='';return;}
@@ -1418,7 +1418,7 @@ function renderFinanceLedgerPager(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===financeLedgerPage?' active':''}" onclick="setFinanceLedgerPage(${item})">${item}</div>`
   ).join('');
-  pagerBtns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.max(1,financeLedgerPage-1))">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.min(${pages},financeLedgerPage+1))">下一页</div><span class="tms-page-jump">跳至 <input id="financeLedgerPageJump" value="${financeLedgerPage}" onkeydown="if(event.key==='Enter')jumpFinanceLedgerPage(this.value)"> 页</span>`;
+  pagerBtns.innerHTML=`<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.max(1,financeLedgerPage-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="setFinanceLedgerPage(Math.min(${pages},financeLedgerPage+1))">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="financeLedgerPageJump" value="${financeLedgerPage}" onkeydown="if(event.key==='Enter')jumpFinanceLedgerPage(this.value)"> 页</span>`;
 }
 function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');

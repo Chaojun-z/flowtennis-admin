@@ -117,8 +117,8 @@ function renderPlans(){
   const slice=list.slice((planPage-1)*PAGE_SIZE,planPage*PAGE_SIZE);
   const pager=document.querySelector('#page-plans .tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
-  document.getElementById('planPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('planPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===planPage?' active':''}" onclick="planPage=${i+1};renderPlans()">${i+1}</div>`).join('');
+  document.getElementById('planPagerInfo').innerHTML=renderPagerInfoHtml(total);
+  document.getElementById('planPagerBtns').innerHTML=pages<=1?'':`<div class="tms-page-btn" onclick="planPage=Math.max(1,planPage-1);renderPlans()">${renderPagerChevron('prev')}</div>${Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===planPage?' active':''}" onclick="planPage=${i+1};renderPlans()">${i+1}</div>`).join('')}<div class="tms-page-btn" onclick="planPage=Math.min(${pages},planPage+1);renderPlans()">${renderPagerChevron('next')}</div>`;
   const ss={'active':'tms-tag-green','已取消':'tms-tag-tier-slate','已结课':'tms-tag-tier-blue'};
   const sl={'active':'上课中','已取消':'已取消','已结课':'已结课'};
   document.getElementById('planTbody').innerHTML=slice.length?slice.map(p=>{

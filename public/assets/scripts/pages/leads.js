@@ -941,7 +941,7 @@ function renderLeadPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===leadPage?' active':''}" onclick="leadPage=${item};renderLeads()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="leadPage=Math.max(1,leadPage-1);renderLeads()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="leadPage=Math.min(${pages},leadPage+1);renderLeads()">下一页</div><span class="tms-page-jump">跳至 <input id="leadPageJump" value="${leadPage}" onkeydown="if(event.key==='Enter')jumpLeadPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="leadPage=Math.max(1,leadPage-1);renderLeads()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="leadPage=Math.min(${pages},leadPage+1);renderLeads()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="leadPageJump" value="${leadPage}" onkeydown="if(event.key==='Enter')jumpLeadPage(this.value)"> 页</span>`;
 }
 function jumpLeadPage(value){
   const total=getFilteredLeads().length;
@@ -967,7 +967,7 @@ function renderLeads(){
     return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
-  if(info)info.textContent=`共 ${total} 条`;
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderLeadPagerControls(total,pages);
 }
 function applyLeadSearch(){

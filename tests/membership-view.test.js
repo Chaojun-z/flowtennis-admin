@@ -21,7 +21,7 @@ assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-table-card"[\s\S
 assert.match(pagesCss, /#page-membership-plans \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership plan table should freeze the left name column');
 assert.match(pagesCss, /#page-membership-plans \.tms-table td\.tms-sticky-r[\s\S]*right:0/s, 'membership plan table should keep the action column fixed on the right');
 assert.doesNotMatch(html, /membershipTabOrders|membershipTabAccounts|membershipTabBenefits/, 'membership page should no longer use tabs');
-assert.match(html, /查看购买记录[\s\S]*查看权益总流水/, 'membership page should expose audit links near the main actions');
+assert.match(html, /购买记录[\s\S]*权益流水/, 'membership page should expose audit buttons near the main actions');
 assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership management page should remove the scheme config shortcut');
 assert.match(html, /id="membershipStatsRow"/, 'membership management page should expose summary stat cards');
 assert.match(html, /function renderMembershipStats/, 'membership management page should compute summary stat cards');
@@ -176,9 +176,12 @@ assert.doesNotMatch(html, /请选择权益账户，排课必须绑定课包权�
 assert.match(html, /会员状态[\s\S]*会员订场[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
 assert.match(html, /function membershipBookingCount\(/, 'membership management should expose a helper to count stored-value bookings');
 assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&String\(h\.payMethod\|\|''\)\.trim\(\)==='储值扣款'&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
-assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:#C06031" onclick="goPage\('membership-orders'\)"/, 'membership management purchase audit entry should use visible accent color');
-assert.match(html, /class="tms-action-link tms-action-link-strong" style="color:#C06031" onclick="goPage\('membership-ledger'\)"/, 'membership management ledger audit entry should use visible accent color');
-assert.match(pagesCss, /#page-memberships \.tms-toolbar-right \.tms-action-link-strong[\s\S]*#FEF3C7/s, 'membership audit entries should be readable on the brown background');
+assert.match(html, /class="tms-toolbar-secondary-btn tms-toolbar-secondary-btn-orders" onclick="goPage\('membership-orders'\)"/, 'membership purchase audit entry should use the shared toolbar secondary button');
+assert.match(html, /class="tms-toolbar-secondary-btn tms-toolbar-secondary-btn-ledger" onclick="goPage\('membership-ledger'\)"/, 'membership ledger audit entry should use the shared toolbar secondary button');
+assert.match(pagesCss, /\.tms-toolbar-secondary-actions\{display:flex;align-items:center;gap:8px\}/, 'toolbar secondary button container should keep 8px spacing');
+assert.match(pagesCss, /\.tms-toolbar-secondary-btn\{[^}]*display:inline-flex[^}]*align-items:center[^}]*gap:6px[^}]*padding:6px 12px[^}]*border-radius:8px[^}]*font-size:14px[^}]*font-weight:500[^}]*color:#78716C[^}]*background:transparent/, 'toolbar secondary buttons should match the default standard');
+assert.match(pagesCss, /\.tms-toolbar-secondary-btn:hover\{[^}]*background:#F5F5F4[^}]*color:#1C1917/, 'toolbar secondary buttons should use the standard hover state');
+assert.match(pagesCss, /\.tms-toolbar-secondary-btn:active\{[^}]*background:#E7E5E4[^}]*transform:scale\(\.95\)/, 'toolbar secondary buttons should use the pressed micro-interaction');
 assert.match(html, /const statusMeta=membershipStatusTagMeta\(a\);/, 'membership management rows should derive status tag metadata');
 assert.match(html, /function membershipVisibleCourt/, 'membership management should ignore deleted or archived court users');
 assert.match(fnBody('getMembershipRows'), /membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should build rows from membership accounts returned by the API');
@@ -226,7 +229,7 @@ assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓�
 assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
 assert.match(fnBody('renderMemberships'), /renderCourtEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
 assert.match(pagesCss, /#page-memberships \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership management table should freeze the left name column');
-assert.match(pagesCss, /#page-memberships \.tms-pagination\{padding:4px 12px;font-size:11px;min-height:32px\}/, 'membership management pager should use the compact standard size');
+assert.match(pagesCss, /#page-memberships \.tms-pagination[\s\S]*min-height:32px/, 'membership management pager should keep the standard compact height');
 assert.match(pagesCss, /#page-memberships \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15\}/, 'membership management rows should use the compact standard row height');
 
 console.log('membership view tests passed');

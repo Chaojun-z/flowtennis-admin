@@ -47,7 +47,7 @@ assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court t
 assert.match(html, /id="courtPageSize"/, 'court table should support page size selection');
 assert.match(html, /20条\/页[\s\S]*50条\/页[\s\S]*100条\/页/, 'court page size selector should offer 20, 50, and 100 rows per page');
 assert.match(html, /function renderCourtPagerControls\(/, 'court page should use the standard pager renderer');
-assert.match(fnBody('renderCourtPagerControls'), /上一页[\s\S]*下一页[\s\S]*jumpCourtPage/, 'court pager should match the student pager interaction');
+assert.match(fnBody('renderCourtPagerControls'), /renderPagerChevron\('prev'\)[\s\S]*renderPagerChevron\('next'\)[\s\S]*jumpCourtPage/, 'court pager should match the shared chevron pager interaction');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');

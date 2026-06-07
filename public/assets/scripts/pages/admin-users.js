@@ -70,7 +70,7 @@ function renderAdminUserPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===adminUserPage?' active':''}" onclick="adminUserPage=${item};renderAdminUsers()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="adminUserPage=Math.max(1,adminUserPage-1);renderAdminUsers()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="adminUserPage=Math.min(${pages},adminUserPage+1);renderAdminUsers()">下一页</div><span class="tms-page-jump">跳至 <input id="adminUserPageJump" value="${adminUserPage}" onkeydown="if(event.key==='Enter')jumpAdminUserPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="adminUserPage=Math.max(1,adminUserPage-1);renderAdminUsers()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="adminUserPage=Math.min(${pages},adminUserPage+1);renderAdminUsers()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="adminUserPageJump" value="${adminUserPage}" onkeydown="if(event.key==='Enter')jumpAdminUserPage(this.value)"> 页</span>`;
 }
 function setAdminUserPageSize(value){
   const next=parseInt(value,10);
@@ -116,7 +116,7 @@ function renderAdminUsers(){
   const pager=document.querySelector('#page-admin-users .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
   const info=document.getElementById('adminUserPagerInfo');
-  if(info)info.textContent=`共 ${total} 条`;
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderAdminUserPagerControls(total,pages);
   tbody.innerHTML=slice.length?slice.map(u=>{
     const statusText=adminUserStatusText(u.status);

@@ -59,6 +59,12 @@ function renderStandardOptionLabel(opt){
   const label=String(opt?.label??opt?.value??'');
   return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;
 }
+function renderPagerInfoHtml(total){
+  return `共 <span class="pager-strong">${Number(total)||0}</span> 条`;
+}
+function renderPagerChevron(direction){
+  return `<span class="tms-page-chevron" aria-hidden="true">${direction==='prev'?'‹':'›'}</span>`;
+}
 function withStandardFilterCounts(options,rows,match){
   const source=Array.isArray(rows)?rows:[];
   return (options||[]).map(opt=>{

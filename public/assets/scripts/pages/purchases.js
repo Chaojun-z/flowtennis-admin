@@ -139,7 +139,7 @@ function renderPurchasePagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===purPage?' active':''}" onclick="purPage=${item};renderPurchases()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="purPage=Math.max(1,purPage-1);renderPurchases()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="purPage=Math.min(${pages},purPage+1);renderPurchases()">下一页</div><span class="tms-page-jump">跳至 <input id="purPageJump" value="${purPage}" onkeydown="if(event.key==='Enter')jumpPurchasePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="purPage=Math.max(1,purPage-1);renderPurchases()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="purPage=Math.min(${pages},purPage+1);renderPurchases()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="purPageJump" value="${purPage}" onkeydown="if(event.key==='Enter')jumpPurchasePage(this.value)"> 页</span>`;
 }
 function setPurchasePageSize(value){
   const next=parseInt(value,10);
@@ -211,7 +211,7 @@ function renderPurchases(){
   const pager=document.querySelector('#page-purchases .tms-pagination');
   if(pager)pager.style.display=total>purPageSize?'flex':'none';
   const info=document.getElementById('purPagerInfo');
-  if(info)info.textContent=`共 ${total} 条`;
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderPurchasePagerControls(total,pages);
   document.getElementById('purchaseTbody').innerHTML=slice.length?slice.map(p=>{
     const ent=entitlements.find(e=>e.purchaseId===p.id);

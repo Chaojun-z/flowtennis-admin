@@ -87,8 +87,8 @@ function renderClasses(){
   const slice=list.slice((clsPage-1)*PAGE_SIZE,clsPage*PAGE_SIZE);
   const pager=document.querySelector('#page-classes .tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
-  document.getElementById('clsPagerInfo').textContent=`共 ${total} 条`;
-  document.getElementById('clsPagerBtns').innerHTML=pages<=1?'':Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===clsPage?' active':''}" onclick="clsPage=${i+1};renderClasses()">${i+1}</div>`).join('');
+  document.getElementById('clsPagerInfo').innerHTML=renderPagerInfoHtml(total);
+  document.getElementById('clsPagerBtns').innerHTML=pages<=1?'':`<div class="tms-page-btn" onclick="clsPage=Math.max(1,clsPage-1);renderClasses()">${renderPagerChevron('prev')}</div>${Array.from({length:pages},(_,i)=>`<div class="tms-page-btn${i+1===clsPage?' active':''}" onclick="clsPage=${i+1};renderClasses()">${i+1}</div>`).join('')}<div class="tms-page-btn" onclick="clsPage=Math.min(${pages},clsPage+1);renderClasses()">${renderPagerChevron('next')}</div>`;
   const ss={'未开始':'tms-tag-tier-gold','已排班':'tms-tag-tier-blue','已取消':'tms-tag-tier-slate','已结课':'tms-tag-green'};
   document.getElementById('clsTbody').innerHTML=slice.length?slice.map(c=>{
     const prod=products.find(x=>x.id===c.productId);

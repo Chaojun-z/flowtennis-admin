@@ -96,7 +96,7 @@ function renderStudentPagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===stuPage?' active':''}" onclick="stuPage=${item};renderStudents()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="stuPage=Math.max(1,stuPage-1);renderStudents()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="stuPage=Math.min(${pages},stuPage+1);renderStudents()">下一页</div><span class="tms-page-jump">跳至 <input id="stuPageJump" value="${stuPage}" onkeydown="if(event.key==='Enter')jumpStudentPage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="stuPage=Math.max(1,stuPage-1);renderStudents()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="stuPage=Math.min(${pages},stuPage+1);renderStudents()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="stuPageJump" value="${stuPage}" onkeydown="if(event.key==='Enter')jumpStudentPage(this.value)"> 页</span>`;
 }
 function setStudentPageSize(value){
   const next=parseInt(value,10);
@@ -403,7 +403,7 @@ function renderStudents(){
   const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);
   const pager=document.querySelector('#page-students .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
-  document.getElementById('stuPagerInfo').textContent=`共 ${total} 条`;
+  document.getElementById('stuPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderStudentPagerControls(total,pages);
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const lastLesson=studentLastLessonDate(s);

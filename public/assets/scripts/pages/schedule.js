@@ -67,7 +67,7 @@ function renderSchedulePagerControls(total,pages){
     ?'<span class="tms-page-ellipsis">...</span>'
     :`<div class="tms-page-btn${item===schPage?' active':''}" onclick="schPage=${item};renderSchedule()">${item}</div>`
   ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="schPage=Math.max(1,schPage-1);renderSchedule()">上一页</div>${pageBtns}<div class="tms-page-btn" onclick="schPage=Math.min(${pages},schPage+1);renderSchedule()">下一页</div><span class="tms-page-jump">跳至 <input id="schPageJump" value="${schPage}" onkeydown="if(event.key==='Enter')jumpSchedulePage(this.value)"> 页</span>`;
+  btns.innerHTML=`<div class="tms-page-btn" onclick="schPage=Math.max(1,schPage-1);renderSchedule()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="schPage=Math.min(${pages},schPage+1);renderSchedule()">${renderPagerChevron('next')}</div><span class="tms-page-jump">跳至 <input id="schPageJump" value="${schPage}" onkeydown="if(event.key==='Enter')jumpSchedulePage(this.value)"> 页</span>`;
 }
 function setSchedulePageSize(value){
   const next=parseInt(value,10);
@@ -117,7 +117,7 @@ function renderSchedule(){
   const slice=list.slice((schPage-1)*schPageSize,schPage*schPageSize);
   const pager=document.querySelector('#page-schedule .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
-  document.getElementById('schPagerInfo').textContent=`共 ${total} 条`;
+  document.getElementById('schPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderSchedulePagerControls(total,pages);
   document.getElementById('schTbody').innerHTML=slice.length?slice.map(s=>{
     const fb=scheduleFeedback(s);
