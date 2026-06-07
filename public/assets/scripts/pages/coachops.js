@@ -262,11 +262,13 @@ function coachOpsLooksLikeTechnicalStudentValue(value){
 }
 function coachOpsScheduleStudentTitle(s){
   const fromIds=parseArr(s?.studentIds).map(id=>students.find(st=>st.id===id)?.name||'').filter(name=>!coachOpsLooksLikeTechnicalStudentValue(name));
-  const fromNames=[...parseArr(s?.studentNames),scheduleListStudentSummary(s),scheduleStudentSummary(s),s?.studentName]
+  if(fromIds.length>1)return `${fromIds[0]} 等 ${fromIds.length} 人`;
+  if(fromIds.length)return fromIds[0];
+  const fromNames=[...parseArr(s?.studentNames),scheduleStudentSummary(s),s?.studentName]
     .flatMap(value=>String(value||'').split(/[、,，/]+/))
     .map(value=>value.trim())
     .filter(name=>!coachOpsLooksLikeTechnicalStudentValue(name));
-  const names=[...new Set([...fromIds,...fromNames])];
+  const names=[...new Set(fromNames)];
   if(names.length>1)return `${names[0]} 等 ${names.length} 人`;
   if(names.length)return names[0];
   return classes.find(c=>c.id===s?.classId)?.className||'学员';

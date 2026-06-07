@@ -229,6 +229,18 @@ assert.match(
 );
 
 assert.match(
+  coachOpsSource,
+  /function coachOpsScheduleStudentTitle\([\s\S]*fromIds\.length>1\)return `\$\{fromIds\[0\]\} 等 \$\{fromIds\.length\} 人`/,
+  'coach ops schedule cards should count actual studentIds instead of stale summary text'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /fromNames=\[[\s\S]*scheduleListStudentSummary\(s\)[\s\S]*s\?\.studentName[\s\S]*const names=\[\.\.\.new Set\(\[\.\.\.fromIds,\.\.\.fromNames\]\)\]/,
+  'coach ops schedule cards should not merge summary text into the participant count'
+);
+
+assert.match(
   source,
   /coach-ops-daycell-head[\s\S]*coach-ops-daycell-count/,
   'coach ops week and month cells should keep date left and lesson count right on one row'
