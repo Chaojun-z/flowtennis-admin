@@ -66,7 +66,7 @@ assert.match(html, /class="tms-action-link"/, 'court page should render action l
 assert.match(html, /function openCourtModal[\s\S]*tms-section-header[\s\S]*tms-form-row/, 'court edit modal should use the upgraded local form layout');
 assert.doesNotMatch(fnBody('openCourtModal'), /placeholder="13800138000"/, 'court phone input should not look prefilled with an example number');
 assert.match(fnBody('openCourtModal'), /id="f_phone"[^>]*placeholder="请输入手机号"/, 'court phone input should use neutral placeholder copy');
-assert.match(fnBody('openCourtModal'), /id="f_studentIds"[\s\S]*id="f_studentSearch"[\s\S]*placeholder="搜索姓名 \/ 手机号"[\s\S]*updateCourtStudentSearch\(\)[\s\S]*id="f_studentSuggest"[\s\S]*id="f_selectedStudentTags"/, 'court linked students should use the searchable student picker');
+assert.match(fnBody('openCourtModal'), /id="f_studentIds"[\s\S]*id="f_studentSearch"[\s\S]*placeholder="搜索姓名、手机号"[\s\S]*updateCourtStudentSearch\(\)[\s\S]*id="f_studentSuggest"[\s\S]*id="f_selectedStudentTags"/, 'court linked students should use the searchable student picker');
 assert.match(html, /function renderCourtStudentTags\(/, 'court linked student picker should render selected student tags');
 assert.match(html, /function selectCourtStudent\(/, 'court linked student picker should support selecting a student from search results');
 assert.match(html, /function removeCourtStudent\(/, 'court linked student picker should support removing selected students');
@@ -120,7 +120,8 @@ assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
 assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
-assert.match(fnBody('renderCourtStatsCards'), /订场用户结构[\s\S]*场地利用[\s\S]*课群次数对比[\s\S]*订场财务大盘[\s\S]*课群金额对比盘/, 'court stats should show the requested five grouped dashboards');
+assert.match(fnBody('renderCourtStatsCards'), /总订场用户[\s\S]*会员用户[\s\S]*客群次数对比[\s\S]*订场总实收[\s\S]*散客消费/, 'court stats should show the requested five dashboard cards');
+assert.match(html, /id="courtSearch"[^>]*placeholder="搜索姓名、手机号"/, 'court user search should use the unified placeholder');
 assert.match(html, /court-stat-percent/, 'court stats should render percentages with a smaller muted style');
 assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'court stats should use the shared adaptive card grid');
 assert.match(pagesCss, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{font-size:21px/, 'court stat main numbers should use the shared stat number size');
@@ -159,7 +160,7 @@ assert.match(html, /function saveCourtFinanceRecord[\s\S]*courseType:'陪打'/, 
 assert.match(fnBody('openCourtModal'), /openCourtMergeModal\('/, 'court edit modal should expose a merge entry for existing users');
 assert.match(html, /function openCourtMergeModal\(/, 'court page should expose a manual merge modal');
 assert.match(html, /function renderCourtMergeTargetOptions\(/, 'court page should expose merge target filtering by search');
-assert.match(html, /id="mergeCourtSearch"[^>]*placeholder="搜索姓名"[^>]*oninput="renderCourtMergeTargetOptions\(\)"/, 'merge modal should support searching target users by name');
+assert.match(html, /id="mergeCourtSearch"[^>]*placeholder="搜索姓名、手机号"[^>]*oninput="renderCourtMergeTargetOptions\(\)"/, 'merge modal should support searching target users by name and phone');
 assert.match(html, /function mergeCourtUsers\(/, 'court page should expose a merge submit handler');
 assert.match(html, /function applyCourtMergeResult\(/, 'court merge should apply API result to local page state immediately');
 assert.match(fnBody('mergeCourtUsers'), /const result=await apiCall\('POST','\/courts\/merge'/, 'court merge should keep the API result');

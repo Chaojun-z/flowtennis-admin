@@ -161,13 +161,14 @@ function ensureCoachOpsReportDateControls(){
     if(host)host.innerHTML=courtDateButtonHtml(id,value,label,handler);
   });
 }
-function toggleCoachOpsPicker(){
+function toggleCoachOpsPicker(event){
+  if(event){event.preventDefault();event.stopPropagation();}
   const pop=coachOpsPickerEl();if(!pop)return;
   coachOpsPickerMonth=monthStart(coachOpsInputDate());
   renderCoachOpsPicker();
   pop.classList.toggle('open');
 }
-function moveCoachOpsPickerMonth(step){coachOpsPickerMonth=addMonths(coachOpsPickerMonth||coachOpsInputDate(),step);renderCoachOpsPicker();}
+function moveCoachOpsPickerMonth(step,event){if(event){event.preventDefault();event.stopPropagation();}coachOpsPickerMonth=addMonths(coachOpsPickerMonth||coachOpsInputDate(),step);renderCoachOpsPicker();}
 function pickCoachOpsDate(value){
   const el=coachOpsDateInput();if(!el)return;
   el.value=value;
@@ -184,7 +185,7 @@ function renderCoachOpsPicker(){
       const active=selected.getFullYear()===base.getFullYear()&&selected.getMonth()===i;
       return `<button class="coach-picker-month ${active?'active':''}" onclick="pickCoachOpsDate('${base.getFullYear()}-${String(i+1).padStart(2,'0')}')">${i+1}月</button>`;
     }).join('');
-    pop.innerHTML=`<div class="coach-picker-head"><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(-12)">‹</button><div class="coach-picker-title">${base.getFullYear()} 年</div><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(12)">›</button></div><div class="coach-picker-months">${months}</div>`;
+    pop.innerHTML=`<div class="coach-picker-head"><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(-12,event)">‹</button><div class="coach-picker-title">${base.getFullYear()} 年</div><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(12,event)">›</button></div><div class="coach-picker-months">${months}</div>`;
     return;
   }
   const first=new Date(base.getFullYear(),base.getMonth(),1);
@@ -199,7 +200,7 @@ function renderCoachOpsPicker(){
     const clickValue=ds;
     return `<button class="coach-picker-day ${muted?'muted':''} ${ds===today()?'today':''} ${active?'active':''} ${weekActive?'week-active':''}" onclick="pickCoachOpsDate('${clickValue}')">${d.getDate()}</button>`;
   }).join('');
-  pop.innerHTML=`<div class="coach-picker-head"><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(-1)">‹</button><div class="coach-picker-title">${base.getFullYear()} 年 ${base.getMonth()+1} 月</div><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(1)">›</button></div><div class="coach-picker-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div class="coach-picker-grid">${days}</div>`;
+  pop.innerHTML=`<div class="coach-picker-head"><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(-1,event)">‹</button><div class="coach-picker-title">${base.getFullYear()} 年 ${base.getMonth()+1} 月</div><button class="coach-picker-move" onclick="moveCoachOpsPickerMonth(1,event)">›</button></div><div class="coach-picker-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div class="coach-picker-grid">${days}</div>`;
 }
 function ensureCoachOpsDate(){
   const el=coachOpsDateInput();if(!el)return;
@@ -429,7 +430,7 @@ function coachTrialConversionText(coach,rows){
     });
   });
   const total=trialMap.size;
-  if(!total)return '0/0 <span class="coach-workload-rate down">0%</span>';
+  if(!total)return '-%';
   const converted=[...trialMap.entries()].filter(([key,trialDate])=>purchases.some(p=>{
     if(!purchaseMatchesCoachTrialStudent(p,key))return false;
     if(coachName(p.ownerCoach)!==coachKey)return false;
@@ -447,7 +448,7 @@ function coachCourseTypeDistributionText(rows){
     const type=scheduleCourseType(s)||'未分类';
     map.set(type,(map.get(type)||0)+scheduleLessonUnits(s));
   });
-  return [...map.entries()].sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${type} ${lessonUnitsText(count)}`).join('｜')||'—';
+  return [...map.entries()].sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${type} ${lessonUnitsText(count)}`).join('｜')||'-';
 }
 function coachOpsHomeCampusCoachNames(){
   if(campus==='all')return activeCoachNames();
@@ -459,7 +460,7 @@ function coachOpsComparisonText(coach,currentRows,range){
   const prevStart=new Date(range.start.getTime()-span);
   const prevRows=billableSchedules().filter(s=>coachOpsCampusMatchesSchedule(s)&&coachName(s.coach)===coachName(coach)&&inRange(s.startTime,prevStart,range.start));
   const previous=sumScheduleLessonUnits(prevRows);
-  if(!previous)return current?'<span class="coach-workload-compare up">新增</span>':'<span class="coach-workload-compare">0%</span>';
+  if(!previous)return current?'<span class="coach-workload-compare up">新增</span>':'<span class="coach-workload-compare">-%</span>';
   const pct=(current-previous)/previous*100;
   const cls=pct>0?'up':pct<0?'down':'';
   return `<span class="coach-workload-compare ${cls}">${pct>0?'+':''}${pct.toFixed(2)}%</span>`;
@@ -511,7 +512,7 @@ function renderCoachOpsRangeFilter(){
 function renderCoachOpsWorkloadHeader(){
   const thead=document.querySelector('#page-coachops .tms-table thead');
   if(!thead)return;
-  thead.innerHTML='<tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:120px">当前筛选总时长</th><th style="width:130px">体验课转化率</th><th style="width:190px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:150px">校区分布</th><th style="width:120px">时间段</th></tr>';
+  thead.innerHTML='<tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:130px">体验课转化率</th><th style="width:220px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:180px">校区分布</th><th style="width:140px">时间段</th></tr>';
 }
 function renderCoachOps(){
   ensureCoachOpsReportDateControls();
@@ -613,7 +614,7 @@ function renderCoachOps(){
     }
   }
   const workloadBody=document.getElementById('coachOpsTbody');
-  if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${r.rangeRows.reduce((n,s)=>n+scheduleDurMin(s),0)} 分钟</td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${distText(r.rangeRows,timeBand)}</div></td></tr>`).join('');
+  if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${distText(r.rangeRows,timeBand)}</div></td></tr>`).join('');
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }
@@ -754,7 +755,7 @@ function financeRecognitionPercent(numerator,denominator){
   return `${Math.round((Number(numerator||0)/base)*1000)/10}%`;
 }
 function financeCardValueWithPercent(mainValue,subValue){
-  return `${financeCardValue(mainValue,subValue)}<span class="finance-card-percent">${financeRecognitionPercent(subValue,mainValue)}</span>`;
+  return `${financeCardValue(mainValue,subValue)}<span class="tms-stat-percent finance-card-percent">${financeRecognitionPercent(subValue,mainValue)}</span>`;
 }
 function financeCoursePackageMetrics(rows=[],overview=null){
   const businessRows=(rows||[]).filter(row=>!row.differenceReason);

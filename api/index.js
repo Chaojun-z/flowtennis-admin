@@ -373,7 +373,7 @@ function getMatchSqlPool(){
 }
 function isMatchSqlUnavailableError(err){
   const msg=String(err?.message||err||'');
-  return /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|getaddrinfo|staging-db\.example\.com|127\.0\.0\.1:5432|缺少 MATCH_DATABASE_URL/i.test(msg);
+  return /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|getaddrinfo|Connection terminated unexpectedly|staging-db\.example\.com|127\.0\.0\.1:5432|缺少 MATCH_DATABASE_URL/i.test(msg);
 }
 function shouldUseEmptyMatchAdminListFallback(err){
   return !isProductionRuntime()&&isMatchSqlUnavailableError(err);

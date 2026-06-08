@@ -465,17 +465,14 @@ function renderMembershipStats(rows=[]){
   const activeFinances=activeRows.map(row=>courtFinanceLocal(row.court||membershipVisibleCourt(row)||{history:[]}));
   const totalRecognized=activeFinances.reduce((sum,finance)=>sum+(Number(finance.storedValueSpent)||0),0);
   const poolTotal=totalIncome+totalBonus;
-  const realRecognized=poolTotal>0?Math.round(totalRecognized*totalIncome/poolTotal):0;
-  const bonusRecognized=Math.round(totalRecognized-realRecognized);
-  const pendingReal=Math.max(0,totalIncome-realRecognized);
-  const totalAvailable=Math.max(0,totalIncome+totalBonus-totalRecognized);
-  const splitCard=(title,primary,secondary,caption)=>`<div class="tms-stat-card membership-stat-card"><div class="tms-stat-label">${title}</div><div class="tms-stat-value membership-split-value"><span>${primary}</span><span class="tms-stat-divider">｜</span><span>${secondary}</span></div><div class="tms-stat-sub">${caption}</div></div>`;
-  host.innerHTML=[
-    splitCard('会员与储值',`${rows.length} 人`,`${validOrders.length} 次`,'会员人数 / 储值次数'),
-    splitCard('充值现金池',`¥${fmt(totalIncome)}`,`¥${fmt(totalBonus)}`,'累计实收 / 累计赠送'),
-    splitCard('消费核销池',`¥${fmt(realRecognized)}`,`¥${fmt(bonusRecognized)}`,'真实核销 / 赠送核销'),
-    splitCard('待履约与余额',`¥${fmt(pendingReal)}`,`¥${fmt(totalAvailable)}`,'待履约真金 / 会员可用总额')
-  ].join('');
+  const pendingTotal=Math.max(0,poolTotal-totalRecognized);
+  host.innerHTML=renderStandardDataCards([
+    {title:'会员储值',valueHtml:`<span>${rows.length}</span><span class="tms-stat-divider">｜</span><span>${validOrders.length}</span>`,sub:'会员人数 vs 储值次数'},
+    {title:'充值金额',value:`¥${fmt(totalIncome)}`,sub:''},
+    {title:'需履约总金额',value:`¥${fmt(poolTotal)}`,sub:'充值金额 + 增长金额'},
+    {title:'已核销金额',value:`¥${fmt(totalRecognized)}`,percent:statPercentText(totalRecognized,poolTotal),sub:'已核销金额 / 累计实收+累计赠送占比'},
+    {title:'待履约金额',value:`¥${fmt(pendingTotal)}`,percent:statPercentText(pendingTotal,poolTotal),sub:'待履约金额 / 累计实收+累计赠送占比'}
+  ]);
 }
 function membershipTierForRow(row){
   const account=row?.account||{};
@@ -1104,6 +1101,9 @@ function courtStatValuePair(left,right){
 function courtStatPercent(value,digits=0){
   return `<span class="court-stat-percent">(${courtRatioText(value.part,value.total,digits)})</span>`;
 }
+function courtStatInlinePercent(value,digits=0){
+  return `<span class="court-stat-percent">${courtRatioText(value.part,value.total,digits)}</span>`;
+}
 function renderCourtStatsCards(summary={}){
   const totalUsers=Number(summary.totalCount)||0;
   const memberUsers=Number(summary.totalMemberCount)||0;
@@ -1118,11 +1118,11 @@ function renderCourtStatsCards(summary={}){
   const card=(title,value,caption,extraClass='')=>`<div class="tms-stat-card court-dashboard-card ${extraClass}"><div class="tms-stat-label">${title}</div>${value}<div class="tms-stat-sub">${caption}</div></div>`;
   document.getElementById('courtStatsRow').classList.add('court-dashboard-stats');
   document.getElementById('courtStatsRow').innerHTML=[
-    card('订场用户结构',courtStatValuePair(`${totalUsers} 人`,`${memberUsers} 人${courtStatPercent({part:memberUsers,total:totalUsers},1)}`),'总订场用户 / 会员用户占比'),
-    card('场地利用',courtStatValuePair(`${bookingCount} 次`,`${fmt(bookingHours)} 小时`),'总订场次数 / 总订场时长'),
-    card('课群次数对比',courtStatValuePair(`${guestBookingCount}次${courtStatPercent({part:guestBookingCount,total:bookingCount})}`,`${memberBookingCount}次${courtStatPercent({part:memberBookingCount,total:bookingCount})}`),'散客次数占比 / 会员次数占比'),
-    card('订场财务大盘',courtStatValuePair(`¥${fmt(totalReceived)}`,`¥${fmt(bookingAmount)}${courtStatPercent({part:bookingAmount,total:totalReceived})}`),'总实收金额 / 实际订场消费占比','court-stat-wide-left'),
-    card('课群金额对比盘',courtStatValuePair(`¥${fmt(guestBookingAmount)}${courtStatPercent({part:guestBookingAmount,total:bookingAmount})}`,`¥${fmt(memberBookingAmount)}${courtStatPercent({part:memberBookingAmount,total:bookingAmount})}`),'散客消费占比 / 会员消费占比','court-stat-wide-right')
+    card('总订场用户',`<div class="tms-stat-value">${totalUsers}</div>`,''),
+    card('会员用户',`<div class="tms-stat-value">${memberUsers} ${courtStatInlinePercent({part:memberUsers,total:totalUsers},1)}</div>`,'会员用户 / 总订场用户占比'),
+    card('客群次数对比',courtStatValuePair(`${guestBookingCount}${courtStatInlinePercent({part:guestBookingCount,total:bookingCount})}`,`${memberBookingCount}${courtStatInlinePercent({part:memberBookingCount,total:bookingCount})}`),'散客次数占比 vs 会员次数占比'),
+    card('订场总实收',`<div class="tms-stat-value">¥${fmt(totalReceived)}</div>`,''),
+    card('散客消费',`<div class="tms-stat-value">¥${fmt(guestBookingAmount)} ${courtStatInlinePercent({part:guestBookingAmount,total:totalReceived})}</div>`,'散客消费金额 / 订场总实收金额占比')
   ].join('');
 }
 function renderCourtAccountListView(){
@@ -1328,7 +1328,7 @@ function openCourtMergeModal(courtId){
     .map(c=>({id:c.id,name:c.name||'',phone:c.phone||'',campus:c.campus||''}));
   if(!targetOptions.length){toast('没有可合并的目标订场用户','warn');return;}
   courtMergeState={sourceCourtId:courtId,options:targetOptions,filtered:targetOptions};
-  const body=`<div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前用户</label><div class="tms-form-readonly">${esc(mergeCourtTargetLabel(sourceCourt))}</div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">搜索目标用户</label><input type="text" class="finput tms-form-control" id="mergeCourtSearch" placeholder="搜索姓名" oninput="renderCourtMergeTargetOptions()"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">合并到用户 *</label><div id="mergeTargetHost"></div><div id="mergeTargetEmpty" style="display:none;font-size:12px;color:#8C7B6E;margin-top:8px;">没有匹配的订场用户</div></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="choice-tag" style="width:max-content"><input type="checkbox" id="merge_deleteSource"><span>合并后直接删除原用户</span></label><div style="font-size:12px;color:#8C7B6E;margin-top:10px;line-height:1.6">会把当前用户的财务流水、关联学员和会员关联迁到目标用户。勾选后，原用户会直接删除；不勾选则隐藏。</div></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前用户</label><div class="tms-form-readonly">${esc(mergeCourtTargetLabel(sourceCourt))}</div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">搜索目标用户</label><input type="text" class="finput tms-form-control" id="mergeCourtSearch" placeholder="搜索姓名、手机号" oninput="renderCourtMergeTargetOptions()"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">合并到用户 *</label><div id="mergeTargetHost"></div><div id="mergeTargetEmpty" style="display:none;font-size:12px;color:#8C7B6E;margin-top:8px;">没有匹配的订场用户</div></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="choice-tag" style="width:max-content"><input type="checkbox" id="merge_deleteSource"><span>合并后直接删除原用户</span></label><div style="font-size:12px;color:#8C7B6E;margin-top:10px;line-height:1.6">会把当前用户的财务流水、关联学员和会员关联迁到目标用户。勾选后，原用户会直接删除；不勾选则隐藏。</div></div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openCourtModal('${sourceCourt.id}')">返回编辑</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-primary" id="courtMergeBtn" onclick="mergeCourtUsers('${sourceCourt.id}')">确认合并</button></div>`;
   setCourtModalFrame(`合并订场用户 · ${sourceCourt.name}`,body,footer,'modal-tight');
   renderCourtMergeTargetOptions();
@@ -1494,7 +1494,7 @@ function openCourtModal(id){
   const selectedIds=parseArr(r?.studentIds);if(!selectedIds.length&&linked)selectedIds.push(linked.id);
   const campusList=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
   const selectedStudentValue=esc(JSON.stringify(selectedIds));
-  const linkedStudentPicker=`<input type="hidden" id="f_studentIds" value="${selectedStudentValue}"><input class="finput tms-form-control" id="f_studentSearch" placeholder="搜索姓名 / 手机号" value="${esc(courtSelectedStudentSearchText(selectedIds))}" oninput="updateCourtStudentSearch()" autocomplete="off"><div id="f_studentSuggest" class="schedule-student-suggest"></div><div id="f_selectedStudentTags" class="schedule-student-tags">${renderCourtStudentTags(selectedIds)}</div>`;
+  const linkedStudentPicker=`<input type="hidden" id="f_studentIds" value="${selectedStudentValue}"><input class="finput tms-form-control" id="f_studentSearch" placeholder="搜索姓名、手机号" value="${esc(courtSelectedStudentSearchText(selectedIds))}" oninput="updateCourtStudentSearch()" autocomplete="off"><div id="f_studentSuggest" class="schedule-student-suggest"></div><div id="f_selectedStudentTags" class="schedule-student-tags">${renderCourtStudentTags(selectedIds)}</div>`;
   const leadSummaryHtml=r?`<div class="tms-section-header">来源线索摘要</div><div class="tms-detail-grid">${studentDetailBlockHtml('线索来源',courtLeadSummaryHtml(r))}</div>`:'';
   const financeSummaryHtml=`<div class="tms-readonly-panel court-finance-readonly" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-detail-grid">${studentDetailFieldHtml('累计充值',`¥${fmt(fin.totalDeposit)}`)}${studentDetailFieldHtml('当前余额',`¥${fmt(fin.balance)}`)}${studentDetailFieldHtml('累计消费',`¥${fmt(fin.spentAmount)}`)}${studentDetailFieldHtml('累计实收',`¥${fmt(fin.receivedAmount)}`)}</div></div>`;
   const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label>${linkedStudentPicker}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderCourtDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${leadSummaryHtml}${financeSummaryHtml}<div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;

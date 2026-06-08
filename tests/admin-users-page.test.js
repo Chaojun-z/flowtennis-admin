@@ -24,7 +24,7 @@ assert.match(source, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sideba
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-toolbar"/, 'account page should use the shared toolbar shell');
 assert.match(source, /'admin-users':\['campuses','coaches'\]/, 'account page should load campuses and coaches for coach binding');
 assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'/, 'account page should not be hidden by global top filters');
-assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索账号、姓名、手机号或绑定教练"/, 'account page should provide a search field');
+assert.match(source, /id="adminUserSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'account page should provide the unified search field');
 assert.match(source, /<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal\(null\)"/, 'account page should provide add button');
 assert.match(source, /id="page-admin-users"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'account page should use the shared table shell');
 assert.match(source, /<th[^>]*class="tms-sticky-l"[^>]*>账号名<\/th><th[^>]*>姓名<\/th><th[^>]*>手机号<\/th><th[^>]*>角色<\/th><th[^>]*>绑定教练<\/th><th[^>]*>微信绑定<\/th><th[^>]*>服务号绑定<\/th><th[^>]*>状态<\/th><th[^>]*>权限说明<\/th><th[^>]*class="tms-sticky-r"[^>]*>操作<\/th>/, 'account table headers should follow the standardized account columns');

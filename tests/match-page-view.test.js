@@ -6,10 +6,15 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
 const components = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'components.js'), 'utf8');
 const state = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
+const bootstrap = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'bootstrap.js'), 'utf8');
+const api = fs.readFileSync(path.join(root, 'api', 'index.js'), 'utf8');
+const pagesCss = fs.readFileSync(path.join(root, 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 
 assert.match(components, /goPage\('matches'/, 'sidebar should expose match management');
 assert.match(html, /id="page-matches"/, 'admin should include match page section');
-assert.match(html, /约球管理[\s\S]*这里只看球局、订场、AA 收款和日志/, 'match page should show a clear page header instead of extra finance cards');
+assert.doesNotMatch(html, /这里只看球局、订场、AA 收款和日志/, 'match page should remove the old explanatory copy');
+assert.doesNotMatch(html, /id="page-matches"[\s\S]*tms-page-head-title[\s\S]*约球管理/, 'match page should remove the duplicated in-page title above the search box');
+assert.match(components, /data-sidebar-icon="matches" width="15" height="15"/, 'match management should use the 15px custom tennis icon');
 assert.match(html, /id="matchTbody"/, 'match page should include a table body');
 assert.match(html, /id="matchStatusFilterHost"/, 'match page should keep the shared status filter host');
 assert.match(html, /assets\/scripts\/pages\/matches\.js/, 'index should load match page script');
@@ -21,6 +26,10 @@ const page = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'pag
 assert.match(page, /function renderMatches\(/, 'match page should render match rows');
 assert.match(page, /function syncMatchFilters\(/, 'match page should render the shared dropdown-style status filter');
 assert.match(page, /renderCourtDropdownHtml\('matchStatusFilter'/, 'match page status filter should reuse the shared dropdown');
+assert.doesNotMatch(bootstrap, /\['coachschedule','coachops','courts','matches','packages','purchases'\]/, 'match page should not render old top campus pills');
+assert.match(page, /matchCampusFilter/, 'match page should render its own campus filter');
+assert.match(page, /renderCourtDropdownHtml\('matchCampusFilter'/, 'match page campus filter should use the latest shared dropdown style');
+assert.match(pagesCss, /#page-matches \.tms-toolbar\{[^}]*align-items:center/, 'match toolbar should align filters with the latest page toolbar style');
 assert.match(page, /function matchCampusCode\(/, 'match page should expose a campus matcher for global campus tabs');
 assert.match(page, /function openMatchBookingModal\(/, 'match page should support booking action');
 assert.match(page, /function openMatchAttendanceModal\(/, 'match page should support attendance action');
@@ -40,5 +49,6 @@ assert.match(page, /请填写原因/, 'fee split refunds and exceptions should r
 assert.match(page, /function openMatchLogModal\(/, 'match page should show operation logs');
 assert.match(page, /match_operation_logs|operationLogs|操作日志/, 'match page should render operation logs');
 assert.match(page, /replacement_transfer/, 'match log labels should cover replacement transfers');
+assert.match(api, /Connection terminated unexpectedly/, 'admin match API should treat transient postgres disconnects as local unavailable fallback');
 
 console.log('match page view tests passed');

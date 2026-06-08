@@ -19,7 +19,7 @@ function fnBody(name){
 }
 
 assert.match(html, /id="page-coaches"[\s\S]*class="tms-toolbar"/, 'coach page should use the court-style toolbar');
-assert.match(html, /id="coachSearch"[\s\S]*placeholder="搜索教练姓名、电话或备注"/, 'coach page should use the court-style search field');
+assert.match(html, /id="coachSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'coach page should use the unified search field');
 assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openCoachModal\(null\)"/, 'coach add button should use the court-style primary button');
 assert.match(html, /id="page-coaches"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'coach page should use the court-style table shell');
 assert.match(html, /id="page-workbench"[\s\S]*id="workbenchBody"/, 'workbench should host the coach schedule shell');

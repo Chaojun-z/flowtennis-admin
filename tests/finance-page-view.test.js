@@ -4,7 +4,8 @@ const revenuePanelStart = source.indexOf('id="financeRevenuePanel"');
 const revenuePanelEnd = source.indexOf('id="financeRecognizedPanel"', revenuePanelStart);
 const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? source.length : revenuePanelEnd);
 
-assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水[\s\S]*data-finance-panel="recognized"[\s\S]*?已入账流水[\s\S]*data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should expose the verified finance menu entries');
+assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
+assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');
 assert.match(source,/id="page-finance"/,'finance center page should exist');
 assert.doesNotMatch(source,/id="financeTabLedger"|id="financeTabRevenue"|id="financeTabRecognized"|id="financeTabSettlement"/,'finance center should not keep duplicate top tabs after sidebar split');
 assert.match(source,/id="financeLedgerPanel"/,'finance center should render ledger panel');
@@ -91,5 +92,8 @@ assert.match(source,/function setFinanceLedgerPageSize\(/,'ledger should support
 assert.match(source,/function setFinanceLedgerPage\(/,'ledger should support switching pages');
 assert.match(source,/renderPageSizeSelectorHtml\('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize'\)/,'ledger page size selector should reuse shared numeric page-size dropdown');
 assert.match(source,/查看迟到月结/,'finance center should expose late settlement entry');
+assert.match(source,/data-sidebar-icon="finance-ledger" width="15" height="15"/,'finance overview sidebar icon should use the 15px custom icon');
+assert.match(source,/data-sidebar-icon="finance-revenue" width="14" height="14"/,'revenue sidebar icon should use the 14px custom icon');
+assert.match(source,/data-sidebar-icon="finance-recognized" width="16" height="16"/,'recognized revenue sidebar icon should use the 16px custom icon');
 
 console.log('finance page view tests passed');

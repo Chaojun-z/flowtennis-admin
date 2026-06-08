@@ -23,7 +23,7 @@ function fnBody(name){
 }
 
 assert.match(componentsSource, /goPage\('leads',this\)[\s\S]*线索池/, 'sidebar should expose a leads entry');
-assert.match(html, /id="page-leads"[\s\S]*id="leadSearch"[\s\S]*placeholder="搜索姓名、手机号、微信名"/, 'leads page should provide the agreed search field');
+assert.match(html, /id="page-leads"[\s\S]*id="leadSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'leads page should provide the agreed search field');
 assert.match(html, /id="leadSourceFilterHost"/, 'leads page should provide source filter host');
 assert.match(html, /id="leadConsultFilterHost"/, 'leads page should provide consult filter host');
 assert.match(html, /id="leadStatusFilterHost"/, 'leads page should provide status filter host');

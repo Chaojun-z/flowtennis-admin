@@ -14,6 +14,7 @@ function fnBody(name) {
 
 assert.match(html, /goPage\('memberships',this\)[\s\S]*?会员管理/, 'sidebar should add membership management entry');
 assert.match(html, /goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'sidebar should add membership plan entry');
+assert.match(html, /data-sidebar-icon="membership-plans" width="16" height="16"/, 'membership plan sidebar icon should use the 16px custom icon');
 assert.match(html, /id="page-memberships"/, 'should have memberships page section');
 assert.match(html, /id="page-membership-plans"/, 'should have dedicated membership plans page section');
 assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-toolbar"/, 'membership plan page should use the court-style toolbar');
@@ -25,11 +26,13 @@ assert.match(html, /购买记录[\s\S]*权益流水/, 'membership page should ex
 assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership management page should remove the scheme config shortcut');
 assert.match(html, /id="membershipStatsRow"/, 'membership management page should expose summary stat cards');
 assert.match(html, /function renderMembershipStats/, 'membership management page should compute summary stat cards');
-assert.match(html, /会员与储值[\s\S]*充值现金池[\s\S]*消费核销池[\s\S]*待履约与余额/, 'membership summary should show grouped finance cards');
-assert.match(fnBody('renderMembershipStats'), /真实核销[\s\S]*赠送核销[\s\S]*待履约真金[\s\S]*会员可用总额/, 'membership summary should split cash, bonus, recognized and balance metrics');
+assert.match(html, /会员储值[\s\S]*充值金额[\s\S]*需履约总金额[\s\S]*已核销金额[\s\S]*待履约金额/, 'membership summary should show the requested five finance cards');
+assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 增长金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
+assert.match(fnBody('renderMembershipStats'), /renderStandardDataCards\(/, 'membership summary should use the global data card renderer');
+assert.match(fnBody('renderMembershipStats'), /percent:statPercentText\(totalRecognized,poolTotal\)[\s\S]*percent:statPercentText\(pendingTotal,poolTotal\)/, 'membership recognized and pending cards should use global percentage formatting');
 assert.match(html, /id="page-memberships"[\s\S]*class="tms-toolbar"/, 'membership management page should use the court-style toolbar');
 assert.match(html, /id="page-memberships"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'membership management page should use the court-style table shell');
-assert.match(html, /id="membershipSearch"[\s\S]*placeholder="搜索会员姓名、手机号或方案"/, 'membership management search should use the new unified copy');
+assert.match(html, /id="membershipSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'membership management search should use the unified search placeholder');
 assert.match(html, /id="page-membership-orders"[\s\S]*返回会员管理[\s\S]*会员购买记录/, 'membership purchase records should be a standalone page with a back entry');
 assert.match(html, /id="page-membership-ledger"[\s\S]*返回会员管理[\s\S]*会员权益流水/, 'membership benefit ledger should be a standalone page with a back entry');
 

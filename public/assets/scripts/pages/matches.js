@@ -21,10 +21,18 @@ function matchStatusOptions(){
   ];
 }
 function syncMatchFilters(){
-  const host=document.getElementById('matchStatusFilterHost');
-  if(!host)return;
-  const value=document.getElementById('matchStatusFilter')?.value||'';
-  host.innerHTML=renderCourtDropdownHtml('matchStatusFilter','全部状态',matchStatusOptions(),value,false,'renderMatches');
+  const campusHost=document.getElementById('matchCampusFilterHost');
+  const statusHost=document.getElementById('matchStatusFilterHost');
+  if(campusHost)campusHost.innerHTML=renderCourtDropdownHtml('matchCampusFilter','全部校区',globalCampusOptions(),campus,false,'onMatchCampusFilterChange');
+  if(statusHost){
+    const value=document.getElementById('matchStatusFilter')?.value||'';
+    statusHost.innerHTML=renderCourtDropdownHtml('matchStatusFilter','全部状态',matchStatusOptions(),value,false,'renderMatches');
+  }
+}
+function onMatchCampusFilterChange(){
+  campus=document.getElementById('matchCampusFilter')?.value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  renderMatches();
 }
 function matchCampusCode(row){
   const direct=String(row?.campus||row?.booking?.campus||'').trim();

@@ -48,7 +48,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号、微信名" oninput="applyLeadSearch()">
+            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号" oninput="applyLeadSearch()">
           </div>
           <div id="leadSourceFilterHost"></div>
           <div id="leadConsultFilterHost"></div>
@@ -72,7 +72,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="stuSearch" placeholder="搜索姓名、手机号、订场账户" oninput="onStudentFilterChange()">
+            <input type="text" class="tms-search-input" id="stuSearch" placeholder="搜索姓名、手机号" oninput="onStudentFilterChange()">
           </div>
           <div id="stuTypeFilterHost"></div>
           <div id="stuSourceFilterHost"></div>
@@ -95,7 +95,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="clsSearch" placeholder="搜索班次、学员、课程" oninput="renderClasses()">
+            <input type="text" class="tms-search-input" id="clsSearch" placeholder="搜索姓名、手机号" oninput="renderClasses()">
           </div>
           <div id="clsStatusFilterHost"></div>
           <div id="clsCampusFilterHost"></div>
@@ -117,7 +117,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="planSearch" placeholder="搜索学员、班次、关联账户" oninput="renderPlans()">
+            <input type="text" class="tms-search-input" id="planSearch" placeholder="搜索姓名、手机号" oninput="renderPlans()">
           </div>
           <div id="planStatusFilterHost"></div>
           <div id="planCampusFilterHost"></div>
@@ -136,7 +136,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索学员、教练、班次或场地" oninput="onScheduleFilterChange()">
+            <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索姓名、手机号" oninput="onScheduleFilterChange()">
           </div>
           <div id="schStatusFilterHost"></div>
           <div id="schCoachFilterHost"></div>
@@ -160,7 +160,7 @@
               <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
               <div class="coach-date-wrap">
                 <input id="coachOpsDate" type="hidden" value="">
-                <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
+                <button class="coach-date-btn" id="coachOpsDateBtn" onclick="toggleCoachOpsPicker(event)" type="button"></button>
                 <div class="coach-date-pop" id="coachOpsPicker"></div>
               </div>
               <button class="coach-ops-nav coach-ops-arrow is-next" onclick="shiftCoachOpsDate(1)" title="下一段"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M303.872 541.952c-7.68 0-15.36-2.944-21.12-8.704-11.648-11.648-11.648-30.592 0-42.24L699.008 74.624c11.648-11.648 30.592-11.648 42.24 0 11.648 11.648 11.648 30.592 0 42.24L324.992 533.12c-5.888 5.888-13.44 8.832-21.12 8.832z"></path><path d="M720.128 958.208c-7.68 0-15.36-2.944-21.12-8.704L282.752 533.12c-11.648-11.648-11.648-30.592 0-42.24 11.648-11.648 30.592-11.648 42.24 0l416.256 416.256c11.648 11.648 11.648 30.592 0 42.24-5.76 5.888-13.44 8.832-21.12 8.832z"></path></svg></button>
@@ -190,7 +190,7 @@
           <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段">‹</button>
           <div class="coach-date-wrap">
             <input id="coachOpsWorkloadDate" type="hidden" value="">
-            <button class="coach-date-btn" id="coachOpsWorkloadDateBtn" onclick="toggleCoachOpsPicker()" type="button"></button>
+            <button class="coach-date-btn" id="coachOpsWorkloadDateBtn" onclick="toggleCoachOpsPicker(event)" type="button"></button>
             <div class="coach-date-pop" id="coachOpsWorkloadPicker"></div>
           </div>
           <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(1)" title="下一段">›</button>
@@ -198,7 +198,7 @@
         </div>
       </div>
       </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:120px">当前筛选总时长</th><th style="width:130px">体验课转化率</th><th style="width:190px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:150px">校区分布</th><th style="width:120px">时间段</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:130px">体验课转化率</th><th style="width:220px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:180px">校区分布</th><th style="width:140px">时间段</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div></div>
     </div>
     <div class="page-section" id="page-finance">
       <div id="financeLedgerPanel">
@@ -213,7 +213,7 @@
             <div class="tms-filters">
               <div class="tms-search-wrapper">
                 <span class="tms-search-icon" aria-hidden="true"></span>
-                <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索姓名、业务类型、支付方式、备注" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
+                <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索姓名、手机号" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
               </div>
               <div id="financeLedgerTransactionTypeFilterHost"></div>
               <div id="financeLedgerBusinessTypeFilterHost"></div>
@@ -234,7 +234,7 @@
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索客户、业务类型、支付方式、备注" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
+              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索姓名、手机号" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
             </div>
             <div id="financeRevenueTypeFilterHost"></div>
             <div id="financeRevenuePayMethodFilterHost"></div>
@@ -256,7 +256,7 @@
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索客户、来源项目、扣减标的、原因" oninput="renderFinanceConsumeReport()">
+              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索姓名、手机号" oninput="renderFinanceConsumeReport()">
             </div>
             <div class="finance-date-host" id="coachOpsConsumeFromHost"></div>
             <div class="finance-date-host" id="coachOpsConsumeToHost"></div>
@@ -286,16 +286,13 @@
       </div>
     </div>
     <div class="page-section" id="page-matches">
-      <div class="tms-page-head">
-        <div class="tms-page-head-title">约球管理</div>
-        <div class="tms-page-head-desc">这里只看球局、订场、AA 收款和日志，不单独再堆一排财务卡片。</div>
-      </div>
       <div class="tms-toolbar">
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索标题、场馆、报名人" oninput="renderMatches()">
+            <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索姓名、手机号" oninput="renderMatches()">
           </div>
+          <div id="matchCampusFilterHost"></div>
           <div id="matchStatusFilterHost"></div>
         </div>
         <div class="tms-toolbar-right">
@@ -310,7 +307,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="coachSearch" placeholder="搜索教练姓名、电话或备注" oninput="renderCoaches()">
+            <input type="text" class="tms-search-input" id="coachSearch" placeholder="搜索姓名、手机号" oninput="renderCoaches()">
           </div>
         </div>
         <div class="tms-toolbar-right">
@@ -325,7 +322,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="adminUserSearch" placeholder="搜索账号、姓名、手机号或绑定教练" oninput="onAdminUserFilterChange()">
+            <input type="text" class="tms-search-input" id="adminUserSearch" placeholder="搜索姓名、手机号" oninput="onAdminUserFilterChange()">
           </div>
         </div>
         <div class="tms-toolbar-right">
@@ -343,7 +340,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="courtSearch" placeholder="搜索姓名、手机号、对接人、跟进日期、备注" oninput="onCourtFilterChange()">
+            <input type="text" class="tms-search-input" id="courtSearch" placeholder="搜索姓名、手机号" oninput="onCourtFilterChange()">
           </div>
           <div id="courtAccountTypeFilter"></div>
           <div id="courtOwnerFilter"></div>
@@ -388,7 +385,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="membershipSearch" placeholder="搜索会员姓名、手机号或方案" oninput="onMembershipSearchChange()">
+            <input type="text" class="tms-search-input" id="membershipSearch" placeholder="搜索姓名、手机号" oninput="onMembershipSearchChange()">
           </div>
           <div id="membershipTierFilter"></div>
         </div>
@@ -427,7 +424,7 @@
         <div class="tms-toolbar-left">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="membershipPlanSearch" placeholder="搜索会员方案" oninput="renderMembershipPlans()">
+            <input type="text" class="tms-search-input" id="membershipPlanSearch" placeholder="搜索姓名、手机号" oninput="renderMembershipPlans()">
           </div>
         </div>
         <div class="tms-toolbar-right">
@@ -449,7 +446,7 @@
           <div class="course-showcase-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索课程名称、类型或备注" oninput="renderProducts()">
+              <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索姓名、手机号" oninput="renderProducts()">
             </div>
             <div id="prodTypeFilterHost"></div>
           </div>
@@ -465,7 +462,7 @@
           <div class="course-package-showcase-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索课包名称、课程类型、时段" oninput="renderPackages()">
+              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索姓名、手机号" oninput="renderPackages()">
             </div>
             <div id="pkgTypeFilterHost"></div>
             <div id="pkgAudienceFilterHost"></div>
@@ -489,7 +486,7 @@
           <div class="tms-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索学员、课包、课程类型" oninput="onPurchaseFilterChange()">
+              <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索姓名、手机号" oninput="onPurchaseFilterChange()">
             </div>
             <div id="purPackageFilterHost"></div>
           </div>
@@ -509,7 +506,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="entSearch" placeholder="搜索学员、课包或课程类型" oninput="renderEntitlements()">
+            <input type="text" class="tms-search-input" id="entSearch" placeholder="搜索姓名、手机号" oninput="renderEntitlements()">
           </div>
           <div id="entStatusFilterHost"></div>
         </div>
@@ -544,7 +541,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="campusSearch" placeholder="搜索校区名称或代码" oninput="renderCampuses()">
+            <input type="text" class="tms-search-input" id="campusSearch" placeholder="搜索姓名、手机号" oninput="renderCampuses()">
           </div>
         </div>
         <div class="tms-toolbar-right">
@@ -559,7 +556,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索校区、渠道、商品" oninput="renderPrices()">
+            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索姓名、手机号" oninput="renderPrices()">
           </div>
           <div id="priceTypeFilterHost"></div>
           <div id="priceProductTypeFilterHost"></div>

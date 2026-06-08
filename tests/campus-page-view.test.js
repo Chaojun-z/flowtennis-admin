@@ -13,7 +13,7 @@ function fnBody(name){
 }
 
 assert.match(html, /id="page-campusmgr"[\s\S]*class="tms-toolbar"/, 'campus page should use the court-style toolbar');
-assert.match(html, /id="campusSearch"[\s\S]*placeholder="搜索校区名称或代码"/, 'campus page should provide a court-style search field');
+assert.match(html, /id="campusSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'campus page should provide the unified search field');
 assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openCampusModal\(null\)"/, 'campus add button should use the court-style primary button');
 assert.match(html, /id="page-campusmgr"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'campus page should use the court-style table shell');
 assert.match(pagesCss, /#page-campusmgr \.tms-table\s*\{[^}]*min-width:900px/s, 'campus table should not inherit the wide court table min width');
