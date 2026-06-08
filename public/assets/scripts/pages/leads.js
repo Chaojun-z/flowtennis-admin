@@ -1,5 +1,6 @@
 let leadImportState={fileName:'',fileSize:0,fileModified:0,csvText:'',previewRows:[],summary:null,error:''};
 let leadDatePreset='all',leadDateCustomStart='',leadDateCustomEnd='';
+let leadDetailActiveTab='basic',leadDetailEditingSection='',leadDetailEditingFollowupId='',leadDetailConversionMode='';
 function leadRawRows(){
   return Array.isArray(leads)?leads:[];
 }
@@ -260,6 +261,10 @@ function leadNowInputValue(){
   const d=new Date();
   const pad=v=>String(v).padStart(2,'0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function leadFollowupDateInputValue(value,lead={}){
+  const raw=String(value||'').trim();
+  return leadDateOnly(raw,lead)||raw.slice(0,10)||today();
 }
 function leadInputToStorageValue(value){
   const text=String(value||'').trim();
@@ -610,8 +615,7 @@ function renderLeadStats(list){
 }
 function leadTimelineHtml(lead){
   const rows=leadFollowupRows(lead);
-  if(!rows.length)return '<div class="empty"><p>暂无跟进时间线</p></div>';
-  return `<div class="lead-timeline-list">${rows.map(item=>`<div class="lead-timeline-item"><div class="lead-timeline-line">${esc(leadTimelineLineText(item))}</div><button class="lead-timeline-edit" onclick="openLeadFollowupModal('${lead.id}','${item.id}')" aria-label="编辑跟进"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9.96 1.54a1.4 1.4 0 0 1 1.98 1.98L4.74 10.72 2.1 11.4l.68-2.64 7.18-7.22Zm-.72 1.42L3.7 8.5l-.28 1.08 1.08-.28 5.54-5.54-.8-.8Z" fill="currentColor"/></svg></button></div>`).join('')}</div>`;
+  return renderDetailDrawerTimeline(rows.map(item=>leadFollowupTimelineItemHtml(lead,item)),{emptyText:'暂无跟进时间线',className:'lead-followup-timeline'});
 }
 function leadTimelineLineText(item){
   const date=leadFollowupDateText(item);
@@ -621,23 +625,237 @@ function leadTimelineLineText(item){
   return `${date} · ${by} 跟进 · （${status}）\n${note}`;
 }
 function linkedStudentName(lead){
-  const stu=students.find(item=>String(item?.id||'')===String(lead?.studentId||''));
-  return stu?.name||lead?.studentId||'-';
+  const studentId=String(lead?.studentId||'').trim();
+  const stu=students.find(item=>String(item?.id||'')===studentId);
+  return stu?.name||lead?.studentName||lead?.studentMatchName||leadDisplayName(lead)||'-';
 }
 function linkedCourtName(lead){
-  const court=courts.find(item=>String(item?.id||'')===String(lead?.courtId||''));
-  return court?.name||lead?.courtId||'-';
+  const courtId=String(lead?.courtId||'').trim();
+  const court=courts.find(item=>String(item?.id||'')===courtId);
+  return court?.name||lead?.courtName||lead?.courtMatchName||leadDisplayName(lead)||'-';
+}
+function linkedCoachName(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '-';
+  const coach=(Array.isArray(coaches)?coaches:[]).find(item=>String(item?.id||'')===raw||coachName(item?.name)===coachName(raw));
+  return coachName(coach?.name||raw)||'-';
+}
+function leadNeedsLookup(rows,id){
+  const raw=String(id||'').trim();
+  return !!raw&&!(Array.isArray(rows)&&rows.length);
+}
+function ensureLeadConversionLookups(leadId){
+  if(leadDetailActiveTab!=='conversion')return;
+  const lead=leadById(leadId);
+  if(!lead)return;
+  const needed=[];
+  if((leadDetailConversionMode==='link-student'&&!(Array.isArray(students)&&students.length))||leadNeedsLookup(students,lead?.studentId))needed.push('students');
+  if((leadDetailConversionMode==='link-court'&&!(Array.isArray(courts)&&courts.length))||leadNeedsLookup(courts,lead?.courtId))needed.push('courts');
+  if(lead?.formalCoach&&!(Array.isArray(coaches)&&coaches.length))needed.push('coaches');
+  if(!needed.length)return;
+  ensureDatasetsByName([...new Set(needed)],{force:false}).then(()=>{
+    const currentId=document.getElementById('overlay')?.dataset.leadDetailId||'';
+    if(currentId===String(leadId)&&leadDetailActiveTab==='conversion')openLeadDetail(leadId);
+  }).catch(e=>console.warn('lead conversion lookup skipped',e));
+}
+function leadDetailHeroHtml(lead){
+  return renderDetailDrawerHero({
+    title:leadDisplayName(lead),
+    avatar:leadDisplayName(lead).slice(0,1)||'线',
+    subtitle:[leadCampusText(lead),lead?.source,lead?.consultType].filter(Boolean).join(' · '),
+    statusHtml:renderLeadTag(leadFollowupStatusText(lead),'status')
+  });
+}
+function leadDetailTabsHtml(active='basic'){
+  const tabs=[['basic','基础信息'],['followups','跟进记录'],['conversion','转化信息']];
+  return renderDetailDrawerTabs(active,tabs,{onClick:'setLeadDetailTab'});
+}
+function setLeadDetailTab(tab){
+  leadDetailActiveTab=['basic','followups','conversion'].includes(tab)?tab:'basic';
+  leadDetailEditingSection='';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  const id=document.getElementById('overlay')?.dataset.leadDetailId||'';
+  if(id)openLeadDetail(id);
 }
 function leadDetailFieldHtml(label,value){
-  return `<div class="tms-detail-field tms-data-field"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-value tms-data-value">${esc(renderCourtEmptyText(value))}</div></div>`;
+  return renderDetailDrawerField(label,value);
+}
+function leadDetailBlockHtml(label,html,options={}){
+  if(options.hideEmpty&&leadDetailIsEmptyHtml(html))return '';
+  return renderDetailDrawerBlock(label,html);
+}
+function leadDrawerCardHtml(title,content,className='',actionsHtml='',options={}){
+  return renderDetailDrawerCard(title,content,{className,actionsHtml,useGrid:options.useGrid!==false,titleHtml:options.titleHtml||''});
+}
+function leadBasicInfoReadonlyHtml(lead){
+  return [
+    leadDetailFieldHtml('微信名',leadWechatText(lead)),
+    leadDetailFieldHtml('电话',lead?.phone||'-'),
+    leadDetailFieldHtml('线索时间',lead?.leadDate||'-'),
+    leadDetailFieldHtml('线索来源',lead?.source||'-'),
+    leadDetailFieldHtml('所属校区',leadCampusText(lead)),
+    leadDetailFieldHtml('咨询需求',lead?.consultType||'-'),
+    leadDetailFieldHtml('意向类型',lead?.intentLevel||'-'),
+    leadDetailFieldHtml('跟进人',lead?.owner||'-'),
+    leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})
+  ].join('');
+}
+function leadBasicInfoFormHtml(lead){
+  const intentOptions=[{value:'',label:'-'},{value:'高',label:'高'},{value:'中',label:'中'},{value:'低',label:'低'}];
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">微信名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',lead?.leadDate||today(),'线索时间')}</div><div class="tms-form-item"><label class="tms-form-label">线索来源</label>${renderCourtDropdownHtml('lead_source','线索来源',[{value:'',label:'-'},...leadSourceOptions()],lead?.source||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderCourtDropdownHtml('lead_campus','所属校区',leadCampusOptions(),lead?.campus||(campus!=='all'?campus:'mabao'),true)}</div><div class="tms-form-item"><label class="tms-form-label">咨询需求</label>${renderCourtDropdownHtml('lead_consultType','咨询需求',[{value:'',label:'-'},...leadConsultOptions()],lead?.consultType||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向类型</label>${renderCourtDropdownHtml('lead_intentLevel','意向类型',intentOptions,lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderCourtDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
+}
+function leadPayloadFromForm(){
+  const displayName=document.getElementById('lead_wechatName')?.value?.trim?.()||'';
+  const phone=document.getElementById('lead_phone')?.value?.trim?.()||'';
+  const wechatName=displayName;
+  return {
+    displayName,
+    phone,
+    wechatName,
+    leadDate:document.getElementById('lead_leadDate')?.value||today(),
+    source:document.getElementById('lead_source')?.value||'',
+    campus:document.getElementById('lead_campus')?.value||'',
+    consultType:document.getElementById('lead_consultType')?.value||'',
+    intentLevel:document.getElementById('lead_intentLevel')?.value||'',
+    owner:document.getElementById('lead_owner')?.value||'',
+    profileNote:document.getElementById('lead_profileNote')?.value?.trim?.()||''
+  };
+}
+function startLeadBasicDrawerEdit(leadId){
+  leadDetailActiveTab='basic';
+  leadDetailEditingSection='basic';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
+}
+function cancelLeadDrawerEdit(leadId){
+  leadDetailEditingSection='';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
+}
+async function saveLeadBasicFromDrawer(leadId){
+  const btn=document.getElementById('leadDrawerSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    await apiCall('PUT','/leads/'+leadId,leadPayloadFromForm());
+    await refreshLeadRuntime();
+    renderLeads();
+    leadDetailEditingSection='';
+    openLeadDetail(leadId);
+    toast('线索已更新 ✓','success');
+  }catch(e){
+    toast('保存失败：'+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='保存';}
+  }
+}
+function leadDetailBasicTabHtml(lead){
+  const editing=leadDetailEditingSection==='basic';
+  if(editing){
+    const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="cancelLeadDrawerEdit('${lead.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="leadDrawerSaveBtn" onclick="saveLeadBasicFromDrawer('${lead.id}')">保存</button></div>`;
+    return renderDetailDrawerContent(renderDetailDrawerFormCard('基础信息',leadBasicInfoFormHtml(lead),actions));
+  }
+  const actions=`<button type="button" class="schedule-detail-action" onclick="startLeadBasicDrawerEdit('${lead.id}')">编辑</button>`;
+  return renderDetailDrawerContent(leadDrawerCardHtml('基础信息',leadBasicInfoReadonlyHtml(lead),'lead-basic-card',actions));
+}
+function leadFollowupTimelineItemHtml(lead,item){
+  const date=leadFollowupDateText(item);
+  const by=leadFollowupPersonText(item);
+  const status=leadFollowupConvertedText(item);
+  const note=leadFollowupNoteText(item);
+  return {className:'lead-followup-item',contentHtml:`<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(`${date} · ${by} 跟进 · ${status}`)}</div><div class="student-lesson-meta">${esc(note)}</div></div><button class="schedule-detail-action" onclick="startLeadFollowupDrawerEdit('${lead.id}','${item.id}')">编辑</button></div>`};
+}
+function leadFollowupDrawerFormHtml(lead,followup=null){
+  const followupTypeOptions=[{value:'电话',label:'电话'},{value:'微信',label:'微信'},{value:'到店',label:'到店'},{value:'面谈',label:'面谈'},{value:'其他',label:'其他'}];
+  const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(followup?.followupBy||currentUser?.name||lead?.owner||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderCourtDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
+}
+function startLeadFollowupDrawerEdit(leadId,followupId=''){
+  leadDetailActiveTab='followups';
+  leadDetailEditingSection='followup';
+  leadDetailEditingFollowupId=followupId||'';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
+}
+function leadFollowupPayloadFromForm(){
+  return {
+    followupAt:document.getElementById('lead_followupAt')?.value||today(),
+    followupBy:document.getElementById('lead_followupBy')?.value?.trim?.()||currentUser?.name||'',
+    followupType:document.getElementById('lead_followupType')?.value||'其他',
+    communicationNote:document.getElementById('lead_communicationNote')?.value?.trim?.()||'',
+    concern:document.getElementById('lead_concern')?.value?.trim?.()||'',
+    conclusion:document.getElementById('lead_conclusion')?.value?.trim?.()||'',
+    statusAfter:document.getElementById('lead_statusAfter')?.value||'跟进中',
+    nextFollowupAt:document.getElementById('lead_nextFollowupAt')?.value||'',
+    nextAction:document.getElementById('lead_nextAction')?.value?.trim?.()||''
+  };
+}
+async function saveLeadFollowupFromDrawer(leadId,followupId=''){
+  const btn=document.getElementById('leadFollowupDrawerSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,leadFollowupPayloadFromForm());
+    else await apiCall('POST',`/leads/${leadId}/followups`,leadFollowupPayloadFromForm());
+    await refreshLeadRuntime();
+    renderLeads();
+    leadDetailEditingSection='';
+    leadDetailEditingFollowupId='';
+    openLeadDetail(leadId);
+    toast('跟进已保存 ✓','success');
+  }catch(e){
+    toast('保存失败：'+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='保存跟进';}
+  }
+}
+function leadDetailFollowupsTabHtml(lead){
+  const editing=leadDetailEditingSection==='followup';
+  const followup=(Array.isArray(leadFollowups)?leadFollowups:[]).find(item=>String(item?.id||'')===String(leadDetailEditingFollowupId))||null;
+  if(editing){
+    const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="cancelLeadDrawerEdit('${lead.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="leadFollowupDrawerSaveBtn" onclick="saveLeadFollowupFromDrawer('${lead.id}','${leadDetailEditingFollowupId||''}')">保存跟进</button></div>`;
+    return renderDetailDrawerContent(renderDetailDrawerFormCard(followup?'编辑跟进':'新增跟进',leadFollowupDrawerFormHtml(lead,followup),actions));
+  }
+  const actions=`<button type="button" class="schedule-detail-action" onclick="startLeadFollowupDrawerEdit('${lead.id}')">新增跟进</button>`;
+  return renderDetailDrawerContent(leadDrawerCardHtml('跟进记录',leadTimelineHtml(lead),'lead-followup-card',actions,{useGrid:false}));
+}
+function leadConversionSummaryHtml(lead){
+  return [
+    leadDetailFieldHtml('转化状态',leadConversionText(lead)),
+    leadDetailFieldHtml('是否转化',leadConvertedYesNo(lead)),
+    leadDetailFieldHtml('关联学员',lead?.studentId?linkedStudentName(lead):'-'),
+    leadDetailFieldHtml('关联订场用户',lead?.courtId?linkedCourtName(lead):'-'),
+    leadDetailFieldHtml('转化教练',linkedCoachName(lead?.formalCoach)),
+    leadDetailFieldHtml('正式报名时间',leadFormalSignupDateText(lead)),
+    leadDetailBlockHtml('未转化原因',esc(lead?.lostReason||'-'),{hideEmpty:false})
+  ].join('');
+}
+function startLeadConversionDrawerMode(leadId,mode){
+  leadDetailActiveTab='conversion';
+  leadDetailEditingSection='';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode=mode||'';
+  openLeadDetail(leadId);
+}
+function leadConversionLinkFormHtml(lead,mode){
+  const isStudent=mode==='link-student';
+  const rows=isStudent?students:courts;
+  const options=[{value:'',label:isStudent?'- 选择学员 -':'- 选择订场用户 -'},...rows.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
+  const id=isStudent?'lead_link_student_id':'lead_link_court_id';
+  const save=isStudent?`saveLeadLinkStudent('${lead.id}')`:`saveLeadLinkCourt('${lead.id}')`;
+  const btnId=isStudent?'leadLinkStudentBtn':'leadLinkCourtBtn';
+  return `<div class="schedule-detail-form"><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">${isStudent?'选择学员':'选择订场用户'}</label>${renderCourtDropdownHtml(id,isStudent?'选择学员':'选择订场用户',options,isStudent?(lead.studentId||''):(lead.courtId||''),true)}</div></div><div class="schedule-detail-card-actions lead-conversion-form-actions"><button type="button" class="schedule-detail-action muted" onclick="startLeadConversionDrawerMode('${lead.id}','')">取消</button><button type="button" class="schedule-detail-action primary" id="${btnId}" onclick="${save}">确认关联</button></div></div>`;
+}
+function leadConversionActionPanelHtml(lead){
+  if(leadDetailConversionMode==='link-student')return leadConversionLinkFormHtml(lead,'link-student');
+  if(leadDetailConversionMode==='link-court')return leadConversionLinkFormHtml(lead,'link-court');
+  return `<div class="lead-conversion-actions"><button type="button" class="schedule-detail-action primary" onclick="convertLeadToStudent('${lead.id}')">转为学员</button><button type="button" class="schedule-detail-action primary" onclick="convertLeadToCourt('${lead.id}')">转为订场用户</button><button type="button" class="schedule-detail-action primary" onclick="openLeadLinkStudentModal('${lead.id}')">关联已有学员</button><button type="button" class="schedule-detail-action primary" onclick="openLeadLinkCourtModal('${lead.id}')">关联已有订场用户</button></div>`;
+}
+function leadDetailConversionTabHtml(lead){
+  return renderDetailDrawerContent(`${leadDrawerCardHtml('转化状态',leadConversionSummaryHtml(lead),'lead-conversion-card')}${leadDrawerCardHtml(leadDetailConversionMode?'关联操作':'转化操作',leadConversionActionPanelHtml(lead),'lead-conversion-card', '',{useGrid:false})}`);
 }
 function leadDetailIsEmptyHtml(html){
   const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
   return !text||['-','暂无跟进时间线','暂无线索详情'].includes(text);
-}
-function leadDetailBlockHtml(label,html,options={}){
-  if(options.hideEmpty&&leadDetailIsEmptyHtml(html))return '';
-  return `<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-block tms-data-block">${html||'-'}</div></div>`;
 }
 function leadReadonlyCardHtml(content,extraClass=''){
   if(!content)return '';
@@ -650,22 +868,26 @@ function leadDetailSectionHtml(title,content,first=false){
 function openLeadDetail(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
-  const body=`
-    ${leadDetailSectionHtml('基础信息',leadReadonlyCardHtml(`
-      ${leadDetailFieldHtml('微信名',leadWechatText(lead))}
-      ${leadDetailFieldHtml('电话',lead?.phone||'-')}
-      ${leadDetailFieldHtml('线索时间',lead?.leadDate||'-')}
-      ${leadDetailFieldHtml('线索来源',lead?.source||'-')}
-      ${leadDetailFieldHtml('所属校区',leadCampusText(lead))}
-      ${leadDetailFieldHtml('咨询需求',lead?.consultType||'-')}
-      ${leadDetailFieldHtml('意向类型',lead?.intentLevel||'-')}
-      ${leadDetailFieldHtml('跟进人',lead?.owner||'-')}
-      ${leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})}
-    `,'lead-readonly-card lead-readonly-card-4'),true)}
-    ${leadDetailSectionHtml('跟进时间线',`<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-block tms-data-block">${leadTimelineHtml(lead)}</div></div>`)}
-  `;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="convertLeadToStudent('${lead.id}')">转学员</button><button class="tms-btn tms-btn-default" onclick="convertLeadToCourt('${lead.id}')">转订场</button><button class="tms-btn tms-btn-primary" onclick="openLeadModal('${lead.id}')">编辑</button>`;
-  setCourtModalFrame('线索详情',body,actions,'modal-view modal-lead-detail');
+  const body=leadDetailActiveTab==='basic'?leadDetailBasicTabHtml(lead):leadDetailActiveTab==='followups'?leadDetailFollowupsTabHtml(lead):leadDetailConversionTabHtml(lead);
+  openDetailSideDrawer({
+    titleHtml:`${leadDetailHeroHtml(lead)}${leadDetailTabsHtml(leadDetailActiveTab)}`,
+    bodyHtml:body,
+    actionsHtml:'',
+    data:{leadDetailId:lead.id},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-lead-drawer'
+  });
+  ensureLeadConversionLookups(leadId);
+}
+function openLeadDetailFromList(leadId){
+  leadDetailActiveTab='basic';
+  leadDetailEditingSection='';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
+}
+function openLeadFollowupFromList(leadId){
+  startLeadFollowupDrawerEdit(leadId,'');
 }
 function openLeadModal(leadId){
   const lead=leadById(leadId)||null;
@@ -694,18 +916,7 @@ async function saveLead(leadId=''){
   if(!leadPhoneValid(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.getElementById('leadSaveBtn');
   if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  const payload={
-    displayName:wechatName,
-    phone,
-    wechatName,
-    leadDate:document.getElementById('lead_leadDate')?.value||today(),
-    source:document.getElementById('lead_source')?.value||'',
-    campus:document.getElementById('lead_campus')?.value||'',
-    consultType:document.getElementById('lead_consultType')?.value||'',
-    intentLevel:document.getElementById('lead_intentLevel')?.value||'',
-    owner:document.getElementById('lead_owner')?.value||'',
-    profileNote:document.getElementById('lead_profileNote')?.value?.trim?.()||''
-  };
+  const payload=leadPayloadFromForm();
   try{
     if(leadId)await apiCall('PUT','/leads/'+leadId,payload);
     else await apiCall('POST','/leads',{...payload,createInitialFollowup:true});
@@ -723,24 +934,14 @@ function openLeadFollowupModal(leadId,followupId=''){
   const followup=(Array.isArray(leadFollowups)?leadFollowups:[]).find(item=>String(item?.id||'')===String(followupId))||null;
   const followupTypeOptions=[{value:'电话',label:'电话'},{value:'微信',label:'微信'},{value:'到店',label:'到店'},{value:'面谈',label:'面谈'},{value:'其他',label:'其他'}];
   const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
-  const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label><input type="datetime-local" class="finput tms-form-control" id="lead_followupAt" value="${esc(followup?leadStorageToInputValue(followup.followupAt):leadNowInputValue())}"></div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(followup?.followupBy||currentUser?.name||lead?.owner||'')}"></div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderCourtDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(followup?.followupBy||currentUser?.name||lead?.owner||'')}"></div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderCourtDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderCourtDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}','${followupId||''}')">保存跟进</button>`;
   setCourtModalFrame(followup?'编辑跟进':'新增跟进',body,actions,'modal-wide');
 }
 async function saveLeadFollowup(leadId,followupId=''){
   const btn=document.getElementById('leadFollowupSaveBtn');
   if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  const payload={
-    followupAt:leadInputToStorageValue(document.getElementById('lead_followupAt')?.value)||new Date().toISOString(),
-    followupBy:document.getElementById('lead_followupBy')?.value?.trim?.()||currentUser?.name||'',
-    followupType:document.getElementById('lead_followupType')?.value||'其他',
-    communicationNote:document.getElementById('lead_communicationNote')?.value?.trim?.()||'',
-    concern:document.getElementById('lead_concern')?.value?.trim?.()||'',
-    conclusion:document.getElementById('lead_conclusion')?.value?.trim?.()||'',
-    statusAfter:document.getElementById('lead_statusAfter')?.value||'跟进中',
-    nextFollowupAt:document.getElementById('lead_nextFollowupAt')?.value||'',
-    nextAction:document.getElementById('lead_nextAction')?.value?.trim?.()||''
-  };
+  const payload=leadFollowupPayloadFromForm();
   try{
     if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,payload);
     else await apiCall('POST',`/leads/${leadId}/followups`,payload);
@@ -862,6 +1063,10 @@ async function convertLeadToCourt(leadId){
   }
 }
 function openLeadLinkStudentModal(leadId){
+  if(document.getElementById('overlay')?.dataset.leadDetailId){
+    startLeadConversionDrawerMode(leadId,'link-student');
+    return;
+  }
   const lead=leadById(leadId);
   if(!lead)return;
   const options=[{value:'',label:'- 选择学员 -'},...students.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
@@ -878,6 +1083,7 @@ async function saveLeadLinkStudent(leadId){
     await apiCall('POST',`/leads/${leadId}/link-student`,{studentId});
     await refreshLeadRuntime({withStudents:true});
     renderLeads();
+    leadDetailConversionMode='';
     openLeadDetail(leadId);
     toast('学员关联已保存 ✓','success');
   }catch(e){
@@ -886,6 +1092,10 @@ async function saveLeadLinkStudent(leadId){
   }
 }
 function openLeadLinkCourtModal(leadId){
+  if(document.getElementById('overlay')?.dataset.leadDetailId){
+    startLeadConversionDrawerMode(leadId,'link-court');
+    return;
+  }
   const lead=leadById(leadId);
   if(!lead)return;
   const options=[{value:'',label:'- 选择订场用户 -'},...courts.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
@@ -902,6 +1112,7 @@ async function saveLeadLinkCourt(leadId){
     await apiCall('POST',`/leads/${leadId}/link-court`,{courtId});
     await refreshLeadRuntime({withCourts:true});
     renderLeads();
+    leadDetailConversionMode='';
     openLeadDetail(leadId);
     toast('订场关联已保存 ✓','success');
   }catch(e){
@@ -910,10 +1121,11 @@ async function saveLeadLinkCourt(leadId){
   }
 }
 function openLeadConvertModal(leadId){
-  const lead=leadById(leadId);
-  if(!lead)return;
-  const body=`<div class="tms-section-header" style="margin-top:0;">转化动作</div><div class="tms-text-secondary" style="margin-bottom:12px">${esc(leadDisplayName(lead))}</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button class="tms-btn tms-btn-default" onclick="convertLeadToStudent('${leadId}')">转为学员</button><button class="tms-btn tms-btn-default" onclick="convertLeadToCourt('${leadId}')">转为订场用户</button><button class="tms-btn tms-btn-default" onclick="openLeadLinkStudentModal('${leadId}')">关联已有学员</button><button class="tms-btn tms-btn-primary" onclick="openLeadLinkCourtModal('${leadId}')">关联已有订场用户</button></div>`;
-  setCourtModalFrame('线索转化',body,`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>`,'modal-tight');
+  leadDetailActiveTab='conversion';
+  leadDetailEditingSection='';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
 }
 function jumpToLeadDetail(leadId){
   if(!leadId)return;
@@ -964,7 +1176,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetail('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupModal('${lead.id}')">跟进</span><span class="tms-action-link" onclick="openLeadConvertModal('${lead.id}')">转化</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(leadWechatText(lead),false)}</td><td>${renderCourtCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderCourtEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderCourtCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderCourtCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderCourtEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);

@@ -22,6 +22,7 @@ assert.match(source, /function renderDetailDrawerCard\(/, 'detail drawer cards s
 assert.match(source, /function renderDetailDrawerField\(/, 'detail drawer readonly fields should be shared');
 assert.match(source, /function renderDetailDrawerInput\(/, 'detail drawer edit fields should be shared');
 assert.match(source, /function renderDetailDrawerTable\(/, 'detail drawer records should use a shared table renderer');
+assert.match(source, /function renderDetailDrawerTimeline\(/, 'detail drawer timeline should be shared');
 assert.match(source, /openStudentDrawer[\s\S]*openDetailSideDrawer/, 'student create, edit and detail should share the componentized drawer shell');
 assert.match(source, /openScheduleDetail[\s\S]*openDetailSideDrawer/, 'schedule detail should use the shared side drawer shell');
 assert.match(source, /student-drawer-overlay[\s\S]*schedule-drawer-overlay/, 'student drawer should apply the same drawer style class as schedule');
@@ -47,6 +48,7 @@ assert.match(fnBody('studentDetailOrdersTabHtml'), /studentDetailMetricsHtml\(s\
 assert.match(fnBody('studentBasicInfoReadonlyHtml'), /studentDetailFieldHtml\('备注'/, 'student notes should render as a normal readonly field');
 assert.doesNotMatch(fnBody('studentBasicInfoReadonlyHtml'), /studentDetailBlockHtml\('备注'/, 'student notes should not render as a block box');
 assert.match(source, /studentDetailOrdersTabHtml\(s\)[\s\S]*useGrid:false/, 'student lesson records should span the full drawer width');
+assert.match(fnBody('studentLessonRecordHtml'), /renderDetailDrawerTimeline\(items,\{emptyText:'暂无上课记录'\}\)/, 'student lesson records should use the shared drawer timeline');
 assert.match(source, /studentDetailBenefitsTabHtml\(s\)[\s\S]*useGrid:false/, 'student benefit records should span the full drawer width');
 assert.match(source, /studentBenefitListTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit list should use the shared drawer table');
 assert.match(source, /studentBenefitGrantTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit grant records should use the shared drawer table');

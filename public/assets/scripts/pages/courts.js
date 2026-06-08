@@ -998,6 +998,7 @@ function setCourtModalFrame(title,bodyHtml,actionsHtml='',extraClass='modal-tigh
   ov.onclick=null;
   delete ov.dataset.scheduleDetailId;
   delete ov.dataset.studentDetailId;
+  delete ov.dataset.leadDetailId;
   if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
   const modal=ov.querySelector('.modal');
   const actions=document.getElementById('mActions');

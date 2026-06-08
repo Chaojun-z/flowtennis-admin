@@ -17,6 +17,7 @@ const context = {
   document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
   window: {},
   esc: value => String(value ?? ''),
+  renderDetailDrawerTimeline: items => (items || []).map(item => item.contentHtml || item).join(''),
   setTimeout: () => null,
   Date
 };
@@ -93,26 +94,34 @@ context.leadFollowups = [
 const rows = context.leadFollowupRows('lead-1');
 assert.strictEqual(rows.length, 8, 'each followup should remain editable as its own row');
 assert.strictEqual(context.leadFollowupCount({ id: 'lead-1' }), 8, 'followup count should use real editable rows');
-assert.match(context.leadTimelineHtml({ id: 'lead-1' }), /openLeadFollowupModal\('lead-1','old-short'\)/, 'timeline should expose edit action for each followup');
+assert.strictEqual(context.leadFollowupDateInputValue('2026/5/7 14:30'), '2026-05-07', 'edit followup date should keep the saved date');
+context.students = [{ id: 'new-student-78570e953770', name: '王小明' }];
+context.courts = [{ id: 'new-court-78570e953770', name: '王小明订场' }];
+assert.strictEqual(context.linkedStudentName({ studentId: 'new-student-78570e953770', displayName: '线索微信' }), '王小明', 'linked student should show student name');
+assert.strictEqual(context.linkedCourtName({ courtId: 'new-court-78570e953770', displayName: '线索微信' }), '王小明订场', 'linked court should show court user name');
+context.students = [];
+context.courts = [];
+assert.strictEqual(context.linkedStudentName({ studentId: 'new-student-78570e953770', displayName: '线索微信' }), '线索微信', 'generated student id should fall back to lead name');
+assert.match(context.leadTimelineHtml({ id: 'lead-1' }), /startLeadFollowupDrawerEdit\('lead-1','old-short'\)/, 'timeline should expose drawer edit action for each followup');
 assert.strictEqual(
   context.leadTimelineLineText(rows[0]),
-  '2026-05-07 · [Mira跟进 · 未转化]：天昊上课'
+  '2026-05-07 · Mira 跟进 · （未转化）\n天昊上课'
 );
 assert.strictEqual(
   context.leadTimelineLineText(rows[1]),
-  '2026-05-07 · [Mira跟进 · 未转化] · 天昊上课：课后跟进学员上课体验，对方想找单反，还要再考虑；第二次安排刘润扬教练上课，还是要考虑，感觉是白嫖'
+  '2026-05-07 · Mira 跟进 · （未转化）\n天昊上课；课后跟进学员上课体验，对方想找单反，还要再考虑；第二次安排刘润扬教练上课，还是要考虑，感觉是白嫖'
 );
 assert.strictEqual(
   context.leadTimelineLineText(rows[2]),
-  '2026-05-06 · [Mira跟进 · 未转化]：觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课'
+  '2026-05-06 · Mira 跟进 · （未转化）\n觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课'
 );
 assert.strictEqual(
   context.leadTimelineLineText(rows[3]),
-  '2026-05-06 · [Mira跟进 · 未转化]：觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课；5月12日，宋教练回学校答辩，无教练上课，改到其他日期'
+  '2026-05-06 · Mira 跟进 · （未转化）\n觉得体验课价格高，有点犹豫；5月8日预约下周二的体验课；5月12日，宋教练回学校答辩，无教练上课，改到其他日期'
 );
 assert.strictEqual(
   context.leadTimelineLineText(rows[6]),
-  '2026-04-29 · [Mira跟进 · 未转化]：介绍了教练和价格后未回复'
+  '2026-04-29 · Mira 跟进 · （未转化）\n介绍了教练和价格后未回复'
 );
 
 console.log('leads followup structure tests passed');

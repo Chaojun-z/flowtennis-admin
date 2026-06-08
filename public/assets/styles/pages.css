@@ -821,8 +821,14 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 #page-leads .tms-text-remark{max-width:none}
 .modal.modal-court .lead-form-row-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .modal.modal-court .lead-form-row-4 .tms-form-item{min-width:0}
-.modal.modal-court .lead-timeline-list{display:flex;flex-direction:column;gap:8px;min-width:0}
-.modal.modal-court .lead-timeline-item{display:block;padding:8px 10px;border:1px solid #EAE0D6;border-radius:8px;background:#FFFCF8;font-size:12px;color:#332A24;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal.modal-court.modal-lead-drawer .mbody{background:#F5F2F0}
+.modal.modal-court.modal-lead-drawer .schedule-detail-title-row .tms-tag{height:22px}
+.modal.modal-court.modal-lead-drawer .lead-basic-card .schedule-detail-field.full-width,.modal.modal-court.modal-lead-drawer .lead-conversion-card .schedule-detail-field.full-width{width:492px;max-width:492px}
+.modal.modal-court.modal-lead-drawer .lead-basic-card .schedule-detail-field.full-width .schedule-detail-label,.modal.modal-court.modal-lead-drawer .lead-basic-card .schedule-detail-field.full-width .schedule-detail-value,.modal.modal-court.modal-lead-drawer .lead-conversion-card .schedule-detail-field.full-width .schedule-detail-label,.modal.modal-court.modal-lead-drawer .lead-conversion-card .schedule-detail-field.full-width .schedule-detail-value{max-width:492px}
+.modal.modal-court.modal-lead-drawer .lead-followup-item .student-lesson-card{width:100%;box-sizing:border-box}
+.modal.modal-court.modal-lead-drawer .lead-followup-item .student-lesson-meta{display:block;white-space:normal;word-break:break-word}
+.modal.modal-court.modal-lead-drawer .lead-conversion-actions{display:flex;gap:12px;flex-wrap:wrap}
+.modal.modal-court.modal-lead-drawer .lead-conversion-form-actions{justify-content:flex-end;margin-top:12px;margin-bottom:0}
 #page-leads .tms-tag-green{background:#E7F1E9;color:#3F7E2B}
 #page-leads .tms-tag-red{background:#F7E9E2;color:#C06031}
 #page-leads .tms-tag-tier-gold{background:#F7E8C8;color:#9A5B00}

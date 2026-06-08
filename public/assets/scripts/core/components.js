@@ -98,6 +98,17 @@ function renderDetailDrawerInput(label,id,value,type='text'){
 function renderDetailDrawerContent(content){
   return `<div class="schedule-detail-content">${content||''}</div>`;
 }
+function renderDetailDrawerTimeline(items=[],{emptyText='暂无记录',className=''}={}){
+  const rows=(Array.isArray(items)?items:[]).filter(Boolean);
+  if(!rows.length)return `<div class="student-detail-empty">${esc(emptyText)}</div>`;
+  const body=rows.map(item=>{
+    const row=typeof item==='string'?{contentHtml:item}:item;
+    const itemClass=['student-lesson-timeline-item',row.className||''].filter(Boolean).join(' ');
+    return `<div class="${itemClass}"><div class="student-lesson-dot"></div><div class="student-lesson-card">${row.contentHtml||''}</div></div>`;
+  }).join('');
+  const cls=['student-lesson-timeline',className||''].filter(Boolean).join(' ');
+  return `<div class="${cls}">${body}</div>`;
+}
 function renderDetailDrawerTable({columns=[],rows=[],emptyText='暂无记录',minWidth='520px'}={}){
   const safeColumns=(Array.isArray(columns)?columns:[]).filter(col=>col&&col.label);
   const safeRows=Array.isArray(rows)?rows:[];
@@ -128,6 +139,7 @@ function openDetailSideDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},o
   classes.forEach(cls=>ov.classList.add(cls));
   delete ov.dataset.scheduleDetailId;
   delete ov.dataset.studentDetailId;
+  delete ov.dataset.leadDetailId;
   Object.entries(data||{}).forEach(([key,value])=>{
     if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
   });

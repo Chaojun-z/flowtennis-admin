@@ -571,14 +571,14 @@ function studentLessonRecordHtml(stu){
   if(!rows.length)return '<div class="student-detail-empty">暂无上课记录</div>';
   const limit=studentLessonRecordExpanded(stu)?rows.length:10;
   const expanded=studentLessonRecordExpanded(stu);
-  const body=rows.slice(0,limit).map(item=>{
+  const items=rows.slice(0,limit).map(item=>{
     const line=item.type==='ledger'
       ? studentLessonRecordPackageHtml(item.row,item.ent)
       : `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(`[${studentLessonRecordTimeText(item.schedule)}] · ${scheduleCourseTypeLabel(item.schedule)} · ${scheduleClassName(item.schedule)}`)}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',studentLessonRecordTimeText(item.schedule))}${studentLessonRecordMetaItem('site',[cn(item.schedule.campus)||'-',item.schedule.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.schedule.coach||'-')}</div></div></div>`;
-    return `<div class="student-lesson-timeline-item"><div class="student-lesson-dot"></div><div class="student-lesson-card">${line}</div></div>`;
-  }).join('');
+    return line;
+  });
   const more=rows.length>10?`<div style="margin-top:6px"><button class="btn-sec" onclick="toggleStudentLessonRecordExpanded('${stu.id}')">${expanded?'收起':'展开全部'}</button></div>`:'';
-  return `<div class="student-lesson-timeline">${body}</div>${more}`;
+  return `${renderDetailDrawerTimeline(items,{emptyText:'暂无上课记录'})}${more}`;
 }
 function studentLessonRecordRows(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));

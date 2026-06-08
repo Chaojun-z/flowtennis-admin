@@ -95,6 +95,7 @@ function resetModalShell(){
   ov.onclick=null;
   delete ov.dataset.scheduleDetailId;
   delete ov.dataset.studentDetailId;
+  delete ov.dataset.leadDetailId;
   const modal=ov.querySelector('.modal');
   if(modal)modal.className='modal';
   const actions=document.getElementById('mActions');
