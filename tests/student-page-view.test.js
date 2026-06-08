@@ -12,6 +12,16 @@ const css = [
   'assets/styles/pages.css'
 ].filter(file=>fs.existsSync(path.join(__dirname, '../public', file))).map(file=>fs.readFileSync(path.join(__dirname, '../public', file), 'utf8')).join('\n');
 
+function fnBody(name){
+  const start = source.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsync = source.indexOf('\nasync function ', start + 1);
+  const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
+  const next = candidates.length ? Math.min(...candidates) : -1;
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
 assert.match(source, /function renderScheduleStudentSuggestions/, 'schedule modal should provide a dedicated student suggestion helper');
 assert.match(source, /function scheduleSelectedStudentHomeCampusMeta/, 'schedule modal should derive the selected student home campus');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*归属：[\s\S]*上次上课：/, 'schedule modal should show selected student home campus inline with the selected tag');
@@ -180,6 +190,8 @@ assert.match(source, /function studentPackageLessonMiniBar\(/, 'student package 
 assert.match(source, /studentPackageLessonMiniBar\(s\)/, 'student list should render package lessons through the mini balance bar');
 assert.match(source, /\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}/, 'student package lesson text should use remaining over total lesson count without truncating half lessons');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
+assert.match(fnBody('renderStudents'), /openStudentDetail\('\$\{s\.id\}'\)[\s\S]*openPurchaseModal\('\$\{s\.id\}'\)/, 'student list should keep only view and package actions');
+assert.doesNotMatch(fnBody('renderStudents'), /openStudentModal\('\$\{s\.id\}'\)/, 'student list should not expose inline edit action');
 assert.match(source, /student-detail-shell/, 'student detail should use the clearer card-based shell');
 assert.match(source, /student-detail-hero/, 'student detail should use a clearer header layout');
 assert.match(source, /student-detail-metrics/, 'student detail should use summary metric cards');

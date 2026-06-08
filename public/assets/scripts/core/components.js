@@ -55,6 +55,92 @@ function renderStandardDataCard(item={}){
 function renderStandardDataCards(items=[]){
   return (Array.isArray(items)?items:[]).map(renderStandardDataCard).join('');
 }
+function detailDrawerEmpty(value){
+  const raw=String(value??'').trim();
+  return raw&&raw!=='—'&&raw!=='-'?raw:'--';
+}
+function renderDetailDrawerHero({title='',avatar='',subtitle='',subtitleHtml='',statusHtml='',statusText='',statusClass=''}={}){
+  const displayTitle=detailDrawerEmpty(title);
+  const displayAvatar=avatar||displayTitle.slice(0,1)||'详';
+  const badge=statusHtml||(
+    statusText?`<span class="schedule-detail-status ${statusClass}">${esc(statusText)}</span>`:''
+  );
+  return `<div class="schedule-detail-hero"><div class="schedule-detail-avatar">${esc(displayAvatar)}</div><div class="schedule-detail-title-wrap"><div class="schedule-detail-title-row"><span class="schedule-detail-title">${esc(displayTitle)}</span>${badge}</div><div class="schedule-detail-subtitle">${subtitleHtml||esc(subtitle||'')}</div></div></div>`;
+}
+function renderDetailDrawerTabs(active,tabs=[],{onClick='setScheduleDetailTab'}={}){
+  return `<div class="schedule-detail-tabs">${(tabs||[]).map(([key,label])=>`<button type="button" class="schedule-detail-tab ${active===key?'active':''}" onclick="${onClick}('${key}')">${esc(label)}</button>`).join('')}</div>`;
+}
+function renderDetailDrawerCard(title,content,{className='',actionsHtml='',useGrid=true,titleHtml=''}={}){
+  if(!content)return '';
+  const cardClass=`schedule-detail-card ${String(className||'').trim()}`.trim();
+  const actions=actionsHtml?`<div class="schedule-detail-card-actions">${actionsHtml}</div>`:'';
+  const displayTitle=titleHtml||esc(title);
+  const body=useGrid?`<div class="schedule-detail-grid">${content}</div>`:content;
+  return `<section class="${cardClass}"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${displayTitle}</div>${actions}</div>${body}</section>`;
+}
+function renderDetailDrawerFormCard(title,content,actionsHtml=''){
+  return `<section class="schedule-detail-card"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${esc(title)}</div>${actionsHtml||''}</div><div class="schedule-detail-form">${content}</div></section>`;
+}
+function renderDetailDrawerField(label,value,options={}){
+  const cls=`schedule-detail-field ${options.full?'full-width':''}`.trim();
+  return `<div class="${cls}"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value">${esc(detailDrawerEmpty(value))}</div></div>`;
+}
+function renderDetailDrawerBlock(label,html){
+  const raw=String(html||'').replace(/<[^>]*>/g,'').trim();
+  return `<div class="schedule-detail-field full-width"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value schedule-detail-block">${raw?html:'--'}</div></div>`;
+}
+function renderDetailDrawerInput(label,id,value,type='text'){
+  const input=type==='textarea'
+    ?`<textarea class="schedule-detail-edit-control" id="${id}">${esc(value||'')}</textarea>`
+    :`<input class="schedule-detail-edit-control" id="${id}" value="${esc(value||'')}">`;
+  return `<div class="schedule-detail-field ${type==='textarea'?'full-width':''}"><div class="schedule-detail-label">${esc(label)}</div>${input}</div>`;
+}
+function renderDetailDrawerContent(content){
+  return `<div class="schedule-detail-content">${content||''}</div>`;
+}
+function renderDetailDrawerTable({columns=[],rows=[],emptyText='暂无记录',minWidth='520px'}={}){
+  const safeColumns=(Array.isArray(columns)?columns:[]).filter(col=>col&&col.label);
+  const safeRows=Array.isArray(rows)?rows:[];
+  if(!safeColumns.length)return '';
+  const th=safeColumns.map(col=>{
+    const width=col.width?` style="width:${esc(col.width)}"`:'';
+    const cls=col.className?` class="${esc(col.className)}"`:'';
+    return `<th${cls}${width}>${esc(col.label)}</th>`;
+  }).join('');
+  const body=safeRows.length?safeRows.map(row=>`<tr>${safeColumns.map(col=>{
+    const cls=col.cellClassName?` class="${esc(col.cellClassName)}"`:'';
+    const align=col.align?` style="text-align:${esc(col.align)}"`:'';
+    const raw=typeof col.render==='function'?col.render(row):row?.[col.key];
+    const html=col.html?String(raw||''):renderCourtCellText(raw,false);
+    return `<td${cls}${align}>${html}</td>`;
+  }).join('')}</tr>`).join(''):`<tr><td colspan="${safeColumns.length}"><div class="tms-empty-state"><div class="tms-empty-title">${esc(emptyText)}</div></div></td></tr>`;
+  return `<div class="tms-table-card detail-drawer-table-card"><div class="tms-table-wrapper detail-drawer-table-wrapper"><table class="tms-table detail-drawer-table" style="min-width:${esc(minWidth)}"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div></div>`;
+}
+function openDetailSideDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},overlayClasses=['schedule-drawer-overlay'],modalClass='modal modal-court modal-schedule-drawer'}={}){
+  const ov=document.getElementById('overlay');
+  if(!ov)return;
+  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
+  const classes=Array.isArray(overlayClasses)?overlayClasses.filter(Boolean):[overlayClasses].filter(Boolean);
+  const alreadyOpen=ov.classList.contains('open')&&classes.some(cls=>ov.classList.contains(cls));
+  if(!alreadyOpen)ov.classList.remove('open');
+  ov.classList.remove('schedule-drawer-overlay');
+  ov.classList.remove('student-drawer-overlay');
+  classes.forEach(cls=>ov.classList.add(cls));
+  delete ov.dataset.scheduleDetailId;
+  delete ov.dataset.studentDetailId;
+  Object.entries(data||{}).forEach(([key,value])=>{
+    if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
+  });
+  const modal=ov.querySelector('.modal');
+  const actions=document.getElementById('mActions');
+  if(modal)modal.className=modalClass;
+  ov.onclick=function(event){if(event.target===ov)closeModal();};
+  document.getElementById('mTitle').innerHTML=titleHtml;
+  document.getElementById('mBody').innerHTML=bodyHtml;
+  if(actions){actions.innerHTML=actionsHtml||'';actions.style.display=actionsHtml?'flex':'none';actions.className='mactions';}
+  if(alreadyOpen)ov.classList.add('open');
+  else requestAnimationFrame(()=>ov.classList.add('open'));
+}
 function renderStandardOptionLabel(opt){
   const label=String(opt?.label??opt?.value??'');
   return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;

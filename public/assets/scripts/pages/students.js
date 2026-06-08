@@ -1,4 +1,10 @@
 // ===== 学员信息 =====
+let studentDetailActiveTab='basic';
+let studentDetailEditingSection='';
+let studentDetailEditingStudentId='';
+let studentReminderModeRequestSeq=0;
+let studentReminderModeSaveTimer=null;
+let studentReminderLinkGenerating=false;
 function onStudentFilterChange(){stuPage=1;renderStudents();}
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
@@ -269,7 +275,7 @@ function studentCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}))];
 }
 function studentDetailFieldHtml(label,value){
-  return `<div class="tms-detail-field tms-data-field"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-value tms-data-value">${esc(renderCourtEmptyText(value))}</div></div>`;
+  return renderDetailDrawerField(label,value);
 }
 function studentDetailIsEmptyHtml(html){
   const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
@@ -277,7 +283,7 @@ function studentDetailIsEmptyHtml(html){
 }
 function studentDetailBlockHtml(label,html,options={}){
   if(options.hideEmpty&&studentDetailIsEmptyHtml(html))return '';
-  return `<div class="tms-detail-field tms-data-field full-width"><div class="tms-detail-label tms-data-label">${esc(label)}</div><div class="tms-detail-block tms-data-block">${html||'-'}</div></div>`;
+  return renderDetailDrawerBlock(label,html);
 }
 function studentDetailSectionHtml(title,content){
   return content?`<div class="tms-section-header">${title}</div><div class="tms-detail-grid">${content}</div>`:'';
@@ -290,10 +296,131 @@ function studentDetailTagHtml(text,type='slate'){
 function studentDetailHeroHtml(stu){
   const meta=[
     stu.phone?`手机号：${stu.phone}`:'',
-    `累计上课：${studentCompletedLessonCount(stu)}节`,
-    stu.notes?`运营备注：${stu.notes}`:''
+    `累计上课：${studentCompletedLessonCount(stu)}节`
   ].filter(Boolean).map(item=>`<span>${esc(item)}</span>`).join('');
-  return `<div class="student-detail-hero"><div class="student-detail-title-row"><h3>${esc(renderCourtEmptyText(stu.name))}</h3>${studentDetailTagHtml(stu.type,'warm')}${studentDetailTagHtml(cn(stu.campus),'slate')}</div><div class="student-detail-hero-meta">${meta||'<span>暂无补充信息</span>'}</div></div>`;
+  return renderDetailDrawerHero({
+    title:renderCourtEmptyText(stu.name),
+    avatar:(renderCourtEmptyText(stu.name)||'学').slice(0,1),
+    subtitleHtml:meta||'<span>暂无补充信息</span>',
+    statusHtml:`${studentDetailTagHtml(stu.type,'warm')}${studentDetailTagHtml(cn(stu.campus),'slate')}`
+  });
+}
+function studentBasicInfoFormHtml(s){
+  const typeOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
+  const sourceOptions=[{value:'',label:'-'},...SOURCES.map(t=>({value:t,label:t}))];
+  const campusOptions=studentCampusOptions();
+  const coachOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
+  const leadSummary=s?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${studentLeadSummaryHtml(s)}</div></div></div>`:'';
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="s_name" value="${rv(s,'name')}" placeholder="学员姓名"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="s_phone" value="${rv(s,'phone')}" placeholder="请输入手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label>${renderCourtDropdownHtml('s_primaryCoach','负责教练',coachOptions,coachName(rv(s,'primaryCoach')),true)}</div><div class="tms-form-item"><label class="tms-form-label">学员类型</label>${renderCourtDropdownHtml('s_type','学员类型',typeOptions,rv(s,'type','成人'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderCourtDropdownHtml('s_source','来源',sourceOptions,rv(s,'source'),true)}</div><div class="tms-form-item"><label class="tms-form-label">活动范围</label><input type="text" class="finput tms-form-control" id="s_range" value="${rv(s,'activityRange')}" placeholder="例：朝阳"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所在校区</label>${renderCourtDropdownHtml('s_campus','校区',campusOptions,rv(s,'campus'),true)}</div></div>${leadSummary}<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="s_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
+}
+function openStudentDrawer({titleHtml='',bodyHtml='',actionsHtml='',studentId=''}) {
+  openDetailSideDrawer({
+    titleHtml,
+    bodyHtml,
+    actionsHtml,
+    data:{studentDetailId:studentId||''},
+    overlayClasses:['student-drawer-overlay','schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-student-drawer'
+  });
+}
+function studentDetailTabsHtml(active='basic'){
+  const tabs=[['basic','基本信息'],['orders','课包/上课记录'],['benefits','权益记录']];
+  return renderDetailDrawerTabs(active,tabs,{onClick:'setStudentDetailTab'});
+}
+function setStudentDetailTab(tab){
+  studentDetailActiveTab=['basic','orders','benefits'].includes(tab)?tab:'basic';
+  const id=document.getElementById('overlay')?.dataset.studentDetailId||'';
+  if(id)openStudentDetail(id);
+}
+function studentDrawerCardHtml(title,content,extraClass='',actionsHtml='',options={}){
+  return renderDetailDrawerCard(title,content,{className:extraClass,actionsHtml,useGrid:options.useGrid!==false,titleHtml:options.titleHtml||''});
+}
+function studentBasicInfoReadonlyHtml(s){
+  return `${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('负责教练',studentPrimaryCoachText(s))}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('来源',s.source)}${studentDetailFieldHtml('活动范围',s.activityRange)}${studentDetailFieldHtml('所在校区',cn(s.campus))}${studentDetailFieldHtml('备注',s.notes)}`;
+}
+function studentDetailBasicTabHtml(s){
+  const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
+  const linkedHtml=studentConsumptionInfoHtml(s);
+  const editing=studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===s.id;
+  const editAction=`<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
+  const saveActions=`<button type="button" class="schedule-detail-action muted" onclick="cancelStudentDetailEdit('${s.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button>`;
+  const basicCard=editing
+    ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)
+    : studentDrawerCardHtml('基本信息',studentBasicInfoReadonlyHtml(s),'',editAction);
+  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
+}
+function studentDetailOrdersTabHtml(s){
+  const canBuyPackage=currentUser?.role==='admin';
+  const action=canBuyPackage?`<button type="button" class="schedule-detail-action primary" onclick="openPurchaseModal('${s.id}')">购买课包</button>`:'';
+  return `<div class="schedule-detail-content">${studentDetailMetricsHtml(s)}${studentDrawerCardHtml('课包订单',studentEntitlementSummaryHtml(s),'student-package-section',action,{useGrid:false})}${studentDrawerCardHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section','',{useGrid:false})}</div>`;
+}
+function studentBenefitListTableHtml(s){
+  const rows=studentBenefitRows(s);
+  return renderDetailDrawerTable({
+    columns:[
+      {label:'权益名称',key:'label',width:'110px'},
+      {label:'总次数',render:row=>`${row.total}${esc(row.unit)}`,width:'80px'},
+      {label:'已消耗',render:row=>`${row.used}${esc(row.unit)}`,width:'80px'},
+      {label:'剩余',render:row=>`${row.remaining}${esc(row.unit)}`,width:'80px'},
+      {label:'最近操作时间',key:'lastAt',width:'120px'},
+      {label:'操作',width:'110px',align:'right',html:true,render:row=>`<span class="tms-action-link" onclick="openStudentBenefitActionModal(${jsArg(s.id)},${jsArg(row.benefitCode)},'supplement')">发放</span><span class="tms-action-link" onclick="openStudentBenefitActionModal(${jsArg(s.id)},${jsArg(row.benefitCode)},'consume')">消耗</span>`}
+    ],
+    rows:rows.map(row=>({...row,lastAt:studentBenefitLastActionDate(s,row.benefitCode)||'--'})),
+    emptyText:'暂无权益',
+    minWidth:'580px'
+  });
+}
+function studentBenefitLastActionDate(stu,benefitCode){
+  const row=membershipBenefitLedger
+    .filter(item=>String(item?.studentId||'')===String(stu?.id||'')&&item?.benefitCode===benefitCode&&item?.action!=='grant')
+    .sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')))[0];
+  return String(row?.relatedDate||row?.createdAt||'').slice(0,10);
+}
+function studentBenefitLedgerRows(stu,mode){
+  const sign=mode==='grant'?1:-1;
+  return membershipBenefitLedger
+    .filter(row=>String(row?.studentId||'')===String(stu?.id||'')&&row?.action!=='grant')
+    .filter(row=>sign>0?(Number(row.delta)||0)>0:(Number(row.delta)||0)<0)
+    .sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')))
+    .map(row=>({
+      time:String(row.relatedDate||row.createdAt||'').slice(0,16).replace('T',' ')||'--',
+      label:row.benefitLabel||studentBenefitTypeMeta(row.benefitCode)?.label||row.benefitCode||'--',
+      count:`${Math.abs(Number(row.delta)||0)}${row.unit||studentBenefitTypeMeta(row.benefitCode)?.unit||'次'}`,
+      reason:row.reason||'--',
+      operator:row.operator||row.createdBy||row.updatedBy||'--'
+    }));
+}
+function studentBenefitGrantTableHtml(s){
+  return renderDetailDrawerTable({
+    columns:[
+      {label:'发放时间',key:'time',width:'130px'},
+      {label:'权益名称',key:'label',width:'110px'},
+      {label:'发放次数',key:'count',width:'90px'},
+      {label:'发放原因',key:'reason',width:'150px'},
+      {label:'操作人',key:'operator',width:'90px'}
+    ],
+    rows:studentBenefitLedgerRows(s,'grant'),
+    emptyText:'暂无权益发放记录',
+    minWidth:'570px'
+  });
+}
+function studentBenefitConsumeTableHtml(s){
+  return renderDetailDrawerTable({
+    columns:[
+      {label:'消耗时间',key:'time',width:'130px'},
+      {label:'权益名称',key:'label',width:'110px'},
+      {label:'消耗次数',key:'count',width:'90px'},
+      {label:'消耗原因',key:'reason',width:'150px'},
+      {label:'操作人',key:'operator',width:'90px'}
+    ],
+    rows:studentBenefitLedgerRows(s,'consume'),
+    emptyText:'暂无权益消耗记录',
+    minWidth:'570px'
+  });
+}
+function studentDetailBenefitsTabHtml(s){
+  const actions=`<button type="button" class="schedule-detail-action" onclick="openStudentBenefitPickerModal('${s.id}','supplement')">新增权益</button><button type="button" class="schedule-detail-action primary" onclick="openStudentBenefitPickerModal('${s.id}','consume')">消耗权益</button>`;
+  return `<div class="schedule-detail-content">${studentDrawerCardHtml('权益列表',studentBenefitListTableHtml(s),'student-benefit-section',actions,{useGrid:false})}${studentDrawerCardHtml('权益发放记录',studentBenefitGrantTableHtml(s),'','',{useGrid:false})}${studentDrawerCardHtml('权益消耗记录',studentBenefitConsumeTableHtml(s),'','',{useGrid:false})}</div>`;
 }
 function studentDetailMetricsHtml(stu){
   const meta=studentPackageLessonMeta(stu);
@@ -409,7 +536,7 @@ function renderStudents(){
     const lastLesson=studentLastLessonDate(s);
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span><span class="tms-action-link" onclick="openStudentModal('${s.id}')">编辑</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderCourtCellText(s.phone)}</td><td>${renderCourtCellText(s.type)}</td><td>${renderCourtCellText(cn(s.campus))}</td><td>${renderCourtCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderCourtCellText(studentCompletedLessonCount(s),false)}</td><td>${renderCourtCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderCourtCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderCourtEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){
@@ -573,14 +700,15 @@ function studentReminderModeOptionHtml(stu,value,title,desc){
   const custom=value==='custom'
     ?`<span class="student-reminder-custom" onclick="event.stopPropagation()"><input id="studentReminderCustomHours" type="number" min="1" max="72" value="${customValue}" oninput="if(document.getElementById('studentReminderMode_custom'))document.getElementById('studentReminderMode_custom').checked=true" onchange="updateStudentReminderMode('${stu.id}','custom')"><span>小时</span></span>`
     :'';
-  return `<label class="student-reminder-option${checked?' is-active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')"><input type="radio" name="studentReminderMode" id="studentReminderMode_${value}" value="${value}" ${checked?'checked':''}><span class="student-reminder-radio"></span><span class="student-reminder-copy-text">${title}</span>${custom}</label>`;
+  return `<label class="student-reminder-option${checked?' is-active':''}" onclick="updateStudentReminderMode('${stu.id}','${value}')"><input type="radio" name="studentReminderMode" id="studentReminderMode_${value}" value="${value}" ${checked?'checked':''}><span class="student-reminder-radio"></span><span class="student-reminder-copy-text">${esc(title)}</span>${custom}</label>`;
 }
 function studentReminderInfoHtml(stu){
   const statusClass=stu?.officialAccountOpenId?'tms-tag-green':'tms-tag-tier-slate';
   const linkAction=stu?.officialAccountOpenId
-    ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>重新复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
-    :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制给学员绑定</span><small>学员用微信打开后完成绑定</small></button>`;
-  return `<section class="student-detail-section student-reminder-section"><div class="student-reminder-compact"><div class="student-reminder-head"><div class="student-reminder-head-title">服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span></div><div class="student-reminder-actions">${linkAction}</div></div><div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div></div></section>`;
+    ?`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制绑定链接</span><small>换微信或发给家长时使用</small></button><button class="btn-sec" onclick="unbindStudentReminder('${stu.id}')">停止绑定</button>`
+    :`<button class="student-reminder-copy-btn" onclick="generateStudentReminderBindLink('${stu.id}')"><span>复制绑定链接</span><small>学员用微信打开后完成绑定</small></button>`;
+  const content=`<div class="student-reminder-options">${studentReminderModeOptionHtml(stu,'all','48小时 + 24小时','适合大多数学员，提前确认行程并在前一天再提醒一次')}${studentReminderModeOptionHtml(stu,'only24h','仅24小时','适合不想收到太多消息的学员')}${studentReminderModeOptionHtml(stu,'custom','自定义','只在你设置的提前时间提醒一次')}${studentReminderModeOptionHtml(stu,'off','不提醒','保留绑定关系，但不再推送上课提醒')}</div><div class="tms-field-help">学员需要关注服务号后才能收到课前提醒；绑定过的学员再次打开链接，会看到已绑定提示。</div>`;
+  return studentDrawerCardHtml('服务号提醒偏好',content,'student-reminder-section',linkAction,{useGrid:false,titleHtml:`服务号提醒偏好<span class="tms-tag ${statusClass}">${studentReminderStatusText(stu)}</span>`});
 }
 function leadRowsForSummary(){
   return typeof leadRows==='function'?leadRows():(Array.isArray(leads)?leads:[]);
@@ -606,12 +734,14 @@ function studentLeadSummaryHtml(s){
 }
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
-  const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
-  const benefitHtml=studentBenefitRows(s).length?studentDetailSectionBlockHtml('当前权益',studentBenefitSummaryHtml(s),'student-benefit-section'):'';
-  const body=`<div class="student-detail-shell">${studentDetailMetricsHtml(s)}${benefitHtml}${studentDetailSectionBlockHtml('课包购买记录',studentEntitlementSummaryHtml(s),'student-package-section')}${studentDetailSectionBlockHtml('上课记录',studentLessonRecordHtml(s),'student-lesson-section')}${studentDetailSectionBlockHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s),'student-feedback-section')}${studentReminderInfoHtml(s)}${leadHtml?`<div class="tms-section-header">关联线索</div><div class="tms-detail-grid">${leadHtml}</div>`:''}${studentConsumptionInfoHtml(s)}</div>`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','supplement')">赠送权益</button><button class="tms-btn tms-btn-default" onclick="openStudentBenefitPickerModal('${s.id}','consume')">消耗权益</button><button class="tms-btn tms-btn-primary" onclick="openStudentModal('${s.id}')">编辑资料</button>`;
-  setCourtModalFrame('',body,footer,'modal-view modal-student-detail');
-  document.getElementById('mTitle').innerHTML=studentDetailHeroHtml(s);
+  if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
+  const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
+  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
+}
+function cancelStudentDetailEdit(studentId){
+  if(studentId)studentDetailEditingStudentId=studentId;
+  studentDetailEditingSection='';
+  openStudentDetail(studentId);
 }
 async function copyStudentReminderText(text){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return;}
@@ -621,7 +751,18 @@ function mergeStudentReminderUpdate(row){
   const i=students.findIndex(x=>x.id===row.id);
   if(i>=0)students[i]={...students[i],...row};
 }
+function setStudentReminderModeSaving(saving){
+  document.querySelectorAll('.student-reminder-option input').forEach(input=>{input.disabled=!!saving;});
+  document.querySelector('.student-reminder-section')?.classList.toggle('is-saving',!!saving);
+}
 async function generateStudentReminderBindLink(studentId){
+  if(studentReminderLinkGenerating)return;
+  studentReminderLinkGenerating=true;
+  const btn=document.querySelector('.student-reminder-copy-btn');
+  const label=btn?.querySelector('span');
+  const oldText=label?.textContent||'复制绑定链接';
+  if(btn)btn.disabled=true;
+  if(label)label.textContent='复制中...';
   try{
     const res=await apiCall('POST',`/students/${studentId}/reminder-link`,{});
     if(res.student)mergeStudentReminderUpdate(res.student);
@@ -629,17 +770,41 @@ async function generateStudentReminderBindLink(studentId){
     await copyStudentReminderText(link);
     toast('绑定链接已复制','success');
     openStudentDetail(studentId);
-  }catch(e){toast('生成绑定链接失败：'+e.message,'error');}
+  }catch(e){
+    if(btn)btn.disabled=false;
+    if(label)label.textContent=oldText;
+    toast('生成绑定链接失败：'+e.message,'error');
+  }finally{studentReminderLinkGenerating=false;}
 }
 async function updateStudentReminderMode(studentId,mode){
-  try{
-    const customInput=document.getElementById('studentReminderCustomHours');
-    const customHours=customInput?customInput.value:undefined;
-    const res=await apiCall('POST',`/students/${studentId}/reminder-settings`,{mode,customHours});
-    if(res.student)mergeStudentReminderUpdate(res.student);
-    toast('提醒时间已更新','success');
-    openStudentDetail(studentId);
-  }catch(e){toast('更新提醒时间失败：'+e.message,'error');}
+  const stu=students.find(x=>x.id===studentId);
+  if(!stu)return;
+  const previous={...stu};
+  const customInput=document.getElementById('studentReminderCustomHours');
+  const customHours=customInput?customInput.value:undefined;
+  const currentMode=stu.officialAccountReminderMode||'all';
+  if(mode===currentMode&&(mode!=='custom'||String(customHours||stu.officialAccountReminderCustomHours||12)===String(stu.officialAccountReminderCustomHours||12)))return;
+  const requestSeq=++studentReminderModeRequestSeq;
+  if(studentReminderModeSaveTimer)clearTimeout(studentReminderModeSaveTimer);
+  mergeStudentReminderUpdate({id:studentId,officialAccountReminderMode:mode,officialAccountReminderCustomHours:customHours||stu.officialAccountReminderCustomHours||12});
+  openStudentDetail(studentId);
+  setStudentReminderModeSaving(true);
+  studentReminderModeSaveTimer=setTimeout(async()=>{
+    try{
+      const res=await apiCall('POST',`/students/${studentId}/reminder-settings`,{mode,customHours});
+      if(requestSeq!==studentReminderModeRequestSeq)return;
+      if(res.student)mergeStudentReminderUpdate(res.student);
+      toast('提醒时间已更新','success');
+      openStudentDetail(studentId);
+    }catch(e){
+      if(requestSeq!==studentReminderModeRequestSeq)return;
+      mergeStudentReminderUpdate(previous);
+      toast('更新提醒时间失败：'+e.message,'error');
+      openStudentDetail(studentId);
+    }finally{
+      if(requestSeq===studentReminderModeRequestSeq)setStudentReminderModeSaving(false);
+    }
+  },300);
 }
 async function unbindStudentReminder(studentId){
   const stu=students.find(x=>x.id===studentId);
@@ -652,16 +817,24 @@ async function unbindStudentReminder(studentId){
     openStudentDetail(studentId);
   }catch(e){toast('解绑失败：'+e.message,'error');}
 }
-function openStudentModal(id){
-  editId=id;const s=id?students.find(x=>x.id===id):null;
-  const typeOptions=[{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}];
-  const sourceOptions=[{value:'',label:'-'},...SOURCES.map(t=>({value:t,label:t}))];
-  const campusOptions=studentCampusOptions();
-  const coachOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
-  const leadSummary=id?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${studentLeadSummaryHtml(s)}</div></div></div>`:'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="s_name" value="${rv(s,'name')}" placeholder="学员姓名"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="s_phone" value="${rv(s,'phone')}" placeholder="请输入手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label>${renderCourtDropdownHtml('s_primaryCoach','负责教练',coachOptions,coachName(rv(s,'primaryCoach')),true)}</div><div class="tms-form-item"><label class="tms-form-label">学员类型</label>${renderCourtDropdownHtml('s_type','学员类型',typeOptions,rv(s,'type','成人'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderCourtDropdownHtml('s_source','来源',sourceOptions,rv(s,'source'),true)}</div><div class="tms-form-item"><label class="tms-form-label">活动范围</label><input type="text" class="finput tms-form-control" id="s_range" value="${rv(s,'activityRange')}" placeholder="例：朝阳"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所在校区</label>${renderCourtDropdownHtml('s_campus','校区',campusOptions,rv(s,'campus'),true)}</div></div>${leadSummary}<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="s_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
-  const footer=id?`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-danger" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除</button><button class="tms-btn tms-btn-primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`:`<div style="display:flex;gap:12px;margin-left:auto;"><button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`;
-  setCourtModalFrame(id?'编辑学员':'添加学员',body,footer,'modal-standard modal-student-form');
+function openStudentModal(id='',mode='edit'){
+  const s=id?students.find(x=>x.id===id):null;
+  if(id&&s){
+    editId=id;
+    studentDetailActiveTab='basic';
+    studentDetailEditingSection='basic';
+    studentDetailEditingStudentId=id;
+    openStudentDetail(id);
+    return;
+  }
+  editId='';
+  studentDetailActiveTab='basic';
+  studentDetailEditingSection='basic';
+  studentDetailEditingStudentId='';
+  const titleHtml=studentDetailHeroHtml({name:'新增学员',type:'待保存',campus:''});
+  const formActions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`;
+  const body=`<div class="schedule-detail-content">${renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(null),formActions)}</div>`;
+  openStudentDrawer({titleHtml:`${titleHtml}${renderDetailDrawerTabs('basic',[['basic','基本信息']],{onClick:'setStudentDetailTab'})}`,bodyHtml:body,actionsHtml:'',studentId:''});
 }
 async function saveStudent(){
   const name=document.getElementById('s_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
@@ -677,9 +850,12 @@ async function saveStudent(){
     }
   }
   try{
-    if(editId){const res=await apiCall('PUT','/students/'+editId,data);const i=students.findIndex(x=>x.id===editId);students[i]={...students[i],...data,id:editId};mergeLinkedUpdates(res.studentUpdates||{});}
+    const savedEditId=editId;
+    if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);students[i]={...students[i],...data,id:savedEditId};mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
-    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
+    toast(savedEditId?'修改成功 ✓':'添加成功 ✓','success');renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
+    if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
+    else closeModal();
   }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
 function mergeLinkedUpdates(updates){

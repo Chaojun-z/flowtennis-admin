@@ -286,15 +286,40 @@ function scheduleCourseTypeLabel(s){
 function scheduleClassName(s){
   return s?.className||classes.find(c=>c.id===s?.classId)?.className||'—';
 }
+function scheduleLooksLikeStudentId(value){
+  const text=String(value||'').trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text)
+    ||/^(seed-student|new-student|import-student|private_lesson_csv_import)/.test(text);
+}
+function scheduleResolveStudentName(id){
+  const sid=String(id||'').trim();
+  if(!sid)return '';
+  const pools=[
+    typeof students!=='undefined'?students:[],
+    typeof feedbacks!=='undefined'?feedbacks:[],
+    typeof entitlements!=='undefined'?entitlements:[],
+    typeof purchases!=='undefined'?purchases:[],
+    typeof plans!=='undefined'?plans:[]
+  ];
+  for(const rows of pools){
+    const hit=(rows||[]).find(row=>String(row?.id||'')===sid||String(row?.studentId||'')===sid||parseArr(row?.studentIds).includes(sid));
+    const name=String(hit?.name||hit?.studentName||'').trim();
+    if(name&&!scheduleLooksLikeStudentId(name))return name;
+  }
+  return scheduleLooksLikeStudentId(sid)?'':sid;
+}
 function scheduleStudentSummary(s){
   const names=parseArr(s?.studentNames);
   if(names.length)return names.join('、');
   const ids=parseArr(s?.studentIds);
   if(ids.length){
-    const resolved=ids.map(id=>students.find(st=>st.id===id)?.name||id).filter(Boolean);
+    const resolved=ids.map(id=>scheduleResolveStudentName(id)).filter(Boolean);
     if(resolved.length)return resolved.join('、');
   }
-  return s?.studentName||'—';
+  const raw=String(s?.studentName||'').trim();
+  if(!raw)return '—';
+  if(scheduleLooksLikeStudentId(raw))return scheduleResolveStudentName(raw)||'—';
+  return raw;
 }
 function scheduleParticipantSummary(s){
   const actual=parseArr(s?.studentIds);
@@ -1092,7 +1117,7 @@ function studentEntitlementSummaryHtml(stu){
     const statusText=entitlementStatusText(e);
     const depleted=remaining<=0||statusText==='已用完';
     const unit=packageBalanceUnitLabel(e);
-    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-title">[${esc(renderCourtEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderCourtEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>归属 ${esc(renderCourtEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
+    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-title">[${esc(renderCourtEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderCourtEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>${esc(renderCourtEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){
