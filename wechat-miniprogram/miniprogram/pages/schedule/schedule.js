@@ -421,10 +421,11 @@ async function ensureCoachSession() {
 
 function handleCoachAuthError(error) {
   const message = error && error.message || '';
-  if (!/不是教练账号/.test(message)) return false;
+  const expiredSession = /未登录|登录已过期|401/.test(message);
+  if (!/不是教练账号/.test(message) && !expiredSession) return false;
   wx.removeStorageSync(TOKEN_KEY);
   wx.removeStorageSync(USER_KEY);
-  wx.showToast({ title: message, icon: 'none' });
+  wx.showToast({ title: expiredSession ? '请重新登录' : message, icon: 'none' });
   wx.reLaunch({ url: '/pages/index/index' });
   return true;
 }

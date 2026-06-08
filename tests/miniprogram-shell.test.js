@@ -361,6 +361,7 @@ assert.match(schedulePageJs, /user\.role !== 'editor'/, 'native schedule page sh
 assert.match(schedulePageJs, /function ensureCoachSession/, 'native schedule page should prefer the password-login coach session before WeChat login');
 assert.match(schedulePageJs, /wx\.getStorageSync\(TOKEN_KEY\)[\s\S]*wx\.getStorageSync\(USER_KEY\)[\s\S]*assertCoachUser\(storedUser\)/, 'native schedule page should not overwrite a valid coach token with WeChat login');
 assert.match(schedulePageJs, /handleCoachAuthError/, 'native schedule page should return invalid-role users to login instead of trapping them on reload');
+assert.match(schedulePageJs, /未登录\|登录已过期\|401/, 'native schedule page should clear stale login and return to login when the token expires');
 assert.match(schedulePageJs, /lessonUnitsCompleted/, 'native student cards should read backend lessonUnitsCompleted');
 assert.match(schedulePageJs, /function scheduleLessonUnits/, 'native student cards should calculate lesson units only as a short fallback');
 assert.match(schedulePageJs, /nextTravelReminder/, 'native workbench reminders should include a travel reminder flag');
