@@ -186,7 +186,7 @@ assert.match(fnBody('openScheduleDetail'), /modal-schedule-drawer/, 'schedule de
 assert.match(source, /排课信息[\s\S]*教练提案[\s\S]*课后反馈/, 'schedule detail drawer should keep three tabs');
 assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信息'[\s\S]*renderScheduleDetailCard\('反馈内容'/, 'schedule detail drawer should organize fields into Feishu-style cards');
 assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信息'[\s\S]*renderScheduleDetailCard\('设置迟到'[\s\S]*renderScheduleDetailCard\('备注信息'/, 'schedule detail drawer should place late settings between basic info and notes');
-assert.match(source, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*schedule-detail-title/, 'schedule detail drawer title should use student names');
+assert.match(source, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
 assert.match(source, /function scheduleResolveStudentName\(/, 'schedule detail should resolve student names from related datasets before rendering');
 assert.doesNotMatch(fnBody('scheduleStudentSummary'), /students\.find\(st=>st\.id===id\)\?\.name\|\|id/, 'schedule student summary should not fall back to displaying raw student ids');
 assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*学员姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*消课时数[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
@@ -235,8 +235,8 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-det
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-subtitle\{[\s\S]*color:#6B7280[\s\S]*font-size:13px[\s\S]*font-weight:400/, 'schedule detail drawer subtitle should be 13px #6B7280 regular');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-hero\{[\s\S]*padding-bottom:12px/, 'schedule detail hero should use 12px bottom padding');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-tab\{[\s\S]*padding:0 0 2px/, 'schedule detail tab underline spacing should be 2px');
-assert.match(fnBody('openScheduleDetail'), /requestAnimationFrame\(\(\)=>ov\.classList\.add\('open'\)\)/, 'schedule detail drawer should add open on the next frame so it slides in from the right');
-assert.match(fnBody('openScheduleDetail'), /event\.target===ov[\s\S]*closeModal\(\)/, 'schedule detail drawer should close when clicking the left overlay blank area');
+assert.match(fnBody('openDetailSideDrawer'), /requestAnimationFrame\(\(\)=>ov\.classList\.add\('open'\)\)/, 'detail drawer should add open on the next frame so it slides in from the right');
+assert.match(fnBody('openDetailSideDrawer'), /event\.target===ov[\s\S]*closeModal\(\)/, 'detail drawer should close when clicking the left overlay blank area');
 assert.doesNotMatch(fnBody('openScheduleModal'), /setCourtModalFrame\(id\?'编辑排课':'添加排课'/, 'schedule create and edit should no longer use the old centered modal frame');
 assert.match(fnBody('openScheduleModal'), /modal-schedule-drawer/, 'schedule create and edit should use the same right-side drawer container');
 assert.match(fnBody('openScheduleModal'), /scheduleDetailHeaderHtml[\s\S]*scheduleDetailTabsHtml/, 'schedule create and edit should reuse the detail drawer header and tabs');

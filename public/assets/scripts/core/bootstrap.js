@@ -90,6 +90,11 @@ function openBatchCourtDeleteConfirm(ids){
 function closeConf(){const ov=document.getElementById('confOv');ov.classList.remove('open');const box=ov?.querySelector('.conf-box');if(box)box.className='conf-box';const icon=document.getElementById('confIcon');if(icon)icon.style.display='flex';delId=null;delType=null;batchDeleteCourtIds=[];const ci=document.getElementById('confInput');if(ci){ci.value='';ci.style.display='block';ci.oninput=null;}const cb=document.getElementById('confYesBtn');if(cb){cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;}const nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;}
 function resetModalShell(){
   const ov=document.getElementById('overlay');
+  ov.classList.remove('schedule-drawer-overlay');
+  ov.classList.remove('student-drawer-overlay');
+  ov.onclick=null;
+  delete ov.dataset.scheduleDetailId;
+  delete ov.dataset.studentDetailId;
   const modal=ov.querySelector('.modal');
   if(modal)modal.className='modal';
   const actions=document.getElementById('mActions');

@@ -508,22 +508,15 @@ function openScheduleModal(id,seed={}){
   const lateSettings=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">是否迟到</label><label class="schedule-checkbox-line schedule-late-free-control"><input type="checkbox" class="tms-checkbox" id="sch_coachLateFree" ${lateChecked?'checked':''} onchange="refreshScheduleLateFee()"><span>是，本节课不扣学员课时</span></label></div><div class="tms-form-item"><label class="tms-form-label">迟到原因</label><input class="finput tms-form-control" id="sch_lateReason" value="${esc(rv(s,'lateReason'))}" placeholder="例如：教练迟到，本节课免费"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">迟到时长</label><input class="finput tms-form-control" id="sch_lateMinutes" type="number" min="0" value="${parseInt(rv(s,'lateMinutes',0))||0}"></div><div class="tms-form-item"><label class="tms-form-label">需承担场地费用</label><input class="finput tms-form-control" id="sch_lateFieldFee" type="number" min="0" value="${parseFloat(rv(s,'coachLateFieldFeeAmount',0))||0}"></div></div>`;
   const notesForm=`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员备注</label><div class="finput tms-form-control schedule-detail-readonly-control">${esc(selectedStudentIds.map(id=>students.find(st=>st.id===id)?.notes).filter(Boolean).join('；')||'--')}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">排课备注</label><textarea class="finput tms-form-control" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
   const body=`${hiddenFields}${renderScheduleDetailFormCard('基础信息',basicForm,drawerActions)}${renderScheduleDetailFormCard('设置迟到',lateSettings)}${renderScheduleDetailFormCard('备注信息',notesForm)}`;
-  const ov=document.getElementById('overlay');
-  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
-  const alreadyOpen=ov.classList.contains('open')&&ov.classList.contains('schedule-drawer-overlay');
-  if(!alreadyOpen)ov.classList.remove('open');
-  const modal=ov.querySelector('.modal');
-  const actions=document.getElementById('mActions');
-  if(modal)modal.className='modal modal-court modal-schedule-drawer';
-  ov.dataset.scheduleDetailId=id||'';
-  ov.classList.add('schedule-drawer-overlay');
-  ov.onclick=function(event){if(event.target===ov)closeModal();};
   const headerHtml=id&&s?scheduleDetailHeaderHtml(s,scheduleStudentSummary(s)):scheduleDetailCreateHeaderHtml(seed);
-  document.getElementById('mTitle').innerHTML=`${headerHtml}${scheduleDetailTabsHtml('info',{create:!id})}`;
-  document.getElementById('mBody').innerHTML=`<div class="schedule-detail-content">${body}</div>`;
-  if(actions){actions.innerHTML='';actions.style.display='none';actions.className='mactions';}
-  if(alreadyOpen)ov.classList.add('open');
-  else requestAnimationFrame(()=>ov.classList.add('open'));
+  openDetailSideDrawer({
+    titleHtml:`${headerHtml}${scheduleDetailTabsHtml('info',{create:!id})}`,
+    bodyHtml:`<div class="schedule-detail-content">${body}</div>`,
+    actionsHtml:'',
+    data:{scheduleDetailId:id||''},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer'
+  });
   setScheduleStudentSelection(selectedStudentIds,false,!id);
   updateScheduleStudentSummary(selectedStudentIds);
   toggleScheduleRepeatWeeks();
@@ -552,21 +545,14 @@ function openCancelScheduleModal(id){
   const repeatBlock=s.scheduleSource==='循环排课'?`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">取消范围</label><div class="schedule-cancel-scope"><label class="tms-checkbox-wrap"><input type="radio" name="sch_cancel_scope" value="single" checked> <span>只取消这一节</span></label><label class="tms-checkbox-wrap"><input type="radio" name="sch_cancel_scope" value="future"> <span>取消本节及后续未上课的循环课（共 ${repeatTargets.length+1} 节）</span></label><div class="schedule-cancel-help">已经上过课的不会动。循环课如果要整组取消，这里只会处理当前这节开始的未上课记录。</div></div></div></div>`:'';
   const body=`<div class="schedule-cancel-summary"><div>${esc(fmtDt(s.startTime))}</div><div>${esc(scheduleListStudentSummary(s))}</div><div>${esc(coachName(s.coach)||'—')}</div><div>${esc(scheduleLocationText(s))}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">取消原因 *</label>${renderCourtDropdownHtml('sch_cancelReasonQuick','取消原因',[{value:'',label:'— 选择取消原因 —'},...SCH_CANCEL_REASONS.map(t=>({value:t,label:t}))],'',true)}</div></div>${repeatBlock}`;
   const drawerActions=`<div class="schedule-drawer-form-actions"><button type="button" class="schedule-detail-action muted" onclick="openScheduleDetail('${s.id}')">返回</button><button type="button" class="schedule-detail-action danger" id="scheduleCancelBtn" onclick="confirmScheduleCancel('${s.id}')">确认取消</button></div>`;
-  const ov=document.getElementById('overlay');
-  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
-  const alreadyOpen=ov.classList.contains('open')&&ov.classList.contains('schedule-drawer-overlay');
-  if(!alreadyOpen)ov.classList.remove('open');
-  const modal=ov.querySelector('.modal');
-  const actions=document.getElementById('mActions');
-  if(modal)modal.className='modal modal-court modal-schedule-drawer';
-  ov.dataset.scheduleDetailId=s.id;
-  ov.classList.add('schedule-drawer-overlay');
-  ov.onclick=function(event){if(event.target===ov)closeModal();};
-  document.getElementById('mTitle').innerHTML=`<div class="schedule-drawer-form-head"><div><div class="schedule-detail-title">取消排课</div><div class="schedule-detail-subtitle">${esc([fmtDt(s.startTime),scheduleLocationText(s)].filter(Boolean).join(' · '))}</div></div>${drawerActions}</div>`;
-  document.getElementById('mBody').innerHTML=`<div class="schedule-detail-content schedule-detail-form">${body}</div>`;
-  if(actions){actions.innerHTML='';actions.style.display='none';actions.className='mactions';}
-  if(alreadyOpen)ov.classList.add('open');
-  else requestAnimationFrame(()=>ov.classList.add('open'));
+  openDetailSideDrawer({
+    titleHtml:`<div class="schedule-drawer-form-head"><div><div class="schedule-detail-title">取消排课</div><div class="schedule-detail-subtitle">${esc([fmtDt(s.startTime),scheduleLocationText(s)].filter(Boolean).join(' · '))}</div></div>${drawerActions}</div>`,
+    bodyHtml:`<div class="schedule-detail-content schedule-detail-form">${body}</div>`,
+    actionsHtml:'',
+    data:{scheduleDetailId:s.id},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer'
+  });
 }
 function scheduleRepeatIdentityKey(s){
   return [
@@ -1573,35 +1559,28 @@ function feedbackSummaryHtml(fb){
 let scheduleDetailActiveTab='info';
 let scheduleDetailEditingSection='';
 function scheduleDetailEmpty(value){
-  const raw=String(value??'').trim();
-  return raw&&raw!=='—'&&raw!=='-'?raw:'--';
+  return detailDrawerEmpty(value);
 }
 function scheduleDetailField(label,value,options={}){
-  const cls=`schedule-detail-field ${options.full?'full-width':''}`.trim();
-  return `<div class="${cls}"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value">${esc(scheduleDetailEmpty(value))}</div></div>`;
+  return renderDetailDrawerField(label,value,options);
 }
 function scheduleDetailBlock(label,html){
-  const raw=String(html||'').replace(/<[^>]*>/g,'').trim();
-  return `<div class="schedule-detail-field full-width"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value schedule-detail-block">${raw?html:'--'}</div></div>`;
+  return renderDetailDrawerBlock(label,html);
 }
 function scheduleDetailInput(label,id,value,type='text'){
-  const input=type==='textarea'
-    ?`<textarea class="schedule-detail-edit-control" id="${id}">${esc(value||'')}</textarea>`
-    :`<input class="schedule-detail-edit-control" id="${id}" value="${esc(value||'')}">`;
-  return `<div class="schedule-detail-field ${type==='textarea'?'full-width':''}"><div class="schedule-detail-label">${esc(label)}</div>${input}</div>`;
+  return renderDetailDrawerInput(label,id,value,type);
 }
 function renderScheduleDetailCard(title,content,{section='',scheduleId='',className='',actionLabel='编辑',feedbackId=''}={}){
   const editing=scheduleDetailEditingSection===section;
-  const cardClass=`schedule-detail-card ${className}`.trim();
   if(section==='schedule-form'){
-    return `<section class="${cardClass}"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${esc(title)}</div><div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action" onclick="openScheduleModal('${scheduleId}')">编辑</button></div></div><div class="schedule-detail-grid">${content}</div></section>`;
+    return renderDetailDrawerCard(title,content,{className,actionsHtml:`<button type="button" class="schedule-detail-action" onclick="openScheduleModal('${scheduleId}')">编辑</button>`});
   }
   const posterAction=section==='feedback'&&feedbackId&&!editing?`<button type="button" class="schedule-detail-action" onclick="openFeedbackPosterModal('${feedbackId}','${scheduleId}')">生成海报</button>`:'';
-  const actions=section?`<div class="schedule-detail-card-actions">${editing?`<button type="button" class="schedule-detail-action muted" onclick="cancelScheduleDetailSectionEdit('${scheduleId}')">取消</button><button type="button" class="schedule-detail-action primary" onclick="saveScheduleDetailSectionEdit('${scheduleId}','${section}')">保存修改</button>`:`${posterAction}<button type="button" class="schedule-detail-action" onclick="editScheduleDetailSection('${scheduleId}','${section}')">${esc(actionLabel)}</button>`}</div>`:'';
-  return `<section class="${cardClass}"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${esc(title)}</div>${actions}</div><div class="schedule-detail-grid">${content}</div></section>`;
+  const actions=section?`${editing?`<button type="button" class="schedule-detail-action muted" onclick="cancelScheduleDetailSectionEdit('${scheduleId}')">取消</button><button type="button" class="schedule-detail-action primary" onclick="saveScheduleDetailSectionEdit('${scheduleId}','${section}')">保存修改</button>`:`${posterAction}<button type="button" class="schedule-detail-action" onclick="editScheduleDetailSection('${scheduleId}','${section}')">${esc(actionLabel)}</button>`}`:'';
+  return renderDetailDrawerCard(title,content,{className,actionsHtml:actions});
 }
 function renderScheduleDetailFormCard(title,content,actions=''){
-  return `<section class="schedule-detail-card"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${esc(title)}</div>${actions}</div><div class="schedule-detail-form">${content}</div></section>`;
+  return renderDetailDrawerFormCard(title,content,actions);
 }
 function scheduleDetailHeaderHtml(s,studentNames){
   const title=scheduleDetailEmpty(studentNames);
@@ -1609,16 +1588,16 @@ function scheduleDetailHeaderHtml(s,studentNames){
   const rawStatus=effectiveScheduleStatus(s);
   const status=scheduleStatusLabel(rawStatus);
   const timeText=`${fmtDt(s.startTime)}${s.endTime?` - ${String(s.endTime).slice(11,16)}`:''}`;
-  return `<div class="schedule-detail-hero"><div class="schedule-detail-avatar">${esc(initial)}</div><div class="schedule-detail-title-wrap"><div class="schedule-detail-title-row"><span class="schedule-detail-title">${esc(title)}</span><span class="tms-tag ${scheduleStatusTagClass(rawStatus)} schedule-detail-status">${esc(status)}</span></div><div class="schedule-detail-subtitle">${esc([timeText,scheduleLocationText(s)].filter(Boolean).join(' · '))}</div></div></div>`;
+  return renderDetailDrawerHero({title,avatar:initial,subtitle:[timeText,scheduleLocationText(s)].filter(Boolean).join(' · '),statusHtml:`<span class="tms-tag ${scheduleStatusTagClass(rawStatus)} schedule-detail-status">${esc(status)}</span>`});
 }
 function scheduleDetailCreateHeaderHtml(seed={}){
   const start=String(seed.startTime||'').trim();
   const timeText=start?`${fmtDt(start)}${seed.endTime?` - ${String(seed.endTime).slice(11,16)}`:''}`:'填写排课信息';
-  return `<div class="schedule-detail-hero"><div class="schedule-detail-avatar">新</div><div class="schedule-detail-title-wrap"><div class="schedule-detail-title-row"><span class="schedule-detail-title">新建排课</span><span class="schedule-detail-status">待保存</span></div><div class="schedule-detail-subtitle">${esc([timeText,seed.venue||''].filter(Boolean).join(' · '))}</div></div></div>`;
+  return renderDetailDrawerHero({title:'新建排课',avatar:'新',subtitle:[timeText,seed.venue||''].filter(Boolean).join(' · '),statusText:'待保存'});
 }
 function scheduleDetailTabsHtml(active,{create=false}={}){
   const tabs=create?[['info','排课信息']]:[['info','排课信息'],['proposal','教练提案'],['feedback','课后反馈']];
-  return `<div class="schedule-detail-tabs">${tabs.map(([key,label])=>`<button type="button" class="schedule-detail-tab ${active===key?'active':''}" onclick="setScheduleDetailTab('${key}')">${label}</button>`).join('')}</div>`;
+  return renderDetailDrawerTabs(active,tabs,{onClick:'setScheduleDetailTab'});
 }
 function setScheduleDetailTab(tab){
   scheduleDetailActiveTab=tab;
@@ -1825,19 +1804,12 @@ function openScheduleDetail(scheduleId){
   const feedbackCanEdit=!!fb||isCoachDetail;
   const feedbackHtml=renderScheduleDetailCard('反馈内容',scheduleDetailFeedbackHtml(s,fb),{section:feedbackCanEdit?'feedback':'',scheduleId:s.id,className:'schedule-feedback-card',actionLabel:fb?'编辑':'填写反馈',feedbackId:fb?.id||''});
   const body=`<div class="schedule-detail-content">${scheduleDetailActiveTab==='info'?infoHtml:scheduleDetailActiveTab==='proposal'?proposalHtml:feedbackHtml}</div>`;
-  const ov=document.getElementById('overlay');
-  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
-  const alreadyOpen=ov.classList.contains('open')&&ov.classList.contains('schedule-drawer-overlay');
-  if(!alreadyOpen)ov.classList.remove('open');
-  const modal=ov.querySelector('.modal');
-  const actions=document.getElementById('mActions');
-  if(modal)modal.className='modal modal-court modal-schedule-drawer';
-  ov.dataset.scheduleDetailId=s.id;
-  ov.classList.add('schedule-drawer-overlay');
-  ov.onclick=function(event){if(event.target===ov)closeModal();};
-  document.getElementById('mTitle').innerHTML=`${scheduleDetailHeaderHtml(s,studentNames)}${scheduleDetailTabsHtml(scheduleDetailActiveTab)}`;
-  document.getElementById('mBody').innerHTML=body;
-  if(actions){actions.innerHTML='';actions.style.display='none';actions.className='mactions';}
-  if(alreadyOpen)ov.classList.add('open');
-  else requestAnimationFrame(()=>ov.classList.add('open'));
+  openDetailSideDrawer({
+    titleHtml:`${scheduleDetailHeaderHtml(s,studentNames)}${scheduleDetailTabsHtml(scheduleDetailActiveTab)}`,
+    bodyHtml:body,
+    actionsHtml:'',
+    data:{scheduleDetailId:s.id},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer'
+  });
 }

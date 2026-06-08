@@ -993,6 +993,11 @@ function scheduleComposeDateTime(dateId,timeId){
 }
 function setCourtModalFrame(title,bodyHtml,actionsHtml='',extraClass='modal-tight'){
   const ov=document.getElementById('overlay');
+  ov.classList.remove('schedule-drawer-overlay');
+  ov.classList.remove('student-drawer-overlay');
+  ov.onclick=null;
+  delete ov.dataset.scheduleDetailId;
+  delete ov.dataset.studentDetailId;
   if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
   const modal=ov.querySelector('.modal');
   const actions=document.getElementById('mActions');
