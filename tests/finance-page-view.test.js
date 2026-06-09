@@ -1,8 +1,15 @@
 const assert = require('assert');
 const { appSource: source } = require('./helpers/read-index-bundle');
+function sliceBetween(text,startMarker,endMarker){
+  const start = text.indexOf(startMarker);
+  const end = start === -1 ? -1 : text.indexOf(endMarker, start);
+  return text.slice(start, end === -1 ? text.length : end);
+}
+const ledgerPanel = sliceBetween(source, 'id="financeLedgerPanel"', 'id="financeRevenuePanel"');
 const revenuePanelStart = source.indexOf('id="financeRevenuePanel"');
 const revenuePanelEnd = source.indexOf('id="financeRecognizedPanel"', revenuePanelStart);
 const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? source.length : revenuePanelEnd);
+const recognizedPanel = sliceBetween(source, 'id="financeRecognizedPanel"', 'id="financeSettlementPanel"');
 
 assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
 assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');
@@ -30,7 +37,7 @@ assert.match(source,/id="financeRevenueTypeFilterHost"/,'revenue table should ex
 assert.match(source,/id="financeRevenuePayMethodFilterHost"/,'revenue table should expose pay method filter host');
 assert.match(source,/renderCourtDropdownHtml\('financeRevenueTypeFilter'/,'revenue type filter should reuse shared dropdown style');
 assert.match(source,/renderCourtDropdownHtml\('financeRevenuePayMethodFilter'/,'revenue pay method filter should reuse shared dropdown style');
-assert.match(source,/日期[\s\S]*星期[\s\S]*时间段[\s\S]*客户[\s\S]*业务类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*收款人[\s\S]*备注[\s\S]*校区[\s\S]*状态[\s\S]*financeRevenueTbody/,'revenue table should follow the owner-facing sheet column order');
+assert.match(revenuePanel,/日期[\s\S]*星期[\s\S]*时间段[\s\S]*客户[\s\S]*业务类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*收款人[\s\S]*备注[\s\S]*校区[\s\S]*状态[\s\S]*financeRevenueTbody/,'revenue table should follow the owner-facing sheet column order');
 assert.doesNotMatch(source,/coachOpsRevenueSearch"[^>]*placeholder="[^"]*收入类型|<th[^>]*>收入类型<\/th>|全部收入类型/,'revenue table should no longer label business type as income type');
 assert.match(source,/businessType:row\.displayBusinessType\|\|financeUnifiedRevenueType\(row\)/,'revenue rows should display standardized business type');
 assert.match(source,/normalizedPaymentMethod:row\.normalizedPaymentMethod\|\|normalizePaymentMethod\(row\.paymentChannel\|\|row\.payMethod\)/,'revenue rows should use standardized payment method');
@@ -38,9 +45,9 @@ assert.doesNotMatch(revenuePanel,/关联单据/,'revenue table should not expose
 assert.doesNotMatch(revenuePanel,/class="tms-sticky-r"/,'revenue rows should not keep a sticky right internal document column');
 assert.match(source,/finance-revenue-toolbar/,'revenue toolbar should use the standardized compact toolbar class');
 assert.match(source,/finance-revenue-remark/,'revenue notes should render as a single-line remark');
-assert.match(source,/确认日期[\s\S]*客户[\s\S]*确认类型[\s\S]*来源项目[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeConsumeTbody/,'consume table should explain where recognized revenue comes from');
+assert.match(recognizedPanel,/确认日期[\s\S]*客户[\s\S]*确认类型[\s\S]*来源项目[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeConsumeTbody/,'consume table should explain where recognized revenue comes from');
 assert.doesNotMatch(source,/先看总账和顶部汇总/,'finance overview should remove the old guidance note');
-assert.match(source,/交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeLedgerTbody/,'ledger table should use the standardized owner-facing column order');
+assert.match(ledgerPanel,/交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeLedgerTbody/,'ledger table should use the standardized owner-facing column order');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'业务类型'/,'ledger business type filter should use linked standardized count labels');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'交易类型'/,'ledger transaction type filter should use linked standardized count labels');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'支付方式'/,'ledger pay method filter should use linked standardized count labels');
