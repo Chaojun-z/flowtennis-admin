@@ -72,7 +72,9 @@ assert.match(fnBody('getFilteredLeads'), /globalDateWithinRange\(leadGlobalDateV
 assert.doesNotMatch(fnBody('getFilteredAdminUsers'), /globalDateWithinRange/, 'account rows should not follow the global time filter');
 assert.doesNotMatch(fnBody('getFilteredCoaches'), /globalDateWithinRange/, 'coach rows should not follow the global time filter');
 assert.match(fnBody('renderFinanceLedger'), /globalDateWithinRange\(row\.businessDate\)/, 'finance ledger should follow the global time filter');
+assert.match(fnBody('financeLedgerRows'), /globalDateWithinRange\(row\.businessDate\)/, 'finance ledger row source should follow the global time filter');
 assert.match(fnBody('renderFinanceRevenueReport'), /globalDateWithinRange\(row\.purchaseDate\)/, 'finance revenue should follow the global time filter');
+assert.match(fnBody('financeRevenueRows'), /globalDateWithinRange\(row\.purchaseDate\)/, 'finance revenue row source should follow the global time filter');
 assert.match(fnBody('financeRecognizedRows'), /globalDateWithinRange\(row\.businessDate\)/, 'recognized revenue should follow the global time filter');
 assert.match(fnBody('renderFinanceSettlementSummary'), /financeSettlementMonthWithinGlobalRange\(row\.month\)/, 'coach settlement should follow the global time filter');
 
