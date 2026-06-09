@@ -79,6 +79,8 @@ const WECHAT_OFFICIAL_ACCOUNT_ENCODING_AES_KEY = process.env.WECHAT_OFFICIAL_ACC
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_URL = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_URL || '';
 const WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET = process.env.WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET || '';
 const FEISHU_DAILY_REPORT_WEBHOOK = String(process.env.FEISHU_DAILY_REPORT_WEBHOOK || process.env.FEISHU_WEBHOOK_URL || '').trim();
+const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || '').trim();
+const FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
@@ -367,6 +369,7 @@ let importedLedgerRepairChecked=false;
 let tsClient;
 const wechatAccessTokenCacheByApp = new Map();
 const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
+const feishuTenantAccessTokenCacheByApp = new Map();
 let matchSqlPool;
 const STORAGE_OPERATION_TIMEOUT_MS = Math.max(1000, parseInt(process.env.STORAGE_OPERATION_TIMEOUT_MS || '10000', 10) || 10000);
 function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3,httpOptions:{timeout:15000}});return tsClient;}
@@ -3744,7 +3747,8 @@ function resolveOfficialAccountSendMode({appId='',secret='',templateId='',forceM
   if(!String(appId||'').trim()||!String(secret||'').trim()||!String(templateId||'').trim())return 'mock';
   return 'live';
 }
-function collectCoachDailyDigestCandidates(rows=[],now=new Date()){
+function collectCoachDailyDigestCandidates(rows=[],now=new Date(),options={}){
+  const sentDateField=String(options?.sentDateField||'coachDailyDigestSentDate').trim()||'coachDailyDigestSentDate';
   const baseDateKey=dateKey(now instanceof Date?now.toISOString():now);
   const baseDate=new Date(`${baseDateKey}T12:00:00`);
   baseDate.setDate(baseDate.getDate()+1);
@@ -3754,7 +3758,7 @@ function collectCoachDailyDigestCandidates(rows=[],now=new Date()){
     .filter(schedule=>{
       if(effectiveScheduleStatus(schedule,now)!=='已排课')return false;
       if(dateKey(schedule.startTime)!==digestDate)return false;
-      return String(schedule.coachDailyDigestSentDate||'').trim()!==digestDate;
+      return String(schedule?.[sentDateField]||'').trim()!==digestDate;
     })
     .sort((a,b)=>dateMs(a.startTime)-dateMs(b.startTime))
     .forEach(schedule=>{
@@ -3780,6 +3784,106 @@ function buildCoachDailyDigestMessage({coachName='',digestDate='',schedules=[]}=
     summary:`${digestDate} 共 ${rows.length} 节课`,
     lines:rows.map(schedule=>`${String(schedule.startTime||'').slice(11,16)}-${String(schedule.endTime||'').slice(11,16)} ${schedule.courseType||'课程'}｜${schedule.studentName||'学员'}｜${[displayCampusName(schedule.campus),schedule.venue||schedule.externalVenueName||schedule.externalCourtName].filter(Boolean).join(' ')}`)
   };
+}
+function normalizeFeishuMobile(value){
+  return String(value||'').trim().replace(/[\s-]/g,'');
+}
+function firstFeishuOpenId(row={}){
+  return String(row?.feishuOpenId||row?.larkOpenId||row?.feishuUserId||row?.larkUserId||'').trim();
+}
+function firstFeishuMobile(row={}){
+  return normalizeFeishuMobile(row?.phone||row?.mobile||row?.tel||row?.telephone||'');
+}
+function findFeishuCoachDigestRecipient(item={},refs={}){
+  const coachId=String(item?.coachId||'').trim();
+  const coachName=String(item?.coachName||item?.coach||'').trim();
+  const users=refs?.users||[];
+  const coaches=refs?.coaches||[];
+  const user=(users||[]).find(u=>{
+    if(String(u?.role||'')!=='editor')return false;
+    if(coachId&&String(u?.coachId||u?.id||u?.username||'').trim()===coachId)return true;
+    return coachName&&String(u?.coachName||u?.name||'').trim()===coachName;
+  })||null;
+  const coach=(coaches||[]).find(c=>{
+    if(coachId&&String(c?.id||'').trim()===coachId)return true;
+    return coachName&&String(c?.name||'').trim()===coachName;
+  })||null;
+  const openId=firstFeishuOpenId(user)||firstFeishuOpenId(coach);
+  const mobile=firstFeishuMobile(user)||firstFeishuMobile(coach);
+  return {coachId,coachName,openId,mobile};
+}
+function buildFeishuCoachDailyDigestText(message={}){
+  const coachName=String(message?.coachName||'教练').trim()||'教练';
+  const nameText=/教练$/.test(coachName)?coachName:`${coachName}教练`;
+  const summary=String(message?.summary||`${message?.digestDate||''} 共 ${(message?.lines||[]).length} 节课`).trim();
+  const lines=(message?.lines||[]).map((line,index)=>`${index+1}. ${line}`);
+  return [`【FlowTennis 明日排课提醒】`,`${nameText}，${summary}`,...lines].filter(Boolean).join('\n');
+}
+async function readFeishuJsonResponse(response){
+  if(typeof response?.text==='function'){
+    const text=await response.text();
+    if(text){
+      try{return JSON.parse(text);}catch{return {raw:text};}
+    }
+  }
+  if(typeof response?.json==='function')return response.json();
+  return null;
+}
+function assertFeishuApiOk(response,data,action){
+  if(!response?.ok)throw new Error(`${action} HTTP ${response?.status||'unknown'}`);
+  if(data&&data.code!==undefined&&data.code!==0)throw new Error(`${action}失败：${data.msg||data.message||data.code}`);
+}
+async function fetchFeishuTenantAccessToken({appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch}={}){
+  const id=String(appId||'').trim();
+  const secret=String(appSecret||'').trim();
+  if(!id||!secret)throw new Error('缺少飞书机器人环境变量');
+  const now=Date.now();
+  const cached=feishuTenantAccessTokenCacheByApp.get(id);
+  if(cached&&cached.expiresAt>now)return cached.token;
+  const response=await fetchImpl('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({app_id:id,app_secret:secret})
+  });
+  const data=await readFeishuJsonResponse(response);
+  assertFeishuApiOk(response,data,'获取飞书 tenant_access_token');
+  const token=String(data?.tenant_access_token||data?.data?.tenant_access_token||'').trim();
+  if(!token)throw new Error('获取飞书 tenant_access_token 失败：返回为空');
+  const ttlMs=Math.max(60,Number(data?.expire||data?.data?.expire||7200)-120)*1000;
+  feishuTenantAccessTokenCacheByApp.set(id,{token,expiresAt:now+ttlMs});
+  return token;
+}
+function extractFeishuMobileOpenIdMap(data={}){
+  const map=new Map();
+  const rows=data?.data?.user_list||data?.user_list||[];
+  for(const row of rows||[]){
+    const mobile=normalizeFeishuMobile(row?.mobile||row?.phone||row?.mobile_visible||'');
+    const openId=String(row?.user_id||row?.open_id||row?.id||'').trim();
+    if(mobile&&openId)map.set(mobile,openId);
+  }
+  return map;
+}
+async function resolveFeishuOpenIdsByMobiles({mobiles=[],tenantAccessToken='',fetchImpl=fetch}={}){
+  const unique=[...new Set((mobiles||[]).map(normalizeFeishuMobile).filter(Boolean))];
+  if(!unique.length)return new Map();
+  const response=await fetchImpl('https://open.feishu.cn/open-apis/contact/v3/users/batch_get_id?user_id_type=open_id',{
+    method:'POST',
+    headers:{'content-type':'application/json',authorization:`Bearer ${tenantAccessToken}`},
+    body:JSON.stringify({mobiles:unique,include_resigned:false})
+  });
+  const data=await readFeishuJsonResponse(response);
+  assertFeishuApiOk(response,data,'飞书手机号换 open_id');
+  return extractFeishuMobileOpenIdMap(data);
+}
+async function sendFeishuBotTextMessage({tenantAccessToken='',openId='',text='',fetchImpl=fetch}={}){
+  const response=await fetchImpl('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id',{
+    method:'POST',
+    headers:{'content-type':'application/json',authorization:`Bearer ${tenantAccessToken}`},
+    body:JSON.stringify({receive_id:openId,msg_type:'text',content:JSON.stringify({text:String(text||'')})})
+  });
+  const data=await readFeishuJsonResponse(response);
+  assertFeishuApiOk(response,data,'飞书私发消息');
+  return data;
 }
 async function fetchOfficialAccountAccessToken(){
   const mode=resolveOfficialAccountSendMode({
@@ -4048,6 +4152,48 @@ async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=n
       result.items.push({coachId:item.coachId,sent:false,error:err.message});
     }
   }
+  return result;
+}
+async function sendFeishuCoachDailyDigests({now=new Date(),rows=null,users=null,coaches=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=FEISHU_COACH_BOT_APP_ID,appSecret=FEISHU_COACH_BOT_APP_SECRET,fetchImpl=fetch}={}){
+  const [resolvedRows,resolvedUsers,resolvedCoaches]=await Promise.all([rows||loadRows(),users||loadUsers(),coaches||loadCoaches()]);
+  const candidates=collectCoachDailyDigestCandidates(resolvedRows,now,{sentDateField:'feishuCoachDailyDigestSentDate'});
+  const result={success:true,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
+  if(!String(appId||'').trim()||!String(appSecret||'').trim()){
+    return {...result,success:true,skipped:candidates.length,reason:'missing_feishu_credentials',items:candidates.map(item=>({coachId:item.coachId,skipped:true,reason:'missing_feishu_credentials'}))};
+  }
+  const recipients=candidates.map(item=>({item,recipient:findFeishuCoachDigestRecipient(item,{users:resolvedUsers,coaches:resolvedCoaches})}));
+  const mobiles=recipients.filter(row=>!row.recipient.openId&&row.recipient.mobile).map(row=>row.recipient.mobile);
+  let tenantAccessToken='';
+  let openIdsByMobile=new Map();
+  if(recipients.some(row=>row.recipient.openId||row.recipient.mobile)){
+    tenantAccessToken=await fetchFeishuTenantAccessToken({appId,appSecret,fetchImpl});
+    openIdsByMobile=await resolveFeishuOpenIdsByMobiles({mobiles,tenantAccessToken,fetchImpl});
+  }
+  for(const row of recipients){
+    const item=row.item;
+    const recipient=row.recipient;
+    const openId=recipient.openId||openIdsByMobile.get(recipient.mobile)||'';
+    if(!openId){
+      result.skipped++;
+      result.items.push({coachId:item.coachId,coachName:item.coachName,skipped:true,reason:recipient.mobile?'missing_feishu_open_id':'missing_coach_mobile'});
+      continue;
+    }
+    try{
+      const digestMessage=buildCoachDailyDigestMessage(item);
+      await sendFeishuBotTextMessage({tenantAccessToken,openId,text:buildFeishuCoachDailyDigestText({...digestMessage,coachName:item.coachName,digestDate:item.digestDate}),fetchImpl});
+      await Promise.all((item.scheduleIds||[]).map(scheduleId=>putSchedule(scheduleId,{
+        ...(((resolvedRows||[]).find(schedule=>String(schedule.id||'')===String(scheduleId)))||{}),
+        feishuCoachDailyDigestSentDate:item.digestDate,
+        feishuCoachDailyDigestSentAt:new Date(now).toISOString()
+      })));
+      result.sent++;
+      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:true,lessonCount:item.lessonCount});
+    }catch(err){
+      result.failed++;
+      result.items.push({coachId:item.coachId,coachName:item.coachName,sent:false,error:err.message});
+    }
+  }
+  result.success=result.failed===0;
   return result;
 }
 async function sendFeishuDailyScheduleReport({now=new Date(),webhook=FEISHU_DAILY_REPORT_WEBHOOK}={}){
@@ -8908,6 +9054,17 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuDailyScheduleReport());
     }
+    if(path==='/cron/feishu-coach-daily-digests'&&method==='GET'){
+      const ua=String(req.headers['user-agent']||'');
+      if(process.env.CRON_SECRET){
+        const auth=String(req.headers.authorization||'');
+        if(auth!==`Bearer ${process.env.CRON_SECRET}`)return sendJson(res,{error:'无权限'},403);
+      }else if(!/vercel-cron/i.test(ua)){
+        return sendJson(res,{error:'无权限'},403);
+      }
+      await init();
+      return sendJson(res,await sendFeishuCoachDailyDigests());
+    }
     if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await loadLoginUser(username);if(user?.__loginTimeout)return sendJson(res,{error:LOGIN_STORAGE_TIMEOUT_ERROR},503);if(!user)return sendJson(res,{error:'账号或密码错误'},401);const passwordVerified=await verifyLoginPassword(username,password,user.password);if(passwordVerified?.invalidAccount)return sendJson(res,{error:LOGIN_INVALID_ACCOUNT_ERROR},500);if(!passwordVerified)return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
     if(path==='/auth/wechat-login'&&method==='POST'){
       const code=String(body.code||'').trim();
@@ -10537,6 +10694,11 @@ module.exports._test={
   buildStudentCourseReminderMessage,
   collectCoachDailyDigestCandidates,
   buildCoachDailyDigestMessage,
+  buildFeishuCoachDailyDigestText,
+  findFeishuCoachDigestRecipient,
+  fetchFeishuTenantAccessToken,
+  resolveFeishuOpenIdsByMobiles,
+  sendFeishuBotTextMessage,
   buildOfficialAccountDigestTemplatePayload,
   resolveOfficialAccountSendMode,
   extractOfficialAccountSubscribeStatus,
@@ -10547,6 +10709,7 @@ module.exports._test={
   sendOfficialAccountStudentCourseReminders,
   sendOfficialAccountReminderJobs,
   sendOfficialAccountDailyDigests,
+  sendFeishuCoachDailyDigests,
   sendFeishuDailyScheduleReport,
   normalizeVenue,
   rangesOverlap,

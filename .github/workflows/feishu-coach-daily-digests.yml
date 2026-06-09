@@ -1,0 +1,28 @@
+name: Feishu Coach Daily Digests
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-feishu-coach-digests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Shanghai
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      TARGET_URL: https://www.flowtennis.cn/api/cron/feishu-coach-daily-digests
+
+    steps:
+      - name: Trigger feishu coach digest endpoint
+        shell: bash
+        run: |
+          curl_args=(-fsS -X GET "$TARGET_URL" -H "User-Agent: vercel-cron")
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl_args+=(-H "Authorization: Bearer ${CRON_SECRET}")
+          fi
+          curl "${curl_args[@]}"

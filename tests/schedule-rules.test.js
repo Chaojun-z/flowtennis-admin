@@ -34,6 +34,9 @@ assert.ok(rules.normalizeOfficialAccountQueryChoice, 'api._test should expose of
 assert.ok(rules.buildOfficialAccountScheduleQueryReply, 'api._test should expose official account schedule reply builder');
 assert.ok(rules.collectCoachDailyDigestCandidates, 'api._test should expose coach daily digest collector');
 assert.ok(rules.buildCoachDailyDigestMessage, 'api._test should expose coach daily digest message builder');
+assert.ok(rules.buildFeishuCoachDailyDigestText, 'api._test should expose feishu coach digest text builder');
+assert.ok(rules.findFeishuCoachDigestRecipient, 'api._test should expose feishu coach recipient finder');
+assert.ok(rules.sendFeishuCoachDailyDigests, 'api._test should expose feishu coach digest sender');
 assert.ok(rules.resolveOfficialAccountSendMode, 'api._test should expose official account send mode helper');
 assert.ok(rules.buildWechatSignature, 'api._test should expose wechat signature helper');
 assert.ok(rules.decryptWechatOfficialAccountMessage, 'api._test should expose official account decrypt helper');
@@ -1084,6 +1087,34 @@ assert.strictEqual(
   'official account digest phrase field should not contain coach names'
 );
 
+assert.deepStrictEqual(
+  rules.findFeishuCoachDigestRecipient(
+    { coachId: 'coach-chaojun', coachName: '朝珺' },
+    {
+      users: [
+        { id: 'u1', role: 'editor', coachId: 'coach-chaojun', coachName: '朝珺', phone: '13800138000' }
+      ],
+      coaches: []
+    }
+  ),
+  { coachId: 'coach-chaojun', coachName: '朝珺', openId: '', mobile: '13800138000' },
+  'feishu digest recipient should resolve coach mobile from bound backend user'
+);
+
+assert.deepStrictEqual(
+  rules.buildFeishuCoachDailyDigestText({
+    coachName: '朝珺',
+    digestDate: '2026-05-16',
+    summary: '2026-05-16 共 2 节课',
+    lines: [
+      '09:00-10:00 私教课｜小鹿｜顺义马坡 1号场',
+      '14:00-15:00 双人课｜Misha｜顺义马坡 2号场'
+    ]
+  }),
+  '【FlowTennis 明日排课提醒】\n朝珺教练，2026-05-16 共 2 节课\n1. 09:00-10:00 私教课｜小鹿｜顺义马坡 1号场\n2. 14:00-15:00 双人课｜Misha｜顺义马坡 2号场',
+  'feishu digest text should be concise and suitable for private messages'
+);
+
 assert.strictEqual(
   rules.resolveOfficialAccountSendMode({
     appId: 'wx-appid',
@@ -1172,6 +1203,51 @@ assert.strictEqual(
       { id:'coach-chaojun', name:'朝珺', phone:'13800138000', status:'active' }
     ]);
     assert.strictEqual(result.user?.id,'coach_1','official account binding should find the coach account through the linked coach profile phone');
+  }
+
+  {
+    const rows=[
+      { id: 'f-dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+      { id: 'f-dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'mabao', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' }
+    ];
+    const users=[
+      { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', phone: '13800138000' }
+    ];
+    const calls=[];
+    const fetchImpl=async (url,options={})=>{
+      calls.push({url:String(url),options});
+      if(String(url).includes('/auth/v3/tenant_access_token/internal')){
+        return {ok:true,json:async()=>({code:0,tenant_access_token:'tenant-token',expire:7200}),text:async()=>''};
+      }
+      if(String(url).includes('/contact/v3/users/batch_get_id')){
+        return {ok:true,json:async()=>({code:0,data:{user_list:[{mobile:'13800138000',user_id:'ou_coach'}]}}),text:async()=>''};
+      }
+      if(String(url).includes('/im/v1/messages')){
+        return {ok:true,json:async()=>({code:0,data:{message_id:'om_1'}}),text:async()=>''};
+      }
+      throw new Error(`unexpected url ${url}`);
+    };
+    const writes=[];
+    const result=await rules.sendFeishuCoachDailyDigests({
+      now: new Date('2026-05-19T20:02:00+08:00'),
+      rows,
+      users,
+      coaches: [],
+      appId: 'cli_app',
+      appSecret: 'secret',
+      fetchImpl,
+      putSchedule: async (id,row) => writes.push([id,row])
+    });
+
+    assert.strictEqual(result.sent, 1, 'feishu coach daily digest should private-message once per coach');
+    assert.match(calls[1].url, /user_id_type=open_id/, 'feishu mobile lookup should request open_id values');
+    assert.deepStrictEqual(JSON.parse(calls[1].options.body), { mobiles: ['13800138000'], include_resigned: false }, 'feishu mobile lookup should use bound coach phones');
+    assert.strictEqual(JSON.parse(calls[2].options.body).receive_id, 'ou_coach', 'feishu private message should target resolved coach open_id');
+    assert.deepStrictEqual(
+      writes.map(item => [item[0], item[1].feishuCoachDailyDigestSentDate]).sort(),
+      [['f-dig-1', '2026-05-20'], ['f-dig-2', '2026-05-20']],
+      'feishu coach daily digest should mark every schedule in the coach group'
+    );
   }
 
   {
