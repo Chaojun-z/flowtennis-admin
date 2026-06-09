@@ -3405,7 +3405,55 @@ function collectCourseReminderCandidates(rows=[],now=new Date()){
       return {schedule,previous,gap,crossCampus};
     });
 }
-function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCampus=false}){
+function courseReminderStudentValue(schedule={},previousFeedbackSummary=''){
+  const studentName=String(schedule?.studentName||'学员').trim()||'学员';
+  const summary=String(previousFeedbackSummary||'').trim();
+  return summary?`${studentName}｜${summary}`:studentName;
+}
+function courseReminderStudentNames(schedule={}){
+  return String(schedule?.studentName||'')
+    .split(/[、,，|/]/)
+    .map(item=>item.trim())
+    .filter(Boolean);
+}
+function courseReminderSchedulesShareStudent(a={},b={}){
+  const idsA=studentIdsForReminderSchedule(a);
+  const idsB=studentIdsForReminderSchedule(b);
+  if(idsA.length&&idsB.length)return idsA.some(id=>idsB.includes(id));
+  const namesA=courseReminderStudentNames(a);
+  const namesB=courseReminderStudentNames(b);
+  return !!(namesA.length&&namesB.length&&namesA.some(name=>namesB.includes(name)));
+}
+function feedbackTextPart(value){
+  return String(value||'').replace(/\s+/g,' ').trim();
+}
+function summarizePreviousCourseFeedback(feedback={}){
+  const current=feedbackTextPart(feedback?.knowledgePoint||feedback?.practicedToday||feedback?.template?.focus);
+  const next=feedbackTextPart(feedback?.nextTraining||feedback?.nextAdvice);
+  const parts=[];
+  if(current)parts.push(`上节：${current}`);
+  if(next)parts.push(`下节${next}`);
+  return parts.join('，');
+}
+function buildPreviousCourseFeedbackSummary({currentSchedule={},rows=[],feedbacks=[]}={}){
+  const currentStart=officialAccountScheduleMs(currentSchedule?.startTime);
+  if(!Number.isFinite(currentStart))return '';
+  const previous=(rows||[])
+    .filter(schedule=>String(schedule?.id||'')!==String(currentSchedule?.id||''))
+    .filter(schedule=>courseReminderSchedulesShareStudent(schedule,currentSchedule))
+    .filter(schedule=>effectiveScheduleStatus(schedule,new Date(currentStart))==='已结束')
+    .filter(schedule=>{
+      const end=officialAccountScheduleMs(schedule?.endTime||schedule?.startTime);
+      return Number.isFinite(end)&&end<=currentStart;
+    })
+    .sort((a,b)=>officialAccountScheduleMs(b.endTime||b.startTime)-officialAccountScheduleMs(a.endTime||a.startTime))[0]||null;
+  if(!previous)return '';
+  const feedback=(feedbacks||[])
+    .filter(item=>String(item?.scheduleId||'')===String(previous.id||''))
+    .sort((a,b)=>String(b?.updatedAt||b?.createdAt||'').localeCompare(String(a?.updatedAt||a?.createdAt||'')))[0]||null;
+  return feedback?summarizePreviousCourseFeedback(feedback):'';
+}
+function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCampus=false,previousFeedbackSummary=''}){
   const scheduleId=encodeURIComponent(String(schedule?.id||''));
   return {
     touser:openid,
@@ -3416,12 +3464,12 @@ function buildCourseReminderSubscribeMessage({templateId,openid,schedule,crossCa
       thing4:{value:truncateWechatValue(scheduleNotifyLocation(schedule))},
       const7:{value:truncateWechatValue(schedule?.courseType||'私教课')},
       thing2:{value:truncateWechatValue(schedule?.coach||'教练')},
-      thing6:{value:truncateWechatValue(schedule?.studentName||'学员')}
+      thing6:{value:truncateWechatValue(courseReminderStudentValue(schedule,previousFeedbackSummary))}
     }
   };
 }
-function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,appId=WECHAT_MINIPROGRAM_APPID}){
-  const mini=buildCourseReminderSubscribeMessage({templateId,openid,schedule});
+function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,appId=WECHAT_MINIPROGRAM_APPID,previousFeedbackSummary=''}){
+  const mini=buildCourseReminderSubscribeMessage({templateId,openid,schedule,previousFeedbackSummary});
   return {
     touser:openid,
     template_id:templateId,
@@ -3820,10 +3868,11 @@ function verifyOfficialAccountCallbackRequest(query){
   if(String(signature||'').trim()!==expected)throw new Error('服务号签名校验失败');
   return echostr;
 }
-async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,users=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_REMINDER_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
-  const [nextRows,nextUsers]=await Promise.all([rows||loadRows(),users||loadUsers()]);
+async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,users=null,feedbacks=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadFeedbacks=()=>getCachedScan(T_FEEDBACKS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_REMINDER_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+  const [nextRows,nextUsers,nextFeedbacks]=await Promise.all([rows||loadRows(),users||loadUsers(),feedbacks||loadFeedbacks()]);
   const resolvedRows=rows||nextRows;
   const resolvedUsers=users||nextUsers;
+  const resolvedFeedbacks=feedbacks||nextFeedbacks;
   const candidates=collectCourseReminderCandidates(resolvedRows,now);
   const mode=resolveOfficialAccountSendMode({
     appId,
@@ -3845,7 +3894,8 @@ async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,user
       continue;
     }
     try{
-      const message=buildOfficialAccountCourseReminderMessage({templateId,openid:recipient.officialAccountOpenId,schedule:item.schedule,appId});
+      const previousFeedbackSummary=buildPreviousCourseFeedbackSummary({currentSchedule:item.schedule,rows:resolvedRows,feedbacks:resolvedFeedbacks});
+      const message=buildOfficialAccountCourseReminderMessage({templateId,openid:recipient.officialAccountOpenId,schedule:item.schedule,appId,previousFeedbackSummary});
       await sendTemplate(message);
       await putSchedule(item.schedule.id,{...item.schedule,courseReminderSentAt:new Date(now).toISOString(),courseReminderCrossCampus:item.crossCampus?'true':'false'});
       result.sent++;
@@ -10469,6 +10519,7 @@ module.exports._test={
   buildScheduleSubscribeMessage,
   buildScheduleNotificationUpdate,
   collectCourseReminderCandidates,
+  buildPreviousCourseFeedbackSummary,
   buildCourseReminderSubscribeMessage,
   buildOfficialAccountCourseReminderMessage,
   collectCoachFeedbackReminderCandidates,

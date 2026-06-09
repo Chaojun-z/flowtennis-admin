@@ -13,6 +13,7 @@ assert.ok(rules.findWechatScheduleRecipient, 'api._test should expose schedule r
 assert.ok(rules.buildScheduleSubscribeMessage, 'api._test should expose schedule subscribe message builder');
 assert.ok(rules.collectCourseReminderCandidates, 'api._test should expose course reminder candidate helper');
 assert.ok(rules.buildCourseReminderSubscribeMessage, 'api._test should expose course reminder message helper');
+assert.ok(rules.buildPreviousCourseFeedbackSummary, 'api._test should expose previous course feedback summary helper');
 assert.ok(rules.collectCoachFeedbackReminderCandidates, 'api._test should expose coach feedback reminder candidate helper');
 assert.ok(rules.buildOfficialAccountCoachFeedbackReminderMessage, 'api._test should expose coach feedback reminder message helper');
 assert.ok(rules.sendOfficialAccountCoachFeedbackReminders, 'api._test should expose coach feedback reminder sender');
@@ -762,6 +763,49 @@ assert.deepStrictEqual(
   'official account course reminder should jump to the coach mini program'
 );
 
+assert.strictEqual(
+  rules.buildPreviousCourseFeedbackSummary({
+    currentSchedule: { id: 'current', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-04-20 12:00', endTime: '2026-04-20 13:00', status: '已排课' },
+    rows: [
+      { id: 'older', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-04-10 10:00', endTime: '2026-04-10 11:00', status: '已排课' },
+      { id: 'previous', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-04-18 10:00', endTime: '2026-04-18 11:00', status: '已排课' },
+      { id: 'other-student', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-04-19 10:00', endTime: '2026-04-19 11:00', status: '已排课' }
+    ],
+    feedbacks: [
+      { id: 'fb-older', scheduleId: 'older', knowledgePoint: '发球', nextTraining: '步伐' },
+      { id: 'fb-previous', scheduleId: 'previous', knowledgePoint: '正手稳定', nextTraining: '练脚步' },
+      { id: 'fb-other', scheduleId: 'other-student', knowledgePoint: '截击', nextTraining: '上网' }
+    ]
+  }),
+  '上节：正手稳定，下节练脚步',
+  'course reminder should summarize the latest previous feedback for the same student'
+);
+
+assert.deepStrictEqual(
+  rules.buildOfficialAccountCourseReminderMessage({
+    templateId: 'official-reminder-tpl',
+    openid: 'oa-openid-1',
+    schedule: reminderRows.find(row => row.id === 'due-cross'),
+    previousFeedbackSummary: '上节：正手稳定，下节练脚步'
+  }),
+  {
+    touser: 'oa-openid-1',
+    template_id: 'official-reminder-tpl',
+    miniprogram: {
+      appid: 'wx7acb7603ee803923',
+      pagepath: 'pages/detail/detail?scheduleId=due-cross'
+    },
+    data: {
+      time3: { value: '2026年4月20日 12:00' },
+      thing4: { value: 'shunyi 2号场' },
+      const7: { value: '私教课' },
+      thing2: { value: '朝珺' },
+      thing6: { value: '小鹿｜上节：正手稳定，下节练脚步' }
+    }
+  },
+  'official account course reminder should append previous feedback to the student field and keep current detail jump'
+);
+
 const coachFeedbackReminderRows = [
   { id: 'fb-rem-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-01 10:00', endTime: '2026-05-01 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
   { id: 'fb-rem-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-03 10:00', endTime: '2026-05-03 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
@@ -1202,7 +1246,8 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'due-1', coach: '朝珺', coachId: 'coach-chaojun', startTime: '2026-05-19 22:02', endTime: '2026-05-19 23:00', campus: 'mabao', venue: '1号场', status: '已排课' }
+      { id: 'previous-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'mabao', venue: '1号场', status: '已排课' },
+      { id: 'due-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 22:02', endTime: '2026-05-19 23:00', campus: 'mabao', venue: '1号场', status: '已排课' }
     ];
     const users=[
       { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-123' }
@@ -1214,6 +1259,7 @@ assert.strictEqual(
       now: reminderNow,
       rows,
       users,
+      feedbacks: [{ id: 'feedback-previous', scheduleId: 'previous-1', knowledgePoint: '正手稳定', nextTraining: '练脚步' }],
       appId: 'wx-appid',
       secret: 'secret',
       templateId: 'tpl',
@@ -1225,6 +1271,7 @@ assert.strictEqual(
     assert.strictEqual(result.sent, 1, 'official account course reminder should send once');
     assert.strictEqual(sent.length, 1, 'official account course reminder should build one outgoing message');
     assert.deepStrictEqual(sent[0].miniprogram, { appid: 'wx-appid', pagepath: 'pages/detail/detail?scheduleId=due-1' }, 'official account course reminder should use mini program jump');
+    assert.strictEqual(sent[0].data.thing6.value, '小鹿｜上节：正手稳定，下节练脚步', 'official account course reminder should append previous feedback to the student field');
     assert.strictEqual(writes[0][0], 'due-1', 'official account course reminder should write back to the same schedule');
     assert.strictEqual(writes[0][1].courseReminderSentAt, reminderNow.toISOString(), 'official account course reminder should mark the sent time');
   }
