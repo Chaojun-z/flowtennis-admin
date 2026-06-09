@@ -8777,12 +8777,14 @@ module.exports = async (req, res) => {
       if(!id)return sendJson(res,{error:'缺少用户ID'},400);
       const u=await get(T_USERS,id);
       if(!u)return sendJson(res,{error:'用户不存在'},404);
-      let updates={...u,coachId:coachId||'',status:status||u.status||'active'};
+      const nextRole=String(body.role||u.role||'editor').trim()==='admin'?'admin':'editor';
+      let updates={...u,role:nextRole,coachId:nextRole==='editor'?(coachId||''):'',status:status||u.status||'active'};
       if(body.name)updates.name=body.name;
       if(Object.prototype.hasOwnProperty.call(body,'phone'))updates.phone=assertPhone(body.phone||'');
-      updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');
+      updates.coachName=nextRole==='editor'?(coachName||updates.name||u.name):'';
       updates={...updates,...buildStoredPermissionFields({
         ...updates,
+        role:nextRole,
         dataScope:Object.prototype.hasOwnProperty.call(body,'dataScope')?body.dataScope:updates.dataScope,
         campusIds:Object.prototype.hasOwnProperty.call(body,'campusIds')?body.campusIds:updates.campusIds,
         featurePermissions:Object.prototype.hasOwnProperty.call(body,'featurePermissions')?body.featurePermissions:updates.featurePermissions,

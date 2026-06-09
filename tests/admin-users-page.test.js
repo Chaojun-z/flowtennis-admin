@@ -55,7 +55,7 @@ assert.match(fnBody('openAdminUserModal'), /au_phone/, 'account modal should inc
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
 assert.match(fnBody('openAdminUserModal'), /au_dataScope/, 'account modal should include data scope field');
 assert.match(fnBody('openAdminUserModal'), /auCampusScopeWrap/, 'account modal should include campus scope block');
-assert.match(fnBody('openAdminUserModal'), /<input type="hidden" id="au_role" value="\$\{rv\(user,'role','editor'\)\}">/, 'account edit modal should keep the real role value for coach binding visibility');
+assert.match(fnBody('openAdminUserModal'), /const roleControl=renderCourtDropdownHtml\('au_role','角色',roleOptions,rv\(user,'role','editor'\),true,'toggleAdminUserPermissionFields'\)/, 'account edit modal should allow changing role between coach and admin');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /au_officialAccountOpenId/, 'account modal should not expose manual official account openid input');
 assert.match(fnBody('openAdminUserModal'), /请在服务号内发送 #绑定 手机号 完成绑定/, 'account modal should explain the real binding flow');
 {
@@ -70,6 +70,7 @@ assert.match(fnBody('openAdminUserModal'), /账号创建后用于登录。教练
 assert.match(fnBody('openAdminUserModal'), /resetAdminUserPassword/, 'account edit modal should expose password reset');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /请用这里的账号ID登录，不是姓名/, 'account create modal should not force account-id-only wording');
 assert.match(fnBody('saveAdminUser'), /phone/, 'account save should submit phone');
+assert.match(fnBody('saveAdminUser'), /role:roleValue/, 'account edit should submit the selected role');
 assert.match(fnBody('saveAdminUser'), /dataScope/, 'account save should submit data scope');
 assert.match(fnBody('saveAdminUser'), /campusIds/, 'account save should submit campus ids');
 assert.doesNotMatch(fnBody('saveAdminUser'), /officialAccountOpenId/, 'account save should not submit manual official account openid');
@@ -84,6 +85,7 @@ assert.match(fnBody('unbindAdminUserWechat'), /clearWechat/, 'wechat unbind shou
 assert.match(fnBody('unbindAdminUserOfficialAccount'), /clearOfficialAccount/, 'official account unbind should send clearOfficialAccount flag');
 assert.match(fnBody('resetAdminUserPassword'), /\/admin\/reset-user-password/, 'password reset should call the admin reset password api');
 assert.match(source, /path==='\/admin\/reset-user-password'&&method==='POST'/, 'api should provide admin password reset endpoint');
+assert.match(source, /const nextRole=String\(body\.role\|\|u\.role\|\|'editor'\)/, 'api update-user should accept role changes');
 assert.doesNotMatch(source, /function defaultLandingPageForUser/, 'admin login flow should no longer force a landing page before shell bootstrap');
 
 console.log('admin users page tests passed');

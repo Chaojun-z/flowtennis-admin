@@ -229,7 +229,7 @@ function openAdminUserModal(id){
   const roleOptions=[{value:'editor',label:'教练账号'},{value:'admin',label:'管理员'}];
   const coachOptions=[{value:'',label:'暂不绑定'}].concat(coaches.map(c=>({value:c.id,label:c.name})));
   const dataScopeOptions=[{value:'all',label:'全部校区'},{value:'campus',label:'指定校区'},{value:'coach',label:'仅本人教练'}];
-  const roleControl=id?`<input type="hidden" id="au_role" value="${rv(user,'role','editor')}"><div class="admin-user-readonly-line">${adminUserRoleText(user?.role)}</div>`:renderCourtDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
+  const roleControl=renderCourtDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
   const passwordRow=id?'':`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">初始密码 *</label><input class="finput tms-form-control" id="au_password" type="password" placeholder="请填写初始密码"></div></div>`;
   const accountHint=id?'<div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">可修改姓名、手机号、绑定教练和约球权限；需要时可单独重置密码。</div>':'<div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。</div>';
   const statusRow=id?`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label><input class="finput tms-form-control" id="au_status" value="${adminUserStatusText(user?.status)}" readonly></div></div>`:'';
@@ -273,7 +273,7 @@ async function saveAdminUser(){
   const id=document.getElementById('au_id').value.trim();
   const name=document.getElementById('au_name').value.trim();
   const phone=document.getElementById('au_phone')?.value.trim()||'';
-  const roleValue=editId?(adminUsers.find(x=>x.id===editId)?.role||'editor'):(document.getElementById('au_role')?.value||'editor');
+  const roleValue=document.getElementById('au_role')?.value||'editor';
   const coachId=document.getElementById('au_coachId')?.value||'';
   const coach=coaches.find(c=>c.id===coachId);
   const rawDataScope=document.getElementById('au_dataScope')?.value||'all';
@@ -283,15 +283,15 @@ async function saveAdminUser(){
   if(!editId){
     const password=document.getElementById('au_password').value.trim();
     if(!password){toast('请填写初始密码','warn');return;}
-    if(roleValue==='editor'&&!coachId){toast('教练账号请先绑定教练','warn');return;}
   }
+  if(roleValue==='editor'&&!coachId){toast('教练账号请先绑定教练','warn');return;}
   if(dataScope==='campus'&&!campusIds.length){toast('请选择可看校区','warn');return;}
   const btn=document.getElementById('adminUserSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   try{
     const matchPermissions=collectAdminUserMatchPermissions();
     if(editId){
       const current=adminUsers.find(x=>x.id===editId)||{};
-      await apiCall('POST','/admin/update-user',{id,name,phone,coachId:roleValue==='editor'?coachId:'',coachName:roleValue==='editor'?(coach?.name||''):'',status:current.status||'active',dataScope,campusIds,matchPermissions});
+      await apiCall('POST','/admin/update-user',{id,name,phone,role:roleValue,coachId:roleValue==='editor'?coachId:'',coachName:roleValue==='editor'?(coach?.name||''):'',status:current.status||'active',dataScope,campusIds,matchPermissions});
     }else{
       await apiCall('POST','/admin/create-user',{id,name,phone,password:document.getElementById('au_password').value.trim(),role:roleValue,coachId:roleValue==='editor'?coachId:'',coachName:roleValue==='editor'?(coach?.name||''):'',dataScope,campusIds,matchPermissions});
     }
