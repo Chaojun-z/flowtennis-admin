@@ -165,7 +165,12 @@ assert.match(scheduleJs, /feedbackContextParts/, 'feedback course meta should ex
 assert.match(scheduleJs, /openFeedbackById[\s\S]*selectedClassDetail:\s*buildDetailData/, 'workbench feedback button should reuse the same feedback sheet detail data as detail entry');
 assert.match(scheduleJs, /feedbackSheetScrollTop/, 'feedback sheet should track a scroll-top value for entry reset');
 assert.match(scheduleJs, /openFeedback\(\)[\s\S]*feedbackSheetScrollTop:\s*0/, 'detail-to-feedback entry should start the feedback sheet from the top');
-assert.match(scheduleJs, /openFeedbackById\(event\)[\s\S]*feedbackSheetScrollTop:\s*0/, 'workbench feedback entry should start the feedback sheet from the top');
+assert.match(scheduleJs, /openFeedbackByScheduleId\(id\)[\s\S]*feedbackSheetScrollTop:\s*0/, 'workbench feedback entry should start the feedback sheet from the top');
+assert.match(scheduleJs, /onLoad\(options = \{\}\)/, 'schedule page should read route params when opened from reminder links');
+assert.match(scheduleJs, /pendingRouteScheduleId:/, 'schedule page should keep the pending reminder schedule id');
+assert.match(scheduleJs, /pendingRouteAction:/, 'schedule page should keep the pending reminder action');
+assert.match(scheduleJs, /tryOpenPendingRouteAction\(\)/, 'schedule page should expose a pending reminder route handler');
+assert.match(scheduleJs, /action === 'feedback'[\s\S]*openFeedbackByScheduleId/, 'feedback reminder route should auto-open the matching feedback sheet');
 assert.match(scheduleJs, /timetableCourseTag[\s\S]*text:\s*'体验'[\s\S]*text:\s*'小班'[\s\S]*text:\s*'陪打'[\s\S]*text:\s*'私教'/, 'timetable course cards should use short course type labels');
 assert.match(scheduleJs, /function scheduleStudentRemarkText[\s\S]*`\$\{name\}备注：\$\{remark\}`/, 'small group detail student remarks should include the student name before each remark');
 assert.match(scheduleJs, /knowledgePoint,\s*nextTraining/, 'feedback save should include practice status and next practice fields');
@@ -320,7 +325,8 @@ assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no lon
 const apiServerJs = readText('api/index.js');
 assert.match(apiServerJs, /\/auth\/wechat-login/, 'API should support mini program login by bound openid');
 assert.match(apiServerJs, /findWechatUserByOpenId/, 'API should find the bound coach account by openid');
-assert.match(apiServerJs, /pages\/detail\/detail/, 'subscribe messages should deep link to native course detail');
+assert.match(apiServerJs, /pages\/detail\/detail/, 'course reminders should still deep link to native course detail');
+assert.match(apiServerJs, /pages\/schedule\/schedule\?scheduleId=.*action=feedback/, 'feedback reminders should deep link to the native feedback entry');
 assert.match(apiServerJs, /courseContent:/, 'workbench API should decorate class data with a courseContent field for the mini program');
 assert.match(apiServerJs, /scheduleTime:/, 'workbench API should decorate class data with a scheduleTime field for the mini program');
 assert.match(apiServerJs, /remark:/, 'workbench API should decorate class data with a remark field for the mini program');

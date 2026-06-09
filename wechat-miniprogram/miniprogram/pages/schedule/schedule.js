@@ -1704,6 +1704,8 @@ Page({
     showShiftSchedule: false,
     showCancelSchedule: false,
     showCoachMenu: false,
+    pendingRouteScheduleId: '',
+    pendingRouteAction: '',
     detailSheetClass: '',
     feedbackSheetClass: '',
     proposalSheetClass: '',
@@ -1744,7 +1746,11 @@ Page({
     posterPreviewImage: ''
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    this.setData({
+      pendingRouteScheduleId: String(options.scheduleId || '').trim(),
+      pendingRouteAction: String(options.action || '').trim()
+    });
     this.load();
   },
 
@@ -1796,12 +1802,24 @@ Page({
         hasLoaded: true
       });
       this.renderWeek();
+      this.tryOpenPendingRouteAction();
     } catch (err) {
       if (handleCoachAuthError(err)) return;
       this.setData({ loading: false, hasLoaded: true, error: err.message || '请先确认账号已绑定微信后重试' });
     } finally {
       if (options.stopPullDown) wx.stopPullDownRefresh();
     }
+  },
+
+  tryOpenPendingRouteAction() {
+    const scheduleId = String(this.data.pendingRouteScheduleId || '').trim();
+    const action = String(this.data.pendingRouteAction || '').trim();
+    if (!scheduleId || !action) return;
+    this.setData({
+      pendingRouteScheduleId: '',
+      pendingRouteAction: ''
+    });
+    if (action === 'feedback') this.openFeedbackByScheduleId(scheduleId);
   },
 
   renderWeek() {
@@ -2143,37 +2161,40 @@ Page({
     });
   },
 
-  openFeedbackById(event) {
-    const id = event.currentTarget.dataset.id;
+  openFeedbackByScheduleId(id) {
     if (!id) return;
     const selectedClass = this.data.schedule.find(item => String(item.id) === String(id));
-    if (selectedClass) {
-      const currentFeedback = findFeedbackByScheduleId(this.data.feedbacks, selectedClass.id);
-      const feedbackForm = feedbackFormFromRecord(currentFeedback);
-      this.setData({
-        selectedClass,
-        selectedClassDetail: buildDetailData(selectedClass, {
-          classes: this.data.classesRaw,
-          students: this.data.studentsRaw,
-          entitlements: this.data.entitlementsRaw,
-          entitlementLedger: this.data.entitlementLedgerRaw,
-          feedbacks: this.data.feedbacks,
-          coachProposals: this.data.coachProposals,
-          coachName: currentCoachName()
-        }),
-        showDetail: false,
-        showFeedback: true,
-        detailSheetClass: '',
-        feedbackSheetClass: 'sheet-show',
-        feedbackForm,
-        feedbackCounts: feedbackCountsOf(feedbackForm),
-        feedbackHasSaved: !!currentFeedback,
-        feedbackEditing: false,
-        feedbackFocusedField: '',
-        feedbackSheetScrollTop: 0,
-        feedbackContextParts: feedbackContextParts(selectedClass)
-      });
-    }
+    if (!selectedClass) return;
+    const currentFeedback = findFeedbackByScheduleId(this.data.feedbacks, selectedClass.id);
+    const feedbackForm = feedbackFormFromRecord(currentFeedback);
+    this.setData({
+      selectedClass,
+      selectedClassDetail: buildDetailData(selectedClass, {
+        classes: this.data.classesRaw,
+        students: this.data.studentsRaw,
+        entitlements: this.data.entitlementsRaw,
+        entitlementLedger: this.data.entitlementLedgerRaw,
+        feedbacks: this.data.feedbacks,
+        coachProposals: this.data.coachProposals,
+        coachName: currentCoachName()
+      }),
+      showDetail: false,
+      showFeedback: true,
+      detailSheetClass: '',
+      feedbackSheetClass: 'sheet-show',
+      feedbackForm,
+      feedbackCounts: feedbackCountsOf(feedbackForm),
+      feedbackHasSaved: !!currentFeedback,
+      feedbackEditing: false,
+      feedbackFocusedField: '',
+      feedbackSheetScrollTop: 0,
+      feedbackContextParts: feedbackContextParts(selectedClass)
+    });
+  },
+
+  openFeedbackById(event) {
+    const id = event.currentTarget.dataset.id;
+    this.openFeedbackByScheduleId(id);
   },
 
   onFeedbackFocus(event) {

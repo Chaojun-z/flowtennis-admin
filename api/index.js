@@ -3432,6 +3432,130 @@ function buildOfficialAccountCourseReminderMessage({templateId,openid,schedule,a
     data:mini.data
   };
 }
+function isCoachFeedbackReminderLessonNumber(value){
+  const lessonNumber=parseInt(value,10);
+  if(!Number.isFinite(lessonNumber)||lessonNumber<=0)return false;
+  const mod=lessonNumber%8;
+  return mod===1||mod===3||mod===5||mod===0;
+}
+function firstCoachFeedbackReminderLessonNumber(previousLessons=0,currentLessons=0){
+  const start=Math.floor(Number(previousLessons)||0)+1;
+  const end=Math.floor(Number(currentLessons)||0);
+  for(let lessonNumber=start;lessonNumber<=end;lessonNumber++){
+    if(isCoachFeedbackReminderLessonNumber(lessonNumber))return lessonNumber;
+  }
+  return null;
+}
+function buildCoachFeedbackReminderRelation(schedule={},entitlements=[],plans=[]){
+  const studentIds=parseArr(schedule?.studentIds).filter(Boolean);
+  const studentId=String(schedule?.studentId||studentIds[0]||'').trim();
+  const entitlementId=String(schedule?.entitlementId||'').trim();
+  if(entitlementId){
+    const entitlement=(entitlements||[]).find(row=>String(row?.id||'').trim()===entitlementId)||null;
+    return {
+      relationType:'entitlement',
+      relationKey:`entitlement:${entitlementId}`,
+      studentId,
+      totalLessons:parseLessonValue(entitlement?.totalLessons)
+    };
+  }
+  const classId=String(schedule?.classId||'').trim();
+  if(classId&&studentId){
+    const plan=(plans||[]).find(row=>String(row?.classId||'').trim()===classId&&String(row?.studentId||'').trim()===studentId)||null;
+    return {
+      relationType:'plan',
+      relationKey:`plan:${classId}:${studentId}`,
+      studentId,
+      totalLessons:parseLessonValue(plan?.totalLessons)
+    };
+  }
+  return null;
+}
+function collectCoachFeedbackReminderCandidates({rows=[],feedbacks=[],entitlements=[],plans=[],now=new Date()}={}){
+  const endedRows=(Array.isArray(rows)?rows:[])
+    .filter(schedule=>feedbackScopeForSchedule(schedule)==='student')
+    .filter(schedule=>effectiveScheduleStatus(schedule,now)==='已结束')
+    .filter(schedule=>parseLessonValue(schedule?.lessonCount,1)>0)
+    .map(schedule=>{
+      const relation=buildCoachFeedbackReminderRelation(schedule,entitlements,plans);
+      return relation?{schedule,relation}:null;
+    })
+    .filter(Boolean);
+  const grouped=new Map();
+  endedRows.forEach(item=>{
+    const key=item.relation.relationKey;
+    if(!key)return;
+    if(!grouped.has(key))grouped.set(key,[]);
+    grouped.get(key).push(item);
+  });
+  const candidates=[];
+  grouped.forEach(items=>{
+    const sorted=items.slice().sort((a,b)=>{
+      const timeDiff=officialAccountScheduleMs(a.schedule?.endTime||a.schedule?.startTime)-officialAccountScheduleMs(b.schedule?.endTime||b.schedule?.startTime);
+      if(timeDiff!==0)return timeDiff;
+      return String(a.schedule?.id||'').localeCompare(String(b.schedule?.id||''));
+    });
+    let completedLessons=0;
+    sorted.forEach(item=>{
+      const lessonCount=parseLessonValue(item.schedule?.lessonCount,1);
+      const previousLessons=completedLessons;
+      completedLessons+=lessonCount;
+      const triggerLessonNumber=firstCoachFeedbackReminderLessonNumber(previousLessons,completedLessons);
+      const totalLessons=parseLessonValue(item.relation?.totalLessons);
+      const isLastLesson=totalLessons>0&&previousLessons<totalLessons&&completedLessons>=totalLessons;
+      if(scheduleHasFeedbackRecord(item.schedule,feedbacks))return;
+      if(item.schedule?.coachFeedbackReminderSentAt)return;
+      if(!triggerLessonNumber&&!isLastLesson)return;
+      candidates.push({
+        schedule:item.schedule,
+        relationType:item.relation.relationType,
+        relationKey:item.relation.relationKey,
+        triggerLessonNumber,
+        isLastLesson,
+        previousCompletedLessonUnits:previousLessons,
+        completedLessonUnits:completedLessons,
+        totalLessons
+      });
+    });
+  });
+  return candidates.sort((a,b)=>{
+    const timeDiff=officialAccountScheduleMs(a.schedule?.endTime||a.schedule?.startTime)-officialAccountScheduleMs(b.schedule?.endTime||b.schedule?.startTime);
+    if(timeDiff!==0)return timeDiff;
+    return String(a.schedule?.id||'').localeCompare(String(b.schedule?.id||''));
+  });
+}
+function buildCoachFeedbackReminderLessonLabel(reminder={}){
+  const lessonNumber=reminder?.triggerLessonNumber;
+  const hasLessonNumber=Number.isFinite(Number(lessonNumber))&&Number(lessonNumber)>0;
+  if(hasLessonNumber){
+    const base=`第${formatStudentReminderLessonCount(lessonNumber)}次课`;
+    return reminder?.isLastLesson?`${base}/最后一节课`:base;
+  }
+  if(reminder?.isLastLesson)return '最后一节课';
+  return '课后评价';
+}
+function buildOfficialAccountCoachFeedbackReminderMessage({templateId,openid,schedule,reminder,appId=WECHAT_MINIPROGRAM_APPID}){
+  const scheduleId=encodeURIComponent(String(schedule?.id||''));
+  const pagepath=scheduleId
+    ? `pages/schedule/schedule?scheduleId=${scheduleId}&action=feedback`
+    : 'pages/schedule/schedule';
+  const mini=buildCourseReminderSubscribeMessage({templateId,openid,schedule});
+  return {
+    touser:openid,
+    template_id:templateId,
+    miniprogram:{
+      appid:String(appId||WECHAT_MINIPROGRAM_APPID),
+      pagepath
+    },
+    data:{
+      time3:mini.data.time3,
+      thing4:mini.data.thing4,
+      const7:{value:truncateWechatValue(buildCoachFeedbackReminderLessonLabel(reminder))},
+      thing2:{value:truncateWechatValue('请完成课后评价')},
+      thing6:{value:truncateWechatValue(schedule?.studentName||'学员')}
+    }
+  };
+}
 function buildStudentReminderBindToken(){
   return crypto.randomBytes(24).toString('hex');
 }
@@ -3733,6 +3857,63 @@ async function sendOfficialAccountCourseReminders({now=new Date(),rows=null,user
   }
   return result;
 }
+async function sendOfficialAccountCoachFeedbackReminders({now=new Date(),rows=null,users=null,feedbacks=null,plans=null,entitlements=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadFeedbacks=()=>getCachedScan(T_FEEDBACKS).catch(()=>[]),loadPlans=()=>getCachedScan(T_PLANS).catch(()=>[]),loadEntitlements=()=>getCachedScan(T_ENTITLEMENTS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_REMINDER_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+  const [nextRows,nextUsers,nextFeedbacks,nextPlans,nextEntitlements]=await Promise.all([
+    rows||loadRows(),
+    users||loadUsers(),
+    feedbacks||loadFeedbacks(),
+    plans||loadPlans(),
+    entitlements||loadEntitlements()
+  ]);
+  const resolvedRows=rows||nextRows;
+  const resolvedUsers=users||nextUsers;
+  const resolvedFeedbacks=feedbacks||nextFeedbacks;
+  const resolvedPlans=plans||nextPlans;
+  const resolvedEntitlements=entitlements||nextEntitlements;
+  const candidates=collectCoachFeedbackReminderCandidates({
+    rows:resolvedRows,
+    feedbacks:resolvedFeedbacks,
+    plans:resolvedPlans,
+    entitlements:resolvedEntitlements,
+    now
+  });
+  const mode=resolveOfficialAccountSendMode({appId,secret,templateId,forceMock});
+  const result={success:true,mode,checked:candidates.length,sent:0,failed:0,skipped:0,items:[]};
+  for(const item of candidates){
+    const recipient=findOfficialAccountScheduleRecipient(item.schedule,resolvedUsers);
+    if(!recipient){
+      result.skipped++;
+      result.items.push({id:item.schedule.id,skipped:true,reason:'missing_official_account_openid'});
+      continue;
+    }
+    if(mode==='mock'){
+      result.sent++;
+      result.items.push({id:item.schedule.id,sent:true,mocked:true,lessonNumber:item.triggerLessonNumber,lastLesson:item.isLastLesson});
+      continue;
+    }
+    try{
+      const message=buildOfficialAccountCoachFeedbackReminderMessage({templateId,openid:recipient.officialAccountOpenId,schedule:item.schedule,reminder:item,appId});
+      await sendTemplate(message);
+      const sentAt=new Date(now).toISOString();
+      const update={
+        ...item.schedule,
+        coachFeedbackReminderSentAt:sentAt,
+        coachFeedbackReminderLessonNumber:item.triggerLessonNumber||'',
+        coachFeedbackReminderLastLesson:item.isLastLesson?'true':'false',
+        coachFeedbackReminderRelationType:item.relationType||'',
+        coachFeedbackReminderCompletedLessonUnits:item.completedLessonUnits
+      };
+      await putSchedule(item.schedule.id,update);
+      Object.assign(item.schedule,update);
+      result.sent++;
+      result.items.push({id:item.schedule.id,sent:true,lessonNumber:item.triggerLessonNumber,lastLesson:item.isLastLesson});
+    }catch(err){
+      result.failed++;
+      result.items.push({id:item.schedule.id,sent:false,error:err.message,lessonNumber:item.triggerLessonNumber,lastLesson:item.isLastLesson});
+    }
+  }
+  return result;
+}
 async function sendOfficialAccountStudentCourseReminders({now=new Date(),rows=null,students=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadStudents=()=>getCachedScan(T_STUDENTS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_REMINDER_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
   const [nextRows,nextStudents]=await Promise.all([rows||loadRows(),students||loadStudents()]);
   const resolvedRows=rows||nextRows;
@@ -3766,11 +3947,12 @@ async function sendOfficialAccountStudentCourseReminders({now=new Date(),rows=nu
   return result;
 }
 async function sendOfficialAccountReminderJobs({now=new Date()}={}){
-  const [coach,students]=await Promise.all([
+  const [coach,students,feedback]=await Promise.all([
     sendOfficialAccountCourseReminders({now}),
-    sendOfficialAccountStudentCourseReminders({now})
+    sendOfficialAccountStudentCourseReminders({now}),
+    sendOfficialAccountCoachFeedbackReminders({now})
   ]);
-  return {success:!!(coach?.success&&students?.success),coach,students};
+  return {success:!!(coach?.success&&students?.success&&feedback?.success),coach,students,feedback};
 }
 async function sendOfficialAccountDailyDigests({now=new Date(),rows=null,users=null,loadRows=()=>getCachedScan(T_SCHEDULE).catch(()=>[]),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),putSchedule=(id,row)=>put(T_SCHEDULE,id,row),appId=WECHAT_OFFICIAL_ACCOUNT_APPID,secret=WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId=WECHAT_OFFICIAL_ACCOUNT_DIGEST_TEMPLATE_ID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
   const [nextRows,nextUsers]=await Promise.all([rows||loadRows(),users||loadUsers()]);
@@ -10289,6 +10471,8 @@ module.exports._test={
   collectCourseReminderCandidates,
   buildCourseReminderSubscribeMessage,
   buildOfficialAccountCourseReminderMessage,
+  collectCoachFeedbackReminderCandidates,
+  buildOfficialAccountCoachFeedbackReminderMessage,
   buildStudentReminderBindToken,
   buildStudentReminderLinkUpdate,
   buildStudentOfficialAccountBoundUpdate,
@@ -10308,6 +10492,7 @@ module.exports._test={
   fetchOfficialAccountSubscribeStatus,
   sendOfficialAccountTemplateMessage,
   sendOfficialAccountCourseReminders,
+  sendOfficialAccountCoachFeedbackReminders,
   sendOfficialAccountStudentCourseReminders,
   sendOfficialAccountReminderJobs,
   sendOfficialAccountDailyDigests,
