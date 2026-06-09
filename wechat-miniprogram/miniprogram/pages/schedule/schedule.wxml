@@ -638,11 +638,7 @@
             </view>
             <view class="detail-info-row">
               <text class="detail-info-label">课包权益</text>
-              <view class="detail-info-value-group">
-                <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.entitlementText}}</text>
-                <text class="detail-info-divider">|</text>
-                <text class="detail-info-helper">{{selectedClassDetail.basicInfo.entitlementSource}}</text>
-              </view>
+              <text class="detail-info-value is-strong">{{selectedClassDetail.basicInfo.entitlementText}}</text>
             </view>
           </view>
         </view>
@@ -677,7 +673,7 @@
             <text>教练提案</text>
             <text class="detail-feedback-pending"> · {{selectedClassDetail.proposal.statusText}}</text>
           </view>
-          <view class="detail-note-grid">
+          <view class="detail-note-grid detail-proposal-summary">
             <view class="detail-note-col">
               <text class="detail-note-label">课程名称</text>
               <text class="detail-note-text">{{selectedClassDetail.proposal.courseName}}</text>
@@ -757,7 +753,7 @@
       </view>
     </view>
 
-    <view class="sheet feedback-sheet {{proposalSheetClass}}" catchtouchmove="stopMove">
+    <view class="sheet feedback-sheet proposal-sheet {{proposalSheetClass}}" catchtouchmove="stopMove">
       <view class="sheet-handle feedback-sheet-handle"></view>
       <view class="feedback-sheet-head">
         <text class="feedback-sheet-title">教练提案</text>

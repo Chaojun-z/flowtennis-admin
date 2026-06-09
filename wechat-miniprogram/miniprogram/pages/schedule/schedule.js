@@ -37,7 +37,8 @@ function isSmallGroupSchedule(item = {}) {
 function timetableCourseTag(item = {}) {
   const text = item.type || item.title || '课程';
   if (item.isTrial || /体验/.test(text)) return { text: '体验', className: 'is-trial' };
-  if (/陪打|小班/.test(text)) return { text: '陪打', className: 'is-play' };
+  if (/小班/.test(text)) return { text: '小班', className: 'is-group' };
+  if (/陪打/.test(text)) return { text: '陪打', className: 'is-play' };
   return { text: '私教', className: 'is-private' };
 }
 
@@ -186,6 +187,25 @@ function studentIdsOf(item = {}) {
     }
   }
   return [];
+}
+
+function scheduleStudentRemarkText(selectedClass = {}, students = []) {
+  const ids = studentIdsOf(selectedClass);
+  const names = String(selectedClass.student || selectedClass.studentName || '')
+    .split(/[、,，|/]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+  const items = ids.map((id, index) => {
+    const student = (students || []).find(item => String(item.id || '').trim() === String(id).trim()) || null;
+    const remark = firstNonEmpty(student && student.remark);
+    if (!remark) return null;
+    const name = firstNonEmpty(student && student.name, student && student.studentName, names[index], `学员${index + 1}`);
+    return { name, remark };
+  }).filter(Boolean);
+  if (!items.length) return '';
+  return items.length > 1
+    ? items.map(({ name, remark }) => `${name}备注：${remark}`).join('\n')
+    : items[0].remark;
 }
 
 function studentRelatedClassIds(studentId = '', classes = []) {
@@ -830,7 +850,7 @@ function buildDetailData(selectedClass, context = {}) {
   const entitlementBalance = entitlementSummary(linkedEntitlements);
   const consumedLessons = scheduleConsumedLessonText(selectedClass, entitlementLedger);
   const remainingLessons = linkedEntitlements.length ? `${lessonUnitsText(entitlementBalance.remaining)} 节` : '-';
-  const studentRemark = buildNoticeField(firstNonEmpty(student && student.remark), true);
+  const studentRemark = buildNoticeField(firstNonEmpty(scheduleStudentRemarkText(selectedClass, students), student && student.remark), true);
   const historyIssue = buildNoticeField(firstNonEmpty(student && student.historyIssue));
   const focusNote = buildNoticeField(firstNonEmpty(
     currentFeedback && currentFeedback.focusNote,
@@ -858,8 +878,7 @@ function buildDetailData(selectedClass, context = {}) {
       studentName: selectedClass.student || '学员待确认',
       coachName: firstNonEmpty(selectedClass.coach, coachName) || '待确认',
       coachNote: firstNonEmpty(student && student.primaryCoach, '未设置'),
-      entitlementText: consumedLessons,
-      entitlementSource: linkedEntitlements.length ? '来源: 课包权益' : '来源: 排课表'
+      entitlementText: consumedLessons
     },
     cancelReason: firstNonEmpty(selectedClass.cancelReason),
     notices: {

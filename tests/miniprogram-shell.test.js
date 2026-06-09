@@ -166,7 +166,8 @@ assert.match(scheduleJs, /openFeedbackById[\s\S]*selectedClassDetail:\s*buildDet
 assert.match(scheduleJs, /feedbackSheetScrollTop/, 'feedback sheet should track a scroll-top value for entry reset');
 assert.match(scheduleJs, /openFeedback\(\)[\s\S]*feedbackSheetScrollTop:\s*0/, 'detail-to-feedback entry should start the feedback sheet from the top');
 assert.match(scheduleJs, /openFeedbackById\(event\)[\s\S]*feedbackSheetScrollTop:\s*0/, 'workbench feedback entry should start the feedback sheet from the top');
-assert.match(scheduleJs, /timetableCourseTag[\s\S]*text:\s*'体验'[\s\S]*text:\s*'陪打'[\s\S]*text:\s*'私教'/, 'timetable course cards should use short course type labels');
+assert.match(scheduleJs, /timetableCourseTag[\s\S]*text:\s*'体验'[\s\S]*text:\s*'小班'[\s\S]*text:\s*'陪打'[\s\S]*text:\s*'私教'/, 'timetable course cards should use short course type labels');
+assert.match(scheduleJs, /function scheduleStudentRemarkText[\s\S]*`\$\{name\}备注：\$\{remark\}`/, 'small group detail student remarks should include the student name before each remark');
 assert.match(scheduleJs, /knowledgePoint,\s*nextTraining/, 'feedback save should include practice status and next practice fields');
 assert.match(scheduleJs, /posterSheetClass/, 'poster sheet should use the same bottom-sheet show transition as other sheets');
 assert.match(scheduleJs, /posterDateText/, 'poster sheet should prepare a readable class date for the preview');
@@ -524,6 +525,9 @@ assert.match(scheduleWxss, /\.detail-sheet-body\s*\{[\s\S]*background:\s*#f8fafc
 assert.match(scheduleWxml, /enhanced show-scrollbar="\{\{false\}\}"/, 'detail sheet scroll view should hide the native right scrollbar');
 assert.match(scheduleWxss, /\.detail-sheet\s*\{[\s\S]*height:\s*calc\(100vh - 416rpx\);/, 'detail sheet should move 60px lower');
 assert.match(scheduleWxss, /\.feedback-sheet\s*\{[\s\S]*height:\s*calc\(100vh - 352rpx\);/, 'feedback sheet should move 60px lower');
+assert.match(scheduleWxml, /feedback-sheet proposal-sheet \{\{proposalSheetClass\}\}/, 'coach proposal sheet should have its own height class');
+assert.match(scheduleWxss, /\.proposal-sheet\s*\{[\s\S]*height:\s*calc\(100vh - 300rpx\);/, 'coach proposal sheet should be taller than the feedback sheet');
+assert.doesNotMatch(scheduleWxml, /selectedClassDetail\.basicInfo\.entitlementSource/, 'schedule detail should not display the source field');
 assert.match(scheduleWxss, /\.detail-section-card\s*\{[\s\S]*padding:\s*40rpx;[\s\S]*border-radius:\s*32rpx;[\s\S]*box-shadow:\s*0 2rpx 4rpx rgba\(15,\s*23,\s*42,\s*0\.06\);/, 'detail cards should match the white rounded p-5 shadow-sm token');
 assert.match(scheduleWxss, /\.detail-section-title\s*\{[\s\S]*font-size:\s*15px;[\s\S]*font-weight:\s*700;/, 'detail section title should use 15px bold slate typography');
 assert.match(scheduleWxss, /\.detail-info-label\s*\{[\s\S]*flex:\s*0 0 144rpx;[\s\S]*font-size:\s*13px;[\s\S]*font-weight:\s*400;/, 'detail labels should use fixed 72px width and 13px regular typography');
@@ -535,6 +539,8 @@ assert.match(scheduleWxss, /\.detail-section-card\.is-empty-state \.detail-note-
 assert.match(scheduleWxss, /\.detail-section-card\.is-empty-state \.detail-note-grid\s*\{[\s\S]*display:\s*flex;/, 'empty pre-class history and focus fields should stay on one row');
 assert.match(scheduleWxss, /\.detail-section-card\.is-empty-state \.detail-note-col\s*\{[\s\S]*display:\s*flex;/, 'empty pre-class note fields should keep label and value inline');
 assert.match(scheduleWxss, /\.detail-section-card\.is-filled \.detail-note-grid\s*\{[\s\S]*display:\s*block;/, 'filled detail note sections should stack long text fields vertically');
+assert.match(scheduleWxml, /detail-proposal-summary[\s\S]*学员级别 \/ 数量[\s\S]*教学目标/, 'proposal detail should mark the summary row separately from teaching goal');
+assert.match(scheduleWxss, /\.detail-proposal-summary\s*\{[\s\S]*margin-bottom:\s*30rpx;/, 'proposal detail summary should leave enough space before teaching goal');
 assert.match(scheduleWxss, /\.detail-feedback-cell\s*\{[\s\S]*display:\s*flex;/, 'feedback lesson counts should keep label and value on one line');
 assert.match(scheduleWxss, /\.detail-feedback-card\.is-empty-state \.detail-note-block\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*baseline;/, 'empty feedback fields should align label and value on one baseline');
 assert.match(scheduleJs, /feedbackSummary\.text = '待填写反馈'/, 'empty feedback summary copy should be pending feedback');

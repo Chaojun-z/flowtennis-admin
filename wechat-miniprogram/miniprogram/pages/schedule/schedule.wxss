@@ -2318,6 +2318,10 @@ button::after {
   background: #fff;
 }
 
+.proposal-sheet {
+  height: calc(100vh - 300rpx);
+}
+
 .feedback-sheet-handle {
   margin-top: 24rpx;
   margin-bottom: 28rpx;
@@ -3497,6 +3501,10 @@ button::after {
 .detail-note-grid {
   display: flex;
   gap: 32rpx;
+}
+
+.detail-proposal-summary {
+  margin-bottom: 30rpx;
 }
 
 .detail-section-card.is-empty-state .detail-note-block {
