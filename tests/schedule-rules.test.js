@@ -258,6 +258,67 @@ assert.deepStrictEqual(
   );
 }
 
+{
+  const scoped = rules.filterLoadAllForUser(
+    {
+      campuses: [{ id: 'mabao', name: '马坡' }, { id: 'shilipu', name: '十里堡' }],
+      students: [
+        { id: 'stu-1', name: '马坡学员', campus: 'mabao' },
+        { id: 'stu-2', name: '十里堡学员', campus: 'shilipu' }
+      ],
+      coaches: [
+        { id: 'coach-1', name: '马坡教练', campus: 'mabao' },
+        { id: 'coach-2', name: '十里堡教练', campus: 'shilipu' }
+      ],
+      classes: [
+        { id: 'class-1', className: '马坡班', campus: 'mabao', studentIds: ['stu-1'], coach: '马坡教练' },
+        { id: 'class-2', className: '十里堡班', campus: 'shilipu', studentIds: ['stu-2'], coach: '十里堡教练' }
+      ],
+      schedule: [
+        { id: 'sch-1', campus: 'mabao', classId: 'class-1', studentIds: ['stu-1'], coach: '马坡教练', status: '已结束', lessonCount: 1 },
+        { id: 'sch-2', campus: 'shilipu', classId: 'class-2', studentIds: ['stu-2'], coach: '十里堡教练', status: '已结束', lessonCount: 1 }
+      ],
+      courts: [
+        { id: 'court-1', name: '马坡订场用户', campus: 'mabao' },
+        { id: 'court-2', name: '十里堡订场用户', campus: 'shilipu' }
+      ],
+      packages: [
+        { id: 'pkg-all', name: '不限校区课包', campusIds: [] },
+        { id: 'pkg-1', name: '马坡课包', campusIds: ['mabao'] },
+        { id: 'pkg-2', name: '十里堡课包', campusIds: ['shilipu'] }
+      ],
+      purchases: [
+        { id: 'pur-1', studentId: 'stu-1', packageId: 'pkg-1' },
+        { id: 'pur-2', studentId: 'stu-2', packageId: 'pkg-2' }
+      ],
+      entitlements: [
+        { id: 'ent-1', studentId: 'stu-1', purchaseId: 'pur-1', packageId: 'pkg-1' },
+        { id: 'ent-2', studentId: 'stu-2', purchaseId: 'pur-2', packageId: 'pkg-2' }
+      ],
+      membershipAccounts: [
+        { id: 'mem-1', courtId: 'court-1' },
+        { id: 'mem-2', courtId: 'court-2' }
+      ],
+      leads: [
+        { id: 'lead-1', campus: 'mabao' },
+        { id: 'lead-2', campus: 'shilipu' }
+      ]
+    },
+    { role: 'admin', id: 'mira', name: 'Mira', dataScope: 'campus', campusIds: ['mabao'] }
+  );
+  assert.deepStrictEqual(scoped.campuses.map(row => row.id), ['mabao'], 'campus-scoped admin should only see assigned campus rows');
+  assert.deepStrictEqual(scoped.students.map(row => row.id), ['stu-1'], 'campus-scoped admin should only see matching students');
+  assert.deepStrictEqual(scoped.coaches.map(row => row.id), ['coach-1'], 'campus-scoped admin should only see matching coaches');
+  assert.deepStrictEqual(scoped.classes.map(row => row.id), ['class-1'], 'campus-scoped admin should only see matching classes');
+  assert.deepStrictEqual(scoped.schedule.map(row => row.id), ['sch-1'], 'campus-scoped admin should only see matching schedule rows');
+  assert.deepStrictEqual(scoped.courts.map(row => row.id), ['court-1'], 'campus-scoped admin should only see matching court users');
+  assert.deepStrictEqual(scoped.packages.map(row => row.id), ['pkg-all', 'pkg-1'], 'campus-scoped admin should see matching packages and unrestricted packages');
+  assert.deepStrictEqual(scoped.purchases.map(row => row.id), ['pur-1'], 'campus-scoped admin should only see matching purchases');
+  assert.deepStrictEqual(scoped.entitlements.map(row => row.id), ['ent-1'], 'campus-scoped admin should only see matching entitlements');
+  assert.deepStrictEqual(scoped.membershipAccounts.map(row => row.id), ['mem-1'], 'campus-scoped admin should only see matching membership accounts');
+  assert.deepStrictEqual(scoped.leads.map(row => row.id), ['lead-1'], 'campus-scoped admin should only see matching leads');
+}
+
 assert.deepStrictEqual(
   rules.resolveWorkbenchState(
     {

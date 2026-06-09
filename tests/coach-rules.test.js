@@ -115,7 +115,21 @@ assert.deepStrictEqual(
     { id: 'coach-user', name: '测试1号教练', role: 'editor', coachName: '测试1号教练' },
     { id: 'coach-user', name: '测试教练', role: 'editor', coachName: '测试教练' }
   ),
-  { id: 'coach-user', name: '测试教练', role: 'editor', status: 'active', username: '', coachId: 'coach-user', coachName: '测试教练', matchPermissions: [] },
+  {
+    id: 'coach-user',
+    name: '测试教练',
+    role: 'editor',
+    status: 'active',
+    username: '',
+    systemType: 'coach',
+    dataScope: 'coach',
+    campusIds: [],
+    coachId: 'coach-user',
+    coachName: '测试教练',
+    featurePermissions: [],
+    permissions: [],
+    matchPermissions: []
+  },
   'stale coach token should be refreshed from stored user'
 );
 

@@ -283,8 +283,13 @@ function globalTopFilterPages(){
 function globalDateFilterQuickOptions(){
   return ['全部','今日','本周','本月','自定义'];
 }
+function accessibleCampusRows(){
+  const source=Array.isArray(campuses)?campuses:[];
+  if(typeof clientUserCanAccessCampus!=='function'||!currentUser)return source;
+  return source.filter(row=>clientUserCanAccessCampus(currentUser,String(row?.code||row?.id||'').trim()));
+}
 function globalCampusOptions(){
-  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusSource=accessibleCampusRows();
   return [{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
     value:String(row?.code||row?.id||'').trim(),
     label:String(row?.name||row?.code||row?.id||'').trim()

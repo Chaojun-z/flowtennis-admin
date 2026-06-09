@@ -28,7 +28,7 @@ let courtAccountListViewData=null,courtAccountListViewCompareData=null;
 let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
-const DATA_CACHE_VERSION='2026-06-07-coach-proposals-network-v1';
+const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
@@ -718,7 +718,8 @@ function buildCampusTabs(){
     }
     return;
   }
-  el.innerHTML='<button class="ctab'+(campus==='all'?' active':'')+'" onclick="setCampus(this,\'all\')">全部</button>'+campuses.map(c=>`<button class="ctab${campus===(c.code||c.id)?' active':''}" onclick="setCampus(this,'${c.code||c.id}')">${esc(c.name)}</button>`).join('');
+  const visibleCampuses=typeof accessibleCampusRows==='function'?accessibleCampusRows():campuses;
+  el.innerHTML='<button class="ctab'+(campus==='all'?' active':'')+'" onclick="setCampus(this,\'all\')">全部</button>'+visibleCampuses.map(c=>`<button class="ctab${campus===(c.code||c.id)?' active':''}" onclick="setCampus(this,'${c.code||c.id}')">${esc(c.name)}</button>`).join('');
 }
 function renderAll(){
   renderRoleShell();

@@ -7,6 +7,7 @@ assert.ok(adminSidebar, 'admin sidebar should exist');
 assert.match(html, /id="sidebarHost"/, 'index should only keep the sidebar mount host');
 assert.doesNotMatch(html, /id="sbAdminView"|id="sbCoachView"/, 'sidebar markup should live in shared components');
 assert.match(source, /function renderSidebarShell\(/, 'sidebar should render from the shared components entry');
+assert.match(source, /function normalizeClientPermissionProfile\(/, 'frontend permission helpers should be loaded before account page logic');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -52,6 +53,8 @@ assert.match(fnBody('openAdminUserModal'), /au_password/, 'account modal should 
 assert.match(fnBody('openAdminUserModal'), /au_role/, 'account modal should include role field');
 assert.match(fnBody('openAdminUserModal'), /au_phone/, 'account modal should include phone field');
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
+assert.match(fnBody('openAdminUserModal'), /au_dataScope/, 'account modal should include data scope field');
+assert.match(fnBody('openAdminUserModal'), /auCampusScopeWrap/, 'account modal should include campus scope block');
 assert.match(fnBody('openAdminUserModal'), /<input type="hidden" id="au_role" value="\$\{rv\(user,'role','editor'\)\}">/, 'account edit modal should keep the real role value for coach binding visibility');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /au_officialAccountOpenId/, 'account modal should not expose manual official account openid input');
 assert.match(fnBody('openAdminUserModal'), /请在服务号内发送 #绑定 手机号 完成绑定/, 'account modal should explain the real binding flow');
@@ -62,10 +65,13 @@ assert.match(fnBody('openAdminUserModal'), /请在服务号内发送 #绑定 手
 }
 assert.match(fnBody('openAdminUserModal'), /au_match_ops/, 'account modal should configure match ops permission');
 assert.match(fnBody('openAdminUserModal'), /au_match_finance/, 'account modal should configure match finance permission');
+assert.match(fnBody('openAdminUserModal'), /campusIds/, 'account modal should prepare campus ids for scope selection');
 assert.match(fnBody('openAdminUserModal'), /账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。/, 'account create modal should describe login by account in neutral wording');
 assert.match(fnBody('openAdminUserModal'), /resetAdminUserPassword/, 'account edit modal should expose password reset');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /请用这里的账号ID登录，不是姓名/, 'account create modal should not force account-id-only wording');
 assert.match(fnBody('saveAdminUser'), /phone/, 'account save should submit phone');
+assert.match(fnBody('saveAdminUser'), /dataScope/, 'account save should submit data scope');
+assert.match(fnBody('saveAdminUser'), /campusIds/, 'account save should submit campus ids');
 assert.doesNotMatch(fnBody('saveAdminUser'), /officialAccountOpenId/, 'account save should not submit manual official account openid');
 assert.match(fnBody('saveAdminUser'), /matchPermissions/, 'account save should submit match permissions');
 assert.match(fnBody('saveAdminUser'), /\/admin\/create-user/, 'account create should call create-user api');

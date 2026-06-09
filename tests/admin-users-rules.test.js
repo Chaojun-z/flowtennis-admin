@@ -75,9 +75,13 @@ assert.deepStrictEqual(
     name: '朝珺',
     phone: '13800138000',
     role: 'editor',
+    systemType: 'coach',
+    dataScope: 'coach',
+    campusIds: [],
     status: 'active',
     coachId: 'coach-id',
     coachName: '朝珺',
+    featurePermissions: [],
     matchPermissions: [],
     wechatBound: true,
     wechatBoundAt: '2026-04-19T12:00:00.000Z',
@@ -85,6 +89,36 @@ assert.deepStrictEqual(
     officialAccountBoundAt: ''
   },
   'admin user view should expose binding status without leaking openid'
+);
+
+assert.deepStrictEqual(
+  rules.buildAdminUserView({
+    id: 'mira',
+    name: 'Mira',
+    role: 'admin',
+    dataScope: 'campus',
+    campusIds: ['mabao'],
+    matchPermissions: ['match_ops']
+  }),
+  {
+    id: 'mira',
+    name: 'Mira',
+    phone: '',
+    role: 'admin',
+    systemType: 'management',
+    dataScope: 'campus',
+    campusIds: ['mabao'],
+    status: 'active',
+    coachId: '',
+    coachName: '',
+    featurePermissions: ['match_ops', 'match_finance'],
+    matchPermissions: ['match_ops', 'match_finance'],
+    wechatBound: false,
+    wechatBoundAt: '',
+    officialAccountBound: false,
+    officialAccountBoundAt: ''
+  },
+  'admin user view should expose campus data scope and normalized feature permissions'
 );
 
 assert.deepStrictEqual(

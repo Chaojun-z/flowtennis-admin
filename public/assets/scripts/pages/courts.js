@@ -40,7 +40,7 @@ function renderCourtTopDropdown(id,displayText,iconSvg,menuHtml,menuClass=''){
   return `<div class="tms-dropdown court-top-select" id="${id}_dropdown" data-target="${id}" onclick="toggleCourtTopDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(displayText)}"><div class="tms-dropdown-display court-top-display"><span class="court-top-display-main"><span class="court-top-display-icon">${iconSvg}</span><span class="court-top-display-text">${esc(displayText)}</span></span><span class="court-top-display-chevron">${courtTopChevronIcon()}</span></div><div class="tms-dropdown-menu ${menuClass}" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${menuHtml}</div></div>`;
 }
 function renderCourtTopFilters(){
-  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
   const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
     value:String(row?.code||row?.id||'').trim(),
     label:String(row?.name||row?.code||row?.id||'').trim()

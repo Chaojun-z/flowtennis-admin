@@ -9,6 +9,7 @@ const path = require('path');
 const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('./lib/perf-metrics');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('./page-data/court-account-read-model.js');
+const { normalizePermissionProfile, userHasFeaturePermission } = require('./permissions');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -228,6 +229,9 @@ const ADMIN_USER_LIST_PROJECTION_FIELDS=[
   'status',
   'coachId',
   'coachName',
+  'dataScope',
+  'campusIds',
+  'featurePermissions',
   'permissions',
   'matchPermissions',
   'matchOps',
@@ -2102,6 +2106,183 @@ function assertCanWriteFeedback(user,schedule,coachRefs=[]){
   if(coachName&&scheduleCoach&&sameCoachName(coachName,scheduleCoach,coachRefs))return;
   throw new Error('只能填写自己的课程反馈');
 }
+function campusValuesFrom(value){
+  if(value==null)return[];
+  if(Array.isArray(value))return value.flatMap(campusValuesFrom);
+  const raw=String(value||'').trim();
+  if(!raw)return[];
+  if(raw.startsWith('[')){
+    try{return campusValuesFrom(JSON.parse(raw));}catch(e){}
+  }
+  return raw.split(/[,，;；|]/).map(item=>normalizeCampusValue(item)).filter(Boolean);
+}
+function addCampusValues(set,...values){
+  values.flatMap(campusValuesFrom).forEach(value=>{if(value)set.add(value);});
+  return set;
+}
+function addCampusSet(set,source){
+  if(!source)return set;
+  for(const value of source)set.add(value);
+  return set;
+}
+function campusSetFromRow(row){
+  const set=new Set();
+  if(!row)return set;
+  addCampusValues(
+    set,
+    row.campus,
+    row.campusId,
+    row.campusCode,
+    row.campusName,
+    row.sourceCampus,
+    row.sourceCampusName,
+    row.targetCampus,
+    row.targetCampusName,
+    row.venueCampus,
+    row.campusIds,
+    row.campuses
+  );
+  return set;
+}
+function campusSetFromCampusRow(row){
+  const set=campusSetFromRow(row);
+  addCampusValues(set,row?.id,row?.code,row?.name);
+  return set;
+}
+function campusSetsIntersect(left,right){
+  if(!left?.size||!right?.size)return false;
+  for(const value of left)if(right.has(value))return true;
+  return false;
+}
+function isCampusScopedAdmin(user){
+  const profile=normalizePermissionProfile(user||{});
+  return profile.role==='admin'&&profile.dataScope==='campus';
+}
+function buildCampusScopeContext(data,user){
+  const profile=normalizePermissionProfile(user||{});
+  const ctx={
+    active:profile.role==='admin'&&profile.dataScope==='campus',
+    allowed:new Set((profile.campusIds||[]).map(normalizeCampusValue).filter(Boolean)),
+    byStudentId:new Map(),
+    byClassId:new Map(),
+    byScheduleId:new Map(),
+    byCoachId:new Map(),
+    byCoachName:new Map(),
+    byPackageId:new Map(),
+    byPurchaseId:new Map(),
+    entitlementsByPurchaseId:new Map(),
+    byEntitlementId:new Map(),
+    byCourtId:new Map(),
+    byMembershipAccountId:new Map(),
+    byMembershipOrderId:new Map(),
+    byLeadId:new Map(),
+    schedulesByClassId:new Map(),
+    schedulesByStudentId:new Map(),
+    schedulesByCoachKey:new Map()
+  };
+  const put=(map,key,row)=>{const k=String(key||'').trim();if(k)map.set(k,row);};
+  const push=(map,key,row)=>{const k=String(key||'').trim();if(k)map.set(k,[...(map.get(k)||[]),row]);};
+  (data.students||[]).forEach(row=>put(ctx.byStudentId,row.id,row));
+  (data.classes||[]).forEach(row=>put(ctx.byClassId,row.id,row));
+  (data.schedule||[]).forEach(row=>{
+    put(ctx.byScheduleId,row.id,row);
+    push(ctx.schedulesByClassId,row.classId,row);
+    parseArr(row.studentIds).forEach(id=>push(ctx.schedulesByStudentId,id,row));
+    [row.coachId,row.coach,row.primaryCoachId,row.primaryCoach].forEach(key=>push(ctx.schedulesByCoachKey,key,row));
+  });
+  (data.coaches||[]).forEach(row=>{
+    put(ctx.byCoachId,row.id,row);
+    put(ctx.byCoachName,row.name,row);
+  });
+  (data.packages||[]).forEach(row=>put(ctx.byPackageId,row.id,row));
+  (data.purchases||[]).forEach(row=>put(ctx.byPurchaseId,row.id,row));
+  (data.entitlements||[]).forEach(row=>{
+    put(ctx.byEntitlementId,row.id,row);
+    push(ctx.entitlementsByPurchaseId,row.purchaseId,row);
+  });
+  (data.courts||[]).forEach(row=>put(ctx.byCourtId,row.id,row));
+  (data.membershipAccounts||[]).forEach(row=>put(ctx.byMembershipAccountId,row.id,row));
+  (data.membershipOrders||[]).forEach(row=>put(ctx.byMembershipOrderId,row.id,row));
+  (data.leads||[]).forEach(row=>put(ctx.byLeadId,row.id,row));
+  return ctx;
+}
+function campusSetForScopedRow(row,type,ctx){
+  const set=type==='campuses'?campusSetFromCampusRow(row):campusSetFromRow(row);
+  const addRow=(linked)=>addCampusSet(set,campusSetFromRow(linked));
+  const addRows=(rows)=>{(rows||[]).forEach(addRow);};
+  if(type==='students'){
+    addRows(ctx.schedulesByStudentId.get(row?.id));
+  }else if(type==='classes'){
+    addRows(ctx.schedulesByClassId.get(row?.id));
+  }else if(type==='schedule'){
+    addRow(ctx.byClassId.get(String(row?.classId||'')));
+    parseArr(row?.studentIds).forEach(id=>addRow(ctx.byStudentId.get(String(id||''))));
+  }else if(type==='coaches'){
+    [row?.id,row?.name].forEach(key=>addRows(ctx.schedulesByCoachKey.get(String(key||''))));
+  }else if(type==='purchases'){
+    addRow(ctx.byStudentId.get(String(row?.studentId||'')));
+    addRow(ctx.byPackageId.get(String(row?.packageId||row?.originalPackageId||'')));
+    addRows(ctx.entitlementsByPurchaseId.get(String(row?.id||'')));
+  }else if(type==='entitlements'){
+    const purchase=ctx.byPurchaseId.get(String(row?.purchaseId||''));
+    addRow(purchase);
+    addRow(ctx.byStudentId.get(String(row?.studentId||purchase?.studentId||'')));
+    addRow(ctx.byPackageId.get(String(row?.packageId||purchase?.packageId||purchase?.originalPackageId||'')));
+  }else if(type==='entitlementLedger'){
+    const entitlement=ctx.byEntitlementId.get(String(row?.entitlementId||''));
+    const purchase=ctx.byPurchaseId.get(String(row?.purchaseId||entitlement?.purchaseId||''));
+    addRow(ctx.byScheduleId.get(String(row?.scheduleId||'')));
+    addRow(entitlement);
+    addRow(purchase);
+    addRow(ctx.byStudentId.get(String(row?.studentId||entitlement?.studentId||purchase?.studentId||'')));
+    addRow(ctx.byPackageId.get(String(entitlement?.packageId||purchase?.packageId||purchase?.originalPackageId||'')));
+  }else if(type==='plans'){
+    addRow(ctx.byStudentId.get(String(row?.studentId||'')));
+    addRow(ctx.byClassId.get(String(row?.classId||'')));
+    addRows(ctx.schedulesByClassId.get(String(row?.classId||'')));
+  }else if(type==='feedbacks'||type==='coachProposals'){
+    addRow(ctx.byScheduleId.get(String(row?.scheduleId||'')));
+  }else if(type==='membershipAccounts'){
+    addRow(ctx.byCourtId.get(String(row?.courtId||'')));
+  }else if(type==='membershipOrders'){
+    const account=ctx.byMembershipAccountId.get(String(row?.membershipAccountId||''));
+    addRow(account);
+    addRow(ctx.byCourtId.get(String(row?.courtId||account?.courtId||'')));
+  }else if(type==='membershipBenefitLedger'||type==='membershipAccountEvents'){
+    const account=ctx.byMembershipAccountId.get(String(row?.membershipAccountId||''));
+    const order=ctx.byMembershipOrderId.get(String(row?.membershipOrderId||''));
+    addRow(account);
+    addRow(order);
+    addRow(ctx.byCourtId.get(String(row?.courtId||account?.courtId||order?.courtId||'')));
+  }else if(type==='leads'){
+    const account=ctx.byMembershipAccountId.get(String(row?.membershipAccountId||''));
+    addRow(ctx.byStudentId.get(String(row?.studentId||'')));
+    addRow(ctx.byCourtId.get(String(row?.courtId||account?.courtId||'')));
+    addRow(account);
+  }else if(type==='leadFollowups'){
+    addRow(ctx.byLeadId.get(String(row?.leadId||'')));
+  }else if(type==='financialLedger'){
+    addRow(ctx.byStudentId.get(String(row?.studentId||'')));
+    addRow(ctx.byCourtId.get(String(row?.courtId||'')));
+    addRow(ctx.byScheduleId.get(String(row?.scheduleId||'')));
+  }
+  return set;
+}
+function campusScopedRowVisible(row,type,ctx){
+  if(!ctx.active)return true;
+  if(!ctx.allowed.size)return false;
+  const campusSet=campusSetForScopedRow(row,type,ctx);
+  if(['products','packages','membershipPlans','pricePlans'].includes(type)&&!campusSet.size)return true;
+  return campusSetsIntersect(campusSet,ctx.allowed);
+}
+function filterCampusScopedData(data,user){
+  const ctx=buildCampusScopeContext(data,user);
+  if(!ctx.active)return data;
+  return Object.fromEntries(Object.entries(data).map(([key,value])=>[
+    key,
+    Array.isArray(value)?value.filter(row=>campusScopedRowVisible(row,key,ctx)):value
+  ]));
+}
 function filterLoadAllForUser(data,user,coachRefs=[]){
   const normalized={
     courts:Array.isArray(data?.courts)?data.courts:[],
@@ -2111,6 +2292,7 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     purchases:Array.isArray(data?.purchases)?data.purchases:[],
     entitlements:Array.isArray(data?.entitlements)?data.entitlements:[],
     entitlementLedger:Array.isArray(data?.entitlementLedger)?data.entitlementLedger:[],
+    financialLedger:Array.isArray(data?.financialLedger)?data.financialLedger:[],
     membershipPlans:Array.isArray(data?.membershipPlans)?data.membershipPlans:[],
     membershipAccounts:Array.isArray(data?.membershipAccounts)?data.membershipAccounts:[],
     membershipOrders:Array.isArray(data?.membershipOrders)?data.membershipOrders:[],
@@ -2123,9 +2305,12 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     classes:Array.isArray(data?.classes)?data.classes:[],
     campuses:Array.isArray(data?.campuses)?data.campuses:[],
     feedbacks:Array.isArray(data?.feedbacks)?data.feedbacks:[],
-    coachProposals:Array.isArray(data?.coachProposals)?data.coachProposals:[]
+    coachProposals:Array.isArray(data?.coachProposals)?data.coachProposals:[],
+    leads:Array.isArray(data?.leads)?data.leads:[],
+    leadFollowups:Array.isArray(data?.leadFollowups)?data.leadFollowups:[]
   };
-  if(user?.role==='admin')return normalized;
+  const profile=normalizePermissionProfile(user||{});
+  if(profile.role==='admin')return filterCampusScopedData(normalized,user);
   const coachId=String(user?.coachId||user?.id||'').trim();
   const coachName=String(user?.coachName||user?.name||'').trim();
   const authId=String(user?.id||user?.username||'').trim();
@@ -2175,6 +2360,7 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     purchases:safePurchases,
     entitlements:safeEntitlements,
     entitlementLedger:normalizeEntitlementLedgerRowsForDetailView(safeLedger),
+    financialLedger:[],
     membershipPlans:[],
     membershipAccounts:[],
     membershipOrders:[],
@@ -2187,7 +2373,9 @@ function filterLoadAllForUser(data,user,coachRefs=[]){
     classes:ownClasses,
     campuses:normalized.campuses,
     feedbacks:normalized.feedbacks.filter(f=>scheduleIds.has(f.scheduleId)),
-    coachProposals:normalized.coachProposals.filter(p=>scheduleIds.has(p.scheduleId))
+    coachProposals:normalized.coachProposals.filter(p=>scheduleIds.has(p.scheduleId)),
+    leads:[],
+    leadFollowups:[]
   };
 }
 function addCoachAliasValue(values,value){
@@ -2266,15 +2454,21 @@ function mergeStoredAuthUser(tokenUser,storedUser){
   const name=source.name||tokenUser?.name||'';
   const id=source.id||tokenUser?.id||'';
   const username=source.username||tokenUser?.username||'';
+  const profile=normalizePermissionProfile({...tokenUser,...source,role,name,id,username});
   return {
     id,
     name,
-    role,
+    role:profile.role,
     status:source.status||tokenUser?.status||'active',
     username,
-    coachId:source.coachId||tokenUser?.coachId||(role==='editor'?(id||username):''),
-    coachName:source.coachName||(role==='editor'?name:(tokenUser?.coachName||'')),
-    matchPermissions:source.matchPermissions||source.permissions||tokenUser?.matchPermissions||tokenUser?.permissions||[]
+    systemType:profile.systemType,
+    dataScope:profile.dataScope,
+    campusIds:profile.campusIds,
+    coachId:source.coachId||tokenUser?.coachId||(profile.role==='editor'?(id||username):''),
+    coachName:source.coachName||(profile.role==='editor'?name:(tokenUser?.coachName||'')),
+    featurePermissions:profile.featurePermissions,
+    permissions:profile.featurePermissions,
+    matchPermissions:profile.featurePermissions
   };
 }
 function assertAuthUserActive(user){
@@ -2332,19 +2526,37 @@ function buildWechatUserIndexRow(user){
   };
 }
 function buildAdminUserView(u){
+  const profile=normalizePermissionProfile(u);
   return {
     id:u.id,
     name:u.name,
     phone:u.phone||'',
-    role:u.role,
+    role:profile.role,
+    systemType:profile.systemType,
+    dataScope:profile.dataScope,
+    campusIds:profile.campusIds,
     status:u.status||'active',
     coachId:u.coachId||'',
     coachName:u.coachName||'',
-    matchPermissions:userMatchPermissions(u),
+    featurePermissions:profile.featurePermissions,
+    matchPermissions:profile.featurePermissions,
     wechatBound:!!u.wechatOpenId,
     wechatBoundAt:u.wechatBoundAt||'',
     officialAccountBound:!!u.officialAccountOpenId,
     officialAccountBoundAt:u.officialAccountBoundAt||''
+  };
+}
+function buildStoredPermissionFields(user){
+  const profile=normalizePermissionProfile(user);
+  return {
+    systemType:profile.systemType,
+    dataScope:profile.dataScope,
+    campusIds:profile.campusIds,
+    featurePermissions:profile.featurePermissions,
+    permissions:profile.featurePermissions,
+    matchPermissions:profile.featurePermissions,
+    matchOps:profile.featurePermissions.includes('match_ops'),
+    matchFinance:profile.featurePermissions.includes('match_finance')
   };
 }
 function isVisibleAdminUser(u){
@@ -5015,21 +5227,12 @@ function requireAdminUser(user){
   if(!user?.id)throw new Error('未登录');
   return user;
 }
-function parsePermissionList(value){
-  if(Array.isArray(value))return value.map(x=>String(x||'').trim()).filter(Boolean);
-  return String(value||'').split(/[,，\s]+/).map(x=>x.trim()).filter(Boolean);
-}
 function userMatchPermissions(user){
-  const permissions=new Set(parsePermissionList(user?.permissions||user?.matchPermissions));
-  if(user?.role==='admin')permissions.add('match_ops'),permissions.add('match_finance');
-  if(user?.matchOps)permissions.add('match_ops');
-  if(user?.matchFinance)permissions.add('match_finance');
-  return [...permissions].filter(x=>['match_ops','match_finance'].includes(x));
+  return normalizePermissionProfile(user).featurePermissions;
 }
 function requireMatchAdminPermission(user,permission){
   requireAdminUser(user);
-  const permissions=userMatchPermissions(user);
-  if(permissions.includes(permission))return true;
+  if(userHasFeaturePermission(user,permission))return true;
   throw new Error(permission==='match_finance'?'无约球财务权限':'无约球运营权限');
 }
 function requireMatchUser(req){
@@ -8553,8 +8756,46 @@ module.exports = async (req, res) => {
       try{return sendJson(res,await markMatchFeeSplit(adminFeeSplitM[1],adminFeeSplitM[2],user.id,body));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/admin/create-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,name,password,role,coachId,coachName}=body;if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);const nextRole=role||'editor';const hashed=await bcrypt.hash(password,10);const nextCoachName=coachName||(nextRole==='editor'?name:'');const matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions||[]});const phone=assertPhone(body.phone||'');await put(T_USERS,id,{id,name,phone,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountOpenId:'',officialAccountBoundAt:'',matchPermissions});return sendJson(res,{success:true,id,name,phone,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountBound:false,officialAccountBoundAt:'',matchPermissions});}
-    if(path==='/admin/update-user'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,coachId,coachName,status}=body;if(!id)return sendJson(res,{error:'缺少用户ID'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);let updates={...u,coachId:coachId||'',status:status||u.status||'active'};if(body.name)updates.name=body.name;if(Object.prototype.hasOwnProperty.call(body,'phone'))updates.phone=assertPhone(body.phone||'');updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');if(Array.isArray(body.matchPermissions)||Array.isArray(body.permissions))updates.matchPermissions=userMatchPermissions({matchPermissions:body.matchPermissions||body.permissions});if(body.clearWechat){await unbindWechatUserWithIndex(updates);return sendJson(res,{success:true});}if(body.clearOfficialAccount){updates=buildOfficialAccountUnboundUser(updates);}await put(T_USERS,id,updates);return sendJson(res,{success:true});}
+    if(path==='/admin/create-user'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const{id,name,password,role,coachId,coachName}=body;
+      if(!id||!name||!password)return sendJson(res,{error:'缺少必填字段'},400);
+      const nextRole=role||'editor';
+      const hashed=await bcrypt.hash(password,10);
+      const nextCoachName=coachName||(nextRole==='editor'?name:'');
+      const phone=assertPhone(body.phone||'');
+      const permissionFields=buildStoredPermissionFields({...body,role:nextRole,coachId:coachId||'',coachName:nextCoachName,name});
+      const nextUser={id,name,phone,password:hashed,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountOpenId:'',officialAccountBoundAt:'',...permissionFields};
+      await put(T_USERS,id,nextUser);
+      return sendJson(res,{success:true,id,name,phone,role:nextRole,status:'active',coachId:coachId||'',coachName:nextCoachName,officialAccountBound:false,officialAccountBoundAt:'',...permissionFields});
+    }
+    if(path==='/admin/update-user'&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const{id,coachId,coachName,status}=body;
+      if(!id)return sendJson(res,{error:'缺少用户ID'},400);
+      const u=await get(T_USERS,id);
+      if(!u)return sendJson(res,{error:'用户不存在'},404);
+      let updates={...u,coachId:coachId||'',status:status||u.status||'active'};
+      if(body.name)updates.name=body.name;
+      if(Object.prototype.hasOwnProperty.call(body,'phone'))updates.phone=assertPhone(body.phone||'');
+      updates.coachName=coachName||(u.role==='editor'?(updates.name||u.name):'');
+      updates={...updates,...buildStoredPermissionFields({
+        ...updates,
+        dataScope:Object.prototype.hasOwnProperty.call(body,'dataScope')?body.dataScope:updates.dataScope,
+        campusIds:Object.prototype.hasOwnProperty.call(body,'campusIds')?body.campusIds:updates.campusIds,
+        featurePermissions:Object.prototype.hasOwnProperty.call(body,'featurePermissions')?body.featurePermissions:updates.featurePermissions,
+        permissions:Object.prototype.hasOwnProperty.call(body,'permissions')?body.permissions:updates.permissions,
+        matchPermissions:Object.prototype.hasOwnProperty.call(body,'matchPermissions')?body.matchPermissions:updates.matchPermissions,
+        matchOps:Object.prototype.hasOwnProperty.call(body,'matchOps')?body.matchOps:updates.matchOps,
+        matchFinance:Object.prototype.hasOwnProperty.call(body,'matchFinance')?body.matchFinance:updates.matchFinance
+      })};
+      if(body.clearWechat){await unbindWechatUserWithIndex(updates);return sendJson(res,{success:true});}
+      if(body.clearOfficialAccount){updates=buildOfficialAccountUnboundUser(updates);}
+      await put(T_USERS,id,updates);
+      return sendJson(res,{success:true});
+    }
     if(path==='/admin/reset-user-password'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const{id,password}=body;if(!id||!password)return sendJson(res,{error:'缺少账号或新密码'},400);const u=await get(T_USERS,id);if(!u)return sendJson(res,{error:'用户不存在'},404);await put(T_USERS,id,{...u,password:await bcrypt.hash(password,10),updatedAt:new Date().toISOString()});return sendJson(res,{success:true});}
     if(path==='/admin/users'&&method==='GET'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const all=isProductionRuntime()?await scanFirstRows(T_USERS,{limit:PRODUCTION_PAGE_READ_LIMITS.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_USERS,{columns:ADMIN_USER_LIST_PROJECTION_FIELDS});return sendJson(res,all.filter(isVisibleAdminUser).map(buildAdminUserView));}
     if(path==='/admin/clear-test-data'&&method==='POST'){
@@ -8689,7 +8930,10 @@ module.exports = async (req, res) => {
     }
     if(path==='/courts'){
       await init();
-      if(method==='GET')return sendJson(res,await getCachedScan(T_COURTS));
+      if(method==='GET'){
+        const rows=await getCachedScan(T_COURTS);
+        return sendJson(res,filterLoadAllForUser({courts:rows},user).courts);
+      }
       if(method==='POST'){
         const id=uuidv4();
         const operationTrace=buildOperationTrace({operationType:'court-booking',operator:user.name||body.operator||''});
@@ -8805,7 +9049,7 @@ module.exports = async (req, res) => {
       return sendJson(res,{dryRun,total:rows.length,candidates,migrated,skipped,preview});
     }
     const cM=path.match(/^\/courts\/(.+)$/);if(cM){const id=cM[1];if(method==='PUT'){const prev=await getCachedRow(T_COURTS,id).catch(()=>null);const prevHistory=JSON.stringify(normalizeCourtHistory(prev?.history));const nextHistory=JSON.stringify(normalizeCourtHistory(body?.history));const operationTrace=buildOperationTrace({operationType:'court-booking',operator:user.name||body.operator||''});const stampedBody=stampCourtHistoryOperationTrace({previousCourt:prev,nextCourt:body,operationTrace});const schedules=prevHistory===nextHistory?[]:await getCachedScan(T_SCHEDULE).catch(()=>[]);const r={...normalizeCourtRecord(stampedBody,{schedules}),id,updatedAt:new Date().toISOString()};await put(T_COURTS,id,r);return sendJson(res,r);}if(method==='DELETE'){const court=await getCachedRow(T_COURTS,id).catch(()=>null);if(!court)return sendJson(res,{error:'订场用户不存在'},404);const action=courtDeleteAction(court,await loadCourtDeleteReferenceData());if(action==='delete'){await del(T_COURTS,id);return sendJson(res,{success:true,archived:false});}const now=new Date().toISOString();await put(T_COURTS,id,{...court,status:'inactive',deletedAt:court.deletedAt||now,updatedAt:now});return sendJson(res,{success:true,archived:true});}}
-    if(path==='/students'){await init();if(method==='GET'){const rows=await getFastStudentsRead();if(user.role==='admin')return sendJson(res,rows);/* hot-cache guard: filterLoadAllForUser({students:rows,schedule,classes},user).students */const [schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({students:rows,schedule,classes,coaches},user,coachRefs).students);}if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
+    if(path==='/students'){await init();if(method==='GET'){const rows=await getFastStudentsRead();if(user.role==='admin')return sendJson(res,filterLoadAllForUser({students:rows},user).students);/* hot-cache guard: filterLoadAllForUser({students:rows,schedule,classes},user).students */const [schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({students:rows,schedule,classes,coaches},user,coachRefs).students);}if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
     const studentReminderLinkM=path.match(/^\/students\/([^/]+)\/reminder-link$/);
     if(studentReminderLinkM&&method==='POST'){
       assertStudentWriteAccess(user);
@@ -8844,16 +9088,16 @@ module.exports = async (req, res) => {
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
     if(path==='/products'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PRODUCTS).catch(()=>[]));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=uuidv4();const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},null,now);r.createdAt=now;await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
-    if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PACKAGES).catch(()=>[]));if(method==='POST'){const id=uuidv4();const refs={products:await getCachedScan(T_PRODUCTS).catch(()=>[]),coaches:await getCachedScan(T_COACHES).catch(()=>[]),campuses:await getCachedScan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
+    if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET'){const rows=await getCachedScan(T_PACKAGES).catch(()=>[]);return sendJson(res,filterLoadAllForUser({packages:rows},user).packages);}if(method==='POST'){const id=uuidv4();const refs={products:await getCachedScan(T_PRODUCTS).catch(()=>[]),coaches:await getCachedScan(T_COACHES).catch(()=>[]),campuses:await getCachedScan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
     if(path==='/packages/merge'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const masterPackageId=String(body.masterPackageId||'').trim();const sourcePackageId=String(body.sourcePackageId||'').trim();const [masterPackage,sourcePackage,purchases,entitlements,schedules]=await Promise.all([get(T_PACKAGES,masterPackageId).catch(()=>null),get(T_PACKAGES,sourcePackageId).catch(()=>null),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[])]);const now=new Date().toISOString();const updates=buildPackageMergeUpdates({masterPackage,sourcePackage,purchases,entitlements,schedules,now,operator:user.name||''});await put(T_PACKAGES,sourcePackageId,updates.sourcePackage);await Promise.all([...updates.purchases.map(row=>put(T_PURCHASES,row.id,row)),...updates.entitlements.map(row=>put(T_ENTITLEMENTS,row.id,row)),...updates.schedules.map(row=>put(T_SCHEDULE,row.id,row))]);await Promise.all(updates.entitlements.map(row=>syncStudentActiveEntitlementIndexes(null,row)));return sendJson(res,{success:true,...updates});}
     if(path==='/packages/order'&&method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const orderedIds=Array.isArray(body.orderedIds)?body.orderedIds.map(id=>String(id||'').trim()).filter(Boolean):[];if(!orderedIds.length)return sendJson(res,{error:'请提供课包排序'},400);if(new Set(orderedIds).size!==orderedIds.length)return sendJson(res,{error:'课包排序不能重复'},400);const rows=await scan(T_PACKAGES).catch(()=>[]);const byId=new Map(rows.map(row=>[String(row.id||''),row]));const missing=orderedIds.filter(id=>!byId.has(id));if(missing.length)return sendJson(res,{error:'课包不存在'},404);const now=new Date().toISOString();const updates=orderedIds.map((id,idx)=>({...byId.get(id),sortOrder:(idx+1)*10,updatedAt:now}));await Promise.all(updates.map(row=>put(T_PACKAGES,row.id,row)));return sendJson(res,{success:true,packages:updates});}
     const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=decodeURIComponent(pkgM[1]);if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);if(!old)return sendJson(res,{error:'售卖课包不存在'},404);const now=new Date().toISOString();const deactivated=buildPackageDeactivateUpdate(old,body,now);if(deactivated){await put(T_PACKAGES,id,deactivated);return sendJson(res,deactivated);}const purchaseRows=await scan(T_PURCHASES).catch(()=>[]);const entitlementRows=await scan(T_ENTITLEMENTS).catch(()=>[]);const legacyCoachNames=[old.ownerCoach,...parseArr(old.coachNames),...parseArr(old.coachIds),...purchaseRows.filter(p=>String(p.packageId||'')===String(id)).flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames),...parseArr(p.allowedCoaches)]),...entitlementRows.filter(e=>String(e.packageId||'')===String(id)).flatMap(e=>[e.ownerCoach,...parseArr(e.coachNames),...parseArr(e.allowedCoaches)])].filter(Boolean);const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[]),legacyCoachNames};const r=normalizePackageRecord({...body,id},old,refs);assertCanEditPackageWithPurchases(old,r,purchaseRows);await put(T_PACKAGES,id,r);const snapshotUpdates=syncSoldPackageRuleSnapshots(r,purchaseRows,entitlementRows,r.updatedAt);await Promise.all([...snapshotUpdates.purchases.map(row=>put(T_PURCHASES,row.id,row)),...snapshotUpdates.entitlements.map(row=>put(T_ENTITLEMENTS,row.id,row))]);await Promise.all(snapshotUpdates.entitlements.map(row=>syncStudentActiveEntitlementIndexes(null,row)));return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
-    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PURCHASES).catch(()=>[]));if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate});const id=uuidv4();const now=new Date().toISOString();const operationTrace=buildOperationTrace({operationType:'package-purchase',operator:user.name||body.operator||'',now});const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name,operationTrace});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);await syncStudentActiveEntitlementIndexes(null,entitlement);return sendJson(res,{purchase,entitlement});}}
+    if(path==='/purchases'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET'){const rows=await getCachedScan(T_PURCHASES).catch(()=>[]);if(!isCampusScopedAdmin(user))return sendJson(res,rows);const [students,packages,entitlements]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_PACKAGES).catch(()=>[]),getCachedScan(T_ENTITLEMENTS).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({purchases:rows,students,packages,entitlements},user).purchases);}if(method==='POST'){const pkg=await get(T_PACKAGES,body.packageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);const student=await get(T_STUDENTS,body.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const purchaseDate=body.purchaseDate||new Date().toISOString().slice(0,10);validatePurchaseInputForPackage(pkg,{...body,purchaseDate});const id=uuidv4();const now=new Date().toISOString();const operationTrace=buildOperationTrace({operationType:'package-purchase',operator:user.name||body.operator||'',now});const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name,operationTrace});const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);await syncStudentActiveEntitlementIndexes(null,entitlement);return sendJson(res,{purchase,entitlement});}}
     const purM=path.match(/^\/purchases\/(.+)$/);if(purM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=purM[1];if(method==='GET')return sendJson(res,await get(T_PURCHASES,id));if(method==='PUT'){const old=await get(T_PURCHASES,id).catch(()=>null);if(!old)return sendJson(res,{error:'购买记录不存在'},404);const ents=(await scan(T_ENTITLEMENTS).catch(()=>[])).filter(e=>e.purchaseId===id);const ledger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);const now=new Date().toISOString();if(purchaseHasEntitlementLedger(id,ents,ledger)){const r={...old,notes:body.notes!==undefined?body.notes:old.notes,updatedAt:now};assertCanEditPurchaseWithLedger(old,r,ents,ledger);await put(T_PURCHASES,id,r);return sendJson(res,{purchase:r,entitlements:[]});}const nextPackageId=body.packageId||old.packageId;const purchaseDate=body.purchaseDate||old.purchaseDate||new Date().toISOString().slice(0,10);const pkg=await get(T_PACKAGES,nextPackageId).catch(()=>null);if(!pkg)return sendJson(res,{error:'售卖课包不存在'},404);validatePurchaseInputForPackage(pkg,{...old,...body,purchaseDate},{isEdit:true,oldPackageId:old.packageId});const student=await get(T_STUDENTS,body.studentId||old.studentId).catch(()=>null);if(!student)return sendJson(res,{error:'学员不存在'},404);const operationTrace=buildOperationTrace({operationType:'package-purchase-edit',operator:user.name||old.operator||'',now});const r=buildPurchaseRecord(pkg,{...old,...body,id,createdAt:old.createdAt,purchaseDate},student,{id,now,operator:old.operator||user.name,operationTrace});await put(T_PURCHASES,id,r);const synced=[];try{for(const ent of ents){const next=withOperationTrace(syncEntitlementFromPurchase(pkg,r,student,ent,now),operationTrace);await put(T_ENTITLEMENTS,ent.id,next);await syncStudentActiveEntitlementIndexes(ent,next);synced.push(next);}return sendJson(res,{purchase:r,entitlements:synced});}catch(err){await put(T_PURCHASES,id,old).catch(()=>null);for(const ent of ents)await put(T_ENTITLEMENTS,ent.id,ent).catch(()=>null);throw err;}}if(method==='DELETE'){const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanVoidPurchase(id,ents,ledger);const now=new Date().toISOString();const operationTrace=buildOperationTrace({operationType:'package-purchase-void',operator:user.name||'',now});for(const ent of ents.filter(e=>e.purchaseId===id)){const nextEnt=withOperationTrace({...ent,status:'voided',updatedAt:now},operationTrace);await put(T_ENTITLEMENTS,ent.id,nextEnt);await syncStudentActiveEntitlementIndexes(ent,nextEnt);const event=withOperationTrace({id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now},operationTrace);await put(T_ENTITLEMENT_LEDGER,event.id,event);}const old=await get(T_PURCHASES,id).catch(()=>null);if(old)await put(T_PURCHASES,id,withOperationTrace({...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now},operationTrace));return sendJson(res,{success:true});}}
     if(path==='/membership-plans'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      if(method==='GET')return sendJson(res,await getCachedScan(T_MEMBERSHIP_PLANS).catch(()=>[]));
+      if(method==='GET'){const rows=await getCachedScan(T_MEMBERSHIP_PLANS).catch(()=>[]);return sendJson(res,filterLoadAllForUser({membershipPlans:rows},user).membershipPlans);}
       if(method==='POST'){const now=new Date().toISOString();const r=buildMembershipPlanRecord(body,{id:uuidv4(),now});await put(T_MEMBERSHIP_PLANS,r.id,r);return sendJson(res,r);}
     }
     const mpM=path.match(/^\/membership-plans\/(.+)$/);if(mpM){
@@ -8871,7 +9115,7 @@ module.exports = async (req, res) => {
     if(path==='/membership-accounts'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      if(method==='GET'){const rows=await getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]);const courtId=query.get('courtId')||'';return sendJson(res,courtId?rows.filter(a=>a.courtId===courtId):rows);}
+      if(method==='GET'){const rows=await getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]);const courtId=query.get('courtId')||'';if(!isCampusScopedAdmin(user))return sendJson(res,courtId?rows.filter(a=>a.courtId===courtId):rows);const courts=await getCachedScan(T_COURTS).catch(()=>[]);const scoped=filterLoadAllForUser({courts,membershipAccounts:rows},user).membershipAccounts;return sendJson(res,courtId?scoped.filter(a=>a.courtId===courtId):scoped);}
     }
     const maM=path.match(/^\/membership-accounts\/(.+)$/);if(maM){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -8910,7 +9154,7 @@ module.exports = async (req, res) => {
     if(path==='/membership-orders'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      if(method==='GET')return sendJson(res,await getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]));
+      if(method==='GET'){const rows=await getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]);if(!isCampusScopedAdmin(user))return sendJson(res,rows);const [courts,membershipAccounts]=await Promise.all([getCachedScan(T_COURTS).catch(()=>[]),getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({courts,membershipAccounts,membershipOrders:rows},user).membershipOrders);}
       if(method==='POST'){
         const now=new Date().toISOString();
         const purchaseDate=body.purchaseDate||now.slice(0,10);
@@ -8969,11 +9213,15 @@ module.exports = async (req, res) => {
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       if(method==='GET'){
-        const [rows,users]=await Promise.all([
+        const [rows,users,courts,membershipAccounts,membershipOrders]=await Promise.all([
           getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
-          getCachedScan(T_USERS).catch(()=>[])
+          getCachedScan(T_USERS).catch(()=>[]),
+          isCampusScopedAdmin(user)?getCachedScan(T_COURTS).catch(()=>[]):Promise.resolve([]),
+          isCampusScopedAdmin(user)?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
+          isCampusScopedAdmin(user)?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
         ]);
-        return sendJson(res,(rows||[]).map(row=>({...row,operator:normalizeOperatorAccountName(row.operator,users)})));
+        const scoped=isCampusScopedAdmin(user)?filterLoadAllForUser({courts,membershipAccounts,membershipOrders,membershipBenefitLedger:rows},user).membershipBenefitLedger:rows;
+        return sendJson(res,(scoped||[]).map(row=>({...row,operator:normalizeOperatorAccountName(row.operator,users)})));
       }
       if(method==='POST'){
         const now=new Date().toISOString();
@@ -9035,22 +9283,22 @@ module.exports = async (req, res) => {
     if(path==='/membership-account-events'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      if(method==='GET')return sendJson(res,await getCachedScan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[]));
+      if(method==='GET'){const rows=await getCachedScan(T_MEMBERSHIP_ACCOUNT_EVENTS).catch(()=>[]);if(!isCampusScopedAdmin(user))return sendJson(res,rows);const [courts,membershipAccounts,membershipOrders]=await Promise.all([getCachedScan(T_COURTS).catch(()=>[]),getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({courts,membershipAccounts,membershipOrders,membershipAccountEvents:rows},user).membershipAccountEvents);}
     }
     if(path==='/entitlement-ledger'){
       await init();
-      if(method==='GET')return sendJson(res,normalizeEntitlementLedgerRowsForDetailView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[])));
+      if(method==='GET'){const rows=normalizeEntitlementLedgerRowsForDetailView(await getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]));if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,rows);const [students,schedule,classes,purchases,packages,entitlements,coaches,users]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_PURCHASES).catch(()=>[]),getCachedScan(T_PACKAGES).catch(()=>[]),getCachedScan(T_ENTITLEMENTS).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({students,schedule,classes,purchases,packages,entitlements,entitlementLedger:rows,coaches},user,coachRefs).entitlementLedger);}
     }
-    if(path==='/entitlements'){await init();if(method==='GET'){const sid=query.get('studentId')||'';if(user.role==='admin'&&sid)return sendJson(res,await getIndexedActiveEntitlementsForStudents([sid]));const rows=await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);if(user.role==='admin')return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});const scoped=filterLoadAllForUser({students,schedule,classes,entitlements:rows,coaches},user,coachRefs).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
+    if(path==='/entitlements'){await init();if(method==='GET'){const sid=query.get('studentId')||'';const rows=(user.role==='admin'&&sid&&!isCampusScopedAdmin(user))?await getIndexedActiveEntitlementsForStudents([sid]):await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes,purchases,packages,coaches,users]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_PURCHASES).catch(()=>[]),getCachedScan(T_PACKAGES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});const scoped=filterLoadAllForUser({students,schedule,classes,purchases,packages,entitlements:rows,coaches},user,coachRefs).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
     if(path==='/entitlements/recommend'&&method==='POST'){await init();const [rows,coaches,users]=await Promise.all([getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds)),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,recommendEntitlements(rows,{...body,coachRefs:buildCoachRefs({coaches,users})}));}
     const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await getCachedRow(T_ENTITLEMENTS,id).catch(()=>null);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);await syncStudentActiveEntitlementIndexes(old,null);return sendJson(res,{success:true});}}
-    if(path==='/plans'){await init();if(method==='GET')return sendJson(res,await scan(T_PLANS));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
+    if(path==='/plans'){await init();if(method==='GET'){const rows=await scan(T_PLANS);if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,rows);const [students,classes,schedule]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({plans:rows,students,classes,schedule},user).plans);}return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     if(path==='/coach-proposals'){
       await init();
       if(method==='GET'){
         const rows=await withTimeout(getCachedScan(T_COACH_PROPOSALS).catch(()=>[]),3000,[]);
-        if(user.role==='admin')return sendJson(res,rows);
+        if(user.role==='admin')return sendJson(res,filterLoadAllForUser({coachProposals:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).coachProposals);
         const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
         const scheduleRows=await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users}));
         const scheduleIds=new Set(scheduleRows.map(row=>String(row.id||'')).filter(Boolean));
@@ -9087,7 +9335,7 @@ module.exports = async (req, res) => {
     }
     if(path==='/feedbacks'){
       await init();
-      if(method==='GET')return sendJson(res,await withTimeout(getCachedScan(T_FEEDBACKS).catch(()=>[]),3000,[]));
+      if(method==='GET'){const rows=await withTimeout(getCachedScan(T_FEEDBACKS).catch(()=>[]),3000,[]);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({feedbacks:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).feedbacks);return sendJson(res,rows);}
       if(method==='POST'){
         return timedEndpointMetric('feedback.save',async()=>{
           const id=uuidv4();
@@ -9121,7 +9369,7 @@ module.exports = async (req, res) => {
     }
     if(path==='/schedule'){
       await init();
-      if(method==='GET'){if(user.role==='admin')return sendJson(res,await getScheduleListRows());const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users})));}
+      if(method==='GET'){if(user.role==='admin'){const rows=await getScheduleListRows();return sendJson(res,filterLoadAllForUser({schedule:rows},user).schedule);}const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users})));}
       if(method==='POST'){
         return timedEndpointMetric('schedule.save',async()=>{
           try{assertCanWriteSchedule(user);}catch(e){return sendJson(res,{error:e.message},403);}
@@ -9334,12 +9582,13 @@ module.exports = async (req, res) => {
         }
       }
     }
-    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET')return sendJson(res,await getCachedScan(T_COACHES));if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await getCachedScan(T_COACHES));const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
+    if(path==='/coaches'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET'){const rows=await getCachedScan(T_COACHES);return sendJson(res,filterLoadAllForUser({coaches:rows},user).coaches);}if(method==='POST'){const id=uuidv4();const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await getCachedScan(T_COACHES));const r={...body,name,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);return sendJson(res,r);}}
     const coM=path.match(/^\/coaches\/(.+)$/);if(coM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=coM[1];if(method==='PUT'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{error:'教练不存在'},404);const name=String(body.name||'').trim();if(!name)return sendJson(res,{error:'请填写教练姓名'},400);assertUniqueCoachName(name,await scan(T_COACHES),id);const r={...body,name,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_COACHES,id,r);const coachUpdates=await applyCoachRename(old.name,name,{oldCoachId:old.id,newCoachId:id});return sendJson(res,{...r,coachUpdates});}if(method==='DELETE'){const old=await get(T_COACHES,id).catch(()=>null);if(!old)return sendJson(res,{success:true});assertCanDeleteCoachName(old.name,await loadCoachReferenceData(),old.id);await del(T_COACHES,id);return sendJson(res,{success:true});}}
     if(path==='/page-data/coaches'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      return sendJson(res,{coaches:await cappedScan(T_COACHES)});
+      const coaches=await cappedScan(T_COACHES);
+      return sendJson(res,{coaches:filterLoadAllForUser({coaches},user).coaches});
     }
     if(path==='/page-data/plans'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -9354,7 +9603,7 @@ module.exports = async (req, res) => {
         cappedScan(T_COURTS),
         cappedScan(T_ENTITLEMENTS)
       ]);
-      return sendJson(res,{
+      const scoped=filterLoadAllForUser({
         campuses:campuses.length?campuses:DEFAULT_CAMPUSES,
         students,
         classes,
@@ -9363,6 +9612,16 @@ module.exports = async (req, res) => {
         schedule,
         courts,
         entitlements
+      },user);
+      return sendJson(res,{
+        campuses:scoped.campuses,
+        students:scoped.students,
+        classes:scoped.classes,
+        plans:scoped.plans,
+        products:scoped.products,
+        schedule:scoped.schedule,
+        courts:scoped.courts,
+        entitlements:scoped.entitlements
       });
     }
     if(path==='/page-data/purchases'&&method==='GET'){
@@ -9374,7 +9633,8 @@ module.exports = async (req, res) => {
         cappedScan(T_STUDENTS),
         cappedScan(T_ENTITLEMENTS)
       ]);
-      return sendJson(res,{purchases,packages,students,entitlements});
+      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements},user);
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements});
     }
     if(path==='/page-data/finance'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -9390,9 +9650,10 @@ module.exports = async (req, res) => {
         getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
         getFinancePageScheduleRows()
       ]);
-      const financeSnapshot=buildFinancePageSnapshot({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule});
+      const scoped=filterLoadAllForUser({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule},user);
+      const financeSnapshot=buildFinancePageSnapshot(scoped);
       return sendJson(res,{
-        campuses,
+        campuses:scoped.campuses,
         financeOverviewData:financeSnapshot.financeOverviewData,
         financeNormalizedRows:financeSnapshot.financeNormalizedRows,
         financeSettlementRows:financeSnapshot.financeSettlementRows,
@@ -9407,7 +9668,8 @@ module.exports = async (req, res) => {
         getFastStudentsRead({columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS}),
         getCachedScan(T_COURTS,{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[])
       ]);
-      return sendJson(res,{campuses,students,courts,membershipAccounts:[],coaches:[],pricePlans:[]});
+      const scoped=filterLoadAllForUser({campuses,students,courts},user);
+      return sendJson(res,{campuses:scoped.campuses,students:scoped.students,courts:scoped.courts,membershipAccounts:[],coaches:[],pricePlans:[]});
     }
     if(path==='/page-data/court-account-list-view'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -9440,7 +9702,7 @@ module.exports = async (req, res) => {
       const normalizedMembershipPlans=(Array.isArray(membershipPlans)?membershipPlans:[]).map(normalizeMembershipPlanViewRecord);
       const membershipPlanMap=new Map(normalizedMembershipPlans.map(p=>[p.id,p]));
       const normalizedMembershipOrders=(Array.isArray(membershipOrders)?membershipOrders:[]).map(order=>normalizeMembershipOrderViewRecord(order,membershipPlanMap.get(order.membershipPlanId)));
-      return sendJson(res,{
+      const scoped=filterLoadAllForUser({
         campuses,
         students,
         courts,
@@ -9450,6 +9712,17 @@ module.exports = async (req, res) => {
         membershipAccountEvents:Array.isArray(membershipAccountEvents)?membershipAccountEvents:[],
         membershipPlans:normalizedMembershipPlans,
         coaches
+      },user);
+      return sendJson(res,{
+        campuses:scoped.campuses,
+        students:scoped.students,
+        courts:scoped.courts,
+        membershipAccounts:scoped.membershipAccounts,
+        membershipOrders:scoped.membershipOrders,
+        membershipBenefitLedger:scoped.membershipBenefitLedger,
+        membershipAccountEvents:scoped.membershipAccountEvents,
+        membershipPlans:scoped.membershipPlans,
+        coaches:scoped.coaches
       });
     }
     if(path==='/page-data/workbench'&&method==='GET'){
@@ -9504,7 +9777,10 @@ module.exports = async (req, res) => {
       await ensureLeadTables();
       const leadId=cleanLeadText(query.get('leadId'));
       const rows=isProductionRuntime()?await scanFirstRows(T_LEAD_FOLLOWUPS,{limit:PRODUCTION_PAGE_READ_LIMITS.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
-      return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
+      if(!isCampusScopedAdmin(user))return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
+      const leads=await getCachedScan(T_LEADS,{columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+      const scoped=filterLoadAllForUser({leads,leadFollowups:rows},user).leadFollowups;
+      return sendJson(res,leadId?scoped.filter(row=>String(row.leadId||'')===leadId):scoped);
     }
     if(path==='/leads'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -9521,7 +9797,8 @@ module.exports = async (req, res) => {
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
         const todayStr=new Date().toISOString().slice(0,10);
-        const filtered=mergeDuplicateLeadRows(rows).filter(row=>{
+        const visibleRows=filterLoadAllForUser({leads:mergeDuplicateLeadRows(rows)},user).leads;
+        const filtered=visibleRows.filter(row=>{
           if(q&&!searchHit(q,row.displayName,row.wechatName,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
           if(source&&row.source!==source)return false;
           if(consultType&&row.consultType!==consultType)return false;
@@ -9726,12 +10003,12 @@ module.exports = async (req, res) => {
       await put(T_LEADS,lead.id,nextLead);
       return sendJson(res,{lead:nextLead,court,membershipAccount});
     }
-    if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,rows);const [schedule,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({classes:rows,schedule,coaches},user,coachRefs).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
+    if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({classes:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).classes);const [schedule,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({classes:rows,schedule,coaches},user,coachRefs).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(path==='/campuses'){
       if(method==='GET'){
         const result=await listCampusesWithDefaults();
-        return sendJson(res,result);
+        return sendJson(res,filterLoadAllForUser({campuses:result},user).campuses);
       }
       await init();
       if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=body.code||uuidv4();const r={...body,id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_CAMPUSES,id,r);return sendJson(res,r);}

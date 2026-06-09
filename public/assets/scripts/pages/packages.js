@@ -32,7 +32,7 @@ function packageDisplayTitle(p){
 }
 function renderPackageTopFilters(){
   if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function')return '';
-  const campusSource=Array.isArray(campuses)?campuses:[];
+  const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
   const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
     value:String(row?.code||row?.id||'').trim(),
     label:String(row?.name||row?.code||row?.id||'').trim()
