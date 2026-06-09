@@ -97,7 +97,7 @@ function displayCampusName(value){const key=normalizeCampusValue(value);return C
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
 const PACKAGE_BOARD_PREFERENCES_ROW_ID='package-board-preferences';
-const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements'];
+const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
 const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
 const TEST_DATA_RESET_TABLES=[
@@ -1055,7 +1055,7 @@ function assertClassSchedulable(cls,rec){
   if(cls.status==='已取消')throw new Error('该班次已取消，不能继续排课');
   if(cls.status==='已结课')throw new Error('该班次已结课，不能继续排课');
 }
-function dateMs(v){if(!v)return NaN;return new Date(String(v).replace(' ','T')).getTime();}
+function dateMs(v){if(!v)return NaN;if(v instanceof Date)return v.getTime();return new Date(String(v).replace(' ','T')).getTime();}
 function dateKey(v){return String(v||'').slice(0,10);}
 function clockMin(v){const m=String(v||'').slice(0,5).match(/^(\d{1,2}):(\d{2})$/);return m?(parseInt(m[1])*60+parseInt(m[2])):NaN;}
 function addDaysKey(ds,days){
@@ -5321,6 +5321,48 @@ function formatNtrpRangeText(minValue,maxValue){
   if(min&&max)return min===max?min:`${min}-${max}`;
   return min||max||'待首位报名定级';
 }
+const MATCH_TECHNICAL_LEVELS=['1.0','1.5','2.0','2.5','3.0','3.5','4.0','4.5','5.0+'];
+function technicalLevelNumber(value){
+  const raw=String(value||'').trim();
+  if(raw==='5.0+')return 5;
+  const num=Number(raw);
+  return Number.isFinite(num)?num:NaN;
+}
+function formatTechnicalRatingAverage(value){
+  const num=Number(value);
+  if(!Number.isFinite(num)||num<=0)return '';
+  if(num>=5)return '5.0+';
+  return num.toFixed(1);
+}
+function assertMatchTechnicalRatingInput(input={},raterUserId=''){
+  const ratedUserId=String(input.ratedUserId||'').trim();
+  const technicalLevel=String(input.technicalLevel||'').trim();
+  if(!ratedUserId)throw new Error('请选择球友');
+  if(String(ratedUserId)===String(raterUserId))throw new Error('不能给自己评定');
+  if(!MATCH_TECHNICAL_LEVELS.includes(technicalLevel))throw new Error('技术等级不正确');
+  return {ratedUserId,technicalLevel};
+}
+function buildMatchTechnicalRatingSummary(ratings=[]){
+  const grouped=new Map();
+  for(const row of ratings||[]){
+    const userId=String(row.rateduserid||row.ratedUserId||'').trim();
+    const level=String(row.technicallevel||row.technicalLevel||'').trim();
+    const numeric=technicalLevelNumber(level);
+    if(!userId||!Number.isFinite(numeric))continue;
+    const current=grouped.get(userId)||{sum:0,count:0};
+    grouped.set(userId,{sum:current.sum+numeric,count:current.count+1});
+  }
+  const result=new Map();
+  for(const [userId,item] of grouped.entries()){
+    const average=item.count?item.sum/item.count:0;
+    result.set(userId,{
+      technicalRatingAverage:Number(average.toFixed(2)),
+      technicalRatingText:formatTechnicalRatingAverage(average),
+      technicalRatingCount:item.count
+    });
+  }
+  return result;
+}
 function activeMatchRegistrations(registrations=[]){
   return (registrations||[]).filter(row=>String(row.registrationstatus||row.registrationStatus)==='registered');
 }
@@ -5570,6 +5612,8 @@ function toMatchView(row,registrations=[],viewerId='',feeSplits=[],viewerAttenda
       userName:String(reg.nickname||reg.nickName||maskPhone(reg.phone)||reg.userid||reg.userId||'球友').trim(),
       ntrpText:formatNtrpValue(reg.ntrplevel||reg.ntrpLevel)||'未设水平',
       attendanceRateText:reg.attendanceratetext||reg.attendanceRateText||'暂无守约率',
+      technicalRatingText:reg.technicalratingtext||reg.technicalRatingText||'',
+      technicalRatingCount:Number(reg.technicalratingcount||reg.technicalRatingCount||0),
       finalAttendanceStatus:reg.finalattendancestatus||reg.finalAttendanceStatus||'pending'
     }))
   };
@@ -5594,6 +5638,12 @@ async function loadAttendanceRateMap(pool,userIds=[]){
   }
   return rateMap;
 }
+async function loadTechnicalRatingSummaryMap(pool,userIds=[]){
+  const uniqueUserIds=[...new Set((userIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!uniqueUserIds.length)return new Map();
+  const rows=await pool.query('SELECT ratedUserId,technicalLevel FROM match_player_ratings WHERE ratedUserId = ANY($1::text[])',[uniqueUserIds]);
+  return buildMatchTechnicalRatingSummary(rows.rows);
+}
 async function loadMatchRegistrationViews(pool,matchIds=[],{registeredOnly=true}={}){
   const uniqueMatchIds=[...new Set((matchIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
   if(!uniqueMatchIds.length)return [];
@@ -5612,10 +5662,15 @@ async function loadMatchRegistrationViews(pool,matchIds=[],{registeredOnly=true}
     WHERE r.matchId = ANY($1::text[])
     ${statusClause}
   `,[uniqueMatchIds]);
-  const rateMap=await loadAttendanceRateMap(pool,regRows.rows.map(row=>String(row.userid||row.userId||'')));
+  const userIds=regRows.rows.map(row=>String(row.userid||row.userId||''));
+  const [rateMap,ratingMap]=await Promise.all([
+    loadAttendanceRateMap(pool,userIds),
+    loadTechnicalRatingSummaryMap(pool,userIds)
+  ]);
   return regRows.rows.map(row=>({
     ...row,
-    attendanceRateText:rateMap.get(String(row.userid||row.userId||''))||'暂无守约率'
+    attendanceRateText:rateMap.get(String(row.userid||row.userId||''))||'暂无守约率',
+    ...(ratingMap.get(String(row.userid||row.userId||''))||{technicalRatingText:'',technicalRatingCount:0})
   }));
 }
 function toMatchDetailResponse(view){
@@ -5811,14 +5866,27 @@ async function getMatchForViewer(matchId,viewerId){
   const pool=getMatchSqlPool();
   const match=await pool.query('SELECT * FROM match_posts WHERE id=$1',[matchId]);
   if(!match.rows[0])return null;
-  const [regs,splits,attendance,feeRecord]=await Promise.all([
+  const [regs,splits,attendance,feeRecord,ratings]=await Promise.all([
     loadMatchRegistrationViews(pool,[matchId],{registeredOnly:false}),
     pool.query('SELECT * FROM match_fee_splits WHERE matchId=$1',[matchId]),
     pool.query('SELECT * FROM match_attendance WHERE matchId=$1',[matchId]),
-    pool.query('SELECT * FROM match_fee_records WHERE matchId=$1 LIMIT 1',[matchId])
+    pool.query('SELECT * FROM match_fee_records WHERE matchId=$1 LIMIT 1',[matchId]),
+    pool.query('SELECT * FROM match_player_ratings WHERE matchId=$1',[matchId])
   ]);
   const viewerAttendance=attendance.rows.find(row=>String(row.userid||row.userId)===String(viewerId))||null;
-  return toMatchView(match.rows[0],regs,viewerId,splits.rows,viewerAttendance,attendance.rows,feeRecord.rows[0]||null);
+  const view=toMatchView(match.rows[0],regs,viewerId,splits.rows,viewerAttendance,attendance.rows,feeRecord.rows[0]||null);
+  const viewerRatings=new Map(ratings.rows.filter(row=>String(row.rateruserid||row.raterUserId)===String(viewerId)).map(row=>[String(row.rateduserid||row.ratedUserId),String(row.technicallevel||row.technicalLevel||'')]));
+  const attendedUserIds=new Set(attendance.rows.filter(row=>String(row.finalstatus||row.finalStatus)==='attended').map(row=>String(row.userid||row.userId)));
+  const ended=dateMs(match.rows[0].endtime||match.rows[0].endTime)<=Date.now();
+  view.registrations=(view.registrations||[]).map(row=>{
+    const userId=String(row.userId||row.userid||'');
+    return {
+      ...row,
+      viewerTechnicalLevel:viewerRatings.get(userId)||'',
+      canRateTechnical:ended&&attendedUserIds.has(String(viewerId))&&attendedUserIds.has(userId)&&userId!==String(viewerId)
+    };
+  });
+  return view;
 }
 async function createMatchForUser(userId,input){
   if(!(await canMatchUserCreate(userId)))throw new Error('仅管理员可发起约球');
@@ -6330,16 +6398,18 @@ async function listMyMatches(userId){
 }
 async function getMatchProfile(userId){
   const pool=getMatchSqlPool();
-  const [userRes,created,joined,attendance,fees]=await Promise.all([
+  const [userRes,created,joined,attendance,fees,ratings]=await Promise.all([
     pool.query('SELECT * FROM match_users WHERE id=$1',[userId]),
     pool.query('SELECT id FROM match_posts WHERE creatorUserId=$1',[userId]),
     pool.query("SELECT DISTINCT matchId AS id FROM match_registrations WHERE userId=$1 AND registrationStatus='registered'",[userId]),
     pool.query('SELECT a.*,p.status AS matchStatus FROM match_attendance a LEFT JOIN match_posts p ON p.id=a.matchId WHERE a.userId=$1',[userId]),
-    pool.query('SELECT * FROM match_fee_splits WHERE userId=$1',[userId])
+    pool.query('SELECT * FROM match_fee_splits WHERE userId=$1',[userId]),
+    pool.query('SELECT ratedUserId,technicalLevel FROM match_player_ratings WHERE ratedUserId=$1',[userId])
   ]);
   const stats=buildMatchProfileStats({createdMatches:created.rows,joinedMatches:joined.rows,attendanceRows:attendance.rows,feeSplits:fees.rows});
+  const ratingSummary=buildMatchTechnicalRatingSummary(ratings.rows).get(String(userId))||{technicalRatingAverage:0,technicalRatingText:'',technicalRatingCount:0};
   const user=userRes.rows[0]||{};
-  return {...stats,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||'',canCreateMatch:await canMatchUserCreate(userId)}};
+  return {...stats,...ratingSummary,user:{id:user.id,phone:user.phone||'',nickName:user.nickname||user.nickName||'',avatarUrl:user.avatarurl||user.avatarUrl||'',ntrpLevel:user.ntrplevel||user.ntrpLevel||'',canCreateMatch:await canMatchUserCreate(userId)}};
 }
 async function updateMatchProfile(userId,input){
   const phone=assertPhone(input.phone||'');
@@ -6351,6 +6421,29 @@ async function updateMatchProfile(userId,input){
     [userId,phone,ntrpLevel,nickName,avatarUrl,'']
   );
   return getMatchProfile(userId);
+}
+async function submitMatchTechnicalRating(matchId,raterUserId,input={}){
+  const rating=assertMatchTechnicalRatingInput(input,raterUserId);
+  return withMatchSqlTransaction(async(client)=>{
+    const matchRes=await client.query('SELECT * FROM match_posts WHERE id=$1 FOR UPDATE',[matchId]);
+    const match=matchRes.rows[0];
+    if(!match)throw new Error('球局不存在');
+    if(dateMs(match.endtime||match.endTime)>Date.now())throw new Error('球局结束后才能评定');
+    const attendance=await client.query(
+      "SELECT userId,finalStatus FROM match_attendance WHERE matchId=$1 AND userId = ANY($2::text[])",
+      [matchId,[raterUserId,rating.ratedUserId]]
+    );
+    const attended=new Set(attendance.rows.filter(row=>String(row.finalstatus||row.finalStatus)==='attended').map(row=>String(row.userid||row.userId)));
+    if(!attended.has(String(raterUserId))||!attended.has(String(rating.ratedUserId)))throw new Error('只允许确认到场的同场球友互相评定');
+    const id=uuidv4();
+    await client.query(
+      "INSERT INTO match_player_ratings(id,matchId,raterUserId,ratedUserId,technicalLevel,createdAt,updatedAt) VALUES($1,$2,$3,$4,$5,NOW(),NOW()) ON CONFLICT(matchId,raterUserId,ratedUserId) DO UPDATE SET technicalLevel=EXCLUDED.technicalLevel,updatedAt=NOW()",
+      [id,matchId,raterUserId,rating.ratedUserId,rating.technicalLevel]
+    );
+    const rows=await client.query('SELECT ratedUserId,technicalLevel FROM match_player_ratings WHERE ratedUserId=$1',[rating.ratedUserId]);
+    const summary=buildMatchTechnicalRatingSummary(rows.rows).get(String(rating.ratedUserId))||{technicalRatingText:'',technicalRatingCount:0};
+    return {success:true,...rating,...summary};
+  });
 }
 async function listMatchNotifications(userId){
   const rows=await getMatchSqlPool().query(
@@ -6386,6 +6479,15 @@ function assertPhone(value){
 function normalizeMoney(value){
   const n=parseFloat(String(value??'').replace(/,/g,''));
   return Number.isFinite(n)?n:0;
+}
+function safeDatabaseUrlHost(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  try{
+    return new URL(raw).hostname || '';
+  }catch(err){
+    return '';
+  }
 }
 function cleanLeadText(value){
   return String(value||'').trim();
@@ -8319,6 +8421,22 @@ module.exports = async (req, res) => {
     console.log('[health] GET bypass scheduleInitInBackground');
     return sendJson(res,{status:'ok',time:new Date().toISOString()});
   }
+  if(path==='/match-diag'&&method==='GET'){
+    const startedAt=Date.now();
+    const host=safeDatabaseUrlHost(MATCH_DATABASE_URL);
+    const result={ts:new Date().toISOString(),matchDatabase:{host:host||'(missing)',ssl:process.env.MATCH_DATABASE_SSL==='true',urlSet:!!MATCH_DATABASE_URL},test:{status:'pending',ms:0}};
+    if(!MATCH_DATABASE_URL){
+      result.test={status:'error',error:'MATCH_DATABASE_URL missing',ms:Date.now()-startedAt};
+      return sendJson(res,result);
+    }
+    try{
+      await getMatchSqlPool().query('SELECT 1 AS ok');
+      result.test={status:'ok',ms:Date.now()-startedAt};
+    }catch(e){
+      result.test={status:'error',error:String(e?.message||e),ms:Date.now()-startedAt};
+    }
+    return sendJson(res,result);
+  }
   if(path==='/diag'&&method==='GET'){
     const startedAt=Date.now();
     const result={ts:new Date().toISOString(),env:{IS_PRODUCTION_RUNTIME:isProductionRuntime(),NODE_ENV:process.env.NODE_ENV||'(missing)',TS_ENDPOINT:process.env.TS_ENDPOINT||'(missing)',TS_INSTANCE:process.env.TS_INSTANCE||'(missing)',KEY_ID_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_ID),KEY_SECRET_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET)},tests:[]};
@@ -8574,7 +8692,9 @@ module.exports = async (req, res) => {
   if(path==='/auth/wechat-mini-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code,'match');
+      const session=(!isProductionRuntime()&&!MATCH_MINIPROGRAM_SECRET)
+        ? {openid:'preview-match-openid',unionid:'preview-match-unionid'}
+        : await fetchWechatSession(code,'match');
       const openid=extractWechatOpenId(session);
       const unionid=session.unionid?String(session.unionid):'';
       const pool=getMatchSqlPool();
@@ -8637,6 +8757,12 @@ module.exports = async (req, res) => {
     if(matchCancelRegisterM&&method==='POST'){
       const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
       try{return sendJson(res,await cancelRegistrationForUser(matchCancelRegisterM[1],matchUser.id));}
+      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
+    }
+    const matchRatingM=path.match(/^\/matches\/([^/]+)\/technical-rating$/);
+    if(matchRatingM&&method==='POST'){
+      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
+      try{return sendJson(res,await submitMatchTechnicalRating(matchRatingM[1],matchUser.id,body));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
     if(path==='/my-matches'&&method==='GET'){
@@ -10268,6 +10394,9 @@ module.exports._test={
   ,getMatchSettings
   ,saveMatchSettings
   ,assertMatchReplacementTransferInput
+  ,assertMatchTechnicalRatingInput
+  ,buildMatchTechnicalRatingSummary
+  ,safeDatabaseUrlHost
   ,resolveMatchPrepayClosure
   ,resolveFinalAttendanceStatus
   ,buildMatchFeeLedger
@@ -10290,6 +10419,7 @@ module.exports._test={
   ,listMyMatches
   ,getMatchProfile
   ,updateMatchProfile
+  ,submitMatchTechnicalRating
   ,listMatchNotifications
   ,matchNotificationText
   ,listMatchPlayers

@@ -32,6 +32,9 @@ assert.ok(rules.assertMatchReplacementTransferInput, 'api._test should expose re
 assert.ok(rules.buildMatchFinanceDailyReport, 'api._test should expose match finance daily report builder');
 assert.ok(rules.canMatchUserCreateByAdminUser, 'api._test should expose match creator permission resolver');
 assert.ok(rules.resolveMatchPrepayClosure, 'api._test should expose prepay closure resolver');
+assert.ok(rules.assertMatchTechnicalRatingInput, 'api._test should expose technical rating validation');
+assert.ok(rules.buildMatchTechnicalRatingSummary, 'api._test should expose technical rating summary');
+assert.ok(rules.safeDatabaseUrlHost, 'api._test should expose safe database host helper');
 
 for (const table of [
   'match_users',
@@ -42,7 +45,8 @@ for (const table of [
   'match_fee_records',
   'match_fee_splits',
   'match_operation_logs',
-  'match_replacements'
+  'match_replacements',
+  'match_player_ratings'
 ]) {
   assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`), `${table} migration is required`);
 }
@@ -95,6 +99,9 @@ assert.match(apiSource, /请先完成全部到场确认，再生成AA/, 'fee gen
 assert.match(apiSource, /已生成AA，不能再修改到场名单/, 'attendance should lock after AA generation');
 assert.match(apiSource, /path==='\/match-notifications'/, 'API should expose match notifications endpoint');
 assert.match(apiSource, /path==='\/match-players'/, 'API should expose match players endpoint');
+assert.match(apiSource, /matchRatingM=path\.match/, 'API should expose match technical rating endpoint');
+assert.match(migration, /match_player_ratings_unique/, 'technical rating should be unique per match, rater and rated user');
+assert.match(apiSource, /path==='\/match-diag'/, 'API should expose safe match database diagnostics');
 assert.doesNotMatch(apiSource, /if\(!\/\^\\\/admin\\\/matches\(\?:\\\/\|\$\)\/\.test\(path\)\)return false;/, 'non-match admin routes should continue past the admin match block instead of hanging without a response');
 assert.match(apiSource, /DEFAULT_ADMIN_BOOTSTRAP_PASSWORD/, 'bootstrap password should come from env instead of hardcoded source');
 assert.doesNotMatch(apiSource, /wqxd2026/, 'default admin password must not be hardcoded');
@@ -369,6 +376,19 @@ assert.deepEqual(rules.assertMatchReplacementTransferInput({ fromUserId:'u1', re
   refundNote:'原用户退赛',
   transferNote:''
 });
+assert.throws(() => rules.assertMatchTechnicalRatingInput({ ratedUserId:'u2', technicalLevel:'0.5' }), /技术等级不正确/);
+assert.throws(() => rules.assertMatchTechnicalRatingInput({ ratedUserId:'u1', technicalLevel:'3.0' }, 'u1'), /不能给自己评定/);
+assert.deepEqual(rules.assertMatchTechnicalRatingInput({ ratedUserId:'u2', technicalLevel:'1.5' }, 'u1'), { ratedUserId:'u2', technicalLevel:'1.5' });
+assert.equal(rules.safeDatabaseUrlHost('postgresql://user:secret@db.example.supabase.co:5432/postgres'), 'db.example.supabase.co');
+assert.equal(rules.safeDatabaseUrlHost(''), '');
+const technicalSummary = rules.buildMatchTechnicalRatingSummary([
+  { ratedUserId:'u1', technicalLevel:'3.0' },
+  { ratedUserId:'u1', technicalLevel:'3.5' },
+  { ratedUserId:'u2', technicalLevel:'5.0+' }
+]);
+assert.equal(technicalSummary.get('u1').technicalRatingText, '3.3');
+assert.equal(technicalSummary.get('u1').technicalRatingCount, 2);
+assert.equal(technicalSummary.get('u2').technicalRatingText, '5.0+');
 assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus:'pending', amount: 200 }), /请填写原因/);
 assert.equal(rules.assertMatchFeeSplitUpdateInput({ payStatus:'pending', amount: 200, note:'运营调价' }).amount, 200);
 
