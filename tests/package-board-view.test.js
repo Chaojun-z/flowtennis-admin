@@ -30,6 +30,7 @@ assert.match(fnBody('packageCampusSummaryText'), /`\$\{names\.length\} 个校区
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /scrollbar-width:none/, 'package board horizontal scrollbar should be hidden');
 assert.match(styles, /#page-packages \.course-package-showcase-grid::-webkit-scrollbar\{display:none\}/, 'package board webkit scrollbar should be hidden');
 assert.match(cssRule('#page-packages .course-package-showcase'), /height:calc\(100vh - var\(--topH\) - 44px\)/, 'package page should keep title and filters fixed');
+assert.match(cssRule('.course-package-showcase-toolbar'), /flex:0 0 auto/, 'package filters and actions should stay outside the scrolling area');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /cursor:grab/, 'package board should invite page-level horizontal drag');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-y:auto/, 'only package card area should scroll vertically');
 assert.match(source, /function initPackageBoardHorizontalDrag\(/, 'package board should support page-level horizontal drag');
@@ -38,6 +39,7 @@ assert.doesNotMatch(fnBody('initPackageBoardHorizontalDrag'), /\[draggable="true
 assert.match(cssRule('.package-board-stack'), /flex:0 0 auto/, 'package columns should only be as tall as their cards');
 assert.match(cssRule('.package-board-stack'), /overflow-y:visible/, 'package columns should not create idle internal scroll areas');
 assert.match(cssRule('.package-board-header'), /position:sticky/, 'package column header should stay fixed while the page scrolls');
+assert.match(cssRule('.package-board-column'), /height:max-content/, 'package columns should grow to show all cards instead of being height-limited');
 assert.doesNotMatch(cssRule('.package-board-header'), /background:/, 'package column header should not have a separate background block');
 assert.doesNotMatch(cssRule('.package-sales-title'), /text-overflow:ellipsis|white-space:nowrap|overflow:hidden/, 'package title should show full text');
 assert.match(cssRule('.package-status-badge'), /height:17px/, 'sale status badge should be 17px tall');
