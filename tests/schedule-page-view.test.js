@@ -101,7 +101,7 @@ assert.match(fnBody('syncScheduleFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/
 assert.match(fnBody('openScheduleModal'), /const courseTypeOptions=STANDARD_COURSE_TYPE_OPTIONS/, 'schedule modal course type dropdown should use the shared standard course type source');
 assert.match(source, /function handleScheduleStandardCourseTypeChange\(/, 'schedule modal should translate standard course type into backend fields');
 assert.match(fnBody('handleScheduleStandardCourseTypeChange'), /setScheduleCourseTypeFields[\s\S]*refreshSchEntitlementOptions/, 'standard course type change should refresh package matching');
-assert.doesNotMatch(fnBody('setScheduleCourseTypeFields'), /setCourtDropdownValue\('sch_standardCourseType'/, 'programmatic standard course updates should not recursively trigger onchange');
+assert.doesNotMatch(fnBody('setScheduleCourseTypeFields'), /setStandardDropdownValue\('sch_standardCourseType'/, 'programmatic standard course updates should not recursively trigger onchange');
 assert.match(fnBody('openScheduleModal'), /sch_experienceType/, 'schedule modal should expose a second-level trial course selector');
 assert.match(fnBody('saveSchedule'), /experienceType:/, 'schedule save should persist trial course subtype');
 assert.match(fnBody('openScheduleModal'), /sch_smallClassType/, 'schedule modal should expose a second-level small group course selector');
@@ -135,7 +135,7 @@ assert.doesNotMatch(fnBody('openScheduleModal'), /关联班次|sch_classId|sch_c
 assert.match(source, /function refreshScheduleTimeDerivedFields\(/, 'schedule modal should expose a time-derived refresh helper');
 assert.match(fnBody('openScheduleModal'), /refreshScheduleTimeDerivedFields/, 'schedule modal should refresh lesson units when time changes');
 assert.match(source, /function getScheduleTimeOptions\([\s\S]*h=7[\s\S]*h<=22[\s\S]*active:opt\.value===selected/, 'schedule time dropdown should only expose 07:00-22:00 and keep the selected time active');
-assert.match(source, /function handleScheduleStartTimeChange\([\s\S]*const mins=[\s\S]*scheduleAddMinutes\(start,mins\)[\s\S]*setCourtDropdownValue\('sch_endTime'/, 'selecting a start time should default end time from course duration rules');
+assert.match(source, /function handleScheduleStartTimeChange\([\s\S]*const mins=[\s\S]*scheduleAddMinutes\(start,mins\)[\s\S]*setStandardDropdownValue\('sch_endTime'/, 'selecting a start time should default end time from course duration rules');
 assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:none/, 'repeat weeks should be hidden until weekly repeat is enabled');
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
 assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');

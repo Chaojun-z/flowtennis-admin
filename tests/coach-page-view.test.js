@@ -34,7 +34,7 @@ assert.match(pagesCss, /\.tms-dropdown-menu[^}]*overscroll-behavior:contain/s, '
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*>操作<\/th>/, 'coach action header should stay visible on the right');
 assert.match(html, /<th[^>]*>入职时间<\/th>/, 'coach table should show hire date');
 assert.doesNotMatch(fnBody('renderCoaches'), /class="abtn"|✏️|🗑️|class="badge /, 'coach rows should not use old icon buttons or old badge style');
-assert.match(fnBody('renderCoaches'), /renderCourtCellText/, 'coach rows should reuse court empty-value display rule');
+assert.match(fnBody('renderCoaches'), /renderStandardCellText/, 'coach rows should reuse court empty-value display rule');
 assert.match(fnBody('renderCoaches'), /hireDate/, 'coach rows should render hire date');
 assert.match(fnBody('renderCoaches'), /<span class="tms-tag/, 'coach status should render as a tms tag');
 assert.match(fnBody('renderCoaches'), /class="tms-sticky-r[^"]*tms-action-cell"[\s\S]*openCoachModal[\s\S]*confirmDel/, 'coach action cells should keep edit/delete entries in the list');
@@ -47,8 +47,8 @@ assert.doesNotMatch(fnBody('openCoachModal'), /confirmDel\([^)]*'coach'|删除|c
 assert.match(fnBody('scheduleTimeRangeControls'), /court-date-row[\s\S]*sch_date[\s\S]*sch_startTime[\s\S]*sch_endTime/, 'schedule modal should keep date and time controls on one row');
 assert.match(fnBody('scheduleTimeRangeControls'), /white-space:nowrap/, 'schedule modal date and time separator should stay on one line');
 assert.match(fnBody('saveCoach'), /hireDate:document\.getElementById\('co_hireDate'\)\.value/, 'coach save should include hire date');
-assert.match(source, /function renderCourtDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
-assert.match(source, /renderCourtDropdownHtml\('co_campus','校区',\[\{value:'',label:'不选择'\},\.\.\.campusOptions\],rv\(c,'campus'\),true\)/, 'coach campus edit should preserve empty campus instead of defaulting to the first campus');
+assert.match(source, /function renderStandardDropdownHtml[\s\S]*onwheel="event\.stopPropagation\(\);event\.preventDefault\(\);this\.scrollTop \+= event\.deltaY"/, 'coach campus dropdown should consume wheel scrolling inside the menu');
+assert.match(source, /renderStandardDropdownHtml\('co_campus','校区',\[\{value:'',label:'不选择'\},\.\.\.campusOptions\],rv\(c,'campus'\),true\)/, 'coach campus edit should preserve empty campus instead of defaulting to the first campus');
 assert.doesNotMatch(fnBody('getFilteredCoaches'), /sameCampusValue|globalDateWithinRange/, 'coach list should not be hidden by global campus or time filters');
 
 console.log('coach page view tests passed');

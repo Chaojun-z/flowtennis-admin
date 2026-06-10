@@ -55,7 +55,7 @@ assert.match(source, /studentBenefitGrantTableHtml\(s\)[\s\S]*renderDetailDrawer
 assert.match(source, /studentBenefitConsumeTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit consume records should use the shared drawer table');
 assert.match(source, /权益列表[\s\S]*权益发放记录[\s\S]*权益消耗记录/, 'student benefit tab should show list, grant records and consume records');
 assert.doesNotMatch(source, /studentDetailBenefitsTabHtml\(s\)[\s\S]*课包核销记录/, 'student benefit tab should not duplicate package lesson ledger records');
-assert.doesNotMatch(source, /归属 \$\{esc\(renderCourtEmptyText\(ownerCoach\)\)\}/, 'student package order should show coach name without owner prefix');
+assert.doesNotMatch(source, /归属 \$\{esc\(renderStandardEmptyText\(ownerCoach\)\)\}/, 'student package order should show coach name without owner prefix');
 assert.doesNotMatch(source, /student-benefit-list/, 'student benefit records should not use custom list cards');
 assert.match(css, /\.overlay\.student-drawer-overlay/, 'student drawer should have scoped overlay styles');
 assert.match(css, /\.modal\.modal-court\.modal-schedule-drawer/, 'shared drawer visual rules should come from the schedule drawer styling');

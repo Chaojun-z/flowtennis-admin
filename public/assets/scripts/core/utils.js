@@ -569,7 +569,7 @@ function membershipPlanStatusMeta(plan){
 }
 function membershipPlanSaleWindowText(plan){
   if(!plan)return '-';
-  return [renderCourtEmptyText(plan.saleStartDate||''),renderCourtEmptyText(plan.saleEndDate||'')].join(' ~ ');
+  return [renderStandardEmptyText(plan.saleStartDate||''),renderStandardEmptyText(plan.saleEndDate||'')].join(' ~ ');
 }
 function membershipPlanTierTagClass(value=''){
   const raw=String(value||'').toLowerCase();
@@ -780,7 +780,7 @@ function membershipPlanPreviewHtml(input={}){
     ['指定教练陪打',parseInt(input.designatedCoachPartnerCount)||0]
   ].filter(x=>x[1]>0).map(x=>`${x[0]} ${x[1]}次`).join('；')||'暂无赠送权益';
   const statusMeta=membershipPlanStatusMeta(input);
-  return `<div style="font-size:12px;color:var(--tb);line-height:1.7"><div><strong style="color:var(--th)">${esc(input.name||'未命名方案')}</strong></div><div>会员档位：${esc(renderCourtEmptyText(input.tierCode||input.name||''))}</div><div>充值金额：¥${fmt(parseFloat(input.rechargeAmount)||0)}</div><div>赠送金额：¥${fmt(parseFloat(input.bonusAmount)||0)}</div><div>折扣：${esc(membershipDiscountText(input.discountRate)||'—')}</div><div>售卖时间：${esc(membershipPlanSaleWindowText(input))}</div><div>方案状态：${esc(statusMeta.text)}</div><div>赠送权益：${esc(benefitLines)}</div></div>`;
+  return `<div style="font-size:12px;color:var(--tb);line-height:1.7"><div><strong style="color:var(--th)">${esc(input.name||'未命名方案')}</strong></div><div>会员档位：${esc(renderStandardEmptyText(input.tierCode||input.name||''))}</div><div>充值金额：¥${fmt(parseFloat(input.rechargeAmount)||0)}</div><div>赠送金额：¥${fmt(parseFloat(input.bonusAmount)||0)}</div><div>折扣：${esc(membershipDiscountText(input.discountRate)||'—')}</div><div>售卖时间：${esc(membershipPlanSaleWindowText(input))}</div><div>方案状态：${esc(statusMeta.text)}</div><div>赠送权益：${esc(benefitLines)}</div></div>`;
 }
 function refreshMembershipPlanPreview(){
   const name=document.getElementById('mp_name')?.value.trim()||'';
@@ -984,7 +984,7 @@ function studentPackageLessonSummary(stu){
 }
 function studentPackageLessonMiniBar(stu){
   const meta=studentPackageLessonMeta(stu);
-  if(!meta.hasPackage)return renderCourtCellText('-',false);
+  if(!meta.hasPackage)return renderStandardCellText('-',false);
   const remaining=meta.remaining,total=meta.total;
   const text=`${lessonQty(remaining)}/${lessonQty(total)}`;
   const title=studentPackageLessonSummary(stu);
@@ -1117,7 +1117,7 @@ function studentEntitlementSummaryHtml(stu){
     const statusText=entitlementStatusText(e);
     const depleted=remaining<=0||statusText==='已用完';
     const unit=packageBalanceUnitLabel(e);
-    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-title">[${esc(renderCourtEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderCourtEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>${esc(renderCourtEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
+    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-title">[${esc(renderStandardEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderStandardEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>${esc(renderStandardEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){
@@ -1321,7 +1321,7 @@ function studentEntitlementLedgerLineHtml(row,ent={}){
     studentEntitlementLedgerLocationText(row,schedule,ent),
     coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
     studentEntitlementLedgerSourceText(row)
-  ].map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  ].map(item=>esc(renderStandardEmptyText(item))).join(' · ');
   return `<div style="border-top:0.5px solid rgba(180,83,9,.12);padding:7px 0;font-size:12px;color:var(--tb);white-space:normal;line-height:1.65">${line}</div>`;
 }
 function studentEntitlementLedgerDeltaText(row,ent={},schedule=null){
@@ -1428,7 +1428,7 @@ function studentLessonRecordPackageText(row,ent={}){
     Number(row.lessonDelta)<0?`扣${studentLedgerConsumedText(row,ent,schedule)}`:(payMethodText?payMethodText:'课次'),
     ent?.id?studentLedgerBalanceAfter(row,ent):payMethodText,
     payText
-  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  ].filter(Boolean).map(item=>esc(renderStandardEmptyText(item))).join(' · ');
 }
 function studentLessonRecordPackageHtml(row,ent={}){
   const student=students.find(s=>s.id===(row?.studentId||ent?.studentId))||{};
@@ -1436,12 +1436,12 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const balance=studentLedgerBalanceNumbersAfter(row,ent)||{remaining:Number(ent.remainingLessons)||0,total:Number(ent.totalLessons)||0};
   const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
   const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance,schedule);
-  const title=[studentLessonRecordSectionText(row,ent),`[${esc(renderCourtEmptyText(payText))}]`].filter(Boolean).join(' · ');
+  const title=[studentLessonRecordSectionText(row,ent),`[${esc(renderStandardEmptyText(payText))}]`].filter(Boolean).join(' · ');
   const meta=[
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
     coachName(schedule.coach||row?.coach||ent?.ownerCoach||'')
-  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  ].filter(Boolean).map(item=>esc(renderStandardEmptyText(item))).join(' · ');
   return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title)}</div><div class="student-lesson-meta">${meta}</div></div><div class="student-lesson-charge">${chargeHtml}</div></div>`;
 }
 function studentLessonRecordLedgerText(row,ent={}){
@@ -1456,7 +1456,7 @@ function studentLessonRecordLedgerText(row,ent={}){
     `扣${studentLedgerConsumedText(row,ent,schedule)}`,
     balance,
     standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包'
-  ].filter(Boolean).map(item=>esc(renderCourtEmptyText(item))).join(' · ');
+  ].filter(Boolean).map(item=>esc(renderStandardEmptyText(item))).join(' · ');
 }
 function studentEntitlementLedgerHtml(stu){
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));

@@ -207,7 +207,7 @@ assert.match(html, /当前会员[\s\S]*courtMembershipTierLabel\(a\)/, 'membersh
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');
 assert.match(html, /membershipLedgerOperatorText/, 'membership ledger audit should normalize operator account names');
-assert.match(html, /renderCourtCellText\(membershipLedgerOperatorText\(l\.operator\)\)/, 'membership ledger audit should render the normalized operator account name');
+assert.match(html, /renderStandardCellText\(membershipLedgerOperatorText\(l\.operator\)\)/, 'membership ledger audit should render the normalized operator account name');
 assert.match(html, /操作账号/, 'membership ledger audit should show operator account');
 assert.match(html, /已消耗/, 'membership account rights should show consumed count');
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
@@ -229,7 +229,7 @@ assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action
 assert.match(fnBody('renderMemberships'), /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
 assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓名/, 'membership management should freeze the member name column');
 assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
-assert.match(fnBody('renderMemberships'), /renderCourtEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
+assert.match(fnBody('renderMemberships'), /renderStandardEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
 assert.match(pagesCss, /#page-memberships \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership management table should freeze the left name column');
 assert.match(pagesCss, /#page-memberships \.tms-pagination[\s\S]*min-height:32px/, 'membership management pager should keep the standard compact height');
 assert.match(pagesCss, /#page-memberships \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15\}/, 'membership management rows should use the compact standard row height');

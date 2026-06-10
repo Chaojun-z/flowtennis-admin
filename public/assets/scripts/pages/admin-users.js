@@ -85,12 +85,13 @@ function renderAdminUserPagerControls(total,pages){
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('adminUserPageSizeValue',adminUserPageSize,'setAdminUserPageSize');
   const btns=document.getElementById('adminUserPagerBtns');
   if(!btns)return;
-  if(!total||pages<=1){btns.innerHTML='';return;}
-  const pageBtns=adminUserPageNumbers(adminUserPage,pages).map(item=>item==='...'
-    ?'<span class="tms-page-ellipsis">...</span>'
-    :`<div class="tms-page-btn${item===adminUserPage?' active':''}" onclick="adminUserPage=${item};renderAdminUsers()">${item}</div>`
-  ).join('');
-  btns.innerHTML=`<div class="tms-page-btn" onclick="adminUserPage=Math.max(1,adminUserPage-1);renderAdminUsers()">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="adminUserPage=Math.min(${pages},adminUserPage+1);renderAdminUsers()">${renderPagerChevron('next')}</div>`;
+  btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(adminUserPage,pages,'setAdminUserPage');
+}
+function setAdminUserPage(value){
+  const total=getFilteredAdminUsers().length;
+  const pages=Math.max(1,Math.ceil(total/adminUserPageSize));
+  adminUserPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  renderAdminUsers();
 }
 function setAdminUserPageSize(value){
   const next=parseInt(value,10);
@@ -146,7 +147,7 @@ function renderAdminUsers(){
     const wechatAction=u.wechatBound?`<span class="tms-action-link" onclick="unbindAdminUserWechat('${u.id}')">解绑微信</span>`:'';
     const officialClass=u.officialAccountBound?'tms-tag-green':'tms-tag-tier-slate';
     const officialAction=u.officialAccountBound?`<span class="tms-action-link" onclick="unbindAdminUserOfficialAccount('${u.id}')">解绑服务号</span>`:'';
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderCourtCellText(u.id,false)}</td><td>${renderCourtCellText(u.name,false)}</td><td><span title="手机号">${renderCourtCellText(adminUserPhoneText(u))}</span></td><td><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${adminUserRoleText(u.role)}</span></td><td><span title="绑定教练">${renderCourtCellText(adminUserCoachText(u))}</span></td><td><span title="微信绑定"><span class="tms-tag ${wechatClass}">${adminUserWechatText(u)}</span></span></td><td><span title="服务号绑定"><span class="tms-tag ${officialClass}">${adminUserOfficialAccountText(u)}</span></span></td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td>${renderCourtCellText(adminUserNoteText(u))}</td><td class="tms-sticky-r tms-action-cell" style="width:300px;padding-right:20px;text-align:right">${wechatAction}${officialAction}<span class="tms-action-link" onclick="openAdminUserModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(u.id,false)}</td><td>${renderStandardCellText(u.name,false)}</td><td><span title="手机号">${renderStandardCellText(adminUserPhoneText(u))}</span></td><td><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${adminUserRoleText(u.role)}</span></td><td><span title="绑定教练">${renderStandardCellText(adminUserCoachText(u))}</span></td><td><span title="微信绑定"><span class="tms-tag ${wechatClass}">${adminUserWechatText(u)}</span></span></td><td><span title="服务号绑定"><span class="tms-tag ${officialClass}">${adminUserOfficialAccountText(u)}</span></span></td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td>${renderStandardCellText(adminUserNoteText(u))}</td><td class="tms-sticky-r tms-action-cell" style="width:300px;padding-right:20px;text-align:right">${wechatAction}${officialAction}<span class="tms-action-link" onclick="openAdminUserModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</span></td></tr>`;
   }).join(''):adminUserEmptyStateHtml();
 }
 async function toggleAdminUserStatus(id){
@@ -207,10 +208,10 @@ function toggleAdminUserScopeFields(){
   const scopeInput=document.getElementById('au_dataScope');
   let scope=scopeInput?.value||'';
   if(role==='editor'){
-    if(typeof setCourtDropdownValue==='function')setCourtDropdownValue('au_dataScope','coach','仅本人教练');
+    if(typeof setStandardDropdownValue==='function')setStandardDropdownValue('au_dataScope','coach','仅本人教练');
     scope='coach';
   }else if(scope==='coach'){
-    if(typeof setCourtDropdownValue==='function')setCourtDropdownValue('au_dataScope','all','全部校区');
+    if(typeof setStandardDropdownValue==='function')setStandardDropdownValue('au_dataScope','all','全部校区');
     scope='all';
   }
   if(row)row.style.display=role==='admin'?'':'none';
@@ -229,16 +230,16 @@ function openAdminUserModal(id){
   const roleOptions=[{value:'editor',label:'教练账号'},{value:'admin',label:'管理员'}];
   const coachOptions=[{value:'',label:'暂不绑定'}].concat(coaches.map(c=>({value:c.id,label:c.name})));
   const dataScopeOptions=[{value:'all',label:'全部校区'},{value:'campus',label:'指定校区'},{value:'coach',label:'仅本人教练'}];
-  const roleControl=renderCourtDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
+  const roleControl=renderStandardDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
   const passwordRow=id?'':`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">初始密码 *</label><input class="finput tms-form-control" id="au_password" type="password" placeholder="请填写初始密码"></div></div>`;
   const accountHint=id?'<div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">可修改姓名、手机号、绑定教练和约球权限；需要时可单独重置密码。</div>':'<div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。</div>';
   const statusRow=id?`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label><input class="finput tms-form-control" id="au_status" value="${adminUserStatusText(user?.status)}" readonly></div></div>`:'';
-  const dataScopeRow=`<div class="tms-form-row" id="auDataScopeRow"><div class="tms-form-item"><label class="tms-form-label">数据范围</label>${renderCourtDropdownHtml('au_dataScope','数据范围',dataScopeOptions,profile.dataScope,true,'toggleAdminUserScopeFields')}</div></div>`;
+  const dataScopeRow=`<div class="tms-form-row" id="auDataScopeRow"><div class="tms-form-item"><label class="tms-form-label">数据范围</label>${renderStandardDropdownHtml('au_dataScope','数据范围',dataScopeOptions,profile.dataScope,true,'toggleAdminUserScopeFields')}</div></div>`;
   const campusScopeRow=`<div class="tms-form-row" id="auCampusScopeWrap"><div class="tms-form-item full-width"><label class="tms-form-label">可看校区</label><div class="tms-checkbox-matrix">${adminUserCampusScopeChecks(campusIds)}</div></div></div>`;
   const matchPermissionRow=`<div class="tms-section-header">约球权限</div><div class="tms-form-row"><label class="choice-tag"><input type="checkbox" id="au_match_ops" ${perms.includes('match_ops')?'checked':''}>约球运营</label><label class="choice-tag"><input type="checkbox" id="au_match_finance" ${perms.includes('match_finance')?'checked':''}>约球财务</label></div>`;
   const officialBindingRow=`<div class="tms-section-header">服务号绑定</div><div class="admin-user-readonly-line">${adminUserOfficialAccountText(user||{})} · 请在服务号内发送 #绑定 手机号 完成绑定</div>`;
   const resetPasswordRow=id?`<div class="tms-section-header">重置密码</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">新密码</label><input class="finput tms-form-control" id="au_reset_password" type="password" placeholder="输入新密码"></div><div class="tms-form-item" style="align-self:flex-end"><button class="tms-btn tms-btn-default" id="adminUserResetPasswordBtn" onclick="resetAdminUserPassword()">重置密码</button></div></div>`:'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">账号ID *</label><input class="finput tms-form-control" id="au_id" value="${rv(user,'id')}" placeholder="例：coach_zhang"${id?' readonly':''}></div><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="au_name" value="${rv(user,'name')}" placeholder="显示名称"></div></div>${passwordRow}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">手机号</label><input class="finput tms-form-control" id="au_phone" value="${rv(user,'phone')}" placeholder="用于关联约球小程序"></div><div class="tms-form-item"><label class="tms-form-label">角色</label>${roleControl}</div></div><div class="tms-form-row"><div class="tms-form-item" id="au_coach_wrap" style="display:${!id||user?.role==='editor'?'':'none'}"><label class="tms-form-label">绑定教练</label>${renderCourtDropdownHtml('au_coachId','绑定教练',coachOptions,adminUserCoachId(user||{}),true)}</div></div><div class="tms-section-header">数据权限</div>${dataScopeRow}${campusScopeRow}${officialBindingRow}${statusRow}${matchPermissionRow}${resetPasswordRow}${accountHint}`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">账号ID *</label><input class="finput tms-form-control" id="au_id" value="${rv(user,'id')}" placeholder="例：coach_zhang"${id?' readonly':''}></div><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="au_name" value="${rv(user,'name')}" placeholder="显示名称"></div></div>${passwordRow}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">手机号</label><input class="finput tms-form-control" id="au_phone" value="${rv(user,'phone')}" placeholder="用于关联约球小程序"></div><div class="tms-form-item"><label class="tms-form-label">角色</label>${roleControl}</div></div><div class="tms-form-row"><div class="tms-form-item" id="au_coach_wrap" style="display:${!id||user?.role==='editor'?'':'none'}"><label class="tms-form-label">绑定教练</label>${renderStandardDropdownHtml('au_coachId','绑定教练',coachOptions,adminUserCoachId(user||{}),true)}</div></div><div class="tms-section-header">数据权限</div>${dataScopeRow}${campusScopeRow}${officialBindingRow}${statusRow}${matchPermissionRow}${resetPasswordRow}${accountHint}`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="adminUserSaveBtn" onclick="saveAdminUser()">保存</button>`;
   setCourtModalFrame(id?'编辑账号':'新增账号',body,actions,'modal-tight');
   toggleAdminUserPermissionFields();

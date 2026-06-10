@@ -133,7 +133,7 @@ function renderDetailDrawerTable({columns=[],rows=[],emptyText='暂无记录',mi
     const cls=col.cellClassName?` class="${esc(col.cellClassName)}"`:'';
     const align=col.align?` style="text-align:${esc(col.align)}"`:'';
     const raw=typeof col.render==='function'?col.render(row):row?.[col.key];
-    const html=col.html?String(raw||''):renderCourtCellText(raw,false);
+    const html=col.html?String(raw||''):renderStandardCellText(raw,false);
     return `<td${cls}${align}>${html}</td>`;
   }).join('')}</tr>`).join(''):`<tr><td colspan="${safeColumns.length}"><div class="tms-empty-state"><div class="tms-empty-title">${esc(emptyText)}</div></div></td></tr>`;
   return `<div class="tms-table-card detail-drawer-table-card"><div class="tms-table-wrapper detail-drawer-table-wrapper"><table class="tms-table detail-drawer-table" style="min-width:${esc(minWidth)}"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div></div>`;
@@ -179,7 +179,7 @@ function renderPagerInfoHtml(total){
   return `共 ${Number(total)||0} 条`;
 }
 function renderPageSizeSelectorHtml(id,pageSize,onchange){
-  return `<span class="pager-divider"></span><span>每页</span>${renderCourtDropdownHtml(id,String(pageSize),[{value:'20',label:'20'},{value:'50',label:'50'},{value:'100',label:'100'}],String(pageSize),false,onchange)}<span>条</span>`;
+  return `<span class="pager-divider"></span><span>每页</span>${renderStandardDropdownHtml(id,String(pageSize),[{value:'20',label:'20'},{value:'50',label:'50'},{value:'100',label:'100'}],String(pageSize),false,onchange)}<span>条</span>`;
 }
 function renderPagerChevron(direction){
   const cls=direction==='prev'?'tms-page-chevron-prev':'tms-page-chevron-next';

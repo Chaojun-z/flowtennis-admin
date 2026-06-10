@@ -29,7 +29,7 @@ assert.doesNotMatch(source, /id="sch_homeCampusSummary"/, 'schedule modal should
 assert.match(source, /function syncScheduleHomeCampusFromStudents/, 'schedule modal should sync home campus after student selection changes');
 assert.match(source, /function scheduleSelectedStudentCoachMeta/, 'schedule modal should derive the selected student primary coach');
 assert.match(source, /function syncScheduleProfileFromStudents/, 'schedule modal should sync selected student coach and campus defaults');
-assert.match(source, /setCourtDropdownValue\('sch_coach',selectedCoach,selectedCoach\)/, 'schedule modal should default coach from selected student profile');
+assert.match(source, /setStandardDropdownValue\('sch_coach',selectedCoach,selectedCoach\)/, 'schedule modal should default coach from selected student profile');
 assert.match(source, /上课校区 \*/, 'schedule own-location field should be labelled as lesson campus, not student home campus');
 assert.match(source, /校区内[\s\S]*校区外/, 'schedule location type copy should separate in-campus and off-campus lessons');
 assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a searchable student input');
@@ -128,7 +128,7 @@ assert.match(css, /\.tms-page-btn\.active\{[^}]*background-color:#8C6D53[^}]*col
 assert.match(source, /class="tms-dropdown-check"[\s\S]*stroke-width="3"/, 'custom dropdown should render the selected checkmark through the shared component');
 assert.match(source, /function renderPagerInfoHtml\(total\)\{\s*return `共 \$\{Number\(total\)\|\|0\} 条`;\s*\}/, 'pager info should keep total number the same style as surrounding text');
 assert.doesNotMatch(source, /pager-strong/, 'pager info should not emphasize total count');
-assert.match(source, /function renderPageSizeSelectorHtml\(id,pageSize,onchange\)[\s\S]*pager-divider[\s\S]*每页[\s\S]*renderCourtDropdownHtml\(id,String\(pageSize\),\[\{value:'20',label:'20'\},\{value:'50',label:'50'\},\{value:'100',label:'100'\}\][\s\S]*条/, 'pager page-size control should render text around a numeric-only dropdown');
+assert.match(source, /function renderPageSizeSelectorHtml\(id,pageSize,onchange\)[\s\S]*pager-divider[\s\S]*每页[\s\S]*renderStandardDropdownHtml\(id,String\(pageSize\),\[\{value:'20',label:'20'\},\{value:'50',label:'50'\},\{value:'100',label:'100'\}\][\s\S]*条/, 'pager page-size control should render text around a numeric-only dropdown');
 assert.match(css, /\.tms-page-chevron\{[^}]*width:14px[^}]*height:14px[^}]*mask:url\("data:image\/svg\+xml/, 'pager arrows should use the filter chevron glyph at 14px');
 assert.match(css, /\.tms-page-chevron-prev\{transform:rotate\(90deg\)\}[\s\S]*\.tms-page-chevron-next\{transform:rotate\(-90deg\)\}/, 'pager arrows should rotate the filter chevron left and right');
 assert.doesNotMatch(source, /跳至 <input/, 'pager should not render jump-to-page controls');
@@ -178,8 +178,8 @@ assert.match(source, /function studentPrimaryCoachText\(/, 'student list should 
 assert.match(source, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
 assert.match(source, /未分配/, 'empty primary coach should display 未分配');
 assert.match(source, /const SOURCES=\['转介绍','小红书','大众点评','视频号','抖音','播客','孙老师','直接线下到电','群友','小班课转化','开业活动期间','其他'\]/, 'student source options should keep the unified ops order');
-assert.match(source, /function renderCourtCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
-assert.match(source, /function renderCourtEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
+assert.match(source, /function renderStandardCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
+assert.match(source, /function renderStandardEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
 assert.doesNotMatch(source, /<th>最后订场<\/th>/, 'student table should remove last-court as a primary list column in phase 2');
 assert.doesNotMatch(source, /<th>关联账户<\/th>/, 'student table should replace account wording with booking membership summary');
 assert.match(source, /<th style="width:90px">[\s\S]*课时\/课包/, 'student package lesson column should be labelled lesson/package');
@@ -278,7 +278,7 @@ assert.match(source, /function studentLessonRecordChargeHtml\([\s\S]*<strong>扣
 assert.match(source, /function studentCumulativeLessonSectionText\([\s\S]*studentEntitlementLedgerRows\(\{id:studentId\}\)[\s\S]*Number\(item\.lessonDelta\)<0[\s\S]*earlierDelta[\s\S]*function studentLessonRecordSectionText\([\s\S]*studentCumulativeLessonSectionText\(row,ent\)/, 'student lesson record section numbers should continue across multiple packages for the same student');
 assert.match(source, /function studentLessonRecordRows\([\s\S]*existing\?\.type==='ledger'[\s\S]*lessonDelta:\(Number\(existing\.row\.lessonDelta\)\|\|0\)\+\(Number\(row\.lessonDelta\)\|\|0\)[\s\S]*function studentLedgerPreferredDisplayEntitlement/, 'student lesson record rows should merge split package deductions for one lesson into one display line');
 assert.match(source, /function studentLessonRecordMergeKey\([\s\S]*relatedDate[\s\S]*sourceVenue[\s\S]*return \[studentId[\s\S]*function studentLessonRecordRows\([\s\S]*studentLessonRecordMergeKey\(\{studentId:stu\?\.id,row,schedule\}\)/, 'student lesson records should merge same-day same-court continuous package deductions into one display line');
-assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*packageBalanceUnitLabel[\s\S]*student-package-card[\s\S]*报名[\s\S]*应付\$\{fmt\(systemAmount\)\} · 实付\$\{fmt\(paidAmount\)\}[\s\S]*归属 \$\{esc\(renderCourtEmptyText\(ownerCoach\)\)\}[\s\S]*<strong>已扣 \$\{lessonQty\(used\)\}\$\{unit\}（\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}\$\{unit\}）<\/strong>/, 'student package purchase records should show signup, price, owner, and bold used balance with the package unit');
+assert.match(source, /function studentEntitlementSummaryHtml\([\s\S]*packageBalanceUnitLabel[\s\S]*student-package-card[\s\S]*报名[\s\S]*应付\$\{fmt\(systemAmount\)\} · 实付\$\{fmt\(paidAmount\)\}[\s\S]*归属 \$\{esc\(renderStandardEmptyText\(ownerCoach\)\)\}[\s\S]*<strong>已扣 \$\{lessonQty\(used\)\}\$\{unit\}（\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}\$\{unit\}）<\/strong>/, 'student package purchase records should show signup, price, owner, and bold used balance with the package unit');
 assert.match(source, /function studentLessonRecordHtml\([\s\S]*studentLessonRecordRows\(stu\)[\s\S]*studentLessonRecordPackageHtml[\s\S]*student-lesson-row[\s\S]*rows\.length>10[\s\S]*收起[\s\S]*展开全部/, 'student lesson record list should use package-record style rows and support expand all');
 assert.match(source, /function toggleStudentLessonRecordExpanded\(studentId\)[\s\S]*openStudentDetail\(studentId\)/, 'student lesson record expand toggle should refresh the open detail modal');
 assert.doesNotMatch(source, /studentDetailBlockHtml\('课包消耗记录'/, 'student detail should not render a second package consume list');
@@ -307,7 +307,7 @@ assert.match(source, /function openStudentModal[\s\S]*姓名 \*[\s\S]*手机号[
 assert.doesNotMatch(source, /placeholder="13800138000"/, 'phone inputs should not show example numbers that look prefilled');
 assert.match(source, /const campusOptions=studentCampusOptions\(\);/, 'student edit modal should build campus options through the shared student helper');
 assert.match(source, /function studentCampusOptions\(/, 'student edit modal should expose all loaded campuses through a helper');
-assert.match(source, /renderCourtDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');
+assert.match(source, /renderStandardDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');
 assert.match(source, /const data=\{name,phone,primaryCoach:/, 'student save should submit primary coach');
 assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
 assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(id\?'编辑学员':'添加学员',body,footer,'modal-standard modal-student-form'\)/, 'student add and edit modals should use the shared 560px standard modal');

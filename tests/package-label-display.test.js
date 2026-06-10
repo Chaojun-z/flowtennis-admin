@@ -36,7 +36,7 @@ const context = {
   coaches: [],
   packages: [],
   entitlements: [],
-  renderCourtEmptyText: value => {
+  renderStandardEmptyText: value => {
     const text = String(value || '').trim();
     return text || '-';
   }

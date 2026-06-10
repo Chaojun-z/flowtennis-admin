@@ -25,10 +25,10 @@ assert.match(state, /if\(pg==='matches'\)renderMatches\(\);/, 'router should ren
 const page = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'pages', 'matches.js'), 'utf8');
 assert.match(page, /function renderMatches\(/, 'match page should render match rows');
 assert.match(page, /function syncMatchFilters\(/, 'match page should render the shared dropdown-style status filter');
-assert.match(page, /renderCourtDropdownHtml\('matchStatusFilter'/, 'match page status filter should reuse the shared dropdown');
+assert.match(page, /renderStandardDropdownHtml\('matchStatusFilter'/, 'match page status filter should reuse the shared dropdown');
 assert.doesNotMatch(bootstrap, /\['coachschedule','coachops','courts','matches','packages','purchases'\]/, 'match page should not render old top campus pills');
 assert.match(page, /matchCampusFilter/, 'match page should render its own campus filter');
-assert.match(page, /renderCourtDropdownHtml\('matchCampusFilter'/, 'match page campus filter should use the latest shared dropdown style');
+assert.match(page, /renderStandardDropdownHtml\('matchCampusFilter'/, 'match page campus filter should use the latest shared dropdown style');
 assert.match(pagesCss, /#page-matches \.tms-toolbar\{[^}]*align-items:center/, 'match toolbar should align filters with the latest page toolbar style');
 assert.match(page, /function matchCampusCode\(/, 'match page should expose a campus matcher for global campus tabs');
 assert.match(page, /function openMatchBookingModal\(/, 'match page should support booking action');

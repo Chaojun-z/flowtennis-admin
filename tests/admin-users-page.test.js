@@ -55,7 +55,7 @@ assert.match(fnBody('openAdminUserModal'), /au_phone/, 'account modal should inc
 assert.match(fnBody('openAdminUserModal'), /au_coachId/, 'account modal should include coach binding field');
 assert.match(fnBody('openAdminUserModal'), /au_dataScope/, 'account modal should include data scope field');
 assert.match(fnBody('openAdminUserModal'), /auCampusScopeWrap/, 'account modal should include campus scope block');
-assert.match(fnBody('openAdminUserModal'), /const roleControl=renderCourtDropdownHtml\('au_role','角色',roleOptions,rv\(user,'role','editor'\),true,'toggleAdminUserPermissionFields'\)/, 'account edit modal should allow changing role between coach and admin');
+assert.match(fnBody('openAdminUserModal'), /const roleControl=renderStandardDropdownHtml\('au_role','角色',roleOptions,rv\(user,'role','editor'\),true,'toggleAdminUserPermissionFields'\)/, 'account edit modal should allow changing role between coach and admin');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /au_officialAccountOpenId/, 'account modal should not expose manual official account openid input');
 assert.match(fnBody('openAdminUserModal'), /请在服务号内发送 #绑定 手机号 完成绑定/, 'account modal should explain the real binding flow');
 {

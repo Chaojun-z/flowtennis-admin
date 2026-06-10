@@ -14,9 +14,9 @@ function fnBody(name){
 
 assert.match(fnBody('scheduleTimeRangeControls'), /refreshScheduleTimeDerivedFields/, 'schedule time range controls should refresh lesson hours when date or time changes');
 assert.match(html, /<th style="width:64px">重复\?<\/th>/, 'schedule table should expose a dedicated repeat column beside course type');
-assert.match(fnBody('toggleCourtDropdown'), /const container=dropdown\.closest\('\.mbody'\)/, 'dropdown opening direction should account for modal body clipping');
-assert.match(fnBody('toggleCourtDropdown'), /containerRect\.bottom/, 'dropdown should compare available space against the modal scroll body');
-assert.match(fnBody('toggleCourtDropdown'), /spaceBelow<menuHeight\+12&&spaceAbove>spaceBelow/, 'dropdown should open upward when modal space below is too small');
+assert.match(fnBody('toggleStandardDropdown'), /const container=dropdown\.closest\('\.mbody'\)/, 'dropdown opening direction should account for modal body clipping');
+assert.match(fnBody('toggleStandardDropdown'), /containerRect\.bottom/, 'dropdown should compare available space against the modal scroll body');
+assert.match(fnBody('toggleStandardDropdown'), /spaceBelow<menuHeight\+12&&spaceAbove>spaceBelow/, 'dropdown should open upward when modal space below is too small');
 assert.match(pagesCss, /\.tms-stats-row\s*\{/, 'court page should define scoped tms stats styles');
 assert.match(tablesCss, /\.tms-table-card\s*\{/, 'court page should use shared table card styles');
 assert.match(pagesCss, /\.tms-mini-bar\s*\{/, 'court page should define scoped tms mini bar styles');
@@ -47,7 +47,7 @@ assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court t
 assert.match(html, /id="courtPageSize"/, 'court table should support page size selection');
 assert.match(html, /renderPageSizeSelectorHtml\('courtPageSizeValue',courtPageSize,'setCourtPageSize'\)/, 'court page size selector should reuse the shared numeric page-size dropdown');
 assert.match(html, /function renderCourtPagerControls\(/, 'court page should use the standard pager renderer');
-assert.match(fnBody('renderCourtPagerControls'), /renderPagerChevron\('prev'\)[\s\S]*renderPagerChevron\('next'\)/, 'court pager should match the shared chevron pager interaction');
+assert.match(fnBody('renderCourtPagerControls'), /renderStandardPaginationButtonsHtml\(courtPage,pages,'setCourtPage'\)/, 'court pager should render page buttons through the global standard pager');
 assert.doesNotMatch(fnBody('renderCourtPagerControls'), /jumpCourtPage|跳至/, 'court pager should not keep jump-to-page controls');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
@@ -80,7 +80,7 @@ assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
 assert.match(html, /tms-form-row court-date-row[\s\S]*f_campus[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate[\s\S]*f_nextFollowUpDate/, 'court modal should place campus and three date fields in one row');
-assert.match(fnBody('openCourtModal'), /renderCourtDropdownHtml\('f_campus','校区',\[\{value:'',label:'-'\},\.\.\.campusList\],rv\(r,'campus'\),true\)/, 'court modal should allow blank campus');
+assert.match(fnBody('openCourtModal'), /renderStandardDropdownHtml\('f_campus','校区',\[\{value:'',label:'-'\},\.\.\.campusList\],rv\(r,'campus'\),true\)/, 'court modal should allow blank campus');
 assert.match(fnBody('openCourtModal'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
@@ -89,7 +89,7 @@ assert.match(fnBody('openCourtFinanceModal'), /court-finance-summary-grid[\s\S]*
 assert.doesNotMatch(fnBody('openCourtFinanceModal'), /财务摘要(?:(?!流水录入)[\s\S])*<input[^>]+readonly/, 'court finance summary should not render readonly values as inputs');
 assert.match(pagesCss, /\.modal\.modal-court \.court-finance-summary-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'court finance summary should render four columns per row');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-record-add-box \.tms-dropdown-display[^}]*font-size:12px/s, 'court finance entry row should use smaller dropdown text to avoid overlapping');
-assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*renderCourtDropdownHtml\('nrType','交易类型'[\s\S]*flex:0 0 128px[\s\S]*renderCourtDropdownHtml\('nrCategory','业务类型'[\s\S]*flex:0 0 128px[\s\S]*renderCourtDropdownHtml\('nrPayMethod','支付方式'/s, 'court finance modal should keep the first three selectors compact enough to avoid stacking');
+assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*renderStandardDropdownHtml\('nrType','交易类型'[\s\S]*flex:0 0 128px[\s\S]*renderStandardDropdownHtml\('nrCategory','业务类型'[\s\S]*flex:0 0 128px[\s\S]*renderStandardDropdownHtml\('nrPayMethod','支付方式'/s, 'court finance modal should keep the first three selectors compact enough to avoid stacking');
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
@@ -113,9 +113,9 @@ assert.match(html, /id="courtBatchToolbar"[^>]*style="display:none"/, 'court bat
 assert.match(html, /function setCourtBatchMode\(/, 'court page should expose explicit batch mode toggling');
 assert.match(html, /function updateCourtBatchButton\([\s\S]*toolbar\.style\.display=courtBatchMode\?'flex':'none'/, 'court batch toolbar should only show in batch mode');
 assert.match(html, /function updateCourtBatchButton\([\s\S]*btn\.style\.display=courtBatchMode\?'inline-flex':'none'/, 'court batch delete button should follow batch mode visibility');
-assert.match(html, /function renderCourtEmptyText\(/, 'court page should centralize empty dash rendering');
+assert.match(html, /function renderStandardEmptyText\(/, 'court page should centralize empty dash rendering');
 assert.match(html, /return raw&&raw!=='—'\?raw:'-';/, 'court list empty cells should convert long dashes to short dashes');
-assert.match(html, /renderCourtDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value deduction');
+assert.match(html, /renderStandardDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value deduction');
 assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use browser confirm');
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
@@ -153,8 +153,8 @@ assert.match(fnBody('runBatchDeleteCourts'), /隐藏/, 'batch delete result shou
 assert.match(fnBody('renderCourts'), /class="tms-court-row-main"[\s\S]*class="tms-checkbox court-row-cb"/, 'court name cell should separate checkbox and name for easier text selection');
 assert.match(fnBody('renderCourts'), /\$\{esc\(courtDisplayName\(u\)\)\}/, 'court rows should render the display-name helper instead of raw names');
 assert.doesNotMatch(fnBody('renderCourts'), /<label class="tms-checkbox-wrap"[\s\S]*\$\{esc\(u\.name\)\}/, 'court name text should no longer be wrapped by a clickable label');
-assert.match(html, /function openCourtFinanceModal[\s\S]*renderCourtDropdownHtml\('nrStudentId','关联学员'/, 'court finance modal should use a shorter linked-student label');
-assert.match(html, /function openCourtFinanceModal[\s\S]*renderCourtDropdownHtml\('nrCompanionCoach','陪打教练'/, 'court finance modal should allow selecting a companion coach for bookings');
+assert.match(html, /function openCourtFinanceModal[\s\S]*renderStandardDropdownHtml\('nrStudentId','关联学员'/, 'court finance modal should use a shorter linked-student label');
+assert.match(html, /function openCourtFinanceModal[\s\S]*renderStandardDropdownHtml\('nrCompanionCoach','陪打教练'/, 'court finance modal should allow selecting a companion coach for bookings');
 assert.match(html, /function saveCourtFinanceRecord[\s\S]*scheduleSource:'订场陪打'/, 'court booking with companion coach should generate a linked coach schedule source');
 assert.match(html, /function saveCourtFinanceRecord[\s\S]*courseType:'陪打'/, 'companion coach booking should create a companion schedule type');
 assert.match(fnBody('openCourtModal'), /openCourtMergeModal\('/, 'court edit modal should expose a merge entry for existing users');

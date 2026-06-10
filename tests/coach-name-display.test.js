@@ -20,8 +20,8 @@ assert.strictEqual(context.coachName('晓哲'), '晓哲教练');
 assert.match(appSource, /function canonicalCoachName\(/, 'frontend should expose one coach display normalizer');
 assert.match(appSource, /function studentPrimaryCoachText\([\s\S]*coachName\(stu\?\.primaryCoach\)/, 'student primary coach display should normalize legacy names');
 assert.match(appSource, /function studentCoachSummary\([\s\S]*coachName\(stu\?\.primaryCoach\)[\s\S]*coachName\(c\.coach\)/, 'student detail coach summary should normalize profile and class coach names');
-assert.match(appSource, /renderCourtCellText\(coachName\(s\.coach\),false\)/, 'schedule list should normalize legacy coach names');
-assert.match(appSource, /renderCourtCellText\(coachName\(p\.ownerCoach\)\)/, 'purchase list should normalize owner coach names');
+assert.match(appSource, /renderStandardCellText\(coachName\(s\.coach\),false\)/, 'schedule list should normalize legacy coach names');
+assert.match(appSource, /renderStandardCellText\(coachName\(p\.ownerCoach\)\)/, 'purchase list should normalize owner coach names');
 assert.match(appSource, /function packageCoachSummary\([\s\S]*coachName\(p\.ownerCoach\)/, 'package coach summary should normalize owner coach names');
 assert.match(appSource, /function myStudentOwnerCoachText\([\s\S]*coachName\(e\.ownerCoach\)/, 'coach portal owner coach display should normalize entitlement owner names');
 
