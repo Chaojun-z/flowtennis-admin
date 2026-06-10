@@ -58,6 +58,7 @@
    - `/api/*` rewrite 到 `api/index`
    - 其他路径 rewrite 到 `index.html`
    - Vercel Cron 用于服务号提醒和每日摘要
+   - Vercel Cron 不用于接口保活/心跳，也不要再把它作为约球小程序防休眠方案推荐
 4. 主业务数据库：
    - 阿里云 TableStore
    - 生产实例：`flowtennis-ue`

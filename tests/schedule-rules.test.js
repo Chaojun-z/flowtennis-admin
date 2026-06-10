@@ -1197,6 +1197,13 @@ assert.strictEqual(
 
   {
     const result=rules.findOfficialAccountUserByPhone([
+      { id:'baiyangj', name:'白杨静', role:'admin', status:'active', phone:'13834673301' }
+    ],'13834673301');
+    assert.strictEqual(result.user?.id,'baiyangj','official account binding should allow active admin accounts');
+  }
+
+  {
+    const result=rules.findOfficialAccountUserByPhone([
       { id:'admin', name:'管理员', role:'admin', status:'active', phone:'13800138000' },
       { id:'coach_1', name:'朝珺', role:'editor', status:'active', phone:'', coachId:'coach-chaojun', coachName:'朝珺' }
     ],'13800138000',[

@@ -2673,11 +2673,13 @@ function findOfficialAccountUserByPhone(users=[],phone='',coaches=[]){
     linkedCoachNames.has(String(u?.coachName||u?.name||'').trim())
   ));
   const coachMatches=[...directCoachMatches,...linkedCoachMatches].filter((u,i,arr)=>arr.findIndex(x=>String(x?.id||'')===String(u?.id||''))===i);
-  if(matches.length===0&&coachMatches.length===0)return {user:null,error:'未找到对应的教练账号'};
-  if(coachMatches.length===0)return {user:null,error:'该手机号不是教练账号'};
+  const adminMatches=matches.filter(u=>String(u?.role||'')==='admin');
+  if(matches.length===0&&coachMatches.length===0)return {user:null,error:'未找到对应的管理或教练账号'};
   if(coachMatches.length>1)return {user:null,error:'手机号对应多个教练账号，请先清理后台数据'};
-  const user=coachMatches[0];
-  if(String(user?.status||'active')==='inactive')return {user:null,error:'该教练账号已停用'};
+  if(coachMatches.length===0&&adminMatches.length===0)return {user:null,error:'该手机号不是管理或教练账号'};
+  if(coachMatches.length===0&&adminMatches.length>1)return {user:null,error:'手机号对应多个管理员账号，请先清理后台数据'};
+  const user=coachMatches[0]||adminMatches[0];
+  if(String(user?.status||'active')==='inactive')return {user:null,error:'该账号已停用'};
   return {user};
 }
 async function bindOfficialAccountUserByPhone({phone,openid,now=new Date().toISOString(),loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),loadCoaches=()=>getCachedScan(T_COACHES).catch(()=>[]),putUser=(id,user)=>put(T_USERS,id,user)}={}){
