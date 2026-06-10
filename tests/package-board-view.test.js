@@ -29,18 +29,24 @@ assert.match(fnBody('packageCampusSummaryText'), /names\.length===2\?names\.join
 assert.match(fnBody('packageCampusSummaryText'), /`\$\{names\.length\} 个校区可用`/, 'more than two campuses should show count only');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /scrollbar-width:none/, 'package board horizontal scrollbar should be hidden');
 assert.match(styles, /#page-packages \.course-package-showcase-grid::-webkit-scrollbar\{display:none\}/, 'package board webkit scrollbar should be hidden');
-assert.match(cssRule('#page-packages .course-package-showcase'), /height:calc\(100vh - var\(--topH\) - 44px\)/, 'package page should keep title and filters fixed');
+assert.match(cssRule('#page-packages.active'), /height:auto/, 'package page should grow with package columns instead of clipping to the current screen');
+assert.match(cssRule('#page-packages.active'), /overflow:visible/, 'package page should not hide long package columns');
+assert.match(cssRule('#page-packages .course-package-showcase'), /height:auto/, 'package board shell should not force a viewport-height scroll box');
 assert.match(cssRule('.course-package-showcase-toolbar'), /flex:0 0 auto/, 'package filters and actions should stay outside the scrolling area');
+assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*draggable="true"[\s\S]*package-board-header[\s\S]*package-board-stack/, 'package board should keep header and cards inside one draggable column');
+assert.doesNotMatch(fnBody('renderPackages'), /package-board-header-row|package-board-body-row/, 'package board should not split headers away from draggable columns');
+assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-x:auto/, 'package board should be the horizontal drag container');
+assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-y:visible/, 'package cards should extend downward instead of being clipped inside the current screen');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /cursor:grab/, 'package board should invite page-level horizontal drag');
-assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-y:auto/, 'only package card area should scroll vertically');
 assert.match(source, /function initPackageBoardHorizontalDrag\(/, 'package board should support page-level horizontal drag');
 assert.match(fnBody('renderPackages'), /initPackageBoardHorizontalDrag\(\)/, 'package board horizontal drag should be wired after render');
 assert.doesNotMatch(fnBody('initPackageBoardHorizontalDrag'), /\[draggable="true"\]/, 'package board horizontal drag should work when started on package cards');
 assert.match(cssRule('.package-board-stack'), /flex:0 0 auto/, 'package columns should only be as tall as their cards');
 assert.match(cssRule('.package-board-stack'), /overflow-y:visible/, 'package columns should not create idle internal scroll areas');
-assert.match(cssRule('.package-board-header'), /position:sticky/, 'package column header should stay fixed while the page scrolls');
+assert.match(cssRule('.package-board-header'), /position:sticky/, 'package column header should stay fixed while package cards scroll');
+assert.match(cssRule('.package-board-header'), /height:28px/, 'package column header should keep a fixed reserved height');
+assert.match(cssRule('.package-board-header'), /flex:0 0 28px/, 'package column header height should not collapse while cards scroll');
 assert.match(cssRule('.package-board-column'), /height:max-content/, 'package columns should grow to show all cards instead of being height-limited');
-assert.doesNotMatch(cssRule('.package-board-header'), /background:/, 'package column header should not have a separate background block');
 assert.doesNotMatch(cssRule('.package-sales-title'), /text-overflow:ellipsis|white-space:nowrap|overflow:hidden/, 'package title should show full text');
 assert.match(cssRule('.package-status-badge'), /height:17px/, 'sale status badge should be 17px tall');
 assert.match(cssRule('.package-status-badge'), /width:56px/, 'sale status badge should be 56px wide');
@@ -57,5 +63,9 @@ assert.match(cssRule('.package-board-column'), /flex:0 0 282px/, 'package card c
 assert.doesNotMatch(styles, /#page-packages \.course-package-showcase \.tms-btn\{/, 'package page should not override global button sizing');
 assert.doesNotMatch(styles, /#page-packages \.course-package-showcase \.tms-btn-ghost\{/, 'package page should not override global ghost button style');
 assert.doesNotMatch(packageBoardCardHtml, /归属：\$\{ownerCoach\}|归属：\$\{esc\(packageCoachSummary/, 'package card should not show owner prefix in the visible coach line');
+assert.match(cssRule('.package-card-meta'), /font-size:10px/, 'package created date should use 10px text');
+assert.match(cssRule('.package-card-meta button'), /font-size:10px/, 'package order count should use 10px text');
+assert.match(cssRule('.package-meta-token'), /overflow:visible/, 'package created date should show fully');
+assert.match(cssRule('.package-sales-footer .showcase-action-btn'), /padding:4px 10px/, 'package view button padding should shrink by 2px horizontally');
 
 console.log('package board view tests passed');
