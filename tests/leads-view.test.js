@@ -8,6 +8,7 @@ const componentsSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/co
 const standardSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/standard/components.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(publicDir, 'assets/scripts/core/state.js'), 'utf8');
+const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const css = [
   'assets/styles/pages.css',
   'assets/styles/components/tables.css',
@@ -40,7 +41,7 @@ assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">�
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(standardSource, /statsId:'leadStatsRow'/, 'leads page should expose the top stats row');
-assert.match(standardSource, /微信名[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*基本信息[\s\S]*咨询需求[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
+assert.match(standardSource, /微信名[\s\S]*水平[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*基本信息[\s\S]*咨询需求[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(standardSource, /bodyId:'leadTbody'/, 'leads page should provide the list tbody mount');
 assert.match(standardSource, /infoId:'leadPagerInfo'/, 'leads page should provide pager info');
 assert.match(standardSource, /pageSizeId:'leadPageSize'/, 'leads page should provide page size selector host');
@@ -103,7 +104,7 @@ assert.match(leadDetailSource, /openStandardDetailDrawer\(/, 'lead detail should
 assert.match(leadDetailSource, /leadDetailHeroHtml\(lead\)[\s\S]*leadDetailTabsHtml\(leadDetailActiveTab\)/, 'lead detail drawer should render hero and tabs');
 assert.match(leadDetailSource, /leadDetailActiveTab==='basic'[\s\S]*leadDetailBasicTabHtml\(lead\)[\s\S]*leadDetailActiveTab==='followups'[\s\S]*leadDetailFollowupsTabHtml\(lead\)[\s\S]*leadDetailConversionTabHtml\(lead\)/, 'lead detail should route basic, follow-up and conversion tabs');
 assert.match(leadDetailSource, /modal-lead-drawer/, 'lead detail should use the scoped lead drawer class');
-assert.match(leadsSource, /function leadBasicInfoReadonlyHtml\(lead\)[\s\S]*leadDetailFieldHtml\('微信名',leadWechatText\(lead\)\)[\s\S]*leadDetailFieldHtml\('电话',lead\?\.phone\|\|'-'\)[\s\S]*leadDetailFieldHtml\('线索时间',lead\?\.leadDate\|\|'-'\)[\s\S]*leadDetailFieldHtml\('线索来源',lead\?\.source\|\|'-'\)[\s\S]*leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)[\s\S]*leadDetailFieldHtml\('咨询需求',lead\?\.consultType\|\|'-'\)[\s\S]*leadDetailFieldHtml\('意向类型',lead\?\.intentLevel\|\|'-'\)[\s\S]*leadDetailFieldHtml\('跟进人',lead\?\.owner\|\|'-'\)[\s\S]*leadDetailBlockHtml\('基本信息',esc\(leadProfileText\(lead\)\),\{hideEmpty:true\}\)/, 'lead detail basic tab should keep the current basic fields');
+assert.match(leadsSource, /function leadBasicInfoReadonlyHtml\(lead\)[\s\S]*leadDetailFieldHtml\('微信名',leadWechatText\(lead\)\)[\s\S]*leadDetailFieldHtml\('电话',lead\?\.phone\|\|'-'\)[\s\S]*leadDetailFieldHtml\('水平',leadLevelText\(lead\)\)[\s\S]*leadDetailFieldHtml\('线索时间',lead\?\.leadDate\|\|'-'\)[\s\S]*leadDetailFieldHtml\('线索来源',lead\?\.source\|\|'-'\)[\s\S]*leadDetailFieldHtml\('所属校区',leadCampusText\(lead\)\)[\s\S]*leadDetailFieldHtml\('咨询需求',lead\?\.consultType\|\|'-'\)[\s\S]*leadDetailFieldHtml\('意向类型',lead\?\.intentLevel\|\|'-'\)[\s\S]*leadDetailFieldHtml\('跟进人',lead\?\.owner\|\|'-'\)[\s\S]*leadDetailBlockHtml\('基本信息',esc\(leadProfileText\(lead\)\),\{hideEmpty:true\}\)/, 'lead detail basic tab should keep the current basic fields');
 assert.match(leadsSource, /function leadTimelineLineText\(item\)[\s\S]*return `\$\{date\} · \$\{by\} 跟进 · （\$\{status\}）\\n\$\{note\}`/, 'lead timeline should render date, follower, conversion result, then note on the second line');
 assert.match(componentsSource, /function renderDetailDrawerTimeline\(/, 'detail drawer timeline should be shared');
 assert.match(leadsSource, /function leadTimelineHtml\(lead\)[\s\S]*renderDetailDrawerTimeline\(rows\.map\(item=>leadFollowupTimelineItemHtml\(lead,item\)\),\{emptyText:'暂无跟进时间线',className:'lead-followup-timeline'\}\)/, 'lead timeline should render through the shared drawer timeline component');
@@ -117,7 +118,7 @@ assert.doesNotMatch(leadsSource, /type="datetime-local"/, 'follow-up date should
 assert.match(leadsSource, /courtDateButtonHtml\('lead_followupAt'[\s\S]*leadFollowupDateInputValue/, 'follow-up date should use the shared date picker');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
-assert.match(leadsSource, /const body=`<div class="tms-form-row lead-form-row-4">[\s\S]*<label class="tms-form-label">微信名<\/label><input class="finput tms-form-control" id="lead_wechatName"[\s\S]*<label class="tms-form-label">电话<\/label><input class="finput tms-form-control" id="lead_phone"[\s\S]*<label class="tms-form-label">线索时间<\/label>[\s\S]*<label class="tms-form-label">线索来源<\/label>[\s\S]*<label class="tms-form-label">所属校区<\/label>[\s\S]*<label class="tms-form-label">咨询需求<\/label>[\s\S]*<label class="tms-form-label">意向类型<\/label>[\s\S]*<label class="tms-form-label">跟进人<\/label>[\s\S]*<label class="tms-form-label">基本信息<\/label>/, 'lead create and edit modal should use the requested field order without a section title');
+assert.match(leadsSource, /const body=`<div class="tms-form-row lead-form-row-4">[\s\S]*<label class="tms-form-label">微信名<\/label><input class="finput tms-form-control" id="lead_wechatName"[\s\S]*<label class="tms-form-label">电话<\/label><input class="finput tms-form-control" id="lead_phone"[\s\S]*<label class="tms-form-label">水平<\/label>[\s\S]*renderStandardDropdownHtml\('lead_level','水平'[\s\S]*<label class="tms-form-label">线索时间<\/label>[\s\S]*<label class="tms-form-label">线索来源<\/label>[\s\S]*<label class="tms-form-label">所属校区<\/label>[\s\S]*<label class="tms-form-label">咨询需求<\/label>[\s\S]*<label class="tms-form-label">意向类型<\/label>[\s\S]*<label class="tms-form-label">跟进人<\/label>[\s\S]*<label class="tms-form-label">基本信息<\/label>/, 'lead create and edit modal should use the requested field order without a section title');
 assert.doesNotMatch(leadsSource, /<div class="tms-section-header" style="margin-top:0;">基础信息<\/div><div class="tms-form-row lead-form-row-4">/, 'lead create and edit modal should not show the basic info section title');
 assert.match(leadsSource, /openStandardModal\(\{title:leadId\?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'\}\)/, 'lead create and edit modal should use the standard 800px complex modal');
 assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索'/, 'lead create and edit modal should not keep the old shell');
@@ -127,10 +128,16 @@ assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit
 assert.match(leadsSource, /function leadConversionActionPanelHtml\(lead\)[\s\S]*转为学员[\s\S]*转为订场用户[\s\S]*关联已有学员[\s\S]*关联已有订场用户/, 'lead conversion tab should expose conversion actions inside the drawer');
 assert.match(leadsSource, /查看[\s\S]*跟进/, 'lead rows should expose view and follow-up actions');
 assert.doesNotMatch(fnBody('renderLeads'), /转化/, 'lead rows should not expose conversion action');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',12,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
+assert.match(leadsSource, /function leadSourceOptions\(\)[\s\S]*大众点评[\s\S]*抖音[\s\S]*小红书[\s\S]*直接线下到店[\s\S]*朋友转介绍[\s\S]*孙老师介绍[\s\S]*小班课转化[\s\S]*群友[\s\S]*开业活动期间[\s\S]*未知/, 'lead source options should use the requested fixed list');
+assert.match(leadsSource, /function leadConsultOptions\(\)[\s\S]*成人私教课[\s\S]*成人小班课[\s\S]*青少年私教课[\s\S]*青少年小班课[\s\S]*订场[\s\S]*约球[\s\S]*陪打[\s\S]*发球机[\s\S]*穿线[\s\S]*咨询储值卡（会员）[\s\S]*合作等[\s\S]*未说明需求/, 'lead consult options should use the requested fixed list');
+assert.match(leadsSource, /function leadIntentOptions\(\)[\s\S]*沉默[\s\S]*20%-40%[\s\S]*40%-60%[\s\S]*60%-80%[\s\S]*80%-100%/, 'lead intent options should use the requested fixed list');
+assert.match(leadsSource, /function leadLevelOptions\(\)[\s\S]*0[\s\S]*1\.0[\s\S]*1\.5[\s\S]*2\.0[\s\S]*2\.5[\s\S]*3\.0[\s\S]*3\.5[\s\S]*4\.0[\s\S]*4\.5[\s\S]*5\.0[\s\S]*自定义/, 'lead level options should use the requested fixed list');
+assert.match(fnBody('leadPayloadFromForm'), /level:document\.getElementById\('lead_level'\)\?\.value\|\|''/, 'lead save payload should include level');
+assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',13,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',12/, 'leads loading state should pass all visible columns to the skeleton helper');
-assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="12"/, 'leads error state should span all visible columns');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',13/, 'leads loading state should pass all visible columns to the skeleton helper');
+assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="13"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');

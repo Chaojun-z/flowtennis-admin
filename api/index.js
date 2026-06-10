@@ -185,6 +185,7 @@ const LEAD_LIST_PROJECTION_FIELDS=[
   'name',
   'wechatName',
   'phone',
+  'level',
   'leadDate',
   'source',
   'campus',
