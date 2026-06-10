@@ -29,7 +29,7 @@ const packageBoardCardHtml = fnBody('packageBoardCardHtml');
 assert.match(packageBoardCardHtml, /openPackageDetail\('\$\{p\.id\}'\)">查看/, 'package cards should expose a read-only detail drawer entry');
 assert.doesNotMatch(packageBoardCardHtml, /openPackageModal\('\$\{p\.id\}'\)">编辑/, 'package cards should not keep edit action');
 assert.match(packageBoardCardHtml, /openPackageDetail\('\$\{p\.id\}'\)">查看[\s\S]*deactivatePackage\('\$\{p\.id\}'\)">下架/, 'package cards should keep only view and deactivate actions');
-assert.match(openPackageModal, /openDetailSideDrawer\(/, 'package create/edit should open as the shared right-side drawer');
+assert.match(openPackageModal, /openStandardDetailDrawer\(/, 'package create/edit should open as the standard right-side drawer');
 assert.match(openPackageModal, /modal-schedule-drawer/, 'package create/edit should reuse the schedule detail drawer shell');
 assert.match(openPackageModal, /schedule-drawer-overlay/, 'package create/edit should slide in from the right like schedule detail');
 assert.match(source, /function packageDrawerHeaderHtml\([\s\S]*renderDetailDrawerHero/, 'package create/edit should use the shared drawer hero');
@@ -41,7 +41,7 @@ assert.match(openPackageModal, /注意：该课包已有购买记录/, 'locked p
 assert.match(openPackageModal, /packageCampusPickerHtml/, 'package campus selection should use the new drawer choice UI');
 assert.match(openPackageModal, /packageCoachPickerHtml/, 'package coach selection should use the new drawer choice UI');
 assert.doesNotMatch(openPackageModal, /setCourtModalFrame\(id\?'编辑课包':'创建课包'/, 'package create/edit should not use the old centered modal frame');
-assert.match(openPackageDetail, /openDetailSideDrawer\(/, 'package view should open as the shared right-side drawer');
+assert.match(openPackageDetail, /openStandardDetailDrawer\(/, 'package view should open as the standard right-side drawer');
 assert.match(openPackageDetail, /modal-schedule-drawer/, 'package view should reuse the schedule detail drawer shell');
 assert.match(openPackageDetail, /renderDetailDrawerCard\('基础属性'[\s\S]*renderDetailDrawerCard\('规格与价格'[\s\S]*renderDetailDrawerCard\('上课时间与效期'[\s\S]*renderDetailDrawerCard\('教练和场地'/, 'package view should show all package fields in schedule-style cards');
 assert.doesNotMatch(openPackageDetail, /setCourtModalFrame/, 'package view should not use the old centered modal frame');

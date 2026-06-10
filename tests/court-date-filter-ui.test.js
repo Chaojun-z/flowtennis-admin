@@ -12,8 +12,8 @@ function fnBody(name){
 }
 
 assert.match(source, /id="campusTabs"/, 'top bar should provide the shared campus tabs host');
-assert.match(fnBody('renderCourtTopFilters'), /renderCourtTopDropdown\('courtTopCampus'/, 'court top filters should render the campus dropdown');
-assert.match(fnBody('renderCourtTopFilters'), /renderCourtTopDropdown\('courtTopDate'/, 'court top filters should render the date dropdown');
+assert.match(fnBody('renderCourtTopFilters'), /renderStandardTopDropdown\('courtTopCampus'/, 'court top filters should render the campus dropdown through standard components');
+assert.match(fnBody('renderCourtTopFilters'), /renderStandardTopDropdown\('courtTopDate'/, 'court top filters should render the date dropdown through standard components');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='courts'[\s\S]*renderCourtTopFilters\(\)/, 'courts page should replace top campus tabs with custom top filters');
 assert.match(fnBody('courtDateFilterQuickOptions'), /全部[\s\S]*今日[\s\S]*本周[\s\S]*本月[\s\S]*自定义/, 'court date range filter should expose the required quick ranges');
 assert.match(fnBody('currentCourtDateRangeLabel'), /resolveCourtDatePresetRange\(courtDateRangeFilterValue\)[\s\S]*formatCourtDateRangeValue\(preset\.startDate,preset\.endDate\)/, 'quick date ranges should display as concrete start/end dates in the top bar');

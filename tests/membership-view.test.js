@@ -71,7 +71,7 @@ assert.match(html, /function openMembershipBenefitHistoryModal/, 'benefit histor
 assert.match(html, /查看明细/, 'benefit card should use shorter history label');
 assert.match(html, /查看全部权益流水/, 'court detail should provide all-benefit history entry for the current user');
 assert.match(html, /function openCourtMembershipLedgerModal/, 'court detail should support all-benefit history modal');
-assert.match(html, /setCourtModalFrame\('查看全部权益流水'[\s\S]*modal-wide/, 'all-benefit ledger should use the wide court modal shell');
+assert.match(html, /openStandardModal\(\{title:'查看全部权益流水'[\s\S]*extraClass:'modal-wide'/, 'all-benefit ledger should use the wide standard modal shell');
 assert.match(html, /membershipBenefitLedger\.filter\(l=>l\.membershipAccountId===account\.id&&l\.benefitCode===benefitCode&&l\.action!=='grant'\)/, 'benefit history should hide grant rows because purchase records already carry the issuance source');
 assert.match(html, /membershipBenefitLedger\.filter\(l=>l\.membershipAccountId===account\.id&&l\.action!=='grant'\)/, 'all-benefit history should hide grant rows and focus on actual changes');
 assert.doesNotMatch(html, /openMembershipBenefitActionModal\('\$\{court\.id\}','ballMachine','consume'\)/, 'court detail shortcut actions should not hardcode ballMachine consume');
@@ -162,7 +162,7 @@ assert.match(html, /const benefits=benefitRows\.length\?benefitRows\.map\(b=>`\$
 assert.match(html, /function resetModalActions\(\)/, 'membership modals should clear stale footer actions before using body-level action areas');
 assert.match(html, /function openMembershipOrderModal/, 'membership order modal should remain available');
 assert.match(html, /function openMembershipBenefitActionModal/, 'benefit action modal should remain available');
-assert.match(html, /setCourtModalFrame\(`\$\{court\.name\} · 会员账户`,courtMembershipPanelHtml\(court\),'',/, 'membership account panel should not append an extra close footer');
+assert.match(html, /openStandardModal\(\{title:`\$\{court\.name\} · 会员账户`,bodyHtml:courtMembershipPanelHtml\(court\),actionsHtml:''/, 'membership account panel should not append an extra close footer');
 assert.match(html, /modal-member/, 'membership account panel should use a wider dedicated modal shell');
 assert.match(html, /售卖时间[\s\S]*方案状态[\s\S]*操作/, 'membership plan list should show sale window and plan status columns');
 assert.match(html, /tms-action-link[\s\S]*(删除[\s\S]*上架[\s\S]*编辑|停售[\s\S]*编辑)/, 'membership plan list should use the requested action order');

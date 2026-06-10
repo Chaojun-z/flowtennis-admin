@@ -39,7 +39,7 @@ assert.match(fnBody('renderCoaches'), /hireDate/, 'coach rows should render hire
 assert.match(fnBody('renderCoaches'), /<span class="tms-tag/, 'coach status should render as a tms tag');
 assert.match(fnBody('renderCoaches'), /class="tms-sticky-r[^"]*tms-action-cell"[\s\S]*openCoachModal[\s\S]*confirmDel/, 'coach action cells should keep edit/delete entries in the list');
 assert.match(fnBody('renderCoaches'), /tms-action-link[\s\S]*编辑[\s\S]*删除/, 'coach actions should use text links');
-assert.match(fnBody('openCoachModal'), /setCourtModalFrame/, 'coach create/edit should use the court-style modal frame');
+assert.match(fnBody('openCoachModal'), /openStandardModal/, 'coach create/edit should use the standard modal frame');
 assert.match(fnBody('openCoachModal'), /tms-section-header[\s\S]*tms-form-row[\s\S]*tms-form-label[\s\S]*tms-form-control/, 'coach modal should use court-style form fields');
 assert.match(fnBody('openCoachModal'), /co_hireDate/, 'coach modal should include hire date field');
 assert.match(fnBody('openCoachModal'), /courtDateButtonHtml\('co_hireDate'/, 'coach hire date should use the shared court-style date picker');

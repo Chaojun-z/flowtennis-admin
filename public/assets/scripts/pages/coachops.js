@@ -278,8 +278,8 @@ function renderCoachOpsTopFilters(){
   const coachOpts=[{value:'',label:'全部教练'}].concat(coachOpsHomeCampusCoachNames().map(name=>({value:name,label:name})));
   const coachMenu=coachOpts.map(opt=>`<div class="tms-dropdown-item ${coachOpsSelectedCoach===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectCoachOpsCoachFilter(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
   const coachLabel=coachOpts.find(opt=>opt.value===coachOpsSelectedCoach)?.label||'全部教练';
-  const coachIcon=typeof courtTopCoachIcon==='function'?courtTopCoachIcon():courtTopLocationIcon();
-  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderCourtTopDropdown('coachOpsCoachFilter',coachLabel,coachIcon,coachMenu,'court-top-campus-menu')}</div></div>`;
+  const coachIcon=typeof standardTopCoachIcon==='function'?standardTopCoachIcon():standardTopLocationIcon();
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('coachOpsTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',standardTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderStandardTopDropdown('coachOpsCoachFilter',coachLabel,coachIcon,coachMenu,'court-top-campus-menu')}</div></div>`;
 }
 function selectCoachOpsTopCampus(value,event){
   if(event)event.stopPropagation();
@@ -291,7 +291,7 @@ function selectCoachOpsTopCampus(value,event){
   }
   refreshCoachOpsTopFilters();
   renderCoachOps();
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function selectCoachOpsCoachFilter(value,event){
   if(event)event.stopPropagation();
@@ -300,7 +300,7 @@ function selectCoachOpsCoachFilter(value,event){
   else localStorage.removeItem(COACH_OPS_COACH_FILTER_KEY);
   refreshCoachOpsTopFilters();
   renderCoachOps();
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function refreshCoachOpsTopFilters(){
   const host=document.getElementById('campusTabs');
@@ -313,7 +313,7 @@ function openCoachOpsDaySchedules(coach,date){
   const body=rows.length
     ?`<div class="coach-ops-day-modal-list">${rows.map(s=>`<button type="button" class="coach-ops-day-modal-item" onclick="openScheduleDetail('${s.id}')"><span>${esc(coachOpsScheduleItemText(s))}</span><small>${esc(scheduleCourseTypeLabel(s))} · ${esc(scheduleLocationText(s))}</small></button>`).join('')}</div>`
     :'<div class="empty"><p>当天暂无排课</p></div>';
-  setCourtModalFrame('当天排课',body,'<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>','modal-tight');
+  openStandardModal({title:'当天排课',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-default" onclick="closeModal()">关闭</button>',extraClass:'modal-tight'});
 }
 function openCoachOpsMorePopover(el,coach,date,event){
   if(event)event.stopPropagation();

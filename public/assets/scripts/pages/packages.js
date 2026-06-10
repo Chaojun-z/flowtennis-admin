@@ -31,14 +31,14 @@ function packageDisplayTitle(p){
   return [packageCoreClassLabel(p),lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
 }
 function renderPackageTopFilters(){
-  if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function')return '';
+  if(typeof renderStandardTopDropdown!=='function'||typeof standardTopLocationIcon!=='function')return '';
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
   const campusOpts=[{value:'all',label:'全部校区'}].concat(campusSource.map(row=>({
     value:String(row?.code||row?.id||'').trim(),
     label:String(row?.name||row?.code||row?.id||'').trim()
   })).filter(opt=>opt.value&&opt.label));
   const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectPackageTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
-  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('packageTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('packageTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',standardTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
 }
 function refreshPackageTopFilters(){
   const host=document.getElementById('campusTabs');
@@ -51,7 +51,7 @@ function selectPackageTopCampus(value,event){
   pkgPage=standardListFirstPage();
   refreshPackageTopFilters();
   renderPackages();
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function onPackageFilterChange(){
   pkgPage=standardListFirstPage();
@@ -476,7 +476,7 @@ function openPackageMergeModal(){
   const opts=packageMergeOpts('');
   const body=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留课包 *</label>${renderStandardDropdownHtml('pkg_merge_master','选择课包',opts,'',true)}</div><div class="tms-form-item"><label class="tms-form-label">并入课包 *</label>${renderStandardDropdownHtml('pkg_merge_source','选择课包',opts,'',true)}</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="packageMergeBtn" onclick="mergePackage()">确认合并</button>`;
-  setCourtModalFrame('合并课包',body,footer,'modal-tight modal-merge-package');
+  openStandardModal({title:'合并课包',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight modal-merge-package'});
 }
 async function mergePackage(){
   const masterPackageId=document.getElementById('pkg_merge_master')?.value||'';
@@ -682,7 +682,7 @@ function openPackageDetail(id){
     renderDetailDrawerCard('上课时间与效期',time,{className:'package-detail-card'}),
     renderDetailDrawerCard('教练和场地',resource,{className:'package-detail-card'})
   ].join(''));
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:packageDrawerHeaderHtml(p,'view'),
     bodyHtml:body,
     actionsHtml:'',
@@ -718,7 +718,7 @@ function openPackageModal(id,presetProductId=''){
     renderDetailDrawerFormCard('教练和场地',resourceForm),
     packageDrawerHiddenFields(p)
   ].join(''));
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:packageDrawerHeaderHtml(p,id?'edit':'create'),
     bodyHtml:body,
     actionsHtml:'',

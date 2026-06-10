@@ -33,8 +33,8 @@ function fnBody(source, name){
   assert.match(appSource, new RegExp(`${name}`), `${name} should be bundled globally`);
 });
 
-assert.match(fnBody(coreSource, 'openDetailSideDrawer'), /return openStandardDetailDrawer\(/, 'legacy drawer entry should delegate to the standard drawer');
-assert.match(fnBody(courtsSource, 'setCourtModalFrame'), /return openStandardModal\(\{title,bodyHtml,actionsHtml,extraClass\}\)/, 'legacy court modal entry should delegate to the standard modal');
+assert.doesNotMatch(coreSource, /function openDetailSideDrawer\(/, 'legacy drawer entry should be removed after page migration');
+assert.doesNotMatch(courtsSource, /function setCourtModalFrame\(/, 'legacy court modal entry should be removed after page migration');
 assert.match(fnBody(coreSource, 'openStandardModal'), /ov\.classList\.remove\('schedule-drawer-overlay'\)[\s\S]*ov\.classList\.remove\('student-drawer-overlay'\)/, 'standard modal should clear drawer overlay classes');
 assert.match(fnBody(coreSource, 'openStandardModal'), /modal\.className=`modal modal-court \$\{extraClass\}`\.trim\(\)/, 'standard modal should keep one global modal class rule');
 assert.match(fnBody(coreSource, 'openStandardDetailDrawer'), /modalClass='modal modal-court modal-schedule-drawer'/, 'standard drawer should keep one global drawer class rule');

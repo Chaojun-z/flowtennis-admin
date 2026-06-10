@@ -263,9 +263,6 @@ function openStandardDetailDrawer({titleHtml='',bodyHtml='',actionsHtml='',data=
   if(alreadyOpen)ov.classList.add('open');
   else requestAnimationFrame(()=>ov.classList.add('open'));
 }
-function openDetailSideDrawer(options={}){
-  return openStandardDetailDrawer(options);
-}
 function renderStandardOptionLabel(opt){
   const label=String(opt?.label??opt?.value??'');
   return opt&&opt.count!==undefined?`${label}（${Number(opt.count)||0}）`:label;
@@ -459,7 +456,7 @@ function clearGlobalDateRange(event){
   saveGlobalDateRange();
   refreshGlobalTopFilters();
   renderCurrentGlobalFilterPage();
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function saveGlobalDateRange(){
   localStorage.setItem(GLOBAL_DATE_RANGE_KEY,globalDateRangeFilterValue);
@@ -473,7 +470,7 @@ function globalTopDateMenuActive(label){
   return !globalDateRangeDraftActive&&label===globalDateRangeFilterValue;
 }
 function renderGlobalTopFilters(){
-  if(typeof renderCourtTopDropdown!=='function'||typeof courtTopLocationIcon!=='function'||typeof courtTopTimeIcon!=='function')return '';
+  if(typeof renderStandardTopDropdown!=='function'||typeof standardTopLocationIcon!=='function'||typeof standardTopTimeIcon!=='function')return '';
   const campusOpts=globalCampusOptions();
   const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectGlobalTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
   const timeMenu=globalDateFilterQuickOptions().map(label=>`<div class="tms-dropdown-item ${globalTopDateMenuActive(label)?'active':''}" data-value="${esc(label)}" onclick="setGlobalDateRangeFilter(${jsArg(label)},event)">${esc(label)}</div>`).join('');
@@ -482,7 +479,7 @@ function renderGlobalTopFilters(){
   const dateMenu=showCustomPanel
     ? `<div class="court-date-range-shell"><div class="court-date-range-left">${timeMenu}</div><div class="court-date-range-right">${renderCourtDateRangePanel()}</div></div>`
     : timeMenu;
-  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderCourtTopDropdown('globalTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',courtTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderCourtTopDropdown('globalTopDate',currentGlobalDateRangeLabel(),courtTopTimeIcon(),dateMenu,dateMenuClass)}</div></div>`;
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('globalTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',standardTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderStandardTopDropdown('globalTopDate',currentGlobalDateRangeLabel(),standardTopTimeIcon(),dateMenu,dateMenuClass)}</div></div>`;
 }
 function refreshGlobalTopFilters(){
   const host=document.getElementById('campusTabs');
@@ -491,7 +488,7 @@ function refreshGlobalTopFilters(){
 function selectGlobalTopCampus(value,event){
   if(event)event.stopPropagation();
   setCampus(null,value||'all');
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function renderCurrentGlobalFilterPage(){
   stuPage=1;leadPage=1;schPage=1;financeLedgerPage=1;financeRevenuePage=1;adminUserPage=1;
@@ -524,7 +521,7 @@ function setGlobalDateRangeFilter(value,event){
   saveGlobalDateRange();
   refreshGlobalTopFilters();
   renderCurrentGlobalFilterPage();
-  closeCourtTopDropdowns();
+  closeStandardTopDropdowns();
 }
 function globalDateWithinRange(value){
   const range=activeGlobalDateRange();

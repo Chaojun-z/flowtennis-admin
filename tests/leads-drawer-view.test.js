@@ -18,7 +18,7 @@ function fnBody(name){
 assert.match(source, /let leadDetailActiveTab='basic'/, 'lead drawer should keep active tab state');
 assert.match(source, /function leadDetailTabsHtml\(/, 'lead detail should expose drawer tabs');
 assert.match(fnBody('leadDetailTabsHtml'), /基础信息[\s\S]*跟进记录[\s\S]*转化信息/, 'lead drawer should have the agreed three tabs');
-assert.match(fnBody('openLeadDetail'), /openDetailSideDrawer\(/, 'lead detail should use the shared right drawer');
+assert.match(fnBody('openLeadDetail'), /openStandardDetailDrawer\(/, 'lead detail should use the standard right drawer');
 assert.match(fnBody('openLeadDetail'), /leadDetailActiveTab==='basic'[\s\S]*leadDetailBasicTabHtml\(lead\)[\s\S]*leadDetailActiveTab==='followups'[\s\S]*leadDetailFollowupsTabHtml\(lead\)[\s\S]*leadDetailConversionTabHtml\(lead\)/, 'lead detail should route each tab to its own content');
 assert.match(source, /function leadFollowupDrawerFormHtml\(/, 'lead follow-up editing should render inside the drawer');
 assert.doesNotMatch(fnBody('leadFollowupDrawerFormHtml'), /datetime-local/, 'lead follow-up date should not use native datetime-local');

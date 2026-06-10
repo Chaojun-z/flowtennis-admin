@@ -22,7 +22,7 @@ const snippet = [
   fnBody('courtRatioText'),
   fnBody('courtStatValuePair'),
   fnBody('courtStatPercent'),
-  fnBody('closeCourtTopDropdowns'),
+  fnBody('closeStandardTopDropdowns'),
   fnBody('activeCourtDateRange'),
   fnBody('courtRowHistoryForFilter'),
   fnBody('courtDateKeyForFilter'),

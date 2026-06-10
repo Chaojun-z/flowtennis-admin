@@ -48,7 +48,7 @@ assert.match(fnBody('renderAdminUsers'), /停用|启用/, 'account rows should e
 assert.match(fnBody('renderAdminUsers'), /adminUserEmptyStateHtml\(\)/, 'account empty state should use the standard empty state');
 assert.match(fnBody('renderAdminUsers'), /renderAdminUserPagerControls\(total,pages\)/, 'account list should render standard pagination controls');
 assert.match(fnBody('loadAdminUsers'), /apiCall\('GET','\/admin\/users'\)/, 'account page should load users from admin api');
-assert.match(fnBody('openAdminUserModal'), /setCourtModalFrame/, 'account modal should use shared modal shell');
+assert.match(fnBody('openAdminUserModal'), /openStandardModal/, 'account modal should use standard modal shell');
 assert.match(fnBody('openAdminUserModal'), /au_id/, 'account modal should include account id field');
 assert.match(fnBody('openAdminUserModal'), /au_password/, 'account modal should include password field for create');
 assert.match(fnBody('openAdminUserModal'), /au_role/, 'account modal should include role field');

@@ -91,7 +91,7 @@ function openMatchBookingModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;
   const body=`<div class="tms-section-header" style="margin-top:0;">订场信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最终场馆</label><input class="finput tms-form-control" id="matchVenueFinal" value="${esc(row.venueName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">场地号</label><input class="finput tms-form-control" id="matchCourtNo" value=""></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">最终场地费 *</label><input class="finput tms-form-control" id="matchFinalCourtFee" type="number" min="0" value="${row.finalCourtFee||row.estimatedCourtFee||''}"></div><div class="tms-form-item"><label class="tms-form-label">订场状态</label><select class="finput tms-form-control" id="matchBookingStatus"><option value="booked">订场成功</option><option value="cancelled">订场取消</option></select></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchBooking('${id}')">保存</button>`;
-  setCourtModalFrame('约球订场',body,actions,'modal-wide');
+  openStandardModal({title:'约球订场',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveMatchBooking(id){
   try{
@@ -114,7 +114,7 @@ function openMatchAttendanceModal(id){
   const regs=Array.isArray(row.registrations)?row.registrations:[];
   const body=`<div class="tms-section-header" style="margin-top:0;">到场确认</div>${regs.map(r=>`<label class="choice-tag" style="width:100%;justify-content:space-between;margin-bottom:8px"><span>${esc(r.nickName||r.phone||r.userId)}</span><select class="finput tms-form-control match-attendance-status" data-user-id="${esc(r.userId||r.userid)}" style="width:130px"><option value="attended">到场</option><option value="absent">缺席</option></select></label>`).join('')||'<div class="empty"><p>暂无报名人</p></div>'}`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchAttendance('${id}')">保存</button>`;
-  setCourtModalFrame('确认到场',body,actions,'modal-wide');
+  openStandardModal({title:'确认到场',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveMatchAttendance(id){
   const items=[...document.querySelectorAll('.match-attendance-status')].map(el=>({userId:el.dataset.userId,finalStatus:el.value}));
@@ -128,7 +128,7 @@ function openMatchWithdrawalModal(id){
   const regs=Array.isArray(row.registrations)?row.registrations:[];
   const body=`<div class="tms-section-header" style="margin-top:0;">已订场退赛处理</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">退赛球友</label><select class="finput tms-form-control" id="matchWithdrawalUser">${regs.map(r=>`<option value="${esc(r.userId||r.userid)}">${esc(r.nickName||r.phone||r.userId||r.userid)}</option>`).join('')}</select></div><div class="tms-form-item"><label class="tms-form-label">财务责任</label><select class="finput tms-form-control" id="matchWithdrawalResponsibility"><option value="charge">仍需AA</option><option value="waive">减免</option><option value="abnormal">异常待处理</option></select></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">原因</label><input class="finput tms-form-control" id="matchWithdrawalReason" placeholder="例：临时有事，运营已确认"></div></div><div style="font-size:12px;color:var(--ts);line-height:1.6">booked 后用户不能自行退出，必须由运营在这里处理责任。</div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchWithdrawal('${id}')">保存</button>`;
-  setCourtModalFrame('处理退赛',body,actions,'modal-wide');
+  openStandardModal({title:'处理退赛',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveMatchWithdrawal(matchId){
   const userId=document.getElementById('matchWithdrawalUser')?.value||'';
@@ -143,7 +143,7 @@ function openMatchReplacementModal(id){
   const regs=(Array.isArray(row.registrations)?row.registrations:[]).filter(r=>String(r.registrationstatus||r.registrationStatus)==='registered');
   const body=`<div class="tms-section-header" style="margin-top:0;">替补名额 / 订单转让</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">原报名人</label><select class="finput tms-form-control" id="matchReplacementFromUser">${regs.map(r=>`<option value="${esc(r.userId||r.userid)}">${esc(r.nickName||r.phone||r.userId||r.userid)}</option>`).join('')}</select></div><div class="tms-form-item"><label class="tms-form-label">替补手机号</label><input class="finput tms-form-control" id="matchReplacementPhone" placeholder="请输入替补手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">替补付款状态</label><select class="finput tms-form-control" id="matchReplacementPayStatus"><option value="paid">已付款入局</option><option value="pending">仅转让名额，待付款</option></select></div><div class="tms-form-item"><label class="tms-form-label">转让说明 *</label><input class="finput tms-form-control" id="matchReplacementReason" placeholder="例：原用户退赛，已找到同级替补"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">补充备注</label><input class="finput tms-form-control" id="matchReplacementNote" placeholder="可填写替补昵称、沟通情况"></div></div><div style="font-size:12px;color:var(--ts);line-height:1.6">保存后会同时处理：原用户退局、名额转给替补、原用户退款、替补付款入局。</div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" onclick="saveMatchReplacement('${id}')">保存</button>`;
-  setCourtModalFrame('替补转让',body,actions,'modal-wide');
+  openStandardModal({title:'替补转让',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveMatchReplacement(matchId){
   const fromUserId=document.getElementById('matchReplacementFromUser')?.value||'';
@@ -168,7 +168,7 @@ function openMatchFeeModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;
   const splits=Array.isArray(row.feeSplits)?row.feeSplits:[];
   const body=`<div class="tms-section-header" style="margin-top:0;">AA 应收</div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:10px">标记已收后会同步进入场地财务总账，分类为约球订场收入。需要人工调整时，可直接修改单人 AA 金额。</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:160px">球友</th><th style="width:100px">应收</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:320px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${splits.map(s=>`<tr><td style="padding-left:20px">${renderStandardCellText(s.nickName||s.phone||s.userId||s.userid)}</td><td><div class="tms-cell-text">¥${fmt(s.amount||0)}</div></td><td>${renderStandardCellText(matchPayStatusText(s.payStatus||s.paystatus),false)}</td><td class="tms-sticky-r tms-action-cell" style="width:320px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="editMatchFeeAmount('${id}','${s.userId||s.userid}',${Number(s.amount||0)},'${esc(s.payStatus||s.paystatus||'pending')}')">改金额</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','paid')">已收</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','waived')">减免</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','abnormal')">异常</span><span class="tms-action-link" onclick="updateMatchFeeSplit('${id}','${s.userId||s.userid}','refunded')">退款</span></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>暂无 AA 应收，请先生成 AA</p></div></td></tr>'}</tbody></table></div></div>`;
-  setCourtModalFrame('约球收款',body,`<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>`,'modal-wide');
+  openStandardModal({title:'约球收款',bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>`,extraClass:'modal-wide'});
 }
 function matchPayStatusText(status){
   return ({pending:'待收',paid:'已收',waived:'减免',refunded:'已退款',bad_debt:'坏账',abnormal:'异常'}[status]||status||'-');
@@ -207,7 +207,7 @@ function openMatchLogModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;
   const operationLogs=Array.isArray(row.operationLogs)?row.operationLogs:[];
   const body=`<div class="tms-section-header" style="margin-top:0;">操作日志</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:150px">时间</th><th style="width:120px">动作</th><th style="width:120px">操作人</th><th>内容</th></tr></thead><tbody>${operationLogs.map(log=>`<tr><td style="padding-left:20px">${renderStandardCellText(String(log.createdAt||log.createdat||'').replace('T',' ').slice(0,16),false)}</td><td>${renderStandardCellText(matchLogActionText(log.action),false)}</td><td>${renderStandardCellText(log.operatorId||log.operatorid,false)}</td><td><div class="tms-text-remark" style="white-space:normal;line-height:1.55">${esc(matchLogSummary(log))}</div></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty"><p>暂无操作日志</p></div></td></tr>'}</tbody></table></div></div>`;
-  setCourtModalFrame('约球操作日志',body,`<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>`,'modal-wide');
+  openStandardModal({title:'约球操作日志',bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>`,extraClass:'modal-wide'});
 }
 function matchLogSummary(log){
   const after=log.after||log.afterjson||'';

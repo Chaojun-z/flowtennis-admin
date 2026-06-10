@@ -11,7 +11,7 @@ function openCampusModal(id){
   editId=id;const c=id?campuses.find(x=>x.id===id):null;
   const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区名称 *</label><input class="finput tms-form-control" id="ca_name" value="${rv(c,'name')}" placeholder="例：朝阳十里堡"></div><div class="tms-form-item"><label class="tms-form-label">校区代码 *</label><input class="finput tms-form-control" id="ca_code" value="${rv(c,'code')}" placeholder="例：shilipu"${id?' disabled':''}></div></div><div style="font-size:12px;color:var(--ts);line-height:1.6;margin-top:8px">校区代码创建后不可修改，用于关联学员、排课和订场数据。</div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="campusSaveBtn" onclick="saveCampus()">保存</button>`;
-  setCourtModalFrame(id?'编辑校区':'新增校区',body,actions,'modal-tight');
+  openStandardModal({title:id?'编辑校区':'新增校区',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveCampus(){
   const name=document.getElementById('ca_name').value.trim();

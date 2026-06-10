@@ -1,3 +1,39 @@
+function standardTopChevronIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M150.3 305.16c14.72-14.72 38.3-15.61 54.08-2.03l2.19 2.03L544.11 642.7l337.54-337.54c14.72-14.74 38.32-15.62 54.1-2.03l2.17 2.03c14.72 14.72 15.61 38.3 2.03 54.08l-2.03 2.19L586.3 713.04c-22.34 22.33-58.22 23.38-81.83 2.39l-2.55-2.39-351.64-351.63c-15.53-15.53-15.53-40.72 0-56.25h0.02z"></path></svg>';
+}
+function standardTopLocationIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M512 249.976471c-99.388235 0-180.705882 81.317647-180.705882 180.705882s81.317647 180.705882 180.705882 180.705882 180.705882-81.317647 180.705882-180.705882-81.317647-180.705882-180.705882-180.705882z m0 301.17647c-66.258824 0-120.470588-54.211765-120.470588-120.470588s54.211765-120.470588 120.470588-120.470588 120.470588 54.211765 120.470588 120.470588-54.211765 120.470588-120.470588 120.470588z"></path><path d="M512 39.152941c-216.847059 0-391.529412 174.682353-391.529412 391.529412 0 349.364706 391.529412 572.235294 391.529412 572.235294s391.529412-222.870588 391.529412-572.235294c0-216.847059-174.682353-391.529412-391.529412-391.529412z m0 891.482353C424.658824 873.411765 180.705882 686.682353 180.705882 430.682353c0-183.717647 147.576471-331.294118 331.294118-331.294118s331.294118 147.576471 331.294118 331.294118c0 256-243.952941 442.729412-331.294118 499.952941z"></path></svg>';
+}
+function standardTopTimeIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M512 64c249.6 0 448 198.4 448 448s-198.4 448-448 448-448-198.4-448-448 198.4-448 448-448z m0 64C300.8 128 128 300.8 128 512s172.8 384 384 384 384-172.8 384-384-172.8-384-384-384z m32 128v224h192v64h-256V256h64z"></path></svg>';
+}
+function standardTopCoachIcon(){
+  return '<svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M512 128c105.984 0 192 86.016 192 192s-86.016 192-192 192-192-86.016-192-192 86.016-192 192-192z m0 64c-70.592 0-128 57.408-128 128s57.408 128 128 128 128-57.408 128-128-57.408-128-128-128zM512 576c176.736 0 320 107.456 320 240v48H192v-48c0-132.544 143.264-240 320-240z m0 64c-130.624 0-239.232 70.336-255.104 160h510.208C751.232 710.336 642.624 640 512 640z"></path></svg>';
+}
+function renderStandardTopDropdown(id,displayText,iconSvg,menuHtml,menuClass=''){
+  return `<div class="tms-dropdown court-top-select" id="${id}_dropdown" data-target="${id}" onclick="toggleStandardTopDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(displayText)}"><div class="tms-dropdown-display court-top-display"><span class="court-top-display-main"><span class="court-top-display-icon">${iconSvg}</span><span class="court-top-display-text">${esc(displayText)}</span></span><span class="court-top-display-chevron">${standardTopChevronIcon()}</span></div><div class="tms-dropdown-menu ${menuClass}" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${menuHtml}</div></div>`;
+}
+function closeStandardTopDropdowns(){
+  const globalDateDropdown=document.getElementById('globalTopDate_dropdown');
+  const shouldCancelGlobalDraft=!!(globalDateDropdown&&globalDateDropdown.classList.contains('open')&&typeof cancelGlobalCustomDateDraft==='function');
+  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>el.classList.remove('open'));
+  if(shouldCancelGlobalDraft)cancelGlobalCustomDateDraft();
+}
+function toggleStandardTopDropdown(id,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  if(!dropdown)return;
+  document.querySelectorAll('#campusTabs .tms-dropdown.open').forEach(el=>{
+    if(el!==dropdown){
+      const shouldCancel=el.id==='globalTopDate_dropdown'&&typeof cancelGlobalCustomDateDraft==='function';
+      el.classList.remove('open');
+      if(shouldCancel)cancelGlobalCustomDateDraft();
+    }
+  });
+  const wasOpen=dropdown.classList.contains('open');
+  dropdown.classList.toggle('open');
+  if(wasOpen&&id==='globalTopDate'&&typeof cancelGlobalCustomDateDraft==='function')cancelGlobalCustomDateDraft();
+}
 function renderStandardEmptyText(value){
   const raw=String(value??'').trim();
   return raw&&raw!=='—'?raw:'-';
@@ -186,6 +222,13 @@ function mountStandardListShells(){
   });
 }
 Object.assign(window,{
+  standardTopChevronIcon,
+  standardTopLocationIcon,
+  standardTopTimeIcon,
+  standardTopCoachIcon,
+  renderStandardTopDropdown,
+  closeStandardTopDropdowns,
+  toggleStandardTopDropdown,
   renderStandardEmptyText,
   renderStandardCellText,
   renderStandardDropdownHtml,
@@ -210,3 +253,4 @@ Object.assign(window,{
 });
 document.documentElement.dataset.standardComponents='loaded';
 document.addEventListener('click',closeStandardDropdowns);
+document.addEventListener('click',closeStandardTopDropdowns);

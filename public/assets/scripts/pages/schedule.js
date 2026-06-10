@@ -496,7 +496,7 @@ function openScheduleModal(id,seed={}){
   const notesForm=`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员备注</label><div class="finput tms-form-control schedule-detail-readonly-control">${esc(selectedStudentIds.map(id=>students.find(st=>st.id===id)?.notes).filter(Boolean).join('；')||'--')}</div></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">排课备注</label><textarea class="finput tms-form-control" id="sch_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
   const body=`${hiddenFields}${renderScheduleDetailFormCard('基础信息',basicForm,drawerActions)}${renderScheduleDetailFormCard('设置迟到',lateSettings)}${renderScheduleDetailFormCard('备注信息',notesForm)}`;
   const headerHtml=id&&s?scheduleDetailHeaderHtml(s,scheduleStudentSummary(s)):scheduleDetailCreateHeaderHtml(seed);
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:`${headerHtml}${scheduleDetailTabsHtml('info',{create:!id})}`,
     bodyHtml:`<div class="schedule-detail-content">${body}</div>`,
     actionsHtml:'',
@@ -532,7 +532,7 @@ function openCancelScheduleModal(id){
   const repeatBlock=s.scheduleSource==='循环排课'?`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">取消范围</label><div class="schedule-cancel-scope"><label class="tms-checkbox-wrap"><input type="radio" name="sch_cancel_scope" value="single" checked> <span>只取消这一节</span></label><label class="tms-checkbox-wrap"><input type="radio" name="sch_cancel_scope" value="future"> <span>取消本节及后续未上课的循环课（共 ${repeatTargets.length+1} 节）</span></label><div class="schedule-cancel-help">已经上过课的不会动。循环课如果要整组取消，这里只会处理当前这节开始的未上课记录。</div></div></div></div>`:'';
   const body=`<div class="schedule-cancel-summary"><div>${esc(fmtDt(s.startTime))}</div><div>${esc(scheduleListStudentSummary(s))}</div><div>${esc(coachName(s.coach)||'—')}</div><div>${esc(scheduleLocationText(s))}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">取消原因 *</label>${renderStandardDropdownHtml('sch_cancelReasonQuick','取消原因',[{value:'',label:'— 选择取消原因 —'},...SCH_CANCEL_REASONS.map(t=>({value:t,label:t}))],'',true)}</div></div>${repeatBlock}`;
   const drawerActions=`<div class="schedule-drawer-form-actions"><button type="button" class="schedule-detail-action muted" onclick="openScheduleDetail('${s.id}')">返回</button><button type="button" class="schedule-detail-action danger" id="scheduleCancelBtn" onclick="confirmScheduleCancel('${s.id}')">确认取消</button></div>`;
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:`<div class="schedule-drawer-form-head"><div><div class="schedule-detail-title">取消排课</div><div class="schedule-detail-subtitle">${esc([fmtDt(s.startTime),scheduleLocationText(s)].filter(Boolean).join(' · '))}</div></div>${drawerActions}</div>`,
     bodyHtml:`<div class="schedule-detail-content schedule-detail-form">${body}</div>`,
     actionsHtml:'',
@@ -892,7 +892,7 @@ function openCoachLateSettlementModal(month=today().slice(0,7)){
   const total=rows.reduce((sum,s)=>sum+(parseFloat(s.coachLateFieldFeeAmount)||0),0);
   const lateMinutes=rows.reduce((sum,s)=>sum+(parseInt(s.lateMinutes)||0),0);
   const body=`<div class="late-settlement-head"><div class="tms-form-item"><label class="tms-form-label">月份</label><input class="finput tms-form-control" id="coachLateMonth" type="month" value="${esc(month)}" onchange="openCoachLateSettlementModal(this.value)"></div></div><div class="tms-readonly-panel late-settlement-summary"><div class="late-settlement-card"><div class="late-settlement-label">迟到次数</div><div class="late-settlement-value">${rows.length}<span> 次</span></div></div><div class="late-settlement-card"><div class="late-settlement-label">迟到分钟</div><div class="late-settlement-value">${lateMinutes}<span> 分钟</span></div></div><div class="late-settlement-card"><div class="late-settlement-label">承担合计</div><div class="late-settlement-value">¥${fmt(total)}</div></div></div><div class="tms-audit-note late-settlement-note">只统计已标记「教练迟到免费」的排课，用于月底让教练承担场地费。</div><div class="tms-table-card late-settlement-table"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:110px;padding-left:20px">日期</th><th style="width:120px">时间</th><th style="width:110px">教练</th><th style="width:130px">学员</th><th>校区/场地</th><th style="width:90px">迟到</th><th style="width:110px;text-align:right;padding-right:20px">承担金额</th></tr></thead><tbody>${rows.map(s=>`<tr><td style="padding-left:20px">${esc(String(s.startTime||'').slice(0,10))}</td><td>${esc(String(s.startTime||'').slice(11,16))}-${esc(String(s.endTime||'').slice(11,16))}</td><td>${esc(coachName(s.coach)||'-')}</td><td>${esc(s.studentName||scheduleStudentSummary(s)||'-')}</td><td>${esc(scheduleLocationText(s))}</td><td>${parseInt(s.lateMinutes)||0} 分钟</td><td style="text-align:right;padding-right:20px">¥${fmt(parseFloat(s.coachLateFieldFeeAmount)||0)}</td></tr>`).join('')||'<tr><td colspan="7"><div class="late-settlement-empty">本月暂无迟到记录</div></td></tr>'}</tbody></table></div></div>`;
-  setCourtModalFrame('迟到月结',body,'<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>','modal-wide late-settlement-modal');
+  openStandardModal({title:'迟到月结',bodyHtml:body,actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="closeModal()">关闭</button>',extraClass:'modal-wide late-settlement-modal'});
 }
 function buildRepeatScheduleSeeds(baseData){
   const enabled=!!document.getElementById('sch_repeatEnabled')?.checked;
@@ -1389,7 +1389,7 @@ function openFeedbackPosterModal(feedbackId,scheduleId){
   const buttons=Object.entries(FEEDBACK_POSTER_TEMPLATES).map(([key,t])=>`<button class="poster-template-btn${key==='blueGreenDiagonal'?' active':''}" data-poster-template="${key}" onclick="renderFeedbackPosterPreview('${key}')">${esc(t.name)}</button>`).join('');
   const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openFeedbackModal('${s.id}')">返回反馈</button><button class="tms-btn tms-btn-default" id="posterDownloadBtn" onclick="downloadFeedbackPoster()">下载图片</button><button class="tms-btn tms-btn-primary" id="posterShareBtn" onclick="shareFeedbackPoster()">分享图片</button>`;
-  setCourtModalFrame('生成课后海报',body,footer,'modal-tight');
+  openStandardModal({title:'生成课后海报',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight'});
   requestAnimationFrame(()=>renderFeedbackPosterPreview('blueGreenDiagonal'));
 }
 function feedbackPosterBlob(canvas){
@@ -1505,7 +1505,7 @@ function openCoachProposalModal(scheduleId){
   const studentCount=parseArr(s.studentIds).length||p.studentCount||'';
   const body=`<div class="tms-section-header" style="margin-top:0;">教练提案</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">课程名称 *</label><input class="finput tms-form-control" id="cp_courseName" value="${proposalValue(p,'courseName',s.className||s.productName||'小班课')}"></div><div class="tms-form-item"><label class="tms-form-label">学员级别 *</label><input class="finput tms-form-control" id="cp_studentLevel" value="${proposalValue(p,'studentLevel')}" placeholder="例：1.5-2.0"></div><div class="tms-form-item"><label class="tms-form-label">学员数量 *</label><input class="finput tms-form-control" id="cp_studentCount" type="number" min="1" value="${proposalValue(p,'studentCount',studentCount)}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">教学目标 *</label><textarea class="finput tms-form-control" id="cp_teachingGoal">${proposalValue(p,'teachingGoal')}</textarea></div></div><div class="tms-section-header">教学组织 · 3级进阶</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶1 *</label><textarea class="finput tms-form-control" id="cp_progression1">${proposalValue(p,'progression1')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶2 *</label><textarea class="finput tms-form-control" id="cp_progression2">${proposalValue(p,'progression2')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶3 *</label><textarea class="finput tms-form-control" id="cp_progression3">${proposalValue(p,'progression3')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">进阶逻辑 *</label><textarea class="finput tms-form-control" id="cp_progressionLogic">${proposalValue(p,'progressionLogic')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">结语 *</label><textarea class="finput tms-form-control" id="cp_conclusion">${proposalValue(p,'conclusion')}</textarea></div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openScheduleDetail('${s.id}')">返回详情</button><button class="tms-btn tms-btn-primary" id="coachProposalSaveBtn" onclick="saveCoachProposal('${s.id}')">保存提案</button>`;
-  setCourtModalFrame(p.id?'修改教练提案':'填写教练提案',body,footer,'modal-wide');
+  openStandardModal({title:p.id?'修改教练提案':'填写教练提案',bodyHtml:body,actionsHtml:footer,extraClass:'modal-wide'});
 }
 async function saveCoachProposal(scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);if(!s)return;
@@ -1791,7 +1791,7 @@ function openScheduleDetail(scheduleId){
   const feedbackCanEdit=!!fb||isCoachDetail;
   const feedbackHtml=renderScheduleDetailCard('反馈内容',scheduleDetailFeedbackHtml(s,fb),{section:feedbackCanEdit?'feedback':'',scheduleId:s.id,className:'schedule-feedback-card',actionLabel:fb?'编辑':'填写反馈',feedbackId:fb?.id||''});
   const body=`<div class="schedule-detail-content">${scheduleDetailActiveTab==='info'?infoHtml:scheduleDetailActiveTab==='proposal'?proposalHtml:feedbackHtml}</div>`;
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:`${scheduleDetailHeaderHtml(s,studentNames)}${scheduleDetailTabsHtml(scheduleDetailActiveTab)}`,
     bodyHtml:body,
     actionsHtml:'',

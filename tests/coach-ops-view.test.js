@@ -254,7 +254,7 @@ assert.match(
 
 assert.match(
   source,
-  /function openCoachOpsDaySchedules\([\s\S]*setCourtModalFrame\('当天排课'/,
+  /function openCoachOpsDaySchedules\([\s\S]*openStandardModal\(\{title:'当天排课'/,
   'coach ops populated cells should open a full daily schedule list'
 );
 
@@ -350,7 +350,7 @@ assert.doesNotMatch(
 
 assert.match(
   html,
-  /<th style="width:90px">已反馈<\/th>[\s\S]*<th style="width:90px">未反馈<\/th>[\s\S]*<th style="width:150px">校区分布<\/th>[\s\S]*<th style="width:120px">时间段<\/th>/,
+  /<th style="width:90px">已反馈<\/th>[\s\S]*<th style="width:90px">未反馈<\/th>[\s\S]*<th style="width:180px">校区分布<\/th>[\s\S]*<th style="width:140px">时间段<\/th>/,
   'coach workload table should add 已反馈 before 未反馈 and keep the time/campus columns'
 );
 
@@ -386,7 +386,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachops \.tms-table-wrapper\{max-height:calc\(100vh - 250px\);overflow-x:hidden;overflow-y:auto\}/,
+  /#page-coachops \.tms-table-wrapper\{max-height:none;min-height:calc\(100vh - 220px\);flex:1;overflow-x:hidden;overflow-y:auto\}/,
   'coach workload table should not rely on horizontal scrolling'
 );
 
@@ -416,8 +416,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachops \.coach-workload-wrap\{white-space:normal;overflow:visible;word-break:break-word;overflow-wrap:anywhere;line-height:1.35\}/,
-  'coach workload long text columns should wrap instead of being cut off'
+  /#page-coachops \.coach-workload-wrap\{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal;overflow-wrap:normal;line-height:1.35\}/,
+  'coach workload long text columns should use the current compact truncation style'
 );
 
 assert.match(

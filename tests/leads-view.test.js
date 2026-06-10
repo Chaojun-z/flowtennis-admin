@@ -99,7 +99,7 @@ assert.match(leadsSource, /function leadDetailTabsHtml\(/, 'lead detail should e
 assert.match(leadsSource, /function leadDrawerCardHtml\(/, 'lead detail should expose a shared drawer card helper');
 assert.match(leadsSource, /function openLeadDetail\(/, 'leads page should expose the lead detail drawer');
 const leadDetailSource=(leadsSource.match(/function openLeadDetail\([\s\S]*?function openLeadModal/)||[''])[0];
-assert.match(leadDetailSource, /openDetailSideDrawer\(/, 'lead detail should use the shared right drawer');
+assert.match(leadDetailSource, /openStandardDetailDrawer\(/, 'lead detail should use the standard right drawer');
 assert.match(leadDetailSource, /leadDetailHeroHtml\(lead\)[\s\S]*leadDetailTabsHtml\(leadDetailActiveTab\)/, 'lead detail drawer should render hero and tabs');
 assert.match(leadDetailSource, /leadDetailActiveTab==='basic'[\s\S]*leadDetailBasicTabHtml\(lead\)[\s\S]*leadDetailActiveTab==='followups'[\s\S]*leadDetailFollowupsTabHtml\(lead\)[\s\S]*leadDetailConversionTabHtml\(lead\)/, 'lead detail should route basic, follow-up and conversion tabs');
 assert.match(leadDetailSource, /modal-lead-drawer/, 'lead detail should use the scoped lead drawer class');
@@ -119,8 +119,8 @@ assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page s
 assert.match(leadsSource, /识别到的字段[\s\S]*缺失字段提醒[\s\S]*总行数[\s\S]*状态归类统计[\s\S]*自动匹配统计[\s\S]*疑似匹配列表[\s\S]*未匹配列表/, 'import preview modal should expose the required sections');
 assert.match(leadsSource, /const body=`<div class="tms-form-row lead-form-row-4">[\s\S]*<label class="tms-form-label">微信名<\/label><input class="finput tms-form-control" id="lead_wechatName"[\s\S]*<label class="tms-form-label">电话<\/label><input class="finput tms-form-control" id="lead_phone"[\s\S]*<label class="tms-form-label">线索时间<\/label>[\s\S]*<label class="tms-form-label">线索来源<\/label>[\s\S]*<label class="tms-form-label">所属校区<\/label>[\s\S]*<label class="tms-form-label">咨询需求<\/label>[\s\S]*<label class="tms-form-label">意向类型<\/label>[\s\S]*<label class="tms-form-label">跟进人<\/label>[\s\S]*<label class="tms-form-label">基本信息<\/label>/, 'lead create and edit modal should use the requested field order without a section title');
 assert.doesNotMatch(leadsSource, /<div class="tms-section-header" style="margin-top:0;">基础信息<\/div><div class="tms-form-row lead-form-row-4">/, 'lead create and edit modal should not show the basic info section title');
-assert.match(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索',body,actions,'modal-complex modal-leads-form'\)/, 'lead create and edit modal should use the shared 800px complex modal');
-assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索',body,actions,'modal-wide modal-leads-form'\)/, 'lead create and edit modal should not keep the old wide shell');
+assert.match(leadsSource, /openStandardModal\(\{title:leadId\?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'\}\)/, 'lead create and edit modal should use the standard 800px complex modal');
+assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索'/, 'lead create and edit modal should not keep the old shell');
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
 assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|\(campus!=='all'\?campus:'mabao'\)/, 'new leads should default to the current campus or mabao');
 assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit modal should remove the current status field');

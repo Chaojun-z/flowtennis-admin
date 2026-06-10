@@ -301,7 +301,7 @@ function studentBasicInfoFormHtml(s){
   return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="s_name" value="${rv(s,'name')}" placeholder="学员姓名"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="s_phone" value="${rv(s,'phone')}" placeholder="请输入手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label>${renderStandardDropdownHtml('s_primaryCoach','负责教练',coachOptions,coachName(rv(s,'primaryCoach')),true)}</div><div class="tms-form-item"><label class="tms-form-label">学员类型</label>${renderStandardDropdownHtml('s_type','学员类型',typeOptions,rv(s,'type','成人'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('s_source','来源',sourceOptions,rv(s,'source'),true)}</div><div class="tms-form-item"><label class="tms-form-label">活动范围</label><input type="text" class="finput tms-form-control" id="s_range" value="${rv(s,'activityRange')}" placeholder="例：朝阳"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所在校区</label>${renderStandardDropdownHtml('s_campus','校区',campusOptions,rv(s,'campus'),true)}</div></div>${leadSummary}<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="s_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
 }
 function openStudentDrawer({titleHtml='',bodyHtml='',actionsHtml='',studentId=''}) {
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml,
     bodyHtml,
     actionsHtml,
@@ -451,7 +451,7 @@ function openStudentBenefitPickerModal(studentId,mode){
   if(mode==='consume'&&!rows.length){toast('该学员当前没有可消耗权益','warn');return;}
   const actionText=mode==='consume'?'消耗':'赠送';
   const body=`<div class="tms-section-header" style="margin-top:0;">选择权益类型</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper" style="max-height:360px"><table class="tms-table" style="min-width:620px"><thead><tr><th style="padding-left:20px">权益</th><th style="width:140px">当前剩余</th><th style="width:120px;text-align:right;padding-right:20px">操作</th></tr></thead><tbody>${rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.label,false)}</td><td>${renderStandardCellText(`${row.remaining}/${row.total}${row.unit}`,false)}</td><td style="text-align:right;padding-right:20px"><span class="tms-action-link" onclick="openStudentBenefitActionModal('${studentId}','${row.benefitCode}','${mode}')">${actionText}</span></td></tr>`).join('')}</tbody></table></div></div>`;
-  setCourtModalFrame(`${actionText}权益`,body,`<button class="tms-btn tms-btn-default" onclick="openStudentDetail('${studentId}')">返回学员详情</button>`,'modal-wide');
+  openStandardModal({title:`${actionText}权益`,bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-default" onclick="openStudentDetail('${studentId}')">返回学员详情</button>`,extraClass:'modal-wide'});
 }
 function openStudentBenefitActionModal(studentId,benefitCode,mode){
   const stu=students.find(x=>x.id===studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}

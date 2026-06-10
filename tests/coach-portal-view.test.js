@@ -203,7 +203,7 @@ assert.match(
 
 assert.match(
   fnBody('openMyStudentDetail'),
-  /tms-section-header[\s\S]*上课记录[\s\S]*setCourtModalFrame/,
+  /tms-section-header[\s\S]*上课记录[\s\S]*openStandardModal/,
   'my student detail should reuse the management modal frame and include lesson history'
 );
 
@@ -227,7 +227,7 @@ assert.match(
 
 assert.match(
   fnBody('openMyClassDetail'),
-  /tms-section-header[\s\S]*setCourtModalFrame/,
+  /tms-section-header[\s\S]*openStandardModal/,
   'my class detail should reuse the management modal frame and section style'
 );
 

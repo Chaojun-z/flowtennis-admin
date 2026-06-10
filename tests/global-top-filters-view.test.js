@@ -45,7 +45,7 @@ assert.match(fnBody('cancelGlobalCustomDateDraft'), /__globalDateRangeDraftViewA
 assert.match(fnBody('clearGlobalDateRange'), /__globalDateRangeDraftViewAnchor=''[\s\S]*__courtDateRangeViewAnchor=''/, 'clearing custom date should reset stale month anchors');
 assert.match(fnBody('confirmCourtCustomDateRange'), /applyGlobalCustomDateRange\(\)/, 'global custom date should apply only after confirm');
 assert.match(fnBody('clearCourtCustomDateRange'), /clearGlobalDateRange\(/, 'global custom clear should return to all time');
-assert.match(fnBody('closeCourtTopDropdowns'), /cancelGlobalCustomDateDraft\(\)/, 'closing the global dropdown should cancel an unconfirmed draft');
+assert.match(fnBody('closeStandardTopDropdowns'), /cancelGlobalCustomDateDraft\(\)/, 'closing the global dropdown should cancel an unconfirmed draft');
 
 [
   'students',
@@ -61,8 +61,8 @@ assert.match(fnBody('closeCourtTopDropdowns'), /cancelGlobalCustomDateDraft\(\)/
 });
 assert.doesNotMatch(fnBody('globalTopFilterPages'), /'admin-users'|'coaches'/, 'account and coach pages should not use global top filters');
 
-assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopCampus'/, 'global campus filter should reuse the court-style dropdown');
-assert.match(fnBody('renderGlobalTopFilters'), /renderCourtTopDropdown\('globalTopDate'/, 'global time filter should reuse the court-style dropdown');
+assert.match(fnBody('renderGlobalTopFilters'), /renderStandardTopDropdown\('globalTopCampus'/, 'global campus filter should use the standard top dropdown');
+assert.match(fnBody('renderGlobalTopFilters'), /renderStandardTopDropdown\('globalTopDate'/, 'global time filter should use the standard top dropdown');
 assert.match(fnBody('renderGlobalTopFilters'), /showCustomPanel[\s\S]*renderCourtDateRangePanel\(\)/, 'global time filter should reuse the court custom date panel');
 assert.match(pagesCss, /#campusTabs \.court-top-select \.court-top-display\{[^}]*height:32px[^}]*display:inline-flex[^}]*align-items:center[^}]*line-height:1/, 'global top filter should vertically center icon and text');
 assert.match(pagesCss, /#campusTabs \.court-top-display-icon svg\{[^}]*vertical-align:middle/, 'global top filter icons should not sit below the text baseline');

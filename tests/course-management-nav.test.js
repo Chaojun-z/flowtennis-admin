@@ -171,7 +171,7 @@ assert.match(html, /function packageHasPurchases/, 'package modal should know wh
 assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
 assert.match(html, /function mergePackage\(\)[\s\S]*\/packages\/merge/, 'package merge should call the dedicated merge endpoint');
 assert.match(html, /openPackageMergeModal[\s\S]*renderStandardDropdownHtml\('pkg_merge_master'[\s\S]*renderStandardDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the shared custom dropdown');
-assert.match(html, /setCourtModalFrame\('合并课包'[\s\S]*modal-merge-package/, 'package merge modal should use the dedicated overflow class');
+assert.match(html, /openStandardModal\(\{title:'合并课包'[\s\S]*modal-merge-package/, 'package merge modal should use the dedicated overflow class through standard modal');
 assert.doesNotMatch(html, /<select class="fselect tms-form-control" id="pkg_merge_/, 'package merge modal should not use native select controls');
 assert.doesNotMatch(html, /只支持规则一致的课包合并。并入课包会在后台隐藏，购买记录和课包余额会显示为保留课包。/, 'package merge notice should remove the unreadable yellow hint');
 assert.doesNotMatch(html, /课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。/, 'package page should remove the long banner description');
@@ -196,7 +196,7 @@ assert.match(html, /function packageBoardColumnKey\([\s\S]*packageIsChaojunOnlyO
 assert.doesNotMatch(html, /function packageBoardColumnKey\([\s\S]*boardColumn/, 'package board classification should not be overridden by stale saved board columns');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*package-board-title[\s\S]*package-board-count[\s\S]*packageBoardCardHtml/, 'package page should render a Notion-style board with column counts and package cards');
 assert.match(fnBody('buildCampusTabs'), /currentPage==='packages'[\s\S]*renderPackageTopFilters/, 'package page should reuse the coach ops top campus dropdown');
-assert.match(html, /function selectPackageTopCampus\([\s\S]*refreshPackageTopFilters\(\)[\s\S]*renderPackages\(\)[\s\S]*closeCourtTopDropdowns\(\)/, 'package top campus dropdown should refresh label and package board');
+assert.match(html, /function selectPackageTopCampus\([\s\S]*refreshPackageTopFilters\(\)[\s\S]*renderPackages\(\)[\s\S]*closeStandardTopDropdowns\(\)/, 'package top campus dropdown should refresh label and package board');
 assert.match(fnBody('dropPackageCard'), /packageBoardColumnKey\(dragged\)!==packageBoardColumnKey\(target\)[\s\S]*return/, 'package card sorting should stay inside the same board column');
 assert.match(fnBody('dropPackageCard'), /savePackageBoardOrder\(ordered\)/, 'package card drops should only save in-column ordering');
 assert.match(fnBody('savePackageBoardOrder'), /savePackageOrder\(orderedIds\)/, 'package drag sorting should persist order only');

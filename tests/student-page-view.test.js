@@ -206,7 +206,7 @@ assert.match(source, /student-reminder-compact/, 'student detail should render r
 assert.match(source, /student-reminder-head-title/, 'student detail should keep the reminder title row compact');
 assert.doesNotMatch(source, /studentDetailSectionBlockHtml\('服务号提醒偏好'/, 'student detail should not wrap the reminder block with an extra section title');
 assert.doesNotMatch(source, /student-reminder-status/, 'student detail should not show a redundant reminder status line');
-assert.match(source, /setCourtModalFrame\('',body,footer,'modal-view modal-student-detail'\)/, 'student detail should use the shared 720px view modal');
+assert.match(source, /openStandardDetailDrawer\(/, 'student detail should use the standard detail drawer');
 assert.match(source, /document\.getElementById\('mTitle'\)\.innerHTML=studentDetailHeroHtml\(s\)/, 'student detail should move the profile summary into the modal header');
 assert.match(source, /服务号上课提醒/, 'student detail should expose the official account lesson reminder block');
 assert.match(source, /复制绑定链接/, 'student detail should let ops copy a student-specific binding link');
@@ -309,8 +309,8 @@ assert.match(source, /const campusOptions=studentCampusOptions\(\);/, 'student e
 assert.match(source, /function studentCampusOptions\(/, 'student edit modal should expose all loaded campuses through a helper');
 assert.match(source, /renderStandardDropdownHtml\('s_primaryCoach'/, 'student edit modal should provide a primary coach selector');
 assert.match(source, /const data=\{name,phone,primaryCoach:/, 'student save should submit primary coach');
-assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student edit modal should reuse the booking-style modal shell');
-assert.match(source, /function openStudentModal[\s\S]*setCourtModalFrame\(id\?'编辑学员':'添加学员',body,footer,'modal-standard modal-student-form'\)/, 'student add and edit modals should use the shared 560px standard modal');
+assert.match(source, /function openStudentModal[\s\S]*openStudentDrawer\(/, 'student edit modal should reuse the standard student drawer');
+assert.doesNotMatch(source, /function openStudentModal[\s\S]*setCourtModalFrame\(/, 'student add and edit modals should not use legacy modal shell');
 assert.match(source, /选择课包 \*[\s\S]*归属教练[\s\S]*支付日期[\s\S]*系统价格[\s\S]*实收金额[\s\S]*支付方式/, 'purchase modal should arrange package, owner, payment date, price and pay method in compact rows');
 assert.match(source, /实际成交价与系统价格不一致时必填/, 'purchase modal should require an override reason when final price differs');
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');

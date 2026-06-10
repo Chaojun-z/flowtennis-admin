@@ -858,7 +858,7 @@ function openLeadDetail(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
   const body=leadDetailActiveTab==='basic'?leadDetailBasicTabHtml(lead):leadDetailActiveTab==='followups'?leadDetailFollowupsTabHtml(lead):leadDetailConversionTabHtml(lead);
-  openDetailSideDrawer({
+  openStandardDetailDrawer({
     titleHtml:`${leadDetailHeroHtml(lead)}${leadDetailTabsHtml(leadDetailActiveTab)}`,
     bodyHtml:body,
     actionsHtml:'',
@@ -884,7 +884,7 @@ function openLeadModal(leadId){
   const campusValue=lead?.campus||(campus!=='all'?campus:'mabao');
   const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">微信名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',lead?.leadDate||today(),'线索时间')}</div><div class="tms-form-item"><label class="tms-form-label">线索来源</label>${renderStandardDropdownHtml('lead_source','线索来源',[{value:'',label:'-'},...leadSourceOptions()],lead?.source||'',true)}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">咨询需求</label>${renderStandardDropdownHtml('lead_consultType','咨询需求',[{value:'',label:'-'},...leadConsultOptions()],lead?.consultType||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">意向类型</label>${renderStandardDropdownHtml('lead_intentLevel','意向类型',intentOptions,lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadSaveBtn" onclick="saveLead('${leadId||''}')">保存</button>`;
-  setCourtModalFrame(leadId?'编辑线索':'新增线索',body,actions,'modal-complex modal-leads-form');
+  openStandardModal({title:leadId?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'});
 }
 async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
   const base=['leads','leadFollowups'];
@@ -925,7 +925,7 @@ function openLeadFollowupModal(leadId,followupId=''){
   const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
   const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input class="finput tms-form-control" id="lead_followupBy" value="${esc(followup?.followupBy||currentUser?.name||lead?.owner||'')}"></div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}','${followupId||''}')">保存跟进</button>`;
-  setCourtModalFrame(followup?'编辑跟进':'新增跟进',body,actions,'modal-wide');
+  openStandardModal({title:followup?'编辑跟进':'新增跟进',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveLeadFollowup(leadId,followupId=''){
   const btn=document.getElementById('leadFollowupSaveBtn');
@@ -970,7 +970,7 @@ function openLeadImportPreviewModal(){
   leadImportState={fileName:'',fileSize:0,fileModified:0,csvText:'',previewRows:[],summary:null,error:''};
   const body=`<div class="tms-section-header" style="margin-top:0;">导入预览</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">CSV 文件</label><input class="finput tms-form-control" id="leadImportFile" type="file" accept=".csv,text/csv" onchange="handleLeadImportFile(this)"></div></div><div class="tms-section-header">识别到的字段</div><div class="finput tms-form-control" id="leadImportFields" style="height:auto;min-height:56px">线索时间 / 微信名 / 电话 / 水平 / 线索渠道 / 咨询需求 / 跟进状态</div><div class="tms-section-header">缺失字段提醒</div><div class="finput tms-form-control" id="leadImportMissing" style="height:auto;min-height:56px">正式联调后这里显示缺列和异常字段。</div><div class="tms-section-header">总行数</div><div class="finput tms-form-control" id="leadImportTotal">0</div><div class="tms-section-header">状态归类统计</div><div class="finput tms-form-control" id="leadImportStatus" style="height:auto;min-height:56px">新线索 / 跟进中 / 已约体验 / 已转课程 / 已转订场 / 已流失</div><div class="tms-section-header">自动匹配统计</div><div class="finput tms-form-control" id="leadImportMatch" style="height:auto;min-height:56px">已自动关联 / 疑似匹配待确认 / 未匹配待处理</div><div class="tms-section-header">疑似匹配列表</div><div class="finput tms-form-control" id="leadImportPossible" style="height:auto;min-height:56px">预览后显示疑似匹配明细。</div><div class="tms-section-header">未匹配列表</div><div class="finput tms-form-control" id="leadImportUnmatched" style="height:auto;min-height:56px">预览后显示未匹配明细。</div><div class="tms-section-header">导入预览明细</div><div id="leadImportPreviewRows" class="finput tms-form-control" style="height:auto;min-height:56px">预览后显示数据明细。</div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-default" id="leadImportPreviewBtn" onclick="rerunLeadImportPreview()">开始预览</button><button class="tms-btn tms-btn-primary" id="leadImportCommitBtn" onclick="runLeadImportCommit()" disabled>确认导入</button>`;
-  setCourtModalFrame('线索导入预览',body,actions,'modal-wide');
+  openStandardModal({title:'线索导入预览',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
   renderLeadImportPreviewBody();
 }
 async function handleLeadImportFile(input){
@@ -1061,7 +1061,7 @@ function openLeadLinkStudentModal(leadId){
   const options=[{value:'',label:'- 选择学员 -'},...students.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
   const body=`<div class="tms-section-header" style="margin-top:0;">关联已有学员</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">选择学员</label>${renderStandardDropdownHtml('lead_link_student_id','选择学员',options,lead.studentId||'',true)}</div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadLinkStudentBtn" onclick="saveLeadLinkStudent('${leadId}')">确认关联</button>`;
-  setCourtModalFrame('关联已有学员',body,actions,'modal-tight');
+  openStandardModal({title:'关联已有学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveLeadLinkStudent(leadId){
   const studentId=document.getElementById('lead_link_student_id')?.value||'';
@@ -1090,7 +1090,7 @@ function openLeadLinkCourtModal(leadId){
   const options=[{value:'',label:'- 选择订场用户 -'},...courts.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
   const body=`<div class="tms-section-header" style="margin-top:0;">关联已有订场用户</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">选择订场用户</label>${renderStandardDropdownHtml('lead_link_court_id','选择订场用户',options,lead.courtId||'',true)}</div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadLinkCourtBtn" onclick="saveLeadLinkCourt('${leadId}')">确认关联</button>`;
-  setCourtModalFrame('关联已有订场用户',body,actions,'modal-tight');
+  openStandardModal({title:'关联已有订场用户',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveLeadLinkCourt(leadId){
   const courtId=document.getElementById('lead_link_court_id')?.value||'';

@@ -14,7 +14,7 @@ assert.match(source, /function planEntitlementSummary\(/, 'plan list should comp
 assert.match(source, /const pct=tl>0\?Math\.round\(ul\/tl\*100\):0/, 'plan progress bar should use used lessons ratio');
 assert.match(source, /function openPlanDetail\(/, 'plan page should provide a details action');
 assert.match(source, /学习计划摘要[\s\S]*最近排课[\s\S]*课包余额[\s\S]*最近反馈/, 'plan detail should follow the agreed information hierarchy');
-assert.match(source, /function openPlanDetail[\s\S]*setCourtModalFrame\(/, 'plan detail should reuse the booking-style modal shell');
+assert.match(source, /function openPlanDetail[\s\S]*openStandardModal\(/, 'plan detail should use the standard modal shell');
 assert.match(source, /function openPlanStudent\(/, 'plan page should provide student jump action');
 assert.match(source, /function openPlanClass\(/, 'plan page should provide class jump action');
 assert.match(source, /function openPlanSchedule\(/, 'plan page should provide schedule action');

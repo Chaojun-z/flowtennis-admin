@@ -21,7 +21,7 @@ function openCoachModal(id){
   const statusOptions=[{value:'active',label:'在职'},{value:'inactive',label:'离职'}];
   const body=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="co_name" value="${rv(c,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="co_phone" value="${rv(c,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('co_campus','校区',[{value:'',label:'不选择'},...campusOptions],rv(c,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">入职时间</label>${courtDateButtonHtml('co_hireDate',rv(c,'hireDate'),'入职日期')}</div><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('co_status','状态',statusOptions,rv(c,'status','active'),true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="co_notes">${esc(rv(c,'notes'))}</textarea></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="coachSaveBtn" onclick="saveCoach()">保存</button>`;
-  setCourtModalFrame(id?'编辑教练':'新增教练',body,actions,'modal-tight');
+  openStandardModal({title:id?'编辑教练':'新增教练',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveCoach(){
   const name=document.getElementById('co_name').value.trim();if(!name){toast('请填写姓名','warn');return;}

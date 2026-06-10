@@ -15,7 +15,7 @@ function fnBody(name){
   return source.slice(start, next === -1 ? source.length : next);
 }
 
-assert.match(source, /function openDetailSideDrawer\(/, 'detail side drawer shell should be a shared component');
+assert.match(source, /function openStandardDetailDrawer\(/, 'detail side drawer shell should be a standard component');
 assert.match(source, /function renderDetailDrawerHero\(/, 'detail drawer header should be shared');
 assert.match(source, /function renderDetailDrawerTabs\(/, 'detail drawer tabs should be shared');
 assert.match(source, /function renderDetailDrawerCard\(/, 'detail drawer cards should be shared');
@@ -23,8 +23,8 @@ assert.match(source, /function renderDetailDrawerField\(/, 'detail drawer readon
 assert.match(source, /function renderDetailDrawerInput\(/, 'detail drawer edit fields should be shared');
 assert.match(source, /function renderDetailDrawerTable\(/, 'detail drawer records should use a shared table renderer');
 assert.match(source, /function renderDetailDrawerTimeline\(/, 'detail drawer timeline should be shared');
-assert.match(source, /openStudentDrawer[\s\S]*openDetailSideDrawer/, 'student create, edit and detail should share the componentized drawer shell');
-assert.match(source, /openScheduleDetail[\s\S]*openDetailSideDrawer/, 'schedule detail should use the shared side drawer shell');
+assert.match(source, /openStudentDrawer[\s\S]*openStandardDetailDrawer/, 'student create, edit and detail should share the standard drawer shell');
+assert.match(source, /openScheduleDetail[\s\S]*openStandardDetailDrawer/, 'schedule detail should use the standard side drawer shell');
 assert.match(source, /student-drawer-overlay[\s\S]*schedule-drawer-overlay/, 'student drawer should apply the same drawer style class as schedule');
 assert.match(source, /基本信息[\s\S]*课包\/上课记录[\s\S]*权益记录/, 'student detail drawer should keep the agreed three tabs');
 assert.match(source, /基本信息[\s\S]*课包\/上课记录[\s\S]*权益记录/, 'student package tab should be named package / lesson records');
