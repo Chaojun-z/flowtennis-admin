@@ -165,8 +165,8 @@ function packageRuleIcon(kind){
 function packageCoachSummary(p){
   const ownerCoach=coachName(p.ownerCoach);
   const coaches=parseArr(p.coachNames||p.coachIds).map(coachName).filter(Boolean);
-  if(ownerCoach&&coaches.length>1)return `归属：${ownerCoach}（+${coaches.length-1}）`;
-  if(ownerCoach)return `归属：${ownerCoach}`;
+  if(ownerCoach&&coaches.length>1)return `${ownerCoach}（+${coaches.length-1}）`;
+  if(ownerCoach)return ownerCoach;
   if(coaches.length)return `${coaches.length} 位可用`;
   return '未分配';
 }
@@ -270,6 +270,42 @@ function renderPackages(){
     const rows=groups.get(col.key)||[];
     return `<div class="package-board-column" data-package-column="${esc(col.key)}" draggable="true" ondragstart="startPackageColumnDrag(event,'${esc(col.key)}')" ondragover="allowPackageColumnDrop(event)" ondrop="dropPackageColumn(event,'${esc(col.key)}')" ondragend="endPackageColumnDrag()"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
   }).join('');
+  initPackageBoardHorizontalDrag();
+}
+function initPackageBoardHorizontalDrag(){
+  const board=document.getElementById('packageGrid');
+  if(!board||board.dataset.dragScrollReady==='1')return;
+  board.dataset.dragScrollReady='1';
+  let down=false,startX=0,startScroll=0,moved=false;
+  board.addEventListener('pointerdown',event=>{
+    if(event.button!==0)return;
+    if(event.target?.closest?.('button,input,.tms-dropdown'))return;
+    down=true;
+    moved=false;
+    startX=event.clientX;
+    startScroll=board.scrollLeft;
+    board.classList.add('is-drag-scrolling');
+  });
+  board.addEventListener('pointermove',event=>{
+    if(!down)return;
+    const dx=event.clientX-startX;
+    if(Math.abs(dx)>3)moved=true;
+    board.scrollLeft=startScroll-dx;
+  });
+  const end=()=>{
+    down=false;
+    board.classList.remove('is-drag-scrolling');
+  };
+  board.addEventListener('pointerup',end);
+  board.addEventListener('pointercancel',end);
+  board.addEventListener('pointerleave',end);
+  board.addEventListener('click',event=>{
+    if(moved){
+      event.preventDefault();
+      event.stopPropagation();
+      moved=false;
+    }
+  },true);
 }
 function packageOrderedRows(columnKey=''){
   return packages.filter(p=>packageListStatusValue(p)!=='merged'&&(!columnKey||packageBoardColumnKey(p)===columnKey)).sort((a,b)=>{
