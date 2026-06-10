@@ -3352,7 +3352,7 @@ function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MA
     data:{
       time3:{value:formatOfficialAccountTemplateTime(match?.starttime||match?.startTime)},
       thing4:{value:truncateWechatValue(venue)},
-      const7:{value:truncateWechatValue('约球提醒')},
+      const7:{value:truncateWechatValue('私教课')},
       thing2:{value:truncateWechatValue('新约球')},
       thing6:{value:truncateWechatValue(targetHeadcount?`${title} ${targetHeadcount}人`:title)}
     }

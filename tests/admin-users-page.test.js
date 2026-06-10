@@ -41,6 +41,7 @@ assert.match(fnBody('renderAdminUsers'), /绑定教练/, 'account rows should sh
 assert.match(fnBody('renderAdminUsers'), /手机号/, 'account rows should show phone text');
 assert.match(fnBody('renderAdminUsers'), /微信绑定/, 'account rows should show wechat binding text');
 assert.match(fnBody('renderAdminUsers'), /服务号绑定/, 'account rows should show official account binding text');
+assert.doesNotMatch(fnBody('adminUserOfficialAccountText'), /role!=='editor'/, 'admin accounts should also show official account binding status');
 assert.match(fnBody('renderAdminUsers'), /unbindAdminUserWechat/, 'account rows should expose wechat unbind action');
 assert.match(fnBody('renderAdminUsers'), /unbindAdminUserOfficialAccount/, 'account rows should expose official account unbind action');
 assert.match(fnBody('renderAdminUsers'), /停用|启用/, 'account rows should expose enable and disable actions');

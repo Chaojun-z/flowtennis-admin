@@ -44,7 +44,6 @@ function adminUserWechatText(user){
   return user.wechatBound?`已绑定${user.wechatBoundAt?' · '+String(user.wechatBoundAt).slice(0,10):''}`:'未绑定';
 }
 function adminUserOfficialAccountText(user){
-  if(user.role!=='editor')return '-';
   return user.officialAccountBound?`已绑定${user.officialAccountBoundAt?' · '+String(user.officialAccountBoundAt).slice(0,10):''}`:'未绑定';
 }
 function adminUserNoteText(user){
