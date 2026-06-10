@@ -3350,12 +3350,11 @@ function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MA
       pagepath:matchDetailPagePath(match?.id)
     },
     data:{
-      first:{value:'有新的约球发布'},
-      keyword1:{value:truncateWechatValue(title)},
-      keyword2:{value:formatMatchAdminNotifyTime(match)},
-      keyword3:{value:truncateWechatValue(venue)},
-      keyword4:{value:truncateWechatValue(targetHeadcount?`${targetHeadcount}人`:'待定')},
-      remark:{value:'点击查看约球详情'}
+      time3:{value:formatOfficialAccountTemplateTime(match?.starttime||match?.startTime)},
+      thing4:{value:truncateWechatValue(venue)},
+      const7:{value:truncateWechatValue('约球提醒')},
+      thing2:{value:truncateWechatValue('新约球')},
+      thing6:{value:truncateWechatValue(targetHeadcount?`${title} ${targetHeadcount}人`:title)}
     }
   };
 }

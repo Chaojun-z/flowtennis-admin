@@ -475,9 +475,11 @@ assert.equal(matchAdminMessage.touser, 'oa-admin');
 assert.equal(matchAdminMessage.template_id, 'template-match-admin');
 assert.equal(matchAdminMessage.miniprogram.appid, 'wx-match-app');
 assert.equal(matchAdminMessage.miniprogram.pagepath, 'pages/match-detail/index?id=match-1');
-assert.match(matchAdminMessage.data.keyword1.value, /周末双打/);
-assert.match(matchAdminMessage.data.keyword2.value, /2026-06-12 20:00/);
-assert.match(matchAdminMessage.data.keyword3.value, /马坡网球馆/);
+assert.match(matchAdminMessage.data.time3.value, /2026年6月12日 20:00/);
+assert.match(matchAdminMessage.data.thing4.value, /马坡网球馆/);
+assert.match(matchAdminMessage.data.const7.value, /约球提醒/);
+assert.match(matchAdminMessage.data.thing2.value, /新约球/);
+assert.match(matchAdminMessage.data.thing6.value, /周末双打/);
 
 assert.deepEqual(rules.collectMatchAdminOfficialAccountRecipients([
   { id: 'boss', role: 'admin', officialAccountOpenId: 'oa-boss' },
