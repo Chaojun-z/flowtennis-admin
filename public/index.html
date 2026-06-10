@@ -456,7 +456,7 @@
           <div class="course-package-showcase-filters">
             <div class="tms-search-wrapper">
               <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索姓名、手机号" oninput="renderPackages()">
+              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索姓名、手机号" oninput="onPackageFilterChange()">
             </div>
             <div id="pkgTypeFilterHost"></div>
             <div id="pkgAudienceFilterHost"></div>
@@ -470,6 +470,7 @@
           </div>
         </div>
         <div class="course-package-showcase-grid" id="packageGrid"></div>
+        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="pkgPagerInfo">共 0 条</span><div id="pkgPageSize"></div></div><div class="tms-page-numbers" id="pkgPagerBtns"></div></div>
       </div>
     </div>
     <!-- 购买记录 -->
@@ -550,7 +551,7 @@
         <div class="tms-filters">
           <div class="tms-search-wrapper">
             <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索姓名、手机号" oninput="renderPrices()">
+            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索姓名、手机号" oninput="onPriceFilterChange()">
           </div>
           <div id="priceTypeFilterHost"></div>
           <div id="priceProductTypeFilterHost"></div>
@@ -560,7 +561,9 @@
         </div>
       </div>
       <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:66px;padding-left:12px">类型</th><th style="width:64px">渠道</th><th style="width:372px">名称</th><th style="width:50px">场地类型</th><th style="width:60px">日期类型</th><th style="width:62px">商品类型</th><th style="width:58px">关联业务</th><th style="width:88px">时间段</th><th style="width:58px">时长</th><th style="width:54px">价格</th><th style="width:52px">状态</th><th class="tms-sticky-r" style="width:88px;padding-right:12px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div></div>
+      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:66px;padding-left:12px">类型</th><th style="width:64px">渠道</th><th style="width:372px">名称</th><th style="width:50px">场地类型</th><th style="width:60px">日期类型</th><th style="width:62px">商品类型</th><th style="width:58px">关联业务</th><th style="width:88px">时间段</th><th style="width:58px">时长</th><th style="width:54px">价格</th><th style="width:52px">状态</th><th class="tms-sticky-r" style="width:88px;padding-right:12px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div>
+        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="pricePagerInfo">共 0 条</span><div id="pricePageSize"></div></div><div class="tms-page-numbers" id="pricePagerBtns"></div></div>
+      </div>
     </div>
 </div>
 </div>

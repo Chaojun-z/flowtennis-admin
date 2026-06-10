@@ -1,5 +1,5 @@
 // ===== 排课表 =====
-function onScheduleFilterChange(){schPage=1;renderSchedule();}
+function onScheduleFilterChange(){schPage=standardListFirstPage();renderSchedule();}
 function syncScheduleFilterOptions(){
   const statusValue=document.getElementById('schStatusFilter')?.value||'';
   const coachValue=document.getElementById('schCoachFilter')?.value||'';
@@ -53,17 +53,6 @@ function scheduleRepeatDisplayText(schedule){
   const count=scheduleRepeatGroupRows(schedule).length;
   return count>1?`循环${count}周`:'循环课';
 }
-function schedulePageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
-  const items=[1];
-  const start=Math.max(2,page-2);
-  const end=Math.min(pages-1,page+2);
-  if(start>2)items.push('...');
-  for(let i=start;i<=end;i++)items.push(i);
-  if(end<pages-1)items.push('...');
-  items.push(pages);
-  return items;
-}
 function renderSchedulePagerControls(total,pages){
   const pageSizeHost=document.getElementById('schPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('schPageSizeValue',schPageSize,'setSchedulePageSize');
@@ -73,14 +62,12 @@ function renderSchedulePagerControls(total,pages){
 }
 function setSchedulePage(value){
   const total=getFilteredSchedules().length;
-  const pages=Math.max(1,Math.ceil(total/schPageSize));
-  schPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  schPage=standardListPagination(total,value,schPageSize).page;
   renderSchedule();
 }
 function setSchedulePageSize(value){
-  const next=parseInt(value,10);
-  schPageSize=[20,50,100].includes(next)?next:20;
-  schPage=1;
+  schPageSize=standardListPageSize(value,schPageSize);
+  schPage=standardListFirstPage();
   renderSchedule();
 }
 function getFilteredSchedules(){
@@ -104,8 +91,7 @@ function getFilteredSchedules(){
 }
 function jumpSchedulePage(value){
   const total=getFilteredSchedules().length;
-  const pages=Math.max(1,Math.ceil(total/schPageSize));
-  schPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  schPage=standardListPagination(total,value,schPageSize).page;
   renderSchedule();
 }
 function scheduleHasActiveSearchOrFilter(){
@@ -120,9 +106,9 @@ function scheduleEmptyStateHtml(){
 function renderSchedule(){
   syncScheduleFilterOptions();
   let list=getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
-  const total=list.length,pages=Math.max(1,Math.ceil(total/schPageSize));
-  if(schPage>pages)schPage=pages;
-  const slice=list.slice((schPage-1)*schPageSize,schPage*schPageSize);
+  const pageState=standardListSlice(list,schPage,schPageSize);
+  schPage=pageState.page;
+  const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-schedule .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
   document.getElementById('schPagerInfo').innerHTML=renderPagerInfoHtml(total);

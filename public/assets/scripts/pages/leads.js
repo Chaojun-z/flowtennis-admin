@@ -431,14 +431,14 @@ function setLeadDatePreset(preset){
     leadDateCustomStart='';
     leadDateCustomEnd='';
   }
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function setLeadCustomDateRange(){
   leadDatePreset='custom';
   leadDateCustomStart=document.getElementById('leadDateFrom')?.value||'';
   leadDateCustomEnd=document.getElementById('leadDateTo')?.value||'';
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function leadSortDateValue(value,lead={}){
@@ -479,7 +479,7 @@ function cycleLeadSort(key){
   if(leadSortKey!==key){leadSortKey=key;leadSortDir='asc';}
   else if(leadSortDir==='asc')leadSortDir='desc';
   else {leadSortKey='';leadSortDir='';}
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function updateLeadSortHeaders(){
@@ -488,17 +488,6 @@ function updateLeadSortHeaders(){
     btn.classList.toggle('asc',active&&leadSortDir==='asc');
     btn.classList.toggle('desc',active&&leadSortDir==='desc');
   });
-}
-function leadPageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
-  const items=[1];
-  const start=Math.max(2,page-2);
-  const end=Math.min(pages-1,page+2);
-  if(start>2)items.push('...');
-  for(let i=start;i<=end;i++)items.push(i);
-  if(end<pages-1)items.push('...');
-  items.push(pages);
-  return items;
 }
 function leadStudentMatchText(row){
   if(row?.studentMatchType==='auto')return `已自动关联：${row.studentMatchName||row.studentId||'-'}`;
@@ -1152,14 +1141,12 @@ function renderLeadPagerControls(total,pages){
 }
 function setLeadPage(value){
   const total=getFilteredLeads().length;
-  const pages=Math.max(1,Math.ceil(total/leadPageSize));
-  leadPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  leadPage=standardListPagination(total,value,leadPageSize).page;
   renderLeads();
 }
 function jumpLeadPage(value){
   const total=getFilteredLeads().length;
-  const pages=Math.max(1,Math.ceil(total/leadPageSize));
-  leadPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  leadPage=standardListPagination(total,value,leadPageSize).page;
   renderLeads();
 }
 function renderLeads(){
@@ -1168,11 +1155,9 @@ function renderLeads(){
   updateLeadSortHeaders();
   const list=getSortedLeads(getFilteredLeads());
   renderLeadStats(list);
-  const total=list.length;
-  const pageSize=leadPageSize||20;
-  const pages=Math.max(1,Math.ceil(total/pageSize));
-  if(leadPage>pages)leadPage=pages;
-  const slice=list.slice((leadPage-1)*pageSize,leadPage*pageSize);
+  const pageState=standardListSlice(list,leadPage,leadPageSize);
+  leadPage=pageState.page;
+  const {total,pages,slice}=pageState;
   const tbody=document.getElementById('leadTbody');
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
@@ -1184,11 +1169,11 @@ function renderLeads(){
   renderLeadPagerControls(total,pages);
 }
 function applyLeadSearch(){
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function onLeadFilterChange(){
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function resetLeadFilters(){
@@ -1197,12 +1182,11 @@ function resetLeadFilters(){
   leadDatePreset='all';
   leadDateCustomStart='';
   leadDateCustomEnd='';
-  leadPage=1;
+  leadPage=standardListFirstPage();
   renderLeads();
 }
 function setLeadPageSize(value){
-  const next=parseInt(value,10);
-  leadPageSize=[20,50,100].includes(next)?next:20;
-  leadPage=1;
+  leadPageSize=standardListPageSize(value,leadPageSize);
+  leadPage=standardListFirstPage();
   renderLeads();
 }

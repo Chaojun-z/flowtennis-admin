@@ -3,7 +3,7 @@ function purchaseSelectedPackageFilter(){
 }
 function onPurchaseFilterChange(){
   purPackageFilterValue=document.getElementById('purPackageFilter')?.value||'';
-  purPage=1;
+  purPage=standardListFirstPage();
   renderPurchases();
 }
 function purchaseTopCampusOptions(){
@@ -44,7 +44,7 @@ function selectPurchaseTopCampus(value,event){
   if(event)event.stopPropagation();
   campus=value||'all';
   localStorage.setItem(CAMPUS_KEY,campus);
-  purPage=1;
+  purPage=standardListFirstPage();
   refreshPurchaseTopFilters();
   renderPurchases();
   closeCourtTopDropdowns();
@@ -55,7 +55,7 @@ function onPurchaseDateRangeFilterChange(value,event){
   const range=activePurchaseDateRange();
   purDateRangeStart=range.startDate;
   purDateRangeEnd=range.endDate;
-  purPage=1;
+  purPage=standardListFirstPage();
   refreshPurchaseTopFilters();
   renderPurchases();
   closeCourtTopDropdowns();
@@ -118,17 +118,6 @@ function getFilteredPurchases(){
     return true;
   }).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
 }
-function purchasePageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
-  const items=[1];
-  const start=Math.max(2,page-2);
-  const end=Math.min(pages-1,page+2);
-  if(start>2)items.push('...');
-  for(let i=start;i<=end;i++)items.push(i);
-  if(end<pages-1)items.push('...');
-  items.push(pages);
-  return items;
-}
 function renderPurchasePagerControls(total,pages){
   const pageSizeHost=document.getElementById('purPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('purPageSizeValue',purPageSize,'setPurchasePageSize');
@@ -138,20 +127,17 @@ function renderPurchasePagerControls(total,pages){
 }
 function setPurchasePage(value){
   const total=getFilteredPurchases().length;
-  const pages=Math.max(1,Math.ceil(total/purPageSize));
-  purPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  purPage=standardListPagination(total,value,purPageSize).page;
   renderPurchases();
 }
 function setPurchasePageSize(value){
-  const next=parseInt(value,10);
-  purPageSize=[20,50,100].includes(next)?next:20;
-  purPage=1;
+  purPageSize=standardListPageSize(value,purPageSize);
+  purPage=standardListFirstPage();
   renderPurchases();
 }
 function jumpPurchasePage(value){
   const total=getFilteredPurchases().length;
-  const pages=Math.max(1,Math.ceil(total/purPageSize));
-  purPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  purPage=standardListPagination(total,value,purPageSize).page;
   renderPurchases();
 }
 function purchaseDisplayPackageMeta(p={}){
@@ -206,9 +192,9 @@ function purchaseEmptyStateHtml(){
 function renderPurchases(){
   refreshPurchaseFilters();
   const list=getFilteredPurchases();
-  const total=list.length,pages=Math.max(1,Math.ceil(total/purPageSize));
-  if(purPage>pages)purPage=pages;
-  const slice=list.slice((purPage-1)*purPageSize,purPage*purPageSize);
+  const pageState=standardListSlice(list,purPage,purPageSize);
+  purPage=pageState.page;
+  const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-purchases .tms-pagination');
   if(pager)pager.style.display=total>purPageSize?'flex':'none';
   const info=document.getElementById('purPagerInfo');
@@ -460,7 +446,7 @@ function focusPurchaseByPackage(packageId){
   goPage('purchases');
   const pkg=packages.find(p=>String(p.id||'')===String(packageId||''));
   setStandardDropdownValue('purPackageFilter',packageId,standardPackageLabel(pkg||{},true)||pkg?.name||packageId);
-  purPage=1;
+  purPage=standardListFirstPage();
   renderPurchases();
 }
 function clearPurchasePageFiltersForPackageFocus(){

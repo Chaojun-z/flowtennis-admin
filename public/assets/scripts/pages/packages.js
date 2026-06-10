@@ -22,7 +22,7 @@ function syncPackageFilterOptions(){
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
-    if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'renderPackages');
+    if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onPackageFilterChange');
   });
 }
 function packageDisplayTitle(p){
@@ -48,9 +48,14 @@ function selectPackageTopCampus(value,event){
   if(event)event.stopPropagation();
   campus=value||'all';
   localStorage.setItem(CAMPUS_KEY,campus);
+  pkgPage=standardListFirstPage();
   refreshPackageTopFilters();
   renderPackages();
   closeCourtTopDropdowns();
+}
+function onPackageFilterChange(){
+  pkgPage=standardListFirstPage();
+  renderPackages();
 }
 function packageListStatusValue(p){
   const status=String(p.status||'active');
@@ -230,15 +235,31 @@ function packageBoardCardHtml(p){
   const inactive=packageListStatusValue(p)==='inactive';
   return `<div class="package-card-shell ${inactive?'is-inactive':''}" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${packageTimeBandBadgeHtml(p)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price"><span class="package-sales-currency">¥</span><span class="package-sales-amount">${fmt(p.price)}</span></div><div class="package-sales-rules"><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}')">${packagePurchaseCount(p.id)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageDetail('${p.id}')">查看</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
 }
-function renderPackages(){
-  syncPackageFilterOptions();
+function renderPackagePagerControls(total,pages){
+  const pageSizeHost=document.getElementById('pkgPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('pkgPageSizeValue',pkgPageSize,'setPackagePageSize');
+  const btns=document.getElementById('pkgPagerBtns');
+  if(!btns)return;
+  btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(pkgPage,pages,'setPackagePage');
+}
+function setPackagePage(value){
+  const total=getFilteredPackages().length;
+  pkgPage=standardListPagination(total,value,pkgPageSize).page;
+  renderPackages();
+}
+function setPackagePageSize(value){
+  pkgPageSize=standardListPageSize(value,pkgPageSize);
+  pkgPage=standardListFirstPage();
+  renderPackages();
+}
+function getFilteredPackages(){
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('pkgTypeFilter')?.value||'';
   const af=document.getElementById('pkgAudienceFilter')?.value||'';
   const cf=document.getElementById('pkgCoachFilter')?.value||'';
   const sf=document.getElementById('pkgStatusFilter')?.value||'';
   const bf=document.getElementById('pkgTimeBandFilter')?.value||'';
-  const list=packages.filter(p=>{
+  return packages.filter(p=>{
     const courseType=standardCourseTypeFilterValue(p);
     const campusIds=parseArr(p.campusIds);
     const coachNames=parseArr(p.coachNames||p.coachIds).map(coachName);
@@ -256,18 +277,30 @@ function renderPackages(){
     const orderDiff=packageSortValue(a)-packageSortValue(b);
     return orderDiff||String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
+}
+function renderPackages(){
+  syncPackageFilterOptions();
+  const list=getFilteredPackages();
+  const pageState=standardListSlice(list,pkgPage,pkgPageSize);
+  pkgPage=pageState.page;
+  const {total,pages,slice}=pageState;
+  const pager=document.querySelector('#page-packages .tms-pagination');
+  if(pager)pager.style.display=total?'flex':'none';
+  const info=document.getElementById('pkgPagerInfo');
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
+  renderPackagePagerControls(total,pages);
   const host=document.getElementById('packageGrid');
-  if(!list.length){
+  if(!slice.length){
     host.innerHTML=`<div class="course-package-showcase-empty"><div style="font-size:18px;font-weight:800;color:var(--cream-pale)">暂无售卖课包</div><div style="margin-top:8px;font-size:13px;line-height:1.7">点击创建即可直接配置课程类型、归属教练和可上课教练。</div><button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button></div>`;
     return;
   }
   const groups=new Map();
-  list.forEach(p=>{
+  slice.forEach(p=>{
     const key=packageBoardColumnKey(p);
     if(!groups.has(key))groups.set(key,[]);
     groups.get(key).push(p);
   });
-  host.innerHTML=packageBoardColumns(list).map(col=>{
+  host.innerHTML=packageBoardColumns(slice).map(col=>{
     const rows=groups.get(col.key)||[];
     return `<div class="package-board-column" data-package-column="${esc(col.key)}" draggable="true" ondragstart="startPackageColumnDrag(event,'${esc(col.key)}')" ondragover="allowPackageColumnDrop(event)" ondrop="dropPackageColumn(event,'${esc(col.key)}')" ondragend="endPackageColumnDrag()"><div class="package-board-header"><div class="package-board-title">${esc(col.title)}</div><div class="package-board-count">${rows.length}</div></div><div class="package-board-stack">${rows.length?rows.map(packageBoardCardHtml).join(''):'<div class="package-board-empty">暂无课包</div>'}</div></div>`;
   }).join('');

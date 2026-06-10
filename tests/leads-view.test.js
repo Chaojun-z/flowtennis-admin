@@ -79,14 +79,14 @@ assert.match(leadsSource, /leadConvertedYesNo\(lead\)/, 'leads page should expos
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
 assert.match(leadsSource, /function leadStatusOptionValues\(/, 'leads page should derive status filters from the latest data');
-assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=1[\s\S]*renderLeads\(\)/, 'leads search should reset pagination before rendering');
+assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'leads search should reset pagination through the standard list flow before rendering');
 assert.match(leadsSource, /function cycleLeadSort\([\s\S]*leadSortDir='asc'[\s\S]*leadSortDir='desc'[\s\S]*leadSortKey='';leadSortDir='';/, 'leads sortable headers should cycle asc, desc, and no sort');
 assert.match(leadsSource, /function updateLeadSortHeaders\(/, 'leads page should update sortable header state');
 assert.match(leadsSource, /function getSortedLeads\(/, 'leads page should sort after filtering and before pagination');
-assert.match(leadsSource, /function leadPageNumbers\(/, 'leads page should render compact pager numbers');
+assert.match(leadsSource, /renderStandardPaginationButtonsHtml\(leadPage,pages,'setLeadPage'\)/, 'leads page should render compact pager numbers through the global standard pager');
 assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
 assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
-assert.match(leadsSource, /leadPageSize=\[20,50,100\]\.includes\(next\)\?next:20/, 'leads page size should be limited to 20, 50, and 100');
+assert.match(leadsSource, /leadPageSize=standardListPageSize\(value,leadPageSize\)/, 'leads page size should be limited by the global 20, 50, and 100 rule');
 assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'converted'[\s\S]*key:'owner'/, 'leads toolbar filters should use linked count labels');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');

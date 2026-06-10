@@ -67,18 +67,7 @@ async function loadAdminUsers(force=false){
     toast('账号列表加载失败：'+e.message,'error');
   }
 }
-function onAdminUserFilterChange(){adminUserPage=1;renderAdminUsers();}
-function adminUserPageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
-  const items=[1];
-  const start=Math.max(2,page-2);
-  const end=Math.min(pages-1,page+2);
-  if(start>2)items.push('...');
-  for(let i=start;i<=end;i++)items.push(i);
-  if(end<pages-1)items.push('...');
-  items.push(pages);
-  return items;
-}
+function onAdminUserFilterChange(){adminUserPage=standardListFirstPage();renderAdminUsers();}
 function renderAdminUserPagerControls(total,pages){
   const pageSizeHost=document.getElementById('adminUserPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('adminUserPageSizeValue',adminUserPageSize,'setAdminUserPageSize');
@@ -88,20 +77,17 @@ function renderAdminUserPagerControls(total,pages){
 }
 function setAdminUserPage(value){
   const total=getFilteredAdminUsers().length;
-  const pages=Math.max(1,Math.ceil(total/adminUserPageSize));
-  adminUserPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  adminUserPage=standardListPagination(total,value,adminUserPageSize).page;
   renderAdminUsers();
 }
 function setAdminUserPageSize(value){
-  const next=parseInt(value,10);
-  adminUserPageSize=[20,50,100].includes(next)?next:20;
-  adminUserPage=1;
+  adminUserPageSize=standardListPageSize(value,adminUserPageSize);
+  adminUserPage=standardListFirstPage();
   renderAdminUsers();
 }
 function jumpAdminUserPage(value){
   const total=getFilteredAdminUsers().length;
-  const pages=Math.max(1,Math.ceil(total/adminUserPageSize));
-  adminUserPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  adminUserPage=standardListPagination(total,value,adminUserPageSize).page;
   renderAdminUsers();
 }
 function adminUserHasActiveSearch(){
@@ -130,9 +116,9 @@ function getFilteredAdminUsers(){
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;
   const list=getFilteredAdminUsers();
-  const total=list.length,pages=Math.max(1,Math.ceil(total/adminUserPageSize));
-  if(adminUserPage>pages)adminUserPage=pages;
-  const slice=list.slice((adminUserPage-1)*adminUserPageSize,adminUserPage*adminUserPageSize);
+  const pageState=standardListSlice(list,adminUserPage,adminUserPageSize);
+  adminUserPage=pageState.page;
+  const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-admin-users .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
   const info=document.getElementById('adminUserPagerInfo');

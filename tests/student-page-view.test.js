@@ -36,7 +36,7 @@ assert.match(source, /id="sch_stuSearch"/, 'schedule modal should provide a sear
 assert.match(source, /id="sch_selectedStudentTags"/, 'schedule modal should show selected students as removable tags');
 assert.doesNotMatch(source, /id="sch_stuName"[^>]*placeholder="选班次自动填入"/, 'schedule modal should not use free text student input as the formal selector');
 assert.match(source, /function getFilteredStudents\(/, 'student page should centralize filtered student list calculation');
-assert.match(source, /function onStudentFilterChange\(\)\{stuPage=1;renderStudents\(\);\}/, 'student filters should reset pagination to first page');
+assert.match(source, /function onStudentFilterChange\(\)\{stuPage=standardListFirstPage\(\);renderStudents\(\);\}/, 'student filters should reset pagination through the standard list flow');
 assert.match(source, /oninput="onStudentFilterChange\(\)"/, 'student search should reset pagination before rendering');
 assert.match(source, /function renderStudentToolbarFilters\(/, 'student filters should render through the booking-style dropdown helper');
 assert.match(source, /stuTypeFilterHost[\s\S]*onStudentFilterChange/, 'student type filter should reset pagination before rendering');
@@ -318,7 +318,7 @@ assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase
 assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
 assert.match(source, /支付日期<\/th><th style="width:80px">学员<\/th><th style="width:110px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase record table should follow the narrowed column order');
 assert.match(source, /id="purPagerInfo"[\s\S]*id="purPageSize"[\s\S]*id="purPagerBtns"/, 'purchase record page should expose the standard pager');
-assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=1[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination before rendering');
+assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=standardListFirstPage\(\)[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination through the standard list flow');
 assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');
 assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
 assert.match(source, /pager\.style\.display=total>purPageSize\?'flex':'none'/, 'purchase pager should hide when the filtered result fits on one page');

@@ -45,12 +45,16 @@ function syncPriceFilterOptions(){
   const productHost=document.getElementById('priceProductTypeFilterHost');
   if(typeHost){
     const value=document.getElementById('priceTypeFilter')?.value||'';
-    typeHost.innerHTML=renderStandardDropdownHtml('priceTypeFilter','全部价格',[{value:'',label:'全部价格'},{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'}],value,false,'renderPrices');
+    typeHost.innerHTML=renderStandardDropdownHtml('priceTypeFilter','全部价格',[{value:'',label:'全部价格'},{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'}],value,false,'onPriceFilterChange');
   }
   if(productHost){
     const value=document.getElementById('priceProductTypeFilter')?.value||'';
-    productHost.innerHTML=renderStandardDropdownHtml('priceProductTypeFilter','全部商品类型',[{value:'',label:'全部商品类型'},{value:'订场券',label:'订场券'},{value:'体验课',label:'体验课'},{value:'小班课',label:'小班课'},{value:'课包',label:'课包'}],value,false,'renderPrices');
+    productHost.innerHTML=renderStandardDropdownHtml('priceProductTypeFilter','全部商品类型',[{value:'',label:'全部商品类型'},{value:'订场券',label:'订场券'},{value:'体验课',label:'体验课'},{value:'小班课',label:'小班课'},{value:'课包',label:'课包'}],value,false,'onPriceFilterChange');
   }
+}
+function onPriceFilterChange(){
+  pricePage=standardListFirstPage();
+  renderPrices();
 }
 function filteredPricePlans(){
   const q=String(document.getElementById('priceSearch')?.value||'').trim().toLowerCase();
@@ -63,6 +67,23 @@ function filteredPricePlans(){
     return searchHit(q,row.campus,cn(row.campus),row.dateType,row.channel,row.productName,courseTypeDisplayLabel(row),row.productType,row.experienceType,row.businessType,row.notes);
   });
 }
+function renderPricePagerControls(total,pages){
+  const pageSizeHost=document.getElementById('pricePageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('pricePageSizeValue',pricePageSize,'setPricePageSize');
+  const btns=document.getElementById('pricePagerBtns');
+  if(!btns)return;
+  btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(pricePage,pages,'setPricePage');
+}
+function setPricePage(value){
+  const total=filteredPricePlans().length;
+  pricePage=standardListPagination(total,value,pricePageSize).page;
+  renderPrices();
+}
+function setPricePageSize(value){
+  pricePageSize=standardListPageSize(value,pricePageSize);
+  pricePage=standardListFirstPage();
+  renderPrices();
+}
 function syncPriceExperienceType(){
   const type=normalizeCourseType(document.getElementById('priceProductType')?.value||'');
   const item=document.getElementById('priceExperienceTypeItem');
@@ -71,9 +92,17 @@ function syncPriceExperienceType(){
 function renderPrices(){
   syncPriceFilterOptions();
   const rows=filteredPricePlans();
+  const pageState=standardListSlice(rows,pricePage,pricePageSize);
+  pricePage=pageState.page;
+  const {total,pages,slice}=pageState;
+  const pager=document.querySelector('#page-prices .tms-pagination');
+  if(pager)pager.style.display=total?'flex':'none';
+  const info=document.getElementById('pricePagerInfo');
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
+  renderPricePagerControls(total,pages);
   const body=document.getElementById('priceTbody');
   if(!body)return;
-  body.innerHTML=rows.map(row=>`<tr><td style="padding-left:12px"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${priceTypeLabel(row.type)}</span></td><td>${renderStandardCellText(priceChannelText(row),false)}</td><td>${renderStandardCellText(priceNameText(row),false)}</td><td>${renderStandardCellText(priceVenueSpaceTypeText(row),false)}</td><td>${renderStandardCellText(priceDateTypeText(row),false)}</td><td>${renderStandardCellText(priceProductTypeText(row),false)}</td><td>${renderStandardCellText(priceBusinessText(row),false)}</td><td>${renderStandardCellText(priceTimeBandText(row),false)}</td><td>${renderStandardCellText(priceDurationText(row),false)}</td><td>${esc(priceAmountText(row))}</td><td><span class="tms-tag ${priceStatusTag(row.status)}">${priceStatusLabel(row.status)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:88px;padding-right:12px"><span class="tms-action-link" onclick="openPriceModal('${row.type}','${row.id}')">编辑</span><span class="tms-action-link" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</span></td></tr>`).join('')||`<tr><td colspan="12"><div class="empty"><p>${priceTypeFilter?'暂无'+priceTypeLabel(priceTypeFilter):'暂无价格'}</p></div></td></tr>`;
+  body.innerHTML=slice.map(row=>`<tr><td style="padding-left:12px"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${priceTypeLabel(row.type)}</span></td><td>${renderStandardCellText(priceChannelText(row),false)}</td><td>${renderStandardCellText(priceNameText(row),false)}</td><td>${renderStandardCellText(priceVenueSpaceTypeText(row),false)}</td><td>${renderStandardCellText(priceDateTypeText(row),false)}</td><td>${renderStandardCellText(priceProductTypeText(row),false)}</td><td>${renderStandardCellText(priceBusinessText(row),false)}</td><td>${renderStandardCellText(priceTimeBandText(row),false)}</td><td>${renderStandardCellText(priceDurationText(row),false)}</td><td>${esc(priceAmountText(row))}</td><td><span class="tms-tag ${priceStatusTag(row.status)}">${priceStatusLabel(row.status)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:88px;padding-right:12px"><span class="tms-action-link" onclick="openPriceModal('${row.type}','${row.id}')">编辑</span><span class="tms-action-link" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</span></td></tr>`).join('')||`<tr><td colspan="12"><div class="empty"><p>${document.getElementById('priceTypeFilter')?.value?('暂无'+priceTypeLabel(document.getElementById('priceTypeFilter')?.value)):'暂无价格'}</p></div></td></tr>`;
 }
 function openPriceModal(type='',id=''){
   const row=pricePlans.find(x=>x.id===id)||{type:type||'venue_rate',status:'active'};

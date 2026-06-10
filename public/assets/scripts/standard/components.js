@@ -105,6 +105,28 @@ function renderStandardPaginationButtonsHtml(page,pages,onPageChange){
   ).join('');
   return `<div class="tms-page-btn" onclick="${handler}(Math.max(1,${current}-1))">${renderPagerChevron('prev')}</div>${pageBtns}<div class="tms-page-btn" onclick="${handler}(Math.min(${totalPages},${current}+1))">${renderPagerChevron('next')}</div>`;
 }
+function standardListFirstPage(){
+  return 1;
+}
+function standardListPageSize(value,current=20){
+  const next=parseInt(value,10);
+  if([20,50,100].includes(next))return next;
+  const fallback=parseInt(current,10);
+  return [20,50,100].includes(fallback)?fallback:20;
+}
+function standardListPagination(total,page,pageSize){
+  const safeTotal=Math.max(0,parseInt(total,10)||0);
+  const safePageSize=standardListPageSize(pageSize,20);
+  const pages=Math.max(1,Math.ceil(safeTotal/safePageSize));
+  const current=Math.min(pages,Math.max(1,parseInt(page,10)||1));
+  const start=(current-1)*safePageSize;
+  return {total:safeTotal,page:current,pageSize:safePageSize,pages,start,end:start+safePageSize};
+}
+function standardListSlice(list,page,pageSize){
+  const rows=Array.isArray(list)?list:[];
+  const state=standardListPagination(rows.length,page,pageSize);
+  return {...state,slice:rows.slice(state.start,state.end)};
+}
 Object.assign(window,{
   renderStandardEmptyText,
   renderStandardCellText,
@@ -113,7 +135,11 @@ Object.assign(window,{
   toggleStandardDropdown,
   selectStandardDropdownItem,
   setStandardDropdownValue,
-  renderStandardPaginationButtonsHtml
+  renderStandardPaginationButtonsHtml,
+  standardListFirstPage,
+  standardListPageSize,
+  standardListPagination,
+  standardListSlice
 });
 document.documentElement.dataset.standardComponents='loaded';
 document.addEventListener('click',closeStandardDropdowns);

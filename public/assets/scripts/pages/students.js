@@ -5,7 +5,7 @@ let studentDetailEditingStudentId='';
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
-function onStudentFilterChange(){stuPage=1;renderStudents();}
+function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
@@ -71,7 +71,7 @@ function cycleStudentSort(key){
   if(stuSortKey!==key){stuSortKey=key;stuSortDir='asc';}
   else if(stuSortDir==='asc')stuSortDir='desc';
   else {stuSortKey='';stuSortDir='';}
-  stuPage=1;
+  stuPage=standardListFirstPage();
   renderStudents();
 }
 function updateStudentSortHeaders(){
@@ -80,17 +80,6 @@ function updateStudentSortHeaders(){
     btn.classList.toggle('asc',active&&stuSortDir==='asc');
     btn.classList.toggle('desc',active&&stuSortDir==='desc');
   });
-}
-function studentPageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i+1);
-  const items=[1];
-  const start=Math.max(2,page-2);
-  const end=Math.min(pages-1,page+2);
-  if(start>2)items.push('...');
-  for(let i=start;i<=end;i++)items.push(i);
-  if(end<pages-1)items.push('...');
-  items.push(pages);
-  return items;
 }
 function renderStudentPagerControls(total,pages){
   const pageSizeHost=document.getElementById('stuPageSize');
@@ -101,20 +90,17 @@ function renderStudentPagerControls(total,pages){
 }
 function setStudentPage(value){
   const total=getFilteredStudents().length;
-  const pages=Math.max(1,Math.ceil(total/stuPageSize));
-  stuPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  stuPage=standardListPagination(total,value,stuPageSize).page;
   renderStudents();
 }
 function setStudentPageSize(value){
-  const next=parseInt(value,10);
-  stuPageSize=[20,50,100].includes(next)?next:20;
-  stuPage=1;
+  stuPageSize=standardListPageSize(value,stuPageSize);
+  stuPage=standardListFirstPage();
   renderStudents();
 }
 function jumpStudentPage(value){
   const total=getFilteredStudents().length;
-  const pages=Math.max(1,Math.ceil(total/stuPageSize));
-  stuPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
+  stuPage=standardListPagination(total,value,stuPageSize).page;
   renderStudents();
 }
 function getStudentBaseList(){
@@ -526,9 +512,9 @@ function renderStudents(){
     {label:'课包实收',valueHtml:`¥${fmt(stats.totalIncome)}`},
     {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
   ]);
-  const total=list.length,pages=Math.max(1,Math.ceil(total/stuPageSize));
-  if(stuPage>pages)stuPage=pages;
-  const slice=list.slice((stuPage-1)*stuPageSize,stuPage*stuPageSize);
+  const pageState=standardListSlice(list,stuPage,stuPageSize);
+  stuPage=pageState.page;
+  const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-students .tms-pagination');
   if(pager)pager.style.display=total?'flex':'none';
   document.getElementById('stuPagerInfo').innerHTML=renderPagerInfoHtml(total);
