@@ -505,13 +505,26 @@ function leadCourtMatchText(row){
   if(row?.courtMatchType==='possible')return `疑似订场：${row.courtMatchName||'-'}`;
   return '未匹配';
 }
+function leadOwnerFilterValues(){
+  return [...document.querySelectorAll('.lead-owner-filter-cb:checked')].map(cb=>cb.value).filter(Boolean);
+}
+function leadOwnerFilterHtml(options=[],selectedValues=[]){
+  const selected=new Set(selectedValues);
+  const values=options.map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt).filter(opt=>String(opt.value||''));
+  const display=selected.size?`跟进人 ${selected.size}`:'全部跟进人';
+  return `<div class="tms-dropdown${selected.size?' has-value':''}" id="leadOwnerFilter_dropdown" data-target="leadOwnerFilter" onclick="toggleStandardDropdown('leadOwnerFilter',event)"><input type="hidden" id="leadOwnerFilter" value="${esc([...selected].join(','))}"><div class="tms-dropdown-display">${esc(display)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onclick="event.stopPropagation()" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${values.map(opt=>`<label class="tms-dropdown-item" style="gap:8px" onclick="event.stopPropagation()"><input type="checkbox" class="tms-checkbox lead-owner-filter-cb" value="${esc(opt.value)}" ${selected.has(String(opt.value))?'checked':''} onchange="toggleLeadOwnerFilter()"><span>${esc(renderStandardOptionLabel(opt))}</span></label>`).join('')}</div></div>`;
+}
+function toggleLeadOwnerFilter(){
+  leadPage=standardListFirstPage();
+  renderLeads();
+}
 function getFilteredLeads(){
   const q=(document.getElementById('leadSearch')?.value||'').trim().toLowerCase();
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const statusValue=document.getElementById('leadStatusFilter')?.value||'';
   const convertedValue=document.getElementById('leadConvertedFilter')?.value||'';
-  const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
+  const ownerValues=leadOwnerFilterValues();
   const campusValue=campus;
   return leadRows().filter(lead=>{
     if(!leadInDateRange(lead,getLeadDateFilterRange()))return false;
@@ -521,7 +534,7 @@ function getFilteredLeads(){
     if(consultValue&&String(lead?.consultType||'')!==consultValue)return false;
     if(statusValue&&leadFollowupStatusText(lead)!==statusValue)return false;
     if(convertedValue&&leadConvertedYesNo(lead)!==convertedValue)return false;
-    if(ownerValue&&String(lead?.owner||'')!==ownerValue)return false;
+    if(ownerValues.length&&!ownerValues.includes(String(lead?.owner||'')))return false;
     if(campusValue!=='all'&&!sameCampusValue(lead?.campus,campusValue))return false;
     return true;
   }).sort((a,b)=>{
@@ -538,26 +551,26 @@ function renderLeadToolbarFilters(){
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const statusValue=document.getElementById('leadStatusFilter')?.value||'';
   const convertedValue=document.getElementById('leadConvertedFilter')?.value||'';
-  const ownerValue=document.getElementById('leadOwnerFilter')?.value||'';
+  const ownerValues=leadOwnerFilterValues();
   const statusValues=leadStatusOptionValues(rows);
   const linked=withLinkedFilterCounts([
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...Array.from(new Set(rows.map(item=>String(item?.source||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.source||'')===String(value)},
     {key:'consult',value:consultValue,options:[{value:'',label:'全部',emptyDisplay:'咨询需求'},...Array.from(new Set(rows.map(item=>String(item?.consultType||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.consultType||'')===String(value)},
     {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},...statusValues.map(value=>({value,label:value}))],match:(lead,value)=>leadFollowupStatusText(lead)===String(value)},
-    {key:'converted',value:convertedValue,options:[{value:'',label:'全部',emptyDisplay:'是否转化'},{value:'是',label:'是'},{value:'否',label:'否'}],match:(lead,value)=>leadConvertedYesNo(lead)===String(value)},
-    {key:'owner',value:ownerValue,options:[{value:'',label:'全部',emptyDisplay:'跟进人'},...Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.owner||'')===String(value)}
+    {key:'converted',value:convertedValue,options:[{value:'',label:'全部',emptyDisplay:'是否转化'},{value:'是',label:'是'},{value:'否',label:'否'}],match:(lead,value)=>leadConvertedYesNo(lead)===String(value)}
   ],rows);
   const configs=[
     ['leadSourceFilterHost','leadSourceFilter','全部来源',linked.source.options,linked.source.value],
     ['leadConsultFilterHost','leadConsultFilter','全部咨询需求',linked.consult.options,linked.consult.value],
     ['leadStatusFilterHost','leadStatusFilter','全部状态',linked.status.options,linked.status.value],
-    ['leadConvertedFilterHost','leadConvertedFilter','全部是否转化',linked.converted.options,linked.converted.value],
-    ['leadOwnerFilterHost','leadOwnerFilter','全部跟进人',linked.owner.options,linked.owner.value]
+    ['leadConvertedFilterHost','leadConvertedFilter','全部是否转化',linked.converted.options,linked.converted.value]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onLeadFilterChange');
   });
+  const ownerHost=document.getElementById('leadOwnerFilterHost');
+  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value})),ownerValues);
 }
 function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
@@ -1168,7 +1181,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);

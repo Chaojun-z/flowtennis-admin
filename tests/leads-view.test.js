@@ -41,7 +41,7 @@ assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">�
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(standardSource, /statsId:'leadStatsRow'/, 'leads page should expose the top stats row');
-assert.match(standardSource, /微信名[\s\S]*水平[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*基本信息[\s\S]*咨询需求[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
+assert.match(standardSource, /微信名[\s\S]*水平[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*咨询需求[\s\S]*基本信息[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
 assert.match(standardSource, /bodyId:'leadTbody'/, 'leads page should provide the list tbody mount');
 assert.match(standardSource, /infoId:'leadPagerInfo'/, 'leads page should provide pager info');
 assert.match(standardSource, /pageSizeId:'leadPageSize'/, 'leads page should provide page size selector host');
@@ -90,7 +90,11 @@ assert.match(leadsSource, /renderStandardPaginationButtonsHtml\(leadPage,pages,'
 assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
 assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
 assert.match(leadsSource, /leadPageSize=standardListPageSize\(value,leadPageSize\)/, 'leads page size should be limited by the global 20, 50, and 100 rule');
-assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'converted'[\s\S]*key:'owner'/, 'leads toolbar filters should use linked count labels');
+assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'converted'/, 'leads toolbar filters should use linked count labels');
+assert.match(leadsSource, /function leadOwnerFilterValues\([\s\S]*lead-owner-filter-cb:checked/, 'lead owner filter should collect checked owners');
+assert.match(leadsSource, /function leadOwnerFilterHtml\([\s\S]*tms-dropdown[\s\S]*leadOwnerFilter_dropdown[\s\S]*type="checkbox"[\s\S]*lead-owner-filter-cb[\s\S]*toggleLeadOwnerFilter/, 'lead owner filter should render as a checkbox dropdown');
+assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'checking lead owners should refresh the list');
+assert.match(fnBody('getFilteredLeads'), /const ownerValues=leadOwnerFilterValues\(\)[\s\S]*if\(ownerValues\.length&&!ownerValues\.includes\(String\(lead\?\.owner\|\|''\)\)\)return false;/, 'lead filtering should support multiple checked owners');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
 assert.match(leadsSource, /function leadDetailFieldHtml\([\s\S]*renderDetailDrawerField/, 'lead detail readonly fields should use the shared drawer field helper');
@@ -141,6 +145,7 @@ assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspa
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
+assert.match(fnBody('renderLeads'), /renderLeadTag\(lead\?\.source,'source'\)[\s\S]*renderLeadTag\(lead\?\.consultType,'consult'\)[\s\S]*leadProfileText\(lead\)/, 'lead list rows should show consult before basic info');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:12px\}/, 'leads table header should match the standard table font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
