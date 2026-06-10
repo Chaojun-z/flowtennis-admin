@@ -265,11 +265,10 @@ assert.match(pagesCss, /body\.is-packages-page \.content\{overflow:hidden\}/, 'p
 assert.match(html, /document\.body\.classList\.toggle\('is-packages-page',pg==='packages'\)/, 'package navigation should toggle the package-only scroll state');
 assert.match(pagesCss, /#page-packages \.course-package-showcase\{height:100%;min-height:0\}/, 'package board should fill the fixed page area');
 assert.match(pagesCss, /\.course-package-showcase-toolbar\{flex:0 0 56px;height:56px\}/, 'package filters should reserve a fixed header height');
-assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:auto/, 'package board grid should be the only vertical scroller');
-assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*padding-bottom:24px/, 'package board should leave room below the last package');
+assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:hidden/, 'package board grid should only handle horizontal scrolling');
 assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*overscroll-behavior-x:contain[^}]*touch-action:pan-x pan-y/, 'package board horizontal scrolling should not trigger browser back navigation');
-assert.match(pagesCss, /package-board-column\{[^}]*display:flex[^}]*flex-direction:column/, 'package board columns should be flex containers');
-assert.match(pagesCss, /package-board-stack\{[^}]*flex:0 0 auto[^}]*min-height:0[^}]*overflow-y:visible[^}]*overscroll-behavior:contain/, 'package cards should extend naturally inside the board scroller');
+assert.match(pagesCss, /package-board-column\{[^}]*height:100%[^}]*display:flex[^}]*flex-direction:column/, 'package board columns should stay fixed-height flex containers');
+assert.match(pagesCss, /package-board-stack\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow-y:auto[^}]*overscroll-behavior:contain[^}]*padding-bottom:24px/, 'package cards below each title should scroll inside their column');
 assert.match(pagesCss, /package-board-stack\{[^}]*scrollbar-width:none[^}]*-ms-overflow-style:none/, 'package board column scrollbars should be hidden');
 assert.match(pagesCss, /package-board-stack::-webkit-scrollbar\{display:none\}/, 'package board column webkit scrollbars should be hidden');
 assert.match(pagesCss, /package-board-title\{[^}]*color:#FFFFFF[^}]*font-size:15px[^}]*font-weight:600[^}]*letter-spacing:\.025em/, 'package board title should use white semibold tracking');
