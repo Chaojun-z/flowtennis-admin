@@ -631,6 +631,35 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court.modal-package-edit .package-resource-content>.tms-dropdown{max-width:220px}
 .modal.modal-court.modal-package-edit .package-campus-grid{min-height:48px;align-items:center;max-height:116px;overflow:auto}
 .modal.modal-court.modal-package-edit .package-coach-picker{max-height:140px;overflow:auto}
+.modal.modal-court.modal-schedule-drawer .package-detail-card .schedule-detail-field.full-width{width:492px;max-width:492px}
+.modal.modal-court.modal-schedule-drawer .package-detail-card .schedule-detail-field.full-width .schedule-detail-label,.modal.modal-court.modal-schedule-drawer .package-detail-card .schedule-detail-field.full-width .schedule-detail-value{max-width:492px}
+.modal.modal-court.modal-schedule-drawer .package-drawer-help{grid-column:1/-1;margin:0;width:492px;max-width:492px;color:#6B7280;background:#FBFCFE;border:1px solid #EEF0F3;border-radius:6px}
+.modal.modal-court.modal-schedule-drawer .package-drawer-danger-help{grid-column:1/-1;margin:0;width:492px;max-width:492px;color:#B42318}
+.modal.modal-court.modal-schedule-drawer .package-lesson-shortcuts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;width:232px;max-width:232px}
+.modal.modal-court.modal-schedule-drawer .package-time-section{grid-template-columns:232px 232px}
+.modal.modal-court.modal-schedule-drawer .package-date-range{display:grid;grid-template-columns:108px 16px 108px;gap:0;align-items:center;width:232px;max-width:232px}
+.modal.modal-court.modal-schedule-drawer .package-date-range .coach-date-btn{width:108px;max-width:108px;min-width:0;height:var(--schedule-edit-control-height);padding:4px 8px;border-radius:6px;background:#fff;border:1px solid #E6E7EB;box-shadow:none;color:#333333;font-size:13px;font-weight:400;justify-content:flex-start}
+.modal.modal-court.modal-schedule-drawer .package-date-range .range-dash{justify-self:center;color:#969AA0}
+.modal.modal-court.modal-schedule-drawer .package-time-window-row{display:grid;grid-template-columns:56px 232px;gap:10px;align-items:center;width:298px;max-width:298px}
+.modal.modal-court.modal-schedule-drawer .package-time-window-label{font-size:12px;color:#969AA0;white-space:nowrap}
+.modal.modal-court.modal-schedule-drawer .package-time-window-fields{display:grid;grid-template-columns:108px 16px 108px;gap:0;align-items:center;width:232px;max-width:232px}
+.modal.modal-court.modal-schedule-drawer .package-time-window-fields .tms-dropdown,.modal.modal-court.modal-schedule-drawer .package-time-window-fields .tms-dropdown.tms-dropdown-form .tms-dropdown-display{width:108px;max-width:108px;min-width:0}
+.modal.modal-court.modal-schedule-drawer .package-time-window-fields .tms-dropdown.tms-dropdown-form .tms-dropdown-display{padding-left:8px;padding-right:8px;font-size:13px}
+.modal.modal-court.modal-schedule-drawer .package-time-window-fields .range-dash{justify-self:center;color:#969AA0}
+.modal.modal-court.modal-schedule-drawer .package-resource-panel{display:flex;flex-direction:column;gap:0;width:492px;max-width:492px}
+.modal.modal-court.modal-schedule-drawer .package-panel-divider{height:1px;background:#EEF0F3;margin:12px 0}
+.modal.modal-court.modal-schedule-drawer .package-resource-row{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.modal.modal-court.modal-schedule-drawer .package-resource-row>.tms-form-label{padding-top:0;margin-bottom:0}
+.modal.modal-court.modal-schedule-drawer .package-resource-content{min-width:0}
+.modal.modal-court.modal-schedule-drawer .package-resource-content>.tms-dropdown{max-width:232px}
+.modal.modal-court.modal-schedule-drawer .package-campus-grid{min-height:48px;align-items:center;max-height:116px;overflow:auto}
+.modal.modal-court.modal-schedule-drawer .package-coach-picker{max-height:140px;overflow:auto}
+.modal.modal-court.modal-schedule-drawer .package-choice-grid{display:flex;flex-wrap:wrap;gap:8px;width:100%;max-height:148px;overflow:auto;padding:2px 0}
+.modal.modal-court.modal-schedule-drawer .package-choice-pill{position:relative;display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border:1px solid #E6E7EB;border-radius:6px;background:#fff;color:#333333;font-size:13px;line-height:20px;cursor:pointer;user-select:none;box-sizing:border-box}
+.modal.modal-court.modal-schedule-drawer .package-choice-pill input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.modal.modal-court.modal-schedule-drawer .package-choice-pill:has(input:checked){border-color:#805435;background:#F6EFE8;color:#805435}
+.modal.modal-court.modal-schedule-drawer .package-choice-pill:has(input:checked)::before{content:"";width:6px;height:6px;border-radius:50%;background:#805435;margin-right:7px;flex:0 0 auto}
+.modal.modal-court.modal-schedule-drawer .package-choice-empty{font-size:13px;color:#969AA0;line-height:32px}
 .membership-panel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .membership-panel-card{background:#FDF7F2;border-radius:10px;padding:12px 14px;min-height:72px}
 .membership-panel-label{font-size:11px;color:#8C7B6E;margin-bottom:8px}
@@ -913,7 +942,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court.modal-schedule-drawer{overflow:hidden;color:#333333}
 .modal.modal-court.modal-schedule-drawer .mhead{padding:20px 16px 0;border-bottom:1px solid #EEF0F3;align-items:flex-start;background:#FDFDFD;flex-shrink:0}
 .modal.modal-court.modal-schedule-drawer .mtitle{min-width:0;flex:1}
-.modal.modal-court.modal-schedule-drawer .mclose{width:32px;height:32px;border-radius:6px;background:transparent;color:#9EA3AE;font-size:0;line-height:1;display:flex;align-items:center;justify-content:center}
+.modal.modal-court.modal-schedule-drawer .mclose{position:relative;z-index:2;width:32px;height:32px;border-radius:6px;background:transparent;color:#9EA3AE;font-size:0;line-height:1;display:flex;align-items:center;justify-content:center}
 .modal.modal-court.modal-schedule-drawer .mclose .mclose-svg{width:9px;height:9px;display:block;flex:0 0 auto}
 .modal.modal-court.modal-schedule-drawer .mclose:hover{background:#F5F6F8;color:#6B7280}
 .modal.modal-court.modal-schedule-drawer .mbody{padding:12px 16px;overflow:auto;background:#F5F2F0}
@@ -923,6 +952,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court.modal-schedule-drawer .schedule-detail-title-wrap{min-width:0}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-title-row{display:flex;align-items:center;gap:8px;min-width:0}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-title{font-size:18px;font-weight:600;color:#111827;line-height:24px}
+.modal.modal-court.modal-schedule-drawer .schedule-detail-title-row .package-status-badge{position:static;top:auto;right:auto;height:22px;padding:0 8px;font-size:13px;flex:0 0 auto}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-status{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:13px;font-weight:500}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-subtitle{margin-top:4px;color:#6B7280;font-size:13px;font-weight:400;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-tabs{display:flex;gap:28px;height:34px;align-items:flex-end}
@@ -976,6 +1006,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .modal.modal-court.modal-schedule-drawer .schedule-detail-form .tms-form-control,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .finput{min-height:var(--schedule-edit-control-height);height:var(--schedule-edit-control-height);line-height:22px;padding:4px 8px;border-radius:6px;background:#fff;border:1px solid #E6E7EB;box-shadow:none}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-form .tms-form-control::placeholder,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .finput::placeholder,.modal.modal-court.modal-schedule-drawer .schedule-detail-edit-control::placeholder{color:#9EA3AE}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-form .tms-dropdown.tms-dropdown-form .tms-dropdown-display{width:232px;max-width:232px;height:var(--schedule-edit-control-height);min-height:var(--schedule-edit-control-height);padding:4px 8px;border-radius:6px;background:#fff;border:1px solid #E6E7EB;box-shadow:none;color:#333333;font-size:13px;font-weight:400}
+.modal.modal-court.modal-schedule-drawer .schedule-detail-form .package-time-window-fields .tms-dropdown,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .package-time-window-fields .tms-dropdown.tms-dropdown-form .tms-dropdown-display{width:108px;max-width:108px;min-width:0}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-form textarea.tms-form-control{height:auto;min-height:72px;resize:vertical}
 .modal.modal-court.modal-schedule-drawer .schedule-time-row{grid-template-columns:repeat(2,232px)}
 .modal.modal-court.modal-schedule-drawer .schedule-time-row .schedule-time-field{width:232px;max-width:232px}

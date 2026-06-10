@@ -151,12 +151,19 @@ function openDetailSideDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},o
   delete ov.dataset.scheduleDetailId;
   delete ov.dataset.studentDetailId;
   delete ov.dataset.leadDetailId;
+  delete ov.dataset.packageDetailId;
   Object.entries(data||{}).forEach(([key,value])=>{
     if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
   });
   const modal=ov.querySelector('.modal');
   const actions=document.getElementById('mActions');
   if(modal)modal.className=modalClass;
+  const closeBtn=ov.querySelector('.mclose');
+  if(closeBtn){
+    closeBtn.setAttribute('aria-label','关闭');
+    closeBtn.setAttribute('title','关闭');
+    closeBtn.innerHTML='<svg class="mclose-svg" width="9" height="9" viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.4978 3.7938L8.1458 0.145803C8.23916 0.052447 8.36578 0 8.4978 0C8.62983 0 8.75645 0.052447 8.8498 0.145803C8.94316 0.239159 8.99561 0.365778 8.99561 0.497803C8.99561 0.629829 8.94316 0.756447 8.8498 0.849804L5.2018 4.4978L8.8498 8.1458C8.94316 8.23916 8.99561 8.36578 8.99561 8.4978C8.99561 8.62983 8.94316 8.75645 8.8498 8.8498C8.75645 8.94316 8.62983 8.99561 8.4978 8.99561C8.36578 8.99561 8.23916 8.94316 8.1458 8.8498L4.4978 5.2018L0.849803 8.8498C0.756447 8.94316 0.629829 8.99561 0.497803 8.99561C0.365778 8.99561 0.239159 8.94316 0.145803 8.8498C0.052447 8.75645 0 8.62983 0 8.4978C0 8.36578 0.052447 8.23916 0.145803 8.1458L3.7938 4.4978L0.145803 0.849804C0.052447 0.756447 0 0.629829 0 0.497803C0 0.365778 0.052447 0.239159 0.145803 0.145803C0.239159 0.052447 0.365778 0 0.497803 0C0.629829 0 0.756447 0.052447 0.849803 0.145803L4.4978 3.7938Z" fill="currentColor"/></svg>';
+  }
   ov.onclick=function(event){if(event.target===ov)closeModal();};
   document.getElementById('mTitle').innerHTML=titleHtml;
   document.getElementById('mBody').innerHTML=bodyHtml;
