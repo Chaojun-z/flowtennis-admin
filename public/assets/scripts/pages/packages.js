@@ -178,7 +178,8 @@ function packageCoachDetail(p){
 function packageCampusSummaryText(ids){
   const names=parseArr(ids).map(id=>cn(id)).filter(Boolean);
   if(!names.length)return'不限校区';
-  return names.length===1?names[0]:`${names[0]} 等 ${names.length} 个校区`;
+  if(names.length===1)return names[0];
+  return names.length===2?names.join('、'):`${names.length} 个校区可用`;
 }
 function packageCampusTitle(ids){
   return parseArr(ids).map(id=>cn(id)).filter(Boolean).join('、')||'不限校区';
