@@ -80,13 +80,13 @@ assert.strictEqual(purchase.businessDate, '2026-06-01 08:09:10');
 const consume = snapshot.financeNormalizedRows.find(row => row.id === 'consume-ledger-1');
 assert.strictEqual(consume.transactionType, '消耗');
 assert.strictEqual(consume.normalizedPaymentMethod, '课包划扣');
-assert.strictEqual(consume.businessDate, '2026-06-02 15:30:45');
+assert.strictEqual(consume.businessDate, '2026-06-02 10:00:00');
 
 const storedConsume = snapshot.financeNormalizedRows.find(row => row.id.includes('court-1-h1'));
 assert.strictEqual(storedConsume.transactionType, '消耗');
 assert.strictEqual(storedConsume.normalizedPaymentMethod, '储值扣款');
 assert.strictEqual(storedConsume.displayBusinessType, '场地 / 会员订场');
-assert.strictEqual(storedConsume.businessDate, '2026-06-03 12:34:56');
+assert.strictEqual(storedConsume.businessDate, '2026-06-03');
 
 const reverse = snapshot.financeNormalizedRows.find(row => row.id.includes('court-1-h2'));
 assert.strictEqual(reverse.transactionType, '退款');

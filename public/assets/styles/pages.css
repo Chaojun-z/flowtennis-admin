@@ -106,14 +106,15 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-finance .finance-date-host-compact .coach-date-btn{width:auto;min-width:0}
 #page-finance .coach-ops-tabs{margin-bottom:0}
 #page-finance .tms-stats-row{margin-bottom:18px}
-#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;overflow:visible}
+#page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;overflow:visible}
 #page-finance .finance-ledger-stats .tms-stat-card{min-width:0}
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:21px;min-width:0;overflow:hidden}
-#page-finance .finance-ledger-stats .tms-stat-value.finance-split-value{gap:6px}
-#page-finance .finance-ledger-stats .finance-main-number{font-size:21px;color:#3B3026;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+#page-finance .finance-ledger-stats .tms-stat-value.finance-split-value{gap:5px;font-size:16px}
+#page-finance .finance-ledger-stats .finance-main-number{font-size:16px;color:#3B3026;font-weight:700;flex:0 0 auto}
 #page-finance .finance-ledger-stats .finance-split-sep{font-size:10px;color:#A19080;flex:0 0 auto}
-#page-finance .finance-ledger-stats .finance-sub-number{font-size:13px;color:#A19080;overflow:hidden;text-overflow:ellipsis}
+#page-finance .finance-ledger-stats .finance-sub-number{font-size:16px;color:#3B3026;font-weight:700;flex:0 0 auto}
+#page-finance .finance-ledger-stats .finance-split-value .finance-card-percent{font-size:9px;margin-left:2px}
 #page-finance .finance-card-percent{display:inline;margin-top:0;text-align:left}
 #page-finance .finance-amount{font-weight:700;font-variant-numeric:tabular-nums}
 #page-finance .finance-amount-income{color:#3F946D}
