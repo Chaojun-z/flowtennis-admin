@@ -3,8 +3,8 @@ function renderCampuses(){
   const q=(document.getElementById('campusSearch')?.value||'').toLowerCase();
   const list=campuses.filter(c=>searchHit(q,c.name,c.code,c.id));
   tbody.innerHTML=list.length?list.map(c=>{
-    const code=renderCourtEmptyText(c.code||c.id);
-    return `<tr><td style="padding-left:20px">${renderCourtCellText(c.name,false)}</td><td><span class="tms-tag tms-tag-tier-gold">${esc(code)}</span></td><td>${renderCourtCellText(c.createdAt?c.createdAt.slice(0,10):'')}</td><td class="tms-sticky-r tms-action-cell" style="width:132px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCampusModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</span></td></tr>`;
+    const code=renderStandardEmptyText(c.code||c.id);
+    return `<tr><td style="padding-left:20px">${renderStandardCellText(c.name,false)}</td><td><span class="tms-tag tms-tag-tier-gold">${esc(code)}</span></td><td>${renderStandardCellText(c.createdAt?c.createdAt.slice(0,10):'')}</td><td class="tms-sticky-r tms-action-cell" style="width:132px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCampusModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</span></td></tr>`;
   }).join(''):'<tr><td colspan="4"><div class="empty"><p>暂无校区</p></div></td></tr>';
 }
 function openCampusModal(id){

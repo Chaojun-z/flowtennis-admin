@@ -21,7 +21,8 @@ assert.match(html, /<th class="tms-sticky-r"[\s\S]*>操作<\/th>/, 'campus actio
 assert.doesNotMatch(html, /校区管理仅管理员可操作/, 'campus page should remove the old instruction card');
 assert.doesNotMatch(fnBody('renderCampuses'), /class="abtn"|✏️|🗑️|class="badge b-amber"/, 'campus rows should not use old icon buttons or old badge style');
 assert.match(fnBody('renderCampuses'), /campusSearch/, 'campus table should filter by search input');
-assert.match(fnBody('renderCampuses'), /renderCourtEmptyText/, 'campus rows should reuse court empty-value display rule');
+assert.match(fnBody('renderCampuses'), /renderStandardEmptyText/, 'campus rows should use the standard empty-value display rule');
+assert.match(fnBody('renderCampuses'), /renderStandardCellText/, 'campus rows should use the standard cell display rule');
 assert.match(fnBody('renderCampuses'), /<span class="tms-tag/, 'campus code should render as a tms tag');
 assert.match(fnBody('renderCampuses'), /tms-action-link[\s\S]*编辑[\s\S]*删除/, 'campus actions should use text links');
 assert.match(fnBody('renderCampuses'), /class="tms-sticky-r[^"]*tms-action-cell"[\s\S]*openCampusModal[\s\S]*confirmDel/, 'campus action cells should stay visible and keep edit/delete entries');
