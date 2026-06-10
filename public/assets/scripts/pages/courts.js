@@ -923,25 +923,7 @@ function scheduleComposeDateTime(dateId,timeId){
   return `${date} ${time||'00:00'}`;
 }
 function setCourtModalFrame(title,bodyHtml,actionsHtml='',extraClass='modal-tight'){
-  const ov=document.getElementById('overlay');
-  ov.classList.remove('schedule-drawer-overlay');
-  ov.classList.remove('student-drawer-overlay');
-  ov.onclick=null;
-  delete ov.dataset.scheduleDetailId;
-  delete ov.dataset.studentDetailId;
-  delete ov.dataset.leadDetailId;
-  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
-  const modal=ov.querySelector('.modal');
-  const actions=document.getElementById('mActions');
-  if(modal)modal.className=`modal modal-court ${extraClass}`.trim();
-  document.getElementById('mTitle').textContent=title;
-  document.getElementById('mBody').innerHTML=bodyHtml;
-  if(actions){
-    actions.innerHTML=actionsHtml||'';
-    actions.style.display=actionsHtml?'flex':'none';
-    actions.className='mactions';
-  }
-  ov.classList.add('open');
+  return openStandardModal({title,bodyHtml,actionsHtml,extraClass});
 }
 function resetModalActions(){
   const actions=document.getElementById('mActions');

@@ -78,8 +78,14 @@ function renderDetailDrawerHero({title='',avatar='',subtitle='',subtitleHtml='',
   );
   return `<div class="schedule-detail-hero"><div class="schedule-detail-avatar">${esc(displayAvatar)}</div><div class="schedule-detail-title-wrap"><div class="schedule-detail-title-row"><span class="schedule-detail-title">${esc(displayTitle)}</span>${badge}</div><div class="schedule-detail-subtitle">${subtitleHtml||esc(subtitle||'')}</div></div></div>`;
 }
+function renderStandardDetailHeaderHtml(options={}){
+  return renderDetailDrawerHero(options);
+}
 function renderDetailDrawerTabs(active,tabs=[],{onClick='setScheduleDetailTab'}={}){
   return `<div class="schedule-detail-tabs">${(tabs||[]).map(([key,label])=>`<button type="button" class="schedule-detail-tab ${active===key?'active':''}" onclick="${onClick}('${key}')">${esc(label)}</button>`).join('')}</div>`;
+}
+function renderStandardDetailTabsHtml(active,tabs=[],options={}){
+  return renderDetailDrawerTabs(active,tabs,options);
 }
 function renderDetailDrawerCard(title,content,{className='',actionsHtml='',useGrid=true,titleHtml=''}={}){
   if(!content)return '';
@@ -89,8 +95,14 @@ function renderDetailDrawerCard(title,content,{className='',actionsHtml='',useGr
   const body=useGrid?`<div class="schedule-detail-grid">${content}</div>`:content;
   return `<section class="${cardClass}"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${displayTitle}</div>${actions}</div>${body}</section>`;
 }
+function renderStandardDetailCardHtml(title,content,options={}){
+  return renderDetailDrawerCard(title,content,options);
+}
 function renderDetailDrawerFormCard(title,content,actionsHtml=''){
   return `<section class="schedule-detail-card"><div class="schedule-detail-card-head"><div class="schedule-detail-section-title">${esc(title)}</div>${actionsHtml||''}</div><div class="schedule-detail-form">${content}</div></section>`;
+}
+function renderStandardDetailFormCardHtml(title,content,actionsHtml=''){
+  return renderDetailDrawerFormCard(title,content,actionsHtml);
 }
 function renderDetailDrawerField(label,value,options={}){
   const cls=`schedule-detail-field ${options.full?'full-width':''}`.trim();
@@ -120,6 +132,9 @@ function renderDetailDrawerTimeline(items=[],{emptyText='暂无记录',className
   const cls=['student-lesson-timeline',className||''].filter(Boolean).join(' ');
   return `<div class="${cls}">${body}</div>`;
 }
+function renderStandardDetailTimelineHtml(items=[],options={}){
+  return renderDetailDrawerTimeline(items,options);
+}
 function renderDetailDrawerTable({columns=[],rows=[],emptyText='暂无记录',minWidth='520px'}={}){
   const safeColumns=(Array.isArray(columns)?columns:[]).filter(col=>col&&col.label);
   const safeRows=Array.isArray(rows)?rows:[];
@@ -138,7 +153,84 @@ function renderDetailDrawerTable({columns=[],rows=[],emptyText='暂无记录',mi
   }).join('')}</tr>`).join(''):`<tr><td colspan="${safeColumns.length}"><div class="tms-empty-state"><div class="tms-empty-title">${esc(emptyText)}</div></div></td></tr>`;
   return `<div class="tms-table-card detail-drawer-table-card"><div class="tms-table-wrapper detail-drawer-table-wrapper"><table class="tms-table detail-drawer-table" style="min-width:${esc(minWidth)}"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
-function openDetailSideDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},overlayClasses=['schedule-drawer-overlay'],modalClass='modal modal-court modal-schedule-drawer'}={}){
+function renderStandardModalActionsHtml(actions=[]){
+  return (Array.isArray(actions)?actions:[]).map(action=>{
+    if(typeof action==='string')return action;
+    const cls=action.className||`btn-${action.type==='primary'?'save':'cancel'}`;
+    const disabled=action.disabled?' disabled':'';
+    const id=action.id?` id="${esc(action.id)}"`:'';
+    const onclick=action.onclick?` onclick="${esc(action.onclick)}"`:'';
+    return `<button type="button"${id} class="${esc(cls)}"${onclick}${disabled}>${esc(action.label||'')}</button>`;
+  }).join('');
+}
+function renderStandardModalFormSectionHtml(title,content,{className=''}={}){
+  const cls=`standard-modal-section ${String(className||'').trim()}`.trim();
+  return `<div class="${cls}">${title?`<div class="sec-ttl">${esc(title)}</div>`:''}${content||''}</div>`;
+}
+function openStandardModal({title='',titleHtml='',bodyHtml='',actionsHtml='',extraClass='modal-tight',data={}}={}){
+  const ov=document.getElementById('overlay');
+  if(!ov)return;
+  ov.classList.remove('schedule-drawer-overlay');
+  ov.classList.remove('student-drawer-overlay');
+  ov.onclick=null;
+  delete ov.dataset.scheduleDetailId;
+  delete ov.dataset.studentDetailId;
+  delete ov.dataset.leadDetailId;
+  delete ov.dataset.packageDetailId;
+  Object.entries(data||{}).forEach(([key,value])=>{
+    if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
+  });
+  if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
+  const modal=ov.querySelector('.modal');
+  const actions=document.getElementById('mActions');
+  if(modal)modal.className=`modal modal-court ${extraClass}`.trim();
+  const titleEl=document.getElementById('mTitle');
+  if(titleEl){
+    if(titleHtml)titleEl.innerHTML=titleHtml;
+    else titleEl.textContent=title;
+  }
+  const bodyEl=document.getElementById('mBody');
+  if(bodyEl)bodyEl.innerHTML=bodyHtml||'';
+  if(actions){
+    actions.innerHTML=actionsHtml||'';
+    actions.style.display=actionsHtml?'flex':'none';
+    actions.className='mactions';
+  }
+  ov.classList.add('open');
+}
+function setStandardActionLoading(buttonOrId,loading=true,loadingText='保存中...'){
+  const btn=typeof buttonOrId==='string'?document.getElementById(buttonOrId):buttonOrId;
+  if(!btn)return;
+  if(loading){
+    if(!btn.dataset.standardLoading){
+      btn.dataset.standardIdleText=btn.textContent||'';
+      btn.dataset.standardLoading='1';
+    }
+    btn.disabled=true;
+    btn.textContent=loadingText;
+    return;
+  }
+  btn.disabled=false;
+  if(btn.dataset.standardIdleText!==undefined)btn.textContent=btn.dataset.standardIdleText;
+  delete btn.dataset.standardIdleText;
+  delete btn.dataset.standardLoading;
+}
+async function runStandardMutation(buttonOrId,task,{loadingText='保存中...',errorPrefix='保存失败',successText='',closeOnSuccess=false}={}){
+  const btn=typeof buttonOrId==='string'?document.getElementById(buttonOrId):buttonOrId;
+  setStandardActionLoading(btn,true,loadingText);
+  try{
+    const result=await task();
+    if(successText)toast(successText,'ok');
+    if(closeOnSuccess)closeModal();
+    return result;
+  }catch(e){
+    toast(`${errorPrefix}：${e.message}`,'error');
+    return null;
+  }finally{
+    setStandardActionLoading(btn,false);
+  }
+}
+function openStandardDetailDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},overlayClasses=['schedule-drawer-overlay'],modalClass='modal modal-court modal-schedule-drawer'}={}){
   const ov=document.getElementById('overlay');
   if(!ov)return;
   if(modalCleanupTimer){clearTimeout(modalCleanupTimer);modalCleanupTimer=null;}
@@ -170,6 +262,9 @@ function openDetailSideDrawer({titleHtml='',bodyHtml='',actionsHtml='',data={},o
   if(actions){actions.innerHTML=actionsHtml||'';actions.style.display=actionsHtml?'flex':'none';actions.className='mactions';}
   if(alreadyOpen)ov.classList.add('open');
   else requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function openDetailSideDrawer(options={}){
+  return openStandardDetailDrawer(options);
 }
 function renderStandardOptionLabel(opt){
   const label=String(opt?.label??opt?.value??'');

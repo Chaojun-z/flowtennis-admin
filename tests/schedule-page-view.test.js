@@ -235,8 +235,8 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-det
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-subtitle\{[\s\S]*color:#6B7280[\s\S]*font-size:13px[\s\S]*font-weight:400/, 'schedule detail drawer subtitle should be 13px #6B7280 regular');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-hero\{[\s\S]*padding-bottom:12px/, 'schedule detail hero should use 12px bottom padding');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-tab\{[\s\S]*padding:0 0 2px/, 'schedule detail tab underline spacing should be 2px');
-assert.match(fnBody('openDetailSideDrawer'), /requestAnimationFrame\(\(\)=>ov\.classList\.add\('open'\)\)/, 'detail drawer should add open on the next frame so it slides in from the right');
-assert.match(fnBody('openDetailSideDrawer'), /event\.target===ov[\s\S]*closeModal\(\)/, 'detail drawer should close when clicking the left overlay blank area');
+assert.match(fnBody('openStandardDetailDrawer'), /requestAnimationFrame\(\(\)=>ov\.classList\.add\('open'\)\)/, 'detail drawer should add open on the next frame so it slides in from the right');
+assert.match(fnBody('openStandardDetailDrawer'), /event\.target===ov[\s\S]*closeModal\(\)/, 'detail drawer should close when clicking the left overlay blank area');
 assert.doesNotMatch(fnBody('openScheduleModal'), /setCourtModalFrame\(id\?'编辑排课':'添加排课'/, 'schedule create and edit should no longer use the old centered modal frame');
 assert.match(fnBody('openScheduleModal'), /modal-schedule-drawer/, 'schedule create and edit should use the same right-side drawer container');
 assert.match(fnBody('openScheduleModal'), /scheduleDetailHeaderHtml[\s\S]*scheduleDetailTabsHtml/, 'schedule create and edit should reuse the detail drawer header and tabs');
