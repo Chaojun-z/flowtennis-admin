@@ -173,8 +173,8 @@ assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[
 assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');
 assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function scheduleEmptyStateHtml\([\s\S]*没有匹配的排课[\s\S]*暂无排课[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加排课开始安排课程/, 'schedule empty state should distinguish filtered empty results from no data');
-assert.match(source, /id="schPageSize"/, 'schedule pager should expose a page size selector host');
-assert.match(source, /<th class="tms-sticky-l" style="width:84px;padding-left:14px">日期<\/th>/, 'schedule table should keep the date column fixed on the left');
+assert.match(source, /pageSizeId:'schPageSize'/, 'schedule pager should expose a page size selector host');
+assert.match(source, /label:'日期'[\s\S]*className:'tms-sticky-l'[\s\S]*style:'width:84px;padding-left:14px'/, 'schedule table should keep the date column fixed on the left');
 assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
 assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
 assert.match(styles, /\.tms-pagination\{[^}]*font-size:12px[^}]*line-height:16px[^}]*color:#78716C/, 'schedule pager should use the shared 12px footer standard');

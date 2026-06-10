@@ -42,51 +42,9 @@
   <div id="topbarHost"></div>
   <div class="content">
     <!-- 线索池 -->
-    <div class="page-section" id="page-leads">
-      <div class="tms-stats-row" id="leadStatsRow"></div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="leadSearch" placeholder="搜索姓名、手机号" oninput="applyLeadSearch()">
-          </div>
-          <div id="leadSourceFilterHost"></div>
-          <div id="leadConsultFilterHost"></div>
-          <div id="leadStatusFilterHost"></div>
-          <div id="leadConvertedFilterHost"></div>
-          <div id="leadOwnerFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <span class="tms-import-action" onclick="openLeadImportPreviewModal()">导入</span>
-          <button class="tms-btn tms-btn-primary" onclick="openLeadModal(null)">新增线索</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:130px;padding-left:20px">微信名</th><th style="width:120px"><button class="tms-sort-header" data-lead-sort="leadDate" onclick="cycleLeadSort('leadDate')">线索时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:110px">线索渠道</th><th style="width:220px">基本信息</th><th style="width:220px">咨询需求</th><th style="width:100px">跟进人</th><th style="width:130px">跟进状态</th><th style="width:220px"><button class="tms-sort-header" data-lead-sort="trialLessonAt" onclick="cycleLeadSort('trialLessonAt')">体验课时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:90px">是否转化</th><th style="width:110px">转化教练</th><th style="width:170px">未转化原因</th><th class="tms-sticky-r" style="width:150px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="leadTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="leadPagerInfo">共 0 条</span><div id="leadPageSize"></div></div><div class="tms-page-numbers" id="leadPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-leads" data-standard-list-shell="leads"></div>
     <!-- 学员信息 -->
-    <div class="page-section active" id="page-students">
-      <div class="tms-stats-row" id="studentStatsRow"></div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="stuSearch" placeholder="搜索姓名、手机号" oninput="onStudentFilterChange()">
-          </div>
-          <div id="stuTypeFilterHost"></div>
-          <div id="stuSourceFilterHost"></div>
-          <div id="stuCoachFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <span class="tms-export-action" onclick="exportStudentCSV()">导出</span>
-          <button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">添加学员</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">学员</th><th style="width:94px">电话</th><th style="width:58px">类型</th><th style="width:105px">校区</th><th style="width:140px"><button class="tms-sort-header" data-student-sort="lastLesson" onclick="cycleStudentSort('lastLesson')">最近上课<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:100px"><button class="tms-sort-header" data-student-sort="completedLessons" onclick="cycleStudentSort('completedLessons')">累计上课<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:110px">负责教练</th><th style="width:90px"><button class="tms-sort-header" data-student-sort="packageLessons" onclick="cycleStudentSort('packageLessons')">课时/课包<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:90px">来源</th><th style="width:180px">备注</th><th class="tms-sticky-r" style="width:150px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="stuTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="stuPagerInfo">共 0 条</span><div id="stuPageSize"></div></div><div class="tms-page-numbers" id="stuPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section active" id="page-students" data-standard-list-shell="students"></div>
     <!-- 班次管理 -->
     <div class="page-section page-layout-standard" id="page-classes">
       <div class="tms-stats-row" id="classStatsRow"></div>
@@ -131,25 +89,7 @@
       </div>
     </div>
     <!-- 排课表 -->
-    <div class="page-section" id="page-schedule">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="schSearch" placeholder="搜索姓名、手机号" oninput="onScheduleFilterChange()">
-          </div>
-          <div id="schStatusFilterHost"></div>
-          <div id="schCoachFilterHost"></div>
-          <div id="schCourseTypeFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openScheduleModal(null)">添加排课</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:84px;padding-left:14px">日期</th><th style="width:92px">上课时间</th><th style="width:52px">时长</th><th style="width:125px">校区/场地</th><th style="width:68px">教练</th><th style="width:120px">学员</th><th style="width:64px">课程类型</th><th style="width:64px">重复?</th><th style="width:52px">反馈</th><th style="width:68px">状态</th><th class="tms-sticky-r" style="width:118px;padding-right:10px;text-align:right">操作</th></tr></thead><tbody id="schTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="schPagerInfo">共 0 条</span><span id="schPageSize"></span></div><div class="tms-page-numbers" id="schPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-schedule" data-standard-list-shell="schedule"></div>
     <!-- 教练排课 -->
     <div class="page-section" id="page-coachschedule">
       <div class="coach-ops-grid-card is-loading">
@@ -311,22 +251,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:16%;padding-left:20px">姓名</th><th style="width:16%">电话</th><th style="width:14%">校区</th><th style="width:12%">入职时间</th><th style="width:10%">状态</th><th style="width:18%">备注</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachTbody"></tbody></table></div></div>
     </div>
     <!-- 账号管理 -->
-    <div class="page-section" id="page-admin-users">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="adminUserSearch" placeholder="搜索姓名、手机号" oninput="onAdminUserFilterChange()">
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openAdminUserModal(null)">新增账号</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:130px;padding-left:20px">账号名</th><th style="width:100px">姓名</th><th style="width:112px">手机号</th><th style="width:90px">角色</th><th style="width:100px">绑定教练</th><th style="width:130px">微信绑定</th><th style="width:130px">服务号绑定</th><th style="width:82px">状态</th><th style="width:180px">权限说明</th><th class="tms-sticky-r" style="width:300px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="adminUserTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="adminUserPagerInfo">共 0 条</span><div id="adminUserPageSize"></div></div><div class="tms-page-numbers" id="adminUserPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-admin-users" data-standard-list-shell="admin-users"></div>
     <!-- 订场用户 -->
     <div class="page-section" id="page-courts">
       <div class="tms-stats-row" id="courtStatsRow"></div>
@@ -450,50 +375,9 @@
       </div>
     </div>
     <!-- 售卖课包 -->
-    <div class="page-section" id="page-packages">
-      <div class="course-package-showcase">
-        <div class="course-package-showcase-toolbar">
-          <div class="course-package-showcase-filters">
-            <div class="tms-search-wrapper">
-              <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="pkgSearch" placeholder="搜索姓名、手机号" oninput="onPackageFilterChange()">
-            </div>
-            <div id="pkgTypeFilterHost"></div>
-            <div id="pkgAudienceFilterHost"></div>
-            <div id="pkgCoachFilterHost"></div>
-            <div id="pkgStatusFilterHost"></div>
-            <div id="pkgTimeBandFilterHost"></div>
-          </div>
-          <div class="course-package-showcase-actions">
-            <button class="tms-btn tms-btn-ghost" onclick="openPackageMergeModal()">合并课包</button>
-            <button class="tms-btn tms-btn-primary" onclick="openPackageModal(null)">创建课包</button>
-          </div>
-        </div>
-        <div class="course-package-showcase-grid" id="packageGrid"></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="pkgPagerInfo">共 0 条</span><div id="pkgPageSize"></div></div><div class="tms-page-numbers" id="pkgPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-packages" data-standard-list-shell="packages"></div>
     <!-- 购买记录 -->
-    <div class="page-section" id="page-purchases">
-      <div class="tms-toolbar">
-        <div class="tms-toolbar-left">
-          <button class="tms-btn tms-btn-ghost" onclick="goPage('packages')">课包售卖</button>
-          <div class="tms-filters">
-            <div class="tms-search-wrapper">
-              <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="purSearch" placeholder="搜索姓名、手机号" oninput="onPurchaseFilterChange()">
-            </div>
-            <div id="purPackageFilterHost"></div>
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openPurchaseEntryModal()">课包购买</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:100px;padding-left:20px">支付日期</th><th style="width:80px">学员</th><th style="width:110px">课包</th><th style="width:90px">实收</th><th style="width:105px">余额</th><th style="width:80px">状态</th><th style="width:95px">归属教练</th><th style="width:90px">支付方式</th><th class="tms-sticky-r" style="width:120px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="purchaseTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="purPagerInfo">共 0 条</span><div id="purPageSize"></div></div><div class="tms-page-numbers" id="purPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-purchases" data-standard-list-shell="purchases"></div>
     <!-- 课包余额（已隐藏入口，仅保留底层审计页） -->
     <div class="page-section" id="page-entitlements">
       <div class="tms-audit-note">课包余额是学员当前可用课时余额。排课时实际消耗的是这里，不是直接消耗课程产品。</div>
@@ -546,25 +430,7 @@
       <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:34%;padding-left:20px">校区名称</th><th style="width:24%">校区代码</th><th style="width:22%">创建时间</th><th class="tms-sticky-r" style="width:132px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div></div>
     </div>
     <!-- 价格管理 -->
-    <div class="page-section" id="page-prices">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="priceSearch" placeholder="搜索姓名、手机号" oninput="onPriceFilterChange()">
-          </div>
-          <div id="priceTypeFilterHost"></div>
-          <div id="priceProductTypeFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openPriceModal()">新增价格</button>
-        </div>
-      </div>
-      <div class="tms-audit-note">价格在这里统一维护。订场和渠道核销会自动引用价格，并在流水里保存当时的价格快照。</div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table price-table"><thead><tr><th style="width:66px;padding-left:12px">类型</th><th style="width:64px">渠道</th><th style="width:372px">名称</th><th style="width:50px">场地类型</th><th style="width:60px">日期类型</th><th style="width:62px">商品类型</th><th style="width:58px">关联业务</th><th style="width:88px">时间段</th><th style="width:58px">时长</th><th style="width:54px">价格</th><th style="width:52px">状态</th><th class="tms-sticky-r" style="width:88px;padding-right:12px;text-align:right">操作</th></tr></thead><tbody id="priceTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="pricePagerInfo">共 0 条</span><div id="pricePageSize"></div></div><div class="tms-page-numbers" id="pricePagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-prices" data-standard-list-shell="prices"></div>
 </div>
 </div>
 </div>

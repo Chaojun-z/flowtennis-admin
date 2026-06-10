@@ -43,7 +43,7 @@ function fnBody(source, name) {
   assert.doesNotMatch(source, /function \w+PageNumbers\(/, `${file} should not define page-number rules locally`);
 });
 
-assert.match(html, /id="pkgPagerInfo"[\s\S]*id="pkgPageSize"[\s\S]*id="pkgPagerBtns"/, 'package page should expose the standard pager shell');
-assert.match(html, /id="pricePagerInfo"[\s\S]*id="pricePageSize"[\s\S]*id="pricePagerBtns"/, 'price page should expose the standard pager shell');
+assert.match(appSource, /infoId:'pkgPagerInfo'[\s\S]*pageSizeId:'pkgPageSize'[\s\S]*buttonsId:'pkgPagerBtns'/, 'package page should expose the standard pager shell');
+assert.match(appSource, /infoId:'pricePagerInfo'[\s\S]*pageSizeId:'pricePageSize'[\s\S]*buttonsId:'pricePagerBtns'/, 'price page should expose the standard pager shell');
 
 console.log('standard list flow tests passed');

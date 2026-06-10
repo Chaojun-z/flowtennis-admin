@@ -6,12 +6,16 @@ const courseSource = [
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'products.js'), 'utf8'),
   fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'packages.js'), 'utf8')
 ].join('\n');
+const standardSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'standard', 'components.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const filtersCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'filters.css'), 'utf8');
-const purchaseSectionStart = html.indexOf('id="page-purchases"');
-const purchaseSectionEnd = html.indexOf('id="page-entitlements"', purchaseSectionStart);
-const purchaseSection = html.slice(purchaseSectionStart, purchaseSectionEnd === -1 ? html.length : purchaseSectionEnd);
+const packageShellConfigStart = standardSource.indexOf("{key:'packages'");
+const packageShellConfigEnd = standardSource.indexOf("{key:'purchases'", packageShellConfigStart);
+const packageShellConfig = standardSource.slice(packageShellConfigStart, packageShellConfigEnd === -1 ? standardSource.length : packageShellConfigEnd);
+const purchaseShellConfigStart = standardSource.indexOf("{key:'purchases'");
+const purchaseShellConfigEnd = standardSource.indexOf("{key:'prices'", purchaseShellConfigStart);
+const purchaseShellConfig = standardSource.slice(purchaseShellConfigStart, purchaseShellConfigEnd === -1 ? standardSource.length : purchaseShellConfigEnd);
 
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
@@ -22,6 +26,7 @@ function fnBody(name){
   const next = candidates.length ? Math.min(...candidates) : -1;
   return html.slice(start, next === -1 ? html.length : next);
 }
+const openPackageModalBody = fnBody('openPackageModal');
 
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
@@ -66,12 +71,12 @@ assert.match(pagesCss, /\.topbar\{[^}]*background:var\(--shell-app-bg\)[^}]*bord
 assert.match(pagesCss, /\.content\{[^}]*background:var\(--shell-app-bg\)/, 'content area should use shared shell background');
 
 assert.match(html, /id="page-packages"/, 'should have packages page section');
-assert.match(html, /id="pkgTimeBandFilterHost"/, 'package page should expose a time band filter');
-assert.match(html, /id="pkgCoachFilterHost"/, 'package page should expose a coach filter');
-assert.match(html, /id="pkgAudienceFilterHost"/, 'package page should expose an adult/youth filter');
+assert.match(packageShellConfig, /pkgTimeBandFilterHost/, 'package page should expose a time band filter');
+assert.match(packageShellConfig, /pkgCoachFilterHost/, 'package page should expose a coach filter');
+assert.match(packageShellConfig, /pkgAudienceFilterHost/, 'package page should expose an adult/youth filter');
 assert.match(html, /id="page-purchases"/, 'should have purchases page section');
 assert.match(html, /course-showcase/, 'course product page should use the new showcase container');
-assert.match(html, /course-package-showcase/, 'package page should use the new showcase container');
+assert.match(packageShellConfig, /course-package-showcase/, 'package page should use the new showcase container');
 assert.match(html, /product-card-shell/, 'product page should render the gemini-style product cards');
 assert.match(html, /package-card-shell/, 'package page should render the gemini-style package cards');
 assert.match(html, /function packageSortValue\(/, 'package list should expose a persisted sort value helper');
@@ -98,7 +103,8 @@ assert.doesNotMatch(html, /const t=\{students:[\s\S]*?\n\s*const t=\{students:/,
 assert.match(html, /workbench:'工作台'/, 'page title map should include coach workbench');
 assert.doesNotMatch(html, /function syncPackageProductMeta/, 'package modal should not sync product metadata anymore');
 assert.doesNotMatch(fnBody('openPackageModal'), /pkg_productId|课程产品|课程类型跟随课程产品/, 'package modal should no longer require course product selection');
-assert.match(fnBody('openPackageModal'), /基础属性[\s\S]*学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*规格与价格[\s\S]*pkg_lessons_label[\s\S]*价格[\s\S]*上课时间与效期[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*教练和场地[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should follow the standardized package creation layout');
+assert.match(openPackageModalBody, /renderDetailDrawerFormCard\('基础属性'[\s\S]*renderDetailDrawerFormCard\('规格与价格'[\s\S]*renderDetailDrawerFormCard\('上课时间与效期'[\s\S]*renderDetailDrawerFormCard\('教练和场地'/, 'package modal should follow the standardized package card order');
+assert.match(openPackageModalBody, /学员类型[\s\S]*课程类型[\s\S]*上课人数[\s\S]*状态[\s\S]*pkg_lessons_label[\s\S]*价格[\s\S]*活动时间[\s\S]*可用时间[\s\S]*时段类型[\s\S]*可用时段[\s\S]*归属教练[\s\S]*可用校区[\s\S]*可上课教练[\s\S]*备注/, 'package modal should include the standardized package creation fields');
 assert.match(fnBody('openPackageModal'), /courseType==='小班课'\?'次数':'课时'/, 'small group package modal should label package amount as count');
 assert.match(fnBody('openPackageModal'), /10\$\{packageUnitLabel\}[\s\S]*20\$\{packageUnitLabel\}/, 'package shortcut chips should follow the current package unit label');
 assert.match(fnBody('standardPackageLabel'), /packageLessonUnitLabel\(p\)/, 'small group package labels should show count instead of lesson hours');
@@ -126,8 +132,10 @@ assert.doesNotMatch(fnBody('openPackageModal'), /适用日期|pkg_timeScope/, 'p
 assert.match(html, /function courseSurchargePayMethodOptions\(\)[\s\S]*payMethodOptions\(\)\.filter/, 'schedule surcharge payment should reuse shared payment methods');
 assert.match(fnBody('courseSurchargePayMethodOptions'), /\['储值扣款','课包划扣','大众点评券码','抖音券码','其他'\]\.includes\(option\.value\)/, 'schedule surcharge payment should hide non-cash payment methods');
 assert.match(fnBody('openScheduleModal'), /renderStandardDropdownHtml\('sch_fieldFeePayMethod','支付方式',courseSurchargePayMethodOptions\(\)/, 'schedule surcharge field should use filtered shared payment methods');
-assert.match(fnBody('openScheduleModal'), /schedule-settlement-row[\s\S]*课程类型[\s\S]*结算方式[\s\S]*扣减课包/, 'schedule modal should order course type, settlement type, then package deduction');
-assert.match(fnBody('openScheduleModal'), /schedule-course-type-item[\s\S]*schedule-settlement-type-item[\s\S]*schedule-entitlement-item/, 'schedule modal should give course and settlement compact columns and package a wide column');
+assert.match(fnBody('openScheduleModal'), /schedule-course-type-item[\s\S]*schedule-settlement-row">\$\{settlementField\}\$\{packageField\}/, 'schedule modal should order course type before settlement row');
+assert.match(fnBody('openScheduleModal'), /const settlementField=`[\s\S]*结算方式[\s\S]*const packageField=`[\s\S]*扣减课包/, 'schedule modal settlement row should render settlement type before package deduction');
+assert.match(fnBody('openScheduleModal'), /schedule-course-type-item[\s\S]*schedule-settlement-row">\$\{settlementField\}\$\{packageField\}/, 'schedule modal should give course and settlement compact columns and package a wide column');
+assert.match(fnBody('openScheduleModal'), /schedule-settlement-type-item[\s\S]*schedule-entitlement-item/, 'schedule settlement and package columns should keep their standard classes');
 assert.match(fnBody('openScheduleModal'), /schedule-field-fee-section[\s\S]*schedule-field-fee-main-row[\s\S]*是否收补差[\s\S]*补差金额[\s\S]*支付方式[\s\S]*schedule-field-fee-note-row[\s\S]*补差说明/, 'schedule surcharge fields should split main fields and note into separate rows');
 assert.match(fnBody('openScheduleModal'), /textarea class="finput tms-form-control schedule-field-fee-note" id="sch_fieldFeeNote"/, 'schedule surcharge note should use a readable full-width textarea');
 assert.match(pagesCss, /schedule-course-type-item[\s\S]*flex:0 0 120px[\s\S]*max-width:120px/, 'schedule modal course type should use a compact 120px column');
@@ -139,7 +147,7 @@ assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeStart\$\{suffix\}[\s
 assert.match(fnBody('applyPackageTimeBandPreset'), /pkg_timeEnd\$\{suffix\}[\s\S]*getScheduleTimeOptions/, 'package modal end time should use the schedule custom time picker');
 assert.doesNotMatch(fnBody('openPackageModal'), /type="time"/, 'package modal should not use native time inputs');
 assert.doesNotMatch(fnBody('packageTimeScopeOptions'), /value:'custom'|自定义/, 'package time window scope should not include custom');
-assert.match(fnBody('openPackageModal'), /tms-checkbox-matrix purchase-coach-picker package-coach-picker[\s\S]*packageCoachChecks/, 'package allowed coaches should use purchase modal checkbox matrix style');
+assert.match(fnBody('openPackageModal'), /packageCoachPickerHtml\(rv\(p,'coachNames',\[\]\)\)/, 'package allowed coaches should use the drawer choice UI');
 assert.match(fnBody('packageCoachChecks'), /pkg-coach-cb/, 'package allowed coach checks should keep the save selector class');
 assert.match(html, /function applyPackageTimeBandPreset/, 'package modal should apply simple default windows for time band presets');
 assert.match(html, /function setPackageLessonShortcut\(/, 'package modal should provide lesson shortcuts');
@@ -169,18 +177,18 @@ assert.doesNotMatch(html, /只支持规则一致的课包合并。并入课包�
 assert.doesNotMatch(html, /课程产品定义上什么课；售卖课包定义怎么卖、什么时候能买、什么时候能用。创建售卖课包时会直接绑定一个课程产品。/, 'package page should remove the long banner description');
 assert.doesNotMatch(html, /id="page-packages"[\s\S]*搜索课包名称、课程产品、时段/, 'package search should no longer mention course products');
 assert.match(html, /openPackageModal\(null\)">创建课包/, 'package page primary action should say create package');
-assert.match(html, /setCourtModalFrame\(id\?'编辑课包':'创建课包'/, 'package modal title should use create package copy');
-assert.match(fnBody('openPackageModal'), /deactivatePackage\('\$\{p\.id\}'\)[\s\S]*下架/, 'package edit modal should use deactivate copy');
+assert.match(fnBody('openPackageModal'), /titleHtml:packageDrawerHeaderHtml\(p,id\?'edit':'create'\)/, 'package modal title should use create package copy');
+assert.match(fnBody('packageBoardCardHtml'), /deactivatePackage\('\$\{p\.id\}'\)[\s\S]*下架/, 'package card should use deactivate copy');
 assert.doesNotMatch(html, /id="page-purchases"[\s\S]*搜索学员、课包、课程产品/, 'purchase search should no longer mention course products');
 assert.doesNotMatch(html, /id="page-packages"[\s\S]*还没有课程产品|id="page-packages"[\s\S]*先创建课程产品，再基于课程产品创建售卖课包。/, 'package page should not require course products to create a package');
 assert.doesNotMatch(html, /关联产品:/, 'package cards should not show linked product subtitle');
 assert.doesNotMatch(fnBody('packageBoardCardHtml'), /showcase-status-tag[\s\S]*启用/, 'package cards should not show the redundant active status tag');
 assert.doesNotMatch(fnBody('packageBoardCardHtml'), /packageCardTags/, 'package cards should not show duplicate course type tags');
 assert.match(fnBody('packageStatusBadge'), /packageListStatusValue[\s\S]*已停售/, 'package stopped sale state should render from package status');
-assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgTimeBandFilter'\)/, 'package cards should filter by time band');
-assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgCoachFilter'\)/, 'package cards should filter by coach');
-assert.match(fnBody('renderPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
-assert.match(fnBody('renderPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
+assert.match(fnBody('getFilteredPackages'), /document\.getElementById\('pkgTimeBandFilter'\)/, 'package cards should filter by time band');
+assert.match(fnBody('getFilteredPackages'), /document\.getElementById\('pkgCoachFilter'\)/, 'package cards should filter by coach');
+assert.match(fnBody('getFilteredPackages'), /document\.getElementById\('pkgAudienceFilter'\)/, 'package cards should filter by adult or youth');
+assert.match(fnBody('getFilteredPackages'), /packageAudienceLabelFromText\(\[p\.audience,p\.type,p\.productName,p\.name,p\.packageName,p\.notes\]\)!==af/, 'package audience filter should use the structured audience label');
 assert.match(html, /const PACKAGE_BOARD_COLUMNS=\[[\s\S]*青少年 · 私教课[\s\S]*青少年 · 小班课[\s\S]*成人 · 私教课[\s\S]*成人 · 小班课[\s\S]*朝珺/, 'package board should render the four teaching columns plus a Chaojun column');
 assert.match(html, /function packageIsChaojunOnlyOwned\([\s\S]*ownerCoach[\s\S]*includes\('朝珺'\)/, 'package board should identify packages whose owner coach name includes Chaojun');
 assert.doesNotMatch(fnBody('packageIsChaojunOnlyOwned'), /coachNames|coachIds/, 'package board should not move packages into Chaojun just because Chaojun is an available coach');
@@ -251,7 +259,7 @@ assert.match(html, /function selectPurchaseTopCampus\([\s\S]*refreshPurchaseTopF
 assert.match(html, /function onPurchaseDateRangeFilterChange\([\s\S]*purDateRangeFilterValue=value[\s\S]*renderPurchases\(\)/, 'purchase top time selector should refresh orders');
 assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/, 'purchase filtering should not depend only on the rendered dropdown input');
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
-assert.match(fnBody('renderPackages'), /const courseType=standardCourseTypeFilterValue\(p\)/, 'package card should normalize legacy course type labels to standard filter values');
+assert.match(fnBody('getFilteredPackages'), /const courseType=standardCourseTypeFilterValue\(p\)/, 'package card should normalize legacy course type labels to standard filter values');
 assert.match(html, /function packageCoreClassLabel\([\s\S]*体验课[\s\S]*experienceType[\s\S]*私教体验课[\s\S]*小班体验课/, 'shared package label should show both experience-course names');
 assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'\]/, 'package purchase pay method should use the shared pay method source with coupon codes');
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
@@ -277,15 +285,15 @@ assert.match(pagesCss, /package-card-shell\{[^}]*position:relative[^}]*backgroun
 assert.match(pagesCss, /package-card-shell\.is-inactive\{[^}]*opacity:\.9[^}]*border-color:#F3F4F6/, 'inactive package cards should be visually de-emphasized');
 assert.match(pagesCss, /package-sales-card-body\{[^}]*gap:0[^}]*padding:0/, 'package card upper content should rely on the 12px card padding');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*color:#6B7280[^}]*font-size:13px[^}]*margin-top:4px[^}]*margin-bottom:16px/, 'package audience and lesson text should use 13px gray spacing');
-assert.match(pagesCss, /package-rule-line\{[^}]*font-size:12px[^}]*color:#9CA3AF[^}]*line-height:1\.2/, 'package campus and coach text should use 12px compact gray text');
-assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*padding:4px 12px[^}]*background:#FFFFFF[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*font-size:12px/, 'package edit and deactivate buttons should use 12px px-3 py-1 styling');
-assert.match(pagesCss, /package-card-meta\{[^}]*color:#9CA3AF[^}]*font-size:11px/, 'package created date and order count should use 11px gray text');
+assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px[^}]*color:#9CA3AF[^}]*line-height:1\.2/, 'package campus and coach text should use compact gray text');
+assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*padding:4px 10px[^}]*background:#FFFFFF[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*font-size:12px/, 'package edit and deactivate buttons should use compact 12px styling');
+assert.match(pagesCss, /package-card-meta\{[^}]*color:#9CA3AF[^}]*font-size:10px/, 'package created date and order count should use compact gray text');
 assert.match(pagesCss, /package-time-band-badge\{[^}]*border-radius:6px[^}]*font-size:10px[^}]*font-weight:500/, 'package time band tag should use 10px medium rounded style');
-assert.match(pagesCss, /package-time-band-badge\.is-prime\{background:#FEF9E7;color:#D4AF37;border-color:#FBEBA7/, 'package prime tag should use the gold design');
-assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{background:#F3F4F6;color:#6B7280;border-color:#E5E7EB/, 'package off-peak tag should use the gray design');
-assert.match(pagesCss, /package-time-band-badge\.is-all\{background:#E6F0FA;color:#4A90E2/, 'package all-day tag should use the blue design');
+assert.match(pagesCss, /package-time-band-badge\.is-prime\{[^}]*background:#FEF9E7[^}]*color:#D4AF37[^}]*border-color:#FBEBA7/, 'package prime tag should use the gold design');
+assert.match(pagesCss, /package-time-band-badge\.is-offpeak\{[^}]*background:#F3F4F6[^}]*color:#6B7280[^}]*border-color:#E5E7EB/, 'package off-peak tag should use the gray design');
+assert.match(pagesCss, /package-time-band-badge\.is-all\{[^}]*background:#E6F0FA[^}]*color:#4A90E2/, 'package all-day tag should use the blue design');
 assert.match(fnBody('packageTimeBandBadgeHtml'), /package-time-band-crown[\s\S]*packageTimeBandBadgeClass/, 'prime package badge should include a small crown icon');
-assert.match(pagesCss, /package-status-badge\{[^}]*position:absolute[^}]*top:12px[^}]*right:12px[^}]*font-size:11px[^}]*font-weight:500/, 'package sale status should be positioned at the card top right');
+assert.match(pagesCss, /package-status-badge\{[^}]*position:absolute[^}]*top:12px[^}]*right:12px[^}]*font-size:10px[^}]*font-weight:500/, 'package sale status should be positioned at the card top right');
 assert.match(pagesCss, /package-status-badge\.is-on\{background:#F0FDF4;color:#16A34A;border-color:#DCFCE7/, 'active package status should use green badge styling');
 assert.match(pagesCss, /package-status-badge\.is-off\{background:#F9FAFB;color:#9CA3AF;border-color:#E5E7EB/, 'inactive package status should use gray badge styling');
 assert.match(pagesCss, /package-sales-footer\{[^}]*justify-content:space-between[^}]*border-top:1px dashed #E5E7EB[^}]*margin-top:12px[^}]*padding:14px 0 0/, 'package footer should use dashed divider and card-side alignment');
@@ -300,14 +308,14 @@ assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*color:#
 assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\.is-danger\{[^}]*background:#FFFFFF[^}]*color:#EF4444[^}]*border-color:#FEE2E2/, 'package deactivate button should use red ghost styling');
 assert.match(html, /function showPackageRuleTooltip\(/, 'package rule tooltip should use a fixed floating tooltip');
 assert.match(fnBody('packageBoardCardHtml'), /onmouseenter="showPackageRuleTooltip\(event\)"[\s\S]*onmouseleave="hidePackageRuleTooltip\(\)"/, 'package rule tooltip should not be clipped inside the scroll column');
-assert.doesNotMatch(purchaseSection, /导出/, 'purchase page should remove export button');
-assert.doesNotMatch(purchaseSection, /导入/, 'purchase page should remove import button');
-assert.match(purchaseSection, /onclick="goPage\('packages'\)"[\s\S]*课包售卖/, 'purchase page should expose a back entry to package sales');
-assert.doesNotMatch(purchaseSection, /purDateFrom/, 'purchase page should remove start date filter');
-assert.doesNotMatch(purchaseSection, /purDateTo/, 'purchase page should remove end date filter');
+assert.doesNotMatch(purchaseShellConfig, /导出/, 'purchase page should remove export button');
+assert.doesNotMatch(purchaseShellConfig, /导入/, 'purchase page should remove import button');
+assert.match(purchaseShellConfig, /goPage\(\\'packages\\'\)[\s\S]*课包售卖/, 'purchase page should expose a back entry to package sales');
+assert.doesNotMatch(purchaseShellConfig, /purDateFrom/, 'purchase page should remove start date filter');
+assert.doesNotMatch(purchaseShellConfig, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /openPurchaseEntryModal\(\)">课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(html, /<th style="width:100px;padding-left:20px">支付日期<\/th><th style="width:80px">学员<\/th><th style="width:110px">课包<\/th><th style="width:90px">实收<\/th><th style="width:105px">余额<\/th><th style="width:80px">状态<\/th><th style="width:95px">归属教练<\/th><th style="width:90px">支付方式<\/th>/, 'purchase table should narrow student and package columns');
+assert.match(purchaseShellConfig, /label:'支付日期',style:'width:100px;padding-left:20px'[\s\S]*label:'学员',style:'width:80px'[\s\S]*label:'课包',style:'width:110px'[\s\S]*label:'实收',style:'width:90px'[\s\S]*label:'余额',style:'width:105px'[\s\S]*label:'状态',style:'width:80px'[\s\S]*label:'归属教练',style:'width:95px'[\s\S]*label:'支付方式',style:'width:90px'/, 'purchase table should narrow student and package columns');
 assert.doesNotMatch(html, /购买记录用于查账和追溯/, 'purchase page should remove the long audit explanation');
 assert.doesNotMatch(fnBody('purchasePackageListLabel'), /replace\(\s*\/\^1v\\d私教课/, 'purchase package column should keep the 1v1/1v2 prefix');
 assert.match(fnBody('purchasePackageListLabel'), /replace\([^)]*已停售/, 'purchase package column should only remove stopped-sale copy from the package label');

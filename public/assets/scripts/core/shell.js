@@ -19,6 +19,7 @@ function ensureGlobalLiveClock(){
 function renderRoleShell(){
   if(typeof mountSidebarShell==='function')mountSidebarShell();
   if(typeof mountTopbarShell==='function')mountTopbarShell();
+  if(typeof mountStandardListShells==='function')mountStandardListShells();
   const isAdmin=currentUser?.role==='admin';
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   document.getElementById('userNamePill').textContent=(currentUser?.name||'用户');
