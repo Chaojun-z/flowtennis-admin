@@ -261,11 +261,15 @@ assert.match(pagesCss, /#page-packages \.course-package-showcase \.tms-search-wr
 assert.match(filtersCss, /\.tms-dropdown-display\{[^}]*height:36px[^}]*min-width:0[^}]*width:auto/, 'package filters should inherit the adaptive dropdown width standard');
 assert.doesNotMatch(pagesCss, /#pkg(Type|Coach|Status|TimeBand)FilterHost \.tms-dropdown:not\(\.has-value\) \.tms-dropdown-display[\s\S]*width:60px/, 'package filters should not keep page-level 60px overrides');
 assert.match(pagesCss, /package-board-column\{[^}]*border:1px solid rgba\(255,255,255,\.05\)[^}]*border-radius:12px[^}]*background:rgba\(0,0,0,\.05\)[^}]*padding:12px/, 'package board columns should use the subtle dark slot style');
-assert.match(pagesCss, /#page-packages \.course-package-showcase\{height:calc\(100vh - var\(--topH\) - 44px\);min-height:0\}/, 'package board should stay within the visible page area');
-assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:hidden/, 'package board grid should not scroll vertically as a full page');
+assert.match(pagesCss, /body\.is-packages-page \.content\{overflow:hidden\}/, 'package page should stop the outer page scroller');
+assert.match(html, /document\.body\.classList\.toggle\('is-packages-page',pg==='packages'\)/, 'package navigation should toggle the package-only scroll state');
+assert.match(pagesCss, /#page-packages \.course-package-showcase\{height:100%;min-height:0\}/, 'package board should fill the fixed page area');
+assert.match(pagesCss, /\.course-package-showcase-toolbar\{flex:0 0 56px;height:56px\}/, 'package filters should reserve a fixed header height');
+assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-x:auto[^}]*overflow-y:auto/, 'package board grid should be the only vertical scroller');
+assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*padding-bottom:24px/, 'package board should leave room below the last package');
 assert.match(pagesCss, /#page-packages \.course-package-showcase-grid\{[^}]*overscroll-behavior-x:contain[^}]*touch-action:pan-x pan-y/, 'package board horizontal scrolling should not trigger browser back navigation');
 assert.match(pagesCss, /package-board-column\{[^}]*display:flex[^}]*flex-direction:column/, 'package board columns should be flex containers');
-assert.match(pagesCss, /package-board-stack\{[^}]*flex:1[^}]*min-height:0[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/, 'package cards should scroll inside each column');
+assert.match(pagesCss, /package-board-stack\{[^}]*flex:0 0 auto[^}]*min-height:0[^}]*overflow-y:visible[^}]*overscroll-behavior:contain/, 'package cards should extend naturally inside the board scroller');
 assert.match(pagesCss, /package-board-stack\{[^}]*scrollbar-width:none[^}]*-ms-overflow-style:none/, 'package board column scrollbars should be hidden');
 assert.match(pagesCss, /package-board-stack::-webkit-scrollbar\{display:none\}/, 'package board column webkit scrollbars should be hidden');
 assert.match(pagesCss, /package-board-title\{[^}]*color:#FFFFFF[^}]*font-size:15px[^}]*font-weight:600[^}]*letter-spacing:\.025em/, 'package board title should use white semibold tracking');

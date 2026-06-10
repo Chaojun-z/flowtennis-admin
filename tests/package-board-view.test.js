@@ -31,12 +31,15 @@ assert.match(cssRule('#page-packages .course-package-showcase-grid'), /scrollbar
 assert.match(styles, /#page-packages \.course-package-showcase-grid::-webkit-scrollbar\{display:none\}/, 'package board webkit scrollbar should be hidden');
 assert.match(cssRule('#page-packages.active'), /height:100%/, 'package page should keep the top title area fixed outside package scrolling');
 assert.match(cssRule('#page-packages.active'), /overflow:hidden/, 'package page itself should not scroll the top title away');
-assert.match(cssRule('#page-packages .course-package-showcase'), /height:calc\(100vh - var\(--topH\) - 44px\)/, 'package board shell should constrain scrolling below the fixed page title');
-assert.match(cssRule('.course-package-showcase-toolbar'), /flex:0 0 auto/, 'package filters and actions should stay outside the scrolling area');
+assert.match(cssRule('body.is-packages-page .content'), /overflow:hidden/, 'package page should stop the outer content scroller');
+assert.match(fnBody('goPage'), /document\.body\.classList\.toggle\('is-packages-page',pg==='packages'\)/, 'package page should toggle the package-only scroll state');
+assert.match(cssRule('#page-packages .course-package-showcase'), /height:100%/, 'package board shell should fill the fixed content area');
+assert.match(cssRule('.course-package-showcase-toolbar'), /flex:0 0 56px/, 'package filters and actions should keep a fixed reserved height');
 assert.match(fnBody('renderPackages'), /package-board-column[\s\S]*draggable="true"[\s\S]*package-board-header[\s\S]*package-board-stack/, 'package board should keep header and cards inside one draggable column');
 assert.doesNotMatch(fnBody('renderPackages'), /package-board-header-row|package-board-body-row/, 'package board should not split headers away from draggable columns');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-x:auto/, 'package board should be the horizontal drag container');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /overflow-y:auto/, 'only the package card board should scroll vertically');
+assert.match(cssRule('#page-packages .course-package-showcase-grid'), /padding-bottom:24px/, 'package board should leave room below the last package card');
 assert.match(cssRule('#page-packages .course-package-showcase-grid'), /cursor:grab/, 'package board should invite page-level horizontal drag');
 assert.match(source, /function initPackageBoardHorizontalDrag\(/, 'package board should support page-level horizontal drag');
 assert.match(fnBody('renderPackages'), /initPackageBoardHorizontalDrag\(\)/, 'package board horizontal drag should be wired after render');
