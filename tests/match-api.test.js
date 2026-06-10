@@ -480,6 +480,11 @@ assert.match(matchAdminMessage.data.thing4.value, /马坡网球馆/);
 assert.match(matchAdminMessage.data.const7.value, /约球提醒/);
 assert.match(matchAdminMessage.data.thing2.value, /新约球/);
 assert.match(matchAdminMessage.data.thing6.value, /周末双打/);
+assert.ok(rules.buildOfficialAccountMatchAdminMessage({
+  templateId: 'template-match-admin',
+  openid: 'oa-admin',
+  match: { id: 'match-1' }
+}).miniprogram.appid);
 
 assert.deepEqual(rules.collectMatchAdminOfficialAccountRecipients([
   { id: 'boss', role: 'admin', officialAccountOpenId: 'oa-boss' },

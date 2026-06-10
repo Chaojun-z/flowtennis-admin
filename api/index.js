@@ -3338,7 +3338,7 @@ function matchDetailPagePath(matchId=''){
   const id=encodeURIComponent(String(matchId||''));
   return `pages/match-detail/index${id?`?id=${id}`:''}`;
 }
-function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MATCH_MINIPROGRAM_APPID}={}){
+function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MATCH_MINIPROGRAM_APPID||WECHAT_MINIPROGRAM_APPID}={}){
   const title=match?.title||'新约球';
   const venue=match?.venueName||match?.venuename||'待定';
   const targetHeadcount=match?.targetHeadcount||match?.targetheadcount||'';
@@ -3346,7 +3346,7 @@ function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MA
     touser:openid,
     template_id:templateId,
     miniprogram:{
-      appid:String(appId||MATCH_MINIPROGRAM_APPID),
+      appid:String(appId||MATCH_MINIPROGRAM_APPID||WECHAT_MINIPROGRAM_APPID),
       pagepath:matchDetailPagePath(match?.id)
     },
     data:{
@@ -3368,7 +3368,7 @@ function collectMatchAdminOfficialAccountRecipients(users=[],configuredOpenids=M
     .filter(Boolean);
   return [...new Set(openids)];
 }
-async function sendOfficialAccountMatchAdminNotification({match,users=null,loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),templateId=MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID,openids=MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS,appId=MATCH_MINIPROGRAM_APPID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+async function sendOfficialAccountMatchAdminNotification({match,users=null,loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),templateId=MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID,openids=MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS,appId=MATCH_MINIPROGRAM_APPID||WECHAT_MINIPROGRAM_APPID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
   const resolvedUsers=users||await loadUsers();
   const recipients=collectMatchAdminOfficialAccountRecipients(resolvedUsers,openids);
   const mode=resolveOfficialAccountSendMode({appId:WECHAT_OFFICIAL_ACCOUNT_APPID,secret:WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId,forceMock});

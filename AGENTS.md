@@ -405,3 +405,16 @@
 4. 历史 worktree 只允许只读取证和差异比对。
 5. 如果历史文档仍写 `thread26-staging-latest`、`thread114-staging-merge`、旧主目录禁用等旧口径，必须按本文件的新口径执行，并在必要时更新旧文档。
 6. 新任务默认从当前根目录跟踪 `origin/main` 的分支继续；如果需要新分支，必须从 `origin/main` 创建普通分支，不得创建 worktree。
+
+## 9. 微信服务号通知代理规则
+
+1. 服务号模板消息不得从本地电脑直接请求微信接口，否则会因为本地出口 IP 不在微信白名单里被拒绝。
+2. 服务号模板消息必须优先走阿里云固定 IP 代理：
+   - 公网 IP：`39.106.153.44`
+   - 代理地址：`http://39.106.153.44/wechat-official-proxy/send-template`
+   - 健康检查：`http://39.106.153.44/wechat-official-proxy/health`
+3. 本地和 Vercel 必须配置：
+   - `WECHAT_OFFICIAL_ACCOUNT_PROXY_URL`
+   - `WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET`
+4. `WECHAT_OFFICIAL_ACCOUNT_PROXY_SECRET` 是敏感密钥，禁止写入代码、文档或聊天明文；只允许放在 `.env.local`、Vercel 环境变量或阿里云服务器环境文件。
+5. 发送约球/排课服务号测试通知前，先确认代理健康检查返回 `{"ok":true}`，再发送模板消息。
