@@ -54,25 +54,22 @@ async function main() {
       await insertUser(pool, id, phone);
     }
 
-    await assert.rejects(
-      () => rules.createMatchForUser(ids.creator, {
-        title: `${prefix} 普通用户发起`,
-        matchType: 'double',
-        targetHeadcount: 4,
-        startTime: futureDate(2),
-        endTime: futureDate(4),
-        venueName: '马坡网球馆',
-        venueAddress: '马坡',
-        venueLatitude: 40.123,
-        venueLongitude: 116.456,
-        ntrpMin: 2.5,
-        ntrpMax: 3.5,
-        genderPreference: '不限',
-        estimatedCourtFee: 480
-      }),
-      /仅管理员可发起约球/,
-      'plain match users should no longer be able to create matches'
-    );
+    const plainCreated = await rules.createMatchForUser(ids.creator, {
+      title: `${prefix} 普通用户发起`,
+      matchType: 'double',
+      targetHeadcount: 4,
+      startTime: futureDate(2),
+      endTime: futureDate(4),
+      venueName: '马坡网球馆',
+      venueAddress: '马坡',
+      venueLatitude: 40.123,
+      venueLongitude: 116.456,
+      ntrpMin: 2.5,
+      ntrpMax: 3.5,
+      genderPreference: '不限',
+      estimatedCourtFee: 480
+    });
+    assert.equal(plainCreated.creatorUserId, ids.creator, 'plain match users should be able to create matches');
 
     const matchId = `${prefix}-match-main`;
     const createdAt = new Date().toISOString();

@@ -35,6 +35,10 @@ assert.ok(rules.resolveMatchPrepayClosure, 'api._test should expose prepay closu
 assert.ok(rules.assertMatchTechnicalRatingInput, 'api._test should expose technical rating validation');
 assert.ok(rules.buildMatchTechnicalRatingSummary, 'api._test should expose technical rating summary');
 assert.ok(rules.safeDatabaseUrlHost, 'api._test should expose safe database host helper');
+assert.ok(rules.buildOfficialAccountMatchAdminMessage, 'api._test should expose match admin official account message builder');
+assert.ok(rules.collectMatchAdminOfficialAccountRecipients, 'api._test should expose match admin official account recipient resolver');
+assert.ok(rules.sendOfficialAccountMatchAdminNotification, 'api._test should expose match admin official account notifier');
+assert.ok(rules.adminCancelMatch, 'api._test should expose admin match cancel helper');
 
 for (const table of [
   'match_users',
@@ -58,6 +62,7 @@ assert.match(apiSource, /currentHeadcount:nextCount/, 'registration should retur
 assert.match(apiSource, /if\(user\.type==='match_user'\)return sendJson\(res,\{error:'无管理端权限'\},403\);/, 'match user token must not pass admin APIs');
 assert.match(apiSource, /\/admin\/matches/, 'API should expose admin match endpoints');
 assert.match(apiSource, /adminBookingM=path\.match/, 'API should expose admin booking endpoint');
+assert.match(apiSource, /adminCancelM=path\.match/, 'API should expose admin cancel endpoint');
 assert.match(apiSource, /adminFeeConfirmM=path\.match/, 'API should expose admin fee confirmation endpoint');
 assert.match(apiSource, /requireMatchAdminPermission\(user,'match_ops'\)/, 'match booking and attendance admin APIs should require ops permission');
 assert.match(apiSource, /requireMatchAdminPermission\(user,'match_finance'\)/, 'match fee admin APIs should require finance permission');
@@ -66,6 +71,7 @@ assert.match(apiSource, /adminReplacementM=path\.match/, 'API should expose repl
 assert.match(apiSource, /adminTransferMatchReplacement/, 'API should implement replacement transfer flow');
 assert.match(apiSource, /cancelMatchForUser[\s\S]*status==='booked'[\s\S]*UPDATE match_registrations SET registrationStatus='cancelled'/, 'booked match cancel should also close active registrations');
 assert.match(apiSource, /cancelMatchForUser[\s\S]*status==='booked'[\s\S]*closeMatchFeeLedger/, 'booked match cancel should also settle fee split states');
+assert.match(apiSource, /adminCancelMatch[\s\S]*requireCreator:false[\s\S]*operatorType:'admin_user'/, 'admin cancel should keep delete/offline permission on the admin side');
 assert.match(apiSource, /if\(isFourPlayerGroupMatch\(match\)&&nextCount<4\)\{[\s\S]*closeMatchFeeLedger\(client,matchId,'四人局人数不足，已降级为自由局',\{onlyPrepay:true,mode:'downgraded'\}\)/, 'formation downgrade should close prepay ledgers with downgrade status instead of deleting them');
 assert.match(apiSource, /financialResponsibility='waive'/, 'booked match cancel should waive active registrations instead of dropping history');
 assert.match(apiSource, /prepay_cancelled/, 'booked match cancel should persist a dedicated prepay cancelled status');
@@ -116,6 +122,7 @@ assert.match(apiSource, /operationLogs/, 'admin match list should include operat
 assert.match(apiSource, /match_operation_logs ORDER BY createdAt DESC/, 'admin match list should load latest operation logs');
 assert.match(apiSource, /MATCH_WECHAT_TEMPLATE_ID/, 'match notifications should have a dedicated template id env');
 assert.match(apiSource, /notifyMatchUsers/, 'match operations should trigger subscribe notification helper');
+assert.match(apiSource, /createMatchForUser[\s\S]*sendOfficialAccountMatchAdminNotification\(\{match:created\}\)/, 'new match creation should notify admins through the official account');
 assert.match(apiSource, /运营接管/, 'match operations should record admin takeover behavior');
 assert.match(apiSource, /levelMode/, 'match posts should persist level mode');
 assert.match(apiSource, /formationStatus/, 'match posts should persist formation status');
@@ -449,8 +456,36 @@ assert.equal(profileStats.attendanceRateText, '67%');
 assert.equal(profileStats.totalFeeAmount, 42);
 assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'admin' }), true);
 assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', matchPermissions: ['match_ops'] }), true);
-assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', matchPermissions: [] }), false);
-assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', name: '陈丹丹', matchPermissions: [] }), false);
+assert.equal(rules.canMatchUserCreateByAdminUser({ role: 'editor', matchPermissions: [] }), true);
+assert.equal(rules.canMatchUserCreateByAdminUser(null), true);
+
+const matchAdminMessage = rules.buildOfficialAccountMatchAdminMessage({
+  templateId: 'template-match-admin',
+  openid: 'oa-admin',
+  appId: 'wx-match-app',
+  match: {
+    id: 'match-1',
+    title: '周末双打',
+    startTime: '2026-06-12T20:00:00.000Z',
+    venueName: '马坡网球馆',
+    targetHeadcount: 4
+  }
+});
+assert.equal(matchAdminMessage.touser, 'oa-admin');
+assert.equal(matchAdminMessage.template_id, 'template-match-admin');
+assert.equal(matchAdminMessage.miniprogram.appid, 'wx-match-app');
+assert.equal(matchAdminMessage.miniprogram.pagepath, 'pages/match-detail/index?id=match-1');
+assert.match(matchAdminMessage.data.keyword1.value, /周末双打/);
+assert.match(matchAdminMessage.data.keyword2.value, /2026-06-12 20:00/);
+assert.match(matchAdminMessage.data.keyword3.value, /马坡网球馆/);
+
+assert.deepEqual(rules.collectMatchAdminOfficialAccountRecipients([
+  { id: 'boss', role: 'admin', officialAccountOpenId: 'oa-boss' },
+  { id: 'ops', role: 'editor', matchPermissions: ['match_ops'], officialAccountOpenId: 'oa-ops' },
+  { id: 'finance', role: 'editor', matchPermissions: ['match_finance'], officialAccountOpenId: 'oa-finance' },
+  { id: 'empty', role: 'admin', officialAccountOpenId: '' }
+]), ['oa-boss', 'oa-ops']);
+assert.deepEqual(rules.collectMatchAdminOfficialAccountRecipients([], 'oa-a, oa-b'), ['oa-a', 'oa-b']);
 
 const matchCourtHistoryRow = rules.buildMatchCourtFinanceHistoryRow({
   match: {

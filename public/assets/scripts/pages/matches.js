@@ -76,6 +76,7 @@ function renderMatches(){
       `<span class="tms-action-link" onclick="confirmMatchFees('${row.id}')">生成AA</span>`,
       `<span class="tms-action-link" onclick="openMatchFeeModal('${row.id}')">收款</span>`,
       (['group_ready','group_locked'].includes(String(row.formationStatus||''))?`<span class="tms-action-link" onclick="openMatchReplacementModal('${row.id}')">替补</span>`:''),
+      `<span class="tms-action-link" onclick="cancelMatchByAdmin('${row.id}')">下架</span>`,
       `<span class="tms-action-link" onclick="openMatchLogModal('${row.id}')">日志</span>`
     ].filter(Boolean).join('');
     return `<tr><td style="padding-left:20px"><div class="tms-cell-main">${esc(row.title||'-')}</div><div class="tms-cell-sub">${esc(row.matchType||'')}${campusText&&campusText!=='-'?` · ${esc(campusText)}`:''}</div></td><td>${renderCourtCellText(matchTimeText(row),false)}</td><td>${renderCourtCellText(row.booking?.venueNameFinal||row.venueName||'待定')}</td><td><div class="tms-cell-text">${row.currentHeadcount||0}/${row.targetHeadcount||0}</div></td><td><span class="tms-tag">${esc(row.statusText||row.status||'-')}</span></td><td><div class="tms-cell-text">¥${fmt(row.estimatedCourtFee||0)}</div></td><td><div class="tms-cell-text">¥${fmt(row.booking?.finalcourtfee||row.booking?.finalCourtFee||row.finalCourtFee||0)}</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:220px">${esc(regs.map(r=>r.nickName||r.phone||r.userId).join('；')||'-')}</div></td><td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right">${actions}</td></tr>`;
@@ -97,6 +98,16 @@ async function saveMatchBooking(id){
     await apiCall('POST',`/admin/matches/${id}/booking`,{venueNameFinal:document.getElementById('matchVenueFinal').value.trim(),courtNo:document.getElementById('matchCourtNo').value.trim(),finalCourtFee:parseFloat(document.getElementById('matchFinalCourtFee').value)||0,bookingStatus:document.getElementById('matchBookingStatus').value});
     closeModal();toast('订场已保存','success');await loadMatches(true);
   }catch(e){toast('保存失败：'+e.message,'error');}
+}
+async function cancelMatchByAdmin(id){
+  const reason=String(window.prompt('请输入下架原因')||'').trim();
+  if(!reason){toast('请填写下架原因','warn');return;}
+  if(!await appConfirm('确认下架这个约球？',{title:'下架约球',confirmText:'确认下架'}))return;
+  try{
+    await apiCall('POST',`/admin/matches/${id}/cancel`,{reason});
+    toast('约球已下架','success');
+    await loadMatches(true);
+  }catch(e){toast('下架失败：'+e.message,'error');}
 }
 function openMatchAttendanceModal(id){
   const row=(matches||[]).find(x=>x.id===id);if(!row)return;

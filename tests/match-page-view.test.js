@@ -32,6 +32,8 @@ assert.match(page, /renderCourtDropdownHtml\('matchCampusFilter'/, 'match page c
 assert.match(pagesCss, /#page-matches \.tms-toolbar\{[^}]*align-items:center/, 'match toolbar should align filters with the latest page toolbar style');
 assert.match(page, /function matchCampusCode\(/, 'match page should expose a campus matcher for global campus tabs');
 assert.match(page, /function openMatchBookingModal\(/, 'match page should support booking action');
+assert.match(page, /function cancelMatchByAdmin\(/, 'match page should support admin cancel action');
+assert.match(page, /\/admin\/matches\/\$\{id\}\/cancel/, 'admin cancel should call the admin match cancel API');
 assert.match(page, /function openMatchAttendanceModal\(/, 'match page should support attendance action');
 assert.match(page, /function confirmMatchFees\(/, 'match page should support AA fee generation');
 assert.match(page, /function openMatchFeeModal\(/, 'match page should support fee split management');

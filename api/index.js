@@ -83,6 +83,8 @@ const FEISHU_COACH_BOT_APP_ID = String(process.env.FEISHU_COACH_BOT_APP_ID || ''
 const FEISHU_COACH_BOT_APP_SECRET = String(process.env.FEISHU_COACH_BOT_APP_SECRET || '').trim();
 const STUDENT_REMINDER_PUBLIC_BASE_URL = process.env.STUDENT_REMINDER_PUBLIC_BASE_URL || 'https://www.flowtennis.cn';
 const MATCH_WECHAT_TEMPLATE_ID = process.env.MATCH_WECHAT_TEMPLATE_ID;
+const MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID = process.env.MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID || '';
+const MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS = process.env.MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS || '';
 const MATCH_DATABASE_URL = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 const MATCH_CREATOR_CONFIRM_DEADLINE_HOURS = 12;
 const MATCH_PREPAY_WINDOW_HOURS = 2;
@@ -3324,6 +3326,74 @@ function buildMatchSubscribeMessage({templateId,openid,match,content}){
     }
   };
 }
+function parseCommaList(value=''){
+  return String(value||'').split(',').map(item=>item.trim()).filter(Boolean);
+}
+function formatMatchAdminNotifyTime(match={}){
+  return String(match?.starttime||match?.startTime||'').replace('T',' ').slice(0,16);
+}
+function matchDetailPagePath(matchId=''){
+  const id=encodeURIComponent(String(matchId||''));
+  return `pages/match-detail/index${id?`?id=${id}`:''}`;
+}
+function buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId=MATCH_MINIPROGRAM_APPID}={}){
+  const title=match?.title||'新约球';
+  const venue=match?.venueName||match?.venuename||'待定';
+  const targetHeadcount=match?.targetHeadcount||match?.targetheadcount||'';
+  return {
+    touser:openid,
+    template_id:templateId,
+    miniprogram:{
+      appid:String(appId||MATCH_MINIPROGRAM_APPID),
+      pagepath:matchDetailPagePath(match?.id)
+    },
+    data:{
+      first:{value:'有新的约球发布'},
+      keyword1:{value:truncateWechatValue(title)},
+      keyword2:{value:formatMatchAdminNotifyTime(match)},
+      keyword3:{value:truncateWechatValue(venue)},
+      keyword4:{value:truncateWechatValue(targetHeadcount?`${targetHeadcount}人`:'待定')},
+      remark:{value:'点击查看约球详情'}
+    }
+  };
+}
+function collectMatchAdminOfficialAccountRecipients(users=[],configuredOpenids=MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS){
+  const configured=parseCommaList(configuredOpenids);
+  if(configured.length)return [...new Set(configured)];
+  const openids=(users||[])
+    .filter(user=>String(user?.officialAccountOpenId||'').trim())
+    .filter(user=>String(user?.role||'')==='admin'||userHasFeaturePermission(user,'match_ops'))
+    .map(user=>String(user.officialAccountOpenId||'').trim())
+    .filter(Boolean);
+  return [...new Set(openids)];
+}
+async function sendOfficialAccountMatchAdminNotification({match,users=null,loadUsers=()=>getCachedScan(T_USERS).catch(()=>[]),templateId=MATCH_ADMIN_OFFICIAL_ACCOUNT_TEMPLATE_ID,openids=MATCH_ADMIN_OFFICIAL_ACCOUNT_OPENIDS,appId=MATCH_MINIPROGRAM_APPID,forceMock=WECHAT_OFFICIAL_ACCOUNT_MOCK_SEND,sendTemplate=sendOfficialAccountTemplateMessage}={}){
+  const resolvedUsers=users||await loadUsers();
+  const recipients=collectMatchAdminOfficialAccountRecipients(resolvedUsers,openids);
+  const mode=resolveOfficialAccountSendMode({appId:WECHAT_OFFICIAL_ACCOUNT_APPID,secret:WECHAT_OFFICIAL_ACCOUNT_SECRET,templateId,forceMock});
+  const result={success:true,mode,checked:recipients.length,sent:0,failed:0,skipped:0,items:[]};
+  if(!templateId){
+    result.skipped=recipients.length;
+    result.reason='missing_template';
+    return result;
+  }
+  for(const openid of recipients){
+    if(mode==='mock'){
+      result.sent++;
+      result.items.push({openid,sent:true,mocked:true});
+      continue;
+    }
+    try{
+      await sendTemplate(buildOfficialAccountMatchAdminMessage({templateId,openid,match,appId}));
+      result.sent++;
+      result.items.push({openid,sent:true});
+    }catch(err){
+      result.failed++;
+      result.items.push({openid,sent:false,error:String(err?.message||err)});
+    }
+  }
+  return result;
+}
 async function notifyMatchUsers(matchId,action){
   if(!MATCH_WECHAT_TEMPLATE_ID)return {skipped:true,reason:'missing_template'};
   const pool=getMatchSqlPool();
@@ -5623,9 +5693,7 @@ function ensureMatchUserResponse(req,res){
   catch(err){sendJson(res,{error:String(err?.message||'未登录')},401);return null;}
 }
 function canMatchUserCreateByAdminUser(adminUser){
-  if(!adminUser)return false;
-  const permissions=userMatchPermissions(adminUser);
-  return adminUser.role==='admin'||permissions.includes('match_ops');
+  return true;
 }
 async function canMatchUserCreate(userId){
   const pool=getMatchSqlPool();
@@ -5633,8 +5701,7 @@ async function canMatchUserCreate(userId){
   const user=userRes.rows[0]||{};
   const phone=normalizePhone(user.phone||'');
   if(!phone)return false;
-  const adminUser=await getCachedRow(T_USERS,phone).catch(()=>null);
-  return canMatchUserCreateByAdminUser(adminUser);
+  return canMatchUserCreateByAdminUser(null);
 }
 function buildMatchUserToken(user){
   return jwt.sign({id:user.id,type:'match_user',openid:user.openid},JWT_SECRET,{expiresIn:'7d'});
@@ -6267,14 +6334,16 @@ async function getMatchForViewer(matchId,viewerId){
   return view;
 }
 async function createMatchForUser(userId,input){
-  if(!(await canMatchUserCreate(userId)))throw new Error('仅管理员可发起约球');
+  if(!(await canMatchUserCreate(userId)))throw new Error('请先授权手机号');
   const row=assertMatchPostInput(input);
   const id=uuidv4();
   await getMatchSqlPool().query(
     'INSERT INTO match_posts(id,creatorUserId,title,matchType,targetHeadcount,startTime,endTime,venueName,venueAddress,venueLatitude,venueLongitude,ntrpMin,ntrpMax,levelMode,genderPreference,estimatedCourtFee,status,formationStatus,createdAt,updatedAt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW(),NOW())',
     [id,userId,row.title,row.matchType,row.targetHeadcount,row.startTime,row.endTime,row.venueName||'',row.venueAddress||'',row.venueLatitude||null,row.venueLongitude||null,row.ntrpMin,row.ntrpMax,row.levelMode,row.genderPreference,row.estimatedCourtFee,'open','free_open']
   );
-  return getMatchForViewer(id,userId);
+  const created=await getMatchForViewer(id,userId);
+  await sendOfficialAccountMatchAdminNotification({match:created}).catch(err=>console.warn('[match-admin-notify] failed',String(err?.message||err)));
+  return created;
 }
 async function updateMatchForUser(matchId,userId,input){
   const row=assertMatchPostInput(input);
@@ -6329,14 +6398,17 @@ async function closeMatchFeeLedger(client,matchId,note,{feeRecord=null,onlyPrepa
   await client.query('UPDATE match_fee_records SET status=$1,updatedAt=NOW() WHERE id=$2',[nextRecordStatus,String(lockedFeeRecord.id||'')]);
   return {feeRecord:lockedFeeRecord,isPrepay,updatedSplits};
 }
-async function cancelMatchForUser(matchId,userId,reason=''){
-  const cancellationReason=String(reason||'发起者取消').trim()||'发起者取消';
+async function cancelMatchForUser(matchId,userId,reason='',options={}){
+  const requireCreator=options.requireCreator!==false;
+  const operatorType=options.operatorType||'match_user';
+  const defaultReason=options.defaultReason||'发起者取消';
+  const cancellationReason=String(reason||defaultReason).trim()||defaultReason;
   const financeSync={refundUserIds:[]};
   const result=await withMatchSqlTransaction(async(client)=>{
     const matchRes=await client.query('SELECT * FROM match_posts WHERE id=$1 FOR UPDATE',[matchId]);
     const match=matchRes.rows[0];
     if(!match)throw new Error('球局不存在');
-    if(String(match.creatoruserid||match.creatorUserId)!==String(userId))throw new Error('只有发起者可取消');
+    if(requireCreator&&String(match.creatoruserid||match.creatorUserId)!==String(userId))throw new Error('只有发起者可取消');
     const status=deriveMatchStatus(match);
     if(!['open','full','booked'].includes(status))throw new Error('当前状态不能取消');
     if(dateMs(match.starttime||match.startTime)<=Date.now())throw new Error('已开始，不能取消');
@@ -6355,7 +6427,7 @@ async function cancelMatchForUser(matchId,userId,reason=''){
       }
     }
     await client.query("UPDATE match_posts SET status='cancelled',formationStatus='free_open',cancelReason=$1,prepayTriggeredAt=NULL,prepayDeadlineAt=NULL,updatedAt=NOW() WHERE id=$2",[cancellationReason,matchId]);
-    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,'match_user',userId,status==='booked'?'match_cancel_booked':'match_cancel',JSON.stringify(match),JSON.stringify({reason:cancellationReason,closedFeeSplits:feeClosure?.updatedSplits?.length||0})]);
+    await client.query('INSERT INTO match_operation_logs(id,matchId,operatorType,operatorId,action,before,after,createdAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW())',[uuidv4(),matchId,operatorType,userId,status==='booked'?'match_cancel_booked':'match_cancel',JSON.stringify(match),JSON.stringify({reason:cancellationReason,closedFeeSplits:feeClosure?.updatedSplits?.length||0})]);
     return {success:true,status:'cancelled',closedFeeSplits:feeClosure?.updatedSplits?.length||0};
   });
   for(const refundUserId of financeSync.refundUserIds){
@@ -6363,6 +6435,9 @@ async function cancelMatchForUser(matchId,userId,reason=''){
   }
   notifyMatchUsers(matchId,'match_update').catch(()=>null);
   return result;
+}
+async function adminCancelMatch(matchId,operatorId,reason=''){
+  return cancelMatchForUser(matchId,operatorId,reason,{requireCreator:false,operatorType:'admin_user',defaultReason:'运营下架'});
 }
 async function cancelRegistrationForUser(matchId,userId){
   return withMatchSqlTransaction(async(client)=>{
@@ -9240,6 +9315,12 @@ module.exports = async (req, res) => {
       try{return sendJson(res,await adminBookMatch(adminBookingM[1],user.id,body));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
+    const adminCancelM=path.match(/^\/admin\/matches\/([^/]+)\/cancel$/);
+    if(adminCancelM&&method==='POST'){
+      requireMatchAdminPermission(user,'match_ops');
+      try{return sendJson(res,await adminCancelMatch(adminCancelM[1],user.id,body.reason));}
+      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
+    }
     const adminAttendanceM=path.match(/^\/admin\/matches\/([^/]+)\/attendance$/);
     if(adminAttendanceM&&method==='POST'){
       requireMatchAdminPermission(user,'match_ops');
@@ -10805,6 +10886,7 @@ module.exports._test={
   ,createMatchForUser
   ,updateMatchForUser
   ,cancelMatchForUser
+  ,adminCancelMatch
   ,cancelRegistrationForUser
   ,listAdminMatches
   ,adminBookMatch
@@ -10821,6 +10903,9 @@ module.exports._test={
   ,submitMatchTechnicalRating
   ,listMatchNotifications
   ,matchNotificationText
+  ,buildOfficialAccountMatchAdminMessage
+  ,collectMatchAdminOfficialAccountRecipients
+  ,sendOfficialAccountMatchAdminNotification
   ,listMatchPlayers
   ,buildMatchSubscribeMessage
   ,notifyMatchUsers
