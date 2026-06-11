@@ -104,7 +104,7 @@ assert.match(html, /function courtBookingSummary\(/, 'court page should centrali
 assert.match(html, /function isCourtBookingHistoryRow\(/, 'court page should centralize booking row detection');
 assert.match(fnBody('courtBookingSummary'), /h\.type==='消费'/, 'court booking summary should count consumption rows');
 assert.match(fnBody('courtBookingSummary'), /isCourtBookingHistoryRow\(h\)/, 'court booking summary should reuse booking row detection');
-assert.match(fnBody('isCourtBookingHistoryRow'), /category\.includes\('订场'\)[\s\S]*payMethod!=='储值扣款'/, 'booking row detection should include categorized bookings and legacy direct booking rows');
+assert.match(fnBody('isCourtBookingHistoryRow'), /category\.includes\('订场'\)[\s\S]*!isStoredValuePayMethod\(payMethod\)/, 'booking row detection should include categorized bookings and legacy direct booking rows');
 assert.match(fnBody('courtSortMetric'), /if\(!raw\|\|raw==='-'\|\|raw==='—'\)return \{empty:true,value:0\};/, 'court date sorting should treat dash placeholders as empty values');
 assert.match(fnBody('renderCourts'), /const sortedList=\[\.\.\.list\];/, 'court page should sort the full filtered list before paging');
 assert.match(fnBody('renderCourts'), /else\{[\s\S]*updatedAt\|\|b\.createdAt[\s\S]*updatedAt\|\|a\.createdAt/, 'court rows should use a deterministic default sort when no explicit sort is selected');
@@ -115,7 +115,7 @@ assert.match(html, /function updateCourtBatchButton\([\s\S]*toolbar\.style\.disp
 assert.match(html, /function updateCourtBatchButton\([\s\S]*btn\.style\.display=courtBatchMode\?'inline-flex':'none'/, 'court batch delete button should follow batch mode visibility');
 assert.match(html, /function renderStandardEmptyText\(/, 'court page should centralize empty dash rendering');
 assert.match(html, /return raw&&raw!=='—'\?raw:'-';/, 'court list empty cells should convert long dashes to short dashes');
-assert.match(html, /renderStandardDropdownHtml\('nrPayMethod'[\s\S]*'储值扣款',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value deduction');
+assert.match(html, /renderStandardDropdownHtml\('nrPayMethod'[\s\S]*'储值卡',true,'onCourtFinanceSceneChange'\)/, 'court booking payment should default to stored-value card');
 assert.doesNotMatch(fnBody('saveCourt'), /confirm\(/, 'court save should not use browser confirm');
 assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court finance save should not use browser confirm');
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');

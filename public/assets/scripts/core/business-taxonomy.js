@@ -5,7 +5,7 @@
   root.normalizePaymentMethod = api.normalizePaymentMethod;
 })(typeof window !== 'undefined' ? window : globalThis, function() {
   const TRANSACTION_TYPES = ['收款', '消耗', '退款', '废弃'];
-  const PAYMENT_METHODS = ['小程序', '微信', '支付宝', '储值扣款', '课包划扣', '大众点评券码', '抖音券码', '其他'];
+  const PAYMENT_METHODS = ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他'];
   const COURSE_TYPE_OPTIONS = [
     { level1: '私教课', level2: '' },
     { level1: '小班课', level2: '单次' },
@@ -28,10 +28,12 @@
 
   function normalizePaymentMethod(value) {
     const raw = text(value);
-    if (raw === '储值扣款') return '储值扣款';
+    if (raw === '储值扣款' || raw === '储值卡') return '储值扣款';
     if (raw === '课包划扣') return '课包划扣';
     if (['大众点评', '大众点评券码', '大众点评支付'].includes(raw)) return '大众点评券码';
-    if (['单独支付', '商家码支付', '微信', '微信转账', '微信转账支付', '转账', '会员充值'].includes(raw)) return '微信';
+    if (['单独支付', '商家码支付', '微信', '微信转账', '微信转账支付', '会员充值'].includes(raw)) return '微信';
+    if (raw === '现金') return '现金';
+    if (raw === '转账') return '转账';
     if (raw === '抖音') return '抖音券码';
     if (raw === '支付宝转账支付') return '支付宝';
     if (raw === '小程序') return '小程序';

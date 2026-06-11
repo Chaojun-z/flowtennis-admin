@@ -28,6 +28,11 @@ function normalizeCourtHistory(history) {
   }));
 }
 
+function isStoredValuePayMethod(value) {
+  const method = String(value || '').trim();
+  return method === '储值扣款' || method === '储值卡';
+}
+
 function courtHistoryDateKey(value) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -73,7 +78,7 @@ function computeLegacyFinance(court) {
     if (row.type === '消费') {
       if (isInternal) return;
       totals.spentAmount += amount;
-      if (row.payMethod === '储值扣款') totals.balance -= amount;
+      if (isStoredValuePayMethod(row.payMethod)) totals.balance -= amount;
       else totals.receivedAmount += amount;
       return;
     }
@@ -84,7 +89,7 @@ function computeLegacyFinance(court) {
     }
     if (row.type === '冲正') {
       totals.spentAmount -= amount;
-      if (row.payMethod === '储值扣款') totals.balance += amount;
+      if (isStoredValuePayMethod(row.payMethod)) totals.balance += amount;
       else totals.receivedAmount -= amount;
     }
   });
@@ -103,7 +108,7 @@ function isCourtBookingHistoryRow(row) {
   if (['储值扣款', '现场收款', '代用户订场'].includes(String(row?.revenueBucket || ''))) return true;
   if (row?.startTime && row?.endTime && row?.venue) return true;
   const payMethod = String(row?.payMethod || '').trim();
-  return row?.type === '消费' && payMethod !== '储值扣款' && (!category || category === '其他');
+  return row?.type === '消费' && !isStoredValuePayMethod(payMethod) && (!category || category === '其他');
 }
 
 function clockMinutes(value) {
@@ -131,7 +136,7 @@ function computeBookingSummary(court) {
     if (!isCourtBookingHistoryRow(row)) return;
     const amount = money(row?.amount);
     if (row.type === '消费') {
-      const isMemberBooking = String(row?.payMethod || '').trim() === '储值扣款' && String(row?.category || '').includes('订场');
+      const isMemberBooking = isStoredValuePayMethod(row?.payMethod) && String(row?.category || '').includes('订场');
       summary.bookingCount += 1;
       summary.bookingAmount += amount;
       summary.bookingHours += bookingDurationHours(row);
@@ -158,7 +163,7 @@ function computeBookingSummary(court) {
 }
 
 function computeMemberBookingCount(court) {
-  return normalizeCourtHistory(court?.history).filter((row) => row?.type === '消费' && String(row?.payMethod || '').trim() === '储值扣款' && String(row?.category || '').includes('订场')).length;
+  return normalizeCourtHistory(court?.history).filter((row) => row?.type === '消费' && isStoredValuePayMethod(row?.payMethod) && String(row?.category || '').includes('订场')).length;
 }
 
 function membershipStatusText(status) {

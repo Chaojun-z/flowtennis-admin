@@ -5173,7 +5173,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         action=amount>0?'收款':action;
         cashDelta=amount;
         deferredRevenueDelta=amount;
-      }else if(historyRow.type==='消费'&&String(historyRow.payMethod||'').trim()==='储值扣款'){
+      }else if(historyRow.type==='消费'&&isStoredValuePayMethod(historyRow.payMethod)){
         action=amount>0?'已入账':action;
         recognizedRevenueDelta=amount;
         deferredRevenueDelta=-amount;
@@ -5189,7 +5189,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         action='退款';
         cashDelta=-amount;
         recognizedRevenueDelta=-amount;
-      }else if(historyRow.type==='冲正'&&String(historyRow.payMethod||'').trim()==='储值扣款'){
+      }else if(historyRow.type==='冲正'&&isStoredValuePayMethod(historyRow.payMethod)){
         action='冲回';
         recognizedRevenueDelta=-amount;
         deferredRevenueDelta=amount;
@@ -5228,7 +5228,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         usedLessons:0,
         remainingLessons:0,
         sourceProject:businessType,
-        debitTarget:businessType==='会员储值'?'会员储值余额':(String(historyRow.payMethod||'').trim()==='储值扣款'?'会员储值余额':'现场收款')
+        debitTarget:businessType==='会员储值'?'会员储值余额':(isStoredValuePayMethod(historyRow.payMethod)?'会员储值余额':'现场收款')
       };
     }).filter(Boolean);
   });
@@ -7573,9 +7573,13 @@ function courtFinanceRevenueBucket(row){
   if(row?.category==='内部占用')return '内部占用';
   if(row?.category!=='订场')return '';
   const method=String(row?.payMethod||'').trim();
-  if(method==='储值扣款')return '储值扣款';
+  if(isStoredValuePayMethod(method))return '储值扣款';
   if(method==='代用户订场')return '代用户订场';
   return '现场收款';
+}
+function isStoredValuePayMethod(value){
+  const method=String(value||'').trim();
+  return method==='储值扣款'||method==='储值卡';
 }
 function normalizeCourtHistory(history){
   if(!Array.isArray(history))return[];
@@ -7632,7 +7636,7 @@ function computeCourtFinance(input){
     }
     if(h.type==='消费'){
       totals.spentAmount+=amount;
-      if(h.payMethod==='储值扣款'){
+      if(isStoredValuePayMethod(h.payMethod)){
         totals.storedValueSpent+=amount;
         totals.balance-=amount;
         if(totals.balance<0&&!allowNegativeBalance)throw new Error('余额不足，不能使用储值扣款');
@@ -7659,7 +7663,7 @@ function computeCourtFinance(input){
       }
       totals.spentAmount-=amount;
       if(totals.spentAmount<0)throw new Error('冲正金额超过累计消费');
-      if(h.payMethod==='储值扣款'){
+      if(isStoredValuePayMethod(h.payMethod)){
         totals.storedValueSpent-=amount;
         if(totals.storedValueSpent<0)throw new Error('冲正金额超过储值扣款消费');
         totals.balance+=amount;

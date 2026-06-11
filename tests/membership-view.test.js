@@ -178,7 +178,7 @@ assert.doesNotMatch(html, /赠送权益批次 = 每次购买送了什么、还�
 assert.doesNotMatch(html, /请选择权益账户，排课必须绑定课包权益/, 'schedule form should not hard-block saving when no entitlement is selected');
 assert.match(html, /会员状态[\s\S]*会员订场[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
 assert.match(html, /function membershipBookingCount\(/, 'membership management should expose a helper to count stored-value bookings');
-assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&String\(h\.payMethod\|\|''\)\.trim\(\)==='储值扣款'&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
+assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&isStoredValuePayMethod\(h\.payMethod\)&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
 assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-orders" onclick="goPage\('membership-orders'\)"[\s\S]*历史订单/, 'membership purchase audit entry should use the new history order entry');
 assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-ledger" onclick="goPage\('membership-ledger'\)"[\s\S]*权益消耗记录/, 'membership ledger audit entry should use the new benefit consume entry');
 assert.match(pagesCss, /\.tms-toolbar-secondary-actions\{display:flex;align-items:center;gap:8px\}/, 'toolbar secondary button container should keep 8px spacing');

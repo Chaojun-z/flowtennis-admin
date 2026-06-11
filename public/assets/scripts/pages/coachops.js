@@ -1286,12 +1286,12 @@ function financeLegacyUnifiedRows(){
       const businessType=financeCourtHistoryBusinessType(h);
       let cashDelta=0,recognizedRevenueDelta=0,deferredRevenueDelta=0;
       if(h.type==='充值'){cashDelta=amount;deferredRevenueDelta=amount;}
-      if(h.type==='消费'&&h.payMethod==='储值扣款'){recognizedRevenueDelta=amount;deferredRevenueDelta=-amount;}
-      if(h.type==='消费'&&h.payMethod!=='储值扣款'){cashDelta=amount;recognizedRevenueDelta=amount;}
+      if(h.type==='消费'&&isStoredValuePayMethod(h.payMethod)){recognizedRevenueDelta=amount;deferredRevenueDelta=-amount;}
+      if(h.type==='消费'&&!isStoredValuePayMethod(h.payMethod)){cashDelta=amount;recognizedRevenueDelta=amount;}
       if(h.type==='退款'&&h.payMethod==='储值退款'){cashDelta=-amount;deferredRevenueDelta=-amount;}
       if(h.type==='退款'&&h.payMethod!=='储值退款'){cashDelta=-amount;recognizedRevenueDelta=-amount;}
-      if(h.type==='冲正'&&h.payMethod==='储值扣款'){recognizedRevenueDelta=-amount;deferredRevenueDelta=amount;}
-      if(h.type==='冲正'&&h.payMethod!=='储值扣款'){cashDelta=-amount;recognizedRevenueDelta=-amount;}
+      if(h.type==='冲正'&&isStoredValuePayMethod(h.payMethod)){recognizedRevenueDelta=-amount;deferredRevenueDelta=amount;}
+      if(h.type==='冲正'&&!isStoredValuePayMethod(h.payMethod)){cashDelta=-amount;recognizedRevenueDelta=-amount;}
       if(h.type==='退款'&&h.payMethod==='储值退款'&&businessType==='会员储值'){recognizedRevenueDelta=0;}
       return {
         id:`court-${court.id}-${h.id||h.date||Math.random()}`,
@@ -1299,7 +1299,7 @@ function financeLegacyUnifiedRows(){
         campusName,
         customer:courtDisplayName(court)||court.name||court.id,
         businessType:businessType,
-        action:h.type==='充值'?'收款':(h.type==='消费'?(h.payMethod==='储值扣款'?'已入账':'收款'):(h.type==='退款'?'退款':(h.type==='冲正'?'冲回':'记录'))),
+        action:h.type==='充值'?'收款':(h.type==='消费'?(isStoredValuePayMethod(h.payMethod)?'已入账':'收款'):(h.type==='退款'?'退款':(h.type==='冲正'?'冲回':'记录'))),
         cashDelta,
         recognizedRevenueDelta,
         deferredRevenueDelta,

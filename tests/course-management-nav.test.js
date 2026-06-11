@@ -261,7 +261,7 @@ assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('getFilteredPackages'), /const courseType=standardCourseTypeFilterValue\(p\)/, 'package card should normalize legacy course type labels to standard filter values');
 assert.match(html, /function packageCoreClassLabel\([\s\S]*体验课[\s\S]*experienceType[\s\S]*私教体验课[\s\S]*小班体验课/, 'shared package label should show both experience-course names');
-assert.match(html, /const PAY_METHODS=\['微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'\]/, 'package purchase pay method should use the shared pay method source with coupon codes');
+assert.match(html, /const PAY_METHODS=\['储值卡','微信','支付宝','现金','转账','大众点评券码','抖音券码','其他'\]/, 'package purchase pay method should use the shared pay method source with stored value and coupon codes');
 assert.match(fnBody('openPurchaseModal'), /PAY_METHODS\.map/, 'purchase create modal should use shared pay methods');
 assert.match(fnBody('openPurchaseEditModal'), /PAY_METHODS\.map/, 'purchase edit modal should use shared pay methods');
 assert.match(fnBody('packageBoardCardHtml'), /\$\{packagePurchaseCount\(p\.id\)\} 笔订单/, 'package card order button should show order count');

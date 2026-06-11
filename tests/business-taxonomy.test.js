@@ -1,6 +1,8 @@
 const assert = require('assert');
 const taxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 
+assert.deepStrictEqual(taxonomy.PAYMENT_METHODS, ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他']);
+assert.strictEqual(taxonomy.normalizePaymentMethod('储值卡'), '储值扣款');
 assert.strictEqual(taxonomy.normalizePaymentMethod('大众点评支付'), '大众点评券码');
 assert.strictEqual(taxonomy.normalizePaymentMethod('微信转账支付'), '微信');
 assert.strictEqual(taxonomy.normalizePaymentMethod('会员充值'), '微信');
