@@ -355,6 +355,7 @@ assert.match(source, /function posterApplyLineStyle\(/, 'feedback poster should 
 assert.match(fnBody('posterApplyLineStyle'), /style==='preserve'[\s\S]*String\(text\|\|'—'\)/, 'feedback poster should preserve coach-entered titles and list markers by default');
 assert.match(source, /function posterLineMetrics\(/, 'feedback poster should calculate hanging indents for numbered and bullet list lines');
 assert.match(fnBody('posterLineMetrics'), /markerMatch[\s\S]*indent[\s\S]*paragraphGap/, 'feedback poster line metrics should include indent and paragraph spacing');
+assert.match(fnBody('posterTextLines'), /availableWidth[\s\S]*maxWidth-line\.hangingIndent[\s\S]*lineWidth\+width>availableWidth/s, 'feedback poster should wrap indented continuation lines inside the card width');
 assert.match(fnBody('posterDrawTextBlock'), /posterLineMetrics\(ctx,lineGroups\)[\s\S]*currentX=x\+metrics\.indent[\s\S]*metrics\.paragraphGap/s, 'feedback poster should draw wrapped list text with hanging indent and extra item spacing');
 assert.match(source, /function feedbackNextListMarker\(/, 'feedback editor should calculate the next marker when coach presses enter');
 assert.match(fnBody('feedbackNextListMarker'), /mode==='normal'[\s\S]*!numberMatch[\s\S]*!bulletMatch[\s\S]*return ''[\s\S]*mode==='bullet'[\s\S]*· [\s\S]*Number\(numberMatch\[1\]\)\+1/, 'feedback editor should only continue lists when the coach starts a numbered or bullet list');

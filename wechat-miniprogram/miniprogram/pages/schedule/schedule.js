@@ -1100,7 +1100,8 @@ function posterTextLines(ctx, text, maxWidth, maxLines) {
       const width = ctx.measureText(ch).width;
       let line = lines[lines.length - 1];
       const lineWidth = line.reduce((sum, item) => sum + item.width, 0);
-      if (line.length && lineWidth + width > maxWidth) {
+      const availableWidth = maxWidth - line.hangingIndent;
+      if (line.length && lineWidth + width > availableWidth) {
         const hangingIndent = line.hangingIndent || posterListMarkerIndent(ctx, line);
         lines.push(posterNewTextLine({
           isWrapped: true,
@@ -1124,7 +1125,8 @@ function posterTextLines(ctx, text, maxWidth, maxLines) {
     const last = kept[kept.length - 1];
     posterContentFont(ctx, false);
     const dotsWidth = ctx.measureText('…').width;
-    while (last.length && last.reduce((sum, item) => sum + item.width, 0) + dotsWidth > maxWidth) last.pop();
+    const availableWidth = maxWidth - last.hangingIndent;
+    while (last.length && last.reduce((sum, item) => sum + item.width, 0) + dotsWidth > availableWidth) last.pop();
     while (last.length && /[，。；、\s]/.test(last[last.length - 1].ch)) last.pop();
     last.push({ ch: '…', highlight: false, width: dotsWidth });
   }
