@@ -44,7 +44,7 @@ assert.match(source, /function appConfirm\([\s\S]*html=false[\s\S]*hideIcon=fals
 assert.match(styles, /\.schedule-confirm-box[\s\S]*\.schedule-confirm-charge/, 'schedule save confirm should have dedicated scoped styles');
 assert.match(styles, /\.schedule-confirm-box #confDesc[\s\S]*font-size:13px/, 'schedule save confirm should use compact 13px body text');
 assert.match(styles, /\.schedule-confirm-value[\s\S]*font-weight:400/, 'schedule save confirm values should use regular weight');
-assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', '正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
+assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', ids\.length>1\?'正在匹配学员课包':'正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
 assert.match(fnBody('saveSchedule'), /resetScheduleSaveButton\(\)/, 'schedule save should restore the save button through the helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
@@ -77,6 +77,11 @@ assert.match(fnBody('openScheduleModal'), /renderScheduleDetailFormCard\('基础
 assert.match(fnBody('openScheduleModal'), /sch_standardCourseType[\s\S]*sch_settlementType|sch_settlementType[\s\S]*sch_standardCourseType/, 'schedule modal should keep standard course type and settlement controls in basic info');
 assert.match(fnBody('openScheduleModal'), /sch_entitlementHost[\s\S]*schedule-time-field|schedule-time-field[\s\S]*sch_entitlementHost/, 'schedule modal should keep package and time controls in basic info');
 assert.doesNotMatch(fnBody('openScheduleModal'), /<select[^>]+id="sch_entitlement"/, 'schedule entitlement should use the standard custom dropdown instead of native select');
+assert.match(source, /function renderScheduleStudentEntitlementRows\(/, 'multi-student small group schedules should render package matching by student');
+assert.match(source, /function refreshScheduleStudentEntitlementRows\(/, 'schedule modal should refresh per-student package rows when students or lesson data changes');
+assert.match(fnBody('openScheduleModal'), /sch_studentEntitlementRows/, 'schedule modal should include a per-student package matching host');
+assert.match(fnBody('refreshSchEntitlementOptions'), /refreshScheduleStudentEntitlementRows\(/, 'multi-student package refresh should update per-student package rows');
+assert.doesNotMatch(fnBody('refreshSchEntitlementOptions'), /ids\.length>1\)\{setScheduleEntitlementDropdown\(\[\], '', '系统按参与学员自动扣课'\)/, 'multi-student package refresh should not hide package details behind one generic message');
 assert.match(fnBody('openScheduleModal'), /上课教练[\s\S]*sch_coach[\s\S]*地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit after coach and location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
 assert.match(fnBody('scheduleVenueOptionsForCampus'), /shilipu[\s\S]*5号场/, 'shilipu should expose 1-5 courts');

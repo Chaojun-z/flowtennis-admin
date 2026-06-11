@@ -787,6 +787,14 @@ function normalizeSmallClassType(value='',fallback='single'){
   if(/单次/.test(raw))return 'single';
   return fallback;
 }
+function smallClassTypesCompatible(entitlementType='',scheduleType=''){
+  const entType=normalizeSmallClassType(entitlementType,'');
+  const schType=normalizeSmallClassType(scheduleType,'');
+  if(!entType||!schType)return true;
+  if(entType===schType)return true;
+  if(entType==='bootcamp'||schType==='bootcamp')return false;
+  return ['single','dropin'].includes(entType)&&['single','dropin'].includes(schType);
+}
 function inferSmallClassType(source={},fallback='single'){
   const lessons=parseInt(source.lessons||source.totalLessons||source.packageLessons)||0;
   const price=normalizeMoney(source.price||source.packagePrice||source.amountPaid);
@@ -1734,7 +1742,7 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(isSmallGroupCourse(entitlement)&&isSmallGroupCourse(schedule)){
     const entType=normalizeSmallClassType(entitlement.smallClassType);
     const schType=normalizeSmallClassType(schedule.smallClassType||schedule.packageSubType||schedule.subType,entType);
-    if(entType&&schType&&entType!==schType)throw new Error('小班课类型不匹配');
+    if(!smallClassTypesCompatible(entType,schType))throw new Error('小班课类型不匹配');
   }
 }
 function isAnyCoachPackageValue(value){
@@ -1833,6 +1841,7 @@ function resolveScheduleEntitlementDeltas(rec,entitlements=[]){
     const {recommended}=recommendEntitlements(options,{...rec,studentIds:[studentId]});
     return recommended?{studentId,entitlementId:recommended.entitlementId,delta:lessonCount}:null;
   }).filter(Boolean);
+  if(isSmallGroupCourse(rec)&&attendDeltas.length<attendIds.length)throw new Error('有学员没有可用课包');
   if(!isSmallGroupCourse(rec))return attendDeltas;
   const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
   const absent=parseArr(rec.absentStudentIds).filter(Boolean);

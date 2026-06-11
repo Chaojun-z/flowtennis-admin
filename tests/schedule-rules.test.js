@@ -1753,6 +1753,55 @@ assert.deepStrictEqual(
   'small group package recommendation should allow one remaining count for multi-hour schedules'
 );
 
+assert.deepStrictEqual(
+  rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-mixed-single-dropin',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'dropin',
+    lessonCount: 2,
+    studentIds: ['stu-dropin-1', 'stu-dropin-2', 'stu-dropin-3', 'stu-single-1'],
+    expectedStudentIds: ['stu-dropin-1', 'stu-dropin-2', 'stu-dropin-3', 'stu-single-1']
+  }, [
+    { id: 'ent-dropin-1', studentId: 'stu-dropin-1', status: 'active', courseType: '小班课', smallClassType: 'dropin', totalLessons: 6, remainingLessons: 3 },
+    { id: 'ent-dropin-2', studentId: 'stu-dropin-2', status: 'active', courseType: '小班课', smallClassType: 'dropin', totalLessons: 6, remainingLessons: 3 },
+    { id: 'ent-dropin-3', studentId: 'stu-dropin-3', status: 'active', courseType: '小班课', smallClassType: 'dropin', totalLessons: 6, remainingLessons: 3 },
+    { id: 'ent-single-1', studentId: 'stu-single-1', status: 'active', courseType: '小班课', smallClassType: 'single', totalLessons: 1, remainingLessons: 1 }
+  ]),
+  [
+    { studentId: 'stu-dropin-1', entitlementId: 'ent-dropin-1', delta: 1 },
+    { studentId: 'stu-dropin-2', entitlementId: 'ent-dropin-2', delta: 1 },
+    { studentId: 'stu-dropin-3', entitlementId: 'ent-dropin-3', delta: 1 },
+    { studentId: 'stu-single-1', entitlementId: 'ent-single-1', delta: 1 }
+  ],
+  'small group drop-in schedule should allow each student to consume their own single or drop-in package'
+);
+
+assert.throws(
+  () => rules.validateEntitlementForSchedule(
+    { id: 'ent-bootcamp-mismatch', studentId: 'stu-1', status: 'active', courseType: '小班课', smallClassType: 'single', totalLessons: 1, remainingLessons: 1 },
+    { id: 'sch-bootcamp-mismatch', status: '已排课', courseType: '小班课', smallClassType: 'bootcamp', studentIds: ['stu-1'], lessonCount: 1 }
+  ),
+  /小班课类型不匹配/,
+  'small group bootcamp schedules should not mix with single or drop-in packages'
+);
+
+assert.throws(
+  () => rules.resolveScheduleEntitlementDeltas({
+    id: 'sch-small-missing-package',
+    status: '已排课',
+    courseType: '小班课',
+    smallClassType: 'dropin',
+    lessonCount: 2,
+    studentIds: ['stu-has-package', 'stu-missing-package'],
+    expectedStudentIds: ['stu-has-package', 'stu-missing-package']
+  }, [
+    { id: 'ent-has-package', studentId: 'stu-has-package', status: 'active', courseType: '小班课', smallClassType: 'dropin', totalLessons: 6, remainingLessons: 3 }
+  ]),
+  /有学员没有可用课包/,
+  'package-settled small group schedules should not silently save when an attendee has no matching package'
+);
+
 assert.strictEqual(
   rules.smallGroupLessonCountForStudentCount(2),
   1,
