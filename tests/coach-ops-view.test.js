@@ -68,6 +68,30 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function preserveCoachOpsScrollLeft\(/,
+  'coach schedule should preserve the horizontal scroll position during a quiet refresh'
+);
+
+assert.match(
+  coachOpsSource,
+  /function restoreCoachOpsScrollLeft\(/,
+  'coach schedule should restore the horizontal scroll position after rerendering'
+);
+
+assert.match(
+  coachOpsSource,
+  /const previousScrollLeft=preserveCoachOpsScrollLeft\(\);[\s\S]*restoreCoachOpsScrollLeft\(previousScrollLeft\);/,
+  'coach schedule rerender should keep the user at the place they left'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /if\(pg==='coachschedule'&&typeof resetCoachScheduleToToday==='function'\)resetCoachScheduleToToday\(\);/,
+  'switching back to an already-open coach schedule page should not force today'
+);
+
+assert.match(
+  coachOpsSource,
   /function scrollCoachOpsDayToNow\(\)[\s\S]*scroll\.scrollLeft=Math\.max\(0,nowLineLeft-360\)/,
   'coach schedule day view should auto-scroll near the current time'
 );

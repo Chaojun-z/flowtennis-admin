@@ -123,11 +123,14 @@ function mergeDuplicateLeadRows(rows=[]){
 function leadWechatText(lead){
   return String(lead?.wechatName||lead?.displayName||'-').trim()||'-';
 }
+function leadSortCreatedValue(lead){
+  return leadSortDateValue(lead?.createdAt,lead);
+}
 function leadRows(){
   return mergeDuplicateLeadRows(leadRawRows()).sort((a,b)=>{
-    const leadDateDiff=leadSortDateValue(b?.leadDate,b)-leadSortDateValue(a?.leadDate,a);
-    if(leadDateDiff!==0)return leadDateDiff;
-    return String(b?.createdAt||b?.id||'').localeCompare(String(a?.createdAt||a?.id||''));
+    const createdDiff=leadSortCreatedValue(b)-leadSortCreatedValue(a);
+    if(createdDiff!==0)return createdDiff;
+    return String(b?.id||'').localeCompare(String(a?.id||''));
   });
 }
 function leadMergedIds(leadRef){
@@ -1205,7 +1208,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConvertedYesNo(lead),'converted')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);

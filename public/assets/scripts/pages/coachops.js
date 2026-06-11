@@ -203,6 +203,20 @@ function resetCoachScheduleToToday(){
   if(el){el.value=coachOpsInputValue(new Date(),'day');el.dataset.coachOpsAutoDate='1';}
   coachOpsAutoScrollDayView=true;
 }
+function prepareCoachSchedulePageOpen(){
+  if(!isCoachSchedulePage())return;
+  const el=coachOpsDateInput();
+  if(!el||!el.value||el.dataset.coachOpsAutoDate==='1')resetCoachScheduleToToday();
+}
+function preserveCoachOpsScrollLeft(){
+  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  return scroll?scroll.scrollLeft:null;
+}
+function restoreCoachOpsScrollLeft(value){
+  if(value===null||value===undefined)return;
+  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  if(scroll)scroll.scrollLeft=value;
+}
 function setCoachOpsMode(mode){
   const d=coachOpsDateInput();
   mode=['day','week','month'].includes(mode)?mode:'day';
@@ -523,6 +537,7 @@ function renderCoachOpsWorkloadHeader(){
   thead.innerHTML='<tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:130px">体验课转化率</th><th style="width:220px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:180px">校区分布</th><th style="width:140px">时间段</th></tr>';
 }
 function renderCoachOps(){
+  const previousScrollLeft=preserveCoachOpsScrollLeft();
   ensureCoachOpsReportDateControls();
   const rangeDropdownId=renderCoachOpsRangeFilter();
   renderCoachOpsWorkloadHeader();
@@ -622,6 +637,7 @@ function renderCoachOps(){
       }).join('');
     }
   }
+  restoreCoachOpsScrollLeft(previousScrollLeft);
   if(mode==='day'&&coachOpsAutoScrollDayView){
     requestAnimationFrame(scrollCoachOpsDayToNow);
     coachOpsAutoScrollDayView=false;

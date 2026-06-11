@@ -28,7 +28,7 @@ assert.match(html, /assets\/scripts\/pages\/purchases\.js/, 'index.html should l
 assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html should load entitlements page module');
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
-assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260609-campus-scope-v1/, 'index.html should version coachops.js after campus scope filtering changes');
+assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260611-keep-position-v1/, 'index.html should version coachops.js after keeping schedule position');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260609-campus-scope-v1/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
