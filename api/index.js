@@ -6945,7 +6945,7 @@ function safeDatabaseUrlHost(value){
   }
 }
 function cleanLeadText(value){
-  return String(value||'').trim();
+  return String(value??'').trim();
 }
 function normalizeLeadBoolean(value){
   const raw=String(value||'').trim();

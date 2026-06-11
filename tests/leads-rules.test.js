@@ -30,6 +30,7 @@ const lead = rules.normalizeLeadRecord({
 assert.strictEqual(lead.id, 'lead-1');
 assert.strictEqual(lead.phone, '13800138000');
 assert.strictEqual(lead.wechatName, 'Leah');
+assert.strictEqual(rules.normalizeLeadRecord({ level: 0 }, { id: 'lead-zero', now: '2026-06-11T00:00:00.000Z' }).level, '0');
 assert.strictEqual(lead.systemStatus, '跟进中');
 assert.strictEqual(
   rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08T00:00:00.000Z' }).campus,
