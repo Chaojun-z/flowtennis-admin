@@ -582,6 +582,9 @@ assert.doesNotMatch(scheduleWxss, /\.feedback-input-bar\s*\{/, 'feedback sheet s
 assert.match(scheduleWxss, /\.feedback-input\s*\{[\s\S]*color:\s*#334155;[\s\S]*font-size:\s*14px;[\s\S]*font-weight:\s*400;/, 'feedback input text should use the requested 14px regular slate token');
 assert.match(scheduleWxss, /\.feedback-input-placeholder\s*\{[\s\S]*color:\s*#94a3b8;[\s\S]*font-size:\s*14px;[\s\S]*font-weight:\s*400;/, 'feedback placeholder text should use the requested 14px regular muted token');
 assert.match(scheduleWxss, /\.feedback-action-btn\s*\{[\s\S]*height:\s*88rpx;[\s\S]*border-radius:\s*44rpx;[\s\S]*font-size:\s*15px;/, 'feedback bottom buttons should use the 44px pill token');
+assert.doesNotMatch(scheduleJs, /raw\[i\]\s*===\s*'\*'/, 'mini feedback poster should only use Chinese brackets as manual highlight markers');
+assert.match(scheduleJs, /function posterLineMetrics\(/, 'mini feedback poster should calculate hanging indents for list lines');
+assert.match(scheduleJs, /posterLineMetrics\(ctx,\s*lineGroups\)[\s\S]*currentX\s*=\s*x\s*\+\s*metrics\.indent[\s\S]*metrics\.paragraphGap/, 'mini feedback poster should draw wrapped list text with hanging indent and paragraph spacing');
 assert.match(scheduleWxss, /\.poster-style-chip\s*\{[\s\S]*height:\s*64rpx;[\s\S]*border-radius:\s*32rpx;[\s\S]*font-size:\s*13px;/, 'poster style chips should match the 32px capsule token');
 assert.match(scheduleWxss, /\.feedback-poster-canvas\s*\{[\s\S]*width:\s*560rpx;[\s\S]*height:\s*996rpx;[\s\S]*border-radius:\s*32rpx;/, 'poster canvas should keep the mapped preview container');
 assert.match(scheduleWxss, /\.poster-action-btn\s*\{[\s\S]*height:\s*88rpx;[\s\S]*border-radius:\s*44rpx;[\s\S]*font-size:\s*15px;/, 'poster bottom buttons should use the 44px pill token');

@@ -1249,9 +1249,7 @@ function posterEscapeRegExp(text){
 }
 function posterPushAutoGroups(groups,text){
   if(!text)return;
-  const keywords=['回合对打','连续对打','10 多拍','10多拍','非常了不起','稳定','进步','节奏','重心','脚步','发力','引拍','击球点'];
-  const pattern=new RegExp(`(${keywords.map(posterEscapeRegExp).join('|')})`,'g');
-  String(text).split(pattern).filter(Boolean).forEach(part=>groups.push({text:part,highlight:false}));
+  groups.push({text:String(text),highlight:false});
 }
 function posterNormalizeText(text,options={}){
   const raw=String(text||'—');
@@ -1355,15 +1353,9 @@ function posterTextGroups(text,options={}){
       const end=raw.indexOf('】',i+1);
       if(end>-1){groups.push({text:raw.slice(i+1,end),highlight:true});i=end+1;continue;}
     }
-    if(raw[i]==='*'){
-      const end=raw.indexOf('*',i+1);
-      if(end>-1){groups.push({text:raw.slice(i+1,end),highlight:true});i=end+1;continue;}
-    }
     let next=raw.length;
     const bracket=raw.indexOf('【',i+1);
-    const star=raw.indexOf('*',i+1);
     if(bracket>-1)next=Math.min(next,bracket);
-    if(star>-1)next=Math.min(next,star);
     posterPushAutoGroups(groups,raw.slice(i,next));
     i=next;
   }
@@ -1372,21 +1364,49 @@ function posterTextGroups(text,options={}){
 function posterContentFont(ctx,isHighlight){
   ctx.font=`${isHighlight?'600':'400'} 30px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
 }
+function posterNewTextLine(props={}){
+  const line=[];
+  line.isWrapped=!!props.isWrapped;
+  line.isParagraphStart=props.isParagraphStart!==false;
+  line.lineIndex=props.lineIndex||0;
+  line.hangingIndent=props.hangingIndent||0;
+  return line;
+}
+function posterLineText(lineGroups){
+  return (lineGroups||[]).map(group=>group.text||'').join('');
+}
+function posterListMarkerIndent(ctx,line){
+  const text=line.map(item=>item.ch||'').join('');
+  const markerMatch=text.match(/^\s*(?:\d+[\.\、]|[·•\-－])\s*/);
+  if(!markerMatch)return 0;
+  posterContentFont(ctx,false);
+  return Math.ceil(ctx.measureText(markerMatch[0]).width);
+}
+function posterLineMetrics(ctx,lineGroups){
+  const markerMatch=posterLineText(lineGroups).match(/^\s*(?:\d+[\.\、]|[·•\-－])\s*/);
+  const indent=lineGroups?.isWrapped?(lineGroups.hangingIndent||0):0;
+  const paragraphGap=lineGroups?.isParagraphStart&&lineGroups?.lineIndex===0&&markerMatch?12:0;
+  return {indent,paragraphGap};
+}
 function posterTextLines(ctx,text,maxWidth,maxLines=Number.MAX_SAFE_INTEGER,options={}){
-  const lines=[[]];
+  const lines=[posterNewTextLine({isParagraphStart:false})];
   posterTextGroups(text,options).forEach(group=>{
     posterContentFont(ctx,group.highlight);
     Array.from(group.text||'').forEach(ch=>{
-      if(ch==='\n'){lines.push([]);return;}
+      if(ch==='\n'){lines.push(posterNewTextLine());return;}
       const width=ctx.measureText(ch).width;
       let line=lines[lines.length-1];
       const lineWidth=line.reduce((sum,item)=>sum+item.width,0);
-      if(line.length&&lineWidth+width>maxWidth){lines.push([]);line=lines[lines.length-1];}
+      if(line.length&&lineWidth+width>maxWidth){
+        const hangingIndent=line.hangingIndent||posterListMarkerIndent(ctx,line);
+        lines.push(posterNewTextLine({isWrapped:true,isParagraphStart:false,lineIndex:(line.lineIndex||0)+1,hangingIndent}));
+        line=lines[lines.length-1];
+      }
       line.push({ch,highlight:group.highlight,width});
     });
   });
   let kept=lines.filter(line=>line.length);
-  if(!kept.length)kept=[[{ch:'—',highlight:false,width:ctx.measureText('—').width}]];
+  if(!kept.length){const line=posterNewTextLine({isParagraphStart:false});line.push({ch:'—',highlight:false,width:ctx.measureText('—').width});kept=[line];}
   if(kept.length>maxLines){
     kept=kept.slice(0,maxLines);
     const last=kept[kept.length-1];
@@ -1403,6 +1423,10 @@ function posterTextLines(ctx,text,maxWidth,maxLines=Number.MAX_SAFE_INTEGER,opti
       if(last&&last.highlight===item.highlight)last.text+=item.ch;
       else groups.push({text:item.ch,highlight:item.highlight});
     });
+    groups.isWrapped=line.isWrapped;
+    groups.isParagraphStart=line.isParagraphStart;
+    groups.lineIndex=line.lineIndex;
+    groups.hangingIndent=line.hangingIndent;
     return groups;
   });
 }
@@ -1424,10 +1448,12 @@ function posterDrawFittedTitle(ctx,text,x,y,maxWidth,maxFont,minFont,color){
   }
   ctx.fillText(finalText,x,y);
 }
-function posterBlockHeight(lineCount){
-  const paddingTop=32,paddingBottom=54,titleSpace=52,lineHeight=48;
-  const safeCount=Math.max(1,Number(lineCount)||1);
-  return paddingTop+titleSpace+(safeCount-1)*lineHeight+paddingBottom;
+function posterBlockHeight(lines){
+  const paddingTop=32,paddingBottom=56,titleSpace=56,lineHeight=50;
+  const safeLines=Array.isArray(lines)?lines:[];
+  const safeCount=Math.max(1,safeLines.length||Number(lines)||1);
+  const paragraphGaps=safeLines.reduce((sum,line)=>sum+posterLineMetrics(null,line).paragraphGap,0);
+  return paddingTop+titleSpace+(safeCount-1)*lineHeight+paragraphGaps+paddingBottom;
 }
 function posterSectionHasContent(text){
   const value=String(text||'').trim();
@@ -1439,12 +1465,12 @@ function measureFeedbackPosterLayout(ctx,data){
   const startY=320;
   const textOptions={preserveListMarkers:data.preserveListMarkers!==false,listStyle:data.posterListStyle||'preserve'};
   const practicedLines=posterTextLines(ctx,data.practicedToday,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
-  const practicedHeight=posterBlockHeight(practicedLines.length);
+  const practicedHeight=posterBlockHeight(practicedLines);
   let nextY=startY+practicedHeight+gap;
   let knowledge=null;
   if(posterSectionHasContent(data.knowledgePoint)){
     const knowledgeLines=posterTextLines(ctx,data.knowledgePoint,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
-    const knowledgeHeight=posterBlockHeight(knowledgeLines.length);
+    const knowledgeHeight=posterBlockHeight(knowledgeLines);
     knowledge={y:nextY,lines:knowledgeLines,boxHeight:knowledgeHeight};
     nextY+=knowledgeHeight+gap;
   }else{
@@ -1452,7 +1478,7 @@ function measureFeedbackPosterLayout(ctx,data){
   }
   const nextTrainingY=nextY;
   const nextTrainingLines=posterTextLines(ctx,data.nextTraining,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
-  const nextTrainingHeight=posterBlockHeight(nextTrainingLines.length);
+  const nextTrainingHeight=posterBlockHeight(nextTrainingLines);
   const footerTop=nextTrainingY+nextTrainingHeight+92;
   const footerBrandY=footerTop+56;
   const footerTaglineY=footerBrandY+35;
@@ -1468,7 +1494,7 @@ function measureFeedbackPosterLayout(ctx,data){
   };
 }
 function posterDrawTextBlock(ctx,tpl,label,x,y,w,lines,boxHeight){
-  const paddingTop=32,titleSpace=52,lineHeight=48;
+  const paddingTop=32,titleSpace=56,lineHeight=50;
   const boxY=y-paddingTop-24;
   ctx.save();
   if(tpl.type==='diagonalSplit'){
@@ -1492,14 +1518,18 @@ function posterDrawTextBlock(ctx,tpl,label,x,y,w,lines,boxHeight){
   ctx.fillStyle=tpl.cardTitle||tpl.accent;
   ctx.font='800 22px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
   ctx.fillText(label,x,y);
-  lines.forEach((lineGroups,i)=>{
-    let currentX=x;
+  let textY=y+titleSpace;
+  lines.forEach((lineGroups)=>{
+    const metrics=posterLineMetrics(ctx,lineGroups);
+    let currentX=x+metrics.indent;
+    textY+=metrics.paragraphGap;
     lineGroups.forEach(group=>{
       posterContentFont(ctx,group.highlight);
       ctx.fillStyle=group.highlight?(tpl.highlight||tpl.accent):tpl.ink;
-      ctx.fillText(group.text,currentX,y+titleSpace+i*lineHeight);
+      ctx.fillText(group.text,currentX,textY);
       currentX+=ctx.measureText(group.text).width;
     });
+    textY+=lineHeight;
   });
   ctx.restore();
   return boxHeight+28;

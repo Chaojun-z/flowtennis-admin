@@ -347,11 +347,15 @@ assert.match(fnBody('drawFeedbackPoster'), /用网球向生活发出邀请/, 'fe
 assert.match(source, /function posterDisplayDate\(/, 'feedback poster should format lesson date for poster display');
 assert.match(source, /function posterTextGroups\(/, 'feedback poster should support highlighted text groups');
 assert.match(fnBody('posterTextGroups'), /raw\[i\]==='【'[\s\S]*highlight:true/, 'feedback poster should use Chinese brackets as manual highlight markers');
+assert.doesNotMatch(fnBody('posterTextGroups'), /raw\[i\]==='\\*'|raw\[i\]==='\*'/, 'feedback poster should not treat asterisks as highlight markers');
 assert.doesNotMatch(fnBody('posterPushAutoGroups'), /highlight:keywords\.includes\(part\)/, 'feedback poster should not auto-highlight guessed keywords');
 assert.match(source, /function posterNormalizeText\(/, 'feedback poster should normalize list markers before drawing text');
 assert.match(fnBody('posterApplyLineStyle'), /replace[\s\S]*\\d\+[\s\S]*·/, 'feedback poster should optionally remove line-start numbers and bullets');
 assert.match(source, /function posterApplyLineStyle\(/, 'feedback poster should keep coach-entered list markers available for rendering');
 assert.match(fnBody('posterApplyLineStyle'), /style==='preserve'[\s\S]*String\(text\|\|'—'\)/, 'feedback poster should preserve coach-entered titles and list markers by default');
+assert.match(source, /function posterLineMetrics\(/, 'feedback poster should calculate hanging indents for numbered and bullet list lines');
+assert.match(fnBody('posterLineMetrics'), /markerMatch[\s\S]*indent[\s\S]*paragraphGap/, 'feedback poster line metrics should include indent and paragraph spacing');
+assert.match(fnBody('posterDrawTextBlock'), /posterLineMetrics\(ctx,lineGroups\)[\s\S]*currentX=x\+metrics\.indent[\s\S]*metrics\.paragraphGap/s, 'feedback poster should draw wrapped list text with hanging indent and extra item spacing');
 assert.match(source, /function feedbackNextListMarker\(/, 'feedback editor should calculate the next marker when coach presses enter');
 assert.match(fnBody('feedbackNextListMarker'), /mode==='normal'[\s\S]*!numberMatch[\s\S]*!bulletMatch[\s\S]*return ''[\s\S]*mode==='bullet'[\s\S]*· [\s\S]*Number\(numberMatch\[1\]\)\+1/, 'feedback editor should only continue lists when the coach starts a numbered or bullet list');
 assert.match(source, /function handleFeedbackListKeydown\(/, 'feedback editor should intercept enter to auto insert the next marker');
