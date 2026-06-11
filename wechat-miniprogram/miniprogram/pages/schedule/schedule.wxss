@@ -2520,7 +2520,8 @@ button::after {
 
 .feedback-input {
   width: 100%;
-  height: 118rpx;
+  min-height: 118rpx;
+  height: auto;
   padding: 0;
   color: #334155;
   font-size: 14px;

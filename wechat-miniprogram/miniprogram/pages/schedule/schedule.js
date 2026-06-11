@@ -2373,6 +2373,7 @@ Page({
     }
     this.setData({
       feedbackListStyle: style,
+      feedbackFocusedField: field,
       feedbackForm,
       feedbackListCursors,
       feedbackCounts: feedbackCountsOf(feedbackForm)

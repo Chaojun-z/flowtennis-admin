@@ -1338,11 +1338,19 @@ function handleFeedbackListKeydown(event){
   el.selectionStart=el.selectionEnd=start+insert.length;
   el.dispatchEvent(new Event('input',{bubbles:true}));
 }
+function autoResizeFeedbackTextarea(el){
+  if(!el)return;
+  el.style.height='auto';
+  el.style.height=`${el.scrollHeight}px`;
+}
+function autoResizeFeedbackTextareas(root=document){
+  (root||document).querySelectorAll('textarea[data-feedback-autoresize="true"]').forEach(autoResizeFeedbackTextarea);
+}
 function feedbackListStyleSelect(id){
   return `<div class="feedback-list-toolbar"><input type="hidden" id="${id}" value="normal"><span>换行</span><button type="button" class="poster-template-btn active" data-feedback-list-style="${id}" data-style="normal" onclick="setFeedbackListStyle('${id}','normal')">普通</button><button type="button" class="poster-template-btn" data-feedback-list-style="${id}" data-style="number" onclick="setFeedbackListStyle('${id}','number')">编号</button><button type="button" class="poster-template-btn" data-feedback-list-style="${id}" data-style="bullet" onclick="setFeedbackListStyle('${id}','bullet')">圆点</button></div>`;
 }
 function feedbackListTextareaAttrs(sourceId){
-  return `data-list-style-source="${sourceId}" onkeydown="handleFeedbackListKeydown(event)"`;
+  return `data-feedback-autoresize="true" data-list-style-source="${sourceId}" oninput="autoResizeFeedbackTextarea(this)" onkeydown="handleFeedbackListKeydown(event)"`;
 }
 function posterTextGroups(text,options={}){
   const raw=posterNormalizeText(text,options);
@@ -1680,6 +1688,7 @@ function openFeedbackModal(scheduleId){
   const trialFieldsHtml=trial?`<div class="sec-ttl">体验课内部记录</div><div class="fgrid"><div class="fg"><div class="flabel">学员水平</div><select class="fselect" id="fb_player_level"><option value="">未判断</option><option value="1.0～1.5"${fb.playerLevel==='1.0～1.5'?' selected':''}>1.0～1.5</option><option value="1.5～2.0"${fb.playerLevel==='1.5～2.0'?' selected':''}>1.5～2.0</option><option value="2.0～2.5"${fb.playerLevel==='2.0～2.5'?' selected':''}>2.0～2.5</option><option value="2.5～3.0"${fb.playerLevel==='2.5～3.0'?' selected':''}>2.5～3.0</option><option value="3.0～3.5"${fb.playerLevel==='3.0～3.5'?' selected':''}>3.0～3.5</option><option value="3.5～4.0"${fb.playerLevel==='3.5～4.0'?' selected':''}>3.5～4.0</option></select></div><div class="fg"><div class="flabel">转化意愿</div><select class="fselect" id="fb_conversion_intent"><option value="">未判断</option><option value="高"${fb.conversionIntent==='高'?' selected':''}>高</option><option value="中"${fb.conversionIntent==='中'?' selected':''}>中</option><option value="低"${fb.conversionIntent==='低'?' selected':''}>低</option></select></div><div class="fg"><div class="flabel">推荐产品</div><select class="fselect" id="fb_recommended_product_type"><option value="">未推荐</option><option value="场地会员"${fb.recommendedProductType==='场地会员'?' selected':''}>场地会员</option><option value="私教课"${fb.recommendedProductType==='私教课'?' selected':''}>私教课</option><option value="训练营"${fb.recommendedProductType==='训练营'?' selected':''}>训练营</option><option value="继续观察"${fb.recommendedProductType==='继续观察'?' selected':''}>继续观察</option></select></div><div class="fg"><div class="flabel">是否需要跟进</div><select class="fselect" id="fb_need_ops_follow_up"><option value="否"${fb.needOpsFollowUp?'':' selected'}>否</option><option value="是"${fb.needOpsFollowUp?' selected':''}>是</option></select></div></div>`:'';
   const listAttrs=feedbackListTextareaAttrs('fb_list_style');
   document.getElementById('mBody').innerHTML=`<div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">${fmtDt(s.startTime)} · ${esc(scheduleStudentSummary(s))} · ${esc(coachName(s.coach))||'—'} · ${esc(scheduleLocationText(s))} · ${scheduleCourseTypeLabel(s)}</div><div class="sec-ttl">反馈内容</div>${feedbackListStyleSelect('fb_list_style')}<div class="fgrid"><div class="fg full"><div class="flabel">今天练习了 *</div><textarea class="finput ftextarea" id="fb_practiced" ${listAttrs}>${esc(fb.practicedToday||fb.template?.focus||fb.performance)}</textarea></div><div class="fg full"><div class="flabel">练习情况（非必填）</div><textarea class="finput ftextarea" id="fb_knowledge" ${listAttrs}>${esc(fb.knowledgePoint||fb.problems)}</textarea></div><div class="fg full"><div class="flabel">下次练习 *</div><textarea class="finput ftextarea" id="fb_next_training" ${listAttrs}>${esc(fb.nextTraining||fb.nextAdvice)}</textarea></div></div>${trialFieldsHtml}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${posterBtn}<button class="btn-save" onclick="saveFeedback('${s.id}')">保存反馈</button></div>`;
+  requestAnimationFrame(()=>autoResizeFeedbackTextareas(document.getElementById('mBody')));
   document.getElementById('overlay').classList.add('open');
 }
 function feedbackDraftText(s){
@@ -2038,4 +2047,5 @@ function openScheduleDetail(scheduleId){
     overlayClasses:['schedule-drawer-overlay'],
     modalClass:'modal modal-court modal-schedule-drawer'
   });
+  requestAnimationFrame(()=>autoResizeFeedbackTextareas());
 }

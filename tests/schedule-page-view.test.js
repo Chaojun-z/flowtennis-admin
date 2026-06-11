@@ -362,7 +362,11 @@ assert.match(fnBody('feedbackNextListMarker'), /mode==='normal'[\s\S]*!numberMat
 assert.match(source, /function handleFeedbackListKeydown\(/, 'feedback editor should intercept enter to auto insert the next marker');
 assert.match(source, /function setFeedbackListStyle\(/, 'feedback editor should expose buttons to start numbered or bullet lists');
 assert.match(fnBody('feedbackListStyleSelect'), /普通[\s\S]*编号[\s\S]*圆点/, 'feedback modal should expose normal, numbered, and bullet typing modes before coaches write feedback');
+assert.match(source, /function autoResizeFeedbackTextarea\(/, 'feedback textareas should expose auto height resizing');
+assert.match(fnBody('feedbackListTextareaAttrs'), /data-feedback-autoresize="true"[\s\S]*oninput="autoResizeFeedbackTextarea\(this\)"/, 'feedback textareas should resize when content changes');
 assert.match(fnBody('openFeedbackModal'), /feedbackListStyleSelect\('fb_list_style'\)/, 'feedback modal should render the feedback typing mode toolbar');
+assert.match(fnBody('openFeedbackModal'), /autoResizeFeedbackTextareas\(document\.getElementById\('mBody'\)\)/, 'feedback modal should resize existing feedback text when opened');
+assert.match(fnBody('openScheduleDetail'), /autoResizeFeedbackTextareas\(\)/, 'schedule detail feedback edit fields should resize existing text when opened');
 assert.match(fnBody('feedbackListTextareaAttrs'), /onkeydown="handleFeedbackListKeydown\(event\)"/, 'feedback modal textareas should auto continue list markers while typing');
 assert.match(fnBody('openFeedbackPosterModal'), /preserveListMarkers/, 'feedback poster modal should expose a list marker option');
 assert.doesNotMatch(fnBody('openFeedbackPosterModal'), /posterListStyle[\s\S]*自动编号[\s\S]*项目符号[\s\S]*不添加/, 'feedback poster modal should not reformat all lines after coaches already typed the structure');

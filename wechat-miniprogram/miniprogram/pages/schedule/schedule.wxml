@@ -873,7 +873,7 @@
         <view class="feedback-field">
           <view class="feedback-field-label">今天练习了 <text wx:if="{{!feedbackHasSaved || feedbackEditing}}">*</text></view>
           <view class="feedback-input-wrap {{feedbackHasSaved && !feedbackEditing ? 'is-readonly' : ''}} {{feedbackFocusedField === 'practicedToday' ? 'is-active' : ''}}">
-            <textarea class="feedback-input" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="详细描述今天教学的核心动作与内容..." value="{{feedbackForm.practicedToday}}" cursor="{{feedbackListCursors.practicedToday}}" data-field="practicedToday" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
+            <textarea class="feedback-input" data-field="practicedToday" auto-height="true" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="详细描述今天教学的核心动作与内容..." value="{{feedbackForm.practicedToday}}" cursor="{{feedbackListCursors.practicedToday}}" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
             <text class="feedback-count">{{feedbackCounts.practicedToday}}/200</text>
           </view>
         </view>
@@ -881,7 +881,7 @@
         <view class="feedback-field">
           <view class="feedback-field-label">练习情况 <text class="feedback-optional" wx:if="{{!feedbackHasSaved || feedbackEditing}}">（非必填）</text></view>
           <view class="feedback-input-wrap {{feedbackHasSaved && !feedbackEditing ? 'is-readonly' : ''}} {{feedbackFocusedField === 'knowledgePoint' ? 'is-active' : ''}}">
-            <textarea class="feedback-input" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="学员完成度如何？有哪些亮点或需要关注的代偿问题..." value="{{feedbackForm.knowledgePoint}}" cursor="{{feedbackListCursors.knowledgePoint}}" data-field="knowledgePoint" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
+            <textarea class="feedback-input" data-field="knowledgePoint" auto-height="true" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="学员完成度如何？有哪些亮点或需要关注的代偿问题..." value="{{feedbackForm.knowledgePoint}}" cursor="{{feedbackListCursors.knowledgePoint}}" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
             <text class="feedback-count">{{feedbackCounts.knowledgePoint}}/200</text>
           </view>
         </view>
@@ -889,7 +889,7 @@
         <view class="feedback-field">
           <view class="feedback-field-label">下次练习 <text wx:if="{{!feedbackHasSaved || feedbackEditing}}">*</text></view>
           <view class="feedback-input-wrap {{feedbackHasSaved && !feedbackEditing ? 'is-readonly' : ''}} {{feedbackFocusedField === 'nextTraining' ? 'is-active' : ''}}">
-            <textarea class="feedback-input" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="为下节课设定的目标与教学计划..." value="{{feedbackForm.nextTraining}}" cursor="{{feedbackListCursors.nextTraining}}" data-field="nextTraining" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
+            <textarea class="feedback-input" data-field="nextTraining" auto-height="true" placeholder-class="feedback-input-placeholder" maxlength="200" cursor-color="#3b5bff" disabled="{{feedbackHasSaved && !feedbackEditing}}" placeholder="为下节课设定的目标与教学计划..." value="{{feedbackForm.nextTraining}}" cursor="{{feedbackListCursors.nextTraining}}" bindfocus="onFeedbackFocus" bindblur="onFeedbackBlur" bindinput="onFeedbackInput" />
             <text class="feedback-count">{{feedbackCounts.nextTraining}}/200</text>
           </view>
         </view>

@@ -134,6 +134,7 @@ assert.match(scheduleWxml, /wx:else[\s\S]*取消[\s\S]*保存反馈/, 'unsaved f
 assert.match(scheduleWxml, /data-field="practicedToday"[\s\S]*data-field="knowledgePoint"[\s\S]*data-field="nextTraining"/, 'feedback sheet should bind all three feedback fields');
 assert.match(scheduleWxml, /feedbackListStyleOptions[\s\S]*onFeedbackListStyleTap/, 'feedback sheet should render typing mode buttons before coaches write feedback');
 assert.match(scheduleWxml, /cursor="\{\{feedbackListCursors\.practicedToday\}\}"[\s\S]*cursor="\{\{feedbackListCursors\.knowledgePoint\}\}"[\s\S]*cursor="\{\{feedbackListCursors\.nextTraining\}\}"/, 'feedback sheet should restore cursor after inserting list markers');
+assert.match(scheduleWxml, /data-field="practicedToday"[\s\S]*auto-height="true"[\s\S]*data-field="knowledgePoint"[\s\S]*auto-height="true"[\s\S]*data-field="nextTraining"[\s\S]*auto-height="true"/, 'feedback textareas should auto grow with content');
 assert.match(scheduleWxml, /placeholder-class="feedback-input-placeholder"/, 'feedback inputs should use the mapped placeholder color token');
 assert.match(scheduleWxml, /bindfocus="onFeedbackFocus"[\s\S]*cursor-color="#3b5bff"/, 'feedback input focus should drive the blue focus state and cursor color');
 assert.doesNotMatch(scheduleWxml, /feedback-input-bar/, 'feedback sheet should not fake the input cursor with a separate blue bar');
@@ -190,6 +191,7 @@ assert.match(scheduleJs, /function posterApplyLineStyle\(/, 'mini program poster
 assert.match(scheduleJs, /style === 'preserve'[\s\S]*String\(text \|\| '—'\)/, 'mini program poster should preserve coach-entered titles and list markers by default');
 assert.match(scheduleJs, /function feedbackAutoListValue\(/, 'mini program feedback editor should auto add the next marker when coach presses enter');
 assert.match(scheduleJs, /onFeedbackListStyleTap/, 'mini program feedback editor should let coaches choose numbered, bullet, or normal typing');
+assert.match(scheduleJs, /feedbackFocusedField:\s*field/, 'mini program list style buttons should focus the target feedback field after inserting the marker');
 assert.match(scheduleJs, /feedbackListStyle[\s\S]*普通[\s\S]*编号[\s\S]*圆点/, 'mini program feedback editor should expose typing list style options');
 assert.doesNotMatch(scheduleWxml, /posterListStyleOptions[\s\S]*posterListStyleText/, 'mini program poster should not reformat all lines after coaches already typed the structure');
 assert.doesNotMatch(scheduleJs, /highlight: keywords\.includes\(part\)/, 'mini program poster should not auto-highlight guessed keywords');
@@ -580,6 +582,7 @@ assert.match(scheduleWxss, /\.feedback-field-label\s*\{[\s\S]*display:\s*flex;[\
 assert.match(scheduleWxss, /\.feedback-input-wrap\.is-active\s*\{[\s\S]*border:\s*2rpx solid #3b5bff;/, 'focused feedback input should show the active blue border');
 assert.doesNotMatch(scheduleWxss, /\.feedback-input-bar\s*\{/, 'feedback sheet should not use a decorative fake cursor bar');
 assert.match(scheduleWxss, /\.feedback-input\s*\{[\s\S]*color:\s*#334155;[\s\S]*font-size:\s*14px;[\s\S]*font-weight:\s*400;/, 'feedback input text should use the requested 14px regular slate token');
+assert.match(scheduleWxss, /\.feedback-input\s*\{[\s\S]*min-height:\s*118rpx;[\s\S]*height:\s*auto;/, 'feedback inputs should use min-height instead of fixed height');
 assert.match(scheduleWxss, /\.feedback-input-placeholder\s*\{[\s\S]*color:\s*#94a3b8;[\s\S]*font-size:\s*14px;[\s\S]*font-weight:\s*400;/, 'feedback placeholder text should use the requested 14px regular muted token');
 assert.match(scheduleWxss, /\.feedback-action-btn\s*\{[\s\S]*height:\s*88rpx;[\s\S]*border-radius:\s*44rpx;[\s\S]*font-size:\s*15px;/, 'feedback bottom buttons should use the 44px pill token');
 assert.doesNotMatch(scheduleJs, /raw\[i\]\s*===\s*'\*'/, 'mini feedback poster should only use Chinese brackets as manual highlight markers');
