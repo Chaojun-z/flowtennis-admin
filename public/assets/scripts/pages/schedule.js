@@ -275,6 +275,7 @@ function setScheduleStudentSelection(ids,keepKeyword=false,applyCampusDefault=tr
   if(suggest)suggest.innerHTML=renderScheduleStudentSuggestions(normalized,keyword);
   syncScheduleProfileFromStudents(normalized,applyCampusDefault);
   refreshScheduleTimeDerivedFields();
+  refreshScheduleStoredValueHint();
 }
 function applyScheduleStudentFilter(){
   const ids=parseArr(document.getElementById('sch_stuIds')?.value||'[]');
@@ -466,6 +467,30 @@ function scheduleSettlementTypeLabel(value){
 function currentScheduleSettlementType(){
   return document.getElementById('sch_settlementType')?.value||'package';
 }
+function scheduleStoredValuePaymentState(){
+  const studentIds=parseArr(document.getElementById('sch_stuIds')?.value||'[]');
+  const amount=parseFloat(document.getElementById('sch_paidAmount')?.value||'0')||0;
+  const payMethod=document.getElementById('sch_payMethod')?.value||'';
+  if(currentScheduleSettlementType()!=='direct'||!isStoredValuePayMethod(payMethod))return {active:false};
+  if(!studentIds.length)return {active:true,valid:false,message:'请选择学员后查看储值卡余额'};
+  if(studentIds.length>1)return {active:true,valid:false,message:'储值卡扣款请只选择 1 名学员'};
+  const student=students.find(s=>s.id===studentIds[0]);
+  const court=courtsForStudent(student)[0]||null;
+  if(!court)return {active:true,valid:false,message:'未找到该学员的会员储值卡'};
+  const balance=courtFinanceLocal(court).balance||0;
+  const after=Math.round((balance-amount)*100)/100;
+  if(amount>0&&after<0)return {active:true,valid:false,balance,amount,after,message:`余额不足，当前储值卡余额：¥${fmt(balance)}，本次需扣 ¥${fmt(amount)}`};
+  return {active:true,valid:true,balance,amount,after,message:amount>0?`当前储值卡余额：¥${fmt(balance)}，本次扣款 ¥${fmt(amount)}，扣后余额 ¥${fmt(after)}`:`当前储值卡余额：¥${fmt(balance)}`};
+}
+function refreshScheduleStoredValueHint(){
+  const hint=document.getElementById('sch_storedValueHint');
+  if(!hint)return;
+  const state=scheduleStoredValuePaymentState();
+  hint.classList.toggle('is-error',state.active&&!state.valid);
+  if(!state.active){hint.style.display='none';hint.textContent='';return;}
+  hint.style.display='block';
+  hint.textContent=state.message||'';
+}
 function toggleScheduleSettlementFields(){
   const type=currentScheduleSettlementType();
   const packageItem=document.getElementById('sch_packageSettlementItem');
@@ -478,6 +503,7 @@ function toggleScheduleSettlementFields(){
   refreshScheduleCountFields();
   refreshSchEntitlementOptions();
   refreshScheduleFieldFeeFields();
+  refreshScheduleStoredValueHint();
 }
 // schedule modal field ids: id="sch_date" id="sch_startTime" id="sch_endTime" id="sch_cancelReason" id="sch_scheduleSource"
 function openScheduleModal(id,seed={}){
@@ -506,7 +532,7 @@ function openScheduleModal(id,seed={}){
   const drawerActions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="${id?`openScheduleDetail('${s.id}')`:'closeModal()'}">取消</button><button type="button" class="schedule-detail-action primary" id="scheduleSaveBtn" onclick="saveSchedule()">保存修改</button></div>`;
   const fieldFeeChecked=!!s?.requiresFieldFee&&parseFloat(s?.fieldFeeAmount)>0;
   const fieldFeeSection=`<div class="schedule-field-fee-section" id="sch_fieldFeeFields" style="display:none"><div class="tms-form-row schedule-field-fee-main-row"><div class="tms-form-item schedule-field-fee-toggle"><label class="tms-form-label">是否收补差</label><div class="finput tms-form-control schedule-field-fee-toggle-control"><input type="checkbox" class="tms-checkbox" id="sch_fieldFeeEnabled" ${fieldFeeChecked?'checked':''} onchange="refreshScheduleFieldFeeFields()"><span>非黄金课包排入黄金时段补差</span></div></div><div class="tms-form-item schedule-field-fee-amount"><label class="tms-form-label">补差金额</label><input class="finput tms-form-control" id="sch_fieldFeeAmount" type="number" min="0" step="0.01" value="${rv(s,'fieldFeeAmount','')}" placeholder="补差金额"></div><div class="tms-form-item schedule-field-fee-pay"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('sch_fieldFeePayMethod','支付方式',courseSurchargePayMethodOptions(),rv(s,'fieldFeePayMethod','微信'),true)}</div></div><div class="tms-form-row schedule-field-fee-note-row"><div class="tms-form-item full-width"><label class="tms-form-label">补差说明</label><textarea class="finput tms-form-control schedule-field-fee-note" id="sch_fieldFeeNote" placeholder="非黄金课包排入黄金时段补差">${esc(rv(s,'fieldFeeNote','非黄金课包排入黄金时段补差'))}</textarea></div></div></div>`;
-  const settlementField=`<div class="tms-form-item schedule-settlement-type-item"><label class="tms-form-label">结算方式</label><div class="schedule-settlement-controls"><div class="schedule-settlement-select">${renderStandardDropdownHtml('sch_settlementType','结算方式',settlementOptions,settlementType,true,'toggleScheduleSettlementFields')}</div><div class="schedule-direct-payment-item" id="sch_directPaymentFields" style="display:none">${renderStandardDropdownHtml('sch_payMethod','支付方式',payMethodOptions(),rv(s,'payMethod','微信'),true)}<input class="finput tms-form-control" id="sch_paidAmount" type="number" min="0" step="0.01" value="${rv(s,'paidAmount','')}" placeholder="支付金额"></div></div></div>`;
+  const settlementField=`<div class="tms-form-item schedule-settlement-type-item"><label class="tms-form-label">结算方式</label><div class="schedule-settlement-controls"><div class="schedule-settlement-select">${renderStandardDropdownHtml('sch_settlementType','结算方式',settlementOptions,settlementType,true,'toggleScheduleSettlementFields')}</div><div class="schedule-direct-payment-item" id="sch_directPaymentFields" style="display:none">${renderStandardDropdownHtml('sch_payMethod','支付方式',payMethodOptions(),rv(s,'payMethod','微信'),true,'refreshScheduleStoredValueHint')}<div class="schedule-direct-payment-amount"><input class="finput tms-form-control" id="sch_paidAmount" type="number" min="0" step="0.01" value="${rv(s,'paidAmount','')}" placeholder="支付金额" oninput="refreshScheduleStoredValueHint()"><div id="sch_storedValueHint" class="schedule-stored-value-hint"></div></div></div></div></div>`;
   const packageField=`<div class="tms-form-item schedule-entitlement-item" id="sch_packageSettlementItem"><label class="tms-form-label">扣减课包</label><div id="sch_entitlementHost">${renderScheduleEntitlementDropdown([],rv(s,'entitlementId',''),rv(s,'packageName','自动匹配可用课包')||'自动匹配可用课包')}</div><div id="sch_studentEntitlementRows"></div><div id="sch_ent_hint" class="schedule-entitlement-alert"></div></div>`;
   const repeatField=`<div class="tms-form-item schedule-repeat-field"><label class="tms-form-label">循环排课</label><label class="schedule-checkbox-line schedule-repeat-control ${id?'is-disabled':''}"><input type="checkbox" class="tms-checkbox" id="sch_repeatEnabled" ${s?.scheduleSource==='循环排课'?'checked':''} ${id?'disabled':''} onchange="toggleScheduleRepeatWeeks()"><span>每周循环</span></label>${id?'<div class="schedule-repeat-help">批量排课不支持编辑</div>':''}</div><div class="tms-form-item schedule-repeat-weeks-field" id="sch_repeatWeeksWrap" style="display:none"><label class="tms-form-label">循环周数</label><input class="finput tms-form-control" id="sch_repeatWeeks" type="number" min="1" max="12" value="1" ${id?'disabled':''}></div>`;
   const basicForm=`<input type="hidden" id="sch_courseType" value="${esc(courseTypeForm.courseType||PRODUCT_TYPES[0])}"><input type="hidden" id="sch_smallClassType" value="${esc(smallClassType)}"><input type="hidden" id="sch_experienceType" value="${esc(scheduleExperienceType)}"><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员姓名</label><input class="finput tms-form-control" id="sch_stuSearch" placeholder="搜索姓名 / 手机号" oninput="updateScheduleStudentSearch()" autocomplete="off"><div id="sch_studentSuggest" class="schedule-student-suggest"></div><div id="sch_selectedStudentTags" class="schedule-student-tags">${renderScheduleStudentTags(selectedStudentIds)}</div></div><div class="tms-form-item schedule-course-type-item"><label class="tms-form-label">课程类型</label>${renderStandardDropdownHtml('sch_standardCourseType','课程类型',courseTypeOptions,courseTypeForm.standardCourseType||standardCourseTypeLabel(courseTypeForm.courseType,courseTypeForm.experienceType,courseTypeForm.smallClassType),true,'handleScheduleStandardCourseTypeChange')}</div></div><div class="tms-form-row schedule-settlement-row">${settlementField}${packageField}</div><div class="tms-form-row schedule-time-row"><div class="tms-form-item schedule-time-field"><label class="tms-form-label">上课时间</label>${scheduleTimeRangeControls(dateValue,startTimeValue,endTimeValue)}</div><div class="tms-form-item schedule-lesson-count-item"><label class="tms-form-label" id="sch_lc_label">消课时数</label><div class="schedule-lesson-count-controls"><input class="finput tms-form-control" id="sch_lc" type="number" step="0.5" value="${rv(s,'lessonCount',seed.lessonCount||1)}" onchange="refreshSchEntitlementOptions()"><div id="sch_countItem" style="display:none"><input class="finput tms-form-control" id="sch_count" type="number" value="1" readonly></div></div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">上课教练</label>${renderStandardDropdownHtml('sch_coach','上课教练',coachOptions,coachName(rv(s,'coach')||seed.coach),true,'handleScheduleCoachChange')}</div><div class="tms-form-item schedule-location-type"><label class="tms-form-label">地点类型</label>${renderStandardDropdownHtml('sch_locationType','地点类型',[{value:'own',label:'校区内'},{value:'external',label:'校区外'}],locationType,true,'toggleScheduleLocationType')}</div></div><div class="tms-form-row schedule-location-row"><div class="tms-form-item"><label class="tms-form-label" id="sch_locationPlaceLabel">${locationType==='external'?'场馆名称':'上课校区'}</label><div class="schedule-location-fields" id="sch_ownLocationRow">${renderStandardDropdownHtml('sch_campus','上课校区',campusOptions,locationType==='own'?(rv(s,'campus')||seed.campus):'',true,'handleScheduleCampusChange')}</div><div class="schedule-location-fields" id="sch_externalLocationRow" style="display:none"><input class="finput tms-form-control" id="sch_externalVenueName" value="${esc(externalParts.name)}" placeholder="例：奥森网球中心"></div></div><div class="tms-form-item"><label class="tms-form-label">场地</label><div class="schedule-location-fields" id="sch_ownCourtRow"><div id="sch_venueFieldHost">${renderScheduleVenueField(locationType==='own'?(rv(s,'campus')||seed.campus):'',locationType==='own'?rv(s,'venue','1号场'):'1号场')}</div></div><div class="schedule-location-fields" id="sch_externalCourtRow" style="display:none"><input class="finput tms-form-control" id="sch_externalCourtName" value="${esc(externalParts.court)}" placeholder="例：A1 / 学员自订"><input type="hidden" id="sch_externalNotes" value="${esc(rv(s,'externalNotes'))}"></div></div></div><div class="tms-form-row schedule-repeat-row">${repeatField}</div>${fieldFeeSection}`;
@@ -649,6 +675,7 @@ function mergeScheduleSaveResult(result,editingId){
   (result?.entitlements||[]).forEach(e=>{const i=entitlements.findIndex(x=>x.id===e.id);if(i>=0)entitlements[i]=e;else entitlements.unshift(e);});
   (result?.entitlementLedger||[]).forEach(l=>{const i=entitlementLedger.findIndex(x=>x.id===l.id);if(i<0)entitlementLedger.unshift(l);});
   (result?.financialLedger||[]).forEach(l=>{const i=financialLedger.findIndex(x=>x.id===l.id);if(i>=0)financialLedger[i]=l;else financialLedger.unshift(l);});
+  (result?.courts||[]).forEach(c=>{const i=courts.findIndex(x=>x.id===c.id);if(i>=0)courts[i]=c;else courts.unshift(c);});
 }
 function scheduleConfirmRuleMeta(scheduleSource,startTime=''){
   const days=scheduleSource==='循环排课'?5:2;
@@ -1078,6 +1105,11 @@ async function saveSchedule(){
   const payMethod=settlementType==='direct'?(document.getElementById('sch_payMethod')?.value||''):(settlementType==='gift'?'赠送':'');
   if(settlementType==='direct'&&!payMethod){toast('请选择支付方式','warn');return;}
   if(settlementType==='direct'&&!(paidAmount>0)){toast('请输入支付金额','warn');return;}
+  if(settlementType==='direct'&&isStoredValuePayMethod(payMethod)){
+    const storedValueState=scheduleStoredValuePaymentState();
+    refreshScheduleStoredValueHint();
+    if(!storedValueState.valid){toast(storedValueState.after<0?'储值卡余额不足':(storedValueState.message||'储值卡余额不足'),'warn');return;}
+  }
   const fieldFeeRequired=settlementType==='package'&&!!selectedEntitlement?.requiresFieldFee;
   const fieldFeeEnabled=fieldFeeRequired&&!!document.getElementById('sch_fieldFeeEnabled')?.checked;
   const fieldFeeAmount=fieldFeeEnabled?parseFloat(document.getElementById('sch_fieldFeeAmount')?.value||'0'):0;

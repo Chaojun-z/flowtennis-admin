@@ -87,7 +87,7 @@ const PAGE_DATA_REQUIREMENTS={
   leads:['campuses','leads'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
-  schedule:['campuses','students','schedule','coaches','coachProposals'],
+  schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],

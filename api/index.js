@@ -1721,6 +1721,165 @@ async function syncScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date
   }
   return null;
 }
+function scheduleStoredValuePaymentAmount(schedule){
+  if(!isBillableSchedule(schedule)||!isDirectPaidSchedule(schedule)||!isStoredValuePayMethod(schedule?.payMethod||schedule?.paymentChannel))return 0;
+  return roundMoney(schedule?.paidAmount||schedule?.paymentAmount||0);
+}
+function activeCourtForStoredValue(court){
+  const status=String(court?.status||'active');
+  return court&&status!=='inactive'&&status!=='deleted'&&!court.deletedAt&&!court.mergedIntoCourtId;
+}
+function resolveScheduleStoredValueCourt(schedule,courts=[],students=[]){
+  const storedCourtId=String(schedule?.storedValueCourtId||'').trim();
+  if(storedCourtId){
+    const court=(courts||[]).find(item=>String(item?.id||'')===storedCourtId&&activeCourtForStoredValue(item));
+    if(court)return court;
+  }
+  const studentIds=parseArr(schedule?.studentIds).filter(Boolean);
+  if(studentIds.length!==1)throw new Error('储值卡扣款请只选择 1 名学员');
+  const studentId=studentIds[0];
+  const student=(students||[]).find(item=>String(item?.id||'')===String(studentId))||{};
+  const studentPhone=String(student.phone||student.mobile||student.studentPhone||'').trim();
+  const studentName=String(student.name||schedule?.studentName||'').trim();
+  const rows=(courts||[]).filter(activeCourtForStoredValue).filter(court=>{
+    const ids=normalizeStudentIds(court);
+    if(ids.includes(String(studentId)))return true;
+    if(studentPhone&&String(court.phone||'').trim()===studentPhone)return true;
+    return !studentPhone&&studentName&&String(court.name||'').trim()===studentName;
+  });
+  if(!rows.length)throw new Error('未找到该学员的会员储值卡');
+  return rows.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))[0];
+}
+function buildScheduleStoredValueHistoryRow(schedule,{court,type='消费',amount=0,now=new Date().toISOString(),operator='',operationTrace=null,note='',idSuffix='consume'}={}){
+  const courseLabel=schedule?.courseType==='体验课'?(schedule.experienceType||'体验课'):(schedule?.courseType||'课程');
+  const historyId=`schedule-stored-${schedule.id}-${idSuffix}`;
+  const occurredDate=String(schedule?.startTime||now).slice(0,10);
+  const row=withOperationTrace({
+    id:historyId,
+    date:occurredDate,
+    occurredDate,
+    createdAt:now,
+    recordedAt:now,
+    type,
+    transactionType:type==='冲正'?'冲正':'消耗',
+    businessTypeLevel1:'课程',
+    businessTypeLevel2:courseLabel,
+    category:`排课${courseLabel}`,
+    sourceCategory:'排课储值卡扣款',
+    sourceType:'schedule',
+    sourceDocument:`排课 ${schedule.id}`,
+    sourceProject:`${courseLabel} ${String(schedule?.startTime||'').replace('T',' ').slice(0,16)}`,
+    scheduleId:schedule.id,
+    studentId:parseArr(schedule?.studentIds)[0]||'',
+    studentName:schedule?.studentName||'',
+    payMethod:'储值卡',
+    normalizedPaymentMethod:businessTaxonomy.normalizePaymentMethod('储值卡'),
+    amount:roundMoney(amount),
+    note:note||'排课产生的储值卡扣款',
+    startTime:schedule?.startTime||'',
+    endTime:schedule?.endTime||'',
+    venue:schedule?.venue||'',
+    campus:schedule?.campus||court?.campus||'',
+    coach:schedule?.coach||'',
+    operator:operator||schedule?.updatedBy||schedule?.createdBy||'系统记录',
+    revenueBucket:'储值扣款'
+  },operationTrace);
+  return row;
+}
+function buildScheduleStoredValueCourtUpdate({previousSchedule=null,nextSchedule=null,courts=[],students=[],now=new Date().toISOString(),operator='',operationTrace=null}={}){
+  const previousAmount=scheduleStoredValuePaymentAmount(previousSchedule);
+  const nextAmount=scheduleStoredValuePaymentAmount(nextSchedule);
+  const next={...(nextSchedule||{})};
+  if(!previousAmount&&!nextAmount){
+    next.storedValueCourtId='';
+    next.storedValueAmount=0;
+    return {schedule:next,court:null,courts:[],originalCourts:[],historyRows:[]};
+  }
+  const previousCourt=previousAmount?resolveScheduleStoredValueCourt(previousSchedule,courts,students):null;
+  const nextCourt=nextAmount?resolveScheduleStoredValueCourt(next,courts,students):null;
+  if(nextAmount){
+    next.storedValueCourtId=nextCourt.id;
+    next.storedValueAmount=nextAmount;
+  }else{
+    next.storedValueCourtId='';
+    next.storedValueAmount=0;
+  }
+  const updates=new Map();
+  const originals=new Map();
+  const historyRows=[];
+  const addRow=(court,row)=>{
+    if(!court||!row||row.amount<=0)return;
+    if(!originals.has(court.id))originals.set(court.id,court);
+    const current=updates.get(court.id)||{...court,history:normalizeCourtHistory(court.history)};
+    current.history=[...normalizeCourtHistory(current.history),row];
+    updates.set(court.id,current);
+    historyRows.push(row);
+  };
+  if(previousAmount&&(!nextAmount||previousCourt.id!==nextCourt.id)){
+    addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{
+      court:previousCourt,
+      type:'冲正',
+      amount:previousAmount,
+      now,
+      operator,
+      operationTrace,
+      note:nextAmount?'编辑排课退回原储值卡扣款':'取消排课退回储值卡',
+      idSuffix:`return-${operationTrace?.operationId||now}`
+    }));
+  }
+  if(nextAmount&&(!previousAmount||previousCourt.id!==nextCourt.id)){
+    addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
+      court:nextCourt,
+      type:'消费',
+      amount:nextAmount,
+      now,
+      operator,
+      operationTrace,
+      note:'排课产生的储值卡扣款',
+      idSuffix:`consume-${operationTrace?.operationId||now}`
+    }));
+  }
+  if(previousAmount&&nextAmount&&previousCourt.id===nextCourt.id){
+    const diff=roundMoney(nextAmount-previousAmount);
+    if(diff>0){
+      addRow(nextCourt,buildScheduleStoredValueHistoryRow(next,{
+        court:nextCourt,
+        type:'消费',
+        amount:diff,
+        now,
+        operator,
+        operationTrace,
+        note:'编辑排课补扣储值卡',
+        idSuffix:`consume-diff-${operationTrace?.operationId||now}`
+      }));
+    }else if(diff<0){
+      addRow(previousCourt,buildScheduleStoredValueHistoryRow(previousSchedule,{
+        court:previousCourt,
+        type:'冲正',
+        amount:Math.abs(diff),
+        now,
+        operator,
+        operationTrace,
+        note:'编辑排课退回储值卡差额',
+        idSuffix:`return-diff-${operationTrace?.operationId||now}`
+      }));
+    }
+  }
+  const updatedCourts=[...updates.values()].map(court=>{
+    computeCourtFinance(court);
+    return {...court,updatedAt:now};
+  });
+  return {schedule:next,court:updatedCourts[0]||null,courts:updatedCourts,originalCourts:[...originals.values()],historyRows};
+}
+async function persistScheduleStoredValueCourts(update){
+  const rows=Array.isArray(update?.courts)?update.courts:[];
+  for(const court of rows)await put(T_COURTS,court.id,court);
+  return rows;
+}
+async function rollbackScheduleStoredValueCourts(update){
+  const rows=Array.isArray(update?.originalCourts)?update.originalCourts:[];
+  for(const court of rows)await put(T_COURTS,court.id,court).catch(()=>null);
+}
 function validateEntitlementForSchedule(entitlement,schedule){
   if(!isBillableSchedule(schedule))return;
   if(!entitlement)return;
@@ -5104,7 +5263,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       debitTarget:entitlement.packageName||purchase.packageName||'课包'
     };
   }).filter(Boolean);
-  const directScheduleRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&isDirectPaidSchedule(item)&&roundMoney(item.paidAmount||item.paymentAmount)>0).map(item=>{
+  const directScheduleRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&isDirectPaidSchedule(item)&&!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&roundMoney(item.paidAmount||item.paymentAmount)>0).map(item=>{
     const amount=roundMoney(item.paidAmount||item.paymentAmount);
     const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
     const businessDate=financeBusinessDateTime(item.paidAt||item.paymentTime||item.createdAt,item.paymentTime,item.createdAt,String(item.startTime||'').slice(0,10));
@@ -5226,7 +5385,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         recognizedRevenueDelta,
         deferredRevenueDelta,
         paymentChannel:historyRow.payMethod||'—',
-        sourceDocument:`订场账户 ${court.id}`,
+        sourceDocument:historyRow.sourceDocument||`订场账户 ${court.id}`,
         notes:differenceReason?`${differenceReason}；${historyRow.note||historyRow.category||''}`:(historyRow.note||historyRow.category||''),
         incomeType:businessType,
         packageName:'',
@@ -5236,7 +5395,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         totalLessons:0,
         usedLessons:0,
         remainingLessons:0,
-        sourceProject:businessType,
+        sourceProject:historyRow.sourceProject||businessType,
         debitTarget:businessType==='会员储值'?'会员储值余额':(isStoredValuePayMethod(historyRow.payMethod)?'会员储值余额':'现场收款')
       };
     }).filter(Boolean);
@@ -5354,7 +5513,7 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const ledgerRows=(source.entitlementLedger||[]).filter(row=>isFinanceImportIncrementRow(row)||purchaseIds.has(String(row.purchaseId||''))||entitlementIds.has(String(row.entitlementId||'')));
   const membershipOrderRows=(source.membershipOrders||[]).filter(isFinanceMembershipImportIncrementOrder);
   const courtRows=(source.courts||[]).map(courtWithFinanceImportHistory).filter(row=>normalizeCourtHistory(row.history).length);
-  const directScheduleRows=(source.schedule||[]).filter(row=>(isDirectPaidSchedule(row)&&roundMoney(row.paidAmount||row.paymentAmount)>0)||roundMoney(row.fieldFeeAmount)>0);
+  const directScheduleRows=(source.schedule||[]).filter(row=>(isDirectPaidSchedule(row)&&!isStoredValuePayMethod(row.payMethod||row.paymentChannel)&&roundMoney(row.paidAmount||row.paymentAmount)>0)||roundMoney(row.fieldFeeAmount)>0);
   const incrementRows=buildFinanceUnifiedRows({
     campuses:source.campuses||[],
     students:source.students||[],
@@ -10006,9 +10165,18 @@ module.exports = async (req, res) => {
             r.entitlementIds=entitlementDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},null);
-            return {risk,entitlementDeltas,entitlementRows};
+            let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
+            if(scheduleStoredValuePaymentAmount(r)>0){
+              const [courtRows,studentRows]=await Promise.all([
+                withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
+                getFastStudentsRead().catch(()=>[])
+              ]);
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:null,nextSchedule:r,courts:courtRows,students:studentRows,now,operator:user.name||'',operationTrace});
+              Object.assign(r,storedValueUpdate.schedule);
+            }
+            return {risk,entitlementDeltas,entitlementRows,storedValueUpdate};
           });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
-          const {risk,entitlementDeltas,entitlementRows}=validation;
+          const {risk,entitlementDeltas,entitlementRows,storedValueUpdate}=validation;
           await timed('schedule create persist',()=>put(T_SCHEDULE,id,r));
           const nextDelta=scheduleLessonDelta(r);
           const appliedEntitlements=[];
@@ -10033,13 +10201,15 @@ module.exports = async (req, res) => {
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
             const financialLedger=await timed('schedule create field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,now));
+            const storedValueCourts=await timed('schedule create stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
           let notification={skipped:true,reason:'official_account_reminder_only'};
             await syncCoachScheduleIndexes(null,r).catch(err=>{
               notification={...(notification||{}),sent:false,indexError:err.message};
             });
-            return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],notification});
+            return sendJson(res,{schedule:r,warnings:risk.warnings||[],...(lessonUpdate||{}),entitlements,entitlementLedger,entitlement:entitlements[0]||null,ledger:entitlementLedger[0]||null,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,notification});
           }catch(err){
             await del(T_SCHEDULE,id).catch(()=>null);
+            await rollbackScheduleStoredValueCourts(storedValueUpdate);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
             if(nextDelta&&lessonApplied)await applyLessonDelta(nextDelta.classId,-nextDelta.delta,r.studentIds).catch(()=>null);
@@ -10067,6 +10237,15 @@ module.exports = async (req, res) => {
             const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
             const oldEntDeltas=scheduleEntitlementDeltas(ex);
             const oldFreeAbsenceLedger=allLedger.filter(row=>row.scheduleId===id&&row.action==='free_absence');
+            let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
+            if(scheduleStoredValuePaymentAmount(ex)>0){
+              const [courtRows,studentRows]=await Promise.all([
+                withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
+                getFastStudentsRead().catch(()=>[])
+              ]);
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,now:r.updatedAt,operator:user.name||'',operationTrace});
+              Object.assign(r,storedValueUpdate.schedule);
+            }
             await timed('schedule cancel persist',()=>put(T_SCHEDULE,id,r));
             const appliedEntitlements=[];
             const appliedClassDeltas=[];
@@ -10087,10 +10266,12 @@ module.exports = async (req, res) => {
                 lessonUpdate=await applyLessonDelta(oldDelta.classId,-oldDelta.delta,parseArr(ex.studentIds));
                 appliedClassDeltas.push({classId:oldDelta.classId,delta:oldDelta.delta,studentIds:parseArr(ex.studentIds)});
               }
+              const storedValueCourts=await timed('schedule cancel stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
               await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule cancel index sync failed:',err));
-              return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),warnings:[]});
+              return sendJson(res,{schedule:r,entitlements,entitlementLedger,...(lessonUpdate||{}),courts:storedValueCourts,warnings:[]});
             }catch(err){
               await put(T_SCHEDULE,id,ex).catch(()=>null);
+              await rollbackScheduleStoredValueCourts(storedValueUpdate);
               await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
               for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
               for(const item of appliedEntitlements)await applyEntitlementDelta(item.entitlementId,id,item.delta,item.action,item.reason,user).catch(()=>null);
@@ -10127,9 +10308,18 @@ module.exports = async (req, res) => {
             r.entitlementIds=nextEntDeltas.map(d=>d.entitlementId);
             r.entitlementId=r.entitlementIds.length===1?r.entitlementIds[0]:'';
             await assertScheduleEntitlementCapacity({...r,coachRefs},ex);
-            return {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows};
+            let storedValueUpdate={schedule:r,courts:[],originalCourts:[],historyRows:[]};
+            if(scheduleStoredValuePaymentAmount(ex)>0||scheduleStoredValuePaymentAmount(r)>0){
+              const [courtRows,studentRows]=await Promise.all([
+                withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
+                getFastStudentsRead().catch(()=>[])
+              ]);
+              storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:r,courts:courtRows,students:studentRows,now:r.updatedAt,operator:user.name||'',operationTrace});
+              Object.assign(r,storedValueUpdate.schedule);
+            }
+            return {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows,storedValueUpdate};
           });}catch(err){return sendJson(res,{error:String(err?.message||err)},scheduleSaveErrorStatus(err));}
-          const {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows}=validation;
+          const {risk,oldEntDeltas,nextEntDeltas,oldFreeAbsenceLedger,nextBaseRows,storedValueUpdate}=validation;
           await timed('schedule update persist',()=>put(T_SCHEDULE,id,r));
           const appliedEntitlements=[];
           const appliedClassDeltas=[];
@@ -10157,10 +10347,12 @@ module.exports = async (req, res) => {
             const entitlements=entitlementChanged.filter(Boolean).map(x=>x.entitlement);
             const entitlementLedger=entitlementChanged.filter(Boolean).map(x=>x.ledger);
             const financialLedger=await timed('schedule update field fee finance write',()=>syncScheduleFieldFeeFinancialLedger(r,user,new Date().toISOString()));
+            const storedValueCourts=await timed('schedule update stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
             await syncCoachScheduleIndexes(ex,r).catch(err=>console.error('schedule update index sync failed:',err));
-            return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],warnings:risk.warnings||[]});
+            return sendJson(res,{schedule:r,classes,plans,entitlements,entitlementLedger,financialLedger:financialLedger?[financialLedger]:[],courts:storedValueCourts,warnings:risk.warnings||[]});
           }catch(err){
             await put(T_SCHEDULE,id,ex).catch(()=>null);
+            await rollbackScheduleStoredValueCourts(storedValueUpdate);
             await rollbackSmallGroupFreeAbsences((appliedEntitlements||[]).filter(item=>item.action==='free_absence')).catch(()=>null);
             await restoreSmallGroupFreeAbsenceLedgerRows(oldFreeAbsenceLedger).catch(()=>null);
             for(const item of appliedClassDeltas)await applyLessonDelta(item.classId,item.delta,item.studentIds).catch(()=>null);
@@ -10175,6 +10367,15 @@ module.exports = async (req, res) => {
         const allLedger=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
         const scheduleLedger=allLedger.filter(row=>row.scheduleId===id);
         assertCanDeleteSchedule(ex||id,await scanFeedbacks(),allLedger);
+        let storedValueUpdate={schedule:{...(ex||{}),status:'已取消'},courts:[],originalCourts:[],historyRows:[]};
+        if(scheduleStoredValuePaymentAmount(ex)>0){
+          const [courtRows,studentRows]=await Promise.all([
+            withRequiredStorageTimeout(getCachedScan(T_COURTS).catch(()=>[]),3500,'会员储值卡余额校验超时，请稍后重试'),
+            getFastStudentsRead().catch(()=>[])
+          ]);
+          const operationTrace=buildOperationTrace({operationType:'lesson-consume',operator:user.name||'',now:new Date().toISOString()});
+          storedValueUpdate=buildScheduleStoredValueCourtUpdate({previousSchedule:ex,nextSchedule:{...ex,status:'已取消'},courts:courtRows,students:studentRows,now:operationTrace.operationAt,operator:user.name||'',operationTrace});
+        }
         await del(T_SCHEDULE,id);
         const deletedLedger=[];
         try{
@@ -10185,10 +10386,12 @@ module.exports = async (req, res) => {
             }
           }
           const lessonUpdate=oldDelta?await applyLessonDelta(oldDelta.classId,-oldDelta.delta):null;
+          const storedValueCourts=await timed('schedule delete stored value writes',()=>persistScheduleStoredValueCourts(storedValueUpdate));
           await syncCoachScheduleIndexes(ex,null).catch(err=>console.error('schedule delete index sync failed:',err));
-          return sendJson(res,{success:true,...(lessonUpdate||{})});
+          return sendJson(res,{success:true,...(lessonUpdate||{}),courts:storedValueCourts});
         }catch(err){
           if(ex)await put(T_SCHEDULE,id,ex).catch(()=>null);
+          await rollbackScheduleStoredValueCourts(storedValueUpdate);
           for(const row of deletedLedger||[])await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
           if(oldDelta)await applyLessonDelta(oldDelta.classId,oldDelta.delta).catch(()=>null);
           throw err;
@@ -10692,6 +10895,10 @@ module.exports._test={
   normalizeEntitlementLedgerRowsForDetailView,
   syncEntitlementFromPurchase,
   writePurchaseAndEntitlementAtomic,
+  scheduleStoredValuePaymentAmount,
+  resolveScheduleStoredValueCourt,
+  buildScheduleStoredValueHistoryRow,
+  buildScheduleStoredValueCourtUpdate,
   validateEntitlementForSchedule,
   recommendEntitlements,
   normalizeCampusValue,

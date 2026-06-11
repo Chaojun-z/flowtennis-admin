@@ -11,7 +11,7 @@ assert.match(apiSource, /withRequiredStorageTimeout\(getCachedScan\(T_SCHEDULE\)
 assert.match(apiSource, /catch\(err\)\{return sendJson\(res,\{error:String\(err\?\.message\|\|err\)\},scheduleSaveErrorStatus\(err\)\);\}/, 'schedule save validation should return JSON errors instead of falling through to the global 500 handler');
 assert.match(apiSource, /timed\('schedule create persist',\(\)=>put\(T_SCHEDULE,id,r\)\)/, 'schedule create should expose a persist timing segment');
 assert.match(apiSource, /timed\('schedule create entitlement writes',async\(\)=>\{/, 'schedule create should expose entitlement write timing');
-assert.match(apiSource, /return \{risk,entitlementDeltas,entitlementRows\};[\s\S]*const \{risk,entitlementDeltas,entitlementRows\}=validation;[\s\S]*applySmallGroupFreeAbsences\(r,entitlementRows,user(?:,[^)]+)?\)/, 'schedule create should keep entitlement rows available for free-absence writes');
+assert.match(apiSource, /return \{risk,entitlementDeltas,entitlementRows,storedValueUpdate\};[\s\S]*const \{risk,entitlementDeltas,entitlementRows,storedValueUpdate\}=validation;[\s\S]*applySmallGroupFreeAbsences\(r,entitlementRows,user(?:,[^)]+)?\)/, 'schedule create should keep entitlement rows available for free-absence writes');
 assert.match(apiSource, /timed\('schedule create lesson writes',\(\)=>applyLessonDelta\(nextDelta\.classId,nextDelta\.delta,r\.studentIds\)\)/, 'schedule create should expose lesson write timing');
 assert.doesNotMatch(apiSource, /notifyCoachScheduleCreated\(r\)/, 'schedule create should not send one-time mini program subscribe notifications');
 assert.match(apiSource, /notification=\{skipped:true,reason:'official_account_reminder_only'\}/, 'schedule create should leave reminders to official account cron');

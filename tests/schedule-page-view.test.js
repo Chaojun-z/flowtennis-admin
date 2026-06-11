@@ -278,6 +278,17 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-ent
 assert.match(fnBody('applySchEntitlementOptions'), /hint\.innerHTML=.*schedule-entitlement-alert-icon[\s\S]*hint\.style\.display/, 'package unavailable hint should include an alert icon and toggle visibility');
 assert.match(fnBody('openScheduleModal'), /schedule-settlement-controls[\s\S]*sch_settlementType[\s\S]*sch_directPaymentFields[\s\S]*sch_payMethod[\s\S]*sch_paidAmount/, 'direct payment controls should live beside settlement type');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-settlement-row\.is-direct \.schedule-settlement-controls\{[\s\S]*grid-template-columns:repeat\(3,1fr\)/, 'direct settlement should split settlement, pay method, and amount equally');
+assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_paidAmount[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_storedValueHint/, 'stored-value direct payment should show a balance hint below the amount input');
+assert.match(source, /function refreshScheduleStoredValueHint\(/, 'schedule page should refresh stored-value balance hint');
+assert.match(fnBody('scheduleStoredValuePaymentState'), /isStoredValuePayMethod[\s\S]*courtFinanceLocal/, 'stored-value hint should read the selected student membership balance');
+assert.match(fnBody('scheduleStoredValuePaymentState'), /当前储值卡余额/, 'stored-value hint should show current balance copy');
+assert.match(fnBody('scheduleStoredValuePaymentState'), /扣后余额/, 'stored-value hint should show after-balance copy');
+assert.match(fnBody('scheduleStoredValuePaymentState'), /余额不足/, 'stored-value hint should show insufficient-balance copy');
+assert.match(fnBody('setScheduleStudentSelection'), /refreshScheduleStoredValueHint\(\)/, 'changing schedule students should refresh stored-value balance hint');
+assert.match(fnBody('saveSchedule'), /scheduleStoredValuePaymentState[\s\S]*储值卡余额不足/, 'saving stored-value direct payment should block insufficient balance');
+assert.match(fnBody('mergeScheduleSaveResult'), /result\?\.courts[\s\S]*courts\.findIndex/, 'schedule save should merge returned court account updates so stored-value balance refreshes locally');
+assert.match(fnBody('renderCourtHistoryItems'), /sourceType==='schedule'[\s\S]*扣款时间/, 'schedule stored-value history rows should show the actual deduction time');
+assert.match(styles, /\.schedule-stored-value-hint\{[\s\S]*font-size:12px/, 'stored-value balance hint should use compact helper text style');
 assert.match(fnBody('openScheduleModal'), /schedule-lesson-count-controls[\s\S]*id="sch_lc"[\s\S]*id="sch_countItem"/, 'schedule modal should keep both deduction inputs for mode switching');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-lesson-count-controls\{[\s\S]*display:block[\s\S]*width:232px/, 'lesson hour and count controls should use the same 232px field position');
 assert.match(fnBody('openScheduleModal'), /schedule-repeat-field[\s\S]*schedule-repeat-weeks-field[\s\S]*sch_repeatWeeksWrap/, 'repeat weeks should appear as its own aligned field');

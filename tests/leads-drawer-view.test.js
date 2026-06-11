@@ -25,6 +25,8 @@ assert.doesNotMatch(fnBody('leadFollowupDrawerFormHtml'), /datetime-local/, 'lea
 assert.match(fnBody('leadFollowupDrawerFormHtml'), /courtDateButtonHtml\('lead_followupAt'[\s\S]*leadFollowupDateInputValue/, 'lead follow-up date should use the shared date picker and keep edit value');
 assert.match(fnBody('leadFollowupDrawerFormHtml'), /renderStandardDropdownHtml\('lead_followupBy','跟进人',\[\{value:'',label:'-'\},\.\.\.leadOwnerOptions\(\)\]/, 'lead follow-up owner should use the same dropdown interaction as basic owner');
 assert.doesNotMatch(fnBody('leadFollowupDrawerFormHtml'), /id="lead_followupBy"[^>]*<input|<input[^>]*id="lead_followupBy"/, 'lead follow-up owner should not be a free text input');
+assert.match(fnBody('openLeadFollowupModal'), /renderStandardDropdownHtml\('lead_followupBy','跟进人',\[\{value:'',label:'-'\},\.\.\.leadOwnerOptions\(\)\]/, 'lead follow-up modal owner should use the same dropdown interaction as basic owner');
+assert.doesNotMatch(fnBody('openLeadFollowupModal'), /id="lead_followupBy"[^>]*<input|<input[^>]*id="lead_followupBy"/, 'lead follow-up modal owner should not be a free text input');
 assert.match(source, /function startLeadFollowupDrawerEdit\(/, 'lead follow-up records should switch into drawer edit mode');
 assert.match(fnBody('leadDetailFollowupsTabHtml'), /schedule-detail-action" onclick="startLeadFollowupDrawerEdit/, 'add follow-up should render as text action instead of a primary button');
 assert.doesNotMatch(fnBody('leadDetailFollowupsTabHtml'), /schedule-detail-action primary" onclick="startLeadFollowupDrawerEdit/, 'add follow-up should not render as a brown button');

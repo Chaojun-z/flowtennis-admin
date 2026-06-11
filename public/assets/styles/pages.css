@@ -1031,6 +1031,9 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .schedule-settlement-controls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:492px;max-width:492px}
 .modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .schedule-direct-payment-item{display:contents}
 .modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .tms-dropdown,.modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .tms-dropdown.tms-dropdown-form .tms-dropdown-display,.modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .finput{width:100%;max-width:100%}
+.modal.modal-court.modal-schedule-drawer .schedule-direct-payment-amount{min-width:0}
+.schedule-stored-value-hint{display:none;margin-top:6px;font-size:12px;line-height:18px;color:#8C7B6E}
+.schedule-stored-value-hint.is-error{color:#EF4444}
 .modal.modal-court.modal-schedule-drawer .schedule-repeat-weeks-field{width:232px;max-width:232px}
 .modal.modal-court.modal-schedule-drawer .schedule-repeat-weeks-field .finput{width:232px;max-width:232px}
 .modal.modal-court.modal-schedule-drawer .schedule-checkbox-line{min-height:40px;display:flex;align-items:center;gap:8px;color:#333333;font-size:13px;line-height:20px}
