@@ -538,7 +538,7 @@ function renderCoachOps(){
   const showNowLine=dayIsToday&&nowMinutes>=0&&nowMinutes<=(22-7)*60;
   const nowLineLeft=showNowLine?nowMinutes/60*120:0;
   const nowLineHtml=showNowLine?`<span class="coach-ops-now-line" style="left:${nowLineLeft}px"></span>`:'';
-  const nowHeadHtml=showNowLine?`<span class="coach-ops-now-head" style="left:${nowLineLeft}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></span>`:'';
+  const nowHeadHtml=showNowLine?`<div class="coach-ops-now-head" style="left:${nowLineLeft}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></div>`:'';
   const gridCard=document.querySelector('#page-coachschedule .coach-ops-grid-card');
   if(gridCard){
     gridCard.classList.toggle('mode-day',mode==='day');

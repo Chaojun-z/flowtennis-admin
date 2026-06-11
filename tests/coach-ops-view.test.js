@@ -74,8 +74,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const nowHeadHtml=showNowLine\?`<span class="coach-ops-now-head" style="left:\$\{nowLineLeft\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/span>`:'';/,
+  /const nowHeadHtml=showNowLine\?`<div class="coach-ops-now-head" style="left:\$\{nowLineLeft\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/div>`:'';/,
   'coach schedule current time label should render near the header'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /<span class="coach-ops-now-head"/,
+  'coach schedule current-time marker should not be a span that inherits hour-cell styles'
 );
 
 assert.doesNotMatch(
@@ -872,8 +878,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:calc\(100% \+ 6px\);left:0;transform:translateX\(-50%\);height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
-  'coach schedule current-time label should sit below the header instead of covering hour labels'
+  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:calc\(100% \+ 6px\);left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
+  'coach schedule current-time label should sit beside the red line instead of covering it'
 );
 
 assert.doesNotMatch(
