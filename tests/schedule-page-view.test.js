@@ -78,6 +78,7 @@ assert.match(fnBody('openScheduleModal'), /sch_standardCourseType[\s\S]*sch_sett
 assert.match(fnBody('openScheduleModal'), /sch_entitlementHost[\s\S]*schedule-time-field|schedule-time-field[\s\S]*sch_entitlementHost/, 'schedule modal should keep package and time controls in basic info');
 assert.doesNotMatch(fnBody('openScheduleModal'), /<select[^>]+id="sch_entitlement"/, 'schedule entitlement should use the standard custom dropdown instead of native select');
 assert.match(source, /function renderScheduleStudentEntitlementRows\(/, 'multi-student small group schedules should render package matching by student');
+assert.match(fnBody('renderScheduleStudentEntitlementRows'), /title="\$\{esc\(`\$\{name\}Ôºö\$\{text\}`\)\}"/, 'multi-student package rows should expose the full package text on hover');
 assert.match(source, /function refreshScheduleStudentEntitlementRows\(/, 'schedule modal should refresh per-student package rows when students or lesson data changes');
 assert.match(fnBody('openScheduleModal'), /sch_studentEntitlementRows/, 'schedule modal should include a per-student package matching host');
 assert.match(fnBody('refreshSchEntitlementOptions'), /refreshScheduleStudentEntitlementRows\(/, 'multi-student package refresh should update per-student package rows');
@@ -264,6 +265,11 @@ assert.match(fnBody('openScheduleModal'), /schedule-detail-card-actions[\s\S]*Âè
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.tms-form-row\{[\s\S]*grid-template-columns:repeat\(2,232px\)[\s\S]*gap:12px 28px/, 'schedule edit form rows should align to the same 232px two-column grid as readonly');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.tms-form-item\{[\s\S]*width:232px[\s\S]*max-width:232px/, 'schedule edit form fields should cap at 232px');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.tms-form-item\.full-width\{[\s\S]*width:492px[\s\S]*max-width:492px/, 'schedule notes should fill the full row and align to the right column');
+assert.match(fnBody('openScheduleModal'), /schedule-student-notes-preview" title="\$\{esc\(studentNotesText\)\}"/, 'student notes preview should expose the full note text on hover');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-student-notes-preview\{[^}]*white-space:nowrap[^}]*overflow:hidden[^}]*text-overflow:ellipsis/, 'student notes preview should stay on one line without overlapping schedule notes');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-student-entitlement-list\{[^}]*display:flex[^}]*flex-direction:column[^}]*gap:8px/, 'multi-student package rows should render one student per line');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-student-entitlement-row\{[^}]*display:flex[^}]*height:32px[^}]*border-radius:8px[^}]*background:#FDF7F2/, 'multi-student package rows should match the selected-student tag style');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-student-entitlement-package\{[^}]*min-width:0[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/, 'multi-student package text should stay on one line with ellipsis');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.tms-form-label\{[\s\S]*color:#969AA0[\s\S]*font-size:13px[\s\S]*line-height:22px/, 'schedule edit form labels should match readonly labels');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.tms-form-control[\s\S]*max-width:232px[\s\S]*font-size:13px[\s\S]*color:#333333/, 'schedule edit form controls should match readonly text width and color');
 assert.match(styles, /--schedule-edit-control-height:40px[\s\S]*height:var\(--schedule-edit-control-height\)/, 'schedule edit inputs should use one fixed 40px height token');
