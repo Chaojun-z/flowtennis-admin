@@ -2,6 +2,7 @@
 let coachOpsDraggedName='';
 const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
+let coachOpsAutoScrollDayView=false;
 function isCoachSchedulePage(){
   return currentPage==='coachschedule';
 }
@@ -191,15 +192,28 @@ function ensureCoachOpsDate(){
   if(!el.value){el.value=coachOpsInputValue(new Date(),coachOpsMode);el.dataset.coachOpsAutoDate='1';}
   updateCoachOpsDateButton();
 }
+function coachOpsModeDateForMode(mode){
+  if(mode==='day')return new Date();
+  return coachOpsInputDate();
+}
+function resetCoachScheduleToToday(){
+  if(!isCoachSchedulePage())return;
+  const el=coachOpsDateInput();
+  coachOpsMode='day';
+  if(el){el.value=coachOpsInputValue(new Date(),'day');el.dataset.coachOpsAutoDate='1';}
+  coachOpsAutoScrollDayView=true;
+}
 function setCoachOpsMode(mode){
   const d=coachOpsDateInput();
-  const base=mode==='day'&&d?.dataset?.coachOpsAutoDate==='1'?new Date():coachOpsInputDate();
-  coachOpsMode=['day','week','month'].includes(mode)?mode:'day';
+  mode=['day','week','month'].includes(mode)?mode:'day';
+  const base=coachOpsModeDateForMode(mode);
+  coachOpsMode=mode;
   if(d)d.value=coachOpsInputValue(base,coachOpsMode);
+  coachOpsAutoScrollDayView=coachOpsMode==='day';
   closeCoachOpsPicker();
   renderCoachOps();
 }
-function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}renderCoachOps();}
+function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=coachOpsMode==='day';renderCoachOps();}
 function shiftCoachOpsDate(step){
   const el=coachOpsDateInput();if(!el)return;
   const mode=coachOpsMode;
@@ -210,7 +224,7 @@ function shiftCoachOpsDate(step){
   delete el.dataset.coachOpsAutoDate;
   renderCoachOps();
 }
-function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}renderCoachOps();}
+function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=ds===today();renderCoachOps();}
 function coachOpsQuickCreate(){
   openScheduleModal(null,{scheduleSource:'教练运营'});
 }
@@ -372,6 +386,16 @@ function coachOpsDrop(e,targetCoach){
   if(from<0||to<0)return;
   order.splice(to,0,order.splice(from,1)[0]);
   saveCoachOpsOrder(order);
+}
+function scrollCoachOpsDayToNow(){
+  if(!isCoachSchedulePage()||coachOpsMode!=='day')return;
+  const range=rangeBounds('day');
+  if(dateKey(range.start)!==today())return;
+  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  if(!scroll)return;
+  const now=new Date();
+  const nowLineLeft=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*120;
+  scroll.scrollLeft=Math.max(0,nowLineLeft-360);
 }
 async function saveCoachOpsOrder(order){
   const byName=new Map(coaches.map(coach=>[coachName(coach.name),coach]));
@@ -575,7 +599,8 @@ function renderCoachOps(){
           const endMin=(endMs-base.getTime())/60000;
           const left=Math.max(0,startMin/60*120);
           const width=Math.max(24,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*120);
-          return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="left:${left+2}px;width:${Math.min(width-4,1920-left-4)}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
+          const cardWidth=Math.min(Math.max(width-4,112),1920-left-4);
+          return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="left:${left+2}px;width:${cardWidth}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
         }).join('');
         return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${coachOpsDragIconHtml()}<span>${esc(r.name)}</span></div><div class="coach-ops-line ${dayIsToday?'is-today':''}" onclick="openCoachOpsLineCreate(event,${jsArg(r.name)},'${dateKey(range.start)}')">${nowLineHtml}${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
       }
@@ -596,6 +621,10 @@ function renderCoachOps(){
       return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${coachOpsDragIconHtml()}<span>${esc(r.name)}</span></div><div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${cells}</div></div>`;
       }).join('');
     }
+  }
+  if(mode==='day'&&coachOpsAutoScrollDayView){
+    requestAnimationFrame(scrollCoachOpsDayToNow);
+    coachOpsAutoScrollDayView=false;
   }
   const workloadBody=document.getElementById('coachOpsTbody');
   if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${coachTrialConversionText(r.name,r.rangeRows)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${distText(r.rangeRows,timeBand)}</div></td></tr>`).join('');

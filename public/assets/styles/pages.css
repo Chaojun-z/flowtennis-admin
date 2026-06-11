@@ -1736,9 +1736,12 @@ body.is-packages-page .content{overflow:hidden}
 #page-coachschedule .coach-ops-line.is-today{background-color:#FFFDFC}
 #page-coachschedule .coach-ops-now-line{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba(242,72,34,.25);z-index:12;pointer-events:none}
 #page-coachschedule .coach-ops-hours{position:relative;overflow:visible}
+#page-coachschedule .coach-ops-hours span{position:relative;z-index:2}
 #page-coachschedule .coach-ops-now-head{position:absolute;top:0;bottom:0;width:0;z-index:20;pointer-events:none}
 #page-coachschedule .coach-ops-now-head i{position:absolute;top:calc(100% + 6px);left:0;transform:translateX(-50%);height:16px;padding:0 5px;border-radius:999px;background:rgba(242,72,34,.9);color:#fff;font-size:10px;font-style:normal;line-height:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(242,72,34,.14)}
 #page-coachschedule .coach-ops-now-head b{position:absolute;left:-4px;bottom:-4px;width:8px;height:8px;border-radius:50%;background:#F24822;box-shadow:0 0 0 2px rgba(255,255,255,.95)}
+#page-coachschedule .coach-ops-block{min-width:112px;box-sizing:border-box}
+#page-coachschedule .coach-ops-time,#page-coachschedule .coach-ops-student,#page-coachschedule .coach-ops-location{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .my-schedule-primary{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.95fr);gap:14px;margin-bottom:16px}
 .my-schedule-panel{background:#FCFAF7;border:1px solid #E9DED2;border-radius:18px;box-shadow:0 10px 30px rgba(60,20,0,.05);padding:16px 18px}
 .my-schedule-panel h3{font-size:18px;color:#2F241E;margin-bottom:4px}

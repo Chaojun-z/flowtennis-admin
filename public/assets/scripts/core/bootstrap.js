@@ -37,6 +37,7 @@ function goPage(pg,el,skipRender=false){
       targetPage.classList.add('active');
     }
     currentPage=pg;
+    if(pg==='coachschedule'&&typeof resetCoachScheduleToToday==='function')resetCoachScheduleToToday();
     localStorage.setItem(PAGE_KEY,currentPage);
     document.body.classList.toggle('is-packages-page',pg==='packages');
     document.getElementById('campusTabs').style.display=globalTopFilterPages().includes(pg)||['coachschedule','coachops','courts','packages','purchases'].includes(pg)?'flex':'none';

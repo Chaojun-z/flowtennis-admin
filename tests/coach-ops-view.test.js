@@ -56,14 +56,26 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const base=mode==='day'&&d\?\.dataset\?\.coachOpsAutoDate==='1'\?new Date\(\):coachOpsInputDate\(\);/,
-  'switching from the default week view to day view should use today instead of the week start'
+  /const base=coachOpsModeDateForMode\(mode\);/,
+  'switching to day view should use today instead of the week start'
+);
+
+assert.match(
+  coachOpsSource,
+  /function resetCoachScheduleToToday\(\)[\s\S]*coachOpsMode='day'[\s\S]*el\.value=coachOpsInputValue\(new Date\(\),'day'\)/,
+  'opening coach schedule should default to today in day view'
+);
+
+assert.match(
+  coachOpsSource,
+  /function scrollCoachOpsDayToNow\(\)[\s\S]*scroll\.scrollLeft=Math\.max\(0,nowLineLeft-360\)/,
+  'coach schedule day view should auto-scroll near the current time'
 );
 
 assert.match(
   coachOpsSource,
   /const nowHeadHtml=showNowLine\?`<span class="coach-ops-now-head" style="left:\$\{nowLineLeft\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/span>`:'';/,
-  'coach schedule current time label should render in the header'
+  'coach schedule current time label should render near the header'
 );
 
 assert.doesNotMatch(
@@ -727,6 +739,18 @@ assert.match(
 );
 
 assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-block\{min-width:112px;box-sizing:border-box\}/,
+  'coach schedule short day cards should keep a readable minimum width'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-time,#page-coachschedule \.coach-ops-student,#page-coachschedule \.coach-ops-location\{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/,
+  'coach schedule short day card text should not wrap into vertical text'
+);
+
+assert.match(
   html,
   /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-skeleton-row/,
   'coach schedule should show a skeleton before the first script render'
@@ -838,6 +862,12 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba\(242,72,34,\.25\);z-index:12;pointer-events:none\}/,
   'coach schedule current-time body line should be 1px at 25% opacity'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-hours span\{position:relative;z-index:2\}/,
+  'coach schedule hour labels should stay above the current-time marker'
 );
 
 assert.match(
