@@ -184,6 +184,10 @@ assert.match(scheduleJs, /ctx\.fillText\(`\$\{posterDisplayDate\(data\.date\)\} 
 assert.doesNotMatch(scheduleJs, /ctx\.fillText\('训练反馈', Math\.min\(60 \+ nameWidth \+ 16, 560\), 140\)/, 'mini program poster title suffix should not sit beside the student name');
 assert.match(scheduleJs, /function posterNormalizeText\(/, 'mini program poster should normalize list markers before drawing text');
 assert.match(scheduleJs, /preserveListMarkers/, 'mini program poster should expose a list marker option');
+assert.match(scheduleJs, /function posterApplyLineStyle\(/, 'mini program poster should auto add list markers for multiline feedback');
+assert.match(scheduleJs, /style === 'number'[\s\S]*`\$\{itemIndex\}\. \$\{clean\}`[\s\S]*style === 'bullet'[\s\S]*`· \$\{clean\}`/, 'mini program poster should support auto numbered and bullet list styles');
+assert.match(scheduleJs, /posterListStyle[\s\S]*自动编号[\s\S]*项目符号[\s\S]*不添加/, 'mini program poster should let coaches choose auto list style');
+assert.match(scheduleWxml, /posterListStyleOptions[\s\S]*posterListStyleText/, 'mini program poster should render the list style picker');
 assert.doesNotMatch(scheduleJs, /highlight: keywords\.includes\(part\)/, 'mini program poster should not auto-highlight guessed keywords');
 assert.match(scheduleJs, /function posterSectionHasContent\(/, 'mini program poster should detect empty optional sections');
 assert.match(scheduleJs, /posterSectionHasContent\(data\.knowledgePoint\)/, 'mini program poster should hide practice status when it is empty');

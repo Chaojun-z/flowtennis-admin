@@ -1256,10 +1256,25 @@ function posterPushAutoGroups(groups,text){
 function posterNormalizeText(text,options={}){
   const raw=String(text||'—');
   const preserveListMarkers=options.preserveListMarkers;
-  if(preserveListMarkers===false){
-    return raw.split('\n').map(line=>line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/,'')).join('\n')||'—';
-  }
-  return raw;
+  const style=options.listStyle||(preserveListMarkers===false?'none':'number');
+  return posterApplyLineStyle(raw,style);
+}
+function posterApplyLineStyle(text,style='number'){
+  const lines=String(text||'—').split('\n');
+  const filledCount=lines.filter(line=>line.trim()).length;
+  let itemIndex=0;
+  const next=lines.map(line=>{
+    if(!line.trim())return '';
+    const clean=line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/,'').trim();
+    if(style==='none'||filledCount<2)return clean;
+    if(style==='number'){
+      itemIndex+=1;
+      return `${itemIndex}. ${clean}`;
+    }
+    if(style==='bullet')return `· ${clean}`;
+    return clean;
+  }).join('\n');
+  return next||'—';
 }
 function posterTextGroups(text,options={}){
   const raw=posterNormalizeText(text,options);
@@ -1352,7 +1367,7 @@ function measureFeedbackPosterLayout(ctx,data){
   const contentWidth=570;
   const gap=28;
   const startY=320;
-  const textOptions={preserveListMarkers:data.preserveListMarkers!==false};
+  const textOptions={preserveListMarkers:data.preserveListMarkers!==false,listStyle:data.posterListStyle||'number'};
   const practicedLines=posterTextLines(ctx,data.practicedToday,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
   const practicedHeight=posterBlockHeight(practicedLines.length);
   let nextY=startY+practicedHeight+gap;
@@ -1485,8 +1500,11 @@ function feedbackPosterFilename(){
 function renderFeedbackPosterPreview(templateKey){
   if(!feedbackPosterState)return;
   feedbackPosterState.templateKey=templateKey;
-  const preserve=document.getElementById('posterPreserveListMarkers');
-  if(preserve)feedbackPosterState.data.preserveListMarkers=preserve.checked;
+  const style=document.getElementById('posterListStyle');
+  if(style){
+    feedbackPosterState.data.posterListStyle=style.value;
+    feedbackPosterState.data.preserveListMarkers=style.value!=='none';
+  }
   document.querySelectorAll('[data-poster-template]').forEach(btn=>btn.classList.toggle('active',btn.dataset.posterTemplate===templateKey));
   const canvas=document.getElementById('feedbackPosterCanvas');
   if(!canvas)return;
@@ -1498,9 +1516,9 @@ function openFeedbackPosterModal(feedbackId,scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);
   const fb=feedbacks.find(x=>x.id===feedbackId)||scheduleFeedback(s);
   if(!s||!fb){toast('找不到反馈记录','error');return;}
-  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:{...feedbackPosterData(s,fb),preserveListMarkers:true}};
+  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:{...feedbackPosterData(s,fb),preserveListMarkers:true,posterListStyle:'number'}};
   const buttons=Object.entries(FEEDBACK_POSTER_TEMPLATES).map(([key,t])=>`<button class="poster-template-btn${key==='blueGreenDiagonal'?' active':''}" data-poster-template="${key}" onclick="renderFeedbackPosterPreview('${key}')">${esc(t.name)}</button>`).join('');
-  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><label class="poster-list-toggle"><input type="checkbox" id="posterPreserveListMarkers" checked onchange="renderFeedbackPosterPreview(feedbackPosterState?.templateKey||'blueGreenDiagonal')">保留序号/项目符号</label><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
+  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><label class="poster-list-toggle">换行样式<select id="posterListStyle" class="poster-list-select" onchange="renderFeedbackPosterPreview(feedbackPosterState?.templateKey||'blueGreenDiagonal')"><option value="number" selected>自动编号</option><option value="bullet">项目符号</option><option value="none">不添加</option></select></label><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openFeedbackModal('${s.id}')">返回反馈</button><button class="tms-btn tms-btn-default" id="posterDownloadBtn" onclick="downloadFeedbackPoster()">下载图片</button><button class="tms-btn tms-btn-primary" id="posterShareBtn" onclick="shareFeedbackPoster()">分享图片</button>`;
   openStandardModal({title:'生成课后海报',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight'});
   requestAnimationFrame(()=>renderFeedbackPosterPreview('blueGreenDiagonal'));

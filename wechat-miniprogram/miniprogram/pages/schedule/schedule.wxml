@@ -914,10 +914,13 @@
       </scroll-view>
       <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="poster-sheet-body">
         <view class="poster-sheet-content">
-          <label class="poster-list-toggle">
-            <switch checked="{{posterPreserveListMarkers}}" bindchange="onPosterListMarkerChange" color="#2b3a55" />
-            <text>保留序号/项目符号</text>
-          </label>
+          <picker mode="selector" range="{{posterListStyleOptions}}" range-key="label" value="{{posterListStyleIndex}}" bindchange="onPosterListStyleChange">
+            <view class="poster-list-toggle">
+              <text>换行样式</text>
+              <text class="poster-list-toggle-value">{{posterListStyleText}}</text>
+              <text class="poster-list-toggle-arrow">⌄</text>
+            </view>
+          </picker>
           <canvas type="2d" id="feedbackPosterCanvas" class="feedback-poster-canvas poster-render-canvas" style="height:{{posterCanvasHeightRpx}}rpx;"></canvas>
           <image wx:if="{{posterPreviewImage}}" class="feedback-poster-image" src="{{posterPreviewImage}}" mode="widthFix"></image>
           <view wx:else class="poster-preview-loading">海报生成中...</view>

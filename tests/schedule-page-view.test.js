@@ -349,8 +349,11 @@ assert.match(source, /function posterTextGroups\(/, 'feedback poster should supp
 assert.match(fnBody('posterTextGroups'), /raw\[i\]==='【'[\s\S]*highlight:true/, 'feedback poster should use Chinese brackets as manual highlight markers');
 assert.doesNotMatch(fnBody('posterPushAutoGroups'), /highlight:keywords\.includes\(part\)/, 'feedback poster should not auto-highlight guessed keywords');
 assert.match(source, /function posterNormalizeText\(/, 'feedback poster should normalize list markers before drawing text');
-assert.match(fnBody('posterNormalizeText'), /preserveListMarkers===false[\s\S]*replace[\s\S]*\\d\+[\s\S]*·/, 'feedback poster should optionally remove line-start numbers and bullets');
+assert.match(fnBody('posterApplyLineStyle'), /replace[\s\S]*\\d\+[\s\S]*·/, 'feedback poster should optionally remove line-start numbers and bullets');
+assert.match(source, /function posterApplyLineStyle\(/, 'feedback poster should auto add list markers for multiline feedback');
+assert.match(fnBody('posterApplyLineStyle'), /style==='number'[\s\S]*`\$\{itemIndex\}\. \$\{clean\}`[\s\S]*style==='bullet'[\s\S]*`· \$\{clean\}`/, 'feedback poster should support auto numbered and bullet list styles');
 assert.match(fnBody('openFeedbackPosterModal'), /preserveListMarkers/, 'feedback poster modal should expose a list marker option');
+assert.match(fnBody('openFeedbackPosterModal'), /posterListStyle[\s\S]*自动编号[\s\S]*项目符号[\s\S]*不添加/, 'feedback poster modal should let coaches choose auto list style');
 assert.match(source, /function measureFeedbackPosterLayout\(/, 'feedback poster should expose a layout measurer for dynamic poster height');
 assert.match(source, /function posterSectionHasContent\(/, 'feedback poster should detect empty optional sections');
 assert.match(fnBody('measureFeedbackPosterLayout'), /posterSectionHasContent\(data\.knowledgePoint\)[\s\S]*knowledge=null/, 'feedback poster should hide practice status when it is empty');

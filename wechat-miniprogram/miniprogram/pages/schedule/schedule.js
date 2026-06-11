@@ -972,10 +972,26 @@ function posterPushAutoGroups(groups, text) {
 function posterNormalizeText(text, options = {}) {
   const raw = String(text || '—');
   const preserveListMarkers = options.preserveListMarkers;
-  if (preserveListMarkers === false) {
-    return raw.split('\n').map(line => line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/, '')).join('\n') || '—';
-  }
-  return raw;
+  const style = options.listStyle || (preserveListMarkers === false ? 'none' : 'number');
+  return posterApplyLineStyle(raw, style);
+}
+
+function posterApplyLineStyle(text, style = 'number') {
+  const lines = String(text || '—').split('\n');
+  const filledCount = lines.filter(line => line.trim()).length;
+  let itemIndex = 0;
+  const next = lines.map(line => {
+    if (!line.trim()) return '';
+    const clean = line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/, '').trim();
+    if (style === 'none' || filledCount < 2) return clean;
+    if (style === 'number') {
+      itemIndex += 1;
+      return `${itemIndex}. ${clean}`;
+    }
+    if (style === 'bullet') return `· ${clean}`;
+    return clean;
+  }).join('\n');
+  return next || '—';
 }
 
 function posterTextGroups(text, options = {}) {
@@ -1094,7 +1110,7 @@ function posterSectionHasContent(text) {
 
 function posterLayout(ctx, data) {
   const contentWidth = 570;
-  const textOptions = { preserveListMarkers: data.preserveListMarkers !== false };
+  const textOptions = { preserveListMarkers: data.preserveListMarkers !== false, listStyle: data.posterListStyle || 'number' };
   const baseSections = [
     { key: 'practicedToday', label: '今天练习了', text: data.practicedToday },
     { key: 'nextTraining', label: '下次练习', text: data.nextTraining }
@@ -1403,7 +1419,7 @@ function drawFeedbackPoster(canvas, data, templateKey = 'blueGreenDiagonal') {
   return layout;
 }
 
-function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers = true) {
+function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers = true, posterListStyle = 'number') {
   const startText = String(schedule.startTime || '').slice(0, 10);
   return {
     studentName: schedule.student || schedule.studentText || '学员',
@@ -1412,7 +1428,8 @@ function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers
     practicedToday: form.practicedToday || '—',
     knowledgePoint: form.knowledgePoint || '',
     nextTraining: form.nextTraining || '—',
-    preserveListMarkers
+    preserveListMarkers,
+    posterListStyle
   };
 }
 
@@ -1776,6 +1793,14 @@ Page({
     posterTemplateKey: 'blueGreenDiagonal',
     posterStyles: POSTER_STYLE_OPTIONS,
     posterPreserveListMarkers: true,
+    posterListStyle: 'number',
+    posterListStyleIndex: 0,
+    posterListStyleText: '自动编号',
+    posterListStyleOptions: [
+      { label: '自动编号', value: 'number' },
+      { label: '项目符号', value: 'bullet' },
+      { label: '不添加', value: 'none' }
+    ],
     posterCanvasHeightRpx: 996,
     posterPreviewImage: ''
   },
@@ -2342,6 +2367,9 @@ Page({
       posterDate: posterDateText(this.data.selectedClass || {}),
       posterTemplateKey: this.data.posterTemplateKey || 'blueGreenDiagonal',
       posterPreserveListMarkers: true,
+      posterListStyle: 'number',
+      posterListStyleIndex: 0,
+      posterListStyleText: '自动编号',
       posterPreviewImage: ''
     });
     setTimeout(() => this.renderFeedbackPosterCanvas(), 80);
@@ -2369,6 +2397,18 @@ Page({
     this.renderFeedbackPosterCanvas();
   },
 
+  onPosterListStyleChange(event) {
+    const index = Number(event.detail.value) || 0;
+    const option = this.data.posterListStyleOptions[index] || this.data.posterListStyleOptions[0];
+    this.setData({
+      posterListStyleIndex: index,
+      posterListStyle: option.value,
+      posterListStyleText: option.label,
+      posterPreserveListMarkers: option.value !== 'none'
+    });
+    this.renderFeedbackPosterCanvas();
+  },
+
   renderFeedbackPosterCanvas() {
     const query = wx.createSelectorQuery().in(this);
     query.select('#feedbackPosterCanvas').fields({ node: true, size: true }).exec((res) => {
@@ -2376,7 +2416,7 @@ Page({
       if (!canvas) return;
       const layout = drawFeedbackPoster(
         canvas,
-        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}, this.data.posterPreserveListMarkers),
+        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}, this.data.posterPreserveListMarkers, this.data.posterListStyle || 'number'),
         this.data.posterTemplateKey || 'blueGreenDiagonal'
       );
       this.setData({
