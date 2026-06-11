@@ -966,8 +966,8 @@ async function refreshSchEntitlementOptions(){
 function scheduleSaveConfirmText(data,selectedEntitlement){
   const absent=parseArr(data.absentStudentIds);
   const packageText=data.settlementType==='direct'?`${data.payMethod} ¥${fmt(data.paidAmount||0)}`:data.settlementType==='gift'?'赠送/免费，收入 ¥0':(data.studentIds.length>1?'系统按参与学员自动扣课':(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName):'未选择可用课包，本次不会扣减课包余额'));
-  const chargeUnit=scheduleSaveChargeUnit(data,selectedEntitlement);
-  const chargeText=data.coachLateFree?'本次不扣课':`${data.lessonCount||0} ${chargeUnit}`;
+  const chargeLabel=scheduleSaveChargeLabel(data);
+  const chargeText=scheduleSaveChargeText(data,selectedEntitlement);
   const timeText=()=>{
     const start=fmtDt(data.startTime),end=fmtDt(data.endTime);
     const day=start.slice(0,10),startClock=start.slice(11),endClock=end.slice(11);
@@ -982,11 +982,22 @@ function scheduleSaveConfirmText(data,selectedEntitlement){
     ${row('场地',scheduleLocationText(data))}
     ${row('课程',courseTypeDisplayLabel(data)||'—')}
     ${row('结算方式',`${scheduleSettlementTypeLabel(data.settlementType)} · ${packageText}`)}
-    <div class="schedule-confirm-charge"><span class="schedule-confirm-label">本次扣课</span><span class="schedule-confirm-charge-value">${esc(chargeText)}</span></div>
+    <div class="schedule-confirm-charge"><span class="schedule-confirm-label">${esc(chargeLabel)}</span><span class="schedule-confirm-charge-value">${esc(chargeText)}</span></div>
     ${data.requiresFieldFee?row('补差价',data.fieldFeeAmount>0?`${data.fieldFeePayMethod} ¥${fmt(data.fieldFeeAmount)}`:(data.fieldFeeReason||'需补差价/场地费'),'schedule-confirm-warn'):''}
     ${data.coachLateFree?row('迟到免费',`本节不扣学员课时，教练承担场地费 ¥${fmt(data.coachLateFieldFeeAmount||0)}`,'schedule-confirm-warn'):''}
     ${data.status==='已取消'?row('取消原因',data.cancelReason||'未填写','schedule-confirm-warn'):''}
   </div>`;
+}
+function scheduleSaveChargeLabel(data={}){
+  const settlementType=data?.settlementType||'package';
+  if(settlementType==='direct'||settlementType==='gift'||scheduleCourseType(data)==='陪打')return '本次服务';
+  return '本次扣课';
+}
+function scheduleSaveChargeText(data={},selectedEntitlement=null){
+  if(data.coachLateFree)return '本次不扣课';
+  if(scheduleSaveChargeLabel(data)==='本次服务')return `${lessonUnitsText(data.lessonCount||0)} 小时`;
+  const chargeUnit=scheduleSaveChargeUnit(data,selectedEntitlement);
+  return `${data.lessonCount||0} ${chargeUnit}`;
 }
 function scheduleSaveChargeUnit(data={},selectedEntitlement=null){
   if(scheduleCourseType(data)==='小班课')return '次';
@@ -1659,19 +1670,25 @@ function scheduleDetailInfoHtml(s,ent,studentNames,primaryCoachText,ownerCoachTe
   const settlement=scheduleSettlementTypeLabel(s?.settlementType||'package');
   const packageText=(s?.settlementType||'package')==='package'?scheduleEntitlementSummary(s):(s?.settlementType==='direct'?`${s.payMethod||'收款'} ¥${fmt(parseFloat(s.paidAmount)||0)}`:'赠送/免费');
   const location=scheduleLocationDetailParts(s);
+  const lessonField=scheduleLessonDisplayField(s);
   return [
     scheduleDetailField('学员姓名',studentNames),
     scheduleDetailField('课程类型',standardCourseTypeLabel(scheduleCourseType(s),s.experienceType,s.smallClassType)||courseTypeDisplayLabel(ent)||''),
     scheduleDetailField('结算方式',settlement),
     scheduleDetailField('扣减课包',packageText),
     scheduleDetailField('上课时间',`${fmtDt(s.startTime)}${s.endTime?` - ${String(s.endTime).slice(11,16)}`:''}`),
-    scheduleDetailField('消课时数',`${lessonUnitsText(s.lessonCount||0)} ${scheduleCourseType(s)==='小班课'?'次':'节'}`),
+    scheduleDetailField(lessonField.label,lessonField.value),
     scheduleDetailField('上课教练',coachName(s.coach)||''),
     scheduleDetailField('地点类型',location.type),
     scheduleDetailField('上课校区/场馆名称',location.place),
     scheduleDetailField('场地',location.court),
     scheduleDetailField('循环排课',scheduleRepeatDisplayText(s))
   ].join('');
+}
+function scheduleLessonDisplayField(s={}){
+  const settlementType=s?.settlementType||'package';
+  if(settlementType==='direct'||settlementType==='gift'||scheduleCourseType(s)==='陪打')return {label:'服务时长',value:`${lessonUnitsText(s.lessonCount||0)} 小时`};
+  return {label:'消课时数',value:`${lessonUnitsText(s.lessonCount||0)} ${scheduleCourseType(s)==='小班课'?'次':'节'}`};
 }
 function scheduleDetailNotesHtml(s,studentNotes,recentFeedback,fb){
   const editing=scheduleDetailEditingSection==='notes';

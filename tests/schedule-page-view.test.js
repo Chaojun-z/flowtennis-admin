@@ -32,7 +32,11 @@ assert.doesNotMatch(fnBody('scheduleSaveConfirmText'), /<strong>/, 'schedule sav
 assert.match(fnBody('scheduleSaveConfirmText'), /schedule-confirm-charge/, 'schedule save confirm should highlight lesson deduction');
 assert.match(source, /function scheduleSaveChargeUnit\(/, 'schedule save confirm should centralize the deduction unit');
 assert.match(fnBody('scheduleSaveChargeUnit'), /小班课[\s\S]*次/, 'small group schedules should display count-based deductions');
-assert.match(fnBody('scheduleSaveConfirmText'), /const chargeUnit=scheduleSaveChargeUnit\(data,selectedEntitlement\);[\s\S]*const chargeText=data\.coachLateFree\?'本次不扣课':`\$\{data\.lessonCount\|\|0\} \$\{chargeUnit\}`;/, 'coach-late free confirm should not display a deduction amount and small group courses should use 次');
+assert.match(fnBody('scheduleSaveChargeText'), /data\.coachLateFree[\s\S]*本次不扣课[\s\S]*scheduleSaveChargeUnit\(data,selectedEntitlement\)/, 'coach-late free confirm should not display a deduction amount and package deductions should still use the proper unit');
+assert.match(source, /function scheduleSaveChargeLabel\(/, 'schedule save confirm should centralize whether the row means deduction or service time');
+assert.match(fnBody('scheduleSaveChargeLabel'), /settlementType==='direct'[\s\S]*本次服务/, 'direct-paid schedules should not label service time as lesson deduction');
+assert.match(source, /function scheduleLessonDisplayField\(/, 'schedule detail should centralize the lesson display field');
+assert.match(fnBody('scheduleLessonDisplayField'), /settlementType==='direct'[\s\S]*服务时长/, 'direct-paid schedule detail should not label service time as consumed lessons');
 assert.match(fnBody('saveSchedule'), /const lc=scheduleCurrentLessonCount\(\);/, 'schedule save should preserve half-lesson counts');
 assert.doesNotMatch(fnBody('saveSchedule'), /const lc=parseInt\(document\.getElementById\('sch_lc'\)\.value\)\|\|1;/, 'schedule save should not truncate half-lesson counts');
 assert.match(fnBody('saveSchedule'), /html:true[\s\S]*hideIcon:true[\s\S]*boxClass:'schedule-confirm-box'/, 'schedule save confirm should use the compact visual confirm layout');
@@ -189,7 +193,7 @@ assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信
 assert.match(source, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
 assert.match(source, /function scheduleResolveStudentName\(/, 'schedule detail should resolve student names from related datasets before rendering');
 assert.doesNotMatch(fnBody('scheduleStudentSummary'), /students\.find\(st=>st\.id===id\)\?\.name\|\|id/, 'schedule student summary should not fall back to displaying raw student ids');
-assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*学员姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*消课时数[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
+assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*学员姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*lessonField\.label[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
 assert.doesNotMatch(source, /历史问题/, 'schedule detail drawer should remove the historical issue field');
 assert.match(source, /排课备注/, 'schedule detail drawer should rename coach note to schedule note');
 assert.doesNotMatch(source, /if\(!isSmallGroupSchedule\(s\)\)return scheduleDetailField\('教练提案'/, 'schedule detail proposal tab should not collapse non-small-group lessons into one placeholder field');
