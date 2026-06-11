@@ -1227,7 +1227,7 @@ function feedbackPosterData(schedule,feedback){
     date:String(feedback?.startTime||schedule?.startTime||feedback?.createdAt||'').slice(0,10)||today(),
     coach:feedback?.coach||schedule?.coach||'教练',
     practicedToday:feedback?.practicedToday||feedback?.template?.focus||'—',
-    knowledgePoint:feedback?.knowledgePoint||'—',
+    knowledgePoint:feedback?.knowledgePoint||'',
     nextTraining:feedback?.nextTraining||feedback?.nextAdvice||'—'
   };
 }
@@ -1251,10 +1251,18 @@ function posterPushAutoGroups(groups,text){
   if(!text)return;
   const keywords=['回合对打','连续对打','10 多拍','10多拍','非常了不起','稳定','进步','节奏','重心','脚步','发力','引拍','击球点'];
   const pattern=new RegExp(`(${keywords.map(posterEscapeRegExp).join('|')})`,'g');
-  String(text).split(pattern).filter(Boolean).forEach(part=>groups.push({text:part,highlight:keywords.includes(part)}));
+  String(text).split(pattern).filter(Boolean).forEach(part=>groups.push({text:part,highlight:false}));
 }
-function posterTextGroups(text){
+function posterNormalizeText(text,options={}){
   const raw=String(text||'—');
+  const preserveListMarkers=options.preserveListMarkers;
+  if(preserveListMarkers===false){
+    return raw.split('\n').map(line=>line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/,'')).join('\n')||'—';
+  }
+  return raw;
+}
+function posterTextGroups(text,options={}){
+  const raw=posterNormalizeText(text,options);
   const groups=[];
   let i=0;
   while(i<raw.length){
@@ -1279,9 +1287,9 @@ function posterTextGroups(text){
 function posterContentFont(ctx,isHighlight){
   ctx.font=`${isHighlight?'600':'400'} 30px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
 }
-function posterTextLines(ctx,text,maxWidth,maxLines=Number.MAX_SAFE_INTEGER){
+function posterTextLines(ctx,text,maxWidth,maxLines=Number.MAX_SAFE_INTEGER,options={}){
   const lines=[[]];
-  posterTextGroups(text).forEach(group=>{
+  posterTextGroups(text,options).forEach(group=>{
     posterContentFont(ctx,group.highlight);
     Array.from(group.text||'').forEach(ch=>{
       if(ch==='\n'){lines.push([]);return;}
@@ -1313,23 +1321,52 @@ function posterTextLines(ctx,text,maxWidth,maxLines=Number.MAX_SAFE_INTEGER){
     return groups;
   });
 }
+function posterDrawFittedTitle(ctx,text,x,y,maxWidth,maxFont,minFont,color){
+  let fontSize=maxFont;
+  const value=String(text||'学员');
+  ctx.fillStyle=color;
+  while(fontSize>minFont){
+    ctx.font=`900 ${fontSize}px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
+    if(ctx.measureText(value).width<=maxWidth)break;
+    fontSize-=2;
+  }
+  ctx.font=`900 ${fontSize}px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
+  let finalText=value;
+  if(ctx.measureText(finalText).width>maxWidth){
+    finalText=value;
+    while(finalText.length>1&&ctx.measureText(`${finalText}…`).width>maxWidth)finalText=finalText.slice(0,-1);
+    finalText=`${finalText}…`;
+  }
+  ctx.fillText(finalText,x,y);
+}
 function posterBlockHeight(lineCount){
   const paddingTop=32,paddingBottom=54,titleSpace=52,lineHeight=48;
   const safeCount=Math.max(1,Number(lineCount)||1);
   return paddingTop+titleSpace+(safeCount-1)*lineHeight+paddingBottom;
 }
+function posterSectionHasContent(text){
+  const value=String(text||'').trim();
+  return !!value&&value!=='—';
+}
 function measureFeedbackPosterLayout(ctx,data){
   const contentWidth=570;
   const gap=28;
   const startY=320;
-  const lineCaps={practiced:12,knowledge:14,nextTraining:10};
-  const practicedLines=posterTextLines(ctx,data.practicedToday,contentWidth,lineCaps.practiced);
+  const textOptions={preserveListMarkers:data.preserveListMarkers!==false};
+  const practicedLines=posterTextLines(ctx,data.practicedToday,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
   const practicedHeight=posterBlockHeight(practicedLines.length);
-  const knowledgeY=startY+practicedHeight+gap;
-  const knowledgeLines=posterTextLines(ctx,data.knowledgePoint,contentWidth,lineCaps.knowledge);
-  const knowledgeHeight=posterBlockHeight(knowledgeLines.length);
-  const nextTrainingY=knowledgeY+knowledgeHeight+gap;
-  const nextTrainingLines=posterTextLines(ctx,data.nextTraining,contentWidth,lineCaps.nextTraining);
+  let nextY=startY+practicedHeight+gap;
+  let knowledge=null;
+  if(posterSectionHasContent(data.knowledgePoint)){
+    const knowledgeLines=posterTextLines(ctx,data.knowledgePoint,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
+    const knowledgeHeight=posterBlockHeight(knowledgeLines.length);
+    knowledge={y:nextY,lines:knowledgeLines,boxHeight:knowledgeHeight};
+    nextY+=knowledgeHeight+gap;
+  }else{
+    knowledge=null;
+  }
+  const nextTrainingY=nextY;
+  const nextTrainingLines=posterTextLines(ctx,data.nextTraining,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
   const nextTrainingHeight=posterBlockHeight(nextTrainingLines.length);
   const footerTop=nextTrainingY+nextTrainingHeight+92;
   const footerBrandY=footerTop+56;
@@ -1340,7 +1377,7 @@ function measureFeedbackPosterLayout(ctx,data){
     contentWidth,
     canvasHeight,
     practiced:{y:startY,lines:practicedLines,boxHeight:practicedHeight},
-    knowledge:{y:knowledgeY,lines:knowledgeLines,boxHeight:knowledgeHeight},
+    knowledge,
     nextTraining:{y:nextTrainingY,lines:nextTrainingLines,boxHeight:nextTrainingHeight},
     footer:{brandY:footerBrandY,taglineY:footerTaglineY,accentY:footerAccentY}
   };
@@ -1420,19 +1457,13 @@ function drawFeedbackPoster(canvas,data,templateKey='blueGreenDiagonal'){
   }
   ctx.restore();
   const nameStr=data.studentName||'学员';
-  ctx.fillStyle=tpl.nameColor||tpl.ink;
-  ctx.font='900 68px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
-  ctx.fillText(nameStr,60,140);
-  const nameWidth=ctx.measureText(nameStr).width;
-  ctx.fillStyle=tpl.subColor||tpl.muted;
-  ctx.font='600 32px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
-  ctx.fillText('训练反馈',Math.min(60+nameWidth+16,560),140);
+  posterDrawFittedTitle(ctx,nameStr,60,140,630,68,46,tpl.nameColor||tpl.ink);
   ctx.fillStyle=tpl.type==='cleanSilhouette'?(tpl.subColor||tpl.muted):tpl.accent;
   ctx.font='700 26px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
-  ctx.fillText(`上课日期：${posterDisplayDate(data.date)}`,60,195);
+  ctx.fillText(`${posterDisplayDate(data.date)} 训练反馈`,60,195);
   if(!['sport','diagonalSplit','split'].includes(tpl.type)){ctx.fillStyle=tpl.subColor||tpl.muted;ctx.globalAlpha=.3;ctx.fillRect(60,235,630,2);ctx.globalAlpha=1;}
   posterDrawTextBlock(ctx,tpl,'今天练习了',90,layout.practiced.y,layout.contentWidth,layout.practiced.lines,layout.practiced.boxHeight);
-  posterDrawTextBlock(ctx,tpl,'练习情况',90,layout.knowledge.y,layout.contentWidth,layout.knowledge.lines,layout.knowledge.boxHeight);
+  if(layout.knowledge)posterDrawTextBlock(ctx,tpl,'练习情况',90,layout.knowledge.y,layout.contentWidth,layout.knowledge.lines,layout.knowledge.boxHeight);
   posterDrawTextBlock(ctx,tpl,'下次练习',90,layout.nextTraining.y,layout.contentWidth,layout.nextTraining.lines,layout.nextTraining.boxHeight);
   ctx.fillStyle=tpl.nameColor||tpl.ink;
   ctx.font='900 34px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
@@ -1454,6 +1485,8 @@ function feedbackPosterFilename(){
 function renderFeedbackPosterPreview(templateKey){
   if(!feedbackPosterState)return;
   feedbackPosterState.templateKey=templateKey;
+  const preserve=document.getElementById('posterPreserveListMarkers');
+  if(preserve)feedbackPosterState.data.preserveListMarkers=preserve.checked;
   document.querySelectorAll('[data-poster-template]').forEach(btn=>btn.classList.toggle('active',btn.dataset.posterTemplate===templateKey));
   const canvas=document.getElementById('feedbackPosterCanvas');
   if(!canvas)return;
@@ -1465,9 +1498,9 @@ function openFeedbackPosterModal(feedbackId,scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);
   const fb=feedbacks.find(x=>x.id===feedbackId)||scheduleFeedback(s);
   if(!s||!fb){toast('找不到反馈记录','error');return;}
-  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:feedbackPosterData(s,fb)};
+  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:{...feedbackPosterData(s,fb),preserveListMarkers:true}};
   const buttons=Object.entries(FEEDBACK_POSTER_TEMPLATES).map(([key,t])=>`<button class="poster-template-btn${key==='blueGreenDiagonal'?' active':''}" data-poster-template="${key}" onclick="renderFeedbackPosterPreview('${key}')">${esc(t.name)}</button>`).join('');
-  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
+  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><label class="poster-list-toggle"><input type="checkbox" id="posterPreserveListMarkers" checked onchange="renderFeedbackPosterPreview(feedbackPosterState?.templateKey||'blueGreenDiagonal')">保留序号/项目符号</label><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openFeedbackModal('${s.id}')">返回反馈</button><button class="tms-btn tms-btn-default" id="posterDownloadBtn" onclick="downloadFeedbackPoster()">下载图片</button><button class="tms-btn tms-btn-primary" id="posterShareBtn" onclick="shareFeedbackPoster()">分享图片</button>`;
   openStandardModal({title:'生成课后海报',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight'});
   requestAnimationFrame(()=>renderFeedbackPosterPreview('blueGreenDiagonal'));

@@ -966,11 +966,20 @@ function posterPushAutoGroups(groups, text) {
   if (!text) return;
   const keywords = ['回合对打', '连续对打', '10 多拍', '10多拍', '非常了不起', '稳定', '进步', '节奏', '重心', '脚步', '发力', '引拍', '击球点'];
   const pattern = new RegExp(`(${keywords.map(posterEscapeRegExp).join('|')})`, 'g');
-  String(text).split(pattern).filter(Boolean).forEach(part => groups.push({ text: part, highlight: keywords.includes(part) }));
+  String(text).split(pattern).filter(Boolean).forEach(part => groups.push({ text: part, highlight: false }));
 }
 
-function posterTextGroups(text) {
+function posterNormalizeText(text, options = {}) {
   const raw = String(text || '—');
+  const preserveListMarkers = options.preserveListMarkers;
+  if (preserveListMarkers === false) {
+    return raw.split('\n').map(line => line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/, '')).join('\n') || '—';
+  }
+  return raw;
+}
+
+function posterTextGroups(text, options = {}) {
+  const raw = posterNormalizeText(text, options);
   const groups = [];
   let i = 0;
   while (i < raw.length) {
@@ -1007,7 +1016,8 @@ function posterContentFont(ctx, isHighlight) {
 
 function posterTextLines(ctx, text, maxWidth, maxLines) {
   const lines = [[]];
-  posterTextGroups(text).forEach(group => {
+  const options = arguments[4] || {};
+  posterTextGroups(text, options).forEach(group => {
     posterContentFont(ctx, group.highlight);
     Array.from(group.text || '').forEach(ch => {
       if (ch === '\n') {
@@ -1046,9 +1056,29 @@ function posterTextLines(ctx, text, maxWidth, maxLines) {
   });
 }
 
+function posterDrawFittedTitle(ctx, text, x, y, maxWidth, maxFont, minFont, color) {
+  let fontSize = maxFont;
+  const value = String(text || '学员');
+  ctx.fillStyle = color;
+  while (fontSize > minFont) {
+    ctx.font = `900 ${fontSize}px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
+    if (ctx.measureText(value).width <= maxWidth) break;
+    fontSize -= 2;
+  }
+  ctx.font = `900 ${fontSize}px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif`;
+  let finalText = value;
+  if (ctx.measureText(finalText).width > maxWidth) {
+    finalText = value;
+    while (finalText.length > 1 && ctx.measureText(`${finalText}…`).width > maxWidth) finalText = finalText.slice(0, -1);
+    finalText = `${finalText}…`;
+  }
+  ctx.fillText(finalText, x, y);
+}
+
 function posterMeasureTextBlock(ctx, text, w, maxLines) {
   ctx.font = '400 30px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
-  const lines = posterTextLines(ctx, text, w, maxLines);
+  const options = arguments[4] || {};
+  const lines = posterTextLines(ctx, text, w, maxLines, options);
   const paddingTop = 32;
   const paddingBottom = 54;
   const titleSpace = 52;
@@ -1057,15 +1087,23 @@ function posterMeasureTextBlock(ctx, text, w, maxLines) {
   return { lines, boxHeight, consumedHeight: boxHeight + 28 };
 }
 
+function posterSectionHasContent(text) {
+  const value = String(text || '').trim();
+  return !!value && value !== '—';
+}
+
 function posterLayout(ctx, data) {
   const contentWidth = 570;
+  const textOptions = { preserveListMarkers: data.preserveListMarkers !== false };
   const baseSections = [
     { key: 'practicedToday', label: '今天练习了', text: data.practicedToday },
-    { key: 'knowledgePoint', label: '练习情况', text: data.knowledgePoint },
     { key: 'nextTraining', label: '下次练习', text: data.nextTraining }
   ];
+  if (posterSectionHasContent(data.knowledgePoint)) {
+    baseSections.splice(1, 0, { key: 'knowledgePoint', label: '练习情况', text: data.knowledgePoint });
+  }
   const sections = baseSections.map((section) => {
-    const measured = posterMeasureTextBlock(ctx, section.text, contentWidth, Infinity);
+    const measured = posterMeasureTextBlock(ctx, section.text, contentWidth, Infinity, textOptions);
     return {
       key: section.key,
       label: section.label,
@@ -1328,16 +1366,10 @@ function drawFeedbackPoster(canvas, data, templateKey = 'blueGreenDiagonal') {
   }
   ctx.restore();
   const nameStr = data.studentName || '学员';
-  ctx.fillStyle = tpl.nameColor || tpl.ink;
-  ctx.font = '900 68px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
-  ctx.fillText(nameStr, 60, 140);
-  const nameWidth = ctx.measureText(nameStr).width;
-  ctx.fillStyle = tpl.subColor || tpl.muted;
-  ctx.font = '600 32px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
-  ctx.fillText('训练反馈', Math.min(60 + nameWidth + 16, 560), 140);
+  posterDrawFittedTitle(ctx, nameStr, 60, 140, 630, 68, 46, tpl.nameColor || tpl.ink);
   ctx.fillStyle = tpl.type === 'cleanSilhouette' ? (tpl.subColor || tpl.muted) : tpl.accent;
   ctx.font = '700 26px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
-  ctx.fillText(`上课日期：${posterDisplayDate(data.date)}`, 60, 195);
+  ctx.fillText(`${posterDisplayDate(data.date)} 训练反馈`, 60, 195);
   if (!['sport', 'diagonalSplit', 'split'].includes(tpl.type)) {
     ctx.fillStyle = tpl.subColor || tpl.muted;
     ctx.globalAlpha = 0.3;
@@ -1371,15 +1403,16 @@ function drawFeedbackPoster(canvas, data, templateKey = 'blueGreenDiagonal') {
   return layout;
 }
 
-function feedbackPosterDataForMini(schedule = {}, form = {}) {
+function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers = true) {
   const startText = String(schedule.startTime || '').slice(0, 10);
   return {
     studentName: schedule.student || schedule.studentText || '学员',
     date: startText || posterDateText(schedule),
     coach: schedule.coach || currentCoachName() || '教练',
     practicedToday: form.practicedToday || '—',
-    knowledgePoint: form.knowledgePoint || '—',
-    nextTraining: form.nextTraining || '—'
+    knowledgePoint: form.knowledgePoint || '',
+    nextTraining: form.nextTraining || '—',
+    preserveListMarkers
   };
 }
 
@@ -1742,6 +1775,7 @@ Page({
     posterStyle: '蓝绿对角',
     posterTemplateKey: 'blueGreenDiagonal',
     posterStyles: POSTER_STYLE_OPTIONS,
+    posterPreserveListMarkers: true,
     posterCanvasHeightRpx: 996,
     posterPreviewImage: ''
   },
@@ -2307,6 +2341,7 @@ Page({
       posterSheetClass: 'sheet-show',
       posterDate: posterDateText(this.data.selectedClass || {}),
       posterTemplateKey: this.data.posterTemplateKey || 'blueGreenDiagonal',
+      posterPreserveListMarkers: true,
       posterPreviewImage: ''
     });
     setTimeout(() => this.renderFeedbackPosterCanvas(), 80);
@@ -2329,6 +2364,11 @@ Page({
     this.renderFeedbackPosterCanvas();
   },
 
+  onPosterListMarkerChange(event) {
+    this.setData({ posterPreserveListMarkers: !!event.detail.value });
+    this.renderFeedbackPosterCanvas();
+  },
+
   renderFeedbackPosterCanvas() {
     const query = wx.createSelectorQuery().in(this);
     query.select('#feedbackPosterCanvas').fields({ node: true, size: true }).exec((res) => {
@@ -2336,7 +2376,7 @@ Page({
       if (!canvas) return;
       const layout = drawFeedbackPoster(
         canvas,
-        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}),
+        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}, this.data.posterPreserveListMarkers),
         this.data.posterTemplateKey || 'blueGreenDiagonal'
       );
       this.setData({

@@ -179,6 +179,15 @@ assert.match(scheduleJs, /posterDateText/, 'poster sheet should prepare a readab
 assert.match(scheduleJs, /FEEDBACK_POSTER_TEMPLATES[\s\S]*blueGreenDiagonal[\s\S]*minimalDarkGreen[\s\S]*retroCourt[\s\S]*blueprintBlue[\s\S]*minimalRacket[\s\S]*activeGreen/, 'mini program poster should reuse the real six poster templates');
 assert.match(scheduleJs, /drawFeedbackPoster/, 'mini program poster should draw the real poster templates on canvas');
 assert.match(scheduleJs, /renderFeedbackPosterCanvas/, 'mini program poster should render the selected template instead of static fake data');
+assert.match(scheduleJs, /function posterDrawFittedTitle\(/, 'mini program poster should fit long student names on one title line');
+assert.match(scheduleJs, /ctx\.fillText\(`\$\{posterDisplayDate\(data\.date\)\} 训练反馈`, 60, 195\)/, 'mini program poster subtitle should combine date and training feedback');
+assert.doesNotMatch(scheduleJs, /ctx\.fillText\('训练反馈', Math\.min\(60 \+ nameWidth \+ 16, 560\), 140\)/, 'mini program poster title suffix should not sit beside the student name');
+assert.match(scheduleJs, /function posterNormalizeText\(/, 'mini program poster should normalize list markers before drawing text');
+assert.match(scheduleJs, /preserveListMarkers/, 'mini program poster should expose a list marker option');
+assert.doesNotMatch(scheduleJs, /highlight: keywords\.includes\(part\)/, 'mini program poster should not auto-highlight guessed keywords');
+assert.match(scheduleJs, /function posterSectionHasContent\(/, 'mini program poster should detect empty optional sections');
+assert.match(scheduleJs, /posterSectionHasContent\(data\.knowledgePoint\)/, 'mini program poster should hide practice status when it is empty');
+assert.doesNotMatch(scheduleJs, /posterMeasureTextBlock\(ctx, section\.text, contentWidth, \d+/, 'mini program poster should not cap long feedback text');
 assert.match(scheduleJs, /buildStudentDetailData/, 'student detail sheet should prepare mapped student profile data');
 assert.match(scheduleJs, /selectedStudentDetail/, 'student detail sheet should keep its selected student data separately');
 assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use its own visibility state');
