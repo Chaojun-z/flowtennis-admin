@@ -752,6 +752,46 @@ function feedbackCountsOf(form = {}) {
   };
 }
 
+function feedbackAutoListValue(prevValue = '', nextValue = '', style = 'normal') {
+  const prev = String(prevValue || '');
+  const next = String(nextValue || '');
+  if (style === 'none' || next.length <= prev.length || !next.endsWith('\n')) return next;
+  const before = next.slice(0, -1);
+  const line = before.slice(before.lastIndexOf('\n') + 1);
+  if (!line.trim()) return next;
+  const numberMatch = line.match(/^\s*(\d+)[\.\、]\s*/);
+  const bulletMatch = line.match(/^\s*[·•\-－]\s*/);
+  if (style === 'normal' && !numberMatch && !bulletMatch) return next;
+  if (style === 'bullet' || bulletMatch) return `${next}· `;
+  if (style === 'number' || numberMatch) {
+    const marker = numberMatch ? Number(numberMatch[1]) + 1 : 1;
+    return `${next}${marker}. `;
+  }
+  return next;
+}
+
+function feedbackInsertListMarker(value = '', cursor = 0, style = 'normal') {
+  if (style === 'normal') return { value: String(value || ''), cursor };
+  const text = String(value || '');
+  const start = Math.max(0, Number(cursor) || 0);
+  const lineStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+  const currentLine = text.slice(lineStart, start);
+  if (/^\s*(?:\d+[\.\、]|[·•\-－])\s*/.test(currentLine)) return { value: text, cursor: start };
+  const insert = `${currentLine.trim() ? '\n' : ''}${style === 'bullet' ? '· ' : '1. '}`;
+  return {
+    value: `${text.slice(0, start)}${insert}${text.slice(start)}`,
+    cursor: start + insert.length
+  };
+}
+
+function feedbackListStyleOptions() {
+  return [
+    { label: '普通', value: 'normal' },
+    { label: '编号', value: 'number' },
+    { label: '圆点', value: 'bullet' }
+  ];
+}
+
 function feedbackContextParts(item = {}) {
   return [
     item.student || item.studentText,
@@ -972,11 +1012,12 @@ function posterPushAutoGroups(groups, text) {
 function posterNormalizeText(text, options = {}) {
   const raw = String(text || '—');
   const preserveListMarkers = options.preserveListMarkers;
-  const style = options.listStyle || (preserveListMarkers === false ? 'none' : 'number');
+  const style = options.listStyle || (preserveListMarkers === false ? 'none' : 'preserve');
   return posterApplyLineStyle(raw, style);
 }
 
-function posterApplyLineStyle(text, style = 'number') {
+function posterApplyLineStyle(text, style = 'preserve') {
+  if (style === 'preserve') return String(text || '—');
   const lines = String(text || '—').split('\n');
   const filledCount = lines.filter(line => line.trim()).length;
   let itemIndex = 0;
@@ -1110,7 +1151,7 @@ function posterSectionHasContent(text) {
 
 function posterLayout(ctx, data) {
   const contentWidth = 570;
-  const textOptions = { preserveListMarkers: data.preserveListMarkers !== false, listStyle: data.posterListStyle || 'number' };
+  const textOptions = { preserveListMarkers: data.preserveListMarkers !== false, listStyle: data.posterListStyle || 'preserve' };
   const baseSections = [
     { key: 'practicedToday', label: '今天练习了', text: data.practicedToday },
     { key: 'nextTraining', label: '下次练习', text: data.nextTraining }
@@ -1419,7 +1460,7 @@ function drawFeedbackPoster(canvas, data, templateKey = 'blueGreenDiagonal') {
   return layout;
 }
 
-function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers = true, posterListStyle = 'number') {
+function feedbackPosterDataForMini(schedule = {}, form = {}, preserveListMarkers = true, posterListStyle = 'preserve') {
   const startText = String(schedule.startTime || '').slice(0, 10);
   return {
     studentName: schedule.student || schedule.studentText || '学员',
@@ -1719,6 +1760,9 @@ Page({
     shiftStats: { totalCount: 0, activeCount: 0, totalLessons: 0, usedLessons: 0, remainingLessons: 0 },
     feedbackForm: feedbackFormFromRecord(),
     feedbackCounts: feedbackCountsOf(),
+    feedbackListStyle: 'normal',
+    feedbackListStyleOptions: feedbackListStyleOptions(),
+    feedbackListCursors: {},
     proposalForm: proposalFormFromRecord(),
     proposalCounts: proposalCountsOf(),
     feedbackHasSaved: false,
@@ -1793,14 +1837,7 @@ Page({
     posterTemplateKey: 'blueGreenDiagonal',
     posterStyles: POSTER_STYLE_OPTIONS,
     posterPreserveListMarkers: true,
-    posterListStyle: 'number',
-    posterListStyleIndex: 0,
-    posterListStyleText: '自动编号',
-    posterListStyleOptions: [
-      { label: '自动编号', value: 'number' },
-      { label: '项目符号', value: 'bullet' },
-      { label: '不添加', value: 'none' }
-    ],
+    posterListStyle: 'preserve',
     posterCanvasHeightRpx: 996,
     posterPreviewImage: ''
   },
@@ -2215,6 +2252,8 @@ Page({
       feedbackHasSaved: !!currentFeedback,
       feedbackEditing: false,
       feedbackFocusedField: '',
+      feedbackListStyle: 'normal',
+      feedbackListCursors: {},
       feedbackSheetScrollTop: 0,
       feedbackContextParts: feedbackContextParts(this.data.selectedClass)
     });
@@ -2246,6 +2285,8 @@ Page({
       feedbackHasSaved: !!currentFeedback,
       feedbackEditing: false,
       feedbackFocusedField: '',
+      feedbackListStyle: 'normal',
+      feedbackListCursors: {},
       feedbackSheetScrollTop: 0,
       feedbackContextParts: feedbackContextParts(selectedClass)
     });
@@ -2261,17 +2302,42 @@ Page({
   },
 
   onFeedbackBlur() {
-    this.setData({ feedbackFocusedField: '' });
   },
 
   onFeedbackInput(event) {
     const field = event.currentTarget.dataset.field || 'practicedToday';
+    const prevValue = this.data.feedbackForm[field] || '';
+    const value = feedbackAutoListValue(prevValue, event.detail.value, this.data.feedbackListStyle || 'normal');
     const feedbackForm = {
       ...this.data.feedbackForm,
-      [field]: event.detail.value
+      [field]: value
+    };
+    const feedbackListCursors = {
+      ...this.data.feedbackListCursors,
+      [field]: value.length
     };
     this.setData({
       feedbackForm,
+      feedbackListCursors,
+      feedbackCounts: feedbackCountsOf(feedbackForm)
+    });
+  },
+
+  onFeedbackListStyleTap(event) {
+    const style = event.currentTarget.dataset.style || 'normal';
+    const field = this.data.feedbackFocusedField || 'practicedToday';
+    const feedbackForm = { ...this.data.feedbackForm };
+    const feedbackListCursors = { ...this.data.feedbackListCursors };
+    const cursor = feedbackListCursors[field] == null ? String(feedbackForm[field] || '').length : feedbackListCursors[field];
+    if (style === 'number' || style === 'bullet') {
+      const next = feedbackInsertListMarker(feedbackForm[field], cursor, style);
+      feedbackForm[field] = next.value;
+      feedbackListCursors[field] = next.cursor;
+    }
+    this.setData({
+      feedbackListStyle: style,
+      feedbackForm,
+      feedbackListCursors,
       feedbackCounts: feedbackCountsOf(feedbackForm)
     });
   },
@@ -2367,9 +2433,7 @@ Page({
       posterDate: posterDateText(this.data.selectedClass || {}),
       posterTemplateKey: this.data.posterTemplateKey || 'blueGreenDiagonal',
       posterPreserveListMarkers: true,
-      posterListStyle: 'number',
-      posterListStyleIndex: 0,
-      posterListStyleText: '自动编号',
+      posterListStyle: 'preserve',
       posterPreviewImage: ''
     });
     setTimeout(() => this.renderFeedbackPosterCanvas(), 80);
@@ -2392,23 +2456,6 @@ Page({
     this.renderFeedbackPosterCanvas();
   },
 
-  onPosterListMarkerChange(event) {
-    this.setData({ posterPreserveListMarkers: !!event.detail.value });
-    this.renderFeedbackPosterCanvas();
-  },
-
-  onPosterListStyleChange(event) {
-    const index = Number(event.detail.value) || 0;
-    const option = this.data.posterListStyleOptions[index] || this.data.posterListStyleOptions[0];
-    this.setData({
-      posterListStyleIndex: index,
-      posterListStyle: option.value,
-      posterListStyleText: option.label,
-      posterPreserveListMarkers: option.value !== 'none'
-    });
-    this.renderFeedbackPosterCanvas();
-  },
-
   renderFeedbackPosterCanvas() {
     const query = wx.createSelectorQuery().in(this);
     query.select('#feedbackPosterCanvas').fields({ node: true, size: true }).exec((res) => {
@@ -2416,7 +2463,7 @@ Page({
       if (!canvas) return;
       const layout = drawFeedbackPoster(
         canvas,
-        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}, this.data.posterPreserveListMarkers, this.data.posterListStyle || 'number'),
+        feedbackPosterDataForMini(this.data.selectedClass || {}, this.data.feedbackForm || {}, this.data.posterPreserveListMarkers, this.data.posterListStyle || 'preserve'),
         this.data.posterTemplateKey || 'blueGreenDiagonal'
       );
       this.setData({

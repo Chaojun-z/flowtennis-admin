@@ -2471,6 +2471,35 @@ button::after {
   margin-left: 18rpx;
 }
 
+.feedback-list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin: 0 0 28rpx;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.feedback-list-style-btn {
+  height: 56rpx;
+  min-width: 96rpx;
+  padding: 0 20rpx;
+  border-radius: 28rpx;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 56rpx;
+}
+
+.feedback-list-style-btn.is-active {
+  border-color: #2b3a55;
+  background: #2b3a55;
+  color: #fff;
+}
+
 .feedback-input-wrap {
   position: relative;
   min-height: 192rpx;

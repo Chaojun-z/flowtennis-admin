@@ -132,6 +132,8 @@ assert.doesNotMatch(scheduleWxml, /反馈:/, 'native timetable course cards shou
 assert.match(scheduleWxml, /feedbackHasSaved && !feedbackEditing[\s\S]*生成海报[\s\S]*编辑反馈/, 'saved feedback sheet should show poster and edit actions');
 assert.match(scheduleWxml, /wx:else[\s\S]*取消[\s\S]*保存反馈/, 'unsaved feedback sheet should show cancel and save actions');
 assert.match(scheduleWxml, /data-field="practicedToday"[\s\S]*data-field="knowledgePoint"[\s\S]*data-field="nextTraining"/, 'feedback sheet should bind all three feedback fields');
+assert.match(scheduleWxml, /feedbackListStyleOptions[\s\S]*onFeedbackListStyleTap/, 'feedback sheet should render typing mode buttons before coaches write feedback');
+assert.match(scheduleWxml, /cursor="\{\{feedbackListCursors\.practicedToday\}\}"[\s\S]*cursor="\{\{feedbackListCursors\.knowledgePoint\}\}"[\s\S]*cursor="\{\{feedbackListCursors\.nextTraining\}\}"/, 'feedback sheet should restore cursor after inserting list markers');
 assert.match(scheduleWxml, /placeholder-class="feedback-input-placeholder"/, 'feedback inputs should use the mapped placeholder color token');
 assert.match(scheduleWxml, /bindfocus="onFeedbackFocus"[\s\S]*cursor-color="#3b5bff"/, 'feedback input focus should drive the blue focus state and cursor color');
 assert.doesNotMatch(scheduleWxml, /feedback-input-bar/, 'feedback sheet should not fake the input cursor with a separate blue bar');
@@ -185,9 +187,11 @@ assert.doesNotMatch(scheduleJs, /ctx\.fillText\('训练反馈', Math\.min\(60 \+
 assert.match(scheduleJs, /function posterNormalizeText\(/, 'mini program poster should normalize list markers before drawing text');
 assert.match(scheduleJs, /preserveListMarkers/, 'mini program poster should expose a list marker option');
 assert.match(scheduleJs, /function posterApplyLineStyle\(/, 'mini program poster should auto add list markers for multiline feedback');
-assert.match(scheduleJs, /style === 'number'[\s\S]*`\$\{itemIndex\}\. \$\{clean\}`[\s\S]*style === 'bullet'[\s\S]*`· \$\{clean\}`/, 'mini program poster should support auto numbered and bullet list styles');
-assert.match(scheduleJs, /posterListStyle[\s\S]*自动编号[\s\S]*项目符号[\s\S]*不添加/, 'mini program poster should let coaches choose auto list style');
-assert.match(scheduleWxml, /posterListStyleOptions[\s\S]*posterListStyleText/, 'mini program poster should render the list style picker');
+assert.match(scheduleJs, /style === 'preserve'[\s\S]*String\(text \|\| '—'\)/, 'mini program poster should preserve coach-entered titles and list markers by default');
+assert.match(scheduleJs, /function feedbackAutoListValue\(/, 'mini program feedback editor should auto add the next marker when coach presses enter');
+assert.match(scheduleJs, /onFeedbackListStyleTap/, 'mini program feedback editor should let coaches choose numbered, bullet, or normal typing');
+assert.match(scheduleJs, /feedbackListStyle[\s\S]*普通[\s\S]*编号[\s\S]*圆点/, 'mini program feedback editor should expose typing list style options');
+assert.doesNotMatch(scheduleWxml, /posterListStyleOptions[\s\S]*posterListStyleText/, 'mini program poster should not reformat all lines after coaches already typed the structure');
 assert.doesNotMatch(scheduleJs, /highlight: keywords\.includes\(part\)/, 'mini program poster should not auto-highlight guessed keywords');
 assert.match(scheduleJs, /function posterSectionHasContent\(/, 'mini program poster should detect empty optional sections');
 assert.match(scheduleJs, /posterSectionHasContent\(data\.knowledgePoint\)/, 'mini program poster should hide practice status when it is empty');

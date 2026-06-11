@@ -1256,10 +1256,11 @@ function posterPushAutoGroups(groups,text){
 function posterNormalizeText(text,options={}){
   const raw=String(text||'—');
   const preserveListMarkers=options.preserveListMarkers;
-  const style=options.listStyle||(preserveListMarkers===false?'none':'number');
+  const style=options.listStyle||(preserveListMarkers===false?'none':'preserve');
   return posterApplyLineStyle(raw,style);
 }
-function posterApplyLineStyle(text,style='number'){
+function posterApplyLineStyle(text,style='preserve'){
+  if(style==='preserve')return String(text||'—');
   const lines=String(text||'—').split('\n');
   const filledCount=lines.filter(line=>line.trim()).length;
   let itemIndex=0;
@@ -1275,6 +1276,75 @@ function posterApplyLineStyle(text,style='number'){
     return clean;
   }).join('\n');
   return next||'—';
+}
+function feedbackNextListMarker(value,cursor,style='number'){
+  const mode=style==='none'?'normal':style;
+  const before=String(value||'').slice(0,Number(cursor)||0);
+  const line=before.slice(before.lastIndexOf('\n')+1);
+  if(!line.trim())return '';
+  const numberMatch=line.match(/^\s*(\d+)[\.\、]\s*/);
+  const bulletMatch=line.match(/^\s*[·•\-－]\s*/);
+  if(mode==='normal'&&!numberMatch&&!bulletMatch)return '';
+  if(mode==='bullet'||bulletMatch)return '· ';
+  if(mode==='number'||numberMatch){
+    const next=numberMatch?Number(numberMatch[1])+1:1;
+    return `${next}. `;
+  }
+  return '';
+}
+function feedbackInsertListMarker(el,style){
+  if(!el||style==='normal')return;
+  const start=el.selectionStart||0;
+  const end=el.selectionEnd||start;
+  const value=el.value||'';
+  const lineStart=value.lastIndexOf('\n',Math.max(0,start-1))+1;
+  const currentLine=value.slice(lineStart,start);
+  if(/^\s*(?:\d+[\.\、]|[·•\-－])\s*/.test(currentLine))return;
+  const insert=`${currentLine.trim()?'\n':''}${style==='bullet'?'· ':'1. '}`;
+  el.value=`${value.slice(0,start)}${insert}${value.slice(end)}`;
+  el.selectionStart=el.selectionEnd=start+insert.length;
+  el.focus();
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function setFeedbackListStyle(sourceId,style){
+  const input=document.getElementById(sourceId);
+  if(input)input.value=style;
+  document.querySelectorAll(`[data-feedback-list-style="${sourceId}"]`).forEach(btn=>btn.classList.toggle('active',btn.dataset.style===style));
+  const active=document.activeElement;
+  const target=active&&active.dataset?.listStyleSource===sourceId?active:document.querySelector(`[data-list-style-source="${sourceId}"]`);
+  if(style==='number'||style==='bullet')feedbackInsertListMarker(target,style);
+}
+function clearFeedbackListMarkerLine(el){
+  const start=el.selectionStart||0;
+  const value=el.value||'';
+  const lineStart=value.lastIndexOf('\n',Math.max(0,start-1))+1;
+  const line=value.slice(lineStart,start);
+  if(!/^\s*(?:\d+[\.\、]|[·•\-－])\s*$/.test(line))return false;
+  el.value=`${value.slice(0,lineStart)}${value.slice(start)}`;
+  el.selectionStart=el.selectionEnd=lineStart;
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+  return true;
+}
+function handleFeedbackListKeydown(event){
+  if(event.key!=='Enter'||event.shiftKey||event.isComposing)return;
+  const el=event.currentTarget;
+  const style=document.getElementById(el.dataset.listStyleSource||'fb_list_style')?.value||'normal';
+  const start=el.selectionStart||0;
+  const end=el.selectionEnd||start;
+  if(clearFeedbackListMarkerLine(el)){event.preventDefault();return;}
+  const marker=feedbackNextListMarker(el.value,start,style);
+  if(!marker)return;
+  event.preventDefault();
+  const insert=`\n${marker}`;
+  el.value=`${el.value.slice(0,start)}${insert}${el.value.slice(end)}`;
+  el.selectionStart=el.selectionEnd=start+insert.length;
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function feedbackListStyleSelect(id){
+  return `<div class="feedback-list-toolbar"><input type="hidden" id="${id}" value="normal"><span>换行</span><button type="button" class="poster-template-btn active" data-feedback-list-style="${id}" data-style="normal" onclick="setFeedbackListStyle('${id}','normal')">普通</button><button type="button" class="poster-template-btn" data-feedback-list-style="${id}" data-style="number" onclick="setFeedbackListStyle('${id}','number')">编号</button><button type="button" class="poster-template-btn" data-feedback-list-style="${id}" data-style="bullet" onclick="setFeedbackListStyle('${id}','bullet')">圆点</button></div>`;
+}
+function feedbackListTextareaAttrs(sourceId){
+  return `data-list-style-source="${sourceId}" onkeydown="handleFeedbackListKeydown(event)"`;
 }
 function posterTextGroups(text,options={}){
   const raw=posterNormalizeText(text,options);
@@ -1367,7 +1437,7 @@ function measureFeedbackPosterLayout(ctx,data){
   const contentWidth=570;
   const gap=28;
   const startY=320;
-  const textOptions={preserveListMarkers:data.preserveListMarkers!==false,listStyle:data.posterListStyle||'number'};
+  const textOptions={preserveListMarkers:data.preserveListMarkers!==false,listStyle:data.posterListStyle||'preserve'};
   const practicedLines=posterTextLines(ctx,data.practicedToday,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
   const practicedHeight=posterBlockHeight(practicedLines.length);
   let nextY=startY+practicedHeight+gap;
@@ -1500,11 +1570,6 @@ function feedbackPosterFilename(){
 function renderFeedbackPosterPreview(templateKey){
   if(!feedbackPosterState)return;
   feedbackPosterState.templateKey=templateKey;
-  const style=document.getElementById('posterListStyle');
-  if(style){
-    feedbackPosterState.data.posterListStyle=style.value;
-    feedbackPosterState.data.preserveListMarkers=style.value!=='none';
-  }
   document.querySelectorAll('[data-poster-template]').forEach(btn=>btn.classList.toggle('active',btn.dataset.posterTemplate===templateKey));
   const canvas=document.getElementById('feedbackPosterCanvas');
   if(!canvas)return;
@@ -1516,9 +1581,9 @@ function openFeedbackPosterModal(feedbackId,scheduleId){
   const s=schedules.find(x=>x.id===scheduleId);
   const fb=feedbacks.find(x=>x.id===feedbackId)||scheduleFeedback(s);
   if(!s||!fb){toast('找不到反馈记录','error');return;}
-  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:{...feedbackPosterData(s,fb),preserveListMarkers:true,posterListStyle:'number'}};
+  feedbackPosterState={scheduleId:s.id,feedbackId:fb.id,templateKey:'blueGreenDiagonal',data:{...feedbackPosterData(s,fb),preserveListMarkers:true,posterListStyle:'preserve'}};
   const buttons=Object.entries(FEEDBACK_POSTER_TEMPLATES).map(([key,t])=>`<button class="poster-template-btn${key==='blueGreenDiagonal'?' active':''}" data-poster-template="${key}" onclick="renderFeedbackPosterPreview('${key}')">${esc(t.name)}</button>`).join('');
-  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><label class="poster-list-toggle">换行样式<select id="posterListStyle" class="poster-list-select" onchange="renderFeedbackPosterPreview(feedbackPosterState?.templateKey||'blueGreenDiagonal')"><option value="number" selected>自动编号</option><option value="bullet">项目符号</option><option value="none">不添加</option></select></label><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
+  const body=`<div class="poster-mobile-shell"><div class="poster-template-row">${buttons}</div><canvas id="feedbackPosterCanvas" class="feedback-poster-canvas" width="750" height="1334"></canvas><img id="feedbackPosterImage" class="feedback-poster-image" alt="课后反馈海报"><div class="poster-save-tip">电脑点“下载图片”会保存 PNG；手机若没有下载入口，请长按海报图片保存。</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="openFeedbackModal('${s.id}')">返回反馈</button><button class="tms-btn tms-btn-default" id="posterDownloadBtn" onclick="downloadFeedbackPoster()">下载图片</button><button class="tms-btn tms-btn-primary" id="posterShareBtn" onclick="shareFeedbackPoster()">分享图片</button>`;
   openStandardModal({title:'生成课后海报',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight'});
   requestAnimationFrame(()=>renderFeedbackPosterPreview('blueGreenDiagonal'));
@@ -1581,7 +1646,8 @@ function openFeedbackModal(scheduleId){
   document.getElementById('mTitle').textContent=fb.id?'编辑课后反馈':'课后反馈';
   const posterBtn=fb.id?`<button class="btn-sec" onclick="openFeedbackPosterModal('${fb.id}','${s.id}')">生成海报</button>`:'';
   const trialFieldsHtml=trial?`<div class="sec-ttl">体验课内部记录</div><div class="fgrid"><div class="fg"><div class="flabel">学员水平</div><select class="fselect" id="fb_player_level"><option value="">未判断</option><option value="1.0～1.5"${fb.playerLevel==='1.0～1.5'?' selected':''}>1.0～1.5</option><option value="1.5～2.0"${fb.playerLevel==='1.5～2.0'?' selected':''}>1.5～2.0</option><option value="2.0～2.5"${fb.playerLevel==='2.0～2.5'?' selected':''}>2.0～2.5</option><option value="2.5～3.0"${fb.playerLevel==='2.5～3.0'?' selected':''}>2.5～3.0</option><option value="3.0～3.5"${fb.playerLevel==='3.0～3.5'?' selected':''}>3.0～3.5</option><option value="3.5～4.0"${fb.playerLevel==='3.5～4.0'?' selected':''}>3.5～4.0</option></select></div><div class="fg"><div class="flabel">转化意愿</div><select class="fselect" id="fb_conversion_intent"><option value="">未判断</option><option value="高"${fb.conversionIntent==='高'?' selected':''}>高</option><option value="中"${fb.conversionIntent==='中'?' selected':''}>中</option><option value="低"${fb.conversionIntent==='低'?' selected':''}>低</option></select></div><div class="fg"><div class="flabel">推荐产品</div><select class="fselect" id="fb_recommended_product_type"><option value="">未推荐</option><option value="场地会员"${fb.recommendedProductType==='场地会员'?' selected':''}>场地会员</option><option value="私教课"${fb.recommendedProductType==='私教课'?' selected':''}>私教课</option><option value="训练营"${fb.recommendedProductType==='训练营'?' selected':''}>训练营</option><option value="继续观察"${fb.recommendedProductType==='继续观察'?' selected':''}>继续观察</option></select></div><div class="fg"><div class="flabel">是否需要跟进</div><select class="fselect" id="fb_need_ops_follow_up"><option value="否"${fb.needOpsFollowUp?'':' selected'}>否</option><option value="是"${fb.needOpsFollowUp?' selected':''}>是</option></select></div></div>`:'';
-  document.getElementById('mBody').innerHTML=`<div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">${fmtDt(s.startTime)} · ${esc(scheduleStudentSummary(s))} · ${esc(coachName(s.coach))||'—'} · ${esc(scheduleLocationText(s))} · ${scheduleCourseTypeLabel(s)}</div><div class="sec-ttl">反馈内容</div><div class="fgrid"><div class="fg full"><div class="flabel">今天练习了 *</div><textarea class="finput ftextarea" id="fb_practiced">${esc(fb.practicedToday||fb.template?.focus||fb.performance)}</textarea></div><div class="fg full"><div class="flabel">练习情况（非必填）</div><textarea class="finput ftextarea" id="fb_knowledge">${esc(fb.knowledgePoint||fb.problems)}</textarea></div><div class="fg full"><div class="flabel">下次练习 *</div><textarea class="finput ftextarea" id="fb_next_training">${esc(fb.nextTraining||fb.nextAdvice)}</textarea></div></div>${trialFieldsHtml}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${posterBtn}<button class="btn-save" onclick="saveFeedback('${s.id}')">保存反馈</button></div>`;
+  const listAttrs=feedbackListTextareaAttrs('fb_list_style');
+  document.getElementById('mBody').innerHTML=`<div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.2);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--ts);margin-bottom:12px">${fmtDt(s.startTime)} · ${esc(scheduleStudentSummary(s))} · ${esc(coachName(s.coach))||'—'} · ${esc(scheduleLocationText(s))} · ${scheduleCourseTypeLabel(s)}</div><div class="sec-ttl">反馈内容</div>${feedbackListStyleSelect('fb_list_style')}<div class="fgrid"><div class="fg full"><div class="flabel">今天练习了 *</div><textarea class="finput ftextarea" id="fb_practiced" ${listAttrs}>${esc(fb.practicedToday||fb.template?.focus||fb.performance)}</textarea></div><div class="fg full"><div class="flabel">练习情况（非必填）</div><textarea class="finput ftextarea" id="fb_knowledge" ${listAttrs}>${esc(fb.knowledgePoint||fb.problems)}</textarea></div><div class="fg full"><div class="flabel">下次练习 *</div><textarea class="finput ftextarea" id="fb_next_training" ${listAttrs}>${esc(fb.nextTraining||fb.nextAdvice)}</textarea></div></div>${trialFieldsHtml}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button>${posterBtn}<button class="btn-save" onclick="saveFeedback('${s.id}')">保存反馈</button></div>`;
   document.getElementById('overlay').classList.add('open');
 }
 function feedbackDraftText(s){
@@ -1686,6 +1752,9 @@ function scheduleDetailBlock(label,html){
   return renderDetailDrawerBlock(label,html);
 }
 function scheduleDetailInput(label,id,value,type='text'){
+  if(type==='textarea'&&/^sd_fb_/.test(id)){
+    return `<div class="schedule-detail-field full-width"><div class="schedule-detail-label">${esc(label)}</div><textarea class="schedule-detail-edit-control" id="${id}" ${feedbackListTextareaAttrs('sd_fb_list_style')}>${esc(value||'')}</textarea></div>`;
+  }
   return renderDetailDrawerInput(label,id,value,type);
 }
 function renderScheduleDetailCard(title,content,{section='',scheduleId='',className='',actionLabel='编辑',feedbackId=''}={}){
@@ -1880,6 +1949,7 @@ function scheduleDetailProposalHtml(s,proposal,{section='',scheduleId=''}={}){
 }
 function scheduleDetailFeedbackFormHtml(s,fb){
   return [
+    `<div class="schedule-detail-field full-width">${feedbackListStyleSelect('sd_fb_list_style')}</div>`,
     scheduleDetailInput('今天练习了','sd_fb_practiced',fb?.practicedToday||fb?.template?.focus||fb?.performance||'','textarea'),
     scheduleDetailInput('练习情况','sd_fb_knowledge',fb?.knowledgePoint||fb?.problems||'','textarea'),
     scheduleDetailInput('下次练习','sd_fb_nextTraining',fb?.nextTraining||fb?.nextAdvice||'','textarea')
