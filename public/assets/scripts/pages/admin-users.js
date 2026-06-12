@@ -52,12 +52,7 @@ function adminUserNoteText(user){
   return adminUserDataPermissionText(user);
 }
 function adminUserDataPermissionText(user){
-  const profile=adminUserProfile(user);
-  const perms=profile.featurePermissions||[];
-  const featureText=perms.includes('match_ops')||perms.includes('match_finance')
-    ?`；约球：${[perms.includes('match_ops')?'运营':'',perms.includes('match_finance')?'财务':''].filter(Boolean).join('、')}`
-    :'';
-  return `${adminUserDataScopeText(user)}${featureText}`;
+  return adminUserDataScopeText(user);
 }
 async function loadAdminUsers(force=false){
   if(currentUser?.role!=='admin')return;
@@ -253,15 +248,12 @@ function toggleAdminUserScopeFields(){
   const wrap=document.getElementById('auCampusScopeWrap');
   const scopeInput=document.getElementById('au_dataScope');
   let scope=scopeInput?.value||'';
-  if(role==='editor'){
-    if(typeof setStandardDropdownValue==='function')setStandardDropdownValue('au_dataScope','coach','仅本人教练');
-    scope='coach';
-  }else if(scope==='coach'){
+  if(role!=='editor'&&scope==='coach'){
     if(typeof setStandardDropdownValue==='function')setStandardDropdownValue('au_dataScope','all','全部校区');
     scope='all';
   }
   if(row)row.style.display=row.dataset.adminDrawerScope==='1'||role==='admin'?'':'none';
-  if(wrap)wrap.style.display=role==='admin'&&scope==='campus'?'':'none';
+  if(wrap)wrap.style.display=scope==='campus'?'':'none';
 }
 function toggleAdminUserPermissionFields(){
   toggleAdminUserCoachBinding();
@@ -269,7 +261,6 @@ function toggleAdminUserPermissionFields(){
 }
 function adminUserAccountFormCardHtml(user,{title='编辑账号',isCreate=false,actionsHtml=''}={}){
   const profile=adminUserProfile(user||{role:'editor',dataScope:'coach',campusIds:[],matchPermissions:[]});
-  const perms=profile.featurePermissions||[];
   const campusIds=profile.campusIds||[];
   const roleOptions=[{value:'editor',label:'教练账号'},{value:'admin',label:'管理员'}];
   const coachOptions=[{value:'',label:'暂不绑定'}].concat(coaches.map(c=>({value:c.id,label:c.name})));
@@ -277,8 +268,7 @@ function adminUserAccountFormCardHtml(user,{title='编辑账号',isCreate=false,
   const roleControl=renderStandardDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
   const dataScopeRow=`<div class="tms-form-row" id="auDataScopeRow" data-admin-drawer-scope="1"><div class="tms-form-item"><label class="tms-form-label">数据范围</label>${renderStandardDropdownHtml('au_dataScope','数据范围',dataScopeOptions,profile.dataScope,true,'toggleAdminUserScopeFields')}</div></div>`;
   const campusScopeRow=`<div class="tms-form-row" id="auCampusScopeWrap"><div class="tms-form-item full-width"><label class="tms-form-label">可看校区</label><div class="tms-checkbox-matrix">${adminUserCampusScopeChecks(campusIds)}</div></div></div>`;
-  const matchPermissionRow=`<div class="tms-form-row"><label class="choice-tag"><input type="checkbox" id="au_match_ops" ${perms.includes('match_ops')?'checked':''}>约球运营</label><label class="choice-tag"><input type="checkbox" id="au_match_finance" ${perms.includes('match_finance')?'checked':''}>约球财务</label></div>`;
-  const form=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">账号ID *</label><input class="finput tms-form-control" id="au_id" value="${rv(user,'id')}" placeholder="例：coach_zhang"${isCreate?'':' readonly'}></div><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="au_name" value="${rv(user,'name')}" placeholder="显示名称"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">手机号</label><input class="finput tms-form-control" id="au_phone" value="${rv(user,'phone')}" placeholder="用于关联约球小程序"></div><div class="tms-form-item"><label class="tms-form-label">角色</label>${roleControl}</div></div><div class="tms-form-row"><div class="tms-form-item" id="au_coach_wrap" style="display:${isCreate||user?.role==='editor'?'':'none'}"><label class="tms-form-label">绑定教练</label>${renderStandardDropdownHtml('au_coachId','绑定教练',coachOptions,adminUserCoachId(user||{}),true)}</div></div><div class="tms-section-header">数据权限</div>${dataScopeRow}${campusScopeRow}${matchPermissionRow}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label><input class="finput tms-form-control" id="au_status" value="${adminUserStatusText(user?.status)}" readonly></div></div>`;
+  const form=`<div class="tms-section-header" style="margin-top:0;">基础信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">账号ID *</label><input class="finput tms-form-control" id="au_id" value="${rv(user,'id')}" placeholder="例：coach_zhang"${isCreate?'':' readonly'}></div><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input class="finput tms-form-control" id="au_name" value="${rv(user,'name')}" placeholder="显示名称"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">手机号</label><input class="finput tms-form-control" id="au_phone" value="${rv(user,'phone')}" placeholder="用于关联约球小程序"></div><div class="tms-form-item"><label class="tms-form-label">角色</label>${roleControl}</div></div><div class="tms-form-row"><div class="tms-form-item" id="au_coach_wrap" style="display:${isCreate||user?.role==='editor'?'':'none'}"><label class="tms-form-label">绑定教练</label>${renderStandardDropdownHtml('au_coachId','绑定教练',coachOptions,adminUserCoachId(user||{}),true)}</div></div><div class="tms-section-header">数据权限</div>${dataScopeRow}${campusScopeRow}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label><input class="finput tms-form-control" id="au_status" value="${adminUserStatusText(user?.status)}" readonly></div></div>`;
   return renderDetailDrawerFormCard(title,form,actionsHtml);
 }
 function adminUserPasswordCardHtml({isCreate=false}={}){
@@ -343,10 +333,7 @@ async function resetAdminUserPassword(){
   }
 }
 function collectAdminUserMatchPermissions(){
-  const list=[];
-  if(document.getElementById('au_match_ops')?.checked)list.push('match_ops');
-  if(document.getElementById('au_match_finance')?.checked)list.push('match_finance');
-  return list;
+  return ['match_ops','match_finance'];
 }
 function collectAdminUserCampusIds(){
   return [...document.querySelectorAll('.au-campus-cb:checked')].map(cb=>cb.value).filter(Boolean);
@@ -359,7 +346,7 @@ async function saveAdminUser(){
   const coachId=document.getElementById('au_coachId')?.value||'';
   const coach=coaches.find(c=>c.id===coachId);
   const rawDataScope=document.getElementById('au_dataScope')?.value||'all';
-  const dataScope=roleValue==='editor'?'coach':(rawDataScope==='campus'?'campus':'all');
+  const dataScope=rawDataScope==='campus'?'campus':(roleValue==='editor'&&rawDataScope==='coach'?'coach':'all');
   const campusIds=dataScope==='campus'?collectAdminUserCampusIds():[];
   if(!id||!name){toast('请填写账号和姓名','warn');return;}
   if(!editId){

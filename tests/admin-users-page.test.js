@@ -56,6 +56,10 @@ assert.match(fnBody('adminUserAccountTabHtml'), /openAdminUserDrawerEdit/, 'acco
 assert.match(fnBody('adminUserAccountTabHtml'), /账号ID[\s\S]*姓名[\s\S]*手机号[\s\S]*角色[\s\S]*绑定教练[\s\S]*数据范围[\s\S]*当前状态/, 'account view should match edit account fields');
 assert.doesNotMatch(fnBody('adminUserAccountTabHtml'), /服务号绑定|约球权限/, 'account info tab should not show service binding or standalone match permission fields');
 assert.match(fnBody('adminUserAccountFormCardHtml'), /账号ID[\s\S]*姓名[\s\S]*手机号[\s\S]*角色[\s\S]*绑定教练[\s\S]*数据权限[\s\S]*当前状态/, 'account create and edit should share the same account fields');
+assert.doesNotMatch(fnBody('adminUserAccountFormCardHtml'), /au_match_ops|au_match_finance|约球运营|约球财务/, 'match permissions should not render as separate account fields');
+assert.doesNotMatch(fnBody('adminUserDataPermissionText'), /约球/, 'data permission display should not append match permission text');
+assert.doesNotMatch(fnBody('toggleAdminUserScopeFields'), /role==='editor'[\s\S]*setStandardDropdownValue\('au_dataScope','coach'/, 'coach accounts should be able to select campus scope');
+assert.match(fnBody('toggleAdminUserScopeFields'), /wrap\.style\.display=scope==='campus'\?'':'none'/, 'campus selector should open whenever data scope is campus');
 assert.match(fnBody('openAdminUserDrawerCreate'), /openStandardDetailDrawer/, 'account create should use the global drawer shell');
 assert.match(fnBody('openAdminUserDrawerCreate'), /adminUserAccountFormCardHtml/, 'account create should reuse the shared account form');
 assert.match(fnBody('openAdminUserDrawerCreate'), /adminUserPasswordCardHtml\(\{isCreate:true\}\)/, 'account create should put initial password in a separate card');
@@ -71,6 +75,7 @@ assert.match(fnBody('saveAdminUser'), /dataScope/, 'account save should submit d
 assert.match(fnBody('saveAdminUser'), /campusIds/, 'account save should submit campus ids');
 assert.doesNotMatch(fnBody('saveAdminUser'), /officialAccountOpenId/, 'account save should not submit manual official account openid');
 assert.match(fnBody('saveAdminUser'), /matchPermissions/, 'account save should submit match permissions');
+assert.match(fnBody('collectAdminUserMatchPermissions'), /\['match_ops','match_finance'\]/, 'match permissions should be enabled for every account by default');
 assert.match(fnBody('saveAdminUser'), /\/admin\/create-user/, 'account create should call create-user api');
 assert.match(fnBody('saveAdminUser'), /\/admin\/update-user/, 'account edit should call update-user api');
 assert.match(fnBody('saveAdminUser'), /账号创建成功 ✓/, 'account create should keep the success toast');
