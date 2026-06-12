@@ -780,7 +780,7 @@ function financeCardValue(mainValue,subValue=null){
 }
 function financePercent(numerator,denominator,{parens=false}={}){
   const base=Number(denominator)||0;
-  const text=base?`${Math.round((Number(numerator||0)/base)*1000)/10}%`:'0.0%';
+  const text=base?`${Math.round((Number(numerator||0)/base)*100)}%`:'0%';
   return parens?`(${text})`:text;
 }
 function financeRecognitionPercent(numerator,denominator){
@@ -797,6 +797,18 @@ function financeInlineMoneyOnly(value){
 }
 function financeStatCardHtml({label,value,caption='',split=false}){
   return `<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value${split?' finance-split-value':''}">${value}</div>${caption?`<div class="tms-stat-sub">${caption}</div>`:''}</div>`;
+}
+function financeFitOverviewStatValues(){
+  const host=document.getElementById('financeOverviewPrimaryStats');
+  if(!host)return;
+  host.querySelectorAll('.tms-stat-value').forEach(el=>{
+    el.style.fontSize='';
+    let size=parseFloat(getComputedStyle(el).fontSize)||21;
+    while(el.scrollWidth>el.clientWidth&&size>12){
+      size-=1;
+      el.style.fontSize=`${size}px`;
+    }
+  });
 }
 function financeRowsSum(rows,field){
   return Math.round((rows||[]).reduce((total,row)=>total+(Number(row?.[field])||0),0)*100)/100;
@@ -1407,6 +1419,8 @@ function renderFinanceOverview(){
     {label:'散客订场',value:financeInlineMoneyWithPercent(metrics.bookingIncome,metrics.totalCash),caption:'散客订场/总实收比'},
     {label:'课程收入',value:`${financeInlineMoneyWithPercent(metrics.courseIncome,metrics.totalCash)} <span class="finance-split-sep">｜</span> ${financeInlineMoneyOnly(metrics.courseRecognized)}`,caption:'课程实收 vs 课程已核销',split:true}
   ].map(financeStatCardHtml).join('');
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(financeFitOverviewStatValues);
+  else setTimeout(financeFitOverviewStatValues,0);
   secondaryHost.innerHTML='';
   secondaryHost.style.display='none';
 }

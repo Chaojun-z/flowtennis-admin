@@ -75,6 +75,9 @@ assert.doesNotMatch(source,/总核销确收[\s\S]{0,260}financePercent\(metrics\
 assert.doesNotMatch(source,/storedValueRecognized,metrics\.totalRecognized/,'overview membership recognized amount should not show a percentage');
 assert.doesNotMatch(source,/courseRecognized,metrics\.totalRecognized/,'overview course recognized amount should not show a percentage');
 assert.doesNotMatch(pagesCss,/#page-finance \.finance-ledger-stats \.tms-stat-value\{[^}]*overflow:hidden/,'finance overview stat values should not clip long currency text');
+assert.match(source,/Math\.round\(\(Number\(numerator\|\|0\)\/base\)\*100\)/,'finance card percentages should drop decimal places');
+assert.match(source,/function financeFitOverviewStatValues\(\)/,'finance overview should shrink oversized stat values instead of clipping them');
+assert.match(source,/while\(el\.scrollWidth>el\.clientWidth&&size>12\)/,'finance overview should keep shrinking until the value fits');
 assert.match(source,/financeTransactionAmountHtml/,'ledger should render transaction amount with standardized style');
 assert.match(source,/row\.differenceReason[\s\S]*return false/,'finance ledger should hide difference rows from the main transaction table');
 assert.doesNotMatch(source,/全部交易类型[\s\S]{0,3000}差异/,'finance transaction type filter should not expose difference as a business type');
