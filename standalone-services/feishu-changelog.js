@@ -310,7 +310,7 @@ function buildCandidate(commit, prDetails) {
 }
 
 function extractProductBroadcastLines(input) {
-  const lines = String(input || '').replace(/\r/g, '').split('\n');
+  const lines = String(input || '').replace(/\r/g, '').replace(/\\n/g, '\n').split('\n');
   const result = [];
   let inBlock = false;
   for (const rawLine of lines) {
@@ -446,13 +446,17 @@ function parseGitLog(raw) {
     .map((block) => {
       const [meta, ...fileLines] = block.split('\n');
       const [sha, subject, body] = meta.split('\u001f');
-      const files = fileLines.map((line) => line.trim()).filter(Boolean);
+      const separatorIndex = fileLines.findIndex((line) => !line.trim());
+      const bodyLines = separatorIndex >= 0 ? fileLines.slice(0, separatorIndex) : [];
+      const rawFiles = separatorIndex >= 0 ? fileLines.slice(separatorIndex + 1) : fileLines;
+      const fullBody = [body || '', ...bodyLines].join('\n').trim();
+      const files = rawFiles.map((line) => line.trim()).filter(Boolean);
       return {
         sha: sha || '',
         subject: subject || '',
-        body: body || '',
+        body: fullBody,
         files,
-        prNumber: parsePullRequestNumber(`${subject}\n${body}`)
+        prNumber: parsePullRequestNumber(`${subject}\n${fullBody}`)
       };
     });
 }
@@ -620,6 +624,7 @@ module.exports = {
   extractProductBroadcastItems,
   groupEntriesByPlatform,
   isNoiseCommit,
+  parseGitLog,
   readSentDates,
   resolveReportDates,
   targetDate,

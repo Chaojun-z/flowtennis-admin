@@ -3,6 +3,28 @@ const path = require('path');
 
 const changelog = require(path.join(__dirname, '..', 'standalone-services', 'feishu-changelog.js'));
 
+const rawGitLog = [
+  'abc123\u001fFix package page\u001f产品播报:',
+  '- 管理后台：售卖课包页面固定标题和筛选区',
+  '- 教练手机端：每天晚间通过飞书私信收到次日排课提醒',
+  '',
+  'public/assets/scripts/pages/packages.js',
+  'api/index.js'
+].join('\n');
+const parsedCommits = changelog.parseGitLog(rawGitLog);
+assert.strictEqual(parsedCommits.length, 1, 'git log 应解析出一条提交');
+assert.match(parsedCommits[0].body, /售卖课包页面固定标题和筛选区/, 'git log 多行正文应保留产品播报条目');
+assert.deepStrictEqual(
+  parsedCommits[0].files,
+  ['public/assets/scripts/pages/packages.js', 'api/index.js'],
+  '产品播报条目不应被误当作文件路径'
+);
+assert.strictEqual(
+  changelog.buildBusinessEntries(parsedCommits).length,
+  2,
+  '从 git log 解析出的多行产品播报应进入升级日志'
+);
+
 const entries = changelog.buildBusinessEntries([
   {
     sha: 'a1',
