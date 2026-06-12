@@ -358,7 +358,12 @@ assert.match(fnBody('posterLineMetrics'), /markerMatch[\s\S]*indent[\s\S]*paragr
 assert.match(fnBody('posterTextLines'), /availableWidth[\s\S]*maxWidth-line\.hangingIndent[\s\S]*lineWidth\+width>availableWidth/s, 'feedback poster should wrap indented continuation lines inside the card width');
 assert.match(fnBody('posterDrawTextBlock'), /posterLineMetrics\(ctx,lineGroups\)[\s\S]*currentX=x\+metrics\.indent[\s\S]*metrics\.paragraphGap/s, 'feedback poster should draw wrapped list text with hanging indent and extra item spacing');
 assert.match(source, /function feedbackNextListMarker\(/, 'feedback editor should calculate the next marker when coach presses enter');
-assert.match(fnBody('feedbackNextListMarker'), /mode==='normal'[\s\S]*!numberMatch[\s\S]*!bulletMatch[\s\S]*return ''[\s\S]*mode==='bullet'[\s\S]*· [\s\S]*Number\(numberMatch\[1\]\)\+1/, 'feedback editor should only continue lists when the coach starts a numbered or bullet list');
+assert.match(fnBody('feedbackNextListMarker'), /mode==='normal'[\s\S]*!numberMatch[\s\S]*!bulletMatch[\s\S]*return ''[\s\S]*mode==='bullet'[\s\S]*• [\s\S]*Number\(numberMatch\[1\]\)\+1/, 'feedback editor should only continue lists when the coach starts a numbered or bullet list');
+assert.match(source, /function feedbackApplyListStyleToRange\(/, 'feedback editor should format the selected lines instead of replacing selected text with one marker');
+assert.match(fnBody('feedbackApplyListStyleToRange'), /end>start[\s\S]*split\('\\n'\)[\s\S]*itemIndex\+=1[\s\S]*`\$\{itemIndex\}\. \$\{clean\}`/s, 'feedback editor should number only the selected non-empty lines');
+assert.match(fnBody('feedbackApplyListStyleToRange'), /style==='bullet'[\s\S]*`• \$\{clean\}`/s, 'feedback editor should use the normal bullet glyph for selected bullet lists');
+assert.match(fnBody('feedbackInsertListMarker'), /feedbackApplyListStyleToRange\(value,start,end,style\)/, 'feedback list buttons should preserve selected text through the shared formatter');
+assert.doesNotMatch(fnBody('feedbackNextListMarker'), /return '· '/, 'feedback enter continuation should not insert the tiny middle dot as bullet');
 assert.match(source, /function handleFeedbackListKeydown\(/, 'feedback editor should intercept enter to auto insert the next marker');
 assert.match(source, /function setFeedbackListStyle\(/, 'feedback editor should expose buttons to start numbered or bullet lists');
 assert.match(fnBody('feedbackListStyleSelect'), /普通[\s\S]*编号[\s\S]*圆点/, 'feedback modal should expose normal, numbered, and bullet typing modes before coaches write feedback');
@@ -375,6 +380,7 @@ assert.match(source, /function posterSectionHasContent\(/, 'feedback poster shou
 assert.match(fnBody('measureFeedbackPosterLayout'), /posterSectionHasContent\(data\.knowledgePoint\)[\s\S]*knowledge=null/, 'feedback poster should hide practice status when it is empty');
 assert.doesNotMatch(fnBody('measureFeedbackPosterLayout'), /lineCaps=\{practiced:12,knowledge:14,nextTraining:10\}/, 'feedback poster should not cap long feedback text');
 assert.match(fnBody('measureFeedbackPosterLayout'), /posterTextLines[\s\S]*posterBlockHeight[\s\S]*canvasHeight/s, 'feedback poster layout should derive block heights and final canvas height from wrapped text');
+assert.match(fnBody('measureFeedbackPosterLayout'), /footerBaseTop=1156[\s\S]*contentBottom[\s\S]*canvasHeight=Math\.max\(1334,contentBottom\+240\)[\s\S]*footer:\{brandY:footerBaseTop\+56,taglineY:footerBaseTop\+91,accentY:footerBaseTop\+81\}/s, 'feedback poster footer should stay fixed while content controls only the poster height');
 assert.doesNotMatch(fnBody('drawFeedbackPoster'), /TRAINING REPORT|Coach/, 'feedback poster should remove the old English report and coach footer');
 assert.doesNotMatch(fnBody('drawFeedbackPoster'), /canvas\.width=750;canvas\.height=1334;/, 'feedback poster should not hardcode a fixed export height anymore');
 assert.match(fnBody('drawFeedbackPoster'), /const layout=measureFeedbackPosterLayout\(ctx,data\);[\s\S]*canvas\.width=750;canvas\.height=layout\.canvasHeight;/s, 'feedback poster should size the canvas from measured content before drawing');

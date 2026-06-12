@@ -191,6 +191,11 @@ assert.match(scheduleJs, /function posterApplyLineStyle\(/, 'mini program poster
 assert.match(scheduleJs, /style === 'preserve'[\s\S]*String\(text \|\| '—'\)/, 'mini program poster should preserve coach-entered titles and list markers by default');
 assert.match(scheduleJs, /function feedbackAutoListValue\(/, 'mini program feedback editor should auto add the next marker when coach presses enter');
 assert.match(scheduleJs, /onFeedbackListStyleTap/, 'mini program feedback editor should let coaches choose numbered, bullet, or normal typing');
+assert.match(scheduleJs, /function feedbackApplyListStyleToRange\(/, 'mini program feedback editor should format selected lines instead of replacing selected text');
+assert.match(scheduleJs, /feedbackApplyListStyleToRange[\s\S]*end > start[\s\S]*split\('\\n'\)[\s\S]*itemIndex \+= 1[\s\S]*`\$\{itemIndex\}\. \$\{clean\}`/, 'mini program feedback editor should number only selected non-empty lines');
+assert.match(scheduleJs, /feedbackApplyListStyleToRange[\s\S]*style === 'bullet'[\s\S]*`• \$\{clean\}`/, 'mini program feedback editor should use the normal bullet glyph');
+assert.match(scheduleWxml, /bindselect="onFeedbackSelect"/, 'mini program feedback textareas should record selected text ranges for list formatting');
+assert.doesNotMatch(scheduleJs, /return `\$\{next\}· `|return '· '/, 'mini program feedback list continuation should not insert the tiny middle dot as bullet');
 assert.match(scheduleJs, /feedbackFocusedField:\s*field/, 'mini program list style buttons should focus the target feedback field after inserting the marker');
 assert.match(scheduleJs, /feedbackListStyle[\s\S]*普通[\s\S]*编号[\s\S]*圆点/, 'mini program feedback editor should expose typing list style options');
 assert.doesNotMatch(scheduleWxml, /posterListStyleOptions[\s\S]*posterListStyleText/, 'mini program poster should not reformat all lines after coaches already typed the structure');
@@ -198,6 +203,7 @@ assert.doesNotMatch(scheduleJs, /highlight: keywords\.includes\(part\)/, 'mini p
 assert.match(scheduleJs, /function posterSectionHasContent\(/, 'mini program poster should detect empty optional sections');
 assert.match(scheduleJs, /posterSectionHasContent\(data\.knowledgePoint\)/, 'mini program poster should hide practice status when it is empty');
 assert.doesNotMatch(scheduleJs, /posterMeasureTextBlock\(ctx, section\.text, contentWidth, \d+/, 'mini program poster should not cap long feedback text');
+assert.match(scheduleJs, /const footerBaseY = 1212;[\s\S]*const contentBottom = currentY - 28;[\s\S]*canvasHeight: Math\.max\(1334, contentBottom \+ 240\),[\s\S]*footerY: footerBaseY/, 'mini program poster footer should stay fixed while content controls only the poster height');
 assert.match(scheduleJs, /buildStudentDetailData/, 'student detail sheet should prepare mapped student profile data');
 assert.match(scheduleJs, /selectedStudentDetail/, 'student detail sheet should keep its selected student data separately');
 assert.match(scheduleJs, /showStudentDetail/, 'student detail sheet should use its own visibility state');

@@ -1270,7 +1270,7 @@ function posterApplyLineStyle(text,style='preserve'){
       itemIndex+=1;
       return `${itemIndex}. ${clean}`;
     }
-    if(style==='bullet')return `· ${clean}`;
+    if(style==='bullet')return `• ${clean}`;
     return clean;
   }).join('\n');
   return next||'—';
@@ -1283,24 +1283,47 @@ function feedbackNextListMarker(value,cursor,style='number'){
   const numberMatch=line.match(/^\s*(\d+)[\.\、]\s*/);
   const bulletMatch=line.match(/^\s*[·•\-－]\s*/);
   if(mode==='normal'&&!numberMatch&&!bulletMatch)return '';
-  if(mode==='bullet'||bulletMatch)return '· ';
+  if(mode==='bullet'||bulletMatch)return '• ';
   if(mode==='number'||numberMatch){
     const next=numberMatch?Number(numberMatch[1])+1:1;
     return `${next}. `;
   }
   return '';
 }
+function feedbackApplyListStyleToRange(value,start,end,style){
+  const text=String(value||'');
+  if(style==='normal')return {value:text,start,end};
+  start=Math.max(0,Number(start)||0);
+  end=Math.max(start,Number(end)||start);
+  const hasSelection=end>start;
+  const rangeStart=hasSelection?text.lastIndexOf('\n',Math.max(0,start-1))+1:text.lastIndexOf('\n',Math.max(0,start-1))+1;
+  const currentLineEnd=text.indexOf('\n',hasSelection?Math.max(start,end-1):start);
+  const rangeEnd=hasSelection?(currentLineEnd===-1?text.length:currentLineEnd):(currentLineEnd===-1?text.length:currentLineEnd);
+  const selected=text.slice(rangeStart,rangeEnd);
+  if(!selected.trim()){
+    const insert=style==='bullet'?'• ':'1. ';
+    return {value:`${text.slice(0,start)}${insert}${text.slice(end)}`,start:start+insert.length,end:start+insert.length};
+  }
+  let itemIndex=0;
+  const next=selected.split('\n').map(line=>{
+    if(!line.trim())return line;
+    const clean=line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/,'').trim();
+    if(style==='bullet')return `• ${clean}`;
+    itemIndex+=1;
+    return `${itemIndex}. ${clean}`;
+  }).join('\n');
+  return {value:`${text.slice(0,rangeStart)}${next}${text.slice(rangeEnd)}`,start:rangeStart,end:rangeStart+next.length};
+}
 function feedbackInsertListMarker(el,style){
   if(!el||style==='normal')return;
   const start=el.selectionStart||0;
   const end=el.selectionEnd||start;
   const value=el.value||'';
-  const lineStart=value.lastIndexOf('\n',Math.max(0,start-1))+1;
-  const currentLine=value.slice(lineStart,start);
-  if(/^\s*(?:\d+[\.\、]|[·•\-－])\s*/.test(currentLine))return;
-  const insert=`${currentLine.trim()?'\n':''}${style==='bullet'?'· ':'1. '}`;
-  el.value=`${value.slice(0,start)}${insert}${value.slice(end)}`;
-  el.selectionStart=el.selectionEnd=start+insert.length;
+  const next=feedbackApplyListStyleToRange(value,start,end,style);
+  if(next.value===value&&next.start===start&&next.end===end)return;
+  el.value=next.value;
+  el.selectionStart=next.start;
+  el.selectionEnd=next.end;
   el.focus();
   el.dispatchEvent(new Event('input',{bubbles:true}));
 }
@@ -1489,18 +1512,16 @@ function measureFeedbackPosterLayout(ctx,data){
   const nextTrainingY=nextY;
   const nextTrainingLines=posterTextLines(ctx,data.nextTraining,contentWidth,Number.MAX_SAFE_INTEGER,textOptions);
   const nextTrainingHeight=posterBlockHeight(nextTrainingLines);
-  const footerTop=nextTrainingY+nextTrainingHeight+92;
-  const footerBrandY=footerTop+56;
-  const footerTaglineY=footerBrandY+35;
-  const footerAccentY=footerTaglineY-10;
-  const canvasHeight=Math.max(1334,footerTaglineY+64);
+  const footerBaseTop=1156;
+  const contentBottom=nextTrainingY+nextTrainingHeight;
+  const canvasHeight=Math.max(1334,contentBottom+240);
   return {
     contentWidth,
     canvasHeight,
     practiced:{y:startY,lines:practicedLines,boxHeight:practicedHeight},
     knowledge,
     nextTraining:{y:nextTrainingY,lines:nextTrainingLines,boxHeight:nextTrainingHeight},
-    footer:{brandY:footerBrandY,taglineY:footerTaglineY,accentY:footerAccentY}
+    footer:{brandY:footerBaseTop+56,taglineY:footerBaseTop+91,accentY:footerBaseTop+81}
   };
 }
 function posterDrawTextBlock(ctx,tpl,label,x,y,w,lines,boxHeight){

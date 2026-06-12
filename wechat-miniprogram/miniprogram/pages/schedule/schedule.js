@@ -762,7 +762,7 @@ function feedbackAutoListValue(prevValue = '', nextValue = '', style = 'normal')
   const numberMatch = line.match(/^\s*(\d+)[\.\、]\s*/);
   const bulletMatch = line.match(/^\s*[·•\-－]\s*/);
   if (style === 'normal' && !numberMatch && !bulletMatch) return next;
-  if (style === 'bullet' || bulletMatch) return `${next}· `;
+  if (style === 'bullet' || bulletMatch) return `${next}• `;
   if (style === 'number' || numberMatch) {
     const marker = numberMatch ? Number(numberMatch[1]) + 1 : 1;
     return `${next}${marker}. `;
@@ -770,17 +770,38 @@ function feedbackAutoListValue(prevValue = '', nextValue = '', style = 'normal')
   return next;
 }
 
-function feedbackInsertListMarker(value = '', cursor = 0, style = 'normal') {
-  if (style === 'normal') return { value: String(value || ''), cursor };
+function feedbackApplyListStyleToRange(value = '', start = 0, end = start, style = 'normal') {
   const text = String(value || '');
-  const start = Math.max(0, Number(cursor) || 0);
-  const lineStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
-  const currentLine = text.slice(lineStart, start);
-  if (/^\s*(?:\d+[\.\、]|[·•\-－])\s*/.test(currentLine)) return { value: text, cursor: start };
-  const insert = `${currentLine.trim() ? '\n' : ''}${style === 'bullet' ? '· ' : '1. '}`;
+  if (style === 'normal') return { value: text, cursor: Number(end) || 0 };
+  start = Math.max(0, Number(start) || 0);
+  end = Math.max(start, Number(end) || start);
+  const hasSelection = end > start;
+  const rangeStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+  const currentLineEnd = text.indexOf('\n', hasSelection ? Math.max(start, end - 1) : start);
+  const rangeEnd = currentLineEnd === -1 ? text.length : currentLineEnd;
+  const selected = text.slice(rangeStart, rangeEnd);
+  if (!selected.trim()) {
+    const insert = style === 'bullet' ? '• ' : '1. ';
+    const cursor = start + insert.length;
+    return { value: `${text.slice(0, start)}${insert}${text.slice(end)}`, cursor };
+  }
+  let itemIndex = 0;
+  const next = selected.split('\n').map((line) => {
+    if (!line.trim()) return line;
+    const clean = line.replace(/^\s*(?:\d+[\.\、][\s\t]*|[·•\-－][\s\t]*)/, '').trim();
+    if (style === 'bullet') return `• ${clean}`;
+    itemIndex += 1;
+    return `${itemIndex}. ${clean}`;
+  }).join('\n');
+  return { value: `${text.slice(0, rangeStart)}${next}${text.slice(rangeEnd)}`, cursor: rangeStart + next.length };
+}
+
+function feedbackInsertListMarker(value = '', cursor = 0, style = 'normal', selectionEnd = cursor) {
+  if (style === 'normal') return { value: String(value || ''), cursor };
+  const next = feedbackApplyListStyleToRange(value, cursor, selectionEnd, style);
   return {
-    value: `${text.slice(0, start)}${insert}${text.slice(start)}`,
-    cursor: start + insert.length
+    value: next.value,
+    cursor: next.cursor
   };
 }
 
@@ -1027,7 +1048,7 @@ function posterApplyLineStyle(text, style = 'preserve') {
       itemIndex += 1;
       return `${itemIndex}. ${clean}`;
     }
-    if (style === 'bullet') return `· ${clean}`;
+    if (style === 'bullet') return `• ${clean}`;
     return clean;
   }).join('\n');
   return next || '—';
@@ -1209,11 +1230,12 @@ function posterLayout(ctx, data) {
     section.y = currentY;
     currentY += section.consumedHeight;
   });
-  const footerY = currentY + 62;
+  const footerBaseY = 1212;
+  const contentBottom = currentY - 28;
   return {
     sections,
-    canvasHeight: Math.max(1334, footerY + 120),
-    footerY
+    canvasHeight: Math.max(1334, contentBottom + 240),
+    footerY: footerBaseY
   };
 }
 
@@ -1800,6 +1822,7 @@ Page({
     feedbackListStyle: 'normal',
     feedbackListStyleOptions: feedbackListStyleOptions(),
     feedbackListCursors: {},
+    feedbackSelectionRanges: {},
     proposalForm: proposalFormFromRecord(),
     proposalCounts: proposalCountsOf(),
     feedbackHasSaved: false,
@@ -2291,6 +2314,7 @@ Page({
       feedbackFocusedField: '',
       feedbackListStyle: 'normal',
       feedbackListCursors: {},
+      feedbackSelectionRanges: {},
       feedbackSheetScrollTop: 0,
       feedbackContextParts: feedbackContextParts(this.data.selectedClass)
     });
@@ -2324,6 +2348,7 @@ Page({
       feedbackFocusedField: '',
       feedbackListStyle: 'normal',
       feedbackListCursors: {},
+      feedbackSelectionRanges: {},
       feedbackSheetScrollTop: 0,
       feedbackContextParts: feedbackContextParts(selectedClass)
     });
@@ -2345,18 +2370,42 @@ Page({
     const field = event.currentTarget.dataset.field || 'practicedToday';
     const prevValue = this.data.feedbackForm[field] || '';
     const value = feedbackAutoListValue(prevValue, event.detail.value, this.data.feedbackListStyle || 'normal');
+    const cursor = event.detail.cursor == null ? value.length : event.detail.cursor;
     const feedbackForm = {
       ...this.data.feedbackForm,
       [field]: value
     };
     const feedbackListCursors = {
       ...this.data.feedbackListCursors,
-      [field]: value.length
+      [field]: cursor
+    };
+    const feedbackSelectionRanges = {
+      ...this.data.feedbackSelectionRanges,
+      [field]: { start: cursor, end: cursor }
     };
     this.setData({
       feedbackForm,
       feedbackListCursors,
+      feedbackSelectionRanges,
       feedbackCounts: feedbackCountsOf(feedbackForm)
+    });
+  },
+
+  onFeedbackSelect(event) {
+    const field = event.currentTarget.dataset.field || 'practicedToday';
+    const detail = event.detail || {};
+    const start = detail.selectionStart == null ? (detail.cursor || 0) : detail.selectionStart;
+    const end = detail.selectionEnd == null ? start : detail.selectionEnd;
+    this.setData({
+      feedbackFocusedField: field,
+      feedbackListCursors: {
+        ...this.data.feedbackListCursors,
+        [field]: end
+      },
+      feedbackSelectionRanges: {
+        ...this.data.feedbackSelectionRanges,
+        [field]: { start, end }
+      }
     });
   },
 
@@ -2365,17 +2414,24 @@ Page({
     const field = this.data.feedbackFocusedField || 'practicedToday';
     const feedbackForm = { ...this.data.feedbackForm };
     const feedbackListCursors = { ...this.data.feedbackListCursors };
-    const cursor = feedbackListCursors[field] == null ? String(feedbackForm[field] || '').length : feedbackListCursors[field];
+    const range = this.data.feedbackSelectionRanges[field] || {};
+    const cursor = range.start == null ? (feedbackListCursors[field] == null ? String(feedbackForm[field] || '').length : feedbackListCursors[field]) : range.start;
+    const selectionEnd = range.end == null ? cursor : range.end;
     if (style === 'number' || style === 'bullet') {
-      const next = feedbackInsertListMarker(feedbackForm[field], cursor, style);
+      const next = feedbackInsertListMarker(feedbackForm[field], cursor, style, selectionEnd);
       feedbackForm[field] = next.value;
       feedbackListCursors[field] = next.cursor;
     }
+    const feedbackSelectionRanges = {
+      ...this.data.feedbackSelectionRanges,
+      [field]: { start: feedbackListCursors[field] || 0, end: feedbackListCursors[field] || 0 }
+    };
     this.setData({
       feedbackListStyle: style,
       feedbackFocusedField: field,
       feedbackForm,
       feedbackListCursors,
+      feedbackSelectionRanges,
       feedbackCounts: feedbackCountsOf(feedbackForm)
     });
   },
