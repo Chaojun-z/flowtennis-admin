@@ -2025,6 +2025,69 @@ function applyEntitlementLessonDelta(entitlement,delta,now=new Date().toISOStrin
   const status=remaining<=0?'depleted':(entitlement.status==='depleted'?'active':(entitlement.status||'active'));
   return {...entitlement,usedLessons:used,remainingLessons:remaining,status,updatedAt:now};
 }
+function manualEntitlementAdjustmentCampusSet({entitlement={},purchase={},packageRow={},student={}}={}){
+  const packageSet=campusSetFromRow(packageRow);
+  if(packageSet.size)return packageSet;
+  const purchaseSet=campusSetFromRow(purchase);
+  if(purchaseSet.size)return purchaseSet;
+  const studentSet=campusSetFromRow(student);
+  if(studentSet.size)return studentSet;
+  return campusSetFromRow(entitlement);
+}
+function userCanManageManualEntitlementAdjustment(user,ctx={}){
+  const profile=normalizePermissionProfile(user||{});
+  if(profile.role!=='admin')return false;
+  if(profile.dataScope!=='campus')return true;
+  const targetSet=manualEntitlementAdjustmentCampusSet(ctx);
+  if(!targetSet.size)return true;
+  const allowed=new Set((profile.campusIds||[]).map(normalizeCampusValue).filter(Boolean));
+  return campusSetsIntersect(targetSet,allowed);
+}
+function validateManualEntitlementAdjustment({entitlement={},purchase={},packageRow={},student={},user={},lessonDelta,relatedDate='',reason=''}={}){
+  const delta=parseLessonValue(lessonDelta,0);
+  if(!delta)throw new Error('请输入消课数量');
+  if(!String(relatedDate||'').slice(0,10))throw new Error('请选择消课日期');
+  if(!String(reason||'').trim())throw new Error('请填写备注');
+  if(!userCanManageManualEntitlementAdjustment(user,{entitlement,purchase,packageRow,student}))throw new Error('无权限操作该课包');
+  if(entitlement.status==='voided')throw new Error('已作废课包不能操作');
+  const remaining=parseLessonValue(entitlement.remainingLessons);
+  const used=parseLessonValue(entitlement.usedLessons);
+  if(delta<0){
+    if(entitlement.status&&entitlement.status!=='active')throw new Error('当前课包不可继续消课');
+    const count=Math.abs(delta);
+    if(remaining<count)throw new Error('课包剩余课时不足');
+    const day=String(relatedDate||'').slice(0,10);
+    const from=entitlement.usageStartDate||entitlement.validFrom||purchase.usageStartDate||packageRow.usageStartDate||'';
+    const until=entitlement.usageEndDate||entitlement.validUntil||purchase.usageEndDate||packageRow.usageEndDate||'';
+    if((from&&day<from)||(until&&day>until))throw new Error('不在课包可用日期范围');
+  }else if(used<delta){
+    throw new Error('退回课时不能超过已扣课时');
+  }
+}
+function buildManualEntitlementLedgerRecord({entitlement={},lessonDelta,relatedDate='',reason='',user={},operationTrace=null}={},opts={}){
+  const delta=parseLessonValue(lessonDelta,0);
+  const notes=String(reason||'').trim();
+  const action=delta<0?'manual_consume':'manual_return';
+  const trace=operationTrace?Object.fromEntries(Object.entries(operationTrace).filter(([,value])=>value!==undefined&&value!==null&&value!=='')):null;
+  return {
+    id:opts.id||uuidv4(),
+    entitlementId:entitlement.id||'',
+    studentId:entitlement.studentId||'',
+    purchaseId:entitlement.purchaseId||'',
+    scheduleId:'',
+    lessonDelta:delta,
+    action,
+    reason:`管理员${delta<0?'手动消课':'手动退回'}：${notes}`,
+    notes,
+    relatedDate:String(relatedDate||'').slice(0,10),
+    sourceDate:String(relatedDate||'').slice(0,10),
+    operator:user?.name||'',
+    createdAt:opts.now||new Date().toISOString(),
+    packageName:entitlement.packageName||'',
+    coach:entitlement.ownerCoach||'',
+    ...(trace||{})
+  };
+}
 function applyEntitlementFreeAbsence(entitlement,now=new Date().toISOString()){
   const limit=parseInt(entitlement?.freeAbsenceLimit)||0;
   const used=parseInt(entitlement?.freeAbsenceUsed)||0;
@@ -10063,6 +10126,40 @@ module.exports = async (req, res) => {
     }
     if(path==='/entitlements'){await init();if(method==='GET'){const sid=query.get('studentId')||'';const rows=(user.role==='admin'&&sid&&!isCampusScopedAdmin(user))?await getIndexedActiveEntitlementsForStudents([sid]):await getCachedScan(T_ENTITLEMENTS).catch(()=>[]);if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,sid?rows.filter(e=>e.studentId===sid):rows);const [students,schedule,classes,purchases,packages,coaches,users]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_PURCHASES).catch(()=>[]),getCachedScan(T_PACKAGES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});const scoped=filterLoadAllForUser({students,schedule,classes,purchases,packages,entitlements:rows,coaches},user,coachRefs).entitlements;return sendJson(res,sid?scoped.filter(e=>e.studentId===sid):scoped);}}
     if(path==='/entitlements/recommend'&&method==='POST'){await init();const [rows,coaches,users]=await Promise.all([getIndexedActiveEntitlementsForStudents(parseArr(body.studentIds)),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);return sendJson(res,recommendEntitlements(rows,{...body,coachRefs:buildCoachRefs({coaches,users})}));}
+    const entManualM=path.match(/^\/entitlements\/(.+)\/manual-adjust$/);
+    if(entManualM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      const id=entManualM[1];
+      const old=await get(T_ENTITLEMENTS,id).catch(()=>null);
+      if(!old)return sendJson(res,{error:'课包余额不存在'},404);
+      const [purchase,packageRow,student]=await Promise.all([
+        old.purchaseId?get(T_PURCHASES,old.purchaseId).catch(()=>null):Promise.resolve(null),
+        old.packageId?get(T_PACKAGES,old.packageId).catch(()=>null):Promise.resolve(null),
+        old.studentId?get(T_STUDENTS,old.studentId).catch(()=>null):Promise.resolve(null)
+      ]);
+      const count=Math.abs(parseLessonValue(body.lessonDelta||body.count,0));
+      const action=String(body.action||'manual_consume');
+      const delta=action==='manual_return'?count:-count;
+      const relatedDate=String(body.relatedDate||body.consumeDate||'').slice(0,10);
+      const reason=String(body.reason||body.notes||'').trim();
+      validateManualEntitlementAdjustment({entitlement:old,purchase:purchase||{},packageRow:packageRow||{},student:student||{},user,lessonDelta:delta,relatedDate,reason});
+      const now=new Date().toISOString();
+      const operationTrace=buildOperationTrace({operationType:delta<0?'manual-lesson-consume':'manual-lesson-return',operator:user.name||'',now});
+      const next=withOperationTrace(applyEntitlementLessonDelta(old,delta,now),operationTrace);
+      const ledger=buildManualEntitlementLedgerRecord({entitlement:old,lessonDelta:delta,relatedDate,reason,user,operationTrace},{now});
+      try{
+        await put(T_ENTITLEMENTS,id,next);
+        await syncStudentActiveEntitlementIndexes(old,next);
+        await put(T_ENTITLEMENT_LEDGER,ledger.id,ledger);
+        return sendJson(res,{entitlement:next,ledger});
+      }catch(err){
+        await put(T_ENTITLEMENTS,id,old).catch(()=>null);
+        await syncStudentActiveEntitlementIndexes(next,old).catch(()=>null);
+        await del(T_ENTITLEMENT_LEDGER,ledger.id).catch(()=>null);
+        throw err;
+      }
+    }
     const entM=path.match(/^\/entitlements\/(.+)$/);if(entM){const id=entM[1];if(method==='GET')return sendJson(res,await getCachedRow(T_ENTITLEMENTS,id));if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await getCachedRow(T_ENTITLEMENTS,id).catch(()=>null);assertCanDeleteEntitlement(id,await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),await scan(T_ENTITLEMENTS).catch(()=>[]));await del(T_ENTITLEMENTS,id);await syncStudentActiveEntitlementIndexes(old,null);return sendJson(res,{success:true});}}
     if(path==='/plans'){await init();if(method==='GET'){const rows=await scan(T_PLANS);if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,rows);const [students,classes,schedule]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({plans:rows,students,classes,schedule},user).plans);}return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
@@ -10908,6 +11005,9 @@ module.exports._test={
   scheduleEntitlementDeltas,
   resolveScheduleEntitlementDeltas,
   applyEntitlementLessonDelta,
+  userCanManageManualEntitlementAdjustment,
+  validateManualEntitlementAdjustment,
+  buildManualEntitlementLedgerRecord,
   diffScheduleEntitlementDeltas,
   assertScheduleEditableAfterFeedback,
   isScheduleInsideDailyTimeWindows,

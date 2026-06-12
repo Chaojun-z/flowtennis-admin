@@ -1279,6 +1279,9 @@ function findScheduleForEntitlementLedgerRow(row,stu){
     return true;
   })||{};
 }
+function isManualEntitlementLedgerRow(row={}){
+  return ['manual_consume','manual_return'].includes(String(row?.action||''))||/^管理员手动/.test(String(row?.reason||''));
+}
 function studentEntitlementLedgerTimeText(row,schedule={}){
   if(schedule?.startTime){
     const date=String(schedule.startTime).slice(0,10);
@@ -1307,6 +1310,10 @@ function studentEntitlementLedgerLocationText(row,schedule={},ent={}){
   return [campus,venue].filter(Boolean).join(' ');
 }
 function studentEntitlementLedgerSourceText(row){
+  if(isManualEntitlementLedgerRow(row)){
+    const operator=String(row?.operator||row?.createdBy||'').trim();
+    return operator?`手动操作：${operator}`:'手动操作';
+  }
   const sourceSheet=String(row?.sourceSheet||'').trim();
   if(sourceSheet)return sourceSheet.includes('导入')?sourceSheet:`${sourceSheet}导入`;
   const importSource=String(row?.importSource||'').trim();
@@ -1439,11 +1446,13 @@ function studentLessonRecordPackageHtml(row,ent={}){
   const balance=studentLedgerBalanceNumbersAfter(row,ent)||{remaining:Number(ent.remainingLessons)||0,total:Number(ent.totalLessons)||0};
   const payText=standardPackageLabel({...ent,...row,packageName:ent.packageName||row?.packageName||''},ent.status==='inactive'||ent.status==='voided')||ent.packageName||row?.packageName||'课包';
   const chargeHtml=studentLessonRecordChargeHtml(row,ent,balance,schedule);
-  const title=[studentLessonRecordSectionText(row,ent),`[${esc(renderStandardEmptyText(payText))}]`].filter(Boolean).join(' · ');
+  const manualLabel=isManualEntitlementLedgerRow(row)?(Number(row.lessonDelta)>0?'手动退回':'手动消课'):'';
+  const title=[manualLabel,studentLessonRecordSectionText(row,ent),`[${esc(renderStandardEmptyText(payText))}]`].filter(Boolean).join(' · ');
   const meta=[
     studentEntitlementLedgerTimeText(row,schedule),
     studentEntitlementLedgerLocationText(row,schedule,ent),
-    coachName(schedule.coach||row?.coach||ent?.ownerCoach||'')
+    coachName(schedule.coach||row?.coach||ent?.ownerCoach||''),
+    isManualEntitlementLedgerRow(row)?String(row?.notes||row?.reason||'').replace(/^管理员手动(消课|退回)：/,''):''
   ].filter(Boolean).map(item=>esc(renderStandardEmptyText(item))).join(' · ');
   return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title)}</div><div class="student-lesson-meta">${meta}</div></div><div class="student-lesson-charge">${chargeHtml}</div></div>`;
 }

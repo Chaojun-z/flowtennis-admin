@@ -615,6 +615,7 @@ function studentLessonRecordShouldIncludeSchedule(schedule,stu,ledgerKeys,hasCon
   return scheduleCourseType(schedule)==='体验课';
 }
 function studentLessonRecordHasConcreteTime(row={},schedule={}){
+  if(isManualEntitlementLedgerRow(row))return true;
   if(schedule?.startTime)return true;
   if(String(row?.sourceTimeBand||'').match(/\d{1,2}:\d{2}/))return true;
   if(String(row?.scheduleTime||'').match(/\d{1,2}:\d{2}/))return true;

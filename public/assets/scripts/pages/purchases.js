@@ -236,7 +236,11 @@ function purchaseLedgerHtml(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entIds.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
   if(!rows.length)return '<div class="finput" style="min-height:42px">暂无扣课记录</div>';
-  return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>`${(Number(l.lessonDelta)||0)>0?'退回':'扣减'} ${lessonQty(Math.abs(Number(l.lessonDelta)||0))} 节 · ${esc(renderStandardEmptyText(l.reason))} · ${renderStandardEmptyText(entitlementLedgerDisplayDate(l))}`).join('<br>')}</div>`;
+  return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>{
+    const ent=entitlements.find(e=>e.id===l.entitlementId)||{};
+    const unit=packageBalanceUnitLabel({...ent,...l,packageName:ent.packageName||l.packageName||''});
+    return `${(Number(l.lessonDelta)||0)>0?'退回':'扣减'} ${lessonQty(Math.abs(Number(l.lessonDelta)||0))} ${unit} · ${esc(renderStandardEmptyText(l.reason))} · ${renderStandardEmptyText(entitlementLedgerDisplayDate(l))}`;
+  }).join('<br>')}</div>`;
 }
 function purchaseSystemAmountForPackage(packageId){
   const pkg=packages.find(x=>x.id===packageId);
@@ -351,11 +355,55 @@ function openPurchaseDetailModal(id){
   const ent=purchaseEntitlement(id);
   const meta=purchaseDisplayPackageMeta(p);
   const unit=packageLessonUnitLabel(meta);
+  const canManualAdjust=ent&&p.status!=='voided'&&currentUser?.role==='admin';
+  const manualConsumeAction=canManualAdjust&&ent.status==='active'&&Number(ent.remainingLessons||0)>0?`<button class="btn-save" onclick="openManualEntitlementAdjustModal('${ent.id}', 'manual_consume')">手动消课</button>`:'';
+  const manualReturnAction=canManualAdjust&&Number(ent.usedLessons||0)>0?`<button class="btn-save" onclick="openManualEntitlementAdjustModal('${ent.id}', 'manual_return')">退回课时</button>`:'';
+  const manualActions=`${manualConsumeAction}${manualReturnAction}`;
   const modal=document.querySelector('#overlay .modal');
   if(modal)modal.className='modal modal-wide';
   document.getElementById('mTitle').textContent='购买记录详情';
-  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">成交快照</div><div class="fgrid"><div class="fg"><div class="flabel">支付日期</div><div class="finput">${esc(renderStandardEmptyText(p.purchaseDate))}</div></div><div class="fg"><div class="flabel">系统录入时间</div><div class="finput">${fmtDt(p.createdAt)}</div></div><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(renderStandardEmptyText(p.studentName))}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||meta.packageName))}</div></div>${purchasePriceSummaryHtml(p)}<div class="fg"><div class="flabel">归属教练</div><div class="finput">${esc(renderStandardEmptyText(coachName(p.ownerCoach)))}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(renderStandardEmptyText(parseArr(p.allowedCoaches).map(coachName).filter(Boolean).join('、')))}</div></div><div class="fg"><div class="flabel">支付方式</div><div class="finput">${esc(renderStandardEmptyText(p.payMethod))}</div></div><div class="fg"><div class="flabel">购买状态</div><div class="finput">${purchaseStatusText(p)}</div></div><div class="fg"><div class="flabel">操作人</div><div class="finput">${esc(renderStandardEmptyText(p.operator))}</div></div><div class="fg full"><div class="flabel">备注</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.notes))}</div></div></div><div class="sec-ttl">课包余额</div><div class="fgrid"><div class="fg"><div class="flabel">当前余额</div><div class="finput">${ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`:'-'}</div></div><div class="fg"><div class="flabel">有效期</div><div class="finput">${ent?`${renderStandardEmptyText(ent.validFrom)} - ${renderStandardEmptyText(ent.validUntil)}`:'-'}</div></div><div class="fg"><div class="flabel">余额状态</div><div class="finput">${ent?entitlementStatusText(ent):'-'}</div></div></div><div class="sec-ttl">扣课记录</div>${purchaseLedgerHtml(p.id)}${purchasePackageSnapshotHtml(p)}${p.status==='voided'?`<div class="sec-ttl">作废信息</div><div class="fgrid"><div class="fg"><div class="flabel">作废时间</div><div class="finput">${esc(renderStandardEmptyText(p.voidedAt))}</div></div><div class="fg"><div class="flabel">作废人</div><div class="finput">${esc(renderStandardEmptyText(p.voidedBy))}</div></div><div class="fg full"><div class="flabel">作废原因</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.voidReason))}</div></div></div>`:''}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${p.status==='voided'?'':`<button class="btn-save" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`}</div>`;
+  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">成交快照</div><div class="fgrid"><div class="fg"><div class="flabel">支付日期</div><div class="finput">${esc(renderStandardEmptyText(p.purchaseDate))}</div></div><div class="fg"><div class="flabel">系统录入时间</div><div class="finput">${fmtDt(p.createdAt)}</div></div><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(renderStandardEmptyText(p.studentName))}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||meta.packageName))}</div></div>${purchasePriceSummaryHtml(p)}<div class="fg"><div class="flabel">归属教练</div><div class="finput">${esc(renderStandardEmptyText(coachName(p.ownerCoach)))}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(renderStandardEmptyText(parseArr(p.allowedCoaches).map(coachName).filter(Boolean).join('、')))}</div></div><div class="fg"><div class="flabel">支付方式</div><div class="finput">${esc(renderStandardEmptyText(p.payMethod))}</div></div><div class="fg"><div class="flabel">购买状态</div><div class="finput">${purchaseStatusText(p)}</div></div><div class="fg"><div class="flabel">操作人</div><div class="finput">${esc(renderStandardEmptyText(p.operator))}</div></div><div class="fg full"><div class="flabel">备注</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.notes))}</div></div></div><div class="sec-ttl">课包余额</div><div class="fgrid"><div class="fg"><div class="flabel">当前余额</div><div class="finput">${ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`:'-'}</div></div><div class="fg"><div class="flabel">有效期</div><div class="finput">${ent?`${renderStandardEmptyText(ent.validFrom)} - ${renderStandardEmptyText(ent.validUntil)}`:'-'}</div></div><div class="fg"><div class="flabel">余额状态</div><div class="finput">${ent?entitlementStatusText(ent):'-'}</div></div></div><div class="sec-ttl">扣课记录</div>${purchaseLedgerHtml(p.id)}${purchasePackageSnapshotHtml(p)}${p.status==='voided'?`<div class="sec-ttl">作废信息</div><div class="fgrid"><div class="fg"><div class="flabel">作废时间</div><div class="finput">${esc(renderStandardEmptyText(p.voidedAt))}</div></div><div class="fg"><div class="flabel">作废人</div><div class="finput">${esc(renderStandardEmptyText(p.voidedBy))}</div></div><div class="fg full"><div class="flabel">作废原因</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.voidReason))}</div></div></div>`:''}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${manualActions}${p.status==='voided'?'':`<button class="btn-save" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`}</div>`;
   document.getElementById('overlay').classList.add('open');
+}
+function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'){
+  const ent=entitlements.find(e=>e.id===entitlementId);
+  if(!ent){toast('课包余额不存在','error');return;}
+  const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
+  const meta=purchaseDisplayPackageMeta({...purchase,...ent});
+  const unit=packageLessonUnitLabel(meta);
+  const isReturn=action==='manual_return';
+  const max=isReturn?Number(ent.usedLessons||0):Number(ent.remainingLessons||0);
+  const title=isReturn?'退回课时':'手动消课';
+  const body=`<div class="fgrid"><div class="fg full"><div class="flabel">课包</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||ent.packageName))}</div></div><div class="fg"><div class="flabel">当前余额</div><div class="finput">${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}</div></div><div class="fg"><div class="flabel">${isReturn?'可退回':'可扣减'}</div><div class="finput">${lessonQty(max)} ${unit}</div></div><div class="fg"><div class="flabel">${isReturn?'退回':'消课'}数量 *</div><input class="finput" id="manual_ent_count" type="number" min="0.5" step="0.5" max="${max}" value="1"></div><div class="fg"><div class="flabel">${isReturn?'退回':'消课'}日期 *</div>${courtDateButtonHtml('manual_ent_date',today(),`${title}日期`)}</div><div class="fg full"><div class="flabel">备注 *</div><textarea class="finput ftextarea" id="manual_ent_reason" placeholder="${isReturn?'例如：误扣课时退回':'例如：补录历史上课记录'}"></textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="openPurchaseDetailModal('${ent.purchaseId}')">取消</button><button class="btn-save" id="manualEntSaveBtn" onclick="saveManualEntitlementAdjust('${entitlementId}','${action}')">保存</button></div>`;
+  openStandardModal({title,bodyHtml:body,actionsHtml:'',extraClass:'modal-view'});
+}
+function patchManualEntitlementAdjustResult(result){
+  if(result?.entitlement){
+    const i=entitlements.findIndex(e=>e.id===result.entitlement.id);
+    if(i>=0)entitlements[i]=result.entitlement;else entitlements.unshift(result.entitlement);
+  }
+  if(result?.ledger)entitlementLedger.unshift(result.ledger);
+}
+async function saveManualEntitlementAdjust(entitlementId, action){
+  const count=Math.abs(Number(document.getElementById('manual_ent_count')?.value)||0);
+  const relatedDate=document.getElementById('manual_ent_date')?.value||'';
+  const reason=(document.getElementById('manual_ent_reason')?.value||'').trim();
+  if(!count){toast('请输入数量','warn');return;}
+  if(!relatedDate){toast('请选择日期','warn');return;}
+  if(!reason){toast('请填写备注','warn');return;}
+  const btn=document.getElementById('manualEntSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    const data={action,count,relatedDate,reason};
+    const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
+    patchManualEntitlementAdjustResult(result);
+    toast('已保存','success');
+    openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'');
+    if(currentPage==='purchases')renderPurchases();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='保存';}
+    toast('保存失败：'+e.message,'error');
+  }
 }
 function openPurchaseEditModal(id){
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}

@@ -9,6 +9,9 @@ assert.ok(rules.collectMabaoSeedImportedLedgerReplacementIds, 'api._test should 
 assert.ok(rules.collectDuplicateImportedLedgerIds, 'api._test should expose generic duplicate imported ledger cleanup helper');
 assert.ok(rules.normalizeEntitlementLedgerRowsForView, 'api._test should expose ledger view normalization helper');
 assert.ok(rules.normalizeEntitlementLedgerRowsForDetailView, 'api._test should expose ledger detail view normalization helper');
+assert.ok(rules.userCanManageManualEntitlementAdjustment, 'api._test should expose manual entitlement campus permission helper');
+assert.ok(rules.validateManualEntitlementAdjustment, 'api._test should expose manual entitlement adjustment validator');
+assert.ok(rules.buildManualEntitlementLedgerRecord, 'api._test should expose manual entitlement ledger builder');
 
 const pkg = {
   id: 'pkg-1',
@@ -84,6 +87,138 @@ assert.deepStrictEqual(
   ]).map(row => row.id),
   ['lesson-1', 'lesson-2'],
   'student detail ledger should keep imported lesson rows one by one'
+);
+
+assert.strictEqual(
+  rules.userCanManageManualEntitlementAdjustment(
+    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    {
+      entitlement: { campusIds: ['mabao'] },
+      purchase: { campusIds: ['shilipu'] },
+      packageRow: { campusIds: ['mabao'] },
+      student: { campus: 'shilipu' }
+    }
+  ),
+  true,
+  'campus admin should manage manual lesson adjustments when package campus matches'
+);
+
+assert.strictEqual(
+  rules.userCanManageManualEntitlementAdjustment(
+    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    {
+      entitlement: { campusIds: [] },
+      purchase: { campusIds: ['shilipu'] },
+      packageRow: { campusIds: [] },
+      student: { campus: 'mabao' }
+    }
+  ),
+  false,
+  'purchase campus should restrict manual adjustments before student campus when package has no campus'
+);
+
+assert.strictEqual(
+  rules.userCanManageManualEntitlementAdjustment(
+    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    {
+      entitlement: { campusIds: [] },
+      purchase: {},
+      packageRow: { campusIds: [] },
+      student: {}
+    }
+  ),
+  true,
+  'campus admins may manage manual adjustments only when no package, purchase, student, or entitlement campus is known'
+);
+
+assert.doesNotThrow(
+  () => rules.validateManualEntitlementAdjustment({
+    entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
+    purchase: { id: 'pur-1' },
+    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    student: { id: 'stu-1' },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    lessonDelta: -5,
+    relatedDate: '2026-04-10',
+    reason: '补录历史训练营课时'
+  }),
+  'manual consume should allow an authorized campus admin to consume available lessons'
+);
+
+assert.throws(
+  () => rules.validateManualEntitlementAdjustment({
+    entitlement: { id: 'ent-1', status: 'active', remainingLessons: 4, usedLessons: 6, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
+    purchase: { id: 'pur-1' },
+    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    student: { id: 'stu-1' },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    lessonDelta: -5,
+    relatedDate: '2026-04-10',
+    reason: '补录历史训练营课时'
+  }),
+  /课包剩余课时不足/,
+  'manual consume should reject consuming more than the remaining balance'
+);
+
+assert.throws(
+  () => rules.validateManualEntitlementAdjustment({
+    entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
+    purchase: { id: 'pur-1' },
+    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    student: { id: 'stu-1' },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] },
+    lessonDelta: -1,
+    relatedDate: '2026-04-10',
+    reason: '补录历史训练营课时'
+  }),
+  /无权限操作该课包/,
+  'manual consume should reject campus admins outside the package scope'
+);
+
+assert.throws(
+  () => rules.validateManualEntitlementAdjustment({
+    entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
+    purchase: { id: 'pur-1' },
+    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    student: { id: 'stu-1' },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    lessonDelta: -1,
+    relatedDate: '2026-07-10',
+    reason: '补录历史训练营课时'
+  }),
+  /不在课包可用日期范围/,
+  'manual consume should use the lesson date to validate package availability'
+);
+
+assert.deepStrictEqual(
+  rules.buildManualEntitlementLedgerRecord({
+    entitlement: { id: 'ent-1', studentId: 'stu-1', purchaseId: 'pur-1', packageName: '小班训练营', ownerCoach: '朝珺' },
+    lessonDelta: -5,
+    relatedDate: '2026-04-10',
+    reason: '补录历史训练营课时',
+    user: { name: '马坡管理员' },
+    operationTrace: { operationId: 'op-manual-1', batchId: 'batch-op-manual-1' }
+  }, { id: 'ledger-manual-1', now: '2026-06-12T10:00:00.000Z' }),
+  {
+    id: 'ledger-manual-1',
+    entitlementId: 'ent-1',
+    studentId: 'stu-1',
+    purchaseId: 'pur-1',
+    scheduleId: '',
+    lessonDelta: -5,
+    action: 'manual_consume',
+    reason: '管理员手动消课：补录历史训练营课时',
+    notes: '补录历史训练营课时',
+    relatedDate: '2026-04-10',
+    sourceDate: '2026-04-10',
+    operator: '马坡管理员',
+    createdAt: '2026-06-12T10:00:00.000Z',
+    packageName: '小班训练营',
+    coach: '朝珺',
+    operationId: 'op-manual-1',
+    batchId: 'batch-op-manual-1'
+  },
+  'manual consume should write a schedule-less ledger row with operation trace'
 );
 
 assert.deepStrictEqual(
