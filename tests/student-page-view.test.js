@@ -47,8 +47,10 @@ assert.match(source, /发现可能重复的学员：/, 'student save flow should
 assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTennis_学员_'\+today\(\)\+'.csv'/, 'student csv export should use current filtered result set');
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
-assert.match(source, /总学员数[\s\S]*有效课包学员[\s\S]*课包实收[\s\S]*课包可用余额/, 'student top stats should show total, active package students, package income, and package balance');
-assert.doesNotMatch(fnBody('renderStudents'), /有课包学员数|体验课转化|体验课人数 vs 体验课转正人数/, 'student top stats should remove old package-count and trial-conversion cards');
+assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*有课包学员数[\s\S]*体验课转化[\s\S]*体验课人数 vs 体验课转正人数/, 'trial student top stats should keep the original five-card data');
+assert.match(source, /有效课包学员[\s\S]*课包实收[\s\S]*课包可用余额/, 'package student top stats should show active package students, package income, and package balance');
+assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /有效课包学员 \/ 总学员数占比/, 'student active package card should explain the requested formula');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
