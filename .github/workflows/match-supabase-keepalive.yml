@@ -1,0 +1,27 @@
+name: Match Supabase Keepalive
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TZ: Asia/Shanghai
+      TARGET_URL: https://www.flowtennis.cn/api/match-diag
+
+    steps:
+      - name: Ping match database
+        shell: bash
+        run: |
+          response="$(curl -fsS -X GET "$TARGET_URL" -H "User-Agent: github-actions-match-keepalive")"
+          if ! printf '%s' "$response" | grep -q '"status":"ok"'; then
+            echo "match database keepalive failed"
+            exit 1
+          fi
