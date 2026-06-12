@@ -32,7 +32,7 @@ const openPackageModalBody = fnBody('openPackageModal');
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>/, 'sidebar should group resource pages');
-assert.match(html, /<div class="sb-sec">用户中心<\/div>[\s\S]*?goPage\('students',this\)[\s\S]*?学员管理[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池/, 'user center should order students, memberships, courts, then leads');
+assert.match(html, /<div class="sb-sec">用户中心<\/div>[\s\S]*?goPage\('package-students',this\)[\s\S]*?课包学员[\s\S]*?goPage\('trial-students',this\)[\s\S]*?体验课学员[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池/, 'user center should order package students, trial students, memberships, courts, then leads');
 assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课表[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?教练排课[\s\S]*?goPage\('coachops',this\)[\s\S]*?教练工作量[\s\S]*?goPage\('packages',this\)[\s\S]*?售卖课包/, 'teaching center should order schedule, coach schedule, workload, then packages');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?<div class="sb-sec">场地运营<\/div>/, 'resource management should appear before court operations');
 assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?goPage\('coaches',this\)[\s\S]*?教练管理[\s\S]*?goPage\('campusmgr',this\)[\s\S]*?校区管理[\s\S]*?goPage\('admin-users',this\)[\s\S]*?账号管理/, 'resource management should order coaches, campus, then accounts');
@@ -48,7 +48,8 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
 
 [
   ['leads', '线索池'],
-  ['students', '学员管理'],
+  ['package-students', '课包学员', 'students'],
+  ['trial-students', '体验课学员', 'students'],
   ['courts', '订场用户'],
   ['memberships', '会员管理'],
   ['schedule', '排课表'],
@@ -58,9 +59,10 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
   ['campusmgr', '校区管理'],
   ['coaches', '教练管理'],
   ['coachops', '教练工作量']
-].forEach(([page, label]) => {
-  assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${page}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);
-  assert.match(html, new RegExp(`data-sidebar-icon="${page}"`), `${label} should provide the custom svg`);
+].forEach(([page, label, iconKey]) => {
+  const icon = iconKey || page;
+  assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${icon}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);
+  assert.match(html, new RegExp(`data-sidebar-icon="${icon}"`), `${label} should provide the custom svg`);
 });
 assert.match(pagesCss, /--shell-sidebar-icon-color:#C5B0A2/, 'inactive sidebar icon color should match design');
 assert.match(pagesCss, /--shell-sidebar-active-icon-color:#EFE7E2/, 'active sidebar icon color should match design');

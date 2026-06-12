@@ -48,6 +48,23 @@ function studentLastLessonDate(stu){
   const row=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime&&effectiveScheduleStatus(x)==='已结束').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
   return row?.startTime?.slice(0,10)||'';
 }
+function studentPackagePurchaseDate(stu){
+  const sid=String(stu?.id||'');
+  const dates=[
+    ...studentActiveEntitlementRows(stu).filter(e=>!studentPackageRecordIsTrial(e)).map(e=>studentEntitlementPurchaseDate(e,purchases.find(p=>p.id===e.purchaseId)||{})),
+    ...purchases.filter(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p)).map(p=>p.purchaseDate||'')
+  ].map(v=>String(v||'').slice(0,10)).filter(Boolean);
+  return dates.sort().pop()||'';
+}
+function studentHasRemainingPackage(stu){
+  return studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)&&(Number(e.remainingLessons)||0)>0);
+}
+function studentHumanText(value){
+  let text=String(value||'').trim();
+  if(!text)return '';
+  ['历史导入','马坡私教 CSV 导入自动创建','CSV 导入自动创建'].forEach(label=>{text=text.split(label).join('');});
+  return text.replace(/[；;，,。\/｜|·\s]+$/g,'').replace(/^[；;，,。\/｜|·\s]+/g,'').trim();
+}
 function studentCompletedLessonUnits(stu){
   const lessonMap=new Map();
   const ledgerItems=studentConcreteLessonLedgerItems(stu);
@@ -66,6 +83,7 @@ function studentCompletedLessonUnits(stu){
   return [...lessonMap.values()].reduce((sum,value)=>sum+value,0);
 }
 function studentSortValue(stu,key){
+  if(key==='packagePurchaseDate')return studentPackagePurchaseDate(stu);
   if(key==='lastLesson')return studentLastLessonDate(stu);
   if(key==='completedLessons')return studentCompletedLessonUnits(stu);
   if(key==='packageLessons')return studentPackageLessonMeta(stu).remaining||0;
@@ -248,7 +266,7 @@ function studentPageStats(base){
     },0);
   return {
     total:base.length,
-    packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
+    activePackageStudentCount:base.filter(s=>studentHasRemainingPackage(s)).length,
     totalIncome:Math.round(totalIncome*100)/100,
     recognized:Math.round(recognized*100)/100,
     packageBalance:Math.round((totalIncome-recognized)*100)/100,
@@ -341,7 +359,7 @@ function studentDrawerCardHtml(title,content,extraClass='',actionsHtml='',option
   return renderDetailDrawerCard(title,content,{className:extraClass,actionsHtml,useGrid:options.useGrid!==false,titleHtml:options.titleHtml||''});
 }
 function studentBasicInfoReadonlyHtml(s){
-  return `${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('负责教练',studentPrimaryCoachText(s))}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('来源',s.source)}${studentDetailFieldHtml('活动范围',s.activityRange)}${studentDetailFieldHtml('所在校区',cn(s.campus))}${studentDetailFieldHtml('备注',s.notes)}`;
+  return `${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('负责教练',studentPrimaryCoachText(s))}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('来源',studentHumanText(s.source))}${studentDetailFieldHtml('活动范围',s.activityRange)}${studentDetailFieldHtml('所在校区',cn(s.campus))}${studentDetailFieldHtml('备注',studentHumanText(s.notes))}`;
 }
 function studentDetailBasicTabHtml(s){
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
@@ -516,7 +534,7 @@ function studentEmptyStateHtml(){
   const filtered=studentHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的学员':'暂无学员';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加学员开始录入';
-  return `<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderStudents(){
   renderStudentToolbarFilters();
@@ -526,8 +544,7 @@ function renderStudents(){
   const stats=studentPageStats(base);
   document.getElementById('studentStatsRow').innerHTML=renderStandardDataCards([
     {label:'总学员数',valueHtml:stats.total},
-    {label:'有课包学员数',valueHtml:stats.packageStudentCount,percent:studentPercentText(stats.packageStudentCount,stats.total),sub:'有课包学员数 / 总学员数占比'},
-    {label:'体验课转化',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'体验课人数 vs 体验课转正人数'},
+    {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'},
     {label:'课包实收',valueHtml:`¥${fmt(stats.totalIncome)}`},
     {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
   ]);
@@ -539,10 +556,12 @@ function renderStudents(){
   document.getElementById('stuPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderStudentPagerControls(total,pages);
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
+    const purchaseDate=studentPackagePurchaseDate(s);
     const lastLesson=studentLastLessonDate(s);
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(s.source)}</td><td><div class="tms-text-remark" title="${esc(studentNoteSummary(s))}">${esc(renderStandardEmptyText(studentNoteSummary(s)))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    const noteText=studentHumanText(studentNoteSummary(s));
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){
@@ -669,13 +688,15 @@ function studentOpsInfoHtml(stu){
   const recentFeedback=studentRecentFeedbacks(stu,1)[0];
   const conversionSummary=recentFeedback?(recentFeedback.conversionIntent||recentFeedback.recommendedProductType||recentFeedback.needOpsFollowUp?'已形成转化判断':'未形成转化判断'):'暂无转化判断';
   const opsConclusion=recentFeedback?esc(renderStandardEmptyText([recentFeedback.mainIssues,recentFeedback.recommendedReason,recentFeedback.opsFollowUpSuggestion].filter(Boolean).join('；'))):'-';
+  const sourceText=studentHumanText(stu.source);
+  const noteText=studentHumanText(stu.notes);
   const content=[
-    stu.source?studentDetailFieldHtml('来源',stu.source):'',
+    sourceText?studentDetailFieldHtml('来源',sourceText):'',
     stu.activityRange?studentDetailFieldHtml('活动范围',stu.activityRange):'',
     conversionSummary==='已形成转化判断'?studentDetailFieldHtml('转化判断',conversionSummary):'',
     recentFeedback?.needOpsFollowUp?studentDetailFieldHtml('运营跟进','需要运营跟进'):'',
     studentDetailBlockHtml('最近反馈里的运营结论',opsConclusion,{hideEmpty:true}),
-    studentDetailBlockHtml('运营备注',esc(renderStandardEmptyText(stu.notes)),{hideEmpty:true})
+    studentDetailBlockHtml('运营备注',esc(renderStandardEmptyText(noteText)),{hideEmpty:true})
   ].join('');
   return studentDetailSectionHtml('运营信息',content);
 }
@@ -876,7 +897,7 @@ function mergeLinkedUpdates(updates){
 function exportStudentCSV(){
   const d=getFilteredStudents();
   let csv='姓名,手机号,类型,来源,活动范围,校区,备注\n';
-  csv+=d.map(s=>[csvEscapeCell(s.name),csvEscapeCell(s.phone||''),csvEscapeCell(s.type||''),csvEscapeCell(s.source||''),csvEscapeCell(s.activityRange||''),csvEscapeCell(cn(s.campus)),csvEscapeCell(s.notes||'')].join(',')).join('\n');
+  csv+=d.map(s=>[csvEscapeCell(s.name),csvEscapeCell(s.phone||''),csvEscapeCell(s.type||''),csvEscapeCell(studentHumanText(s.source)),csvEscapeCell(s.activityRange||''),csvEscapeCell(cn(s.campus)),csvEscapeCell(studentHumanText(s.notes))].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_学员_'+today()+'.csv';a.click();toast('导出成功','success');
 }

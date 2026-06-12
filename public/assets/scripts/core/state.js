@@ -332,7 +332,7 @@ function renderTableSkeletonLoading(id,colspan,text){
   el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
-  renderTableSkeletonLoading('stuTbody',11,'学员数据加载中...');
+  renderTableSkeletonLoading('stuTbody',12,'学员数据加载中...');
 }
 function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
