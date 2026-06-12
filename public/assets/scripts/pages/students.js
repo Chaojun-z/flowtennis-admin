@@ -361,12 +361,14 @@ function studentDrawerCardHtml(title,content,extraClass='',actionsHtml='',option
 function studentBasicInfoReadonlyHtml(s){
   return `${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('负责教练',studentPrimaryCoachText(s))}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('来源',studentHumanText(s.source))}${studentDetailFieldHtml('活动范围',s.activityRange)}${studentDetailFieldHtml('所在校区',cn(s.campus))}${studentDetailFieldHtml('备注',studentHumanText(s.notes))}`;
 }
+function studentDetailDeleteActionHtml(s){
+  return currentUser?.role==='admin'?`<div class="schedule-detail-card-actions student-detail-delete-actions"><button type="button" class="schedule-detail-action muted" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除学员</button></div>`:'';
+}
 function studentDetailBasicTabHtml(s){
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
   const linkedHtml=studentConsumptionInfoHtml(s);
   const editing=studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===s.id;
-  const deleteAction=currentUser?.role==='admin'?`<button type="button" class="schedule-detail-action muted" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除学员</button>`:'';
-  const editAction=`${deleteAction}<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
+  const editAction=`<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
   const saveActions=`<button type="button" class="schedule-detail-action muted" onclick="cancelStudentDetailEdit('${s.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button>`;
   const basicCard=editing
     ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)
@@ -764,7 +766,7 @@ function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
-  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
+  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}${studentDetailDeleteActionHtml(s)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
 }
 function cancelStudentDetailEdit(studentId){
   if(studentId)studentDetailEditingStudentId=studentId;

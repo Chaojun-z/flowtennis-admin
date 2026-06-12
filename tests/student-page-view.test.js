@@ -210,7 +210,7 @@ assert.match(source, /titleHtml:`服务号提醒偏好<span class="tms-tag \$\{s
 assert.doesNotMatch(source, /studentDetailSectionBlockHtml\('服务号提醒偏好'/, 'student detail should not wrap the reminder block with an extra section title');
 assert.doesNotMatch(source, /student-reminder-status/, 'student detail should not show a redundant reminder status line');
 assert.match(source, /openStandardDetailDrawer\(/, 'student detail should use the standard detail drawer');
-assert.match(source, /openStudentDrawer\(\{titleHtml:`\$\{studentDetailHeroHtml\(s\)\}\$\{studentDetailTabsHtml\(studentDetailActiveTab\)\}`/, 'student detail should move the profile summary into the drawer header');
+assert.match(source, /openStudentDrawer\(\{titleHtml:`\$\{studentDetailHeroHtml\(s\)\}\$\{studentDetailTabsHtml\(studentDetailActiveTab\)\}\$\{studentDetailDeleteActionHtml\(s\)\}`/, 'student detail should move the profile summary and fixed delete action into the drawer header');
 assert.match(source, /服务号上课提醒/, 'student detail should expose the official account lesson reminder block');
 assert.match(source, /复制绑定链接/, 'student detail should let ops copy a student-specific binding link');
 assert.match(source, /name="studentReminderMode"/, 'student detail reminder frequency should use single-choice controls instead of loose action buttons');
@@ -304,6 +304,7 @@ assert.match(source, /已购课包/, 'student detail should present purchased pa
 assert.match(source, /扣课记录/, 'student detail should expose lesson charge history in the student detail');
 assert.match(source, /课包订单/, 'student detail should label package purchase records clearly');
 assert.match(source, /删除学员[\s\S]*confirmDel\('\$\{s\.id\}','\$\{esc\(s\.name\)\}','student'\)/, 'student detail should expose a delete action behind the standard confirmation flow');
+assert.match(source, /function studentDetailDeleteActionHtml\(s\)[\s\S]*confirmDel\('\$\{s\.id\}','\$\{esc\(s\.name\)\}','student'\)[\s\S]*function openStudentDetail\(id\)[\s\S]*studentDetailDeleteActionHtml\(s\)/, 'student detail should keep the delete action visible in the drawer header across all tabs');
 assert.match(source, /DELETE_STUDENT_HISTORY/, 'student delete requests should carry the backend confirmation marker');
 assert.doesNotMatch(source, /课包消耗记录/, 'student detail should avoid a duplicate package consume record block');
 assert.match(source, /关联订场账户在「订场\/会员」页面编辑用户时选择「关联学员」/, 'student detail should explain where to link booking accounts');
