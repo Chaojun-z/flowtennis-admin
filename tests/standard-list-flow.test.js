@@ -30,7 +30,6 @@ function fnBody(source, name) {
   ['schedule', 'sch', 'Schedule', 'renderSchedule', 'onScheduleFilterChange', null],
   ['leads', 'lead', 'Lead', 'renderLeads', 'onLeadFilterChange', 'cycleLeadSort'],
   ['purchases', 'pur', 'Purchase', 'renderPurchases', 'onPurchaseFilterChange', null],
-  ['packages', 'pkg', 'Package', 'renderPackages', 'onPackageFilterChange', null],
   ['prices', 'price', 'Price', 'renderPrices', 'onPriceFilterChange', null],
   ['admin-users', 'adminUser', 'AdminUser', 'renderAdminUsers', 'onAdminUserFilterChange', null]
 ].forEach(([file, prefix, title, renderFn, filterFn, sortFn]) => {
@@ -43,7 +42,10 @@ function fnBody(source, name) {
   assert.doesNotMatch(source, /function \w+PageNumbers\(/, `${file} should not define page-number rules locally`);
 });
 
-assert.match(appSource, /infoId:'pkgPagerInfo'[\s\S]*pageSizeId:'pkgPageSize'[\s\S]*buttonsId:'pkgPagerBtns'/, 'package page should expose the standard pager shell');
+const packageSource = pageSource('packages');
+assert.doesNotMatch(fnBody(packageSource, 'onPackageFilterChange'), /pkgPage=standardListFirstPage\(\)/, 'package board filters should not reset table pagination');
+assert.doesNotMatch(fnBody(packageSource, 'renderPackages'), /standardListSlice\(/, 'package board should not use table pagination slicing');
+assert.doesNotMatch(appSource.match(/key:'packages'[\s\S]*?(?=\n    \{key:|\n  \];)/)?.[0] || '', /pager:/, 'package board should not expose the standard pager shell');
 assert.match(appSource, /infoId:'pricePagerInfo'[\s\S]*pageSizeId:'pricePageSize'[\s\S]*buttonsId:'pricePagerBtns'/, 'price page should expose the standard pager shell');
 
 console.log('standard list flow tests passed');

@@ -4,7 +4,7 @@ let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,pk
 let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='lastLesson',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
 let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='asc';
 let membershipTierFilterValue='';
-let purPackageFilterValue='';
+let purPackageFilterValue='',purOwnerCoachFilterValue='';
 let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 

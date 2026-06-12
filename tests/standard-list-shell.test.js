@@ -11,7 +11,7 @@ const targetPages = [
   ['schedule', '', 'schSearch', 'schTbody', 'schPagerInfo', 'schPageSize', 'schPagerBtns'],
   ['leads', 'leadStatsRow', 'leadSearch', 'leadTbody', 'leadPagerInfo', 'leadPageSize', 'leadPagerBtns'],
   ['purchases', '', 'purSearch', 'purchaseTbody', 'purPagerInfo', 'purPageSize', 'purPagerBtns'],
-  ['packages', '', 'pkgSearch', 'packageGrid', 'pkgPagerInfo', 'pkgPageSize', 'pkgPagerBtns'],
+  ['packages', '', 'pkgSearch', 'packageGrid', '', '', ''],
   ['prices', '', 'priceSearch', 'priceTbody', 'pricePagerInfo', 'pricePageSize', 'pricePagerBtns'],
   ['admin-users', '', 'adminUserSearch', 'adminUserTbody', 'adminUserPagerInfo', 'adminUserPageSize', 'adminUserPagerBtns']
 ];
@@ -41,7 +41,11 @@ targetPages.forEach(([page, statsId, searchId, bodyId, pagerInfoId, pageSizeId, 
   assert.match(appSource, new RegExp(`key:'${page}'[\\s\\S]*search:\\{id:'${searchId}'`), `${page} should define its search through the global list config`);
   if (statsId) assert.match(appSource, new RegExp(`key:'${page}'[\\s\\S]*statsId:'${statsId}'`), `${page} should define stats through the global list config`);
   assert.match(appSource, new RegExp(`key:'${page}'[\\s\\S]*${bodyId}`), `${page} should expose its row/body mount through the global list shell`);
-  assert.match(appSource, new RegExp(`key:'${page}'[\\s\\S]*${pagerInfoId}[\\s\\S]*${pageSizeId}[\\s\\S]*${pagerBtnsId}`), `${page} should define standard pager hosts through the global list shell`);
+  if (pagerInfoId) {
+    assert.match(appSource, new RegExp(`key:'${page}'[\\s\\S]*${pagerInfoId}[\\s\\S]*${pageSizeId}[\\s\\S]*${pagerBtnsId}`), `${page} should define standard pager hosts through the global list shell`);
+  } else {
+    assert.doesNotMatch(appSource.match(new RegExp(`key:'${page}'[\\s\\S]*?(?=\\n    \\{key:|\\n  \\];)`))?.[0] || '', /pager:/, `${page} should not define standard pager hosts`);
+  }
 });
 
 console.log('standard list shell tests passed');

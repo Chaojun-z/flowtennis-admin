@@ -3,6 +3,7 @@ function purchaseSelectedPackageFilter(){
 }
 function onPurchaseFilterChange(){
   purPackageFilterValue=document.getElementById('purPackageFilter')?.value||'';
+  purOwnerCoachFilterValue='';
   purPage=standardListFirstPage();
   renderPurchases();
 }
@@ -108,11 +109,13 @@ function isMeaningfulPurchaseRecord(p){
 function getFilteredPurchases(){
   const q=(document.getElementById('purSearch')?.value||'').toLowerCase();
   const packageId=purchaseSelectedPackageFilter();
+  const ownerCoachFilter=purOwnerCoachFilterValue||'';
   const dateRange=activePurchaseDateRange();
   return purchases.filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
     if(!searchHit(q,p.studentName,purchasePackageListLabel(p),p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&!purchaseMatchesPackage(p,packageId))return false;
+    if(ownerCoachFilter&&coachName(p.ownerCoach)!==ownerCoachFilter)return false;
     if(!purchaseMatchesCampus(p,campus))return false;
     if(!purchaseDateWithinRange(p.purchaseDate||p.createdAt,dateRange))return false;
     return true;
@@ -440,8 +443,9 @@ async function savePurchase(){
     closeModal();toast('购买成功','success');renderStudents();renderPurchases();renderEntitlements();
   }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
 }
-function focusPurchaseByPackage(packageId){
+function focusPurchaseByPackage(packageId,ownerCoach=''){
   purPackageFilterValue=String(packageId||'');
+  purOwnerCoachFilterValue=coachName(ownerCoach||'');
   clearPurchasePageFiltersForPackageFocus();
   goPage('purchases');
   const pkg=packages.find(p=>String(p.id||'')===String(packageId||''));
