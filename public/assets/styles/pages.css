@@ -245,7 +245,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-membership-ledger .tms-table{min-width:1100px}
 #page-membership-orders .tms-table-wrapper,#page-membership-ledger .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-membership-plans .tms-table{min-width:1660px}
-#page-purchases .tms-table{min-width:1040px;table-layout:fixed}
+#page-purchases .tms-table{min-width:1100px;table-layout:fixed}
 #page-purchases .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-purchases .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-purchases .tms-text-primary,#page-purchases .tms-cell-text,#page-purchases .tms-text-remark{font-size:12px}
