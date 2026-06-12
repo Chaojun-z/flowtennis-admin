@@ -1,4 +1,4 @@
-let currentPage=localStorage.getItem(PAGE_KEY)||'students',campus=localStorage.getItem(CAMPUS_KEY)||'all',globalDateRangeFilterValue=localStorage.getItem(GLOBAL_DATE_RANGE_KEY)||'全部',globalDateRangeStart=localStorage.getItem(GLOBAL_DATE_RANGE_START_KEY)||'',globalDateRangeEnd=localStorage.getItem(GLOBAL_DATE_RANGE_END_KEY)||'',editId=null,delId=null,delType=null,_pending=[];
+let currentPage=normalizeStudentListPage(localStorage.getItem(PAGE_KEY)||'package-students'),campus=localStorage.getItem(CAMPUS_KEY)||'all',globalDateRangeFilterValue=localStorage.getItem(GLOBAL_DATE_RANGE_KEY)||'全部',globalDateRangeStart=localStorage.getItem(GLOBAL_DATE_RANGE_START_KEY)||'',globalDateRangeEnd=localStorage.getItem(GLOBAL_DATE_RANGE_END_KEY)||'',editId=null,delId=null,delType=null,_pending=[];
 let batchDeleteCourtIds=[];
 let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,pkgPage=1,pricePage=1,financeLedgerPage=1,financeRevenuePage=1,adminUserPage=1;
 let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='lastLesson',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
@@ -10,13 +10,14 @@ let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 
 function goPage(pg,el,skipRender=false){
   syncViewportMode();
-  if(pg==='entitlements')pg='students';
+  if(pg==='entitlements')pg='package-students';
+  pg=normalizeStudentListPage(pg);
   if(pg==='myschedule')pg='workbench';
-  const adminPages=['students','leads','classes','plans','schedule','coachschedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr','matches'];
+  const adminPages=['students','package-students','trial-students','leads','classes','plans','schedule','coachschedule','coachops','products','packages','purchases','finance','coaches','admin-users','courts','memberships','membership-orders','membership-ledger','membership-plans','prices','campusmgr','matches'];
   const coachPages=['workbench','postfeedback','mystudents','myclasses'];
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentUser?.role!=='admin'&&adminPages.includes(pg))pg=isCoach?'workbench':'';
-  if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='students';
+  if(currentUser?.role==='admin'&&coachPages.includes(pg))pg='package-students';
   if(!pg)return;
   const updateDOM = () => {
     document.querySelectorAll('.sb-item').forEach(n=>{
@@ -32,7 +33,7 @@ function goPage(pg,el,skipRender=false){
       n.classList.toggle('active',el?n===el:matched);
     });
     document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
-    const targetPage = document.getElementById('page-'+pg);
+    const targetPage = document.getElementById('page-'+(isStudentListPage(pg)?'students':pg));
     if(targetPage) {
       targetPage.classList.add('active');
     }
@@ -42,7 +43,7 @@ function goPage(pg,el,skipRender=false){
     document.body.classList.toggle('is-packages-page',pg==='packages');
     document.getElementById('campusTabs').style.display=globalTopFilterPages().includes(pg)||['coachschedule','coachops','courts','packages','purchases'].includes(pg)?'flex':'none';
     if(typeof buildCampusTabs==='function')buildCampusTabs();
-    const t={students:'学员管理',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachschedule:'教练排课',coachops:'教练工作量',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
+    const t={students:'课包学员','package-students':'课包学员','trial-students':'体验课学员',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachschedule:'教练排课',coachops:'教练工作量',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
     const financeTitleMap={ledger:'财务总览',revenue:'收入流水',recognized:'已入账流水',settlement:'教练结算'};
     document.getElementById('topTitle').textContent=pg==='finance'?(financeTitleMap[financePanel]||t[pg]||''):(t[pg]||'');
     if(!skipRender)loadPageDataAndRender(pg,{quiet:true});
@@ -54,10 +55,10 @@ function goPage(pg,el,skipRender=false){
   }
 }
 function renderStudentsIfVisible(){
-  if(currentPage==='students')renderStudents();
+  if(isStudentListPage(currentPage))renderStudents();
   if(currentPage==='mystudents')renderMyStudents();
 }
-function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();courtPage=standardListFirstPage();purPage=standardListFirstPage();pkgPage=standardListFirstPage();pricePage=standardListFirstPage();financeRevenuePage=1;adminUserPage=standardListFirstPage();refreshGlobalTopFilters();if(currentPage==='students')renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();if(currentPage==='purchases')renderPurchases();if(currentPage==='prices')renderPrices();}
+function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();courtPage=standardListFirstPage();purPage=standardListFirstPage();pkgPage=standardListFirstPage();pricePage=standardListFirstPage();financeRevenuePage=1;adminUserPage=standardListFirstPage();refreshGlobalTopFilters();if(isStudentListPage(currentPage))renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();if(currentPage==='purchases')renderPurchases();if(currentPage==='prices')renderPrices();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
 function appConfirm(message,{title='请确认',confirmText='确定',danger=false,html=false,hideIcon=false,boxClass=''}={}){

@@ -324,7 +324,8 @@ function renderSidebarShell(){
   <!-- 管理员视角 -->
   <div id="sbAdminView">
   <div class="sb-sec">用户中心</div>
-  <div class="sb-item active" onclick="goPage('students',this)">${sidebarIcon('students')}学员管理</div>
+  <div class="sb-item active" onclick="goPage('package-students',this)">${sidebarIcon('students')}课包学员</div>
+  <div class="sb-item" onclick="goPage('trial-students',this)">${sidebarIcon('students')}体验课学员</div>
   <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}会员管理</div>
   <div class="sb-item" onclick="goPage('courts',this)">${sidebarIcon('courts')}订场用户</div>
   <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
@@ -377,7 +378,7 @@ function mountTopbarShell(){
 
 let globalDateRangeDraftActive=false;
 function globalTopFilterPages(){
-  return ['students','leads','schedule','finance'];
+  return ['students','package-students','trial-students','leads','schedule','finance'];
 }
 function globalDateFilterQuickOptions(){
   return ['全部','今日','本周','本月','自定义'];
@@ -493,6 +494,7 @@ function selectGlobalTopCampus(value,event){
 function renderCurrentGlobalFilterPage(){
   stuPage=1;leadPage=1;schPage=1;financeLedgerPage=1;financeRevenuePage=1;adminUserPage=1;
   if(currentPage==='students')renderStudents();
+  else if(typeof isStudentListPage==='function'&&isStudentListPage(currentPage))renderStudents();
   if(currentPage==='leads')renderLeads();
   if(currentPage==='schedule')renderSchedule();
   if(currentPage==='finance')renderFinanceCenter();

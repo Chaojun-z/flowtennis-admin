@@ -5,6 +5,24 @@ let studentDetailEditingStudentId='';
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
+function studentListViewMode(){
+  return currentPage==='trial-students'?'trial':'package';
+}
+function studentPackageRecordIsTrial(row={}){
+  const type=normalizeCourseType(row.courseType||row.packageCourseType||row.type||row.productType||'');
+  const text=[row.courseType,row.packageCourseType,row.type,row.productType,row.experienceType,row.courseTypeLevel2,row.packageName,row.productName,row.name,row.notes].filter(Boolean).join(' ');
+  return type==='体验课'||/体验/.test(text);
+}
+function studentHasNonTrialPackage(stu){
+  const sid=String(stu?.id||'');
+  if(!sid)return false;
+  if(studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)))return true;
+  return purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p));
+}
+function studentMatchesListPage(stu){
+  const hasPackage=studentHasNonTrialPackage(stu);
+  return studentListViewMode()==='trial'?!hasPackage:hasPackage;
+}
 function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
@@ -104,7 +122,7 @@ function jumpStudentPage(value){
   renderStudents();
 }
 function getStudentBaseList(){
-  return students.filter(s=>campus==='all'||sameCampusValue(s.campus,campus));
+  return students.filter(s=>(campus==='all'||sameCampusValue(s.campus,campus))&&studentMatchesListPage(s));
 }
 function studentGlobalDateValue(s){
   return s.createdAt||s.enrollDate||s.registerDate||s.joinDate||studentLastLessonDate(s);

@@ -84,6 +84,8 @@ function shouldBypassDatasetCache(name){
 }
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students'],
+  'package-students':['campuses','students','purchasesPage'],
+  'trial-students':['campuses','students','purchasesPage'],
   leads:['campuses','leads'],
   classes:['campuses','students','products','classes','schedule','coaches'],
   plans:[],
@@ -112,6 +114,8 @@ const PAGE_DATA_REQUIREMENTS={
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
+  'package-students':['classes','schedule','courts'],
+  'trial-students':['classes','schedule','courts'],
   leads:['leadFollowups','purchases'],
   plans:['plansPage'],
   packages:[],
@@ -131,6 +135,12 @@ const PERFORMANCE_PAGE_DATA_GUARD={
   students:['classes','schedule','courts'],
   workbench:['workbenchPage']
 };
+function isStudentListPage(pg){
+  return ['students','package-students','trial-students'].includes(pg);
+}
+function normalizeStudentListPage(pg){
+  return pg==='students'?'package-students':pg;
+}
 function assertPageDataPerformanceGuard(){
   Object.entries(PERFORMANCE_PAGE_DATA_GUARD).forEach(([page,expected])=>{
     const actual=PAGE_DATA_BACKGROUND_REQUIREMENTS[page]||[];
@@ -326,7 +336,7 @@ function renderStudentTableLoading(){
 }
 function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
-  if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('students',{force:true})">重新加载</button></div></td></tr>`;
+  if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
   renderTableSkeletonLoading('leadTbody',13,'线索数据加载中...');
@@ -355,6 +365,7 @@ function renderBlockLoading(id,text){
 }
 function renderPageLoading(pg){
   if(pg==='students')renderStudentTableLoading();
+  if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='leads')renderLeadTableLoading();
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
@@ -480,7 +491,7 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
   if(requestVersion!==dataRequestVersion)return;
   buildCampusTabs();
   renderAll();
-  if(pg==='students'&&STUDENT_PAGE_DEFERRED_REQUIREMENTS.length){
+  if(isStudentListPage(pg)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS.length){
     setTimeout(()=>{
       if(requestVersion!==dataRequestVersion)return;
       ensureDatasetsByName(STUDENT_PAGE_DEFERRED_REQUIREMENTS,{force})
@@ -607,6 +618,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(requestVersion!==dataRequestVersion)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
     if(pg==='students')renderStudentTableError(String(e.message||e));
+    if(isStudentListPage(pg)&&pg!=='students')renderStudentTableError(String(e.message||e));
     if(pg==='leads')renderLeadTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
     if(pg==='courts')renderCourtTableError(String(e.message||e));
@@ -727,8 +739,9 @@ function renderAll(){
   initClsCounter();
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentPage==='myschedule')currentPage='workbench';
+  currentPage=normalizeStudentListPage(currentPage);
   if(isCoach&&!['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='workbench';
-  else if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='students';
+  else if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage))currentPage='package-students';
   else if(currentUser?.role!=='admin'&&!isCoach){doLogout();return;}
   renderPageData(currentPage);
   goPage(currentPage,null,true);
@@ -740,6 +753,7 @@ function renderPageData(pg){
     return;
   }
   if(pg==='students')renderStudents();
+  if(isStudentListPage(pg)&&pg!=='students')renderStudents();
   if(pg==='leads')renderLeads();
   if(pg==='classes')renderClasses();
   if(pg==='schedule')renderSchedule();

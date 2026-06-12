@@ -18,7 +18,7 @@ assert.doesNotMatch(fnBody('goPage'), /if\(!skipRender\)renderPageData\(pg\)/, '
 assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{quiet:true\}\)/, 'goPage should reuse the page-scoped loading entry without blocking the whole screen');
 assert.doesNotMatch(fnBody('loadPageBackgroundDatasets'), /for\(const name of immediateNames\)/, 'background page datasets should not load one by one');
 assert.match(fnBody('loadPageBackgroundDatasets'), /Promise\.allSettled\(immediateNames\.map/, 'background page datasets should load the current batch in parallel');
-assert.match(fnBody('loadPageBackgroundDatasets'), /if\(pg==='students'&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)/, 'students page should allow a second deferred background batch');
+assert.match(fnBody('loadPageBackgroundDatasets'), /if\(isStudentListPage\(pg\)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)/, 'student list pages should allow a second deferred background batch');
 assert.match(html, /if\(path==='\/page-data\/plans'&&method==='GET'\)/, 'api should expose an aggregated plans page endpoint');
 assert.match(html, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
 assert.match(html, /if\(path==='\/page-data\/finance'&&method==='GET'\)/, 'api should expose an aggregated finance page endpoint');
