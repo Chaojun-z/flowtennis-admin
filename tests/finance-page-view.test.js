@@ -1,4 +1,6 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 function sliceBetween(text,startMarker,endMarker){
   const start = text.indexOf(startMarker);
@@ -10,6 +12,7 @@ const revenuePanelStart = source.indexOf('id="financeRevenuePanel"');
 const revenuePanelEnd = source.indexOf('id="financeRecognizedPanel"', revenuePanelStart);
 const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? source.length : revenuePanelEnd);
 const recognizedPanel = sliceBetween(source, 'id="financeRecognizedPanel"', 'id="financeSettlementPanel"');
+const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 
 assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
 assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');
@@ -68,7 +71,10 @@ assert.match(source,/总实收[\s\S]*总核销确收[\s\S]*会员储值[\s\S]*�
 assert.doesNotMatch(source,/散客单次课程|课包专项/,'ledger summary should merge direct course and package income into course income');
 assert.match(source,/课程实收 vs 课程已核销/,'merged course summary card should explain course income and recognized revenue');
 assert.match(source,/class="tms-stat-sub"/,'finance summary card captions should use the visible shared caption style');
-assert.match(source,/financeRecognitionPercent/,'overview cards should render recognition percentage');
+assert.doesNotMatch(source,/总核销确收[\s\S]{0,260}financePercent\(metrics\.totalRecognized,metrics\.totalCash\)/,'overview total recognized card should not show a recognized-vs-cash percentage under date filters');
+assert.doesNotMatch(source,/storedValueRecognized,metrics\.totalRecognized/,'overview membership recognized amount should not show a percentage');
+assert.doesNotMatch(source,/courseRecognized,metrics\.totalRecognized/,'overview course recognized amount should not show a percentage');
+assert.doesNotMatch(pagesCss,/#page-finance \.finance-ledger-stats \.tms-stat-value\{[^}]*overflow:hidden/,'finance overview stat values should not clip long currency text');
 assert.match(source,/financeTransactionAmountHtml/,'ledger should render transaction amount with standardized style');
 assert.match(source,/row\.differenceReason[\s\S]*return false/,'finance ledger should hide difference rows from the main transaction table');
 assert.doesNotMatch(source,/全部交易类型[\s\S]{0,3000}差异/,'finance transaction type filter should not expose difference as a business type');

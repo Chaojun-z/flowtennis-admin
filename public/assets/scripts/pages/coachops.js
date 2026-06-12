@@ -792,6 +792,9 @@ function financeCardValueWithPercent(mainValue,subValue){
 function financeInlineMoneyWithPercent(value,total){
   return `${financeCardMoney(value)} <span class="tms-stat-percent finance-card-percent">${financePercent(value,total,{parens:true})}</span>`;
 }
+function financeInlineMoneyOnly(value){
+  return financeCardMoney(value);
+}
 function financeStatCardHtml({label,value,caption='',split=false}){
   return `<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value${split?' finance-split-value':''}">${value}</div>${caption?`<div class="tms-stat-sub">${caption}</div>`:''}</div>`;
 }
@@ -1399,10 +1402,10 @@ function renderFinanceOverview(){
   const metrics=financeCurrentMetrics(financeLedgerRows());
   primaryHost.innerHTML=[
     {label:'总实收',value:financeCardMoney(metrics.totalCash)},
-    {label:'总核销确收',value:`${financeCardMoney(metrics.totalRecognized)} <span class="tms-stat-percent finance-card-percent">${financePercent(metrics.totalRecognized,metrics.totalCash)}</span>`,caption:'总核销金额 / 总实收占比'},
-    {label:'会员储值',value:`${financeInlineMoneyWithPercent(metrics.storedValueIncome,metrics.totalCash)} <span class="finance-split-sep">｜</span> ${financeInlineMoneyWithPercent(metrics.storedValueRecognized,metrics.totalRecognized)}`,caption:'会员实收 vs 会员已核销',split:true},
+    {label:'总核销确收',value:financeCardMoney(metrics.totalRecognized),caption:'筛选范围内核销金额'},
+    {label:'会员储值',value:`${financeInlineMoneyWithPercent(metrics.storedValueIncome,metrics.totalCash)} <span class="finance-split-sep">｜</span> ${financeInlineMoneyOnly(metrics.storedValueRecognized)}`,caption:'会员实收 vs 会员已核销',split:true},
     {label:'散客订场',value:financeInlineMoneyWithPercent(metrics.bookingIncome,metrics.totalCash),caption:'散客订场/总实收比'},
-    {label:'课程收入',value:`${financeInlineMoneyWithPercent(metrics.courseIncome,metrics.totalCash)} <span class="finance-split-sep">｜</span> ${financeInlineMoneyWithPercent(metrics.courseRecognized,metrics.totalRecognized)}`,caption:'课程实收 vs 课程已核销',split:true}
+    {label:'课程收入',value:`${financeInlineMoneyWithPercent(metrics.courseIncome,metrics.totalCash)} <span class="finance-split-sep">｜</span> ${financeInlineMoneyOnly(metrics.courseRecognized)}`,caption:'课程实收 vs 课程已核销',split:true}
   ].map(financeStatCardHtml).join('');
   secondaryHost.innerHTML='';
   secondaryHost.style.display='none';
