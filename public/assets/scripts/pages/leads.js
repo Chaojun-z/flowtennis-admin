@@ -186,8 +186,13 @@ function renderLeadCommunicationBlock(text){
 function leadProfileText(lead){
   return String(lead?.profileNote||'').trim()||'-';
 }
+function leadLevelCanonicalValue(value){
+  const text=String(value??'').trim();
+  if(['1','2','3','4','5'].includes(text))return `${text}.0`;
+  return text;
+}
 function leadLevelText(lead){
-  return String(lead?.level??'').trim()||'-';
+  return leadLevelCanonicalValue(lead?.level)||'-';
 }
 function leadFallbackYear(lead={}){
   const match=String(lead?.leadDate||lead?.createdAt||'').match(/^(\d{4})/);
@@ -338,17 +343,17 @@ function leadLevelOptions(){
   return ['0','1.0','1.5','2.0','2.5','3.0','3.5','4.0','4.5','5.0','自定义'].map(value=>({value,label:value}));
 }
 function leadLevelPresetValue(value){
-  const text=String(value??'').trim();
+  const text=leadLevelCanonicalValue(value);
   if(!text)return '';
   return leadLevelOptions().some(opt=>opt.value===text)?text:'自定义';
 }
 function leadLevelCustomValue(value){
-  const text=String(value??'').trim();
+  const text=leadLevelCanonicalValue(value);
   if(!text||leadLevelOptions().some(opt=>opt.value===text))return '';
   return text;
 }
 function leadLevelControlHtml(lead){
-  const raw=String(lead?.level??'').trim();
+  const raw=leadLevelCanonicalValue(lead?.level);
   const preset=leadLevelPresetValue(raw);
   const custom=leadLevelCustomValue(raw);
   return `${renderStandardDropdownHtml('lead_level','水平',[{value:'',label:'-'},...leadLevelOptions()],preset,true,'toggleLeadLevelCustomInput')}<input class="finput tms-form-control" id="lead_level_custom" value="${esc(custom)}" placeholder="请输入水平" style="display:${preset==='自定义'?'block':'none'};margin-top:8px">`;
