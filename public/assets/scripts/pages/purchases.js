@@ -207,7 +207,7 @@ function renderPurchases(){
     const ent=entitlements.find(e=>e.purchaseId===p.id);
     const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
-    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(p.payMethod,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseEditModal('${p.id}')">编辑</span><span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
+    return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(p.payMethod,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
 }
 
@@ -232,9 +232,57 @@ function purchasePackageSnapshotHtml(p){
   const windows=parseArr(p.dailyTimeWindows).map(w=>typeof packageTimeWindowText==='function'?packageTimeWindowText(w):[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
   return `<div class="sec-ttl">购买时规则快照</div><div class="fgrid"><div class="fg"><div class="flabel">课包名称</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||meta.packageName))}</div></div><div class="fg"><div class="flabel">归属教练</div><div class="finput">${esc(renderStandardEmptyText(coachName(p.ownerCoach)))}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(coachText)}</div></div><div class="fg"><div class="flabel">课包${unitName}</div><div class="finput">${parseInt(meta.packageLessons)||0} ${unit}</div></div><div class="fg"><div class="flabel">课包标价</div><div class="finput">¥${fmt(p.packagePrice)}</div></div><div class="fg"><div class="flabel">时段类型</div><div class="finput">${esc(packageTimeBandShortLabel(meta.packageTimeBand||meta.timeBand||'全天'))}</div></div><div class="fg"><div class="flabel">每日时段</div><div class="finput">${esc(windows)}</div></div><div class="fg"><div class="flabel">可用校区</div><div class="finput">${esc(campusText)}</div></div><div class="fg"><div class="flabel">使用开始</div><div class="finput">${esc(renderStandardEmptyText(p.usageStartDate))}</div></div><div class="fg"><div class="flabel">使用结束</div><div class="finput">${esc(renderStandardEmptyText(p.usageEndDate))}</div></div></div>`;
 }
+function purchaseSnapshotField(label,value,changed=false,options={}){
+  const cls=`schedule-detail-field ${options.full?'full-width':''}`.trim();
+  const flag=changed?'<span class="purchase-snapshot-change-tag">已变更</span>':'';
+  return `<div class="${cls}"><div class="schedule-detail-label">${esc(label)}${flag}</div><div class="schedule-detail-value">${esc(detailDrawerEmpty(value))}</div></div>`;
+}
+function purchaseCompareText(value){
+  return String(value??'').trim();
+}
+function purchaseCompareList(values,mapper=v=>v){
+  return parseArr(values).map(mapper).map(v=>String(v||'').trim()).filter(Boolean).sort().join('|');
+}
+function purchaseCompareWindows(values){
+  return parseArr(values).map(w=>typeof packageTimeWindowText==='function'?packageTimeWindowText(w):[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).sort().join('|');
+}
+function purchaseSnapshotChanged(snapshot,current,kind='text'){
+  if(!current||!String(current.id||'').trim())return false;
+  if(kind==='list')return purchaseCompareList(snapshot) !== purchaseCompareList(current);
+  if(kind==='coachList')return purchaseCompareList(snapshot,coachName) !== purchaseCompareList(current,coachName);
+  if(kind==='campusList')return purchaseCompareList(snapshot,cn) !== purchaseCompareList(current,cn);
+  if(kind==='windows')return purchaseCompareWindows(snapshot) !== purchaseCompareWindows(current);
+  if(kind==='number')return Number(snapshot||0)!==Number(current||0);
+  if(kind==='coach')return coachName(snapshot)!==coachName(current);
+  return purchaseCompareText(snapshot)!==purchaseCompareText(current);
+}
+function purchasePackageSnapshotDrawerFields(p){
+  const currentPkg=packages.find(row=>String(row.id||'')===String(p.packageId||p.priceSourceId||''))||{};
+  const meta=purchaseDisplayPackageMeta(p);
+  const currentMeta=currentPkg.id?purchaseDisplayPackageMeta({...p,...currentPkg,id:p.id}):{};
+  const unit=packageLessonUnitLabel(meta);
+  const unitName=unit==='次'?'次数':'课时';
+  const coachText=parseArr(p.coachNames).map(coachName).filter(Boolean).join('、')||'不限';
+  const campusText=parseArr(p.campusIds).map(id=>cn(id)).join('、')||'不限';
+  const windows=parseArr(p.dailyTimeWindows).map(w=>typeof packageTimeWindowText==='function'?packageTimeWindowText(w):[w.startTime,w.endTime].filter(Boolean).join(' - ')).filter(Boolean).join('、')||'全天';
+  const snapshotName=standardPackageLabel(meta,true)||meta.packageName;
+  const currentName=currentPkg.id?(standardPackageLabel(currentMeta,true)||currentPkg.name):'';
+  return [
+    purchaseSnapshotField('课包名称',snapshotName,purchaseSnapshotChanged(snapshotName,currentName)),
+    purchaseSnapshotField('归属教练',coachName(p.ownerCoach),purchaseSnapshotChanged(p.ownerCoach,currentPkg.ownerCoach,'coach')),
+    purchaseSnapshotField('可上课教练',coachText,purchaseSnapshotChanged(p.coachNames,currentPkg.coachNames||currentPkg.allowedCoaches,'coachList')),
+    purchaseSnapshotField(`课包${unitName}`,`${parseInt(meta.packageLessons)||0} ${unit}`,purchaseSnapshotChanged(meta.packageLessons,currentPkg.lessons,'number')),
+    purchaseSnapshotField('课包标价',`¥${fmt(p.packagePrice)}`,purchaseSnapshotChanged(p.packagePrice,currentPkg.price,'number')),
+    purchaseSnapshotField('时段类型',packageTimeBandShortLabel(meta.packageTimeBand||meta.timeBand||'全天'),purchaseSnapshotChanged(meta.packageTimeBand||meta.timeBand,currentPkg.timeBand)),
+    purchaseSnapshotField('每日时段',windows,purchaseSnapshotChanged(p.dailyTimeWindows,currentPkg.dailyTimeWindows,'windows')),
+    purchaseSnapshotField('可用校区',campusText,purchaseSnapshotChanged(p.campusIds,currentPkg.campusIds,'campusList')),
+    purchaseSnapshotField('使用开始',p.usageStartDate,purchaseSnapshotChanged(p.usageStartDate,currentPkg.usageStartDate)),
+    purchaseSnapshotField('使用结束',p.usageEndDate,purchaseSnapshotChanged(p.usageEndDate,currentPkg.usageEndDate))
+  ].join('');
+}
 function purchaseLedgerHtml(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
-  const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>entIds.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
+  const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>String(l.purchaseId||'')===String(purchaseId||'')||entIds.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
   if(!rows.length)return '<div class="finput" style="min-height:42px">暂无扣课记录</div>';
   return `<div class="finput" style="min-height:42px;white-space:normal;line-height:1.7">${rows.map(l=>{
     const ent=entitlements.find(e=>e.id===l.entitlementId)||{};
@@ -296,6 +344,38 @@ function purchasePriceSummaryHtml(p){
   const overrideReason=String(p.overrideReason||'').trim();
   return `<div class="fg"><div class="flabel">系统价格</div><div class="finput">¥${fmt(systemAmount)}</div></div><div class="fg"><div class="flabel">成交金额</div><div class="finput">¥${fmt(finalAmount)}</div></div><div class="fg"><div class="flabel">是否改价</div><div class="finput">${systemAmount!==finalAmount?'是':'否'}</div></div><div class="fg full"><div class="flabel">改价原因</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(overrideReason))}</div></div>`;
 }
+function purchaseDrawerAvatar(name){
+  const raw=String(name||'').trim();
+  return raw?raw.slice(0,1):'购';
+}
+function purchaseDrawerHeaderHtml({title='购买记录',avatar='',subtitle='',statusText='',statusClass=''}={}){
+  const status=statusText?`<span class="schedule-detail-status ${statusClass}">${esc(statusText)}</span>`:'';
+  return renderDetailDrawerHero({title,avatar:avatar||purchaseDrawerAvatar(title),subtitle,statusHtml:status});
+}
+function openPurchaseDrawer(titleHtml,bodyHtml,data={}){
+  openStandardDetailDrawer({
+    titleHtml,
+    bodyHtml,
+    actionsHtml:'',
+    data,
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer'
+  });
+}
+function purchaseDrawerActions(cancelOnclick,saveOnclick,saveId,saveText='保存'){
+  return `<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="${cancelOnclick}">取消</button><button type="button" class="schedule-detail-action primary btn-save" id="${saveId}" onclick="${saveOnclick}">${saveText}</button></div>`;
+}
+function purchasePriceSummaryDrawerFields(p){
+  const systemAmount=Number(p.systemAmount??p.packagePrice??0)||0;
+  const finalAmount=Number(p.finalAmount??p.amountPaid??systemAmount)||0;
+  const overrideReason=String(p.overrideReason||'').trim();
+  return [
+    renderDetailDrawerField('系统价格',`¥${fmt(systemAmount)}`),
+    renderDetailDrawerField('成交金额',`¥${fmt(finalAmount)}`),
+    renderDetailDrawerField('是否改价',systemAmount!==finalAmount?'是':'否'),
+    renderDetailDrawerField('改价原因',overrideReason)
+  ].join('');
+}
 function purchaseStudentSearchRows(keyword=''){
   const q=String(keyword||'').trim().toLowerCase();
   return students.filter(s=>{
@@ -333,9 +413,20 @@ function openPurchaseModal(studentId=''){
   const payOptions=PAY_METHODS.map(t=>({value:t,label:t}));
   const ownerOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
   const studentSearchValue=stu?(stu.phone?`${stu.name} · ${stu.phone}`:stu.name):'';
-  const body=`<div class="tms-section-header" style="margin-top:0;">学员信息</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员 *</label><input type="hidden" id="pur_studentId" value="${esc(stu?.id||'')}"><input class="finput tms-form-control" id="pur_studentSearch" value="${esc(studentSearchValue)}" placeholder="搜索姓名 / 手机号 / 校区 / 教练" oninput="renderPurchaseStudentPicker()"><div id="pur_studentPickerWrap" style="margin-top:8px">${purchaseStudentPickerHtml(stu?.id||'',studentSearchValue)}</div></div></div><div class="tms-section-header">购买信息</div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item" style="flex:2"><label class="tms-form-label">选择课包 *</label>${renderStandardDropdownHtml('pur_packageId','选择课包',packages.filter(p=>p.status!=='inactive'&&p.status!=='merged').map(p=>({value:p.id,label:purchasePackagePickerLabel(p)})), '', true, 'onPurchasePackageChange')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_ownerCoach','归属教练',ownerOptions,coachName(stu?.primaryCoach),true)}</div></div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_purchaseDate',today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_systemAmount" type="number" value="0" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_amountPaid" type="number" value="0" oninput="purchasePriceOverrideChanged('pur')"></div><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_payMethod','支付方式',payOptions,'微信',true)}</div></div><div class="tms-form-row" id="pur_overrideReasonWrap" style="display:none"><div class="tms-form-item full-width"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_overrideReason" placeholder="实际成交价与系统价格不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks([], 'pur-allowed-coach-cb')}</div></div></div><div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_notes"></textarea></div></div>`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="purchaseSaveBtn" onclick="savePurchase()">保存</button>`;
-  openStandardModal({title:'课包购买',bodyHtml:body,actionsHtml:footer,extraClass:'modal-wide'});
+  const actions=purchaseDrawerActions('closeModal()','savePurchase()','purchaseSaveBtn');
+  const studentForm=`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员 *</label><input type="hidden" id="pur_studentId" value="${esc(stu?.id||'')}"><input class="finput tms-form-control" id="pur_studentSearch" value="${esc(studentSearchValue)}" placeholder="搜索姓名 / 手机号 / 校区 / 教练" oninput="renderPurchaseStudentPicker()"><div id="pur_studentPickerWrap" style="margin-top:8px">${purchaseStudentPickerHtml(stu?.id||'',studentSearchValue)}</div></div></div>`;
+  const purchaseForm=`<div class="tms-form-row purchase-compact-row"><div class="tms-form-item" style="flex:2"><label class="tms-form-label">选择课包 *</label>${renderStandardDropdownHtml('pur_packageId','选择课包',packages.filter(p=>p.status!=='inactive'&&p.status!=='merged').map(p=>({value:p.id,label:purchasePackagePickerLabel(p)})), '', true, 'onPurchasePackageChange')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_ownerCoach','归属教练',ownerOptions,coachName(stu?.primaryCoach),true)}</div></div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_purchaseDate',today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_systemAmount" type="number" value="0" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_amountPaid" type="number" value="0" oninput="purchasePriceOverrideChanged('pur')"></div><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_payMethod','支付方式',payOptions,'微信',true)}</div></div><div class="tms-form-row" id="pur_overrideReasonWrap" style="display:none"><div class="tms-form-item full-width"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_overrideReason" placeholder="实际成交价与系统价格不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks([], 'pur-allowed-coach-cb')}</div></div></div>`;
+  const notesForm=`<div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_notes"></textarea></div></div>`;
+  const body=renderDetailDrawerContent([
+    renderDetailDrawerFormCard('学员信息',studentForm,actions),
+    renderDetailDrawerFormCard('购买信息',purchaseForm),
+    renderDetailDrawerFormCard('备注',notesForm)
+  ].join(''));
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title:'课包购买',avatar:purchaseDrawerAvatar(stu?.name),subtitle:stu?studentSearchValue:'新增购买记录',statusText:'新建',statusClass:'tms-tag-green'}),
+    body,
+    {purchaseDetailId:''}
+  );
   fillPurchasePackageMeta();
 }
 function fillPurchasePackageMeta(){
@@ -350,20 +441,63 @@ function onPurchaseEditPackageChange(){
   syncPurchasePackageMeta('pur_edit',true);
   purchasePriceOverrideChanged('pur_edit');
 }
-function openPurchaseDetailModal(id){
+function setPurchaseDetailTab(tab){
+  const id=document.getElementById('overlay')?.dataset.purchaseDetailId||'';
+  if(id)openPurchaseDetailModal(id,['deal','balance','rules'].includes(tab)?tab:'deal');
+}
+function openPurchaseDetailModal(id,tab='deal'){
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
+  const activeTab=['deal','balance','rules'].includes(tab)?tab:'deal';
   const ent=purchaseEntitlement(id);
   const meta=purchaseDisplayPackageMeta(p);
   const unit=packageLessonUnitLabel(meta);
   const canManualAdjust=ent&&p.status!=='voided'&&currentUser?.role==='admin';
   const manualConsumeAction=canManualAdjust&&ent.status==='active'&&Number(ent.remainingLessons||0)>0?`<button class="btn-save" onclick="openManualEntitlementAdjustModal('${ent.id}', 'manual_consume')">手动消课</button>`:'';
   const manualReturnAction=canManualAdjust&&Number(ent.usedLessons||0)>0?`<button class="btn-save" onclick="openManualEntitlementAdjustModal('${ent.id}', 'manual_return')">退回课时</button>`:'';
-  const manualActions=`${manualConsumeAction}${manualReturnAction}`;
-  const modal=document.querySelector('#overlay .modal');
-  if(modal)modal.className='modal modal-wide';
-  document.getElementById('mTitle').textContent='购买记录详情';
-  document.getElementById('mBody').innerHTML=`<div class="sec-ttl">成交快照</div><div class="fgrid"><div class="fg"><div class="flabel">支付日期</div><div class="finput">${esc(renderStandardEmptyText(p.purchaseDate))}</div></div><div class="fg"><div class="flabel">系统录入时间</div><div class="finput">${fmtDt(p.createdAt)}</div></div><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(renderStandardEmptyText(p.studentName))}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||meta.packageName))}</div></div>${purchasePriceSummaryHtml(p)}<div class="fg"><div class="flabel">归属教练</div><div class="finput">${esc(renderStandardEmptyText(coachName(p.ownerCoach)))}</div></div><div class="fg"><div class="flabel">可上课教练</div><div class="finput">${esc(renderStandardEmptyText(parseArr(p.allowedCoaches).map(coachName).filter(Boolean).join('、')))}</div></div><div class="fg"><div class="flabel">支付方式</div><div class="finput">${esc(renderStandardEmptyText(p.payMethod))}</div></div><div class="fg"><div class="flabel">购买状态</div><div class="finput">${purchaseStatusText(p)}</div></div><div class="fg"><div class="flabel">操作人</div><div class="finput">${esc(renderStandardEmptyText(p.operator))}</div></div><div class="fg full"><div class="flabel">备注</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.notes))}</div></div></div><div class="sec-ttl">课包余额</div><div class="fgrid"><div class="fg"><div class="flabel">当前余额</div><div class="finput">${ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`:'-'}</div></div><div class="fg"><div class="flabel">有效期</div><div class="finput">${ent?`${renderStandardEmptyText(ent.validFrom)} - ${renderStandardEmptyText(ent.validUntil)}`:'-'}</div></div><div class="fg"><div class="flabel">余额状态</div><div class="finput">${ent?entitlementStatusText(ent):'-'}</div></div></div><div class="sec-ttl">扣课记录</div>${purchaseLedgerHtml(p.id)}${purchasePackageSnapshotHtml(p)}${p.status==='voided'?`<div class="sec-ttl">作废信息</div><div class="fgrid"><div class="fg"><div class="flabel">作废时间</div><div class="finput">${esc(renderStandardEmptyText(p.voidedAt))}</div></div><div class="fg"><div class="flabel">作废人</div><div class="finput">${esc(renderStandardEmptyText(p.voidedBy))}</div></div><div class="fg full"><div class="flabel">作废原因</div><div class="finput" style="min-height:42px">${esc(renderStandardEmptyText(p.voidReason))}</div></div></div>`:''}<div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${manualActions}${p.status==='voided'?'':`<button class="btn-save" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`}</div>`;
-  document.getElementById('overlay').classList.add('open');
+  const manualActions=`${manualConsumeAction.replace('btn-save','schedule-detail-action primary')}${manualReturnAction.replace('btn-save','schedule-detail-action primary')}`;
+  const editAction=p.status==='voided'?'':`<button type="button" class="schedule-detail-action" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`;
+  const dealFields=[
+    renderDetailDrawerField('支付日期',p.purchaseDate),
+    renderDetailDrawerField('系统录入时间',fmtDt(p.createdAt)),
+    renderDetailDrawerField('学员',p.studentName),
+    renderDetailDrawerField('售卖课包',standardPackageLabel(meta,true)||meta.packageName),
+    purchasePriceSummaryDrawerFields(p),
+    renderDetailDrawerField('归属教练',coachName(p.ownerCoach)),
+    renderDetailDrawerField('可上课教练',parseArr(p.allowedCoaches).map(coachName).filter(Boolean).join('、')),
+    renderDetailDrawerField('支付方式',p.payMethod),
+    renderDetailDrawerField('购买状态',purchaseStatusText(p)),
+    renderDetailDrawerField('操作人',p.operator),
+    renderDetailDrawerField('备注',p.notes)
+  ].join('');
+  const balanceFields=[
+    renderDetailDrawerField('当前余额',ent?`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`:'-'),
+    renderDetailDrawerField('余额状态',ent?entitlementStatusText(ent):'-')
+  ].join('');
+  const voidFields=p.status==='voided'?[
+    renderDetailDrawerField('作废时间',p.voidedAt),
+    renderDetailDrawerField('作废人',p.voidedBy),
+    renderDetailDrawerField('作废原因',p.voidReason,{full:true})
+  ].join(''):'';
+  const tabs=[['deal','课包信息'],['balance','课包余额'],['rules','下单快照']];
+  let cards=[];
+  if(activeTab==='deal'){
+    cards=[renderDetailDrawerCard('课包信息',dealFields,{actionsHtml:editAction})];
+    if(voidFields)cards.push(renderDetailDrawerCard('作废信息',voidFields));
+  }
+  if(activeTab==='balance'){
+    cards=[
+      renderDetailDrawerCard('课包余额',balanceFields,{actionsHtml:manualActions}),
+      renderDetailDrawerCard('扣课记录',purchaseLedgerHtml(p.id),{useGrid:false})
+    ];
+  }
+  if(activeTab==='rules'){
+    cards=[renderDetailDrawerCard('下单快照',purchasePackageSnapshotDrawerFields(p))];
+  }
+  openPurchaseDrawer(
+    `${purchaseDrawerHeaderHtml({title:p.studentName||'购买记录',avatar:purchaseDrawerAvatar(p.studentName),subtitle:standardPackageLabel(meta,true)||meta.packageName||'',statusText:purchaseStatusText(p),statusClass:p.status==='voided'?'':'tms-tag-green'})}${renderDetailDrawerTabs(activeTab,tabs,{onClick:'setPurchaseDetailTab'})}`,
+    renderDetailDrawerContent(cards.join('')),
+    {purchaseDetailId:p.id}
+  );
 }
 function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'){
   const ent=entitlements.find(e=>e.id===entitlementId);
@@ -374,8 +508,22 @@ function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'
   const isReturn=action==='manual_return';
   const max=isReturn?Number(ent.usedLessons||0):Number(ent.remainingLessons||0);
   const title=isReturn?'退回课时':'手动消课';
-  const body=`<div class="fgrid"><div class="fg full"><div class="flabel">课包</div><div class="finput">${esc(renderStandardEmptyText(standardPackageLabel(meta,true)||ent.packageName))}</div></div><div class="fg"><div class="flabel">当前余额</div><div class="finput">${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}</div></div><div class="fg"><div class="flabel">${isReturn?'可退回':'可扣减'}</div><div class="finput">${lessonQty(max)} ${unit}</div></div><div class="fg"><div class="flabel">${isReturn?'退回':'消课'}数量 *</div><input class="finput" id="manual_ent_count" type="number" min="0.5" step="0.5" max="${max}" value="1"></div><div class="fg"><div class="flabel">${isReturn?'退回':'消课'}日期 *</div>${courtDateButtonHtml('manual_ent_date',today(),`${title}日期`)}</div><div class="fg full"><div class="flabel">备注 *</div><textarea class="finput ftextarea" id="manual_ent_reason" placeholder="${isReturn?'例如：误扣课时退回':'例如：补录历史上课记录'}"></textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="openPurchaseDetailModal('${ent.purchaseId}')">取消</button><button class="btn-save" id="manualEntSaveBtn" onclick="saveManualEntitlementAdjust('${entitlementId}','${action}')">保存</button></div>`;
-  openStandardModal({title,bodyHtml:body,actionsHtml:'',extraClass:'modal-view'});
+  const actions=purchaseDrawerActions(`openPurchaseDetailModal('${ent.purchaseId}','balance')`,`saveManualEntitlementAdjust('${entitlementId}','${action}')`,'manualEntSaveBtn');
+  const summary=[
+    renderDetailDrawerField('课包',standardPackageLabel(meta,true)||ent.packageName,{full:true}),
+    renderDetailDrawerField('当前余额',`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`),
+    renderDetailDrawerField(isReturn?'可退回':'可扣减',`${lessonQty(max)} ${unit}`)
+  ].join('');
+  const form=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">${isReturn?'退回':'消课'}数量 *</label><input class="finput tms-form-control" id="manual_ent_count" type="number" min="0.5" step="0.5" max="${max}" value="1"></div><div class="tms-form-item"><label class="tms-form-label">${isReturn?'退回':'消课'}日期 *</label>${courtDateButtonHtml('manual_ent_date',today(),`${title}日期`)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">备注 *</label><textarea class="finput tms-form-control" id="manual_ent_reason" placeholder="${isReturn?'例如：误扣课时退回':'例如：补录历史上课记录'}"></textarea></div></div>`;
+  const body=renderDetailDrawerContent([
+    renderDetailDrawerCard('课包余额',summary),
+    renderDetailDrawerFormCard(title,form,actions)
+  ].join(''));
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title,avatar:purchaseDrawerAvatar(purchase.studentName),subtitle:standardPackageLabel(meta,true)||ent.packageName||''}),
+    body,
+    {purchaseDetailId:ent.purchaseId||''}
+  );
 }
 function patchManualEntitlementAdjustResult(result){
   if(result?.entitlement){
@@ -398,7 +546,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
     toast('已保存','success');
-    openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'');
+    openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'','balance');
     if(currentPage==='purchases')renderPurchases();
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='保存';}
@@ -411,9 +559,17 @@ function openPurchaseEditModal(id){
   const studentOptions=students.map(s=>({value:s.id,label:`${s.name}${s.phone?` · ${s.phone}`:''}`}));
   const payOptions=PAY_METHODS.map(t=>({value:t,label:t}));
   const ownerOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
-  const body=`${locked?'<div class="tms-audit-note" style="margin-bottom:18px">该购买记录已有课时消耗，只能修改备注。</div>':''}<div class="tms-section-header" style="margin-top:0;">购买信息</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员 *</label>${renderStandardDropdownHtml('pur_edit_studentId','选择学员',studentOptions,p.studentId,true)}</div></div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item" style="flex:2"><label class="tms-form-label">选择课包 *</label>${renderStandardDropdownHtml('pur_edit_packageId','选择课包',packages.filter(pkg=>(pkg.status!=='inactive'&&pkg.status!=='merged')||pkg.id===p.packageId).map(pkg=>({value:pkg.id,label:purchasePackagePickerLabel(pkg)})),p.packageId,true,'onPurchaseEditPackageChange')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_edit_ownerCoach','归属教练',ownerOptions,coachName(p.ownerCoach),true)}</div></div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_edit_purchaseDate',p.purchaseDate||today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_edit_systemAmount" type="number" value="${Number(p.systemAmount??p.packagePrice??0)||0}" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_edit_amountPaid" type="number" value="${parseFloat(p.finalAmount??p.amountPaid)||0}"${locked?' readonly':''} oninput="purchasePriceOverrideChanged('pur_edit')"></div><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_edit_payMethod','支付方式',payOptions,p.payMethod||'微信',true)}</div></div><div class="tms-form-row" id="pur_edit_overrideReasonWrap" style="display:${Number(p.systemAmount??p.packagePrice??0)!==Number(p.finalAmount??p.amountPaid??0)?'block':'none'}"><div class="tms-form-item full-width"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_edit_overrideReason" value="${esc(p.overrideReason||'')}" ${locked?'readonly':''} placeholder="实际成交价与系统价格不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks(p.allowedCoaches, 'pur-edit-allowed-coach-cb')}</div></div></div><div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_edit_notes">${esc(p.notes||'')}</textarea></div></div>`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="purchaseEditSaveBtn" onclick="savePurchaseEdit('${p.id}')">保存</button>`;
-  openStandardModal({title:'编辑购买记录',bodyHtml:body,actionsHtml:footer,extraClass:'modal-wide'});
+  const actions=purchaseDrawerActions(`openPurchaseDetailModal('${p.id}')`,`savePurchaseEdit('${p.id}')`,'purchaseEditSaveBtn');
+  const purchaseForm=`${locked?'<div class="inline-help package-drawer-danger-help">该购买记录已有课时消耗，只能修改备注。</div>':''}<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">学员 *</label>${renderStandardDropdownHtml('pur_edit_studentId','选择学员',studentOptions,p.studentId,true)}</div><div class="tms-form-item"><label class="tms-form-label">选择课包 *</label>${renderStandardDropdownHtml('pur_edit_packageId','选择课包',packages.filter(pkg=>(pkg.status!=='inactive'&&pkg.status!=='merged')||pkg.id===p.packageId).map(pkg=>({value:pkg.id,label:purchasePackagePickerLabel(pkg)})),p.packageId,true,'onPurchaseEditPackageChange')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_edit_purchaseDate',p.purchaseDate||today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_edit_ownerCoach','归属教练',ownerOptions,coachName(p.ownerCoach),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_edit_systemAmount" type="number" value="${Number(p.systemAmount??p.packagePrice??0)||0}" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_edit_amountPaid" type="number" value="${parseFloat(p.finalAmount??p.amountPaid)||0}"${locked?' readonly':''} oninput="purchasePriceOverrideChanged('pur_edit')"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_edit_payMethod','支付方式',payOptions,p.payMethod||'微信',true)}</div><div class="tms-form-item" id="pur_edit_overrideReasonWrap" style="display:${Number(p.systemAmount??p.packagePrice??0)!==Number(p.finalAmount??p.amountPaid??0)?'block':'none'}"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_edit_overrideReason" value="${esc(p.overrideReason||'')}" ${locked?'readonly':''} placeholder="实际成交价不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks(p.allowedCoaches, 'pur-edit-allowed-coach-cb')}</div></div><div class="tms-form-item"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_edit_notes">${esc(p.notes||'')}</textarea></div></div>`;
+  const body=renderDetailDrawerContent([
+    renderDetailDrawerFormCard('购买信息',purchaseForm,actions)
+  ].join(''));
+  const meta=purchaseDisplayPackageMeta(p);
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title:'编辑购买记录',avatar:purchaseDrawerAvatar(p.studentName),subtitle:[p.studentName,standardPackageLabel(meta,true)||meta.packageName].filter(Boolean).join(' · '),statusText:purchaseStatusText(p)}),
+    body,
+    {purchaseDetailId:p.id}
+  );
   if(locked){
     ['pur_edit_studentId_dropdown','pur_edit_packageId_dropdown','pur_edit_payMethod_dropdown','pur_edit_ownerCoach_dropdown'].forEach(id=>{
       const el=document.getElementById(id);
@@ -455,11 +611,27 @@ function openPurchaseVoidModal(id){
   const meta=purchaseDisplayPackageMeta(p);
   const unit=packageLessonUnitLabel(meta);
   const blocked=purchaseHasLedger(id);
-  const modal=document.querySelector('#overlay .modal');
-  if(modal)modal.className='modal modal-tight';
-  document.getElementById('mTitle').textContent='作废购买记录';
-  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">学员</div><div class="finput">${esc(p.studentName)||'-'}</div></div><div class="fg"><div class="flabel">售卖课包</div><div class="finput">${esc(standardPackageLabel(meta,true)||meta.packageName)||'-'}</div></div><div class="fg"><div class="flabel">购买日期</div><div class="finput">${esc(p.purchaseDate)||'-'}</div></div><div class="fg"><div class="flabel">实收金额</div><div class="finput">¥${fmt(p.amountPaid)}</div></div><div class="fg full"><div class="flabel">影响范围</div><div class="finput" style="min-height:42px">${ent?`将同步作废课包余额「${esc(standardPackageLabel(meta,true)||meta.packageName)}」，当前剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}。`:'未找到对应课包余额。'}</div></div>${blocked?`<div class="fg full"><div class="flabel">当前状态</div><div class="finput" style="min-height:42px">该购买记录已有课时消耗，不能直接作废。</div></div>`:`<div class="fg full"><div class="flabel">作废原因</div><textarea class="finput ftextarea" id="pur_void_reason" placeholder="例如：录错学员、重复购买、实际未付款"></textarea></div>`}</div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button>${blocked?'':`<button class="btn-save" onclick="voidPurchase('${p.id}')">确认作废</button>`}</div>`;
-  document.getElementById('overlay').classList.add('open');
+  const summary=[
+    renderDetailDrawerField('学员',p.studentName),
+    renderDetailDrawerField('售卖课包',standardPackageLabel(meta,true)||meta.packageName,{full:true}),
+    renderDetailDrawerField('购买日期',p.purchaseDate),
+    renderDetailDrawerField('实收金额',`¥${fmt(p.amountPaid)}`),
+    renderDetailDrawerField('影响范围',ent?`将同步作废课包余额「${standardPackageLabel(meta,true)||meta.packageName}」，当前剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}。`:'未找到对应课包余额。',{full:true}),
+    blocked?renderDetailDrawerField('当前状态','该购买记录已有课时消耗，不能直接作废。',{full:true}):''
+  ].join('');
+  const actions=blocked
+    ?`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">返回</button></div>`
+    :`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">取消</button><button type="button" class="schedule-detail-action primary btn-save" onclick="voidPurchase('${p.id}')">确认作废</button></div>`;
+  const reasonForm=blocked?'':`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">作废原因</label><textarea class="finput tms-form-control" id="pur_void_reason" placeholder="例如：录错学员、重复购买、实际未付款"></textarea></div></div>`;
+  const body=renderDetailDrawerContent([
+    renderDetailDrawerCard('作废确认',summary),
+    renderDetailDrawerFormCard('作废原因',reasonForm,actions)
+  ].join(''));
+  openPurchaseDrawer(
+    purchaseDrawerHeaderHtml({title:'作废购买记录',avatar:purchaseDrawerAvatar(p.studentName),subtitle:[p.studentName,standardPackageLabel(meta,true)||meta.packageName].filter(Boolean).join(' · '),statusText:blocked?'不可作废':'待确认'}),
+    body,
+    {purchaseDetailId:p.id}
+  );
 }
 async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';

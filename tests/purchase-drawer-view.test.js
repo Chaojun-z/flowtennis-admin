@@ -1,0 +1,61 @@
+const assert = require('assert');
+const { appSource: source } = require('./helpers/read-index-bundle');
+const fs = require('fs');
+const path = require('path');
+
+const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+
+function fnBody(name){
+  const start = source.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsync = source.indexOf('\nasync function ', start + 1);
+  const candidates = [nextFunction, nextAsync].filter(i => i !== -1);
+  const next = candidates.length ? Math.min(...candidates) : -1;
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
+const renderPurchases = fnBody('renderPurchases');
+const openPurchaseModal = fnBody('openPurchaseModal');
+const openPurchaseDrawer = fnBody('openPurchaseDrawer');
+const purchaseDrawerActions = fnBody('purchaseDrawerActions');
+const openPurchaseDetailModal = fnBody('openPurchaseDetailModal');
+const openPurchaseEditModal = fnBody('openPurchaseEditModal');
+const openPurchaseVoidModal = fnBody('openPurchaseVoidModal');
+const openManualEntitlementAdjustModal = fnBody('openManualEntitlementAdjustModal');
+
+assert.match(renderPurchases, /openPurchaseDetailModal\('\$\{p\.id\}'\)">查看/, 'purchase list should keep a view action');
+assert.match(renderPurchases, /openPurchaseVoidModal\('\$\{p\.id\}'\)">作废/, 'purchase list should keep a void action');
+assert.doesNotMatch(renderPurchases, /openPurchaseEditModal\('\$\{p\.id\}'\)">编辑/, 'purchase list should not expose edit as a row action');
+
+[openPurchaseModal, openPurchaseDetailModal, openPurchaseEditModal, openPurchaseVoidModal, openManualEntitlementAdjustModal].forEach((body, index) => {
+  assert.match(body, /openPurchaseDrawer\(|openStandardDetailDrawer\(/, `purchase flow ${index + 1} should use the standard drawer`);
+});
+assert.match(openPurchaseDrawer, /openStandardDetailDrawer\(/, 'purchase drawer helper should call the standard drawer');
+assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helper should use the right-side drawer shell');
+
+assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
+assert.match(openPurchaseEditModal, /renderDetailDrawerFormCard\('购买信息'/, 'purchase edit should use one coherent two-column form card');
+assert.doesNotMatch(openPurchaseEditModal, /renderDetailDrawerFormCard\('备注'/, 'purchase edit should not split notes into a separate one-field card');
+assert.match(source, /function setPurchaseDetailTab\(/, 'purchase detail drawer should support tab switching');
+assert.match(openPurchaseDetailModal, /\[\['deal','课包信息'\],\['balance','课包余额'\],\['rules','下单快照'\]\]/, 'purchase detail should split content into renamed tabs');
+assert.match(openPurchaseDetailModal, /activeTab==='deal'[\s\S]*renderDetailDrawerCard\('课包信息'/, 'deal tab should show package info fields');
+assert.match(openPurchaseDetailModal, /activeTab==='balance'[\s\S]*renderDetailDrawerCard\('课包余额'[\s\S]*renderDetailDrawerCard\('扣课记录'/, 'balance tab should include lesson ledger rows');
+assert.doesNotMatch(openPurchaseDetailModal, /renderDetailDrawerField\('有效期'/, 'balance tab should not show validity period');
+assert.match(openPurchaseDetailModal, /activeTab==='rules'[\s\S]*renderDetailDrawerCard\('下单快照'/, 'rules tab should show order snapshot');
+assert.match(source, /function purchaseSnapshotChanged\(/, 'order snapshot should compare current package values');
+assert.match(source, /purchase-snapshot-change-tag[\s\S]*已变更/, 'changed snapshot fields should show a marker');
+assert.match(openPurchaseDetailModal, /avatar:purchaseDrawerAvatar\(p\.studentName\)/, 'purchase detail avatar should use the student name initial');
+assert.match(purchaseDrawerActions, /schedule-detail-action primary btn-save[\s\S]*onclick="\$\{saveOnclick\}"/, 'purchase drawer actions should use drawer button styles');
+assert.match(openPurchaseModal, /purchaseDrawerActions\('closeModal\(\)','savePurchase\(\)','purchaseSaveBtn'\)/, 'purchase create save should be in drawer actions');
+assert.match(openPurchaseEditModal, /purchaseDrawerActions\(`openPurchaseDetailModal\('\$\{p\.id\}'\)`,`savePurchaseEdit\('\$\{p\.id\}'\)`,'purchaseEditSaveBtn'\)/, 'purchase edit save should be in drawer actions');
+assert.doesNotMatch(openPurchaseModal, /openStandardModal\(/, 'purchase create should not use centered modal');
+assert.doesNotMatch(openPurchaseDetailModal, /openStandardModal\(/, 'purchase detail should not use centered modal');
+assert.doesNotMatch(openPurchaseEditModal, /openStandardModal\(/, 'purchase edit should not use centered modal');
+assert.doesNotMatch(openPurchaseVoidModal, /document\.getElementById\('mBody'\)\.innerHTML/, 'purchase void should not manually fill legacy modal body');
+assert.match(source, /setDatasetValue\('entitlementLedger',data\.entitlementLedger\|\|\[\]\)/, 'purchase page data should hydrate lesson ledger rows');
+assert.match(source, /String\(l\.purchaseId\|\|''\)===String\(purchaseId\|\|''\)\|\|entIds\.has\(l\.entitlementId\)/, 'purchase ledger should match rows by purchase id as well as entitlement id');
+assert.match(source, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
+assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
+
+console.log('purchase drawer view tests passed');

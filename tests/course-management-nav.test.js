@@ -237,8 +237,8 @@ assert.match(fnBody('refreshPurchaseFilters'), /label:purchasePackagePickerLabel
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
 assert.match(html, /id="pur_studentSearch"/, 'purchase modal should provide a student search input');
-assert.match(html, /id="purchaseSaveBtn"[\s\S]*onclick="savePurchase\(\)"/, 'purchase create save button should have a stable id used by the save handler');
-assert.match(html, /id="purchaseEditSaveBtn"[\s\S]*onclick="savePurchaseEdit/, 'purchase edit save button should have a stable id used by the edit save handler');
+assert.match(fnBody('openPurchaseModal'), /purchaseDrawerActions\('closeModal\(\)','savePurchase\(\)','purchaseSaveBtn'\)/, 'purchase create save button should have a stable id used by the save handler');
+assert.match(fnBody('openPurchaseEditModal'), /purchaseDrawerActions\(`openPurchaseDetailModal\('\$\{p\.id\}'\)`,`savePurchaseEdit\('\$\{p\.id\}'\)`,'purchaseEditSaveBtn'\)/, 'purchase edit save button should have a stable id used by the edit save handler');
 assert.doesNotMatch(fnBody('savePurchase'), /document\.querySelector\('\.btn-save'\)/, 'purchase create save should not depend on the legacy btn-save class');
 assert.doesNotMatch(fnBody('savePurchaseEdit'), /document\.querySelector\('\.btn-save'\)/, 'purchase edit save should not depend on the legacy btn-save class');
 assert.match(html, /function getFilteredPurchases[\s\S]*String\(b\.purchaseDate\|\|b\.createdAt\|\|''\)\.localeCompare\(String\(a\.purchaseDate\|\|a\.createdAt\|\|''\)\)/, 'purchase list should sort newer payment dates first');

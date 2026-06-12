@@ -403,6 +403,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('packages',data.packages||[]);
       setDatasetValue('students',data.students||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
+      setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       loadedDatasets.add('purchasesPage');
       return;
     }

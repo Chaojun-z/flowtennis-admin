@@ -983,6 +983,7 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-field{width:232px;max-width:232px;min-width:0;padding:0}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-field.full-width{grid-column:1/-1;width:232px;max-width:232px}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-label{color:#969AA0;font-size:13px;line-height:22px;font-weight:400;max-width:232px;min-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal.modal-court.modal-schedule-drawer .purchase-snapshot-change-tag{display:inline-flex;align-items:center;height:18px;margin-left:6px;padding:0 6px;border-radius:4px;background:#FFF7ED;color:#C06031;font-size:11px;font-weight:500;vertical-align:1px}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-value{color:#333333;font-size:13px;line-height:22px;padding:4px 0;max-width:232px;min-height:22px;word-break:break-word;white-space:pre-wrap}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-block{border:1px solid #EEF0F3;border-radius:6px;background:#FBFCFE;padding:10px 12px;min-height:44px}
 .modal.modal-court.modal-schedule-drawer .schedule-detail-edit-control{width:100%;min-height:40px;height:40px;border:1px solid #E6E7EB;border-radius:6px;background:#fff;color:#333333;font-size:13px;line-height:22px;padding:4px 8px;outline:none;font-family:inherit}

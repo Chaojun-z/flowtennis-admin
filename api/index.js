@@ -10540,14 +10540,15 @@ module.exports = async (req, res) => {
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [purchases,packages,students,entitlements]=await Promise.all([
+      const [purchases,packages,students,entitlements,entitlementLedger]=await Promise.all([
         cappedScan(T_PURCHASES),
         cappedScan(T_PACKAGES),
         cappedScan(T_STUDENTS),
-        cappedScan(T_ENTITLEMENTS)
+        cappedScan(T_ENTITLEMENTS),
+        cappedScan(T_ENTITLEMENT_LEDGER)
       ]);
-      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements},user);
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements});
+      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger},user);
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger});
     }
     if(path==='/page-data/finance'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
