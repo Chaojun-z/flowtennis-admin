@@ -499,7 +499,7 @@ function openPurchaseDetailModal(id,tab='deal'){
     {purchaseDetailId:p.id}
   );
 }
-function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'){
+function openManualEntitlementAdjustModal(entitlementId, action='manual_consume', options={}){
   const ent=entitlements.find(e=>e.id===entitlementId);
   if(!ent){toast('课包余额不存在','error');return;}
   const purchase=purchases.find(p=>p.id===ent.purchaseId)||{};
@@ -508,7 +508,10 @@ function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'
   const isReturn=action==='manual_return';
   const max=isReturn?Number(ent.usedLessons||0):Number(ent.remainingLessons||0);
   const title=isReturn?'退回课时':'手动消课';
-  const actions=purchaseDrawerActions(`openPurchaseDetailModal('${ent.purchaseId}','balance')`,`saveManualEntitlementAdjust('${entitlementId}','${action}')`,'manualEntSaveBtn');
+  const source=options?.source==='student'?'student':'purchase';
+  const studentId=options?.studentId||ent.studentId||'';
+  const cancelAction=source==='student'&&studentId?`openStudentDetail('${studentId}')`:`openPurchaseDetailModal('${ent.purchaseId}','balance')`;
+  const actions=purchaseDrawerActions(cancelAction,`saveManualEntitlementAdjust('${entitlementId}','${action}')`,'manualEntSaveBtn');
   const summary=[
     renderDetailDrawerField('课包',standardPackageLabel(meta,true)||ent.packageName,{full:true}),
     renderDetailDrawerField('当前余额',`${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}`),
@@ -522,7 +525,7 @@ function openManualEntitlementAdjustModal(entitlementId, action='manual_consume'
   openPurchaseDrawer(
     purchaseDrawerHeaderHtml({title,avatar:purchaseDrawerAvatar(purchase.studentName),subtitle:standardPackageLabel(meta,true)||ent.packageName||''}),
     body,
-    {purchaseDetailId:ent.purchaseId||''}
+    {purchaseDetailId:ent.purchaseId||'',manualAdjustSource:source,studentDetailId:studentId}
   );
 }
 function patchManualEntitlementAdjustResult(result){
@@ -533,6 +536,9 @@ function patchManualEntitlementAdjustResult(result){
   if(result?.ledger)entitlementLedger.unshift(result.ledger);
 }
 async function saveManualEntitlementAdjust(entitlementId, action){
+  const overlay=document.getElementById('overlay');
+  const source=overlay?.dataset.manualAdjustSource||'purchase';
+  const studentId=overlay?.dataset.studentDetailId||entitlements.find(e=>e.id===entitlementId)?.studentId||'';
   const count=Math.abs(Number(document.getElementById('manual_ent_count')?.value)||0);
   const relatedDate=document.getElementById('manual_ent_date')?.value||'';
   const reason=(document.getElementById('manual_ent_reason')?.value||'').trim();
@@ -545,8 +551,19 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     const data={action,count,relatedDate,reason};
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
+    loadedDatasets.delete('financePage');
+    financeOverviewData=null;
+    financeNormalizedLedgerRows=[];
+    financeSettlementSummaryRows=[];
     toast('已保存','success');
-    openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'','balance');
+    if(source==='student'&&studentId){
+      studentDetailActiveTab='orders';
+      openStudentDetail(studentId);
+    }else{
+      openPurchaseDetailModal(result.entitlement?.purchaseId||entitlements.find(e=>e.id===entitlementId)?.purchaseId||'','balance');
+    }
+    renderStudents();
+    renderEntitlements();
     if(currentPage==='purchases')renderPurchases();
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='保存';}

@@ -27,14 +27,38 @@ assert.match(
 
 assert.match(
   source,
+  /function studentManualEntitlementActionsHtml\(/,
+  'student package cards should reuse manual lesson adjustment actions'
+);
+
+assert.match(
+  fnBody('studentEntitlementSummaryHtml'),
+  /studentManualEntitlementActionsHtml\(e\)/,
+  'student package cards should render manual consume and return actions per entitlement'
+);
+
+assert.match(
+  source,
   /function openManualEntitlementAdjustModal\(/,
   'manual lesson adjustment modal should exist'
+);
+
+assert.match(
+  fnBody('openManualEntitlementAdjustModal'),
+  /options\?\.source==='student'[\s\S]*openStudentDetail\('\$\{studentId\}'\)/,
+  'manual lesson adjustment modal should support returning to student detail'
 );
 
 assert.match(
   fnBody('saveManualEntitlementAdjust'),
   /apiCall\('POST',`\/entitlements\/\$\{entitlementId\}\/manual-adjust`,data\)/,
   'manual lesson adjustment should save through the entitlement manual-adjust API'
+);
+
+assert.match(
+  fnBody('saveManualEntitlementAdjust'),
+  /loadedDatasets\.delete\('financePage'\)/,
+  'manual lesson adjustment should invalidate finance snapshot data'
 );
 
 assert.match(
