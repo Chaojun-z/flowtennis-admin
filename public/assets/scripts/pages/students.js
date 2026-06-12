@@ -347,7 +347,8 @@ function studentDetailBasicTabHtml(s){
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
   const linkedHtml=studentConsumptionInfoHtml(s);
   const editing=studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===s.id;
-  const editAction=`<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
+  const deleteAction=currentUser?.role==='admin'?`<button type="button" class="schedule-detail-action muted" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除学员</button>`:'';
+  const editAction=`${deleteAction}<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
   const saveActions=`<button type="button" class="schedule-detail-action muted" onclick="cancelStudentDetailEdit('${s.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button>`;
   const basicCard=editing
     ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)

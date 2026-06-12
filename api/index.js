@@ -8368,6 +8368,117 @@ function assertCanDeleteStudent(studentId,data){
   if((data.feedbacks||[]).some(f=>f.studentId===studentId||parseArr(f.studentIds).includes(studentId)))reasons.push('课后反馈');
   if(reasons.length)throw new Error(`该学员不能直接删除：已关联${[...new Set(reasons)].join('、')}`);
 }
+function buildStudentCascadeDeletePlan(studentId,data={},now=new Date().toISOString()){
+  const id=String(studentId||'').trim();
+  const deletes={students:id?[id]:[],studentActiveEntitlementIndex:id?[id]:[],classes:[],schedule:[],plans:[],purchases:[],entitlements:[],entitlementLedger:[],membershipBenefitLedger:[],financialLedger:[],feedbacks:[]};
+  const updates={classes:[],schedule:[],courts:[],leads:[],leadFollowups:[]};
+  if(!id)return {deletes,updates};
+  const touch=row=>({...row,updatedAt:now});
+  const purchaseIds=new Set((data.purchases||[]).filter(row=>String(row?.studentId||'')===id).map(row=>String(row.id||'')).filter(Boolean));
+  const entitlementIds=new Set((data.entitlements||[]).filter(row=>String(row?.studentId||'')===id||purchaseIds.has(String(row?.purchaseId||''))).map(row=>String(row.id||'')).filter(Boolean));
+  const deletedScheduleIds=new Set();
+  const studentNameById=new Map((data.students||[]).map(row=>[String(row?.id||''),String(row?.name||row?.studentName||'').trim()]));
+
+  (data.classes||[]).forEach(row=>{
+    const ids=parseArr(row?.studentIds).filter(Boolean);
+    if(!ids.includes(id))return;
+    const nextIds=ids.filter(sid=>sid!==id);
+    if(nextIds.length)updates.classes.push(touch({...row,studentIds:nextIds}));
+    else deletes.classes.push(row.id);
+  });
+  (data.schedule||[]).forEach(row=>{
+    const ids=parseArr(row?.studentIds).filter(Boolean);
+    const matches=ids.includes(id)||String(row?.studentId||'')===id;
+    if(!matches)return;
+    const nextIds=ids.filter(sid=>sid!==id);
+    if(nextIds.length){
+      updates.schedule.push(touch({
+        ...row,
+        studentId:nextIds[0]||'',
+        studentIds:nextIds,
+        expectedStudentIds:parseArr(row?.expectedStudentIds).filter(sid=>sid!==id),
+        absentStudentIds:parseArr(row?.absentStudentIds).filter(sid=>sid!==id),
+        studentName:nextIds.map(sid=>studentNameById.get(String(sid))||'').filter(Boolean).join('、')||row.studentName||''
+      }));
+    }else{
+      deletes.schedule.push(row.id);
+      deletedScheduleIds.add(String(row.id||''));
+    }
+  });
+  deletes.plans=(data.plans||[]).filter(row=>String(row?.studentId||'')===id||deletes.classes.includes(row?.classId)).map(row=>row.id);
+  deletes.purchases=[...purchaseIds];
+  deletes.entitlements=[...entitlementIds];
+  deletes.entitlementLedger=(data.entitlementLedger||[])
+    .filter(row=>String(row?.studentId||'')===id||purchaseIds.has(String(row?.purchaseId||''))||entitlementIds.has(String(row?.entitlementId||''))||parseArr(row?.entitlementIds).some(entId=>entitlementIds.has(String(entId)))||deletedScheduleIds.has(String(row?.scheduleId||'')))
+    .map(row=>row.id);
+  deletes.membershipBenefitLedger=(data.membershipBenefitLedger||[]).filter(row=>String(row?.studentId||'')===id).map(row=>row.id);
+  deletes.financialLedger=(data.financialLedger||[]).filter(row=>String(row?.userId||row?.studentId||'')===id||deletedScheduleIds.has(String(row?.sourceId||row?.scheduleId||''))).map(row=>row.id);
+  deletes.feedbacks=(data.feedbacks||[]).filter(row=>String(row?.studentId||'')===id||parseArr(row?.studentIds).includes(id)||deletedScheduleIds.has(String(row?.scheduleId||''))).map(row=>row.id);
+  (data.courts||[]).forEach(row=>{
+    const ids=parseArr(row?.studentIds).filter(Boolean);
+    const history=normalizeCourtHistory(row?.history);
+    const nextIds=ids.filter(sid=>sid!==id);
+    const nextHistory=history.filter(item=>String(item?.studentId||'')!==id);
+    const linked=String(row?.studentId||'')===id||ids.includes(id)||history.length!==nextHistory.length;
+    if(!linked)return;
+    updates.courts.push(touch({...row,studentId:String(row?.studentId||'')===id?(nextIds[0]||''):row.studentId,studentIds:nextIds,history:nextHistory}));
+  });
+  (data.leads||[]).forEach(row=>{
+    if(String(row?.studentId||'')!==id)return;
+    updates.leads.push(touch({...row,studentId:'',studentName:'',studentMatchName:'',isCourseConverted:false}));
+  });
+  (data.leadFollowups||[]).forEach(row=>{
+    if(String(row?.studentId||'')!==id)return;
+    updates.leadFollowups.push(touch({...row,studentId:'',studentName:''}));
+  });
+  Object.keys(deletes).forEach(key=>{deletes[key]=[...new Set((deletes[key]||[]).map(value=>String(value||'')).filter(Boolean))];});
+  return {deletes,updates};
+}
+async function deleteStudentCascade(studentId,{confirm='',user={}}={}){
+  assertStudentWriteAccess(user);
+  const id=String(studentId||'').trim();
+  if(!id)throw new Error('缺少学员ID');
+  if(confirm!=='DELETE_STUDENT_HISTORY')throw new Error('缺少删除确认');
+  const student=await get(T_STUDENTS,id).catch(()=>null);
+  if(!student)throw new Error('学员不存在');
+  const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,leads,leadFollowups,students]=await Promise.all([
+    scan(T_CLASSES).catch(()=>[]),
+    scan(T_SCHEDULE).catch(()=>[]),
+    scan(T_PLANS).catch(()=>[]),
+    scan(T_COURTS).catch(()=>[]),
+    scanFeedbacks().catch(()=>[]),
+    scan(T_PURCHASES).catch(()=>[]),
+    scan(T_ENTITLEMENTS).catch(()=>[]),
+    scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
+    scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]),
+    scan(T_FINANCIAL_LEDGER).catch(()=>[]),
+    scan(T_LEADS).catch(()=>[]),
+    scan(T_LEAD_FOLLOWUPS).catch(()=>[]),
+    scan(T_STUDENTS).catch(()=>[])
+  ]);
+  const plan=buildStudentCascadeDeletePlan(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger,membershipBenefitLedger,financialLedger,leads,leadFollowups,students});
+  await Promise.all([
+    ...plan.updates.classes.map(row=>put(T_CLASSES,row.id,row)),
+    ...plan.updates.schedule.map(row=>put(T_SCHEDULE,row.id,row)),
+    ...plan.updates.courts.map(row=>put(T_COURTS,row.id,row)),
+    ...plan.updates.leads.map(row=>put(T_LEADS,row.id,row)),
+    ...plan.updates.leadFollowups.map(row=>put(T_LEAD_FOLLOWUPS,row.id,row))
+  ]);
+  await Promise.all([
+    ...plan.deletes.feedbacks.map(rowId=>del(T_FEEDBACKS,rowId)),
+    ...plan.deletes.entitlementLedger.map(rowId=>del(T_ENTITLEMENT_LEDGER,rowId)),
+    ...plan.deletes.membershipBenefitLedger.map(rowId=>del(T_MEMBERSHIP_BENEFIT_LEDGER,rowId)),
+    ...plan.deletes.financialLedger.map(rowId=>del(T_FINANCIAL_LEDGER,rowId)),
+    ...plan.deletes.plans.map(rowId=>del(T_PLANS,rowId)),
+    ...plan.deletes.schedule.map(rowId=>del(T_SCHEDULE,rowId)),
+    ...plan.deletes.classes.map(rowId=>del(T_CLASSES,rowId)),
+    ...plan.deletes.entitlements.map(rowId=>del(T_ENTITLEMENTS,rowId)),
+    ...plan.deletes.purchases.map(rowId=>del(T_PURCHASES,rowId)),
+    ...plan.deletes.studentActiveEntitlementIndex.map(rowId=>del(T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,rowId).catch(()=>null)),
+    del(T_STUDENTS,id)
+  ]);
+  return {success:true,deleted:plan.deletes,updated:plan.updates};
+}
 function assertStudentWriteAccess(user){
   if(user?.role!=='admin')throw new Error('无权限');
 }
@@ -9919,7 +10030,7 @@ module.exports = async (req, res) => {
       await put(T_STUDENTS,id,next);
       return sendJson(res,{success:true,student:next});
     }
-    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){assertStudentWriteAccess(user);const [classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[]),scan(T_PLANS).catch(()=>[]),scan(T_COURTS).catch(()=>[]),scanFeedbacks().catch(()=>[]),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);assertCanDeleteStudent(id,{classes,schedule,plans,courts,feedbacks,purchases,entitlements,entitlementLedger});await del(T_STUDENTS,id);return sendJson(res,{success:true});}}
+    const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){try{return sendJson(res,await deleteStudentCascade(id,{confirm:body.confirm,user}));}catch(err){const msg=String(err?.message||err);return sendJson(res,{error:msg},msg==='无权限'?403:/不存在/.test(msg)?404:400);}}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
     if(path==='/products'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PRODUCTS).catch(()=>[]));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=uuidv4();const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},null,now);r.createdAt=now;await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
     const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
@@ -11162,6 +11273,7 @@ module.exports._test={
   assertCanEditClassWithSchedules,
   assertCanDeleteSchedule,
   assertCanDeleteStudent,
+  buildStudentCascadeDeletePlan,
   assertCanDeleteCourt,
   courtDeleteAction,
   assertCanDeleteCampus,

@@ -75,7 +75,7 @@ function appConfirm(message,{title='请确认',confirmText='确定',danger=false
     ov.classList.add('open');
   });
 }
-function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confTitle').textContent=type==='court'?'确认删除/隐藏？':'确认删除？';document.getElementById('confIcon').textContent='!';document.getElementById('confDesc').textContent=type==='court'?'即将处理「'+name+'」。没有财务/会员记录会删除；已有记录会隐藏保留数据。请输入「确认删除」。':type==='membership-plan'?'即将删除「'+name+'」。仅草稿/停售且没有购买记录的方案可删除。请输入「确认删除」。':'即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';var nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
+function confirmDel(id,name,type){delId=id;delType=type;document.getElementById('confTitle').textContent=type==='court'?'确认删除/隐藏？':'确认删除？';document.getElementById('confIcon').textContent='!';document.getElementById('confDesc').textContent=type==='court'?'即将处理「'+name+'」。没有财务/会员记录会删除；已有记录会隐藏保留数据。请输入「确认删除」。':type==='membership-plan'?'即将删除「'+name+'」。仅草稿/停售且没有购买记录的方案可删除。请输入「确认删除」。':type==='student'?'即将删除学员「'+name+'」及其课包订单、课包余额、扣课记录、学习计划、单人排课、课后反馈和学员权益记录，并清理订场/线索关联。请输入「确认删除」。':'即将删除「'+name+'」，请输入「确认删除」。';document.getElementById('confOv').classList.add('open');var ci=document.getElementById('confInput');ci.style.display='block';ci.value='';var cb=document.getElementById('confYesBtn');cb.textContent='确认删除';cb.style.background='#dc2626';cb.classList.remove('neutral');cb.onclick=doDelete;cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';var nb=document.getElementById('confNoBtn');if(nb)nb.onclick=closeConf;ci.oninput=function(){if(ci.value.trim()==='确认删除'){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';}else{cb.disabled=true;cb.style.opacity='0.4';cb.style.cursor='not-allowed';}};}
 function openBatchCourtDeleteConfirm(ids){
   batchDeleteCourtIds=[...ids];
   delId='__batch__';
@@ -130,6 +130,37 @@ async function runBatchDeleteCourts(ids){
     updateCourtBatchButton();
   }
 }
+function removeRowsByIds(rows,ids){
+  const set=new Set((ids||[]).map(id=>String(id||'')));
+  return (rows||[]).filter(row=>!set.has(String(row?.id||'')));
+}
+function mergeRowsById(rows,updates){
+  const map=new Map((updates||[]).map(row=>[String(row?.id||''),row]).filter(([id])=>id));
+  return (rows||[]).map(row=>map.get(String(row?.id||''))||row);
+}
+function applyStudentCascadeDeleteResult(studentId,result={}){
+  const deleted=result.deleted||{};
+  const updated=result.updated||{};
+  students=removeRowsByIds(students,[studentId]);
+  classes=mergeRowsById(removeRowsByIds(classes,deleted.classes),updated.classes);
+  schedules=mergeRowsById(removeRowsByIds(schedules,deleted.schedule),updated.schedule);
+  plans=removeRowsByIds(plans,deleted.plans);
+  purchases=removeRowsByIds(purchases,deleted.purchases);
+  entitlements=removeRowsByIds(entitlements,deleted.entitlements);
+  entitlementLedger=removeRowsByIds(entitlementLedger,deleted.entitlementLedger);
+  membershipBenefitLedger=removeRowsByIds(membershipBenefitLedger,deleted.membershipBenefitLedger);
+  financialLedger=removeRowsByIds(financialLedger,deleted.financialLedger);
+  feedbacks=removeRowsByIds(feedbacks,deleted.feedbacks);
+  courts=mergeRowsById(courts,updated.courts);
+  leads=mergeRowsById(leads,updated.leads);
+  leadFollowups=mergeRowsById(leadFollowups,updated.leadFollowups);
+  if(deleted.financialLedger?.length||deleted.purchases?.length||deleted.entitlements?.length||deleted.entitlementLedger?.length){
+    loadedDatasets.delete('financePage');
+    financeOverviewData=null;
+    financeNormalizedLedgerRows=[];
+    financeSettlementSummaryRows=[];
+  }
+}
 async function doDelete(){
   if(!delId)return;
   try{
@@ -140,9 +171,9 @@ async function doDelete(){
       return;
     }
     const m={court:'/courts/',student:'/students/',product:'/products/',package:'/packages/',purchase:'/purchases/',plan:'/plans/',schedule:'/schedule/',class:'/classes/',coach:'/coaches/',campus:'/campuses/','membership-plan':'/membership-plans/'};
-    const result=await apiCall('DELETE',m[delType]+delId);
+    const result=await apiCall('DELETE',m[delType]+delId,delType==='student'?{confirm:'DELETE_STUDENT_HISTORY'}:undefined);
     if(delType==='court')courts=courts.filter(u=>u.id!==delId);
-    else if(delType==='student')students=students.filter(u=>u.id!==delId);
+    else if(delType==='student')applyStudentCascadeDeleteResult(delId,result);
     else if(delType==='product')products=products.filter(u=>u.id!==delId);
     else if(delType==='package')packages=packages.filter(u=>u.id!==delId);
     else if(delType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});closeConf();closeModal();toast('已作废','error');return;}
