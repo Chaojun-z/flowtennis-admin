@@ -361,8 +361,10 @@ function studentDrawerCardHtml(title,content,extraClass='',actionsHtml='',option
 function studentBasicInfoReadonlyHtml(s){
   return `${studentDetailFieldHtml('姓名',s.name)}${studentDetailFieldHtml('手机号',s.phone)}${studentDetailFieldHtml('负责教练',studentPrimaryCoachText(s))}${studentDetailFieldHtml('学员类型',s.type)}${studentDetailFieldHtml('来源',studentHumanText(s.source))}${studentDetailFieldHtml('活动范围',s.activityRange)}${studentDetailFieldHtml('所在校区',cn(s.campus))}${studentDetailFieldHtml('备注',studentHumanText(s.notes))}`;
 }
-function studentDetailDeleteActionHtml(s){
-  return currentUser?.role==='admin'?`<div class="schedule-detail-card-actions student-detail-delete-actions"><button type="button" class="schedule-detail-action muted" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除学员</button></div>`:'';
+function studentDeleteCardHtml(s){
+  if(currentUser?.role!=='admin')return '';
+  const action=`<button type="button" class="schedule-detail-action muted" onclick="confirmDel('${s.id}','${esc(s.name)}','student')">删除学员</button>`;
+  return studentDrawerCardHtml('删除学员','<div class="tms-field-help">删除前需要二次确认。</div>','student-delete-section',action,{useGrid:false});
 }
 function studentDetailBasicTabHtml(s){
   const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
@@ -373,7 +375,7 @@ function studentDetailBasicTabHtml(s){
   const basicCard=editing
     ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)
     : studentDrawerCardHtml('基本信息',studentBasicInfoReadonlyHtml(s),'',editAction);
-  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
+  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDeleteCardHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
 }
 function studentDetailOrdersTabHtml(s){
   const canBuyPackage=currentUser?.role==='admin';
@@ -766,7 +768,7 @@ function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
-  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}${studentDetailDeleteActionHtml(s)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
+  openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
 }
 function cancelStudentDetailEdit(studentId){
   if(studentId)studentDetailEditingStudentId=studentId;
