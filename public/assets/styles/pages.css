@@ -223,11 +223,12 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 #page-campusmgr .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-campusmgr .tms-table td.tms-action-cell{display:table-cell}
 #page-campusmgr .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
-#page-admin-users .tms-table{min-width:940px}
+#page-admin-users .tms-table{min-width:1040px}
 #page-admin-users .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-admin-users .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#F1E9E2}
 #page-admin-users .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-admin-users .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
+#page-admin-users .tms-table td:nth-child(9) .tms-cell-text{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #page-coaches .tms-table{min-width:1000px}
 #page-coaches .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-memberships .tms-table{min-width:1500px}

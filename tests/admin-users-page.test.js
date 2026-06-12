@@ -42,8 +42,8 @@ assert.match(fnBody('renderAdminUsers'), /手机号/, 'account rows should show 
 assert.match(fnBody('renderAdminUsers'), /微信绑定/, 'account rows should show wechat binding text');
 assert.match(fnBody('renderAdminUsers'), /服务号绑定/, 'account rows should show official account binding text');
 assert.doesNotMatch(fnBody('adminUserOfficialAccountText'), /role!=='editor'/, 'admin accounts should also show official account binding status');
-assert.match(fnBody('renderAdminUsers'), /unbindAdminUserWechat/, 'account rows should expose wechat unbind action');
-assert.match(fnBody('renderAdminUsers'), /unbindAdminUserOfficialAccount/, 'account rows should expose official account unbind action');
+assert.match(fnBody('renderAdminUsers'), /openAdminUserDetailDrawer/, 'account rows should open the account drawer');
+assert.doesNotMatch(fnBody('renderAdminUsers'), /unbindAdminUserWechat|unbindAdminUserOfficialAccount|openAdminUserModal\('\$\{u\.id\}'\)/, 'account rows should keep only view and status actions');
 assert.match(fnBody('renderAdminUsers'), /停用|启用/, 'account rows should expose enable and disable actions');
 assert.match(fnBody('renderAdminUsers'), /adminUserEmptyStateHtml\(\)/, 'account empty state should use the standard empty state');
 assert.match(fnBody('renderAdminUsers'), /renderAdminUserPagerControls\(total,pages\)/, 'account list should render standard pagination controls');
@@ -69,6 +69,15 @@ assert.match(fnBody('openAdminUserModal'), /au_match_finance/, 'account modal sh
 assert.match(fnBody('openAdminUserModal'), /campusIds/, 'account modal should prepare campus ids for scope selection');
 assert.match(fnBody('openAdminUserModal'), /账号创建后用于登录。教练账号绑定教练后，登录会进入教练工作台。/, 'account create modal should describe login by account in neutral wording');
 assert.match(fnBody('openAdminUserModal'), /resetAdminUserPassword/, 'account edit modal should expose password reset');
+assert.match(fnBody('openAdminUserDetailDrawer'), /openStandardDetailDrawer/, 'account detail should use the global drawer shell');
+assert.match(fnBody('openAdminUserDetailDrawer'), /renderDetailDrawerTabs\(adminUserDetailActiveTab,\[\['account','账号信息'\],\['binding','绑定关系'\]\]/, 'account drawer should use account and binding tabs');
+assert.match(fnBody('adminUserAccountTabHtml'), /openAdminUserDrawerEdit/, 'account info tab should expose edit action inside drawer');
+assert.match(fnBody('adminUserAccountTabHtml'), /账号ID[\s\S]*姓名[\s\S]*手机号[\s\S]*角色[\s\S]*绑定教练[\s\S]*数据范围[\s\S]*当前状态/, 'account view should match edit account fields');
+assert.doesNotMatch(fnBody('adminUserAccountTabHtml'), /服务号绑定|约球权限/, 'account info tab should not show service binding or standalone match permission fields');
+assert.match(fnBody('openAdminUserDrawerEdit'), /renderDetailDrawerFormCard\('编辑账号'/, 'account drawer edit should keep account fields in the first card');
+assert.match(fnBody('openAdminUserDrawerEdit'), /renderDetailDrawerFormCard\('重置密码'/, 'account drawer edit should put password reset in a separate card');
+assert.doesNotMatch(fnBody('openAdminUserDrawerEdit'), /const officialBindingRow|服务号绑定|<div class="tms-section-header">约球权限<\/div>/, 'account drawer edit should not show service binding or standalone match permission sections');
+assert.match(fnBody('adminUserBindingTabHtml'), /unbindAdminUserWechat[\s\S]*unbindAdminUserOfficialAccount/, 'binding tab should expose unbind actions inside drawer');
 assert.doesNotMatch(fnBody('openAdminUserModal'), /请用这里的账号ID登录，不是姓名/, 'account create modal should not force account-id-only wording');
 assert.match(fnBody('saveAdminUser'), /phone/, 'account save should submit phone');
 assert.match(fnBody('saveAdminUser'), /role:roleValue/, 'account edit should submit the selected role');
