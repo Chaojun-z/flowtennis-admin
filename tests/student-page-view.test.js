@@ -58,8 +58,8 @@ assert.match(source, /已履约金额 \/ 课包实收金额占比[\s\S]*待履�
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
 assert.match(source, /const sign=Number\(row\.lessonDelta\|\|0\)>0\?-1:1/, 'student package recognized amount should subtract returned lessons');
-assert.match(source, /function studentStatsCampusNameForPurchase\(/, 'student top package finance stats should resolve campus from entitlement and purchase, not only student profile');
-assert.match(source, /studentStatsMatchesPackageCampus\(p,entitlementByPurchaseId\.get\(String\(p\.id\|\|''\)\)\|\|\{\}\)/, 'student top package income should include purchases scoped by package campus');
+assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top package finance stats should use the same filtered rows as the table list');
+assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student top package income should not apply a second campus filter after the table list is filtered');
 assert.doesNotMatch(source, /const validEntitlements=entitlements\.filter\(e=>studentIds\.has\(String\(e\.studentId\|\|''\)\)&&entitlementStatusText\(e\)!=='已作废'\)/, 'student top package stats must not drop package-campus rows when the student campus is empty');
 assert.match(source, /activePackageStudentCount:base\.filter\(s=>studentHasRemainingPackage\(s\)\)\.length/, 'student stats should summarize only students with remaining package balance');
 assert.match(source, /function studentStatusMeta\(/, 'student list should compute business status labels');

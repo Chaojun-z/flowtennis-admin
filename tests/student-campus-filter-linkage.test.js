@@ -1,4 +1,7 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
 const { appSource: source } = require('./helpers/read-index-bundle');
 
 function fnBody(name){
@@ -14,6 +17,61 @@ function fnBody(name){
 assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from profile, purchases, entitlements, packages, and schedules');
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the same business-campus sources as top stats');
 assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)&&studentMatchesListPage\(s\)/, 'student list base rows should use the shared student campus matcher');
-assert.match(fnBody('studentPageStats'), /studentIds\.has\(String\(e\.studentId\|\|''\)\)[\s\S]*studentStatsMatchesPackageCampus\(purchase,e\)/, 'student package stats should only count entitlements linked to visible students');
+assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
+assert.match(fnBody('studentPageStats'), /const rowMatchesBase=row=>studentIds\.has\(String\(row\.studentId\|\|''\)\)\|\|studentNames\.has\(String\(row\.studentName\|\|''\)\.trim\(\)\)/, 'student package stats should count rows linked to the visible student list');
+assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student package stats should not apply a second purchase-campus filter after the list is already filtered');
+
+const root = path.join(__dirname, '..');
+const context = {
+  console,
+  window: {},
+  document: { createElement: () => ({ set textContent(value) { this.innerHTML = String(value || ''); } }) },
+  localStorage: { getItem: () => null, setItem: () => null, removeItem: () => null },
+  currentPage: 'package-students',
+  campus: 'chaojun',
+  campuses: [{ id: 'chaojun', code: 'chaojun', name: '朝珺私教' }, { id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  CAMPUS: { chaojun: '朝珺私教', mabao: '顺义马坡' },
+  FlowTennisBusinessTaxonomy: {
+    EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
+    PRODUCT_TYPES: ['私教课', '体验课', '小班课', '大师课', '陪打']
+  },
+  students: [
+    { id: 'stu-17', name: '一七&zzxxyy', campus: 'mabao' },
+    { id: 'stu-xd', name: '铣大象', campus: 'mabao' },
+    { id: 'stu-misha', name: 'misha', campus: 'mabao' },
+    { id: 'stu-huang', name: '黄总', campus: 'mabao' },
+    { id: 'stu-putao', name: '葡萄', campus: 'mabao' }
+  ],
+  purchases: [
+    { id: 'pur-17', studentId: 'stu-17', studentName: '一七&zzxxyy', packageId: 'pkg-gold', packageName: '1v1私教课', amountPaid: 5000, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '私教课' },
+    { id: 'pur-xd-paid', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 3500, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
+    { id: 'pur-putao-1', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 4500, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
+    { id: 'pur-putao-2', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 4000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
+    { id: 'pur-misha-paid', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
+    { id: 'pur-huang-paid', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
+    { id: 'pur-xd-free', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
+    { id: 'pur-misha-free', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
+    { id: 'pur-huang-free', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
+    { id: 'pur-putao-free', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' }
+  ],
+  entitlements: [],
+  entitlementLedger: [],
+  packages: [],
+  schedules: [],
+  classes: [],
+  courts: []
+};
+vm.createContext(context);
+['public/assets/scripts/core/constants.js', 'public/assets/scripts/core/utils.js', 'public/assets/scripts/pages/students.js'].forEach(file => {
+  vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
+});
+
+const base = vm.runInContext('getStudentBaseList()', context);
+assert.deepStrictEqual(base.map(s => s.name), ['一七&zzxxyy', '铣大象', 'misha', '黄总', '葡萄'], 'campus-filtered student list should include all five linked students');
+assert.strictEqual(
+  vm.runInContext('studentPageStats(getStudentBaseList()).totalIncome', context),
+  29000,
+  'student top package income should sum all purchases for the visible student list'
+);
 
 console.log('student campus filter linkage tests passed');

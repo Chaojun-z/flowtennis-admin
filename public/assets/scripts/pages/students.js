@@ -314,19 +314,23 @@ function studentPageStats(base){
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
   const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
+  const includePackageRow=row=>studentListViewMode()==='trial'?studentPackageRecordIsTrial(row):!studentPackageRecordIsTrial(row);
+  const rowMatchesBase=row=>studentIds.has(String(row.studentId||''))||studentNames.has(String(row.studentName||'').trim());
   const validEntitlements=entitlements.filter(e=>{
     const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
-    return studentIds.has(String(e.studentId||''))&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废'&&studentStatsMatchesPackageCampus(purchase,e);
+    return rowMatchesBase(e)&&includePackageRow(e)&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废';
   });
   const validEntitlementIds=new Set(validEntitlements.map(e=>String(e.id||'')));
-  const purchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
-  const entitlementByPurchaseId=new Map(validEntitlements.map(e=>[String(e.purchaseId||''),e]).filter(([id])=>id));
+  const validEntitlementPurchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
   const validPurchases=purchases.filter(p=>{
     if(purchaseStatusText(p)==='已作废')return false;
-    if(!studentStatsMatchesPackageCampus(p,entitlementByPurchaseId.get(String(p.id||''))||{}))return false;
-    if(campus==='all')return true;
-    return studentIds.has(String(p.studentId||''))||purchaseIds.has(String(p.id||''));
+    if(!includePackageRow(p))return false;
+    return rowMatchesBase(p)||validEntitlementPurchaseIds.has(String(p.id||''));
   });
+  const purchaseIds=new Set([
+    ...validEntitlementPurchaseIds,
+    ...validPurchases.map(p=>String(p.id||'')).filter(Boolean)
+  ]);
   const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
   const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
   const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
@@ -646,9 +650,9 @@ function renderStudents(){
   ensureStudentDefaultSort();
   renderStudentTableHeaders();
   updateStudentSortHeaders();
-  let list=getSortedStudents(getFilteredStudents());
-  const base=getStudentBaseList();
-  const stats=studentPageStats(base);
+  const filteredStudents=getFilteredStudents();
+  let list=getSortedStudents(filteredStudents);
+  const stats=studentPageStats(filteredStudents);
   document.getElementById('studentStatsRow').innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
   const pageState=standardListSlice(list,stuPage,stuPageSize);
   stuPage=pageState.page;
