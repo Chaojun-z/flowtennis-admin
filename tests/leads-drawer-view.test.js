@@ -43,6 +43,7 @@ assert.match(source, /function openLeadDetailFromList\(/, 'lead list view action
 assert.match(source, /function openLeadFollowupFromList\(/, 'lead list follow-up action should open drawer edit form');
 assert.match(fnBody('renderLeads'), /openLeadDetailFromList\('\$\{lead\.id\}'\)[\s\S]*openLeadFollowupFromList\('\$\{lead\.id\}'\)/, 'lead list should show view and follow-up actions');
 assert.doesNotMatch(fnBody('renderLeads'), /openLeadConvertModal\('\$\{lead\.id\}'\)/, 'lead list should not show conversion action');
+assert.match(fnBody('renderLeads'), /renderLeadTag\(lead\?\.source,'source'\)[\s\S]*renderLeadTag\(lead\?\.consultType,'consult'\)[\s\S]*renderStandardCellText\(leadLevelText\(lead\)/, 'lead list should place consult need before level');
 assert.match(css, /\.modal\.modal-court\.modal-lead-drawer/, 'lead drawer should have scoped drawer styles');
 assert.doesNotMatch(css, /lead-followup-item::before\{display:none\}/, 'lead follow-up timeline should keep the shared vertical line');
 

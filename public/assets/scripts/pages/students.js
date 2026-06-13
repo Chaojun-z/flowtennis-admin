@@ -5,6 +5,7 @@ let studentDetailEditingStudentId='';
 let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
+let studentSortMode='';
 function studentListViewMode(){
   return currentPage==='trial-students'?'trial':'package';
 }
@@ -56,6 +57,17 @@ function studentPackagePurchaseDate(stu){
   ].map(v=>String(v||'').slice(0,10)).filter(Boolean);
   return dates.sort().pop()||'';
 }
+function studentTrialPackagePurchaseDate(stu){
+  const sid=String(stu?.id||'');
+  const dates=[
+    ...studentActiveEntitlementRows(stu).filter(e=>studentPackageRecordIsTrial(e)).map(e=>studentEntitlementPurchaseDate(e,purchases.find(p=>p.id===e.purchaseId)||{})),
+    ...purchases.filter(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p)).map(p=>p.purchaseDate||'')
+  ].map(v=>String(v||'').slice(0,10)).filter(Boolean);
+  return dates.sort().pop()||'';
+}
+function studentListPackagePurchaseDate(stu){
+  return studentListViewMode()==='trial'?studentTrialPackagePurchaseDate(stu):studentPackagePurchaseDate(stu);
+}
 function studentHasRemainingPackage(stu){
   return studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)&&(Number(e.remainingLessons)||0)>0);
 }
@@ -83,11 +95,18 @@ function studentCompletedLessonUnits(stu){
   return [...lessonMap.values()].reduce((sum,value)=>sum+value,0);
 }
 function studentSortValue(stu,key){
-  if(key==='packagePurchaseDate')return studentPackagePurchaseDate(stu);
+  if(key==='packagePurchaseDate')return studentListPackagePurchaseDate(stu);
   if(key==='lastLesson')return studentLastLessonDate(stu);
   if(key==='completedLessons')return studentCompletedLessonUnits(stu);
   if(key==='packageLessons')return studentPackageLessonMeta(stu).remaining||0;
   return '';
+}
+function ensureStudentDefaultSort(){
+  const mode=studentListViewMode();
+  if(studentSortMode===mode)return;
+  studentSortMode=mode;
+  if(mode==='trial'){stuSortKey='lastLesson';stuSortDir='desc';}
+  else{stuSortKey='packagePurchaseDate';stuSortDir='desc';}
 }
 function getSortedStudents(list){
   if(!stuSortKey||!stuSortDir)return list;
@@ -116,6 +135,42 @@ function updateStudentSortHeaders(){
     btn.classList.toggle('asc',active&&stuSortDir==='asc');
     btn.classList.toggle('desc',active&&stuSortDir==='desc');
   });
+}
+function studentSortHeader(key,label){
+  return `<button class="tms-sort-header" data-student-sort="${key}" onclick="cycleStudentSort('${key}')">${label}<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>`;
+}
+function studentTableColumns(){
+  if(studentListViewMode()==='trial')return [
+    {label:'学员',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
+    {label:'类型',style:'width:58px'},
+    {label:'来源',style:'width:90px'},
+    {label:'校区',style:'width:105px'},
+    {style:'width:140px',html:studentSortHeader('lastLesson','最近上课')},
+    {style:'width:100px',html:studentSortHeader('completedLessons','累计上课')},
+    {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
+    {style:'width:90px',html:studentSortHeader('packageLessons','课包/课时')},
+    {label:'负责教练',style:'width:110px'},
+    {label:'备注',style:'width:180px'},
+    {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
+  ];
+  return [
+    {label:'学员',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
+    {label:'电话',style:'width:94px'},
+    {label:'类型',style:'width:58px'},
+    {label:'校区',style:'width:105px'},
+    {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
+    {style:'width:140px',html:studentSortHeader('lastLesson','最近上课')},
+    {style:'width:100px',html:studentSortHeader('completedLessons','累计上课')},
+    {label:'负责教练',style:'width:110px'},
+    {style:'width:90px',html:studentSortHeader('packageLessons','课时/课包')},
+    {label:'来源',style:'width:90px'},
+    {label:'备注',style:'width:180px'},
+    {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
+  ];
+}
+function renderStudentTableHeaders(){
+  const head=document.querySelector('#page-students .tms-table thead tr');
+  if(head)head.innerHTML=studentTableColumns().map(renderStandardTableHeadCellHtml).join('');
 }
 function renderStudentPagerControls(total,pages){
   const pageSizeHost=document.getElementById('stuPageSize');
@@ -233,6 +288,7 @@ function studentStatsMatchesPackageCampus(purchase,entitlement={}){
 }
 function studentPageStats(base){
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
+  const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
   const validEntitlements=entitlements.filter(e=>{
     const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
@@ -250,6 +306,9 @@ function studentPageStats(base){
   const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
   const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
   const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
+  const trialIncome=purchases.filter(p=>purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p))
+    .filter(p=>studentIds.has(String(p.studentId||''))||studentNames.has(String(p.studentName||'').trim()))
+    .reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
   const directCourseIncome=studentStatsDirectCourseRows().reduce((sum,row)=>sum+studentRoundMoney(row.paidAmount||row.paymentAmount),0);
   const recognized=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))
     .filter(row=>Number(row.lessonDelta||0)!==0)
@@ -272,6 +331,7 @@ function studentPageStats(base){
     totalIncome:Math.round(totalIncome*100)/100,
     recognized:Math.round(recognized*100)/100,
     packageBalance:Math.round((totalIncome-recognized)*100)/100,
+    trialIncome:Math.round(trialIncome*100)/100,
     directCourseIncome:Math.round(directCourseIncome*100)/100,
     courseIncome:Math.round((totalIncome+directCourseIncome)*100)/100,
     courseRecognized:Math.round((recognized+directCourseIncome)*100)/100,
@@ -285,11 +345,10 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'总学员数',valueHtml:stats.total},
-    {label:'有课包学员数',valueHtml:stats.packageStudentCount,percent:studentPercentText(stats.packageStudentCount,stats.total),sub:'有课包学员数 / 总学员数占比'},
+    {label:'学员数',valueHtml:stats.total},
+    {label:'体验课人数',valueHtml:stats.trialStudentCount,percent:studentPercentText(stats.trialStudentCount,stats.total),sub:'体验课人数 / 学员数占比'},
     {label:'体验课转化',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'体验课人数 vs 体验课转正人数'},
-    {label:'课包实收',valueHtml:`¥${fmt(stats.totalIncome)}`},
-    {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
+    {label:'体验课收入',valueHtml:`¥${fmt(stats.trialIncome)}`}
   ];
   return [
     {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span>`,sub:'正式学员数 vs 购买次数'},
@@ -556,10 +615,12 @@ function studentEmptyStateHtml(){
   const filtered=studentHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的学员':'暂无学员';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加学员开始录入';
-  return `<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="${studentTableColumns().length}"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderStudents(){
   renderStudentToolbarFilters();
+  ensureStudentDefaultSort();
+  renderStudentTableHeaders();
   updateStudentSortHeaders();
   let list=getSortedStudents(getFilteredStudents());
   const base=getStudentBaseList();
@@ -573,11 +634,12 @@ function renderStudents(){
   document.getElementById('stuPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderStudentPagerControls(total,pages);
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
-    const purchaseDate=studentPackagePurchaseDate(s);
+    const purchaseDate=studentListPackagePurchaseDate(s);
     const lastLesson=studentLastLessonDate(s);
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
     const noteText=studentHumanText(studentNoteSummary(s));
+    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(coachText)}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }

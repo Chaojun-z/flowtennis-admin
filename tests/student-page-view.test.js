@@ -48,7 +48,9 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*有课包学员数[\s\S]*体验课转化[\s\S]*体验课人数 vs 体验课转正人数/, 'trial student top stats should keep the original five-card data');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*学员数[\s\S]*体验课人数[\s\S]*体验课人数 \/ 学员数占比[\s\S]*体验课转化[\s\S]*体验课收入/, 'trial student top stats should show the requested four-card data');
+assert.match(source, /trialIncome:Math\.round\(trialIncome\*100\)\/100/, 'trial student stats should expose trial-only income');
+assert.match(source, /studentPackageRecordIsTrial\(p\)[\s\S]*studentIds\.has\(String\(p\.studentId\|\|''\)\)/, 'trial income should only count trial package purchases from students in the current list');
 assert.match(source, /正式学员[\s\S]*正式学员数 vs 购买次数[\s\S]*有效课包学员[\s\S]*课包实收金额[\s\S]*已履约金额[\s\S]*待履约金额/, 'package student top stats should show official students, package income, recognized, and pending amounts');
 assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /有效课包学员 \/ 总学员数占比/, 'student active package card should explain the requested formula');
@@ -71,7 +73,10 @@ assert.match(source, /data-student-sort="completedLessons"[\s\S]*累计上课/, 
 assert.match(source, /data-student-sort="packageLessons"[\s\S]*课时\/课包/, 'student table should sort by lesson/package balance');
 assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should hide the current class column');
 assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
-assert.match(source, /columns:\[[\s\S]*\{label:'电话',style:'width:94px'\}[\s\S]*\{label:'类型',style:'width:58px'\}[\s\S]*\{label:'校区',style:'width:105px'\}[\s\S]*style:'width:140px'/, 'student table should widen phone and type columns enough to show their full text');
+assert.match(source, /function studentTableColumns\(\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*label:'学员'[\s\S]*label:'类型'[\s\S]*label:'来源'[\s\S]*label:'校区'[\s\S]*studentSortHeader\('lastLesson','最近上课'\)[\s\S]*studentSortHeader\('completedLessons','累计上课'\)[\s\S]*studentSortHeader\('packagePurchaseDate','课包购买时间'\)[\s\S]*studentSortHeader\('packageLessons','课包\/课时'\)[\s\S]*label:'负责教练'[\s\S]*label:'备注'/, 'trial student table should use the requested column order');
+const trialStudentColumns = fnBody('studentTableColumns').match(/if\(studentListViewMode\(\)==='trial'\)return \[([\s\S]*?)\];/)?.[1] || '';
+assert.doesNotMatch(trialStudentColumns, /label:'电话'/, 'trial student table should not show phone column');
+assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*const mode=studentListViewMode\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='lastLesson';stuSortDir='desc'/, 'trial student list should default to latest lesson descending');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
@@ -171,7 +176,7 @@ assert.match(css, /#page-students \.tms-empty-state\{[\s\S]*#page-students \.tms
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
 assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
 assert.match(source, /function scheduleLessonUnits\(/, 'lesson stats should use schedule lesson units instead of row counts');
-assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'/, 'student list should default to latest package purchase descending');
+assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'/, 'package student list should default to latest package purchase descending');
 assert.match(source, /function studentLastLessonDate[\s\S]*effectiveScheduleStatus\(x\)==='已结束'/, 'student latest lesson date should use completed lessons');
 assert.match(source, /function scheduleDurationLessonUnits[\s\S]*Math\.round\(\(mins\/60\)\*10\)\/10/, 'web lesson units should derive a precise duration fallback from start and end time');
 assert.match(source, /function scheduleLessonUnits[\s\S]*Math\.max\(count,durationUnits\)/, 'web lesson units should not let a stale lower lessonCount override a longer real lesson duration');
