@@ -545,9 +545,7 @@ async function saveManualEntitlementAdjust(entitlementId, action){
   if(!count){toast('请输入数量','warn');return;}
   if(!relatedDate){toast('请选择日期','warn');return;}
   if(!reason){toast('请填写备注','warn');return;}
-  const btn=document.getElementById('manualEntSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('manualEntSaveBtn',async()=>{
     const data={action,count,relatedDate,reason};
     const result=await apiCall('POST',`/entitlements/${entitlementId}/manual-adjust`,data);
     patchManualEntitlementAdjustResult(result);
@@ -555,7 +553,10 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     financeOverviewData=null;
     financeNormalizedLedgerRows=[];
     financeSettlementSummaryRows=[];
-    toast('已保存','success');
+    return result;
+  },{
+    successText:'已保存',
+    refresh:(result={})=>{
     if(source==='student'&&studentId){
       studentDetailActiveTab='orders';
       openStudentDetail(studentId);
@@ -565,10 +566,8 @@ async function saveManualEntitlementAdjust(entitlementId, action){
     renderStudents();
     renderEntitlements();
     if(currentPage==='purchases')renderPurchases();
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent='保存';}
-    toast('保存失败：'+e.message,'error');
-  }
+    }
+  });
 }
 function openPurchaseEditModal(id){
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
@@ -603,11 +602,11 @@ function fillPurchaseEditPackageMeta(){
   purchasePriceOverrideChanged('pur_edit');
 }
 async function savePurchaseEdit(id){
-  const btn=document.getElementById('purchaseEditSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  const btn=document.getElementById('purchaseEditSaveBtn');
   const data={studentId:document.getElementById('pur_edit_studentId')?.value||'',packageId:document.getElementById('pur_edit_packageId')?.value||'',ownerCoach:document.getElementById('pur_edit_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-edit-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_edit_purchaseDate')?.value||'',amountPaid:parseFloat(document.getElementById('pur_edit_amountPaid')?.value)||0,overrideReason:document.getElementById('pur_edit_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_edit_payMethod')?.value||'',notes:document.getElementById('pur_edit_notes')?.value.trim()||''};
   const systemAmount=Number(document.getElementById('pur_edit_systemAmount')?.value)||0;
   if(!purchaseHasLedger(id)&&systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
-  try{
+  await runStandardMutation(btn,async()=>{
     const res=await apiCall('PUT','/purchases/'+id,data);
     if(res.purchase){
       const i=purchases.findIndex(x=>x.id===id);
@@ -619,8 +618,11 @@ async function savePurchaseEdit(id){
         if(i>=0)entitlements[i]=next;
       });
     }
-    closeModal();toast('购买记录已更新','success');renderStudents();renderPurchases();renderEntitlements();
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+  },{
+    successText:'购买记录已更新',
+    closeOnSuccess:true,
+    refresh:[renderStudents,renderPurchases,renderEntitlements]
+  });
 }
 function openPurchaseVoidModal(id){
   const p=purchases.find(x=>x.id===id);if(!p){toast('购买记录不存在','error');return;}
@@ -653,32 +655,35 @@ function openPurchaseVoidModal(id){
 async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
   if(!reason){toast('请填写作废原因','warn');return;}
-  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='作废中…';
-  try{
+  await runStandardMutation(document.querySelector('.btn-save'),async()=>{
     await apiCall('DELETE','/purchases/'+id,{reason});
     patchPurchaseVoidResult(id,reason);
-    closeModal();
-    renderStudents();
-    renderPurchases();
-    renderEntitlements();
-    toast('购买记录已作废','success');
-  }catch(e){toast('作废失败：'+e.message,'error');btn.disabled=false;btn.textContent='确认作废';}
+  },{
+    loadingText:'作废中…',
+    errorPrefix:'作废失败',
+    successText:'购买记录已作废',
+    closeOnSuccess:true,
+    refresh:[renderStudents,renderPurchases,renderEntitlements]
+  });
 }
 async function savePurchase(){
   const studentId=document.getElementById('pur_studentId').value;
   if(!studentId){toast('请选择学员','warn');return;}
   const packageId=document.getElementById('pur_packageId').value;
   if(!packageId){toast('请选择课包','warn');return;}
-  const btn=document.getElementById('purchaseSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  const btn=document.getElementById('purchaseSaveBtn');
   const data={studentId,packageId,ownerCoach:document.getElementById('pur_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_purchaseDate').value,amountPaid:parseFloat(document.getElementById('pur_amountPaid').value)||0,overrideReason:document.getElementById('pur_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_payMethod').value,notes:document.getElementById('pur_notes').value.trim()};
   const systemAmount=Number(document.getElementById('pur_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
-  try{
+  await runStandardMutation(btn,async()=>{
     const res=await apiCall('POST','/purchases',data);
     if(res.purchase)purchases.unshift(res.purchase);
     if(res.entitlement)entitlements.unshift(res.entitlement);
-    closeModal();toast('购买成功','success');renderStudents();renderPurchases();renderEntitlements();
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+  },{
+    successText:'购买成功',
+    closeOnSuccess:true,
+    refresh:[renderStudents,renderPurchases,renderEntitlements]
+  });
 }
 function focusPurchaseByPackage(packageId,ownerCoach=''){
   purPackageFilterValue=String(packageId||'');

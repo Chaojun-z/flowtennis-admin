@@ -133,7 +133,7 @@ function openPriceModal(type='',id=''){
     ? `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('priceCampus','校区',campusOptions,row.campus||campusOptions[0]?.value||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">场地类型</label>${renderStandardDropdownHtml('priceVenueSpaceType','场地类型',[{value:'室内',label:'室内'},{value:'室外',label:'室外'}],row.venueSpaceType||'室内',true)}</div><div class="tms-form-item"><label class="tms-form-label">日期类型</label>${renderStandardDropdownHtml('priceDateType','日期类型',[{value:'工作日',label:'工作日'},{value:'周末节假日',label:'周末节假日'}],row.dateType||'工作日',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">开始时间</label>${renderStandardDropdownHtml('priceStartTime','开始时间',getCourtTimeOptions(row.startTime||'08:00'),row.startTime||'08:00',true)}</div><div class="tms-form-item"><label class="tms-form-label">结束时间</label>${renderStandardDropdownHtml('priceEndTime','结束时间',getCourtTimeOptions(row.endTime||'10:00'),row.endTime||'10:00',true)}</div><div class="tms-form-item"><label class="tms-form-label">原价/小时</label><input class="finput tms-form-control" id="priceUnitPrice" type="number" min="0" step="1" value="${row.unitPrice||''}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('priceStatus','状态',statusOptions,row.status||'active',true)}</div><div class="tms-form-item"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="priceNotes" value="${esc(row.notes||'')}"></div></div>`
     : `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">渠道</label>${renderStandardDropdownHtml('priceChannel','渠道',priceChannelOptions(),row.channel||'大众点评',true)}</div><div class="tms-form-item"><label class="tms-form-label">商品名称</label><input class="finput tms-form-control" id="priceProductName" value="${esc(row.productName||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">商品类型</label>${renderStandardDropdownHtml('priceProductType','商品类型',priceProductTypeOptions(),row.productType||'订场券',true,'syncPriceExperienceType')}</div><div class="tms-form-item" id="priceExperienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderStandardDropdownHtml('priceExperienceType','体验课类型',experienceTypeOptions(),priceExperienceType,true)}</div><div class="tms-form-item"><label class="tms-form-label">关联业务</label>${renderStandardDropdownHtml('priceBusinessType','关联业务',priceBusinessTypeOptions(),row.businessType||'court',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">时长文案</label><input class="finput tms-form-control" id="priceDurationLabel" value="${esc(row.durationLabel||'')}" placeholder="如：1小时 / 1-2小时"></div><div class="tms-form-item"><label class="tms-form-label">时长分钟</label><input class="finput tms-form-control" id="priceDurationMinutes" type="number" min="0" step="30" value="${row.durationMinutes||''}"></div><div class="tms-form-item"><label class="tms-form-label">售价</label><input class="finput tms-form-control" id="priceSalePrice" type="number" min="0" step="1" value="${row.salePrice||''}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('priceStatus','状态',statusOptions,row.status||'active',true)}</div><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="priceNotes" value="${esc(row.notes||'')}"></div></div>`;
   const body=typeSwitch+fields;
-  openStandardModal({title:id?'编辑价格':'新增价格',bodyHtml:body,actionsHtml:`<button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" onclick="savePricePlan('${type}')">保存</button>`,extraClass:'modal-wide'});
+  openStandardModal({title:id?'编辑价格':'新增价格',bodyHtml:body,actionsHtml:`<button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" id="priceSaveBtn" onclick="savePricePlan('${type}')">保存</button>`,extraClass:'modal-wide'});
   syncPriceExperienceType();
 }
 function switchPriceModalType(type){openPriceModal(type);}
@@ -145,24 +145,24 @@ async function savePricePlan(type){
     const productType=document.getElementById('priceProductType')?.value||'';
     Object.assign(payload,{channel:document.getElementById('priceChannel')?.value||'',productName:document.getElementById('priceProductName')?.value.trim()||'',productType,businessType:document.getElementById('priceBusinessType')?.value||'',experienceType:normalizeCourseType(productType)==='体验课'?normalizeExperienceType(document.getElementById('priceExperienceType')?.value):'',durationLabel:document.getElementById('priceDurationLabel')?.value.trim()||'',durationMinutes:parseInt(document.getElementById('priceDurationMinutes')?.value)||0,salePrice:parseFloat(document.getElementById('priceSalePrice')?.value)||0});
   }
-  try{
+  await runStandardMutation('priceSaveBtn',async()=>{
     const saved=await apiCall(editId?'PUT':'POST',editId?`/price-plans/${editId}`:'/price-plans',payload);
     const i=pricePlans.findIndex(x=>x.id===saved.id);
     if(i>=0)pricePlans[i]=saved;else pricePlans.unshift(saved);
-    closeModal();
-    renderPrices();
-    toast('价格已保存','success');
-  }catch(e){toast('保存失败：'+e.message,'error');}
+  },{
+    successText:'价格已保存',
+    closeOnSuccess:true,
+    refresh:renderPrices
+  });
 }
 async function togglePricePlanStatus(id){
   const row=pricePlans.find(x=>x.id===id);
   if(!row)return;
-  try{
+  await runStandardMutation(null,async()=>{
     const saved=await apiCall('PUT',`/price-plans/${id}`,{...row,status:row.status==='inactive'?'active':'inactive'});
     const i=pricePlans.findIndex(x=>x.id===id);
     if(i>=0)pricePlans[i]=saved;
-    renderPrices();
-  }catch(e){toast('更新失败：'+e.message,'error');}
+  },{errorPrefix:'更新失败',refresh:renderPrices});
 }
 function defaultMabaoPricePlans(){
   const venue=[

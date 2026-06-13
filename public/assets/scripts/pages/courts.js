@@ -390,10 +390,10 @@ function jumpCourtPage(value){
 
 function membershipPlansTableHtml(q=''){
   const rows=membershipPlans.filter(p=>searchHit(q,p.name,p.tierCode,p.notes));
-  return `<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:170px;padding-left:20px">会员方案</th><th style="width:140px">档位</th><th style="width:120px">充值金额</th><th style="width:120px">赠送金额</th><th style="width:90px">折扣</th><th style="width:180px">售卖时间</th><th style="width:120px">方案状态</th><th style="width:560px">赠送权益</th><th style="width:180px">备注</th><th class="tms-sticky-r" style="width:168px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${rows.map(p=>{const statusMeta=membershipPlanStatusMeta(p);const tierTagClass=membershipPlanTierTagClass(p.tierCode||p.name);const benefits=[{label:'大师公开课',count:parseInt(p.publicLessonCount)||0},{label:'穿线免手工费',count:parseInt(p.stringingLaborCount)||0},{label:'发球机免费',count:parseInt(p.ballMachineCount)||0},{label:'国家二级运动员陪打',count:parseInt(p.level2PartnerCount)||0},{label:'指定教练陪打',count:parseInt(p.designatedCoachPartnerCount)||0}].filter(x=>x.count>0).map(x=>`${x.label} ${x.count}次`).join('；')||'-';const actions=p.status==='active'?[`<span class="tms-action-link" onclick="toggleMembershipPlanStatus('${p.id}','inactive')">停售</span>`,`<span class="tms-action-link" onclick="openMembershipPlanModal('${p.id}')">编辑</span>`]:[`<span class="tms-action-link" onclick="confirmDel('${p.id}','${esc(p.name)}','membership-plan')">删除</span>`,`<span class="tms-action-link" onclick="toggleMembershipPlanStatus('${p.id}','active')">上架</span>`,`<span class="tms-action-link" onclick="openMembershipPlanModal('${p.id}')">编辑</span>`].filter(Boolean);return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(p.name,false)}</td><td><span class="tms-tag ${tierTagClass}">${esc(renderStandardEmptyText(p.tierCode||p.name))}</span></td><td><div class="tms-cell-text">¥${fmt(p.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(p.bonusAmount)}</div></td><td>${renderStandardCellText(p.discountRate?Math.round((parseFloat(p.discountRate)||1)*100)/10+' 折':'')}</td><td>${renderStandardCellText(membershipPlanSaleWindowText(p),false)}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:500px;max-width:none;color:#A3968F">${esc(benefits)}</div></td><td><div class="tms-text-remark" style="max-width:180px" title="${esc(p.notes||'')}">${esc(renderStandardEmptyText(p.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;justify-content:flex-end">${actions.join('')}</td></tr>`;}).join('')||'<tr><td colspan="10"><div class="empty"><p>暂无会员方案</p></div></td></tr>'}</tbody></table></div></div>`;
+  return rows.map(p=>{const statusMeta=membershipPlanStatusMeta(p);const tierTagClass=membershipPlanTierTagClass(p.tierCode||p.name);const benefits=[{label:'大师公开课',count:parseInt(p.publicLessonCount)||0},{label:'穿线免手工费',count:parseInt(p.stringingLaborCount)||0},{label:'发球机免费',count:parseInt(p.ballMachineCount)||0},{label:'国家二级运动员陪打',count:parseInt(p.level2PartnerCount)||0},{label:'指定教练陪打',count:parseInt(p.designatedCoachPartnerCount)||0}].filter(x=>x.count>0).map(x=>`${x.label} ${x.count}次`).join('；')||'-';const actions=p.status==='active'?[`<span class="tms-action-link" onclick="toggleMembershipPlanStatus('${p.id}','inactive')">停售</span>`,`<span class="tms-action-link" onclick="openMembershipPlanModal('${p.id}')">编辑</span>`]:[`<span class="tms-action-link" onclick="confirmDel('${p.id}','${esc(p.name)}','membership-plan')">删除</span>`,`<span class="tms-action-link" onclick="toggleMembershipPlanStatus('${p.id}','active')">上架</span>`,`<span class="tms-action-link" onclick="openMembershipPlanModal('${p.id}')">编辑</span>`].filter(Boolean);return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(p.name,false)}</td><td><span class="tms-tag ${tierTagClass}">${esc(renderStandardEmptyText(p.tierCode||p.name))}</span></td><td><div class="tms-cell-text">¥${fmt(p.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(p.bonusAmount)}</div></td><td>${renderStandardCellText(p.discountRate?Math.round((parseFloat(p.discountRate)||1)*100)/10+' 折':'')}</td><td>${renderStandardCellText(membershipPlanSaleWindowText(p),false)}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:500px;max-width:none;color:#A3968F">${esc(benefits)}</div></td><td><div class="tms-text-remark" style="max-width:180px" title="${esc(p.notes||'')}">${esc(renderStandardEmptyText(p.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;justify-content:flex-end">${actions.join('')}</td></tr>`;}).join('')||'<tr><td colspan="10"><div class="empty"><p>暂无会员方案</p></div></td></tr>';
 }
 function renderMembershipPlans(){
-  const host=document.getElementById('membershipPlanBody');if(!host)return;
+  const host=document.getElementById('membershipPlanTbody');if(!host)return;
   const q=(document.getElementById('membershipPlanSearch')?.value||'').toLowerCase();
   host.innerHTML=membershipPlansTableHtml(q);
 }
@@ -546,7 +546,7 @@ function getMembershipRows(){
   });
 }
 function renderMemberships(){
-  const host=document.getElementById('membershipTabBody');if(!host)return;
+  const body=document.getElementById('membershipTbody');if(!body)return;
   renderMembershipHeaderFilters(membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account})));
   const rows=getMembershipRows();
   renderMembershipStats(rows);
@@ -562,11 +562,13 @@ function renderMemberships(){
   const total=sortedRows.length,pages=Math.max(1,Math.ceil(total/membershipPageSize));
   if(membershipPage>pages)membershipPage=pages;
   const slice=sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
-  host.innerHTML=`<div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:150px;padding-left:20px">会员姓名</th><th style="width:140px">手机号</th><th style="width:160px">会员类型</th><th style="width:120px">会员状态</th><th style="width:150px"><button class="tms-sort-header" data-membership-sort="firstOpenDate" onclick="setMembershipSort('firstOpenDate')">首次开卡时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:120px"><button class="tms-sort-header" data-membership-sort="balance" onclick="setMembershipSort('balance')">会员余额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:100px">当前折扣</th><th style="width:110px"><button class="tms-sort-header" data-membership-sort="memberBookingCount" onclick="setMembershipSort('memberBookingCount')">会员订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:110px"><button class="tms-sort-header" data-membership-sort="bookingCount" onclick="setMembershipSort('bookingCount')">累计订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:360px">可用权益</th><th style="width:150px"><button class="tms-sort-header" data-membership-sort="validUntil" onclick="setMembershipSort('validUntil')">余额有效期<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th><th style="width:150px">清零时间</th><th class="tms-sticky-r" style="width:168px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody>${slice.map(({court,account:a})=>{const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const statusMeta=membershipStatusTagMeta(a);const tierLabel=courtMembershipTierLabel(a);const firstOpenDate=membershipFirstOpenDate({court,account:a});const memberBookingCount=membershipBookingCount(court);const bookingCount=courtBookingSummary(court).count;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(courtDisplayName(court)||a.courtName,false)}</td><td>${renderStandardCellText(court.phone)}</td><td>${['voided','cleared'].includes(a.status)||tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td>${renderStandardCellText(firstOpenDate,false)}</td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':(a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':''))}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':a.validUntil,false)}</td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':a.hardExpireAt,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${court.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${court.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="13"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>'}</tbody></table></div><div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="membershipPagerInfo">${renderPagerInfoHtml(total)}</span><div id="membershipPageSize"></div></div><div class="tms-page-numbers" id="membershipPagerBtns"></div></div></div>`;
-  const pager=host.querySelector('.tms-pagination');
+  body.innerHTML=slice.map(({court,account:a})=>{const finance=courtFinanceLocal(court||{history:[]});const benefitRows=membershipBenefitRowsForAccount(a);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const statusMeta=membershipStatusTagMeta(a);const tierLabel=courtMembershipTierLabel(a);const firstOpenDate=membershipFirstOpenDate({court,account:a});const memberBookingCount=membershipBookingCount(court);const bookingCount=courtBookingSummary(court).count;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(courtDisplayName(court)||a.courtName,false)}</td><td>${renderStandardCellText(court.phone)}</td><td>${['voided','cleared'].includes(a.status)||tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td>${renderStandardCellText(firstOpenDate,false)}</td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':(a.discountRate?Math.round((parseFloat(a.discountRate)||1)*100)/10+' 折':''))}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':a.validUntil,false)}</td><td>${renderStandardCellText(['voided','cleared'].includes(a.status)?'-':a.hardExpireAt,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${court.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${court.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="13"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
+  const pagerInfo=document.getElementById('membershipPagerInfo');
+  if(pagerInfo)pagerInfo.innerHTML=renderPagerInfoHtml(total);
+  const pager=document.querySelector('#page-memberships .tms-pagination');
   if(pager)pager.style.display=pages>1?'flex':'none';
   renderMembershipPagerControls(total,pages);
-  host.querySelectorAll('[data-membership-sort]').forEach(btn=>{
+  document.querySelectorAll('#page-memberships [data-membership-sort]').forEach(btn=>{
     const active=btn.dataset.membershipSort===membershipSortKey;
     btn.classList.toggle('asc',active&&membershipSortDir==='asc');
     btn.classList.toggle('desc',active&&membershipSortDir==='desc');
@@ -627,8 +629,14 @@ async function saveMembershipPlan(){
     if(saleStartDate&&saleStartDate<today())toast('售卖开始日期早于今天，系统会按历史方案正常保存','warn');
   }
   const data={name,tierCode:tierInput.value.trim(),rechargeAmount:parseFloat(document.getElementById('mp_recharge').value)||0,discountRate:parseFloat(document.getElementById('mp_discount').value)||0,bonusAmount:parseFloat(document.getElementById('mp_bonus').value)||0,saleStartDate,saleEndDate,publicLessonCount:parseInt(document.getElementById('mp_publicLesson').value)||0,stringingLaborCount:parseInt(document.getElementById('mp_stringingLabor').value)||0,ballMachineCount:parseInt(document.getElementById('mp_ballMachine').value)||0,level2PartnerCount:parseInt(document.getElementById('mp_level2Partner').value)||0,designatedCoachPartnerCount:parseInt(document.getElementById('mp_designatedCoachPartner').value)||0,designatedCoachIds:membershipCoachSelectorValues('mp_designatedCoachIdsWrap'),notes:document.getElementById('mp_notes').value.trim(),status};
-  const btn=document.getElementById('membershipPlanSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{if(editId){const r=await apiCall('PUT','/membership-plans/'+editId,data);const i=membershipPlans.findIndex(x=>x.id===editId);membershipPlans[i]=r;}else{const r=await apiCall('POST','/membership-plans',data);membershipPlans.unshift(r);}closeModal();renderMembershipPlans();renderMemberships();toast('会员方案已保存','success');}catch(e){if(btn){btn.disabled=false;btn.textContent='保存';}toast('保存失败：'+e.message,'error');}
+  await runStandardMutation('membershipPlanSaveBtn',async()=>{
+    if(editId){const r=await apiCall('PUT','/membership-plans/'+editId,data);const i=membershipPlans.findIndex(x=>x.id===editId);membershipPlans[i]=r;}
+    else{const r=await apiCall('POST','/membership-plans',data);membershipPlans.unshift(r);}
+  },{
+    successText:'会员方案已保存',
+    closeOnSuccess:true,
+    refresh:[renderMembershipPlans,renderMemberships]
+  });
 }
 function refreshMembershipOrderPreview(mode='renew'){
   const courtId=document.getElementById('mo_courtId')?.value||'';
@@ -676,8 +684,7 @@ async function saveMembershipOrder(courtId){
   if(!data.membershipPlanId){toast('请先创建会员方案','warn');return;}
   const systemAmount=Number(document.getElementById('mo_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.rechargeAmount||0)&&!data.overrideReason){toast('请填写改价原因','warn');return;}
-  const btn=document.getElementById('membershipOrderSaveBtn');if(btn){btn.disabled=true;btn.textContent='提交中…';}
-  try{
+  await runStandardMutation('membershipOrderSaveBtn',async()=>{
     const built=await apiCall('POST','/membership-orders',data);
     if(built?.account){
       const ai=membershipAccounts.findIndex(x=>x.id===built.account.id);
@@ -693,8 +700,12 @@ async function saveMembershipOrder(courtId){
         courts[ci]=court;
       }
     }
-    closeModal();toast('会员已保存','success');renderMemberships();renderCourts();
-  }catch(e){if(btn){btn.disabled=false;btn.textContent='保存';}toast('保存失败：'+e.message,'error');}
+  },{
+    loadingText:'提交中…',
+    successText:'会员已保存',
+    closeOnSuccess:true,
+    refresh:[renderMemberships,renderCourts]
+  });
 }
 function openMembershipBenefitModal(courtId,mode){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
@@ -754,33 +765,39 @@ async function saveMembershipBenefit(courtId,mode,benefitCode=''){
   const label=membershipBenefitLabelForCode(benefitCode,account);
   const data={membershipAccountId:account.id,courtId,benefitCode,benefitLabel:label,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('mb_reason').value.trim(),relatedDate:today()};
   if(mode==='supplement')data.membershipOrderId=document.getElementById('mb_order').value;
-  const btn=document.getElementById('membershipBenefitSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('membershipBenefitSaveBtn',async()=>{
     const r=await apiCall('POST','/membership-benefit-ledger',data);
     const rows=Array.isArray(r?.records)?r.records:[r];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
-    closeModal();
+  },{
+    successText:'权益流水已保存',
+    closeOnSuccess:true,
+    refresh:()=>{
     renderMemberships();
     renderCourts();
-    toast('权益流水已保存','success');
-  }catch(e){if(btn){btn.disabled=false;btn.textContent=mode==='consume'?'确认消耗':'确认补发';}toast('保存失败：'+e.message,'error');}
+    }
+  });
 }
 async function voidMembership(courtId){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
   const reason=window.prompt('请输入作废原因','手动作废会员');
   if(reason===null)return;
   if(!confirm('确定作废会员账户？作废后折扣失效，权益不可再使用。'))return;
-  try{
+  await runStandardMutation(null,async()=>{
     const res=await apiCall('PUT','/membership-accounts/'+account.id,{status:'voided',voidReason:reason});
     const nextAccount=res?.account||res;
     const nextEvent=res?.event||null;
     const i=membershipAccounts.findIndex(x=>x.id===account.id);
     if(i>=0)membershipAccounts[i]=nextAccount;
     if(nextEvent)membershipAccountEvents.unshift(nextEvent);
+  },{
+    errorPrefix:'作废失败',
+    successText:'会员已作废',
+    refresh:()=>{
     renderCourts();renderMemberships();
     if(document.getElementById('overlay').classList.contains('open'))openCourtMembershipPanel(courtId);
-    toast('会员已作废','success');
-  }catch(e){toast('作废失败：'+e.message,'error');}
+    }
+  });
 }
 function updateCourtBatchButton(){
   const toolbar=document.getElementById('courtBatchToolbar');
@@ -1396,7 +1413,7 @@ function openCourtModal(id){
 async function saveCourt(){
   const name=document.getElementById('f_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
   const phone=document.getElementById('f_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
-  const btn=document.getElementById('courtSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  const btn=document.getElementById('courtSaveBtn');
   const rawH=editId?courtBaseHistoryForSave(courts.find(u=>u.id===editId)):[];
   const studentIds=parseArr(document.getElementById('f_studentIds')?.value||'[]');
   const campusValue=document.getElementById('f_campus').value;
@@ -1409,11 +1426,14 @@ async function saveCourt(){
       return;
     }
   }
-  try{
+  await runStandardMutation(btn,async()=>{
     if(editId){const saved=await apiCall('PUT','/courts/'+editId,rec);const i=courts.findIndex(u=>u.id===editId);courts[i]=saved;}
     else{const r=await apiCall('POST','/courts',rec);courts.unshift(r);}
-    closeModal();toast(editId?'修改成功 ✓':'添加成功 ✓','success');renderCourts();renderStudentsIfVisible();
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+  },{
+    successText:editId?'修改成功 ✓':'添加成功 ✓',
+    closeOnSuccess:true,
+    refresh:[renderCourts,renderStudentsIfVisible]
+  });
 }
 const COURT_FINANCE_TRANSACTION_TYPES=FlowTennisBusinessTaxonomy.TRANSACTION_TYPES;
 const COURT_FINANCE_BUSINESS_TYPES=FlowTennisBusinessTaxonomy.COURT_FINANCE_BUSINESS_TYPES;
@@ -1648,10 +1668,8 @@ async function saveCourtFinanceRecord(){
   if(preview.receivedAmount<0){toast('退款金额超过累计实收','warn');return;}
   if(preview.spentAmount<0||preview.storedValueSpent<0||preview.directPaidSpent<0){toast('冲正金额超过已有消费','warn');return;}
   if(!await appConfirm(courtFinanceConfirmText(h,studentId),{title:'确认添加流水',confirmText:'确认添加'}))return;
-  const btn=document.getElementById('courtFinanceAddBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const rec={...court,history:hist};
-  try{
+  await runStandardMutation('courtFinanceAddBtn',async()=>{
     const saved=await apiCall('PUT','/courts/'+court.id,rec);
     const i=courts.findIndex(u=>u.id===court.id);
     if(i>=0)courts[i]=saved;
@@ -1664,16 +1682,15 @@ async function saveCourtFinanceRecord(){
         companionFailed=err.message||'陪打日程创建失败';
       }
     }
-    closeModal();
-    toast(companionFailed?'流水已保存，陪打日程创建失败':'添加成功 ✓',companionFailed?'warn':'success');
-    renderCourts();
-    renderStudentsIfVisible();
-    renderSchedule();
-    renderMySchedule();
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='添加';}
-  }
+    return {companionFailed};
+  },{
+    successText:'',
+    closeOnSuccess:true,
+    onSuccess:({companionFailed}={})=>{
+      toast(companionFailed?'流水已保存，陪打日程创建失败':'添加成功 ✓',companionFailed?'warn':'success');
+    },
+    refresh:[renderCourts,renderStudentsIfVisible,renderSchedule,renderMySchedule]
+  });
 }
 function openCourtHist(id){
   const u=courts.find(x=>x.id===id);if(!u)return;editId=null;

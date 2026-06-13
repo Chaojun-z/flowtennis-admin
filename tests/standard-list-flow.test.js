@@ -48,4 +48,20 @@ assert.doesNotMatch(fnBody(packageSource, 'renderPackages'), /standardListSlice\
 assert.doesNotMatch(appSource.match(/key:'packages'[\s\S]*?(?=\n    \{key:|\n  \];)/)?.[0] || '', /pager:/, 'package board should not expose the standard pager shell');
 assert.match(appSource, /infoId:'pricePagerInfo'[\s\S]*pageSizeId:'pricePageSize'[\s\S]*buttonsId:'pricePagerBtns'/, 'price page should expose the standard pager shell');
 
+const financeSource = pageSource('coachops');
+[
+  ['finance ledger', 'FinanceLedger', 'financeLedger'],
+  ['finance revenue', 'FinanceRevenue', 'financeRevenue'],
+  ['finance recognized', 'FinanceRecognized', 'financeRecognized']
+].forEach(([label, title, prefix]) => {
+  assert.match(fnBody(financeSource, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${label} page size should use the global 20/50/100 rule`);
+  assert.match(fnBody(financeSource, `set${title}Page`), /standardListPagination\(/, `${label} page switching should use global page normalization`);
+});
+assert.match(fnBody(financeSource, 'renderFinanceLedger'), /standardListSlice\(/, 'finance ledger rendering should use global page slicing and empty-page fallback');
+assert.match(fnBody(financeSource, 'renderFinanceRevenueReport'), /standardListSlice\(/, 'finance revenue rendering should use global page slicing and empty-page fallback');
+assert.match(fnBody(financeSource, 'renderFinanceConsumeReport'), /standardListSlice\(/, 'finance recognized rendering should use global page slicing and empty-page fallback');
+assert.match(fnBody(financeSource, 'renderFinanceLedgerFilterChange'), /financeLedgerPage=standardListFirstPage\(\)/, 'finance ledger filters should reset to the first page');
+assert.match(fnBody(financeSource, 'resetFinanceRevenuePage'), /financeRevenuePage=standardListFirstPage\(\)/, 'finance revenue filters should reset to the first page');
+assert.match(fnBody(financeSource, 'resetFinanceRecognizedPage'), /financeRecognizedPage=standardListFirstPage\(\)/, 'finance recognized filters should reset to the first page');
+
 console.log('standard list flow tests passed');

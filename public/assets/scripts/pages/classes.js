@@ -200,17 +200,17 @@ function normalizeClassRecord(cls,data={}){
 async function saveClass(){
   const productId=document.getElementById('cls_prodId').value;
   if(!productId){toast('请选择课程产品','warn');return;}
-  const btn=document.getElementById('classSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const studentIds=[...document.querySelectorAll('.cls-stu-cb:checked')].map(cb=>cb.value);
   const scheduleDays=[...document.querySelectorAll('.cls-day-cb:checked')].map(cb=>cb.value);
   const prod=products.find(p=>p.id===productId);
   const existing=editId?classes.find(x=>x.id===editId):null;
   const totalLessons=parseInt(document.getElementById('cls_total').value)||0;
+  const btn=document.getElementById('classSaveBtn');
   if(prod?.maxStudents&&studentIds.length>(parseInt(prod.maxStudents)||0)){toast('选择学员数超过课程产品人数上限','warn');btn.disabled=false;btn.textContent='保存';return;}
   const startDate=document.getElementById('cls_start').value,endDate=document.getElementById('cls_end').value;
   if(endDate&&startDate&&endDate<startDate){toast('结束日期不能早于开始日期','warn');btn.disabled=false;btn.textContent='保存';return;}
   const data={productId,productName:prod?prod.name:'',studentIds,coach:document.getElementById('cls_coach').value,campus:document.getElementById('cls_campus').value,startDate,endDate,scheduleDays,totalLessons,status:document.getElementById('cls_status').value,sourceType:document.getElementById('cls_source')?.value||'',opsNote:document.getElementById('cls_ops_note')?.value.trim()||'',updatedBy:currentUser?.name||''};
-  try{
+  await runStandardMutation('classSaveBtn',async()=>{
     let res;
     if(editId){
       res=await apiCall('PUT','/classes/'+editId,data);
@@ -225,6 +225,9 @@ async function saveClass(){
     if(Array.isArray(res?.plans)){
       res.plans.forEach(p=>{const i=plans.findIndex(x=>x.id===p.id);if(i>=0)plans[i]=p;else plans.unshift(p);});
     }
-    closeModal();toast(editId?'班次修改成功 ✓':'班次创建成功 ✓','success');renderClasses();renderPlans();renderStudents();
-  }catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+  },{
+    successText:editId?'班次修改成功 ✓':'班次创建成功 ✓',
+    closeOnSuccess:true,
+    refresh:[renderClasses,renderPlans,renderStudents]
+  });
 }

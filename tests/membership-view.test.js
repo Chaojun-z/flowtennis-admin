@@ -11,28 +11,42 @@ function fnBody(name) {
   const next = html.indexOf('\nfunction ', start + 1);
   return html.slice(start, next === -1 ? html.length : next);
 }
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = html.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = html.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+const membershipShell = standardConfigBlock('memberships');
+const membershipPlanShell = standardConfigBlock('membership-plans');
+const courtShell = standardConfigBlock('courts');
 
 assert.match(html, /goPage\('memberships',this\)[\s\S]*?会员管理/, 'sidebar should add membership management entry');
 assert.match(html, /goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'sidebar should add membership plan entry');
 assert.match(html, /data-sidebar-icon="membership-plans" width="16" height="16"/, 'membership plan sidebar icon should use the 16px custom icon');
 assert.match(html, /id="page-memberships"/, 'should have memberships page section');
 assert.match(html, /id="page-membership-plans"/, 'should have dedicated membership plans page section');
-assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-toolbar"/, 'membership plan page should use the court-style toolbar');
-assert.match(html, /id="page-membership-plans"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'membership plan page should use the court-style table shell');
+assert.match(html, /id="page-membership-plans" data-standard-list-shell="membership-plans"/, 'membership plan page should mount the standard list shell');
+assert.match(membershipPlanShell, /search:\{id:'membershipPlanSearch'/, 'membership plan page should use the court-style toolbar');
+assert.match(membershipPlanShell, /bodyId:'membershipPlanTbody'/, 'membership plan page should use the standard table shell');
 assert.match(pagesCss, /#page-membership-plans \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership plan table should freeze the left name column');
 assert.match(pagesCss, /#page-membership-plans \.tms-table td\.tms-sticky-r[\s\S]*right:0/s, 'membership plan table should keep the action column fixed on the right');
 assert.doesNotMatch(html, /membershipTabOrders|membershipTabAccounts|membershipTabBenefits/, 'membership page should no longer use tabs');
-assert.match(html, /购买记录[\s\S]*权益流水/, 'membership page should expose audit buttons near the main actions');
+assert.match(membershipShell, /历史订单[\s\S]*权益消耗记录/, 'membership page should expose audit buttons near the main actions');
 assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership management page should remove the scheme config shortcut');
-assert.match(html, /id="membershipStatsRow"/, 'membership management page should expose summary stat cards');
+assert.match(membershipShell, /statsId:'membershipStatsRow'/, 'membership management page should expose summary stat cards');
 assert.match(html, /function renderMembershipStats/, 'membership management page should compute summary stat cards');
 assert.match(html, /会员储值[\s\S]*充值金额[\s\S]*需履约总金额[\s\S]*已核销金额[\s\S]*待履约金额/, 'membership summary should show the requested five finance cards');
 assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 赠送金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
 assert.match(fnBody('renderMembershipStats'), /renderStandardDataCards\(/, 'membership summary should use the global data card renderer');
 assert.match(fnBody('renderMembershipStats'), /percent:statPercentText\(totalRecognized,poolTotal\)[\s\S]*percent:statPercentText\(pendingTotal,poolTotal\)/, 'membership recognized and pending cards should use global percentage formatting');
-assert.match(html, /id="page-memberships"[\s\S]*class="tms-toolbar"/, 'membership management page should use the court-style toolbar');
-assert.match(html, /id="page-memberships"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'membership management page should use the court-style table shell');
-assert.match(html, /id="membershipSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'membership management search should use the unified search placeholder');
+assert.match(html, /id="page-memberships" data-standard-list-shell="memberships"/, 'membership management page should mount the standard list shell');
+assert.match(membershipShell, /search:\{id:'membershipSearch'/, 'membership management page should use the court-style toolbar');
+assert.match(membershipShell, /bodyId:'membershipTbody'/, 'membership management page should use the standard table shell');
+assert.match(membershipShell, /id:'membershipSearch'/, 'membership management search should use the unified search placeholder');
 assert.match(html, /id="page-membership-orders"[\s\S]*返回会员管理[\s\S]*会员购买记录/, 'membership purchase records should be a standalone page with a back entry');
 assert.match(html, /id="page-membership-ledger"[\s\S]*返回会员管理[\s\S]*会员权益流水/, 'membership benefit ledger should be a standalone page with a back entry');
 
@@ -42,8 +56,8 @@ assert.match(html, /membershipAccounts=Array\.isArray\(data\?\.membershipAccount
 assert.match(html, /membershipOrders=Array\.isArray\(data\?\.membershipOrders\)\?data\.membershipOrders:\[\]/, 'load-all should store membership orders');
 assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBenefitLedger\)\?data\.membershipBenefitLedger:\[\]/, 'load-all should store membership benefit ledger');
 
-assert.match(html, /账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场/, 'courts table should show membership status columns');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注/, 'courts table should show requested account columns');
+assert.match(courtShell, /账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场/, 'courts table should show membership status columns');
+assert.match(courtShell, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注/, 'courts table should show requested account columns');
 assert.match(fnBody('renderCourtHeaderFilters'), /const accountTypes=\['会员','普通'\]/, 'court account filter should only expose member and normal account states');
 assert.match(fnBody('renderCourtAccountListView'), /courtAccountStateLabel\(item\)/, 'court read-model list should filter and render by displayed account state');
 assert.match(fnBody('renderCourts'), /courtAccountStateLabel\(m\)/, 'court legacy list should filter and render by displayed account state');
@@ -122,8 +136,8 @@ assert.match(html, /function membershipOrderBenefitSummaryHtml/, 'membership pur
 assert.match(html, /额外赠送/, 'membership purchase list should show one-off extra benefit adjustments');
 assert.match(html, /function renderMembershipOrdersAuditPage/, 'membership page should render purchase audit as a standalone page');
 assert.match(html, /function renderMembershipLedgerAuditPage/, 'membership page should render ledger audit as a standalone page');
-assert.match(html, /onclick="goPage\('membership-orders'\)"/, 'membership management purchase audit entry should navigate to standalone page');
-assert.match(html, /onclick="goPage\('membership-ledger'\)"/, 'membership management ledger audit entry should navigate to standalone page');
+assert.match(membershipShell, /onclick="goPage\(\\'membership-orders\\'\)"/, 'membership management purchase audit entry should navigate to standalone page');
+assert.match(membershipShell, /onclick="goPage\(\\'membership-ledger\\'\)"/, 'membership management ledger audit entry should navigate to standalone page');
 assert.match(html, /membershipBenefitLedger\.filter\(l=>l\.action!=='grant'&&searchHit/, 'global benefit audit should hide grant rows');
 assert.match(html, /购买日期[\s\S]*订场用户[\s\S]*会员方案[\s\S]*充值[\s\S]*赠送金额[\s\S]*折扣[\s\S]*是否重置有效期[\s\S]*当次权益摘要[\s\S]*状态/, 'membership purchase audit should keep reduced audit fields');
 assert.match(html, /时间[\s\S]*订场用户[\s\S]*购买批次[\s\S]*权益[\s\S]*变动[\s\S]*动作[\s\S]*原因/, 'membership ledger audit should keep audit columns only');
@@ -193,11 +207,11 @@ assert.match(html, /setInterval\(syncAllQuietly,180000\);/, 'background sync int
 assert.doesNotMatch(html, /membershipBenefitCourtFilter/, 'membership management page should remove the global benefit batch filter');
 assert.doesNotMatch(html, /赠送权益批次 = 每次购买送了什么、还剩多少、何时到期/, 'membership management page should no longer expose global benefit batch explanation');
 assert.doesNotMatch(html, /请选择权益账户，排课必须绑定课包权益/, 'schedule form should not hard-block saving when no entitlement is selected');
-assert.match(html, /会员状态[\s\S]*会员订场[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
+assert.match(membershipShell, /会员状态[\s\S]*会员订场[\s\S]*余额有效期[\s\S]*清零时间/, 'membership management list should show booking count before validity columns');
 assert.match(html, /function membershipBookingCount\(/, 'membership management should expose a helper to count stored-value bookings');
 assert.match(fnBody('membershipBookingCount'), /h\.type==='消费'&&isStoredValuePayMethod\(h\.payMethod\)&&String\(h\.category\|\|''\)\.includes\('订场'\)/, 'membership booking count should only include stored-value booking consumption');
-assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-orders" onclick="goPage\('membership-orders'\)"[\s\S]*历史订单/, 'membership purchase audit entry should use the new history order entry');
-assert.match(html, /class="tms-membership-audit-action tms-membership-audit-action-ledger" onclick="goPage\('membership-ledger'\)"[\s\S]*权益消耗记录/, 'membership ledger audit entry should use the new benefit consume entry');
+assert.match(membershipShell, /class="tms-membership-audit-action tms-membership-audit-action-orders" onclick="goPage\(\\'membership-orders\\'\)"[\s\S]*历史订单/, 'membership purchase audit entry should use the new history order entry');
+assert.match(membershipShell, /class="tms-membership-audit-action tms-membership-audit-action-ledger" onclick="goPage\(\\'membership-ledger\\'\)"[\s\S]*权益消耗记录/, 'membership ledger audit entry should use the new benefit consume entry');
 assert.match(pagesCss, /\.tms-toolbar-secondary-actions\{display:flex;align-items:center;gap:8px\}/, 'toolbar secondary button container should keep 8px spacing');
 assert.match(pagesCss, /\.tms-membership-audit-action\{[^}]*display:inline-flex[^}]*align-items:center[^}]*gap:6px[^}]*color:#F1E9E2[^}]*font-size:13px[^}]*font-weight:400[^}]*line-height:36px/, 'membership audit entries should match import/export text action style');
 assert.match(pagesCss, /\.tms-membership-audit-action svg\{[^}]*width:16px[^}]*height:16px[^}]*color:#F1E9E2/, 'membership audit icons should use 16px cream icons');
@@ -213,14 +227,14 @@ assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:320px;
 assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:500px;max-width:none;color:#A3968F"/, 'membership plan benefits should use the remark color while staying fully visible');
 assert.match(html, /会员账户<\/span>/, 'court user list should label the membership account action clearly');
 assert.match(html, /function openMembershipBenefitPickerModal/, 'generic consume and supplement actions should let operators choose a benefit type');
-assert.match(html, /id="membershipBenefitSaveBtn"[\s\S]*保存中/, 'benefit save action should show a submitting state');
+assert.match(fnBody('saveMembershipBenefit'), /runStandardMutation\('membershipBenefitSaveBtn'/, 'benefit save action should show a submitting state through the global mutation helper');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase audit page should use breadcrumb-style navigation');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员权益流水/, 'ledger audit page should use breadcrumb-style navigation');
 assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only note');
 assert.match(html, /支付日期<\/th>[\s\S]*录入时间<\/th>[\s\S]*订场用户/, 'membership order audit should show pay date and recorded time columns');
 assert.match(html, /会员方案 \*[\s\S]*系统价格[\s\S]*实收\/充值金额[\s\S]*改价原因/, 'membership order modal should expose system price and override reason fields');
 assert.match(html, /支付日期<\/th>[\s\S]*系统价[\s\S]*成交价[\s\S]*改价原因/, 'membership order audit should show price snapshot columns');
-assert.match(html, /当前会员[\s\S]*courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
+assert.match(fnBody('renderMemberships'), /const tierLabel=courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');
 assert.match(html, /membershipLedgerOperatorText/, 'membership ledger audit should normalize operator account names');
@@ -235,18 +249,18 @@ assert.match(fnBody('membershipDefaultSortDir'), /return 'desc'/, 'first-open da
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
 assert.match(html, /function membershipFirstOpenDate/, 'membership management should compute first-open date from membership orders');
 assert.match(html, /function onMembershipSearchChange\(\)/, 'membership management search should reset to the first page');
-assert.match(html, /id="membershipSearch"[\s\S]*oninput="onMembershipSearchChange\(\)"/, 'membership management search should use the standard search handler');
+assert.match(membershipShell, /search:\{id:'membershipSearch',oninput:'onMembershipSearchChange\(\)'/, 'membership management search should use the standard search handler');
 assert.match(html, /let membershipTierFilterValue=''/, 'membership management should keep a member type filter value');
-assert.match(html, /id="membershipTierFilter"/, 'membership management should expose a member type filter');
+assert.match(membershipShell, /filterHostIds:\['membershipTierFilter'\]/, 'membership management should expose a member type filter');
 assert.match(html, /function onMembershipToolbarFilterChange\(\)/, 'membership member type filter should rerender from page one');
-assert.match(fnBody('renderMemberships'), /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
+assert.match(membershipShell, /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
 assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订场次数/, 'membership management should remove old column labels');
 assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
 assert.match(fnBody('renderMemberships'), /membershipBookingCount\(court\)[\s\S]*courtBookingSummary\(court\)\.count/, 'membership management should show member bookings and total bookings separately');
 assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{court\.id\}'\)">订场/, 'membership management should provide view and booking actions');
-assert.match(fnBody('renderMemberships'), /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
-assert.match(fnBody('renderMemberships'), /class="tms-sticky-l"[\s\S]*会员姓名/, 'membership management should freeze the member name column');
-assert.match(fnBody('renderMemberships'), /membershipPageSize[\s\S]*membershipPagerInfo[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
+assert.match(membershipShell, /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
+assert.match(membershipShell, /label:'会员姓名'[\s\S]*className:'tms-sticky-l'/, 'membership management should freeze the member name column');
+assert.match(membershipShell, /membershipPagerInfo[\s\S]*membershipPageSize[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
 assert.match(fnBody('renderMemberships'), /renderStandardEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
 assert.match(pagesCss, /#page-memberships \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership management table should freeze the left name column');
 assert.match(pagesCss, /#page-memberships \.tms-pagination[\s\S]*min-height:32px/, 'membership management pager should keep the standard compact height');

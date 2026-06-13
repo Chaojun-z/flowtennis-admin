@@ -134,10 +134,10 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-prices .price-table .tms-cell-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #page-prices .price-table th:nth-child(3),#page-prices .price-table td:nth-child(3){width:372px}
 #page-prices .price-table td:nth-child(3) .tms-cell-text{overflow:visible;text-overflow:clip;white-space:nowrap}
-#page-finance .finance-revenue-toolbar{margin-bottom:10px}
-#page-finance .finance-revenue-toolbar .tms-filters{gap:8px;flex-wrap:nowrap}
-#page-finance .finance-revenue-toolbar .tms-search-wrapper{width:300px;flex:0 0 300px}
-#page-finance .finance-revenue-toolbar .finance-date-host{flex:0 0 150px;min-width:150px}
+#page-finance .finance-table-toolbar{margin-bottom:10px}
+#page-finance .finance-table-toolbar .tms-filters{gap:8px;flex-wrap:nowrap}
+#page-finance .finance-table-toolbar .tms-search-wrapper{width:300px;flex:0 0 300px}
+#page-finance .finance-table-toolbar .finance-date-host{flex:0 0 150px;min-width:150px}
 #page-finance .finance-revenue-toolbar .tms-toolbar-right{margin-left:auto}
 #page-finance .finance-revenue-toolbar .tms-btn{height:34px;padding:0 14px;border-radius:6px;font-size:13px}
 #page-finance .finance-revenue-remark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}

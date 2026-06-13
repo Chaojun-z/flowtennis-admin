@@ -46,7 +46,7 @@ assert.match(styles, /\.schedule-confirm-box #confDesc[\s\S]*font-size:13px/, 's
 assert.match(styles, /\.schedule-confirm-value[\s\S]*font-weight:400/, 'schedule save confirm values should use regular weight');
 assert.match(fnBody('refreshSchEntitlementOptions'), /setScheduleEntitlementDropdown\(\[\], '', ids\.length>1\?'正在匹配学员课包':'正在重新计算可用课包'\);[\s\S]*hint\.textContent='正在匹配可用课包…';/, 'refreshing schedule entitlements should clear stale package options before async recommend returns');
 assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should use a helper to restore the save button safely');
-assert.match(fnBody('saveSchedule'), /resetScheduleSaveButton\(\)/, 'schedule save should restore the save button through the helper');
+assert.match(fnBody('saveSchedule'), /runStandardMutation\('scheduleSaveBtn'/, 'schedule save should restore the save button through the global mutation helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
 assert.match(source, /function renderAfterScheduleMutation\(\)/, 'schedule save should render follow-up views through a safe helper');
 assert.match(fnBody('renderAfterScheduleMutation'), /try\{renderSchedule\(\);renderClasses\(\);renderPlans\(\);renderCoachOps\(\);renderMySchedule\(\);\}catch\(err\)/, 'post-save render failures should not be reported as save failures');
@@ -223,8 +223,8 @@ assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('反馈内
 assert.match(source, /function editScheduleDetailSection\(/, 'schedule detail drawer should support local section editing');
 assert.match(source, /function cancelScheduleDetailSectionEdit\(/, 'schedule detail drawer should support cancelling local edits');
 assert.match(source, /function saveScheduleDetailSectionEdit\(/, 'schedule detail drawer should support saving local edits');
-assert.match(fnBody('saveScheduleDetailSectionEdit'), /saveButton[\s\S]*disabled=true[\s\S]*保存中/, 'local section saves should give immediate saving feedback');
-assert.match(fnBody('saveScheduleDetailSectionEdit'), /catch\(e\)[\s\S]*saveButton[\s\S]*disabled=false/, 'local section save failures should restore the save button');
+assert.match(fnBody('saveScheduleDetailSectionEdit'), /runStandardMutation\(saveButton/, 'local section saves should give immediate saving feedback through the global mutation helper');
+assert.doesNotMatch(fnBody('saveScheduleDetailSectionEdit'), /catch\(e\)[\s\S]*saveButton[\s\S]*disabled=false/, 'local section save failures should not restore the save button by hand');
 assert.match(fnBody('renderScheduleDetailCard'), /schedule-detail-action muted[\s\S]*取消[\s\S]*schedule-detail-action primary[\s\S]*保存修改/, 'schedule detail local edit actions should show cancel and save modification');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay[\s\S]*justify-content:flex-end/, 'schedule detail drawer overlay should align the panel to the right');
 assert.match(styles, /\.overlay\.schedule-drawer-overlay \.modal\.modal-court\.modal-schedule-drawer\{[\s\S]*translateX\(100%\)/, 'schedule detail drawer should close by sliding out to the right');

@@ -1,7 +1,7 @@
 let currentPage=normalizeStudentListPage(localStorage.getItem(PAGE_KEY)||'package-students'),campus=localStorage.getItem(CAMPUS_KEY)||'all',globalDateRangeFilterValue=localStorage.getItem(GLOBAL_DATE_RANGE_KEY)||'全部',globalDateRangeStart=localStorage.getItem(GLOBAL_DATE_RANGE_START_KEY)||'',globalDateRangeEnd=localStorage.getItem(GLOBAL_DATE_RANGE_END_KEY)||'',editId=null,delId=null,delType=null,_pending=[];
 let batchDeleteCourtIds=[];
-let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,pkgPage=1,pricePage=1,financeLedgerPage=1,financeRevenuePage=1,adminUserPage=1;
-let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='packagePurchaseDate',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
+let stuPage=1,leadPage=1,clsPage=1,planPage=1,schPage=1,courtPage=1,purPage=1,pkgPage=1,pricePage=1,financeLedgerPage=1,financeRevenuePage=1,financeRecognizedPage=1,adminUserPage=1;
+let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='packagePurchaseDate',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,financeRecognizedPageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
 let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='desc';
 let membershipTierFilterValue='';
 let purPackageFilterValue='',purOwnerCoachFilterValue='';
@@ -58,7 +58,7 @@ function renderStudentsIfVisible(){
   if(isStudentListPage(currentPage))renderStudents();
   if(currentPage==='mystudents')renderMyStudents();
 }
-function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();courtPage=standardListFirstPage();purPage=standardListFirstPage();pkgPage=standardListFirstPage();pricePage=standardListFirstPage();financeRevenuePage=1;adminUserPage=standardListFirstPage();refreshGlobalTopFilters();if(isStudentListPage(currentPage))renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();if(currentPage==='purchases')renderPurchases();if(currentPage==='prices')renderPrices();}
+function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();courtPage=standardListFirstPage();purPage=standardListFirstPage();pkgPage=standardListFirstPage();pricePage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();refreshGlobalTopFilters();if(isStudentListPage(currentPage))renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();if(currentPage==='purchases')renderPurchases();if(currentPage==='prices')renderPrices();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
 function appConfirm(message,{title='请确认',confirmText='确定',danger=false,html=false,hideIcon=false,boxClass=''}={}){
@@ -163,28 +163,40 @@ function applyStudentCascadeDeleteResult(studentId,result={}){
 }
 async function doDelete(){
   if(!delId)return;
-  try{
-    if(delType==='court-batch'){
-      const ids=[...batchDeleteCourtIds];
-      closeConf();
-      await runBatchDeleteCourts(ids);
-      return;
-    }
+  if(delType==='court-batch'){
+    const ids=[...batchDeleteCourtIds];
+    closeConf();
+    await runBatchDeleteCourts(ids);
+    return;
+  }
+  const currentDelId=delId,currentDelType=delType;
+  await runStandardMutation('confYesBtn',async()=>{
     const m={court:'/courts/',student:'/students/',product:'/products/',package:'/packages/',purchase:'/purchases/',plan:'/plans/',schedule:'/schedule/',class:'/classes/',coach:'/coaches/',campus:'/campuses/','membership-plan':'/membership-plans/'};
-    const result=await apiCall('DELETE',m[delType]+delId,delType==='student'?{confirm:'DELETE_STUDENT_HISTORY'}:undefined);
-    if(delType==='court')courts=courts.filter(u=>u.id!==delId);
-    else if(delType==='student')applyStudentCascadeDeleteResult(delId,result);
-    else if(delType==='product')products=products.filter(u=>u.id!==delId);
-    else if(delType==='package')packages=packages.filter(u=>u.id!==delId);
-    else if(delType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});closeConf();closeModal();toast('已作废','error');return;}
-    else if(delType==='plan')plans=plans.filter(u=>u.id!==delId);
-    else if(delType==='schedule'){schedules=schedules.filter(u=>u.id!==delId);mergeScheduleSaveResult(result,null);setDatasetValue('schedule',schedules);}
-    else if(delType==='class'){classes=classes.filter(u=>u.id!==delId);plans=plans.filter(p=>p.classId!==delId);}
-    else if(delType==='coach')coaches=coaches.filter(u=>u.id!==delId);
-    else if(delType==='campus'){campuses=campuses.filter(u=>u.id!==delId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});buildCampusTabs();}
-    else if(delType==='membership-plan')membershipPlans=membershipPlans.filter(u=>u.id!==delId);
-    closeConf();closeModal();toast(result?.archived?'已隐藏':'已删除',result?.archived?'warn':'error');renderAll();
-  }catch(e){toast('删除失败：'+e.message,'error');closeConf();}
+    const result=await apiCall('DELETE',m[currentDelType]+currentDelId,currentDelType==='student'?{confirm:'DELETE_STUDENT_HISTORY'}:undefined);
+    if(currentDelType==='court')courts=courts.filter(u=>u.id!==currentDelId);
+    else if(currentDelType==='student')applyStudentCascadeDeleteResult(currentDelId,result);
+    else if(currentDelType==='product')products=products.filter(u=>u.id!==currentDelId);
+    else if(currentDelType==='package')packages=packages.filter(u=>u.id!==currentDelId);
+    else if(currentDelType==='purchase'){await loadPageDataAndRender(currentPage,{quiet:true,force:true});return {...result,purchaseVoid:true};}
+    else if(currentDelType==='plan')plans=plans.filter(u=>u.id!==currentDelId);
+    else if(currentDelType==='schedule'){schedules=schedules.filter(u=>u.id!==currentDelId);mergeScheduleSaveResult(result,null);setDatasetValue('schedule',schedules);}
+    else if(currentDelType==='class'){classes=classes.filter(u=>u.id!==currentDelId);plans=plans.filter(p=>p.classId!==currentDelId);}
+    else if(currentDelType==='coach')coaches=coaches.filter(u=>u.id!==currentDelId);
+    else if(currentDelType==='campus'){campuses=campuses.filter(u=>u.id!==currentDelId);CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=campusDisplayName(x.name||x.code||x.id);});buildCampusTabs();}
+    else if(currentDelType==='membership-plan')membershipPlans=membershipPlans.filter(u=>u.id!==currentDelId);
+    return result;
+  },{
+    loadingText:'删除中…',
+    errorPrefix:'删除失败',
+    closeOnSuccess:true,
+    onSuccess:(result={})=>{
+      closeConf();
+      toast(result?.purchaseVoid?'已作废':(result?.archived?'已隐藏':'已删除'),result?.archived?'warn':'error');
+    },
+    refresh:(result={})=>{
+      if(!result?.purchaseVoid)renderAll();
+    }
+  });
 }
 function closeModal(){
   const ov=document.getElementById('overlay');

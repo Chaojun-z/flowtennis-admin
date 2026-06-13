@@ -13,6 +13,7 @@ const pageScriptFiles = [
   'admin-users.js',
   'coaches.js',
   'campusmgr.js',
+  'leads.js',
   'students.js',
   'schedule.js',
   'classes.js',
@@ -24,6 +25,7 @@ const pageScriptFiles = [
   'coachops.js',
   'prices.js',
   'courts.js',
+  'matches.js',
   'coach-portal.js'
 ];
 const appSource = [

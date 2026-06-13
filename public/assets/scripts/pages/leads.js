@@ -783,19 +783,17 @@ function cancelLeadDrawerEdit(leadId){
   openLeadDetail(leadId);
 }
 async function saveLeadBasicFromDrawer(leadId){
-  const btn=document.getElementById('leadDrawerSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('leadDrawerSaveBtn',async()=>{
     await apiCall('PUT','/leads/'+leadId,leadPayloadFromForm());
+  },{
+    successText:'线索已更新 ✓',
+    refresh:async()=>{
     await refreshLeadRuntime();
     renderLeads();
     leadDetailEditingSection='';
     openLeadDetail(leadId);
-    toast('线索已更新 ✓','success');
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='保存';}
-  }
+    }
+  });
 }
 function leadDetailBasicTabHtml(lead){
   const editing=leadDetailEditingSection==='basic';
@@ -839,21 +837,19 @@ function leadFollowupPayloadFromForm(){
   };
 }
 async function saveLeadFollowupFromDrawer(leadId,followupId=''){
-  const btn=document.getElementById('leadFollowupDrawerSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('leadFollowupDrawerSaveBtn',async()=>{
     if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,leadFollowupPayloadFromForm());
     else await apiCall('POST',`/leads/${leadId}/followups`,leadFollowupPayloadFromForm());
+  },{
+    successText:'跟进已保存 ✓',
+    refresh:async()=>{
     await refreshLeadRuntime();
     renderLeads();
     leadDetailEditingSection='';
     leadDetailEditingFollowupId='';
     openLeadDetail(leadId);
-    toast('跟进已保存 ✓','success');
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='保存跟进';}
-  }
+    }
+  });
 }
 function leadDetailFollowupsTabHtml(lead){
   const editing=leadDetailEditingSection==='followup';
@@ -960,20 +956,18 @@ async function saveLead(leadId=''){
   const phone=document.getElementById('lead_phone')?.value?.trim?.()||'';
   if(!wechatName){toast('请填写微信名','warn');return;}
   if(!leadPhoneValid(phone)){toast('手机号格式不正确','warn');return;}
-  const btn=document.getElementById('leadSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const payload=leadPayloadFromForm();
-  try{
+  await runStandardMutation('leadSaveBtn',async()=>{
     if(leadId)await apiCall('PUT','/leads/'+leadId,payload);
     else await apiCall('POST','/leads',{...payload,createInitialFollowup:true});
-    closeModal();
+  },{
+    successText:leadId?'线索已更新 ✓':'线索已创建 ✓',
+    closeOnSuccess:true,
+    refresh:async()=>{
     await refreshLeadRuntime();
     renderLeads();
-    toast(leadId?'线索已更新 ✓':'线索已创建 ✓','success');
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='保存';}
-  }
+    }
+  });
 }
 function openLeadFollowupModal(leadId,followupId=''){
   const lead=leadById(leadId)||null;
@@ -985,21 +979,19 @@ function openLeadFollowupModal(leadId,followupId=''){
   openStandardModal({title:followup?'编辑跟进':'新增跟进',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
 async function saveLeadFollowup(leadId,followupId=''){
-  const btn=document.getElementById('leadFollowupSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const payload=leadFollowupPayloadFromForm();
-  try{
+  await runStandardMutation('leadFollowupSaveBtn',async()=>{
     if(followupId)await apiCall('PUT',`/lead-followups/${followupId}`,payload);
     else await apiCall('POST',`/leads/${leadId}/followups`,payload);
+  },{
+    successText:'跟进已保存 ✓',
+    refresh:async()=>{
     closeModal();
     await refreshLeadRuntime();
     renderLeads();
     openLeadDetail(leadId);
-    toast('跟进已保存 ✓','success');
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='保存跟进';}
-  }
+    }
+  });
 }
 function renderLeadImportPreviewBody(){
   const summary=leadImportState.summary||null;
@@ -1123,19 +1115,19 @@ function openLeadLinkStudentModal(leadId){
 async function saveLeadLinkStudent(leadId){
   const studentId=document.getElementById('lead_link_student_id')?.value||'';
   if(!studentId){toast('请选择学员','warn');return;}
-  const btn=document.getElementById('leadLinkStudentBtn');
-  if(btn){btn.disabled=true;btn.textContent='关联中…';}
-  try{
+  await runStandardMutation('leadLinkStudentBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/link-student`,{studentId});
+  },{
+    loadingText:'关联中…',
+    errorPrefix:'关联失败',
+    successText:'学员关联已保存 ✓',
+    refresh:async()=>{
     await refreshLeadRuntime({withStudents:true});
     renderLeads();
     leadDetailConversionMode='';
     openLeadDetail(leadId);
-    toast('学员关联已保存 ✓','success');
-  }catch(e){
-    toast('关联失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='确认关联';}
-  }
+    }
+  });
 }
 function openLeadLinkCourtModal(leadId){
   if(document.getElementById('overlay')?.dataset.leadDetailId){
@@ -1152,19 +1144,19 @@ function openLeadLinkCourtModal(leadId){
 async function saveLeadLinkCourt(leadId){
   const courtId=document.getElementById('lead_link_court_id')?.value||'';
   if(!courtId){toast('请选择订场用户','warn');return;}
-  const btn=document.getElementById('leadLinkCourtBtn');
-  if(btn){btn.disabled=true;btn.textContent='关联中…';}
-  try{
+  await runStandardMutation('leadLinkCourtBtn',async()=>{
     await apiCall('POST',`/leads/${leadId}/link-court`,{courtId});
+  },{
+    loadingText:'关联中…',
+    errorPrefix:'关联失败',
+    successText:'订场关联已保存 ✓',
+    refresh:async()=>{
     await refreshLeadRuntime({withCourts:true});
     renderLeads();
     leadDetailConversionMode='';
     openLeadDetail(leadId);
-    toast('订场关联已保存 ✓','success');
-  }catch(e){
-    toast('关联失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='确认关联';}
-  }
+    }
+  });
 }
 function openLeadConvertModal(leadId){
   leadDetailActiveTab='conversion';

@@ -40,5 +40,6 @@ assert.match(fnBody(coreSource, 'openStandardModal'), /modal\.className=`modal m
 assert.match(fnBody(coreSource, 'openStandardDetailDrawer'), /modalClass='modal modal-court modal-schedule-drawer'/, 'standard drawer should keep one global drawer class rule');
 assert.match(fnBody(coreSource, 'setStandardActionLoading'), /dataset\.standardLoading/, 'standard action loading should be tracked on the button');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /try[\s\S]*await task\(\)[\s\S]*catch[\s\S]*toast\([\s\S]*return null[\s\S]*finally/, 'standard mutation helper should keep failures open and always clear loading');
+assert.match(fnBody(coreSource, 'runStandardMutation'), /onSuccess[\s\S]*refresh[\s\S]*formatError/, 'standard mutation helper should own success callbacks, refresh callbacks, and page-specific error formatting');
 
 console.log('standard overlay component tests passed');

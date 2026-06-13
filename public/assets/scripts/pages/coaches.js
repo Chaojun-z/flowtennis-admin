@@ -27,10 +27,12 @@ async function saveCoach(){
   const name=document.getElementById('co_name').value.trim();if(!name){toast('请填写姓名','warn');return;}
   const phone=document.getElementById('co_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const data={name,phone,campus:document.getElementById('co_campus').value,hireDate:document.getElementById('co_hireDate').value,status:document.getElementById('co_status').value,notes:document.getElementById('co_notes').value.trim()};
-  const btn=document.getElementById('coachSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('coachSaveBtn',async()=>{
     if(editId){const r=await apiCall('PUT','/coaches/'+editId,data);const i=coaches.findIndex(x=>x.id===editId);if(i>=0)coaches[i]=r;}
     else{const r=await apiCall('POST','/coaches',data);coaches.unshift(r);}
-    closeModal();renderCoaches();toast(editId?'更新成功 ✓':'添加成功 ✓','success');
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+  },{
+    successText:editId?'更新成功 ✓':'添加成功 ✓',
+    closeOnSuccess:true,
+    refresh:renderCoaches
+  });
 }

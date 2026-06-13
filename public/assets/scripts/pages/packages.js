@@ -766,7 +766,6 @@ async function savePackage(){
   if(!courseType){toast('请选择课程类型','warn');return;}
   const coachNames=[...document.querySelectorAll('.pkg-coach-cb:checked')].map(cb=>cb.value);
   const campusIds=[...document.querySelectorAll('.pkg-campus-cb:checked')].map(cb=>cb.value);
-  const btn=document.querySelector('.btn-save');btn.disabled=true;btn.textContent='保存中…';
   document.getElementById('pkg_notes').value=document.getElementById('pkg_notes_inline').value.trim();
   const timeBand=document.getElementById('pkg_timeBand').value.trim()||'全天';
   const presetWindows=packageTimeBandPresetWindows(timeBand);
@@ -777,5 +776,13 @@ async function savePackage(){
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
   const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:courseType==='小班课'&&smallClassType==='bootcamp'?4:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:0,saleStartDate,saleEndDate,usageStartDate,usageEndDate:'',timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
-  try{if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}closeModal();toast(editId?'课包修改成功 ✓':'课包创建成功 ✓','success');renderPackages();renderProducts();}catch(e){toast('保存失败：'+packageSaveErrorText(e),'error');btn.disabled=false;btn.textContent='保存';}
+  await runStandardMutation(document.querySelector('.btn-save'),async()=>{
+    if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}
+    else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}
+  },{
+    successText:editId?'课包修改成功 ✓':'课包创建成功 ✓',
+    closeOnSuccess:true,
+    refresh:[renderPackages,renderProducts],
+    formatError:packageSaveErrorText
+  });
 }

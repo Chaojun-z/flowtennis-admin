@@ -14,9 +14,19 @@ function fnBody(name) {
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
 }
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = source.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = source.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+const coachOpsShell = standardConfigBlock('coachops');
 
 assert.match(source, /let coachOpsMode='week'/, 'coach operations should default to weekly view');
-assert.match(html, /id="page-coachops"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table"[\s\S]*体验课转化率[\s\S]*课程类型分布/, 'coach workload should use the standard table style and expose the new columns');
+assert.match(`${html}\n${coachOpsShell}`, /id="page-coachops" data-standard-list-shell="coachops"[\s\S]*bodyId:'coachOpsTbody'[\s\S]*体验课转化率[\s\S]*课程类型分布/, 'coach workload should use the standard table style and expose the new columns');
 assert.doesNotMatch(html, /id="page-coachops"[\s\S]*当前筛选总时长[\s\S]*coachOpsTbody/, 'coach workload should remove current filtered duration column');
 assert.match(html, /id="page-coachschedule"[\s\S]*id="coachOpsTimeline"/, 'coach schedule should live in its own page');
 assert.doesNotMatch(html, /coachOpsTabSchedule|coachOpsTabWorkload|coachOpsStats/, 'coach operations split pages should not keep old tabs or top stats');

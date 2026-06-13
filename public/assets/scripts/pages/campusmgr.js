@@ -18,12 +18,16 @@ async function saveCampus(){
   const code=document.getElementById('ca_code').value.trim();
   if(!name||!code){toast('请填写名称和代码','warn');return;}
   if(!editId&&campuses.find(c=>(c.code||c.id)===code)){toast('代码已存在','warn');return;}
-  const btn=document.getElementById('campusSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
   const data={name,code};
-  try{
+  await runStandardMutation('campusSaveBtn',async()=>{
     if(editId){await apiCall('PUT','/campuses/'+editId,data);const i=campuses.findIndex(x=>x.id===editId);campuses[i]={...campuses[i],...data};}
     else{const r=await apiCall('POST','/campuses',data);campuses.push(r);}
+  },{
+    successText:editId?'校区修改成功 ✓':'校区新增成功 ✓',
+    closeOnSuccess:true,
+    refresh:()=>{
     CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
-    buildCampusTabs();closeModal();toast(editId?'校区修改成功 ✓':'校区新增成功 ✓','success');renderCampuses();renderAll();
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+      buildCampusTabs();renderCampuses();renderAll();
+    }
+  });
 }

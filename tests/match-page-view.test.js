@@ -7,16 +7,26 @@ const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
 const components = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'components.js'), 'utf8');
 const state = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
 const bootstrap = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'core', 'bootstrap.js'), 'utf8');
+const standard = fs.readFileSync(path.join(root, 'public', 'assets', 'scripts', 'standard', 'components.js'), 'utf8');
 const api = fs.readFileSync(path.join(root, 'api', 'index.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(root, 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = standard.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = standard.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+const matchShell = standardConfigBlock('matches');
 
 assert.match(components, /goPage\('matches'/, 'sidebar should expose match management');
 assert.match(html, /id="page-matches"/, 'admin should include match page section');
 assert.doesNotMatch(html, /这里只看球局、订场、AA 收款和日志/, 'match page should remove the old explanatory copy');
 assert.doesNotMatch(html, /id="page-matches"[\s\S]*tms-page-head-title[\s\S]*约球管理/, 'match page should remove the duplicated in-page title above the search box');
 assert.match(components, /data-sidebar-icon="matches" width="15" height="15"/, 'match management should use the 15px custom tennis icon');
-assert.match(html, /id="matchTbody"/, 'match page should include a table body');
-assert.match(html, /id="matchStatusFilterHost"/, 'match page should keep the shared status filter host');
+assert.match(matchShell, /bodyId:'matchTbody'/, 'match page should include a table body');
+assert.match(matchShell, /matchStatusFilterHost/, 'match page should keep the shared status filter host');
 assert.match(html, /assets\/scripts\/pages\/matches\.js/, 'index should load match page script');
 assert.match(state, /matches:\['matchesPage'\]/, 'match page should load match API data');
 assert.match(state, /matchesPage:\(\)=>apiCall\('GET','\/admin\/matches'\)/, 'match dataset loader should call admin match API');

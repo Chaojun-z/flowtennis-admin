@@ -35,8 +35,14 @@ function openProductModal(id){
 }
 async function saveProduct(){
   const name=document.getElementById('p_name').value.trim();if(!name){toast('请输入名称','warn');return;}
-  const btn=document.getElementById('productSaveBtn');btn.disabled=true;btn.textContent='保存中…';
   const type=normalizeCourseType(document.getElementById('p_type').value);
   const data={name,type,experienceType:type==='体验课'?normalizeExperienceType(document.getElementById('p_experienceType')?.value):'',maxStudents:parseInt(document.getElementById('p_max').value)||1,price:parseFloat(document.getElementById('p_price').value)||0,lessons:parseInt(document.getElementById('p_lessons').value)||0,notes:document.getElementById('p_notes').value.trim()};
-  try{if(editId){await apiCall('PUT','/products/'+editId,data);const i=products.findIndex(x=>x.id===editId);products[i]={...products[i],...data,id:editId};classes.forEach(c=>{if(c.productId===editId){c.productName=name;if(c.classNo)c.className=c.classNo+'-'+name;}});plans.forEach(p=>{const cls=classes.find(c=>c.id===p.classId);if(cls?.productId===editId){p.productName=name;p.className=cls.className||p.className;}});}else{const r=await apiCall('POST','/products',data);products.unshift(r);}closeModal();toast(editId?'修改成功 ✓':'添加成功，可以去班次管理创建班次','success');renderProducts();renderPackages();renderClasses();renderPlans();}catch(e){toast('保存失败：'+e.message,'error');btn.disabled=false;btn.textContent='保存';}
+  await runStandardMutation('productSaveBtn',async()=>{
+    if(editId){await apiCall('PUT','/products/'+editId,data);const i=products.findIndex(x=>x.id===editId);products[i]={...products[i],...data,id:editId};classes.forEach(c=>{if(c.productId===editId){c.productName=name;if(c.classNo)c.className=c.classNo+'-'+name;}});plans.forEach(p=>{const cls=classes.find(c=>c.id===p.classId);if(cls?.productId===editId){p.productName=name;p.className=cls.className||p.className;}});}
+    else{const r=await apiCall('POST','/products',data);products.unshift(r);}
+  },{
+    successText:editId?'修改成功 ✓':'添加成功，可以去班次管理创建班次',
+    closeOnSuccess:true,
+    refresh:[renderProducts,renderPackages,renderClasses,renderPlans]
+  });
 }

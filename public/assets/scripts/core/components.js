@@ -216,16 +216,20 @@ function setStandardActionLoading(buttonOrId,loading=true,loadingText='保存中
   delete btn.dataset.standardIdleText;
   delete btn.dataset.standardLoading;
 }
-async function runStandardMutation(buttonOrId,task,{loadingText='保存中...',errorPrefix='保存失败',successText='',closeOnSuccess=false}={}){
+async function runStandardMutation(buttonOrId,task,{loadingText='保存中...',errorPrefix='保存失败',successText='',closeOnSuccess=false,onSuccess=null,refresh=null,formatError=null}={}){
   const btn=typeof buttonOrId==='string'?document.getElementById(buttonOrId):buttonOrId;
   setStandardActionLoading(btn,true,loadingText);
   try{
     const result=await task();
+    if(typeof onSuccess==='function')await onSuccess(result);
+    const refreshers=Array.isArray(refresh)?refresh:(refresh?[refresh]:[]);
+    for(const fn of refreshers){if(typeof fn==='function')await fn(result);}
     if(successText)toast(successText,'ok');
     if(closeOnSuccess)closeModal();
     return result;
   }catch(e){
-    toast(`${errorPrefix}：${e.message}`,'error');
+    const message=typeof formatError==='function'?formatError(e):(e?.message||e);
+    toast(`${errorPrefix}：${message}`,'error');
     return null;
   }finally{
     setStandardActionLoading(btn,false);
@@ -509,7 +513,7 @@ function selectGlobalTopCampus(value,event){
   closeStandardTopDropdowns();
 }
 function renderCurrentGlobalFilterPage(){
-  stuPage=1;leadPage=1;schPage=1;financeLedgerPage=1;financeRevenuePage=1;adminUserPage=1;
+  stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();
   if(currentPage==='students')renderStudents();
   else if(typeof isStudentListPage==='function'&&isStudentListPage(currentPage))renderStudents();
   if(currentPage==='leads')renderLeads();

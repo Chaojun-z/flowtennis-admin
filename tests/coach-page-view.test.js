@@ -17,11 +17,21 @@ function fnBody(name){
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
 }
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = source.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = source.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
 
-assert.match(html, /id="page-coaches"[\s\S]*class="tms-toolbar"/, 'coach page should use the court-style toolbar');
-assert.match(html, /id="coachSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'coach page should use the unified search field');
-assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openCoachModal\(null\)"/, 'coach add button should use the court-style primary button');
-assert.match(html, /id="page-coaches"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'coach page should use the court-style table shell');
+const coachShell = standardConfigBlock('coaches');
+
+assert.match(html, /id="page-coaches" data-standard-list-shell="coaches"/, 'coach page should mount the standard list shell');
+assert.match(coachShell, /search:\{id:'coachSearch'[\s\S]*placeholder:'搜索姓名、手机号'|search:\{id:'coachSearch'/, 'coach page should use the unified search field');
+assert.match(coachShell, /<button class="tms-btn tms-btn-primary" onclick="openCoachModal\(null\)"/, 'coach add button should use the court-style primary button');
+assert.match(coachShell, /bodyId:'coachTbody'/, 'coach page should use the standard table shell');
 assert.match(html, /id="page-workbench"[\s\S]*id="workbenchBody"/, 'workbench should host the coach schedule shell');
 assert.doesNotMatch(html, /id="page-myschedule"/, 'standalone my schedule page should be removed');
 assert.doesNotMatch(html, /id="myScheduleStats"|id="mySchedulePrimarySection"|id="myScheduleSideSection"|id="myMobileSchedule"/, 'my schedule should remove the duplicate stat and list areas');
@@ -31,8 +41,8 @@ assert.match(fnBody('renderMySchedule'), /scheduleCourseType\(s\).*scheduleLocat
 assert.match(pagesCss, /#page-coaches \.tms-table\s*\{[^}]*min-width:1000px/s, 'coach table should not inherit the wide court table min width');
 assert.match(pagesCss, /#page-coaches \.tms-table-wrapper\s*\{[^}]*max-height:calc\(100vh - 190px\)/s, 'coach table should use more vertical space before scrolling');
 assert.match(pagesCss, /\.tms-dropdown-menu[^}]*overscroll-behavior:contain/s, 'dropdown scrolling should not drag the modal or page behind it');
-assert.match(html, /<th class="tms-sticky-r"[\s\S]*>操作<\/th>/, 'coach action header should stay visible on the right');
-assert.match(html, /<th[^>]*>入职时间<\/th>/, 'coach table should show hire date');
+assert.match(coachShell, /label:'操作'[\s\S]*className:'tms-sticky-r'/, 'coach action header should stay visible on the right');
+assert.match(coachShell, /label:'入职时间'/, 'coach table should show hire date');
 assert.doesNotMatch(fnBody('renderCoaches'), /class="abtn"|✏️|🗑️|class="badge /, 'coach rows should not use old icon buttons or old badge style');
 assert.match(fnBody('renderCoaches'), /renderStandardCellText/, 'coach rows should reuse court empty-value display rule');
 assert.match(fnBody('renderCoaches'), /hireDate/, 'coach rows should render hire date');

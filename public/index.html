@@ -46,48 +46,9 @@
     <!-- 学员信息 -->
     <div class="page-section active" id="page-students" data-standard-list-shell="students"></div>
     <!-- 班次管理 -->
-    <div class="page-section page-layout-standard" id="page-classes">
-      <div class="tms-stats-row" id="classStatsRow"></div>
-      <div class="tms-audit-note">班次用于组织固定上课关系和学习进度；是否还能继续约课，仍然以课包余额和可用规则为准。</div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="clsSearch" placeholder="搜索姓名、手机号" oninput="renderClasses()">
-          </div>
-          <div id="clsStatusFilterHost"></div>
-          <div id="clsCampusFilterHost"></div>
-          <div id="clsCoachFilterHost"></div>
-          <div id="clsTypeFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openClassModal(null)">新建班次</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">班次名称</th><th style="width:130px">班次编号</th><th style="width:150px">课程</th><th style="width:110px">类型</th><th style="width:120px">开始日期</th><th style="width:120px">结束日期</th><th style="width:100px">校区</th><th style="width:180px">学员</th><th style="width:100px">教练</th><th style="width:100px">上课日</th><th style="width:120px">最近上课</th><th style="width:120px">下次课</th><th style="width:130px">课时进度</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:160px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="clsTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="clsPagerInfo">共 0 条</span></div><div class="tms-page-numbers" id="clsPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section page-layout-standard" id="page-classes" data-standard-list-shell="classes"></div>
     <!-- 学习计划 -->
-    <div class="page-section" id="page-plans">
-      <div class="tms-audit-note">学习计划由「班次管理」自动生成，每个学员 × 班次 = 一条记录；班次进度用于看学习推进，真实可约课以课包余额规则为准。</div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="planSearch" placeholder="搜索姓名、手机号" oninput="renderPlans()">
-          </div>
-          <div id="planStatusFilterHost"></div>
-          <div id="planCampusFilterHost"></div>
-          <div id="planCoachFilterHost"></div>
-          <div id="planTypeFilterHost"></div>
-          <div id="planStageFilterHost"></div>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:140px;padding-left:20px">学员</th><th style="width:140px">手机号</th><th style="width:180px">班次</th><th style="width:150px">课程</th><th style="width:110px">教练</th><th style="width:120px">最近上课</th><th style="width:140px">班次进度</th><th style="width:240px">课包余额</th><th style="width:100px">状态</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="planTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="planPagerInfo">共 0 条</span></div><div class="tms-page-numbers" id="planPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-plans" data-standard-list-shell="plans"></div>
     <!-- 排课表 -->
     <div class="page-section" id="page-schedule" data-standard-list-shell="schedule"></div>
     <!-- 教练排课 -->
@@ -122,83 +83,17 @@
       </div>
     </div>
     <!-- 教练工作量 -->
-    <div class="page-section" id="page-coachops">
-      <div class="coach-ops-shell">
-      <div class="coach-ops-toolbar">
-        <div class="coach-ops-toolbar-main">
-          <div id="coachOpsWorkloadRangeHost"></div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(-1)" title="上一段">‹</button>
-          <div class="coach-date-wrap">
-            <input id="coachOpsWorkloadDate" type="hidden" value="">
-            <button class="coach-date-btn" id="coachOpsWorkloadDateBtn" onclick="toggleCoachOpsPicker(event)" type="button"></button>
-            <div class="coach-date-pop" id="coachOpsWorkloadPicker"></div>
-          </div>
-          <button class="coach-ops-nav coach-ops-arrow" onclick="shiftCoachOpsDate(1)" title="下一段">›</button>
-          <button class="coach-ops-nav" onclick="setCoachOpsToday()">今天</button>
-        </div>
-      </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:130px">体验课转化率</th><th style="width:220px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:180px">校区分布</th><th style="width:140px">时间段</th></tr></thead><tbody id="coachOpsTbody"></tbody></table></div></div>
-    </div>
+    <div class="page-section" id="page-coachops" data-standard-list-shell="coachops"></div>
     <div class="page-section" id="page-finance">
       <div id="financeLedgerPanel">
       <div id="financeLedgerLoading" class="finance-loading-card" style="display:none">
         <div class="finance-loading-title">总账加载中</div>
         <div class="finance-loading-desc">先把这一页数据加载完整，再展示筛选和表格。</div>
         </div>
-        <div id="financeLedgerReady" class="section-stack">
-          <div class="tms-stats-row finance-ledger-stats" id="financeOverviewPrimaryStats"></div>
-          <div class="tms-stats-row" id="financeOverviewSecondaryStats"></div>
-          <div class="tms-toolbar">
-            <div class="tms-filters">
-              <div class="tms-search-wrapper">
-                <span class="tms-search-icon" aria-hidden="true"></span>
-                <input type="text" class="tms-search-input" id="financeLedgerSearch" placeholder="搜索姓名、手机号" oninput="resetFinanceLedgerPage();renderFinanceLedger()">
-              </div>
-              <div id="financeLedgerTransactionTypeFilterHost"></div>
-              <div id="financeLedgerBusinessTypeFilterHost"></div>
-              <div id="financeLedgerPayMethodFilterHost"></div>
-            </div>
-          </div>
-          <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">交易时间</th><th style="width:120px">姓名</th><th style="width:100px">交易类型</th><th style="width:120px">交易金额</th><th style="width:180px">业务类型</th><th style="width:120px">支付方式</th><th style="width:100px">校区</th><th style="width:140px">操作人</th><th style="width:260px">备注</th></tr></thead><tbody id="financeLedgerTbody"></tbody></table></div>
-            <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeLedgerPagerInfo">共 0 条</span><div id="financeLedgerPageSize"></div></div><div class="tms-page-numbers" id="financeLedgerPagerBtns"></div></div>
-          </div>
-        </div>
+        <div id="financeLedgerReady" class="section-stack" data-standard-list-shell="finance-ledger"></div>
       </div>
-      <div id="financeRevenuePanel" class="section-stack" style="display:none">
-        <div class="tms-stats-row finance-ledger-stats" id="coachOpsRevenueStats"></div>
-        <div class="tms-toolbar finance-revenue-toolbar">
-          <div class="tms-filters">
-            <div class="tms-search-wrapper">
-              <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="coachOpsRevenueSearch" placeholder="搜索姓名、手机号" oninput="resetFinanceRevenuePage();renderFinanceRevenueReport()">
-            </div>
-            <div id="financeRevenueTypeFilterHost"></div>
-            <div id="financeRevenuePayMethodFilterHost"></div>
-          </div>
-          <div class="tms-toolbar-right">
-            <span class="tms-export-action" onclick="exportCoachOpsRevenueCsv()">导出</span>
-          </div>
-        </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">交易时间</th><th style="width:120px">姓名</th><th style="width:150px">业务类型</th><th style="width:110px">支付方式</th><th style="width:90px">应收</th><th style="width:90px">实收</th><th style="width:90px">差价</th><th style="width:150px">差价说明</th><th style="width:100px">校区</th><th style="width:140px">操作人</th><th style="width:260px">备注</th></tr></thead><tbody id="financeRevenueTbody"></tbody></table></div>
-          <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="financeRevenuePagerInfo">共 0 条</span><div id="financeRevenuePageSize"></div></div><div class="tms-page-numbers" id="financeRevenuePagerBtns"></div></div>
-        </div>
-      </div>
-      <div id="financeRecognizedPanel" class="section-stack" style="display:none">
-        <div class="tms-stats-row finance-ledger-stats" id="coachOpsConsumeStats"></div>
-        <div class="tms-toolbar">
-          <div class="tms-filters">
-            <div class="tms-search-wrapper">
-              <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="coachOpsConsumeSearch" placeholder="搜索姓名、手机号" oninput="renderFinanceConsumeReport()">
-            </div>
-          </div>
-          <div class="tms-toolbar-right">
-            <span class="tms-export-action" onclick="exportCoachOpsConsumeCsv()">导出</span>
-          </div>
-        </div>
-        <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:180px;padding-left:20px">交易时间</th><th style="width:120px">姓名</th><th style="width:150px">业务类型</th><th style="width:110px">支付方式</th><th style="width:150px">扣减标的</th><th style="width:100px">确认收入</th><th style="width:100px">校区</th><th style="width:140px">操作人</th><th style="width:260px">备注</th></tr></thead><tbody id="financeConsumeTbody"></tbody></table></div></div>
-      </div>
+      <div id="financeRevenuePanel" class="section-stack" data-standard-list-shell="finance-revenue" style="display:none"></div>
+      <div id="financeRecognizedPanel" class="section-stack" data-standard-list-shell="finance-recognized" style="display:none"></div>
       <div id="financeSettlementPanel" class="section-stack" style="display:none">
         <div class="tms-audit-note">教练结算这一期只看两件事：已完成课时数、迟到承担场地费。</div>
         <div class="tms-stats-row" id="financeSettlementStats"></div>
@@ -216,100 +111,15 @@
         <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:140px;padding-left:20px">教练</th><th style="width:120px">校区</th><th style="width:120px">已完成课时数</th><th style="width:120px">迟到记录</th><th style="width:140px">承担场地费</th></tr></thead><tbody id="financeSettlementTbody"></tbody></table></div></div>
       </div>
     </div>
-    <div class="page-section" id="page-matches">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="matchSearch" placeholder="搜索姓名、手机号" oninput="renderMatches()">
-          </div>
-          <div id="matchCampusFilterHost"></div>
-          <div id="matchStatusFilterHost"></div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-ghost" onclick="loadMatches(true)">刷新</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:220px;padding-left:20px">球局</th><th style="width:150px">时间</th><th style="width:160px">场地</th><th style="width:90px">人数</th><th style="width:100px">状态</th><th style="width:120px">预计费用</th><th style="width:120px">最终费用</th><th style="width:240px">报名名单</th><th class="tms-sticky-r" style="width:220px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="matchTbody"></tbody></table></div></div>
-    </div>
+    <div class="page-section" id="page-matches" data-standard-list-shell="matches"></div>
     <!-- 教练管理 -->
-    <div class="page-section" id="page-coaches">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="coachSearch" placeholder="搜索姓名、手机号" oninput="renderCoaches()">
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openCoachModal(null)">新增教练</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:16%;padding-left:20px">姓名</th><th style="width:16%">电话</th><th style="width:14%">校区</th><th style="width:12%">入职时间</th><th style="width:10%">状态</th><th style="width:18%">备注</th><th class="tms-sticky-r" style="width:180px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="coachTbody"></tbody></table></div></div>
-    </div>
+    <div class="page-section" id="page-coaches" data-standard-list-shell="coaches"></div>
     <!-- 账号管理 -->
     <div class="page-section" id="page-admin-users" data-standard-list-shell="admin-users"></div>
     <!-- 订场用户 -->
-    <div class="page-section" id="page-courts">
-      <div class="tms-stats-row" id="courtStatsRow"></div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="courtSearch" placeholder="搜索姓名、手机号" oninput="onCourtFilterChange()">
-          </div>
-          <div id="courtAccountTypeFilter"></div>
-          <div id="courtOwnerFilter"></div>
-          <div id="courtMoreActions"></div>
-          <div class="court-batch-toolbar" id="courtBatchToolbar" style="display:none">
-            <span class="court-batch-count" id="courtBatchCount">已选 0 条</span>
-            <button class="tms-btn tms-btn-danger" id="courtBatchDelBtn" onclick="batchDeleteCourts()" disabled>批量删除</button>
-            <button class="tms-btn tms-btn-ghost" id="courtBatchCancelBtn" onclick="setCourtBatchMode(false)">取消</button>
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <span class="tms-export-action" onclick="exportCourtCSV()">导出</span>
-          <button class="tms-btn tms-btn-primary" onclick="openCourtModal(null)">添加订场用户</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr>
-        <th class="tms-sticky-l" data-court-name-cell="1" style="width:156px;padding-left:20px"><label class="tms-th-checkbox"><input type="checkbox" class="tms-checkbox" id="courtSelectAll" onchange="toggleCourtPageSelection(this.checked)"><span>姓名</span></label></th>
-        <th style="width:124px">手机号</th>
-        <th style="width:100px">校区</th>
-        <th style="width:96px">账户状态</th>
-        <th style="width:100px">会员类型</th>
-        <th style="width:112px"><button class="tms-sort-header" data-court-sort="balance" onclick="setCourtSort('balance')">会员余额<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
-        <th style="width:170px"><button class="tms-sort-header" data-court-sort="lastBookingDate" onclick="setCourtSort('lastBookingDate')">最近订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
-        <th style="width:92px"><button class="tms-sort-header" data-court-sort="memberBookingCount" onclick="setCourtSort('memberBookingCount')">会员订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
-        <th style="width:92px"><button class="tms-sort-header" data-court-sort="bookingCount" onclick="setCourtSort('bookingCount')">累计订场<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
-        <th style="width:112px"><button class="tms-sort-header" data-court-sort="bookingAmount" onclick="setCourtSort('bookingAmount')">累计消费<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button></th>
-        <th style="width:90px">对接人</th>
-        <th style="width:90px">熟悉程序</th>
-        <th style="width:118px">处置态度</th>
-        <th style="width:190px">备注</th>
-        <th class="tms-sticky-r" style="width:188px;padding-right:20px;text-align:right">操作</th>
-      </tr></thead><tbody id="courtTbody"></tbody></table></div>
-        <div class="tms-pagination"><div class="tms-pagination-left"><span class="pager-info" id="courtPagerInfo">共 0 条</span><div id="courtPageSize"></div></div><div class="tms-page-numbers" id="courtPagerBtns"></div></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-courts" data-standard-list-shell="courts"></div>
     <!-- 会员管理 -->
-    <div class="page-section" id="page-memberships">
-      <div class="tms-stats-row" id="membershipStatsRow"></div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="membershipSearch" placeholder="搜索姓名、手机号" oninput="onMembershipSearchChange()">
-          </div>
-          <div id="membershipTierFilter"></div>
-        </div>
-        <div class="tms-toolbar-right tms-toolbar-secondary-actions">
-          <span class="tms-membership-audit-action tms-membership-audit-action-orders" onclick="goPage('membership-orders')"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M256 249.1h382.5c9.6 0 17.3-7.8 17.3-17.3s-7.8-17.3-17.3-17.3H256c-9.6 0-17.3 7.8-17.3 17.3s7.8 17.3 17.3 17.3z m67.2 349.6H256c-9.6 0-17.3 7.8-17.3 17.3s7.8 17.3 17.3 17.3h63.2c0.8-11.6 2.1-23.2 4-34.6z m94.1-182.2c3.4-3.4 6.9-6.7 10.4-9.9H256c-9.6 0-17.3 7.8-17.3 17.3s7.8 17.3 17.3 17.3h138.8c7.1-8.5 14.6-16.8 22.5-24.7z m238.5 511.7c-73 0-141.6-28.4-193.2-80-51.6-51.6-80-120.2-80-193.2s28.4-141.6 80-193.2 120.2-80 193.2-80 141.6 28.4 193.2 80S929 582 929 655s-28.4 141.6-80 193.2c-51.6 51.6-120.3 80-193.2 80z m0-506.4c-62.3 0-120.9 24.3-164.9 68.3-44.1 44.1-68.3 102.6-68.3 164.9s24.3 120.9 68.3 164.9 102.6 68.3 164.9 68.3 120.9-24.3 164.9-68.3S889 717.3 889 655s-24.3-120.9-68.3-164.9c-44.1-44.1-102.6-68.3-164.9-68.3z"></path><path d="M374.5 837H244.6c-38.2 0-69.2-31.1-69.2-69.2V184.7c0-38.2 31.1-69.2 69.2-69.2h421.2c38.2 0 69.2 31.1 69.2 69.2v144.7c11.7 2.8 23.3 6.3 34.6 10.4V184.7c0-57.3-46.6-103.9-103.9-103.9H244.6c-57.3 0-103.9 46.6-103.9 103.9v583.1c0 57.3 46.6 103.9 103.9 103.9h155.7c-9.4-11.1-18-22.6-25.8-34.7z"></path><path d="M794.7 675h-163V512c0-11 9-20 20-20s20 9 20 20v123h123c11 0 20 9 20 20s-8.9 20-20 20z"></path></svg><span>历史订单</span></span>
-          <span class="tms-membership-audit-action tms-membership-audit-action-ledger" onclick="goPage('membership-ledger')"><svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M2.87344 0.952148H12.1521C12.444 0.952148 12.693 1.05542 12.8996 1.26182C13.106 1.46821 13.2091 1.71724 13.2091 2.00918V8.23403H12.5043V2.00918C12.5043 1.91191 12.4699 1.82886 12.4012 1.76001C12.3324 1.69131 12.2493 1.65688 12.1521 1.65688H2.87344C2.77617 1.65688 2.69312 1.69131 2.62427 1.76001C2.55557 1.82886 2.52114 1.91191 2.52114 2.00918V12.6385C2.52114 12.7358 2.55557 12.8188 2.62427 12.8875C2.69312 12.9564 2.77617 12.9908 2.87344 12.9908H8.7019V13.6956H2.87344C2.58149 13.6956 2.33247 13.5923 2.12607 13.3859C1.91968 13.1795 1.81641 12.9303 1.81641 12.6385V2.00918C1.81641 1.71724 1.91968 1.46821 2.12607 1.26182C2.33247 1.05542 2.58149 0.952148 2.87344 0.952148Z"></path><path d="M3.98916 2.84619H11.0362C11.1335 2.84619 11.2166 2.88062 11.2854 2.94932C11.3541 3.01816 11.3885 3.10122 11.3885 3.19849C11.3885 3.2959 11.3541 3.37881 11.2854 3.44766C11.2166 3.5165 11.1335 3.55093 11.0362 3.55093H3.98916C3.89189 3.55093 3.80884 3.5165 3.73999 3.44766C3.67129 3.37881 3.63687 3.2959 3.63687 3.19849C3.63687 3.10122 3.67129 3.01816 3.73999 2.94932C3.80884 2.88062 3.89189 2.84619 3.98916 2.84619ZM3.98916 4.72544H11.0362C11.1335 4.72544 11.2166 4.75972 11.2854 4.82856C11.3541 4.89741 11.3885 4.98047 11.3885 5.07773C11.3885 5.175 11.3541 5.25806 11.2854 5.3269C11.2166 5.39575 11.1335 5.43003 11.0362 5.43003H3.98916C3.89189 5.43003 3.80884 5.39575 3.73999 5.3269C3.67129 5.25806 3.63687 5.175 3.63687 5.07773C3.63687 4.98047 3.67129 4.89741 3.73999 4.82856C3.80884 4.75972 3.89189 4.72544 3.98916 4.72544ZM3.98916 6.60454H11.0362C11.1335 6.60454 11.2166 6.63897 11.2854 6.70781C11.3541 6.77666 11.3885 6.85957 11.3885 6.95698C11.3885 7.05425 11.3541 7.13731 11.2854 7.20615C11.2166 7.27485 11.1335 7.30928 11.0362 7.30928H3.98916C3.89189 7.30928 3.80884 7.27485 3.73999 7.20615C3.67129 7.13731 3.63687 7.05425 3.63687 6.95698C3.63687 6.85957 3.67129 6.77666 3.73999 6.70781C3.80884 6.63897 3.89189 6.60454 3.98916 6.60454ZM3.57812 8.85088C3.57812 8.6562 3.73589 8.49844 3.93042 8.49844C4.1251 8.49844 4.28286 8.6562 4.28286 8.85088C4.28286 9.04541 4.1251 9.20318 3.93042 9.20318C3.73589 9.20318 3.57812 9.04541 3.57812 8.85088ZM5.13438 8.85088C5.13438 8.6562 5.29214 8.49844 5.48667 8.49844C5.68135 8.49844 5.83896 8.6562 5.83896 8.85088C5.83896 9.04541 5.68135 9.20318 5.48667 9.20318C5.29214 9.20318 5.13438 9.04541 5.13438 8.85088ZM6.67583 8.85088C6.67583 8.6562 6.83359 8.49844 7.02827 8.49844C7.2228 8.49844 7.38057 8.6562 7.38057 8.85088C7.38057 9.04541 7.2228 9.20318 7.02827 9.20318C6.83359 9.20318 6.67583 9.04541 6.67583 8.85088Z"></path><path d="M10.739 13.7259L8.64571 11.0886C8.47461 10.8724 8.46465 10.5699 8.62124 10.343L9.38677 9.24522C9.44429 9.16296 9.52084 9.09583 9.60991 9.04956C9.69898 9.00329 9.79792 8.97925 9.89829 8.97949H12.5546C12.7584 8.97949 12.9494 9.0791 13.0662 9.24653L13.8317 10.3443C13.988 10.5713 13.9782 10.8737 13.8072 11.0899L11.714 13.7272C11.6554 13.8004 11.5811 13.8593 11.4965 13.8997C11.4119 13.94 11.3193 13.9606 11.2256 13.96C11.1321 13.9602 11.0397 13.9393 10.9554 13.8987C10.8712 13.8582 10.7971 13.7991 10.739 13.7259ZM8.96255 10.5806C8.90982 10.656 8.91289 10.7571 8.97032 10.8292L11.0636 13.461C11.083 13.4855 11.1077 13.5052 11.1358 13.5188C11.164 13.5323 11.1948 13.5394 11.226 13.5394C11.2573 13.5394 11.2881 13.5323 11.3162 13.5188C11.3443 13.5052 11.369 13.4855 11.3885 13.461L13.4817 10.8287C13.5395 10.7566 13.5428 10.6553 13.4899 10.5797L12.724 9.48281C12.7048 9.45581 12.6794 9.4338 12.6499 9.41861C12.6204 9.40343 12.5878 9.39551 12.5546 9.39551H9.89829V9.39507C9.83033 9.39507 9.76704 9.42803 9.72808 9.48384L8.96255 10.5806ZM10.1064 10.5119C10.1949 10.4232 10.3383 10.4232 10.427 10.5117L11.2265 11.3121L12.0277 10.5117C12.1165 10.426 12.2577 10.4272 12.345 10.5145C12.4323 10.6018 12.4335 10.743 12.3477 10.8318L11.3872 11.792C11.2987 11.8803 11.1554 11.8803 11.0671 11.792L10.1064 10.8322C10.018 10.7438 10.018 10.6003 10.1064 10.5119Z"></path><path d="M10.6586 13.7896L8.56547 11.1523C8.46586 11.0265 8.41342 10.8834 8.40815 10.7231C8.40287 10.5628 8.44579 10.4168 8.53691 10.2848L9.30273 9.18662C9.3707 9.08921 9.45742 9.01319 9.56274 8.95855C9.66791 8.90391 9.77983 8.87666 9.89848 8.87696H12.5547C12.6733 8.87696 12.7852 8.90435 12.8904 8.95928C12.9957 9.01421 13.0823 9.09053 13.1503 9.18794L13.9158 10.2857C14.0069 10.418 14.05 10.5643 14.0447 10.7246C14.0394 10.8847 13.9872 11.0278 13.8877 11.1535L11.7943 13.7911C11.725 13.8776 11.6405 13.9447 11.5406 13.9922C11.4408 14.0398 11.3355 14.0632 11.2249 14.0625C11.1152 14.0628 11.0104 14.0389 10.911 13.9912C10.8115 13.9433 10.7274 13.8762 10.6587 13.7897L10.6586 13.7896ZM11.2262 13.8574C11.3935 13.8586 11.5294 13.7939 11.6337 13.6635L13.7268 11.0263C13.7983 10.9359 13.836 10.833 13.8396 10.7178C13.8435 10.6025 13.8128 10.4977 13.7477 10.403L12.9821 9.30528C12.9333 9.23526 12.8711 9.18062 12.7956 9.14107C12.7201 9.10166 12.6398 9.08203 12.5547 9.08203H9.89804C9.81293 9.08189 9.73266 9.10137 9.65722 9.14048C9.58163 9.17974 9.51952 9.23423 9.47089 9.30381L8.70566 10.4013C8.64018 10.496 8.60942 10.6012 8.61308 10.7165C8.61689 10.8316 8.65453 10.9345 8.72602 11.0249L10.8191 13.6622H10.8193C10.9231 13.7927 11.0588 13.8579 11.2262 13.8574ZM9.64404 9.42495C9.70585 9.33662 9.79067 9.29253 9.89833 9.29253H10.0009V9.29297H12.5547C12.6615 9.29297 12.7457 9.33648 12.8075 9.42349L13.5741 10.5209C13.6135 10.5775 13.6321 10.64 13.6297 10.7089C13.6275 10.7777 13.6048 10.8391 13.5618 10.8929L11.4688 13.5249C11.4067 13.6028 11.3257 13.6419 11.2261 13.6419C11.1263 13.6419 11.0455 13.603 10.9833 13.5249L8.89008 10.893C8.84731 10.8393 8.8249 10.778 8.8227 10.7093C8.82065 10.6406 8.83925 10.5781 8.87866 10.5218L9.64404 9.4251V9.42495ZM9.88764 9.49805C9.85615 9.50069 9.8311 9.51548 9.8122 9.54243V9.54258L9.04667 10.6395C9.01664 10.6824 9.01796 10.7243 9.05063 10.7653L11.1437 13.3972C11.1648 13.4237 11.1922 13.4369 11.2261 13.4369C11.2599 13.4369 11.2873 13.4237 11.3082 13.3973L13.4018 10.7646C13.4346 10.7235 13.4359 10.6815 13.4059 10.6384L12.6404 9.54229C12.6194 9.51284 12.5909 9.49805 12.5547 9.49805H9.88764ZM10.034 10.9047C9.96967 10.8406 9.93759 10.7629 9.93759 10.6721C9.93759 10.5812 9.96967 10.5037 10.034 10.4394C10.0981 10.3751 10.1758 10.3428 10.2666 10.3428C10.3576 10.3428 10.4352 10.3749 10.4995 10.4392L11.2265 11.1671L11.9564 10.438C12.021 10.3758 12.0981 10.3449 12.1877 10.3458C12.2775 10.3465 12.354 10.3786 12.4174 10.442C12.481 10.5054 12.5131 10.582 12.5138 10.6717C12.5145 10.7615 12.4833 10.839 12.4202 10.9043L11.4597 11.8645C11.3954 11.9287 11.3179 11.9607 11.2271 11.9607C11.1363 11.9607 11.0588 11.9287 10.9946 11.8645L10.034 10.9049V10.9047ZM11.1396 11.7195C11.1638 11.7437 11.193 11.7557 11.2271 11.7557C11.2614 11.7557 11.2905 11.7437 11.3147 11.7195L12.2752 10.7593C12.2979 10.7358 12.309 10.7073 12.3087 10.6736C12.3084 10.6397 12.2964 10.6109 12.2726 10.587C12.2487 10.5631 12.2198 10.5511 12.186 10.5508C12.1523 10.5505 12.1233 10.5621 12.099 10.5855L11.2264 11.4571L10.3543 10.5842C10.3302 10.5601 10.301 10.5479 10.2667 10.5479C10.2325 10.5479 10.2032 10.5601 10.179 10.5844C10.1548 10.6085 10.1427 10.6378 10.1427 10.672C10.1427 10.7063 10.1548 10.7355 10.179 10.7597L11.1396 11.7195Z"></path></svg><span>权益消耗记录</span></span>
-        </div>
-      </div>
-      <div id="membershipTabBody"></div>
-    </div>
+    <div class="page-section" id="page-memberships" data-standard-list-shell="memberships"></div>
     <div class="page-section" id="page-membership-orders">
       <div class="tms-toolbar">
         <div class="tms-toolbar-left">
@@ -333,60 +143,15 @@
       <div id="membershipLedgerAuditBody"></div>
     </div>
     <!-- 会员方案 -->
-    <div class="page-section" id="page-membership-plans">
-      <div class="tms-toolbar">
-        <div class="tms-toolbar-left">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="membershipPlanSearch" placeholder="搜索姓名、手机号" oninput="renderMembershipPlans()">
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openMembershipPlanModal(null)">新增会员方案</button>
-        </div>
-      </div>
-      <div id="membershipPlanBody"></div>
-    </div>
+    <div class="page-section" id="page-membership-plans" data-standard-list-shell="membership-plans"></div>
     <!-- 课程产品 -->
-    <div class="page-section" id="page-products">
-      <div class="course-showcase">
-        <div class="course-showcase-banner">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          课程产品只定义课程模板。后续创建班次、售卖课包，都是基于这里的课程产品。
-        </div>
-        <div class="course-showcase-toolbar">
-          <div class="course-showcase-filters">
-            <div class="tms-search-wrapper">
-              <span class="tms-search-icon" aria-hidden="true"></span>
-              <input type="text" class="tms-search-input" id="prodSearch" placeholder="搜索姓名、手机号" oninput="renderProducts()">
-            </div>
-            <div id="prodTypeFilterHost"></div>
-          </div>
-          <button class="tms-btn tms-btn-primary" onclick="openProductModal(null)">新增课程产品</button>
-        </div>
-        <div class="course-showcase-grid" id="productGrid"></div>
-      </div>
-    </div>
+    <div class="page-section" id="page-products" data-standard-list-shell="products"></div>
     <!-- 售卖课包 -->
     <div class="page-section" id="page-packages" data-standard-list-shell="packages"></div>
     <!-- 购买记录 -->
     <div class="page-section" id="page-purchases" data-standard-list-shell="purchases"></div>
     <!-- 课包余额（已隐藏入口，仅保留底层审计页） -->
-    <div class="page-section" id="page-entitlements">
-      <div class="tms-audit-note">课包余额是学员当前可用课时余额。排课时实际消耗的是这里，不是直接消耗课程产品。</div>
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="entSearch" placeholder="搜索姓名、手机号" oninput="renderEntitlements()">
-          </div>
-          <div id="entStatusFilterHost"></div>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:150px;padding-left:20px">学员</th><th style="width:180px">课包</th><th style="width:120px">课程类型</th><th style="width:120px">课时余额</th><th style="width:190px">有效期</th><th style="width:120px">时段</th><th class="tms-sticky-r" style="width:110px;padding-right:20px;text-align:right">状态</th></tr></thead><tbody id="entitlementTbody"></tbody></table></div></div>
-    </div>
+    <div class="page-section" id="page-entitlements" data-standard-list-shell="entitlements"></div>
     <!-- 工作台（教练视角） -->
     <div class="page-section" id="page-workbench">
       <div id="workbenchBody"></div>
@@ -396,34 +161,11 @@
       <div id="postFeedbackBody"></div>
     </div>
     <!-- 我的学员（教练视角） -->
-    <div class="page-section" id="page-mystudents">
-      <div class="tms-stats-row" id="myStudentStats"></div>
-      <div class="tms-audit-note">这里查看你当前可见的学员，能区分自己负责的学员、代上过的学员，以及最近上课和课时进度。</div>
-      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:96px;padding-left:20px">学员</th><th style="width:96px">校区</th><th style="width:148px">手机号</th><th style="width:62px">类型</th><th style="width:108px">所上班次</th><th style="width:96px">负责教练</th><th style="width:96px">归属教练</th><th style="width:72px">累计上课</th><th style="width:140px">最后上课</th><th style="width:84px">课包进度</th><th style="width:84px">剩余课时</th><th>备注</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myStuTbody"></tbody></table></div></div>
-      <div id="myStudentMobileList" class="coach-mobile-only coach-mobile-list"></div>
-    </div>
+    <div class="page-section" id="page-mystudents" data-standard-list-shell="mystudents"></div>
     <!-- 我的班次（教练视角） -->
-    <div class="page-section" id="page-myclasses">
-      <div class="tms-stats-row" id="myClassStats"></div>
-      <div class="tms-audit-note">这里查看你当前负责的班次，可快速了解学员名单、课时进度和班次时间。</div>
-      <div class="tms-table-card desktop-only"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:108px;padding-left:20px">班次名称</th><th style="width:100px">课程</th><th style="width:108px">学员</th><th style="width:100px">课时进度</th><th style="width:116px">日期</th><th style="width:68px">状态</th><th style="width:72px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="myClsTbody"></tbody></table></div></div>
-      <div id="myClassMobileList" class="coach-mobile-only coach-mobile-list"></div>
-    </div>
+    <div class="page-section" id="page-myclasses" data-standard-list-shell="myclasses"></div>
     <!-- 校区管理 -->
-    <div class="page-section" id="page-campusmgr">
-      <div class="tms-toolbar">
-        <div class="tms-filters">
-          <div class="tms-search-wrapper">
-            <span class="tms-search-icon" aria-hidden="true"></span>
-            <input type="text" class="tms-search-input" id="campusSearch" placeholder="搜索姓名、手机号" oninput="renderCampuses()">
-          </div>
-        </div>
-        <div class="tms-toolbar-right">
-          <button class="tms-btn tms-btn-primary" onclick="openCampusModal(null)">新增校区</button>
-        </div>
-      </div>
-      <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="width:34%;padding-left:20px">校区名称</th><th style="width:24%">校区代码</th><th style="width:22%">创建时间</th><th class="tms-sticky-r" style="width:132px;padding-right:20px;text-align:right">操作</th></tr></thead><tbody id="campusTbody"></tbody></table></div></div>
-    </div>
+    <div class="page-section" id="page-campusmgr" data-standard-list-shell="campusmgr"></div>
     <!-- 价格管理 -->
     <div class="page-section" id="page-prices" data-standard-list-shell="prices"></div>
 </div>

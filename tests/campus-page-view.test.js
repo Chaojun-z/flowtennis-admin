@@ -11,13 +11,23 @@ function fnBody(name){
   const next = source.indexOf('\nfunction ', start + 1);
   return source.slice(start, next === -1 ? source.length : next);
 }
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = source.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = source.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
 
-assert.match(html, /id="page-campusmgr"[\s\S]*class="tms-toolbar"/, 'campus page should use the court-style toolbar');
-assert.match(html, /id="campusSearch"[\s\S]*placeholder="搜索姓名、手机号"/, 'campus page should provide the unified search field');
-assert.match(html, /<button class="tms-btn tms-btn-primary" onclick="openCampusModal\(null\)"/, 'campus add button should use the court-style primary button');
-assert.match(html, /id="page-campusmgr"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/, 'campus page should use the court-style table shell');
+const campusShell = standardConfigBlock('campusmgr');
+
+assert.match(html, /id="page-campusmgr" data-standard-list-shell="campusmgr"/, 'campus page should mount the standard list shell');
+assert.match(campusShell, /search:\{id:'campusSearch'/, 'campus page should provide the unified search field');
+assert.match(campusShell, /<button class="tms-btn tms-btn-primary" onclick="openCampusModal\(null\)"/, 'campus add button should use the court-style primary button');
+assert.match(campusShell, /bodyId:'campusTbody'/, 'campus page should use the standard table shell');
 assert.match(pagesCss, /#page-campusmgr \.tms-table\s*\{[^}]*min-width:900px/s, 'campus table should not inherit the wide court table min width');
-assert.match(html, /<th class="tms-sticky-r"[\s\S]*>操作<\/th>/, 'campus action header should stay visible on the right');
+assert.match(campusShell, /label:'操作'[\s\S]*className:'tms-sticky-r'/, 'campus action header should stay visible on the right');
 assert.doesNotMatch(html, /校区管理仅管理员可操作/, 'campus page should remove the old instruction card');
 assert.doesNotMatch(fnBody('renderCampuses'), /class="abtn"|✏️|🗑️|class="badge b-amber"/, 'campus rows should not use old icon buttons or old badge style');
 assert.match(fnBody('renderCampuses'), /campusSearch/, 'campus table should filter by search input');

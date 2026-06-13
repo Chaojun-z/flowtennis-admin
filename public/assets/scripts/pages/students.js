@@ -614,14 +614,16 @@ async function saveStudentBenefit(studentId,mode,benefitCode){
   const meta=studentBenefitTypeMeta(benefitCode);if(!meta)return;
   const count=Math.abs(parseInt(document.getElementById('sb_count')?.value)||1);
   const data={studentId,studentName:stu.name||'',benefitCode:meta.benefitCode,benefitLabel:meta.label,unit:meta.unit,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('sb_reason')?.value.trim()||'',relatedDate:today()};
-  const btn=document.getElementById('studentBenefitSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('studentBenefitSaveBtn',async()=>{
     const r=await apiCall('POST','/membership-benefit-ledger',data);
     const rows=Array.isArray(r?.records)?r.records:[r];
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
-    toast('学员权益已保存','success');
+  },{
+    successText:'学员权益已保存',
+    refresh:()=>{
     openStudentDetail(studentId);
-  }catch(e){if(btn){btn.disabled=false;btn.textContent=mode==='consume'?'确认消耗':'确认赠送';}toast('保存失败：'+e.message,'error');}
+    }
+  });
 }
 function studentRecentFeedbackSummaryHtml(stu){
   const recentFeedbacks=studentRecentFeedbacks(stu,2);
@@ -974,7 +976,7 @@ function openStudentModal(id='',mode='edit'){
 async function saveStudent(){
   const name=document.getElementById('s_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
   const phone=document.getElementById('s_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
-  const btn=document.getElementById('studentSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  const btn=document.getElementById('studentSaveBtn');
   const data={name,phone,primaryCoach:document.getElementById('s_primaryCoach')?.value||'',type:document.getElementById('s_type').value,source:document.getElementById('s_source').value,activityRange:document.getElementById('s_range').value.trim(),campus:document.getElementById('s_campus').value,notes:document.getElementById('s_notes').value.trim(),updatedBy:currentUser?.name||''};
   const duplicates=getStudentDuplicateCandidates(data,editId);
   if(duplicates.length){
@@ -984,14 +986,18 @@ async function saveStudent(){
       return;
     }
   }
-  try{
-    const savedEditId=editId;
+  const savedEditId=editId;
+  await runStandardMutation(btn,async()=>{
     if(savedEditId){const res=await apiCall('PUT','/students/'+savedEditId,data);const i=students.findIndex(x=>x.id===savedEditId);students[i]={...students[i],...data,id:savedEditId};mergeLinkedUpdates(res.studentUpdates||{});}
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
-    toast(savedEditId?'修改成功 ✓':'添加成功 ✓','success');renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
-    if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
-    else closeModal();
-  }catch(e){toast('保存失败：'+e.message,'error');if(btn){btn.disabled=false;btn.textContent='保存';}}
+  },{
+    successText:savedEditId?'修改成功 ✓':'添加成功 ✓',
+    refresh:()=>{
+      renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
+      if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
+      else closeModal();
+    }
+  });
 }
 function mergeLinkedUpdates(updates){
   (updates.plans||[]).forEach(r=>{const i=plans.findIndex(x=>x.id===r.id);if(i>=0)plans[i]=r;});

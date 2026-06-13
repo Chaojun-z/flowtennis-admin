@@ -321,16 +321,14 @@ async function resetAdminUserPassword(){
   if(!id||!password){toast('请填写新密码','warn');return;}
   const confirmed=await appConfirm(`确认重置账号「${id}」的密码？`,{title:'重置密码',confirmText:'确认重置'});
   if(!confirmed)return;
-  const btn=document.getElementById('adminUserResetPasswordBtn');if(btn){btn.disabled=true;btn.textContent='重置中…';}
-  try{
+  await runStandardMutation('adminUserResetPasswordBtn',async()=>{
     await apiCall('POST','/admin/reset-user-password',{id,password});
     document.getElementById('au_reset_password').value='';
-    toast('密码已重置 ✓','success');
-  }catch(e){
-    toast('重置失败：'+e.message,'error');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='重置密码';}
-  }
+  },{
+    loadingText:'重置中…',
+    errorPrefix:'重置失败',
+    successText:'密码已重置 ✓'
+  });
 }
 function collectAdminUserMatchPermissions(){
   return ['match_ops','match_finance'];
@@ -355,8 +353,7 @@ async function saveAdminUser(){
   }
   if(roleValue==='editor'&&!coachId){toast('教练账号请先绑定教练','warn');return;}
   if(dataScope==='campus'&&!campusIds.length){toast('请选择可看校区','warn');return;}
-  const btn=document.getElementById('adminUserSaveBtn');if(btn){btn.disabled=true;btn.textContent='保存中…';}
-  try{
+  await runStandardMutation('adminUserSaveBtn',async()=>{
     const matchPermissions=collectAdminUserMatchPermissions();
     if(editId){
       const current=adminUsers.find(x=>x.id===editId)||{};
@@ -365,10 +362,8 @@ async function saveAdminUser(){
       await apiCall('POST','/admin/create-user',{id,name,phone,password:document.getElementById('au_password').value.trim(),role:roleValue,coachId:roleValue==='editor'?coachId:'',coachName:roleValue==='editor'?(coach?.name||''):'',dataScope,campusIds,matchPermissions});
     }
     await loadAdminUsers(true);
-    closeModal();
-    toast(editId?'账号更新成功 ✓':'账号创建成功 ✓','success');
-  }catch(e){
-    toast('保存失败：'+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='保存';}
-  }
+  },{
+    successText:editId?'账号更新成功 ✓':'账号创建成功 ✓',
+    closeOnSuccess:true
+  });
 }

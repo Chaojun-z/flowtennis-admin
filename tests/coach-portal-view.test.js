@@ -13,6 +13,17 @@ function fnBody(name){
   const next = candidates.length ? Math.min(...candidates) : -1;
   return source.slice(start, next === -1 ? source.length : next);
 }
+function standardConfigBlock(key) {
+  const marker = `key:'${key}'`;
+  const start = source.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} should have a standard list config`);
+  const rest = source.slice(start);
+  const next = rest.search(/\n    \{key:|\n  \];/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+const myStudentsShell = standardConfigBlock('mystudents');
+const myClassesShell = standardConfigBlock('myclasses');
 
 assert.match(
   source,
@@ -53,14 +64,14 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  source,
-  /id="page-mystudents"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
+  `${source}\n${myStudentsShell}`,
+  /id="page-mystudents" data-standard-list-shell="mystudents"[\s\S]*noteHtml:[\s\S]*bodyId:'myStuTbody'/,
   'my students page should reuse the management-side note and table shell'
 );
 
 assert.match(
-  source,
-  /id="page-myclasses"[\s\S]*class="tms-audit-note"[\s\S]*class="tms-table-card"[\s\S]*class="tms-table-wrapper"[\s\S]*class="tms-table"/,
+  `${source}\n${myClassesShell}`,
+  /id="page-myclasses" data-standard-list-shell="myclasses"[\s\S]*noteHtml:[\s\S]*bodyId:'myClsTbody'/,
   'my classes page should reuse the management-side note and table shell'
 );
 
@@ -297,7 +308,7 @@ assert.match(
 );
 
 assert.match(
-  html,
+  `${myStudentsShell}\n${myClassesShell}`,
   /id="myStudentMobileList"[^>]*coach-mobile-list[\s\S]*id="myClassMobileList"[^>]*coach-mobile-list/,
   'coach my students and my classes should provide dedicated mobile card lists'
 );
@@ -331,8 +342,8 @@ assert.match(pagesCss, /coach-mobile-time-rail/, 'coach mobile schedule should d
 assert.match(pagesCss, /coach-mobile-day-column/, 'coach mobile schedule should define the day column style');
 
 assert.match(
-  html,
-  /累计上课<\/th>[\s\S]*最后上课<\/th>[\s\S]*课包进度<\/th>[\s\S]*剩余课时<\/th>/,
+  myStudentsShell,
+  /累计上课[\s\S]*最后上课[\s\S]*课包进度[\s\S]*剩余课时/,
   'coach my students should split lesson count, last lesson, package progress and remaining lessons'
 );
 
