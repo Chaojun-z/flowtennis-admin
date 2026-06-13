@@ -103,6 +103,7 @@ async function main() {
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
   assert.strictEqual(view.items[0].accountType, '会员');
+  assert.ok(view.filters.accountTypes.every((value) => ['会员', '普通'].includes(value)), '账户类型筛选只应返回会员/普通');
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');

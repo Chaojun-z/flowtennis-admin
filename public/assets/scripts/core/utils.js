@@ -909,11 +909,11 @@ function membershipBenefitConsumePreview(account,benefitCode,count){
 function courtMembershipSummary(court){
   const account=courtMembershipAccount(court?.id);
   const finance=courtFinanceLocal(court||{history:[]});
-  if(!account)return {account:null,accountType:finance.balance>0?'储值':'普通',memberLabel:'—',tierLabel:'-',status:'未开卡',discount:'—',validUntil:'—'};
+  if(!account)return {account:null,accountType:'普通',memberLabel:'—',tierLabel:'-',status:'未开卡',discount:'—',validUntil:'—'};
   if(['voided','cleared'].includes(account.status)){
-    return {account,accountType:'历史会员',memberLabel:'-',tierLabel:'-',status:membershipDisplayStatus(account),discount:'-',validUntil:'-'};
+    return {account,accountType:'普通',memberLabel:'-',tierLabel:'-',status:membershipDisplayStatus(account),discount:'-',validUntil:'-'};
   }
-  return {account,accountType:['active','extended'].includes(account.status)?'会员':'历史会员',memberLabel:account.memberLabel||'—',tierLabel:courtMembershipTierLabel(account),status:membershipDisplayStatus(account),discount:account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—',validUntil:account.validUntil||'—'};
+  return {account,accountType:['active','extended'].includes(account.status)?'会员':'普通',memberLabel:account.memberLabel||'—',tierLabel:courtMembershipTierLabel(account),status:membershipDisplayStatus(account),discount:account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—',validUntil:account.validUntil||'—'};
 }
 function courtMembershipTierLabel(account){
   if(!account)return '-';

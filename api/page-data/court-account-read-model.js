@@ -221,9 +221,9 @@ function displayName(court, studentSummary) {
 }
 
 function buildCourtAccountType(account, finance) {
-  if (!account) return finance.balance > 0 ? '储值' : '普通';
-  if (['voided', 'cleared'].includes(account.status)) return '历史会员';
-  return ['active', 'extended'].includes(account.status) ? '会员' : '历史会员';
+  if (!account) return '普通';
+  if (['voided', 'cleared'].includes(account.status)) return '普通';
+  return ['active', 'extended'].includes(account.status) ? '会员' : '普通';
 }
 
 function buildLegacyItem(court, ctx) {

@@ -42,7 +42,14 @@ assert.match(html, /membershipAccounts=Array\.isArray\(data\?\.membershipAccount
 assert.match(html, /membershipOrders=Array\.isArray\(data\?\.membershipOrders\)\?data\.membershipOrders:\[\]/, 'load-all should store membership orders');
 assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBenefitLedger\)\?data\.membershipBenefitLedger:\[\]/, 'load-all should store membership benefit ledger');
 
-assert.match(html, /会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期/, 'courts table should show membership status columns');
+assert.match(html, /账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场/, 'courts table should show membership status columns');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注/, 'courts table should show requested account columns');
+assert.match(fnBody('renderCourtHeaderFilters'), /const accountTypes=\['会员','普通'\]/, 'court account filter should only expose member and normal account states');
+assert.match(fnBody('renderCourtAccountListView'), /courtAccountStateLabel\(item\)/, 'court read-model list should filter and render by displayed account state');
+assert.match(fnBody('renderCourts'), /courtAccountStateLabel\(m\)/, 'court legacy list should filter and render by displayed account state');
+assert.match(html, /function courtCleanUserNotes\(/, 'court user list should clean system merge notes before display');
+assert.doesNotMatch(fnBody('renderCourts'), /title="\$\{esc\(u\.notes\|\|''\)\}"/, 'court legacy list should not display raw system merge notes');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /title="\$\{esc\(item\.notesSummary\|\|''\)\}"/, 'court read-model list should not display raw system merge notes');
 assert.match(html, /function courtMembershipSummary/, 'courts page should compute membership summaries');
 assert.match(html, /会员账户/, 'courts table should expose dedicated membership account entry');
 assert.match(html, /openCourtModal\('\$\{item\.id\}'\)">编辑/, 'courts table should keep the short profile editing entry');
@@ -148,6 +155,11 @@ assert.doesNotMatch(html, /function openCourtModal[\s\S]*消耗 1 次/, 'court e
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*补发/, 'court edit modal should not include benefit supplement action');
 assert.match(html, /function normalizeCurrentPageForRole/, 'frontend should normalize landing page by role before rendering');
 assert.match(html, /function renderRoleShell/, 'frontend should centralize role shell rendering');
+assert.match(html, /function toggleSidebarCollapsed\(/, 'shell should support collapsing and expanding the left sidebar');
+assert.match(html, /class="sidebar-toggle" onclick="toggleSidebarCollapsed\(\)"/, 'sidebar should expose a dedicated collapse toggle');
+assert.match(html, /width="20" height="20" viewBox="0 0 20 20"[\s\S]*fill="#C5B0A2"/, 'sidebar collapse icon should use the requested 20px warm gray svg');
+assert.match(pagesCss, /body\.sidebar-collapsed\{--sw:64px\}/, 'collapsed sidebar should shrink to icon width and let main content adapt');
+assert.match(pagesCss, /body\.sidebar-collapsed \.sb-item\{[^}]*justify-content:center/, 'collapsed sidebar should show icon-only menu items');
 assert.match(html, /applyLoadedData[\s\S]*normalizeCurrentPageForRole\(\);[\s\S]*renderRoleShell\(\);/, 'load-all should re-sync shell after user role changes');
 assert.match(html, /function clearLoadedData/, 'frontend should clear stale data when login\/load-all fails');
 assert.match(html, /let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;/, 'frontend should track request version to ignore stale load-all responses');
@@ -190,7 +202,7 @@ assert.match(fnBody('getMembershipRows'), /membershipAccounts\.filter\(a=>member
 assert.match(html, /function isActiveCourtRecord\(/, 'frontend should centralize active court filtering');
 assert.match(fnBody('isActiveCourtRecord'), /status!=='inactive'&&status!=='deleted'&&!court\?\.deletedAt&&!court\?\.mergedIntoCourtId/, 'active court filtering should exclude hidden, deleted and merged users');
 assert.match(fnBody('renderMemberships'), /openCourtMembershipPanel\('\$\{court\.id\}'\)/, 'membership account action should open the account for the visible row court');
-assert.match(html, /const statusTagMeta=membershipStatusTagMeta\(m\.status\);/, 'court rows should derive status tag metadata');
+assert.match(html, /const accountState=courtAccountStateLabel\(m\);/, 'court rows should derive account state from membership state');
 assert.match(html, /memberLabel:'-',tierLabel:'-',status:membershipDisplayStatus\(account\),discount:'-',validUntil:'-'/, 'voided or cleared membership summaries should clear benefit display in court list');
 assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:320px;color:#A3968F"/, 'membership management benefits should use the same remark color as membership plan notes');
 assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:500px;max-width:none;color:#A3968F"/, 'membership plan benefits should use the remark color while staying fully visible');
@@ -213,7 +225,8 @@ assert.match(html, /已消耗/, 'membership account rights should show consumed 
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
 assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
 assert.match(fnBody('membershipBenefitSummaryForOrder'), /const positiveDelta=.*?delta\)\|\|0\)>0[\s\S]*const negativeDelta=.*?delta\)\|\|0\)<0[\s\S]*const total=\(item\.total\|\|0\)\+positiveDelta[\s\S]*remaining:expired\?0:Math\.max\(0,total\+negativeDelta\)/, 'frontend benefit summary should add supplements to both total and remaining');
-assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='asc'/, 'membership management should default to first-open date ascending');
+assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='desc'/, 'membership management should default to first-open date descending');
+assert.match(fnBody('membershipDefaultSortDir'), /return 'desc'/, 'first-open date sort should start with newest member first');
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
 assert.match(html, /function membershipFirstOpenDate/, 'membership management should compute first-open date from membership orders');
 assert.match(html, /function onMembershipSearchChange\(\)/, 'membership management search should reset to the first page');
