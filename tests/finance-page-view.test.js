@@ -49,7 +49,8 @@ assert.doesNotMatch(revenuePanel,/关联单据/,'revenue table should not expose
 assert.doesNotMatch(revenuePanel,/class="tms-sticky-r"/,'revenue rows should not keep a sticky right internal document column');
 assert.match(source,/finance-revenue-toolbar/,'revenue toolbar should use the standardized compact toolbar class');
 assert.match(source,/finance-revenue-remark/,'revenue notes should render as a single-line remark');
-assert.match(recognizedPanel,/确认日期[\s\S]*客户[\s\S]*确认类型[\s\S]*来源项目[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*状态[\s\S]*关联单据[\s\S]*financeConsumeTbody/,'consume table should explain where recognized revenue comes from');
+assert.match(recognizedPanel,/交易时间[\s\S]*姓名[\s\S]*业务类型[\s\S]*支付方式[\s\S]*扣减标的[\s\S]*确认收入[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeConsumeTbody/,'recognized table should follow the owner-facing ledger column order');
+assert.doesNotMatch(recognizedPanel,/确认日期|客户|确认类型|来源项目|状态|关联单据/,'recognized table should remove old internal source/status columns');
 assert.doesNotMatch(source,/先看总账和顶部汇总/,'finance overview should remove the old guidance note');
 assert.match(ledgerPanel,/交易时间[\s\S]*姓名[\s\S]*交易类型[\s\S]*交易金额[\s\S]*业务类型[\s\S]*支付方式[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeLedgerTbody/,'ledger table should use the standardized owner-facing column order');
 assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'业务类型'/,'ledger business type filter should use linked standardized count labels');

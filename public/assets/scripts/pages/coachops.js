@@ -1236,7 +1236,7 @@ function renderFinanceConsumeReport(){
     {label:'会员耗卡核销',value:financeInlineMoneyWithPercent(storedValueRecognized,recognizedRevenue)},
     {label:'课程已入账',value:financeInlineMoneyWithPercent(courseRecognized,recognizedRevenue)}
   ].map(financeStatCardHtml).join('');
-  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.businessDate,false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.confirmType,false)}</td><td>${renderStandardCellText(row.sourceProject,false)}</td><td>${renderStandardCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td><span class="tms-tag ${Number(row.recognizedRevenueDelta||0)>=0?'tms-tag-green':'tms-tag-tier-slate'}">${esc(row.systemStatus||'已入账')}</span></td><td class="tms-sticky-r" style="padding-right:20px">${renderStandardCellText(row.sourceDocument,false)}</td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无已入账流水</p></div></td></tr>`;
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.displayBusinessType||row.businessType,false)}</td><td>${renderStandardCellText(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod,false)}</td><td>${renderStandardCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无已入账流水</p></div></td></tr>`;
 }
 function renderCoachOpsConsumeReport(){
   return renderFinanceConsumeReport();
@@ -1250,8 +1250,8 @@ function exportCoachOpsRevenueCsv(){
 }
 function exportCoachOpsConsumeCsv(){
   const rows=financeRecognizedRows();
-  let csv='确认日期,客户,确认类型,来源项目,扣减标的,确认收入,校区,系统状态,关联单据\n';
-  csv+=rows.map(row=>[row.businessDate||'',row.customer||'',row.confirmType||'',row.sourceProject||'',row.debitTarget||'',row.recognizedRevenueDelta||0,row.campusName||'',row.systemStatus||'',row.sourceDocument||''].join(',')).join('\n');
+  let csv='交易时间,姓名,业务类型,支付方式,扣减标的,确认收入,校区,操作人,备注\n';
+  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.customer||'',row.displayBusinessType||row.businessType||'',row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'',row.debitTarget||'',row.recognizedRevenueDelta||0,row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_消耗表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
