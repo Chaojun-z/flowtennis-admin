@@ -268,6 +268,7 @@ function studentPageStats(base){
     total:base.length,
     packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
     activePackageStudentCount:base.filter(s=>studentHasRemainingPackage(s)).length,
+    purchaseCount:validPurchases.length,
     totalIncome:Math.round(totalIncome*100)/100,
     recognized:Math.round(recognized*100)/100,
     packageBalance:Math.round((totalIncome-recognized)*100)/100,
@@ -291,10 +292,11 @@ function studentTopStatsCards(stats){
     {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
   ];
   return [
-    {label:'总学员数',valueHtml:stats.total},
+    {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span>`,sub:'正式学员数 vs 购买次数'},
     {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'},
-    {label:'课包实收',valueHtml:`¥${fmt(stats.totalIncome)}`},
-    {label:'课包可用余额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'课包可用余额 / 课包实收占比'}
+    {label:'课包实收金额',valueHtml:`¥${fmt(stats.totalIncome)}`},
+    {label:'已履约金额',valueHtml:`¥${fmt(stats.recognized)}`,percent:studentPercentText(stats.recognized,stats.totalIncome),sub:'已履约金额 / 课包实收金额占比'},
+    {label:'待履约金额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'待履约金额 / 课包实收金额占比'}
   ];
 }
 function studentStatSplitCard(title,primary,secondary,caption){

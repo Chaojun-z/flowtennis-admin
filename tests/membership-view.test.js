@@ -27,7 +27,7 @@ assert.doesNotMatch(html, /page-memberships[\s\S]*方案配置/, 'membership man
 assert.match(html, /id="membershipStatsRow"/, 'membership management page should expose summary stat cards');
 assert.match(html, /function renderMembershipStats/, 'membership management page should compute summary stat cards');
 assert.match(html, /会员储值[\s\S]*充值金额[\s\S]*需履约总金额[\s\S]*已核销金额[\s\S]*待履约金额/, 'membership summary should show the requested five finance cards');
-assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 增长金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
+assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 赠送金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
 assert.match(fnBody('renderMembershipStats'), /renderStandardDataCards\(/, 'membership summary should use the global data card renderer');
 assert.match(fnBody('renderMembershipStats'), /percent:statPercentText\(totalRecognized,poolTotal\)[\s\S]*percent:statPercentText\(pendingTotal,poolTotal\)/, 'membership recognized and pending cards should use global percentage formatting');
 assert.match(html, /id="page-memberships"[\s\S]*class="tms-toolbar"/, 'membership management page should use the court-style toolbar');

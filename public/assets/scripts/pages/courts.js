@@ -436,7 +436,7 @@ function renderMembershipStats(rows=[]){
   host.innerHTML=renderStandardDataCards([
     {title:'会员储值',valueHtml:`<span>${rows.length}</span><span class="tms-stat-divider">｜</span><span>${validOrders.length}</span>`,sub:'会员人数 vs 储值次数'},
     {title:'充值金额',value:`¥${fmt(totalIncome)}`,sub:''},
-    {title:'需履约总金额',value:`¥${fmt(poolTotal)}`,sub:'充值金额 + 增长金额'},
+    {title:'需履约总金额',value:`¥${fmt(poolTotal)}`,sub:'充值金额 + 赠送金额'},
     {title:'已核销金额',value:`¥${fmt(totalRecognized)}`,percent:statPercentText(totalRecognized,poolTotal),sub:'已核销金额 / 累计实收+累计赠送占比'},
     {title:'待履约金额',value:`¥${fmt(pendingTotal)}`,percent:statPercentText(pendingTotal,poolTotal),sub:'待履约金额 / 累计实收+累计赠送占比'}
   ]);

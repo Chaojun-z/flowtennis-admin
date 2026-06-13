@@ -49,9 +49,10 @@ assert.match(source, /stuCoachFilterHost/, 'student page should include primary 
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
 assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*有课包学员数[\s\S]*体验课转化[\s\S]*体验课人数 vs 体验课转正人数/, 'trial student top stats should keep the original five-card data');
-assert.match(source, /有效课包学员[\s\S]*课包实收[\s\S]*课包可用余额/, 'package student top stats should show active package students, package income, and package balance');
+assert.match(source, /正式学员[\s\S]*正式学员数 vs 购买次数[\s\S]*有效课包学员[\s\S]*课包实收金额[\s\S]*已履约金额[\s\S]*待履约金额/, 'package student top stats should show official students, package income, recognized, and pending amounts');
 assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /有效课包学员 \/ 总学员数占比/, 'student active package card should explain the requested formula');
+assert.match(source, /已履约金额 \/ 课包实收金额占比[\s\S]*待履约金额 \/ 课包实收金额占比/, 'student package finance cards should use the requested fulfillment captions');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');
 assert.match(source, /aggregateHistoricalMonthlyLedgerRows\(dedupeEntitlementLedgerForDisplay\(entitlementLedger\)\)/, 'student package recognized amount should use the same net ledger rows as finance');
 assert.match(source, /const sign=Number\(row\.lessonDelta\|\|0\)>0\?-1:1/, 'student package recognized amount should subtract returned lessons');

@@ -63,6 +63,7 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
   assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${icon}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);
   assert.match(html, new RegExp(`data-sidebar-icon="${icon}"`), `${label} should provide the custom svg`);
 });
+assert.match(html, /data-sidebar-icon="trial-students" width="23" height="23"/, 'trial student sidebar icon should render at 23px');
 assert.match(pagesCss, /--shell-sidebar-icon-color:#C5B0A2/, 'inactive sidebar icon color should match design');
 assert.match(pagesCss, /--shell-sidebar-active-icon-color:#EFE7E2/, 'active sidebar icon color should match design');
 assert.match(pagesCss, /\.sb-item\{[^}]*height:38px/, 'sidebar rows should be tightened to 38px');
