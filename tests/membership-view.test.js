@@ -160,6 +160,11 @@ assert.match(html, /class="sidebar-toggle" onclick="toggleSidebarCollapsed\(\)"/
 assert.match(html, /width="20" height="20" viewBox="0 0 20 20"[\s\S]*fill="#C5B0A2"/, 'sidebar collapse icon should use the requested 20px warm gray svg');
 assert.match(pagesCss, /body\.sidebar-collapsed\{--sw:64px\}/, 'collapsed sidebar should shrink to icon width and let main content adapt');
 assert.match(pagesCss, /body\.sidebar-collapsed \.sb-item\{[^}]*justify-content:center/, 'collapsed sidebar should show icon-only menu items');
+assert.match(html, /function syncSidebarItemTitles\(/, 'collapsed sidebar should sync menu labels for hover tooltips');
+assert.match(html, /item\.setAttribute\('title',title\)/, 'collapsed sidebar should expose menu names through native hover title');
+assert.match(pagesCss, /body\.sidebar-collapsed \.sb-item:hover::after\{[^}]*content:attr\(data-title\)/, 'collapsed sidebar should show menu name on hover');
+assert.match(pagesCss, /\.sidebar\{[^}]*transition:width 180ms ease/, 'sidebar width should animate like a drawer');
+assert.match(pagesCss, /\.main\{[^}]*transition:margin-left 180ms ease/, 'main content should follow sidebar drawer animation');
 assert.match(html, /applyLoadedData[\s\S]*normalizeCurrentPageForRole\(\);[\s\S]*renderRoleShell\(\);/, 'load-all should re-sync shell after user role changes');
 assert.match(html, /function clearLoadedData/, 'frontend should clear stale data when login\/load-all fails');
 assert.match(html, /let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;/, 'frontend should track request version to ignore stale load-all responses');

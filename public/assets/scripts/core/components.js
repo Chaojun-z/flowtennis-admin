@@ -363,11 +363,20 @@ function sidebarCollapseIcon(expand=false){
 function toggleSidebarCollapsed(){
   document.body.classList.toggle('sidebar-collapsed');
 }
+function syncSidebarItemTitles(){
+  document.querySelectorAll('.sidebar .sb-item').forEach(item=>{
+    const title=String(item.textContent||'').trim();
+    if(!title)return;
+    item.dataset.title=title;
+    item.setAttribute('title',title);
+  });
+}
 function mountSidebarShell(){
   applyShellThemeVars();
   const host=document.getElementById('sidebarHost');
   if(!host)return;
   if(!host.querySelector('.sidebar'))host.innerHTML=renderSidebarShell();
+  syncSidebarItemTitles();
 }
 function renderTopbarShell(){
   return `<div class="topbar">
