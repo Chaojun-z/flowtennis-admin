@@ -80,7 +80,7 @@ function financeDateTimeDisplayText(row){
   if(!businessDate)return '-';
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(0,19);
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;
-  return businessDate.slice(0,10);
+  return `${businessDate.slice(0,10)} 00:00:00`;
 }
 function financeOperatorDisplayText(row){
   const collector=String(row?.collector||row?.operator||'').trim();
@@ -1144,7 +1144,7 @@ function renderFinanceRevenueReport(){
     {label:'散客订场',value:financeInlineMoneyWithPercent(bookingIncome,totalIncome)},
     {label:'课程流水',value:financeInlineMoneyWithPercent(courseIncome,totalIncome)}
   ].map(financeStatCardHtml).join('');
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.purchaseDate,false)}</td><td>${renderStandardCellText(row.weekdayText,false)}</td><td>${renderStandardCellText(row.timeText,false)}</td><td>${renderStandardCellText(row.studentName,false)}</td><td>${renderStandardCellText(row.businessType,false)}</td><td>${renderStandardCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderStandardCellText(row.priceDiffReason,false)}</td><td>${renderStandardCellText(row.collector,false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td><td>${renderStandardCellText(row.campusName,false)}</td><td><span class="tms-tag ${row.status==='voided'?'tms-tag-tier-slate':'tms-tag-green'}">${esc(row.systemStatus)}</span></td></tr>`).join(''):`<tr><td colspan="14"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.studentName,false)}</td><td>${renderStandardCellText(row.businessType,false)}</td><td>${renderStandardCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderStandardCellText(row.priceDiffReason,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
 }
 function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))){
   return sourceRows.filter(row=>{
@@ -1243,8 +1243,8 @@ function renderCoachOpsConsumeReport(){
 }
 function exportCoachOpsRevenueCsv(){
   const rows=financeRevenueRows();
-  let csv='日期,星期,时间,客户,收入类型,支付方式,应收,实收,差价,差价说明,收款人,备注,校区,系统状态\n';
-  csv+=rows.map(row=>[row.purchaseDate||'',row.weekdayText||'',row.timeText||'',row.studentName||'',row.incomeType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"','"'+String(row.collector||'').replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"',row.campusName||'',row.systemStatus||''].join(',')).join('\n');
+  let csv='交易时间,姓名,业务类型,支付方式,应收,实收,差价,差价说明,校区,操作人,备注\n';
+  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.studentName||'',row.businessType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"',row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_收入表_'+today()+'.csv';a.click();toast('导出成功','success');
 }

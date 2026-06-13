@@ -12,8 +12,11 @@ const snapshot = _test.buildFinancePageSnapshot({
     amountPaid:4000,
     purchaseDate:'2026-04-23',
     payMethod:'微信',
-    status:'active'
+    status:'active',
+    ownerCoach:'岳克舟教练',
+    operator:'管理员'
   }],
+  users:[{ id:'admin_account', username:'admin_account', name:'管理员' }],
   entitlements:[{
     id:'ent-1',
     purchaseId:'purchase-1',
@@ -83,6 +86,10 @@ const snapshot = _test.buildFinancePageSnapshot({
 assert.ok(Array.isArray(snapshot.financeNormalizedRows), 'finance snapshot should expose normalized ledger rows');
 assert.ok(Array.isArray(snapshot.financeSettlementRows), 'finance snapshot should expose settlement rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='课程'&&row.action==='收款').length, 1, 'finance snapshot should include course receipt rows');
+const packageReceipt = snapshot.financeNormalizedRows.find(row=>row.id==='purchase-purchase-1');
+assert.strictEqual(packageReceipt.businessDate, '2026-04-23 00:00:00', 'date-only receipts should display midnight seconds');
+assert.strictEqual(packageReceipt.collector, 'admin_account', 'finance receipt operator should use the account, not the owner coach');
+assert.notStrictEqual(packageReceipt.collector, '岳克舟教练', 'finance receipt operator must not fall back to coach name');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='课程'&&row.action==='消耗').length, 1, 'finance snapshot should include course consume rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='会员储值'&&row.action==='收款').length, 1, 'finance snapshot should include membership recharge rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='散客订场'&&row.action==='收款').length, 1, 'finance snapshot should include court cash rows');

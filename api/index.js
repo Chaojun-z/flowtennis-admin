@@ -5095,7 +5095,7 @@ function financeBusinessDateTime(primary,...fallbacks){
     const full=financeNormalizeDateTimeValue(item);
     if(full&&(!day||full.slice(0,10)===day))return full;
   }
-  return day;
+  return day?`${day} 00:00:00`:'';
 }
 function financePurchaseStatusText(purchase){
   return purchase?.status==='voided'?'已作废':'正常';
@@ -5199,8 +5199,15 @@ function aggregateFinanceHistoricalMonthlyLedgerRows(rows=[]){
   });
   return [...result,...monthlyMap.values()];
 }
-function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitlements=[],entitlementLedger=[],courts=[],membershipOrders=[],schedule=[]}={}){
+function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitlements=[],entitlementLedger=[],courts=[],membershipOrders=[],schedule=[],users=[]}={}){
   const campusName=buildFinanceCampusResolvers(campuses);
+  const operatorText=(...values)=>{
+    for(const value of values){
+      const normalized=normalizeOperatorAccountName(value,users);
+      if(normalized)return normalized;
+    }
+    return '未记录';
+  };
   const studentMap=new Map((students||[]).map(item=>[String(item.id||''),item]));
   const entitlementByPurchaseId=new Map();
   const entitlementMap=new Map();
@@ -5228,6 +5235,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       purchase.productName
     )||'—';
     const actualAmount=Number(purchase.amountPaid)||0;
+    const operator=operatorText(purchase.operator,purchase.createdBy,purchase.updatedBy);
     const differenceReason=financeDifferenceReason(`${purchase.notes||''} ${purchase.packageName||''} ${purchase.productName||''}`);
     return {
       id:`purchase-${purchase.id}`,
@@ -5246,7 +5254,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       notes:differenceReason?`${differenceReason}；${purchase.notes||''}`:(purchase.notes||''),
       incomeType:purchase.packageName||purchase.productName||'课包购买',
       packageName:purchase.packageName||purchase.productName||'课包',
-      collector:purchase.operator||purchase.ownerCoach||'—',
+      collector:operator,
+      operator,
       differenceReason:differenceReason||'',
       systemStatus:financePurchaseStatusText(purchase),
       totalLessons:Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0,
@@ -5263,6 +5272,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       const court=courtMap.get(String(order.courtId||''))||{};
       const rowCampusName=campusName.fromHints(court.campus,court.campusName,order.courtName,order.notes,order.membershipPlanName)||'—';
       const amount=Number(order.rechargeAmount)||0;
+      const operator=operatorText(order.operator,order.createdBy,order.updatedBy);
       const differenceReason=financeDifferenceReason(`${order.notes||''} ${order.membershipPlanName||''}`);
       return {
         id:`membership-${order.id}`,
@@ -5281,7 +5291,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         notes:differenceReason?`${differenceReason}；${order.notes||''}`:(order.notes||''),
         incomeType:'会员储值',
         packageName:'',
-        collector:order.operator||'系统记录',
+        collector:operator,
+        operator,
         differenceReason:differenceReason||'',
         systemStatus:differenceReason?'差异项':'正常',
         totalLessons:0,
@@ -5299,6 +5310,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const student=studentMap.get(String(purchase.studentId||''))||{};
     const recognizedAmount=financeRecognizedAmountForConsumeRow(row,entitlement,purchase);
     const sign=Number(row.lessonDelta||0)>0?-1:1;
+    const operator=operatorText(row.operator,row.createdBy,row.updatedBy,scheduleRow.operator,scheduleRow.createdBy,purchase.operator);
     return {
       id:`consume-${row.id}`,
       businessDate:financeBusinessDateTime(row.createdAt,row.recordedAt,row.relatedDate),
@@ -5316,7 +5328,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       notes:row.notes||row.reason||'',
       incomeType:entitlement.packageName||purchase.packageName||'课包消耗',
       packageName:entitlement.packageName||purchase.packageName||'课包',
-      collector:scheduleRow.coach||row.operator||purchase.ownerCoach||'系统记录',
+      collector:operator,
+      operator,
       differenceReason:'',
       systemStatus:row.scheduleId||row.importSource==='系统导入'?'已关联':'待补来源',
       totalLessons:Number(entitlement.totalLessons)||Number(purchase.packageLessons)||0,
@@ -5331,6 +5344,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
     const businessDate=financeBusinessDateTime(item.paidAt||item.paymentTime||item.createdAt,item.paymentTime,item.createdAt,String(item.startTime||'').slice(0,10));
     const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
+    const operator=operatorText(item.operator,item.createdBy,item.updatedBy);
     return {
       id:`schedule-direct-${item.id}`,
       businessDate,
@@ -5348,7 +5362,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       notes:item.notes||'',
       incomeType:courseLabel,
       packageName:'',
-      collector:item.operator||item.createdBy||item.coach||'系统记录',
+      collector:operator,
+      operator,
       differenceReason:'',
       systemStatus:'正常',
       totalLessons:Number(item.lessonCount)||0,
@@ -5361,6 +5376,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
     const amount=roundMoney(item.fieldFeeAmount);
     const businessDate=financeBusinessDateTime(item.fieldFeePaidAt||item.fieldFeePaymentTime||item.paidAt||item.paymentTime||item.createdAt,item.fieldFeePaymentTime,item.paymentTime,item.createdAt,String(item.startTime||'').slice(0,10));
+    const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);
     return {
       id:`schedule-field-fee-${item.id}`,
       businessDate,
@@ -5378,7 +5394,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       notes:item.fieldFeeNote||item.fieldFeeReason||'非黄金课包排入黄金时段补差',
       incomeType:'课程补差收入',
       packageName:item.packageName||'',
-      collector:item.operator||item.createdBy||item.coach||'系统记录',
+      collector:operator,
+      operator,
       differenceReason:'',
       systemStatus:'正常',
       totalLessons:0,
@@ -5396,6 +5413,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       const differenceReason=financeDifferenceReason(noteText);
       const businessType=financeCourtHistoryBusinessType(historyRow);
       const amount=Math.round((Number(historyRow.amount)||0)*100)/100;
+      const operator=operatorText(historyRow.operator,historyRow.createdBy,historyRow.updatedBy);
       let action=financeNeutralActionLabel(noteText);
       let cashDelta=0;
       let recognizedRevenueDelta=0;
@@ -5452,7 +5470,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         notes:differenceReason?`${differenceReason}；${historyRow.note||historyRow.category||''}`:(historyRow.note||historyRow.category||''),
         incomeType:businessType,
         packageName:'',
-        collector:historyRow.operator||historyRow.createdBy||'系统记录',
+        collector:operator,
+        operator,
         differenceReason:differenceReason||'',
         systemStatus:differenceReason?'差异项':'正常',
         totalLessons:0,
@@ -10665,7 +10684,7 @@ module.exports = async (req, res) => {
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
       const campuses=await listCampusesWithDefaults();
-      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule]=await Promise.all([
+      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule,users]=await Promise.all([
         getCachedScan(T_STUDENTS).catch(()=>[]),
         getCachedScan(T_PURCHASES).catch(()=>[]),
         getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
@@ -10673,9 +10692,11 @@ module.exports = async (req, res) => {
         getCachedScan(T_COURTS,{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
         getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
-        getFinancePageScheduleRows()
+        getFinancePageScheduleRows(),
+        getCachedScan(T_USERS).catch(()=>[])
       ]);
       const scoped=filterLoadAllForUser({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule},user);
+      scoped.users=users;
       const financeSnapshot=buildFinancePageSnapshot(scoped);
       return sendJson(res,{
         campuses:scoped.campuses,

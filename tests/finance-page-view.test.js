@@ -40,7 +40,8 @@ assert.match(source,/id="financeRevenueTypeFilterHost"/,'revenue table should ex
 assert.match(source,/id="financeRevenuePayMethodFilterHost"/,'revenue table should expose pay method filter host');
 assert.match(source,/renderStandardDropdownHtml\('financeRevenueTypeFilter'/,'revenue type filter should reuse shared dropdown style');
 assert.match(source,/renderStandardDropdownHtml\('financeRevenuePayMethodFilter'/,'revenue pay method filter should reuse shared dropdown style');
-assert.match(revenuePanel,/日期[\s\S]*星期[\s\S]*时间段[\s\S]*客户[\s\S]*业务类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*收款人[\s\S]*备注[\s\S]*校区[\s\S]*状态[\s\S]*financeRevenueTbody/,'revenue table should follow the owner-facing sheet column order');
+assert.match(revenuePanel,/交易时间[\s\S]*姓名[\s\S]*业务类型[\s\S]*支付方式[\s\S]*应收[\s\S]*实收[\s\S]*差价[\s\S]*差价说明[\s\S]*校区[\s\S]*操作人[\s\S]*备注[\s\S]*financeRevenueTbody/,'revenue table should follow the owner-facing sheet column order');
+assert.doesNotMatch(revenuePanel,/星期|时间段|客户|收款人|状态/,'revenue table should remove the old split time, collector, and status columns');
 assert.doesNotMatch(source,/coachOpsRevenueSearch"[^>]*placeholder="[^"]*收入类型|<th[^>]*>收入类型<\/th>|全部收入类型/,'revenue table should no longer label business type as income type');
 assert.match(source,/businessType:row\.displayBusinessType\|\|financeUnifiedRevenueType\(row\)/,'revenue rows should display standardized business type');
 assert.match(source,/normalizedPaymentMethod:row\.normalizedPaymentMethod\|\|normalizePaymentMethod\(row\.paymentChannel\|\|row\.payMethod\)/,'revenue rows should use standardized payment method');
