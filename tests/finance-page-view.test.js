@@ -60,9 +60,16 @@ assert.match(source,/renderStandardDropdownHtml\('financeLedgerTransactionTypeFi
 assert.match(source,/renderStandardDropdownHtml\('financeLedgerPayMethodFilter','支付方式'/,'ledger pay method dropdown should show the standardized default label');
 assert.match(source,/financeOperatorDisplayText/,'ledger should normalize operator display text in the frontend');
 assert.match(source,/financeDateTimeDisplayText/,'ledger should render full Beijing datetime text');
+assert.match(source,/const businessDate=String\(row\?\.businessDate\|\|row\?\.purchaseDate\|\|''\)/,'revenue transaction time should read purchaseDate when businessDate is not present');
 assert.match(source,/function financeDateTimeDisplayText\([\s\S]*businessDate\.slice\(0,19\)/,'ledger transaction time should keep seconds when backend provides full datetime');
 assert.doesNotMatch(source,/timeText\.match/,'ledger transaction time should not fall back to course time text');
 assert.match(source,/finance-ledger-remark/,'ledger notes should render as a single-line remark');
+assert.doesNotMatch(ledgerPanel,/>\s*查询\s*</,'ledger toolbar should not keep a local query button');
+assert.doesNotMatch(revenuePanel,/>\s*查询\s*</,'revenue toolbar should not keep a local query button');
+assert.doesNotMatch(recognizedPanel,/>\s*查询\s*</,'recognized toolbar should not keep a local query button');
+assert.match(revenuePanel,/class="tms-stats-row finance-ledger-stats" id="coachOpsRevenueStats"/,'revenue stats should reuse the finance summary card style');
+assert.match(recognizedPanel,/class="tms-stats-row finance-ledger-stats" id="coachOpsConsumeStats"/,'recognized stats should reuse the finance summary card style');
+assert.match(pagesCss,/#page-finance #financeLedgerPanel \.tms-table td,#page-finance #financeRevenuePanel \.tms-table td,#page-finance #financeRecognizedPanel \.tms-table td\{[^}]*font-size:12px/,'finance ledger, revenue, and recognized tables should share the compact global table text size');
 assert.match(source,/id="financeLedgerPageSize"/,'ledger should keep the same page-size host structure as student page');
 assert.match(source,/id="financeLedgerPagerBtns"/,'ledger should keep the same pager button host structure as student page');
 assert.doesNotMatch(source,/financeLedgerFromHost|financeLedgerToHost|coachOpsRevenueFromHost|coachOpsRevenueToHost|coachOpsConsumeFromHost|coachOpsConsumeToHost/,'finance panels should remove local date filters and use the global top time filter');

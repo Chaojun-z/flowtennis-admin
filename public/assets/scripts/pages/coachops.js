@@ -76,7 +76,7 @@ function financeLedgerExactTimeText(row){
   return '00:00:00';
 }
 function financeDateTimeDisplayText(row){
-  const businessDate=String(row?.businessDate||'').trim().replace('T',' ');
+  const businessDate=String(row?.businessDate||row?.purchaseDate||'').trim().replace('T',' ');
   if(!businessDate)return '-';
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(0,19);
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;
