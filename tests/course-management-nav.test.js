@@ -30,35 +30,34 @@ function fnBody(name){
 const openPackageModalBody = fnBody('openPackageModal');
 
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
-assert.match(html, /<div class="sb-sec">场地运营<\/div>/, 'sidebar should group court operation pages');
-assert.match(html, /<div class="sb-sec">资源管理<\/div>/, 'sidebar should group resource pages');
-assert.match(html, /<div class="sb-sec">用户中心<\/div>[\s\S]*?goPage\('package-students',this\)[\s\S]*?课包学员[\s\S]*?goPage\('trial-students',this\)[\s\S]*?体验课学员[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池/, 'user center should order package students, trial students, memberships, courts, then leads');
-assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课表[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?教练排课[\s\S]*?goPage\('coachops',this\)[\s\S]*?教练工作量[\s\S]*?goPage\('packages',this\)[\s\S]*?售卖课包/, 'teaching center should order schedule, coach schedule, workload, then packages');
-assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?<div class="sb-sec">场地运营<\/div>/, 'resource management should appear before court operations');
-assert.match(html, /<div class="sb-sec">资源管理<\/div>[\s\S]*?goPage\('coaches',this\)[\s\S]*?教练管理[\s\S]*?goPage\('campusmgr',this\)[\s\S]*?校区管理[\s\S]*?goPage\('admin-users',this\)[\s\S]*?账号管理/, 'resource management should order coaches, campus, then accounts');
+assert.match(html, /<div class="sb-sec">客户中心<\/div>[\s\S]*?goPage\('leads',this\)[\s\S]*?线索管理[\s\S]*?goPage\('trial-students',this\)[\s\S]*?体验学员[\s\S]*?goPage\('package-students',this\)[\s\S]*?正式学员[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('matches',this\)[\s\S]*?约球活动/, 'customer center should order leads, trial students, official students, memberships, courts, then matches');
+assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课管理[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?排课日历[\s\S]*?goPage\('coachops',this\)[\s\S]*?教练课时统计/, 'teaching center should order schedule management, schedule calendar, then coach workload stats');
+assert.match(html, /<div class="sb-sec">产品与定价<\/div>[\s\S]*?goPage\('packages',this\)[\s\S]*?课包产品[\s\S]*?goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'product pricing should order package products then membership plans');
+assert.match(html, /<div class="sb-sec">基础设置<\/div>[\s\S]*?goPage\('coaches',this\)[\s\S]*?教练管理[\s\S]*?goPage\('campusmgr',this\)[\s\S]*?校区管理[\s\S]*?goPage\('admin-users',this\)[\s\S]*?账号管理/, 'basic settings should order coaches, campus, then accounts');
 assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNISFLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
 assert.match(html, /function renderTopbarShell\(/, 'topbar should render from the shared shell component');
 assert.doesNotMatch(html, /· TENNIS · FLOW ·/, 'brand subline should not keep side dots');
 
 assert.match(html, /goPage\('products',this\)[\s\S]*?课程产品/, 'sidebar should keep products page');
-assert.match(html, /goPage\('packages',this\)[\s\S]*?售卖课包/, 'sidebar should add packages page');
+assert.match(html, /goPage\('packages',this\)[\s\S]*?课包产品/, 'sidebar should add packages page');
 assert.doesNotMatch(html, /<div class="sb-item" onclick="goPage\('purchases',this\)">[\s\S]*?购买记录<\/div>/, 'sidebar should remove purchases as a standalone first-level nav entry');
 assert.match(html, /goPage\('admin-users',this\)[\s\S]*?账号管理/, 'sidebar should add account management page');
 assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, 'sidebar should hide the old entitlement page entry');
 
 [
-  ['leads', '线索池'],
-  ['package-students', '课包学员', 'students'],
-  ['trial-students', '体验课学员', 'students'],
+  ['leads', '线索管理'],
+  ['package-students', '正式学员', 'students'],
+  ['trial-students', '体验学员', 'trial-students'],
   ['courts', '订场用户'],
   ['memberships', '会员管理'],
-  ['schedule', '排课表'],
-  ['coachschedule', '教练排课'],
-  ['packages', '售卖课包'],
+  ['matches', '约球活动'],
+  ['schedule', '排课管理'],
+  ['coachschedule', '排课日历'],
+  ['packages', '课包产品'],
   ['admin-users', '账号管理'],
   ['campusmgr', '校区管理'],
   ['coaches', '教练管理'],
-  ['coachops', '教练工作量']
+  ['coachops', '教练课时统计']
 ].forEach(([page, label, iconKey]) => {
   const icon = iconKey || page;
   assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${icon}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);

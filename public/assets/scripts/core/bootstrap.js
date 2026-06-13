@@ -43,8 +43,8 @@ function goPage(pg,el,skipRender=false){
     document.body.classList.toggle('is-packages-page',pg==='packages');
     document.getElementById('campusTabs').style.display=globalTopFilterPages().includes(pg)||['coachschedule','coachops','courts','packages','purchases'].includes(pg)?'flex':'none';
     if(typeof buildCampusTabs==='function')buildCampusTabs();
-    const t={students:'课包学员','package-students':'课包学员','trial-students':'体验课学员',leads:'线索池',classes:'班次管理',plans:'学习计划',schedule:'排课表',coachschedule:'教练排课',coachops:'教练工作量',products:'课程产品',packages:'售卖课包',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球管理',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
-    const financeTitleMap={ledger:'财务总览',revenue:'收入流水',recognized:'已入账流水',settlement:'教练结算'};
+    const t={students:'正式学员','package-students':'正式学员','trial-students':'体验学员',leads:'线索管理',classes:'班次管理',plans:'学习计划',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
+    const financeTitleMap={ledger:'财务总览',revenue:'收款流水',recognized:'入账流水',settlement:'教练结算'};
     document.getElementById('topTitle').textContent=pg==='finance'?(financeTitleMap[financePanel]||t[pg]||''):(t[pg]||'');
     if(!skipRender)loadPageDataAndRender(pg,{quiet:true});
   };
