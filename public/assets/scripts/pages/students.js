@@ -194,8 +194,32 @@ function jumpStudentPage(value){
   stuPage=standardListPagination(total,value,stuPageSize).page;
   renderStudents();
 }
+function studentCampusValuesForList(stu){
+  const sid=String(stu?.id||'');
+  const values=[stu?.campus];
+  const mode=studentListViewMode();
+  const includePackageRow=row=>mode==='trial'?studentPackageRecordIsTrial(row):!studentPackageRecordIsTrial(row);
+  const entitlementRows=entitlements.filter(e=>String(e.studentId||'')===sid&&includePackageRow(e));
+  const entitlementPurchaseIds=new Set(entitlementRows.map(e=>String(e.purchaseId||'')).filter(Boolean));
+  const purchaseRows=purchases.filter(p=>(String(p.studentId||'')===sid||entitlementPurchaseIds.has(String(p.id||'')))&&includePackageRow(p));
+  const packageIds=new Set([
+    ...entitlementRows.flatMap(e=>[e.packageId,e.originalPackageId]),
+    ...purchaseRows.flatMap(p=>[p.packageId,p.originalPackageId])
+  ].map(v=>String(v||'')).filter(Boolean));
+  const packageRows=packages.filter(p=>packageIds.has(String(p.id||'')));
+  const scheduleRows=schedules.filter(s=>scheduleHasStudent(s,stu)&&(mode==='trial'?scheduleCourseType(s)==='体验课':scheduleCourseType(s)!=='体验课'));
+  entitlementRows.forEach(e=>values.push(...parseArr(e.campusIds),e.campus,e.campusId,e.campusName));
+  purchaseRows.forEach(p=>values.push(...parseArr(p.campusIds),p.campusId,p.campus,p.campusName));
+  packageRows.forEach(p=>values.push(...parseArr(p.campusIds),p.campusId,p.campus,p.campusName));
+  scheduleRows.forEach(s=>values.push(s.campus,s.campusId,s.campusName));
+  return [...new Set(values.map(v=>String(v||'').trim()).filter(Boolean))];
+}
+function studentMatchesCampusForList(stu){
+  if(!campus||campus==='all')return true;
+  return studentCampusValuesForList(stu).some(value=>sameCampusValue(value,campus)||sameCampusValue(cn(value),cn(campus))||value===cn(campus));
+}
 function getStudentBaseList(){
-  return students.filter(s=>(campus==='all'||sameCampusValue(s.campus,campus))&&studentMatchesListPage(s));
+  return students.filter(s=>studentMatchesCampusForList(s)&&studentMatchesListPage(s));
 }
 function studentGlobalDateValue(s){
   return s.createdAt||s.enrollDate||s.registerDate||s.joinDate||studentLastLessonDate(s);
@@ -292,7 +316,7 @@ function studentPageStats(base){
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
   const validEntitlements=entitlements.filter(e=>{
     const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
-    return entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废'&&studentStatsMatchesPackageCampus(purchase,e);
+    return studentIds.has(String(e.studentId||''))&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废'&&studentStatsMatchesPackageCampus(purchase,e);
   });
   const validEntitlementIds=new Set(validEntitlements.map(e=>String(e.id||'')));
   const purchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
