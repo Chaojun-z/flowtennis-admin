@@ -9,16 +9,7 @@ async function loadMatches(force=false){
   }
 }
 function matchStatusOptions(){
-  return [
-    {value:'',label:'全部状态'},
-    {value:'open',label:'招募中'},
-    {value:'full',label:'已满员'},
-    {value:'booked',label:'已订场'},
-    {value:'attendance_pending',label:'待确认到场'},
-    {value:'fee_pending',label:'待确认费用'},
-    {value:'settled',label:'已结清'},
-    {value:'cancelled',label:'已取消'}
-  ];
+  return FlowTennisBusinessTaxonomy.optionList('matchStatuses');
 }
 function syncMatchFilters(){
   const campusHost=document.getElementById('matchCampusFilterHost');

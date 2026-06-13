@@ -27,6 +27,23 @@ function priceBusinessText(row){
   if(row.type!=='channel_product')return '—';
   return {court:'订场',lesson:'课程',package:'课包'}[row.businessType]||row.businessType||'—';
 }
+function priceTypeOptions(includeAll=false){
+  const options=FlowTennisBusinessTaxonomy.optionList('priceTypes');
+  return includeAll?[{value:'',label:'全部价格'},...options]:options;
+}
+function priceProductTypeOptions(includeAll=false){
+  const options=FlowTennisBusinessTaxonomy.optionList('priceProductTypes');
+  return includeAll?[{value:'',label:'全部商品类型'},...options]:options;
+}
+function priceChannelOptions(){
+  return FlowTennisBusinessTaxonomy.optionList('priceChannels');
+}
+function priceBusinessTypeOptions(){
+  return FlowTennisBusinessTaxonomy.optionList('priceBusinessTypes');
+}
+function priceStatusOptions(){
+  return FlowTennisBusinessTaxonomy.optionList('priceStatuses');
+}
 function priceTimeBandText(row){
   if(row.type==='venue_rate')return row.startTime&&row.endTime?`${row.startTime}-${row.endTime}`:'—';
   return row.timeBand||'—';
@@ -45,11 +62,11 @@ function syncPriceFilterOptions(){
   const productHost=document.getElementById('priceProductTypeFilterHost');
   if(typeHost){
     const value=document.getElementById('priceTypeFilter')?.value||'';
-    typeHost.innerHTML=renderStandardDropdownHtml('priceTypeFilter','全部价格',[{value:'',label:'全部价格'},{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'}],value,false,'onPriceFilterChange');
+    typeHost.innerHTML=renderStandardDropdownHtml('priceTypeFilter','全部价格',priceTypeOptions(true),value,false,'onPriceFilterChange');
   }
   if(productHost){
     const value=document.getElementById('priceProductTypeFilter')?.value||'';
-    productHost.innerHTML=renderStandardDropdownHtml('priceProductTypeFilter','全部商品类型',[{value:'',label:'全部商品类型'},{value:'订场券',label:'订场券'},{value:'体验课',label:'体验课'},{value:'小班课',label:'小班课'},{value:'课包',label:'课包'}],value,false,'onPriceFilterChange');
+    productHost.innerHTML=renderStandardDropdownHtml('priceProductTypeFilter','全部商品类型',priceProductTypeOptions(true),value,false,'onPriceFilterChange');
   }
 }
 function onPriceFilterChange(){
@@ -109,12 +126,12 @@ function openPriceModal(type='',id=''){
   type=row.type||type||'venue_rate';
   editId=id||null;
   const campusOptions=campuses.map(c=>({value:c.code||c.id,label:c.name||c.code||c.id}));
-  const statusOptions=[{value:'active',label:'启用'},{value:'inactive',label:'停用'}];
+  const statusOptions=priceStatusOptions();
   const priceExperienceType=normalizeExperienceType(row.experienceType||row.productName||row.productType,'私教体验课');
-  const typeSwitch=id?'':`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">价格类型</label>${renderStandardDropdownHtml('priceType','价格类型',[{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'}],type,true,'switchPriceModalType')}</div></div>`;
+  const typeSwitch=id?'':`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">价格类型</label>${renderStandardDropdownHtml('priceType','价格类型',priceTypeOptions(),type,true,'switchPriceModalType')}</div></div>`;
   const fields=type==='venue_rate'
     ? `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('priceCampus','校区',campusOptions,row.campus||campusOptions[0]?.value||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">场地类型</label>${renderStandardDropdownHtml('priceVenueSpaceType','场地类型',[{value:'室内',label:'室内'},{value:'室外',label:'室外'}],row.venueSpaceType||'室内',true)}</div><div class="tms-form-item"><label class="tms-form-label">日期类型</label>${renderStandardDropdownHtml('priceDateType','日期类型',[{value:'工作日',label:'工作日'},{value:'周末节假日',label:'周末节假日'}],row.dateType||'工作日',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">开始时间</label>${renderStandardDropdownHtml('priceStartTime','开始时间',getCourtTimeOptions(row.startTime||'08:00'),row.startTime||'08:00',true)}</div><div class="tms-form-item"><label class="tms-form-label">结束时间</label>${renderStandardDropdownHtml('priceEndTime','结束时间',getCourtTimeOptions(row.endTime||'10:00'),row.endTime||'10:00',true)}</div><div class="tms-form-item"><label class="tms-form-label">原价/小时</label><input class="finput tms-form-control" id="priceUnitPrice" type="number" min="0" step="1" value="${row.unitPrice||''}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('priceStatus','状态',statusOptions,row.status||'active',true)}</div><div class="tms-form-item"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="priceNotes" value="${esc(row.notes||'')}"></div></div>`
-    : `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">渠道</label>${renderStandardDropdownHtml('priceChannel','渠道',[{value:'大众点评',label:'大众点评'},{value:'抖音',label:'抖音'},{value:'小程序',label:'小程序'},{value:'门店',label:'门店'}],row.channel||'大众点评',true)}</div><div class="tms-form-item"><label class="tms-form-label">商品名称</label><input class="finput tms-form-control" id="priceProductName" value="${esc(row.productName||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">商品类型</label>${renderStandardDropdownHtml('priceProductType','商品类型',[{value:'订场券',label:'订场券'},{value:'体验课',label:'体验课'},{value:'小班课',label:'小班课'},{value:'课包',label:'课包'}],row.productType||'订场券',true,'syncPriceExperienceType')}</div><div class="tms-form-item" id="priceExperienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderStandardDropdownHtml('priceExperienceType','体验课类型',experienceTypeOptions(),priceExperienceType,true)}</div><div class="tms-form-item"><label class="tms-form-label">关联业务</label>${renderStandardDropdownHtml('priceBusinessType','关联业务',[{value:'court',label:'订场'},{value:'lesson',label:'课程'},{value:'package',label:'课包'}],row.businessType||'court',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">时长文案</label><input class="finput tms-form-control" id="priceDurationLabel" value="${esc(row.durationLabel||'')}" placeholder="如：1小时 / 1-2小时"></div><div class="tms-form-item"><label class="tms-form-label">时长分钟</label><input class="finput tms-form-control" id="priceDurationMinutes" type="number" min="0" step="30" value="${row.durationMinutes||''}"></div><div class="tms-form-item"><label class="tms-form-label">售价</label><input class="finput tms-form-control" id="priceSalePrice" type="number" min="0" step="1" value="${row.salePrice||''}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('priceStatus','状态',statusOptions,row.status||'active',true)}</div><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="priceNotes" value="${esc(row.notes||'')}"></div></div>`;
+    : `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">渠道</label>${renderStandardDropdownHtml('priceChannel','渠道',priceChannelOptions(),row.channel||'大众点评',true)}</div><div class="tms-form-item"><label class="tms-form-label">商品名称</label><input class="finput tms-form-control" id="priceProductName" value="${esc(row.productName||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">商品类型</label>${renderStandardDropdownHtml('priceProductType','商品类型',priceProductTypeOptions(),row.productType||'订场券',true,'syncPriceExperienceType')}</div><div class="tms-form-item" id="priceExperienceTypeItem" style="display:none"><label class="tms-form-label">体验课类型</label>${renderStandardDropdownHtml('priceExperienceType','体验课类型',experienceTypeOptions(),priceExperienceType,true)}</div><div class="tms-form-item"><label class="tms-form-label">关联业务</label>${renderStandardDropdownHtml('priceBusinessType','关联业务',priceBusinessTypeOptions(),row.businessType||'court',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">时长文案</label><input class="finput tms-form-control" id="priceDurationLabel" value="${esc(row.durationLabel||'')}" placeholder="如：1小时 / 1-2小时"></div><div class="tms-form-item"><label class="tms-form-label">时长分钟</label><input class="finput tms-form-control" id="priceDurationMinutes" type="number" min="0" step="30" value="${row.durationMinutes||''}"></div><div class="tms-form-item"><label class="tms-form-label">售价</label><input class="finput tms-form-control" id="priceSalePrice" type="number" min="0" step="1" value="${row.salePrice||''}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">状态</label>${renderStandardDropdownHtml('priceStatus','状态',statusOptions,row.status||'active',true)}</div><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><input class="finput tms-form-control" id="priceNotes" value="${esc(row.notes||'')}"></div></div>`;
   const body=typeSwitch+fields;
   openStandardModal({title:id?'编辑价格':'新增价格',bodyHtml:body,actionsHtml:`<button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" onclick="savePricePlan('${type}')">保存</button>`,extraClass:'modal-wide'});
   syncPriceExperienceType();

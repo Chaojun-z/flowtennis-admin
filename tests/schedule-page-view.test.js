@@ -105,8 +105,8 @@ assert.match(fnBody('maybeSwitchScheduleCourseFromUnavailableEntitlement'), /体
 assert.match(fnBody('handleScheduleEntitlementChange'), /refreshScheduleCountFields\(\)/, 'manual package changes should refresh the separate lesson count field');
 assert.doesNotMatch(source, /消课节数/, 'schedule page should stop using 消课节数 wording');
 assert.match(fnBody('openScheduleModal'), /repeatField[\s\S]*sch_repeatEnabled[\s\S]*sch_repeatWeeksWrap[\s\S]*循环周数[\s\S]*tms-form-row schedule-time-row[\s\S]*scheduleTimeRangeControls[\s\S]*tms-form-row schedule-repeat-row/, 'schedule modal should keep date/time and repeat controls on separate rows');
-assert.match(source, /const PRODUCT_TYPES=\['私教课','体验课','小班课','大师课','陪打'\]/, 'all course type dropdowns should share the standard level1 course types in the agreed order');
-assert.match(source, /const EXPERIENCE_TYPES=\['私教体验课','小班体验课'\]/, 'all trial course subtype dropdowns should share EXPERIENCE_TYPES');
+assert.match(source, /const PRODUCT_TYPES=BUSINESS_TAXONOMY\.PRODUCT_TYPES/, 'all course type dropdowns should use the global course type dictionary');
+assert.match(source, /const EXPERIENCE_TYPES=BUSINESS_TAXONOMY\.EXPERIENCE_TYPES/, 'all trial course subtype dropdowns should use the global experience type dictionary');
 assert.match(fnBody('syncScheduleFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/, 'schedule course type filter should use the shared standard subtype source');
 assert.match(fnBody('openScheduleModal'), /const courseTypeOptions=STANDARD_COURSE_TYPE_OPTIONS/, 'schedule modal course type dropdown should use the shared standard course type source');
 assert.match(source, /function handleScheduleStandardCourseTypeChange\(/, 'schedule modal should translate standard course type into backend fields');

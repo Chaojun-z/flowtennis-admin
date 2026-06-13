@@ -1434,7 +1434,7 @@ function renderFinanceLedgerFilterDropdowns(baseRows){
   const currentPayMethod=String(document.getElementById('financeLedgerPayMethodFilter')?.value||'').trim();
   const visibleRows=(baseRows||[]).filter(row=>!row.differenceReason);
   const businessValues=Array.from(new Set(visibleRows.map(row=>row.displayBusinessType).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
-  const transactionOrder=['收款','消耗','退款','废弃'];
+  const transactionOrder=FlowTennisBusinessTaxonomy.TRANSACTION_TYPES;
   const transactionValues=Array.from(new Set(visibleRows.map(row=>row.transactionType).filter(Boolean))).filter(item=>transactionOrder.includes(item)).sort((a,b)=>transactionOrder.indexOf(a)-transactionOrder.indexOf(b));
   const payMethodValues=Array.from(new Set(visibleRows.map(row=>row.normalizedPaymentMethod||'其他').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
   const linked=withLinkedFilterCounts([

@@ -134,10 +134,10 @@ assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit
 assert.match(leadsSource, /function leadConversionActionPanelHtml\(lead\)[\s\S]*转为学员[\s\S]*转为订场用户[\s\S]*关联已有学员[\s\S]*关联已有订场用户/, 'lead conversion tab should expose conversion actions inside the drawer');
 assert.match(leadsSource, /查看[\s\S]*跟进/, 'lead rows should expose view and follow-up actions');
 assert.doesNotMatch(fnBody('renderLeads'), /转化/, 'lead rows should not expose conversion action');
-assert.match(leadsSource, /function leadSourceOptions\(\)[\s\S]*大众点评[\s\S]*抖音[\s\S]*小红书[\s\S]*直接线下到店[\s\S]*朋友转介绍[\s\S]*孙老师介绍[\s\S]*小班课转化[\s\S]*群友[\s\S]*开业活动期间[\s\S]*未知/, 'lead source options should use the requested fixed list');
-assert.match(leadsSource, /function leadConsultOptions\(\)[\s\S]*成人私教课[\s\S]*成人小班课[\s\S]*青少年私教课[\s\S]*青少年小班课[\s\S]*订场[\s\S]*约球[\s\S]*陪打[\s\S]*发球机[\s\S]*穿线[\s\S]*咨询储值卡（会员）[\s\S]*合作等[\s\S]*未说明需求/, 'lead consult options should use the requested fixed list');
-assert.match(leadsSource, /function leadIntentOptions\(\)[\s\S]*沉默[\s\S]*20%-40%[\s\S]*40%-60%[\s\S]*60%-80%[\s\S]*80%-100%/, 'lead intent options should use the requested fixed list');
-assert.match(leadsSource, /function leadLevelOptions\(\)[\s\S]*0[\s\S]*1\.0[\s\S]*1\.5[\s\S]*2\.0[\s\S]*2\.5[\s\S]*3\.0[\s\S]*3\.5[\s\S]*4\.0[\s\S]*4\.5[\s\S]*5\.0[\s\S]*自定义/, 'lead level options should use the requested fixed list');
+assert.match(leadsSource, /function leadSourceOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadSources'\)/, 'lead source options should use the global business dictionary');
+assert.match(leadsSource, /function leadConsultOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadConsultTypes'\)/, 'lead consult options should use the global business dictionary');
+assert.match(leadsSource, /function leadIntentOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadIntentLevels'\)/, 'lead intent options should use the global business dictionary');
+assert.match(leadsSource, /function leadLevelOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadLevels'\)/, 'lead level options should use the global business dictionary');
 assert.match(leadsSource, /function leadLevelCanonicalValue\(value\)[\s\S]*\['1','2','3','4','5'\]\.includes\(text\)[\s\S]*`\$\{text\}\.0`/, 'lead standard integer levels should display and edit as x.0');
 assert.match(leadsSource, /function leadLevelText\(lead\)[\s\S]*leadLevelCanonicalValue\(lead\?\.level\)/, 'lead level display should preserve standard decimal labels');
 assert.match(leadsSource, /function leadLevelControlHtml\([\s\S]*lead_level_custom[\s\S]*toggleLeadLevelCustomInput/, 'custom lead level should provide an input instead of saving the literal custom label');

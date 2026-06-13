@@ -1,6 +1,6 @@
 function syncEntitlementFilters(){
   const statusValue=document.getElementById('entStatusFilter')?.value||'';
-  const statusOptions=[{value:'',label:'全部状态'},{value:'active',label:'正常'},{value:'depleted',label:'已用完'},{value:'voided',label:'已作废'}];
+  const statusOptions=[{value:'',label:'全部状态'},...ENTITLEMENT_STATUS_OPTIONS];
   const host=document.getElementById('entStatusFilterHost');
   if(host)host.innerHTML=renderStandardDropdownHtml('entStatusFilter','全部状态',statusOptions,statusValue,false,'renderEntitlements');
 }

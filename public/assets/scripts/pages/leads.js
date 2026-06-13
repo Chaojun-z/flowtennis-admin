@@ -331,16 +331,22 @@ function leadPhoneValid(value){
   return !phone||/^1[3-9]\d{9}$/.test(phone);
 }
 function leadSourceOptions(){
-  return ['大众点评','抖音','小红书','直接线下到店','朋友转介绍','孙老师介绍','小班课转化','群友','开业活动期间','未知'].map(value=>({value,label:value}));
+  return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
 function leadConsultOptions(){
-  return ['成人私教课','成人小班课','青少年私教课','青少年小班课','订场','约球','陪打','发球机','穿线','咨询储值卡（会员）','合作等','未说明需求'].map(value=>({value,label:value}));
+  return FlowTennisBusinessTaxonomy.optionList('leadConsultTypes');
 }
 function leadIntentOptions(){
-  return ['沉默','20%-40%','40%-60%','60%-80%','80%-100%'].map(value=>({value,label:value}));
+  return FlowTennisBusinessTaxonomy.optionList('leadIntentLevels');
 }
 function leadLevelOptions(){
-  return ['0','1.0','1.5','2.0','2.5','3.0','3.5','4.0','4.5','5.0','自定义'].map(value=>({value,label:value}));
+  return FlowTennisBusinessTaxonomy.optionList('leadLevels');
+}
+function leadFollowupTypeOptions(){
+  return LEAD_FOLLOWUP_TYPE_OPTIONS;
+}
+function leadStatusAfterOptions(){
+  return LEAD_STATUS_AFTER_OPTIONS;
 }
 function leadLevelPresetValue(value){
   const text=leadLevelCanonicalValue(value);
@@ -375,7 +381,7 @@ function leadCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:campusDisplayName(c.name||c.code||c.id)}))];
 }
 function leadStatusOptionValues(rows){
-  const preferred=['体验课完成','体验课预约','无意向','新线索','已报名-私教','已报名-随到随学','已报名-训练营','已报名-专项','已订场','已对接其他校区','已沟通','已流失','转化跟进中'];
+  const preferred=FlowTennisBusinessTaxonomy.values('leadFollowupStatuses');
   const current=Array.from(new Set((Array.isArray(rows)?rows:[]).map(item=>leadFollowupStatusText(item)).map(item=>String(item||'').trim()).filter(Boolean)));
   const seen=new Set();
   const values=[];
@@ -808,8 +814,8 @@ function leadFollowupTimelineItemHtml(lead,item){
   return {className:'lead-followup-item',contentHtml:`<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(`${date} · ${by} 跟进 · ${status}`)}</div><div class="student-lesson-meta">${esc(note)}</div></div><button class="schedule-detail-action" onclick="startLeadFollowupDrawerEdit('${lead.id}','${item.id}')">编辑</button></div>`};
 }
 function leadFollowupDrawerFormHtml(lead,followup=null){
-  const followupTypeOptions=[{value:'电话',label:'电话'},{value:'微信',label:'微信'},{value:'到店',label:'到店'},{value:'面谈',label:'面谈'},{value:'其他',label:'其他'}];
-  const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
+  const followupTypeOptions=leadFollowupTypeOptions();
+  const statusOptions=leadStatusAfterOptions();
   return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],followup?.followupBy||currentUser?.name||lead?.owner||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
 }
 function startLeadFollowupDrawerEdit(leadId,followupId=''){
@@ -972,8 +978,8 @@ async function saveLead(leadId=''){
 function openLeadFollowupModal(leadId,followupId=''){
   const lead=leadById(leadId)||null;
   const followup=(Array.isArray(leadFollowups)?leadFollowups:[]).find(item=>String(item?.id||'')===String(followupId))||null;
-  const followupTypeOptions=[{value:'电话',label:'电话'},{value:'微信',label:'微信'},{value:'到店',label:'到店'},{value:'面谈',label:'面谈'},{value:'其他',label:'其他'}];
-  const statusOptions=[{value:'新线索',label:'新线索'},{value:'跟进中',label:'跟进中'},{value:'已约体验',label:'已约体验'},{value:'已转课程',label:'已转课程'},{value:'已转订场',label:'已转订场'},{value:'已转课程+订场',label:'已转课程+订场'},{value:'已流失',label:'已流失'}];
+  const followupTypeOptions=leadFollowupTypeOptions();
+  const statusOptions=leadStatusAfterOptions();
   const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],followup?.followupBy||currentUser?.name||lead?.owner||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}','${followupId||''}')">保存跟进</button>`;
   openStandardModal({title:followup?'编辑跟进':'新增跟进',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});

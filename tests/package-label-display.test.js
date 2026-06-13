@@ -43,6 +43,7 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
+vm.runInContext(read('public/assets/scripts/core/business-taxonomy.js'), context, { filename: 'business-taxonomy.js' });
 vm.runInContext(read('public/assets/scripts/core/constants.js'), context, { filename: 'constants.js' });
 vm.runInContext(read('public/assets/scripts/core/utils.js'), context, { filename: 'utils.js' });
 vm.runInContext(extractFunction(read('public/assets/scripts/pages/packages.js'), 'packageDisplayTitle'), context, { filename: 'packages.js' });
