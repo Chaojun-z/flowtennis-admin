@@ -19,7 +19,7 @@ assert.match(
 
 assert.match(
   apiSource,
-  /if\(path==='\/page-data\/coaches'&&method==='GET'\)\{[\s\S]*if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);[\s\S]*return sendJson\(res,\{coaches:await cappedScan\(T_COACHES\)\}\);[\s\S]*\}/,
+  /if\(path==='\/page-data\/coaches'&&method==='GET'\)\{[\s\S]*if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);[\s\S]*const coaches=await cappedScan\(T_COACHES\);[\s\S]*return sendJson\(res,\{coaches:filterLoadAllForUser\(\{coaches\},user\)\.coaches\}\);[\s\S]*\}/,
   'api should expose a dedicated coach page-data endpoint backed by cappedScan'
 );
 

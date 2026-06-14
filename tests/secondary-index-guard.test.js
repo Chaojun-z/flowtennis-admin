@@ -19,6 +19,6 @@ assert.match(apiSource, /const \[entitlementRows,coaches,users\]=await Promise\.
 assert.match(apiSource, /const needsFallback=missingStudentIds\.length>0\|\|!indexedRows\.length;[\s\S]*const fallbackRows=\(await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\)\)\.filter\(row=>normalized\.includes\(String\(row\.studentId\|\|''\)\.trim\(\)\)&&isActiveEntitlementForIndex\(row\)\);/, '课包推荐在索引缺失或空洞时必须回退全量课包扫描');
 assert.match(apiSource, /await syncStudentActiveEntitlementIndexes\(ent,next\);/, '课包扣减后必须同步学员活跃课包索引');
 assert.match(apiSource, /await syncStudentActiveEntitlementIndexes\(old,null\);/, '课包删除后必须同步学员活跃课包索引');
-assert.match(apiSource, /if\(user\.role==='admin'&&sid\)return sendJson\(res,await getIndexedActiveEntitlementsForStudents\(\[sid\]\)\);/, '按学员查看课包时必须优先走学员活跃课包索引');
+assert.match(apiSource, /const rows=\(user\.role==='admin'&&sid&&!isCampusScopedAdmin\(user\)\)\?await getIndexedActiveEntitlementsForStudents\(\[sid\]\):await getCachedScan\(T_ENTITLEMENTS\)\.catch\(\(\)=>\[\]\);[\s\S]*if\(user\.role==='admin'&&!isCampusScopedAdmin\(user\)\)return sendJson\(res,sid\?rows\.filter\(e=>e\.studentId===sid\):rows\);/, '按学员查看课包时必须优先走学员活跃课包索引');
 
 console.log('secondary index guard tests passed');

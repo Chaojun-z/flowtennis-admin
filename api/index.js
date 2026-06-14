@@ -9259,6 +9259,10 @@ module.exports = async (req, res) => {
     console.log('[health] GET bypass scheduleInitInBackground');
     return sendJson(res,{status:'ok',time:new Date().toISOString()});
   }
+  if(path==='/campuses'&&method==='GET'){
+    console.log('[campuses] GET bypass scheduleInitInBackground');
+    return sendJson(res,DEFAULT_CAMPUSES);
+  }
   if(path==='/match-diag'&&method==='GET'){
     const startedAt=Date.now();
     const host=safeDatabaseUrlHost(MATCH_DATABASE_URL);

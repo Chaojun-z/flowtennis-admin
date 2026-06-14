@@ -26,7 +26,7 @@ assert.match(
 
 assert.match(
   apiSource,
-  /if\(method==='GET'\)\{if\(user\.role==='admin'\)return sendJson\(res,await getScheduleListRows\(\)\);/,
+  /if\(method==='GET'\)\{if\(user\.role==='admin'\)\{const rows=await getScheduleListRows\(\);return sendJson\(res,filterLoadAllForUser\(\{schedule:rows\},user\)\.schedule\);/,
   '管理员排课表应读取完整轻投影，不再固定截断'
 );
 
@@ -56,14 +56,14 @@ assert.match(
 );
 assert.match(
   apiSource,
-  /const financeSnapshot=buildFinancePageSnapshot\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
+  /const scoped=filterLoadAllForUser\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\},user\);[\s\S]*const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
   '财务总览应读取生产业务表完整事实账，避免旧基线加白名单增量造成多口径'
 );
 assert.doesNotMatch(apiSource, /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*buildVerifiedFinanceWithImportIncrements/, '财务页不应继续使用旧基线加白名单增量作为主口径');
 assert.doesNotMatch(apiSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
 assert.match(
   apiSource,
-  /const financeSnapshot=buildFinancePageSnapshot\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\}\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
+  /const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
   '财务接口应返回基于排课轻投影聚合的教练结算数据'
 );
 

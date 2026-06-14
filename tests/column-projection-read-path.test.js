@@ -18,13 +18,13 @@ assert.match(
 
 assert.match(
   apiSource,
-  /function scan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*const columnsToGet=columns\.length\?columns\.map\(column=>\(\{columnName:column\}\)\):undefined;[\s\S]*if\(columnsToGet\)request\.columnsToGet=columnsToGet;[\s\S]*gc\(\)\.getRange\(request,/s,
+  /function scan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*const columnsToGet=columns\.length\?columns:undefined;[\s\S]*if\(columnsToGet\)request\.columnsToGet=columnsToGet;[\s\S]*gc\(\)\.getRange\(request,/s,
   'scan should forward projected columns to the TableStore getRange request'
 );
 
 assert.match(
   apiSource,
-  /if\(path==='\/page-data\/courts'&&method==='GET'\)\{[\s\S]*getCachedScan\(T_STUDENTS,\{columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)[\s\S]*getCachedScan\(T_COURTS,\{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)/s,
+  /if\(path==='\/page-data\/courts'&&method==='GET'\)\{[\s\S]*getFastStudentsRead\(\{columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_COURTS,\{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)/s,
   'courts page data should request projected student and court columns on the server side'
 );
 
