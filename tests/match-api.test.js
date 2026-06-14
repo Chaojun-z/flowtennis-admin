@@ -517,6 +517,10 @@ assert.equal(matchCourtHistoryRow.matchId, 'm1');
 assert.equal(matchCourtHistoryRow.matchFeeSplitId, 'split-1');
 assert.equal(matchCourtHistoryRow.startTime, '10:00');
 assert.equal(matchCourtHistoryRow.endTime, '12:00');
+assert.ok(matchCourtHistoryRow.operationId, 'match fee sync history row should carry operationId');
+assert.ok(matchCourtHistoryRow.batchId, 'match fee sync history row should carry batchId');
+assert.equal(matchCourtHistoryRow.batchId, `batch-${matchCourtHistoryRow.operationId}`);
+assert.equal(matchCourtHistoryRow.operationType, 'match-fee-sync');
 assert.match(matchCourtHistoryRow.note, /约球订场/);
 
 const matchRevenueSummary = rules.summarizeCourtFinanceRevenue({
@@ -537,6 +541,10 @@ assert.equal(matchRefundHistoryRow.category, '订场');
 assert.equal(matchRefundHistoryRow.sourceCategory, '约球订场');
 assert.equal(matchRefundHistoryRow.amount, 125);
 assert.equal(matchRefundHistoryRow.matchFeeSplitId, 'split-1');
+assert.ok(matchRefundHistoryRow.operationId, 'match refund sync history row should carry operationId');
+assert.ok(matchRefundHistoryRow.batchId, 'match refund sync history row should carry batchId');
+assert.equal(matchRefundHistoryRow.batchId, `batch-${matchRefundHistoryRow.operationId}`);
+assert.equal(matchRefundHistoryRow.operationType, 'match-refund-sync');
 assert.match(matchRefundHistoryRow.note, /用户退款/);
 
 assert.throws(() => rules.assertMatchFeeSplitUpdateInput({ payStatus: 'waived' }), /请填写原因/);

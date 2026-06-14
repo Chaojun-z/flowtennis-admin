@@ -8050,7 +8050,8 @@ function buildMatchCourtFinanceHistoryRow({match={},split={},user={},operatorId=
   const end=match.endtime||match.endTime;
   const title=String(match.title||'约球').trim();
   const payer=String(user.nickName||user.nickname||user.phone||user.id||split.userId||split.userid||'球友').trim();
-  return {
+  const operationTrace=buildOperationTrace({operationType:'match-fee-sync',operator:operatorId,now});
+  return withOperationTrace({
     id:`match-fee-${split.id||uuidv4()}`,
     date:matchDateText(start)||String(now).slice(0,10),
     occurredDate:matchDateText(start)||String(now).slice(0,10),
@@ -8076,12 +8077,13 @@ function buildMatchCourtFinanceHistoryRow({match={},split={},user={},operatorId=
     matchFeeSplitId:split.id||'',
     matchUserId:split.userid||split.userId||user.id||'',
     operator:operatorId
-  };
+  },operationTrace);
 }
 function buildMatchCourtFinanceRefundRow({paidRow={},split={},operatorId='',note='',now=new Date().toISOString()}={}){
   const amount=normalizeMoney(split.paidAmount||split.paidamount||split.amount||paidRow.amount);
   if(amount<=0)throw new Error('约球退款金额必须大于 0');
-  return {
+  const operationTrace=buildOperationTrace({operationType:'match-refund-sync',operator:operatorId,now});
+  return withOperationTrace({
     ...paidRow,
     id:`match-fee-refund-${split.id||uuidv4()}`,
     createdAt:now,
@@ -8095,8 +8097,13 @@ function buildMatchCourtFinanceRefundRow({paidRow={},split={},operatorId='',note
     note:`约球订场退款 - ${String(note||'运营退款').trim()}`,
     matchFeeSplitId:split.id||paidRow.matchFeeSplitId||'',
     matchUserId:split.userid||split.userId||paidRow.matchUserId||'',
-    operator:operatorId
-  };
+    operator:operatorId,
+    operationId:'',
+    batchId:'',
+    operationType:'',
+    operationAt:'',
+    operationBy:''
+  },operationTrace);
 }
 async function syncMatchFeeSplitToCourtFinance(matchId,userId,operatorId){
   const pool=getMatchSqlPool();
