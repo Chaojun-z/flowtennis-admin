@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+const path = require('path');
 const { _test: rules } = require('../api/index.js');
 const {
+  REPORT_DIR,
   loadEnv,
   assertProductionTarget,
   createClientFromEnv,
@@ -28,6 +31,37 @@ function parseArgs(argv) {
     write: argv.includes('--write'),
     dryRun: argv.includes('--dry-run') || !argv.includes('--write')
   };
+}
+
+function makeOperationTrace(now = new Date().toISOString()) {
+  const stamp = String(now).replace(/[^0-9]/g, '').slice(0, 17) || String(Date.now());
+  const operationId = `mabao-duplicate-courts-repair-20260524-${stamp}`;
+  return { operationId, batchId: `batch-${operationId}` };
+}
+
+function traceRow(row, trace, now = new Date().toISOString()) {
+  if (!row) return row;
+  return {
+    ...row,
+    operationId: trace.operationId,
+    batchId: trace.batchId,
+    updatedAt: row.updatedAt || now
+  };
+}
+
+function traceCourtRow(row, trace, now = new Date().toISOString()) {
+  const traced = traceRow(row, trace, now);
+  return {
+    ...traced,
+    history: Array.isArray(row.history)
+      ? row.history.map((item) => traceRow(item, trace, now))
+      : row.history
+  };
+}
+
+function writeReport(report, reportPath) {
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
 function baseName(name) {
@@ -95,7 +129,7 @@ function summarizeCourt(court, membershipCourtIds = new Set()) {
   };
 }
 
-function applyPlan(plan, refs, now) {
+function applyPlan(plan, refs, now, mergeCourtRecords = rules.mergeCourtRecords) {
   let targetCourt = plan.target;
   const courtUpdates = [];
   let membershipAccounts = refs.membershipAccounts;
@@ -104,7 +138,7 @@ function applyPlan(plan, refs, now) {
   let membershipAccountEvents = refs.membershipAccountEvents;
 
   for (const sourceCourt of plan.sources) {
-    const merged = rules.mergeCourtRecords({
+    const merged = mergeCourtRecords({
       targetCourt,
       sourceCourt,
       membershipAccounts,
@@ -132,27 +166,37 @@ function applyPlan(plan, refs, now) {
   };
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  loadEnv();
-  const target = await assertProductionTarget();
-  const client = createClientFromEnv();
+async function run(argv = process.argv.slice(2), deps = {}) {
+  const args = parseArgs(argv);
+  const now = deps.now || new Date().toISOString();
+  const trace = deps.trace || makeOperationTrace(now);
+  const reportDir = deps.reportDir || path.join(REPORT_DIR, 'duplicate-courts-repair-reports');
+  const reportPath = deps.reportPath || path.join(reportDir, `${trace.operationId}.json`);
+  const loadEnvironment = deps.loadEnv || loadEnv;
+  const assertTarget = deps.assertProductionTarget || assertProductionTarget;
+  const createClient = deps.createClientFromEnv || createClientFromEnv;
+  const scan = deps.scanTable || scanTable;
+  const writeRow = deps.writeRow || putRow;
+  const mergeCourtRecords = deps.mergeCourtRecords || rules.mergeCourtRecords;
+
+  loadEnvironment();
+  const target = await assertTarget();
+  const client = createClient();
   const [courts, membershipAccounts, membershipOrders, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
-    scanTable(client, TABLES.courts),
-    scanTable(client, EXTRA_TABLES.membershipAccounts).catch(() => []),
-    scanTable(client, EXTRA_TABLES.membershipOrders).catch(() => []),
-    scanTable(client, EXTRA_TABLES.membershipBenefitLedger).catch(() => []),
-    scanTable(client, EXTRA_TABLES.membershipAccountEvents).catch(() => [])
+    scan(client, TABLES.courts),
+    scan(client, EXTRA_TABLES.membershipAccounts).catch(() => []),
+    scan(client, EXTRA_TABLES.membershipOrders).catch(() => []),
+    scan(client, EXTRA_TABLES.membershipBenefitLedger).catch(() => []),
+    scan(client, EXTRA_TABLES.membershipAccountEvents).catch(() => [])
   ]);
   const data = { courts, membershipAccounts, membershipOrders, membershipBenefitLedger, membershipAccountEvents };
-  const now = new Date().toISOString();
   const plans = buildDuplicatePlan(data);
   const membershipCourtIds = new Set(membershipOrders.map((row) => String(row.courtId || '')).filter(Boolean));
   const applied = [];
   const skipped = [];
   for (const plan of plans) {
     try {
-      const result = applyPlan(plan, data, now);
+      const result = applyPlan(plan, data, now, mergeCourtRecords);
       applied.push({
         key: plan.key,
         before: {
@@ -174,27 +218,47 @@ async function main() {
 
   const courtUpdatesById = new Map();
   for (const item of applied) {
-    for (const row of item.result.courtUpdates) courtUpdatesById.set(String(row.id), row);
+    for (const row of item.result.courtUpdates) courtUpdatesById.set(String(row.id), traceCourtRow(row, trace, now));
   }
+  const report = {
+    generatedAt: new Date().toISOString(),
+    mode: args.dryRun ? 'dry-run' : 'write',
+    operationId: trace.operationId,
+    batchId: trace.batchId,
+    target,
+    reportPath,
+    tables: {
+      [TABLES.courts]: courtUpdatesById.size
+    }
+  };
   const summary = {
     ok: true,
     mode: args.dryRun ? 'dry-run-only' : 'write',
+    operationId: trace.operationId,
+    batchId: trace.batchId,
     target,
     groups: applied.length,
     skippedGroups: skipped.length,
     sourceCourtsToArchive: applied.reduce((sum, item) => sum + item.before.sources.length, 0),
     courtUpdates: courtUpdatesById.size,
     items: applied.map(({ key, before, after }) => ({ key, before, after })),
-    skipped
+    skipped,
+    report
   };
+  writeReport(report, reportPath);
 
   if (args.dryRun) {
     console.log(JSON.stringify(summary, null, 2));
-    return;
+    return { summary, report, reportPath };
   }
 
-  for (const row of courtUpdatesById.values()) await putRow(client, TABLES.courts, row);
+  for (const row of courtUpdatesById.values()) await writeRow(client, TABLES.courts, row);
   console.log(JSON.stringify(summary, null, 2));
+  return { summary, report, reportPath };
+}
+
+async function main() {
+  await run(process.argv.slice(2));
 }
 
 if (require.main === module) {
@@ -203,3 +267,13 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = {
+  parseArgs,
+  makeOperationTrace,
+  traceRow,
+  traceCourtRow,
+  buildDuplicatePlan,
+  applyPlan,
+  run
+};
