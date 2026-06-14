@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+const path = require('path');
 const {
   SOURCE_FILES,
+  REPORT_DIR,
   TABLES,
   loadEnv,
   assertProductionTarget,
@@ -34,6 +37,15 @@ function parseArgs(argv) {
   return {
     write: argv.includes('--write'),
     dryRun: argv.includes('--dry-run') || !argv.includes('--write')
+  };
+}
+
+function makeOperationTrace(now = new Date().toISOString()) {
+  const stamp = String(now).replace(/[^0-9]/g, '').slice(0, 17) || String(Date.now());
+  const operationId = `mabao-final-import-20260524-${stamp}`;
+  return {
+    operationId,
+    batchId: `batch-${operationId}`
   };
 }
 
@@ -130,17 +142,73 @@ function shouldCreateCourtHistory(row) {
   return money(row['实收/核销']) > 0;
 }
 
-async function writeRows(client, tableName, rows) {
-  for (const row of rows) await putRow(client, tableName, row);
+function traceRow(row, trace, now = new Date().toISOString()) {
+  if (!row) return row;
+  return {
+    ...row,
+    operationId: trace.operationId,
+    batchId: trace.batchId,
+    updatedAt: row.updatedAt || now
+  };
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  loadEnv();
-  const target = await assertProductionTarget();
-  const client = createClientFromEnv();
-  const context = await buildImportContext(client);
-  const sourceRows = parseSourceRows();
+function traceCourtRow(row, trace, now = new Date().toISOString()) {
+  const traced = traceRow(row, trace, now);
+  return {
+    ...traced,
+    history: Array.isArray(row.history)
+      ? row.history.map((item) => traceRow(item, trace, now))
+      : row.history
+  };
+}
+
+function buildApplyReport({ mode, trace, target, writePlan, reportPath }) {
+  return {
+    generatedAt: new Date().toISOString(),
+    mode,
+    operationId: trace.operationId,
+    batchId: trace.batchId,
+    target,
+    reportPath,
+    tables: {
+      [TABLES.students]: writePlan.students,
+      [TABLES.purchases]: writePlan.purchases,
+      [TABLES.entitlements]: writePlan.entitlements,
+      [TABLES.schedule]: writePlan.schedules,
+      [TABLES.entitlementLedger]: writePlan.ledgers,
+      [TABLES.courts]: writePlan.courts,
+      [TABLES.activeEntitlementIndex]: writePlan.activeIndexRows
+    }
+  };
+}
+
+function writeReport(report, reportPath) {
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+}
+
+async function writeRows(client, tableName, rows, writeRow = putRow) {
+  for (const row of rows) await writeRow(client, tableName, row);
+}
+
+async function run(argv = process.argv.slice(2), deps = {}) {
+  const args = parseArgs(argv);
+  const now = deps.now || new Date().toISOString();
+  const trace = deps.trace || makeOperationTrace(now);
+  const reportDir = deps.reportDir || path.join(REPORT_DIR, 'apply-reports');
+  const reportPath = deps.reportPath || path.join(reportDir, `${trace.operationId}.json`);
+  const loadEnvironment = deps.loadEnv || loadEnv;
+  const assertTarget = deps.assertProductionTarget || assertProductionTarget;
+  const createClient = deps.createClientFromEnv || createClientFromEnv;
+  const loadContext = deps.buildImportContext || buildImportContext;
+  const loadSourceRows = deps.parseSourceRows || parseSourceRows;
+  const writeRow = deps.writeRow || putRow;
+
+  loadEnvironment();
+  const target = await assertTarget();
+  const client = createClient();
+  const context = await loadContext(client);
+  const sourceRows = loadSourceRows();
   const studentResolver = buildStudentResolver(context.students);
   const schedulesByIncomeRowNo = sourceByRowNo(sourceRows.schedule);
   const incomeByRowNo = sourceByRowNo(sourceRows.income);
@@ -162,7 +230,7 @@ async function main() {
     if (!shouldCreateCoursePurchase(row)) continue;
     const studentName = extractCourseName(row['客户/学员']);
     const existingStudent = studentResolver.resolve(studentName);
-    const student = existingStudent || buildStudentRecord(studentName, new Date().toISOString(), { rowNo: row.__rowNo, campus: 'mabao' });
+    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'mabao' });
     if (!existingStudent) {
       pendingStudents.push(student);
       studentResolver.register(student);
@@ -188,7 +256,7 @@ async function main() {
   for (const row of sourceRows.schedule) {
     const studentName = lessonStudentName(row['学员']);
     const existingStudent = studentResolver.resolve(studentName);
-    const student = existingStudent || buildStudentRecord(studentName, new Date().toISOString(), { rowNo: row.__rowNo, campus: 'mabao' });
+    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'mabao' });
     if (!existingStudent) {
       pendingStudents.push(student);
       studentResolver.register(student);
@@ -204,7 +272,7 @@ async function main() {
       purchaseId,
       entitlementId: entitlement?.id || '',
       packageName: entitlement?.packageName || linkedPurchase?.packageName || '',
-      now: new Date().toISOString()
+      now
     });
     pendingSchedules.push(scheduleRecord);
   }
@@ -252,7 +320,7 @@ async function main() {
       usedLessons: used,
       remainingLessons: remaining,
       status: remaining <= 0 ? 'depleted' : 'active',
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     });
     changedEntitlementIds.add(entitlement.id);
   }
@@ -262,36 +330,58 @@ async function main() {
     pendingCourtHistoryRows.push(row);
   }
 
-  const pendingCourts = buildCourtHistoryWriteRows(pendingCourtHistoryRows, context.courts);
-  const activeIndexRows = buildActiveIndexRows([...existingEntitlementsById.values()].filter(Boolean));
-  const changedEntitlements = [...changedEntitlementIds].map((id) => existingEntitlementsById.get(id)).filter(Boolean);
+  const pendingCourts = buildCourtHistoryWriteRows(pendingCourtHistoryRows, context.courts, { now });
+  const activeIndexRows = buildActiveIndexRows([...existingEntitlementsById.values()].filter(Boolean)).map((row) => traceRow(row, trace, now));
+  const changedEntitlements = [...changedEntitlementIds].map((id) => existingEntitlementsById.get(id)).filter(Boolean).map((row) => traceRow(row, trace, now));
+  const tracedStudents = pendingStudents.map((row) => traceRow(row, trace, now));
+  const tracedPurchases = pendingPurchases.map((row) => traceRow(row, trace, now));
+  const tracedSchedules = pendingSchedules.map((row) => traceRow(row, trace, now));
+  const tracedLedgers = pendingLedgers.map((row) => traceRow(row, trace, now));
+  const tracedCourts = pendingCourts.map((row) => traceCourtRow(row, trace, now));
   const nextSummary = {
     ...summary,
+    operationId: trace.operationId,
+    batchId: trace.batchId,
     writePlan: {
-      students: pendingStudents.length,
-      purchases: pendingPurchases.length,
-      entitlements: 0,
-      schedules: pendingSchedules.length,
-      ledgers: pendingLedgers.length,
-      courts: pendingCourts.length,
+      students: tracedStudents.length,
+      purchases: tracedPurchases.length,
+      entitlements: changedEntitlements.length,
+      schedules: tracedSchedules.length,
+      ledgers: tracedLedgers.length,
+      courts: tracedCourts.length,
       activeIndexRows: activeIndexRows.length
     }
   };
+  const report = buildApplyReport({
+    mode: args.dryRun ? 'dry-run' : 'write',
+    trace,
+    target,
+    writePlan: nextSummary.writePlan,
+    reportPath
+  });
+  writeReport(report, reportPath);
 
   if (args.dryRun) {
-    console.log(JSON.stringify(nextSummary, null, 2));
-    return;
+    const output = { ...nextSummary, report };
+    console.log(JSON.stringify(output, null, 2));
+    return { summary: nextSummary, report, reportPath };
   }
 
-  await writeRows(client, TABLES.students, pendingStudents);
-  await writeRows(client, TABLES.purchases, pendingPurchases);
-  await writeRows(client, TABLES.entitlements, changedEntitlements);
-  await writeRows(client, TABLES.schedule, pendingSchedules);
-  await writeRows(client, TABLES.entitlementLedger, pendingLedgers);
-  await writeRows(client, TABLES.courts, pendingCourts);
-  await writeRows(client, TABLES.activeEntitlementIndex, activeIndexRows);
+  await writeRows(client, TABLES.students, tracedStudents, writeRow);
+  await writeRows(client, TABLES.purchases, tracedPurchases, writeRow);
+  await writeRows(client, TABLES.entitlements, changedEntitlements, writeRow);
+  await writeRows(client, TABLES.schedule, tracedSchedules, writeRow);
+  await writeRows(client, TABLES.entitlementLedger, tracedLedgers, writeRow);
+  await writeRows(client, TABLES.courts, tracedCourts, writeRow);
+  await writeRows(client, TABLES.activeEntitlementIndex, activeIndexRows, writeRow);
 
-  console.log(JSON.stringify({ ok: true, ...nextSummary }, null, 2));
+  const output = { ok: true, ...nextSummary, report };
+  console.log(JSON.stringify(output, null, 2));
+  return { summary: nextSummary, report, reportPath };
+}
+
+async function main() {
+  await run(process.argv.slice(2));
 }
 
 if (require.main === module) {
@@ -300,3 +390,12 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = {
+  parseArgs,
+  makeOperationTrace,
+  traceRow,
+  traceCourtRow,
+  buildApplyReport,
+  run
+};
