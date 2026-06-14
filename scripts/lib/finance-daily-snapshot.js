@@ -1,5 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const {
+  buildShadowLedgerRowsFromFinanceNormalizedRows
+} = require('./finance-ledger-read-model');
+const {
+  compareFinanceLedgerReadModel
+} = require('./finance-ledger-compare');
 
 const FINANCE_DAILY_SNAPSHOT_TABLES = [
   'ft_courts',
@@ -124,6 +130,36 @@ function buildFinanceSummary(overviewData) {
   };
 }
 
+function buildShadowLedgerSnapshot({ normalizedRows, financePage, tables }) {
+  const shadowLedgerRows = normalizeRows(financePage?.shadowLedgerRows).length
+    ? normalizeRows(financePage?.shadowLedgerRows)
+    : normalizeRows(tables?.ft_financial_ledger?.rows || tables?.ft_financial_ledger).length
+      ? normalizeRows(tables?.ft_financial_ledger?.rows || tables?.ft_financial_ledger)
+      : buildShadowLedgerRowsFromFinanceNormalizedRows(normalizedRows);
+
+  try {
+    return {
+      shadowLedgerRows,
+      shadowLedgerCompareReport: compareFinanceLedgerReadModel({
+        legacyRows: normalizedRows,
+        ledgerRows: shadowLedgerRows
+      })
+    };
+  } catch (error) {
+    return {
+      shadowLedgerRows,
+      shadowLedgerCompareReport: {
+        ok: false,
+        details: [{
+          type: 'compare_error',
+          message: error && error.message ? error.message : String(error)
+        }],
+        warnings: []
+      }
+    };
+  }
+}
+
 function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, financePage }) {
   const diagEnv = readDiagEnv(diag);
   const normalizedTables = {};
@@ -141,6 +177,7 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
   const normalizedRows = normalizeRows(financePage?.financeNormalizedRows);
   const settlementRows = normalizeRows(financePage?.financeSettlementRows);
   const overviewData = normalizeFinanceOverviewData(financePage, normalizedRows);
+  const shadowLedger = buildShadowLedgerSnapshot({ normalizedRows, financePage, tables });
 
   return {
     schemaVersion: 1,
@@ -159,6 +196,8 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
       normalizedRows,
       settlementRows
     },
+    shadowLedgerRows: shadowLedger.shadowLedgerRows,
+    shadowLedgerCompareReport: shadowLedger.shadowLedgerCompareReport,
     summary: {
       tableRowCounts,
       ...buildFinanceSummary(overviewData)
@@ -249,6 +288,7 @@ module.exports = {
   FINANCE_DAILY_FINANCE_SOURCE_TABLES,
   assertDiagMatchesLocalTarget,
   buildDailyFinanceSnapshot,
+  buildShadowLedgerSnapshot,
   buildSnapshotOutputPath,
   deriveFinanceOverviewFromRows,
   fetchOnlineDiag,

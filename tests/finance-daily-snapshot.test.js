@@ -79,7 +79,17 @@ const built = snapshot.buildDailyFinanceSnapshot({
         bookingIncome: 100
       }
     },
-    financeNormalizedRows: [{ id: 'finance-row-1' }],
+    financeNormalizedRows: [{
+      id: 'finance-row-1',
+      businessType: '课程',
+      action: '收款',
+      sourceDocument: '购买记录 purchase-1',
+      cashDelta: 1000,
+      recognizedRevenueDelta: 0,
+      deferredRevenueDelta: 1000,
+      operationId: 'op-snapshot-1',
+      batchId: 'batch-snapshot-1'
+    }],
     financeSettlementRows: [{ id: 'settlement-row-1' }]
   }
 });
@@ -100,6 +110,50 @@ assert.deepStrictEqual(built.summary.financeOverview, {
 });
 assert.strictEqual(built.financePage.normalizedRowCount, 1);
 assert.strictEqual(built.financePage.settlementRowCount, 1);
+assert.strictEqual(built.shadowLedgerRows.length, 1, 'snapshot should include generated shadow ledger rows');
+assert.strictEqual(built.shadowLedgerRows[0].operationId, 'op-snapshot-1');
+assert.strictEqual(built.shadowLedgerRows[0].batchId, 'batch-snapshot-1');
+assert.strictEqual(built.shadowLedgerCompareReport.ok, true, 'matching shadow ledger report should be ok');
+assert.deepStrictEqual(built.shadowLedgerCompareReport.summaryDifference, { cash: 0, recognized: 0, deferred: 0 });
+
+const mismatchBuilt = snapshot.buildDailyFinanceSnapshot({
+  generatedAt: '2026-05-31T10:00:00.000Z',
+  snapshotDate: '2026-05-31',
+  diag: { env: { TS_ENDPOINT: 'endpoint', TS_INSTANCE: 'instance' } },
+  tables: {},
+  financePage: {
+    financeNormalizedRows: [{
+      id: 'finance-row-mismatch',
+      businessType: '课程',
+      action: '收款',
+      sourceDocument: '购买记录 purchase-mismatch',
+      cashDelta: 500,
+      recognizedRevenueDelta: 0,
+      deferredRevenueDelta: 500
+    }],
+    shadowLedgerRows: [{
+      id: 'shadow-finance-row-mismatch',
+      ledgerVersion: 'shadow-ledger-v1',
+      status: 'active',
+      businessType: '课程',
+      actionType: '收款',
+      ledgerType: 'package_receipt',
+      sourceType: 'purchase',
+      sourceId: 'purchase-mismatch',
+      sourceSubId: '',
+      cashDelta: 40000,
+      recognizedRevenueDelta: 10000,
+      deferredRevenueDelta: 30000,
+      sourceSnapshot: {
+        financeNormalizedRowId: 'finance-row-mismatch',
+        sourceDocument: '购买记录 purchase-mismatch'
+      },
+      idempotencyKey: 'purchase|purchase-mismatch||package_receipt'
+    }]
+  }
+});
+assert.strictEqual(mismatchBuilt.shadowLedgerCompareReport.ok, false, 'snapshot should keep failed compare report without throwing');
+assert.ok(mismatchBuilt.shadowLedgerCompareReport.details.some((item) => item.type === 'amount_mismatch'));
 
 const derived = snapshot.buildDailyFinanceSnapshot({
   generatedAt: '2026-05-31T10:00:00.000Z',

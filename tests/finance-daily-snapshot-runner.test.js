@@ -35,7 +35,15 @@ snapshot.runFinanceDailySnapshot({
     return {
       generatedAt: '2026-05-31T10:11:12.000Z',
       financeOverviewData: { all: { cash: 1000, recognized: 0, deferred: 1000 } },
-      financeNormalizedRows: [{ id: 'receipt-1' }],
+      financeNormalizedRows: [{
+        id: 'receipt-1',
+        businessType: '课程',
+        action: '收款',
+        sourceDocument: '购买记录 purchase-1',
+        cashDelta: 1000,
+        recognizedRevenueDelta: 0,
+        deferredRevenueDelta: 1000
+      }],
       financeSettlementRows: []
     };
   }
@@ -48,6 +56,8 @@ snapshot.runFinanceDailySnapshot({
   assert.strictEqual(saved.tables.ft_purchases.rowCount, 1);
   assert.strictEqual(saved.financePage.normalizedRowCount, 1);
   assert.strictEqual(saved.summary.financeOverview.cash, 1000);
+  assert.strictEqual(saved.shadowLedgerCompareReport.ok, true);
+  assert.strictEqual(saved.shadowLedgerRows.length, 1);
   console.log('finance daily snapshot runner tests passed');
 }).catch((error) => {
   console.error(error && error.stack ? error.stack : String(error));
