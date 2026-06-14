@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const validation = require('../scripts/lib/finance-operation-validation');
+const { _test } = require('../api/index.js');
 
 function snapshot({ cash = 0, recognized = 0, deferred = 0, packageIncome = 0, packageRecognized = 0, storedValueIncome = 0, storedValueConsumed = 0, bookingIncome = 0, bookingRecognized = 0, rows = [], tables = {} } = {}) {
   const tableNames = [
@@ -195,6 +196,88 @@ const batchTrace = validation.validateFinanceOperationTrace({
 });
 assert.strictEqual(batchTrace.ok, true, 'batchId trace validation should pass when records exist');
 assert.deepStrictEqual(batchTrace.involvedTables.ft_purchases.recordIds, ['purchase-op-1']);
+
+const realFinanceTrace = _test.buildFinancePageSnapshot({
+  purchases: [{
+    id: 'real-purchase-op-1',
+    studentId: 'real-stu-1',
+    studentName: '真实课包',
+    packageName: '成人10节课包',
+    amountPaid: 400,
+    purchaseDate: '2026-06-14',
+    status: 'active',
+    operationId: 'op-real-finance-1',
+    batchId: 'batch-real-finance-1'
+  }],
+  entitlements: [{
+    id: 'real-ent-op-1',
+    purchaseId: 'real-purchase-op-1',
+    studentId: 'real-stu-1',
+    studentName: '真实课包',
+    packageName: '成人10节课包',
+    totalLessons: 10,
+    remainingLessons: 9
+  }],
+  entitlementLedger: [{
+    id: 'real-ledger-op-1',
+    entitlementId: 'real-ent-op-1',
+    purchaseId: 'real-purchase-op-1',
+    studentId: 'real-stu-1',
+    lessonDelta: -1,
+    action: 'consume',
+    relatedDate: '2026-06-14',
+    createdAt: '2026-06-14T10:00:00.000Z',
+    operationId: 'op-real-finance-1',
+    batchId: 'batch-real-finance-1'
+  }],
+  membershipOrders: [{
+    id: 'real-member-op-1',
+    courtId: 'court-real-member',
+    courtName: '真实会员',
+    rechargeAmount: 300,
+    purchaseDate: '2026-06-14',
+    status: 'active',
+    operationId: 'op-real-finance-1',
+    batchId: 'batch-real-finance-1'
+  }],
+  courts: [{
+    id: 'court-real-booking',
+    name: '真实订场',
+    history: [{
+      id: 'real-court-row-op-1',
+      date: '2026-06-14',
+      type: '消费',
+      category: '订场',
+      payMethod: '微信',
+      amount: 50,
+      operationId: 'op-real-finance-1',
+      batchId: 'batch-real-finance-1'
+    }]
+  }]
+});
+
+const realTrace = validation.validateFinanceOperationTrace({
+  beforeSnapshot: snapshot(),
+  afterSnapshot: snapshot({
+    rows: realFinanceTrace.financeNormalizedRows,
+    tables: {
+      ft_purchases: [{ id: 'real-purchase-op-1', operationId: 'op-real-finance-1', batchId: 'batch-real-finance-1' }],
+      ft_entitlement_ledger: [{ id: 'real-ledger-op-1', operationId: 'op-real-finance-1', batchId: 'batch-real-finance-1' }],
+      ft_membership_orders: [{ id: 'real-member-op-1', operationId: 'op-real-finance-1', batchId: 'batch-real-finance-1' }],
+      ft_courts: [{ id: 'court-real-booking', history: [{ id: 'real-court-row-op-1', operationId: 'op-real-finance-1', batchId: 'batch-real-finance-1' }] }]
+    }
+  }),
+  operationId: 'op-real-finance-1'
+});
+assert.strictEqual(realTrace.financeDeltas.cash, 750, 'operation validation should sum cash from real normalized rows');
+assert.strictEqual(realTrace.financeDeltas.recognized, 90, 'operation validation should sum recognized revenue from real normalized rows');
+assert.strictEqual(realTrace.financeDeltas.deferred, 660, 'operation validation should sum deferred revenue from real normalized rows');
+assert.deepStrictEqual(realTrace.involvedTables['financePage.normalizedRows'].recordIds.sort(), [
+  'consume-real-ledger-op-1',
+  'court-court-real-booking-real-court-row-op-1',
+  'membership-real-member-op-1',
+  'purchase-real-purchase-op-1'
+].sort());
 
 assert.throws(
   () => validation.validateFinanceOperationTrace({

@@ -5175,6 +5175,13 @@ function financeRecognizedAmountForConsumeRow(row,entitlement,purchase){
   if(!amountPaid||!lessonDelta)return 0;
   return Math.round((amountPaid/totalLessons)*lessonDelta*100)/100;
 }
+function financeOperationTraceFields(source={}){
+  const trace={};
+  ['operationId','batchId','operationType','operationAt','operationBy'].forEach(key=>{
+    if(source?.[key]!==undefined&&source?.[key]!==null&&String(source[key]).trim()!=='')trace[key]=source[key];
+  });
+  return trace;
+}
 function aggregateFinanceHistoricalMonthlyLedgerRows(rows=[]){
   const monthlyMap=new Map();
   const result=[];
@@ -5239,6 +5246,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const differenceReason=financeDifferenceReason(`${purchase.notes||''} ${purchase.packageName||''} ${purchase.productName||''}`);
     return {
       id:`purchase-${purchase.id}`,
+      ...financeOperationTraceFields(purchase),
       businessDate:financeBusinessDateTime(purchase.purchaseDate,purchase.paidAt,purchase.paymentTime,purchase.createdAt),
       weekdayText:financeWeekdayText(purchase.purchaseDate||purchase.createdAt),
       timeText:'—',
@@ -5276,6 +5284,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       const differenceReason=financeDifferenceReason(`${order.notes||''} ${order.membershipPlanName||''}`);
       return {
         id:`membership-${order.id}`,
+        ...financeOperationTraceFields(order),
         businessDate:financeBusinessDateTime(order.purchaseDate,order.paidAt,order.paymentTime,order.createdAt),
         weekdayText:financeWeekdayText(order.purchaseDate||order.createdAt),
         timeText:'—',
@@ -5313,6 +5322,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     const operator=operatorText(row.operator,row.createdBy,row.updatedBy,scheduleRow.operator,scheduleRow.createdBy,purchase.operator);
     return {
       id:`consume-${row.id}`,
+      ...financeOperationTraceFields(row),
       businessDate:financeBusinessDateTime(row.createdAt,row.recordedAt,row.relatedDate),
       weekdayText:financeWeekdayText(row.relatedDate||row.createdAt),
       timeText:financeTimeText(scheduleRow.startTime),
@@ -5455,6 +5465,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       }
       return {
         id:`court-${court.id}-${historyRow.id||historyRow.date||uuidv4()}`,
+        ...financeOperationTraceFields(historyRow),
         businessDate:financeBusinessDateTime(historyRow.recordedAt||historyRow.createdAt,historyRow.occurredAt,historyRow.occurredDate||historyRow.date),
         weekdayText:financeWeekdayText(historyRow.occurredDate||historyRow.date),
         timeText:historyRow.startTime&&historyRow.endTime?`${String(historyRow.startTime).slice(11,16)}-${String(historyRow.endTime).slice(11,16)}`:(historyRow.time||'—'),

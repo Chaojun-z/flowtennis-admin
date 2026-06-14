@@ -14,7 +14,9 @@ const snapshot = _test.buildFinancePageSnapshot({
     payMethod:'微信',
     status:'active',
     ownerCoach:'岳克舟教练',
-    operator:'管理员'
+    operator:'管理员',
+    operationId:'op-purchase-1',
+    batchId:'batch-purchase-1'
   }],
   users:[{ id:'admin_account', username:'admin_account', name:'管理员' }],
   entitlements:[{
@@ -36,7 +38,9 @@ const snapshot = _test.buildFinancePageSnapshot({
     action:'consume',
     reason:'正常扣课',
     relatedDate:'2026-04-24',
-    createdAt:'2026-04-24T10:00:00.000Z'
+    createdAt:'2026-04-24T10:00:00.000Z',
+    operationId:'op-ledger-1',
+    batchId:'batch-ledger-1'
   }],
   courts:[{
     id:'court-1',
@@ -49,7 +53,9 @@ const snapshot = _test.buildFinancePageSnapshot({
       category:'订场',
       type:'消费',
       amount:200,
-      payMethod:'微信'
+      payMethod:'微信',
+      operationId:'op-court-1',
+      batchId:'batch-court-1'
     },{
       id:'court-row-recharge',
       date:'2026-04-22',
@@ -68,7 +74,9 @@ const snapshot = _test.buildFinancePageSnapshot({
     rechargeAmount:5000,
     purchaseDate:'2026-04-22',
     payMethod:'会员充值',
-    status:'active'
+    status:'active',
+    operationId:'op-member-1',
+    batchId:'batch-member-1'
   }],
   schedule:[{
     id:'sch-1',
@@ -90,11 +98,45 @@ const packageReceipt = snapshot.financeNormalizedRows.find(row=>row.id==='purcha
 assert.strictEqual(packageReceipt.businessDate, '2026-04-23 00:00:00', 'date-only receipts should display midnight seconds');
 assert.strictEqual(packageReceipt.collector, 'admin_account', 'finance receipt operator should use the account, not the owner coach');
 assert.notStrictEqual(packageReceipt.collector, '岳克舟教练', 'finance receipt operator must not fall back to coach name');
+assert.strictEqual(packageReceipt.operationId, 'op-purchase-1', 'purchase finance row should carry operationId from source purchase');
+assert.strictEqual(packageReceipt.batchId, 'batch-purchase-1', 'purchase finance row should carry batchId from source purchase');
+assert.strictEqual(packageReceipt.cashDelta, 4000, 'purchase trace passthrough must not change cash amount');
+assert.strictEqual(packageReceipt.deferredRevenueDelta, 4000, 'purchase trace passthrough must not change deferred amount');
+const consumeTraceRow = snapshot.financeNormalizedRows.find(row=>row.id==='consume-ledger-1');
+assert.strictEqual(consumeTraceRow.operationId, 'op-ledger-1', 'entitlement ledger finance row should carry operationId from source ledger');
+assert.strictEqual(consumeTraceRow.batchId, 'batch-ledger-1', 'entitlement ledger finance row should carry batchId from source ledger');
+assert.strictEqual(consumeTraceRow.recognizedRevenueDelta, 400, 'ledger trace passthrough must not change recognized amount');
+assert.strictEqual(consumeTraceRow.deferredRevenueDelta, -400, 'ledger trace passthrough must not change deferred amount');
+const courtTraceRow = snapshot.financeNormalizedRows.find(row=>row.id==='court-court-1-court-row-1');
+assert.strictEqual(courtTraceRow.operationId, 'op-court-1', 'court history finance row should carry operationId from source history row');
+assert.strictEqual(courtTraceRow.batchId, 'batch-court-1', 'court history finance row should carry batchId from source history row');
+assert.strictEqual(courtTraceRow.cashDelta, 200, 'court trace passthrough must not change cash amount');
+assert.strictEqual(courtTraceRow.recognizedRevenueDelta, 200, 'court trace passthrough must not change recognized amount');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='课程'&&row.action==='消耗').length, 1, 'finance snapshot should include course consume rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='会员储值'&&row.action==='收款').length, 1, 'finance snapshot should include membership recharge rows');
 assert.strictEqual(snapshot.financeNormalizedRows.filter(row=>row.businessType==='散客订场'&&row.action==='收款').length, 1, 'finance snapshot should include court cash rows');
 assert.strictEqual(snapshot.financeSettlementRows[0].month, '2026-04', 'finance settlement snapshot should pre-aggregate by month');
 assert.strictEqual(snapshot.financeSettlementRows[0].lessonUnits, 1, 'finance settlement snapshot should count finished lesson units');
+
+const membershipTraceSnapshot = _test.buildFinancePageSnapshot({
+  membershipOrders:[{
+    id:'member-order-trace-only',
+    courtId:'court-trace-only',
+    courtName:'独立会员订单',
+    rechargeAmount:1200,
+    purchaseDate:'2026-06-14',
+    payMethod:'会员充值',
+    status:'active',
+    operationId:'op-member-only',
+    batchId:'batch-member-only'
+  }]
+});
+
+const memberTraceRow = membershipTraceSnapshot.financeNormalizedRows.find(row=>row.id==='membership-member-order-trace-only');
+assert.strictEqual(memberTraceRow.operationId, 'op-member-only', 'membership finance row should carry operationId from source order');
+assert.strictEqual(memberTraceRow.batchId, 'batch-member-only', 'membership finance row should carry batchId from source order');
+assert.strictEqual(memberTraceRow.cashDelta, 1200, 'membership trace passthrough must not change cash amount');
+assert.strictEqual(memberTraceRow.deferredRevenueDelta, 1200, 'membership trace passthrough must not change deferred amount');
 
 const directScheduleSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
