@@ -869,15 +869,18 @@ function membershipOrderBenefitSummaryHtml(order){
   });
   return lines.join('；');
 }
-function membershipOrderAdjustmentText(order){
+function membershipOrderHasCustomAdjustment(order){
   const plan=membershipPlans.find(p=>p.id===order?.membershipPlanId)||{};
   const planSnap=effectiveMembershipBenefitSource(order?.planBenefitTemplateSnapshot,plan);
-  if(order?.benefitSnapshotCustomized===true)return '个性化调整';
   const items=membershipBenefitSummaryForOrder(order);
   const itemMap=new Map(items.map(item=>[item.code,item.total]));
   const changed=items.some(item=>(parseInt(planSnap?.[item.code]?.count)||0)!==(parseInt(item.total)||0));
+  const coachChanged=items.some(item=>item.code==='designatedCoachPartner'&&parseArr(planSnap?.[item.code]?.designatedCoachIds).sort().join(',')!==parseArr(item.designatedCoachIds).sort().join(','));
   const removed=Object.entries(planSnap||{}).some(([code,value])=>code!=='customBenefits'&&(parseInt(value?.count)||0)>0&&!itemMap.has(code));
-  return changed||removed?'个性化调整':'标准权益';
+  return changed||coachChanged||removed;
+}
+function membershipOrderAdjustmentText(order){
+  return membershipOrderHasCustomAdjustment(order)?'个性化调整':'标准权益';
 }
 function courtMembershipBenefitRowsHtml(court){
   const account=courtMembershipAccount(court?.id);

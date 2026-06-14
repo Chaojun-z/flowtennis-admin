@@ -874,6 +874,28 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-lead-drawer .lead-followup-item .student-lesson-meta{display:block;white-space:normal;word-break:break-word}
 .modal.modal-court.modal-lead-drawer .lead-conversion-actions{display:flex;gap:12px;flex-wrap:wrap}
 .modal.modal-court.modal-lead-drawer .lead-conversion-form-actions{justify-content:flex-end;margin-top:12px;margin-bottom:0}
+.modal.modal-court.modal-membership-drawer .mbody{background:#F5F2F0}
+.modal.modal-court.modal-membership-drawer .membership-danger-action{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.modal.modal-court.modal-membership-drawer .membership-danger-action .tms-field-help{margin:0;color:#8C7B6E}
+.modal.modal-court.modal-membership-drawer .detail-drawer-table td:last-child{white-space:nowrap}
+.modal.modal-court.modal-membership-drawer .membership-booking-records .detail-drawer-table-wrapper{max-height:min(72vh,720px);overflow:auto}
+.modal.modal-court.modal-membership-drawer .membership-inline-count{width:64px;height:30px;border:1px solid #E5E7EB;border-radius:6px;background:#fff;color:#333333;font-size:13px;padding:0 8px}
+.modal.modal-court.modal-membership-drawer .membership-inline-action{border:0;background:transparent;padding:0}
+.modal.modal-court.modal-membership-drawer .membership-inline-actions{display:inline-flex;align-items:center;gap:14px;white-space:nowrap}
+.modal.modal-court.modal-membership-drawer .membership-inline-editor{display:inline-flex;align-items:center;justify-content:flex-end;gap:8px;white-space:nowrap;color:#8C7B6E;font-size:12px}
+.modal.modal-court.modal-membership-drawer .membership-inline-editor .membership-inline-action.muted{color:#8C7B6E}
+.modal.modal-court.modal-membership-drawer .membership-order-row{border:1px solid #EEF0F3;border-radius:8px;background:#fff;padding:12px;margin-bottom:10px}
+.modal.modal-court.modal-membership-drawer .membership-order-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.modal.modal-court.modal-membership-drawer .membership-order-title{display:flex;align-items:center;gap:8px;min-width:0}
+.modal.modal-court.modal-membership-drawer .membership-order-row strong{display:block;color:#333333;font-size:13px;line-height:1.45}
+.modal.modal-court.modal-membership-drawer .membership-order-amounts{display:block;color:#8C7B6E;font-size:12px;line-height:1.5;white-space:nowrap}
+.modal.modal-court.modal-membership-drawer .membership-order-benefit-lines{margin-top:10px;color:#8C7B6E;font-size:12px;line-height:1.7}
+.modal.modal-court.modal-membership-drawer .membership-order-benefit-line{display:block}
+.modal.modal-court.modal-membership-drawer .membership-drawer-help,.modal.modal-court.modal-membership-drawer .membership-drawer-preview{grid-column:1/-1;margin:0 0 12px;padding:10px 12px;border-radius:8px;background:#FBFCFE;border:1px solid #EEF0F3;color:#6B7280;font-size:12px;line-height:1.65}
+.modal.modal-court.modal-membership-drawer .membership-drawer-help.danger{background:#FFF7F5;border-color:#FED7CE;color:#B42318}
+.modal.modal-court.modal-membership-drawer .membership-drawer-details{grid-column:1/-1;border:1px solid #EEF0F3;border-radius:8px;background:#fff;padding:10px 12px;margin-bottom:12px}
+.modal.modal-court.modal-membership-drawer .membership-drawer-details summary{cursor:pointer;color:#333333;font-size:13px;font-weight:600;line-height:22px}
+.modal.modal-court.modal-membership-drawer .membership-drawer-details .tms-form-row:first-of-type{margin-top:12px}
 #page-leads .tms-tag-green{background:#E7F1E9;color:#3F7E2B}
 #page-leads .tms-tag-red{background:#F7E9E2;color:#C06031}
 #page-leads .tms-tag-tier-gold{background:#F7E8C8;color:#9A5B00}

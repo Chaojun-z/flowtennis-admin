@@ -178,6 +178,8 @@ function openStandardModal({title='',titleHtml='',bodyHtml='',actionsHtml='',ext
   delete ov.dataset.studentDetailId;
   delete ov.dataset.leadDetailId;
   delete ov.dataset.packageDetailId;
+  delete ov.dataset.membershipCourtId;
+  delete ov.dataset.membershipMode;
   Object.entries(data||{}).forEach(([key,value])=>{
     if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
   });
@@ -249,6 +251,8 @@ function openStandardDetailDrawer({titleHtml='',bodyHtml='',actionsHtml='',data=
   delete ov.dataset.studentDetailId;
   delete ov.dataset.leadDetailId;
   delete ov.dataset.packageDetailId;
+  delete ov.dataset.membershipCourtId;
+  delete ov.dataset.membershipMode;
   Object.entries(data||{}).forEach(([key,value])=>{
     if(value!==undefined&&value!==null)ov.dataset[key]=String(value);
   });

@@ -711,7 +711,7 @@ function refreshMembershipOrderPreview(mode='renew'){
   const bonusAmount=document.getElementById('mo_bonus')?.value;
   const preview=membershipOrderPreview({court,account,plan,rechargeAmount,bonusAmount,purchaseDate});
   const previewEl=document.getElementById('membershipOrderPreview');
-  if(previewEl)previewEl.innerHTML=`<div class="flabel">当前状态摘要</div><div style="font-size:12px;color:var(--tb);margin-bottom:8px">${esc(preview.currentStatus)}</div><div class="flabel">本次会发生什么</div><div style="font-size:12px;color:var(--tb);line-height:1.7">是否重置有效期：${preview.resetsValidity?'是':'否'}<br>折扣变化：${esc(preview.nextDiscountText)}<br>原有权益保留：${preview.keepsExistingBenefits?'保留':'无原有权益'}<br>本次新增权益：${esc(preview.addedBenefits)}<br>新的余额有效期：${esc(preview.nextValidUntil)}<br>新的最晚清零日：${esc(preview.nextHardExpireAt)}</div>${preview.warning?`<div style="margin-top:8px;background:rgba(220,38,38,0.08);border:0.5px solid rgba(220,38,38,0.2);border-radius:8px;padding:8px 10px;color:#b91c1c;font-size:12px">${esc(preview.warning)}</div>`:''}`;
+  if(previewEl)previewEl.innerHTML=`<div class="flabel">当前状态摘要</div><div style="font-size:12px;color:var(--tb);margin-bottom:8px">${esc(preview.currentStatus)}</div><div style="font-size:12px;color:var(--tb);line-height:1.7">是否重置有效期：${preview.resetsValidity?'是':'否'}<br>折扣变化：${esc(preview.nextDiscountText)}<br>原有权益保留：${preview.keepsExistingBenefits?'保留':'无原有权益'}<br>本次新增权益：${esc(preview.addedBenefits)}<br>新的余额有效期：${esc(preview.nextValidUntil)}<br>新的最晚清零日：${esc(preview.nextHardExpireAt)}</div>${preview.warning?`<div style="margin-top:8px;background:rgba(220,38,38,0.08);border:0.5px solid rgba(220,38,38,0.2);border-radius:8px;padding:8px 10px;color:#b91c1c;font-size:12px">${esc(preview.warning)}</div>`:''}`;
   const saveBtn=document.getElementById('membershipOrderSaveBtn');
   if(saveBtn)saveBtn.textContent=preview.warning?'我了解折扣和有效期变化，确认续充':'保存';
 }
@@ -724,22 +724,16 @@ function toggleMembershipPriceOverride(){
   if(wrap)wrap.style.display=changed?'block':'none';
   if(!changed&&reason)reason.value='';
 }
+function onMembershipOrderPlanChange(value){
+  applyMembershipOrderDraft(value);
+  refreshMembershipOrderPreview(membershipDrawerOrderMode);
+  toggleMembershipPriceOverride();
+}
 function openMembershipOrderModal(courtId,mode='renew'){
   const court=courts.find(c=>c.id===courtId);if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
-  const account=courtMembershipAccount(courtId);
   const activePlans=membershipPlans.filter(p=>p.status!=='inactive');
   if(!activePlans.length){toast('请先创建会员方案','warn');return;}
-  const firstPlanId=activePlans[0]?.id||'';
-  const title=mode==='first_open'?'首次开卡':mode==='reopen'?'重新开卡':'续充会员';
-  resetModalActions();
-  document.getElementById('mTitle').textContent=`${court.name} · ${title}`;
-  document.getElementById('mBody').innerHTML=`<input type="hidden" id="mo_courtId" value="${esc(courtId)}"><div style="background:rgba(217,119,6,0.08);border:0.5px solid rgba(217,119,6,0.18);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tb);margin-bottom:12px">余额有效期按支付日期起算 12 个月<br>若到期时仍有余额，可自动进入延续期，最长至 24 个月<br>低于原合规档位续充时，余额有效期不会重置<br>每批赠送权益有效期 12 个月<br>余额由充值和消费自动计算，不能在这里手动改<br>系统创建日期只用于留痕，不影响会员有效期<br>当前订场折扣按最近一次充值档位生效</div><div id="membershipOrderPreview" style="background:rgba(255,255,255,0.48);border:0.5px solid rgba(180,83,9,0.12);border-radius:8px;padding:10px 12px;margin-bottom:12px"></div><div class="fgrid"><div class="fg full"><div class="flabel">会员方案 *</div><select class="fselect" id="mo_plan" onchange="applyMembershipOrderDraft(this.value);refreshMembershipOrderPreview('${mode}');toggleMembershipPriceOverride()">${activePlans.map(p=>`<option value="${p.id}">${esc(p.name)} · ¥${fmt(p.rechargeAmount)}</option>`).join('')}</select></div><div class="fg"><div class="flabel">支付日期</div>${courtDateButtonHtml("mo_date",today(),"支付日期")}</div><div class="fg"><div class="flabel">系统价格</div><input class="finput" id="mo_systemAmount" type="number" value="0" readonly></div><div class="fg"><div class="flabel">实收/充值金额</div>${membershipStepperHtml('mo_recharge','','1','默认取方案金额')}</div><div class="fg"><div class="flabel">赠送金额</div>${membershipStepperHtml('mo_bonus','','1','默认取方案赠送')}</div><div class="fg full" id="mo_overrideReasonWrap" style="display:none"><div class="flabel">改价原因</div><input class="finput" id="mo_overrideReason" placeholder="实际成交价与系统价格不一致时必填"></div><div class="fg full"><details><summary class="flabel" style="cursor:pointer">本次额外赠送</summary><div style="font-size:12px;color:var(--ts);margin:8px 0 10px">仅影响本次购买，不回写会员方案</div><div class="fgrid"><div class="fg"><div class="flabel">大师公开课本次调整</div>${membershipStepperHtml('mo_publicLesson','','1')}</div><div class="fg"><div class="flabel">穿线免手工费本次调整</div>${membershipStepperHtml('mo_stringingLabor','','1')}</div><div class="fg"><div class="flabel">发球机免费本次调整</div>${membershipStepperHtml('mo_ballMachine','','1')}</div><div class="fg"><div class="flabel">国家二级运动员陪打本次调整</div>${membershipStepperHtml('mo_level2Partner','','1')}</div><div class="fg"><div class="flabel">指定教练陪打本次调整</div><input class="finput" id="mo_designatedCoachPartner" type="number" step="1" oninput="toggleMembershipCoachSelector('mo_designatedCoachPartner','mo_designatedCoachSection')"></div><div class="fg full" id="mo_designatedCoachSection" style="display:none"><div class="flabel">选择指定教练</div><div id="mo_designatedCoachWrap">${membershipCoachSelectorHtml('mo_designatedCoachIdsWrap',[])}</div><div style="font-size:12px;color:var(--ts);margin-top:6px">指定教练范围本次调整</div></div></div></details></div><div class="fg full"><div class="flabel">备注</div><textarea class="finput ftextarea" id="mo_notes"></textarea></div></div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" id="membershipOrderSaveBtn" onclick="saveMembershipOrder('${courtId}')">保存</button></div>`;
-  document.getElementById('overlay').classList.add('open');
-  if(firstPlanId)applyMembershipOrderDraft(firstPlanId);
-  ['mo_recharge','mo_bonus'].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('oninput',`refreshMembershipOrderPreview('${mode}');toggleMembershipPriceOverride()`)});
-  const moDateEl=document.getElementById('mo_date');if(moDateEl)moDateEl.addEventListener('change',()=>refreshMembershipOrderPreview(mode));
-  toggleMembershipPriceOverride();
-  refreshMembershipOrderPreview(mode);
+  openCourtMembershipPanel(courtId,{mode:'order',orderMode:mode});
 }
 async function saveMembershipOrder(courtId){
   const data={courtId,membershipAccountId:courtMembershipAccount(courtId)?.id||'',membershipPlanId:document.getElementById('mo_plan').value,purchaseDate:document.getElementById('mo_date').value,rechargeAmount:document.getElementById('mo_recharge').value,bonusAmount:document.getElementById('mo_bonus').value,overrideReason:document.getElementById('mo_overrideReason')?.value.trim()||'',publicLessonCount:parseInt(document.getElementById('mo_publicLesson').value)||0,stringingLaborCount:parseInt(document.getElementById('mo_stringingLabor').value)||0,ballMachineCount:parseInt(document.getElementById('mo_ballMachine').value)||0,level2PartnerCount:parseInt(document.getElementById('mo_level2Partner').value)||0,designatedCoachPartnerCount:parseInt(document.getElementById('mo_designatedCoachPartner').value)||0,designatedCoachIds:membershipCoachSelectorValues('mo_designatedCoachIdsWrap'),notes:document.getElementById('mo_notes').value.trim(),requestKey:`${courtId}-${Date.now()}`};
@@ -765,8 +759,11 @@ async function saveMembershipOrder(courtId){
   },{
     loadingText:'提交中…',
     successText:'会员已保存',
-    closeOnSuccess:true,
-    refresh:[renderMemberships,renderCourts]
+    refresh:()=>{
+      renderMemberships();
+      renderCourts();
+      openCourtMembershipPanel(courtId,{tab:'overview'});
+    }
   });
 }
 function openMembershipBenefitModal(courtId,mode){
@@ -777,9 +774,7 @@ function openMembershipBenefitPickerModal(courtId,mode){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
   const rows=membershipBenefitRowsForAccount(account);
   if(!rows.length){toast('该订场用户当前没有可操作的赠送权益','warn');return;}
-  const actionText=mode==='consume'?'消耗':'补发';
-  const body=`<div class="tms-section-header" style="margin-top:0;">选择权益类型</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper" style="max-height:360px"><table class="tms-table" style="min-width:620px"><thead><tr><th style="padding-left:20px">权益</th><th style="width:140px">当前剩余</th><th style="width:120px;text-align:right;padding-right:20px">操作</th></tr></thead><tbody>${rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.label+membershipBenefitNote(row),false)}</td><td>${renderStandardCellText(`${row.remaining}/${row.total}${row.unit}`,false)}</td><td style="text-align:right;padding-right:20px"><span class="tms-action-link" onclick="openMembershipBenefitActionModal('${courtId}','${row.code}','${mode}')">${actionText}</span></td></tr>`).join('')}</tbody></table></div></div>`;
-  openStandardModal({title:`${actionText}权益`,bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-default" onclick="openCourtMembershipPanel('${courtId}')">返回会员账户</button>`,extraClass:'modal-wide'});
+  openCourtMembershipPanel(courtId,{mode:'benefit-picker',benefitMode:mode});
 }
 function refreshMembershipBenefitConsumePreview(courtId,benefitCode){
   const account=courtMembershipAccount(courtId);if(!account)return;
@@ -791,35 +786,19 @@ function refreshMembershipBenefitConsumePreview(courtId,benefitCode){
 }
 function openMembershipBenefitActionModal(courtId,benefitCode,mode){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
-  const label=membershipBenefitLabelForCode(benefitCode,account);
-  const orders=membershipOrdersForAccount(account.id);
-  const latestOrder=orders[0];
-  resetModalActions();
-  document.getElementById('mTitle').textContent=mode==='consume'?`消耗 1 次 · ${label}`:`补发权益 · ${label}`;
-  document.getElementById('mBody').innerHTML=`<div class="fgrid"><div class="fg"><div class="flabel">权益名称</div><div class="finput">${esc(label)}</div></div><div class="fg"><div class="flabel">次数</div><input class="finput" id="mb_count" type="number" value="1" oninput="${mode==='consume'?'refreshMembershipBenefitConsumePreview(\''+courtId+'\',\''+benefitCode+'\')':''}"></div>${mode==='consume'?`<div class="fg full"><div class="flabel">扣减预览</div><div id="membershipBenefitConsumePreview" style="font-size:12px;color:var(--tb);background:rgba(255,255,255,0.45);border:0.5px solid rgba(180,83,9,0.12);border-radius:8px;padding:10px 12px"></div></div>`:''}${mode==='supplement'?`<div class="fg full"><div class="flabel">归属购买批次 *</div><select class="fselect" id="mb_order">${orders.map(o=>`<option value="${o.id}" ${latestOrder?.id===o.id?'selected':''}>${esc(o.purchaseDate)} · ${esc(o.membershipPlanName)}</option>`).join('')}</select><div style="font-size:12px;color:var(--ts);margin-top:6px">本次补发会记入所选购买批次的权益调整，不会生成新的购买记录</div></div>`:''}<div class="fg full"><div class="flabel">原因</div><input class="finput" id="mb_reason" value="${mode==='consume'?'会员权益使用':'会员权益补发'}"></div></div><div class="mactions"><button class="btn-cancel" onclick="openMembershipBenefitPickerModal('${courtId}','${mode}')">返回选择权益</button><button class="btn-save" id="membershipBenefitSaveBtn" onclick="saveMembershipBenefit('${courtId}','${mode}','${benefitCode}')">${mode==='consume'?'确认消耗':'确认补发'}</button></div>`;
-  document.getElementById('overlay').classList.add('open');
-  if(mode==='consume')refreshMembershipBenefitConsumePreview(courtId,benefitCode);
+  openCourtMembershipPanel(courtId,{mode:'benefit-action',benefitMode:mode,benefitCode});
 }
 function openMembershipBenefitHistoryModal(courtId,benefitCode){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
-  const label=membershipBenefitLabelForCode(benefitCode,account);
-  const rows=membershipBenefitLedger.filter(l=>l.membershipAccountId===account.id&&l.benefitCode===benefitCode&&l.action!=='grant').sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
-  resetModalActions();
-  document.getElementById('mTitle').textContent=`权益流水 · ${label}`;
-  document.getElementById('mBody').innerHTML=`<div class="rec-list" style="max-height:320px">${rows.length?rows.map(r=>`<div class="rec-item"><span class="rec-date">${esc(r.createdAt||r.relatedDate)||'—'}</span><span class="badge ${parseInt(r.delta)<0?'b-red':'b-green'}" style="font-size:10px">${parseInt(r.delta)<0?'扣减':'补发'}</span><span class="rec-note">${esc(r.reason)||'—'} · 批次 ${esc(r.membershipOrderId)||'—'} · ${r.delta}</span></div>`).join(''):'<div class="empty"><p>暂无权益流水</p></div>'}</div>`;
-  document.getElementById('overlay').classList.add('open');
+  openCourtMembershipPanel(courtId,{tab:'ledger',benefitCode});
 }
 function openCourtMembershipLedgerModal(courtId){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
-  const rows=membershipBenefitLedger.filter(l=>l.membershipAccountId===account.id&&l.action!=='grant').sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
-  const body=`<div class="tms-section-header" style="margin-top:0;">历史记录</div><div class="rec-list" style="max-height:520px;overflow:auto">${rows.length?rows.map(r=>{const delta=parseInt(r.delta)||0;const type=delta<0?'消耗':'补发';return `<div class="rec-item"><span class="rec-date">${esc(String(r.createdAt||r.relatedDate||'').replace('T',' ').slice(0,16))||'—'}</span><span class="badge ${delta<0?'b-red':'b-green'}" style="font-size:10px">${type}</span><span class="rec-amt ${delta<0?'minus':'plus'}">${delta>0?'+':''}${delta}${esc(r.unit||'次')}</span><span class="rec-note">${esc(r.benefitLabel||r.benefitCode||'-')} · 批次 ${esc(r.membershipOrderId||'-')} · ${esc(renderStandardEmptyText(r.reason))}</span></div>`;}).join(''):'<div class="empty"><p>暂无权益流水</p></div>'}</div>`;
-  openStandardModal({title:'查看全部权益流水',bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-default" onclick="openCourtMembershipPanel('${courtId}')">返回会员账户</button>`,extraClass:'modal-wide'});
+  openCourtMembershipPanel(courtId,{tab:'ledger'});
 }
 function openCourtMembershipBenefitsModal(courtId){
   const court=courts.find(c=>c.id===courtId);if(!court){toast('订场用户不存在','warn');return;}
-  document.getElementById('mTitle').textContent=`${court.name} · 赠送权益`;
-  document.getElementById('mBody').innerHTML=`<div style="margin-bottom:12px">${courtMembershipBenefitRowsHtml(court)}</div><div class="mactions"><button class="btn-cancel" onclick="closeModal()">关闭</button><button class="btn-save" onclick="openCourtMembershipLedgerModal('${courtId}')">查看全部权益流水</button></div>`;
-  document.getElementById('overlay').classList.add('open');
+  openCourtMembershipPanel(courtId,{tab:'rights'});
 }
 async function saveMembershipBenefit(courtId,mode,benefitCode=''){
   const account=courtMembershipAccount(courtId);if(!account)return;
@@ -833,19 +812,45 @@ async function saveMembershipBenefit(courtId,mode,benefitCode=''){
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     successText:'权益流水已保存',
-    closeOnSuccess:true,
     refresh:()=>{
-    renderMemberships();
-    renderCourts();
+      renderMemberships();
+      renderCourts();
+      openCourtMembershipPanel(courtId,{tab:'rights'});
+    }
+  });
+}
+function membershipBenefitInlineInputId(benefitCode){
+  return `mb_inline_count_${String(benefitCode||'').replace(/[^a-zA-Z0-9_-]/g,'_')}`;
+}
+async function saveMembershipBenefitInline(button,courtId,mode,benefitCode=''){
+  const account=courtMembershipAccount(courtId);if(!account)return;
+  const count=Math.abs(parseInt(document.getElementById(membershipBenefitInlineInputId(benefitCode))?.value)||1);
+  const label=membershipBenefitLabelForCode(benefitCode,account);
+  const data={membershipAccountId:account.id,courtId,benefitCode,benefitLabel:label,delta:mode==='consume'?-count:count,action:mode,reason:mode==='consume'?'会员权益使用':'会员权益补发',relatedDate:today()};
+  if(mode==='supplement'){
+    const latestOrder=membershipOrdersForAccount(account.id)[0];
+    if(!latestOrder){toast('暂无可归属的购买批次','warn');return;}
+    data.membershipOrderId=latestOrder.id;
+  }
+  await runStandardMutation(button,async()=>{
+    const r=await apiCall('POST','/membership-benefit-ledger',data);
+    const rows=Array.isArray(r?.records)?r.records:[r];
+    rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
+  },{
+    successText:'权益流水已保存',
+    refresh:()=>{
+      membershipInlineBenefitAction={benefitCode:'',mode:''};
+      renderMemberships();
+      renderCourts();
+      openCourtMembershipPanel(courtId,{tab:'rights'});
     }
   });
 }
 async function voidMembership(courtId){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
-  const reason=window.prompt('请输入作废原因','手动作废会员');
-  if(reason===null)return;
-  if(!confirm('确定作废会员账户？作废后折扣失效，权益不可再使用。'))return;
-  await runStandardMutation(null,async()=>{
+  const reason=document.getElementById('mv_reason')?.value.trim()||'';
+  if(!reason){toast('请填写作废原因','warn');return;}
+  await runStandardMutation('membershipVoidBtn',async()=>{
     const res=await apiCall('PUT','/membership-accounts/'+account.id,{status:'voided',voidReason:reason});
     const nextAccount=res?.account||res;
     const nextEvent=res?.event||null;
@@ -856,8 +861,9 @@ async function voidMembership(courtId){
     errorPrefix:'作废失败',
     successText:'会员已作废',
     refresh:()=>{
-    renderCourts();renderMemberships();
-    if(document.getElementById('overlay').classList.contains('open'))openCourtMembershipPanel(courtId);
+      renderCourts();
+      renderMemberships();
+      openCourtMembershipPanel(courtId,{tab:'overview'});
     }
   });
 }
@@ -1244,33 +1250,241 @@ function courtRecRow(h){
   const meta=[source,h.category,h.payMethod,booking,st?.name].filter(Boolean).map(esc).join(' · ');
   return `<div class="rec-item"><span class="rec-date">${h.date}</span><span class="badge ${cls}" style="font-size:10px">${esc(type)}</span><span class="rec-amt ${type==='充值'?'plus':'minus'}">${sign}¥${fmt(amount)}</span><span class="rec-note">${meta}${h.note?' · '+esc(h.note):''}</span></div>`;
 }
+let membershipDetailActiveTab='overview',membershipDrawerMode='view',membershipDrawerOrderMode='renew',membershipDrawerBenefitMode='',membershipDrawerBenefitCode='';
+let membershipInlineBenefitAction={benefitCode:'',mode:''};
+let membershipBookingEntryOpen=false;
+function membershipDetailHeroHtml(court){
+  const summary=courtMembershipSummary(court);
+  const statusMeta=membershipStatusTagMeta(summary.account);
+  return renderDetailDrawerHero({
+    title:courtDisplayName(court)||court?.name||'会员账户',
+    avatar:(courtDisplayName(court)||court?.name||'会').slice(0,1),
+    subtitle:[court?.phone,cn(court?.campus)].filter(Boolean).join(' · '),
+    statusHtml:`<span class="${esc(statusMeta.tagClass)}">${esc(statusMeta.text)}</span>`
+  });
+}
+function membershipDetailTabsHtml(active='overview'){
+  return renderDetailDrawerTabs(active,[['overview','账户概览'],['booking','订场'],['rights','权益'],['orders','充值记录'],['ledger','权益流水']],{onClick:'setMembershipDetailTab'});
+}
+function setMembershipDetailTab(tab){
+  membershipDetailActiveTab=['overview','booking','rights','orders','ledger'].includes(tab)?tab:'overview';
+  membershipDrawerMode='view';
+  membershipDrawerBenefitCode='';
+  membershipBookingEntryOpen=false;
+  const courtId=document.getElementById('overlay')?.dataset.membershipCourtId||'';
+  if(courtId)openMembershipDrawer(courtId);
+}
+function membershipAccountActionButtons(court){
+  const account=courtMembershipAccount(court?.id);
+  const visible=membershipActionVisibility(account);
+  const buttons=[
+    visible.firstOpen?`<button type="button" class="schedule-detail-action" onclick="openMembershipOrderModal('${court.id}','first_open')">首次开卡</button>`:'',
+    visible.reopen?`<button type="button" class="schedule-detail-action" onclick="openMembershipOrderModal('${court.id}','reopen')">重新开卡</button>`:'',
+    visible.renew?`<button type="button" class="schedule-detail-action" onclick="openMembershipOrderModal('${court.id}','renew')">续充会员</button>`:'',
+    visible.void?`<button type="button" class="schedule-detail-action danger" onclick="openCourtMembershipPanel('${court.id}',{mode:'void'})">作废会员</button>`:''
+  ].filter(Boolean).join('');
+  return buttons?`<div class="schedule-detail-card-actions">${buttons}</div>`:'<div class="student-detail-empty">暂无可用操作</div>';
+}
+function membershipDangerActionHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  const visible=membershipActionVisibility(account);
+  if(!visible.void)return '';
+  return `<div class="membership-danger-action"><div class="tms-field-help">作废后折扣失效，权益不可再使用。</div><button type="button" class="schedule-detail-action danger" onclick="openCourtMembershipPanel('${court.id}',{mode:'void'})">作废会员</button></div>`;
+}
+function membershipOrderBenefitLinesHtml(order){
+  const lines=String(membershipOrderBenefitSummaryHtml(order)||'').split('；').map(x=>x.trim()).filter(Boolean);
+  if(!lines.length)return '-';
+  return `<div class="membership-order-benefit-lines">${lines.map(line=>`<div class="membership-order-benefit-line">${esc(line)}</div>`).join('')}</div>`;
+}
 function courtMembershipPanelHtml(court){
   const summary=courtMembershipSummary(court);
   const account=summary.account;
   const orders=account?membershipOrdersForAccount(account.id):[];
   const finance=courtFinanceLocal(court||{history:[]});
-  const visible=membershipActionVisibility(account);
-  const recentOrders=orders.slice(0,3);
   const latestOrder=orders[0]||null;
-  const benefitRows=membershipBenefitRowsForAccount(account);
-  const currentBenefitHtml=benefitRows.length?benefitRows.map(row=>{
-    const adjusted=row.batches.some(batch=>{
-      const order=membershipOrders.find(o=>o.id===batch.membershipOrderId);
-      return order&&membershipOrderAdjustmentText(order)==='个性化调整';
-    });
-    const expireText=row.batches.some(x=>x.benefitValidUntil)?`最早到期 ${esc(row.batches.filter(x=>x.remaining>0&&x.benefitValidUntil).sort((a,b)=>String(a.benefitValidUntil).localeCompare(String(b.benefitValidUntil)))[0]?.benefitValidUntil||'-')}`:'-';
-    return `<div class="membership-rights-row"><div style="font-size:13px;color:#332A24;font-weight:600;white-space:nowrap">${esc(row.label)}${esc(membershipBenefitNote(row))} ${adjusted?'<span class="tms-tag tms-tag-red" style="margin-left:6px">个性化调整</span>':'<span class="tms-tag tms-tag-green" style="margin-left:6px">标准权益</span>'}</div><div style="font-size:13px;color:#5C4D43;text-align:right">共 ${row.total}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">已消耗 ${membershipBenefitUsedCount(row)}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">剩余 ${row.remaining}${esc(row.unit)}</div><div style="font-size:12px;color:#8C7B6E;text-align:right;white-space:nowrap">${expireText}</div></div>`;
-  }).join(''):'暂无可用权益';
-  const recentOrderHtml=latestOrder?`<div style="background:#FDF7F2;border-radius:10px;padding:12px 14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px"><div style="font-size:13px;color:#332A24;font-weight:600">${esc(latestOrder.purchaseDate)} · ${esc(latestOrder.membershipPlanName)} · 实收 ¥${fmt(latestOrder.rechargeAmount)} · 赠送 ¥${fmt(latestOrder.bonusAmount)}</div><span class="tms-tag ${membershipOrderAdjustmentText(latestOrder)==='个性化调整'?'tms-tag-red':'tms-tag-green'}">${membershipOrderAdjustmentText(latestOrder)}</span></div><div style="font-size:12px;color:#8C7B6E;line-height:1.6">${esc(membershipOrderBenefitSummaryHtml(latestOrder))}</div><div style="font-size:12px;color:#5C4D43;line-height:1.6;margin-top:8px">备注：${esc(latestOrder.notes||'-')}</div></div>`:'-';
   const discountText=account?.status==='voided'?'折扣失效':summary.discount;
+  const memberText=[summary.memberLabel,courtMembershipTierLabel(account)].filter(x=>x&&x!=='-'&&x!=='—').join(' · ')||'-';
+  const bookingSummary=courtBookingSummary(court);
   const voidEvent=account?.status==='voided'?membershipAccountEvents.filter(e=>e.membershipAccountId===account.id&&e.eventType==='voided').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0]:null;
-  const voidInfoHtml=account?.status==='voided'?`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">作废信息</label><div style="background:#FDF7F2;border-radius:10px;padding:12px 14px;font-size:12px;color:#8C7B6E;line-height:1.7">作废时间：${esc(formatMembershipLedgerTime(account.voidedAt||voidEvent?.createdAt))} · 作废人：${esc(account.voidedBy||voidEvent?.operator||'-')} · 作废原因：${esc(account.voidReason||voidEvent?.reason||'-')}</div></div></div>`:'';
-  return `<div class="tms-section-header" style="margin-top:0;">会员账户</div><div class="tms-readonly-panel"><span class="tms-panel-tip">余额由充值和消费自动计算，不能在这里手动改。</span><div class="membership-panel-grid"><div class="membership-panel-card"><div class="membership-panel-label">当前状态</div><div class="membership-panel-value">${esc(summary.memberLabel)||'-'} · ${esc(summary.status)||'-'}</div></div><div class="membership-panel-card"><div class="membership-panel-label">当前余额</div><div class="membership-panel-value">¥${fmt(finance.balance)}</div></div><div class="membership-panel-card"><div class="membership-panel-label">当前折扣</div><div class="membership-panel-value">${esc(discountText)||'-'}</div></div><div class="membership-panel-card"><div class="membership-panel-label">余额有效期</div><div class="membership-panel-value">${esc(summary.validUntil)||'-'}</div></div><div class="membership-panel-card"><div class="membership-panel-label">清零时间</div><div class="membership-panel-value">${esc(account?.hardExpireAt)||'-'}</div></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">当前权益</label><div style="font-size:13px;color:#8C7B6E;margin-bottom:14px">${currentBenefitHtml}</div></div></div>${voidInfoHtml}<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">最近开卡</label><div style="font-size:13px;color:#8C7B6E;margin-bottom:14px">${recentOrderHtml}</div></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">操作</label><div class="membership-actions-row">${visible.firstOpen?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openMembershipOrderModal('${court.id}','first_open')">首次开卡</button>`:''}${visible.reopen?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openMembershipOrderModal('${court.id}','reopen')">重新开卡</button>`:''}${visible.renew?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openMembershipOrderModal('${court.id}','renew')">续充会员</button>`:''}${visible.consume?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openMembershipBenefitModal('${court.id}','consume')">消耗权益</button>`:''}${visible.supplement?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openMembershipBenefitModal('${court.id}','supplement')">补发权益</button>`:''}${visible.ledger?`<button class="tms-btn tms-btn-ghost" style="border:1px solid #EAE0D6;background:#fff" onclick="openCourtMembershipLedgerModal('${court.id}')">查看流水</button>`:''}${visible.void?`<button class="tms-btn tms-btn-danger" onclick="voidMembership('${court.id}')">作废会员</button>`:''}</div></div></div></div>`;
+  const voidInfoHtml=account?.status==='voided'?renderDetailDrawerCard('作废信息',[
+    renderDetailDrawerField('作废时间',formatMembershipLedgerTime(account.voidedAt||voidEvent?.createdAt)),
+    renderDetailDrawerField('作废人',account.voidedBy||voidEvent?.operator||'-'),
+    renderDetailDrawerField('作废原因',account.voidReason||voidEvent?.reason||'-',{full:true})
+  ].join('')):'';
+  const memberFields=account?[
+    renderDetailDrawerField('当前会员',memberText),
+    renderDetailDrawerField('开卡日期',latestOrder?.purchaseDate||membershipFirstOpenDate({court,account})),
+    renderDetailDrawerField('实收金额',latestOrder?`¥${fmt(latestOrder.rechargeAmount)}`:'-'),
+    renderDetailDrawerField('赠送金额',latestOrder?`¥${fmt(latestOrder.bonusAmount)}`:'-'),
+    renderDetailDrawerField('当前折扣',discountText),
+    renderDetailDrawerField('余额有效期',summary.validUntil||account?.validUntil||'-'),
+    renderDetailDrawerField('清零时间',account?.hardExpireAt||'-')
+  ]:[];
+  const overview=renderDetailDrawerCard('会员账户',[
+    renderDetailDrawerField('账户类型',account?'会员':'普通用户'),
+    renderDetailDrawerField('累计充值',`¥${fmt(finance.totalDeposit)}`),
+    renderDetailDrawerField('累计消费',`¥${fmt(finance.spentAmount)}`),
+    renderDetailDrawerField('当前余额',`¥${fmt(finance.balance)}`),
+    renderDetailDrawerField('累计订场',`${bookingSummary.count} 次`),
+    ...memberFields,
+    renderDetailDrawerField('备注',latestOrder?.notes||'-',{full:true})
+  ].join(''));
+  const actions=renderDetailDrawerCard('会员操作',membershipAccountActionButtons(court),{useGrid:false});
+  return `${overview}${voidInfoHtml}${actions}`;
 }
-function openCourtMembershipPanel(courtId){
+function membershipOrdersDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  const orders=account?membershipOrdersForAccount(account.id):[];
+  const rows=orders.length?orders.map(order=>{
+    const custom=membershipOrderHasCustomAdjustment(order);
+    const title=`${esc(order.purchaseDate||'-')} · ${esc(order.membershipPlanName||'-')}`;
+    const tag=custom?`<span class="tms-tag tms-tag-red">个性化调整</span>`:'';
+    return `<div class="membership-order-row"><div class="membership-order-head"><div class="membership-order-title"><strong>${title}</strong>${tag}</div><span class="membership-order-amounts">实收 ¥${fmt(order.rechargeAmount)} · 赠送 ¥${fmt(order.bonusAmount)} · ${esc(membershipDiscountText(order.discountRate))}</span></div>${membershipOrderBenefitLinesHtml(order)}</div>`;
+  }).join(''):'<div class="student-detail-empty">暂无充值记录</div>';
+  return renderDetailDrawerCard('充值记录',rows,{useGrid:false});
+}
+function openMembershipBenefitInlineEditor(courtId,benefitCode,mode){
+  membershipInlineBenefitAction={benefitCode,mode};
+  openCourtMembershipPanel(courtId,{tab:'rights'});
+}
+function closeMembershipBenefitInlineEditor(courtId){
+  membershipInlineBenefitAction={benefitCode:'',mode:''};
+  openCourtMembershipPanel(courtId,{tab:'rights'});
+}
+function membershipRightsDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  const rows=membershipBenefitRowsForAccount(account);
+  const visible=membershipActionVisibility(account);
+  const content=renderDetailDrawerTable({
+    minWidth:'640px',
+    columns:[
+      {label:'权益',key:'label',render:row=>`${row.label}${membershipBenefitNote(row)}`},
+      {label:'总次数',key:'total',render:row=>`${row.total}${row.unit}`},
+      {label:'已消耗',key:'used',render:row=>`${membershipBenefitUsedCount(row)}${row.unit}`},
+      {label:'剩余',key:'remaining',render:row=>`${row.remaining}${row.unit}`},
+      {label:'操作',html:true,align:'right',render:row=>[
+        membershipInlineBenefitAction.benefitCode===row.code&&membershipInlineBenefitAction.mode?`<div class="membership-inline-editor"><span>${membershipInlineBenefitAction.mode==='consume'?'消耗':'补发'}次数</span><input class="membership-inline-count" id="${membershipBenefitInlineInputId(row.code)}" type="number" min="1" step="1" value="1"><button type="button" class="tms-action-link membership-inline-action" onclick="saveMembershipBenefitInline(this,'${court.id}','${membershipInlineBenefitAction.mode}','${row.code}')">确认</button><button type="button" class="tms-action-link membership-inline-action muted" onclick="closeMembershipBenefitInlineEditor('${court.id}')">取消</button></div>`:'',
+        membershipInlineBenefitAction.benefitCode===row.code&&membershipInlineBenefitAction.mode?'':`<div class="membership-inline-actions">${visible.consume?`<button type="button" class="tms-action-link membership-inline-action" onclick="openMembershipBenefitInlineEditor('${court.id}','${row.code}','consume')">消耗</button>`:''}${visible.supplement?`<button type="button" class="tms-action-link membership-inline-action" onclick="openMembershipBenefitInlineEditor('${court.id}','${row.code}','supplement')">补发</button>`:''}</div>`
+      ].filter(Boolean).join('')||'-'}
+    ],
+    rows,
+    emptyText:'暂无可用权益'
+  });
+  return renderDetailDrawerCard('权益列表',content,{useGrid:false});
+}
+function membershipLedgerDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  if(!account)return renderDetailDrawerCard('权益流水','<div class="student-detail-empty">暂无权益流水</div>',{useGrid:false});
+  const rows=membershipBenefitLedger
+    .filter(l=>l.membershipAccountId===account.id&&l.action!=='grant'&&(!membershipDrawerBenefitCode||l.benefitCode===membershipDrawerBenefitCode))
+    .sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
+  const body=rows.length?renderDetailDrawerTable({
+    minWidth:'520px',
+    columns:[
+      {label:'时间',key:'time',render:r=>formatMembershipLedgerTime(r.createdAt||r.relatedDate)},
+      {label:'权益',key:'benefitLabel',render:r=>r.benefitLabel||r.benefitCode},
+      {label:'变动',key:'delta',render:r=>`${parseInt(r.delta)>0?'+':''}${parseInt(r.delta)||0}${r.unit||'次'}`},
+      {label:'动作',key:'action',render:r=>membershipLedgerActionText(r.action)},
+      {label:'原因',key:'reason'}
+    ],
+    rows,
+    emptyText:'暂无权益流水'
+  }):'<div class="student-detail-empty">暂无权益流水</div>';
+  return renderDetailDrawerCard(membershipDrawerBenefitCode?'权益明细':'权益流水',body,{useGrid:false});
+}
+function membershipOrderDrawerHtml(court){
+  const activePlans=membershipPlans.filter(p=>p.status!=='inactive');
+  if(!activePlans.length)return renderDetailDrawerCard('开通会员','请先创建会员方案',{useGrid:false});
+  const title=membershipDrawerOrderMode==='first_open'?'首次开卡':membershipDrawerOrderMode==='reopen'?'重新开卡':'续充会员';
+  const firstPlanId=activePlans[0]?.id||'';
+  const planOptions=activePlans.map(p=>({value:p.id,label:`${p.name} · ¥${fmt(p.rechargeAmount)}`}));
+  const help=`<div class="membership-drawer-help">余额有效期按支付日期起算 12 个月<br>若到期时仍有余额，可自动进入延续期，最长至 24 个月<br>低于原合规档位续充时，余额有效期不会重置<br>每批赠送权益有效期 12 个月<br>余额由充值和消费自动计算，不能在这里手动改<br>系统创建日期只用于留痕，不影响会员有效期<br>当前订场折扣按最近一次充值档位生效</div>`;
+  const form=`<input type="hidden" id="mo_courtId" value="${esc(court.id)}"><div id="membershipOrderPreview" class="membership-drawer-preview"></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">会员方案 *</label>${renderStandardDropdownHtml('mo_plan','会员方案 *',planOptions,firstPlanId,true,'onMembershipOrderPlanChange')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml("mo_date",today(),"支付日期")}</div><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="mo_systemAmount" type="number" value="0" readonly></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">实收/充值金额</label>${membershipStepperHtml('mo_recharge','','1','默认取方案金额')}</div><div class="tms-form-item"><label class="tms-form-label">赠送金额</label>${membershipStepperHtml('mo_bonus','','1','默认取方案赠送')}</div></div><div class="tms-form-row" id="mo_overrideReasonWrap" style="display:none"><div class="tms-form-item full-width"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="mo_overrideReason" placeholder="实际成交价与系统价格不一致时必填"></div></div><details class="membership-drawer-details" open><summary>本次额外赠送</summary><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">大师公开课本次调整</label>${membershipStepperHtml('mo_publicLesson','','1')}</div><div class="tms-form-item"><label class="tms-form-label">穿线免手工费本次调整</label>${membershipStepperHtml('mo_stringingLabor','','1')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">发球机免费本次调整</label>${membershipStepperHtml('mo_ballMachine','','1')}</div><div class="tms-form-item"><label class="tms-form-label">国家二级运动员陪打本次调整</label>${membershipStepperHtml('mo_level2Partner','','1')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">指定教练陪打本次调整</label><input class="finput tms-form-control" id="mo_designatedCoachPartner" type="number" step="1" oninput="toggleMembershipCoachSelector('mo_designatedCoachPartner','mo_designatedCoachSection')"></div></div><div class="tms-form-row" id="mo_designatedCoachSection" style="display:none"><div class="tms-form-item full-width"><label class="tms-form-label">选择指定教练</label><div id="mo_designatedCoachWrap">${membershipCoachSelectorHtml('mo_designatedCoachIdsWrap',[])}</div><div class="tms-field-help">指定教练范围本次调整</div></div></div></details><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="mo_notes"></textarea>${help}</div></div>`;
+  const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openCourtMembershipPanel('${court.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="membershipOrderSaveBtn" onclick="saveMembershipOrder('${court.id}')">保存</button></div>`;
+  return renderDetailDrawerFormCard(title,form,actions);
+}
+function membershipBenefitPickerDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  const rows=membershipBenefitRowsForAccount(account);
+  const actionText=membershipDrawerBenefitMode==='consume'?'消耗':'补发';
+  const body=rows.length?renderDetailDrawerTable({
+    minWidth:'520px',
+    columns:[
+      {label:'权益',key:'label',render:row=>row.label+membershipBenefitNote(row)},
+      {label:'当前剩余',key:'remaining',render:row=>`${row.remaining}/${row.total}${row.unit}`},
+      {label:'操作',html:true,align:'right',render:row=>`<span class="tms-action-link" onclick="openMembershipBenefitActionModal('${court.id}','${row.code}','${membershipDrawerBenefitMode}')">${actionText}</span>`}
+    ],
+    rows,
+    emptyText:'暂无可操作权益'
+  }):'<div class="student-detail-empty">暂无可操作权益</div>';
+  return renderDetailDrawerCard(`${actionText}权益`,body,{useGrid:false});
+}
+function membershipBenefitActionDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  if(!account)return renderDetailDrawerCard('操作权益','该订场用户还没有会员账户',{useGrid:false});
+  const label=membershipBenefitLabelForCode(membershipDrawerBenefitCode,account);
+  const orders=membershipOrdersForAccount(account.id);
+  const latestOrder=orders[0];
+  const title=membershipDrawerBenefitMode==='consume'?`消耗权益 · ${label}`:`补发权益 · ${label}`;
+  const extra=membershipDrawerBenefitMode==='consume'
+    ?`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">扣减预览</label><div id="membershipBenefitConsumePreview" class="membership-drawer-preview">${esc(JSON.stringify(membershipBenefitConsumePreview(account,membershipDrawerBenefitCode,1)) && '')}</div></div></div>`
+    :`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">归属购买批次 *</label><select class="finput tms-form-control" id="mb_order">${orders.map(o=>`<option value="${o.id}" ${latestOrder?.id===o.id?'selected':''}>${esc(o.purchaseDate)} · ${esc(o.membershipPlanName)}</option>`).join('')}</select><div class="tms-field-help">本次补发会记入所选购买批次的权益调整，不会生成新的购买记录</div></div></div>`;
+  const form=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">权益名称</label><div class="finput tms-form-control">${esc(label)}</div></div><div class="tms-form-item"><label class="tms-form-label">次数</label><input class="finput tms-form-control" id="mb_count" type="number" value="1" oninput="${membershipDrawerBenefitMode==='consume'?`refreshMembershipBenefitConsumePreview('${court.id}','${membershipDrawerBenefitCode}')`:''}"></div></div>${extra}<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">原因</label><input class="finput tms-form-control" id="mb_reason" value="${membershipDrawerBenefitMode==='consume'?'会员权益使用':'会员权益补发'}"></div></div>`;
+  const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openMembershipBenefitPickerModal('${court.id}','${membershipDrawerBenefitMode}')">返回选择权益</button><button type="button" class="schedule-detail-action primary" id="membershipBenefitSaveBtn" onclick="saveMembershipBenefit('${court.id}','${membershipDrawerBenefitMode}','${membershipDrawerBenefitCode}')">${membershipDrawerBenefitMode==='consume'?'确认消耗':'确认补发'}</button></div>`;
+  return renderDetailDrawerFormCard(title,form,actions);
+}
+function membershipVoidDrawerHtml(court){
+  const account=courtMembershipAccount(court?.id);
+  if(!account)return renderDetailDrawerCard('作废会员','该订场用户还没有会员账户',{useGrid:false});
+  const form=`<div class="membership-drawer-help danger">作废后折扣失效，权益不可再使用。</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">作废原因</label><textarea class="finput tms-form-control" id="mv_reason">手动作废会员</textarea></div></div>`;
+  const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openCourtMembershipPanel('${court.id}')">取消</button><button type="button" class="schedule-detail-action danger" id="membershipVoidBtn" onclick="voidMembership('${court.id}')">确认作废</button></div>`;
+  return renderDetailDrawerFormCard('作废会员',form,actions);
+}
+function membershipDrawerContentHtml(court){
+  if(membershipDrawerMode==='order')return membershipOrderDrawerHtml(court);
+  if(membershipDrawerMode==='benefit-picker')return membershipBenefitPickerDrawerHtml(court);
+  if(membershipDrawerMode==='benefit-action')return membershipBenefitActionDrawerHtml(court);
+  if(membershipDrawerMode==='void')return membershipVoidDrawerHtml(court);
+  if(membershipDetailActiveTab==='booking')return courtBookingDrawerHtml(court);
+  if(membershipDetailActiveTab==='orders')return membershipOrdersDrawerHtml(court);
+  if(membershipDetailActiveTab==='rights')return membershipRightsDrawerHtml(court);
+  if(membershipDetailActiveTab==='ledger')return membershipLedgerDrawerHtml(court);
+  return courtMembershipPanelHtml(court);
+}
+function initializeMembershipDrawer(courtId){
+  if(membershipDrawerMode==='order'){
+    const planId=document.getElementById('mo_plan')?.value||membershipPlans.filter(p=>p.status!=='inactive')[0]?.id||'';
+    if(planId)applyMembershipOrderDraft(planId);
+    ['mo_recharge','mo_bonus'].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('oninput',`refreshMembershipOrderPreview('${membershipDrawerOrderMode}');toggleMembershipPriceOverride()`)});
+    const moDateEl=document.getElementById('mo_date');if(moDateEl)moDateEl.addEventListener('change',()=>refreshMembershipOrderPreview(membershipDrawerOrderMode));
+    toggleMembershipPriceOverride();
+    refreshMembershipOrderPreview(membershipDrawerOrderMode);
+  }
+  if(membershipDrawerMode==='benefit-action'&&membershipDrawerBenefitMode==='consume')refreshMembershipBenefitConsumePreview(courtId,membershipDrawerBenefitCode);
+  if(membershipDrawerMode==='view'&&membershipDetailActiveTab==='booking'&&membershipBookingEntryOpen)onCourtFinanceSceneChange();
+}
+function openMembershipDrawer(courtId){
   const court=courts.find(c=>c.id===courtId);if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
   editId=null;
-  openStandardModal({title:`${court.name} · 会员账户`,bodyHtml:courtMembershipPanelHtml(court),actionsHtml:'',extraClass:'modal-member'});
+  openStandardDetailDrawer({
+    titleHtml:`${membershipDetailHeroHtml(court)}${membershipDetailTabsHtml(membershipDetailActiveTab)}`,
+    bodyHtml:`<div class="schedule-detail-content">${membershipDrawerContentHtml(court)}</div>`,
+    actionsHtml:'',
+    data:{membershipCourtId:court.id,membershipMode:membershipDrawerMode},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-membership-drawer'
+  });
+  requestAnimationFrame(()=>initializeMembershipDrawer(courtId));
+}
+function openCourtMembershipPanel(courtId,options={}){
+  membershipDetailActiveTab=options.tab||'overview';
+  membershipDrawerMode=options.mode||'view';
+  membershipDrawerOrderMode=options.orderMode||'renew';
+  membershipDrawerBenefitMode=options.benefitMode||'';
+  membershipDrawerBenefitCode=options.benefitCode||'';
+  if(membershipDetailActiveTab!=='rights')membershipInlineBenefitAction={benefitCode:'',mode:''};
+  if(membershipDetailActiveTab!=='booking')membershipBookingEntryOpen=false;
+  openMembershipDrawer(courtId);
 }
 let courtMergeState={sourceCourtId:'',options:[],filtered:[]};
 function mergeCourtTargetLabel(court){
@@ -1680,9 +1894,65 @@ async function createCourtCompanionSchedule(court,record,companionCoach){
     notes:record.note?`订场陪打：${record.note}`:'订场陪打'
   });
 }
+function courtBookingRecordsTableHtml(hist){
+  const rows=(Array.isArray(hist)?hist:[]).filter(h=>String(h.category||h.businessTypeLevel2||'').includes('订场')||h.category==='内部占用');
+  return renderDetailDrawerTable({
+    minWidth:'760px',
+    columns:[
+      {label:'订场日期',key:'date',render:h=>h.occurredDate||h.date||'-'},
+      {label:'时间',key:'time',render:h=>h.startTime&&h.endTime?`${h.startTime}-${h.endTime}`:'-'},
+      {label:'场地',key:'venue',render:h=>h.venue||'-'},
+      {label:'类型',key:'category',render:h=>h.category||h.businessTypeLevel2||'-'},
+      {label:'支付方式',key:'payMethod',render:h=>h.payMethod||'-'},
+      {label:'金额',key:'amount',render:h=>`¥${fmt(Math.abs(parseFloat(h.amount)||0))}`},
+      {label:'备注',key:'note',render:h=>courtBookingHumanNote(h)}
+    ],
+    rows,
+    emptyText:'暂无订场记录'
+  });
+}
+function courtBookingHumanNote(record){
+  const raw=String(record?.note||'').trim();
+  if(!raw)return '-';
+  const systemPattern=/(会员订场修正|会员订场补录|订场补录|正确表|确认表|系统|导入|修正|补账|补录|历史迁移|数据修复)/;
+  const parts=raw.split(/[\/｜|]/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>1){
+    const humanParts=parts.filter(part=>!systemPattern.test(part));
+    return humanParts.join(' / ')||'-';
+  }
+  return systemPattern.test(raw)?'-':raw;
+}
+function openCourtBookingEntryInline(courtId){
+  membershipBookingEntryOpen=true;
+  openCourtMembershipPanel(courtId,{tab:'booking'});
+}
+function closeCourtBookingEntryInline(courtId){
+  membershipBookingEntryOpen=false;
+  openCourtMembershipPanel(courtId,{tab:'booking'});
+}
+function courtBookingDrawerHtml(court){
+  if(!court)return renderDetailDrawerCard('订场','当前订场用户数据未加载，请刷新后重试',{useGrid:false});
+  courtFinanceModalId=court.id;
+  _pending=[];
+  const studentOptions=[{value:'',label:'不关联'},...students.map(s=>({value:s.id,label:s.name}))];
+  const coachOptions=[{value:'',label:'不安排陪打'},...activeCoachNames().map(name=>({value:name,label:name}))];
+  const campusOptions=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
+  const venueOptions=VENUES.map(v=>({value:v,label:esc(v)}));
+  const channelProductOptions=[{value:'',label:'选择渠道商品'},...activeChannelProductOptions()];
+  const hist=[...parseArr(court.history)].reverse();
+  const form=`<div class="tms-record-add-box"><div class="tms-form-row"><div class="tms-form-item" style="flex:0 0 110px;min-width:110px;">${renderStandardDropdownHtml('nrType','交易类型',courtFinanceTransactionOptions(),'消耗',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 128px;min-width:128px;">${renderStandardDropdownHtml('nrCategory','业务类型',courtFinanceBusinessOptions(),'会员订场',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" style="flex:0 0 128px;min-width:128px;">${renderStandardDropdownHtml('nrPayMethod','支付方式',courtPayMethodOptions(),'储值卡',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" data-finance-field="student" style="flex:0 0 128px;min-width:128px;">${renderStandardDropdownHtml('nrStudentId','关联学员',studentOptions,'',true)}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderStandardDropdownHtml('nrCampus','校区',campusOptions,court.campus||campuses[0]?.code||campuses[0]?.id,true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 118px;min-width:118px;">${renderStandardDropdownHtml('nrVenue','场地',venueOptions,venueOptions[0]?.value||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 168px;min-width:168px;">${courtDateButtonHtml('nrDate',today(),'发生日期')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderStandardDropdownHtml('nrStartTime','08:00',getCourtTimeOptions('08:00'),'08:00',true,'refreshCourtFinanceQuote')}</div><div data-finance-field="booking" style="color:#8C7B6E;align-self:center;white-space:nowrap;padding:0 2px;">至</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 100px;min-width:100px;">${renderStandardDropdownHtml('nrEndTime','10:00',getCourtTimeOptions('10:00'),'10:00',true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" data-finance-field="booking" style="flex:0 0 136px;min-width:136px;">${renderStandardDropdownHtml('nrCompanionCoach','陪打教练',coachOptions,'',true)}</div><div class="tms-form-item" data-finance-field="internal" style="flex:0 0 140px;min-width:140px;">${renderStandardDropdownHtml('nrInternalReason','占用原因',[{value:'领导打球',label:'领导打球'},{value:'活动',label:'活动'},{value:'测试教学',label:'测试教学'},{value:'其他',label:'其他'}],'领导打球',true)}</div><div class="tms-form-item" data-finance-field="course" style="flex:1;"><input type="number" class="finput tms-form-control" id="nrLessonCount" min="1" step="1" placeholder="节数"></div></div><div class="tms-form-row" data-finance-field="booking"><div class="tms-form-item" style="flex:0 0 132px;min-width:132px;">${renderStandardDropdownHtml('nrPriceMode','价格来源',[{value:'venue_rate',label:'场地价格'},{value:'channel_product',label:'渠道商品'},{value:'manual',label:'手动价格'}],'venue_rate',true,'onCourtFinanceSceneChange')}</div><div class="tms-form-item" data-price-field="channel" style="flex:1;">${renderStandardDropdownHtml('nrChannelProductId','渠道商品',channelProductOptions,channelProductOptions[0]?.value||'',true,'refreshCourtFinanceQuote')}</div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;"><input type="number" class="finput tms-form-control" id="nrSystemAmount" placeholder="系统应收" readonly></div><div class="tms-form-item" style="flex:0 0 118px;min-width:118px;"><input type="number" class="finput tms-form-control" id="nrFinalAmount" placeholder="最终成交" oninput="syncCourtFinalAmount()"></div><input type="hidden" id="nrPricePlanId"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrOverrideReason" placeholder="改价原因"></div></div><div class="tms-form-row" data-price-field="channel"><div class="tms-form-item"><input type="text" class="finput tms-form-control" id="nrChannelOrderNo" placeholder="平台订单号"></div><div class="tms-form-item"><input type="text" class="finput tms-form-control" id="nrRedeemCode" placeholder="核销码"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item" style="flex:1;"><input type="text" class="finput tms-form-control" id="nrNote" placeholder="备注（非必填）"></div><div class="tms-form-item" style="flex:0 0 128px;"><input type="number" class="finput tms-form-control" id="nrAmt" placeholder="¥ 金额"></div><div class="tms-form-item" style="flex:none;width:120px;"><button class="schedule-detail-action primary" id="courtFinanceAddBtn" style="width:100%;" onclick="saveCourtFinanceRecord()">添加</button></div></div></div><div style="font-size:12px;color:var(--ts);margin:8px 0 6px" id="financeHint">本次订场会从当前余额扣款。</div><div style="font-size:12px;color:var(--ts);margin:0" id="nrQuoteMeta"></div>`;
+  const actions=`<button type="button" class="schedule-detail-action" onclick="openCourtBookingEntryInline('${court.id}')">新增订场流水</button>`;
+  const records=renderDetailDrawerCard('订场记录',courtBookingRecordsTableHtml(hist),{className:'membership-booking-records',useGrid:false,actionsHtml:actions});
+  const closeAction=`<button type="button" class="schedule-detail-action muted" onclick="closeCourtBookingEntryInline('${court.id}')">取消</button>`;
+  const entry=membershipBookingEntryOpen?renderDetailDrawerCard('新增订场流水',form,{useGrid:false,actionsHtml:closeAction}):'';
+  return `${records}${entry}`;
+}
 function openCourtFinanceModal(courtId){
   const court=courts.find(c=>c.id===courtId);
   if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
+  membershipBookingEntryOpen=true;
+  openCourtMembershipPanel(courtId,{tab:'booking'});
+  return;
   courtFinanceModalId=courtId;
   editId=null;
   _pending=[];
@@ -1731,6 +2001,7 @@ async function saveCourtFinanceRecord(){
   if(preview.spentAmount<0||preview.storedValueSpent<0||preview.directPaidSpent<0){toast('冲正金额超过已有消费','warn');return;}
   if(!await appConfirm(courtFinanceConfirmText(h,studentId),{title:'确认添加流水',confirmText:'确认添加'}))return;
   const rec={...court,history:hist};
+  const inMembershipBookingDrawer=document.getElementById('overlay')?.dataset.membershipCourtId===court.id&&membershipDetailActiveTab==='booking';
   await runStandardMutation('courtFinanceAddBtn',async()=>{
     const saved=await apiCall('PUT','/courts/'+court.id,rec);
     const i=courts.findIndex(u=>u.id===court.id);
@@ -1747,11 +2018,17 @@ async function saveCourtFinanceRecord(){
     return {companionFailed};
   },{
     successText:'',
-    closeOnSuccess:true,
+    closeOnSuccess:!inMembershipBookingDrawer,
     onSuccess:({companionFailed}={})=>{
       toast(companionFailed?'流水已保存，陪打日程创建失败':'添加成功 ✓',companionFailed?'warn':'success');
     },
-    refresh:[renderCourts,renderStudentsIfVisible,renderSchedule,renderMySchedule]
+    refresh:[
+      renderCourts,
+      renderStudentsIfVisible,
+      renderSchedule,
+      renderMySchedule,
+      ()=>{if(inMembershipBookingDrawer){membershipBookingEntryOpen=false;openCourtMembershipPanel(court.id,{tab:'booking'});}}
+    ]
   });
 }
 function openCourtHist(id){
