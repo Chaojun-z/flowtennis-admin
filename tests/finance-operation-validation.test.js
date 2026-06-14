@@ -141,6 +141,82 @@ assert.strictEqual(consumeResult.ok, true, 'lesson consume should pass when sche
 assert.strictEqual(consumeResult.financeDeltas.recognized, 100);
 assert.strictEqual(consumeResult.financeDeltas.deferred, -100);
 
+const beforeTrace = snapshot({
+  cash: 1000,
+  recognized: 200,
+  deferred: 800,
+  packageIncome: 1000,
+  packageRecognized: 200,
+  rows: [{ id: 'finance-old' }],
+  tables: {
+    ft_purchases: [{ id: 'purchase-old' }],
+    ft_entitlements: [{ id: 'ent-old', remainingLessons: 8 }]
+  }
+});
+
+const afterTrace = snapshot({
+  cash: 1400,
+  recognized: 200,
+  deferred: 1200,
+  packageIncome: 1400,
+  packageRecognized: 200,
+  rows: [
+    { id: 'finance-old' },
+    { id: 'finance-op-1', operationId: 'op-trace-1', batchId: 'batch-trace-1', cashDelta: 400, deferredRevenueDelta: 400 }
+  ],
+  tables: {
+    ft_purchases: [
+      { id: 'purchase-old' },
+      { id: 'purchase-op-1', operationId: 'op-trace-1', batchId: 'batch-trace-1', amountPaid: 400 }
+    ],
+    ft_entitlements: [
+      { id: 'ent-old', remainingLessons: 8 },
+      { id: 'ent-op-1', operationId: 'op-trace-1', batchId: 'batch-trace-1', remainingLessons: 10 }
+    ]
+  }
+});
+
+const operationTrace = validation.validateFinanceOperationTrace({
+  beforeSnapshot: beforeTrace,
+  afterSnapshot: afterTrace,
+  operationId: 'op-trace-1'
+});
+assert.strictEqual(operationTrace.ok, true, 'operationId trace validation should pass when records exist');
+assert.deepStrictEqual(operationTrace.involvedTables.ft_purchases.recordIds, ['purchase-op-1']);
+assert.deepStrictEqual(operationTrace.involvedTables.ft_entitlements.recordIds, ['ent-op-1']);
+assert.deepStrictEqual(operationTrace.involvedTables['financePage.normalizedRows'].recordIds, ['finance-op-1']);
+assert.strictEqual(operationTrace.financeDeltas.cash, 400);
+assert.strictEqual(operationTrace.financeDeltas.deferred, 400);
+
+const batchTrace = validation.validateFinanceOperationTrace({
+  beforeSnapshot: beforeTrace,
+  afterSnapshot: afterTrace,
+  batchId: 'batch-trace-1'
+});
+assert.strictEqual(batchTrace.ok, true, 'batchId trace validation should pass when records exist');
+assert.deepStrictEqual(batchTrace.involvedTables.ft_purchases.recordIds, ['purchase-op-1']);
+
+assert.throws(
+  () => validation.validateFinanceOperationTrace({
+    beforeSnapshot: beforeTrace,
+    afterSnapshot: afterTrace,
+    operationId: 'op-missing'
+  }),
+  /找不到 operationId: op-missing[\s\S]*禁止猜测/,
+  'operation trace validation should fail when operationId is absent'
+);
+
+assert.throws(
+  () => validation.validateFinanceOperationTrace({
+    beforeSnapshot: beforeTrace,
+    afterSnapshot: afterTrace,
+    operationId: 'op-trace-1',
+    batchId: 'batch-trace-1'
+  }),
+  /operationId 和 batchId 不能同时提供/,
+  'operation trace validation should reject ambiguous selectors'
+);
+
 assert.throws(
   () => validation.validateFinanceOperationChange({
     beforeSnapshot: beforePackage,

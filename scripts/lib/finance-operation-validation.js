@@ -161,6 +161,64 @@ function computeFinanceDeltas(beforeSnapshot, afterSnapshot) {
   return result;
 }
 
+function assertTraceSelector({ operationId = '', batchId = '' } = {}) {
+  const cleanOperationId = String(operationId || '').trim();
+  const cleanBatchId = String(batchId || '').trim();
+  if (cleanOperationId && cleanBatchId) throw new Error('operationId 和 batchId 不能同时提供');
+  if (!cleanOperationId && !cleanBatchId) throw new Error('必须提供 operationId 或 batchId');
+  return { operationId: cleanOperationId, batchId: cleanBatchId };
+}
+
+function matchesTrace(row, selector) {
+  if (!row || typeof row !== 'object') return false;
+  if (selector.operationId) return String(row.operationId || '') === selector.operationId;
+  return String(row.batchId || '') === selector.batchId;
+}
+
+function recordId(row, fallback) {
+  return String(row?.id || row?.pk || row?.key || fallback);
+}
+
+function addInvolvedRecord(groups, tableName, id) {
+  if (!groups[tableName]) groups[tableName] = { recordIds: [] };
+  if (!groups[tableName].recordIds.includes(id)) groups[tableName].recordIds.push(id);
+}
+
+function financeRows(snapshot) {
+  return normalizeRows(snapshot?.financePage?.normalizedRows || snapshot?.financePage?.financeNormalizedRows);
+}
+
+function collectTraceRecords(snapshot, selector) {
+  const groups = {};
+  const tables = snapshot?.tables || {};
+  Object.keys(tables).forEach((tableName) => {
+    tableRows(snapshot, tableName).forEach((row, index) => {
+      if (matchesTrace(row, selector)) addInvolvedRecord(groups, tableName, recordId(row, `${tableName}-${index}`));
+      if (tableName === 'ft_courts') {
+        normalizeRows(row?.history).forEach((historyRow, historyIndex) => {
+          if (matchesTrace(historyRow, selector)) {
+            addInvolvedRecord(groups, 'ft_courts.history', `${recordId(row, `court-${index}`)}#${recordId(historyRow, `history-${historyIndex}`)}`);
+          }
+        });
+      }
+    });
+  });
+  financeRows(snapshot).forEach((row, index) => {
+    if (matchesTrace(row, selector)) addInvolvedRecord(groups, 'financePage.normalizedRows', recordId(row, `finance-row-${index}`));
+  });
+  return groups;
+}
+
+function computeTraceFinanceDeltas(snapshot, selector) {
+  const rows = financeRows(snapshot).filter((row) => matchesTrace(row, selector));
+  return {
+    cash: roundMoney(rows.reduce((total, row) => total + (Number(row.cashDelta) || 0), 0)),
+    recognized: roundMoney(rows.reduce((total, row) => total + (Number(row.recognizedRevenueDelta) || 0), 0)),
+    deferred: roundMoney(rows.reduce((total, row) => total + (Number(row.deferredRevenueDelta) || 0), 0)),
+    normalizedRowCount: rows.length
+  };
+}
+
 function assertAmount(amount) {
   const numeric = roundMoney(amount);
   if (!Number.isFinite(Number(amount)) || numeric <= 0) throw new Error('amount 必须是大于 0 的数字');
@@ -215,6 +273,23 @@ function validateFinanceOperationChange({ beforeSnapshot, afterSnapshot, operati
   };
 }
 
+function validateFinanceOperationTrace({ beforeSnapshot, afterSnapshot, operationId = '', batchId = '' }) {
+  const selector = assertTraceSelector({ operationId, batchId });
+  const involvedTables = collectTraceRecords(afterSnapshot, selector);
+  if (!Object.keys(involvedTables).length) {
+    const label = selector.operationId ? `operationId: ${selector.operationId}` : `batchId: ${selector.batchId}`;
+    throw new Error(`找不到 ${label} 对应记录，禁止猜测`);
+  }
+  return {
+    ok: true,
+    operationId: selector.operationId || undefined,
+    batchId: selector.batchId || undefined,
+    involvedTables,
+    financeDeltas: computeTraceFinanceDeltas(afterSnapshot, selector),
+    totalTableCount: Object.keys(involvedTables).length
+  };
+}
+
 function loadSnapshotFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -223,6 +298,7 @@ module.exports = {
   OPERATION_RULES,
   computeTableChanges,
   computeFinanceDeltas,
+  validateFinanceOperationTrace,
   validateFinanceOperationChange,
   loadSnapshotFile
 };
