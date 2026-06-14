@@ -371,6 +371,8 @@ function renderPageLoading(pg){
   if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
+  if(pg==='membership-orders')renderTableBodyLoading('membershipOrdersAuditTbody',12,'会员购买记录加载中...');
+  if(pg==='membership-ledger')renderTableBodyLoading('membershipLedgerAuditTbody',8,'会员权益流水加载中...');
   if(pg==='finance'){
     renderTableBodyLoading('financeLedgerTbody',11,'总账加载中...');
     renderTableBodyLoading('financeRevenueTbody',14,'收入表加载中...');

@@ -46,6 +46,11 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 .main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;z-index:1;background:var(--shell-app-bg);transition:margin-left 180ms ease}
 .topbar{height:var(--topH);background:var(--shell-app-bg);border-bottom:0.5px solid var(--shell-topbar-divider);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;z-index:90}
 .tb-title{font-size:17px;font-weight:700;color:var(--shell-page-title-color);flex:1;letter-spacing:0}
+.top-title-breadcrumb{display:inline-flex;align-items:center;gap:8px;min-width:0;color:var(--shell-page-title-color)}
+.top-title-parent{appearance:none;border:0;background:transparent;padding:0;color:rgba(251,247,244,.72);font:inherit;font-weight:700;letter-spacing:0;cursor:pointer}
+.top-title-parent:hover{color:var(--shell-page-title-color)}
+.top-title-separator{color:rgba(251,247,244,.44);font-weight:600}
+.top-title-current{color:var(--shell-page-title-color);font-weight:700}
 .topbar-filter-host{display:flex;gap:4px;flex-wrap:wrap}
 .global-live-clock{margin-left:auto;font-family:inherit;font-size:13px;font-weight:400;color:var(--shell-live-clock-color);background:rgba(0,0,0,0.1);padding:4px 12px;border-radius:100px;display:flex;align-items:center;gap:8px;min-height:32px}
 .coach-top-logout{display:none;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:6px 14px;color:rgba(254,243,199,0.8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}

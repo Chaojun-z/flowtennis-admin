@@ -54,8 +54,8 @@ assert.match(fnBody('closeStandardTopDropdowns'), /cancelGlobalCustomDateDraft\(
   'finance'
 ].forEach(page=>{
   assert.match(
-    fnBody('goPage'),
-    new RegExp(`globalTopFilterPages\\(\\)[\\s\\S]*${page}`),
+    fnBody('globalTopFilterPages'),
+    new RegExp(`'${page}'`),
     `${page} should show the shared top filter`
   );
 });

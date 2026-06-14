@@ -47,8 +47,8 @@ assert.match(html, /id="page-memberships" data-standard-list-shell="memberships"
 assert.match(membershipShell, /search:\{id:'membershipSearch'/, 'membership management page should use the court-style toolbar');
 assert.match(membershipShell, /bodyId:'membershipTbody'/, 'membership management page should use the standard table shell');
 assert.match(membershipShell, /id:'membershipSearch'/, 'membership management search should use the unified search placeholder');
-assert.match(html, /id="page-membership-orders"[\s\S]*返回会员管理[\s\S]*会员购买记录/, 'membership purchase records should be a standalone page with a back entry');
-assert.match(html, /id="page-membership-ledger"[\s\S]*返回会员管理[\s\S]*会员权益流水/, 'membership benefit ledger should be a standalone page with a back entry');
+assert.doesNotMatch(html, /id="page-membership-orders"[\s\S]*返回会员管理/, 'membership purchase records should not keep a duplicate back button');
+assert.doesNotMatch(html, /id="page-membership-ledger"[\s\S]*返回会员管理/, 'membership benefit ledger should not keep a duplicate back button');
 
 assert.match(html, /let courts=\[\],students=\[\],products=\[\],packages=\[\],purchases=\[\],entitlements=\[\],entitlementLedger=\[\],financialLedger=\[\],membershipPlans=\[\],membershipAccounts=\[\],membershipOrders=\[\],membershipBenefitLedger=\[\],membershipAccountEvents=\[\]/, 'frontend state should load membership data separately');
 assert.match(html, /membershipPlans=Array\.isArray\(data\?\.membershipPlans\)\?data\.membershipPlans:\[\]/, 'load-all should store membership plans');
@@ -139,9 +139,9 @@ assert.match(html, /function renderMembershipLedgerAuditPage/, 'membership page 
 assert.match(membershipShell, /onclick="goPage\(\\'membership-orders\\'\)"/, 'membership management purchase audit entry should navigate to standalone page');
 assert.match(membershipShell, /onclick="goPage\(\\'membership-ledger\\'\)"/, 'membership management ledger audit entry should navigate to standalone page');
 assert.match(html, /membershipBenefitLedger\.filter\(l=>l\.action!=='grant'&&searchHit/, 'global benefit audit should hide grant rows');
-assert.match(html, /购买日期[\s\S]*订场用户[\s\S]*会员方案[\s\S]*充值[\s\S]*赠送金额[\s\S]*折扣[\s\S]*是否重置有效期[\s\S]*当次权益摘要[\s\S]*状态/, 'membership purchase audit should keep reduced audit fields');
+assert.match(html, /支付日期[\s\S]*订场用户[\s\S]*会员方案[\s\S]*系统价[\s\S]*成交价[\s\S]*赠送金额[\s\S]*折扣[\s\S]*是否重置有效期[\s\S]*当次权益摘要[\s\S]*状态/, 'membership purchase audit should keep reduced audit fields');
 assert.match(html, /时间[\s\S]*订场用户[\s\S]*购买批次[\s\S]*权益[\s\S]*变动[\s\S]*动作[\s\S]*原因/, 'membership ledger audit should keep audit columns only');
-assert.match(html, /此页面仅用于审计与追溯，不用于日常操作/, 'audit modal should explain read-only positioning');
+assert.match(html, /此页面仅用于审计与追溯，不用于日常操作/, 'audit page should explain read-only positioning');
 assert.match(html, /权益有效期固定 12 个月[\s\S]*余额最长按当前系统规则至 24 个月/, 'membership plan form should explain fixed validity rules');
 assert.match(html, /可用权益/, 'membership account list should expose benefit summary');
 assert.match(fnBody('renderMemberships'), />查看<\/span>/, 'membership account list should expose account detail entry');
@@ -231,9 +231,9 @@ assert.match(fnBody('saveMembershipBenefit'), /runStandardMutation\('membershipB
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase audit page should use breadcrumb-style navigation');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员权益流水/, 'ledger audit page should use breadcrumb-style navigation');
 assert.match(html, /tms-audit-note/, 'audit pages should use a slim read-only note');
-assert.match(html, /支付日期<\/th>[\s\S]*录入时间<\/th>[\s\S]*订场用户/, 'membership order audit should show pay date and recorded time columns');
+assert.match(html, /label:'支付日期'[\s\S]*label:'录入时间'[\s\S]*label:'订场用户'/, 'membership order audit should show pay date and recorded time columns');
 assert.match(html, /会员方案 \*[\s\S]*系统价格[\s\S]*实收\/充值金额[\s\S]*改价原因/, 'membership order modal should expose system price and override reason fields');
-assert.match(html, /支付日期<\/th>[\s\S]*系统价[\s\S]*成交价[\s\S]*改价原因/, 'membership order audit should show price snapshot columns');
+assert.match(html, /label:'支付日期'[\s\S]*label:'系统价'[\s\S]*label:'成交价'[\s\S]*label:'改价原因'/, 'membership order audit should show price snapshot columns');
 assert.match(fnBody('renderMemberships'), /const tierLabel=courtMembershipTierLabel\(a\)/, 'membership management should show the member tier like the court user current-member column');
 assert.match(html, /formatMembershipLedgerTime/, 'membership ledger audit should format readable date and time');
 assert.match(html, /membershipLedgerActionText/, 'membership ledger audit should translate backend actions to Chinese');

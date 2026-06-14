@@ -322,7 +322,7 @@ assert.match(html, /function showPackageRuleTooltip\(/, 'package rule tooltip sh
 assert.match(fnBody('packageBoardCardHtml'), /onmouseenter="showPackageRuleTooltip\(event\)"[\s\S]*onmouseleave="hidePackageRuleTooltip\(\)"/, 'package rule tooltip should not be clipped inside the scroll column');
 assert.doesNotMatch(purchaseShellConfig, /导出/, 'purchase page should remove export button');
 assert.doesNotMatch(purchaseShellConfig, /导入/, 'purchase page should remove import button');
-assert.match(purchaseShellConfig, /goPage\(\\'packages\\'\)[\s\S]*课包售卖/, 'purchase page should expose a back entry to package sales');
+assert.doesNotMatch(purchaseShellConfig, /goPage\(\\'packages\\'\)[\s\S]*课包售卖/, 'purchase page should remove the duplicate package sales back entry');
 assert.doesNotMatch(purchaseShellConfig, /purDateFrom/, 'purchase page should remove start date filter');
 assert.doesNotMatch(purchaseShellConfig, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');

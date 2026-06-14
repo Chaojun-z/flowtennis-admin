@@ -580,11 +580,42 @@ function openMembershipOrdersAuditModal(){
 function openMembershipLedgerAuditModal(){
   goPage('membership-ledger');
 }
+function membershipOrderAuditRows(){
+  const q=(document.getElementById('membershipOrderAuditSearch')?.value||'').toLowerCase();
+  return membershipOrders.filter(o=>searchHit(q,o.courtName,o.membershipPlanName,o.notes,o.purchaseDate,o.overrideReason)).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
+}
+function renderMembershipOrderAuditPagerControls(total,pages){
+  const pageSizeHost=document.getElementById('membershipOrdersAuditPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('membershipOrdersAuditPageSizeValue',membershipOrderAuditPageSize,'setMembershipOrderAuditPageSize');
+  const btns=document.getElementById('membershipOrdersAuditPagerBtns');
+  if(btns)btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(membershipOrderAuditPage,pages,'setMembershipOrderAuditPage');
+}
+function setMembershipOrderAuditPage(value){
+  const total=membershipOrderAuditRows().length;
+  membershipOrderAuditPage=standardListPagination(total,value,membershipOrderAuditPageSize).page;
+  renderMembershipOrdersAuditPage();
+}
+function setMembershipOrderAuditPageSize(value){
+  membershipOrderAuditPageSize=standardListPageSize(value,membershipOrderAuditPageSize);
+  membershipOrderAuditPage=standardListFirstPage();
+  renderMembershipOrdersAuditPage();
+}
+function onMembershipOrderAuditSearchChange(){
+  membershipOrderAuditPage=standardListFirstPage();
+  renderMembershipOrdersAuditPage();
+}
 function renderMembershipOrdersAuditPage(){
-  const host=document.getElementById('membershipOrdersAuditBody');if(!host)return;
-  const q=(document.getElementById('membershipSearch')?.value||'').toLowerCase();
-  const rows=membershipOrders.filter(o=>searchHit(q,o.courtName,o.membershipPlanName,o.notes));
-  host.innerHTML=`<div class="tms-audit-note">此页面仅用于审计与追溯，不用于日常操作。</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:120px">支付日期</th><th style="width:170px">录入时间</th><th style="width:120px">订场用户</th><th style="width:150px">会员方案</th><th style="width:100px">系统价</th><th style="width:100px">成交价</th><th style="width:110px">赠送金额</th><th style="width:90px">折扣</th><th style="width:120px">是否重置有效期</th><th style="width:140px">改价原因</th><th style="width:320px">当次权益摘要</th><th style="width:100px">状态</th></tr></thead><tbody>${rows.map(o=>`<tr><td style="padding-left:20px">${renderStandardCellText(o.purchaseDate)}</td><td>${renderStandardCellText(formatMembershipLedgerTime(o.createdAt),false)}</td><td>${renderStandardCellText(o.courtName)}</td><td>${renderStandardCellText(o.membershipPlanName)}</td><td><div class="tms-cell-text">¥${fmt(o.systemAmount??o.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(o.finalAmount??o.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(o.bonusAmount)}</div></td><td>${renderStandardCellText(membershipDiscountText(o.discountRate),false)}</td><td>${renderStandardCellText(o.qualifiesRenewalReset===false?'否':'是',false)}</td><td>${renderStandardCellText(o.overrideReason,false)}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px">${membershipOrderBenefitSummaryHtml(o)}</div></td><td>${renderStandardCellText(membershipStatusText(o.status),false)}</td></tr>`).join('')||'<tr><td colspan="12"><div class="empty"><p>暂无会员购买记录</p></div></td></tr>'}</tbody></table></div></div>`;
+  const host=document.getElementById('membershipOrdersAuditTbody');if(!host)return;
+  const rows=membershipOrderAuditRows();
+  const pageState=standardListSlice(rows,membershipOrderAuditPage,membershipOrderAuditPageSize);
+  membershipOrderAuditPage=pageState.page;
+  const {total,pages,slice}=pageState;
+  const pager=document.querySelector('#page-membership-orders .tms-pagination');
+  if(pager)pager.style.display=total>membershipOrderAuditPageSize?'flex':'none';
+  const info=document.getElementById('membershipOrdersAuditPagerInfo');
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
+  renderMembershipOrderAuditPagerControls(total,pages);
+  host.innerHTML=slice.map(o=>`<tr><td style="padding-left:20px">${renderStandardCellText(o.purchaseDate)}</td><td>${renderStandardCellText(formatMembershipLedgerTime(o.createdAt),false)}</td><td>${renderStandardCellText(o.courtName)}</td><td>${renderStandardCellText(o.membershipPlanName)}</td><td><div class="tms-cell-text">¥${fmt(o.systemAmount??o.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(o.finalAmount??o.rechargeAmount)}</div></td><td><div class="tms-cell-text">¥${fmt(o.bonusAmount)}</div></td><td>${renderStandardCellText(membershipDiscountText(o.discountRate),false)}</td><td>${renderStandardCellText(o.qualifiesRenewalReset===false?'否':'是',false)}</td><td>${renderStandardCellText(o.overrideReason,false)}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px">${membershipOrderBenefitSummaryHtml(o)}</div></td><td>${renderStandardCellText(membershipStatusText(o.status),false)}</td></tr>`).join('')||'<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员购买记录</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
 }
 function formatMembershipLedgerTime(value){
   const d=new Date(value||'');
@@ -598,11 +629,42 @@ function membershipLedgerActionText(action){
 function membershipLedgerOperatorText(operator){
   return renderStandardEmptyText(operator);
 }
+function membershipLedgerAuditRows(){
+  const q=(document.getElementById('membershipLedgerAuditSearch')?.value||'').toLowerCase();
+  return membershipBenefitLedger.filter(l=>l.action!=='grant'&&searchHit(q,courts.find(c=>c.id===l.courtId)?.name,l.benefitLabel,l.reason,l.operator,l.membershipOrderId)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
+}
+function renderMembershipLedgerAuditPagerControls(total,pages){
+  const pageSizeHost=document.getElementById('membershipLedgerAuditPageSize');
+  if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('membershipLedgerAuditPageSizeValue',membershipLedgerAuditPageSize,'setMembershipLedgerAuditPageSize');
+  const btns=document.getElementById('membershipLedgerAuditPagerBtns');
+  if(btns)btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(membershipLedgerAuditPage,pages,'setMembershipLedgerAuditPage');
+}
+function setMembershipLedgerAuditPage(value){
+  const total=membershipLedgerAuditRows().length;
+  membershipLedgerAuditPage=standardListPagination(total,value,membershipLedgerAuditPageSize).page;
+  renderMembershipLedgerAuditPage();
+}
+function setMembershipLedgerAuditPageSize(value){
+  membershipLedgerAuditPageSize=standardListPageSize(value,membershipLedgerAuditPageSize);
+  membershipLedgerAuditPage=standardListFirstPage();
+  renderMembershipLedgerAuditPage();
+}
+function onMembershipLedgerAuditSearchChange(){
+  membershipLedgerAuditPage=standardListFirstPage();
+  renderMembershipLedgerAuditPage();
+}
 function renderMembershipLedgerAuditPage(){
-  const host=document.getElementById('membershipLedgerAuditBody');if(!host)return;
-  const q=(document.getElementById('membershipSearch')?.value||'').toLowerCase();
-  const rows=membershipBenefitLedger.filter(l=>l.action!=='grant'&&searchHit(q,courts.find(c=>c.id===l.courtId)?.name,l.benefitLabel,l.reason,l.operator)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
-  host.innerHTML=`<div class="tms-audit-note">此页面仅用于审计与追溯，不用于日常操作。</div><div class="tms-table-card" style="margin-bottom:0"><div class="tms-table-wrapper"><table class="tms-table"><thead><tr><th style="padding-left:20px;width:170px">时间</th><th style="width:120px">订场用户</th><th style="width:150px">购买批次</th><th style="width:160px">权益</th><th style="width:90px">变动</th><th style="width:100px">动作</th><th style="width:120px">操作账号</th><th style="width:320px">原因</th></tr></thead><tbody>${rows.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(courts.find(c=>c.id===l.courtId)?.name||l.courtId)}</td><td>${renderStandardCellText(l.membershipOrderId)}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="empty"><p>暂无权益流水</p></div></td></tr>'}</tbody></table></div></div>`;
+  const host=document.getElementById('membershipLedgerAuditTbody');if(!host)return;
+  const rows=membershipLedgerAuditRows();
+  const pageState=standardListSlice(rows,membershipLedgerAuditPage,membershipLedgerAuditPageSize);
+  membershipLedgerAuditPage=pageState.page;
+  const {total,pages,slice}=pageState;
+  const pager=document.querySelector('#page-membership-ledger .tms-pagination');
+  if(pager)pager.style.display=total>membershipLedgerAuditPageSize?'flex':'none';
+  const info=document.getElementById('membershipLedgerAuditPagerInfo');
+  if(info)info.innerHTML=renderPagerInfoHtml(total);
+  renderMembershipLedgerAuditPagerControls(total,pages);
+  host.innerHTML=slice.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(courts.find(c=>c.id===l.courtId)?.name||l.courtId)}</td><td>${renderStandardCellText(l.membershipOrderId)}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无权益流水</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
 }
 function openMembershipPlanModal(id){
   editId=id;const p=id?membershipPlans.find(x=>x.id===id):null;
