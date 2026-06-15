@@ -1832,7 +1832,7 @@ assert.throws(
   'small group bootcamp should reject opening class with only one attendee'
 );
 
-assert.throws(
+assert.doesNotThrow(
   () => rules.assertSmallGroupScheduleRules({
     courseType: '小班课',
     smallClassType: 'bootcamp',
@@ -1840,8 +1840,7 @@ assert.throws(
     expectedStudentIds: ['stu-1', 'stu-2', 'stu-3'],
     status: '已排课'
   }),
-  /训练营固定 4 人/,
-  'small group bootcamp should require a fixed four-person expected roster'
+  'small group bootcamp should allow two or more attendees'
 );
 
 assert.deepStrictEqual(

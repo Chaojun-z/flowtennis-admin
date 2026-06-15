@@ -222,7 +222,7 @@ function packageClassSizeLabel(maxStudents=1){
 }
 function packageExperienceTypeLabel(p={}){
   p=p||{};
-  if(normalizeCourseType(p.courseType||p.type||'')!=='体验课')return '';
+  if(normalizeCourseType(p.courseType||p.type||p.productType||'')!=='体验课')return '';
   const text=[p.experienceType,p.courseTypeLevel2,p.name,p.packageName,p.productName,p.notes,p.courseType,p.type].filter(Boolean).join(' ');
   if(/小班|1v4/.test(text))return '小班体验课';
   const direct=normalizeExperienceType(p.experienceType,'');
@@ -260,7 +260,7 @@ function packageStatusText(p={}){
   return '';
 }
 function packageLessonUnitLabel(p={}){
-  const courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||'');
+  const courseType=normalizeCourseType(p.courseType||p.packageCourseType||p.type||p.productType||'');
   if(courseType==='小班课')return '次';
   if(courseType==='体验课'&&packageExperienceTypeLabel(p)==='小班体验课')return '次';
   return '课时';

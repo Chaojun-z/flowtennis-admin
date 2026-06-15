@@ -78,6 +78,17 @@ assert.strictEqual(
   'small group trial package card subtitle should use count unit'
 );
 
+assert.strictEqual(
+  context.packageLessonUnitLabel({
+    productType: '体验课',
+    productName: '成人1v4小班课体验课',
+    salePrice: 129,
+    lessons: 2
+  }),
+  '次',
+  'channel small group trial products should use count unit even when only productType is present'
+);
+
 const staleDropinPackage = {
   id: 'pkg-stale-dropin',
   courseType: '小班课',

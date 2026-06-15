@@ -729,28 +729,16 @@ function applySchEntitlementOptions(res,preferredId=''){
   if(!sel||!hint)return;
   refreshScheduleStudentEntitlementRows({},[]);
   const options=(res.options||[]).filter(x=>x.selectable);
-  if(!options.length&&maybeSwitchScheduleCourseFromUnavailableEntitlement(res.options||[]))return;
   schEntitlementOptionCache.clear();
   options.forEach(option=>{if(option.entitlementId)schEntitlementOptionCache.set(option.entitlementId,option);});
   const maxRemain=options.reduce((best,item)=>(Number(item.remainingLessons)||0)>(Number(best?.remainingLessons)||0)?item:best,null);
   const selected=options.find(x=>preferredId&&x.entitlementId===preferredId)||maxRemain;
   setScheduleEntitlementDropdown(options,selected?.entitlementId||'',options.length?'自动匹配可用课包':'无可用课包');
   setScheduleCoachFromEntitlement(selected);
-  const courseType=scheduleEntitlementCourseType(selected);
-  if(courseType){
-    const experienceType=scheduleEntitlementExperienceType(selected);
-    const smallClassType=courseType==='小班课'?scheduleEntitlementSmallClassType(selected):'';
-    setScheduleCourseTypeFields(courseType,experienceType,smallClassType);
-    syncScheduleExperienceType();
-    syncScheduleSmallClassType();
-    setScheduleCourseTypeReadonly(true);
-    setScheduleSmallClassTypeReadonly(!!smallClassType);
-  }else{
-    syncScheduleExperienceType();
-    syncScheduleSmallClassType();
-    setScheduleCourseTypeReadonly(false);
-    setScheduleSmallClassTypeReadonly(false);
-  }
+  syncScheduleExperienceType();
+  syncScheduleSmallClassType();
+  setScheduleCourseTypeReadonly(false);
+  setScheduleSmallClassTypeReadonly(false);
   const hintText=selected?'':scheduleEntitlementUnavailableReason(res.options||[]);
   hint.innerHTML=hintText?`<span class="schedule-entitlement-alert-icon">!</span><span>${esc(hintText)}</span>`:'';
   hint.style.display=hintText?'flex':'none';
@@ -798,7 +786,7 @@ function handleScheduleCoachChange(){
 }
 function setScheduleCoachFromEntitlement(option){
   const input=document.getElementById('sch_coach');
-  if(!input||input.dataset.userChanged==='1'||window.editScheduleId)return;
+  if(!input||input.dataset.userChanged==='1'||editId)return;
   const owner=coachName(option?.ownerCoach||'');
   if(owner)setStandardDropdownValue('sch_coach',owner,owner);
 }
@@ -900,21 +888,10 @@ function handleScheduleEntitlementChange(){
   const sel=document.getElementById('sch_entitlement');
   if(!sel)return;
   sel.dataset.keep=sel.value||'';
-  const courseType=scheduleEntitlementCourseType({entitlementId:sel.value});
-  if(courseType){
-    const experienceType=scheduleEntitlementExperienceType({entitlementId:sel.value});
-    const smallClassType=courseType==='小班课'?scheduleEntitlementSmallClassType({entitlementId:sel.value}):'';
-    setScheduleCourseTypeFields(courseType,experienceType,smallClassType);
-    syncScheduleExperienceType();
-    syncScheduleSmallClassType();
-    setScheduleCourseTypeReadonly(true);
-    setScheduleSmallClassTypeReadonly(!!smallClassType);
-  }else{
-    syncScheduleExperienceType();
-    syncScheduleSmallClassType();
-    setScheduleCourseTypeReadonly(false);
-    setScheduleSmallClassTypeReadonly(false);
-  }
+  syncScheduleExperienceType();
+  syncScheduleSmallClassType();
+  setScheduleCourseTypeReadonly(false);
+  setScheduleSmallClassTypeReadonly(false);
   refreshScheduleCountFields();
 }
 function readSchEntitlementPayload(ids,startRaw,endRaw){
@@ -1124,7 +1101,6 @@ async function saveSchedule(){
   if(selectedCourseType==='小班课'){
     if(studentIds.length<2){toast('小班课至少 2 人到场才能开课','warn');return;}
     if(studentIds.length>4){toast('小班课最多选择 4 名学员','warn');return;}
-    if(selectedSmallClassType==='bootcamp'&&expectedBase.length&&expectedBase.length!==4){toast('训练营固定 4 人','warn');return;}
   }
   const coachLateFree=!!document.getElementById('sch_coachLateFree')?.checked;
   const lateReason=document.getElementById('sch_lateReason')?.value.trim()||'';

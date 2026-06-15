@@ -13,7 +13,9 @@ const data = {
   purchases: [{ id: 'pur-1', studentId: 'stu-1', studentName: '张三', studentPhone: '13800000000' }],
   entitlements: [{ id: 'ent-1', studentId: 'stu-1', studentName: '张三' }],
   feedbacks: [{ id: 'fb-1', studentId: 'stu-1', studentName: '张三' }],
-  courts: [{ id: 'court-1', name: '张三', phone: '13800000000', studentId: '', studentIds: [], history: [] }]
+  courts: [{ id: 'court-1', name: '张三', phone: '13800000000', studentId: '', studentIds: [], history: [] }],
+  leads: [{ id: 'lead-1', studentId: 'stu-1', studentMatchId: 'stu-1', studentName: '张三', studentMatchName: '张三', isCourseConverted: true }],
+  leadFollowups: [{ id: 'lf-1', studentId: 'stu-1', studentName: '张三' }]
 };
 
 const updates = rules.buildStudentIdentityUpdates(oldStudent,nextStudent,data,'2026-04-12T00:00:00.000Z');
@@ -24,6 +26,8 @@ assert.deepStrictEqual(updates.purchases.map(x=>[x.id,x.studentName,x.studentPho
 assert.deepStrictEqual(updates.entitlements.map(x=>[x.id,x.studentName,x.updatedAt]), [['ent-1','张三丰','2026-04-12T00:00:00.000Z']]);
 assert.deepStrictEqual(updates.feedbacks.map(x=>[x.id,x.studentName,x.updatedAt]), [['fb-1','张三丰','2026-04-12T00:00:00.000Z']]);
 assert.deepStrictEqual(updates.courts.map(x=>[x.id,x.studentId,x.studentIds,x.updatedAt]), [['court-1','stu-1',['stu-1'],'2026-04-12T00:00:00.000Z']]);
+assert.deepStrictEqual(updates.leads.map(x=>[x.id,x.studentName,x.studentMatchName,x.updatedAt]), [['lead-1','张三丰','张三丰','2026-04-12T00:00:00.000Z']]);
+assert.deepStrictEqual(updates.leadFollowups.map(x=>[x.id,x.studentName,x.updatedAt]), [['lf-1','张三丰','2026-04-12T00:00:00.000Z']]);
 
 const cascadePlan = rules.buildStudentCascadeDeletePlan('stu-1',{
   classes: [
@@ -56,7 +60,7 @@ const cascadePlan = rules.buildStudentCascadeDeletePlan('stu-1',{
   courts: [
     { id: 'court-1', studentId: 'stu-1', studentIds: ['stu-1','stu-2'], history: [{ id: 'h1', studentId: 'stu-1' }, { id: 'h2', studentId: 'stu-2' }] }
   ],
-  leads: [{ id: 'lead-1', studentId: 'stu-1', isCourseConverted: true }],
+  leads: [{ id: 'lead-1', studentId: 'stu-1', studentMatchId: 'stu-1', studentName: '张三', studentMatchName: '张三', isCourseConverted: true }],
   leadFollowups: [{ id: 'lf-1', studentId: 'stu-1', studentName: '张三' }],
   students: [{ id: 'stu-2', name: '李四' }]
 },'2026-06-12T00:00:00.000Z');
@@ -73,7 +77,7 @@ assert.deepStrictEqual(cascadePlan.deletes.membershipBenefitLedger, ['benefit-1'
 assert.deepStrictEqual(cascadePlan.deletes.financialLedger.sort(), ['finance-schedule','finance-student']);
 assert.deepStrictEqual(cascadePlan.deletes.feedbacks.sort(), ['fb-schedule','fb-student']);
 assert.deepStrictEqual(cascadePlan.updates.courts.map(x=>[x.id,x.studentId,x.studentIds,x.history.map(h=>h.id)]), [['court-1','stu-2',['stu-2'],['h2']]]);
-assert.deepStrictEqual(cascadePlan.updates.leads.map(x=>[x.id,x.studentId,x.isCourseConverted]), [['lead-1','',false]]);
+assert.deepStrictEqual(cascadePlan.updates.leads.map(x=>[x.id,x.studentId,x.studentMatchId,x.studentName,x.studentMatchName,x.isCourseConverted]), [['lead-1','','','','',false]]);
 assert.deepStrictEqual(cascadePlan.updates.leadFollowups.map(x=>[x.id,x.studentId,x.studentName]), [['lf-1','','']]);
 
 console.log('student rules tests passed');

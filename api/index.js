@@ -1591,10 +1591,8 @@ function assertSmallGroupScheduleRules(rec){
   if(!isSmallGroupCourse(rec)||!isBillableSchedule(rec))return;
   const actual=parseArr(rec.studentIds).filter(Boolean);
   const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
-  const smallClassType=normalizeSmallClassType(rec.smallClassType||rec.packageSubType||rec.subType,expected.length===4?'bootcamp':'single');
   if(actual.length>4)throw new Error('小班课最多 4 人');
   if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
-  if(smallClassType==='bootcamp'&&expected.length&&expected.length!==4)throw new Error('训练营固定 4 人');
 }
 function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
   const used=parseLessonValue(oldEnt?.usedLessons);
@@ -4655,7 +4653,7 @@ function buildStudentIdentityUpdates(oldStudent,nextStudent,data,now=new Date().
   const phone=normalizePhone(nextStudent?.phone);
   const oldName=String(oldStudent?.name||'').trim();
   const oldPhone=normalizePhone(oldStudent?.phone);
-  const empty={plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[],courts:[]};
+  const empty={plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[],courts:[],leads:[],leadFollowups:[]};
   if(!id||(!name&&!phone))return empty;
   const changedName=String(oldStudent?.name||'')!==String(nextStudent?.name||'');
   const changedPhone=normalizePhone(oldStudent?.phone)!==phone;
@@ -4667,6 +4665,8 @@ function buildStudentIdentityUpdates(oldStudent,nextStudent,data,now=new Date().
     purchases:(data.purchases||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName,studentPhone:phone})),
     entitlements:(data.entitlements||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName})),
     feedbacks:(data.feedbacks||[]).filter(r=>r.studentId===id||parseArr(r.studentIds).includes(id)).map(r=>touch({...r,studentName:name||r.studentName})),
+    leads:(data.leads||[]).filter(r=>r.studentId===id||r.studentMatchId===id).map(r=>touch({...r,studentName:name||r.studentName,studentMatchName:name||r.studentMatchName})),
+    leadFollowups:(data.leadFollowups||[]).filter(r=>r.studentId===id).map(r=>touch({...r,studentName:name||r.studentName})),
     courts:(data.courts||[]).filter(r=>{
       const ids=parseArr(r.studentIds);
       if(ids.includes(id)||r.studentId===id)return false;
@@ -4677,15 +4677,17 @@ function buildStudentIdentityUpdates(oldStudent,nextStudent,data,now=new Date().
   };
 }
 async function loadStudentReferenceData(){
-  const [plans,schedule,purchases,entitlements,feedbacks,courts]=await Promise.all([
+  const [plans,schedule,purchases,entitlements,feedbacks,courts,leads,leadFollowups]=await Promise.all([
     getCachedScan(T_PLANS).catch(()=>[]),
     getCachedScan(T_SCHEDULE).catch(()=>[]),
     scan(T_PURCHASES).catch(()=>[]),
     getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
     withTimeout(scanFeedbacks().catch(()=>[]),3000,[]),
-    getCachedScan(T_COURTS).catch(()=>[])
+    getCachedScan(T_COURTS).catch(()=>[]),
+    scan(T_LEADS).catch(()=>[]),
+    scan(T_LEAD_FOLLOWUPS).catch(()=>[])
   ]);
-  return {plans,schedule,purchases,entitlements,feedbacks,courts};
+  return {plans,schedule,purchases,entitlements,feedbacks,courts,leads,leadFollowups};
 }
 async function applyStudentIdentityUpdate(oldStudent,nextStudent){
   const updates=buildStudentIdentityUpdates(oldStudent,nextStudent,await loadStudentReferenceData());
@@ -4695,7 +4697,9 @@ async function applyStudentIdentityUpdate(oldStudent,nextStudent){
     ...updates.purchases.map(r=>put(T_PURCHASES,r.id,r)),
     ...updates.entitlements.map(r=>put(T_ENTITLEMENTS,r.id,r)),
     ...updates.feedbacks.map(r=>putFeedback(r.id,r)),
-    ...updates.courts.map(r=>put(T_COURTS,r.id,r))
+    ...updates.courts.map(r=>put(T_COURTS,r.id,r)),
+    ...updates.leads.map(r=>put(T_LEADS,r.id,r)),
+    ...updates.leadFollowups.map(r=>put(T_LEAD_FOLLOWUPS,r.id,r))
   ]);
   return updates;
 }
@@ -8461,8 +8465,8 @@ function buildStudentCascadeDeletePlan(studentId,data={},now=new Date().toISOStr
     updates.courts.push(touch({...row,studentId:String(row?.studentId||'')===id?(nextIds[0]||''):row.studentId,studentIds:nextIds,history:nextHistory}));
   });
   (data.leads||[]).forEach(row=>{
-    if(String(row?.studentId||'')!==id)return;
-    updates.leads.push(touch({...row,studentId:'',studentName:'',studentMatchName:'',isCourseConverted:false}));
+    if(String(row?.studentId||'')!==id&&String(row?.studentMatchId||'')!==id)return;
+    updates.leads.push(touch({...row,studentId:'',studentMatchId:'',studentName:'',studentMatchName:'',isCourseConverted:false}));
   });
   (data.leadFollowups||[]).forEach(row=>{
     if(String(row?.studentId||'')!==id)return;

@@ -148,8 +148,8 @@ assert.match(source, /function getScheduleTimeOptions\([\s\S]*h=7[\s\S]*h<=22[\s
 assert.match(source, /function handleScheduleStartTimeChange\([\s\S]*const mins=[\s\S]*scheduleAddMinutes\(start,mins\)[\s\S]*setStandardDropdownValue\('sch_endTime'/, 'selecting a start time should default end time from course duration rules');
 assert.match(fnBody('openScheduleModal'), /sch_repeatWeeksWrap[\s\S]*display:none/, 'repeat weeks should be hidden until weekly repeat is enabled');
 assert.match(source, /function toggleScheduleRepeatWeeks\([\s\S]*sch_repeatWeeksWrap[\s\S]*checked\?'':'none'/, 'weekly repeat checkbox should reveal the repeat weeks input only when checked');
-assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type should become readonly when a package determines it');
-assert.match(fnBody('applySchEntitlementOptions'), /maxRemain[\s\S]*setScheduleCourseTypeReadonly/, 'schedule entitlement recommendation should default to the package with most remaining lessons and lock course type');
+assert.match(source, /function setScheduleCourseTypeReadonly\([\s\S]*pointerEvents=readonly\?'none':'auto'/, 'course type readonly helper should still exist for non-package states');
+assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseTypeReadonly\(true\)/, 'auto package matching should not lock course type');
 assert.match(fnBody('applySchEntitlementOptions'), /setScheduleCoachFromEntitlement\(selected\)/, 'schedule entitlement recommendation should default the coach from the selected package owner');
 assert.match(source, /function handleScheduleCoachChange\([\s\S]*dataset\.userChanged='1'[\s\S]*refreshSchEntitlementOptions/, 'manual coach changes should be remembered before refreshing package options');
 assert.match(source, /function setScheduleCoachFromEntitlement\([\s\S]*dataset\.userChanged==='1'[\s\S]*ownerCoach/, 'package owner coach default should not override a manually changed coach');
@@ -159,8 +159,8 @@ assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package pick
 assert.match(source, /function scheduleEntitlementExpiryText\(/, 'package picker should only show expiry text when a real expiry exists');
 assert.match(fnBody('scheduleSaveConfirmText'), /requiresFieldFee[\s\S]*补差价[\s\S]*fieldFeeReason/, 'schedule confirm should show the price-difference entry before saving');
 assert.match(source, /function scheduleEntitlementSmallClassType\(/, 'schedule package picker should read small group subtype from the selected package');
-assert.match(fnBody('applySchEntitlementOptions'), /scheduleEntitlementSmallClassType\(selected\)[\s\S]*setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'schedule entitlement recommendation should force the package standard course subtype');
-assert.match(fnBody('handleScheduleEntitlementChange'), /scheduleEntitlementSmallClassType\(\{entitlementId:sel\.value\}\)[\s\S]*setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'manual package selection should force the package standard course subtype');
+assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'auto package matching should keep the selected course type');
+assert.doesNotMatch(fnBody('handleScheduleEntitlementChange'), /setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'manual package selection should not overwrite course type');
 assert.match(fnBody('setScheduleSmallClassTypeReadonly'), /pointerEvents=readonly\?'none':'auto'/, 'small group subtype should become readonly when a package determines it');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /当前没有可用课包/, 'empty package state should not repeat the no-package message below the dropdown');
 assert.match(styles, /\.modal\.modal-court \.schedule-student-tags[\s\S]*\.modal\.modal-court \.schedule-student-tag/, 'schedule student tags should have scoped modal styles');
@@ -334,6 +334,7 @@ assert.match(fnBody('openScheduleModal'), /课包扣减[\s\S]*直接收款[\s\S]
 assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*sch_paidAmount/, 'schedule modal should collect payment method and amount for direct paid lessons');
 assert.match(fnBody('saveSchedule'), /settlementType[\s\S]*paidAmount[\s\S]*payMethod/, 'schedule save should send settlement and payment fields to backend');
 assert.match(fnBody('refreshSchEntitlementOptions'), /currentScheduleSettlementType\(\)!=='package'/, 'non-package settlement should not try to match entitlements');
+assert.doesNotMatch(fnBody('saveSchedule'), /训练营固定 4 人/, 'small group bootcamp schedules should allow two or more attendees instead of requiring four');
 assert.match(source, /const FEEDBACK_POSTER_TEMPLATES\s*=/, 'feedback poster should define fixed template configs');
 assert.match(source, /blueGreenDiagonal[\s\S]*minimalDarkGreen[\s\S]*retroCourt[\s\S]*blueprintBlue[\s\S]*minimalRacket[\s\S]*activeGreen/, 'feedback poster should expose the selected Gemini template styles');
 assert.doesNotMatch(source, /粉蓝笔刷|专业白\(拍网\)|深蓝撞色|波普斜切/, 'feedback poster should remove the rejected poster styles');
