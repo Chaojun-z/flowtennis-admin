@@ -3,7 +3,7 @@ const TableStore = require('tablestore');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const TS_ENDPOINT = process.env.TS_ENDPOINT || '';
-const TS_INSTANCE = process.env.TS_INSTANCE || 'flowtennis';
+const TS_INSTANCE = String(process.env.TS_INSTANCE || '').trim();
 const TS_KEY_ID = process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || process.env.TS_KEY_ID || '';
 const TS_KEY_SEC = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || process.env.TS_KEY_SEC || '';
 

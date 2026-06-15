@@ -15,12 +15,17 @@ jobs:
     env:
       TZ: Asia/Shanghai
       TARGET_URL: https://www.flowtennis.cn/api/match-diag
+      DIAG_TOKEN: ${{ secrets.DIAG_TOKEN }}
 
     steps:
       - name: Ping match database
         shell: bash
         run: |
-          response="$(curl -fsS -X GET "$TARGET_URL" -H "User-Agent: github-actions-match-keepalive")"
+          if [ -z "$DIAG_TOKEN" ]; then
+            echo "DIAG_TOKEN secret is required"
+            exit 1
+          fi
+          response="$(curl -fsS -X GET "$TARGET_URL" -H "User-Agent: github-actions-match-keepalive" -H "Authorization: Bearer $DIAG_TOKEN")"
           if ! printf '%s' "$response" | grep -q '"status":"ok"'; then
             echo "match database keepalive failed"
             exit 1

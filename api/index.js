@@ -16,10 +16,10 @@ const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishu
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TS_ENDPOINT = process.env.TS_ENDPOINT;
-const TS_INSTANCE = process.env.TS_INSTANCE || 'flowtennis';
+const TS_INSTANCE = String(process.env.TS_INSTANCE || '').trim();
 const TS_KEY_ID = process.env.ALIBABA_CLOUD_ACCESS_KEY_ID;
 const TS_KEY_SEC = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
-const REQUIRED_ENV_VARS = ['JWT_SECRET', 'TS_ENDPOINT', 'ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'];
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'TS_ENDPOINT', 'TS_INSTANCE', 'ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'];
 function readBooleanEnv(env,name){return String(env?.[name]||'').trim().toLowerCase()==='true';}
 function resolveRuntimeStage(env=process.env){
   const vercelEnv=String(env?.VERCEL_ENV||'').trim().toLowerCase();
@@ -669,6 +669,31 @@ const LOGIN_ROW_TIMEOUT_MS=4500;
 const LOGIN_SCAN_TIMEOUT_MS=4500;
 const LOGIN_ROW_RETRY_LIMIT=2;
 const LOGIN_INVALID_ACCOUNT_ERROR='账号数据异常，请联系管理员处理';
+const LOGIN_RATE_LIMIT_WINDOW_MS=15*60*1000;
+const LOGIN_RATE_LIMIT_MAX_FAILURES=10;
+const loginRateLimitBuckets=new Map();
+function loginRateLimitKey(req,username){
+  const forwarded=String(req?.headers?.['x-forwarded-for']||'').split(',')[0].trim();
+  const ip=forwarded||String(req?.socket?.remoteAddress||req?.connection?.remoteAddress||'unknown');
+  return `${ip}:${String(username||'').trim().toLowerCase()}`;
+}
+function checkLoginRateLimit(req,username,now=Date.now()){
+  const key=loginRateLimitKey(req,username);
+  const bucket=loginRateLimitBuckets.get(key);
+  if(!bucket)return {limited:false,key};
+  if(bucket.resetAt<=now){loginRateLimitBuckets.delete(key);return {limited:false,key};}
+  return {limited:bucket.count>=LOGIN_RATE_LIMIT_MAX_FAILURES,retryAfterMs:bucket.resetAt-now,key};
+}
+function recordLoginAttempt(req,username,success,now=Date.now()){
+  const key=loginRateLimitKey(req,username);
+  if(success){loginRateLimitBuckets.delete(key);return;}
+  const current=loginRateLimitBuckets.get(key);
+  if(!current||current.resetAt<=now){
+    loginRateLimitBuckets.set(key,{count:1,resetAt:now+LOGIN_RATE_LIMIT_WINDOW_MS});
+    return;
+  }
+  current.count+=1;
+}
 function isTransientLoginStorageError(err){
   return /Client network socket disconnected before secure TLS connection was established|ECONNRESET|ETIMEDOUT|socket hang up|EAI_AGAIN|timeout/i.test(String(err?.message||err||''));
 }
@@ -5918,25 +5943,49 @@ async function ensureLeadTables(){
 }
 
 function sendJson(res,body,code=200){
-  res.setHeader('Access-Control-Allow-Origin','*');
-  res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
+  applyCorsHeaders(res.req,res);
   res.status(code).json(body);
 }
 function sendPlainText(res,text,code=200){
-  res.setHeader('Access-Control-Allow-Origin','*');
-  res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
+  applyCorsHeaders(res.req,res);
   res.status(code).send(String(text||''));
 }
 function sendXml(res,xml,code=200){
-  res.setHeader('Access-Control-Allow-Origin','*');
-  res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
+  applyCorsHeaders(res.req,res);
   res.setHeader('Content-Type','application/xml; charset=utf-8');
   res.status(code).send(String(xml||''));
 }
+function configuredCorsOrigins(env=process.env){
+  return String(env.ALLOWED_ORIGINS||'').split(',').map(v=>v.trim()).filter(Boolean);
+}
+function resolveCorsOrigin(req,env=process.env){
+  const origin=String(req?.headers?.origin||'').trim();
+  const allowed=configuredCorsOrigins(env);
+  const origins=allowed.length?allowed:(isProductionRuntime()?['https://www.flowtennis.cn']:['*']);
+  if(origins.includes('*'))return origin||'*';
+  if(origin&&origins.includes(origin))return origin;
+  return origins[0]||'';
+}
+function applyCorsHeaders(req,res){
+  const origin=resolveCorsOrigin(req);
+  if(origin)res.setHeader('Access-Control-Allow-Origin',origin);
+  if(origin&&origin!=='*')res.setHeader('Vary','Origin');
+  res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
+}
 function authUser(req){const token=(req.headers.authorization||'').replace('Bearer ','');if(!token)return null;try{return jwt.verify(token,JWT_SECRET);}catch{return null;}}
+function diagnosticsTokenAllowed(req){
+  const token=String(process.env.DIAG_TOKEN||process.env.CRON_SECRET||'').trim();
+  if(!token)return false;
+  return String(req?.headers?.authorization||'')===`Bearer ${token}`;
+}
+function requireDiagnosticsAccess(req,res){
+  const user=authUser(req);
+  if(user?.role==='admin'&&user?.type!=='match_user')return true;
+  if(diagnosticsTokenAllowed(req))return true;
+  sendJson(res,{error:'无权限'},403);
+  return false;
+}
 function requireAdminUser(user){
   if(user?.type==='match_user')throw new Error('无管理端权限');
   if(!user?.id)throw new Error('未登录');
@@ -9258,7 +9307,7 @@ module.exports = async (req, res) => {
   const method=req.method;
   const startedAt=Date.now();
   if(res&&typeof res.on==='function')res.on('finish',()=>{console.log(`[api] ${method} ${path} ${res.statusCode} ${Date.now()-startedAt}ms`);});
-  if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');return res.status(200).end();}
+  if(req.method==='OPTIONS'){applyCorsHeaders(req,res);return res.status(200).end();}
   if(path==='/health'&&method==='GET'){
     console.log('[health] GET bypass scheduleInitInBackground');
     return sendJson(res,{status:'ok',time:new Date().toISOString()});
@@ -9268,6 +9317,7 @@ module.exports = async (req, res) => {
     return sendJson(res,DEFAULT_CAMPUSES);
   }
   if(path==='/match-diag'&&method==='GET'){
+    if(!requireDiagnosticsAccess(req,res))return;
     const startedAt=Date.now();
     const host=safeDatabaseUrlHost(MATCH_DATABASE_URL);
     const result={ts:new Date().toISOString(),matchDatabase:{host:host||'(missing)',ssl:process.env.MATCH_DATABASE_SSL==='true',urlSet:!!MATCH_DATABASE_URL},test:{status:'pending',ms:0}};
@@ -9284,6 +9334,7 @@ module.exports = async (req, res) => {
     return sendJson(res,result);
   }
   if(path==='/diag'&&method==='GET'){
+    if(!requireDiagnosticsAccess(req,res))return;
     const startedAt=Date.now();
     const result={ts:new Date().toISOString(),env:{IS_PRODUCTION_RUNTIME:isProductionRuntime(),NODE_ENV:process.env.NODE_ENV||'(missing)',TS_ENDPOINT:process.env.TS_ENDPOINT||'(missing)',TS_INSTANCE:process.env.TS_INSTANCE||'(missing)',KEY_ID_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_ID),KEY_SECRET_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET)},tests:[]};
     try{
@@ -9533,7 +9584,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests());
     }
-    if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const user=await loadLoginUser(username);if(user?.__loginTimeout)return sendJson(res,{error:LOGIN_STORAGE_TIMEOUT_ERROR},503);if(!user)return sendJson(res,{error:'账号或密码错误'},401);const passwordVerified=await verifyLoginPassword(username,password,user.password);if(passwordVerified?.invalidAccount)return sendJson(res,{error:LOGIN_INVALID_ACCOUNT_ERROR},500);if(!passwordVerified)return sendJson(res,{error:'账号或密码错误'},401);const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
+    if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const rateLimit=checkLoginRateLimit(req,username);if(rateLimit.limited)return sendJson(res,{error:'登录失败次数过多，请稍后再试'},429);const user=await loadLoginUser(username);if(user?.__loginTimeout)return sendJson(res,{error:LOGIN_STORAGE_TIMEOUT_ERROR},503);if(!user){recordLoginAttempt(req,username,false);return sendJson(res,{error:'账号或密码错误'},401);}const passwordVerified=await verifyLoginPassword(username,password,user.password);if(passwordVerified?.invalidAccount)return sendJson(res,{error:LOGIN_INVALID_ACCOUNT_ERROR},500);if(!passwordVerified){recordLoginAttempt(req,username,false);return sendJson(res,{error:'账号或密码错误'},401);}const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}recordLoginAttempt(req,username,true);const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
     if(path==='/auth/wechat-login'&&method==='POST'){
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
