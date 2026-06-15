@@ -1370,13 +1370,13 @@ function membershipRightsDrawerHtml(court){
   const rows=membershipBenefitRowsForAccount(account);
   const visible=membershipActionVisibility(account);
   const content=`<div class="membership-rights-table">${renderDetailDrawerTable({
-    minWidth:'520px',
+    minWidth:'510px',
     columns:[
       {label:'权益',key:'label',width:'150px',render:row=>`${row.label}${membershipBenefitNote(row)}`},
       {label:'总次数',key:'total',width:'70px',render:row=>`${row.total}${row.unit}`},
       {label:'已消耗',key:'used',width:'70px',render:row=>`${membershipBenefitUsedCount(row)}${row.unit}`},
       {label:'剩余',key:'remaining',width:'70px',render:row=>`${row.remaining}${row.unit}`},
-      {label:'操作',html:true,width:'108px',align:'right',className:'membership-rights-action-col',cellClassName:'membership-rights-action-cell',render:row=>[
+      {label:'操作',html:true,width:'150px',align:'right',className:'membership-rights-action-col',cellClassName:'membership-rights-action-cell',render:row=>[
         membershipInlineBenefitAction.benefitCode===row.code&&membershipInlineBenefitAction.mode?`<div class="membership-inline-editor"><span>${membershipInlineBenefitAction.mode==='consume'?'消耗':'补发'}次数</span><input class="membership-inline-count" id="${membershipBenefitInlineInputId(row.code)}" type="number" min="1" step="1" value="1"><button type="button" class="tms-action-link membership-inline-action" onclick="saveMembershipBenefitInline(this,'${court.id}','${membershipInlineBenefitAction.mode}','${row.code}')">确认</button><button type="button" class="tms-action-link membership-inline-action muted" onclick="closeMembershipBenefitInlineEditor('${court.id}')">取消</button></div>`:'',
         membershipInlineBenefitAction.benefitCode===row.code&&membershipInlineBenefitAction.mode?'':`<div class="membership-inline-actions">${visible.consume?`<button type="button" class="tms-action-link membership-inline-action" onclick="openMembershipBenefitInlineEditor('${court.id}','${row.code}','consume')">消耗</button>`:''}${visible.supplement?`<button type="button" class="tms-action-link membership-inline-action" onclick="openMembershipBenefitInlineEditor('${court.id}','${row.code}','supplement')">补发</button>`:''}</div>`
       ].filter(Boolean).join('')||'-'}
@@ -1923,15 +1923,15 @@ async function createCourtCompanionSchedule(court,record,companionCoach){
 function courtBookingRecordsTableHtml(hist){
   const rows=(Array.isArray(hist)?hist:[]).filter(h=>String(h.category||h.businessTypeLevel2||'').includes('订场')||h.category==='内部占用');
   return renderDetailDrawerTable({
-    minWidth:'760px',
+    minWidth:'660px',
     columns:[
-      {label:'订场日期',key:'date',render:h=>h.occurredDate||h.date||'-'},
-      {label:'时间',key:'time',render:h=>h.startTime&&h.endTime?`${h.startTime}-${h.endTime}`:'-'},
-      {label:'场地',key:'venue',render:h=>h.venue||'-'},
-      {label:'类型',key:'category',render:h=>h.category||h.businessTypeLevel2||'-'},
-      {label:'支付方式',key:'payMethod',render:h=>h.payMethod||'-'},
-      {label:'金额',key:'amount',render:h=>`¥${fmt(Math.abs(parseFloat(h.amount)||0))}`},
-      {label:'备注',key:'note',render:h=>courtBookingHumanNote(h)}
+      {label:'订场日期',key:'date',width:'90px',render:h=>h.occurredDate||h.date||'-'},
+      {label:'时间',key:'time',width:'150px',render:h=>h.startTime&&h.endTime?`${h.startTime}-${h.endTime}`:'-'},
+      {label:'场地',key:'venue',width:'70px',render:h=>h.venue||'-'},
+      {label:'类型',key:'category',width:'80px',render:h=>h.category||h.businessTypeLevel2||'-'},
+      {label:'支付方式',key:'payMethod',width:'80px',render:h=>h.payMethod||'-'},
+      {label:'金额',key:'amount',width:'70px',render:h=>`¥${fmt(Math.abs(parseFloat(h.amount)||0))}`},
+      {label:'备注',key:'note',width:'120px',cellClassName:'membership-booking-note-cell',render:h=>courtBookingHumanNote(h)}
     ],
     rows,
     emptyText:'暂无订场记录'

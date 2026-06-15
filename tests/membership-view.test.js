@@ -92,6 +92,8 @@ assert.doesNotMatch(fnBody('courtBookingDrawerHtml'), /renderDetailDrawerCard\('
 assert.match(html, /function courtBookingRecordsTableHtml/, 'booking records should render as a table');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /label:'订场日期'[\s\S]*label:'时间'[\s\S]*label:'场地'[\s\S]*label:'类型'[\s\S]*label:'支付方式'[\s\S]*label:'金额'[\s\S]*label:'备注'/, 'booking records table should use the requested columns');
 assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /录入时间|recordedAt|createdAt/, 'booking records table should not show recorded time');
+assert.match(fnBody('courtBookingRecordsTableHtml'), /minWidth:'660px'[\s\S]*label:'订场日期'[\s\S]*width:'90px'[\s\S]*label:'时间'[\s\S]*width:'150px'[\s\S]*label:'场地'[\s\S]*width:'70px'[\s\S]*label:'类型'[\s\S]*width:'80px'[\s\S]*label:'支付方式'[\s\S]*width:'80px'[\s\S]*label:'金额'[\s\S]*width:'70px'[\s\S]*label:'备注'[\s\S]*width:'120px'/, 'booking records table should use compact widths and a 150px booking time column');
+assert.match(fnBody('courtBookingRecordsTableHtml'), /cellClassName:'membership-booking-note-cell'/, 'booking record notes should support horizontal overflow for long notes');
 assert.match(html, /function courtBookingHumanNote/, 'booking records should filter system-generated notes');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /courtBookingHumanNote\(h\)/, 'booking records table should only render human notes');
 assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /internalReason/, 'booking records table should not show system/internal reason as note');
@@ -138,8 +140,9 @@ assert.match(html, /function saveMembershipBenefitInline/, 'membership rights ta
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /label:'最早到期'|key:'expire'/, 'membership rights tab should not show earliest expiry column');
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /label:'次数'[\s\S]*membershipBenefitInlineInputId/, 'membership rights tab should not show a default count input column');
 assert.match(fnBody('membershipRightsDrawerHtml'), /label:'操作'[\s\S]*openMembershipBenefitInlineEditor[\s\S]*消耗[\s\S]*补发/, 'membership rights tab should expose standard row actions');
-assert.match(fnBody('membershipRightsDrawerHtml'), /minWidth:'520px'[\s\S]*label:'权益'[\s\S]*width:'150px'[\s\S]*label:'总次数'[\s\S]*width:'70px'[\s\S]*label:'已消耗'[\s\S]*width:'70px'[\s\S]*label:'剩余'[\s\S]*width:'70px'[\s\S]*label:'操作'[\s\S]*width:'108px'[\s\S]*align:'right'/, 'membership rights table should use compact columns and right aligned actions');
+assert.match(fnBody('membershipRightsDrawerHtml'), /minWidth:'510px'[\s\S]*label:'权益'[\s\S]*width:'150px'[\s\S]*label:'总次数'[\s\S]*width:'70px'[\s\S]*label:'已消耗'[\s\S]*width:'70px'[\s\S]*label:'剩余'[\s\S]*width:'70px'[\s\S]*label:'操作'[\s\S]*width:'150px'[\s\S]*align:'right'/, 'membership rights table should use compact columns and right aligned actions');
 assert.match(pagesCss, /membership-rights-table \.detail-drawer-table[\s\S]*table-layout:fixed/, 'membership rights table should keep compact widths from being stretched');
+assert.match(pagesCss, /membership-inline-count\{width:34px/, 'membership inline count input should be compact enough to avoid clipping');
 assert.match(pagesCss, /membership-inline-actions[\s\S]*justify-content:flex-end/, 'membership rights row actions should align to the right');
 assert.match(fnBody('membershipRightsDrawerHtml'), /membership-inline-editor[\s\S]*membershipBenefitInlineInputId[\s\S]*saveMembershipBenefitInline[\s\S]*取消/, 'membership rights tab should confirm consume and supplement inline');
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /openMembershipBenefitActionModal|openMembershipBenefitHistoryModal/, 'membership rights row actions should not navigate away from the rights tab');
