@@ -3,21 +3,22 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
 assert.match(
-  apiSource,
+  storageSource,
   /function normalizeProjectionColumns\(columns\)\{/,
   'column projection should normalize requested columns before storage reads'
 );
 
 assert.match(
-  apiSource,
+  storageSource,
   /async function getCachedScan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*return scan\(t,\{columns\}\);[\s\S]*const cacheKey=hotScanCacheKey\(t,columns\);[\s\S]*const rows=await scan\(t,\{columns\}\);/s,
   'getCachedScan should pass projection columns to scan and isolate hot cache entries by projection'
 );
 
 assert.match(
-  apiSource,
+  storageSource,
   /function scan\(t,options=\{\}\)\{[\s\S]*const columns=normalizeProjectionColumns\(options\?\.columns\);[\s\S]*const columnsToGet=columns\.length\?columns:undefined;[\s\S]*if\(columnsToGet\)request\.columnsToGet=columnsToGet;[\s\S]*gc\(\)\.getRange\(request,/s,
   'scan should forward projected columns to the TableStore getRange request'
 );

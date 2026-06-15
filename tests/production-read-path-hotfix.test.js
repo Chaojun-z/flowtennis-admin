@@ -4,15 +4,16 @@ const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
-assert.match(apiSource, /function scanFirstRows\(/, '生产应急恢复应提供限量读取 helper');
+assert.match(storageSource, /function scanFirstRows\(/, '生产应急恢复应提供限量读取 helper');
 assert.match(apiSource, /const PRODUCTION_PAGE_READ_LIMITS=\{/, '生产应急恢复应定义首屏限量读取上限');
 assert.match(apiSource, /\[T_COURTS\]:1000,/, '生产订场数据读取上限应覆盖当前美东 ft_courts 665 条，避免会员和订场用户少数');
-assert.match(apiSource, /function cappedScan\(t, limit=PRODUCTION_PAGE_READ_LIMITS\.default\)/, '生产 cappedScan 默认上限应走集中配置');
-assert.match(apiSource, /const normalizedLimit=limit===undefined\?PRODUCTION_PAGE_READ_LIMITS\.default:\(PRODUCTION_PAGE_READ_LIMITS\[t\]\|\|limit\);/, '生产 cappedScan 应支持按表覆盖读取上限');
-assert.match(apiSource, /function productionReadTruncatedError\(t,limit\)/, '生产限量读取应有明确截断错误');
-assert.match(apiSource, /scanFirstRows\(t,\{limit:normalizedLimit,detectOverflow:true\}\)/, '生产 cappedScan 应多读一条检测是否被截断');
-assert.doesNotMatch(apiSource, /console\.error\('cappedScan err:',\s*e\);\s*return \[\];/, '生产 cappedScan 不应在截断或读取失败时静默返回空数组');
+assert.match(storageSource, /function cappedScan\(t, limit=productionPageReadLimits\.default\)/, '生产 cappedScan 默认上限应走集中配置');
+assert.match(storageSource, /const normalizedLimit=limit===undefined\?productionPageReadLimits\.default:\(productionPageReadLimits\[t\]\|\|limit\);/, '生产 cappedScan 应支持按表覆盖读取上限');
+assert.match(storageSource, /function productionReadTruncatedError\(t,limit\)/, '生产限量读取应有明确截断错误');
+assert.match(storageSource, /scanFirstRows\(t,\{limit:normalizedLimit,detectOverflow:true\}\)/, '生产 cappedScan 应多读一条检测是否被截断');
+assert.doesNotMatch(storageSource, /console\.error\('cappedScan err:',\s*e\);\s*return \[\];/, '生产 cappedScan 不应在截断或读取失败时静默返回空数组');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[/, '线索池应定义首屏轻投影字段，避免继续全量扫描 leads 大对象');
 assert.match(apiSource, /const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=\[/, '线索跟进列表应定义轻投影字段，避免继续全量扫描 followups');
 assert.match(apiSource, /const ADMIN_USER_LIST_PROJECTION_FIELDS=\[/, '账号管理应定义首屏轻投影字段，避免继续全量扫描 users 大对象');

@@ -14,6 +14,7 @@ const { createFinanceSnapshotHelpers } = require('./page-data/finance-snapshot.j
 const { normalizePermissionProfile, userHasFeaturePermission } = require('./permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('./diagnostics');
 const { createAuthServices } = require('./auth');
+const { createStorageServices } = require('./storage');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -368,18 +369,46 @@ const PRODUCTION_PAGE_READ_LIMITS={
   [T_COURTS]:1000,
   adminUsers:200
 };
-const hotScanCache=new Map();
-const hotGetCache=new Map();
 let financeSnapshotCache=null;
 let importedLedgerRepairChecked=false;
 
-let tsClient;
 const wechatAccessTokenCacheByApp = new Map();
 const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
 const feishuTenantAccessTokenCacheByApp = new Map();
 let matchSqlPool;
-const STORAGE_OPERATION_TIMEOUT_MS = Math.max(1000, parseInt(process.env.STORAGE_OPERATION_TIMEOUT_MS || '10000', 10) || 10000);
-function gc(){if(!tsClient)tsClient=new TableStore.Client({accessKeyId:TS_KEY_ID,secretAccessKey:TS_KEY_SEC,endpoint:TS_ENDPOINT,instancename:TS_INSTANCE,maxRetries:3,httpOptions:{timeout:15000}});return tsClient;}
+const {
+  gc,
+  isTransientStorageError,
+  scanLatestRowsDesc,
+  invalidateHotScanCache,
+  getCachedScan,
+  productionReadTruncatedError,
+  scanFirstRows,
+  cappedScan,
+  getCachedRow,
+  put,
+  putIfAbsent,
+  get,
+  scan,
+  del,
+  clearTables,
+  mkTable,
+  withTimeout,
+  withRequiredStorageTimeout,
+  cloneCacheValue
+}=createStorageServices({
+  tableStoreConfig:{
+    accessKeyId:TS_KEY_ID,
+    secretAccessKey:TS_KEY_SEC,
+    endpoint:TS_ENDPOINT,
+    instanceName:TS_INSTANCE
+  },
+  hotScanTables:HOT_SCAN_TABLES,
+  hotGetTables:HOT_GET_TABLES,
+  productionPageReadLimits:PRODUCTION_PAGE_READ_LIMITS,
+  isProductionRuntime,
+  onTableWrite(t){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;}
+});
 function getMatchSqlPool(){
   if(!MATCH_DATABASE_URL)throw new Error('缺少 MATCH_DATABASE_URL 或 DATABASE_URL，约球真实数据不能使用 mock 或 TableStore');
   if(!matchSqlPool)matchSqlPool=new Pool({connectionString:MATCH_DATABASE_URL,ssl:process.env.MATCH_DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});
@@ -392,179 +421,6 @@ function isMatchSqlUnavailableError(err){
 function shouldUseEmptyMatchAdminListFallback(err){
   return !isProductionRuntime()&&isMatchSqlUnavailableError(err);
 }
-function isTransientStorageError(err){
-  const msg=String(err?.message||err||'');
-  return /Client network socket disconnected before secure TLS connection was established|ECONNRESET|ETIMEDOUT|socket hang up|EAI_AGAIN|\[storage-timeout\]/i.test(msg);
-}
-function formatStorageMeta(meta={}){
-  return Object.entries(meta)
-    .filter(([,value])=>value!==undefined&&value!==null&&value!=='')
-    .map(([key,value])=>`${key}=${String(value)}`)
-    .join(' ');
-}
-function summarizeStorageError(err){
-  const parts=[
-    err?.code?`code=${err.code}`:'',
-    err?.name?`name=${err.name}`:'',
-    err?.message?`message=${String(err.message).slice(0,220)}`:String(err||'').slice(0,220)
-  ].filter(Boolean);
-  return parts.join(' ');
-}
-function createStorageTimeoutError(op,meta,startedAt){
-  const detail=formatStorageMeta(meta);
-  const err=new Error(`[storage-timeout] op=${op} ${detail} timed out after ${Date.now()-startedAt}ms`);
-  err.code='STORAGE_TIMEOUT';
-  return err;
-}
-function runStorageOperation(op,meta,executor){
-  return new Promise((res,rej)=>{
-    let settled=false;
-    const startedAt=Date.now();
-    const detail=formatStorageMeta(meta);
-    const timer=setTimeout(()=>{
-      if(settled)return;
-      settled=true;
-      const err=createStorageTimeoutError(op,meta,startedAt);
-      console.error(err.message);
-      rej(err);
-    },STORAGE_OPERATION_TIMEOUT_MS);
-    const resolveOnce=(value)=>{
-      if(settled)return;
-      settled=true;
-      clearTimeout(timer);
-      res(value);
-    };
-    const rejectOnce=(err)=>{
-      if(settled)return;
-      settled=true;
-      clearTimeout(timer);
-      console.error(`[storage-error] op=${op} ${detail} ${summarizeStorageError(err)}`);
-      rej(err);
-    };
-    try{
-      executor(resolveOnce,rejectOnce);
-    }catch(err){
-      rejectOnce(err);
-    }
-  });
-}
-async function withStorageRetry(fn,maxAttempts=2){
-  let lastErr;
-  for(let attempt=1;attempt<=maxAttempts;attempt++){
-    try{return await fn();}
-    catch(err){
-      lastErr=err;
-      console.warn(`[storage-retry] attempt ${attempt}/${maxAttempts} ${summarizeStorageError(err)}`);
-      if(!isTransientStorageError(err)||attempt===maxAttempts)throw err;
-      await new Promise(res=>setTimeout(res,attempt*200));
-    }
-  }
-  throw lastErr;
-}
-function cloneCacheValue(value){return JSON.parse(JSON.stringify(value));}
-function normalizeScanColumns(columns=[]){
-  return [...new Set((columns||[]).map(item=>String(item||'').trim()).filter(Boolean))];
-}
-function scanLatestRowsDesc(t,{limit=200,columns=[]}={}){
-  const normalizedLimit=Math.max(1,Math.min(parseInt(limit,10)||200,2000));
-  const normalizedColumns=normalizeScanColumns(columns);
-  return withStorageRetry(()=>runStorageOperation('getRangeLatest',{table:t,limit:normalizedLimit},(res,rej)=>{
-    gc().getRange({
-      tableName:t,
-      direction:TableStore.Direction.BACKWARD,
-      inclusiveStartPrimaryKey:[{id:TableStore.INF_MAX}],
-      exclusiveEndPrimaryKey:[{id:TableStore.INF_MIN}],
-      maxVersions:1,
-      limit:normalizedLimit,
-      ...(normalizedColumns.length?{columnsToGet:normalizedColumns}:{})
-    },(e,d)=>{
-      if(e)return rej(e);
-      const rows=(d.rows||[]).map(r=>{
-        if(!r.primaryKey)return null;
-        const obj={id:r.primaryKey[0].value};
-        (r.attributes||[]).forEach(a=>{
-          try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}
-        });
-        return obj;
-      }).filter(Boolean);
-      res(rows);
-    });
-  }));
-}
-function invalidateHotScanCache(t){
-  const prefix=`${t}:`;
-  for(const key of hotScanCache.keys())if(key.startsWith(prefix))hotScanCache.delete(key);
-}
-function hotScanCacheKey(t,columns){
-  const projection=Array.isArray(columns)&&columns.length?columns.map(String).join('\u0001'):'*';
-  return `${t}:${projection}`;
-}
-function normalizeProjectionColumns(columns){
-  if(!Array.isArray(columns))return [];
-  return [...new Set(columns.map(item=>String(item||'').trim()).filter(Boolean))];
-}
-function hotGetCacheKey(t,id){return `${t}:${String(id)}`;}
-function invalidateHotGetCache(t,id){
-  if(id===undefined||id===null){
-    for(const key of hotGetCache.keys())if(key.startsWith(`${t}:`))hotGetCache.delete(key);
-    return;
-  }
-  hotGetCache.delete(hotGetCacheKey(t,id));
-}
-function invalidateFinanceSnapshotCache(t){
-  if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;
-}
-async function getCachedScan(t,options={}){
-  const cfg=HOT_SCAN_TABLES.get(t);
-  const columns=normalizeProjectionColumns(options?.columns);
-  if(!cfg)return scan(t,{columns});
-  const now=Date.now();
-  const cacheKey=hotScanCacheKey(t,columns);
-  const cached=hotScanCache.get(cacheKey);
-  if(cached&&cached.expiresAt>now)return cloneCacheValue(cached.rows);
-  const rows=await scan(t,{columns});
-  hotScanCache.set(cacheKey,{rows:cloneCacheValue(rows),expiresAt:now+cfg.ttlMs});
-  return rows;
-}
-function productionReadTruncatedError(t,limit){
-  const err=new Error(`生产读取被截断：${t} 超过 ${limit} 条，请改专用读模型或提高读取上限`);
-  err.code='PRODUCTION_READ_TRUNCATED';
-  return err;
-}
-function scanFirstRows(t, {limit=200, columns=[],detectOverflow=false}={}) {
-  const normalizedLimit=Math.max(1,Math.min(parseInt(limit,10)||200,2000));
-  const requestLimit=detectOverflow?normalizedLimit+1:normalizedLimit;
-  const normalizedColumns=normalizeScanColumns(columns);
-  return withStorageRetry(()=>runStorageOperation('getRangeScanFirst',{table:t},(res,rej)=>{
-    gc().getRange({
-      tableName:t,
-      direction:TableStore.Direction.FORWARD,
-      inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],
-      exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
-      maxVersions:1,
-      limit:requestLimit,
-      ...(normalizedColumns.length?{columnsToGet:normalizedColumns}:{})
-    },(e,d)=>{
-      if(e)return rej(e);
-      const rows=[];
-      (d.rows||[]).forEach(r=>{
-        if(!r.primaryKey)return;
-        const obj={id:r.primaryKey[0].value};
-        (r.attributes||[]).forEach(a=>{
-          try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}
-        });
-        rows.push(obj);
-      });
-      if(detectOverflow&&rows.length>normalizedLimit)return rej(productionReadTruncatedError(t,normalizedLimit));
-      res(rows);
-    });
-  }));
-}
-
-function cappedScan(t, limit=PRODUCTION_PAGE_READ_LIMITS.default){
-  const normalizedLimit=limit===undefined?PRODUCTION_PAGE_READ_LIMITS.default:(PRODUCTION_PAGE_READ_LIMITS[t]||limit);
-  return isProductionRuntime() ? scanFirstRows(t,{limit:normalizedLimit,detectOverflow:true}).catch((e)=>{console.error('cappedScan err:',e);throw e;}) : getCachedScan(t).catch(()=>[]);
-}
 function getScheduleListRows(){
   return isProductionRuntime()
     ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('schedule list scan err:',e);return [];})
@@ -575,86 +431,12 @@ function getFinancePageScheduleRows(){
     ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('finance schedule scan err:',e);return [];})
     : getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]);
 }
-async function getCachedRow(t,id){
-  const cfg=HOT_GET_TABLES.get(t);
-  if(!cfg)return get(t,id);
-  const now=Date.now();
-  const key=hotGetCacheKey(t,id);
-  const cached=hotGetCache.get(key);
-  if(cached&&cached.expiresAt>now)return cloneCacheValue(cached.row);
-  const row=await get(t,id);
-  hotGetCache.set(key,{row:cloneCacheValue(row),expiresAt:now+cfg.ttlMs});
-  return row;
-}
-function put(t,id,attrs){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);invalidateFinanceSnapshotCache(t);return withStorageRetry(()=>runStorageOperation('putRow',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
-function putIfAbsent(t,id,attrs){return withStorageRetry(()=>runStorageOperation('putRowIfAbsent',{table:t,id},(res,rej)=>{gc().putRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST,null),primaryKey:[{id:String(id)}],attributeColumns:Object.entries(attrs).filter(([k])=>k!=='id').map(([k,v])=>({[k]:typeof v==='object'?JSON.stringify(v):String(v??'')}))},( e,d)=>e?rej(e):res(d));}));}
-function get(t,id){return withStorageRetry(()=>runStorageOperation('getRow',{table:t,id},(res,rej)=>{gc().getRow({tableName:t,primaryKey:[{id:String(id)}],maxVersions:1},(e,d)=>{if(e)return rej(e);if(!d.row||!d.row.primaryKey)return res(null);const obj={id:d.row.primaryKey[0].value};(d.row.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});res(obj);});}));}
-function scan(t,options={}){
-  return withStorageRetry(()=>new Promise((res,rej)=>{
-    const rows=[];
-    const columns=normalizeProjectionColumns(options?.columns);
-    const columnsToGet=columns.length?columns:undefined;
-    function f(sk){
-      runStorageOperation('getRangePage',{table:t},(opRes,opRej)=>{
-        const request={
-          tableName:t,
-          direction:TableStore.Direction.FORWARD,
-          inclusiveStartPrimaryKey:sk||[{id:TableStore.INF_MIN}],
-          exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
-          maxVersions:1,
-          limit:500
-        };
-        if(columnsToGet)request.columnsToGet=columnsToGet;
-        gc().getRange(request,(e,d)=>{
-          if(e)return opRej(e);
-          opRes(d);
-        });
-      }).then(d=>{
-        (d.rows||[]).forEach(r=>{
-          if(!r.primaryKey)return;
-          const obj={id:r.primaryKey[0].value};
-          (r.attributes||[]).forEach(a=>{try{obj[a.columnName]=JSON.parse(a.columnValue);}catch{obj[a.columnName]=a.columnValue;}});
-          rows.push(obj);
-        });
-        const nextStartPrimaryKey=d.nextStartPrimaryKey ? d.nextStartPrimaryKey.map(pk => ({ [pk.name]: pk.value })) : null;
-        nextStartPrimaryKey?f(nextStartPrimaryKey):res(rows);
-      }).catch(rej);
-    }
-    f();
-  }));
-}
-function del(t,id){if(HOT_SCAN_TABLES.has(t))invalidateHotScanCache(t);if(HOT_GET_TABLES.has(t))invalidateHotGetCache(t,id);invalidateFinanceSnapshotCache(t);return withStorageRetry(()=>runStorageOperation('deleteRow',{table:t,id},(res,rej)=>{gc().deleteRow({tableName:t,condition:new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE,null),primaryKey:[{id:String(id)}]},(e,d)=>e?rej(e):res(d));}));}
-async function clearTables(storage,tables){
-  const result={success:true,total:0,tables:[]};
-  for(const table of tables){
-    try{
-      const rows=await storage.scan(table);
-      for(const row of rows)await storage.del(table,row.id);
-      result.total+=rows.length;
-      result.tables.push({table,count:rows.length});
-    }catch(err){
-      result.success=false;
-      result.tables.push({table,count:0,error:String(err?.message||err)});
-    }
-  }
-  return result;
-}
 function getTestDataResetTables(){return [...TEST_DATA_RESET_TABLES];}
-function mkTable(t){return runStorageOperation('createTable',{table:t},(res)=>{gc().createTable({tableMeta:{tableName:t,primaryKey:[{name:'id',type:TableStore.PrimaryKeyType.STRING}]},reservedThroughput:{capacityUnit:{read:0,write:0}},tableOptions:{timeToLive:-1,maxVersions:1}},e=>res(e?'exists':'ok'));});}
 async function timed(label,fn){const startedAt=Date.now();try{return await fn();}finally{console.log(`[api-timing] ${label} ${Date.now()-startedAt}ms`);}}
 async function timedEndpointMetric(name,fn,meta={}){
   const startedAt=Date.now();
   try{return await fn();}
   finally{recordPerfMetric(name,Date.now()-startedAt,meta);}
-}
-function withTimeout(promise,ms,fallback){
-  return Promise.race([promise,new Promise((res)=>setTimeout(()=>res(fallback),ms))]);
-}
-async function withRequiredStorageTimeout(promise,ms,message){
-  const timeoutMarker={__storageTimeout:true};
-  const result=await withTimeout(Promise.resolve(promise),ms,timeoutMarker);
-  if(result===timeoutMarker)throw new Error(message);
-  return result;
 }
 function scheduleSaveErrorStatus(err){
   return /超时/.test(String(err?.message||err||''))?503:400;

@@ -3,9 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
 assert.match(apiSource, /timed\('schedule create validate',async\(\)=>\{/, 'schedule create should expose a validate timing segment');
-assert.match(apiSource, /function withRequiredStorageTimeout\(/, 'schedule save should have a required storage timeout helper');
+assert.match(storageSource, /function withRequiredStorageTimeout\(/, 'schedule save should have a required storage timeout helper');
 assert.match(apiSource, /function scheduleSaveErrorStatus\(/, 'schedule save should classify user-visible save failures');
 assert.match(apiSource, /withRequiredStorageTimeout\(getCachedScan\(T_SCHEDULE\),3500,'排课校验超时，请稍后重试'\)/, 'schedule conflict scan should fail fast instead of letting Vercel return FUNCTION_INVOCATION_FAILED');
 assert.match(apiSource, /catch\(err\)\{return sendJson\(res,\{error:String\(err\?\.message\|\|err\)\},scheduleSaveErrorStatus\(err\)\);\}/, 'schedule save validation should return JSON errors instead of falling through to the global 500 handler');
