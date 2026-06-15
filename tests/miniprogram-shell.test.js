@@ -367,7 +367,7 @@ assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose st
 assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
 assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
 assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
-assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER\)/, 'workbench API should read entitlement consume ledger for the mini program');
+assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS\.entitlementLedger\)/, 'workbench API should read entitlement consume ledger for the mini program');
 assert.match(corePageDataJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
 assert.match(corePageDataJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
 assert.match(corePageDataJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');
