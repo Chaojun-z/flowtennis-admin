@@ -4,8 +4,8 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(root, 'api', 'index.js'), 'utf8');
-const authSource = fs.readFileSync(path.join(root, 'api', 'auth.js'), 'utf8');
-const diagnosticsSource = fs.readFileSync(path.join(root, 'api', 'diagnostics.js'), 'utf8');
+const authSource = fs.readFileSync(path.join(root, 'server', 'auth.js'), 'utf8');
+const diagnosticsSource = fs.readFileSync(path.join(root, 'server', 'diagnostics.js'), 'utf8');
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const wechatIndexScript = fs.readFileSync(path.join(root, 'scripts', 'backfill-wechat-user-index.js'), 'utf8');
 const matchKeepaliveWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'match-supabase-keepalive.yml'), 'utf8');
@@ -40,12 +40,12 @@ assert.match(apiSource, /if\(req\.method==='OPTIONS'\)\{applyCorsHeaders\(req,re
 assert.match(apiSource, /function requireDiagnosticsAccess\(req,res\)/, 'diagnostics endpoints should have an auth guard');
 assert.match(apiSource, /if\(path==='\/match-diag'&&method==='GET'\)\{[\s\S]*if\(!requireDiagnosticsAccess\(req,res\)\)return;/, 'match diagnostics must be protected');
 assert.match(apiSource, /if\(path==='\/diag'&&method==='GET'\)\{[\s\S]*if\(!requireDiagnosticsAccess\(req,res\)\)return;/, 'TableStore diagnostics must be protected');
-assert.match(apiSource, /require\('\.\/diagnostics'\)/, 'diagnostics handlers should live outside api/index.js');
+assert.match(apiSource, /require\('\.\.\/server\/diagnostics'\)/, 'diagnostics handlers should live outside api/index.js');
 assert.match(diagnosticsSource, /async function handleMatchDiag\(/, 'match diagnostics should be isolated in diagnostics module');
 assert.match(diagnosticsSource, /async function handleTableStoreDiag\(/, 'TableStore diagnostics should be isolated in diagnostics module');
 assert.match(diagnosticsSource, /module\.exports=\{handleMatchDiag,handleTableStoreDiag\};/, 'diagnostics module should export the two handlers');
 
-assert.match(apiSource, /require\('\.\/auth'\)/, 'auth helpers should live outside api/index.js');
+assert.match(apiSource, /require\('\.\.\/server\/auth'\)/, 'auth helpers should live outside api/index.js');
 assert.match(authSource, /function checkLoginRateLimit\(req,username/, 'login should check a rate limit before password verification');
 assert.match(apiSource, /recordLoginAttempt\(req,username,false\)/, 'login failures should be recorded');
 assert.match(apiSource, /recordLoginAttempt\(req,username,true\)/, 'login success should clear the rate limit');

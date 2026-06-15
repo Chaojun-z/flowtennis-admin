@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const routesPath = path.join(repoRoot, 'api/leads-routes.js');
+const routesPath = path.join(repoRoot, 'server/leads-routes.js');
 
-assert.ok(fs.existsSync(routesPath), 'api/leads-routes.js should own leads route entrypoints');
+assert.ok(fs.existsSync(routesPath), 'server/leads-routes.js should own leads route entrypoints');
 
 const routesSource = fs.readFileSync(routesPath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/leads-routes'\)/, 'api/index.js should import leads routes');
+assert.match(apiSource, /require\('\.\.\/server\/leads-routes'\)/, 'api/index.js should import leads routes');
 assert.match(routesSource, /function createLeadsRoutes/, 'leads routes module should expose a route factory');
 
 for (const route of [

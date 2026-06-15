@@ -84,9 +84,9 @@ assert.strictEqual(stampedCourt.history[1].operationId, 'op-001', 'new finance h
 assert.strictEqual(stampedCourt.history[1].batchId, 'batch-op-001');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
-const courtRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'courts-routes.js'), 'utf8');
-const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'membership-routes.js'), 'utf8');
-const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'purchase-entitlement-routes.js'), 'utf8');
+const courtRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'courts-routes.js'), 'utf8');
+const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'membership-routes.js'), 'utf8');
+const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'purchase-entitlement-routes.js'), 'utf8');
 assert.match(purchaseEntitlementRoutesSource, /buildOperationTrace\(\{operationType:'package-purchase'/, 'package purchase route should create operation trace');
 assert.match(apiSource, /buildOperationTrace\(\{operationType:'lesson-consume'/, 'schedule write route should create operation trace');
 assert.match(membershipRoutesSource, /buildOperationTrace\(\{operationType:'membership-recharge'/, 'membership recharge route should create operation trace');

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const bootstrapSource = fs.readFileSync(path.join(__dirname, '../api/bootstrap.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
 assert.match(apiSource, /const ENABLE_RUNTIME_TABLE_ENSURE = BOOTSTRAP_SAFETY_FLAGS\.enableRuntimeTableEnsure;/, 'api should expose runtime table ensure through the centralized safety flags');

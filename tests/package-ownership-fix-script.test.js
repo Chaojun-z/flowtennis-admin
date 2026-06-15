@@ -76,7 +76,7 @@ assert.ok(plan.creates.every((row) => !['黄金时间', '非黄时间'].includes
 const touchedTables = ['ft_packages', 'ft_purchases', 'ft_entitlements'];
 assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消课流水表');
 
-const seedPurchases = require('../api/seeds/mabao-finance-seed.json').purchases;
+const seedPurchases = require('../server/seeds/mabao-finance-seed.json').purchases;
 const seedStatsRows = fix.buildStatsRowsFromSeedPurchases(seedPurchases);
 
 const sourceRows = fix.buildMappingRowsFromSourceCsv({

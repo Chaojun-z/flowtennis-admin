@@ -4,7 +4,7 @@ const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/coachops.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-snapshot.js'), 'utf8');
+const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-snapshot.js'), 'utf8');
 
 assert.match(source, /function financeLegacyUnifiedRows\(\)/, 'finance page should keep the legacy stitched rows as a guarded fallback');
 assert.match(source, /function financeUnifiedRows\(\)\{\s*const snapshotRows=financeNormalizedRows\(\);[\s\S]*snapshotRows\.filter\(row=>financeMatchesCampusName\(row\.campusName\)\)[\s\S]*return financeLegacyUnifiedRows\(\);\s*\}/, 'finance page should prefer backend finance snapshot rows, apply campus filter, then fall back to local stitching');

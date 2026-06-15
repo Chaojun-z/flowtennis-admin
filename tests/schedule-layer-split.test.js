@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const schedulePath = path.join(repoRoot, 'api/schedule.js');
+const schedulePath = path.join(repoRoot, 'server/schedule.js');
 
-assert.ok(fs.existsSync(schedulePath), 'api/schedule.js should own schedule rules and conflict checks');
+assert.ok(fs.existsSync(schedulePath), 'server/schedule.js should own schedule rules and conflict checks');
 
 const scheduleSource = fs.readFileSync(schedulePath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/schedule'\)/, 'api/index.js should import schedule rules from api/schedule.js');
+assert.match(apiSource, /require\('\.\.\/server\/schedule'\)/, 'api/index.js should import schedule rules from server/schedule.js');
 assert.match(scheduleSource, /function createScheduleRules/, 'schedule module should expose a rule factory');
 assert.match(scheduleSource, /function validateScheduleConflicts/, 'schedule module should own schedule conflict checks');
 assert.match(scheduleSource, /function validateCourtBookingConflicts/, 'schedule module should own court booking conflict checks');

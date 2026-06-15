@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
-const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../server/storage.js'), 'utf8');
 
 assert.match(
   storageSource,

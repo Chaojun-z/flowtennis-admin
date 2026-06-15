@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const modulePath = path.join(__dirname, '../api/page-data/court-account-read-model.js');
+const modulePath = path.join(__dirname, '../server/page-data/court-account-read-model.js');
 const samplePath = path.join(__dirname, '../docs/performance-governance/15-样板页固定验收样本.json');
 
 assert.ok(fs.existsSync(modulePath), '订场用户样板页读模型应拆到独立模块');

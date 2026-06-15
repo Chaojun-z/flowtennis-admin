@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const bootstrapSource = fs.readFileSync(path.join(__dirname, '../api/bootstrap.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
 
 assert.match(source, /const IS_PRODUCTION_RUNTIME = RUNTIME_STAGE === 'production';/, 'api should derive a production runtime guard');
 assert.match(bootstrapSource, /function scheduleInitInBackground\(\)\{[\s\S]*if\(isProductionRuntimeValue\)return;/, 'production requests should not background-trigger init');

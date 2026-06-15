@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
-const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '../api/purchase-entitlement-routes.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '../server/purchase-entitlement-routes.js'), 'utf8');
 
 assert.match(apiSource, /T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index'/, '必须声明教练排课索引表');
 assert.match(apiSource, /T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index'/, '必须声明学员活跃课包索引表');

@@ -4,12 +4,24 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const apiIndexPath = path.join(root, 'api', 'index.js');
+const apiDir = path.join(root, 'api');
 const budgetPath = path.join(root, 'config', 'api-index-budget.json');
 
 assert.ok(fs.existsSync(budgetPath), 'api/index.js must have an explicit line budget');
 
 const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
 const apiIndexLineCount = fs.readFileSync(apiIndexPath, 'utf8').split(/\r?\n/).length;
+const apiFunctionFiles = fs
+  .readdirSync(apiDir, { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.js'))
+  .map((entry) => entry.name)
+  .sort();
+
+assert.deepStrictEqual(
+  apiFunctionFiles,
+  ['index.js'],
+  `Vercel Hobby only allows 12 serverless functions; keep backend modules outside api/. Found: ${apiFunctionFiles.join(', ')}`
+);
 
 assert.strictEqual(typeof budget.maxLines, 'number', 'api/index.js line budget must define maxLines');
 assert.ok(budget.maxLines <= 11250, 'api/index.js line budget must not grow beyond the current safety ceiling');

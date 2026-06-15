@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
 function fnBody(name){

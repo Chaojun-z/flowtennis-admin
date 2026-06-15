@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const packagesPath = path.join(repoRoot, 'api/packages.js');
+const packagesPath = path.join(repoRoot, 'server/packages.js');
 
-assert.ok(fs.existsSync(packagesPath), 'api/packages.js should own package purchase entitlement rules');
+assert.ok(fs.existsSync(packagesPath), 'server/packages.js should own package purchase entitlement rules');
 
 const packageSource = fs.readFileSync(packagesPath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/packages'\)/, 'api/index.js should import package rules from api/packages.js');
+assert.match(apiSource, /require\('\.\.\/server\/packages'\)/, 'api/index.js should import package rules from server/packages.js');
 assert.match(packageSource, /function createPackageRules/, 'package module should expose a rule factory');
 assert.match(packageSource, /function buildEntitlementFromPurchase/, 'package module should own entitlement creation');
 assert.match(packageSource, /function buildPurchaseRecord/, 'package module should own purchase record creation');

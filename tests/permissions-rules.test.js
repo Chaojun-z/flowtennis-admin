@@ -1,5 +1,5 @@
 const assert = require('assert');
-const permissions = require('../api/permissions');
+const permissions = require('../server/permissions');
 
 assert.ok(permissions.normalizePermissionProfile, 'permission module should expose profile normalizer');
 assert.ok(permissions.userCanAccessCampus, 'permission module should expose campus access checker');

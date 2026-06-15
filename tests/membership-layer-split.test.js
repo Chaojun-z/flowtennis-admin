@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const membershipPath = path.join(repoRoot, 'api/membership.js');
+const membershipPath = path.join(repoRoot, 'server/membership.js');
 
-assert.ok(fs.existsSync(membershipPath), 'api/membership.js should own membership plans, accounts, orders and benefit ledger rules');
+assert.ok(fs.existsSync(membershipPath), 'server/membership.js should own membership plans, accounts, orders and benefit ledger rules');
 
 const membershipSource = fs.readFileSync(membershipPath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/membership'\)/, 'api/index.js should import membership rules from api/membership.js');
+assert.match(apiSource, /require\('\.\.\/server\/membership'\)/, 'api/index.js should import membership rules from server/membership.js');
 assert.match(membershipSource, /function createMembershipRules/, 'membership module should expose a rule factory');
 assert.match(membershipSource, /function normalizeMembershipBenefitTemplate/, 'membership module should own benefit template normalization');
 assert.match(membershipSource, /function buildMembershipPlanRecord/, 'membership module should own plan record creation');

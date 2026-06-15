@@ -3,14 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const authSource = fs.readFileSync(path.join(__dirname, '../api/auth.js'), 'utf8');
-const bootstrapSource = fs.readFileSync(path.join(__dirname, '../api/bootstrap.js'), 'utf8');
-const courtRoutesSource = fs.readFileSync(path.join(__dirname, '../api/courts-routes.js'), 'utf8');
-const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
-const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '../api/membership-routes.js'), 'utf8');
-const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '../api/purchase-entitlement-routes.js'), 'utf8');
-const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
+const authSource = fs.readFileSync(path.join(__dirname, '../server/auth.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
+const courtRoutesSource = fs.readFileSync(path.join(__dirname, '../server/courts-routes.js'), 'utf8');
+const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '../server/membership-routes.js'), 'utf8');
+const purchaseEntitlementRoutesSource = fs.readFileSync(path.join(__dirname, '../server/purchase-entitlement-routes.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../server/storage.js'), 'utf8');
 
 assert.match(apiSource, /const HOT_SCAN_TABLES=new Map\(/, 'api should declare hot table cache config');
 assert.match(apiSource, /const HOT_GET_TABLES=new Map\(/, 'api should declare hot row cache config');
@@ -89,7 +89,7 @@ assert.match(courtRoutesSource, /const prev=await getCachedRow\(T_COURTS,id\)\.c
 assert.match(courtRoutesSource, /const court=await getCachedRow\(T_COURTS,id\)\.catch\(\(\)=>null\);/, 'court delete should reuse cached row');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/plans'&&method==='GET'\)\{[\s\S]*Promise\.all\(\[[\s\S]*cappedScan\(T_CAMPUSES\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_CLASSES\)[\s\S]*cappedScan\(T_PLANS\)[\s\S]*cappedScan\(T_PRODUCTS\)[\s\S]*cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)[\s\S]*cappedScan\(T_COURTS\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)[\s\S]*\]\)/, 'plans page aggregate endpoint should use production capped reads and local cached scans');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/purchases'&&method==='GET'\)\{[\s\S]*Promise\.all\(\[[\s\S]*cappedScan\(T_PURCHASES\)[\s\S]*cappedScan\(T_PACKAGES\)[\s\S]*cappedScan\(T_STUDENTS\)[\s\S]*cappedScan\(T_ENTITLEMENTS\)[\s\S]*\]\)/, 'purchases page aggregate endpoint should use production capped reads and local cached scans');
-assert.match(apiSource, /require\('\.\/page-data\/finance-page\.js'\)/, 'finance page aggregate endpoint should live outside api/index.js');
+assert.match(apiSource, /require\('\.\.\/server\/page-data\/finance-page\.js'\)/, 'finance page aggregate endpoint should live outside api/index.js');
 assert.match(financePageSource, /const campuses=await listCampusesWithDefaults\(\);[\s\S]*const financeSnapshot=buildFinancePageSnapshot/, 'finance page aggregate endpoint should build the live finance fact snapshot for the first screen');
 assert.doesNotMatch(financePageSource, /loadVerifiedFinanceArtifacts\(campuses\)/s, 'finance page aggregate endpoint should not use stale verified finance artifacts as the main ledger');
 assert.match(corePageDataSource, /if\(path==='\/page-data\/courts'&&method==='GET'\)\{[\s\S]*Promise\.all\(\[[\s\S]*listCampusesWithDefaults\(\)[\s\S]*getFastStudentsRead\(\{columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_COURTS,\{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)[\s\S]*\]\)/, 'courts page aggregate endpoint should give students a fast cached scan fallback');

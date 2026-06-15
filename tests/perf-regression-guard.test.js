@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 
 assert.match(apiSource, /async function timedEndpointMetric\(name,fn,meta=\{\}\)/, '后端必须提供统一接口耗时统计 helper');
 assert.match(apiSource, /timedEndpointMetric\('auth\.login'/, '登录必须进入性能统计');

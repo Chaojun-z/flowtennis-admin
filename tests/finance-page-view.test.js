@@ -16,7 +16,7 @@ const revenuePanelEnd = source.indexOf('id="financeRecognizedPanel"', revenuePan
 const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? source.length : revenuePanelEnd) + revenueShell;
 const recognizedPanel = sliceBetween(source, 'id="financeRecognizedPanel"', 'id="financeSettlementPanel"') + recognizedShell;
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
-const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'page-data', 'finance-snapshot.js'), 'utf8');
+const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'finance-snapshot.js'), 'utf8');
 
 assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
 assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');

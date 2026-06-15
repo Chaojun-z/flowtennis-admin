@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { createClientFromEnv, scanTable, putRow, deleteRow } = require('./lib/staging-data-store');
-const seed = require('../api/seeds/mabao-finance-seed.json');
+const seed = require('../server/seeds/mabao-finance-seed.json');
 
 const TABLES = {
   packages: 'ft_packages',

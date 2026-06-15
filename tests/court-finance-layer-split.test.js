@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const courtFinancePath = path.join(repoRoot, 'api/court-finance.js');
+const courtFinancePath = path.join(repoRoot, 'server/court-finance.js');
 
-assert.ok(fs.existsSync(courtFinancePath), 'api/court-finance.js should own court account, court history and stored-value finance rules');
+assert.ok(fs.existsSync(courtFinancePath), 'server/court-finance.js should own court account, court history and stored-value finance rules');
 
 const courtFinanceSource = fs.readFileSync(courtFinancePath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/court-finance'\)/, 'api/index.js should import court finance rules from api/court-finance.js');
+assert.match(apiSource, /require\('\.\.\/server\/court-finance'\)/, 'api/index.js should import court finance rules from server/court-finance.js');
 assert.match(courtFinanceSource, /function createCourtFinanceRules/, 'court finance module should expose a rule factory');
 assert.match(courtFinanceSource, /function normalizeCourtHistory/, 'court finance module should own court history normalization');
 assert.match(courtFinanceSource, /function computeCourtFinance/, 'court finance module should own court finance calculation');

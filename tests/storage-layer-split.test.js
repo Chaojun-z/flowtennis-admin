@@ -4,13 +4,13 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(root, 'api', 'index.js'), 'utf8');
-const storagePath = path.join(root, 'api', 'storage.js');
+const storagePath = path.join(root, 'server', 'storage.js');
 
 assert.ok(fs.existsSync(storagePath), 'TableStore read/write foundation should live outside api/index.js');
 
 const storageSource = fs.readFileSync(storagePath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/storage'\)/, 'api/index.js should import storage helpers from api/storage.js');
+assert.match(apiSource, /require\('\.\.\/server\/storage'\)/, 'api/index.js should import storage helpers from server/storage.js');
 assert.match(storageSource, /function createStorageServices\(/, 'storage module should expose a factory for TableStore helpers');
 assert.match(storageSource, /function scan\(t,options=\{\}\)/, 'storage module should own full table scan pagination');
 assert.match(storageSource, /function scanFirstRows\(t, \{limit=200, columns=\[\],detectOverflow=false\}=\{\}\)/, 'storage module should own capped production reads');

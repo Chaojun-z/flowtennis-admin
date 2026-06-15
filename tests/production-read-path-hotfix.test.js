@@ -3,10 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../api/leads-routes.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
-const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
-const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
+const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../server/leads-routes.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../server/storage.js'), 'utf8');
 
 assert.match(storageSource, /function scanFirstRows\(/, '生产应急恢复应提供限量读取 helper');
 assert.match(apiSource, /const PRODUCTION_PAGE_READ_LIMITS=\{/, '生产应急恢复应定义首屏限量读取上限');

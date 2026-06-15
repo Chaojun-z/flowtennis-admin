@@ -4,7 +4,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(repoRoot, 'api/page-data/core-pages.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(repoRoot, 'server/page-data/core-pages.js'), 'utf8');
 
 assert.match(
   apiSource,

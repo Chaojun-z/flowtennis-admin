@@ -348,7 +348,7 @@ assert.doesNotMatch(configJs, /SCHEDULE_TEMPLATE_ID|COURSE_REMINDER_TEMPLATE_ID/
 assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no longer keep the removed webview URL');
 
 const apiServerJs = readText('api/index.js');
-const corePageDataJs = readText('api/page-data/core-pages.js');
+const corePageDataJs = readText('server/page-data/core-pages.js');
 assert.match(apiServerJs, /\/auth\/wechat-login/, 'API should support mini program login by bound openid');
 assert.match(apiServerJs, /findWechatUserByOpenId/, 'API should find the bound coach account by openid');
 assert.match(apiServerJs, /pages\/detail\/detail/, 'course reminders should still deep link to native course detail');

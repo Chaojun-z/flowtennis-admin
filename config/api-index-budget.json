@@ -1,21 +1,21 @@
 {
   "maxLines": 8227,
   "extractedModules": [
-    "api/auth.js",
-    "api/diagnostics.js",
-    "api/storage.js",
-    "api/bootstrap.js",
-    "api/schedule.js",
-    "api/packages.js",
-    "api/court-finance.js",
-    "api/membership.js",
-    "api/courts-routes.js",
-    "api/membership-routes.js",
-    "api/purchase-entitlement-routes.js",
-    "api/match-routes.js",
-    "api/leads-routes.js",
-    "api/page-data/core-pages.js",
-    "api/page-data/finance-page.js",
-    "api/page-data/finance-snapshot.js"
+    "server/auth.js",
+    "server/diagnostics.js",
+    "server/storage.js",
+    "server/bootstrap.js",
+    "server/schedule.js",
+    "server/packages.js",
+    "server/court-finance.js",
+    "server/membership.js",
+    "server/courts-routes.js",
+    "server/membership-routes.js",
+    "server/purchase-entitlement-routes.js",
+    "server/match-routes.js",
+    "server/leads-routes.js",
+    "server/page-data/core-pages.js",
+    "server/page-data/finance-page.js",
+    "server/page-data/finance-snapshot.js"
   ]
 }

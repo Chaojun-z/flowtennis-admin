@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
-const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(__dirname, '../server/storage.js'), 'utf8');
 
 assert.match(apiSource, /timed\('schedule create validate',async\(\)=>\{/, 'schedule create should expose a validate timing segment');
 assert.match(storageSource, /function withRequiredStorageTimeout\(/, 'schedule save should have a required storage timeout helper');

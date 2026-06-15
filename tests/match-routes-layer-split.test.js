@@ -4,13 +4,13 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'api/index.js'), 'utf8');
-const routesPath = path.join(repoRoot, 'api/match-routes.js');
+const routesPath = path.join(repoRoot, 'server/match-routes.js');
 
-assert.ok(fs.existsSync(routesPath), 'api/match-routes.js should own match route entrypoints');
+assert.ok(fs.existsSync(routesPath), 'server/match-routes.js should own match route entrypoints');
 
 const routesSource = fs.readFileSync(routesPath, 'utf8');
 
-assert.match(apiSource, /require\('\.\/match-routes'\)/, 'api/index.js should import match routes');
+assert.match(apiSource, /require\('\.\.\/server\/match-routes'\)/, 'api/index.js should import match routes');
 assert.match(routesSource, /function createMatchRoutes/, 'match routes module should expose a route factory');
 
 for (const route of [

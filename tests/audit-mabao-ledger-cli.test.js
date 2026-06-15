@@ -15,7 +15,7 @@ const runOutput = execFileSync('node', [
   '--stats-csv', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - 课时统计.csv',
   '--detail-csv', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - Halena、Willian.csv',
   '--detail-csv-2', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - Lam、Loon.csv',
-  '--seed-json', path.join(repoRoot, 'api/seeds/mabao-finance-seed.json'),
+  '--seed-json', path.join(repoRoot, 'server/seeds/mabao-finance-seed.json'),
   '--output-dir', outputDir
 ], {
   cwd: repoRoot,

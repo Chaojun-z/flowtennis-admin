@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
-const corePageDataSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'page-data', 'core-pages.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
