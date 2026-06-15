@@ -90,6 +90,7 @@ assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /录入时间|record
 assert.match(html, /function courtBookingHumanNote/, 'booking records should filter system-generated notes');
 assert.match(fnBody('courtBookingRecordsTableHtml'), /courtBookingHumanNote\(h\)/, 'booking records table should only render human notes');
 assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /internalReason/, 'booking records table should not show system/internal reason as note');
+assert.match(fnBody('courtBookingHumanNote'), /订场收入细项修数|修数/, 'booking note filter should hide imported repair summaries');
 assert.match(fnBody('courtBookingDrawerHtml'), /const closeAction=`<button[\s\S]*closeCourtBookingEntryInline/, 'expanded booking entry should define a close action');
 assert.match(fnBody('courtBookingDrawerHtml'), /renderDetailDrawerCard\('新增订场流水',form,\{useGrid:false,actionsHtml:closeAction\}/, 'expanded booking entry should expose close action in the card header');
 assert.doesNotMatch(fnBody('courtBookingDrawerHtml'), /\$\{form\}<div class="schedule-detail-card-actions">/, 'expanded booking entry should not hide cancel action at the bottom');
@@ -131,6 +132,9 @@ assert.match(html, /function saveMembershipBenefitInline/, 'membership rights ta
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /label:'最早到期'|key:'expire'/, 'membership rights tab should not show earliest expiry column');
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /label:'次数'[\s\S]*membershipBenefitInlineInputId/, 'membership rights tab should not show a default count input column');
 assert.match(fnBody('membershipRightsDrawerHtml'), /label:'操作'[\s\S]*openMembershipBenefitInlineEditor[\s\S]*消耗[\s\S]*补发/, 'membership rights tab should expose standard row actions');
+assert.match(fnBody('membershipRightsDrawerHtml'), /minWidth:'520px'[\s\S]*label:'权益'[\s\S]*width:'150px'[\s\S]*label:'总次数'[\s\S]*width:'70px'[\s\S]*label:'已消耗'[\s\S]*width:'70px'[\s\S]*label:'剩余'[\s\S]*width:'70px'[\s\S]*label:'操作'[\s\S]*width:'108px'[\s\S]*align:'right'/, 'membership rights table should use compact columns and right aligned actions');
+assert.match(pagesCss, /membership-rights-table \.detail-drawer-table[\s\S]*table-layout:fixed/, 'membership rights table should keep compact widths from being stretched');
+assert.match(pagesCss, /membership-inline-actions[\s\S]*justify-content:flex-end/, 'membership rights row actions should align to the right');
 assert.match(fnBody('membershipRightsDrawerHtml'), /membership-inline-editor[\s\S]*membershipBenefitInlineInputId[\s\S]*saveMembershipBenefitInline[\s\S]*取消/, 'membership rights tab should confirm consume and supplement inline');
 assert.doesNotMatch(fnBody('membershipRightsDrawerHtml'), /openMembershipBenefitActionModal|openMembershipBenefitHistoryModal/, 'membership rights row actions should not navigate away from the rights tab');
 assert.match(fnBody('membershipRightsDrawerHtml'), /消耗[\s\S]*补发/, 'membership rights row actions should show consume and supplement text');
