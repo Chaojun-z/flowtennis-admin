@@ -958,7 +958,15 @@ function courtAccountStateLabel(value){
   return String(value||'').trim()==='会员'?'会员':'普通';
 }
 function courtCleanUserNotes(value){
-  return String(value||'').split(/\n+/).map(line=>line.replace(/\[合并自[^\]]*\]/g,'').replace(/(^|[；;，,。])\s*合并自[^；;，,。\n]*/g,'$1').trim()).filter(Boolean).join('\n');
+  const systemPattern=/(合并重复订场账户|合并自|系统|导入|修数|修正|补账|补录|历史迁移|数据修复)/;
+  return String(value||'')
+    .split(/\n+/)
+    .map(line=>line
+      .replace(/\[(?:合并重复订场账户|合并自|系统|导入|修数|修正|补账|补录|历史迁移|数据修复)[^\]]*\]/g,'')
+      .replace(/(^|[；;，,。])\s*合并自[^；;，,。\n]*/g,'$1')
+      .trim())
+    .filter(line=>line&&!systemPattern.test(line))
+    .join('\n');
 }
 function renderCourtEmptyText(value){
   return renderStandardEmptyText(value);
@@ -1151,7 +1159,7 @@ function renderCourtAccountListView(){
     const memberTagClass=courtMembershipTierTagClass(item.membershipTierLabel);
     const memberCell=item.membershipTierLabel&&item.membershipTierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderStandardEmptyText(item.membershipTierLabel))}</span>`:renderStandardCellText('-');
     const cleanNotes=courtCleanUserNotes(item.notesSummary);
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderStandardCellText(item.phone)}</td><td>${renderStandardCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.memberBookingCount)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td>${renderStandardCellText(item.owner)}</td><td>${renderStandardCellText(item.familiarity)}</td><td>${renderStandardCellText(item.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${item.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderStandardCellText(item.phone)}</td><td>${renderStandardCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.memberBookingCount)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td>${renderStandardCellText(item.owner)}</td><td>${renderStandardCellText(item.familiarity)}</td><td>${renderStandardCellText(item.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
   }).join(''):'<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
@@ -1231,7 +1239,7 @@ function renderCourts(){
     const memberTagClass=courtMembershipTierTagClass(m.tierLabel);
     const memberCell=m.tierLabel&&m.tierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderStandardEmptyText(m.tierLabel))}</span>`:renderStandardCellText('-');
     const cleanNotes=courtCleanUserNotes(u.notes);
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderStandardCellText(u.phone)}</td><td>${renderStandardCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(memberBookingCount)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td>${renderStandardCellText(u.owner)}</td><td>${renderStandardCellText(u.familiarity)}</td><td>${renderStandardCellText(u.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">会员账户</span><span class="tms-action-link" onclick="openCourtModal('${u.id}')">编辑</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderStandardCellText(u.phone)}</td><td>${renderStandardCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(memberBookingCount)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td>${renderStandardCellText(u.owner)}</td><td>${renderStandardCellText(u.familiarity)}</td><td>${renderStandardCellText(u.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
   }).join(''):'<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
@@ -1327,10 +1335,16 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('当前余额',`¥${fmt(finance.balance)}`),
     renderDetailDrawerField('累计订场',`${bookingSummary.count} 次`),
     ...memberFields,
-    renderDetailDrawerField('备注',latestOrder?.notes||'-',{full:true})
+    renderDetailDrawerField('充值备注',latestOrder?.notes||'-',{full:true})
+  ].join(''));
+  const followup=renderDetailDrawerCard('用户跟进',[
+    renderDetailDrawerField('对接人',court?.owner||'-'),
+    renderDetailDrawerField('熟悉程度',court?.familiarity||'-'),
+    renderDetailDrawerField('储值态度',court?.depositAttitude||'-'),
+    renderDetailDrawerField('备注',courtCleanUserNotes(court?.notes)||'-',{full:true})
   ].join(''));
   const actions=renderDetailDrawerCard('会员操作',membershipAccountActionButtons(court),{useGrid:false});
-  return `${overview}${voidInfoHtml}${actions}`;
+  return `${overview}${followup}${voidInfoHtml}${actions}`;
 }
 function membershipOrdersDrawerHtml(court){
   const account=courtMembershipAccount(court?.id);
@@ -1683,8 +1697,20 @@ function openCourtModal(id){
   const leadSummaryHtml=r?`<div class="tms-section-header">来源线索摘要</div><div class="tms-detail-grid">${studentDetailBlockHtml('线索来源',courtLeadSummaryHtml(r))}</div>`:'';
   const financeSummaryHtml=`<div class="tms-readonly-panel court-finance-readonly" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-detail-grid">${studentDetailFieldHtml('累计充值',`¥${fmt(fin.totalDeposit)}`)}${studentDetailFieldHtml('当前余额',`¥${fmt(fin.balance)}`)}${studentDetailFieldHtml('累计消费',`¥${fmt(fin.spentAmount)}`)}${studentDetailFieldHtml('累计实收',`¥${fmt(fin.receivedAmount)}`)}</div></div>`;
   const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label>${linkedStudentPicker}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${leadSummaryHtml}${financeSummaryHtml}<div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
-  const footer=id?`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-default" onclick="openCourtMergeModal('${r.id}')">合并</button><button class="tms-btn tms-btn-danger" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`:`<div style="display:flex;gap:12px;margin-left:auto;"><button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`;
-  openStandardModal({title:id?'编辑订场用户':'添加订场用户',bodyHtml:body,actionsHtml:footer,extraClass:'modal-wide'});
+  const footer=id?`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action" onclick="openCourtMergeModal('${r.id}')">合并</button><button type="button" class="schedule-detail-action danger" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`:`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`;
+  openStandardDetailDrawer({
+    titleHtml:renderDetailDrawerHero({
+      title:id?'编辑订场用户':'添加订场用户',
+      avatar:(courtDisplayName(r)||'订').slice(0,1),
+      subtitle:id?[courtDisplayName(r),r?.phone,cn(r?.campus)].filter(Boolean).join(' · '):'',
+      statusHtml:''
+    }),
+    bodyHtml:`<div class="schedule-detail-content">${body}</div>`,
+    actionsHtml:footer,
+    data:{courtEditId:id||''},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-court-edit-drawer'
+  });
 }
 async function saveCourt(){
   const name=document.getElementById('f_name').value.trim();if(!name){toast('请输入姓名','warn');return;}

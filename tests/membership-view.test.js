@@ -64,9 +64,14 @@ assert.match(fnBody('renderCourts'), /courtAccountStateLabel\(m\)/, 'court legac
 assert.match(html, /function courtCleanUserNotes\(/, 'court user list should clean system merge notes before display');
 assert.doesNotMatch(fnBody('renderCourts'), /title="\$\{esc\(u\.notes\|\|''\)\}"/, 'court legacy list should not display raw system merge notes');
 assert.doesNotMatch(fnBody('renderCourtAccountListView'), /title="\$\{esc\(item\.notesSummary\|\|''\)\}"/, 'court read-model list should not display raw system merge notes');
+assert.match(fnBody('courtCleanUserNotes'), /合并重复订场账户[\s\S]*系统[\s\S]*导入[\s\S]*修数/, 'court user notes should strip system generated notes');
 assert.match(html, /function courtMembershipSummary/, 'courts page should compute membership summaries');
-assert.match(html, /会员账户/, 'courts table should expose dedicated membership account entry');
-assert.match(html, /openCourtModal\('\$\{item\.id\}'\)">编辑/, 'courts table should keep the short profile editing entry');
+assert.match(fnBody('renderCourtAccountListView'), /openCourtMembershipPanel\('\$\{item\.id\}'\)">查看[\s\S]*openCourtFinanceModal\('\$\{item\.id\}'\)">订场/, 'court read-model row actions should only expose view and booking drawer entries');
+assert.doesNotMatch(fnBody('renderCourtAccountListView'), /openCourtModal\('\$\{item\.id\}'\)">编辑|会员账户/, 'court read-model row actions should remove edit and membership-account copy');
+assert.match(fnBody('renderCourts'), /openCourtMembershipPanel\('\$\{u\.id\}'\)">查看[\s\S]*openCourtFinanceModal\('\$\{u\.id\}'\)">订场/, 'court legacy row actions should only expose view and booking drawer entries');
+assert.doesNotMatch(fnBody('renderCourts'), /openCourtModal\('\$\{u\.id\}'\)">编辑|会员账户/, 'court legacy row actions should remove edit and membership-account copy');
+assert.match(fnBody('openCourtModal'), /openStandardDetailDrawer\(/, 'court edit should use the standard right drawer');
+assert.doesNotMatch(fnBody('openCourtModal'), /openStandardModal\(/, 'court edit should not use centered modal');
 assert.match(html, /function openCourtMembershipPanel/, 'membership actions should move into dedicated account panel');
 assert.match(html, /function courtMembershipPanelHtml/, 'membership account should render through dedicated panel html');
 assert.match(fnBody('openCourtMembershipPanel'), /openMembershipDrawer\(/, 'membership account panel should open through the membership drawer');
@@ -112,11 +117,12 @@ assert.doesNotMatch(fnBody('openMembershipOrderModal'), /openStandardModal\(/, '
 assert.doesNotMatch(fnBody('openMembershipBenefitPickerModal'), /openStandardModal\(/, 'membership benefit picker should no longer use centered modal');
 assert.doesNotMatch(fnBody('openMembershipBenefitActionModal'), /document\.getElementById\('mBody'\)\.innerHTML/, 'membership benefit action should no longer manually fill legacy modal body');
 assert.doesNotMatch(fnBody('openCourtMembershipLedgerModal'), /openStandardModal\(/, 'membership ledger should no longer use centered modal');
-['账户类型','累计充值','累计消费','当前余额','累计订场','当前会员','开卡日期','实收金额','赠送金额','当前折扣','余额有效期','清零时间','备注','会员操作'].forEach(label=>{
+['账户类型','累计充值','累计消费','当前余额','累计订场','当前会员','开卡日期','实收金额','赠送金额','当前折扣','余额有效期','清零时间','充值备注','用户跟进','对接人','熟悉程度','储值态度','备注','会员操作'].forEach(label=>{
   assert.match(html,new RegExp(label),'membership account panel should expose the requested account overview fields');
 });
 assert.doesNotMatch(fnBody('courtMembershipPanelHtml'), /renderDetailDrawerCard\('当前权益'/, 'membership account overview should not repeat current rights');
-assert.match(fnBody('courtMembershipPanelHtml'), /renderDetailDrawerField\('账户类型'[\s\S]*renderDetailDrawerField\('累计充值'[\s\S]*renderDetailDrawerField\('累计消费'[\s\S]*renderDetailDrawerField\('当前余额'[\s\S]*renderDetailDrawerField\('累计订场'[\s\S]*\.\.\.memberFields[\s\S]*renderDetailDrawerField\('备注'/, 'membership account overview should render common account fields before member-only fields');
+assert.match(fnBody('courtMembershipPanelHtml'), /renderDetailDrawerField\('账户类型'[\s\S]*renderDetailDrawerField\('累计充值'[\s\S]*renderDetailDrawerField\('累计消费'[\s\S]*renderDetailDrawerField\('当前余额'[\s\S]*renderDetailDrawerField\('累计订场'[\s\S]*\.\.\.memberFields[\s\S]*renderDetailDrawerField\('充值备注'/, 'membership account overview should render common account fields before member-only fields');
+assert.match(fnBody('courtMembershipPanelHtml'), /renderDetailDrawerCard\('用户跟进'[\s\S]*renderDetailDrawerField\('对接人'[\s\S]*renderDetailDrawerField\('熟悉程度'[\s\S]*renderDetailDrawerField\('储值态度'[\s\S]*renderDetailDrawerField\('备注'[\s\S]*courtCleanUserNotes/, 'membership account overview should show user follow-up fields');
 assert.match(fnBody('courtMembershipPanelHtml'), /const memberFields=account\?\[[\s\S]*renderDetailDrawerField\('当前会员'[\s\S]*renderDetailDrawerField\('开卡日期'[\s\S]*renderDetailDrawerField\('实收金额'[\s\S]*renderDetailDrawerField\('赠送金额'[\s\S]*renderDetailDrawerField\('当前折扣'[\s\S]*renderDetailDrawerField\('余额有效期'[\s\S]*renderDetailDrawerField\('清零时间'/, 'member-only fields should keep the requested member detail order');
 assert.match(fnBody('courtMembershipPanelHtml'), /const memberFields=account\?\[[\s\S]*当前会员[\s\S]*\]:\[\]/, 'member-only fields should be hidden for normal users');
 assert.doesNotMatch(fnBody('courtMembershipPanelHtml'), /renderDetailDrawerCard\('最近开卡'|renderDetailDrawerField\('说明'/, 'membership account overview should not keep the previous separate recent card');
@@ -296,7 +302,7 @@ assert.match(html, /const accountState=courtAccountStateLabel\(m\);/, 'court row
 assert.match(html, /memberLabel:'-',tierLabel:'-',status:membershipDisplayStatus\(account\),discount:'-',validUntil:'-'/, 'voided or cleared membership summaries should clear benefit display in court list');
 assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:320px;color:#A3968F"/, 'membership management benefits should use the same remark color as membership plan notes');
 assert.match(html, /style="white-space:normal;line-height:1\.55;min-width:500px;max-width:none;color:#A3968F"/, 'membership plan benefits should use the remark color while staying fully visible');
-assert.match(html, /会员账户<\/span>/, 'court user list should label the membership account action clearly');
+assert.match(fnBody('renderCourtAccountListView'), />查看<\/span>/, 'court user list should label the account action as view');
 assert.match(html, /function openMembershipBenefitPickerModal/, 'generic consume and supplement actions should let operators choose a benefit type');
 assert.match(fnBody('saveMembershipBenefit'), /runStandardMutation\('membershipBenefitSaveBtn'/, 'benefit save action should show a submitting state through the global mutation helper');
 assert.match(html, /会员管理[\s\S]*\/[\s\S]*会员购买记录/, 'purchase audit page should use breadcrumb-style navigation');
