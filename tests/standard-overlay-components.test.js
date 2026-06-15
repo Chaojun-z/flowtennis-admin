@@ -4,6 +4,7 @@ const path = require('path');
 const { appSource } = require('./helpers/read-index-bundle');
 
 const coreSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'components.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'bootstrap.js'), 'utf8');
 const courtsSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'courts.js'), 'utf8');
 
 function fnBody(source, name){
@@ -41,5 +42,10 @@ assert.match(fnBody(coreSource, 'openStandardDetailDrawer'), /modalClass='modal 
 assert.match(fnBody(coreSource, 'setStandardActionLoading'), /dataset\.standardLoading/, 'standard action loading should be tracked on the button');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /try[\s\S]*await task\(\)[\s\S]*catch[\s\S]*toast\([\s\S]*return null[\s\S]*finally/, 'standard mutation helper should keep failures open and always clear loading');
 assert.match(fnBody(coreSource, 'runStandardMutation'), /onSuccess[\s\S]*refresh[\s\S]*formatError/, 'standard mutation helper should own success callbacks, refresh callbacks, and page-specific error formatting');
+assert.doesNotMatch(fnBody(bootstrapSource, 'toast'), /innerHTML[\s\S]*msg/, 'toast should render message as text, not HTML');
+assert.match(fnBody(bootstrapSource, 'toast'), /textContent=String\(msg\?\?''\)/, 'toast should put untrusted messages into textContent');
+assert.match(bootstrapSource, /function safeConfirmHtml\(/, 'appConfirm html mode should use one sanitizer entry');
+assert.match(fnBody(bootstrapSource, 'appConfirm'), /desc\.innerHTML=safeConfirmHtml\(message\)/, 'appConfirm html mode should sanitize before innerHTML');
+assert.match(fnBody(bootstrapSource, 'appConfirm'), /desc\.textContent=message/, 'appConfirm default mode should remain plain text');
 
 console.log('standard overlay component tests passed');

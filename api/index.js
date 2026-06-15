@@ -9,7 +9,10 @@ const path = require('path');
 const mabaoFinanceSeed = require('./seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('./lib/perf-metrics');
 const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('./page-data/court-account-read-model.js');
+const { handleFinancePageData } = require('./page-data/finance-page.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('./permissions');
+const { handleMatchDiag, handleTableStoreDiag } = require('./diagnostics');
+const { createAuthServices } = require('./auth');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -522,8 +525,14 @@ async function getCachedScan(t,options={}){
   hotScanCache.set(cacheKey,{rows:cloneCacheValue(rows),expiresAt:now+cfg.ttlMs});
   return rows;
 }
-function scanFirstRows(t, {limit=200, columns=[]}={}) {
+function productionReadTruncatedError(t,limit){
+  const err=new Error(`生产读取被截断：${t} 超过 ${limit} 条，请改专用读模型或提高读取上限`);
+  err.code='PRODUCTION_READ_TRUNCATED';
+  return err;
+}
+function scanFirstRows(t, {limit=200, columns=[],detectOverflow=false}={}) {
   const normalizedLimit=Math.max(1,Math.min(parseInt(limit,10)||200,2000));
+  const requestLimit=detectOverflow?normalizedLimit+1:normalizedLimit;
   const normalizedColumns=normalizeScanColumns(columns);
   return withStorageRetry(()=>runStorageOperation('getRangeScanFirst',{table:t},(res,rej)=>{
     gc().getRange({
@@ -532,7 +541,7 @@ function scanFirstRows(t, {limit=200, columns=[]}={}) {
       inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],
       exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],
       maxVersions:1,
-      limit:normalizedLimit,
+      limit:requestLimit,
       ...(normalizedColumns.length?{columnsToGet:normalizedColumns}:{})
     },(e,d)=>{
       if(e)return rej(e);
@@ -545,6 +554,7 @@ function scanFirstRows(t, {limit=200, columns=[]}={}) {
         });
         rows.push(obj);
       });
+      if(detectOverflow&&rows.length>normalizedLimit)return rej(productionReadTruncatedError(t,normalizedLimit));
       res(rows);
     });
   }));
@@ -552,7 +562,7 @@ function scanFirstRows(t, {limit=200, columns=[]}={}) {
 
 function cappedScan(t, limit=PRODUCTION_PAGE_READ_LIMITS.default){
   const normalizedLimit=limit===undefined?PRODUCTION_PAGE_READ_LIMITS.default:(PRODUCTION_PAGE_READ_LIMITS[t]||limit);
-  return isProductionRuntime() ? scanFirstRows(t, {limit:normalizedLimit}).catch((e) => { console.error('cappedScan err:', e); return []; }) : getCachedScan(t).catch(()=>[]);
+  return isProductionRuntime() ? scanFirstRows(t,{limit:normalizedLimit,detectOverflow:true}).catch((e)=>{console.error('cappedScan err:',e);throw e;}) : getCachedScan(t).catch(()=>[]);
 }
 function getScheduleListRows(){
   return isProductionRuntime()
@@ -664,75 +674,6 @@ async function getFastStudentsRead(options={}){
   return rows;
 }
 function isTableMissingError(err){return /not.*exist|table.*not.*exist|OTSObjectNotExist/i.test(String(err?.message||err||''));}
-const LOGIN_STORAGE_TIMEOUT_ERROR='登录服务暂时超时，请重试';
-const LOGIN_ROW_TIMEOUT_MS=4500;
-const LOGIN_SCAN_TIMEOUT_MS=4500;
-const LOGIN_ROW_RETRY_LIMIT=2;
-const LOGIN_INVALID_ACCOUNT_ERROR='账号数据异常，请联系管理员处理';
-const LOGIN_RATE_LIMIT_WINDOW_MS=15*60*1000;
-const LOGIN_RATE_LIMIT_MAX_FAILURES=10;
-const loginRateLimitBuckets=new Map();
-function loginRateLimitKey(req,username){
-  const forwarded=String(req?.headers?.['x-forwarded-for']||'').split(',')[0].trim();
-  const ip=forwarded||String(req?.socket?.remoteAddress||req?.connection?.remoteAddress||'unknown');
-  return `${ip}:${String(username||'').trim().toLowerCase()}`;
-}
-function checkLoginRateLimit(req,username,now=Date.now()){
-  const key=loginRateLimitKey(req,username);
-  const bucket=loginRateLimitBuckets.get(key);
-  if(!bucket)return {limited:false,key};
-  if(bucket.resetAt<=now){loginRateLimitBuckets.delete(key);return {limited:false,key};}
-  return {limited:bucket.count>=LOGIN_RATE_LIMIT_MAX_FAILURES,retryAfterMs:bucket.resetAt-now,key};
-}
-function recordLoginAttempt(req,username,success,now=Date.now()){
-  const key=loginRateLimitKey(req,username);
-  if(success){loginRateLimitBuckets.delete(key);return;}
-  const current=loginRateLimitBuckets.get(key);
-  if(!current||current.resetAt<=now){
-    loginRateLimitBuckets.set(key,{count:1,resetAt:now+LOGIN_RATE_LIMIT_WINDOW_MS});
-    return;
-  }
-  current.count+=1;
-}
-function isTransientLoginStorageError(err){
-  return /Client network socket disconnected before secure TLS connection was established|ECONNRESET|ETIMEDOUT|socket hang up|EAI_AGAIN|timeout/i.test(String(err?.message||err||''));
-}
-async function loadLoginUser(username){
-  const rowTimeout=Symbol('login-row-timeout');
-  const scanTimeout=Symbol('login-scan-timeout');
-  for(let attempt=1;attempt<=LOGIN_ROW_RETRY_LIMIT;attempt++){
-    try{
-      const user=await withTimeout(getCachedRow(T_USERS,username),LOGIN_ROW_TIMEOUT_MS,rowTimeout);
-      if(user!==rowTimeout)return user;
-      console.warn(`[auth/login] ft_users row lookup timed out for ${username} on attempt ${attempt}/${LOGIN_ROW_RETRY_LIMIT}`);
-    }catch(err){
-      if(!isTableMissingError(err)&&!isTransientLoginStorageError(err))throw err;
-      if(isTableMissingError(err))return null;
-      console.warn(`[auth/login] ft_users row lookup failed for ${username} on attempt ${attempt}/${LOGIN_ROW_RETRY_LIMIT}: ${err.message||err}`);
-    }
-  }
-  console.warn(`[auth/login] ft_users row lookup exhausted for ${username}, falling back to user scan cache`);
-  try{
-    const rows=await withTimeout(getCachedScan(T_USERS).catch((err)=>{
-      if(isTableMissingError(err))return [];
-      throw err;
-    }),LOGIN_SCAN_TIMEOUT_MS,scanTimeout);
-    if(rows===scanTimeout)return {__loginTimeout:true};
-    return (Array.isArray(rows)?rows:[]).find((item)=>String(item?.id||'')===String(username))||null;
-  }catch(err){
-    if(isTableMissingError(err))return null;
-    if(isTransientLoginStorageError(err))return {__loginTimeout:true};
-    throw err;
-  }
-}
-async function verifyLoginPassword(username,inputPassword,storedPassword){
-  try{
-    return await bcrypt.compare(inputPassword,storedPassword);
-  }catch(err){
-    console.error(`[auth/login] password compare failed for ${username}:`, err);
-    return {invalidAccount:true};
-  }
-}
 function campusDisplayName(value,externalVenueName=''){
   const raw=String(value||'').trim();
   if(!raw)return '';
@@ -2707,32 +2648,6 @@ function assertUniqueCoachName(name,coaches,excludeId){
   const coach=String(name||'').trim();
   if(!coach)return;
   if((coaches||[]).some(c=>c.id!==excludeId&&sameCoachName(c.name,coach)))throw new Error('教练姓名已存在');
-}
-function mergeStoredAuthUser(tokenUser,storedUser){
-  const source=storedUser||tokenUser||{};
-  const role=source.role||tokenUser?.role||'';
-  const name=source.name||tokenUser?.name||'';
-  const id=source.id||tokenUser?.id||'';
-  const username=source.username||tokenUser?.username||'';
-  const profile=normalizePermissionProfile({...tokenUser,...source,role,name,id,username});
-  return {
-    id,
-    name,
-    role:profile.role,
-    status:source.status||tokenUser?.status||'active',
-    username,
-    systemType:profile.systemType,
-    dataScope:profile.dataScope,
-    campusIds:profile.campusIds,
-    coachId:source.coachId||tokenUser?.coachId||(profile.role==='editor'?(id||username):''),
-    coachName:source.coachName||(profile.role==='editor'?name:(tokenUser?.coachName||'')),
-    featurePermissions:profile.featurePermissions,
-    permissions:profile.featurePermissions,
-    matchPermissions:profile.featurePermissions
-  };
-}
-function assertAuthUserActive(user){
-  if(String(user?.status||'active')==='inactive')throw new Error('账号已停用');
 }
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
@@ -5973,7 +5888,21 @@ function applyCorsHeaders(req,res){
   res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
 }
-function authUser(req){const token=(req.headers.authorization||'').replace('Bearer ','');if(!token)return null;try{return jwt.verify(token,JWT_SECRET);}catch{return null;}}
+const {
+  LOGIN_STORAGE_TIMEOUT_ERROR,
+  LOGIN_INVALID_ACCOUNT_ERROR,
+  checkLoginRateLimit,
+  recordLoginAttempt,
+  loadLoginUser,
+  verifyLoginPassword,
+  authUser,
+  mergeStoredAuthUser,
+  assertAuthUserActive,
+  requireAdminUser,
+  requireMatchAdminPermission,
+  requireMatchUser,
+  ensureMatchUserResponse
+}=createAuthServices({JWT_SECRET,normalizePermissionProfile,userHasFeaturePermission,getCachedRow,getCachedScan,isTableMissingError,withTimeout,T_USERS,sendJson});
 function diagnosticsTokenAllowed(req){
   const token=String(process.env.DIAG_TOKEN||process.env.CRON_SECRET||'').trim();
   if(!token)return false;
@@ -5986,27 +5915,8 @@ function requireDiagnosticsAccess(req,res){
   sendJson(res,{error:'无权限'},403);
   return false;
 }
-function requireAdminUser(user){
-  if(user?.type==='match_user')throw new Error('无管理端权限');
-  if(!user?.id)throw new Error('未登录');
-  return user;
-}
 function userMatchPermissions(user){
   return normalizePermissionProfile(user).featurePermissions;
-}
-function requireMatchAdminPermission(user,permission){
-  requireAdminUser(user);
-  if(userHasFeaturePermission(user,permission))return true;
-  throw new Error(permission==='match_finance'?'无约球财务权限':'无约球运营权限');
-}
-function requireMatchUser(req){
-  const user=authUser(req);
-  if(!user||user.type!=='match_user')throw new Error('未登录');
-  return user;
-}
-function ensureMatchUserResponse(req,res){
-  try{return requireMatchUser(req);}
-  catch(err){sendJson(res,{error:String(err?.message||'未登录')},401);return null;}
 }
 function canMatchUserCreateByAdminUser(adminUser){
   return true;
@@ -9318,109 +9228,11 @@ module.exports = async (req, res) => {
   }
   if(path==='/match-diag'&&method==='GET'){
     if(!requireDiagnosticsAccess(req,res))return;
-    const startedAt=Date.now();
-    const host=safeDatabaseUrlHost(MATCH_DATABASE_URL);
-    const result={ts:new Date().toISOString(),matchDatabase:{host:host||'(missing)',ssl:process.env.MATCH_DATABASE_SSL==='true',urlSet:!!MATCH_DATABASE_URL},test:{status:'pending',ms:0}};
-    if(!MATCH_DATABASE_URL){
-      result.test={status:'error',error:'MATCH_DATABASE_URL missing',ms:Date.now()-startedAt};
-      return sendJson(res,result);
-    }
-    try{
-      await getMatchSqlPool().query('SELECT 1 AS ok');
-      result.test={status:'ok',ms:Date.now()-startedAt};
-    }catch(e){
-      result.test={status:'error',error:String(e?.message||e),ms:Date.now()-startedAt};
-    }
-    return sendJson(res,result);
+    return handleMatchDiag({res,sendJson,safeDatabaseUrlHost,MATCH_DATABASE_URL,getMatchSqlPool});
   }
   if(path==='/diag'&&method==='GET'){
     if(!requireDiagnosticsAccess(req,res))return;
-    const startedAt=Date.now();
-    const result={ts:new Date().toISOString(),env:{IS_PRODUCTION_RUNTIME:isProductionRuntime(),NODE_ENV:process.env.NODE_ENV||'(missing)',TS_ENDPOINT:process.env.TS_ENDPOINT||'(missing)',TS_INSTANCE:process.env.TS_INSTANCE||'(missing)',KEY_ID_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_ID),KEY_SECRET_SET:!!(process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET)},tests:[]};
-    try{
-      const rows=await new Promise((res,rej)=>{
-        const timer=setTimeout(()=>rej(new Error('TableStore getRange timeout after 8s')),8000);
-        try{
-          gc().getRange({tableName:T_CAMPUSES,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:5},(e,d)=>{
-            clearTimeout(timer);
-            if(e)return rej(e);
-            res((d.rows||[]).length);
-          });
-        }catch(syncErr){clearTimeout(timer);rej(syncErr);}
-      });
-    result.tests.push({table:T_CAMPUSES,status:'ok',rows,ms:Date.now()-startedAt});
-    }catch(e){result.tests.push({table:T_CAMPUSES,status:'error',error:String(e?.message||e),code:e?.code,ms:Date.now()-startedAt});}
-    // Test 2: ft_students single page
-    const t2Start=Date.now();
-    try{
-      const rows2=await new Promise((res,rej)=>{
-        const timer=setTimeout(()=>rej(new Error('ft_students getRange timeout after 8s')),8000);
-        try{
-          gc().getRange({tableName:T_STUDENTS,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:10},(e,d)=>{
-            clearTimeout(timer);
-            if(e)return rej(e);
-            const lastRow=(d.rows||[]).length?(d.rows||[])[(d.rows||[]).length-1]:null;
-            res({count:(d.rows||[]).length,hasNext:!!(lastRow&&lastRow.primaryKey&&lastRow.primaryKey[0])});
-          });
-        }catch(syncErr){clearTimeout(timer);rej(syncErr);}
-      });
-      const lastRowId=rows2.count>0?null:null; // placeholder
-      result.tests.push({table:T_STUDENTS,status:'ok',rows:rows2,ms:Date.now()-t2Start});
-      // Test 3: second-page scan of ft_students (simulate scan() pagination)
-      if(rows2.count>0){
-        const t3Start=Date.now();
-        try{
-          // First get the actual last row ID from a fresh getRange call
-          const lastId=await new Promise((res,rej)=>{
-            const timer=setTimeout(()=>rej(new Error('first page timeout')),8000);
-            gc().getRange({tableName:T_STUDENTS,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:[{id:TableStore.INF_MIN}],exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:10},(e,d)=>{
-              clearTimeout(timer);
-              if(e)return rej(e);
-              const last=(d.rows||[])[(d.rows||[]).length-1];
-              res(last&&last.primaryKey&&last.primaryKey[0]?String(last.primaryKey[0].value):null);
-            });
-          });
-          if(lastId){
-            const nextKey=[{id:lastId+'\u0000'}];
-            const page2=await new Promise((res,rej)=>{
-              const timer=setTimeout(()=>rej(new Error('page2 getRange timeout after 8s — pagination is hanging!')),8000);
-              gc().getRange({tableName:T_STUDENTS,direction:TableStore.Direction.FORWARD,inclusiveStartPrimaryKey:nextKey,exclusiveEndPrimaryKey:[{id:TableStore.INF_MAX}],maxVersions:1,limit:10},(e,d)=>{
-                clearTimeout(timer);
-                if(e)return rej(e);
-                res({count:(d.rows||[]).length,lastId});
-              });
-            });
-            result.tests.push({table:T_STUDENTS+'_page2',status:'ok',rows:page2,ms:Date.now()-t3Start});
-          } else {
-            result.tests.push({table:T_STUDENTS+'_page2',status:'skipped',reason:'no lastId'});
-          }
-        }catch(e){result.tests.push({table:T_STUDENTS+'_page2',status:'error',error:String(e?.message||e),ms:Date.now()-t3Start});}
-      }
-    }catch(e){result.tests.push({table:T_STUDENTS,status:'error',error:String(e?.message||e),code:e?.code,ms:Date.now()-t2Start});}
-    // Test 3: INF constants check
-    result.INF_MIN_type=typeof TableStore.INF_MIN;
-    result.INF_MAX_type=typeof TableStore.INF_MAX;
-    result.INF_MIN_val=JSON.stringify(TableStore.INF_MIN);
-    result.INF_MAX_val=JSON.stringify(TableStore.INF_MAX);
-    // Test 4: concurrent cappedScan test (simulates /page-data/courts)
-    const t4Start=Date.now();
-    try{
-      const [campuses,students,courts,membershipAccounts,coaches,pricePlans]=await Promise.race([
-        Promise.all([
-          listCampusesWithDefaults(),
-          cappedScan(T_STUDENTS).catch(e=>{result.cappedScanError='STUDENTS: '+e;return [];}),
-          cappedScan(T_COURTS).catch(e=>{result.cappedScanError='COURTS: '+e;return [];}),
-          cappedScan(T_MEMBERSHIP_ACCOUNTS).catch(e=>{result.cappedScanError='ACCOUNTS: '+e;return [];}),
-          cappedScan(T_COACHES).catch(e=>{result.cappedScanError='COACHES: '+e;return [];}),
-          cappedScan(T_PRICE_PLANS).catch(e=>{result.cappedScanError='PRICE: '+e;return [];})
-        ]),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('concurrent cappedScan timeout after 8s')),8000))
-      ]);
-      result.tests.push({name:'concurrent_cappedScan',status:'ok',ms:Date.now()-t4Start,sizes:[campuses.length,students.length,courts.length,membershipAccounts.length,coaches.length,pricePlans.length]});
-    }catch(e){
-      result.tests.push({name:'concurrent_cappedScan',status:'error',error:String(e?.message||e),ms:Date.now()-t4Start});
-    }
-    return sendJson(res,result);
+    return handleTableStoreDiag({res,sendJson,gc,isProductionRuntime,listCampusesWithDefaults,cappedScan,tables:{T_CAMPUSES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_PRICE_PLANS}});
   }
   if(path==='/diag2'&&method==='GET'){
     const result = { log: [] };
@@ -10758,30 +10570,7 @@ module.exports = async (req, res) => {
       return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger});
     }
     if(path==='/page-data/finance'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      const campuses=await listCampusesWithDefaults();
-      const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule,users]=await Promise.all([
-        getCachedScan(T_STUDENTS).catch(()=>[]),
-        getCachedScan(T_PURCHASES).catch(()=>[]),
-        getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
-        getCachedScan(T_ENTITLEMENT_LEDGER).catch(()=>[]),
-        getCachedScan(T_COURTS,{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
-        getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
-        getFinancePageScheduleRows(),
-        getCachedScan(T_USERS).catch(()=>[])
-      ]);
-      const scoped=filterLoadAllForUser({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule},user);
-      scoped.users=users;
-      const financeSnapshot=buildFinancePageSnapshot(scoped);
-      return sendJson(res,{
-        campuses:scoped.campuses,
-        financeOverviewData:financeSnapshot.financeOverviewData,
-        financeNormalizedRows:financeSnapshot.financeNormalizedRows,
-        financeSettlementRows:financeSnapshot.financeSettlementRows,
-        generatedAt:''
-      });
+      return handleFinancePageData({user,res,sendJson,init,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,filterLoadAllForUser,buildFinancePageSnapshot,FINANCE_PAGE_COURT_PROJECTION_FIELDS,tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_USERS}});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

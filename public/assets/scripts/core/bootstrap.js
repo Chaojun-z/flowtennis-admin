@@ -81,13 +81,26 @@ function renderStudentsIfVisible(){
 function setCampus(el,c){document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');campus=c;localStorage.setItem(CAMPUS_KEY,campus);stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();courtPage=standardListFirstPage();purPage=standardListFirstPage();pkgPage=standardListFirstPage();pricePage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();membershipOrderAuditPage=standardListFirstPage();membershipLedgerAuditPage=standardListFirstPage();refreshGlobalTopFilters();if(isStudentListPage(currentPage))renderStudents();if(currentPage==='leads')renderLeads();if(currentPage==='schedule')renderSchedule();if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();if(currentPage==='courts')renderCourts();if(currentPage==='finance')renderFinanceCenter();if(currentPage==='matches')renderMatches();if(currentPage==='admin-users')renderAdminUsers();if(currentPage==='coaches')renderCoaches();if(currentPage==='packages')renderPackages();if(currentPage==='purchases')renderPurchases();if(currentPage==='membership-orders')renderMembershipOrdersAuditPage();if(currentPage==='membership-ledger')renderMembershipLedgerAuditPage();if(currentPage==='prices')renderPrices();}
 // ===== 教练管理 =====
 // ===== 删除 & 通用 =====
+function safeConfirmHtml(html){
+  const tpl=document.createElement('template');
+  tpl.innerHTML=String(html??'');
+  tpl.content.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(node=>node.remove());
+  tpl.content.querySelectorAll('*').forEach(node=>{
+    [...node.attributes].forEach(attr=>{
+      const name=attr.name.toLowerCase();
+      const value=String(attr.value||'').trim().toLowerCase();
+      if(name.startsWith('on')||((name==='href'||name==='src')&&value.startsWith('javascript:')))node.removeAttribute(attr.name);
+    });
+  });
+  return tpl.innerHTML;
+}
 function appConfirm(message,{title='请确认',confirmText='确定',danger=false,html=false,hideIcon=false,boxClass=''}={}){
   return new Promise(resolve=>{
     const ov=document.getElementById('confOv'),ci=document.getElementById('confInput'),cb=document.getElementById('confYesBtn'),nb=document.getElementById('confNoBtn');
     const box=ov?.querySelector('.conf-box'),icon=document.getElementById('confIcon'),desc=document.getElementById('confDesc');
     if(box)box.className=`conf-box ${boxClass||''}`.trim();
     document.getElementById('confTitle').textContent=title;
-    if(desc){if(html)desc.innerHTML=message;else desc.textContent=message;}
+    if(desc){if(html)desc.innerHTML=safeConfirmHtml(message);else desc.textContent=message;}
     if(icon){icon.textContent='!';icon.style.display=hideIcon?'none':'flex';}
     if(ci){ci.value='';ci.style.display='none';ci.oninput=null;}
     if(cb){cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';cb.textContent=confirmText;cb.style.background=danger?'#dc2626':'#2454c5';cb.classList.toggle('neutral',!danger);cb.onclick=function(){closeConf();resolve(true);};}
@@ -227,7 +240,7 @@ function closeModal(){
     if(!ov.classList.contains('open'))resetModalShell();
   },220);
 }
-function toast(msg,type=''){const c=document.getElementById('toasts'),t=document.createElement('div');t.className='toast '+(type||'');t.innerHTML='<span>'+msg+'</span>';c.appendChild(t);setTimeout(()=>{t.style.cssText='opacity:0;transform:translateX(18px);transition:all .28s';setTimeout(()=>t.remove(),300);},3000);}
+function toast(msg,type=''){const c=document.getElementById('toasts'),t=document.createElement('div'),span=document.createElement('span');t.className='toast '+(type||'');span.textContent=String(msg??'');t.appendChild(span);c.appendChild(t);setTimeout(()=>{t.style.cssText='opacity:0;transform:translateX(18px);transition:all .28s';setTimeout(()=>t.remove(),300);},3000);}
 async function backupToObsidian(){
   try{toast('生成备份…','');const d=new Date(),ds=d.toISOString().slice(0,10),ts=d.toTimeString().slice(0,5);
   let md='# FlowTennis 备份\n\n时间：'+ds+' '+ts+'\n\n---\n\n## 学员（'+students.length+'人）\n\n| 姓名 | 类型 | 手机 | 来源 | 校区 |\n|------|------|------|------|------|\n';

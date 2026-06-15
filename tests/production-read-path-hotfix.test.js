@@ -3,12 +3,16 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
 
 assert.match(apiSource, /function scanFirstRows\(/, '生产应急恢复应提供限量读取 helper');
 assert.match(apiSource, /const PRODUCTION_PAGE_READ_LIMITS=\{/, '生产应急恢复应定义首屏限量读取上限');
 assert.match(apiSource, /\[T_COURTS\]:1000,/, '生产订场数据读取上限应覆盖当前美东 ft_courts 665 条，避免会员和订场用户少数');
 assert.match(apiSource, /function cappedScan\(t, limit=PRODUCTION_PAGE_READ_LIMITS\.default\)/, '生产 cappedScan 默认上限应走集中配置');
 assert.match(apiSource, /const normalizedLimit=limit===undefined\?PRODUCTION_PAGE_READ_LIMITS\.default:\(PRODUCTION_PAGE_READ_LIMITS\[t\]\|\|limit\);/, '生产 cappedScan 应支持按表覆盖读取上限');
+assert.match(apiSource, /function productionReadTruncatedError\(t,limit\)/, '生产限量读取应有明确截断错误');
+assert.match(apiSource, /scanFirstRows\(t,\{limit:normalizedLimit,detectOverflow:true\}\)/, '生产 cappedScan 应多读一条检测是否被截断');
+assert.doesNotMatch(apiSource, /console\.error\('cappedScan err:',\s*e\);\s*return \[\];/, '生产 cappedScan 不应在截断或读取失败时静默返回空数组');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[/, '线索池应定义首屏轻投影字段，避免继续全量扫描 leads 大对象');
 assert.match(apiSource, /const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=\[/, '线索跟进列表应定义轻投影字段，避免继续全量扫描 followups');
 assert.match(apiSource, /const ADMIN_USER_LIST_PROJECTION_FIELDS=\[/, '账号管理应定义首屏轻投影字段，避免继续全量扫描 users 大对象');
@@ -50,19 +54,19 @@ assert.match(
 
 assert.match(apiSource, /const FINANCE_PAGE_COURT_PROJECTION_FIELDS=\[/, '财务总览应定义订场账户轻投影字段');
 assert.match(
-  apiSource,
+  financePageSource,
   /getCachedScan\(T_COURTS,\{columns:FINANCE_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)/,
   '财务快照应对 courts 使用轻投影，避免 history 导致超时'
 );
 assert.match(
-  apiSource,
+  financePageSource,
   /const scoped=filterLoadAllForUser\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\},user\);[\s\S]*const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
   '财务总览应读取生产业务表完整事实账，避免旧基线加白名单增量造成多口径'
 );
-assert.doesNotMatch(apiSource, /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*buildVerifiedFinanceWithImportIncrements/, '财务页不应继续使用旧基线加白名单增量作为主口径');
-assert.doesNotMatch(apiSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
+assert.doesNotMatch(financePageSource, /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*buildVerifiedFinanceWithImportIncrements/, '财务页不应继续使用旧基线加白名单增量作为主口径');
+assert.doesNotMatch(financePageSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
 assert.match(
-  apiSource,
+  financePageSource,
   /const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
   '财务接口应返回基于排课轻投影聚合的教练结算数据'
 );

@@ -11,6 +11,7 @@ const migration = fs.readdirSync(migrationDir)
   .map((file) => fs.readFileSync(path.join(migrationDir, file), 'utf8'))
   .join('\n');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
+const authSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'auth.js'), 'utf8');
 
 assert.ok(rules.assertMatchPostInput, 'api._test should expose match post validation');
 assert.ok(rules.splitAaFee, 'api._test should expose AA split helper');
@@ -88,7 +89,7 @@ assert.match(apiSource, /databaseUnavailable:true,error:'约球数据库未连�
 assert.match(apiSource, /path==='\/match-settings'/, 'API should expose mini match settings endpoint');
 assert.match(apiSource, /MATCH_MINIPROGRAM_APPID/, 'match mini program should use a dedicated appid env');
 assert.match(apiSource, /MATCH_MINIPROGRAM_SECRET/, 'match mini program should use a dedicated secret env');
-assert.match(apiSource, /sendJson\(res,\{error:String\(err\?\.message\|\|'未登录'\)\},401\)/, 'match mini auth failures should return 401 for relogin');
+assert.match(authSource, /sendJson\(res,\{error:String\(err\?\.message\|\|'未登录'\)\},401\)/, 'match mini auth failures should return 401 for relogin');
 assert.match(apiSource, /path==='\/my-matches'/, 'API should expose my matches endpoint');
 assert.match(apiSource, /path==='\/match-profile'/, 'API should expose match profile endpoint');
 assert.match(apiSource, /path==='\/match-profile\/phone'/, 'API should expose match phone endpoint');
