@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "public/assets/scripts/pages/courts.js",
+      "maxLines": 2406
+    },
+    {
+      "path": "public/assets/scripts/pages/schedule.js",
+      "maxLines": 2051
+    },
+    {
+      "path": "public/assets/scripts/core/utils.js",
+      "maxLines": 1686
+    },
+    {
+      "path": "public/assets/scripts/pages/coachops.js",
+      "maxLines": 1570
+    }
+  ]
+}

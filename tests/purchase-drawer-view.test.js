@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'page-data', 'core-pages.js'), 'utf8');
 
 function fnBody(name){
   const start = source.indexOf(`function ${name}(`);
@@ -55,7 +56,7 @@ assert.doesNotMatch(openPurchaseEditModal, /openStandardModal\(/, 'purchase edit
 assert.doesNotMatch(openPurchaseVoidModal, /document\.getElementById\('mBody'\)\.innerHTML/, 'purchase void should not manually fill legacy modal body');
 assert.match(source, /setDatasetValue\('entitlementLedger',data\.entitlementLedger\|\|\[\]\)/, 'purchase page data should hydrate lesson ledger rows');
 assert.match(source, /String\(l\.purchaseId\|\|''\)===String\(purchaseId\|\|''\)\|\|entIds\.has\(l\.entitlementId\)/, 'purchase ledger should match rows by purchase id as well as entitlement id');
-assert.match(source, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
+assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 
 console.log('purchase drawer view tests passed');

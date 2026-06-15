@@ -1,5 +1,9 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
+const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
 function fnBody(name){
   const start = html.indexOf(`function ${name}(`);
@@ -19,11 +23,11 @@ assert.match(fnBody('goPage'), /if\(!skipRender\)loadPageDataAndRender\(pg,\{qui
 assert.doesNotMatch(fnBody('loadPageBackgroundDatasets'), /for\(const name of immediateNames\)/, 'background page datasets should not load one by one');
 assert.match(fnBody('loadPageBackgroundDatasets'), /Promise\.allSettled\(immediateNames\.map/, 'background page datasets should load the current batch in parallel');
 assert.match(fnBody('loadPageBackgroundDatasets'), /if\(isStudentListPage\(pg\)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS\.length\)/, 'student list pages should allow a second deferred background batch');
-assert.match(html, /if\(path==='\/page-data\/plans'&&method==='GET'\)/, 'api should expose an aggregated plans page endpoint');
-assert.match(html, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
-assert.match(html, /if\(path==='\/page-data\/finance'&&method==='GET'\)/, 'api should expose an aggregated finance page endpoint');
-assert.match(html, /if\(path==='\/page-data\/courts'&&method==='GET'\)/, 'api should expose an aggregated courts page endpoint');
-assert.match(html, /if\(path==='\/page-data\/memberships'&&method==='GET'\)/, 'api should expose an aggregated memberships page endpoint');
-assert.match(html, /if\(path==='\/page-data\/workbench'&&method==='GET'\)/, 'api should expose an aggregated workbench page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/plans'&&method==='GET'\)/, 'api should expose an aggregated plans page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/purchases'&&method==='GET'\)/, 'api should expose an aggregated purchases page endpoint');
+assert.match(apiSource, /if\(path==='\/page-data\/finance'&&method==='GET'\)/, 'api should expose an aggregated finance page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/courts'&&method==='GET'\)/, 'api should expose an aggregated courts page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/memberships'&&method==='GET'\)/, 'api should expose an aggregated memberships page endpoint');
+assert.match(corePageDataSource, /if\(path==='\/page-data\/workbench'&&method==='GET'\)/, 'api should expose an aggregated workbench page endpoint');
 
 console.log('page load strategy tests passed');

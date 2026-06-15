@@ -348,6 +348,7 @@ assert.doesNotMatch(configJs, /SCHEDULE_TEMPLATE_ID|COURSE_REMINDER_TEMPLATE_ID/
 assert.doesNotMatch(configJs, /WEB_VIEW_URL/, 'mini program config should no longer keep the removed webview URL');
 
 const apiServerJs = readText('api/index.js');
+const corePageDataJs = readText('api/page-data/core-pages.js');
 assert.match(apiServerJs, /\/auth\/wechat-login/, 'API should support mini program login by bound openid');
 assert.match(apiServerJs, /findWechatUserByOpenId/, 'API should find the bound coach account by openid');
 assert.match(apiServerJs, /pages\/detail\/detail/, 'course reminders should still deep link to native course detail');
@@ -365,11 +366,11 @@ assert.match(apiServerJs, /pendingFeedbackCount/, 'workbench API should expose s
 assert.match(apiServerJs, /trialConversionRate/, 'workbench API should expose standard stats fields');
 assert.match(apiServerJs, /overallTrialConversionRate/, 'workbench API should expose overall coach trial conversion stats for the mini program');
 assert.match(apiServerJs, /workbenchState:/, 'workbench API should expose standard state enum for each schedule');
-assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
-assert.match(apiServerJs, /cappedScan\(T_ENTITLEMENT_LEDGER\)/, 'workbench API should read entitlement consume ledger for the mini program');
-assert.match(apiServerJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
-assert.match(apiServerJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
-assert.match(apiServerJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');
+assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENTS\)/, 'workbench API should read entitlement balances for the mini program');
+assert.match(corePageDataJs, /cappedScan\(T_ENTITLEMENT_LEDGER\)/, 'workbench API should read entitlement consume ledger for the mini program');
+assert.match(corePageDataJs, /entitlements:scoped\.entitlements\|\|\[\]/, 'workbench API should return scoped entitlement balances');
+assert.match(corePageDataJs, /entitlementLedger:scoped\.entitlementLedger\|\|\[\]/, 'workbench API should return scoped entitlement ledger');
+assert.match(corePageDataJs, /studentSchedule:decoratedStudentSchedule/, 'workbench API should return an expanded schedule set for student details without changing the timetable schedule');
 
 const miniApiJs = readText('wechat-miniprogram/miniprogram/utils/api.js');
 assert.match(miniApiJs, /function saveCoachFeedback/, 'mini program API helper should provide feedback save');
