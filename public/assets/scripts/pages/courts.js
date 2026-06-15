@@ -1328,6 +1328,7 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('余额有效期',summary.validUntil||account?.validUntil||'-'),
     renderDetailDrawerField('清零时间',account?.hardExpireAt||'-')
   ]:[];
+  const editAction=`<button type="button" class="schedule-detail-action" onclick="openCourtModal('${court.id}')">编辑资料</button>`;
   const overview=renderDetailDrawerCard('会员账户',[
     renderDetailDrawerField('账户类型',account?'会员':'普通用户'),
     renderDetailDrawerField('累计充值',`¥${fmt(finance.totalDeposit)}`),
@@ -1336,7 +1337,7 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('累计订场',`${bookingSummary.count} 次`),
     ...memberFields,
     renderDetailDrawerField('充值备注',latestOrder?.notes||'-',{full:true})
-  ].join(''));
+  ].join(''),{actionsHtml:editAction});
   const followup=renderDetailDrawerCard('用户跟进',[
     renderDetailDrawerField('对接人',court?.owner||'-'),
     renderDetailDrawerField('熟悉程度',court?.familiarity||'-'),
