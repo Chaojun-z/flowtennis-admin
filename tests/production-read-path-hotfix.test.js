@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../api/leads-routes.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
@@ -42,13 +44,13 @@ assert.match(
 );
 
 assert.match(
-  apiSource,
+  leadsRoutesSource,
   /const rows=isProductionRuntime\(\)\?await scanFirstRows\(T_LEAD_FOLLOWUPS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_LEAD_FOLLOWUPS,\{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\);/,
   '线索跟进列表应在 production 改成限量轻投影读取'
 );
 
 assert.match(
-  apiSource,
+  leadsRoutesSource,
   /const rows=isProductionRuntime\(\)\?await scanFirstRows\(T_LEADS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.leads,columns:LEAD_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_LEADS,\{columns:LEAD_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\);/,
   '线索池列表应在 production 改成限量轻投影读取'
 );
@@ -91,7 +93,7 @@ assert.match(
   '/students 应使用 ft_students 快路读取'
 );
 assert.match(
-  apiSource,
+  corePageDataSource,
   /if\(path==='\/page-data\/courts'&&method==='GET'\)\{[\s\S]*getFastStudentsRead\(\{columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_COURTS,\{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)[\s\S]*membershipAccounts:\[\][\s\S]*coaches:\[\][\s\S]*pricePlans:\[\]/,
   '订场用户首屏应改成 courts/students 轻投影，并允许临时清空扩展数据'
 );

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
 assert.match(
@@ -18,7 +18,7 @@ assert.match(
 );
 
 assert.match(
-  apiSource,
+  corePageDataSource,
   /if\(path==='\/page-data\/coaches'&&method==='GET'\)\{[\s\S]*if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);[\s\S]*const coaches=await cappedScan\(T_COACHES\);[\s\S]*return sendJson\(res,\{coaches:filterLoadAllForUser\(\{coaches\},user\)\.coaches\}\);[\s\S]*\}/,
   'api should expose a dedicated coach page-data endpoint backed by cappedScan'
 );

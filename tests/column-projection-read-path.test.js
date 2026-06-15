@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const corePageDataSource = fs.readFileSync(path.join(__dirname, '../api/page-data/core-pages.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
 assert.match(
@@ -24,7 +25,7 @@ assert.match(
 );
 
 assert.match(
-  apiSource,
+  corePageDataSource,
   /if\(path==='\/page-data\/courts'&&method==='GET'\)\{[\s\S]*getFastStudentsRead\(\{columns:COURTS_PAGE_STUDENT_PROJECTION_FIELDS\}\)[\s\S]*getCachedScan\(T_COURTS,\{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\)/s,
   'courts page data should request projected student and court columns on the server side'
 );
