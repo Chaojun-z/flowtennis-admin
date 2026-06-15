@@ -95,6 +95,9 @@ const built = snapshot.buildDailyFinanceSnapshot({
 });
 
 assert.strictEqual(built.schemaVersion, 1);
+assert.strictEqual(built.baselineType, 'operating_finance_snapshot');
+assert.strictEqual(built.sourceOfTruth, 'online_readonly_snapshot');
+assert.strictEqual(built.notCodeRegressionGuard, true);
 assert.strictEqual(built.snapshotDate, '2026-05-31');
 assert.strictEqual(built.environment.tsInstance, 'flowtennis-ue');
 assert.strictEqual(built.tables.ft_courts.rowCount, 1);

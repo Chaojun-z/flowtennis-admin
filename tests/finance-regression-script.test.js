@@ -20,6 +20,14 @@ const snapshot = financeRegression.loadJsonFile(snapshotPath);
 const metrics = financeRegression.computeFinanceMetrics(snapshot);
 const comparison = financeRegression.compareMetrics(metrics, baseline.metrics);
 
+assert.strictEqual(baseline.purpose, 'code_regression_guard', 'finance baseline should declare it is a code regression guard sample');
+assert.strictEqual(baseline.notOperatingTruth, true, 'finance baseline should not be mistaken for current operating finance truth');
+assert.match(
+  baseline.notice || '',
+  /不是线上经营真实数/,
+  'finance baseline notice should warn that fixture numbers are not current operating truth'
+);
+
 assert.deepStrictEqual(
   metrics,
   {
@@ -40,6 +48,8 @@ const successRun = spawnSync('node', [scriptPath, '--baseline', baselinePath, '-
 
 assert.strictEqual(successRun.status, 0, `finance regression script should exit 0 on matching fixture: ${successRun.stderr || successRun.stdout}`);
 assert.match(successRun.stdout, /finance regression passed/i, 'success output should clearly state pass');
+assert.match(successRun.stdout, /代码门禁固定样本/, 'success output should name the baseline as a code guard sample');
+assert.match(successRun.stdout, /不是线上经营真实数/, 'success output should warn operators not to read fixture metrics as operating truth');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-regression-'));
 const mismatchPath = path.join(tmpDir, 'snapshot-mismatch.json');

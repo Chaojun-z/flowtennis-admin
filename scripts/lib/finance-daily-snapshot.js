@@ -181,6 +181,10 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
 
   return {
     schemaVersion: 1,
+    baselineType: 'operating_finance_snapshot',
+    sourceOfTruth: 'online_readonly_snapshot',
+    notCodeRegressionGuard: true,
+    usage: '用于核对线上当天经营财务真实状态；不要和 config/finance-baseline.v2.json 的代码门禁固定样本混用。',
     generatedAt,
     snapshotDate,
     environment: {

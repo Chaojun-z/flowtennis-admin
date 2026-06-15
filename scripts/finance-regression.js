@@ -121,7 +121,13 @@ function main() {
       process.exit(1);
     }
     console.log('finance regression passed');
-    console.log(JSON.stringify({ metrics: result.metrics, baselineId: result.baseline.baselineId }, null, 2));
+    console.log(JSON.stringify({
+      baselineId: result.baseline.baselineId,
+      purpose: result.baseline.purpose || 'code_regression_guard',
+      purposeLabel: result.baseline.purposeLabel || '代码门禁固定样本',
+      notice: result.baseline.notice || '本结果只表示固定样本没有漂移，不是线上经营真实数。',
+      metrics: result.metrics
+    }, null, 2));
   } catch (error) {
     console.error(`finance regression failed: ${error.message}`);
     process.exit(1);
