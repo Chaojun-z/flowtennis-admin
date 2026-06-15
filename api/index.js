@@ -24,6 +24,8 @@ const { createMembershipRules } = require('./membership');
 const { createCourtRoutes } = require('./courts-routes');
 const { createMembershipRoutes } = require('./membership-routes');
 const { createPurchaseEntitlementRoutes } = require('./purchase-entitlement-routes');
+const { createMatchRoutes } = require('./match-routes');
+const { createLeadsRoutes } = require('./leads-routes');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -681,6 +683,16 @@ const {
   normalizeMembershipOrderViewRecord
 }=membershipRules;
 const routeSendJson=(...args)=>{sendJson(...args);return true;};
+const handleLeadsRoutes=createLeadsRoutes({
+  init,sendJson:routeSendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,
+  cleanLeadText,ensureLeadTables,scanFirstRows,PRODUCTION_PAGE_READ_LIMITS,
+  LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS,LEAD_LIST_PROJECTION_FIELDS,mergeDuplicateLeadRows,
+  normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
+  normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
+  buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,
+  buildLeadStudentRecord,buildLeadCourtRecord,
+  T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS
+});
 const handleCourtRoutes=createCourtRoutes({
   init,sendJson:routeSendJson,getCachedScan,getCachedRow,filterLoadAllForUser,uuidv4,
   buildOperationTrace,stampCourtHistoryOperationTrace,normalizeCourtRecord,put,
@@ -4518,6 +4530,17 @@ const {
   requireMatchUser,
   ensureMatchUserResponse
 }=createAuthServices({JWT_SECRET,normalizePermissionProfile,userHasFeaturePermission,getCachedRow,getCachedScan,isTableMissingError,withTimeout,T_USERS,sendJson});
+const handleMatchRoutes=createMatchRoutes({
+  sendJson:routeSendJson,uuidv4,MATCH_MINIPROGRAM_SECRET,isProductionRuntime,fetchWechatSession,extractWechatOpenId,
+  getMatchSqlPool,buildMatchUserToken,canMatchUserCreate,ensureMatchUserResponse,
+  listMatchesForViewer,createMatchForUser,getMatchForViewer,toMatchDetailResponse,updateMatchForUser,
+  cancelMatchForUser,registerMatchUser,cancelRegistrationForUser,submitMatchTechnicalRating,
+  listMyMatches,getMatchProfile,updateMatchProfile,fetchWechatPhoneNumber,getMatchSettings,
+  creatorConfirmMatchAttendance,listMatchNotifications,listMatchPlayers,requireAdminUser,
+  requireMatchAdminPermission,listAdminMatches,shouldUseEmptyMatchAdminListFallback,saveMatchSettings,
+  getMatchFinanceDailyReportForAdmin,adminBookMatch,adminCancelMatch,confirmMatchAttendance,
+  adminHandleBookedWithdrawal,adminTransferMatchReplacement,generateMatchFeeLedger,markMatchFeeSplit
+});
 function diagnosticsTokenAllowed(req){
   const token=String(process.env.DIAG_TOKEN||process.env.CRON_SECRET||'').trim();
   if(!token)return false;
@@ -7287,122 +7310,7 @@ module.exports = async (req, res) => {
       const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});
       return sendJson(res,{token,user:payload});
     }
-  if(path==='/auth/wechat-mini-login'&&method==='POST'){
-      const code=String(body.code||'').trim();
-      if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=(!isProductionRuntime()&&!MATCH_MINIPROGRAM_SECRET)
-        ? {openid:'preview-match-openid',unionid:'preview-match-unionid'}
-        : await fetchWechatSession(code,'match');
-      const openid=extractWechatOpenId(session);
-      const unionid=session.unionid?String(session.unionid):'';
-      const pool=getMatchSqlPool();
-      const existing=await pool.query('SELECT * FROM match_users WHERE openid=$1 LIMIT 1',[openid]);
-      let matchUser=existing.rows[0];
-      if(!matchUser){
-        const now=new Date().toISOString();
-        matchUser={id:uuidv4(),openid,unionid,nickName:'',avatarUrl:'',phone:'',ntrpLevel:'',createdAt:now,updatedAt:now};
-        await pool.query(
-          'INSERT INTO match_users(id,openid,unionid,nickName,avatarUrl,phone,ntrpLevel,createdAt,updatedAt) VALUES($1,$2,$3,$4,$5,$6,$7,NOW(),NOW())',
-          [matchUser.id,matchUser.openid,matchUser.unionid,matchUser.nickName,matchUser.avatarUrl,matchUser.phone,matchUser.ntrpLevel]
-        );
-      }
-      return sendJson(res,{token:buildMatchUserToken(matchUser),user:{id:matchUser.id,type:'match_user',openid:matchUser.openid,phone:matchUser.phone||'',ntrpLevel:matchUser.ntrplevel||matchUser.ntrpLevel||'',canCreateMatch:await canMatchUserCreate(matchUser.id)}});
-    }
-    if(path==='/matches'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,{items:await listMatchesForViewer(matchUser.id)});
-    }
-    if(path==='/matches'&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      const profile=await getMatchSqlPool().query('SELECT phone FROM match_users WHERE id=$1',[matchUser.id]);
-      if(!profile.rows[0]?.phone)return sendJson(res,{error:'请先授权手机号'},409);
-      return sendJson(res,await createMatchForUser(matchUser.id,body));
-    }
-    const matchDetailM=path.match(/^\/matches\/([^/]+)$/);
-    if(matchDetailM&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      const match=await getMatchForViewer(matchDetailM[1],matchUser.id);
-      if(!match)return sendJson(res,{error:'球局不存在'},404);
-      return sendJson(res,toMatchDetailResponse(match));
-    }
-    const matchUpdateM=path.match(/^\/matches\/([^/]+)$/);
-    if(matchUpdateM&&method==='PUT'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{
-        await updateMatchForUser(matchUpdateM[1],matchUser.id,body);
-        const match=await getMatchForViewer(matchUpdateM[1],matchUser.id);
-        return sendJson(res,toMatchDetailResponse(match));
-      }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const matchCancelM=path.match(/^\/matches\/([^/]+)\/cancel$/);
-    if(matchCancelM&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{return sendJson(res,await cancelMatchForUser(matchCancelM[1],matchUser.id,body.reason));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const matchRegisterM=path.match(/^\/matches\/([^/]+)\/register$/);
-    if(matchRegisterM&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      const profile=await getMatchSqlPool().query('SELECT phone FROM match_users WHERE id=$1',[matchUser.id]);
-      if(!profile.rows[0]?.phone)return sendJson(res,{error:'请先授权手机号'},409);
-      try{return sendJson(res,await registerMatchUser(matchRegisterM[1],matchUser.id));}
-      catch(err){
-        const message=String(err?.message||err);
-        return sendJson(res,{error:message},/名额已满|已报名/.test(message)?409:400);
-      }
-    }
-    const matchCancelRegisterM=path.match(/^\/matches\/([^/]+)\/cancel-registration$/);
-    if(matchCancelRegisterM&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{return sendJson(res,await cancelRegistrationForUser(matchCancelRegisterM[1],matchUser.id));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const matchRatingM=path.match(/^\/matches\/([^/]+)\/technical-rating$/);
-    if(matchRatingM&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{return sendJson(res,await submitMatchTechnicalRating(matchRatingM[1],matchUser.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    if(path==='/my-matches'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,{items:await listMyMatches(matchUser.id)});
-    }
-    if(path==='/match-profile'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,await getMatchProfile(matchUser.id));
-    }
-    if(path==='/match-profile'&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,await updateMatchProfile(matchUser.id,body));
-    }
-    if(path==='/match-profile/phone'&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,await updateMatchProfile(matchUser.id,{phone:body.phone}));
-    }
-    if(path==='/match-profile/phone-code'&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{
-        const phone=await fetchWechatPhoneNumber(String(body.code||'').trim(),'match');
-        return sendJson(res,await updateMatchProfile(matchUser.id,{phone}));
-      }catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    if(path==='/match-settings'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,await getMatchSettings());
-    }
-    if(path==='/match-attendance/creator-confirm'&&method==='POST'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      try{return sendJson(res,await creatorConfirmMatchAttendance(body.matchId,matchUser.id,body.registrationId,body.finalAttendanceStatus));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    if(path==='/match-notifications'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,{items:await listMatchNotifications(matchUser.id)});
-    }
-    if(path==='/match-players'&&method==='GET'){
-      const matchUser=ensureMatchUserResponse(req,res);if(!matchUser)return;
-      return sendJson(res,{items:await listMatchPlayers()});
-    }
+    if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     if(user.type==='match_user')return sendJson(res,{error:'无管理端权限'},403);
     const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
@@ -7419,73 +7327,7 @@ module.exports = async (req, res) => {
       try{return sendJson(res,await savePackageBoardPreferences(body,user));}
       catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
     }
-    if(path==='/admin/matches'&&method==='GET'){
-      requireAdminUser(user);
-      try{
-        return sendJson(res,{items:await listAdminMatches()});
-      }catch(err){
-        if(shouldUseEmptyMatchAdminListFallback(err)){
-          console.warn('[match-admin] database unavailable, returning empty local list',String(err?.message||err));
-          return sendJson(res,{items:[],databaseUnavailable:true,error:'约球数据库未连接'});
-        }
-        throw err;
-      }
-    }
-    if(path==='/admin/matches/settings'&&method==='GET'){
-      requireMatchAdminPermission(user,'match_ops');
-      return sendJson(res,await getMatchSettings());
-    }
-    if(path==='/admin/matches/settings'&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      return sendJson(res,await saveMatchSettings(body,user.id));
-    }
-    if(path==='/admin/matches/finance-daily'&&method==='GET'){
-      requireMatchAdminPermission(user,'match_finance');
-      return sendJson(res,await getMatchFinanceDailyReportForAdmin(query.get('date')||new Date().toISOString().slice(0,10)));
-    }
-    const adminBookingM=path.match(/^\/admin\/matches\/([^/]+)\/booking$/);
-    if(adminBookingM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      try{return sendJson(res,await adminBookMatch(adminBookingM[1],user.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminCancelM=path.match(/^\/admin\/matches\/([^/]+)\/cancel$/);
-    if(adminCancelM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      try{return sendJson(res,await adminCancelMatch(adminCancelM[1],user.id,body.reason));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminAttendanceM=path.match(/^\/admin\/matches\/([^/]+)\/attendance$/);
-    if(adminAttendanceM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      try{return sendJson(res,await confirmMatchAttendance(adminAttendanceM[1],user.id,body.items||body.participants||[]));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminWithdrawalM=path.match(/^\/admin\/matches\/([^/]+)\/registrations\/([^/]+)\/withdrawal$/);
-    if(adminWithdrawalM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      try{return sendJson(res,await adminHandleBookedWithdrawal(adminWithdrawalM[1],adminWithdrawalM[2],user.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminReplacementM=path.match(/^\/admin\/matches\/([^/]+)\/replacements\/transfer$/);
-    if(adminReplacementM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_ops');
-      requireMatchAdminPermission(user,'match_finance');
-      try{return sendJson(res,await adminTransferMatchReplacement(adminReplacementM[1],user.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminFeeConfirmM=path.match(/^\/admin\/matches\/([^/]+)\/fees\/confirm$/);
-    if(adminFeeConfirmM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_finance');
-      try{return sendJson(res,await generateMatchFeeLedger(adminFeeConfirmM[1],user.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
-    const adminFeeSplitM=path.match(/^\/admin\/matches\/([^/]+)\/fees\/splits\/([^/]+)$/);
-    if(adminFeeSplitM&&method==='POST'){
-      requireMatchAdminPermission(user,'match_finance');
-      try{return sendJson(res,await markMatchFeeSplit(adminFeeSplitM[1],adminFeeSplitM[2],user.id,body));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
+    if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;
     if(path==='/admin/create-user'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
@@ -8059,238 +7901,7 @@ module.exports = async (req, res) => {
       const sample=String(query?.get('sample')||'').trim();
       return sendJson(res,await loadCourtAccountListViewCompare({sampleIds:ids,sample}));
     }
-    if(path==='/lead-followups'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const leadId=cleanLeadText(query.get('leadId'));
-      const rows=isProductionRuntime()?await scanFirstRows(T_LEAD_FOLLOWUPS,{limit:PRODUCTION_PAGE_READ_LIMITS.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
-      if(!isCampusScopedAdmin(user))return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
-      const leads=await getCachedScan(T_LEADS,{columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]);
-      const scoped=filterLoadAllForUser({leads,leadFollowups:rows},user).leadFollowups;
-      return sendJson(res,leadId?scoped.filter(row=>String(row.leadId||'')===leadId):scoped);
-    }
-    if(path==='/leads'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      if(method==='GET'){
-        const rows=isProductionRuntime()?await scanFirstRows(T_LEADS,{limit:PRODUCTION_PAGE_READ_LIMITS.leads,columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEADS,{columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]);
-        const q=cleanLeadText(query.get('q')).toLowerCase();
-        const source=cleanLeadText(query.get('source'));
-        const consultType=cleanLeadText(query.get('consultType'));
-        const owner=cleanLeadText(query.get('owner'));
-        const systemStatus=cleanLeadText(query.get('systemStatus'));
-        const waiting=cleanLeadText(query.get('waiting'));
-        const dateFrom=cleanLeadText(query.get('dateFrom'));
-        const dateTo=cleanLeadText(query.get('dateTo'));
-        const todayStr=new Date().toISOString().slice(0,10);
-        const visibleRows=filterLoadAllForUser({leads:mergeDuplicateLeadRows(rows)},user).leads;
-        const filtered=visibleRows.filter(row=>{
-          if(q&&!searchHit(q,row.displayName,row.wechatName,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
-          if(source&&row.source!==source)return false;
-          if(consultType&&row.consultType!==consultType)return false;
-          if(owner&&row.owner!==owner)return false;
-          if(systemStatus&&row.systemStatus!==systemStatus)return false;
-          if(dateFrom&&String(row.leadDate||'')<dateFrom)return false;
-          if(dateTo&&String(row.leadDate||'')>dateTo)return false;
-          if(waiting==='today'&&String(row.nextFollowupAt||'').slice(0,10)!==todayStr)return false;
-          if(waiting==='overdue'&&String(row.nextFollowupAt||'').slice(0,10)>=todayStr)return false;
-          return true;
-        }).sort((a,b)=>String(b.leadDate||b.createdAt||'').localeCompare(String(a.leadDate||a.createdAt||'')));
-        return sendJson(res,filtered);
-      }
-      if(method==='POST'){
-        const now=new Date().toISOString();
-        const lead=normalizeLeadRecord({...body,createdAt:now,updatedAt:now},{now});
-        const existingLeads=await scan(T_LEADS).catch(()=>[]);
-        const sameName=mergeDuplicateLeadRows(existingLeads).find(row=>leadCanonicalNameKey(row)===leadCanonicalNameKey(lead));
-        if(sameName){
-          const next=mergeLeadRows([sameName,{...lead,id:sameName.id,createdAt:sameName.createdAt,leadDate:sameName.leadDate,updatedAt:now}]);
-          await put(T_LEADS,next.id,next);
-          return sendJson(res,{lead:next,followup:null,merged:true});
-        }
-        await put(T_LEADS,lead.id,lead);
-        const followup=body.createInitialFollowup===false?null:buildLeadInitialFollowup(lead);
-        if(followup)await put(T_LEAD_FOLLOWUPS,followup.id,followup);
-        return sendJson(res,{lead,followup});
-      }
-    }
-    const leadIdM=path.match(/^\/leads\/([^/]+)$/);
-    if(leadIdM){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await ensureLeadTables();
-      const leadId=leadIdM[1];
-      if(method==='PUT'){
-        await init();
-        const old=await get(T_LEADS,leadId).catch(()=>null);
-        if(!old)return sendJson(res,{error:'线索不存在'},404);
-        const next=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
-        await put(T_LEADS,leadId,next);
-        return sendJson(res,next);
-      }
-    }
-    const leadFollowupIdM=path.match(/^\/lead-followups\/([^/]+)$/);
-    if(leadFollowupIdM){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const followupId=leadFollowupIdM[1];
-      if(method==='PUT'){
-        const oldFollowup=await get(T_LEAD_FOLLOWUPS,followupId).catch(()=>null);
-        if(!oldFollowup)return sendJson(res,{error:'跟进记录不存在'},404);
-        const leadId=cleanLeadText(oldFollowup.leadId);
-        const lead=await get(T_LEADS,leadId).catch(()=>null);
-        if(!lead)return sendJson(res,{error:'线索不存在'},404);
-        const followup=normalizeLeadFollowupRecord({...oldFollowup,...body,id:followupId,leadId,createdAt:oldFollowup.createdAt},{now:new Date().toISOString()});
-        await put(T_LEAD_FOLLOWUPS,followupId,followup);
-        const rows=(await scan(T_LEAD_FOLLOWUPS).catch(()=>[])).filter(row=>String(row.leadId||'')===String(leadId)).map(row=>String(row.id||'')===String(followupId)?followup:row);
-        const nextLead=applyLeadFollowupsSnapshot(lead,rows);
-        await put(T_LEADS,leadId,nextLead);
-        return sendJson(res,{followup,lead:nextLead});
-      }
-    }
-    const leadFollowupsM=path.match(/^\/leads\/([^/]+)\/followups$/);
-    if(leadFollowupsM){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const leadId=leadFollowupsM[1];
-      const lead=await get(T_LEADS,leadId).catch(()=>null);
-      if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(method==='GET'){
-        const rows=((isProductionRuntime()?await scanFirstRows(T_LEAD_FOLLOWUPS,{limit:PRODUCTION_PAGE_READ_LIMITS.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[])))
-          .filter(row=>String(row.leadId||'')===String(leadId))
-          .sort((a,b)=>String(b.followupAt||b.createdAt||'').localeCompare(String(a.followupAt||a.createdAt||'')));
-        return sendJson(res,rows);
-      }
-      if(method==='POST'){
-        const followup=normalizeLeadFollowupRecord({...body,leadId,followupBy:body.followupBy||user.name||''},{now:new Date().toISOString()});
-        await put(T_LEAD_FOLLOWUPS,followup.id,followup);
-        const nextLead=applyLeadFollowupSnapshot(lead,followup);
-        await put(T_LEADS,leadId,nextLead);
-        return sendJson(res,{followup,lead:nextLead});
-      }
-    }
-    if(path==='/leads/import-preview'&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const leads=normalizeLeadImportRows(body);
-      const [students,courts,membershipAccounts]=await Promise.all([
-        scan(T_STUDENTS).catch(()=>[]),
-        scan(T_COURTS).catch(()=>[]),
-        scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])
-      ]);
-      const rows=buildLeadImportPreviewRows(leads,{students,courts,membershipAccounts});
-      return sendJson(res,{rows,summary:leadImportPreviewSummary(rows)});
-    }
-    if(path==='/leads/import-commit'&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const batchKey=cleanLeadText(body.batchKey)||`preview:${Buffer.from(String(body.csvText||'')).toString('base64').slice(0,48)}`;
-      const existingBatch=await get(T_LEAD_IMPORT_BATCHES,batchKey).catch(()=>null);
-      if(existingBatch)return sendJson(res,existingBatch);
-      const previewRows=Array.isArray(body.rows)&&body.rows.length?body.rows:buildLeadImportPreviewRows(normalizeLeadImportRows(body),{
-        students:await scan(T_STUDENTS).catch(()=>[]),
-        courts:await scan(T_COURTS).catch(()=>[]),
-        membershipAccounts:await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])
-      });
-      const existingLeads=await scan(T_LEADS).catch(()=>[]);
-      const existingKeys=new Set((existingLeads||[]).map(buildLeadDedupKey));
-      const rowsToCreate=dedupeLeadRows(previewRows).filter(row=>!existingKeys.has(buildLeadDedupKey(row)));
-      const createdLeads=[];
-      const createdFollowups=[];
-      for(const row of rowsToCreate){
-        const lead=normalizeLeadRecord(row,{id:row.id,now:new Date().toISOString()});
-        await put(T_LEADS,lead.id,lead);
-        createdLeads.push(lead);
-        const followup=buildLeadInitialFollowup(lead);
-        await put(T_LEAD_FOLLOWUPS,followup.id,followup);
-        createdFollowups.push(followup);
-      }
-      const result={
-        batchKey,
-        importedAt:new Date().toISOString(),
-        leadCount:createdLeads.length,
-        followupCount:createdFollowups.length,
-        skippedDuplicates:(previewRows||[]).length-rowsToCreate.length,
-        summary:{...leadImportPreviewSummary(previewRows),importableRows:rowsToCreate.length}
-      };
-      await put(T_LEAD_IMPORT_BATCHES,batchKey,result);
-      return sendJson(res,result);
-    }
-    const leadConvertStudentM=path.match(/^\/leads\/([^/]+)\/convert-student$/);
-    if(leadConvertStudentM&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const leadId=leadConvertStudentM[1];
-      const lead=await get(T_LEADS,leadId).catch(()=>null);
-      if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(lead.studentId){
-        const student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
-        return sendJson(res,{lead,student,created:false});
-      }
-      let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
-      if(!student){
-        student=buildLeadStudentRecord(lead,{now:new Date().toISOString()});
-        await put(T_STUDENTS,student.id,student);
-      }
-      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student,created:!body.studentId});
-    }
-    const leadConvertCourtM=path.match(/^\/leads\/([^/]+)\/convert-court$/);
-    if(leadConvertCourtM&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const leadId=leadConvertCourtM[1];
-      const lead=await get(T_LEADS,leadId).catch(()=>null);
-      if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(lead.courtId){
-        const court=await get(T_COURTS,lead.courtId).catch(()=>null);
-        return sendJson(res,{lead,court,created:false});
-      }
-      let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
-      if(!court){
-        court=buildLeadCourtRecord(lead,{studentId:lead.studentId,now:new Date().toISOString()});
-        await put(T_COURTS,court.id,court);
-      }
-      const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
-      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court,created:!body.courtId});
-    }
-    const leadLinkStudentM=path.match(/^\/leads\/([^/]+)\/link-student$/);
-    if(leadLinkStudentM&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const lead=await get(T_LEADS,leadLinkStudentM[1]).catch(()=>null);
-      const student=await get(T_STUDENTS,body.studentId).catch(()=>null);
-      if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student});
-    }
-    const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
-    if(leadLinkCourtM&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      await ensureLeadTables();
-      const lead=await get(T_LEADS,leadLinkCourtM[1]).catch(()=>null);
-      const court=await get(T_COURTS,body.courtId).catch(()=>null);
-      if(!lead)return sendJson(res,{error:'线索不存在'},404);
-      if(!court)return sendJson(res,{error:'订场用户不存在'},404);
-      const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
-      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
-      await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court,membershipAccount});
-    }
+    if(await handleLeadsRoutes({path,method,body,user,res,query}))return;
     if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({classes:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).classes);const [schedule,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({classes:rows,schedule,coaches},user,coachRefs).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(path==='/campuses'){

@@ -15,6 +15,7 @@ const pageScriptFiles = [
   'campusmgr.js',
   'leads.js',
   'students.js',
+  'schedule-helpers.js',
   'schedule.js',
   'classes.js',
   'plans.js',
@@ -24,6 +25,7 @@ const pageScriptFiles = [
   'entitlements.js',
   'coachops.js',
   'prices.js',
+  'courts-helpers.js',
   'courts.js',
   'matches.js',
   'coach-portal.js'

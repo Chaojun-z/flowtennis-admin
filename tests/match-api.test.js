@@ -10,7 +10,10 @@ const migration = fs.readdirSync(migrationDir)
   .sort()
   .map((file) => fs.readFileSync(path.join(migrationDir, file), 'utf8'))
   .join('\n');
-const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
+const apiSource = [
+  fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8'),
+  fs.readFileSync(path.join(__dirname, '..', 'api', 'match-routes.js'), 'utf8')
+].join('\n');
 const authSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'auth.js'), 'utf8');
 
 assert.ok(rules.assertMatchPostInput, 'api._test should expose match post validation');

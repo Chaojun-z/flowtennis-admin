@@ -2,11 +2,11 @@
   "files": [
     {
       "path": "public/assets/scripts/pages/courts.js",
-      "maxLines": 2406
+      "maxLines": 2399
     },
     {
       "path": "public/assets/scripts/pages/schedule.js",
-      "maxLines": 2051
+      "maxLines": 2043
     },
     {
       "path": "public/assets/scripts/core/utils.js",

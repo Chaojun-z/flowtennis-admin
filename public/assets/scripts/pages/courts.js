@@ -54,9 +54,6 @@ function selectCourtTopCampus(value,event){
   renderCourts();
   closeStandardTopDropdowns();
 }
-function courtDateFilterQuickOptions(){
-  return ['全部','今日','本周','本月','自定义'];
-}
 function isGlobalDateRangeDraftContext(){
   return typeof globalDateRangeDraftActive!=='undefined'&&globalDateRangeDraftActive&&globalTopFilterPages().includes(currentPage);
 }
@@ -65,10 +62,6 @@ function courtDateRangeViewAnchor(){
 }
 function setCourtDateRangeViewAnchor(value){
   if(isGlobalDateRangeDraftContext())window.__globalDateRangeDraftViewAnchor=value;else window.__courtDateRangeViewAnchor=value;
-}
-function formatCourtDateRangeValue(start,end){
-  if(!start||!end)return '全部时间';
-  return `${start} 至 ${end}`;
 }
 function currentCourtDateRangeLabel(){
   if(courtDateRangeFilterValue==='全部')return '全部时间';

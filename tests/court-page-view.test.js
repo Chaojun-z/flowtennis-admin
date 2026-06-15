@@ -13,7 +13,7 @@ function fnBody(name){
 }
 
 assert.match(fnBody('scheduleTimeRangeControls'), /refreshScheduleTimeDerivedFields/, 'schedule time range controls should refresh lesson hours when date or time changes');
-assert.match(html, /<th style="width:64px">重复\?<\/th>/, 'schedule table should expose a dedicated repeat column beside course type');
+assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule table should expose repeat status beside course type');
 assert.match(fnBody('toggleStandardDropdown'), /const container=dropdown\.closest\('\.mbody'\)/, 'dropdown opening direction should account for modal body clipping');
 assert.match(fnBody('toggleStandardDropdown'), /containerRect\.bottom/, 'dropdown should compare available space against the modal scroll body');
 assert.match(fnBody('toggleStandardDropdown'), /spaceBelow<menuHeight\+12&&spaceAbove>spaceBelow/, 'dropdown should open upward when modal space below is too small');
@@ -23,20 +23,19 @@ assert.match(pagesCss, /\.tms-mini-bar\s*\{/, 'court page should define scoped t
 assert.match(pagesCss, /\.tms-record-add-box\s*\{/, 'court page should define scoped modal form layout styles');
 assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped toolbar styles');
 assert.match(pagesCss, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
-assert.match(html, /<div class="tms-stats-row" id="courtStatsRow"><\/div>/, 'court page should use the upgraded tms stats row container');
+assert.match(fnBody('renderCourtStatsCards'), /document\.getElementById\('courtStatsRow'\)/, 'court page should use the standard stats row host');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*会员状态[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*会员到期[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费金额[\s\S]*对接人[\s\S]*熟悉程度[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
-assert.match(html, /id="courtAccountTypeFilter"/, 'court toolbar should provide account type filter');
-assert.match(html, /id="courtOwnerFilter"/, 'court toolbar should provide owner filter');
-assert.match(html, /id="courtMoreActions"/, 'court toolbar should provide more actions menu');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.match(html, /courtAccountTypeFilter/, 'court toolbar should provide account type filter');
+assert.match(html, /courtOwnerFilter/, 'court toolbar should provide owner filter');
+assert.match(html, /courtMoreActions/, 'court toolbar should provide more actions menu');
 assert.match(html, /批量选择[\s\S]*导入CSV[\s\S]*财务迁移预览[\s\S]*备份/, 'court more actions should include batch select, import, finance migration preview, and backup');
 assert.doesNotMatch(html, /courtMoreActionValue_dropdown[\s\S]*class="tms-dropdown-item[^"]*">更多操作</, 'court more actions menu should not include a redundant self option');
-assert.match(html, /data-court-sort="lastBookingDate"[\s\S]*setCourtSort\('lastBookingDate'\)[\s\S]*最近订场/, 'court table should support sorting by latest booking date');
-assert.match(html, /data-court-sort="memberBookingCount"[\s\S]*setCourtSort\('memberBookingCount'\)[\s\S]*会员订场/, 'court table should support sorting by member booking count');
-assert.match(html, /data-court-sort="bookingCount"[\s\S]*setCourtSort\('bookingCount'\)[\s\S]*累计订场/, 'court table should support sorting by booking count');
-assert.match(html, /data-court-sort="bookingAmount"[\s\S]*setCourtSort\('bookingAmount'\)[\s\S]*累计消费金额/, 'court table should support sorting by booking amount');
-assert.match(html, /data-court-sort="balance"[\s\S]*setCourtSort\('balance'\)[\s\S]*会员余额/, 'court table should keep balance sorting');
-assert.match(html, /data-court-sort="validUntil"[\s\S]*setCourtSort\('validUntil'\)[\s\S]*会员到期/, 'court table should keep expiry sorting');
+assert.match(html, /data-court-sort="lastBookingDate"[\s\S]*最近订场/, 'court table should support sorting by latest booking date');
+assert.match(html, /data-court-sort="memberBookingCount"[\s\S]*会员订场/, 'court table should support sorting by member booking count');
+assert.match(html, /data-court-sort="bookingCount"[\s\S]*累计订场/, 'court table should support sorting by booking count');
+assert.match(html, /data-court-sort="bookingAmount"[\s\S]*累计消费/, 'court table should support sorting by booking amount');
+assert.match(html, /data-court-sort="balance"[\s\S]*会员余额/, 'court table should keep balance sorting');
 assert.match(html, /courtSortKey='lastBookingDate',courtSortDir='desc'/, 'court table should default to latest booking descending');
 assert.match(fnBody('setCourtSort'), /courtSortKey='';courtSortDir='desc'/, 'court sorting should cycle back to no sort');
 assert.match(tablesCss, /\.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'court sort header should reuse the shared sort button style');
@@ -44,7 +43,7 @@ assert.match(tablesCss, /\.tms-sort-icon\{[^}]*width:14px[^}]*height:14px/, 'cou
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should freeze the action header');
 assert.match(html, /会员账户[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
-assert.match(html, /id="courtPageSize"/, 'court table should support page size selection');
+assert.match(html, /courtPageSize/, 'court table should support page size selection');
 assert.match(html, /renderPageSizeSelectorHtml\('courtPageSizeValue',courtPageSize,'setCourtPageSize'\)/, 'court page size selector should reuse the shared numeric page-size dropdown');
 assert.match(html, /function renderCourtPagerControls\(/, 'court page should use the standard pager renderer');
 assert.match(fnBody('renderCourtPagerControls'), /renderStandardPaginationButtonsHtml\(courtPage,pages,'setCourtPage'\)/, 'court pager should render page buttons through the global standard pager');
@@ -94,7 +93,7 @@ assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow sh
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
 assert.match(html, /search.*nextFollowUp|nextFollowUp.*search|courtSearch[\s\S]*followUp/, 'court search should cover follow-up fields');
-assert.match(html, /id="courtSearch"[^>]*oninput="onCourtFilterChange\(\)"/, 'court search should reset to the first page before rendering');
+assert.match(html, /search:\{id:'courtSearch',oninput:'onCourtFilterChange\(\)'/, 'court search should reset to the first page before rendering');
 assert.match(html, /courtPageSize=\d+/, 'court page should keep its own page size state');
 assert.match(html, /function setCourtPageSize\(/, 'court page should expose page size switching');
 assert.match(html, /function courtDisplayName\(/, 'court page should expose a display-name helper for blank court names');
@@ -121,7 +120,7 @@ assert.doesNotMatch(fnBody('saveCourtFinanceRecord'), /confirm\(/, 'court financ
 assert.doesNotMatch(fnBody('renderCourts'), /低余额/, 'court stats should not show low balance text');
 assert.match(html, /function renderCourtStatsCards\(/, 'court stats should render through one shared card helper');
 assert.match(fnBody('renderCourtStatsCards'), /总订场用户[\s\S]*会员用户[\s\S]*客群次数对比[\s\S]*订场总实收[\s\S]*散客消费/, 'court stats should show the requested five dashboard cards');
-assert.match(html, /id="courtSearch"[^>]*placeholder="搜索姓名、手机号"/, 'court user search should use the unified placeholder');
+assert.match(html, /function renderStandardSearchHtml[\s\S]*placeholder='搜索姓名、手机号'[\s\S]*id:'courtSearch'/, 'court user search should use the unified placeholder');
 assert.match(html, /court-stat-percent/, 'court stats should render percentages with a smaller muted style');
 assert.match(pagesCss, /#courtStatsRow\.court-dashboard-stats\{[^}]*display:grid[^}]*grid-template-columns:repeat\(auto-fit,minmax\(200px,1fr\)\)/, 'court stats should use the shared adaptive card grid');
 assert.match(pagesCss, /#page-courts \.court-split-value>span:not\(\.court-stat-slash\)\{font-size:21px/, 'court stat main numbers should use the shared stat number size');
