@@ -16,6 +16,7 @@ const revenuePanelEnd = source.indexOf('id="financeRecognizedPanel"', revenuePan
 const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? source.length : revenuePanelEnd) + revenueShell;
 const recognizedPanel = sliceBetween(source, 'id="financeRecognizedPanel"', 'id="financeSettlementPanel"') + recognizedShell;
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
+const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'page-data', 'finance-snapshot.js'), 'utf8');
 
 assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
 assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');
@@ -116,7 +117,7 @@ assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeU
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category');
 assert.match(source,/storedValueConsumedRows=businessRows\.filter\(row=>[\s\S]*row\.businessTypeLevel2==='会员订场'[\s\S]*row\.businessType==='会员订场'/,'stored value recognized amount should use standardized member booking consumption rows');
-assert.match(source,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
+assert.match(financeSnapshotSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
 assert.match(revenueShell,/infoId:'financeRevenuePagerInfo'/,'revenue should expose pager info');
 assert.match(revenueShell,/pageSizeId:'financeRevenuePageSize'/,'revenue should expose page size selector');
 assert.match(revenueShell,/buttonsId:'financeRevenuePagerBtns'/,'revenue should expose pager buttons');
