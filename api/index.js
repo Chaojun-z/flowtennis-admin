@@ -15,6 +15,9 @@ const { normalizePermissionProfile, userHasFeaturePermission } = require('./perm
 const { handleMatchDiag, handleTableStoreDiag } = require('./diagnostics');
 const { createAuthServices } = require('./auth');
 const { createStorageServices } = require('./storage');
+const { createBootstrapRuntime, buildBootstrapSafetyFlags, readBooleanEnv, logBlockedAutoWrite } = require('./bootstrap');
+const { createScheduleRules } = require('./schedule');
+const { createPackageRules } = require('./packages');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -25,33 +28,6 @@ const TS_INSTANCE = String(process.env.TS_INSTANCE || '').trim();
 const TS_KEY_ID = process.env.ALIBABA_CLOUD_ACCESS_KEY_ID;
 const TS_KEY_SEC = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
 const REQUIRED_ENV_VARS = ['JWT_SECRET', 'TS_ENDPOINT', 'TS_INSTANCE', 'ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'];
-function readBooleanEnv(env,name){return String(env?.[name]||'').trim().toLowerCase()==='true';}
-function resolveRuntimeStage(env=process.env){
-  const vercelEnv=String(env?.VERCEL_ENV||'').trim().toLowerCase();
-  if(vercelEnv)return vercelEnv;
-  const nodeEnv=String(env?.NODE_ENV||'').trim().toLowerCase();
-  return nodeEnv||'development';
-}
-function buildBootstrapSafetyFlags(env=process.env){
-  const runtimeStage=resolveRuntimeStage(env);
-  const isProduction=runtimeStage==='production';
-  const allowProductionBootstrapWrites=readBooleanEnv(env,'ALLOW_PRODUCTION_BOOTSTRAP_WRITES');
-  const allowHighRiskBootstrapWrites=!isProduction||allowProductionBootstrapWrites;
-  return {
-    runtimeStage,
-    isProduction,
-    allowProductionBootstrapWrites,
-    enableDefaultUserBootstrap:readBooleanEnv(env,'ENABLE_DEFAULT_USER_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
-    enableTableBootstrap:readBooleanEnv(env,'ENABLE_TABLE_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
-    enableRuntimeTableEnsure:readBooleanEnv(env,'ENABLE_RUNTIME_TABLE_ENSURE'),
-    enableDefaultPricePlanBootstrap:readBooleanEnv(env,'ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
-    enableMabaoFinanceSeedBootstrap:readBooleanEnv(env,'ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
-    enableImportedLedgerAutoRepair:readBooleanEnv(env,'ENABLE_IMPORTED_LEDGER_AUTO_REPAIR')&&allowHighRiskBootstrapWrites
-  };
-}
-function logBlockedAutoWrite(action){
-  console.warn(`[api-guard] ${action} skipped in production. 如需执行，请仅在获批运维修复场景下显式设置 ALLOW_PRODUCTION_BOOTSTRAP_WRITES=true。`);
-}
 const BOOTSTRAP_SAFETY_FLAGS=buildBootstrapSafetyFlags();
 const RAW_ENABLE_DEFAULT_USER_BOOTSTRAP=readBooleanEnv(process.env,'ENABLE_DEFAULT_USER_BOOTSTRAP');
 const RAW_ENABLE_TABLE_BOOTSTRAP=readBooleanEnv(process.env,'ENABLE_TABLE_BOOTSTRAP');
@@ -370,7 +346,6 @@ const PRODUCTION_PAGE_READ_LIMITS={
   adminUsers:200
 };
 let financeSnapshotCache=null;
-let importedLedgerRepairChecked=false;
 
 const wechatAccessTokenCacheByApp = new Map();
 const wechatAccessTokenCache = wechatAccessTokenCacheByApp;
@@ -501,21 +476,82 @@ async function scanCoachProposals(){
 async function prewarmHotScanCache(){
   await Promise.all([...HOT_SCAN_TABLES.keys()].map(t=>getCachedScan(t)));
 }
-function getRuntimeEnsuredTables(){return [...RUNTIME_ENSURED_TABLES];}
+const bootstrapRuntime=createBootstrapRuntime({
+  env:process.env,
+  bcrypt,
+  requiredEnvVars:REQUIRED_ENV_VARS,
+  defaultAdminBootstrapPassword:DEFAULT_ADMIN_BOOTSTRAP_PASSWORD,
+  bootstrapSafetyFlags:BOOTSTRAP_SAFETY_FLAGS,
+  rawFlags:{
+    enableDefaultUserBootstrap:RAW_ENABLE_DEFAULT_USER_BOOTSTRAP,
+    enableTableBootstrap:RAW_ENABLE_TABLE_BOOTSTRAP,
+    enableDefaultPricePlanBootstrap:RAW_ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP,
+    enableMabaoFinanceSeedBootstrap:RAW_ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP,
+    enableImportedLedgerAutoRepair:RAW_ENABLE_IMPORTED_LEDGER_AUTO_REPAIR
+  },
+  runtimeEnsuredTables:RUNTIME_ENSURED_TABLES,
+  tables:{
+    T_USERS,
+    T_COURTS,
+    T_STUDENTS,
+    T_PRODUCTS,
+    T_PLANS,
+    T_SCHEDULE,
+    T_COACHES,
+    T_CLASSES,
+    T_CLASS_NOS,
+    T_CAMPUSES,
+    T_FEEDBACKS,
+    T_COACH_PROPOSALS,
+    T_PACKAGES,
+    T_PURCHASES,
+    T_ENTITLEMENTS,
+    T_ENTITLEMENT_LEDGER,
+    T_PRICE_PLANS
+  },
+  storage:{get,put,del,scan,mkTable},
+  seedHelpers:{
+    importedLedgerMonthKey,
+    isMabaoFinanceSeedRow,
+    isImportedMonthlyLedgerRow,
+    collectDuplicateImportedLedgerIds
+  },
+  mabaoFinanceSeed,
+  syncDefaultPricePlans,
+  prewarmHotScanCache,
+  isProductionRuntime,
+  logBlockedAutoWrite
+});
+const DEFAULT_CAMPUSES=bootstrapRuntime.DEFAULT_CAMPUSES;
+const {
+  init,
+  scheduleInitInBackground,
+  getRuntimeEnsuredTables,
+  collectMabaoSeedStaleRowIds,
+  collectMabaoSeedImportedLedgerReplacementIds
+}=bootstrapRuntime;
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function parseLessonValue(v,fallback=0){
   const n=Number(v);
   return Number.isFinite(n)?n:fallback;
 }
-function isBillableSchedule(rec){return rec&&rec.status!=='已取消';}
-function scheduleSettlementType(rec){
-  const raw=String(rec?.settlementType||rec?.paymentType||'').trim();
-  if(['direct','直接收款','paid'].includes(raw))return 'direct';
-  if(['gift','free','赠送','免费'].includes(raw))return 'gift';
-  return 'package';
-}
-function isPackageSettlementSchedule(rec){return scheduleSettlementType(rec)==='package';}
-function isDirectPaidSchedule(rec){return scheduleSettlementType(rec)==='direct';}
+const scheduleRules=createScheduleRules({normalizeCourtHistory,campusDisplayName});
+const {
+  isBillableSchedule,
+  scheduleSettlementType,
+  isPackageSettlementSchedule,
+  isDirectPaidSchedule,
+  isScheduleLessonCharged,
+  scheduleLessonDelta,
+  effectiveScheduleStatus,
+  scheduleLessonChargeStatus,
+  assertCanWriteSchedule,
+  validateScheduleConflicts,
+  courtBookingRange,
+  validateCourtBookingConflicts,
+  scheduleParticipantSummary,
+  collectScheduleRiskWarnings
+}=scheduleRules;
 const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
 function isSmallGroupCourse(row={}){
   return String(row.courseType||row.type||'').trim()==='小班课';
@@ -571,7 +607,35 @@ function smallGroupRuleSnapshot(source={}){
   const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0);
   return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};
 }
-function isScheduleLessonCharged(rec){return isBillableSchedule(rec)&&!rec.coachLateFree&&isPackageSettlementSchedule(rec);}
+const packageRules=createPackageRules({
+  uuidv4,
+  parseArr,
+  parseLessonValue,
+  normalizeMoney,
+  dateKey,
+  isSmallGroupCourse,
+  smallGroupRuleSnapshot,
+  withOperationTrace
+});
+const {
+  buildEntitlementFromPurchase,
+  buildPurchaseRecord,
+  validateProductInput,
+  normalizeProductRecord,
+  validatePackageInput,
+  normalizePackageRecord,
+  stableRuleValue,
+  changedCoreFields,
+  syncSoldPackageRuleSnapshots,
+  assertCanEditPackageWithPurchases,
+  buildPackageDeactivateUpdate,
+  assertCanMergePackages,
+  buildPackageMergeUpdates,
+  assertCanEditPurchaseWithLedger,
+  purchaseHasEntitlementLedger,
+  validatePurchaseInputForPackage,
+  syncEntitlementFromPurchase
+}=packageRules;
 async function applyLessonDelta(classId,delta,studentIds=[]){
   if(!classId||!delta)return null;
   const cls=await getCachedRow(T_CLASSES,classId);
@@ -598,36 +662,6 @@ async function applyLessonDelta(classId,delta,studentIds=[]){
     for(const p of oldPlans)await put(T_PLANS,p.id,p).catch(()=>null);
     throw err;
   }
-}
-function scheduleLessonDelta(rec){
-  if(!rec||!rec.classId||!isScheduleLessonCharged(rec))return null;
-  const lessonCount=parseLessonValue(rec.lessonCount);
-  if(lessonCount<=0)return null;
-  return {classId:rec.classId,delta:lessonCount};
-}
-function effectiveScheduleStatus(rec,now=new Date()){
-  if(!rec)return '';
-  const status=rec.status||'已排课';
-  if(status==='已下课')return '已结束';
-  if(status==='已取消'||status==='已结束')return status;
-  const end=dateMs(rec.endTime);
-  const nowMs=now instanceof Date?now.getTime():dateMs(now);
-  if(status==='已排课'&&Number.isFinite(end)&&Number.isFinite(nowMs)&&end<nowMs)return '已结束';
-  return status;
-}
-function scheduleLessonChargeStatus(rec,ledger=[]){
-  if(!rec||effectiveScheduleStatus(rec)==='已取消')return '不扣课';
-  if(rec.coachLateFree)return '迟到免费';
-  if(isDirectPaidSchedule(rec))return '直接收款';
-  if(scheduleSettlementType(rec)==='gift')return '赠送免费';
-  if(parseLessonValue(rec.lessonCount)<=0)return '不扣课';
-  if(!rec.entitlementId)return '未扣课';
-  const used=(ledger||[]).some(l=>l.scheduleId===rec.id&&l.entitlementId===rec.entitlementId&&parseLessonValue(l.lessonDelta)<0);
-  return used?'已扣课':'扣课异常';
-}
-function assertCanWriteSchedule(user){
-  if(user?.role==='admin')return;
-  throw new Error('无权限');
 }
 function scheduleHasFeedbackRecord(schedule,feedbacks=[]){
   const scheduleId=String(schedule?.id||'').trim();
@@ -846,14 +880,6 @@ function minutesBetween(a,b){
   if(!Number.isFinite(am)||!Number.isFinite(bm))return null;
   return Math.round(Math.abs(bm-am)/60000);
 }
-function shareStudent(a,b){
-  const aIds=parseArr(a.studentIds).filter(Boolean);
-  const bIds=parseArr(b.studentIds).filter(Boolean);
-  if(aIds.length&&bIds.length)return aIds.some(id=>bIds.includes(id));
-  const an=String(a.studentName||'').trim();
-  const bn=String(b.studentName||'').trim();
-  return !!(an&&bn&&an===bn);
-}
 function assertLessonCapacity(cls,oldDelta,nextDelta){
   if(!nextDelta)return;
   if(!cls)throw new Error('关联班次不存在');
@@ -862,54 +888,6 @@ function assertLessonCapacity(cls,oldDelta,nextDelta){
   const oldSame=oldDelta&&oldDelta.classId===nextDelta.classId?parseLessonValue(oldDelta.delta):0;
   const nextUsed=used-oldSame+parseLessonValue(nextDelta.delta);
   if(total>0&&nextUsed>total)throw new Error(`剩余课时不足：剩余 ${Math.max(0,total-used+oldSame)} 节，本次消课 ${nextDelta.delta} 节`);
-}
-function validateScheduleConflicts(candidate,schedules,excludeId){
-  if(!isBillableSchedule(candidate))return;
-  if(!candidate.startTime)throw new Error('请选择上课时间');
-  if(!candidate.endTime)throw new Error('请选择下课时间，系统需要用它校验冲突');
-  if(String(candidate.startTime).slice(0,10)!==String(candidate.endTime).slice(0,10))throw new Error('上课时间不能跨天');
-  if(dateMs(candidate.endTime)<=dateMs(candidate.startTime))throw new Error('下课时间不能早于上课时间');
-  for(const rec of schedules||[]){
-    if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
-    if(!rangesOverlap(candidate.startTime,candidate.endTime,rec.startTime,rec.endTime))continue;
-    if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
-    const candidateVenue=normalizeVenue(candidate.venue);
-    const recVenue=normalizeVenue(rec.venue);
-    if(candidateVenue&&recVenue&&candidateVenue===recVenue&&(candidate.campus||'')===(rec.campus||''))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
-    if(shareStudent(candidate,rec))throw new Error('学员此时间已有课程');
-  }
-}
-function courtBookingRange(court,row){
-  if(row?.type&&row.type!=='消费')return null;
-  if(row?.category&&row.category!=='订场')return null;
-  if(!row?.date||!row?.startTime||!row?.endTime)return null;
-  const campus=row.campus||court?.campus||'';
-  const venue=normalizeVenue(row.venue||'');
-  if(!campus||!venue)return null;
-  const startClock=String(row.startTime).includes(' ')?String(row.startTime).slice(11,16):String(row.startTime).slice(0,5);
-  const endClock=String(row.endTime).includes(' ')?String(row.endTime).slice(11,16):String(row.endTime).slice(0,5);
-  return {
-    courtName:court?.name||'订场用户',
-    campus,
-    venue,
-    startTime:`${row.date} ${startClock}`,
-    endTime:`${row.date} ${endClock}`
-  };
-}
-function validateCourtBookingConflicts(candidate,courts){
-  if(candidate?.scheduleSource==='订场陪打')return;
-  if(!isBillableSchedule(candidate)||!candidate.startTime||!candidate.endTime||!candidate.campus||!candidate.venue)return;
-  const candidateVenue=normalizeVenue(candidate.venue);
-  for(const court of courts||[]){
-    for(const row of normalizeCourtHistory(court.history)){
-      const booking=courtBookingRange(court,row);
-      if(!booking)continue;
-      if(booking.campus!==candidate.campus||booking.venue!==candidateVenue)continue;
-      if(rangesOverlap(candidate.startTime,candidate.endTime,booking.startTime,booking.endTime)){
-        throw new Error(`场地「${candidateVenue}」${booking.startTime.slice(11,16)}-${booking.endTime.slice(11,16)} 已被订场用户「${booking.courtName}」订场`);
-      }
-    }
-  }
 }
 function buildOperationTrace({operationType='',operator='',now=new Date().toISOString(),idFactory=uuidv4,operationId='',batchId=''}={}){
   const resolvedOperationId=String(operationId||'').trim()||idFactory();
@@ -971,370 +949,16 @@ function assertCourtBookingHistoryAgainstSchedules(court,schedules){
     );
   }
 }
-function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new Date().toISOString()){
-  const purchaseDate=purchase.purchaseDate||now.slice(0,10);
-  const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
-  const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
-  const rec={
-    id,
-    studentId:purchase.studentId||student?.id||'',
-    studentName:purchase.studentName||student?.name||purchase.studentId||'',
-    purchaseId:purchase.id||'',
-    packageId:pkg.id||purchase.packageId||'',
-    packageName:pkg.name||purchase.packageName||'',
-    productId:pkg.productId||'',
-    productName:pkg.productName||'',
-    courseType:pkg.courseType||pkg.type||'',
-    totalLessons,
-    usedLessons:0,
-    remainingLessons:totalLessons,
-    validFrom:purchaseDate,
-    validUntil:'',
-    usageStartDate:pkg.usageStartDate||purchaseDate,
-    usageEndDate:'',
-    dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
-    timeBand:pkg.timeBand||'',
-    coachIds:parseArr(pkg.coachIds),
-    coachNames:parseArr(pkg.coachNames),
-    ownerCoach:purchase.ownerCoach||pkg.ownerCoach||'',
-    allowedCoaches:parseArr(purchase.allowedCoaches||packageCoaches),
-    campusIds:parseArr(pkg.campusIds),
-    maxStudents:parseInt(pkg.maxStudents)||0,
-    status:'active',
-    createdAt:now,
-    updatedAt:now
-  };
-  if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
-  if(isSmallGroupCourse(rec)){
-    Object.assign(rec,smallGroupRuleSnapshot({...pkg,...purchase,courseType:rec.courseType}));
-    rec.freeAbsenceUsed=parseInt(purchase.freeAbsenceUsed??pkg.freeAbsenceUsed??0)||0;
-  }
-  return withOperationTrace(rec,purchase);
-}
-function buildPurchaseRecord(pkg,body,student,opts={}){
-  const now=opts.now||new Date().toISOString();
-  const purchaseDate=body.purchaseDate||now.slice(0,10);
-  const systemAmount=normalizeMoney(pkg.price);
-  const finalAmount=normalizeMoney(body.amountPaid??pkg.price);
-  const priceOverridden=systemAmount!==finalAmount;
-  const overrideReason=String(body.overrideReason||'').trim();
-  if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
-  const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames);
-  const rec={
-    ...body,
-    id:opts.id||body.id||uuidv4(),
-    studentId:student.id,
-    studentName:student.name||student.id,
-    studentPhone:student.phone||'',
-    packageId:pkg.id,
-    packageName:pkg.name||'',
-    productId:pkg.productId||'',
-    productName:pkg.productName||'',
-    courseType:pkg.courseType||pkg.type||'',
-    packageLessons:parseInt(pkg.lessons)||0,
-    packagePrice:normalizeMoney(pkg.price),
-    priceSource:'package',
-    priceSourceId:pkg.id,
-    priceSourceName:pkg.name||'',
-    systemAmount,
-    finalAmount,
-    priceOverridden,
-    overrideReason,
-    packageTimeBand:pkg.timeBand||'',
-    dailyTimeWindows:parseArr(pkg.dailyTimeWindows),
-    coachIds:parseArr(pkg.coachIds),
-    coachNames:parseArr(pkg.coachNames),
-    ownerCoach:body.ownerCoach||pkg.ownerCoach||'',
-    allowedCoaches:parseArr(body.allowedCoaches||packageCoaches),
-    campusIds:parseArr(pkg.campusIds),
-    usageStartDate:pkg.usageStartDate||'',
-    usageEndDate:pkg.usageEndDate||'',
-    purchaseDate,
-    amountPaid:finalAmount,
-    payMethod:body.payMethod||'',
-    operator:opts.operator||body.operator||'',
-    status:body.status||'active',
-    createdAt:body.createdAt||now,
-    updatedAt:now
-  };
-  if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
-  if(isSmallGroupCourse(rec))Object.assign(rec,smallGroupRuleSnapshot({...pkg,courseType:rec.courseType}));
-  return withOperationTrace(rec,opts.operationTrace);
-}
-function validateProductInput(product){
-  if(!String(product?.name||'').trim())throw new Error('请填写课程名称');
-  if(!String(product?.type||'').trim())throw new Error('请选择课程类型');
-  if((parseInt(product?.maxStudents)||0)<=0)throw new Error('人数必须大于 0');
-  if(normalizeMoney(product?.price)<0)throw new Error('价格不能小于 0');
-  if((parseInt(product?.lessons)||0)<0)throw new Error('课时不能小于 0');
-}
-function normalizeProductRecord(input,old=null,now=new Date().toISOString()){
-  const base={...(old||{}),...(input||{})};
-  const r={
-    ...base,
-    name:String(base.name||'').trim(),
-    type:String(base.type||'').trim(),
-    maxStudents:parseInt(base.maxStudents)||0,
-    price:normalizeMoney(base.price),
-    lessons:parseInt(base.lessons)||0,
-    notes:String(base.notes||'').trim(),
-    updatedAt:now
-  };
-  validateProductInput(r);
-  return r;
-}
-function packageRefIds(values){
-  return parseArr(values).map(x=>String(x||'').trim()).filter(Boolean);
-}
-function validatePackageInput(pkg,refs={}){
-  if(!String(pkg?.name||'').trim())throw new Error('请填写课包名称');
-  if(!String(pkg?.courseType||pkg?.type||'').trim())throw new Error('请填写课程类型');
-  if(pkg?.productId&&refs.products&&!(refs.products||[]).some(p=>p.id===pkg.productId))throw new Error('课程产品不存在');
-  if((parseInt(pkg.lessons)||0)<=0)throw new Error('课时必须大于 0');
-  if(normalizeMoney(pkg.price)<=0)throw new Error('价格必须大于 0');
-  if((parseInt(pkg.maxStudents)||0)<=0)throw new Error('人数限制必须大于 0');
-  if(isSmallGroupCourse(pkg)){
-    const rule=smallGroupRuleSnapshot(pkg);
-    if(!SMALL_CLASS_TYPES.includes(rule.smallClassType))throw new Error('请选择小班课类型');
-    if(rule.smallClassType==='single'){
-      if((parseInt(pkg.lessons)||0)!==1)throw new Error('小班单次必须是 1 次');
-    }
-    if(rule.smallClassType==='bootcamp'){
-      if(String(pkg.timeBand||'')!=='黄金时段')throw new Error('训练营必须是黄金时段');
-      if(rule.fixedStudentCount!==4||parseInt(pkg.maxStudents)!==4)throw new Error('训练营固定 4 人');
-    }
-    if(rule.smallClassType==='dropin'){
-      if((parseInt(pkg.lessons)||0)!==6)throw new Error('随到随学必须是 6 次');
-    }
-  }
-  if(pkg.saleStartDate&&pkg.saleEndDate&&pkg.saleEndDate<pkg.saleStartDate)throw new Error('活动结束时间不能早于活动开始时间');
-  if(pkg.usageStartDate&&pkg.usageEndDate&&pkg.usageEndDate<pkg.usageStartDate)throw new Error('可用结束时间不能早于可用开始时间');
-  for(const w of parseArr(pkg.dailyTimeWindows)){
-    if((w.startTime&&!w.endTime)||(!w.startTime&&w.endTime))throw new Error('可用时段请填写完整');
-    if(w.startTime&&w.endTime&&w.endTime<=w.startTime)throw new Error('可用结束时间必须晚于开始时间');
-  }
-  const coachIds=packageRefIds(pkg.coachIds);
-  if(refs.coaches&&coachIds.length){
-    const ok=new Set((refs.coaches||[]).flatMap(c=>[c.id,c.name]).filter(Boolean).map(String));
-    if(coachIds.some(id=>!ok.has(String(id))))throw new Error('可用教练不存在');
-  }
-  const ownerCoach=String(pkg.ownerCoach||'').trim();
-  if(refs.coaches&&ownerCoach){
-    const ok=new Set((refs.coaches||[]).flatMap(c=>[c.id,c.name]).filter(Boolean).map(String));
-    parseArr(refs.legacyCoachNames).forEach(name=>ok.add(String(name)));
-    if(!ok.has(ownerCoach))throw new Error('主归属教练不存在');
-  }
-  const campusIds=packageRefIds(pkg.campusIds);
-  if(refs.campuses&&campusIds.length){
-    const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
-    if(campusIds.some(id=>!ok.has(String(id))))throw new Error('可用校区不存在');
-  }
-}
-function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOString()){
-  const base={...(old||{}),...(input||{})};
-  const r={
-    ...base,
-    productId:String(base.productId||'').trim(),
-    productName:String(base.productName||'').trim(),
-    courseType:String(base.courseType||base.type||'').trim(),
-    lessons:parseInt(base.lessons)||0,
-    price:normalizeMoney(base.price),
-    validDays:0,
-    validUntil:'',
-    usageEndDate:'',
-    maxStudents:parseInt(base.maxStudents)||0,
-    status:base.status||'active',
-    updatedAt:now
-  };
-  if(isSmallGroupCourse(r))Object.assign(r,smallGroupRuleSnapshot(base));
-  validatePackageInput(r,refs);
-  return r;
-}
-function stableRuleValue(value){
-  if(Array.isArray(value))return JSON.stringify(value.map(stableRuleValue));
-  if(value&&typeof value==='object'){
-    return JSON.stringify(Object.keys(value).sort().reduce((acc,k)=>{acc[k]=stableRuleValue(value[k]);return acc;},{}));
-  }
-  const arr=parseArr(value);
-  if(arr.length)return JSON.stringify(arr.map(stableRuleValue));
-  return String(value??'');
-}
-function changedCoreFields(oldRec,nextRec,fields){
-  return fields.filter(k=>stableRuleValue(oldRec?.[k])!==stableRuleValue(nextRec?.[k]));
-}
-const PACKAGE_MERGE_CORE_FIELDS=[
-  'ownerCoach','courseType','price','lessons','validDays',
-  'saleStartDate','saleEndDate','usageStartDate','usageEndDate',
-  'dailyTimeWindows','timeBand','coachIds','coachNames','campusIds','maxStudents'
-];
-const SOLD_PACKAGE_LOCKED_FIELDS=[
-  'lessons','maxStudents'
-];
-function packageEntitlementValidity(nextPackage,entitlement={},purchase={}){
-  const validFrom=entitlement.validFrom||purchase.purchaseDate||dateKey(entitlement.createdAt)||'';
-  return {
-    validFrom,
-    validUntil:'',
-    usageStartDate:nextPackage.usageStartDate||validFrom,
-    usageEndDate:''
-  };
-}
-function syncSoldPackageRuleSnapshots(nextPackage,purchases=[],entitlements=[],now=new Date().toISOString()){
-  const packageId=String(nextPackage?.id||'');
-  const purchaseById=new Map((purchases||[]).map(p=>[String(p.id||''),p]));
-  const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>{
-    const next={
-      ...p,
-      courseType:nextPackage.courseType||nextPackage.type||'',
-      packageLessons:parseLessonValue(nextPackage.lessons),
-      packagePrice:normalizeMoney(nextPackage.price),
-      systemAmount:normalizeMoney(nextPackage.price),
-      packageTimeBand:nextPackage.timeBand||'',
-      dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
-      ownerCoach:nextPackage.ownerCoach||'',
-      validDays:0,
-      saleStartDate:nextPackage.saleStartDate||'',
-      saleEndDate:nextPackage.saleEndDate||'',
-      usageStartDate:nextPackage.usageStartDate||'',
-      usageEndDate:'',
-      updatedAt:now
-    };
-    if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
-    if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
-    return next;
-  });
-  const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>{
-    const validity=packageEntitlementValidity(nextPackage,e,purchaseById.get(String(e.purchaseId||''))||{});
-    const totalLessons=parseLessonValue(nextPackage.lessons);
-    const usedLessons=parseLessonValue(e.usedLessons,Math.max(0,parseLessonValue(e.totalLessons)-parseLessonValue(e.remainingLessons)));
-    const remainingLessons=Math.max(0,totalLessons-usedLessons);
-    const next={
-      ...e,
-      courseType:nextPackage.courseType||nextPackage.type||'',
-      totalLessons,
-      usedLessons,
-      remainingLessons,
-      timeBand:nextPackage.timeBand||'',
-      dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),
-      ownerCoach:nextPackage.ownerCoach||'',
-      ...validity,
-      status:remainingLessons<=0?'depleted':'active',
-      updatedAt:now
-    };
-    if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
-    if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
-    return next;
-  });
-  return {purchases:purchaseUpdates,entitlements:entitlementUpdates};
-}
 function assertCanEditProductWithReferences(oldProduct,nextProduct,refs={}){
   if(!oldProduct||!nextProduct)return;
   const used=(refs.classes||[]).some(c=>c.productId===oldProduct.id)||(refs.packages||[]).some(p=>p.productId===oldProduct.id);
   if(!used)return;
   if(changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']).length)throw new Error('该课程产品已有班次或售卖课包使用，不能修改核心字段');
 }
-function assertCanEditPackageWithPurchases(oldPackage,nextPackage,purchases=[]){
-  return;
-}
-function buildPackageDeactivateUpdate(oldPackage,input={},now=new Date().toISOString()){
-  if(!oldPackage||String(input.status||'')!=='inactive'||String(oldPackage.status||'active')==='inactive')return null;
-  return {...oldPackage,status:'inactive',updatedAt:now};
-}
-function assertCanMergePackages(masterPackage,sourcePackage){
-  if(!masterPackage||!sourcePackage)throw new Error('课包不存在');
-  if(String(masterPackage.id||'')===String(sourcePackage.id||''))throw new Error('请选择两个不同课包');
-  if(String(masterPackage.status||'active')==='merged')throw new Error('保留课包已被合并，不能作为主课包');
-  if(String(sourcePackage.status||'active')==='merged')throw new Error('并入课包已被合并');
-  const changed=changedCoreFields(masterPackage,sourcePackage,PACKAGE_MERGE_CORE_FIELDS);
-  if(changed.length)throw new Error('课包规则不一致，不能合并');
-}
-function mergeDisplayTrace(row,masterPackage,sourcePackage,now){
-  const originalPackageId=row.originalPackageId||sourcePackage.id||row.packageId||'';
-  const originalPackageName=row.originalPackageName||sourcePackage.name||row.packageName||'';
-  return {
-    ...row,
-    packageId:masterPackage.id,
-    packageName:masterPackage.name||'',
-    originalPackageId,
-    originalPackageName,
-    packageMergedAt:now,
-    updatedAt:now
-  };
-}
-function buildPackageMergeUpdates({masterPackage,sourcePackage,purchases=[],entitlements=[],schedules=[],now=new Date().toISOString(),operator=''}){
-  assertCanMergePackages(masterPackage,sourcePackage);
-  const sourceId=String(sourcePackage.id||'');
-  const masterName=masterPackage.name||'';
-  const nextPurchases=(purchases||[]).filter(row=>String(row.packageId||'')===sourceId).map(row=>({
-    ...mergeDisplayTrace(row,masterPackage,sourcePackage,now),
-    priceSourceId:String(row.priceSourceId||'')===sourceId?masterPackage.id:row.priceSourceId,
-    priceSourceName:String(row.priceSourceId||'')===sourceId||String(row.priceSourceName||'')===String(sourcePackage.name||'')?masterName:row.priceSourceName
-  }));
-  const nextEntitlements=(entitlements||[]).filter(row=>String(row.packageId||'')===sourceId).map(row=>mergeDisplayTrace(row,masterPackage,sourcePackage,now));
-  const purchaseIds=new Set(nextPurchases.map(row=>row.id).filter(Boolean));
-  const entitlementIds=new Set(nextEntitlements.map(row=>row.id).filter(Boolean));
-  const nextSchedules=(schedules||[]).filter(row=>{
-    if(row.packageId&&String(row.packageId)===sourceId)return true;
-    if(row.purchaseId&&purchaseIds.has(row.purchaseId))return true;
-    if(row.entitlementId&&entitlementIds.has(row.entitlementId))return true;
-    return parseArr(row.entitlementIds).some(id=>entitlementIds.has(id));
-  }).map(row=>({
-    ...row,
-    packageName:masterName,
-    originalPackageId:row.originalPackageId||sourcePackage.id||row.packageId||'',
-    originalPackageName:row.originalPackageName||sourcePackage.name||row.packageName||'',
-    packageMergedAt:now,
-    updatedAt:now
-  }));
-  return {
-    sourcePackage:{
-      ...sourcePackage,
-      status:'merged',
-      mergedIntoPackageId:masterPackage.id,
-      mergedIntoPackageName:masterName,
-      mergedAt:now,
-      mergedBy:operator||'',
-      updatedAt:now
-    },
-    purchases:nextPurchases,
-    entitlements:nextEntitlements,
-    schedules:nextSchedules
-  };
-}
-function assertCanEditPurchaseWithLedger(oldPurchase,nextPurchase,entitlements=[],ledger=[]){
-  if(!oldPurchase||!nextPurchase)return;
-  const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===oldPurchase.id).map(e=>e.id));
-  if(!(ledger||[]).some(l=>entitlementIds.has(l.entitlementId)))return;
-  const changed=Object.keys({...oldPurchase,...nextPurchase}).filter(k=>!['notes','updatedAt'].includes(k)&&stableRuleValue(oldPurchase[k])!==stableRuleValue(nextPurchase[k]));
-  if(changed.length)throw new Error('该购买已有课时消耗，只能修改备注');
-}
-function purchaseHasEntitlementLedger(purchaseId,entitlements=[],ledger=[]){
-  const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
-  return (ledger||[]).some(l=>entitlementIds.has(l.entitlementId));
-}
-function validatePurchaseInputForPackage(pkg,purchase,{isEdit=false,oldPackageId=''}={}){
-  if(!pkg)throw new Error('售卖课包不存在');
-  const samePackage=isEdit&&String(pkg.id||'')===String(oldPackageId||'');
-  if(pkg.status&&pkg.status!=='active'&&!samePackage)throw new Error('该课包已停用');
-  const purchaseDate=purchase?.purchaseDate||new Date().toISOString().slice(0,10);
-  if(pkg.saleStartDate&&purchaseDate<pkg.saleStartDate)throw new Error('不在课包活动购买时间内');
-  if(pkg.saleEndDate&&purchaseDate>pkg.saleEndDate)throw new Error('不在课包活动购买时间内');
-}
 function assertScheduleEntitlementRequired(rec){
   if(!isBillableSchedule(rec))return;
   if(!isPackageSettlementSchedule(rec))return;
   assertSmallGroupScheduleRules(rec);
-}
-function scheduleParticipantSummary(rec){
-  const actual=parseArr(rec?.studentIds).filter(Boolean);
-  const expected=parseArr(rec?.expectedStudentIds).filter(Boolean);
-  const base=expected.length?expected:actual;
-  const actualSet=new Set(actual);
-  return {
-    expectedCount:base.length,
-    actualCount:actual.length,
-    absentCount:base.filter(id=>!actualSet.has(id)).length
-  };
 }
 function assertSmallGroupScheduleRules(rec){
   if(!isSmallGroupCourse(rec)||!isBillableSchedule(rec))return;
@@ -1342,17 +966,6 @@ function assertSmallGroupScheduleRules(rec){
   const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
   if(actual.length>4)throw new Error('小班课最多 4 人');
   if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
-}
-function syncEntitlementFromPurchase(pkg,purchase,student,oldEnt,now=new Date().toISOString()){
-  const used=parseLessonValue(oldEnt?.usedLessons);
-  const next=buildEntitlementFromPurchase(pkg,purchase,student,oldEnt?.id||uuidv4(),now);
-  if(oldEnt?.createdAt)next.createdAt=oldEnt.createdAt;
-  next.usedLessons=used;
-  if(isSmallGroupCourse(next))next.freeAbsenceUsed=parseInt(oldEnt?.freeAbsenceUsed)||0;
-  next.remainingLessons=parseLessonValue(next.totalLessons)-used;
-  if(next.remainingLessons<0)throw new Error('该购买记录已有消耗，不能改成课时不足的课包');
-  next.status=oldEnt?.status==='voided'?'voided':(next.remainingLessons<=0?'depleted':'active');
-  return next;
 }
 async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement){
   await store.put(purchaseTable,purchase.id,purchase);
@@ -1969,26 +1582,6 @@ async function restoreSmallGroupFreeAbsenceLedgerRows(ledgerRows=[]){
     }
     await put(T_ENTITLEMENT_LEDGER,row.id,row).catch(()=>null);
   }
-}
-function collectScheduleRiskWarnings(candidate,schedules,excludeId){
-  if(!isBillableSchedule(candidate)||!candidate.coach||!candidate.campus||!candidate.startTime||!candidate.endTime)return[];
-  const warnings=[];
-  const currentCampusText=campusDisplayName(candidate.campus,candidate.externalVenueName||candidate.venue);
-  for(const rec of schedules||[]){
-    if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
-    if(rec.coach!==candidate.coach||!rec.campus||rec.campus===candidate.campus)continue;
-    const prevCampusText=campusDisplayName(rec.campus,rec.externalVenueName||rec.venue);
-    const gapBefore=minutesBetween(rec.endTime,candidate.startTime);
-    if(gapBefore!==null&&dateMs(rec.endTime)<=dateMs(candidate.startTime)&&gapBefore<60){
-      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${prevCampusText}，下一节在 ${currentCampusText}，中间仅 ${gapBefore} 分钟`);
-      continue;
-    }
-    const gapAfter=minutesBetween(candidate.endTime,rec.startTime);
-    if(gapAfter!==null&&dateMs(candidate.endTime)<=dateMs(rec.startTime)&&gapAfter<60){
-      warnings.push(`跨校区提醒：${candidate.coach}上一节在 ${currentCampusText}，下一节在 ${prevCampusText}，中间仅 ${gapAfter} 分钟`);
-    }
-  }
-  return [...new Set(warnings)];
 }
 function feedbackScopeForSchedule(schedule={}){
   const studentIds=parseArr(schedule?.studentIds).filter(Boolean);
@@ -4443,49 +4036,6 @@ async function validateScheduleSave(nextRec,oldRec){
   return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
 }
 
-let inited=false;
-let initPromise=null;
-let defaultPricePlanSyncStarted=false;
-const DEFAULT_COACH_USERS=['baiyangj','chendand','yuekez','zhoux','sunmingy'];
-const DEFAULT_CAMPUSES=[
-  {id:'mabao',name:'顺义马坡',code:'mabao'},
-  {id:'shilipu',name:'朝阳十里堡',code:'shilipu'},
-  {id:'guowang',name:'朝阳国网',code:'guowang'},
-  {id:'langang',name:'朝阳蓝色港湾',code:'langang'},
-  {id:'chaojun',name:'朝珺私教',code:'chaojun'}
-];
-async function bootstrapDefaultUsers(){
-  if(!ENABLE_DEFAULT_USER_BOOTSTRAP)return;
-  if(!DEFAULT_ADMIN_BOOTSTRAP_PASSWORD)throw new Error('ENABLE_DEFAULT_USER_BOOTSTRAP=true 时必须配置 DEFAULT_ADMIN_BOOTSTRAP_PASSWORD');
-  const us=[{id:'admin',name:'管理员',role:'admin',username:'admin'},{id:'baiyangj',name:'白杨静',role:'editor',username:'baiyangj'},{id:'chendand',name:'陈丹丹',role:'editor',username:'chendand'},{id:'yuekez',name:'岳克舟',role:'editor',username:'yuekez'},{id:'zhoux',name:'周欣',role:'editor',username:'zhoux'},{id:'sunmingy',name:'孙明玥',role:'editor',username:'sunmingy'}];
-  const h=await bcrypt.hash(DEFAULT_ADMIN_BOOTSTRAP_PASSWORD,10);
-  for(const u of us){
-    const ex=await get(T_USERS,u.id).catch(()=>null);
-    if(!ex)await put(T_USERS,u.id,{...u,password:h,createdAt:new Date().toISOString()});
-  }
-}
-async function ensureCoachBindings(){
-  for(const id of DEFAULT_COACH_USERS){
-    const u=await get(T_USERS,id).catch(()=>null);
-    if(!u)continue;
-    if(u.role==='editor'&&(!u.coachName||!String(u.coachName).trim())){
-      await put(T_USERS,id,{...u,coachName:u.name||id,coachId:u.coachId||id,updatedAt:new Date().toISOString()});
-    }
-  }
-}
-async function ensureDefaultCampuses(){
-  await mkTable(T_CAMPUSES);
-  for(const campus of DEFAULT_CAMPUSES){
-    const ex=await get(T_CAMPUSES,campus.id).catch(()=>null);
-    if(!ex)await put(T_CAMPUSES,campus.id,{...campus,createdAt:new Date().toISOString()});
-  }
-}
-async function putSeedRows(table,rows=[]){
-  const chunkSize=20;
-  for(let i=0;i<rows.length;i+=chunkSize){
-    await Promise.all(rows.slice(i,i+chunkSize).map(row=>put(table,row.id,row)));
-  }
-}
 function isMabaoFinanceSeedRow(row){
   return String(row?.seedTag||'').startsWith('mabao-finance-seed-');
 }
@@ -4686,104 +4236,6 @@ function normalizeEntitlementLedgerRowsForDetailView(rows=[]){
     deduped.push(row);
   }
   return deduped;
-}
-function collectMabaoSeedStaleRowIds(existingRows=[],seedRows=[],tag=''){
-  const nextIds=new Set((seedRows||[]).map(row=>row.id));
-  return (existingRows||[])
-    .filter(row=>isMabaoFinanceSeedRow(row)&&(!nextIds.has(row.id)||String(row.seedTag||'')!==String(tag||'')))
-    .map(row=>row.id);
-}
-function collectMabaoSeedImportedLedgerReplacementIds(existingRows=[],seedRows=[]){
-  const seedKeys=new Set((seedRows||[]).map(row=>{
-    const monthKey=importedLedgerMonthKey(row);
-    if(!monthKey)return '';
-    return [row.entitlementId,row.purchaseId,row.studentId,monthKey].join('|');
-  }).filter(Boolean));
-  if(!seedKeys.size)return [];
-  return (existingRows||[])
-    .filter(row=>!isMabaoFinanceSeedRow(row)&&isImportedMonthlyLedgerRow(row))
-    .filter(row=>seedKeys.has([row.entitlementId,row.purchaseId,row.studentId,importedLedgerMonthKey(row)].join('|')))
-    .map(row=>row.id);
-}
-async function replaceMabaoSeedRows(table,seedRows=[],tag=''){
-  const staleIds=collectMabaoSeedStaleRowIds(await scan(table).catch(()=>[]),seedRows,tag);
-  if(staleIds.length)await deleteSeedRows(table,staleIds);
-  await putSeedRows(table,seedRows);
-}
-async function replaceMabaoSeedLedgerRows(seedRows=[],tag=''){
-  const existingRows=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
-  const staleIds=collectMabaoSeedStaleRowIds(existingRows,seedRows,tag);
-  const replacementIds=collectMabaoSeedImportedLedgerReplacementIds(existingRows,seedRows);
-  const duplicateIds=collectDuplicateImportedLedgerIds(existingRows);
-  const removeIds=[...new Set([...staleIds,...replacementIds,...duplicateIds])];
-  if(removeIds.length)await deleteSeedRows(T_ENTITLEMENT_LEDGER,removeIds);
-  await putSeedRows(T_ENTITLEMENT_LEDGER,seedRows);
-}
-async function repairImportedLedgerDuplicates(){
-  if(!ENABLE_IMPORTED_LEDGER_AUTO_REPAIR){
-    if(RAW_ENABLE_IMPORTED_LEDGER_AUTO_REPAIR&&BOOTSTRAP_SAFETY_FLAGS.isProduction&&!BOOTSTRAP_SAFETY_FLAGS.allowProductionBootstrapWrites)logBlockedAutoWrite('repairImportedLedgerDuplicates');
-    return 0;
-  }
-  const existingRows=await scan(T_ENTITLEMENT_LEDGER).catch(()=>[]);
-  const duplicateIds=collectDuplicateImportedLedgerIds(existingRows);
-  if(!duplicateIds.length)return 0;
-  await deleteSeedRows(T_ENTITLEMENT_LEDGER,duplicateIds);
-  return duplicateIds.length;
-}
-async function maybeRepairImportedLedgerDuplicates(){
-  if(importedLedgerRepairChecked)return 0;
-  importedLedgerRepairChecked=true;
-  try{
-    return await repairImportedLedgerDuplicates();
-  }catch(err){
-    importedLedgerRepairChecked=false;
-    throw err;
-  }
-}
-function hasCurrentMabaoSeedRows(existingRows=[],seedRows=[],tag=''){
-  const seedIds=new Set((seedRows||[]).map(row=>row.id));
-  const existingSeedRows=(existingRows||[]).filter(isMabaoFinanceSeedRow);
-  return existingSeedRows.length===seedRows.length&&existingSeedRows.every(row=>seedIds.has(row.id)&&String(row.seedTag||'')===String(tag||''));
-}
-async function deleteSeedRows(table,ids=[]){
-  const chunkSize=20;
-  for(let i=0;i<ids.length;i+=chunkSize){
-    await Promise.all(ids.slice(i,i+chunkSize).map(id=>del(table,id).catch(()=>null)));
-  }
-}
-async function isMabaoFinanceSeedCurrent(){
-  const tag=mabaoFinanceSeed?.meta?.tag;
-  if(!tag)return false;
-  const [purchases,entitlements,ledger]=await Promise.all([
-    scan(T_PURCHASES).catch(()=>[]),
-    scan(T_ENTITLEMENTS).catch(()=>[]),
-    scan(T_ENTITLEMENT_LEDGER).catch(()=>[])
-  ]);
-  if(!hasCurrentMabaoSeedRows(purchases,mabaoFinanceSeed.purchases,tag))return false;
-  if(!hasCurrentMabaoSeedRows(entitlements,mabaoFinanceSeed.entitlements,tag))return false;
-  if(!hasCurrentMabaoSeedRows(ledger,mabaoFinanceSeed.entitlementLedger,tag))return false;
-  if(collectMabaoSeedImportedLedgerReplacementIds(ledger,mabaoFinanceSeed.entitlementLedger).length)return false;
-  for(const id of mabaoFinanceSeed?.meta?.deletePurchases||[]){
-    const old=await get(T_PURCHASES,id).catch(()=>null);
-    if(old)return false;
-  }
-  return true;
-}
-async function bootstrapMabaoFinanceSeed(){
-  if(!ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
-    if(RAW_ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP&&BOOTSTRAP_SAFETY_FLAGS.isProduction&&!BOOTSTRAP_SAFETY_FLAGS.allowProductionBootstrapWrites)logBlockedAutoWrite('bootstrapMabaoFinanceSeed');
-    return;
-  }
-  if(await isMabaoFinanceSeedCurrent())return;
-  const tag=mabaoFinanceSeed?.meta?.tag||'';
-  await deleteSeedRows(T_PURCHASES,mabaoFinanceSeed?.meta?.deletePurchases||[]);
-  await deleteSeedRows(T_PACKAGES,mabaoFinanceSeed?.meta?.deletePackages||[]);
-  await replaceMabaoSeedRows(T_STUDENTS,mabaoFinanceSeed.students,tag);
-  await replaceMabaoSeedRows(T_PRODUCTS,mabaoFinanceSeed.products,tag);
-  await replaceMabaoSeedRows(T_PACKAGES,mabaoFinanceSeed.packages,tag);
-  await replaceMabaoSeedRows(T_PURCHASES,mabaoFinanceSeed.purchases,tag);
-  await replaceMabaoSeedRows(T_ENTITLEMENTS,mabaoFinanceSeed.entitlements,tag);
-  await replaceMabaoSeedLedgerRows(mabaoFinanceSeed.entitlementLedger,tag);
 }
 async function listCampusesWithDefaults(){
   const rows=await getCachedScan(T_CAMPUSES).catch(()=>[]);
@@ -5056,82 +4508,6 @@ async function getFinancePageSnapshot(){
 }
 function isProductionRuntime(){
   return RUNTIME_STAGE==='production';
-}
-function scheduleInitInBackground(){
-  if(REQUIRED_ENV_VARS.some((k)=>!process.env[k]))return;
-  if(IS_PRODUCTION_RUNTIME)return;
-  if(inited||initPromise)return;
-  init().catch(err=>console.error('[api-init] background init failed',err));
-}
-async function init(){
-  if(inited)return;
-  if(initPromise)return initPromise;
-  initPromise=(async()=>{
-    const startedAt=Date.now();
-    const missing=REQUIRED_ENV_VARS.filter((k)=>!process.env[k]);
-    if(missing.length)throw new Error('缺少环境变量：'+missing.join(', '));
-    if(RAW_ENABLE_DEFAULT_USER_BOOTSTRAP&&!ENABLE_DEFAULT_USER_BOOTSTRAP&&BOOTSTRAP_SAFETY_FLAGS.isProduction)logBlockedAutoWrite('bootstrapDefaultUsers');
-    if(RAW_ENABLE_TABLE_BOOTSTRAP&&!ENABLE_TABLE_BOOTSTRAP&&BOOTSTRAP_SAFETY_FLAGS.isProduction)logBlockedAutoWrite('ENABLE_TABLE_BOOTSTRAP');
-    if(RAW_ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP&&!ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP&&BOOTSTRAP_SAFETY_FLAGS.isProduction)logBlockedAutoWrite('syncDefaultPricePlans');
-    if(RAW_ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP&&!ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP&&BOOTSTRAP_SAFETY_FLAGS.isProduction)logBlockedAutoWrite('bootstrapMabaoFinanceSeed');
-    if(RAW_ENABLE_IMPORTED_LEDGER_AUTO_REPAIR&&!ENABLE_IMPORTED_LEDGER_AUTO_REPAIR&&BOOTSTRAP_SAFETY_FLAGS.isProduction)logBlockedAutoWrite('repairImportedLedgerDuplicates');
-    if(IS_PRODUCTION_RUNTIME){
-      inited=true;
-      console.log(`[api-init] production request-ready without heavy bootstrap ${Date.now()-startedAt}ms`);
-      return;
-    }
-    if(ENABLE_RUNTIME_TABLE_ENSURE||ENABLE_TABLE_BOOTSTRAP){
-      const stepStartedAt=Date.now();
-      for(const t of RUNTIME_ENSURED_TABLES)await mkTable(t);
-      console.log(`[api-init] ensure runtime tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    if(ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
-      const stepStartedAt=Date.now();
-      for(const t of [T_STUDENTS,T_PRODUCTS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER])await mkTable(t);
-      console.log(`[api-init] ensure mabao seed tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    if(ENABLE_TABLE_BOOTSTRAP){
-      let stepStartedAt=Date.now();
-      for(const t of[T_USERS,T_COURTS,T_STUDENTS,T_PRODUCTS,T_PLANS,T_SCHEDULE,T_COACHES,T_CLASSES,T_CLASS_NOS,T_CAMPUSES,T_FEEDBACKS,T_COACH_PROPOSALS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_PRICE_PLANS])await mkTable(t);
-      console.log(`[api-init] ensure bootstrap tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-      stepStartedAt=Date.now();
-      await bootstrapDefaultUsers();
-      console.log(`[api-init] bootstrapDefaultUsers done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-      stepStartedAt=Date.now();
-      await ensureDefaultCampuses();
-      console.log(`[api-init] ensureDefaultCampuses done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-      stepStartedAt=Date.now();
-      await ensureCoachBindings();
-      console.log(`[api-init] ensureCoachBindings done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    if(ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP){
-      const stepStartedAt=Date.now();
-      await bootstrapMabaoFinanceSeed();
-      console.log(`[api-init] bootstrapMabaoFinanceSeed done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    if(ENABLE_IMPORTED_LEDGER_AUTO_REPAIR){
-      const stepStartedAt=Date.now();
-      const repairedCount=await repairImportedLedgerDuplicates();
-      console.log(`[api-init] repairImportedLedgerDuplicates done ${Date.now()-stepStartedAt}ms, removed ${repairedCount} rows (total ${Date.now()-startedAt}ms)`);
-    }
-    inited=true;
-    if(ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP){
-      const stepStartedAt=Date.now();
-      await syncDefaultPricePlans().catch(err=>console.error('[api-bootstrap] sync default price plans failed',err));
-      console.log(`[api-init] syncDefaultPricePlans done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    {
-      const stepStartedAt=Date.now();
-      prewarmHotScanCache().catch(err=>console.error('[api-timing] prewarm hot tables failed',err));
-      console.log(`[api-init] prewarmHotScanCache dispatched ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
-    }
-    console.log(`[api-timing] init cold start ${Date.now()-startedAt}ms`);
-  })().catch(err=>{
-    initPromise=null;
-    inited=false;
-    throw err;
-  });
-  return initPromise;
 }
 
 scheduleInitInBackground();

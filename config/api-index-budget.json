@@ -1,9 +1,12 @@
 {
-  "maxLines": 10530,
+  "maxLines": 9920,
   "extractedModules": [
     "api/auth.js",
     "api/diagnostics.js",
     "api/storage.js",
+    "api/bootstrap.js",
+    "api/schedule.js",
+    "api/packages.js",
     "api/page-data/finance-page.js",
     "api/page-data/finance-snapshot.js"
   ]

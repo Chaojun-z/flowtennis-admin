@@ -4,6 +4,7 @@ const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const authSource = fs.readFileSync(path.join(__dirname, '../api/auth.js'), 'utf8');
+const bootstrapSource = fs.readFileSync(path.join(__dirname, '../api/bootstrap.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../api/page-data/finance-page.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(__dirname, '../api/storage.js'), 'utf8');
 
@@ -57,7 +58,7 @@ assert.match(apiSource, /const \[entitlementRows,coaches,users\]=await Promise\.
 assert.match(apiSource, /assertCanEditClassWithSchedules\(old,r,await getCachedScan\(T_SCHEDULE\)\);/, 'class edit should reuse cached schedule scan');
 assert.match(apiSource, /assertCanDeleteClass\(id,await getCachedScan\(T_SCHEDULE\)\);const classPlans=\(await getCachedScan\(T_PLANS\)\)\.filter\(p=>p\.classId===id\);/, 'class delete should reuse cached schedule and plan scans');
 assert.match(apiSource, /async function prewarmHotScanCache\(\)/, 'api should expose a hot table prewarm');
-assert.match(apiSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.error\('\[api-timing\] prewarm hot tables failed',err\)\);/, 'init should trigger hot table prewarm');
+assert.match(bootstrapSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.error\('\[api-timing\] prewarm hot tables failed',err\)\);/, 'init should trigger hot table prewarm');
 assert.match(apiSource, /const storedAuthUser=await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\);/, 'authenticated requests should reuse cached user row lookup');
 assert.match(authSource, /async function loadLoginUser\(username\)\{[\s\S]*withTimeout\(getCachedRow\(T_USERS,username\),LOGIN_ROW_TIMEOUT_MS,rowTimeout\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(err\)=>\{/, 'login should fallback from cached user row lookup to cached scan');
 assert.match(apiSource, /if\(user\?\.__loginTimeout\)return sendJson\(res,\{error:LOGIN_STORAGE_TIMEOUT_ERROR\},503\);/, 'login should return 503 when ft_users stays timed out');
