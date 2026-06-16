@@ -2,6 +2,7 @@
 
 const dotenv = require('dotenv');
 const { createClientFromEnv, scanTable, putRow } = require('./lib/staging-data-store');
+const { assertProductionWriteTarget } = require('./lib/production-write-guard');
 
 const PROD_DIAG_URL = 'https://www.flowtennis.cn/api/diag';
 const DEFAULT_FROM_NAME = '刘润扬教练';
@@ -298,17 +299,7 @@ function compactPreview(plan, target) {
 }
 
 async function assertReadTarget() {
-  const res = await fetch(PROD_DIAG_URL, { headers: { 'Cache-Control': 'no-cache' } });
-  if (!res.ok) throw new Error(`线上 diag 失败：${res.status}`);
-  const diag = await res.json();
-  const onlineEndpoint = String(diag.TS_ENDPOINT || diag.env?.TS_ENDPOINT || '').trim();
-  const onlineInstance = String(diag.TS_INSTANCE || diag.env?.TS_INSTANCE || '').trim();
-  const localEndpoint = String(process.env.TS_ENDPOINT || '').trim();
-  const localInstance = String(process.env.TS_INSTANCE || process.env.TARGET_TS_INSTANCE || '').trim();
-  if (localEndpoint !== onlineEndpoint || localInstance !== onlineInstance) {
-    throw new Error(`停止 dry-run：本地目标 ${localEndpoint} / ${localInstance} 与线上 ${onlineEndpoint} / ${onlineInstance} 不一致`);
-  }
-  return { onlineEndpoint, onlineInstance, localEndpoint, localInstance };
+  return assertProductionWriteTarget({ diagUrl: PROD_DIAG_URL });
 }
 
 async function scanAll(client) {

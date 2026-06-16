@@ -1,0 +1,27 @@
+{
+  "updatedAt": "2026-06-16",
+  "policy": "只允许当前 TableStore SDK 间接引入的 protobufjs high/critical 漏洞临时例外；新增 high/critical 必须失败。",
+  "allow": [
+    {
+      "package": "protobufjs",
+      "reason": "TableStore SDK 暂无可用修复版本；已要求业务代码通过 server/storage.js 封装 SDK。",
+      "expiresOn": "2026-09-30",
+      "advisories": [
+        "https://github.com/advisories/GHSA-xq3m-2v4x-88gg",
+        "https://github.com/advisories/GHSA-66ff-xgx4-vchm",
+        "https://github.com/advisories/GHSA-75px-5xx7-5xc7",
+        "https://github.com/advisories/GHSA-jvwf-75h9-cwgg",
+        "https://github.com/advisories/GHSA-685m-2w69-288q",
+        "https://github.com/advisories/GHSA-wcpc-wj8m-hjx6"
+      ]
+    },
+    {
+      "package": "tablestore",
+      "reason": "TableStore SDK 受 protobufjs 影响，等待官方 SDK 可升级路径。",
+      "expiresOn": "2026-09-30",
+      "via": [
+        "protobufjs"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 const path = require('path');
 const TableStore = require('tablestore');
+const {
+  assertExplicitWrite,
+  assertProductionWriteTarget,
+  parseWriteFlags
+} = require('./lib/production-write-guard');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const TS_ENDPOINT = process.env.TS_ENDPOINT || '';
@@ -171,7 +176,10 @@ function selectUser(users) {
 }
 
 async function main() {
+  const args = parseWriteFlags(process.argv.slice(2));
+  assertExplicitWrite({ write: args.write, scriptName: 'backfill-wechat-user-index' });
   assertEnv();
+  const target = await assertProductionWriteTarget();
   const tableStatus = await mkTable(INDEX_TABLE);
   const users = await scan(USERS_TABLE);
   const grouped = new Map();
@@ -227,6 +235,7 @@ async function main() {
         sourceTable: USERS_TABLE,
         indexTable: INDEX_TABLE,
         tableStatus,
+        target,
         ...summary
       },
       null,

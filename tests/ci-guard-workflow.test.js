@@ -10,6 +10,7 @@ const releaseGuard = packageJson.scripts['guard:release'];
 
 const requiredReleaseGuardSteps = [
   'npm test',
+  'npm run guard:deps-security',
   'npm run guard:finance',
   'node tests/page-data-requirements.test.js',
   'node tests/production-read-path-hotfix.test.js',
@@ -30,6 +31,8 @@ const requiredReleaseGuardSteps = [
 
 assert.match(source, /name:\s*Finance regression guard/i, 'workflow should expose a real finance guard step');
 assert.match(source, /npm run guard:finance/, 'workflow should execute the real finance regression script');
+assert.match(source, /name:\s*Dependency security guard/i, 'workflow should expose dependency security guard step');
+assert.match(source, /npm run guard:deps-security/, 'workflow should execute dependency security guard');
 assert.match(source, /TZ:\s*Asia\/Shanghai/, 'workflow should run the CI guard in Beijing time');
 assert.doesNotMatch(source, /Finance guard placeholder|TODO: 接入真实财务回归脚本后替换本步骤/, 'workflow should not keep placeholder finance guard text');
 

@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { createClientFromEnv, scanTable, putRow, deleteRow } = require('./lib/staging-data-store');
+const { assertProductionWriteTarget } = require('./lib/production-write-guard');
 const seed = require('../server/seeds/mabao-finance-seed.json');
 
 const TABLES = {
@@ -1000,17 +1001,7 @@ function loadEnvFile(filePath) {
 }
 
 async function assertProductionTarget() {
-  const res = await fetch(PROD_DIAG_URL);
-  if (!res.ok) throw new Error(`线上 diag 请求失败：${res.status}`);
-  const diag = await res.json();
-  const onlineEndpoint = String(diag.TS_ENDPOINT || diag.env?.TS_ENDPOINT || '').trim();
-  const onlineInstance = String(diag.TS_INSTANCE || diag.env?.TS_INSTANCE || '').trim();
-  const localEndpoint = String(process.env.TS_ENDPOINT || '').trim();
-  const localInstance = String(process.env.TS_INSTANCE || process.env.TARGET_TS_INSTANCE || '').trim();
-  if (localEndpoint !== onlineEndpoint || localInstance !== onlineInstance) {
-    throw new Error(`停止写入：本地目标 ${localEndpoint} / ${localInstance} 与线上 ${onlineEndpoint} / ${onlineInstance} 不一致`);
-  }
-  return { onlineEndpoint, onlineInstance, localEndpoint, localInstance };
+  return assertProductionWriteTarget({ diagUrl: PROD_DIAG_URL });
 }
 
 async function run(argv = process.argv.slice(2)) {

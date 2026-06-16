@@ -7,6 +7,7 @@ const {
   putRow,
   deleteRow
 } = require('./lib/staging-data-store');
+const { assertProductionWriteTarget } = require('./lib/production-write-guard');
 
 const PROD_DIAG_URL = 'https://www.flowtennis.cn/api/diag';
 const TABLES = {
@@ -90,17 +91,7 @@ function roundLesson(value) {
 }
 
 async function assertProductionTarget(env = process.env) {
-  const res = await fetch(PROD_DIAG_URL, { headers: { 'Cache-Control': 'no-cache' } });
-  if (!res.ok) throw new Error(`线上 diag 失败：${res.status}`);
-  const diag = await res.json();
-  const onlineEndpoint = String(diag.TS_ENDPOINT || diag.env?.TS_ENDPOINT || '').trim().replace(/\/+$/, '');
-  const onlineInstance = String(diag.TS_INSTANCE || diag.env?.TS_INSTANCE || '').trim();
-  const localEndpoint = String(env.TS_ENDPOINT || '').trim().replace(/\/+$/, '');
-  const localInstance = String(env.TS_INSTANCE || env.TARGET_TS_INSTANCE || '').trim();
-  if (onlineEndpoint !== localEndpoint || onlineInstance !== localInstance) {
-    throw new Error(`停止写入：本地目标 ${localEndpoint} / ${localInstance} 与线上 ${onlineEndpoint} / ${onlineInstance} 不一致`);
-  }
-  return { onlineEndpoint, onlineInstance, localEndpoint, localInstance };
+  return assertProductionWriteTarget({ env, diagUrl: PROD_DIAG_URL });
 }
 
 function mapById(rows = []) {

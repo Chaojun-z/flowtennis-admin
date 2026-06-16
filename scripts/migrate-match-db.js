@@ -2,6 +2,11 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Pool } = require('pg');
+const {
+  argValue,
+  assertExplicitWrite,
+  parseWriteFlags
+} = require('./lib/production-write-guard');
 
 const databaseUrl = process.env.MATCH_DATABASE_URL || process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -10,6 +15,14 @@ if (!databaseUrl) {
 }
 
 async function main() {
+  const argv = process.argv.slice(2);
+  const args = parseWriteFlags(argv);
+  const target = argValue(argv, '--target');
+  assertExplicitWrite({ write: args.write, scriptName: 'migrate-match-db' });
+  if (!['staging', 'production'].includes(target)) {
+    throw new Error('migrate-match-db 必须显式传入 --target staging 或 --target production');
+  }
+
   const pool = new Pool({
     connectionString: databaseUrl,
     ssl: process.env.MATCH_DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined
@@ -21,7 +34,7 @@ async function main() {
       const sql = fs.readFileSync(path.join(migrationDir, file), 'utf8');
       await pool.query(sql);
     }
-    console.log('match db migration applied');
+    console.log(`match db migration applied: ${target}`);
   } finally {
     await pool.end();
   }
