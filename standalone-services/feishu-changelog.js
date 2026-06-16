@@ -16,6 +16,24 @@ const PLATFORM_NAMES = {
   coachMp: '🟢 教练小程序',
   matchMp: '🎾 约球小程序'
 };
+const CATEGORY_ORDER = [
+  'stability',
+  'finance',
+  'packageSchedule',
+  'membershipCourt',
+  'leadStudent',
+  'experience',
+  'other'
+];
+const CATEGORY_NAMES = {
+  stability: '稳定性与安全',
+  finance: '财务与对账',
+  packageSchedule: '课包与排课',
+  membershipCourt: '会员与订场',
+  leadStudent: '线索与学员',
+  experience: '界面体验',
+  other: '其他更新'
+};
 const BROADCAST_PLATFORM_ALIASES = {
   管理后台: 'adminWeb',
   后台: 'adminWeb',
@@ -351,9 +369,9 @@ function buildBusinessEntries(commits, options = {}) {
   const deduped = new Map();
 
   for (const commit of commits) {
-    if (isNoiseCommit(commit)) continue;
     const prDetails = commit.prNumber ? prDetailsByNumber[commit.prNumber] : null;
     const candidates = buildCandidate(commit, prDetails);
+    if (!candidates.length) continue;
 
     for (const candidate of candidates) {
       if (deduped.has(candidate.key)) {
@@ -390,12 +408,55 @@ function groupEntriesByPlatform(entries) {
   return grouped;
 }
 
-function buildTopSummary(entries) {
-  return entries.slice(0, 4).map((entry, index) => `${index + 1}. ${entry.summary}`);
+function classifyEntryCategory(summary) {
+  const text = String(summary || '');
+  if (/加载失败|部署|发布|函数数量|报错|错误|失败|稳定|安全|门禁|权限|登录|鉴权|XSS|CORS|限流|风险|兜底|读取链路|数据量增长/.test(text)) {
+    return 'stability';
+  }
+  if (/财务|对账|账本|账目|流水|收入|已入账|未入账|口径|快照|基线|回溯|金额/.test(text)) {
+    return 'finance';
+  }
+  if (/课包|排课|课程|消课|扣课|扣减|小班|体验课|购买/.test(text)) {
+    return 'packageSchedule';
+  }
+  if (/会员|订场|场地|储值|充值|余额|消费|订场用户/.test(text)) {
+    return 'membershipCourt';
+  }
+  if (/线索|学员|学生|客户/.test(text)) {
+    return 'leadStudent';
+  }
+  if (/抽屉|列宽|备注|展示|入口|列表|详情|页面|筛选|按钮|输入框|界面|横向查看|对齐/.test(text)) {
+    return 'experience';
+  }
+  return 'other';
+}
+
+function groupEntriesByPlatformAndCategory(entries) {
+  const grouped = {};
+  for (const platform of PLATFORM_ORDER) {
+    grouped[platform] = {};
+    for (const category of CATEGORY_ORDER) grouped[platform][category] = [];
+  }
+
+  for (const entry of entries) {
+    const category = classifyEntryCategory(entry.summary);
+    for (const platform of entry.platforms) {
+      if (!grouped[platform]) continue;
+      grouped[platform][category].push(entry.summary);
+    }
+  }
+
+  for (const platform of PLATFORM_ORDER) {
+    for (const category of CATEGORY_ORDER) {
+      grouped[platform][category] = Array.from(new Set(grouped[platform][category]));
+    }
+  }
+
+  return grouped;
 }
 
 function buildChangelogCard(payload) {
-  const grouped = groupEntriesByPlatform(payload.entries);
+  const grouped = groupEntriesByPlatformAndCategory(payload.entries);
   const blocks = [];
 
   blocks.push({
@@ -404,10 +465,17 @@ function buildChangelogCard(payload) {
   });
 
   for (const platform of PLATFORM_ORDER) {
-    if (!grouped[platform].length) continue;
+    const categoryBlocks = CATEGORY_ORDER
+      .map((category) => {
+        const lines = grouped[platform][category] || [];
+        if (!lines.length) return '';
+        return `【${CATEGORY_NAMES[category]}】\n${lines.map((line) => `• ${line}`).join('\n')}`;
+      })
+      .filter(Boolean);
+    if (!categoryBlocks.length) continue;
     blocks.push({
       tag: 'markdown',
-      content: `**${PLATFORM_NAMES[platform]}**\n${grouped[platform].map((line) => `• ${line}`).join('\n')}`
+      content: `**${PLATFORM_NAMES[platform]}**\n\n${categoryBlocks.join('\n\n')}`
     });
   }
 
@@ -417,7 +485,7 @@ function buildChangelogCard(payload) {
     elements: [
       {
         tag: 'plain_text',
-        content: '本摘要只读取提交或合并请求中的“产品播报”内容；当天无产品播报时静默不发。'
+        content: '本摘要读取提交或合并请求中的“产品播报”内容，并按端和模块归类；如前一天漏发，会在下次自动补发。'
       }
     ]
   });
@@ -620,9 +688,11 @@ module.exports = {
   buildBusinessEntries,
   buildChangelogCard,
   classifyPlatforms,
+  classifyEntryCategory,
   cleanSubject,
   extractProductBroadcastItems,
   groupEntriesByPlatform,
+  groupEntriesByPlatformAndCategory,
   isNoiseCommit,
   parseGitLog,
   readSentDates,
