@@ -7,6 +7,7 @@ const authSource = fs.readFileSync(path.join(__dirname, '../server/auth.js'), 'u
 const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
 const courtRoutesSource = fs.readFileSync(path.join(__dirname, '../server/courts-routes.js'), 'utf8');
 const campusRoutesSource = fs.readFileSync(path.join(__dirname, '../server/campuses-routes.js'), 'utf8');
+const coachRoutesSource = fs.readFileSync(path.join(__dirname, '../server/coaches-routes.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '../server/membership-routes.js'), 'utf8');
@@ -31,7 +32,7 @@ assert.match(apiSource, /if\(user\.role==='admin'\)return sendJson\(res,filterLo
 assert.match(courtRoutesSource, /if\(path==='\/courts'\)\{[\s\S]*const rows=await getCachedScan\(T_COURTS\);[\s\S]*filterLoadAllForUser\(\{courts:rows\},user\)\.courts/, 'courts list should use cached scan');
 assert.match(apiSource, /if\(path==='\/schedule'\)\{[\s\S]*if\(method==='GET'\)\{if\(user\.role==='admin'\)\{const rows=await getScheduleListRows\(\);return sendJson\(res,filterLoadAllForUser\(\{schedule:rows\},user\)\.schedule\);\}[\s\S]*return sendJson\(res,await getCoachScheduleRowsForUser\(user,buildCoachRefs\(\{coaches,users\}\)\)\);/, 'schedule list should use complete projected schedule reads and coach secondary index fallback');
 assert.match(apiSource, /if\(path==='\/classes'\)\{await init\(\);if\(method==='GET'\)\{const rows=await getCachedScan\(T_CLASSES\);/, 'classes list should use cached scan');
-assert.match(apiSource, /if\(path==='\/coaches'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)\{const rows=await getCachedScan\(T_COACHES\);return sendJson\(res,filterLoadAllForUser\(\{coaches:rows\},user\)\.coaches\);/, 'coaches list should use cached scan');
+assert.match(coachRoutesSource, /if\(path==='\/coaches'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getCachedScan\(T_COACHES\);[\s\S]*return sendJson\(res,filterLoadAllForUser\(\{coaches:rows\},user\)\.coaches\);/, 'coaches list should use cached scan');
 assert.match(apiSource, /async function listCampusesWithDefaults\(\)\{[\s\S]*const rows=await getCachedScan\(T_CAMPUSES\)\.catch\(\(\)=>\[\]\);[\s\S]*return rows\.length\?rows:DEFAULT_CAMPUSES;/, 'campuses should read through cached scan with default fallback');
 assert.match(campusRoutesSource, /if\(path==='\/campuses'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const result=await listCampusesWithDefaults\(\);[\s\S]*return sendJson\(res,filterLoadAllForUser\(\{campuses:result\},user\)\.campuses\);[\s\S]*\}[\s\S]*await init\(\);/, 'campuses list should use cached scan via the default-aware helper');
 assert.match(apiSource, /\[T_PLANS,\{ttlMs:60000\}\]/, 'plans should be configured as a hot scan table');

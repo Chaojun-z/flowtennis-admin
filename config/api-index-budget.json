@@ -15,6 +15,7 @@
     "server/match-routes.js",
     "server/leads-routes.js",
     "server/campuses-routes.js",
+    "server/coaches-routes.js",
     "server/page-data/core-pages.js",
     "server/page-data/finance-page.js",
     "server/page-data/finance-snapshot.js"
