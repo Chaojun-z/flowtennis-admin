@@ -7502,7 +7502,7 @@ module.exports = async (req, res) => {
         return sendJson(res,{success:true,archived:true,pricePlan:r});
       }
     }
-    if(await handleCourtRoutes({path,method,body,user,res}))return;
+    if(await handleCourtRoutes({path,method,body,user,res}))return;if(await handleMembershipRoutes({path,method,body,user,res,query}))return;
     if(path==='/students'){await init();if(method==='GET'){const rows=await getFastStudentsRead();if(user.role==='admin')return sendJson(res,filterLoadAllForUser({students:rows},user).students);/* hot-cache guard: filterLoadAllForUser({students:rows,schedule,classes},user).students */const [schedule,classes,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({students:rows,schedule,classes,coaches},user,coachRefs).students);}if(method==='POST'){assertStudentWriteAccess(user);const id=uuidv4();const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);return sendJson(res,r);}}
     const studentReminderLinkM=path.match(/^\/students\/([^/]+)\/reminder-link$/);
     if(studentReminderLinkM&&method==='POST'){

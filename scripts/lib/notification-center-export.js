@@ -33,6 +33,16 @@ function parseScheduleTimeMs(input) {
   return new Date(input || '').getTime();
 }
 
+function scheduleEndTimeMs(row) {
+  const explicitEndMs = parseScheduleTimeMs(row?.endTime || '');
+  if (Number.isFinite(explicitEndMs)) return explicitEndMs;
+  const startMs = parseScheduleTimeMs(row?.startTime || '');
+  if (!Number.isFinite(startMs)) return NaN;
+  const lessonCount = Number(row?.lessonCount);
+  const minutes = Number.isFinite(lessonCount) && lessonCount > 0 ? lessonCount * 60 : 60;
+  return startMs + minutes * 60 * 1000;
+}
+
 function scheduleDateKey(input) {
   const text = String(input || '').trim();
   const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T]/);
@@ -67,7 +77,7 @@ function effectiveStatus(row, now) {
   const status = String(row?.status || '已排课').trim() || '已排课';
   if (status === '已取消') return '已取消';
   if (status === '已结束' || status === '已下课') return '已结束';
-  const endMs = parseScheduleTimeMs(row?.endTime || '');
+  const endMs = scheduleEndTimeMs(row);
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (status === '已排课' && Number.isFinite(endMs) && Number.isFinite(nowMs) && endMs < nowMs) return '已结束';
   return status;
@@ -80,15 +90,20 @@ function sortByStartTime(items) {
 function normalizeLesson(row, campusMap, now) {
   const studentNames = splitStudentNames(row);
   const studentIds = Array.isArray(row.studentIds) ? row.studentIds.filter(Boolean) : [];
+  const campusCode = String(row.campus || '').trim();
+  const isExternal = String(row.locationType || '').trim() === 'external' || campusCode === '__external__' || campusCode === 'external';
+  const venueParts = String(row.venue || '').split(' · ').map((item) => String(item || '').trim()).filter(Boolean);
+  const externalVenueName = String(row.externalVenueName || venueParts[0] || '').trim();
+  const externalCourtName = String(row.externalCourtName || venueParts.slice(1).join(' · ') || '').trim();
   return {
     id: String(row.id || '').trim(),
     startTime: String(row.startTime || '').trim(),
     endTime: String(row.endTime || '').trim(),
     coachId: String(row.coachId || '').trim(),
     coachName: String(row.coach || row.coachName || '').trim(),
-    campusCode: String(row.campus || '').trim(),
-    campusName: campusMap.get(String(row.campus || '').trim()) || String(row.campus || '').trim(),
-    venue: String(row.venue || '').trim(),
+    campusCode,
+    campusName: isExternal ? (externalVenueName || '校区外') : (campusMap.get(campusCode) || campusCode),
+    venue: isExternal ? externalCourtName : String(row.venue || '').trim(),
     className: String(row.className || '').trim(),
     courseType: String(row.courseType || '').trim(),
     status: effectiveStatus(row, now),

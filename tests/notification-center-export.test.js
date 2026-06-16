@@ -34,4 +34,27 @@ assert.strictEqual(completedSnapshot.todayStats.completedLessons, 1, '已经过�
 assert.strictEqual(completedSnapshot.todayStats.cancelledLessons, 1, '已取消排课应计入取消课程');
 assert.deepStrictEqual(completedSnapshot.todayLessonDetails.map((row) => row.status), ['已结束', '已取消']);
 
+const fallbackEndSnapshot = buildNotificationCenterSnapshot({
+  targetDate: '2026-06-16',
+  now: new Date('2026-06-16T13:00:00Z'),
+  scheduleRows: [
+    { id: 'fallback-end', startTime: '2026-06-16 07:00', coach: '朝珺', campus: 'mabao', courseType: '私教课', studentName: '马晨', status: '已排课', lessonCount: 1 }
+  ],
+  campuses: [{ code: 'mabao', name: '顺义马坡' }]
+});
+
+assert.strictEqual(fallbackEndSnapshot.todayStats.completedLessons, 1, '缺少 endTime 的历史排课应按开课时间和课时推算实际完成');
+
+const externalSnapshot = buildNotificationCenterSnapshot({
+  targetDate: '2026-06-16',
+  now: new Date('2026-06-16T13:00:00Z'),
+  scheduleRows: [
+    { id: 'external-1', startTime: '2026-06-17 07:00', endTime: '2026-06-17 09:00', coach: '朝珺', campus: 'external', locationType: 'external', externalVenueName: '国家网球中心', externalCourtName: 'C1', venue: '国家网球中心 · C1', courseType: '私教课', studentName: '有知有行团课', status: '已排课' }
+  ],
+  campuses: [{ code: 'mabao', name: '顺义马坡' }]
+});
+
+assert.strictEqual(externalSnapshot.tomorrowLessonDetails[0].campusName, '国家网球中心', '外部场馆日报不应把 external 当校区展示');
+assert.strictEqual(externalSnapshot.tomorrowLessonDetails[0].venue, 'C1', '外部场馆日报应把外部场地号单独展示');
+
 console.log('notification center export tests passed');
