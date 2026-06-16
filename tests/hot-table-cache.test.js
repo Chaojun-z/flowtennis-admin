@@ -8,6 +8,7 @@ const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstra
 const courtRoutesSource = fs.readFileSync(path.join(__dirname, '../server/courts-routes.js'), 'utf8');
 const campusRoutesSource = fs.readFileSync(path.join(__dirname, '../server/campuses-routes.js'), 'utf8');
 const coachRoutesSource = fs.readFileSync(path.join(__dirname, '../server/coaches-routes.js'), 'utf8');
+const productRoutesSource = fs.readFileSync(path.join(__dirname, '../server/products-routes.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const membershipRoutesSource = fs.readFileSync(path.join(__dirname, '../server/membership-routes.js'), 'utf8');
@@ -68,7 +69,7 @@ assert.match(bootstrapSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.err
 assert.match(apiSource, /const storedAuthUser=await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\);/, 'authenticated requests should reuse cached user row lookup');
 assert.match(authSource, /async function loadLoginUser\(username\)\{[\s\S]*withTimeout\(getCachedRow\(T_USERS,username\),LOGIN_ROW_TIMEOUT_MS,rowTimeout\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(err\)=>\{/, 'login should fallback from cached user row lookup to cached scan');
 assert.match(apiSource, /if\(user\?\.__loginTimeout\)return sendJson\(res,\{error:LOGIN_STORAGE_TIMEOUT_ERROR\},503\);/, 'login should return 503 when ft_users stays timed out');
-assert.match(apiSource, /if\(path==='\/products'\)\{await init\(\);if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PRODUCTS\)\.catch\(\(\)=>\[\]\)\);/, 'products list should use cached scan');
+assert.match(productRoutesSource, /if\(path==='\/products'\)\{[\s\S]*await init\(\);[\s\S]*if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PRODUCTS\)\.catch\(\(\)=>\[\]\)\);/, 'products list should use cached scan');
 assert.match(apiSource, /if\(path==='\/packages'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)\{const rows=await getCachedScan\(T_PACKAGES\)\.catch\(\(\)=>\[\]\);return sendJson\(res,filterLoadAllForUser\(\{packages:rows\},user\)\.packages\);/, 'packages list should use cached scan');
 assert.match(purchaseEntitlementRoutesSource, /if\(path==='\/purchases'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getCachedScan\(T_PURCHASES\)\.catch\(\(\)=>\[\]\);/, 'purchases list should use cached scan');
 assert.match(membershipRoutesSource, /if\(path==='\/membership-accounts'\)\{[\s\S]*if\(method==='GET'\)\{const rows=await getCachedScan\(T_MEMBERSHIP_ACCOUNTS\)\.catch\(\(\)=>\[\]\);/, 'membership accounts list should use cached scan');

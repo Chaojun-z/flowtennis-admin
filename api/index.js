@@ -28,6 +28,7 @@ const { createMatchRoutes } = require('../server/match-routes');
 const { createLeadsRoutes } = require('../server/leads-routes');
 const { createCampusRoutes } = require('../server/campuses-routes');
 const { createCoachRoutes, createCoachRuleHelpers } = require('../server/coaches-routes');
+const { createProductRoutes, createProductRouteHelpers } = require('../server/products-routes');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -734,6 +735,7 @@ const {
   validatePurchaseInputForPackage,
   syncEntitlementFromPurchase
 }=packageRules;
+const {assertCanEditProductWithReferences,assertCanDeleteProduct,buildProductRenameDisplayUpdates}=createProductRouteHelpers({changedCoreFields});
 const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   init,sendJson:routeSendJson,getCachedScan,getCachedRow,get,scan,put,del,filterLoadAllForUser,uuidv4,
   isCampusScopedAdmin,parseArr,parseLessonValue,buildCoachRefs,buildOperationTrace,withOperationTrace,
@@ -1073,12 +1075,6 @@ function assertCourtBookingHistoryAgainstSchedules(court,schedules){
       row.id
     );
   }
-}
-function assertCanEditProductWithReferences(oldProduct,nextProduct,refs={}){
-  if(!oldProduct||!nextProduct)return;
-  const used=(refs.classes||[]).some(c=>c.productId===oldProduct.id)||(refs.packages||[]).some(p=>p.productId===oldProduct.id);
-  if(!used)return;
-  if(changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']).length)throw new Error('该课程产品已有班次或售卖课包使用，不能修改核心字段');
 }
 function assertScheduleEntitlementRequired(rec){
   if(!isBillableSchedule(rec))return;
@@ -2002,6 +1998,12 @@ const handleCoachRoutes=createCoachRoutes({
   buildCoachRenameUpdates,assertCanDeleteCoachName,assertUniqueCoachName,
   T_COACHES,T_CLASSES,T_SCHEDULE,T_PLANS,T_USERS,T_FEEDBACKS,T_LEADS,T_STUDENTS,
   T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS
+});
+const handleProductRoutes=createProductRoutes({
+  init,sendJson:routeSendJson,getCachedScan,get,scan,put,del,uuidv4,
+  normalizeProductRecord,assertCanEditProductWithReferences,assertCanDeleteProduct,
+  buildProductRenameDisplayUpdates,
+  T_PRODUCTS,T_CLASSES,T_PACKAGES,T_PLANS
 });
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
@@ -6466,10 +6468,6 @@ function assertPlanWriteForbidden(method){
   if(String(method||'').toUpperCase()==='GET')return;
   throw new Error('学习计划由班次自动生成，不能独立新增、修改或删除');
 }
-function assertCanDeleteProduct(productId,classes,packages=[]){
-  if((classes||[]).some(c=>c.productId===productId))throw new Error('该课程产品已有班次使用，不能删除');
-  if((packages||[]).some(p=>p.productId===productId))throw new Error('该课程产品已有售卖课包使用，不能删除');
-}
 function assertCanDeleteClass(classId,schedules){
   if((schedules||[]).some(s=>s.classId===classId))throw new Error('该班次已有排课，不能删除');
 }
@@ -6826,25 +6824,6 @@ function assertCanDeleteCampus(campusId,data={}){
     (data.packages||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id))||
     (data.entitlements||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id));
   if(used)throw new Error('该校区已有学员、教练、班次、排课、课包或权益关联，不能直接删除');
-}
-function buildProductRenameDisplayUpdates(oldProduct,nextProduct,data={},now=new Date().toISOString()){
-  const empty={classes:[],plans:[]};
-  if(!oldProduct||!nextProduct)return empty;
-  const oldName=String(oldProduct.name||'').trim();
-  const nextName=String(nextProduct.name||'').trim();
-  if(!oldName||!nextName||oldName===nextName)return empty;
-  if(changedCoreFields(oldProduct,nextProduct,['type','maxStudents','lessons','price']).length)return empty;
-  const classes=(data.classes||[]).filter(c=>c.productId===oldProduct.id).map(c=>{
-    const className=c.classNo&&nextName?`${c.classNo}-${nextName}`:(nextName||c.className||'');
-    return {...c,productName:nextName,className,updatedAt:now};
-  });
-  const classMap=new Map(classes.map(c=>[c.id,c]));
-  const classIds=new Set(classes.map(c=>c.id));
-  const plans=(data.plans||[]).filter(p=>classIds.has(p.classId)).map(p=>{
-    const cls=classMap.get(p.classId)||null;
-    return {...p,productName:nextName,className:cls?.className||p.className||'',updatedAt:now};
-  });
-  return {classes,plans};
 }
 async function syncClassPlans(classId,cls){
   const studentIds=parseArr(cls.studentIds);
@@ -7450,8 +7429,7 @@ module.exports = async (req, res) => {
     }
     const sM=path.match(/^\/students\/(.+)$/);if(sM){const id=sM[1];if(method==='PUT'){assertStudentWriteAccess(user);const old=await get(T_STUDENTS,id).catch(()=>null);const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};await put(T_STUDENTS,id,r);const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};return sendJson(res,{...r,studentUpdates});}if(method==='DELETE'){try{return sendJson(res,await deleteStudentCascade(id,{confirm:body.confirm,user}));}catch(err){const msg=String(err?.message||err);return sendJson(res,{error:msg},msg==='无权限'?403:/不存在/.test(msg)?404:400);}}}
     if(path==='/init-data'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const ss=body.students||[];for(const s of ss)await put(T_STUDENTS,s.id||uuidv4(),{...s,updatedAt:new Date().toISOString()});return sendJson(res,{success:true,count:ss.length});}
-    if(path==='/products'){await init();if(method==='GET')return sendJson(res,await getCachedScan(T_PRODUCTS).catch(()=>[]));if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=uuidv4();const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},null,now);r.createdAt=now;await put(T_PRODUCTS,id,r);return sendJson(res,r);}}
-    const pM=path.match(/^\/products\/(.+)$/);if(pM){const id=pM[1];if(method==='GET')return sendJson(res,await get(T_PRODUCTS,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const old=await get(T_PRODUCTS,id).catch(()=>null);if(!old)return sendJson(res,{error:'课程产品不存在'},404);const now=new Date().toISOString();const r=normalizeProductRecord({...body,id},old,now);const [classes,packages]=await Promise.all([scan(T_CLASSES).catch(()=>[]),scan(T_PACKAGES).catch(()=>[])]);assertCanEditProductWithReferences(old,r,{classes,packages});await put(T_PRODUCTS,id,r);const renamed=buildProductRenameDisplayUpdates(old,r,{classes},now);if(renamed.classes.length){const plans=await scan(T_PLANS).catch(()=>[]);const sync=buildProductRenameDisplayUpdates(old,r,{classes,plans},now);await Promise.all([...sync.classes.map(row=>put(T_CLASSES,row.id,row)),...sync.plans.map(row=>put(T_PLANS,row.id,row))]);}return sendJson(res,r);}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const [classes,packages]=await Promise.all([scan(T_CLASSES),scan(T_PACKAGES).catch(()=>[])]);assertCanDeleteProduct(id,classes,packages);await del(T_PRODUCTS,id);return sendJson(res,{success:true});}}
+    if(await handleProductRoutes({path,method,body,user,res}))return;
     if(path==='/packages'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();if(method==='GET'){const rows=await getCachedScan(T_PACKAGES).catch(()=>[]);return sendJson(res,filterLoadAllForUser({packages:rows},user).packages);}if(method==='POST'){const id=uuidv4();const refs={products:await getCachedScan(T_PRODUCTS).catch(()=>[]),coaches:await getCachedScan(T_COACHES).catch(()=>[]),campuses:await getCachedScan(T_CAMPUSES).catch(()=>[])};const now=new Date().toISOString();const r=normalizePackageRecord({...body,id},null,refs,now);r.createdAt=now;await put(T_PACKAGES,id,r);return sendJson(res,r);}}
     if(path==='/packages/merge'&&method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const masterPackageId=String(body.masterPackageId||'').trim();const sourcePackageId=String(body.sourcePackageId||'').trim();const [masterPackage,sourcePackage,purchases,entitlements,schedules]=await Promise.all([get(T_PACKAGES,masterPackageId).catch(()=>null),get(T_PACKAGES,sourcePackageId).catch(()=>null),scan(T_PURCHASES).catch(()=>[]),scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_SCHEDULE).catch(()=>[])]);const now=new Date().toISOString();const updates=buildPackageMergeUpdates({masterPackage,sourcePackage,purchases,entitlements,schedules,now,operator:user.name||''});await put(T_PACKAGES,sourcePackageId,updates.sourcePackage);await Promise.all([...updates.purchases.map(row=>put(T_PURCHASES,row.id,row)),...updates.entitlements.map(row=>put(T_ENTITLEMENTS,row.id,row)),...updates.schedules.map(row=>put(T_SCHEDULE,row.id,row))]);await Promise.all(updates.entitlements.map(row=>syncStudentActiveEntitlementIndexes(null,row)));return sendJson(res,{success:true,...updates});}
     if(path==='/packages/order'&&method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const orderedIds=Array.isArray(body.orderedIds)?body.orderedIds.map(id=>String(id||'').trim()).filter(Boolean):[];if(!orderedIds.length)return sendJson(res,{error:'请提供课包排序'},400);if(new Set(orderedIds).size!==orderedIds.length)return sendJson(res,{error:'课包排序不能重复'},400);const rows=await scan(T_PACKAGES).catch(()=>[]);const byId=new Map(rows.map(row=>[String(row.id||''),row]));const missing=orderedIds.filter(id=>!byId.has(id));if(missing.length)return sendJson(res,{error:'课包不存在'},404);const now=new Date().toISOString();const updates=orderedIds.map((id,idx)=>({...byId.get(id),sortOrder:(idx+1)*10,updatedAt:now}));await Promise.all(updates.map(row=>put(T_PACKAGES,row.id,row)));return sendJson(res,{success:true,packages:updates});}
