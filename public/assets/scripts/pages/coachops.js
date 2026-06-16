@@ -82,13 +82,8 @@ function financeDateTimeDisplayText(row){
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(businessDate))return `${businessDate.slice(0,16)}:00`;
   return `${businessDate.slice(0,10)} 00:00:00`;
 }
-function financeOperatorDisplayText(row){
-  const collector=String(row?.collector||row?.operator||'').trim();
-  const importHint=String(row?.importSource||'').trim()==='系统导入'||/导入/.test(`${row?.sourceProject||''} ${row?.notes||''} ${row?.sourceDocument||''}`);
-  if(importHint)return '系统导入';
-  if(collector&&collector!=='系统记录')return collector;
-  return '-';
-}
+function financeOperatorDisplayText(row){const collector=String(row?.collector||row?.operator||'').trim();const importHint=String(row?.importSource||'').trim()==='系统导入'||/导入/.test(`${row?.sourceProject||''} ${row?.notes||''} ${row?.sourceDocument||''}`);if(importHint||collector==='未记录')return '系统导入';return collector&&collector!=='系统记录'?collector:'-';}
+function financeHumanNote(note=''){const text=String(note||'').trim(),consumeRecordText='课包消耗'+'记录';if(!text)return '';const auditPattern=new RegExp(`(订场收入细项修数|会员订场修正|马坡补账|私教课CSV.*导入|来源价格\\d*：${consumeRecordText}|正确表第\\s*\\d+\\s*行|[^\\s；;]*订场（\\d+次，[\\d.]+元）#\\d+|网球兄弟.*\\.csv#\\d+|来源\\s*[^；;]*\\.csv#\\d+|用户确认：|实际扣款\\s*[\\d.]+)`);return text.split(/[；;]/).map(part=>part.trim()).filter(part=>part&&!auditPattern.test(part)).join('；');}
 function financeLedgerSortKey(row){
   return `${String(row?.businessDate||'').slice(0,10)} ${financeLedgerExactTimeText(row)}`;
 }
@@ -1142,7 +1137,7 @@ function renderFinanceRevenueReport(){
     {label:'散客订场',value:financeInlineMoneyWithPercent(bookingIncome,totalIncome)},
     {label:'课程流水',value:financeInlineMoneyWithPercent(courseIncome,totalIncome)}
   ].map(financeStatCardHtml).join('');
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.studentName,false)}</td><td>${renderStandardCellText(row.businessType,false)}</td><td>${renderStandardCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderStandardCellText(row.priceDiffReason,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.studentName,false)}</td><td>${renderStandardCellText(row.businessType,false)}</td><td>${renderStandardCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderStandardCellText(row.priceDiffReason,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
 }
 function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))){
   return sourceRows.filter(row=>{
@@ -1249,7 +1244,7 @@ function renderFinanceConsumeReport(){
     {label:'会员耗卡核销',value:financeInlineMoneyWithPercent(storedValueRecognized,recognizedRevenue)},
     {label:'课程已入账',value:financeInlineMoneyWithPercent(courseRecognized,recognizedRevenue)}
   ].map(financeStatCardHtml).join('');
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.displayBusinessType||row.businessType,false)}</td><td>${renderStandardCellText(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod,false)}</td><td>${renderStandardCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">暂无已入账流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.displayBusinessType||row.businessType,false)}</td><td>${renderStandardCellText(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod,false)}</td><td>${renderStandardCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">暂无已入账流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
 }
 function renderCoachOpsConsumeReport(){
   return renderFinanceConsumeReport();
@@ -1257,14 +1252,14 @@ function renderCoachOpsConsumeReport(){
 function exportCoachOpsRevenueCsv(){
   const rows=financeRevenueRows();
   let csv='交易时间,姓名,业务类型,支付方式,应收,实收,差价,差价说明,校区,操作人,备注\n';
-  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.studentName||'',row.businessType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"',row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
+  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.studentName||'',row.businessType||'',row.payMethod||'',row.receivableAmount||0,row.actualAmount||0,row.priceDiff||0,'"'+String(row.priceDiffReason||'').replace(/"/g,'""')+'"',row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(financeHumanNote(row.notes)).replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_收入表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
 function exportCoachOpsConsumeCsv(){
   const rows=financeRecognizedRows();
   let csv='交易时间,姓名,业务类型,支付方式,扣减标的,确认收入,校区,操作人,备注\n';
-  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.customer||'',row.displayBusinessType||row.businessType||'',row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'',row.debitTarget||'',row.recognizedRevenueDelta||0,row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(row.notes||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
+  csv+=rows.map(row=>[financeDateTimeDisplayText(row),row.customer||'',row.displayBusinessType||row.businessType||'',row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'',row.debitTarget||'',row.recognizedRevenueDelta||0,row.campusName||'','"'+String(financeOperatorDisplayText(row)).replace(/"/g,'""')+'"','"'+String(financeHumanNote(row.notes)).replace(/"/g,'""')+'"'].join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_消耗表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
@@ -1485,7 +1480,7 @@ function renderFinanceLedger(){
   financeLedgerPageSize=pageState.pageSize;
   const slice=pageState.slice;
   renderFinanceLedgerPager(pageState.total,pageState.pages);
-  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType)}</span></td><td>${financeTransactionAmountHtml(row)}</td><td>${renderStandardCellText(row.displayBusinessType,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(row.notes||'')}">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无交易流水</p></div></td></tr>`;
+  body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType)}</span></td><td>${financeTransactionAmountHtml(row)}</td><td>${renderStandardCellText(row.displayBusinessType,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无交易流水</p></div></td></tr>`;
 }
 function renderFinancePrepaidBalance(){
   const body=document.getElementById('financePrepaidTbody');
@@ -1501,7 +1496,7 @@ function renderFinancePrepaidBalance(){
     ['会员储值待确认',storedDeferred.reduce((sum,row)=>sum+(Number(row.deferredAmount)||0),0),financeMoney],
     ['待确认客户数',allRows.length,val=>String(val)]
   ].map(([label,val,formatter])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${formatter(val)}</div></div>`).join('');
-  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(row.deferredType==='课包待确认'?'课包':'会员储值',false)}</td><td>${financeAmountText(row.deferredAmount)}</td><td>${renderStandardCellText(row.source,false)}</td><td><div class="tms-text-remark">${esc(renderStandardEmptyText(row.notes))}</div></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>暂无待确认收入</p></div></td></tr>`;
+  body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(row.deferredType==='课包待确认'?'课包':'会员储值',false)}</td><td>${financeAmountText(row.deferredAmount)}</td><td>${renderStandardCellText(row.source,false)}</td><td><div class="tms-text-remark">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>暂无待确认收入</p></div></td></tr>`;
 }
 function financeLegacySettlementRows(){
   const monthInput=document.getElementById('financeSettlementMonth');

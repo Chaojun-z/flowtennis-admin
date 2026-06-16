@@ -70,6 +70,13 @@ assert.match(source,/const businessDate=String\(row\?\.businessDate\|\|row\?\.pu
 assert.match(source,/function financeDateTimeDisplayText\([\s\S]*businessDate\.slice\(0,19\)/,'ledger transaction time should keep seconds when backend provides full datetime');
 assert.doesNotMatch(source,/timeText\.match/,'ledger transaction time should not fall back to course time text');
 assert.match(source,/finance-ledger-remark/,'ledger notes should render as a single-line remark');
+assert.match(source,/function financeHumanNote\(/,'finance tables should clean system-generated audit notes before display');
+assert.match(source,/订场收入细项修数\|会员订场修正\|马坡补账\|私教课CSV.*导入/,'finance note cleaner should hide import and repair audit text');
+assert.match(source,/consumeRecordText='课包消耗'\+'记录'/,'finance note cleaner should hide generated package consume audit text');
+assert.match(source,/financeHumanNote\(row\.notes\)/,'finance tables should render cleaned human notes');
+assert.match(source,/financeHumanNote\(row\.notes\)[\s\S]*renderFinancePrepaidBalance/,'prepaid balance notes should render cleaned human notes');
+assert.match(source,/collector==='未记录'/,'finance tables should not show missing historical operators as 未记录');
+assert.match(source,/importHint\|\|collector==='未记录'[\s\S]*return '系统导入'/,'finance tables should show imported or repaired rows as 系统导入 when no account operator exists');
 assert.doesNotMatch(ledgerPanel,/>\s*查询\s*</,'ledger toolbar should not keep a local query button');
 assert.doesNotMatch(revenuePanel,/>\s*查询\s*</,'revenue toolbar should not keep a local query button');
 assert.doesNotMatch(recognizedPanel,/>\s*查询\s*</,'recognized toolbar should not keep a local query button');

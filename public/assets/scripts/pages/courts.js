@@ -951,7 +951,7 @@ function courtAccountStateLabel(value){
   return String(value||'').trim()==='会员'?'会员':'普通';
 }
 function courtCleanUserNotes(value){
-  const systemPattern=/(合并重复订场账户|合并自|系统|导入|修数|修正|补账|补录|历史迁移|数据修复)/;
+  const systemPattern=/(合并重复订场账户|合并自|系统|导入|私教课CSV.*导入|马坡补账|网球兄弟.*csv|修数|修正|补账|补录|历史迁移|数据修复)/;
   return String(value||'')
     .split(/\n+/)
     .map(line=>line
@@ -1934,8 +1934,8 @@ function courtBookingRecordsTableHtml(hist){
 function courtBookingHumanNote(record){
   const raw=String(record?.note||'').trim();
   if(!raw)return '-';
-  const systemPattern=/(订场收入细项修数|修数|会员订场修正|会员订场补录|订场补录|正确表|确认表|系统|导入|修正|补账|补录|历史迁移|数据修复)/;
-  const importSummaryPattern=/(（\d+(?:\.\d+)?次，\d+(?:\.\d+)?元）#\d+|#\d+\s*\/\s*\d{4}-\d{2}-\d{2})/;
+  const systemPattern=/(订场收入细项修数|修数|会员订场修正|会员订场补录|订场补录|马坡补账|私教课CSV.*导入|正确表|确认表|系统|导入|修正|补账|补录|历史迁移|数据修复)/;
+  const importSummaryPattern=/(（\d+(?:\.\d+)?次，\d+(?:\.\d+)?元）#\d+|#\d+\s*\/\s*\d{4}-\d{2}-\d{2}|网球兄弟.*csv#\d+|来源\s*[^；;]*\.csv#\d+)/;
   if(systemPattern.test(raw)||importSummaryPattern.test(raw))return '-';
   const parts=raw.split(/[\/｜|]/).map(x=>x.trim()).filter(Boolean);
   if(parts.length>1){

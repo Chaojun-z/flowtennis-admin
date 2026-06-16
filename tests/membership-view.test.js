@@ -98,6 +98,8 @@ assert.match(html, /function courtBookingHumanNote/, 'booking records should fil
 assert.match(fnBody('courtBookingRecordsTableHtml'), /courtBookingHumanNote\(h\)/, 'booking records table should only render human notes');
 assert.doesNotMatch(fnBody('courtBookingRecordsTableHtml'), /internalReason/, 'booking records table should not show system/internal reason as note');
 assert.match(fnBody('courtBookingHumanNote'), /订场收入细项修数|修数/, 'booking note filter should hide imported repair summaries');
+assert.match(fnBody('courtBookingHumanNote'), /马坡补账[\s\S]*私教课CSV.*导入[\s\S]*网球兄弟.*csv/, 'booking note filter should hide generated import audit notes');
+assert.match(fnBody('courtCleanUserNotes'), /私教课CSV.*导入[\s\S]*马坡补账/, 'court user notes should hide generated import audit notes');
 assert.match(fnBody('courtBookingDrawerHtml'), /const closeAction=`<button[\s\S]*closeCourtBookingEntryInline/, 'expanded booking entry should define a close action');
 assert.match(fnBody('courtBookingDrawerHtml'), /renderDetailDrawerCard\('新增订场流水',form,\{useGrid:false,actionsHtml:closeAction\}/, 'expanded booking entry should expose close action in the card header');
 assert.doesNotMatch(fnBody('courtBookingDrawerHtml'), /\$\{form\}<div class="schedule-detail-card-actions">/, 'expanded booking entry should not hide cancel action at the bottom');
