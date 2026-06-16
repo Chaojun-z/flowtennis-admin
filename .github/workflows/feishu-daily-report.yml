@@ -2,6 +2,8 @@ name: Feishu Daily Report
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '5 12 * * *'
 
 permissions:
   contents: read
