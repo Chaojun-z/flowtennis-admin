@@ -25,6 +25,7 @@ const { createMembershipRoutes } = require('../server/membership-routes');
 const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlement-routes');
 const { createScheduleRoutes } = require('../server/schedule-routes');
 const { createAdminUserRoutes } = require('../server/admin-users-routes');
+const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
 const { createMatchRoutes } = require('../server/match-routes');
 const { createLeadsRoutes } = require('../server/leads-routes');
 const { createCampusRoutes } = require('../server/campuses-routes');
@@ -97,23 +98,6 @@ const PACKAGE_BOARD_PREFERENCES_ROW_ID='package-board-preferences';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
 const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
-const TEST_DATA_RESET_TABLES=[
-  T_COURTS,
-  T_STUDENTS,
-  T_PRODUCTS,
-  T_PLANS,
-  T_SCHEDULE,
-  T_CLASSES,
-  T_CLASS_NOS,
-  T_FEEDBACKS,
-  T_COACH_PROPOSALS,
-  T_PACKAGES,
-  T_PURCHASES,
-  T_ENTITLEMENTS,
-  T_ENTITLEMENT_LEDGER,
-  T_PRICE_PLANS,
-  ...MEMBERSHIP_TABLES
-];
 const HOT_SCAN_TABLES=new Map([
   [T_USERS,{ttlMs:60000}],
   [T_COURTS,{ttlMs:60000}],
@@ -418,7 +402,6 @@ function getFinancePageScheduleRows(){
     ? scan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch((e)=>{console.error('finance schedule scan err:',e);return [];})
     : getCachedScan(T_SCHEDULE,{columns:SCHEDULE_LIST_PROJECTION_FIELDS}).catch(()=>[]);
 }
-function getTestDataResetTables(){return [...TEST_DATA_RESET_TABLES];}
 async function timed(label,fn){const startedAt=Date.now();try{return await fn();}finally{console.log(`[api-timing] ${label} ${Date.now()-startedAt}ms`);}}
 async function timedEndpointMetric(name,fn,meta={}){
   const startedAt=Date.now();
@@ -1992,6 +1975,9 @@ const handleAdminUserRoutes=createAdminUserRoutes({
   unbindWechatUserWithIndex,buildOfficialAccountUnboundUser,isProductionRuntime,
   scanFirstRows,getCachedScan,buildAdminUserView,isVisibleAdminUser,
   PRODUCTION_PAGE_READ_LIMITS,ADMIN_USER_LIST_PROJECTION_FIELDS,T_USERS
+});
+const handleAdminToolRoutes=createAdminToolRoutes({
+  init,sendJson:routeSendJson,clearTables,scan,del
 });
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
@@ -7037,13 +7023,7 @@ module.exports = async (req, res) => {
     }
     if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;
     if(await handleAdminUserRoutes({path,method,body,user,res}))return;
-    if(path==='/admin/clear-test-data'&&method==='POST'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      if(body.confirm!=='CLEAR_TEST_DATA')return sendJson(res,{error:'缺少清空确认'},400);
-      await init();
-      const result=await clearTables({scan,del},TEST_DATA_RESET_TABLES);
-      return sendJson(res,{...result,kept:[T_USERS,T_COACHES,T_CAMPUSES]});
-    }
+    if(await handleAdminToolRoutes({path,method,body,user,res}))return;
     if(path==='/admin/replace-courts'&&method==='POST'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
