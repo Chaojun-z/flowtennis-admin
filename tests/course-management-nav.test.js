@@ -8,6 +8,7 @@ const courseSource = [
 ].join('\n');
 const standardSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'standard', 'components.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
+const packageRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'packages-routes.js'), 'utf8');
 const packageBoardRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'package-board-routes.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const buttonsCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'buttons.css'), 'utf8');
@@ -87,8 +88,8 @@ assert.match(html, /function packageSortValue\(/, 'package list should expose a 
 assert.match(html, /function renderPackages[\s\S]*packageSortValue\(a\)-packageSortValue\(b\)[\s\S]*String\(b\.createdAt\|\|''\)\.localeCompare\(String\(a\.createdAt\|\|''\)\)/, 'package list should sort by persisted package order before falling back to newer records first');
 assert.match(fnBody('packageBoardCardHtml'), /draggable="true"[\s\S]*onDragStart="startPackageDrag/, 'package cards should be draggable');
 assert.match(html, /async function savePackageOrder\([\s\S]*\/packages\/order/, 'package drag order should save through a dedicated endpoint');
-assert.match(apiSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
-assert.match(apiSource, /const id=decodeURIComponent\(pkgM\[1\]\)/, 'package update route should decode URL-encoded package ids before reading TableStore');
+assert.match(packageRoutesSource, /path==='\/packages\/order'&&method==='PUT'[\s\S]*sortOrder/, 'package order should have a dedicated backend endpoint');
+assert.match(packageRoutesSource, /const id=decodeURIComponent\(pkgM\[1\]\)/, 'package update route should decode URL-encoded package ids before reading TableStore');
 assert.match(html, /function packageDisplayTitle\([\s\S]*packageCoreClassLabel[\s\S]*packageLessonUnitLabel[\s\S]*packageTimeBandShortLabel/, 'package cards should build titles from structured fields');
 assert.match(html, /function packageTimeBandBadgeClass\([\s\S]*黄金[\s\S]*非黄金[\s\S]*全天/, 'package time band badge should expose three visual states');
 assert.match(fnBody('packageBoardCardHtml'), /package-sales-title-row[\s\S]*packageTimeBandBadgeHtml\(p\)/, 'package cards should show the time band tag next to the title');
