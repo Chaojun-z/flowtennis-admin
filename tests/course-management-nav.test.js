@@ -8,6 +8,7 @@ const courseSource = [
 ].join('\n');
 const standardSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'standard', 'components.js'), 'utf8');
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
+const packageBoardRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'package-board-routes.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const buttonsCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'buttons.css'), 'utf8');
 const filtersCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'filters.css'), 'utf8');
@@ -206,8 +207,8 @@ assert.match(fnBody('savePackageBoardOrder'), /savePackageOrder\(orderedIds\)/, 
 assert.match(fnBody('packageBoardCardHtml'), /ondrop="dropPackageCard\(event,'\$\{p\.id\}'\)"/, 'package cards should accept package drops');
 assert.match(fnBody('renderPackages'), /draggable="true"[\s\S]*startPackageColumnDrag\(event,'\$\{esc\(col\.key\)\}'\)[\s\S]*dropPackageColumn\(event,'\$\{esc\(col\.key\)\}'\)/, 'package board columns should support drag sorting between columns');
 assert.match(html, /async function dropPackageColumn\([\s\S]*apiCall\('PUT','\/package-board-preferences',\{columnOrder:next\}\)/, 'package board should persist column order through the backend');
-assert.match(apiSource, /path==='\/package-board-preferences'&&method==='GET'[\s\S]*getPackageBoardPreferences/, 'package board should load saved column order from the backend');
-assert.match(apiSource, /path==='\/package-board-preferences'&&method==='PUT'[\s\S]*savePackageBoardPreferences/, 'package board should save column order to the backend');
+assert.match(packageBoardRoutesSource, /path==='\/package-board-preferences'&&method==='GET'[\s\S]*getPackageBoardPreferences/, 'package board should load saved column order from the backend');
+assert.match(packageBoardRoutesSource, /path==='\/package-board-preferences'&&method==='PUT'[\s\S]*savePackageBoardPreferences/, 'package board should save column order to the backend');
 assert.match(html, /packageBoardPreferences:\(\)=>apiCall\('GET','\/package-board-preferences'\)/, 'package page should request board preferences while loading data');
 assert.doesNotMatch(html, /async function dropPackageToColumn\(/, 'package board should not support dragging cards into another column');
 assert.doesNotMatch(fnBody('savePackageOrder'), /boardColumnById/, 'package order save should not send board column placement');

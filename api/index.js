@@ -26,6 +26,7 @@ const { createPurchaseEntitlementRoutes } = require('../server/purchase-entitlem
 const { createScheduleRoutes } = require('../server/schedule-routes');
 const { createAdminUserRoutes } = require('../server/admin-users-routes');
 const { createAdminToolRoutes, TEST_DATA_RESET_TABLES, getTestDataResetTables } = require('../server/admin-tools-routes');
+const { createPackageBoardRoutes, normalizePackageBoardColumnOrder } = require('../server/package-board-routes');
 const { createMatchRoutes } = require('../server/match-routes');
 const { createLeadsRoutes } = require('../server/leads-routes');
 const { createCampusRoutes } = require('../server/campuses-routes');
@@ -94,7 +95,6 @@ function normalizeCampusValue(value){const raw=String(value||'').trim();return C
 function displayCampusName(value){const key=normalizeCampusValue(value);return CAMPUS_DISPLAY_NAMES[key]||String(value||'').trim();}
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
 const MATCH_SETTINGS_ROW_ID='match-launch-settings';
-const PACKAGE_BOARD_PREFERENCES_ROW_ID='package-board-preferences';
 const MATCH_SQL_TABLES=['match_users','match_posts','match_registrations','match_attendance','match_bookings','match_fee_records','match_fee_splits','match_operation_logs','match_replacements','match_player_ratings'];
 const MEMBERSHIP_TABLES=[T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS];
 const RUNTIME_ENSURED_TABLES=[T_FEEDBACKS,T_PACKAGES,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_CLASS_NOS,T_PRICE_PLANS,T_MATCH_SETTINGS,T_USER_WECHAT_INDEX,T_COACH_SCHEDULE_INDEX,T_STUDENT_ACTIVE_ENTITLEMENT_INDEX,T_OFFICIAL_ACCOUNT_QUERY_SESSIONS,T_COACH_PROPOSALS,...MEMBERSHIP_TABLES];
@@ -135,28 +135,6 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_SCHEDULE,
   T_CAMPUSES
 ]);
-const PACKAGE_BOARD_COLUMN_KEYS=['青少年-私教课','青少年-小班课','成人-私教课','成人-小班课','chaojun','other'];
-function normalizePackageBoardColumnOrder(value){
-  if(!Array.isArray(value))return [];
-  const seen=new Set();
-  return value.map(item=>String(item||'').trim()).filter(key=>{
-    if(!PACKAGE_BOARD_COLUMN_KEYS.includes(key)||seen.has(key))return false;
-    seen.add(key);
-    return true;
-  });
-}
-async function getPackageBoardPreferences(){
-  const row=await get(T_MATCH_SETTINGS,PACKAGE_BOARD_PREFERENCES_ROW_ID).catch(()=>null);
-  return {columnOrder:normalizePackageBoardColumnOrder(row?.columnOrder)};
-}
-async function savePackageBoardPreferences(body={},user={}){
-  const columnOrder=normalizePackageBoardColumnOrder(body.columnOrder);
-  if(!columnOrder.length)throw new Error('请提供列顺序');
-  const now=new Date().toISOString();
-  const row={id:PACKAGE_BOARD_PREFERENCES_ROW_ID,columnOrder,updatedAt:now,updatedBy:user.name||user.id||''};
-  await put(T_MATCH_SETTINGS,PACKAGE_BOARD_PREFERENCES_ROW_ID,row);
-  return {columnOrder};
-}
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName',
   'name',
@@ -1978,6 +1956,9 @@ const handleAdminUserRoutes=createAdminUserRoutes({
 });
 const handleAdminToolRoutes=createAdminToolRoutes({
   init,sendJson:routeSendJson,clearTables,scan,del
+});
+const handlePackageBoardRoutes=createPackageBoardRoutes({
+  init,sendJson:routeSendJson,get,put,T_MATCH_SETTINGS
 });
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
@@ -7010,17 +6991,7 @@ module.exports = async (req, res) => {
     const storedAuthUser=await getCachedRow(T_USERS,user.id).catch(()=>null);
     user=mergeStoredAuthUser(user,storedAuthUser);
     try{assertAuthUserActive(user);}catch(e){return sendJson(res,{error:e.message},403);}
-    if(path==='/package-board-preferences'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      return sendJson(res,await getPackageBoardPreferences());
-    }
-    if(path==='/package-board-preferences'&&method==='PUT'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      try{return sendJson(res,await savePackageBoardPreferences(body,user));}
-      catch(err){return sendJson(res,{error:String(err?.message||err)},400);}
-    }
+    if(await handlePackageBoardRoutes({path,method,body,user,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,user,query}))return;
     if(await handleAdminUserRoutes({path,method,body,user,res}))return;
     if(await handleAdminToolRoutes({path,method,body,user,res}))return;
