@@ -417,6 +417,9 @@ function mergeCourtRecords({targetCourt,sourceCourt,membershipAccounts=[],member
     studentId:mergedStudentIds[0]||'',
     studentIds:mergedStudentIds,
     status:'active',
+    mergedIntoCourtId:'',
+    mergedAt:'',
+    deletedAt:'',
     history:mergedHistory,
     updatedAt:now
   },{allowNegativeBalance:true});

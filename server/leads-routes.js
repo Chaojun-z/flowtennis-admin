@@ -6,7 +6,7 @@ function createLeadsRoutes(deps={}){
     normalizeLeadRecord,leadCanonicalNameKey,mergeLeadRows,buildLeadInitialFollowup,
     normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
     buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,
-    buildLeadStudentRecord,buildLeadCourtRecord,
+    buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
     T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS
   }=deps;
 
@@ -193,8 +193,12 @@ function createLeadsRoutes(deps={}){
       }
       let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
       if(!student){
-        student=buildLeadStudentRecord(lead,{now:new Date().toISOString()});
-        await put(T_STUDENTS,student.id,student);
+        const studentMatch=matchLeadToStudent?matchLeadToStudent(lead,await scan(T_STUDENTS).catch(()=>[])):{matchType:'none',record:null};
+        student=studentMatch.record||null;
+        if(!student){
+          student=buildLeadStudentRecord(lead,{now:new Date().toISOString()});
+          await put(T_STUDENTS,student.id,student);
+        }
       }
       const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
       await put(T_LEADS,lead.id,nextLead);
@@ -214,8 +218,12 @@ function createLeadsRoutes(deps={}){
       }
       let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
       if(!court){
-        court=buildLeadCourtRecord(lead,{studentId:lead.studentId,now:new Date().toISOString()});
-        await put(T_COURTS,court.id,court);
+        const courtMatch=matchLeadToCourt?matchLeadToCourt(lead,(await scan(T_COURTS).catch(()=>[])).filter(row=>String(row.status||'active')!=='inactive')):{matchType:'none',record:null};
+        court=courtMatch.record||null;
+        if(!court){
+          court=buildLeadCourtRecord(lead,{studentId:lead.studentId,now:new Date().toISOString()});
+          await put(T_COURTS,court.id,court);
+        }
       }
       const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
       const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});

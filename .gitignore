@@ -13,4 +13,6 @@ docs/
 !/docs/2026-06-01-课程课包经营可信基线.md
 .worktrees/
 var/finance-snapshots/
+var/ops-backups/
+var/ops-reports/
 tmp/
