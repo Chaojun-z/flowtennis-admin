@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const scheduleRoutesSource = fs.readFileSync(path.join(__dirname, '../server/schedule-routes.js'), 'utf8');
 const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../server/leads-routes.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
@@ -32,7 +33,7 @@ assert.match(
 );
 
 assert.match(
-  apiSource,
+  scheduleRoutesSource,
   /if\(method==='GET'\)\{if\(user\.role==='admin'\)\{const rows=await getScheduleListRows\(\);return sendJson\(res,filterLoadAllForUser\(\{schedule:rows\},user\)\.schedule\);/,
   '管理员排课表应读取完整轻投影，不再固定截断'
 );
