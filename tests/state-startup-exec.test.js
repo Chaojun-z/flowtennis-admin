@@ -43,7 +43,7 @@ const context = {
   apiCall() { return Promise.resolve([]); },
   campusDisplayName(value) { return value; },
   doLogout() {},
-  initClsCounter() {},
+  renderRoleShell() {},
   goPage() {},
   openPendingScheduleDeepLink() {},
   renderStudents() {},
@@ -82,6 +82,9 @@ assert.strictEqual(typeof context.hydrateDatasetsFromCache, 'function', 'state s
 assert.doesNotThrow(() => {
   context.hydrateDatasetsFromCache();
 }, 'cache hydration should not access uninitialized globals after startup');
+assert.doesNotThrow(() => {
+  context.renderAll();
+}, 'renderAll should not call missing legacy class counter');
 assert.match(utilsSource, /window\.shanghaiNow=shanghaiNow;/, 'shanghaiNow must be exposed for separately loaded page scripts');
 assert.match(utilsSource, /window\.esc=esc;/, 'esc must be exposed for separately loaded page scripts');
 

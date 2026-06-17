@@ -720,7 +720,6 @@ function buildCampusTabs(){
 }
 function renderAll(){
   renderRoleShell();
-  initClsCounter();
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;
   if(currentPage==='myschedule')currentPage='workbench';
   currentPage=normalizeStudentListPage(currentPage);
