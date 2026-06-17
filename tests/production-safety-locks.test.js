@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const apiSource = fs.readFileSync(path.join(root, 'api', 'index.js'), 'utf8');
 const authSource = fs.readFileSync(path.join(root, 'server', 'auth.js'), 'utf8');
+const authRoutesSource = fs.readFileSync(path.join(root, 'server', 'auth-routes.js'), 'utf8');
 const diagnosticsSource = fs.readFileSync(path.join(root, 'server', 'diagnostics.js'), 'utf8');
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const wechatIndexScript = fs.readFileSync(path.join(root, 'scripts', 'backfill-wechat-user-index.js'), 'utf8');
@@ -47,8 +48,8 @@ assert.match(diagnosticsSource, /module\.exports=\{handleMatchDiag,handleTableSt
 
 assert.match(apiSource, /require\('\.\.\/server\/auth'\)/, 'auth helpers should live outside api/index.js');
 assert.match(authSource, /function checkLoginRateLimit\(req,username/, 'login should check a rate limit before password verification');
-assert.match(apiSource, /recordLoginAttempt\(req,username,false\)/, 'login failures should be recorded');
-assert.match(apiSource, /recordLoginAttempt\(req,username,true\)/, 'login success should clear the rate limit');
+assert.match(authRoutesSource, /recordLoginAttempt\(req,username,false\)/, 'login failures should be recorded');
+assert.match(authRoutesSource, /recordLoginAttempt\(req,username,true\)/, 'login success should clear the rate limit');
 
 assert.doesNotMatch(readme, /TS_INSTANCE`\s*—\s*`flowtennis`/, 'README must not document the old production instance');
 assert.doesNotMatch(readme, /JWT_SECRET`\s*—\s*`flowtennis-jwt-2026`/, 'README must not document a hardcoded JWT secret');

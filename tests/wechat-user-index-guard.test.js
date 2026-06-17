@@ -11,7 +11,7 @@ assert.match(apiSource, /T_USER_WECHAT_INDEX='ft_user_wechat_index'/, '必须声
 assert.match(apiSource, /async function getWechatUserByOpenId\(openid\)\{/, '必须提供微信索引读取 helper');
 assert.match(apiSource, /const link=await getCachedRow\(T_USER_WECHAT_INDEX,key\)\.catch\(\(\)=>null\);/, '微信登录必须优先读取索引表');
 assert.match(apiSource, /return findWechatUserByOpenId\(await getCachedScan\(T_USERS\)\.catch\(\(\)=>\[\]\),key\);/, '索引缺失时必须回落旧逻辑');
-assert.match(apiSource, /const account=await getWechatUserByOpenId\(openid\);/, '微信登录入口必须走索引 helper');
+assert.match(authRoutesSource, /const account=await getWechatUserByOpenId\(openid\);/, '微信登录入口必须走索引 helper');
 assert.match(authRoutesSource, /await bindWechatUserWithIndex\(stored,openid\);/, '微信绑定时必须同步写索引');
 assert.match(adminUsersRoutesSource, /if\(body\.clearWechat\)\{await unbindWechatUserWithIndex\(updates\);return sendJson\(res,\{success:true\}\);\}/, '后台解绑微信时必须同步删除索引');
 assert.match(scriptSource, /const INDEX_TABLE = process\.env\.WECHAT_USER_INDEX_TABLE \|\| 'ft_user_wechat_index';/, '回填脚本默认索引表必须与主后端一致');

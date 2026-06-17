@@ -4,6 +4,7 @@ const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const authSource = fs.readFileSync(path.join(__dirname, '../server/auth.js'), 'utf8');
+const authRoutesSource = fs.readFileSync(path.join(__dirname, '../server/auth-routes.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(__dirname, '../server/bootstrap.js'), 'utf8');
 const courtRoutesSource = fs.readFileSync(path.join(__dirname, '../server/courts-routes.js'), 'utf8');
 const scheduleRoutesSource = fs.readFileSync(path.join(__dirname, '../server/schedule-routes.js'), 'utf8');
@@ -69,7 +70,7 @@ assert.match(apiSource, /async function prewarmHotScanCache\(\)/, 'api should ex
 assert.match(bootstrapSource, /prewarmHotScanCache\(\)\.catch\(err=>console\.error\('\[api-timing\] prewarm hot tables failed',err\)\);/, 'init should trigger hot table prewarm');
 assert.match(apiSource, /const storedAuthUser=await getCachedRow\(T_USERS,user\.id\)\.catch\(\(\)=>null\);/, 'authenticated requests should reuse cached user row lookup');
 assert.match(authSource, /async function loadLoginUser\(username\)\{[\s\S]*withTimeout\(getCachedRow\(T_USERS,username\),LOGIN_ROW_TIMEOUT_MS,rowTimeout\)[\s\S]*getCachedScan\(T_USERS\)\.catch\(\(err\)=>\{/, 'login should fallback from cached user row lookup to cached scan');
-assert.match(apiSource, /if\(user\?\.__loginTimeout\)return sendJson\(res,\{error:LOGIN_STORAGE_TIMEOUT_ERROR\},503\);/, 'login should return 503 when ft_users stays timed out');
+assert.match(authRoutesSource, /if\(user\?\.__loginTimeout\)return sendJson\(res,\{error:LOGIN_STORAGE_TIMEOUT_ERROR\},503\);/, 'login should return 503 when ft_users stays timed out');
 assert.match(productRoutesSource, /if\(path==='\/products'\)\{[\s\S]*await init\(\);[\s\S]*if\(method==='GET'\)return sendJson\(res,await getCachedScan\(T_PRODUCTS\)\.catch\(\(\)=>\[\]\)\);/, 'products list should use cached scan');
 assert.match(apiSource, /if\(path==='\/packages'\)\{if\(user\.role!=='admin'\)return sendJson\(res,\{error:'无权限'\},403\);await init\(\);if\(method==='GET'\)\{const rows=await getCachedScan\(T_PACKAGES\)\.catch\(\(\)=>\[\]\);return sendJson\(res,filterLoadAllForUser\(\{packages:rows\},user\)\.packages\);/, 'packages list should use cached scan');
 assert.match(purchaseEntitlementRoutesSource, /if\(path==='\/purchases'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getCachedScan\(T_PURCHASES\)\.catch\(\(\)=>\[\]\);/, 'purchases list should use cached scan');

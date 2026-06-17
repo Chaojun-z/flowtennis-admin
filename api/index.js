@@ -1961,9 +1961,6 @@ const handleAdminToolRoutes=createAdminToolRoutes({
 const handlePackageBoardRoutes=createPackageBoardRoutes({
   init,sendJson:routeSendJson,get,put,T_MATCH_SETTINGS
 });
-const handleAuthRoutes=createAuthRoutes({
-  sendJson:routeSendJson,fetchWechatSession,extractWechatOpenId,get,bindWechatUserWithIndex,T_USERS
-});
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
 }
@@ -4397,6 +4394,13 @@ const {
   requireMatchUser,
   ensureMatchUserResponse
 }=createAuthServices({JWT_SECRET,normalizePermissionProfile,userHasFeaturePermission,getCachedRow,getCachedScan,isTableMissingError,withTimeout,T_USERS,sendJson});
+const handleAuthRoutes=createAuthRoutes({
+  sendJson:routeSendJson,jwt,JWT_SECRET,timedEndpointMetric,checkLoginRateLimit,recordLoginAttempt,
+  loadLoginUser,verifyLoginPassword,mergeStoredAuthUser,assertAuthUserActive,
+  LOGIN_STORAGE_TIMEOUT_ERROR,LOGIN_INVALID_ACCOUNT_ERROR,
+  fetchWechatSession,extractWechatOpenId,getWechatUserByOpenId,
+  get,bindWechatUserWithIndex,T_USERS
+});
 const handleMatchRoutes=createMatchRoutes({
   sendJson:routeSendJson,uuidv4,MATCH_MINIPROGRAM_SECRET,isProductionRuntime,fetchWechatSession,extractWechatOpenId,
   getMatchSqlPool,buildMatchUserToken,canMatchUserCreate,ensureMatchUserResponse,
@@ -6976,19 +6980,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests());
     }
-    if(path==='/auth/login'&&method==='POST'){return timedEndpointMetric('auth.login',async()=>{const{username,password}=body;if(!username||!password)return sendJson(res,{error:'请填写账号和密码'},400);const rateLimit=checkLoginRateLimit(req,username);if(rateLimit.limited)return sendJson(res,{error:'登录失败次数过多，请稍后再试'},429);const user=await loadLoginUser(username);if(user?.__loginTimeout)return sendJson(res,{error:LOGIN_STORAGE_TIMEOUT_ERROR},503);if(!user){recordLoginAttempt(req,username,false);return sendJson(res,{error:'账号或密码错误'},401);}const passwordVerified=await verifyLoginPassword(username,password,user.password);if(passwordVerified?.invalidAccount)return sendJson(res,{error:LOGIN_INVALID_ACCOUNT_ERROR},500);if(!passwordVerified){recordLoginAttempt(req,username,false);return sendJson(res,{error:'账号或密码错误'},401);}const payload=mergeStoredAuthUser(null,user);try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}recordLoginAttempt(req,username,true);const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});return sendJson(res,{token,user:payload});});}
-    if(path==='/auth/wechat-login'&&method==='POST'){
-      const code=String(body.code||'').trim();
-      if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code);
-      const openid=extractWechatOpenId(session);
-      const account=await getWechatUserByOpenId(openid);
-      if(!account)return sendJson(res,{error:'微信未绑定教练账号，请先使用账号密码登录完成绑定'},404);
-      const payload=mergeStoredAuthUser(null,account);
-      try{assertAuthUserActive(payload);}catch(e){return sendJson(res,{error:e.message},403);}
-      const token=jwt.sign(payload,JWT_SECRET,{expiresIn:'7d'});
-      return sendJson(res,{token,user:payload});
-    }
+    if(await handleAuthRoutes({path,method,body,req,user,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     if(user.type==='match_user')return sendJson(res,{error:'无管理端权限'},403);
@@ -7019,7 +7011,7 @@ module.exports = async (req, res) => {
       const rows=Array.isArray(body.rows)?body.rows:[];
       return sendJson(res,await importCourtRows(rows));
     }
-    if(await handleAuthRoutes({path,method,body,user,res}))return;
+    if(await handleAuthRoutes({path,method,body,req,user,res}))return;
     if(path==='/load-all'&&method==='GET'){
       await init();
       const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks,coachProposals]=await Promise.all([
