@@ -35,6 +35,8 @@ const { createCoachRoutes, createCoachRuleHelpers } = require('../server/coaches
 const { createProductRoutes, createProductRouteHelpers } = require('../server/products-routes');
 const { createPackageRoutes, assertCanDeletePackage } = require('../server/packages-routes');
 const { createStudentRoutes } = require('../server/students-routes');
+const { createFeedbackRoutes } = require('../server/feedbacks-routes');
+const { createCoachProposalRoutes } = require('../server/coach-proposals-routes');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -685,6 +687,12 @@ const handleStudentRoutes=createStudentRoutes({init,sendJson:routeSendJson,getFa
   assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,buildStudentReminderLinkUpdate,
   normalizeStudentReminderMode,normalizeStudentReminderCustomHours,buildStudentOfficialAccountUnboundUpdate,
   applyStudentIdentityUpdate,deleteStudentCascade,T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
+const handleFeedbackRoutes=createFeedbackRoutes({init,sendJson:routeSendJson,withTimeout,getCachedScan,filterLoadAllForUser,
+  timedEndpointMetric,uuidv4,get,buildCoachRefs,assertCanWriteFeedback,buildFeedbackRecord,putFeedback,
+  T_FEEDBACKS,T_SCHEDULE,T_COACHES,T_USERS});
+const handleCoachProposalRoutes=createCoachProposalRoutes({init,sendJson:routeSendJson,withTimeout,getCachedScan,
+  filterLoadAllForUser,getCoachScheduleRowsForUser,buildCoachRefs,uuidv4,get,assertCanWriteCoachProposal,
+  buildCoachProposalRecord,putCoachProposal,T_COACH_PROPOSALS,T_SCHEDULE,T_COACHES,T_USERS});
 const {
   buildEntitlementFromPurchase,
   buildPurchaseRecord,
@@ -7115,79 +7123,8 @@ module.exports = async (req, res) => {
     if(await handleProductRoutes({path,method,body,user,res}))return;
     if(await handlePackageRoutes({path,method,body,user,res}))return;
     if(await handlePurchaseEntitlementRoutes({path,method,body,user,res,query}))return;
-    if(path==='/coach-proposals'){
-      await init();
-      if(method==='GET'){
-        const rows=await withTimeout(getCachedScan(T_COACH_PROPOSALS).catch(()=>[]),3000,[]);
-        if(user.role==='admin')return sendJson(res,filterLoadAllForUser({coachProposals:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).coachProposals);
-        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-        const scheduleRows=await getCoachScheduleRowsForUser(user,buildCoachRefs({coaches,users}));
-        const scheduleIds=new Set(scheduleRows.map(row=>String(row.id||'')).filter(Boolean));
-        return sendJson(res,rows.filter(row=>scheduleIds.has(String(row.scheduleId||''))));
-      }
-      if(method==='POST'){
-        const id=uuidv4();
-        const schedule=await get(T_SCHEDULE,body.scheduleId).catch(()=>null);
-        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-        try{assertCanWriteCoachProposal(user,schedule,buildCoachRefs({coaches,users}));}
-        catch(e){return sendJson(res,{error:e.message},400);}
-        const r=buildCoachProposalRecord(body,{id},user,schedule);
-        await putCoachProposal(id,r);
-        return sendJson(res,r);
-      }
-    }
-    const cpM=path.match(/^\/coach-proposals\/(.+)$/);
-    if(cpM){
-      const id=cpM[1];
-      if(method==='GET')return sendJson(res,await get(T_COACH_PROPOSALS,id));
-      if(method==='PUT'){
-        const ex=await get(T_COACH_PROPOSALS,id).catch(()=>null);
-        if(!ex)return sendJson(res,{error:'教练提案不存在'},404);
-        const schedule=await get(T_SCHEDULE,body.scheduleId||ex.scheduleId).catch(()=>null);
-        if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-        const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-        try{assertCanWriteCoachProposal(user,schedule,buildCoachRefs({coaches,users}));}
-        catch(e){return sendJson(res,{error:e.message},400);}
-        const r=buildCoachProposalRecord({...ex,...body},{...ex,id},user,schedule);
-        await putCoachProposal(id,r);
-        return sendJson(res,r);
-      }
-    }
-    if(path==='/feedbacks'){
-      await init();
-      if(method==='GET'){const rows=await withTimeout(getCachedScan(T_FEEDBACKS).catch(()=>[]),3000,[]);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({feedbacks:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).feedbacks);return sendJson(res,rows);}
-      if(method==='POST'){
-        return timedEndpointMetric('feedback.save',async()=>{
-          const id=uuidv4();
-          const schedule=await get(T_SCHEDULE,body.scheduleId).catch(()=>null);
-          if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-          const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-          assertCanWriteFeedback(user,schedule,buildCoachRefs({coaches,users}));
-          const r=buildFeedbackRecord(body,{id},user);
-          await putFeedback(id,r);
-          return sendJson(res,r);
-        },{mode:'create'});
-      }
-    }
-    const fbM=path.match(/^\/feedbacks\/(.+)$/);
-    if(fbM){
-      const id=fbM[1];
-      if(method==='GET')return sendJson(res,await get(T_FEEDBACKS,id));
-      if(method==='PUT'){
-        return timedEndpointMetric('feedback.save',async()=>{
-          const ex=await get(T_FEEDBACKS,id).catch(()=>null);
-          if(!ex)return sendJson(res,{error:'反馈不存在'},404);
-          const schedule=await get(T_SCHEDULE,body.scheduleId||ex.scheduleId).catch(()=>null);
-          if(!schedule)return sendJson(res,{error:'排课不存在'},404);
-          const [coaches,users]=await Promise.all([getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);
-          assertCanWriteFeedback(user,schedule,buildCoachRefs({coaches,users}));
-          const r=buildFeedbackRecord({...ex,...body},{...ex,id},user);
-          await putFeedback(id,r);
-          return sendJson(res,r);
-        },{mode:'update'});
-      }
-    }
+    if(await handleCoachProposalRoutes({path,method,body,user,res}))return;
+    if(await handleFeedbackRoutes({path,method,body,user,res}))return;
     if(await handleScheduleRoutes({path,method,body,user,res}))return;
     if(await handleCoachRoutes({path,method,body,user,res}))return;
     if(await handleCorePageDataRoutes({path,method,user,res}))return;
