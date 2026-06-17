@@ -8,9 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const mabaoFinanceSeed = require('../server/seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('../server/lib/perf-metrics');
-const { createCourtAccountListViewLoader, createCourtAccountListCompareLoader } = require('../server/page-data/court-account-read-model.js');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
-const { handleFinancePageData } = require('../server/page-data/finance-page.js');
+const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
@@ -4223,6 +4222,11 @@ const {
   parseLessonValue,
   computeCourtFinance
 });
+const handleResidualPageDataRoutes=createResidualPageDataRoutes({
+  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,
+  filterLoadAllForUser,buildFinancePageSnapshot,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS}
+});
 function parseSimpleCsv(text=''){
   const rows=[];
   let current='';
@@ -6849,23 +6853,6 @@ async function syncClassPlans(classId,cls){
   }
   return saved;
 }
-const fixedCourtAcceptanceSamples=require('../docs/performance-governance/15-样板页固定验收样本.json');
-const loadCourtAccountListView=createCourtAccountListViewLoader({
-  listCampusesWithDefaults,
-  getCachedScan,
-  fixedSampleAccounts:fixedCourtAcceptanceSamples,
-  tables:{
-    students:T_STUDENTS,
-    courts:T_COURTS,
-    membershipAccounts:T_MEMBERSHIP_ACCOUNTS,
-    membershipOrders:T_MEMBERSHIP_ORDERS,
-    membershipPlans:T_MEMBERSHIP_PLANS
-  }
-});
-const loadCourtAccountListViewCompare=createCourtAccountListCompareLoader({
-  loadCourtAccountListView,
-  fixedSampleAccounts:fixedCourtAcceptanceSamples
-});
 const RECENT_MEMBERSHIP_ORDER_TTL_MS=60000;
 const recentMembershipOrderRequests=new Map();
 function membershipOrderRequestDedupKey({courtId,membershipPlanId,purchaseDate,rechargeAmount,requestKey=''}={}){
@@ -7771,23 +7758,7 @@ module.exports = async (req, res) => {
     }
     if(await handleCoachRoutes({path,method,body,user,res}))return;
     if(await handleCorePageDataRoutes({path,method,user,res}))return;
-    if(path==='/page-data/finance'&&method==='GET'){
-      return handleFinancePageData({user,res,sendJson,init,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,filterLoadAllForUser,buildFinancePageSnapshot,FINANCE_PAGE_COURT_PROJECTION_FIELDS,tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_USERS}});
-    }
-    if(path==='/page-data/court-account-list-view'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
-      const sample=String(query?.get('sample')||'').trim();
-      return sendJson(res,await loadCourtAccountListView({sampleIds:ids,sample}));
-    }
-    if(path==='/page-data/court-account-list-view-compare'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      const ids=String(query?.get('ids')||'').split(',').map(item=>String(item||'').trim()).filter(Boolean);
-      const sample=String(query?.get('sample')||'').trim();
-      return sendJson(res,await loadCourtAccountListViewCompare({sampleIds:ids,sample}));
-    }
+    if(await handleResidualPageDataRoutes({path,method,user,res,query}))return;
     if(await handleLeadsRoutes({path,method,body,user,res,query}))return;
     if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({classes:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).classes);const [schedule,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({classes:rows,schedule,coaches},user,coachRefs).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
     const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}

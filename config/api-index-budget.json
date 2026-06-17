@@ -18,6 +18,7 @@
     "server/coaches-routes.js",
     "server/products-routes.js",
     "server/page-data/core-pages.js",
+    "server/page-data/residual-pages.js",
     "server/page-data/finance-page.js",
     "server/page-data/finance-snapshot.js"
   ]

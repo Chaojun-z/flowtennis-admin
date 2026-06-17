@@ -4,11 +4,11 @@ const path = require('path');
 
 const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 const courtsSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/courts.js'), 'utf8');
-const indexSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
+const residualPageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/residual-pages.js'), 'utf8');
 
-assert.match(indexSource, /court-account-read-model/, 'api/index.js 应接入订场用户读模型模块');
-assert.match(indexSource, /\/page-data\/court-account-list-view/, 'api/index.js 应新增订场用户读模型入口');
-assert.match(indexSource, /\/page-data\/court-account-list-view-compare/, 'api/index.js 应新增新旧结果 compare 入口');
+assert.match(residualPageDataSource, /court-account-read-model/, 'page-data residual routes 应接入订场用户读模型模块');
+assert.match(residualPageDataSource, /\/page-data\/court-account-list-view/, 'page-data residual routes 应保留订场用户读模型入口');
+assert.match(residualPageDataSource, /\/page-data\/court-account-list-view-compare/, 'page-data residual routes 应保留新旧结果 compare 入口');
 
 assert.match(stateSource, /const COURT_READ_MODEL_STORAGE_KEY='ft_court_read_model_mode';/, '前端应保留隐藏验证模式存储键');
 assert.match(stateSource, /const COURT_READ_MODEL_FORCE_LEGACY_KEY='ft_court_read_model_force_legacy';/, '前端应保留全局强退开关存储键');
