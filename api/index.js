@@ -4399,7 +4399,7 @@ const handleAuthRoutes=createAuthRoutes({
   loadLoginUser,verifyLoginPassword,mergeStoredAuthUser,assertAuthUserActive,
   LOGIN_STORAGE_TIMEOUT_ERROR,LOGIN_INVALID_ACCOUNT_ERROR,
   fetchWechatSession,extractWechatOpenId,getWechatUserByOpenId,
-  get,bindWechatUserWithIndex,T_USERS
+  get,put,bcrypt,bindWechatUserWithIndex,T_USERS
 });
 const handleMatchRoutes=createMatchRoutes({
   sendJson:routeSendJson,uuidv4,MATCH_MINIPROGRAM_SECRET,isProductionRuntime,fetchWechatSession,extractWechatOpenId,
@@ -6980,7 +6980,7 @@ module.exports = async (req, res) => {
       await init();
       return sendJson(res,await sendFeishuCoachDailyDigests());
     }
-    if(await handleAuthRoutes({path,method,body,req,user,res}))return;
+    if(await handleAuthRoutes({path,method,body,req,user:null,res}))return;
     if(await handleMatchRoutes({path,method,body,req,res,query}))return;
     let user=authUser(req);if(!user)return sendJson(res,{error:'未登录'},401);
     if(user.type==='match_user')return sendJson(res,{error:'无管理端权限'},403);
@@ -7067,7 +7067,6 @@ module.exports = async (req, res) => {
       },user);
       return sendJson(res,{...loaded,user});
     }
-    if(path==='/auth/change-password'&&method==='POST'){const u=await get(T_USERS,user.id);if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});return sendJson(res,{success:true});}
     if(path==='/price-plans'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();

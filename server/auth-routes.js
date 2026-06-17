@@ -4,7 +4,7 @@ function createAuthRoutes(deps={}){
     loadLoginUser,verifyLoginPassword,mergeStoredAuthUser,assertAuthUserActive,
     LOGIN_STORAGE_TIMEOUT_ERROR,LOGIN_INVALID_ACCOUNT_ERROR,
     fetchWechatSession,extractWechatOpenId,getWechatUserByOpenId,
-    get,bindWechatUserWithIndex,T_USERS
+    get,put,bcrypt,bindWechatUserWithIndex,T_USERS
   }=deps;
 
   return async function handleAuthRoutes({path,method,body,req,user,res}){
@@ -40,6 +40,7 @@ function createAuthRoutes(deps={}){
       return sendJson(res,{token,user:payload});
     }
     if(path==='/auth/wechat-bind'&&method==='POST'){
+      if(!user)return false;
       const code=String(body.code||'').trim();
       if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
       const session=await fetchWechatSession(code);
@@ -49,6 +50,14 @@ function createAuthRoutes(deps={}){
       await bindWechatUserWithIndex(stored,openid);
       return sendJson(res,{success:true,wechatBound:true});
     }
+    if(path==='/auth/change-password'&&method==='POST'){
+      if(!user)return false;
+      const u=await get(T_USERS,user.id);
+      if(!await bcrypt.compare(body.oldPassword,u.password))return sendJson(res,{error:'原密码错误'},400);
+      await put(T_USERS,user.id,{...u,password:await bcrypt.hash(body.newPassword,10)});
+      return sendJson(res,{success:true});
+    }
+    if(path==='/auth/me'&&!user)return false;
     if(path==='/auth/me')return sendJson(res,user);
     return false;
   };

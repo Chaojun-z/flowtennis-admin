@@ -15,12 +15,16 @@ assert.match(routesSource, /function createAuthRoutes/, 'auth routes module shou
 assert.match(routesSource, /path==='\/auth\/login'&&method==='POST'/, 'auth routes module should own password login route');
 assert.match(routesSource, /path==='\/auth\/wechat-login'&&method==='POST'/, 'auth routes module should own wechat login route');
 assert.match(routesSource, /path==='\/auth\/wechat-bind'&&method==='POST'/, 'auth routes module should own wechat bind route');
+assert.match(routesSource, /path==='\/auth\/change-password'&&method==='POST'/, 'auth routes module should own change password route');
 assert.match(routesSource, /path==='\/auth\/me'/, 'auth routes module should own auth me route');
 assert.match(routesSource, /timedEndpointMetric\('auth\.login'/, 'password login route should keep timing metric');
 assert.match(routesSource, /checkLoginRateLimit\(req,username\)/, 'password login route should keep rate limit');
 assert.match(routesSource, /jwt\.sign\(payload,JWT_SECRET,\{expiresIn:'7d'\}\)/, 'auth routes should keep token expiry');
+assert.match(routesSource, /bcrypt\.compare\(body\.oldPassword,u\.password\)/, 'change password route should keep old password verification');
+assert.match(routesSource, /bcrypt\.hash\(body\.newPassword,10\)/, 'change password route should keep password hash cost');
 assert.match(routesSource, /await bindWechatUserWithIndex\(stored,openid\);/, 'wechat bind route should keep index sync');
+assert.match(apiSource, /if\(await handleAuthRoutes\(\{path,method,body,req,user:null,res\}\)\)return;/, 'api/index.js should call public auth routes without reading authenticated user first');
 assert.match(apiSource, /if\(await handleAuthRoutes\(\{path,method,body,req,user,res\}\)\)return;/, 'api/index.js should call auth routes');
-assert.doesNotMatch(apiSource, /path==='\/auth\/login'|path==='\/auth\/wechat-login'|path==='\/auth\/wechat-bind'|path==='\/auth\/me'/, 'api/index.js should not keep auth routes inline');
+assert.doesNotMatch(apiSource, /path==='\/auth\/login'|path==='\/auth\/wechat-login'|path==='\/auth\/wechat-bind'|path==='\/auth\/change-password'|path==='\/auth\/me'/, 'api/index.js should not keep auth routes inline');
 
 console.log('auth routes layer split tests passed');
