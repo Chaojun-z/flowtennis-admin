@@ -20,8 +20,7 @@ assert.match(html, /assets\/scripts\/pages\/admin-users\.js/, 'index.html should
 assert.match(html, /assets\/scripts\/pages\/coaches\.js/, 'index.html should load coaches page module');
 assert.match(html, /assets\/scripts\/pages\/campusmgr\.js/, 'index.html should load campusmgr page module');
 assert.match(html, /assets\/scripts\/pages\/leads\.js/, 'index.html should load leads page module');
-assert.match(html, /assets\/scripts\/pages\/classes\.js/, 'index.html should load classes page module');
-assert.match(html, /assets\/scripts\/pages\/plans\.js/, 'index.html should load plans page module');
+assert.doesNotMatch(html, /assets\/scripts\/pages\/classes\.js|assets\/scripts\/pages\/plans\.js/, 'index.html should not load deprecated classes or plans page modules');
 assert.match(html, /assets\/scripts\/pages\/products\.js/, 'index.html should load products page module');
 assert.match(html, /assets\/scripts\/pages\/packages\.js/, 'index.html should load packages page module');
 assert.match(html, /assets\/scripts\/pages\/purchases\.js/, 'index.html should load purchases page module');

@@ -344,8 +344,6 @@ function renderSidebarShell(){
   <div class="sb-item" onclick="goPage('coachschedule',this)">${sidebarIcon('coachschedule')}排课日历</div>
   <div class="sb-item" onclick="goPage('coachops',this)">${sidebarIcon('coachops')}教练课时统计</div>
   <div class="sb-item" style="display:none" onclick="goPage('products',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>课程产品</div>
-  <div class="sb-item" style="display:none" onclick="goPage('classes',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>班次管理</div>
-  <div class="sb-item" style="display:none" onclick="goPage('plans',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>学习计划</div>
   <div class="sb-sec">产品与定价</div>
   <div class="sb-item" onclick="goPage('packages',this)">${sidebarIcon('packages')}课包产品</div>
   <div class="sb-item" onclick="goPage('membership-plans',this)">${sidebarIcon('membership-plans')}会员方案</div>

@@ -763,31 +763,7 @@ const handleCampusRoutes=createCampusRoutes({
   T_CAMPUSES,T_STUDENTS,T_COACHES,T_CLASSES,T_SCHEDULE,T_COURTS,T_PACKAGES,T_ENTITLEMENTS
 });
 async function applyLessonDelta(classId,delta,studentIds=[]){
-  if(!classId||!delta)return null;
-  const cls=await getCachedRow(T_CLASSES,classId);
-  if(!cls)return null;
-  const oldClass={...cls};
-  const nextUsed=Math.max(0,parseLessonValue(cls.usedLessons)+delta);
-  const relatedPlans=(await timed('scan plans for lesson delta',()=>getCachedScan(T_PLANS))).filter((p)=>p.classId===classId&&p.status==='active');
-  const studentSet=new Set(parseArr(studentIds).filter(Boolean));
-  const chargedPlans=studentSet.size?relatedPlans.filter(p=>studentSet.has(p.studentId)):relatedPlans;
-  const oldPlans=relatedPlans.map((p)=>({...p}));
-  const updatedPlans=[];
-  try{
-    const nextClass={...cls,usedLessons:nextUsed,updatedAt:new Date().toISOString()};
-    await put(T_CLASSES,classId,nextClass);
-    for(const p of chargedPlans){
-      const nextPlanUsed=Math.max(0,parseLessonValue(p.usedLessons)+delta);
-      const nextPlan={...p,usedLessons:nextPlanUsed,updatedAt:new Date().toISOString()};
-      await put(T_PLANS,p.id,nextPlan);
-      updatedPlans.push(nextPlan);
-    }
-    return {class:nextClass,plans:updatedPlans};
-  }catch(err){
-    await put(T_CLASSES,classId,oldClass).catch(()=>null);
-    for(const p of oldPlans)await put(T_PLANS,p.id,p).catch(()=>null);
-    throw err;
-  }
+  return null;
 }
 function scheduleHasFeedbackRecord(schedule,feedbacks=[]){
   const scheduleId=String(schedule?.id||'').trim();
@@ -973,10 +949,7 @@ function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now
   });
 }
 function assertClassSchedulable(cls,rec){
-  if(!rec?.classId||!isBillableSchedule(rec))return;
-  if(!cls)throw new Error('关联班次不存在');
-  if(cls.status==='已取消')throw new Error('该班次已取消，不能继续排课');
-  if(cls.status==='已结课')throw new Error('该班次已结课，不能继续排课');
+  return;
 }
 function dateMs(v){if(!v)return NaN;if(v instanceof Date)return v.getTime();return new Date(String(v).replace(' ','T')).getTime();}
 function dateKey(v){return String(v||'').slice(0,10);}
@@ -1007,13 +980,7 @@ function minutesBetween(a,b){
   return Math.round(Math.abs(bm-am)/60000);
 }
 function assertLessonCapacity(cls,oldDelta,nextDelta){
-  if(!nextDelta)return;
-  if(!cls)throw new Error('关联班次不存在');
-  const total=parseLessonValue(cls.totalLessons);
-  const used=parseLessonValue(cls.usedLessons);
-  const oldSame=oldDelta&&oldDelta.classId===nextDelta.classId?parseLessonValue(oldDelta.delta):0;
-  const nextUsed=used-oldSame+parseLessonValue(nextDelta.delta);
-  if(total>0&&nextUsed>total)throw new Error(`剩余课时不足：剩余 ${Math.max(0,total-used+oldSame)} 节，本次消课 ${nextDelta.delta} 节`);
+  return;
 }
 function buildOperationTrace({operationType='',operator='',now=new Date().toISOString(),idFactory=uuidv4,operationId='',batchId=''}={}){
   const resolvedOperationId=String(operationId||'').trim()||idFactory();
@@ -3903,15 +3870,6 @@ async function validateScheduleSave(nextRec,oldRec){
   validateScheduleConflicts(nextRec,schedules,nextRec.id);
   /* hot-cache guard: timed('scan courts for schedule conflict check',()=>getCachedScan(T_COURTS).catch(()=>[])) */
   validateCourtBookingConflicts(nextRec,await timed('scan courts for schedule conflict check',()=>withTimeout(getCachedScan(T_COURTS).catch(()=>[]),2500,[])));
-  const oldDelta=scheduleLessonDelta(oldRec);
-  const nextDelta=scheduleLessonDelta(nextRec);
-  if(nextRec?.classId&&isBillableSchedule(nextRec)){
-    const cls=await withRequiredStorageTimeout(get(T_CLASSES,nextRec.classId),2500,'班次校验超时，请稍后重试');
-    assertClassSchedulable(cls,nextRec);
-    if(nextDelta){
-    assertLessonCapacity(cls,oldDelta,nextDelta);
-    }
-  }
   return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
 }
 
@@ -6450,31 +6408,6 @@ async function removeMatchCourtFinanceRowsForTest(matchIdPrefix){
   }
   return {removed};
 }
-function classStatusToPlanStatus(status){
-  return status==='已取消'?'已取消':status==='已结课'?'已结课':'active';
-}
-function buildClassPlanRecord(cls,student){
-  return {
-    classId:cls.id,
-    studentId:student?.id||'',
-    studentName:student?.name||student?.id||'',
-    studentPhone:student?.phone||'',
-    className:cls.className||'',
-    productName:cls.productName||'',
-    coach:cls.coach||'',
-    campus:cls.campus||'',
-    totalLessons:parseLessonValue(cls.totalLessons),
-    usedLessons:parseLessonValue(cls.usedLessons),
-    status:classStatusToPlanStatus(cls.status)
-  };
-}
-function assertPlanWriteForbidden(method){
-  if(String(method||'').toUpperCase()==='GET')return;
-  throw new Error('学习计划由班次自动生成，不能独立新增、修改或删除');
-}
-function assertCanDeleteClass(classId,schedules){
-  if((schedules||[]).some(s=>s.classId===classId))throw new Error('该班次已有排课，不能删除');
-}
 function assertCanDeletePackage(packageId,purchases){
   if((purchases||[]).some(p=>p.packageId===packageId))throw new Error('该课包已有购买记录，不能删除，请停用');
 }
@@ -6485,92 +6418,6 @@ function assertCanVoidPurchase(purchaseId,entitlements,ledger){
 function assertCanDeleteEntitlement(entitlementId,ledger,entitlements=[]){
   if((ledger||[]).some(l=>l.entitlementId===entitlementId))throw new Error('该课包余额已有消耗记录，不能删除');
   if((entitlements||[]).some(e=>e.id===entitlementId&&e.purchaseId))throw new Error('该课包余额来自购买记录，不能删除');
-}
-function sameStudentIds(a,b){
-  const x=parseArr(a).filter(Boolean).sort();
-  const y=parseArr(b).filter(Boolean).sort();
-  return x.length===y.length&&x.every((id,i)=>id===y[i]);
-}
-function classRemainingLessonsForRecord(cls){
-  return parseLessonValue(cls?.totalLessons)-parseLessonValue(cls?.usedLessons);
-}
-function assertCanWriteClass(user){
-  if(user?.role!=='admin')throw new Error('无权限');
-}
-function nextClassNoFromClasses(classes){
-  const nums=(classes||[]).map(c=>{
-    const m=String(c?.classNo||'').match(/^CLS(\d+)$/);
-    return m?parseInt(m[1]):0;
-  });
-  const next=(nums.length?Math.max(...nums):0)+1;
-  return 'CLS'+String(next).padStart(4,'0');
-}
-function isClassNoReservationConflict(err){
-  return /condition|expect|exist|OTSConditionCheckFail|ConditionCheck/i.test(String(err?.code||'')+' '+String(err?.message||err||''));
-}
-async function reserveNextClassNo(existingClasses,user,now){
-  let base=existingClasses||[];
-  for(let attempt=0;attempt<8;attempt++){
-    const classNo=nextClassNoFromClasses(base);
-    try{
-      await putIfAbsent(T_CLASS_NOS,classNo,{id:classNo,classNo,createdBy:user?.name||'',createdAt:now});
-      return classNo;
-    }catch(err){
-      if(isTableMissingError(err)){await mkTable(T_CLASS_NOS);continue;}
-      if(!isClassNoReservationConflict(err))throw err;
-      base=await scan(T_CLASSES).catch(()=>base);
-      base=[...base,{classNo}];
-    }
-  }
-  throw new Error('班次编号生成失败，请重试');
-}
-function validateClassInput(input,product){
-  if(!input?.productId)throw new Error('请选择课程产品');
-  const total=parseLessonValue(input.totalLessons,Number.NaN);
-  const used=parseLessonValue(input.usedLessons);
-  if(Number.isNaN(total)||total<0)throw new Error('应上课时不能小于0');
-  if(used<0)throw new Error('已上课时不能小于0');
-  if(used>total)throw new Error('已上课时不能大于应上课时');
-  const studentIds=parseArr(input.studentIds).filter(Boolean);
-  const max=parseInt(product?.maxStudents)||0;
-  if(max>0&&studentIds.length>max)throw new Error(`选择学员数超过课程产品人数上限：最多 ${max} 人`);
-  if(input.startDate&&input.endDate&&String(input.endDate)<String(input.startDate))throw new Error('结束日期不能早于开始日期');
-}
-function buildClassCreateRecord(body,{id,classNo,user,now}){
-  const productName=body.productName||'';
-  return {
-    ...body,
-    id,
-    classNo,
-    className:classNo+'-'+productName,
-    productName,
-    studentIds:parseArr(body.studentIds),
-    scheduleDays:parseArr(body.scheduleDays),
-    totalLessons:parseLessonValue(body.totalLessons),
-    usedLessons:0,
-    status:body.status||'已排班',
-    createdBy:user?.name||'',
-    createdAt:now,
-    updatedAt:now
-  };
-}
-function buildClassUpdateRecord(oldClass,body,{product,now}){
-  const classNo=oldClass?.classNo||body.classNo||'';
-  const productName=product?.name||body.productName||oldClass?.productName||'';
-  return {
-    ...oldClass,
-    ...body,
-    id:oldClass?.id||body.id,
-    classNo,
-    className:classNo&&productName?classNo+'-'+productName:(body.className||oldClass?.className||''),
-    productName,
-    studentIds:parseArr(body.studentIds),
-    scheduleDays:parseArr(body.scheduleDays),
-    totalLessons:parseLessonValue(body.totalLessons),
-    usedLessons:parseLessonValue(oldClass?.usedLessons),
-    status:body.status||oldClass?.status||'已排班',
-    updatedAt:now
-  };
 }
 function firstNonEmptyText(...values){
   for(const value of values){
@@ -6648,19 +6495,6 @@ function decorateWorkbenchFeedbacks(feedbacks=[]){
     focusNote:firstNonEmptyText(item?.focusNote,item?.sessionFocus,item?.coachFocus,item?.coachNote),
     summary:firstNonEmptyText(item?.summary,item?.practicedToday)
   }));
-}
-function assertCanEditClassWithSchedules(oldClass,nextClass,schedules){
-  const classSchedules=(schedules||[]).filter(s=>s.classId===oldClass?.id);
-  if(!classSchedules.length)return;
-  if(String(oldClass?.productId||'').trim()!==String(nextClass?.productId||'').trim())throw new Error('该班次已有排课，不能直接修改课程产品');
-  if(String(oldClass?.coach||'').trim()!==String(nextClass?.coach||'').trim())throw new Error('该班次已有排课，不能直接修改教练');
-  if(String(oldClass?.campus||'').trim()!==String(nextClass?.campus||'').trim())throw new Error('该班次已有排课，不能直接修改校区');
-  if(!sameStudentIds(oldClass?.studentIds,nextClass?.studentIds))throw new Error('该班次已有排课，不能直接修改学员');
-  if(parseLessonValue(oldClass?.totalLessons)!==parseLessonValue(nextClass?.totalLessons))throw new Error('该班次已有排课，不能直接修改总课时');
-  if(parseLessonValue(oldClass?.usedLessons)!==parseLessonValue(nextClass?.usedLessons))throw new Error('已上课时由排课自动维护，不能手动修改');
-  const oldStatus=oldClass?.status||'已排班',nextStatus=nextClass?.status||'已排班';
-  if(oldStatus!==nextStatus&&nextStatus==='已取消')throw new Error('该班次已有排课，不能直接取消');
-  if(oldStatus!==nextStatus&&nextStatus==='已结课'&&classRemainingLessonsForRecord(nextClass)>0)throw new Error('该班次仍有剩余课时，不能直接结课');
 }
 function assertCanDeleteSchedule(schedule,feedbacks,ledger=[]){
   const scheduleId=typeof schedule==='string'?schedule:schedule?.id;
@@ -6828,30 +6662,6 @@ function assertCanDeleteCampus(campusId,data={}){
     (data.packages||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id))||
     (data.entitlements||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id));
   if(used)throw new Error('该校区已有学员、教练、班次、排课、课包或权益关联，不能直接删除');
-}
-async function syncClassPlans(classId,cls){
-  const studentIds=parseArr(cls.studentIds);
-  const [students,existingPlans]=await Promise.all([
-    timed('sync class plans scan students',()=>getCachedScan(T_STUDENTS)),
-    timed('sync class plans scan plans',()=>getCachedScan(T_PLANS))
-  ]);
-  const classPlans=existingPlans.filter(p=>p.classId===classId);
-  const saved=[];
-  for(const sid of studentIds){
-    const student=students.find(s=>s.id===sid)||{id:sid,name:sid};
-    const current=classPlans.find(p=>p.studentId===sid);
-    const id=current?.id||uuidv4();
-    const rec={...current,...buildClassPlanRecord({...cls,id:classId},student),id,updatedAt:new Date().toISOString()};
-    if(!current)rec.createdAt=new Date().toISOString();
-    await put(T_PLANS,id,rec);
-    saved.push(rec);
-  }
-  for(const plan of classPlans.filter(p=>!studentIds.includes(p.studentId)&&p.status!=='已取消')){
-    const rec={...plan,status:'已取消',updatedAt:new Date().toISOString()};
-    await put(T_PLANS,plan.id,rec);
-    saved.push(rec);
-  }
-  return saved;
 }
 const RECENT_MEMBERSHIP_ORDER_TTL_MS=60000;
 const recentMembershipOrderRequests=new Map();
@@ -7422,8 +7232,6 @@ module.exports = async (req, res) => {
     if(path==='/packages/order'&&method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);await init();const orderedIds=Array.isArray(body.orderedIds)?body.orderedIds.map(id=>String(id||'').trim()).filter(Boolean):[];if(!orderedIds.length)return sendJson(res,{error:'请提供课包排序'},400);if(new Set(orderedIds).size!==orderedIds.length)return sendJson(res,{error:'课包排序不能重复'},400);const rows=await scan(T_PACKAGES).catch(()=>[]);const byId=new Map(rows.map(row=>[String(row.id||''),row]));const missing=orderedIds.filter(id=>!byId.has(id));if(missing.length)return sendJson(res,{error:'课包不存在'},404);const now=new Date().toISOString();const updates=orderedIds.map((id,idx)=>({...byId.get(id),sortOrder:(idx+1)*10,updatedAt:now}));await Promise.all(updates.map(row=>put(T_PACKAGES,row.id,row)));return sendJson(res,{success:true,packages:updates});}
     const pkgM=path.match(/^\/packages\/(.+)$/);if(pkgM){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);const id=decodeURIComponent(pkgM[1]);if(method==='GET')return sendJson(res,await get(T_PACKAGES,id));if(method==='PUT'){const old=await get(T_PACKAGES,id).catch(()=>null);if(!old)return sendJson(res,{error:'售卖课包不存在'},404);const now=new Date().toISOString();const deactivated=buildPackageDeactivateUpdate(old,body,now);if(deactivated){await put(T_PACKAGES,id,deactivated);return sendJson(res,deactivated);}const purchaseRows=await scan(T_PURCHASES).catch(()=>[]);const entitlementRows=await scan(T_ENTITLEMENTS).catch(()=>[]);const legacyCoachNames=[old.ownerCoach,...parseArr(old.coachNames),...parseArr(old.coachIds),...purchaseRows.filter(p=>String(p.packageId||'')===String(id)).flatMap(p=>[p.ownerCoach,...parseArr(p.coachNames),...parseArr(p.allowedCoaches)]),...entitlementRows.filter(e=>String(e.packageId||'')===String(id)).flatMap(e=>[e.ownerCoach,...parseArr(e.coachNames),...parseArr(e.allowedCoaches)])].filter(Boolean);const refs={products:await scan(T_PRODUCTS).catch(()=>[]),coaches:await scan(T_COACHES).catch(()=>[]),campuses:await scan(T_CAMPUSES).catch(()=>[]),legacyCoachNames};const r=normalizePackageRecord({...body,id},old,refs);assertCanEditPackageWithPurchases(old,r,purchaseRows);await put(T_PACKAGES,id,r);const snapshotUpdates=syncSoldPackageRuleSnapshots(r,purchaseRows,entitlementRows,r.updatedAt);await Promise.all([...snapshotUpdates.purchases.map(row=>put(T_PURCHASES,row.id,row)),...snapshotUpdates.entitlements.map(row=>put(T_ENTITLEMENTS,row.id,row))]);await Promise.all(snapshotUpdates.entitlements.map(row=>syncStudentActiveEntitlementIndexes(null,row)));return sendJson(res,r);}if(method==='DELETE'){assertCanDeletePackage(id,await scan(T_PURCHASES).catch(()=>[]));await del(T_PACKAGES,id);return sendJson(res,{success:true});}}
     if(await handlePurchaseEntitlementRoutes({path,method,body,user,res,query}))return;
-    if(path==='/plans'){await init();if(method==='GET'){const rows=await scan(T_PLANS);if(user.role==='admin'&&!isCampusScopedAdmin(user))return sendJson(res,rows);const [students,classes,schedule]=await Promise.all([getCachedScan(T_STUDENTS).catch(()=>[]),getCachedScan(T_CLASSES).catch(()=>[]),getCachedScan(T_SCHEDULE).catch(()=>[])]);return sendJson(res,filterLoadAllForUser({plans:rows,students,classes,schedule},user).plans);}return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
-    const plM=path.match(/^\/plans\/(.+)$/);if(plM){const id=plM[1];if(method==='GET')return sendJson(res,await get(T_PLANS,id));return sendJson(res,{error:'学习计划由班次自动生成，不能独立新增、修改或删除'},400);}
     if(path==='/coach-proposals'){
       await init();
       if(method==='GET'){
@@ -7760,8 +7568,6 @@ module.exports = async (req, res) => {
     if(await handleCorePageDataRoutes({path,method,user,res}))return;
     if(await handleResidualPageDataRoutes({path,method,user,res,query}))return;
     if(await handleLeadsRoutes({path,method,body,user,res,query}))return;
-    if(path==='/classes'){await init();if(method==='GET'){const rows=await getCachedScan(T_CLASSES);if(user.role==='admin')return sendJson(res,filterLoadAllForUser({classes:rows,schedule:await getCachedScan(T_SCHEDULE).catch(()=>[])},user).classes);const [schedule,coaches,users]=await Promise.all([getCachedScan(T_SCHEDULE).catch(()=>[]),getCachedScan(T_COACHES).catch(()=>[]),getCachedScan(T_USERS).catch(()=>[])]);const coachRefs=buildCoachRefs({coaches,users});return sendJson(res,filterLoadAllForUser({classes:rows,schedule,coaches},user,coachRefs).classes);}if(method==='POST'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const id=uuidv4();const now=new Date().toISOString();const [existingClasses,product]=await Promise.all([getCachedScan(T_CLASSES).catch(()=>[]),get(T_PRODUCTS,body.productId).catch(()=>null)]);if(!product)return sendJson(res,{error:'课程产品不存在'},404);validateClassInput({...body,usedLessons:0},product);const classNo=await reserveNextClassNo(existingClasses,user,now);const r=buildClassCreateRecord({...body,productName:product.name||body.productName||''},{id,classNo,user,now});await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}}
-    const clM=path.match(/^\/classes\/(.+)$/);if(clM){const id=clM[1];if(method==='GET')return sendJson(res,await get(T_CLASSES,id));if(method==='PUT'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);const old=await get(T_CLASSES,id).catch(()=>null);if(!old)return sendJson(res,{error:'班次不存在'},404);const product=await get(T_PRODUCTS,body.productId||old.productId).catch(()=>null);if(!product)return sendJson(res,{error:'课程产品不存在'},404);const r=buildClassUpdateRecord(old,body,{product,now:new Date().toISOString()});validateClassInput(r,product);assertCanEditClassWithSchedules(old,r,await getCachedScan(T_SCHEDULE));await put(T_CLASSES,id,r);const syncedPlans=await syncClassPlans(id,r);return sendJson(res,{class:r,plans:syncedPlans});}if(method==='DELETE'){if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);assertCanWriteClass(user);assertCanDeleteClass(id,await getCachedScan(T_SCHEDULE));const classPlans=(await getCachedScan(T_PLANS)).filter(p=>p.classId===id);for(const p of classPlans)await del(T_PLANS,p.id);await del(T_CLASSES,id);return sendJson(res,{success:true});}}
     if(await handleCampusRoutes({path,method,body,user,res}))return;
     return sendJson(res,{error:'Not found'},404);
   }catch(e){console.error('API error:',e);return sendJson(res,{error:e.message},500);}
@@ -7861,7 +7667,6 @@ module.exports._test={
   decorateWorkbenchStudents,
   decorateWorkbenchFeedbacks,
   workbenchLessonUnits,
-  assertPlanWriteForbidden,
   buildCoachRenameUpdates,
   buildStudentIdentityUpdates,
   buildProductRenameDisplayUpdates,
@@ -7981,20 +7786,11 @@ module.exports._test={
   legacyCourtFinanceWarnings,
   extractDepositAmountFromText,
   importCourtRows,
-  buildClassPlanRecord,
   assertCanDeleteProduct,
-  assertCanDeleteClass,
-  assertCanWriteClass,
-  nextClassNoFromClasses,
-  isClassNoReservationConflict,
-  validateClassInput,
-  buildClassCreateRecord,
-  buildClassUpdateRecord,
   assertCanDeletePackage,
   assertCanVoidPurchase,
   assertCanDeleteEntitlement,
   assertStudentWriteAccess,
-  assertCanEditClassWithSchedules,
   assertCanDeleteSchedule,
   assertCanDeleteStudent,
   buildStudentCascadeDeletePlan,

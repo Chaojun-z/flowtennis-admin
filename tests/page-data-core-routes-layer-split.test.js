@@ -14,7 +14,6 @@ assert.match(apiSource, /require\('\.\.\/server\/page-data\/core-pages\.js'\)/, 
 assert.match(routesSource, /function createCorePageDataRoutes/, 'core page-data module should expose a route factory');
 for (const route of [
   '/page-data/coaches',
-  '/page-data/plans',
   '/page-data/purchases',
   '/page-data/courts',
   '/page-data/memberships',

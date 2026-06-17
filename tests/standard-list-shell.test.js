@@ -14,8 +14,6 @@ const targetPages = [
   ['packages', '', 'pkgSearch', 'packageGrid', '', '', ''],
   ['prices', '', 'priceSearch', 'priceTbody', 'pricePagerInfo', 'pricePageSize', 'pricePagerBtns'],
   ['admin-users', '', 'adminUserSearch', 'adminUserTbody', 'adminUserPagerInfo', 'adminUserPageSize', 'adminUserPagerBtns'],
-  ['classes', 'classStatsRow', 'clsSearch', 'clsTbody', 'clsPagerInfo', '', 'clsPagerBtns'],
-  ['plans', '', 'planSearch', 'planTbody', 'planPagerInfo', '', 'planPagerBtns'],
   ['coachops', '', '', 'coachOpsTbody', '', '', ''],
   ['matches', '', 'matchSearch', 'matchTbody', '', '', ''],
   ['coaches', '', 'coachSearch', 'coachTbody', '', '', ''],

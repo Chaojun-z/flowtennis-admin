@@ -1571,7 +1571,7 @@ function resolveUniquePackageIdByText(value){
   return {id:'',reason:'课包未匹配'};
 }
 function productHasReferences(productId){
-  return classes.some(c=>c.productId===productId)||packages.some(p=>p.productId===productId);
+  return packages.some(p=>p.productId===productId);
 }
 function packageHasPurchases(packageId){
   return purchases.some(p=>p.packageId===packageId);

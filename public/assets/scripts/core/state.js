@@ -87,13 +87,11 @@ const PAGE_DATA_REQUIREMENTS={
   'package-students':['campuses','students','purchasesPage'],
   'trial-students':['campuses','students','purchasesPage'],
   leads:['campuses','leads'],
-  classes:['campuses','students','products','classes','schedule','coaches'],
-  plans:[],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   finance:[],
-  products:['products','classes'],
+  products:['products'],
   packages:['packages','products','purchases','entitlements','packageBoardPreferences'],
   purchases:[],
   entitlements:['entitlements','students'],
@@ -117,7 +115,6 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   'package-students':['classes','schedule','courts'],
   'trial-students':['classes','schedule','courts'],
   leads:['leadFollowups','purchases'],
-  plans:['plansPage'],
   packages:[],
   purchases:['purchasesPage'],
   schedule:['classes','feedbacks','entitlements','entitlementLedger'],
@@ -167,11 +164,10 @@ const DATASET_LOADERS={
   pricePlans:()=>apiCall('GET','/price-plans'),
   schedule:()=>apiCall('GET','/schedule'),
   coaches:()=>apiCall('GET','/coaches').catch(()=>apiCall('GET','/page-data/coaches').then(data=>data.coaches||[])),
-  classes:()=>apiCall('GET','/classes'),
+  classes:()=>Promise.resolve([]),
   campuses:()=>apiCall('GET','/campuses'),
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
-  ,plansPage:()=>apiCall('GET','/page-data/plans')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
   ,financePage:()=>apiCall('GET','/page-data/finance')
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
@@ -299,7 +295,6 @@ function initialBackgroundDatasetsForPage(pg){
   if(isNonProductionRuntime()&&pg==='finance')return ['financePage'];
   const fallback={
     leadFollowups:['leadFollowups'],
-    plansPage:['plans'],
     purchasesPage:['purchases'],
     courtsPage:['courts'],
     membershipsPage:['courts','membershipAccounts'],
@@ -368,7 +363,6 @@ function renderPageLoading(pg){
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='leads')renderLeadTableLoading();
-  if(pg==='plans')renderTableBodyLoading('planTbody',10,'学习计划加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
   if(pg==='membership-orders')renderTableBodyLoading('membershipOrdersAuditTbody',12,'会员购买记录加载中...');
@@ -399,18 +393,6 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     return promise;
   }));
   results.forEach(([name,data])=>{
-    if(name==='plansPage'){
-      setDatasetValue('campuses',data.campuses||[]);
-      setDatasetValue('students',data.students||[]);
-      setDatasetValue('classes',data.classes||[]);
-      setDatasetValue('plans',data.plans||[]);
-      setDatasetValue('products',data.products||[]);
-      setDatasetValue('schedule',data.schedule||[]);
-      setDatasetValue('courts',data.courts||[]);
-      setDatasetValue('entitlements',data.entitlements||[]);
-      loadedDatasets.add('plansPage');
-      return;
-    }
   if(name==='purchasesPage'){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
@@ -757,7 +739,6 @@ function renderPageData(pg){
   if(pg==='students')renderStudents();
   if(isStudentListPage(pg)&&pg!=='students')renderStudents();
   if(pg==='leads')renderLeads();
-  if(pg==='classes')renderClasses();
   if(pg==='schedule')renderSchedule();
   if(pg==='coachschedule'||pg==='coachops')renderCoachOps();
   if(pg==='finance')renderFinanceCenter();

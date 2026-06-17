@@ -22,40 +22,6 @@ function createCorePageDataRoutes(deps={}){
       const coaches=await cappedScan(T_COACHES);
       return sendJson(res,{coaches:filterLoadAllForUser({coaches},user).coaches});
     }
-    if(path==='/page-data/plans'&&method==='GET'){
-      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
-      await init();
-      const [campuses,students,classes,plans,products,schedule,courts,entitlements]=await Promise.all([
-        cappedScan(T_CAMPUSES),
-        cappedScan(T_STUDENTS),
-        cappedScan(T_CLASSES),
-        cappedScan(T_PLANS),
-        cappedScan(T_PRODUCTS),
-        cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule),
-        cappedScan(T_COURTS),
-        cappedScan(T_ENTITLEMENTS)
-      ]);
-      const scoped=filterLoadAllForUser({
-        campuses:campuses.length?campuses:DEFAULT_CAMPUSES,
-        students,
-        classes,
-        plans,
-        products,
-        schedule,
-        courts,
-        entitlements
-      },user);
-      return sendJson(res,{
-        campuses:scoped.campuses,
-        students:scoped.students,
-        classes:scoped.classes,
-        plans:scoped.plans,
-        products:scoped.products,
-        schedule:scoped.schedule,
-        courts:scoped.courts,
-        entitlements:scoped.entitlements
-      });
-    }
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();

@@ -993,7 +993,7 @@ async function saveStudent(){
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',
     refresh:()=>{
-      renderStudents();renderPlans();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
+      renderStudents();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
       if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
       else closeModal();
     }

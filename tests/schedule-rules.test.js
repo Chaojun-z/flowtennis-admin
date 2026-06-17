@@ -1954,23 +1954,6 @@ assert.strictEqual(
   'daily digest should display campus name instead of internal code'
 );
 
-assert.throws(
-  () => rules.assertClassSchedulable({ id: 'class-a', status: '已取消' }, { classId: 'class-a', status: '已排课' }),
-  /已取消.*不能继续排课/,
-  'cancelled class should not allow active schedule'
-);
-
-assert.throws(
-  () => rules.assertClassSchedulable({ id: 'class-a', status: '已结课' }, { classId: 'class-a', status: '已排课' }),
-  /已结课.*不能继续排课/,
-  'finished class should not allow active schedule'
-);
-
-assert.doesNotThrow(
-  () => rules.assertClassSchedulable({ id: 'class-a', status: '已排班' }, { classId: 'class-a', status: '已排课' }),
-  'active class should allow active schedule'
-);
-
 assert.doesNotThrow(
   () => rules.assertScheduleEntitlementRequired({ classId: 'class-a', studentIds: ['stu-1'], status: '已排课', lessonCount: 1 }),
   'billable schedule may be saved without binding a package balance record'
@@ -1990,44 +1973,6 @@ assert.deepStrictEqual(
   rules.scheduleParticipantSummary({ studentIds: ['stu-1', 'stu-2'], expectedStudentIds: ['stu-1', 'stu-2', 'stu-3'] }),
   { expectedCount: 3, actualCount: 2, absentCount: 1 },
   'schedule participant summary should count actual and absent students'
-);
-
-assert.throws(
-  () => rules.assertLessonCapacity(
-    { id: 'class-a', totalLessons: 10, usedLessons: 10 },
-    null,
-    { classId: 'class-a', delta: 1 }
-  ),
-  /剩余课时不足/,
-  'over-consuming lessons should be rejected'
-);
-
-assert.doesNotThrow(
-  () => rules.assertLessonCapacity(
-    { id: 'class-a', totalLessons: 10, usedLessons: 10 },
-    { classId: 'class-a', delta: 1 },
-    { classId: 'class-a', delta: 1 }
-  ),
-  'editing an already-consumed schedule without increasing lessons should be allowed'
-);
-
-assert.throws(
-  () => rules.assertLessonCapacity(
-    { id: 'class-a', totalLessons: 10, usedLessons: 10 },
-    { classId: 'class-a', delta: 1 },
-    { classId: 'class-a', delta: 2 }
-  ),
-  /剩余课时不足/,
-  'increasing lesson count should check remaining lessons after subtracting the old count'
-);
-
-assert.doesNotThrow(
-  () => rules.assertLessonCapacity(
-    { id: 'class-a', totalLessons: 10, usedLessons: 10 },
-    { classId: 'class-a', delta: 1 },
-    null
-  ),
-  'cancelling a schedule should not require remaining lesson capacity'
 );
 
 assert.throws(

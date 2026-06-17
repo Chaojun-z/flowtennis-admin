@@ -624,7 +624,7 @@ async function confirmScheduleCancel(id){
     errorPrefix:'取消失败',
     successText:scope==='future'?'循环排课已取消 ✓':'排课已取消 ✓',
     closeOnSuccess:true,
-    refresh:[renderSchedule,renderClasses,renderPlans,renderCoachOps,renderMySchedule]
+    refresh:[renderSchedule,renderCoachOps,renderMySchedule]
   });
 }
 function onSchClassChange(){
@@ -1125,7 +1125,7 @@ async function saveSchedule(){
   renderAfterScheduleMutation();
 }
 function renderAfterScheduleMutation(){
-  try{renderSchedule();renderClasses();renderPlans();renderCoachOps();renderMySchedule();}catch(err){
+  try{renderSchedule();renderCoachOps();renderMySchedule();}catch(err){
     console.error('schedule post-save render failed:',err);
     toast('排课已保存，页面刷新异常，请手动刷新页面','warn');
   }
