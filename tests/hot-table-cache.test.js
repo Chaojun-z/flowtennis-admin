@@ -12,6 +12,7 @@ const campusRoutesSource = fs.readFileSync(path.join(__dirname, '../server/campu
 const coachRoutesSource = fs.readFileSync(path.join(__dirname, '../server/coaches-routes.js'), 'utf8');
 const productRoutesSource = fs.readFileSync(path.join(__dirname, '../server/products-routes.js'), 'utf8');
 const packageRoutesSource = fs.readFileSync(path.join(__dirname, '../server/packages-routes.js'), 'utf8');
+const studentRoutesSource = fs.readFileSync(path.join(__dirname, '../server/students-routes.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const residualPageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/residual-pages.js'), 'utf8');
@@ -32,8 +33,8 @@ assert.match(storageSource, /function invalidateHotGetCache\(t,id\)/, 'api shoul
 assert.match(storageSource, /if\(hotScanTables\.has\(t\)\)invalidateHotScanCache\(t\);/, 'writes should invalidate hot table cache');
 assert.match(storageSource, /if\(hotGetTables\.has\(t\)\)invalidateHotGetCache\(t,id\);/, 'writes should invalidate hot row cache');
 assert.match(apiSource, /async function getFastStudentsRead\(options=\{\}\)\{[\s\S]*getCachedScan\(T_STUDENTS,options\)[\s\S]*withTimeout\(readPromise,FT_STUDENTS_FAST_TIMEOUT_MS,fallback\)/, 'students fast read helper should wrap cached scan with timeout fallback');
-assert.match(apiSource, /if\(path==='\/students'\)\{await init\(\);if\(method==='GET'\)\{const rows=await getFastStudentsRead\(\);/, 'students list should use fast cached scan fallback');
-assert.match(apiSource, /if\(user\.role==='admin'\)return sendJson\(res,filterLoadAllForUser\(\{students:rows\},user\)\.students\);[\s\S]*filterLoadAllForUser\(\{students:rows,schedule,classes,coaches\},user,coachRefs\)\.students/, 'coach students list should filter cached scan results');
+assert.match(studentRoutesSource, /if\(path==='\/students'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getFastStudentsRead\(\);/, 'students list should use fast cached scan fallback');
+assert.match(studentRoutesSource, /if\(user\.role==='admin'\)return sendJson\(res,filterLoadAllForUser\(\{students:rows\},user\)\.students\);[\s\S]*filterLoadAllForUser\(\{students:rows,schedule,classes,coaches\},user,coachRefs\)\.students/, 'coach students list should filter cached scan results');
 assert.match(courtRoutesSource, /if\(path==='\/courts'\)\{[\s\S]*const rows=await getCachedScan\(T_COURTS\);[\s\S]*filterLoadAllForUser\(\{courts:rows\},user\)\.courts/, 'courts list should use cached scan');
 assert.match(scheduleRoutesSource, /if\(path==='\/schedule'\)\{[\s\S]*if\(method==='GET'\)\{if\(user\.role==='admin'\)\{const rows=await getScheduleListRows\(\);return sendJson\(res,filterLoadAllForUser\(\{schedule:rows\},user\)\.schedule\);\}[\s\S]*return sendJson\(res,await getCoachScheduleRowsForUser\(user,buildCoachRefs\(\{coaches,users\}\)\)\);/, 'schedule list should use complete projected schedule reads and coach secondary index fallback');
 assert.doesNotMatch(apiSource, /if\(path==='\/classes'\)/, 'deprecated classes route should stay removed');

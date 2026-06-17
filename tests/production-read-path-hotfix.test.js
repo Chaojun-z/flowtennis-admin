@@ -6,6 +6,7 @@ const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8
 const scheduleRoutesSource = fs.readFileSync(path.join(__dirname, '../server/schedule-routes.js'), 'utf8');
 const adminUserRoutesSource = fs.readFileSync(path.join(__dirname, '../server/admin-users-routes.js'), 'utf8');
 const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../server/leads-routes.js'), 'utf8');
+const studentRoutesSource = fs.readFileSync(path.join(__dirname, '../server/students-routes.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
 const storageSource = fs.readFileSync(path.join(__dirname, '../server/storage.js'), 'utf8');
@@ -90,8 +91,8 @@ assert.match(
   'ft_students 快路读取应在超时或异常时快速降级为空数组'
 );
 assert.match(
-  apiSource,
-  /if\(path==='\/students'\)\{await init\(\);if\(method==='GET'\)\{const rows=await getFastStudentsRead\(\);/,
+  studentRoutesSource,
+  /if\(path==='\/students'\)\{[\s\S]*if\(method==='GET'\)\{[\s\S]*const rows=await getFastStudentsRead\(\);/,
   '/students 应使用 ft_students 快路读取'
 );
 assert.match(

@@ -1,5 +1,5 @@
 {
-  "maxLines": 7528,
+  "maxLines": 7498,
   "extractedModules": [
     "server/auth.js",
     "server/auth-routes.js",
@@ -19,6 +19,7 @@
     "server/coaches-routes.js",
     "server/products-routes.js",
     "server/packages-routes.js",
+    "server/students-routes.js",
     "server/admin-users-routes.js",
     "server/admin-tools-routes.js",
     "server/package-board-routes.js",
