@@ -15,6 +15,7 @@ const { normalizePermissionProfile, userHasFeaturePermission } = require('../ser
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
 const { createStorageServices } = require('../server/storage');
+const { createAuthRoutes } = require('../server/auth-routes');
 const { createBootstrapRuntime, buildBootstrapSafetyFlags, readBooleanEnv, logBlockedAutoWrite } = require('../server/bootstrap');
 const { createScheduleRules } = require('../server/schedule');
 const { createPackageRules } = require('../server/packages');
@@ -1959,6 +1960,9 @@ const handleAdminToolRoutes=createAdminToolRoutes({
 });
 const handlePackageBoardRoutes=createPackageBoardRoutes({
   init,sendJson:routeSendJson,get,put,T_MATCH_SETTINGS
+});
+const handleAuthRoutes=createAuthRoutes({
+  sendJson:routeSendJson,fetchWechatSession,extractWechatOpenId,get,bindWechatUserWithIndex,T_USERS
 });
 function buildWechatCode2SessionUrl(appid,secret,code){
   return `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(appid)}&secret=${encodeURIComponent(secret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
@@ -7015,17 +7019,7 @@ module.exports = async (req, res) => {
       const rows=Array.isArray(body.rows)?body.rows:[];
       return sendJson(res,await importCourtRows(rows));
     }
-    if(path==='/auth/wechat-bind'&&method==='POST'){
-      const code=String(body.code||'').trim();
-      if(!code)return sendJson(res,{error:'缺少微信登录凭证'},400);
-      const session=await fetchWechatSession(code);
-      const openid=extractWechatOpenId(session);
-      const stored=await get(T_USERS,user.id);
-      if(!stored)return sendJson(res,{error:'用户不存在'},404);
-      await bindWechatUserWithIndex(stored,openid);
-      return sendJson(res,{success:true,wechatBound:true});
-    }
-    if(path==='/auth/me')return sendJson(res,user);
+    if(await handleAuthRoutes({path,method,body,user,res}))return;
     if(path==='/load-all'&&method==='GET'){
       await init();
       const [rawCourts,students,products,packages,purchases,entitlements,entitlementLedger,financialLedger,membershipPlans,membershipAccounts,membershipOrders,membershipBenefitLedger,membershipAccountEvents,pricePlans,plans,schedule,coaches,classes,campuses,feedbacks,coachProposals]=await Promise.all([
