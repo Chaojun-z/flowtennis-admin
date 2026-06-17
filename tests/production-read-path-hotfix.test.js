@@ -4,6 +4,7 @@ const path = require('path');
 
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const scheduleRoutesSource = fs.readFileSync(path.join(__dirname, '../server/schedule-routes.js'), 'utf8');
+const adminUserRoutesSource = fs.readFileSync(path.join(__dirname, '../server/admin-users-routes.js'), 'utf8');
 const leadsRoutesSource = fs.readFileSync(path.join(__dirname, '../server/leads-routes.js'), 'utf8');
 const corePageDataSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
 const financePageSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-page.js'), 'utf8');
@@ -39,8 +40,8 @@ assert.match(
 );
 
 assert.match(
-  apiSource,
-  /const all=isProductionRuntime\(\)\?await scanFirstRows\(T_USERS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_USERS,\{columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\);return sendJson\(res,all\.filter\(isVisibleAdminUser\)\.map\(buildAdminUserView\)\);/,
+  adminUserRoutesSource,
+  /const all=isProductionRuntime\(\)\?await scanFirstRows\(T_USERS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.adminUsers,columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_USERS,\{columns:ADMIN_USER_LIST_PROJECTION_FIELDS\}\);\s*return sendJson\(res,all\.filter\(isVisibleAdminUser\)\.map\(buildAdminUserView\)\);/,
   '账号管理首屏应在 production 改成限量轻投影读取'
 );
 

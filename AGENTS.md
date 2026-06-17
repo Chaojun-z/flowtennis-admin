@@ -53,6 +53,8 @@
    - Express
    - Vercel Serverless Function
    - 入口：`api/index.js`
+   - Vercel Hobby 限制单次部署最多 12 个 Serverless Functions；本项目必须保持 `api/` 目录只有 `index.js`
+   - 后续后端拆分只能拆到 `server/` 目录，由 `api/index.js` 统一入口转发，禁止新增 `api/*.js` 或 `api/**/index.js`
 3. 部署：
    - Vercel
    - `/api/*` rewrite 到 `api/index`

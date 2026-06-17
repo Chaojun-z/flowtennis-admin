@@ -1,5 +1,8 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { html, appSource: source } = require('./helpers/read-index-bundle');
+const adminUserRoutesSource = fs.readFileSync(path.join(__dirname, '../server/admin-users-routes.js'), 'utf8');
 const coachSidebar = source.match(/<div id="sbCoachView"[\s\S]*?<\/div>\s*<!-- 管理员视角 -->/);
 const adminSidebar = source.match(/<div id="sbAdminView">[\s\S]*?<\/div>\s*<\/div>\s*<div class="sb-bottom">/);
 assert.ok(coachSidebar, 'coach sidebar should exist');
@@ -85,8 +88,8 @@ assert.match(fnBody('toggleAdminUserStatus'), /status/, 'account status toggle s
 assert.match(fnBody('unbindAdminUserWechat'), /clearWechat/, 'wechat unbind should send clearWechat flag');
 assert.match(fnBody('unbindAdminUserOfficialAccount'), /clearOfficialAccount/, 'official account unbind should send clearOfficialAccount flag');
 assert.match(fnBody('resetAdminUserPassword'), /\/admin\/reset-user-password/, 'password reset should call the admin reset password api');
-assert.match(source, /path==='\/admin\/reset-user-password'&&method==='POST'/, 'api should provide admin password reset endpoint');
-assert.match(source, /const nextRole=String\(body\.role\|\|u\.role\|\|'editor'\)/, 'api update-user should accept role changes');
+assert.match(adminUserRoutesSource, /path==='\/admin\/reset-user-password'&&method==='POST'/, 'api should provide admin password reset endpoint');
+assert.match(adminUserRoutesSource, /const nextRole=String\(body\.role\|\|u\.role\|\|'editor'\)/, 'api update-user should accept role changes');
 assert.doesNotMatch(source, /function defaultLandingPageForUser/, 'admin login flow should no longer force a landing page before shell bootstrap');
 
 console.log('admin users page tests passed');
