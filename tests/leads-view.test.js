@@ -30,8 +30,8 @@ assert.match(standardSource, /function renderStandardSearchHtml\(\{id='',placeho
 assert.match(standardSource, /leadSourceFilterHost/, 'leads page should provide source filter host');
 assert.match(standardSource, /leadConsultFilterHost/, 'leads page should provide consult filter host');
 assert.match(standardSource, /leadStatusFilterHost/, 'leads page should provide status filter host');
-assert.match(standardSource, /leadConvertedFilterHost/, 'leads page should provide converted filter host');
 assert.match(standardSource, /leadConversionTypeFilterHost/, 'leads page should provide conversion type filter host');
+assert.doesNotMatch(standardSource, /leadConvertedFilterHost/, 'leads page should not keep the ambiguous converted yes/no filter');
 assert.match(standardSource, /leadOwnerFilterHost/, 'leads page should provide owner filter host');
 assert.doesNotMatch(html, /id="leadTodoFilterHost"/, 'leads page should remove the follow-up todo filter host');
 assert.doesNotMatch(html, /id="leadDateFilterHost"/, 'leads page should remove the date filter host');
@@ -42,7 +42,8 @@ assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">�
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(standardSource, /statsId:'leadStatsRow'/, 'leads page should expose the top stats row');
-assert.match(standardSource, /微信名[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*咨询需求[\s\S]*水平[\s\S]*基本信息[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*是否转化[\s\S]*转化类型[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
+assert.match(standardSource, /微信名[\s\S]*线索时间[\s\S]*线索渠道[\s\S]*咨询需求[\s\S]*水平[\s\S]*基本信息[\s\S]*跟进人[\s\S]*跟进状态[\s\S]*体验课时间[\s\S]*转化类型[\s\S]*转化教练[\s\S]*未转化原因[\s\S]*操作/, 'leads table should expose the requested reordered columns');
+assert.doesNotMatch(standardSource, /label:'是否转化'/, 'leads table should not keep the ambiguous converted yes/no column');
 assert.match(standardSource, /bodyId:'leadTbody'/, 'leads page should provide the list tbody mount');
 assert.match(standardSource, /infoId:'leadPagerInfo'/, 'leads page should provide pager info');
 assert.match(standardSource, /pageSizeId:'leadPageSize'/, 'leads page should provide page size selector host');
@@ -79,10 +80,10 @@ assert.match(leadsSource, /if\(!leadInDateRange\(lead,getLeadDateFilterRange\(\)
 assert.match(leadsSource, /function renderLeads\([\s\S]*const list=getSortedLeads\(getFilteredLeads\(\)\)[\s\S]*renderLeadStats\(list\)/, 'lead stats should follow the current lead filters and campus scope');
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /leadFollowupStatusText\(lead\)/, 'leads page should keep the status filter aligned with the displayed follow-up status');
-assert.match(leadsSource, /leadConvertedYesNo\(lead\)/, 'leads page should expose the converted yes\/no helper to filters');
 assert.match(leadsSource, /function leadConversionTypeText\(/, 'leads page should expose a conversion type helper');
 assert.match(leadsSource, /leadConversionTypeText\(lead\)/, 'leads list and detail should render the conversion type');
 assert.match(leadsSource, /conversionTypeValue&&leadConversionTypeText\(lead\)!==conversionTypeValue/, 'lead filtering should support conversion type');
+assert.match(fnBody('leadConvertedYesNo'), /leadConversionTypeText\(lead\)!=='未转化'/, 'converted yes/no should align with displayed conversion type');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
 assert.match(leadsSource, /function leadStatusOptionValues\(/, 'leads page should derive status filters from the latest data');
@@ -96,7 +97,7 @@ assert.match(leadsSource, /renderStandardPaginationButtonsHtml\(leadPage,pages,'
 assert.match(leadsSource, /function renderLeadPagerControls\(/, 'leads page should render standard pager controls');
 assert.match(leadsSource, /function jumpLeadPage\(/, 'leads page should support jump-to-page');
 assert.match(leadsSource, /leadPageSize=standardListPageSize\(value,leadPageSize\)/, 'leads page size should be limited by the global 20, 50, and 100 rule');
-assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'converted'/, 'leads toolbar filters should use linked count labels');
+assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*key:'consult'[\s\S]*key:'status'[\s\S]*key:'conversionType'/, 'leads toolbar filters should use linked count labels');
 assert.match(leadsSource, /function leadOwnerFilterValues\([\s\S]*lead-owner-filter-cb:checked/, 'lead owner filter should collect checked owners');
 assert.match(leadsSource, /function leadOwnerFilterHtml\([\s\S]*tms-dropdown[\s\S]*leadOwnerFilter_dropdown[\s\S]*type="checkbox"[\s\S]*lead-owner-filter-cb[\s\S]*toggleLeadOwnerFilter/, 'lead owner filter should render as a checkbox dropdown');
 assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'checking lead owners should refresh the list');
@@ -147,10 +148,10 @@ assert.match(leadsSource, /function leadLevelText\(lead\)[\s\S]*leadLevelCanonic
 assert.match(leadsSource, /function leadLevelControlHtml\([\s\S]*lead_level_custom[\s\S]*toggleLeadLevelCustomInput/, 'custom lead level should provide an input instead of saving the literal custom label');
 assert.match(fnBody('leadPayloadFromForm'), /const levelValue=document\.getElementById\('lead_level'\)\?\.value\|\|''[\s\S]*level:levelValue==='自定义'\?document\.getElementById\('lead_level_custom'\)\?\.value\?\.trim\?\.\(\)\|\|'':levelValue/, 'lead save payload should use custom level input value');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[[\s\S]*'level'[\s\S]*\]/, 'lead list API projection should include level');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',14,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',13,'线索数据加载中\.\.\.'\)/, 'leads loading state should use the shared full-table skeleton');
 assert.match(stateSource, /function renderLeadTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'leads load failure should render an inline retry state');
-assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',14/, 'leads loading state should pass all visible columns to the skeleton helper');
-assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="14"/, 'leads error state should span all visible columns');
+assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSkeletonLoading\('leadTbody',13/, 'leads loading state should pass all visible columns to the skeleton helper');
+assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="13"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
