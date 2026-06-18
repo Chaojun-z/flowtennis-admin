@@ -12,6 +12,14 @@ assert.deepStrictEqual(
 assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '已报名-私教' }), '已转课程');
 assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '已定场' }), '已转订场');
 assert.strictEqual(rules.deriveLeadSystemStatus({ studentId: 'stu-1', courtId: 'court-1' }), '已转课程+订场');
+assert.strictEqual(rules.deriveLeadConversionType({}), '未转化');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1' }), '课程转化');
+assert.strictEqual(rules.deriveLeadConversionType({ courtId: 'court-1' }), '订场转化');
+assert.strictEqual(rules.deriveLeadConversionType({ membershipAccountId: 'member-1' }), '会员转化');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1' }), '课程+订场');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', membershipAccountId: 'member-1' }), '课程+会员');
+assert.strictEqual(rules.deriveLeadConversionType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+会员');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
 
 const lead = rules.normalizeLeadRecord({
   '线索时间': '2026-04-10',
@@ -32,6 +40,7 @@ assert.strictEqual(lead.phone, '13800138000');
 assert.strictEqual(lead.wechatName, 'Leah');
 assert.strictEqual(rules.normalizeLeadRecord({ level: 0 }, { id: 'lead-zero', now: '2026-06-11T00:00:00.000Z' }).level, '0');
 assert.strictEqual(lead.systemStatus, '跟进中');
+assert.strictEqual(lead.conversionType, '未转化');
 assert.strictEqual(
   rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08T00:00:00.000Z' }).campus,
   'mabao'
@@ -49,6 +58,7 @@ const updated = rules.applyLeadFollowupSnapshot(lead, rules.normalizeLeadFollowu
 assert.strictEqual(updated.lastFollowupAt, '2026-05-09 10:00');
 assert.strictEqual(updated.latestConcern, '时间');
 assert.strictEqual(updated.systemStatus, '已约体验');
+assert.strictEqual(updated.conversionType, '未转化');
 
 assert.strictEqual(
   rules.buildLeadDedupKey({ displayName: 'Leah 13800138000', leadDate: '2026/4/7', source: '大众点评', consultType: '成人私教' }),

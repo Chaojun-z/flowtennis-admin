@@ -6,6 +6,7 @@ let studentReminderModeRequestSeq=0;
 let studentReminderModeSaveTimer=null;
 let studentReminderLinkGenerating=false;
 let studentSortMode='';
+const STUDENT_DEAL_PATH_LABELS=['体验转化','直接成交','老客续费'];
 function studentListViewMode(){
   return currentPage==='trial-students'?'trial':'package';
 }
@@ -20,9 +21,16 @@ function studentHasNonTrialPackage(stu){
   if(studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)))return true;
   return purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p));
 }
+function studentHasTrialPath(stu){
+  const sid=String(stu?.id||'');
+  if(!sid)return false;
+  if(studentActiveEntitlementRows(stu).some(studentPackageRecordIsTrial))return true;
+  if(purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p)))return true;
+  return schedules.some(s=>scheduleHasStudent(s,stu)&&scheduleCourseType(s)==='体验课'&&effectiveScheduleStatus(s)!=='已取消');
+}
 function studentMatchesListPage(stu){
   const hasPackage=studentHasNonTrialPackage(stu);
-  return studentListViewMode()==='trial'?!hasPackage:hasPackage;
+  return studentListViewMode()==='trial'?studentHasTrialPath(stu):hasPackage;
 }
 function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function renderStudentToolbarFilters(){
@@ -67,6 +75,22 @@ function studentTrialPackagePurchaseDate(stu){
 }
 function studentListPackagePurchaseDate(stu){
   return studentListViewMode()==='trial'?studentTrialPackagePurchaseDate(stu):studentPackagePurchaseDate(stu);
+}
+function studentNonTrialPurchaseRows(stu){
+  const sid=String(stu?.id||'');
+  if(!sid)return [];
+  return purchases.filter(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p));
+}
+function studentDealPathText(stu){
+  const rows=studentNonTrialPurchaseRows(stu);
+  if(!rows.length)return '-';
+  if(rows.length>1)return STUDENT_DEAL_PATH_LABELS[2];
+  return studentHasTrialPath(stu)?STUDENT_DEAL_PATH_LABELS[0]:STUDENT_DEAL_PATH_LABELS[1];
+}
+function studentTrialPathStatusText(stu){
+  if(studentHasNonTrialPackage(stu))return '已转正式';
+  if(studentLastLessonDate(stu))return '已体验待转化';
+  return '已约体验';
 }
 function studentHasRemainingPackage(stu){
   return studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)&&(Number(e.remainingLessons)||0)>0);
@@ -147,6 +171,7 @@ function studentTableColumns(){
     {label:'校区',style:'width:105px'},
     {style:'width:140px',html:studentSortHeader('lastLesson','最近上课')},
     {style:'width:100px',html:studentSortHeader('completedLessons','累计上课')},
+    {label:'体验状态',style:'width:100px'},
     {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
     {style:'width:90px',html:studentSortHeader('packageLessons','课包/课时')},
     {label:'负责教练',style:'width:110px'},
@@ -163,6 +188,7 @@ function studentTableColumns(){
     {style:'width:100px',html:studentSortHeader('completedLessons','累计上课')},
     {label:'负责教练',style:'width:110px'},
     {style:'width:90px',html:studentSortHeader('packageLessons','课时/课包')},
+    {label:'成交路径',style:'width:90px'},
     {label:'来源',style:'width:90px'},
     {label:'备注',style:'width:180px'},
     {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
@@ -669,8 +695,8 @@ function renderStudents(){
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(coachText)}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(coachText)}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardCellText(s.type)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardCellText(lastLesson?daysAgoText(lastLesson):'-',false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td title="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(studentHumanText(s.source))}</td><td><div class="tms-text-remark" title="${esc(noteText)}">${esc(renderStandardEmptyText(noteText))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){

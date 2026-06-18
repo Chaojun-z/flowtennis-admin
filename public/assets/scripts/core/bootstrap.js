@@ -9,7 +9,7 @@ let purPackageFilterValue='',purOwnerCoachFilterValue='';
 let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 
-const PAGE_TITLE_MAP={students:'正式学员','package-students':'正式学员','trial-students':'体验学员',leads:'线索管理',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
+const PAGE_TITLE_MAP={students:'正式学员','package-students':'正式学员','trial-students':'体验学员',leads:'线索池',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
 const FINANCE_TITLE_MAP={ledger:'财务总览',revenue:'收款流水',recognized:'入账流水',settlement:'教练结算'};
 const TOP_TITLE_BREADCRUMBS={
   'membership-orders':{parentPage:'memberships',parentTitle:'会员管理',title:'会员购买记录'},

@@ -141,38 +141,9 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_CAMPUSES
 ]);
 const LEAD_LIST_PROJECTION_FIELDS=[
-  'displayName',
-  'name',
-  'wechatName',
-  'phone',
-  'level',
-  'leadDate',
-  'source',
-  'campus',
-  'consultType',
-  'intentLevel',
-  'profileNote',
-  'owner',
-  'systemStatus',
-  'rawStatus',
-  'trialAtRaw',
-  'enrollAtRaw',
-  'convertedFlag',
-  'nextFollowupAt',
-  'lastFollowupAt',
-  'latestConcern',
-  'latestConclusion',
-  'nextAction',
-  'formalCoach',
-  'studentId',
-  'courtId',
-  'membershipAccountId',
-  'isCourseConverted',
-  'isCourtConverted',
-  'isMembershipConverted',
-  'updatedAt',
-  'createdAt',
-  'lostReason'
+  'displayName','name','wechatName','phone','level','leadDate','source','campus','consultType','intentLevel','profileNote','owner',
+  'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','formalCoach',
+  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','conversionType','updatedAt','createdAt','lostReason'
 ];
 const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
   'leadId',
@@ -5722,6 +5693,11 @@ function deriveLeadSystemStatus(input={}){
   if(rawStatus==='体验课预约'||rawStatus==='已约体验')return '已约体验';
   return '跟进中';
 }
+function deriveLeadConversionType(input={}){
+  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus);
+  const parts=[['课程',cleanLeadText(input.studentId)||input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
+  return parts.length?`${parts.join('+')}转化`.replace('+订场转化','+订场').replace('+会员转化','+会员'):(input.convertedFlag===true?'课程转化':'未转化');
+}
 function normalizeLeadRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
   const id=input.id||opts.id||uuidv4();
@@ -5766,6 +5742,7 @@ function normalizeLeadRecord(input={},opts={}){
     updatedAt:now
   };
   next.systemStatus=deriveLeadSystemStatus(next);
+  next.conversionType=deriveLeadConversionType(next);
   return next;
 }
 function normalizeLeadFollowupRecord(input={},opts={}){
@@ -5798,6 +5775,7 @@ function applyLeadFollowupSnapshot(lead,followup){
     updatedAt:followup.updatedAt||new Date().toISOString()
   };
   next.systemStatus=deriveLeadSystemStatus(next);
+  next.conversionType=deriveLeadConversionType(next);
   return next;
 }
 function latestLeadFollowupSnapshot(followups=[]){
@@ -5962,6 +5940,7 @@ function mergeLeadRows(rows=[]){
   merged.lastFollowupAt=latest.map(row=>cleanLeadText(row.lastFollowupAt)).filter(Boolean).sort().pop()||merged.lastFollowupAt||'';
   merged._mergedLeadIds=Array.from(new Set(list.map(row=>cleanLeadText(row.id)).filter(Boolean)));
   merged.systemStatus=deriveLeadSystemStatus(merged);
+  merged.conversionType=deriveLeadConversionType(merged);
   return merged;
 }
 function mergeDuplicateLeadRows(rows=[]){
@@ -6034,7 +6013,8 @@ function buildLeadImportPreviewRows(leads,{students=[],courts=[],membershipAccou
       courtMatchType:courtMatch.matchType,
       courtMatchId:courtMatch.record?.id||'',
       courtMatchName:courtMatch.record?.name||'',
-      systemStatus:deriveLeadSystemStatus({...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:''})
+      systemStatus:deriveLeadSystemStatus({...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:''}),
+      conversionType:deriveLeadConversionType({...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:'',membershipAccountId:membershipMatch?.id||''})
     };
   });
 }
@@ -6046,6 +6026,7 @@ function buildLeadStudentRecord(lead,{id=uuidv4(),now=new Date().toISOString()}=
     primaryCoach:cleanLeadText(lead.formalCoach||''),
     type:cleanLeadText(lead.consultType).includes('青少')?'青少年':'成人',
     source:cleanLeadText(lead.source),
+    sourceLeadId:cleanLeadText(lead.id),
     activityRange:'',
     campus:'',
     notes:[cleanLeadText(lead.profileNote),cleanLeadText(lead.latestConcern),cleanLeadText(lead.latestConclusion)].filter(Boolean).join('；'),
@@ -7140,6 +7121,7 @@ module.exports._test={
   TEST_DATA_RESET_TABLES,
   extractLeadPhoneMeta,
   deriveLeadSystemStatus,
+  deriveLeadConversionType,
   normalizeLeadRecord,
   normalizeLeadFollowupRecord,
   applyLeadFollowupSnapshot,

@@ -74,6 +74,7 @@ assert.match(source, /data-student-sort="packageLessons"[\s\S]*课时\/课包/, 
 assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should hide the current class column');
 assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
 assert.match(source, /function studentTableColumns\(\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*label:'学员'[\s\S]*label:'类型'[\s\S]*label:'来源'[\s\S]*label:'校区'[\s\S]*studentSortHeader\('lastLesson','最近上课'\)[\s\S]*studentSortHeader\('completedLessons','累计上课'\)[\s\S]*studentSortHeader\('packagePurchaseDate','课包购买时间'\)[\s\S]*studentSortHeader\('packageLessons','课包\/课时'\)[\s\S]*label:'负责教练'[\s\S]*label:'备注'/, 'trial student table should use the requested column order');
+assert.match(source, /label:'成交路径'/, 'official student table should show the deal path');
 const trialStudentColumns = fnBody('studentTableColumns').match(/if\(studentListViewMode\(\)==='trial'\)return \[([\s\S]*?)\];/)?.[1] || '';
 assert.doesNotMatch(trialStudentColumns, /label:'电话'/, 'trial student table should not show phone column');
 assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*const mode=studentListViewMode\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='lastLesson';stuSortDir='desc'/, 'trial student list should default to latest lesson descending');

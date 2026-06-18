@@ -333,7 +333,7 @@ function renderSidebarShell(){
   <!-- 管理员视角 -->
   <div id="sbAdminView">
   <div class="sb-sec">客户中心</div>
-  <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索管理</div>
+  <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
   <div class="sb-item" onclick="goPage('trial-students',this)">${sidebarIcon('trial-students')}体验学员</div>
   <div class="sb-item active" onclick="goPage('package-students',this)">${sidebarIcon('students')}正式学员</div>
   <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}会员管理</div>
