@@ -70,11 +70,12 @@ assert.match(html, /function renderCourtStudentTags\(/, 'court linked student pi
 assert.match(html, /function selectCourtStudent\(/, 'court linked student picker should support selecting a student from search results');
 assert.match(html, /function removeCourtStudent\(/, 'court linked student picker should support removing selected students');
 assert.match(fnBody('saveCourt'), /parseArr\(document\.getElementById\('f_studentIds'\)\?\.value\|\|'\[\]'\)/, 'court save should read linked students from the picker state');
-assert.match(fnBody('courtProfileFormHtml'), /tms-panel-tip[\s\S]*tms-detail-grid[\s\S]*累计充值[\s\S]*当前余额[\s\S]*累计消费[\s\S]*累计实收/, 'court readonly finance summary should use the detail-grid readonly style');
+assert.doesNotMatch(fnBody('courtProfileFormHtml'), /tms-panel-tip|累计充值|当前余额|累计消费|累计实收/, 'court profile edit form should not include readonly finance summary');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /tms-panel-tip[\s\S]*tms-form-readonly/, 'court readonly finance summary should not look like input fields');
-assert.match(fnBody('courtProfileFormHtml'), /来源线索摘要[\s\S]*tms-detail-grid[\s\S]*线索来源/, 'court lead source should use readonly detail style');
+assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要|线索来源/, 'court profile edit form should not include readonly lead summary');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要[\s\S]*finput tms-form-control tms-readonly-text/, 'court lead source should not look like an input');
 assert.match(fnBody('courtProfileFormHtml'), /court-profile-row[\s\S]*id="f_owner"[\s\S]*id="f_familiarity"[\s\S]*id="f_attitude"/, 'court owner, familiarity and deposit attitude should sit in one row');
+assert.doesNotMatch(fnBody('renderCourtRecentBookingCell'), /daysAgoText/, 'court recent booking cell should not duplicate the booking date with relative text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
