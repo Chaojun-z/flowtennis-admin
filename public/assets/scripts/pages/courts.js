@@ -1321,7 +1321,8 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('余额有效期',summary.validUntil||account?.validUntil||'-'),
     renderDetailDrawerField('清零时间',account?.hardExpireAt||'-')
   ]:[];
-  const editAction=`<button type="button" class="schedule-detail-action" onclick="openCourtModal('${court.id}')">编辑资料</button>`;
+  const editAction=`<button type="button" class="schedule-detail-action" onclick="editCourtProfileInline('${court.id}')">编辑资料</button>`;
+  const profile=renderDetailDrawerCard('基本信息',courtProfileReadonlyHtml(court),{actionsHtml:editAction});
   const overview=renderDetailDrawerCard('会员账户',[
     renderDetailDrawerField('账户类型',account?'会员':'普通用户'),
     renderDetailDrawerField('累计充值',`¥${fmt(finance.totalDeposit)}`),
@@ -1330,15 +1331,9 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('累计订场',`${bookingSummary.count} 次`),
     ...memberFields,
     renderDetailDrawerField('充值备注',latestOrder?.notes||'-',{full:true})
-  ].join(''),{actionsHtml:editAction});
-  const followup=renderDetailDrawerCard('用户跟进',[
-    renderDetailDrawerField('对接人',court?.owner||'-'),
-    renderDetailDrawerField('熟悉程度',court?.familiarity||'-'),
-    renderDetailDrawerField('储值态度',court?.depositAttitude||'-'),
-    renderDetailDrawerField('备注',courtCleanUserNotes(court?.notes)||'-',{full:true})
   ].join(''));
   const actions=renderDetailDrawerCard('会员操作',membershipAccountActionButtons(court),{useGrid:false});
-  return `${overview}${followup}${voidInfoHtml}${actions}`;
+  return `${profile}${overview}${voidInfoHtml}${actions}`;
 }
 function membershipOrdersDrawerHtml(court){
   const account=courtMembershipAccount(court?.id);
@@ -1449,6 +1444,7 @@ function membershipVoidDrawerHtml(court){
   return renderDetailDrawerFormCard('作废会员',form,actions);
 }
 function membershipDrawerContentHtml(court){
+  if(membershipDrawerMode==='profile-edit')return courtProfileEditPanelHtml(court);
   if(membershipDrawerMode==='order')return membershipOrderDrawerHtml(court);
   if(membershipDrawerMode==='benefit-picker')return membershipBenefitPickerDrawerHtml(court);
   if(membershipDrawerMode==='benefit-action')return membershipBenefitActionDrawerHtml(court);
@@ -1473,7 +1469,7 @@ function initializeMembershipDrawer(courtId){
 }
 function openMembershipDrawer(courtId){
   const court=courts.find(c=>c.id===courtId);if(!court){toast('当前订场用户数据未加载，请刷新后重试','warn');return;}
-  editId=null;
+  if(membershipDrawerMode!=='profile-edit')editId=null;
   openStandardDetailDrawer({
     titleHtml:`${membershipDetailHeroHtml(court)}${membershipDetailTabsHtml(membershipDetailActiveTab)}`,
     bodyHtml:`<div class="schedule-detail-content">${membershipDrawerContentHtml(court)}</div>`,
@@ -1522,7 +1518,7 @@ function openCourtMergeModal(courtId){
   if(!targetOptions.length){toast('没有可合并的目标订场用户','warn');return;}
   courtMergeState={sourceCourtId:courtId,options:targetOptions,filtered:targetOptions};
   const body=`<div class="tms-section-header" style="margin-top:0;">合并设置</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前用户</label><div class="tms-form-readonly">${esc(mergeCourtTargetLabel(sourceCourt))}</div></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">搜索目标用户</label><input type="text" class="finput tms-form-control" id="mergeCourtSearch" placeholder="搜索姓名、手机号" oninput="renderCourtMergeTargetOptions()"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">合并到用户 *</label><div id="mergeTargetHost"></div><div id="mergeTargetEmpty" style="display:none;font-size:12px;color:#8C7B6E;margin-top:8px;">没有匹配的订场用户</div></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="choice-tag" style="width:max-content"><input type="checkbox" id="merge_deleteSource"><span>合并后直接删除原用户</span></label><div style="font-size:12px;color:#8C7B6E;margin-top:10px;line-height:1.6">会把当前用户的财务流水、关联学员和会员关联迁到目标用户。勾选后，原用户会直接删除；不勾选则隐藏。</div></div></div>`;
-  const footer=`<button class="tms-btn tms-btn-default" onclick="openCourtModal('${sourceCourt.id}')">返回编辑</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-primary" id="courtMergeBtn" onclick="mergeCourtUsers('${sourceCourt.id}')">确认合并</button></div>`;
+  const footer=`<button class="tms-btn tms-btn-default" onclick="editCourtProfileInline('${sourceCourt.id}')">返回编辑</button><div style="display:flex;gap:12px;"><button class="tms-btn tms-btn-primary" id="courtMergeBtn" onclick="mergeCourtUsers('${sourceCourt.id}')">确认合并</button></div>`;
   openStandardModal({title:`合并订场用户 · ${sourceCourt.name}`,bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight'});
   renderCourtMergeTargetOptions();
 }
@@ -1680,17 +1676,59 @@ function removeCourtStudent(studentId){
   const ids=parseArr(document.getElementById('f_studentIds')?.value||'[]').filter(id=>id!==studentId);
   setCourtStudentSelection(ids,false);
 }
-function openCourtModal(id){
-  editId=id;_pending=[];const r=id?courts.find(x=>x.id===id):null;
+function courtProfileSelectedStudentIds(court){
+  const linked=findStudentForCourt(court);
+  const selectedIds=parseArr(court?.studentIds);
+  if(!selectedIds.length&&linked)selectedIds.push(linked.id);
+  return selectedIds;
+}
+function courtProfileReadonlyHtml(court){
+  const selectedIds=courtProfileSelectedStudentIds(court);
+  return [
+    renderDetailDrawerField('姓名',courtDisplayName(court)),
+    renderDetailDrawerField('手机号',court?.phone||''),
+    renderDetailDrawerField('关联学员',courtSelectedStudentSearchText(selectedIds)||courtStudentNames(court)),
+    renderDetailDrawerField('校区',cn(court?.campus)),
+    renderDetailDrawerField('加入日期',court?.joinDate),
+    renderDetailDrawerField('末次跟进日期',court?.recentFollowUpDate),
+    renderDetailDrawerField('下次跟进日期',court?.nextFollowUpDate),
+    renderDetailDrawerField('对接人',court?.owner),
+    renderDetailDrawerField('熟悉程度',court?.familiarity),
+    renderDetailDrawerField('储值态度',court?.depositAttitude),
+    renderDetailDrawerField('备注',courtCleanUserNotes(court?.notes),{full:true})
+  ].join('');
+}
+function courtProfileFormHtml(court){
+  const r=court||null;
   const fin=courtFinanceLocal(r||{history:[]});
-  const linked=findStudentForCourt(r);
-  const selectedIds=parseArr(r?.studentIds);if(!selectedIds.length&&linked)selectedIds.push(linked.id);
+  const selectedIds=courtProfileSelectedStudentIds(r);
   const campusList=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
   const selectedStudentValue=esc(JSON.stringify(selectedIds));
   const linkedStudentPicker=`<input type="hidden" id="f_studentIds" value="${selectedStudentValue}"><input class="finput tms-form-control" id="f_studentSearch" placeholder="搜索姓名、手机号" value="${esc(courtSelectedStudentSearchText(selectedIds))}" oninput="updateCourtStudentSearch()" autocomplete="off"><div id="f_studentSuggest" class="schedule-student-suggest"></div><div id="f_selectedStudentTags" class="schedule-student-tags">${renderCourtStudentTags(selectedIds)}</div>`;
   const leadSummaryHtml=r?`<div class="tms-section-header">来源线索摘要</div><div class="tms-detail-grid">${studentDetailBlockHtml('线索来源',courtLeadSummaryHtml(r))}</div>`:'';
-  const financeSummaryHtml=`<div class="tms-readonly-panel court-finance-readonly" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-detail-grid">${studentDetailFieldHtml('累计充值',`¥${fmt(fin.totalDeposit)}`)}${studentDetailFieldHtml('当前余额',`¥${fmt(fin.balance)}`)}${studentDetailFieldHtml('累计消费',`¥${fmt(fin.spentAmount)}`)}${studentDetailFieldHtml('累计实收',`¥${fmt(fin.receivedAmount)}`)}</div></div>`;
-  const body=`<div class="tms-section-header" style="margin-top:0;">基本信息</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label>${linkedStudentPicker}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${leadSummaryHtml}${financeSummaryHtml}<div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
+  const financeSummaryHtml=r?`<div class="tms-readonly-panel court-finance-readonly" style="margin-bottom:16px"><span class="tms-panel-tip">下面 4 个财务字段是系统自动汇总，只读展示，不能在这里手动修改。</span><div class="tms-detail-grid">${studentDetailFieldHtml('累计充值',`¥${fmt(fin.totalDeposit)}`)}${studentDetailFieldHtml('当前余额',`¥${fmt(fin.balance)}`)}${studentDetailFieldHtml('累计消费',`¥${fmt(fin.spentAmount)}`)}${studentDetailFieldHtml('累计实收',`¥${fmt(fin.receivedAmount)}`)}</div></div>`:'';
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">关联学员（可多选）</label>${linkedStudentPicker}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div></div>${leadSummaryHtml}${financeSummaryHtml}<div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
+}
+function courtProfileEditPanelHtml(court){
+  const actions=`<button type="button" class="schedule-detail-action muted" onclick="cancelCourtProfileInlineEdit('${court.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourtProfileInline('${court.id}')">保存</button>`;
+  return renderDetailDrawerFormCard('基本信息',courtProfileFormHtml(court),actions);
+}
+function editCourtProfileInline(courtId){
+  editId=courtId;_pending=[];
+  membershipDetailActiveTab='overview';
+  membershipDrawerMode='profile-edit';
+  openMembershipDrawer(courtId);
+}
+function cancelCourtProfileInlineEdit(courtId){
+  editId=null;_pending=[];
+  openCourtMembershipPanel(courtId,{tab:'overview'});
+}
+async function saveCourtProfileInline(courtId){
+  editId=courtId;
+  await saveCourt({reopenMembershipCourtId:courtId});
+}
+function openCourtModal(id){
+  editId=id;_pending=[];const r=id?courts.find(x=>x.id===id):null;
   const footer=id?`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action" onclick="openCourtMergeModal('${r.id}')">合并</button><button type="button" class="schedule-detail-action danger" onclick="confirmDel('${r.id}','${esc(r.name)}','court')">删除</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`:`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourt()">保存</button></div>`;
   openStandardDetailDrawer({
     titleHtml:renderDetailDrawerHero({
@@ -1699,14 +1737,14 @@ function openCourtModal(id){
       subtitle:id?[courtDisplayName(r),r?.phone,cn(r?.campus)].filter(Boolean).join(' · '):'',
       statusHtml:''
     }),
-    bodyHtml:`<div class="schedule-detail-content">${body}</div>`,
-    actionsHtml:footer,
+    bodyHtml:`<div class="schedule-detail-content">${renderDetailDrawerFormCard('基本信息',courtProfileFormHtml(r),footer)}</div>`,
+    actionsHtml:'',
     data:{courtEditId:id||''},
     overlayClasses:['schedule-drawer-overlay'],
     modalClass:'modal modal-court modal-schedule-drawer modal-court-edit-drawer'
   });
 }
-async function saveCourt(){
+async function saveCourt(options={}){
   const name=document.getElementById('f_name').value.trim();if(!name){toast('请输入姓名','warn');return;}
   const phone=document.getElementById('f_phone').value.trim();if(!validateCnPhone(phone)){toast('手机号格式不正确','warn');return;}
   const btn=document.getElementById('courtSaveBtn');
@@ -1727,8 +1765,8 @@ async function saveCourt(){
     else{const r=await apiCall('POST','/courts',rec);courts.unshift(r);}
   },{
     successText:editId?'修改成功 ✓':'添加成功 ✓',
-    closeOnSuccess:true,
-    refresh:[renderCourts,renderStudentsIfVisible]
+    closeOnSuccess:!options.reopenMembershipCourtId,
+    refresh:[renderCourts,renderStudentsIfVisible,()=>{if(options.reopenMembershipCourtId){editId=null;_pending=[];openCourtMembershipPanel(options.reopenMembershipCourtId,{tab:'overview'});}}]
   });
 }
 const COURT_FINANCE_TRANSACTION_TYPES=FlowTennisBusinessTaxonomy.TRANSACTION_TYPES;
