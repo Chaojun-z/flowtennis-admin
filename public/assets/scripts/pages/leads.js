@@ -176,6 +176,15 @@ function leadConversionTypeText(lead){
   if(parts.length)return parts.length===1?`${parts[0]}转化`:`${parts.join('+')}`;
   return lead?.convertedFlag===true?'课程转化':'未转化';
 }
+function leadStageText(lead){
+  const conversion=leadConversionTypeText(lead);
+  if(conversion&&conversion!=='未转化')return conversion;
+  const status=leadFollowupStatusText(lead);
+  if(status==='已流失'||status==='无意向')return '已流失';
+  if(status==='已约体验'||status==='体验课预约')return '已约体验';
+  if(status==='体验课完成'||status==='已体验待转化'||leadTrialDone(lead))return '已体验待转化';
+  return '未转化';
+}
 function leadConvertedYesNo(lead){
   return lead?.convertedFlag===true||leadConversionTypeText(lead)!=='未转化'?'是':'否';
 }
@@ -316,6 +325,13 @@ function leadTagClass(kind,value=''){
     if(text==='订场转化'||text==='会员转化')return 'tms-tag-tier-blue';
     return 'tms-tag-tier-slate';
   }
+  if(kind==='stage'){
+    if(text==='未转化')return 'tms-tag-tier-slate';
+    if(text==='已流失')return 'tms-tag-lead-no-intent';
+    if(text==='已约体验')return 'tms-tag-lead-trial-booked';
+    if(text==='已体验待转化')return 'tms-tag-lead-trial-done';
+    return leadTagClass('conversionType',text);
+  }
   if(kind==='status'){
     if(text==='体验课完成')return 'tms-tag-lead-trial-done';
     if(text==='体验课预约')return 'tms-tag-lead-trial-booked';
@@ -399,19 +415,6 @@ function leadCampusText(lead){
 }
 function leadCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:campusDisplayName(c.name||c.code||c.id)}))];
-}
-function leadStatusOptionValues(rows){
-  const preferred=FlowTennisBusinessTaxonomy.values('leadFollowupStatuses');
-  const current=Array.from(new Set((Array.isArray(rows)?rows:[]).map(item=>leadFollowupStatusText(item)).map(item=>String(item||'').trim()).filter(Boolean)));
-  const seen=new Set();
-  const values=[];
-  preferred.forEach(value=>{
-    if(current.includes(value)&&!seen.has(value)){values.push(value);seen.add(value);}
-  });
-  current.forEach(value=>{
-    if(!seen.has(value)){values.push(value);seen.add(value);}
-  });
-  return values;
 }
 function leadDateKeyFromDate(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -579,8 +582,7 @@ function getFilteredLeads(){
   const q=(document.getElementById('leadSearch')?.value||'').trim().toLowerCase();
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
-  const statusValue=document.getElementById('leadStatusFilter')?.value||'';
-  const conversionTypeValue=document.getElementById('leadConversionTypeFilter')?.value||'';
+  const stageValue=document.getElementById('leadStageFilter')?.value||'';
   const ownerValues=leadOwnerFilterValues();
   const campusValue=campus;
   return leadRows().filter(lead=>{
@@ -589,8 +591,7 @@ function getFilteredLeads(){
     if(!searchHit(q,leadDisplayName(lead),lead?.phone,lead?.wechatName,lead?.source,lead?.consultType,lead?.owner,lead?.profileNote))return false;
     if(sourceValue&&String(lead?.source||'')!==sourceValue)return false;
     if(consultValue&&String(lead?.consultType||'')!==consultValue)return false;
-    if(statusValue&&leadFollowupStatusText(lead)!==statusValue)return false;
-    if(conversionTypeValue&&leadConversionTypeText(lead)!==conversionTypeValue)return false;
+    if(stageValue&&leadStageText(lead)!==stageValue)return false;
     if(ownerValues.length&&!ownerValues.includes(String(lead?.owner||'')))return false;
     if(campusValue!=='all'&&!sameCampusValue(lead?.campus,campusValue))return false;
     return true;
@@ -606,21 +607,17 @@ function renderLeadToolbarFilters(){
   const rows=leadRows().filter(lead=>leadInDateRange(lead,getLeadDateFilterRange())&&globalDateWithinRange(leadGlobalDateValue(lead))&&(campus==='all'||sameCampusValue(lead?.campus,campus)));
   const sourceValue=document.getElementById('leadSourceFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
-  const statusValue=document.getElementById('leadStatusFilter')?.value||'';
-  const conversionTypeValue=document.getElementById('leadConversionTypeFilter')?.value||'';
+  const stageValue=document.getElementById('leadStageFilter')?.value||'';
   const ownerValues=leadOwnerFilterValues();
-  const statusValues=leadStatusOptionValues(rows);
   const linked=withLinkedFilterCounts([
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...Array.from(new Set(rows.map(item=>String(item?.source||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.source||'')===String(value)},
     {key:'consult',value:consultValue,options:[{value:'',label:'全部',emptyDisplay:'咨询需求'},...Array.from(new Set(rows.map(item=>String(item?.consultType||'').trim()).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>String(lead?.consultType||'')===String(value)},
-    {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},...statusValues.map(value=>({value,label:value}))],match:(lead,value)=>leadFollowupStatusText(lead)===String(value)},
-    {key:'conversionType',value:conversionTypeValue,options:[{value:'',label:'全部',emptyDisplay:'转化类型'},...Array.from(new Set(rows.map(leadConversionTypeText).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>leadConversionTypeText(lead)===String(value)}
+    {key:'stage',value:stageValue,options:[{value:'',label:'全部',emptyDisplay:'线索阶段'},...Array.from(new Set(rows.map(leadStageText).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>leadStageText(lead)===String(value)}
   ],rows);
   const configs=[
     ['leadSourceFilterHost','leadSourceFilter','全部来源',linked.source.options,linked.source.value],
     ['leadConsultFilterHost','leadConsultFilter','全部咨询需求',linked.consult.options,linked.consult.value],
-    ['leadStatusFilterHost','leadStatusFilter','全部状态',linked.status.options,linked.status.value],
-    ['leadConversionTypeFilterHost','leadConversionTypeFilter','全部转化类型',linked.conversionType.options,linked.conversionType.value]
+    ['leadStageFilterHost','leadStageFilter','全部线索阶段',linked.stage.options,linked.stage.value]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
@@ -728,7 +725,7 @@ function leadDetailHeroHtml(lead){
     title:leadDisplayName(lead),
     avatar:leadDisplayName(lead).slice(0,1)||'线',
     subtitle:[leadCampusText(lead),lead?.source,lead?.consultType].filter(Boolean).join(' · '),
-    statusHtml:renderLeadTag(leadFollowupStatusText(lead),'status')
+    statusHtml:renderLeadTag(leadStageText(lead),'stage')
   });
 }
 function leadDetailTabsHtml(active='basic'){
@@ -883,8 +880,7 @@ function leadDetailFollowupsTabHtml(lead){
 }
 function leadConversionSummaryHtml(lead){
   return [
-    leadDetailFieldHtml('转化状态',leadConversionText(lead)),
-    leadDetailFieldHtml('转化类型',leadConversionTypeText(lead)),
+    leadDetailFieldHtml('线索阶段',leadStageText(lead)),
     leadDetailFieldHtml('关联学员',lead?.studentId?linkedStudentName(lead):'-'),
     leadDetailFieldHtml('关联订场用户',lead?.courtId?linkedCourtName(lead):'-'),
     leadDetailFieldHtml('转化教练',linkedCoachName(lead?.formalCoach)),
@@ -1191,13 +1187,13 @@ function jumpToLeadDetail(leadId){
   setTimeout(()=>openLeadDetail(leadId),120);
 }
 function leadHasActiveSearchOrFilter(){
-  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStatusFilter')?.value||document.getElementById('leadConversionTypeFilter')?.value||document.getElementById('leadOwnerFilter')?.value||campus!=='all');
+  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStageFilter')?.value||document.getElementById('leadOwnerFilter')?.value||campus!=='all');
 }
 function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的线索':'暂无线索';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
-  return `<tr><td colspan="13"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
@@ -1231,7 +1227,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderLeadTag(leadFollowupStatusText(lead),'status')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadConversionTypeText(lead),'conversionType')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(lead?.source,'source')}</td><td>${renderLeadTag(lead?.consultType,'consult')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(leadProfileText(lead))}">${esc(renderStandardEmptyText(leadProfileText(lead)))}</div></td><td>${renderLeadTag(lead?.owner,'owner')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderLeadTag(leadStageText(lead),'stage')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td><div class="tms-text-remark tms-text-remark-1" title="${esc(lead?.lostReason||'')}">${esc(renderStandardEmptyText(lead?.lostReason))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
@@ -1246,7 +1242,7 @@ function onLeadFilterChange(){
   renderLeads();
 }
 function resetLeadFilters(){
-  const ids=['leadSearch','leadSourceFilter','leadConsultFilter','leadStatusFilter','leadConversionTypeFilter','leadOwnerFilter'];
+  const ids=['leadSearch','leadSourceFilter','leadConsultFilter','leadStageFilter','leadOwnerFilter'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   leadDatePreset='all';
   leadDateCustomStart='';
