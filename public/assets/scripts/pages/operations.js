@@ -209,14 +209,27 @@ function renderOperationsCourtHeatCell(slot = {}, venue = {}, options = {}) {
   const rate = Math.max(0, Math.min(100, Number(slot.utilizationRate) || 0));
   const toneRate = Math.max(0, Math.min(100, Number(slot.heatRate ?? slot.utilizationRate) || 0));
   const hour = slot.hour || '';
+  const endHour = operationsCourtHeatNextHour(hour);
   const venueName = operationsCourtHeatVenueName(venue);
-  const usedMinutes = Math.max(0, Number(slot.bookedMinutes) || 0);
-  const capacityMinutes = Math.max(0, Number(slot.capacityMinutes) || 0);
-  const occupiedCount = Math.max(0, Number(slot.occupiedCount) || 0);
-  const dayCount = Math.max(0, Number(slot.dayCount) || 0);
-  const label = `${venueName} ${hour}｜占用 ${fmt(occupiedCount)}次 / ${fmt(dayCount)}天｜时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟｜利用率 ${fmt(rate)}%`;
+  const usedMinutes = Math.max(0, Number(slot.bookedMinutes ?? slot.occupiedMinutes ?? slot.usedMinutes) || 0);
+  const inferredCapacity = rate > 0 && usedMinutes > 0 ? Math.round(usedMinutes * 100 / rate) : 0;
+  const capacityMinutes = Math.max(0, Number(slot.capacityMinutes) || inferredCapacity);
+  const occupiedRaw = Number(slot.occupiedCount ?? slot.usageCount ?? slot.count);
+  const dayRaw = Number(slot.dayCount ?? slot.days);
+  const occupiedText = Number.isFinite(occupiedRaw) && occupiedRaw >= 0 ? fmt(occupiedRaw) : '-';
+  const dayText = Number.isFinite(dayRaw) && dayRaw > 0 ? fmt(dayRaw) : (capacityMinutes ? fmt(Math.round(capacityMinutes / 30)) : '-');
+  const label = `<strong style="display:block;margin-bottom:4px">${esc(venueName)} ${esc(hour)}-${esc(endHour)}</strong><span style="display:block">使用：${esc(occupiedText)} 次 / ${esc(dayText)} 天</span><span style="display:block">使用时长：${fmt(usedMinutes)} / ${fmt(capacityMinutes)} 分钟</span><span style="display:block">利用率：${fmt(rate)}%</span>`;
   const firstRowClass = options.firstRow ? ' is-first-row' : '';
-  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)} 利用率 ${fmt(rate)}%，占用 ${fmt(usedMinutes)}分钟" data-rate="${fmt(rate)}" data-heat="${fmt(toneRate)}" data-minutes="${fmt(usedMinutes)}"><span class="operations-court-heat-tooltip">${esc(label)}</span></span>`;
+  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)}-${esc(endHour)} 利用率 ${fmt(rate)}%，使用时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟" data-rate="${fmt(rate)}" data-heat="${fmt(toneRate)}" data-minutes="${fmt(usedMinutes)}"><span class="operations-court-heat-tooltip">${label}</span></span>`;
+}
+
+function operationsCourtHeatNextHour(hour = '') {
+  const match = String(hour || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return '';
+  const total = Number(match[1]) * 60 + Number(match[2]) + 30;
+  const h = String(Math.floor(total / 60)).padStart(2, '0');
+  const m = String(total % 60).padStart(2, '0');
+  return `${h}:${m}`;
 }
 
 function renderOperationsCourtHeatVenueRow(venue = {}, index = 0) {
