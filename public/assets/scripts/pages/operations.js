@@ -1,4 +1,4 @@
-let operationsActiveTab = 'overview';
+let operationsActiveTab = 'court';
 let operationsConversionFilters = { source: '', campus: '', coach: '' };
 let operationsActiveCourtHeatCampus = '顺义马坡';
 const operationsCourtHeatCampusTabs = ['顺义马坡', '朝阳十里堡', '蓝色港湾', '国网', '朝珺私教'];
@@ -89,7 +89,7 @@ function operationsSimpleTable(columns = [], rows = [], emptyText = '暂无数�
 }
 
 function setOperationsTab(tab) {
-  operationsActiveTab = ['overview', 'court', 'conversion', 'coach'].includes(tab) ? tab : 'overview';
+  operationsActiveTab = tab === 'court' ? 'court' : 'court';
   if (currentPage === 'operations') {
     document.querySelectorAll('.sb-item[data-nav-page="operations"]').forEach(item => {
       item.classList.toggle('active', item.dataset.operationsTab === operationsActiveTab);

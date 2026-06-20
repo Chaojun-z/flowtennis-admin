@@ -6,6 +6,7 @@ const repoRoot = path.join(__dirname, '..');
 const operationsPagePath = path.join(repoRoot, 'server/page-data/operations-page.js');
 const operationsMetricsPath = path.join(repoRoot, 'server/metrics/operations-metrics.js');
 const residualPageDataPath = path.join(repoRoot, 'server/page-data/residual-pages.js');
+const courtReadModelPath = path.join(repoRoot, 'server/page-data/court-account-read-model.js');
 const apiIndexPath = path.join(repoRoot, 'api/index.js');
 const budgetPath = path.join(repoRoot, 'config/api-index-budget.json');
 
@@ -13,12 +14,14 @@ assert.ok(fs.existsSync(operationsPagePath), 'operations page-data route should 
 assert.ok(fs.existsSync(operationsMetricsPath), 'operations metric calculations should live in server/metrics/operations-metrics.js');
 
 const operationsPageSource = fs.readFileSync(operationsPagePath, 'utf8');
+const courtReadModelSource = fs.readFileSync(courtReadModelPath, 'utf8');
 const residualSource = fs.readFileSync(residualPageDataPath, 'utf8');
 const apiSource = fs.readFileSync(apiIndexPath, 'utf8');
 const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
 
 assert.match(operationsPageSource, /function handleOperationsPageData/, 'operations page-data module should expose handleOperationsPageData');
 assert.match(operationsPageSource, /buildOperationsMetrics/, 'operations page-data should delegate calculations to server/metrics/operations-metrics.js');
+assert.match(courtReadModelSource, /module\.exports = \{[\s\S]*bookingDurationHours[\s\S]*courtHistoryBusinessDate[\s\S]*isCourtBookingHistoryRow[\s\S]*normalizeCourtHistory/, 'court account read model should export the court history helpers used by operations metrics');
 assert.match(operationsPageSource, /getFinancePageSnapshotIfCached/, 'operations page-data should reuse only the cached finance page snapshot when scope allows it');
 assert.doesNotMatch(operationsPageSource, /getFinancePageSnapshot\(\)/, 'operations page-data should not cold-build the full finance snapshot');
 assert.match(operationsPageSource, /scanFirstRows/, 'operations page-data should use projected first-row reads instead of full raw table scans');

@@ -443,6 +443,11 @@ function createCourtAccountListCompareLoader(deps) {
 }
 
 module.exports = {
+  bookingDurationHours,
+  computeBookingSummary,
   createCourtAccountListCompareLoader,
-  createCourtAccountListViewLoader
+  createCourtAccountListViewLoader,
+  courtHistoryBusinessDate,
+  isCourtBookingHistoryRow,
+  normalizeCourtHistory
 };
