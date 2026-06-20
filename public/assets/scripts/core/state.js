@@ -9,6 +9,7 @@ let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
+let operationsPageData=null;
 let studentLessonRecordExpandedState={};
 function financeNormalizedRows(){
   return Array.isArray(financeNormalizedLedgerRows)?financeNormalizedLedgerRows:[];
@@ -87,6 +88,7 @@ const PAGE_DATA_REQUIREMENTS={
   'package-students':['campuses','students','purchasesPage'],
   'trial-students':['campuses','students','purchasesPage'],
   leads:['campuses','leads'],
+  operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
   coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
@@ -145,6 +147,14 @@ function assertPageDataPerformanceGuard(){
   });
 }
 assertPageDataPerformanceGuard();
+function operationsPageDataUrl(){
+  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
+  const params=new URLSearchParams();
+  if(range?.startDate)params.set('startDate',range.startDate);
+  if(range?.endDate)params.set('endDate',range.endDate);
+  const query=params.toString();
+  return query?`/page-data/operations?${query}`:'/page-data/operations';
+}
 const DATASET_LOADERS={
   leads:()=>apiCall('GET','/leads'),
   leadFollowups:()=>apiCall('GET','/lead-followups'),
@@ -173,6 +183,7 @@ const DATASET_LOADERS={
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
   ,courtAccountListViewPage:()=>apiCall('GET','/page-data/court-account-list-view')
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
+  ,operationsPage:()=>apiCall('GET',operationsPageDataUrl())
   ,matchesPage:()=>apiCall('GET','/admin/matches')
   ,membershipsPage:()=>apiCall('GET','/page-data/memberships')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
@@ -363,6 +374,8 @@ function renderPageLoading(pg){
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='leads')renderLeadTableLoading();
+  if(pg==='operations'&&typeof renderOperationsLoading==='function')renderOperationsLoading();
+  else if(pg==='operations')renderBlockLoading('page-operations','经营分析加载中...');
   if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
   if(pg==='membership-orders')renderTableBodyLoading('membershipOrdersAuditTbody',12,'会员购买记录加载中...');
@@ -408,6 +421,12 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
       loadedDatasets.add('financePage');
+      return;
+    }
+    if(name==='operationsPage'){
+      setDatasetValue('campuses',data.campuses||[]);
+      operationsPageData=data.operations||null;
+      loadedDatasets.add('operationsPage');
       return;
     }
     if(name==='courtsPage'){
@@ -496,7 +515,7 @@ function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
-  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];
+  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];operationsPageData=null;
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
   loadedDatasets=new Set();
@@ -542,6 +561,7 @@ function applyLoadedData(data){
   financeOverviewData=data?.financeOverviewData||null;
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
+  operationsPageData=data?.operations||null;
   loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches']);
   if(data?.user){
     currentUser=data.user;
@@ -609,6 +629,16 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');
+  }
+}
+async function reloadOperationsPageDataWithInlineLoading(){
+  if(typeof renderOperationsLoading==='function')renderOperationsLoading();
+  try{
+    await ensureDatasetsByName(['operationsPage'],{force:true});
+    if(currentPage==='operations')renderOperations();
+  }catch(e){
+    if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    toast('加载失败：'+e.message,'error');
   }
 }
 async function loadCourtReadModelGuardData({force=false}={}){
@@ -738,6 +768,7 @@ function renderPageData(pg){
   if(pg==='students')renderStudents();
   if(isStudentListPage(pg)&&pg!=='students')renderStudents();
   if(pg==='leads')renderLeads();
+  if(pg==='operations')renderOperations();
   if(pg==='schedule')renderSchedule();
   if(pg==='coachschedule'||pg==='coachops')renderCoachOps();
   if(pg==='finance')renderFinanceCenter();

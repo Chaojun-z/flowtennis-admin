@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/assets/styles/components/search.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/buttons.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/filters.css?v=20260605-ui-components-v1">
-<link rel="stylesheet" href="/assets/styles/pages.css?v=20260614-login-theme-v1">
+<link rel="stylesheet" href="/assets/styles/pages.css?v=20260620-operations-quadrant-v3">
 <link rel="stylesheet" href="/assets/styles/components/tables.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/status-tags.css?v=20260605-ui-components-v1">
 <link rel="stylesheet" href="/assets/styles/components/modals.css?v=20260605-ui-components-v1">
@@ -80,6 +80,7 @@
     </div>
     <!-- 教练工作量 -->
     <div class="page-section" id="page-coachops" data-standard-list-shell="coachops"></div>
+    <div class="page-section" id="page-operations"></div>
     <div class="page-section" id="page-finance">
       <div id="financeLedgerPanel">
       <div id="financeLedgerLoading" class="finance-loading-card" style="display:none">
@@ -174,10 +175,12 @@
 <script src="/assets/scripts/core/permissions.js?v=20260609-permissions-v1"></script>
 <script src="/assets/scripts/core/api.js?v=20260527-student-reminder-reuse-v1"></script>
 <script src="/assets/scripts/core/shell.js?v=20260527-student-reminder-v1"></script>
-<script src="/assets/scripts/core/components.js?v=20260612-student-split-v1"></script>
+<script src="/assets/scripts/core/components.js?v=20260618-operations-v3"></script>
 <script src="/assets/scripts/standard/components.js?v=20260612-leads-level-after-source-v1"></script>
-<script src="/assets/scripts/core/state.js?v=20260612-student-split-v1"></script>
-<script src="/assets/scripts/core/bootstrap.js?v=20260612-student-split-v1"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/assets/scripts/standard/charts.js?v=20260620-operations-quadrant-v3"></script>
+<script src="/assets/scripts/core/state.js?v=20260618-operations-v3"></script>
+<script src="/assets/scripts/core/bootstrap.js?v=20260618-operations-v3"></script>
 <script src="/assets/scripts/pages/admin-users.js?v=20260610-official-bind-v1"></script>
 <script src="/assets/scripts/pages/coaches.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/campusmgr.js?v=20260508-finance-ledger-v4"></script>
@@ -190,6 +193,7 @@
 <script src="/assets/scripts/pages/purchases.js?v=20260609-campus-scope-v1"></script>
 <script src="/assets/scripts/pages/entitlements.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/coachops.js?v=20260613-finance-list-v1"></script>
+<script src="/assets/scripts/pages/operations.js?v=20260620-operations-quadrant-v3"></script>
 <script src="/assets/scripts/pages/prices.js?v=20260508-finance-ledger-v4"></script>
 <script src="/assets/scripts/pages/courts-helpers.js?v=20260615-helper-split-v1"></script>
 <script src="/assets/scripts/pages/courts.js?v=20260609-campus-scope-v1"></script>

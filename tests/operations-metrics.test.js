@@ -1,0 +1,600 @@
+const assert = require('assert');
+
+const {
+  coachAvailableHours,
+  buildOperationsMetrics
+} = require('../server/metrics/operations-metrics.js');
+
+assert.strictEqual(coachAvailableHours({ period: 'today' }), 8, 'coach daily available hours should be 8');
+assert.strictEqual(coachAvailableHours({ period: 'week' }), 48, 'coach weekly available hours should be 6 days * 8 hours');
+assert.strictEqual(
+  coachAvailableHours({ period: 'month', now: new Date('2026-06-18T00:00:00+08:00') }),
+  205.7,
+  'coach monthly available hours should use natural days * 8 * 6 / 7'
+);
+
+const metrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  leads: [
+    { id: 'lead-1', leadStage: '未转化', source: '小红书', leadDate: '2026-06-01', campus: 'mabao', owner: '张教练', level: '零基础', gender: '女', studentType: '成人' },
+    { id: 'lead-2', leadStage: '课程转化', studentId: 'student-2', source: '小红书', leadDate: '2026-06-02', campus: 'mabao', owner: '张教练', level: '进阶提升', gender: '男', studentType: '成人' },
+    { id: 'lead-3', studentId: 'student-1', courtId: 'court-1', source: '转介绍', leadDate: '2026-06-03', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
+    { id: 'lead-4', rawStatus: '已流失', source: '大众点评', leadDate: '2026-06-04', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '成人' },
+    { id: 'lead-5', leadStage: '订场转化', courtId: 'court-2', source: '抖音/美团', leadDate: '2026-06-05', campus: 'mabao', owner: '张教练', level: '零基础', gender: '男', studentType: '成人' }
+  ],
+  students: [
+    { id: 'student-1', sourceLeadId: 'lead-3', dealPath: '体验转化', primaryCoach: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
+    { id: 'student-2', sourceLeadId: 'lead-2', dealPath: '体验转化', primaryCoach: '张教练', level: '进阶提升', gender: '男', studentType: '成人' }
+  ],
+  purchases: [
+    { id: 'purchase-1', studentId: 'student-1', packageId: 'pkg-a', amount: 1000, actualAmount: 1000, purchaseDate: '2026-06-05' },
+    { id: 'purchase-2', studentId: 'student-1', packageId: 'pkg-a', amount: 1200, actualAmount: 1200, purchaseDate: '2026-06-15' },
+    { id: 'purchase-3', studentId: 'student-2', packageId: 'pkg-b', amount: 900, actualAmount: 900, purchaseDate: '2026-06-08' }
+  ],
+  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'mabao' }],
+  schedule: [
+    { id: 'sch-1', coach: 'Siren 教练', startTime: '2026-06-05T10:00:00+08:00', endTime: '2026-06-05T12:00:00+08:00', status: '已排课', campus: 'mabao' }
+  ],
+  courts: [
+    {
+      id: 'court-1',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { date: '2026-06-06', venue: '1号场', startTime: '08:00', endTime: '10:00', amount: 300, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  membershipAccounts: [{ id: 'member-1', sourceLeadId: 'lead-other' }],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'finance-court-1', businessType: '散客订场', action: '收款', cashDelta: 300, recognizedRevenueDelta: 300, timeText: '08:00-10:00', sourceProject: '1号场' },
+    { id: 'finance-court-2', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 180, timeText: '10:00-11:00', sourceProject: '2号场' }
+  ],
+  financeOverviewData: { totalIncome: 2500, recognizedRevenue: 700, pendingRevenue: 1800 }
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+assert.strictEqual(metrics.overview.cards.totalIncome.value, 2500, 'overview should reuse finance total income');
+assert.strictEqual(metrics.conversion.cards.totalLeads.value, 5, 'conversion should count all leads');
+assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '课程转化').count, 1, 'lead funnel should use the unified lead stage');
+assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '课程+订场').count, 1, 'multiple conversion results should be merged into one lead stage');
+assert.strictEqual(metrics.conversion.cards.sameProjectRenewalRate.value, 100, 'same package renewal should count as same-project renewal');
+assert.deepStrictEqual(
+  metrics.conversion.courseFunnel.map(row => row.stage),
+  ['线索量', '预约体验客户', '体验课实到人数', '体验后成交人数', '成交后续费人数'],
+  'course conversion funnel should use the requested Gemini-style stage order'
+);
+assert.strictEqual(metrics.conversion.courseFunnel[0].count, 5, 'course funnel should keep all leads as the first stage');
+assert.strictEqual(metrics.conversion.courseFunnel[3].count, 2, 'course funnel should count only course deals, not booking or membership deals');
+assert.strictEqual(metrics.conversion.courseFunnel[4].count, 1, 'course funnel should count course renewals after deal');
+assert.strictEqual(metrics.conversion.sourceRanking.find(row => row.source === '抖音/美团'), undefined, 'booking-only converted channels should not enter course deal ranking');
+assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '转介绍'), 'channel deal ranking should include course deal channels');
+assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书'), 'channel deal ranking should include all course deal channels');
+assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.trialConversionRate, 50, 'channel trial conversion rate should use trial attendance count over leads');
+assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.dealConversionRate, 50, 'channel deal conversion rate should use deals over leads');
+assert.ok(metrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年女性'), 'student attributes should combine youth and gender when available');
+assert.strictEqual(metrics.conversion.studentAttributeRows.find(row => row.attribute === '零基础')?.renewalRate, 100, 'student attribute renewal rate should use paid deal count as denominator');
+assert.ok(metrics.conversion.filterOptions.sources.includes('小红书'), 'conversion filters should include source options');
+assert.ok(metrics.conversion.filterOptions.campuses.includes('顺义马坡'), 'conversion filters should display campus names instead of campus codes');
+assert.ok(metrics.conversion.filterOptions.coaches.includes('Siren 教练'), 'conversion filters should include coach options');
+assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 48, 'coach module should expose 6-day weekly capacity');
+assert.strictEqual(metrics.coach.rows[0].usedHours, 2, 'coach workload should sum completed lesson hours');
+assert.strictEqual(metrics.court.cards.bookingHours.value, 2, 'court module should sum booking hours from court history');
+assert.strictEqual(metrics.court.cards.bookingAmount.value, 480, 'court module should reuse finance booking rows without double-counting recognized revenue');
+
+const campusVenueMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [
+        { id: 'v1', name: '1号红土场', status: 'active', sortOrder: 1 },
+        { id: 'v2', name: '2号硬地场', status: 'active', sortOrder: 2 },
+        { id: 'v3', name: '停用场地', status: 'inactive', sortOrder: 3 }
+      ]
+    },
+    {
+      id: 'gaoxin',
+      code: 'gaoxin',
+      name: '高新旗舰店',
+      venues: [{ id: 'g1', name: 'A号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-mabao',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'h1', date: '2026-06-06', venue: '1号红土场', venueId: 'v1', startTime: '08:00', endTime: '10:00', amount: 300, type: '消费', category: '散客订场' },
+        { id: 'h2', date: '2026-06-06', venue: '2号硬地场', startTime: '18:00', endTime: '20:00', amount: 400, type: '消费', category: '会员订场' },
+        { id: 'h3', date: '2026-06-06', venue: '历史旧场地', startTime: '20:00', endTime: '21:00', amount: 100, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [
+    { id: 's1', campus: 'mabao', venueId: 'v1', venue: '1号红土场', startTime: '2026-06-06T16:00:00+08:00', endTime: '2026-06-06T17:00:00+08:00', status: '已排课' },
+    { id: 's2', campus: 'mabao', venue: '外部球馆', locationType: 'external', startTime: '2026-06-06T18:00:00+08:00', endTime: '2026-06-06T19:00:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+const mabaoCampus = campusVenueMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+const gaoxinCampus = campusVenueMetrics.court.campusRows.find(row => row.campusCode === 'gaoxin');
+assert.strictEqual(campusVenueMetrics.court.cards.activeVenues.value, 3, 'court module should count enabled venues from campus config');
+assert.strictEqual(mabaoCampus.venueCount, 2, 'campus row should derive venue count from active campus venues');
+assert.strictEqual(mabaoCampus.bookingAmount, 800, 'campus booking revenue should include matched and historical unmatched booking rows');
+assert.strictEqual(mabaoCampus.bookingCount, 3, 'campus booking count should include historical booking rows only');
+assert.strictEqual(mabaoCampus.usageCount, 4, 'campus usage count should include historical booking rows and own-campus schedule occupancy');
+assert.strictEqual(mabaoCampus.utilizationRate, 16.7, 'campus utilization should use active venue capacity as denominator');
+assert.strictEqual(mabaoCampus.goldenUtilizationRate, 25, 'golden utilization should use 16:00-22:00 active venue capacity');
+assert.strictEqual(mabaoCampus.offPeakUtilizationRate, 11.1, 'off-peak utilization should use 07:00-16:00 active venue capacity');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').usageCount, 2, 'venue rows should expose one row per court with booking plus schedule usage count');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').utilizationRate, 20, 'venue rows should expose per-court utilization');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').goldenUtilizationRate, 16.7, 'venue rows should expose per-court golden utilization');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').offPeakUtilizationRate, 22.2, 'venue rows should expose per-court off-peak utilization');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '未匹配').usageCount, 1, 'unmatched historical venue rows should still appear as one row in court overview data');
+assert.strictEqual(gaoxinCampus.venueCount, 1, 'campuses without bookings should still appear from campus config');
+assert.strictEqual(gaoxinCampus.utilizationRate, 0, 'empty campus utilization should be zero');
+assert.ok(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueName === '未匹配'), 'unmatched historical venue rows should be displayed separately');
+assert.ok(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'gaoxin').venues.find(row => row.venueName === 'A号场'), 'configured venues with no orders should still render in heatmap');
+assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '16:00').utilizationRate, 100, 'own campus schedules should occupy configured venue heatmap slots');
+assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'legacy rows should match configured venues by campus and venue name');
+
+const rangedHeatMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-ranged',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'in-range', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'out-range', date: '2026-05-31', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [
+    { id: 'schedule-in-range', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-02T18:00:00+08:00', endTime: '2026-06-02T18:30:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+const rangedCampus = rangedHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+const rangedVenue = rangedCampus.venues.find(row => row.venueId === 'v1');
+assert.ok(rangedCampus.hours.includes('18:30'), 'court heatmap should use half-hour slots');
+assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:00').utilizationRate, 28.6, 'half-hour heat rate should use selected period capacity as denominator and include booking plus schedule occupancy');
+assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:30').utilizationRate, 0, 'out-of-range bookings should not heat selected-period slots');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingCount, 1, 'court booking counts should follow the selected date range without counting schedules as bookings');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 2, 'court usage counts should follow the selected date range and include own-campus schedule occupancy');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 2.4, 'golden utilization should use selected period capacity, not only days that have records');
+
+const currentMonthHeatMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-current-month',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'jun-01', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'jun-05', date: '2026-06-05', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'jun-10', date: '2026-06-10', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'jun-20', date: '2026-06-20', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const currentMonthSlot = currentMonthHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '14:00');
+assert.strictEqual(currentMonthSlot.utilizationRate, 20, 'current month heatmap should not dilute utilization with future dates');
+assert.strictEqual(currentMonthSlot.heatRate, 100, 'heatmap color strength should use relative heat within the selected campus');
+assert.strictEqual(currentMonthSlot.occupiedCount, 4, 'heatmap slots should expose occupied count for hover numerator');
+assert.strictEqual(currentMonthSlot.dayCount, 20, 'heatmap slots should expose selected business days for hover denominator');
+assert.strictEqual(currentMonthSlot.capacityMinutes, 600, 'heatmap slots should expose capacity minutes for hover denominator');
+
+const allTimeSpanMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-all-time',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'first-day', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'last-day', date: '2026-06-07', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+assert.strictEqual(allTimeSpanMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 8.3, 'all-time utilization should use active business days instead of diluting by historical gaps');
+assert.strictEqual(allTimeSpanMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'all-time heat slots should use active business days instead of diluting by historical gaps');
+
+const importedSourceBandMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [
+        { id: 'v1', name: '1号场', status: 'active', sortOrder: 1 },
+        { id: 'v2', name: '2号场', status: 'active', sortOrder: 2 }
+      ]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-imported-band',
+      campus: 'mabao',
+      bookingCount: 4,
+      bookingAmount: 500,
+      history: JSON.stringify([
+        { id: 'imported-band-1', date: '2026-06-01', sourceTimeBand: '10点30-11点30', sourceVenue: '历史客户A', amount: 100, type: '消费', category: '订场' },
+        { id: 'imported-band-2', date: '2026-06-01', sourceTimeBand: '18:00-19:00', sourceVenue: '2号场', amount: 120, type: '消费', category: '订场' },
+        { id: 'imported-band-3', date: '2026-06-01', sourceTimeBand: '15-17点', sourceVenue: '历史客户B', amount: 80, type: '消费', category: '订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+const importedBandCampus = importedSourceBandMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').isUnmatched, true, 'unmatched heatmap rows should be flagged as data-cleaning rows');
+assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingCount, 4, 'campus booking count should keep the cached business total when it is higher than heat-eligible rows');
+assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingAmount, 500, 'campus booking amount should keep the cached business total when it is higher than heat-eligible rows');
+assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').slots.find(slot => slot.hour === '10:30').utilizationRate, 100, 'imported rows without configured venue should heat the unmatched venue row');
+assert.strictEqual(importedBandCampus.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'sourceVenue should match configured venue names when available');
+assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').slots.find(slot => slot.hour === '15:00').utilizationRate, 100, 'imported sourceTimeBand rows like 15-17点 should heat the unmatched venue row');
+
+const cachedSpendIsNotBookingMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-cached-spend',
+      campus: 'mabao',
+      cachedTotalSpent: 404867,
+      spentAmount: 404867,
+      bookingCount: 2,
+      history: []
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-20T14:00:00+08:00') });
+const cachedSpendCampus = cachedSpendIsNotBookingMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+assert.strictEqual(cachedSpendCampus.bookingAmount, 0, 'campus booking revenue should not fall back to cachedTotalSpent or spentAmount');
+assert.strictEqual(cachedSpendIsNotBookingMetrics.court.cards.bookingAmount.value, 0, 'court booking revenue card should not use total spent as booking income');
+
+const rangedCachedTotalsMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-cached-all-time',
+      campus: 'mabao',
+      bookingCount: 2,
+      bookingAmount: 500,
+      bookingHours: 3,
+      history: JSON.stringify([
+        { id: 'old-booking', date: '2026-05-31', venue: '1号场', startTime: '10:00', endTime: '11:00', amount: 100, type: '消费', category: '订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const rangedCachedCampus = rangedCachedTotalsMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+assert.strictEqual(rangedCachedCampus.bookingCount, 0, 'selected date ranges should not reuse all-time cached booking counts');
+assert.strictEqual(rangedCachedCampus.bookingAmount, 0, 'selected date ranges should not reuse all-time cached booking income');
+assert.strictEqual(rangedCachedCampus.bookingHours, 0, 'selected date ranges should not reuse all-time cached booking hours');
+
+const normalizedVenueNameMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1 号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-normalized-venue',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'space-name', date: '2026-06-01', venue: '1 号场', startTime: '08:00', endTime: '08:30', amount: 100, type: '消费', category: '订场' },
+        { id: 'compact-name', date: '2026-06-01', venue: '1号场', startTime: '08:30', endTime: '09:00', amount: 100, type: '消费', category: '订场' },
+        { id: 'short-name', date: '2026-06-01', venue: '1号', startTime: '09:00', endTime: '09:30', amount: 100, type: '消费', category: '订场' },
+        { id: 'internal-use', date: '2026-06-01', venue: '1号', startTime: '09:30', endTime: '10:00', amount: 0, type: '消费', category: '内部占用' }
+      ])
+    }
+  ],
+  schedule: [
+    { id: 'schedule-short-name', campus: 'mabao', venue: '1号', startTime: '2026-06-01T10:00:00+08:00', endTime: '2026-06-01T10:30:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+const normalizedVenueCampus = normalizedVenueNameMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+const normalizedVenueHeatmap = normalizedVenueNameMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+const normalizedVenue = normalizedVenueHeatmap.venues.find(row => row.venueId === 'v1');
+assert.strictEqual(normalizedVenueCampus.bookingCount, 3, 'booking count should exclude internal occupancy and schedules');
+assert.strictEqual(normalizedVenueCampus.usageCount, 5, 'usage count should include bookings, internal occupancy and schedules');
+assert.strictEqual(normalizedVenueCampus.bookingAmount, 300, 'booking amount should exclude internal occupancy and schedules');
+assert.ok(!normalizedVenueHeatmap.venues.find(row => row.venueName === '未匹配'), '1号场, 1 号场 and 1号 should all match the configured 1 号场');
+assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '08:00').bookedMinutes, 30, '1 号场 should heat configured venue slots');
+assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '08:30').bookedMinutes, 30, '1号场 should heat the same configured venue slots');
+assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '09:00').bookedMinutes, 30, '1号 should heat the same configured venue slots');
+assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '09:30').bookedMinutes, 30, 'internal occupancy should heat venue usage slots');
+assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '10:00').bookedMinutes, 30, 'schedule rows should heat venue usage slots');
+
+const historicalCourseHeatMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [
+        { id: 'v1', name: '1号场', status: 'active', sortOrder: 1 },
+        { id: 'v2', name: '2号场', status: 'active', sortOrder: 2 }
+      ]
+    }
+  ],
+  entitlements: [
+    { id: 'ent-course-1', campusIds: ['mabao'] }
+  ],
+  entitlementLedger: [
+    {
+      id: 'ledger-course-1',
+      entitlementId: 'ent-course-1',
+      scheduleId: '',
+      action: 'consume',
+      lessonDelta: -1,
+      sourceDate: '2026-06-03',
+      sourceTimeBand: '10:00-11:00',
+      sourceLocation: '顺义马坡',
+      sourceVenue: '1号场'
+    },
+    {
+      id: 'ledger-course-2',
+      entitlementId: 'ent-course-1',
+      scheduleId: '',
+      action: 'free_lesson',
+      lessonDelta: 0,
+      sourceDate: '2026-06-04',
+      sourceTimeBand: '12:00-12:30',
+      sourceLocation: '顺义马坡',
+      sourceVenue: '2号场'
+    }
+  ],
+  courts: [],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const historicalCourseHeatmap = historicalCourseHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+assert.strictEqual(historicalCourseHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 2, 'historical course ledger rows with venue and time should count as court occupancy');
+assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '10:00').bookedMinutes, 30, 'historical course ledger rows should heat the configured source venue');
+assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '12:00').bookedMinutes, 30, 'free historical lesson rows should also heat the configured source venue');
+assert.ok(!historicalCourseHeatmap.venues.find(row => row.venueName === '未匹配'), 'historical course rows with sourceVenue should not fall into unmatched');
+
+const campusConversionCourtMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  leads: [
+    { id: 'campus-lead-1', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-1', trialAtRaw: '2026-06-01' },
+    { id: 'campus-lead-2', campus: 'mabao', leadStage: '已体验待转化', trialAtRaw: '2026-06-02' },
+    { id: 'campus-lead-3', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-2', trialAtRaw: '2026-06-03' }
+  ],
+  students: [
+    { id: 'campus-student-1', sourceLeadId: 'campus-lead-1', dealPath: '体验转化' },
+    { id: 'campus-student-2', sourceLeadId: 'campus-lead-3', dealPath: '体验转化' }
+  ],
+  purchases: [
+    { id: 'campus-purchase-1', studentId: 'campus-student-1', packageId: 'pkg-a', amount: 100, purchaseDate: '2026-06-04' },
+    { id: 'campus-purchase-2', studentId: 'campus-student-1', packageId: 'pkg-a', amount: 100, purchaseDate: '2026-06-10' },
+    { id: 'campus-purchase-3', studentId: 'campus-student-2', packageId: 'pkg-b', amount: 100, purchaseDate: '2026-06-05' }
+  ],
+  courts: [
+    {
+      id: 'campus-conversion-court',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'campus-conversion-booking', date: '2026-06-01', venue: '1号场', startTime: '08:00', endTime: '09:00', amount: 100, type: '消费', category: '订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+const campusConversionRow = campusConversionCourtMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+assert.strictEqual(campusConversionRow.trialConversionRate, 66.7, 'court campus rows should include experience conversion rate by campus');
+assert.strictEqual(campusConversionRow.repeatCustomerConversionRate, 50, 'court campus rows should include repeat customer conversion rate by campus');
+
+const noGenderMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  leads: [
+    { id: 'lead-no-gender-1', leadStage: '未转化', source: '小红书', campus: 'mabao', consultType: '成人私教课' },
+    { id: 'lead-no-gender-2', leadStage: '未转化', source: '小红书', campus: 'mabao', consultType: '青少年小班课' },
+    { id: 'lead-no-gender-3', leadStage: '未转化', source: '小红书', campus: 'mabao' }
+  ],
+  students: [],
+  purchases: [],
+  coaches: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '成人'), 'student attributes should classify adult demand even without gender');
+assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年'), 'student attributes should classify youth demand even without gender');
+assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '私教课'), 'student attributes should classify private lesson demand');
+assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '小班课'), 'student attributes should classify group lesson demand');
+assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '未标注人群'), 'student attributes should keep an untagged fallback group instead of going empty');
+
+const mergedLeadMetrics = buildOperationsMetrics({
+  leads: [
+    { id: 'lead-primary', _mergedLeadIds: ['lead-primary', 'lead-duplicate'], source: '小红书', campus: 'mabao', formalCoach: '王教练', consultType: '成人私教课' }
+  ],
+  students: [
+    { id: 'student-merged', sourceLeadId: 'lead-duplicate', dealPath: '体验转化', primaryCoach: '王教练', type: '成人' }
+  ],
+  purchases: [
+    { id: 'purchase-merged', studentId: 'student-merged', packageId: 'pkg-a', actualAmount: 1000 }
+  ],
+  coaches: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[0].count, 1, 'merged duplicate leads should count as one lead');
+assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[3].count, 1, 'merged duplicate lead ids should still link to course conversion');
+assert.ok(mergedLeadMetrics.conversion.filterOptions.coaches.includes('王教练'), 'conversion coach filters should include formalCoach fallback');
+
+const unifiedRateMetrics = buildOperationsMetrics({
+  leads: [
+    { id: 'rate-lead-1', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-10' },
+    { id: 'rate-lead-2', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-11' },
+    { id: 'rate-lead-3', source: '视频号', consultType: '成人私教课', studentId: 'rate-student-3' },
+    { id: 'rate-lead-4', source: '视频号', consultType: '成人私教课', rawStatus: '已约体验' },
+    { id: 'rate-lead-5', source: '视频号', consultType: '成人私教课' }
+  ],
+  students: [
+    { id: 'rate-student-3', sourceLeadId: 'rate-lead-3', dealPath: '体验转化', type: '成人', consultType: '成人私教课' }
+  ],
+  purchases: [
+    { id: 'rate-purchase-3', studentId: 'rate-student-3', packageId: 'pkg-rate', actualAmount: 1000 }
+  ],
+  coaches: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+const videoChannel = unifiedRateMetrics.conversion.channelEfficiencyRows.find(row => row.source === '视频号');
+assert.strictEqual(videoChannel?.trialConversionRate, 60, 'channel trial conversion rate should use trial attendance over leads');
+assert.strictEqual(videoChannel?.dealConversionRate, 20, 'channel deal conversion rate should use first paid deals over leads');
+const adultAttribute = unifiedRateMetrics.conversion.studentAttributeRows.find(row => row.attribute === '成人');
+assert.strictEqual(adultAttribute?.trialConversionRate, 60, 'student attribute trial conversion should use trial attendance over attribute leads');
+assert.strictEqual(adultAttribute?.dealConversionRate, 20, 'student attribute deal conversion should use first paid deals over attribute leads');
+assert.strictEqual(adultAttribute?.renewalRate, 0, 'student attribute renewal rate should use renewals over first paid deals');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[1].count, 4, 'trial attendance should also count as having entered the appointment funnel step');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 3, 'course funnel attendance should include completed trial dates and experience deals');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 60, 'course funnel should expose cumulative rate over total leads');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate, 75, 'course funnel should expose transition rate from previous step');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 25, 'course funnel should expose loss rate from previous step');
+
+console.log('operations metrics tests passed');

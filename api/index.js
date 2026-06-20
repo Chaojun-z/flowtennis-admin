@@ -192,6 +192,8 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'coach',
   'campus',
   'venue',
+  'venueId',
+  'venueSpaceType',
   'lessonCount',
   'status',
   'cancelReason',
@@ -1347,7 +1349,7 @@ function returnEntitlementFreeAbsence(entitlement,now=new Date().toISOString()){
 function assertScheduleEditableAfterFeedback(oldRec,nextRec,feedbacks){
   if(!oldRec||!nextRec)return;
   if(!(feedbacks||[]).some(f=>f.scheduleId===oldRec.id))return;
-  const coreFields=['studentName','classId','entitlementId','startTime','endTime','coach','coachId','campus','venue','courseType','experienceType','isTrial','lessonCount','status'];
+  const coreFields=['studentName','classId','entitlementId','startTime','endTime','coach','coachId','campus','venue','venueId','venueSpaceType','courseType','experienceType','isTrial','lessonCount','status'];
   const changed=coreFields.filter(k=>String(oldRec[k]??'')!==String(nextRec[k]??''));
   const oldStudents=parseArr(oldRec.studentIds).sort();
   const nextStudents=parseArr(nextRec.studentIds).sort();
@@ -4159,9 +4161,9 @@ const {
   computeCourtFinance
 });
 const handleResidualPageDataRoutes=createResidualPageDataRoutes({
-  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,getFinancePageScheduleRows,
-  filterLoadAllForUser,buildFinancePageSnapshot,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
-  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS}
+  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,scanFirstRows,getFinancePageScheduleRows,
+  filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE}
 });
 function parseSimpleCsv(text=''){
   const rows=[];
@@ -4325,6 +4327,9 @@ async function getFinancePageSnapshot(){
   const snapshot=buildFinancePageSnapshot({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,schedule});
   financeSnapshotCache=cloneCacheValue(snapshot);
   return snapshot;
+}
+function getFinancePageSnapshotIfCached(){
+  return financeSnapshotCache?cloneCacheValue(financeSnapshotCache):null;
 }
 function isProductionRuntime(){
   return RUNTIME_STAGE==='production';
