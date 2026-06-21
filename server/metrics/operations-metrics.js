@@ -515,7 +515,20 @@ function buildConversionFilterOptions(rows = [], campuses = []) {
 }
 
 function purchaseAmount(row = {}) {
-  return money(row.actualAmount ?? row.amountPaid ?? row.finalAmount ?? row.amount ?? row.price ?? 0);
+  const snapshot = row.coachPriceSnapshot && typeof row.coachPriceSnapshot === 'object' ? row.coachPriceSnapshot : {};
+  return money(
+    row.actualAmount
+    ?? row.amountPaid
+    ?? row.finalAmount
+    ?? row.paidAmount
+    ?? row.receivedAmount
+    ?? row.cashDelta
+    ?? snapshot.amountPaid
+    ?? row.amount
+    ?? row.packagePrice
+    ?? row.price
+    ?? 0
+  );
 }
 
 function buildRenewalMetrics(purchases = []) {
@@ -546,8 +559,47 @@ function buildRenewalMetrics(purchases = []) {
   };
 }
 
+const COACH_NAME_ALIAS_MAP = new Map([
+  ['沙琪儿', 'Siren 教练'],
+  ['siren', 'Siren 教练'],
+  ['Siren', 'Siren 教练'],
+  ['朝珺', '朝珺教练'],
+  ['甄朝珺', '朝珺教练'],
+  ['chaojun', '朝珺教练'],
+  ['Rive', 'Rive 天昊教练'],
+  ['rive', 'Rive 天昊教练'],
+  ['天昊', 'Rive 天昊教练'],
+  ['Rive 天昊', 'Rive 天昊教练'],
+  ['晓哲', '晓哲教练']
+]);
+
+function canonicalCoachName(value) {
+  const raw = String(value || '').trim();
+  return COACH_NAME_ALIAS_MAP.get(raw) || raw;
+}
+
+function isBusinessCoachName(value) {
+  const text = canonicalCoachName(value);
+  return !!text && !/不固定|无固定|没有固定|未分配|待分配|未知/.test(text);
+}
+
 function scheduleCoachName(row = {}) {
-  return String(row.coach || row.coachName || row.primaryCoach || row.teacher || '').trim();
+  return canonicalCoachName(row.coach || row.coachName || row.primaryCoach || row.teacher || '');
+}
+
+function purchaseCoachName(row = {}) {
+  const snapshot = row.coachPriceSnapshot && typeof row.coachPriceSnapshot === 'object' ? row.coachPriceSnapshot : {};
+  const names = [
+    row.ownerCoach,
+    row.coachPriceName,
+    snapshot.coachName,
+    row.primaryCoach,
+    row.coach,
+    row.coachName,
+    ...parseArr(row.coachNames),
+    ...parseArr(row.allowedCoaches)
+  ];
+  return canonicalCoachName(names.find(value => String(value || '').trim()) || '');
 }
 
 function scheduleDurationHours(row = {}) {
@@ -563,22 +615,283 @@ function isCompletedScheduleForOperations(row = {}, now = new Date()) {
   return /已完成|completed|done/i.test(String(row.status || row.systemStatus || row.state || ''));
 }
 
-function buildCoachRows({ coaches = [], schedule = [], now = new Date() } = {}) {
+function isActiveScheduleForOperations(row = {}) {
+  return !/取消|cancel|void|delete/i.test(String(row.status || row.systemStatus || row.state || ''));
+}
+
+function isValidCoursePurchase(row = {}) {
+  return !['voided', 'refunded', 'deleted', 'inactive'].includes(String(row.status || 'active').trim());
+}
+
+function scheduleStudentKeys(row = {}) {
+  return [...new Set([
+    ...parseArr(row.studentIds),
+    row.studentId,
+    ...parseArr(row.studentNames),
+    row.studentName
+  ].map(value => String(value || '').trim()).filter(Boolean))];
+}
+
+function purchaseStudentKey(row = {}) {
+  return String(row.studentId || row.studentName || '').trim();
+}
+
+function normalizeCoachCourseType(row = {}) {
+  const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
+  if (/体验/.test(text)) return '体验课';
+  if (/小班|班课|训练营|大师/.test(text)) return '小班课';
+  return '私教课';
+}
+
+function coachUtilizationBand(rateValue) {
+  const value = Number(rateValue) || 0;
+  if (value < 40) return { band: '0%-40%', label: '闲置', color: '#9B5E5E' };
+  if (value < 60) return { band: '40%-60%', label: '偏低', color: '#C58A3A' };
+  if (value < 75) return { band: '60%-75%', label: '待提升', color: '#466A9F' };
+  if (value < 90) return { band: '75%-90%', label: '健康', color: '#2F7D67' };
+  return { band: '90%+', label: '负荷', color: '#D97706' };
+}
+
+function selectedCoachAvailableHours(dateRange = {}, now = new Date()) {
+  const days = dateRangeDayCount(dateRange);
+  if (days) return coachAvailableHours({ days, now });
+  return coachAvailableHours({ period: 'week', now });
+}
+
+function coachDataSpanDays({ schedule = [], purchases = [] } = {}) {
+  const days = new Set();
+  (schedule || []).forEach(row => {
+    const day = dateKey(row.startTime || row.date || row.createdAt);
+    if (day) days.add(day);
+  });
+  (purchases || []).forEach(row => {
+    const day = purchaseDate(row);
+    if (day) days.add(day);
+  });
+  return dateSetSpanDayCount(days);
+}
+
+function coachPeriodInfo({ schedule = [], purchases = [], dateRange = {}, now = new Date() } = {}) {
+  const normalized = normalizeDateRange(dateRange);
+  const selectedDays = dateRangeDayCount(normalized);
+  if (selectedDays) {
+    return {
+      days: selectedDays,
+      label: `${normalized.startDate} 至 ${normalized.endDate}`,
+      rule: '按所选日期计算'
+    };
+  }
+  const spanDays = coachDataSpanDays({ schedule, purchases });
+  if (spanDays) {
+    return {
+      days: spanDays,
+      label: `全部时间（按数据跨度 ${spanDays} 天）`,
+      rule: '按当前数据中课程/购买记录的日期跨度计算'
+    };
+  }
+  return {
+    days: 0,
+    label: '本周',
+    rule: '暂无日期数据时按本周估算'
+  };
+}
+
+function purchaseDate(row = {}) {
+  return dateKey(row.purchaseDate || row.createdAt);
+}
+
+function isPurchaseBeforeRange(row = {}, dateRange = {}) {
+  const startDate = normalizeDateRange(dateRange).startDate;
+  const day = purchaseDate(row);
+  return !!(startDate && day && day < startDate);
+}
+
+function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const activeCoaches = (coaches || []).filter(row => String(row.status || 'active') !== 'inactive');
-  const coachNames = activeCoaches.map(row => String(row.name || row.coachName || '').trim()).filter(Boolean);
-  const grouped = new Map(coachNames.map(name => [name, { coach: name, usedHours: 0, lessonCount: 0, availableHours: coachAvailableHours({ period: 'week', now }) }]));
-  (schedule || []).filter(row => isCompletedScheduleForOperations(row, now)).forEach(row => {
+  const campusLabels = buildCampusLabelMap(campuses || []);
+  const period = coachPeriodInfo({ schedule, purchases, dateRange, now });
+  const availableHours = period.days ? coachAvailableHours({ days: period.days, now }) : selectedCoachAvailableHours(dateRange, now);
+  const grouped = new Map(activeCoaches
+    .map(row => ({
+      coach: canonicalCoachName(row.name || row.coachName || ''),
+      campus: campusLabel(row.campus || row.campusName, campusLabels)
+    }))
+    .filter(row => isBusinessCoachName(row.coach))
+    .map(row => [row.coach, {
+      coach: row.coach,
+      campus: row.campus,
+      usedHours: 0,
+      lessonCount: 0,
+      availableHours,
+      revenue: 0,
+      trialBase: 0,
+      trialConverted: 0,
+      oldCustomerBase: 0,
+      renewalCount: 0,
+      courseMix: [
+        { type: '体验课', hours: 0 },
+        { type: '私教课', hours: 0 },
+        { type: '小班课', hours: 0 }
+      ]
+    }]));
+  (schedule || []).filter(isActiveScheduleForOperations).forEach(row => {
     const coach = scheduleCoachName(row);
-    if (!coach) return;
-    if (!grouped.has(coach)) grouped.set(coach, { coach, usedHours: 0, lessonCount: 0, availableHours: coachAvailableHours({ period: 'week', now }) });
+    if (!isBusinessCoachName(coach)) return;
+    if (!grouped.has(coach)) grouped.set(coach, {
+      coach,
+      campus: campusLabel(row.campus || row.campusName, campusLabels),
+      usedHours: 0,
+      lessonCount: 0,
+      availableHours,
+      revenue: 0,
+      trialBase: 0,
+      trialConverted: 0,
+      oldCustomerBase: 0,
+      renewalCount: 0,
+      courseMix: [
+        { type: '体验课', hours: 0 },
+        { type: '私教课', hours: 0 },
+        { type: '小班课', hours: 0 }
+      ]
+    });
     const current = grouped.get(coach);
-    current.usedHours = round(current.usedHours + scheduleDurationHours(row), 1);
+    const hours = scheduleDurationHours(row);
+    current.usedHours = round(current.usedHours + hours, 1);
     current.lessonCount += 1;
+    const mixType = normalizeCoachCourseType(row);
+    const mix = current.courseMix.find(item => item.type === mixType);
+    if (mix) mix.hours = round(mix.hours + hours, 1);
+  });
+  (purchases || []).filter(isValidCoursePurchase).forEach(row => {
+    const coach = purchaseCoachName(row);
+    if (!isBusinessCoachName(coach)) return;
+    if (!grouped.has(coach)) grouped.set(coach, {
+      coach,
+      campus: '未记录',
+      usedHours: 0,
+      lessonCount: 0,
+      availableHours,
+      revenue: 0,
+      trialBase: 0,
+      trialConverted: 0,
+      oldCustomerBase: 0,
+      renewalCount: 0,
+      courseMix: [
+        { type: '体验课', hours: 0 },
+        { type: '私教课', hours: 0 },
+        { type: '小班课', hours: 0 }
+      ]
+    });
+    grouped.get(coach).revenue = money(grouped.get(coach).revenue + purchaseAmount(row));
+  });
+  const validAllPurchases = (allPurchases || []).filter(isValidCoursePurchase);
+  grouped.forEach(row => {
+    const coach = row.coach;
+    const completedTrials = (schedule || [])
+      .filter(item => scheduleCoachName(item) === coach && normalizeCoachCourseType(item) === '体验课' && isCompletedScheduleForOperations(item, now));
+    const trialStudents = new Map();
+    completedTrials.forEach(item => {
+      const trialDate = dateKey(item.endTime || item.startTime);
+      scheduleStudentKeys(item).forEach(key => {
+        if (key && !trialStudents.has(key)) trialStudents.set(key, trialDate);
+      });
+    });
+    row.trialBase = trialStudents.size;
+    row.trialConverted = [...trialStudents.entries()].filter(([key, trialDate]) => validAllPurchases.some(purchase => {
+      if (purchaseCoachName(purchase) !== coach) return false;
+      if (purchaseStudentKey(purchase) !== key) return false;
+      const day = purchaseDate(purchase);
+      return !trialDate || !day || day >= trialDate;
+    })).length;
+    let priorOldStudents = new Set(validAllPurchases
+      .filter(purchase => purchaseCoachName(purchase) === coach && isPurchaseBeforeRange(purchase, dateRange))
+      .map(purchaseStudentKey)
+      .filter(Boolean));
+    let renewedStudents = new Set((purchases || [])
+      .filter(isValidCoursePurchase)
+      .filter(purchase => purchaseCoachName(purchase) === coach && priorOldStudents.has(purchaseStudentKey(purchase)))
+      .map(purchaseStudentKey)
+      .filter(Boolean));
+    if (!isDateRangeActive(dateRange)) {
+      const byStudent = new Map();
+      validAllPurchases
+        .filter(purchase => purchaseCoachName(purchase) === coach)
+        .forEach(purchase => {
+          const key = purchaseStudentKey(purchase);
+          if (!key) return;
+          if (!byStudent.has(key)) byStudent.set(key, []);
+          byStudent.get(key).push(purchase);
+        });
+      priorOldStudents = new Set([...byStudent.keys()]);
+      renewedStudents = new Set([...byStudent.entries()].filter(([, rows]) => rows.length > 1).map(([key]) => key));
+    }
+    row.oldCustomerBase = priorOldStudents.size;
+    row.renewalCount = renewedStudents.size;
   });
   return [...grouped.values()].map(row => ({
     ...row,
-    utilizationRate: row.availableHours ? round(row.usedHours * 100 / row.availableHours, 1) : 0
-  })).sort((a, b) => b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+    utilizationRate: row.availableHours ? round(row.usedHours * 100 / row.availableHours, 1) : 0,
+    trialConversionRate: rate(row.trialConverted, row.trialBase),
+    renewalRate: rate(row.renewalCount, row.oldCustomerBase),
+    period,
+    courseMix: row.courseMix.map(item => ({ ...item, share: rate(item.hours, row.usedHours) })),
+    utilizationBand: coachUtilizationBand(row.availableHours ? row.usedHours * 100 / row.availableHours : 0)
+  })).sort((a, b) => b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+}
+
+function buildCoachUtilizationBands(rows = []) {
+  const order = [
+    { band: '0%-40%', label: '闲置', color: '#9B5E5E' },
+    { band: '40%-60%', label: '偏低', color: '#C58A3A' },
+    { band: '60%-75%', label: '待提升', color: '#466A9F' },
+    { band: '75%-90%', label: '健康', color: '#2F7D67' },
+    { band: '90%+', label: '负荷', color: '#D97706' }
+  ];
+  return order.map(band => ({
+    ...band,
+    count: (rows || []).filter(row => row.utilizationBand?.band === band.band).length
+  }));
+}
+
+function buildCoachParetoRows(rows = []) {
+  const sorted = [...(rows || [])].sort((a, b) => b.revenue - a.revenue || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+  const total = sorted.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0);
+  let cumulative = 0;
+  return sorted.map(row => {
+    cumulative += Number(row.revenue) || 0;
+    return {
+      coach: row.coach,
+      revenue: row.revenue,
+      revenueShare: rate(row.revenue, total),
+      cumulativeShare: rate(cumulative, total)
+    };
+  });
+}
+
+function buildCoachCourseMixRows(rows = []) {
+  return (rows || []).map(row => ({
+    coach: row.coach,
+    trialHours: row.courseMix.find(item => item.type === '体验课')?.hours || 0,
+    privateHours: row.courseMix.find(item => item.type === '私教课')?.hours || 0,
+    smallGroupHours: row.courseMix.find(item => item.type === '小班课')?.hours || 0
+  }));
+}
+
+function buildCoachAlerts(rows = []) {
+  const activeRows = (rows || []).filter(row => row.usedHours > 0 || row.revenue > 0);
+  const averageRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.revenue, 0) / activeRows.length : 0;
+  const lowUtilization = rows.filter(row => row.utilizationRate < 40);
+  const busyLowRevenue = rows.filter(row => row.utilizationRate >= 75 && row.revenue < averageRevenue);
+  const overLoaded = rows.filter(row => row.utilizationRate >= 90);
+  const conversionRisk = rows.filter(row => row.trialBase > 0 && row.trialConversionRate < 50);
+  const renewalRisk = rows.filter(row => row.oldCustomerBase > 0 && row.renewalRate < 50);
+  const alerts = [];
+  if (lowUtilization.length) alerts.push({ type: '低利用', tone: 'danger', title: `${lowUtilization.length} 名教练产能闲置`, detail: lowUtilization.slice(0, 3).map(row => row.coach).join('、') });
+  if (busyLowRevenue.length) alerts.push({ type: '低产高忙', tone: 'warn', title: `${busyLowRevenue.length} 名教练忙但产值偏低`, detail: busyLowRevenue.slice(0, 3).map(row => row.coach).join('、') });
+  if (overLoaded.length) alerts.push({ type: '过载', tone: 'overload', title: `${overLoaded.length} 名教练接近满负荷`, detail: overLoaded.slice(0, 3).map(row => row.coach).join('、') });
+  if (conversionRisk.length) alerts.push({ type: '转化风险', tone: 'warn', title: `${conversionRisk.length} 名教练体验转化偏低`, detail: conversionRisk.slice(0, 3).map(row => row.coach).join('、') });
+  if (renewalRisk.length) alerts.push({ type: '续费风险', tone: 'danger', title: `${renewalRisk.length} 名教练老客续费偏低`, detail: renewalRisk.slice(0, 3).map(row => row.coach).join('、') });
+  return alerts;
 }
 
 function courtHistoryRows(courts = []) {
@@ -1255,7 +1568,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const studentAttributeRows = buildStudentAttributeRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
-  const coachRows = buildCoachRows({ coaches: data.coaches || [], schedule: rangedData.schedule || [], now });
+  const coachRows = buildCoachRows({
+    coaches: data.coaches || [],
+    schedule: rangedData.schedule || [],
+    purchases: rangedData.purchases || [],
+    allPurchases: data.purchases || [],
+    dateRange,
+    campuses: data.campuses || [],
+    now
+  });
   const court = buildConfiguredCourtMetrics({
     campuses: data.campuses || [],
     courts: data.courts || [],
@@ -1289,6 +1610,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
     .reduce((sum, row) => sum + row.count, 0);
   const usedCoachHours = round(coachRows.reduce((sum, row) => sum + row.usedHours, 0), 1);
   const availableCoachHours = round(coachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);
+  const coachRevenue = money(coachRows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
+  const coachTrialBase = coachRows.reduce((sum, row) => sum + (Number(row.trialBase) || 0), 0);
+  const coachTrialConverted = coachRows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
+  const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
+  const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
+  const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange, now });
   const revenueMix = buildRevenueMix(financeOverviewData);
   const fallbackRevenueMix = [
     { name: '课程收入', value: fallbackFinance.courseIncome },
@@ -1334,9 +1661,27 @@ function buildOperationsMetrics(data = {}, options = {}) {
         activeCoaches: { title: '在岗教练', value: coachRows.length, unit: '人' },
         availableHoursThisWeek: { title: '本周可排工时', value: availableCoachHours, unit: '小时' },
         usedHours: { title: '已排课时', value: usedCoachHours, unit: '小时' },
-        utilizationRate: { title: '工时利用率', value: availableCoachHours ? round(usedCoachHours * 100 / availableCoachHours, 1) : 0, unit: '%' }
+        utilizationRate: { title: '工时利用率', value: availableCoachHours ? round(usedCoachHours * 100 / availableCoachHours, 1) : 0, unit: '%' },
+        revenue: { title: '归属课程实收', value: coachRevenue, unit: '元' },
+        trialConversionRate: { title: '体验转化率', value: rate(coachTrialConverted, coachTrialBase), unit: '%' },
+        renewalRate: { title: '老客续费率', value: rate(coachRenewalCount, coachOldCustomerBase), unit: '%' }
       },
-      rows: coachRows
+      rows: coachRows,
+      period: coachPeriod,
+      utilizationBands: buildCoachUtilizationBands(coachRows),
+      revenueParetoRows: buildCoachParetoRows(coachRows),
+      courseMixRows: buildCoachCourseMixRows(coachRows),
+      capabilityRows: coachRows.map(row => ({
+        coach: row.coach,
+        trialConversionRate: row.trialConversionRate,
+        trialBase: row.trialBase,
+        trialConverted: row.trialConverted,
+        renewalRate: row.renewalRate,
+        oldCustomerBase: row.oldCustomerBase,
+        renewalCount: row.renewalCount,
+        revenue: row.revenue
+      })),
+      alerts: buildCoachAlerts(coachRows)
     }
   };
 }

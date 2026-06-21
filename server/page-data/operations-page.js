@@ -14,9 +14,12 @@ const OPERATIONS_STUDENT_FIELDS = [
   'studentType', 'type', 'ageGroup', 'age', 'birthDate'
 ];
 const OPERATIONS_PURCHASE_FIELDS = [
-  'studentId', 'packageId', 'productId', 'packageName', 'productName',
+  'id', 'studentId', 'studentName', 'ownerCoach', 'primaryCoach', 'coach', 'coachName',
+  'packageId', 'productId', 'packageName', 'productName',
   'courseType', 'status', 'purchaseDate', 'createdAt', 'amountPaid',
-  'actualAmount', 'finalAmount', 'amount', 'price', 'payMethod'
+  'actualAmount', 'finalAmount', 'amount', 'price', 'packagePrice', 'systemAmount',
+  'paidAmount', 'receivedAmount', 'cashDelta', 'payMethod',
+  'coachPriceName', 'coachPriceSnapshot', 'coachNames', 'allowedCoaches', 'campusIds'
 ];
 const OPERATIONS_ENTITLEMENT_FIELDS = [
   'id', 'studentId', 'purchaseId', 'packageId', 'campus', 'campusName', 'campusIds'
@@ -38,8 +41,10 @@ const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId
 const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus'];
 const OPERATIONS_SCHEDULE_FIELDS = [
+  'id', 'studentId', 'studentIds', 'studentName', 'studentNames',
   'coach', 'coachName', 'primaryCoach', 'teacher', 'startTime', 'endTime',
   'status', 'systemStatus', 'state', 'lessonCount', 'durationHours', 'hours',
+  'courseType', 'standardCourseType', 'experienceType', 'packageName', 'productName',
   'campus', 'campusName', 'venue', 'venueId', 'venueSpaceType',
   'locationType', 'externalVenueName', 'externalCourtName'
 ];

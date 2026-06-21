@@ -29,6 +29,7 @@ assert.match(operationsPageSource, /OPERATIONS_CACHE_TTL_MS/, 'operations page-d
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations page-data cache should be scoped before reuse');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*OPERATIONS_SCHEDULE_FIELDS/, 'operations page-data should keep a dedicated projection field list for the operations read model');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*formalCoach/, 'operations page-data should include formalCoach for conversion coach filters');
+assert.match(operationsPageSource, /OPERATIONS_PURCHASE_FIELDS[\s\S]*'paidAmount'[\s\S]*'receivedAmount'[\s\S]*'coachPriceName'[\s\S]*'coachPriceSnapshot'/, 'operations page-data should read real coach ownership and receipt fallback fields for coach efficiency');
 assert.match(operationsPageSource, /OPERATIONS_COURT_FIELDS[\s\S]*'history'/, 'operations page-data should read court history for campus venue heatmaps');
 assert.match(operationsPageSource, /OPERATIONS_SCHEDULE_FIELDS[\s\S]*'venueId'[\s\S]*'locationType'[\s\S]*'externalVenueName'/, 'operations page-data should read schedule venue id and external venue flags for utilization');
 assert.match(operationsPageSource, /OPERATIONS_ENTITLEMENT_LEDGER_FIELDS[\s\S]*'sourceDate'[\s\S]*'sourceTimeBand'[\s\S]*'sourceVenue'/, 'operations page-data should read historical course ledger venue and time fields for heatmaps');

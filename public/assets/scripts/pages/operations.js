@@ -1,4 +1,4 @@
-let operationsActiveTab = 'court';
+let operationsActiveTab = 'overview';
 let operationsConversionFilters = { source: '', campus: '', coach: '' };
 let operationsActiveCourtHeatCampus = '顺义马坡';
 const operationsCourtHeatCampusTabs = ['顺义马坡', '朝阳十里堡', '蓝色港湾', '国网', '朝珺私教'];
@@ -29,6 +29,31 @@ function operationsRateTone(value) {
 function operationsPercentBar(value) {
   const percent = Math.max(0, Math.min(100, Number(value) || 0));
   return `<div class="operations-rate-cell"><span class="operations-rate-track ${operationsRateTone(percent)}"><i style="width:${percent}%"></i></span><strong>${fmt(percent)}%</strong></div>`;
+}
+
+function operationsCardNumber(card = {}) {
+  return Number(card?.value) || 0;
+}
+
+function operationsCardText(card = {}, fallbackUnit = '') {
+  const unit = card?.unit || fallbackUnit;
+  return `${fmt(operationsCardNumber(card))}${unit ? `<em>${esc(unit)}</em>` : ''}`;
+}
+
+function operationsMoneyMetric(label, value, caption = '') {
+  return `<div class="operations-overview-metric">
+    <span>${esc(label)}</span>
+    <strong>${operationsMoneyText(value)}</strong>
+    ${caption ? `<p>${esc(caption)}</p>` : ''}
+  </div>`;
+}
+
+function operationsPlainMetric(label, value, caption = '') {
+  return `<div class="operations-overview-metric">
+    <span>${esc(label)}</span>
+    <strong>${value}</strong>
+    ${caption ? `<p>${esc(caption)}</p>` : ''}
+  </div>`;
 }
 
 function operationsCourtStatus(row = {}, averages = {}) {
@@ -89,7 +114,7 @@ function operationsSimpleTable(columns = [], rows = [], emptyText = '暂无数�
 }
 
 function setOperationsTab(tab) {
-  operationsActiveTab = tab === 'court' ? 'court' : 'court';
+  operationsActiveTab = ['overview', 'court', 'conversion', 'coach'].includes(tab) ? tab : 'overview';
   if (currentPage === 'operations') {
     document.querySelectorAll('.sb-item[data-nav-page="operations"]').forEach(item => {
       item.classList.toggle('active', item.dataset.operationsTab === operationsActiveTab);
@@ -112,6 +137,42 @@ function setOperationsConversionFilter() {
 function renderOperationsLoading() {
   const host = document.getElementById('page-operations');
   if (!host) return;
+  if (operationsActiveTab === 'overview') {
+    host.innerHTML = `<div class="operations-page">
+      <section class="operations-command-center operations-overview-command">
+        <div class="operations-skeleton-line title"></div>
+        <div class="operations-skeleton-line caption"></div>
+        <div class="operations-kpi-row">${[1,2,3,4].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}</div>
+      </section>
+      <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
+      <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
+    </div>`;
+    return;
+  }
+  if (operationsActiveTab === 'coach') {
+    host.innerHTML = `<div class="operations-page">
+      <section class="operations-coach-command operations-coach-command-skeleton">
+        <div class="operations-skeleton-line title"></div>
+        <div class="operations-skeleton-line caption"></div>
+        <div class="operations-coach-kpi-strip">
+          ${[1,2,3,4,5].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}
+        </div>
+      </section>
+      <div class="operations-coach-hero-grid">
+        <div class="operations-skeleton-panel operations-coach-matrix-skeleton"></div>
+        <div class="operations-skeleton-panel operations-coach-matrix-skeleton"></div>
+      </div>
+      <div class="operations-coach-secondary-grid">
+        <div class="operations-skeleton-panel"></div>
+        <div class="operations-skeleton-panel"></div>
+      </div>
+      <div class="operations-coach-secondary-grid">
+        <div class="operations-skeleton-panel"></div>
+        <div class="operations-skeleton-panel"></div>
+      </div>
+    </div>`;
+    return;
+  }
   if (operationsActiveTab === 'court') {
     host.innerHTML = `<div class="operations-page">
       <div class="operations-court-skeleton-grid">
@@ -130,12 +191,132 @@ function renderOperationsLoading() {
 }
 
 function renderOperationsOverview(data) {
-  const cards = renderStandardDataCards(operationsMetricCards(data.overview?.cards));
-  return `${operationsSection('关键指标', `<div class="tms-stats-row">${cards}</div>`)}
-  <div class="operations-chart-grid">
-    ${operationsChartCard('收入结构', 'operationsRevenueMixChart')}
-    ${operationsChartCard('线索转化漏斗', 'operationsLeadFunnelChart')}
+  const overview = data.overview || {};
+  const cards = overview.cards || {};
+  const totalIncome = operationsCardNumber(cards.totalIncome);
+  const recognizedRevenue = operationsCardNumber(cards.recognizedRevenue);
+  const pendingRevenue = operationsCardNumber(cards.pendingRevenue);
+  const incomeRate = totalIncome ? Math.round(recognizedRevenue * 1000 / totalIncome) / 10 : 0;
+  const conversion = operationsConversionView(data);
+  return `<section class="operations-command-center operations-overview-command">
+    <div class="operations-command-head">
+      <div>
+        <h2>经营总览</h2>
+        <p>用同一套经营分析聚合口径，看财务、转化留存、场地和教练人效的当前状态</p>
+      </div>
+    </div>
+    <div class="operations-kpi-row">
+      <div class="operations-kpi-card"><span>总收入</span><strong>${operationsCardText(cards.totalIncome)}</strong><p>来自财务总览同口径</p></div>
+      <div class="operations-kpi-card"><span>入账率</span><strong>${fmt(incomeRate)}<em>%</em></strong><p>${operationsMoneyText(recognizedRevenue)} 已入账</p></div>
+      <div class="operations-kpi-card"><span>成交笔数</span><strong>${operationsCardText(cards.tradeCount)}</strong><p>按财务聚合成交数</p></div>
+      <div class="operations-kpi-card"><span>场地利用率</span><strong>${operationsCardText(data.court?.cards?.utilizationRate)}</strong><p>复用场地运转口径</p></div>
+      <div class="operations-kpi-card"><span>教练工时利用率</span><strong>${operationsCardText(data.coach?.cards?.utilizationRate)}</strong><p>复用教练人效口径</p></div>
+    </div>
+  </section>
+  <div class="operations-overview-grid">
+    ${operationsOverviewRevenueMix(data)}
+    ${operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue)}
+  </div>
+  <div class="operations-overview-grid">
+    ${operationsOverviewConversionPath(conversion)}
+    ${operationsOverviewCourtSummary(data)}
+  </div>
+  <div class="operations-overview-grid">
+    ${operationsOverviewCoachSummary(data)}
+    ${operationsOverviewWarnings(data, conversion)}
   </div>`;
+}
+
+function operationsOverviewRevenueMix(data = {}) {
+  const rows = data.overview?.revenueMix || [];
+  const total = rows.reduce((sum, row) => sum + (Number(row.value) || 0), 0);
+  const body = rows.length ? rows.map(row => {
+    const value = Number(row.value) || 0;
+    const percent = total ? Math.round(value * 1000 / total) / 10 : 0;
+    return `<div class="operations-overview-bar-row">
+      <div class="operations-overview-bar-label"><span>${esc(row.name || '')}</span><strong>${operationsMoneyText(value)}</strong></div>
+      <div class="operations-overview-bar-track"><i style="width:${Math.max(0, Math.min(100, percent))}%"></i></div>
+      <em>${fmt(percent)}%</em>
+    </div>`;
+  }).join('') : '<div class="operations-channel-empty">暂无收入组成数据</div>';
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>收入组成</h3><span>横向占比条，避免用饼图堆信息</span></div></div>
+    <div class="operations-overview-bars">${body}</div>
+  </section>`;
+}
+
+function operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue) {
+  const recognizedRate = totalIncome ? Math.round(recognizedRevenue * 1000 / totalIncome) / 10 : 0;
+  const pendingRate = Math.max(0, 100 - recognizedRate);
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>现金入账质量</h3><span>总收入、已入账、未入账同财务聚合口径</span></div></div>
+    <div class="operations-overview-cash">
+      <div class="operations-overview-cash-track"><i class="recognized" style="width:${Math.max(0, Math.min(100, recognizedRate))}%"></i><i class="pending" style="width:${Math.max(0, Math.min(100, pendingRate))}%"></i></div>
+      <div class="operations-overview-metric-grid">
+        ${operationsMoneyMetric('总收入', totalIncome)}
+        ${operationsMoneyMetric('已入账', recognizedRevenue)}
+        ${operationsMoneyMetric('未入账', pendingRevenue)}
+      </div>
+    </div>
+  </section>`;
+}
+
+function operationsOverviewConversionPath(conversion = {}) {
+  const funnel = conversion.courseFunnel || [];
+  return `<section class="operations-section operations-overview-funnel">
+    <div class="operations-module-head"><div><h3>转化与留存路径</h3><span>线索、预约、到课、成交、续费同专题页口径</span></div></div>
+    <div class="operations-funnel-host operations-overview-funnel-host" id="operationsOverviewFunnel"></div>
+  </section>`;
+}
+
+function operationsOverviewCourtSummary(data = {}) {
+  const cards = data.court?.cards || {};
+  const heatmaps = data.court?.campusHeatmaps || [];
+  const active = heatmaps.find(item => item.campusName === operationsActiveCourtHeatCampus) || heatmaps[0] || {};
+  return `<section class="operations-section operations-overview-court-card">
+    <div class="operations-module-head"><div><h3>场地运转摘要</h3><span>直接复用场地运转卡片数据</span></div></div>
+    <div class="operations-overview-metric-grid">
+      ${operationsMoneyMetric('订场收入', operationsCardNumber(cards.bookingAmount))}
+      ${operationsPlainMetric('订场次数', operationsCardText(cards.bookingCount), '订场业务记录数')}
+      ${operationsPlainMetric('场地利用率', operationsCardText(cards.utilizationRate), '总占用小时 / 总可经营小时')}
+      ${operationsPlainMetric('启用场地', operationsCardText(cards.activeVenues), '来自校区配置')}
+    </div>
+    <div class="operations-overview-mini-heat">
+      <span>黄金时段 ${fmt(active.goldenUtilizationRate || 0)}%</span>
+      <div><i style="width:${Math.max(0, Math.min(100, Number(active.goldenUtilizationRate) || 0))}%"></i></div>
+      <span>非黄金时段 ${fmt(active.offPeakUtilizationRate || 0)}%</span>
+      <div><i style="width:${Math.max(0, Math.min(100, Number(active.offPeakUtilizationRate) || 0))}%"></i></div>
+    </div>
+  </section>`;
+}
+
+function operationsOverviewCoachSummary(data = {}) {
+  const cards = data.coach?.cards || {};
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>教练人效摘要</h3><span>只展示团队层面的产能信号</span></div></div>
+    <div class="operations-overview-metric-grid">
+      ${operationsPlainMetric('在岗教练', operationsCardText(cards.activeCoaches))}
+      ${operationsPlainMetric('本周可排工时', operationsCardText(cards.availableHoursThisWeek))}
+      ${operationsPlainMetric('已排课时', operationsCardText(cards.usedHours))}
+      ${operationsPlainMetric('工时利用率', operationsCardText(cards.utilizationRate))}
+    </div>
+  </section>`;
+}
+
+function operationsOverviewWarnings(data = {}, conversion = {}) {
+  const overviewCards = data.overview?.cards || {};
+  const warnings = [];
+  const pending = operationsCardNumber(overviewCards.pendingRevenue);
+  if (pending > 0) warnings.push({ tone: 'warn', title: '存在未入账金额', detail: `${operationsMoneyText(pending)} 未入账，需到财务总览核对` });
+  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
+  if (summary.worst?.to) warnings.push({ tone: 'danger', title: '最大流失环节', detail: `${summary.worst.from} → ${summary.worst.to}，流失 ${fmt(summary.worst.lossRate)}%` });
+  const unmatched = (data.court?.campusHeatmaps || []).some(campus => (campus.venues || []).some(venue => venue.isUnmatched));
+  if (unmatched) warnings.push({ tone: 'warn', title: '存在未匹配场地数据', detail: '场地热力中有历史未匹配记录，需到场地运转继续核对' });
+  if (!warnings.length) warnings.push({ tone: 'good', title: '暂无明确预警', detail: '第一版只展示能被现有口径明确判断的问题' });
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>经营问题预警</h3><span>只展示能解释、能下钻的问题</span></div></div>
+    <div class="operations-coach-alert-list">${warnings.map(row => `<div class="operations-coach-alert-card ${esc(row.tone)}"><span>预警</span><strong>${esc(row.title)}</strong><p>${esc(row.detail)}</p></div>`).join('')}</div>
+  </section>`;
 }
 
 function operationsMoneyText(value) {
@@ -314,15 +495,112 @@ function renderOperationsConversion(data) {
 }
 
 function renderOperationsCoach(data) {
-  const rows = data.coach?.rows || [];
-  return `${operationsSection('人效指标', `<div class="tms-stats-row">${renderStandardDataCards(operationsMetricCards(data.coach?.cards))}</div>`)}
-  ${operationsChartCard('教练工时利用率', 'operationsCoachChart')}
-  ${operationsSimpleTable([
-    { label: '教练', key: 'coach' },
-    { label: '已排课时', key: 'usedHours' },
-    { label: '本周可排', key: 'availableHours' },
-    { label: '利用率', render: row => `${fmt(row.utilizationRate)}%` }
-  ], rows)}`;
+  const coach = data.coach || {};
+  const rows = coach.rows || [];
+  const cards = coach.cards || {};
+  const used = Number(cards.usedHours?.value) || rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0);
+  const available = Number(cards.availableHoursThisWeek?.value) || rows.reduce((sum, row) => sum + (Number(row.availableHours) || 0), 0);
+  const revenue = Number(cards.revenue?.value) || rows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0);
+  const kpis = [
+    { label: '在岗教练', value: cards.activeCoaches?.value || rows.length, unit: '人', caption: `${fmt(available)} 周期可排小时`, tone: 'neutral' },
+    { label: '工时利用率', value: `${fmt(cards.utilizationRate?.value || 0)}%`, caption: `${fmt(used)} / ${fmt(available)} 小时`, tone: operationsCoachKpiTone(cards.utilizationRate?.value || 0) },
+    { label: '归属课程实收', value: `¥${fmt(revenue)}`, caption: '按课程购买归属教练统计', tone: revenue > 0 ? 'good' : 'warn' },
+    { label: '体验课转化率', value: `${fmt(cards.trialConversionRate?.value || 0)}%`, caption: '体验后归属购买转化', tone: 'neutral' },
+    { label: '老客续费率', value: `${fmt(cards.renewalRate?.value || 0)}%`, caption: '归属购买学员再次购买', tone: 'neutral' }
+  ];
+  return `<div class="operations-coach-kpi-strip">${kpis.map(renderOperationsCoachKpi).join('')}</div>
+  <div class="operations-coach-hero-grid">
+    <section class="operations-section operations-coach-primary-card">
+      <div class="operations-module-head"><div><h3>产值 × 工时利用率矩阵</h3><span>横轴越右越饱和，纵轴越高越能创造课程实收</span></div></div>
+      <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachMatrixChart"></div>
+    </section>
+    <section class="operations-section operations-coach-primary-card">
+      <div class="operations-module-head"><div><h3>转化 × 续费能力矩阵</h3><span>只在有体验/续费基数时展示，避免把缺失数据误读为 0 能力</span></div></div>
+      <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachCapabilityChart"></div>
+    </section>
+  </div>
+  <div class="operations-coach-secondary-grid">
+    <section class="operations-section">
+      <div class="operations-module-head"><div><h3>产值贡献帕累托</h3><span>柱子是归属实收，折线是从左到右的累计收入占比</span></div>${operationsCoachTitleLegend([
+        { label: '归属实收', color: '#805435' },
+        { label: '累计收入占比', color: '#466A9F', line: true }
+      ])}</div>
+      <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
+    </section>
+    <section class="operations-section">
+      <div class="operations-module-head"><div><h3>利用率五档分布</h3><span>看团队整体是闲置、健康还是过载</span></div></div>
+      <div class="operations-chart-host operations-coach-chart" id="operationsCoachUtilizationBandsChart"></div>
+    </section>
+  </div>
+  <div class="operations-coach-secondary-grid">
+    <section class="operations-section operations-coach-wide-card">
+      <div class="operations-module-head"><div><h3>课程结构占比</h3><span>体验课、私教课、小班课按课时拆分</span></div>${operationsCoachTitleLegend([
+        { label: '体验课', color: '#C58A3A' },
+        { label: '私教课', color: '#466A9F' },
+        { label: '小班课', color: '#2F7D67' }
+      ])}</div>
+      <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
+    </section>
+  </div>`;
+}
+
+function operationsCoachTitleLegend(items = []) {
+  return `<div class="operations-coach-title-legend">${items.map(item => `<span><i class="${item.line ? 'line' : ''}" style="background:${esc(item.color)}"></i>${esc(item.label)}</span>`).join('')}</div>`;
+}
+
+function renderOperationsCoachUtilizationBands(rows = []) {
+  const host = document.getElementById('operationsCoachUtilizationBandsChart');
+  if (!host) return;
+  const source = (rows || []).filter(row => row && row.band);
+  if (!source.length) {
+    host.innerHTML = '<div class="tms-empty-state" style="height:100%;display:flex;align-items:center;justify-content:center"><div class="tms-empty-title">暂无图表数据</div></div>';
+    return;
+  }
+  const total = source.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
+  const maxCount = Math.max(1, ...source.map(row => Number(row.count) || 0));
+  const axisMax = Math.max(21, Math.ceil(maxCount / 3) * 3);
+  const axisStep = Math.max(1, axisMax / 7);
+  const ticks = Array.from({ length: 8 }, (_, index) => Math.round(index * axisStep));
+  const displayRows = [...source].reverse().map(row => {
+    const count = Number(row.count) || 0;
+    return {
+      ...row,
+      count,
+      share: total ? Math.round((count * 100 / total) * 10) / 10 : 0,
+      width: Math.max(0, Math.min(100, count * 100 / axisMax))
+    };
+  });
+  host.innerHTML = `<div class="operations-utilization-gemini">
+    <div class="operations-utilization-axis">${ticks.map(tick => `<span>${fmt(tick)}人</span>`).join('')}</div>
+    <div class="operations-utilization-rule"></div>
+    <div class="operations-utilization-rows">
+      ${displayRows.map(row => {
+        const active = row.count > 0;
+        return `<div class="operations-utilization-row ${active ? 'active' : ''}">
+          <div class="operations-utilization-label">${esc(row.band)} ${esc(row.label)}</div>
+          <div class="operations-utilization-track"><i style="width:${row.width}%"></i></div>
+          <div class="operations-utilization-value"><strong>${fmt(row.count)} 人</strong><span>${fmt(row.share)}%</span></div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function operationsCoachKpiTone(value) {
+  const rate = Number(value) || 0;
+  if (rate < 40) return 'danger';
+  if (rate < 60) return 'warn';
+  if (rate < 75) return 'mid';
+  if (rate < 90) return 'good';
+  return 'overload';
+}
+
+function renderOperationsCoachKpi(card = {}) {
+  return `<div class="operations-coach-kpi ${esc(card.tone || 'neutral')}">
+    <span>${esc(card.label || '')}</span>
+    <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+    <p>${esc(card.caption || '')}</p>
+  </div>`;
 }
 
 function operationsRate(part, total) {
@@ -700,8 +978,7 @@ function renderConversionAttributeModule(conversion) {
 
 function renderOperationsCharts(data) {
   const conversion = operationsConversionView(data);
-  renderStandardChart('operationsRevenueMixChart', buildStandardPieChartOption({ rows: data.overview?.revenueMix || [], name: '收入结构' }));
-  renderStandardChart('operationsLeadFunnelChart', buildStandardFunnelChartOption({ rows: data.conversion?.stageRows || [], name: '线索阶段' }));
+  renderProgressFunnel('operationsOverviewFunnel', conversion.courseFunnel || []);
   renderStandardChart('operationsCourtComparisonChart', buildOperationsCourtQuadrantChartOption({
     rows: (data.court?.campusRows || []).length ? data.court.campusRows : (data.court?.campusComparison || [])
   }), { height: 296 });
@@ -716,6 +993,11 @@ function renderOperationsCharts(data) {
     values: (data.coach?.rows || []).map(row => row.utilizationRate),
     name: '利用率'
   }));
+  renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 340 });
+  renderStandardChart('operationsCoachParetoChart', buildOperationsCoachParetoChartOption({ rows: data.coach?.revenueParetoRows || [] }), { height: 280 });
+  renderOperationsCoachUtilizationBands(data.coach?.utilizationBands || []);
+  renderStandardChart('operationsCoachCourseMixChart', buildOperationsCoachCourseMixChartOption({ rows: data.coach?.courseMixRows || [] }), { height: 280 });
+  renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 340, emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
 }
 
 function renderOperations() {
@@ -732,6 +1014,7 @@ function renderOperations() {
     conversion: renderOperationsConversion,
     coach: renderOperationsCoach
   };
-  host.innerHTML = `<div class="operations-page">${panels[operationsActiveTab](data)}</div>`;
+  const renderPanel = panels[operationsActiveTab] || panels.overview;
+  host.innerHTML = `<div class="operations-page">${renderPanel(data)}</div>`;
   requestAnimationFrame(() => renderOperationsCharts(data));
 }

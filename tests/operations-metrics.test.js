@@ -76,7 +76,8 @@ assert.strictEqual(metrics.conversion.studentAttributeRows.find(row => row.attri
 assert.ok(metrics.conversion.filterOptions.sources.includes('小红书'), 'conversion filters should include source options');
 assert.ok(metrics.conversion.filterOptions.campuses.includes('顺义马坡'), 'conversion filters should display campus names instead of campus codes');
 assert.ok(metrics.conversion.filterOptions.coaches.includes('Siren 教练'), 'conversion filters should include coach options');
-assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 48, 'coach module should expose 6-day weekly capacity');
+assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 75.4, 'coach module should use the current data span when all-time is selected');
+assert.strictEqual(metrics.coach.period.label, '全部时间（按数据跨度 11 天）', 'coach module should expose the period behind all-time capacity');
 assert.strictEqual(metrics.coach.rows[0].usedHours, 2, 'coach workload should sum completed lesson hours');
 assert.strictEqual(metrics.court.cards.bookingHours.value, 2, 'court module should sum booking hours from court history');
 assert.strictEqual(metrics.court.cards.bookingAmount.value, 480, 'court module should reuse finance booking rows without double-counting recognized revenue');
@@ -596,5 +597,92 @@ assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 3, 'cour
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 60, 'course funnel should expose cumulative rate over total leads');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate, 75, 'course funnel should expose transition rate from previous step');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 25, 'course funnel should expose loss rate from previous step');
+
+const coachDashboardMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  coaches: [
+    { id: 'coach-a', name: 'A教练', status: 'active', campus: 'mabao' },
+    { id: 'coach-b', name: 'B教练', status: 'active', campus: 'mabao' },
+    { id: 'coach-c', name: 'C教练', status: 'inactive', campus: 'mabao' }
+  ],
+  students: [
+    { id: 'old-a', primaryCoach: 'A教练' },
+    { id: 'trial-a', primaryCoach: 'A教练' },
+    { id: 'trial-b', primaryCoach: 'B教练' }
+  ],
+  purchases: [
+    { id: 'old-a-before', studentId: 'old-a', ownerCoach: 'A教练', actualAmount: 3000, purchaseDate: '2026-05-20', status: 'active', courseType: '私教课' },
+    { id: 'old-a-renewal', studentId: 'old-a', ownerCoach: 'A教练', amountPaid: 5000, purchaseDate: '2026-06-03', status: 'active', courseType: '私教课' },
+    { id: 'trial-a-deal', studentId: 'trial-a', ownerCoach: 'A教练', finalAmount: 1200, purchaseDate: '2026-06-04', status: 'active', courseType: '私教课' },
+    { id: 'voided-a', studentId: 'trial-a', ownerCoach: 'A教练', actualAmount: 9000, purchaseDate: '2026-06-05', status: 'voided', courseType: '私教课' },
+    { id: 'outside-a', studentId: 'trial-a', ownerCoach: 'A教练', actualAmount: 8000, purchaseDate: '2026-06-12', status: 'active', courseType: '私教课' },
+    { id: 'trial-b-deal', studentId: 'trial-b', ownerCoach: 'B教练', actualAmount: 700, purchaseDate: '2026-06-06', status: 'active', courseType: '小班课' }
+  ],
+  schedule: [
+    { id: 'a-private', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-02T09:00:00+08:00', endTime: '2026-06-02T11:00:00+08:00', status: '已排课', campus: 'mabao', courseType: '私教课' },
+    { id: 'a-trial', coach: 'A教练', studentId: 'trial-a', startTime: '2026-06-03T09:00:00+08:00', endTime: '2026-06-03T10:00:00+08:00', status: '已结束', campus: 'mabao', courseType: '体验课', experienceType: '私教体验课' },
+    { id: 'a-small', coach: 'A教练', studentIds: ['old-a', 'trial-a'], startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:30:00+08:00', status: '待上课', campus: 'mabao', courseType: '小班课' },
+    { id: 'a-cancel', coach: 'A教练', startTime: '2026-06-05T09:00:00+08:00', endTime: '2026-06-05T12:00:00+08:00', status: '已取消', campus: 'mabao', courseType: '私教课' },
+    { id: 'b-trial', coach: 'B教练', studentId: 'trial-b', startTime: '2026-06-03T11:00:00+08:00', endTime: '2026-06-03T12:00:00+08:00', status: '已结束', campus: 'mabao', courseType: '体验课' }
+  ],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' }
+});
+
+const coachA = coachDashboardMetrics.coach.rows.find(row => row.coach === 'A教练');
+const coachB = coachDashboardMetrics.coach.rows.find(row => row.coach === 'B教练');
+assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C教练'), false, 'coach dashboard should exclude inactive coaches');
+assert.strictEqual(coachA.availableHours, 48, 'coach available hours should use the same selected period as used hours');
+assert.strictEqual(coachA.usedHours, 4.5, 'coach utilization should include scheduled and completed non-cancelled lessons in the selected period');
+assert.strictEqual(coachA.utilizationRate, 9.4, 'coach utilization should divide used hours by selected-period available hours');
+assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use ownerCoach course receipts inside the selected purchase period');
+assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should count later course purchases for completed trial students');
+assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
+assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
+assert.strictEqual(coachB.revenue, 700, 'coach revenue should not borrow other coaches receipts');
+assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6900, 'coach top cards should sum ownerCoach course receipts only');
+assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-40%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
+assert.deepStrictEqual(
+  coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
+  ['0%-40% 闲置 #9B5E5E', '40%-60% 偏低 #C58A3A', '60%-75% 待提升 #466A9F', '75%-90% 健康 #2F7D67', '90%+ 负荷 #D97706'],
+  'coach utilization bands should use concise labels and distinct overload color'
+);
+assert.ok(coachDashboardMetrics.coach.revenueParetoRows.find(row => row.coach === 'A教练')?.cumulativeShare > 80, 'coach dashboard should expose pareto contribution rows');
+assert.strictEqual(coachDashboardMetrics.coach.courseMixRows.find(row => row.coach === 'A教练')?.privateHours, 2, 'coach dashboard should expose chart-ready course mix rows');
+assert.ok(coachDashboardMetrics.coach.alerts.find(row => row.type === '低利用'), 'coach dashboard should expose diagnostic alert cards');
+
+const coachFallbackMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'siren', name: 'Siren', status: 'active' }],
+  purchases: [
+    { id: 'fallback-paid', studentId: 'stu-1', coachPriceName: 'siren', paidAmount: 1000, purchaseDate: '2026-06-01', status: 'active' },
+    { id: 'fallback-snapshot', studentId: 'stu-2', coachPriceSnapshot: { coachName: 'Siren', amountPaid: 800 }, purchaseDate: '2026-06-02', status: 'active' },
+    { id: 'unassigned', studentId: 'stu-3', ownerCoach: '没有固定教练', amountPaid: 9999, purchaseDate: '2026-06-03', status: 'active' }
+  ],
+  schedule: [
+    { id: 'siren-hour', coach: 'Siren', startTime: '2026-06-01T10:00:00+08:00', endTime: '2026-06-01T11:00:00+08:00', status: '已排课' },
+    { id: 'siren-lower-hour', coach: 'siren', startTime: '2026-06-02T10:00:00+08:00', endTime: '2026-06-02T11:00:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-04T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+const sirenRow = coachFallbackMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
+assert.strictEqual(coachFallbackMetrics.coach.rows.some(row => row.coach === '没有固定教练'), false, 'coach dashboard should exclude unassigned ownership from person efficiency');
+assert.strictEqual(sirenRow?.revenue, 1800, 'coach dashboard should merge coach aliases and use real receipt fallback fields');
+assert.strictEqual(sirenRow?.usedHours, 2, 'coach dashboard should merge schedule aliases into the same coach row');
 
 console.log('operations metrics tests passed');
