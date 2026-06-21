@@ -207,23 +207,14 @@ function renderOperationsOverview(data) {
   const totalIncome = operationsCardNumber(cards.totalIncome);
   const recognizedRevenue = operationsCardNumber(cards.recognizedRevenue);
   const pendingRevenue = operationsCardNumber(cards.pendingRevenue);
-  const incomeRate = totalIncome ? Math.round(recognizedRevenue * 1000 / totalIncome) / 10 : 0;
   const conversion = operationsConversionView(data);
-  return `<section class="operations-command-center operations-overview-command">
-    <div class="operations-command-head">
-      <div>
-        <h2>公司经营总盘</h2>
-        <p>先看公司整体收入、入账、待履约、场地效率和教练人效，再下钻到专题页查原因</p>
-      </div>
-    </div>
-    <div class="operations-kpi-row">
-      <div class="operations-kpi-card"><span>总收入</span><strong>${operationsCardText(cards.totalIncome)}</strong><p>来自财务总览同口径</p></div>
-      <div class="operations-kpi-card"><span>入账流水</span><strong>${operationsMoneyText(recognizedRevenue)}</strong><p>已入账率 ${fmt(incomeRate)}%</p></div>
-      <div class="operations-kpi-card"><span>待履约余额</span><strong>${operationsMoneyText(pendingRevenue)}</strong><p>未入账/待核销金额</p></div>
-      <div class="operations-kpi-card"><span>成交笔数</span><strong>${operationsCardText(cards.tradeCount)}</strong><p>按财务聚合成交数</p></div>
-      <div class="operations-kpi-card"><span>场地利用率</span><strong>${operationsCardText(data.court?.cards?.utilizationRate)}</strong><p>复用场地运转口径</p></div>
-    </div>
-  </section>
+  return `<div class="operations-kpi-row operations-overview-kpi-row">
+    <div class="operations-kpi-card"><span>总收入</span><strong>${operationsCardText(cards.totalIncome)}</strong></div>
+    <div class="operations-kpi-card"><span>入账流水</span><strong>${operationsMoneyText(recognizedRevenue)}</strong></div>
+    <div class="operations-kpi-card"><span>待履约余额</span><strong>${operationsMoneyText(pendingRevenue)}</strong></div>
+    <div class="operations-kpi-card"><span>成交笔数</span><strong>${operationsCardText(cards.tradeCount)}</strong></div>
+    <div class="operations-kpi-card"><span>场地利用率</span><strong>${operationsCardText(data.court?.cards?.utilizationRate)}</strong></div>
+  </div>
   <div class="operations-overview-grid">
     ${operationsOverviewRevenueMix(data)}
     ${operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue)}
@@ -495,50 +486,58 @@ function renderOperationsCoach(data) {
   const coach = data.coach || {};
   const rows = coach.rows || [];
   const cards = coach.cards || {};
+  const trends = coach.trends || [];
   const used = Number(cards.usedHours?.value) || rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0);
   const available = Number(cards.availableHoursThisWeek?.value) || rows.reduce((sum, row) => sum + (Number(row.availableHours) || 0), 0);
   const revenue = Number(cards.revenue?.value) || rows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0);
   const kpis = [
-    { label: '在岗教练', value: cards.activeCoaches?.value || rows.length, unit: '人', caption: `${fmt(available)} 周期可排小时`, tone: 'neutral' },
-    { label: '工时利用率', value: `${fmt(cards.utilizationRate?.value || 0)}%`, caption: `${fmt(used)} / ${fmt(available)} 小时`, tone: operationsCoachKpiTone(cards.utilizationRate?.value || 0) },
-    { label: '归属课程实收', value: `¥${fmt(revenue)}`, caption: '按课程购买归属教练统计', tone: revenue > 0 ? 'good' : 'warn' },
-    { label: '体验课转化率', value: `${fmt(cards.trialConversionRate?.value || 0)}%`, caption: '体验后归属购买转化', tone: 'neutral' },
-    { label: '老客续费率', value: `${fmt(cards.renewalRate?.value || 0)}%`, caption: '归属购买学员再次购买', tone: 'neutral' }
+    { label: '在岗教练', value: cards.activeCoaches?.value || rows.length, unit: '人', rawValue: cards.activeCoaches?.value || rows.length, meta: `${fmt(available)} 可排小时`, help: '在岗且未停用的教练数', trendKey: 'activeCoaches', tone: 'neutral' },
+    { label: '工时利用率', value: `${fmt(cards.utilizationRate?.value || 0)}%`, rawValue: cards.utilizationRate?.value || 0, meta: `${fmt(used)} / ${fmt(available)} 小时`, help: '已排课小时 / 可排课小时', trendKey: 'utilizationRate', tone: operationsCoachKpiTone(cards.utilizationRate?.value || 0) },
+    { label: '归属课程实收', value: `¥${fmt(revenue)}`, rawValue: revenue, meta: '课程归属实收', help: '按课程归属教练统计的实收金额', trendKey: 'revenue', tone: revenue > 0 ? 'revenue' : 'warn' },
+    { label: '体验课转化率', value: `${fmt(cards.trialConversionRate?.value || 0)}%`, rawValue: cards.trialConversionRate?.value || 0, meta: '体验后购买转化', help: '体验后购买课包人数 / 体验课人数', trendKey: 'trialConversionRate', tone: 'good' },
+    { label: '老客续费率', value: `${fmt(cards.renewalRate?.value || 0)}%`, rawValue: cards.renewalRate?.value || 0, meta: '到期老客再次购买', help: '续费学员数 / 到期老学员数', trendKey: 'renewalRate', tone: 'good' }
   ];
-  return `<div class="operations-coach-kpi-strip">${kpis.map(renderOperationsCoachKpi).join('')}</div>
+  return `<div class="operations-coach-kpi-strip" data-trend-count="${trends.length}">${kpis.map(card => renderOperationsCoachKpi({
+    ...card,
+    trendValues: operationsCoachTrendValues(trends, card.trendKey, card.rawValue)
+  })).join('')}</div>
   <div class="operations-coach-hero-grid">
     <section class="operations-section operations-coach-primary-card">
-      <div class="operations-module-head"><div><h3>产值 × 工时利用率矩阵</h3><span>横轴越右越饱和，纵轴越高越能创造课程实收</span></div></div>
+      ${operationsCoachChartHeader('产值 × 工时利用率矩阵')}
       <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachMatrixChart"></div>
     </section>
     <section class="operations-section operations-coach-primary-card">
-      <div class="operations-module-head"><div><h3>转化 × 续费能力矩阵</h3><span>只在有体验/续费基数时展示，避免把缺失数据误读为 0 能力</span></div></div>
+      ${operationsCoachChartHeader('转化 × 续费能力矩阵')}
       <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachCapabilityChart"></div>
     </section>
   </div>
   <div class="operations-coach-secondary-grid">
     <section class="operations-section">
-      <div class="operations-module-head"><div><h3>教练产值贡献排行</h3><span>柱子是归属实收，折线是个人收入占比</span></div>${operationsCoachTitleLegend([
-        { label: '归属实收', color: '#805435' },
-        { label: '个人收入占比', color: '#466A9F', line: true }
-      ])}</div>
+      ${operationsCoachChartHeader('教练产值贡献排行', operationsCoachTitleLegend([
+        { label: '归属实收', color: '#8B5E3C' },
+        { label: '个人收入占比', color: '#3B6EA8', line: true }
+      ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>
     <section class="operations-section">
-      <div class="operations-module-head"><div><h3>利用率五档分布</h3><span>看团队整体是闲置、健康还是过载</span></div></div>
+      ${operationsCoachChartHeader('利用率五档分布')}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachUtilizationBandsChart"></div>
     </section>
   </div>
   <div class="operations-coach-secondary-grid">
     <section class="operations-section operations-coach-wide-card">
-      <div class="operations-module-head"><div><h3>课程结构占比</h3><span>体验课、私教课、小班课按课时拆分</span></div>${operationsCoachTitleLegend([
-        { label: '体验课', color: '#C58A3A' },
-        { label: '私教课', color: '#466A9F' },
-        { label: '小班课', color: '#2F7D67' }
-      ])}</div>
+      ${operationsCoachChartHeader('课程结构占比', operationsCoachTitleLegend([
+        { label: '体验课', color: '#D89135' },
+        { label: '私教课', color: '#3B6EA8' },
+        { label: '小班课', color: '#2E8B6D' }
+      ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
     </section>
   </div>`;
+}
+
+function operationsCoachChartHeader(title, extra = '') {
+  return `<div class="operations-module-head"><div><h3>${esc(title)}</h3></div>${extra || ''}</div>`;
 }
 
 function operationsCoachTitleLegend(items = []) {
@@ -594,9 +593,74 @@ function operationsCoachKpiTone(value) {
 
 function renderOperationsCoachKpi(card = {}) {
   return `<div class="operations-coach-kpi ${esc(card.tone || 'neutral')}">
-    <span>${esc(card.label || '')}</span>
-    <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-    <p>${esc(card.caption || '')}</p>
+    <div class="operations-coach-kpi-main">
+      <div class="operations-coach-kpi-head">
+        <span>${esc(card.label || '')}</span>
+        <button class="operations-coach-kpi-help" type="button" aria-label="${esc(card.help || card.label || '')}" data-tip="${esc(card.help || '')}">?</button>
+      </div>
+      <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+      <p>${esc(card.meta || '')}</p>
+    </div>
+    ${operationsCoachSparklineSvg(card.trendValues || [], card.trendKey)}
+  </div>`;
+}
+
+function operationsCoachTrendValues(trends = [], key = '', fallbackValue = 0) {
+  const values = (trends || [])
+    .filter(row => row && row.date && Object.prototype.hasOwnProperty.call(row, key))
+    .map(row => Number(row[key]) || 0)
+    .filter(value => Number.isFinite(value));
+  if (values.length >= 2) return values;
+  return [];
+}
+
+function operationsCoachTrendToneColor(key, values = []) {
+  const first = Number(values[0]) || 0;
+  const last = Number(values[values.length - 1]) || 0;
+  if (key === 'revenue') return '#8B5E3C';
+  if (key === 'activeCoaches') return '#3B6EA8';
+  return last >= first ? '#2E8B6D' : '#E05252';
+}
+
+function operationsCoachSparklineValues(values = []) {
+  return (values || []).map(value => Number(value) || 0).filter(value => Number.isFinite(value)).slice(-24);
+}
+
+function operationsCoachSparklineTooltip(values = [], key = '') {
+  const list = operationsCoachSparklineValues(values);
+  if (list.length < 2) return '';
+  const first = Number(list[0]) || 0;
+  const last = Number(list[list.length - 1]) || 0;
+  const change = last - first;
+  const suffix = ['utilizationRate', 'trialConversionRate', 'renewalRate'].includes(key) ? '%' : '';
+  const prefix = key === 'revenue' ? '¥' : '';
+  return `最新 ${prefix}${fmt(last)}${suffix}，变化 ${change >= 0 ? '+' : ''}${prefix}${fmt(change)}${suffix}`;
+}
+
+function operationsCoachSparklineSvg(values = [], key = '') {
+  const list = operationsCoachSparklineValues(values);
+  if (list.length < 2) return '<div class="operations-coach-kpi-sparkline"></div>';
+  const tip = operationsCoachSparklineTooltip(list, key);
+  const color = operationsCoachTrendToneColor(key, values);
+  const min = Math.min(...list);
+  const max = Math.max(...list);
+  const isFlat = max === min;
+  const range = Math.max(1, max - min);
+  const width = 132;
+  const height = 44;
+  const points = list.map((value, index) => {
+    const x = list.length === 1 ? 0 : Math.round(index * width / (list.length - 1));
+    const y = isFlat ? Math.round(height / 2) : Math.round(6 + (height - 12) * (1 - ((value - min) / range)));
+    return `${x},${y}`;
+  }).join(' ');
+  const area = `0,${height} ${points} ${width},${height}`;
+  const gradientId = `coachSpark${String(key || 'line').replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  return `<div class="operations-coach-kpi-sparkline" data-tip="${esc(tip)}">
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".18"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${esc(area)}" fill="url(#${esc(gradientId)})"></polygon>
+      <polyline points="${esc(points)}" fill="none" stroke="${esc(color)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+    </svg>
   </div>`;
 }
 
@@ -905,23 +969,15 @@ function renderConversionCommandCenter(data, conversion) {
     ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
     ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
   </div>`;
-  return `<section class="operations-command-center">
-    <div class="operations-command-head">
-      <div>
-        <h2>转化与留存数据中心</h2>
-        <p>通过线索、预约、到课、成交、续费，定位每个环节的流失和高价值渠道</p>
-      </div>
-      ${filters}
-    </div>
+  return `<div class="operations-conversion-toolbar">${filters}</div>
     <div class="operations-kpi-row">
       ${operationsConversionKpiCards(conversion.courseFunnel || []).map(card => `<div class="operations-kpi-card">
         <span>${esc(card.label)}</span>
         <strong>${esc(card.value)}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-        <p>${esc(card.caption)}</p>
       </div>`).join('')}
     </div>
     <div class="operations-loss-summary">最大流失环节：${esc(summary.worst?.from || '-')} → ${esc(summary.worst?.to || '-')}，流失 ${fmt(summary.worst?.lossRate || 0)}%</div>
-  </section>`;
+  `;
 }
 
 function renderConversionInsightModule(conversion) {

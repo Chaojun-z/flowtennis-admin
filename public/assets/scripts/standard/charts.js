@@ -121,7 +121,7 @@ function buildStandardBarLineChartOption({ labels = [], barValues = [], lineValu
     tooltip: { trigger: 'axis', formatter: formatOperationChartTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     legend: { bottom: 4, left: 'center', itemGap: 22, itemWidth: 28, itemHeight: 12, textStyle: { color: '#6E625A', fontSize: 12, fontWeight: 400 } },
     grid: { left: 8, right: 8, top: 16, bottom: 38, containLabel: false },
-    xAxis: { type: 'category', data: labels, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#9CA3AF', fontSize: 11 } },
+    xAxis: { type: 'category', data: labels, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#A19080', fontSize: 11 } },
     yAxis: [
       { type: 'value', splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, splitLine: { show: false } },
       { type: 'value', splitNumber: 4, min: 0, max: 100, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, splitLine: { show: false } }
@@ -152,10 +152,12 @@ function buildStandardBarLineChartOption({ labels = [], barValues = [], lineValu
 
 function operationsCourtQuadrantColor(row = {}) {
   if (!row.hasData) return '#CBD5E1';
-  const conversion = Number(row.trialConversionRate) || Number(row.repeatCustomerConversionRate) || 0;
-  if (conversion >= 70) return '#14B8A6';
-  if (conversion >= 35) return '#3B82F6';
-  return '#F59E0B';
+  const utilization = Number(row.utilizationRate) || 0;
+  if (utilization < 10) return '#E05252';
+  if (utilization < 20) return '#D89135';
+  if (utilization < 30) return '#3B6EA8';
+  if (utilization < 40) return '#2E8B6D';
+  return '#14B8A6';
 }
 
 function operationsCourtQuadrantTooltip(item = {}) {
@@ -202,31 +204,32 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
   const data = source.map(row => {
     const bubbleSize = Math.max(18, Math.min(58, 18 + (row.bookingCount / maxBookingCount) * 40));
+    const bubbleColor = operationsCourtQuadrantColor(row);
     return {
       name: row.campusName,
       raw: row,
       value: [row.utilizationRate, row.bookingAmount, row.bookingCount, row.trialConversionRate],
       itemStyle: {
-        color: operationsCourtQuadrantColor(row),
+        color: bubbleColor,
         opacity: 0.82,
         borderColor: '#FFFFFF',
         borderWidth: 2,
         shadowBlur: 14,
-        shadowColor: 'rgba(20,184,166,.22)'
+        shadowColor: `${bubbleColor}33`
       },
       label: { color: '#FFFFFF', fontSize: operationsCourtBubbleLabelSize(row.campusName, bubbleSize) }
     };
   });
   return {
-    color: ['#14B8A6', '#3B82F6', '#F59E0B', '#CBD5E1'],
-    grid: { left: 12, right: 12, top: 28, bottom: 34, containLabel: false },
+    color: ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'],
+    grid: { left: 18, right: 18, top: 28, bottom: 34, containLabel: true },
     tooltip: { trigger: 'item', formatter: operationsCourtQuadrantTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
       min: 0,
       max: 50,
       interval: 10,
-      axisLabel: { formatter: value => `${value}%`, color: '#94A3B8', fontSize: 11 },
+      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -236,7 +239,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       min: 0,
       max: 1000000,
       interval: 200000,
-      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 },
+      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -261,10 +264,22 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
         silent: true,
         symbol: 'none',
         lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-        label: { color: '#64748B', fontSize: 11 },
+        label: { color: '#A19080', fontSize: 11 },
         data: [
           { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
           { name: '平均收入', yAxis: avgRevenue, label: { formatter: '平均收入', position: 'insideEndTop' } }
+        ]
+      },
+      markArea: {
+        silent: true,
+        itemStyle: { opacity: 0.42 },
+        label: { show: false },
+        data: [
+          [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 10 }],
+          [{ xAxis: 10, itemStyle: { color: '#FFFBEB' } }, { xAxis: 20 }],
+          [{ xAxis: 20, itemStyle: { color: '#EFF6FF' } }, { xAxis: 30 }],
+          [{ xAxis: 30, itemStyle: { color: '#ECFDF5' } }, { xAxis: 40 }],
+          [{ xAxis: 40, itemStyle: { color: '#F0FDFA' } }, { xAxis: 50 }]
         ]
       }
     }]
@@ -323,8 +338,8 @@ function buildOperationsOverviewCashChartOption({ totalIncome = 0, recognizedRev
     },
     legend: { bottom: 0, left: 'center', itemWidth: 18, itemHeight: 10, textStyle: { color: '#6E625A', fontSize: 11 } },
     grid: { left: 12, right: 12, top: 28, bottom: 42, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
-    yAxis: { type: 'category', data: ['经营收入'], axisTick: { show: false }, axisLabel: { color: '#8C7B6E', fontSize: 12, fontWeight: 700 } },
+    xAxis: { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
+    yAxis: { type: 'category', data: ['经营收入'], axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11, fontWeight: 400 } },
     series: [
       { name: '已入账', type: 'bar', stack: 'income', data: [recognized], barWidth: 34, itemStyle: { color: '#2F7D67', borderRadius: [6, 0, 0, 6] }, emphasis: { focus: 'series' } },
       { name: '未入账/待履约', type: 'bar', stack: 'income', data: [pending], barWidth: 34, itemStyle: { color: '#C58A3A', borderRadius: [0, 6, 6, 0] }, emphasis: { focus: 'series' } }
@@ -373,11 +388,11 @@ function buildStandardHeatmapChartOption({ rows = [] } = {}) {
 
 function operationsCoachBandColor(value) {
   const rate = Number(value) || 0;
-  if (rate < 40) return '#9B5E5E';
-  if (rate < 60) return '#C58A3A';
-  if (rate < 75) return '#466A9F';
-  if (rate < 90) return '#2F7D67';
-  return '#D97706';
+  if (rate < 40) return '#E05252';
+  if (rate < 60) return '#D89135';
+  if (rate < 75) return '#3B6EA8';
+  if (rate < 90) return '#2E8B6D';
+  return '#D89135';
 }
 
 function operationsCoachShortName(value) {
@@ -393,10 +408,10 @@ function operationsCoachRevenueAxisLabel(value) {
 function operationsCoachCapabilityColor(row = {}) {
   const trial = Number(row.trialConversionRate) || 0;
   const renewal = Number(row.renewalRate) || 0;
-  if (trial >= 30 && renewal >= 50) return { label: '双高', color: '#2F7D67' };
-  if (trial >= 30) return { label: '转化高续费低', color: '#C58A3A' };
-  if (renewal >= 50) return { label: '转化低续费高', color: '#466A9F' };
-  return { label: '双低', color: '#9B5E5E' };
+  if (trial >= 30 && renewal >= 50) return { label: '双高', color: '#2E8B6D' };
+  if (trial >= 30) return { label: '转化高续费低', color: '#D89135' };
+  if (renewal >= 50) return { label: '转化低续费高', color: '#3B6EA8' };
+  return { label: '双低', color: '#E05252' };
 }
 
 function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
@@ -406,7 +421,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
   return {
-    grid: { left: 18, right: 28, top: 30, bottom: 34, containLabel: true },
+    grid: { left: 18, right: 18, top: 30, bottom: 34, containLabel: true },
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -425,7 +440,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       min: 0,
       max: 100,
       interval: 20,
-      axisLabel: { formatter: value => `${value}%`, color: '#94A3B8', fontSize: 11 },
+      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -435,7 +450,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       min: 0,
       max: 1000000,
       interval: 200000,
-      axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#94A3B8', fontSize: 11 },
+      axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -498,7 +513,7 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
   if (!source.length) return { series: [] };
   return {
     ...standardChartBaseOption(),
-    color: ['#805435', '#466A9F'],
+    color: ['#8B5E3C', '#3B6EA8'],
     tooltip: {
       trigger: 'axis',
       formatter: params => {
@@ -515,15 +530,15 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
       textStyle: { fontSize: 12, fontWeight: 400 }
     },
     legend: { show: false },
-    grid: { left: 12, right: 12, top: 14, bottom: 24, containLabel: true },
-    xAxis: { type: 'category', data: source.map(row => row.coach), axisTick: { show: false }, axisLabel: { color: '#8C7B6E', fontSize: 11 } },
+    grid: { left: 48, right: 36, top: 14, bottom: 24, containLabel: false },
+    xAxis: { type: 'category', data: source.map(row => row.coach), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11 } },
     yAxis: [
-      { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
-      { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#94A3B8', fontSize: 11 }, splitLine: { show: false } }
+      { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
+      { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11 }, splitLine: { show: false } }
     ],
     series: [
-      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#805435', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
-      { name: '个人收入占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#466A9F' }, itemStyle: { color: '#466A9F' }, emphasis: { focus: 'series' } }
+      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#8B5E3C', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
+      { name: '个人收入占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
     ]
   };
 }
@@ -552,14 +567,14 @@ function buildOperationsCoachUtilizationBandsChartOption({ rows = [] } = {}) {
       },
       textStyle: { fontSize: 12, fontWeight: 400 }
     },
-    grid: { left: 92, right: 58, top: 18, bottom: 30, containLabel: true },
+    grid: { left: 96, right: 64, top: 18, bottom: 30, containLabel: false },
     xAxis: {
       type: 'value',
       min: 0,
       max: axisMax,
       interval: Math.max(1, axisMax / 7),
       position: 'bottom',
-      axisLabel: { formatter: '{value}人', color: '#8FA0B8', fontSize: 10, fontWeight: 400 },
+      axisLabel: { formatter: '{value}人', color: '#A19080', fontSize: 11, fontWeight: 400 },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { show: true, lineStyle: { color: '#E9EEF6', width: 1 } }
@@ -569,7 +584,7 @@ function buildOperationsCoachUtilizationBandsChartOption({ rows = [] } = {}) {
       data: source.map(row => `${row.band} ${row.label}`),
       axisTick: { show: false },
       axisLine: { show: true, lineStyle: { color: '#5F6673', width: 1.3 } },
-      axisLabel: { color: '#7B8798', fontSize: 11, fontWeight: 400, margin: 12 },
+      axisLabel: { color: '#A19080', fontSize: 11, fontWeight: 400, margin: 12 },
       splitLine: { show: false }
     },
     series: [{
@@ -581,7 +596,7 @@ function buildOperationsCoachUtilizationBandsChartOption({ rows = [] } = {}) {
         value: row.count,
         count: row.count,
         share: row.share,
-        itemStyle: { color: '#975D5A', borderRadius: [0, 6, 6, 0] }
+        itemStyle: { color: row.band === '0%-40%' ? '#E05252' : row.band === '75%-90%' ? '#2E8B6D' : row.band === '60%-75%' ? '#3B6EA8' : '#D89135', borderRadius: [0, 6, 6, 0] }
       })),
       label: {
         show: true,
@@ -607,16 +622,16 @@ function buildOperationsCoachCourseMixChartOption({ rows = [] } = {}) {
     .sort((a, b) => b.totalHours - a.totalHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'))
     .slice(0, 10);
   return {
-    color: ['#C58A3A', '#466A9F', '#2F7D67'],
+    color: ['#D89135', '#3B6EA8', '#2E8B6D'],
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, textStyle: { fontSize: 12, fontWeight: 400 } },
     legend: { show: false },
-    grid: { left: 12, right: 12, top: 14, bottom: 24, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { formatter: '{value}h', color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
-    yAxis: { type: 'category', data: displayRows.map(row => row.coach), axisTick: { show: false }, axisLabel: { color: '#8C7B6E', fontSize: 11 } },
+    grid: { left: 96, right: 22, top: 14, bottom: 24, containLabel: false },
+    xAxis: { type: 'value', axisLabel: { formatter: '{value}h', color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
+    yAxis: { type: 'category', data: displayRows.map(row => row.coach), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11, margin: 10 } },
     series: [
-      { name: '体验课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.trialHours), itemStyle: { color: '#C58A3A' }, emphasis: { focus: 'series' } },
-      { name: '私教课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.privateHours), itemStyle: { color: '#466A9F' }, emphasis: { focus: 'series' } },
-      { name: '小班课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.smallGroupHours), itemStyle: { color: '#2F7D67' }, emphasis: { focus: 'series' } }
+      { name: '体验课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.trialHours), itemStyle: { color: '#D89135' }, emphasis: { focus: 'series' } },
+      { name: '私教课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.privateHours), itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } },
+      { name: '小班课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.smallGroupHours), itemStyle: { color: '#2E8B6D' }, emphasis: { focus: 'series' } }
     ]
   };
 }
@@ -628,7 +643,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
   return {
-    grid: { left: 20, right: 24, top: 28, bottom: 38, containLabel: true },
+    grid: { left: 18, right: 18, top: 28, bottom: 38, containLabel: true },
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -640,8 +655,8 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
         </div>`;
       }
     },
-    xAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    xAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    yAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     series: [{
       name: '转化续费能力',
       type: 'scatter',

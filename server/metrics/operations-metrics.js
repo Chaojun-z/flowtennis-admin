@@ -72,6 +72,19 @@ function dateRangeDayCount(range = {}) {
   return Math.floor((end - start) / 86400000) + 1;
 }
 
+function addUtcDays(day, offset) {
+  const ms = dateKeyUtcMs(day);
+  if (ms == null) return '';
+  return new Date(ms + offset * 86400000).toISOString().slice(0, 10);
+}
+
+function enumerateDateRange(range = {}) {
+  const normalized = normalizeDateRange(range);
+  const count = dateRangeDayCount(normalized);
+  if (!count) return [];
+  return Array.from({ length: count }, (_, index) => addUtcDays(normalized.startDate, index)).filter(Boolean);
+}
+
 function beijingDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return dateKey(value);
@@ -841,11 +854,11 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
 
 function buildCoachUtilizationBands(rows = []) {
   const order = [
-    { band: '0%-40%', label: '闲置', color: '#9B5E5E' },
-    { band: '40%-60%', label: '偏低', color: '#C58A3A' },
-    { band: '60%-75%', label: '待提升', color: '#466A9F' },
-    { band: '75%-90%', label: '健康', color: '#2F7D67' },
-    { band: '90%+', label: '负荷', color: '#D97706' }
+    { band: '0%-40%', label: '闲置', color: '#E05252' },
+    { band: '40%-60%', label: '偏低', color: '#D89135' },
+    { band: '60%-75%', label: '待提升', color: '#3B6EA8' },
+    { band: '75%-90%', label: '健康', color: '#2E8B6D' },
+    { band: '90%+', label: '负荷', color: '#D89135' }
   ];
   return order.map(band => ({
     ...band,
@@ -864,6 +877,55 @@ function buildCoachParetoRows(rows = []) {
       revenue: row.revenue,
       revenueShare: rate(row.revenue, total),
       cumulativeShare: rate(cumulative, total)
+    };
+  });
+}
+
+function coachTrendDays({ schedule = [], purchases = [], dateRange = {} } = {}) {
+  const selectedDays = enumerateDateRange(dateRange);
+  if (selectedDays.length) return selectedDays;
+  const days = new Set();
+  (schedule || []).forEach(row => {
+    const day = dateKey(row.startTime || row.date || row.createdAt);
+    if (day) days.add(day);
+  });
+  (purchases || []).forEach(row => {
+    const day = purchaseDate(row);
+    if (day) days.add(day);
+  });
+  const sorted = [...days].sort();
+  if (sorted.length !== 1) return sorted;
+  return enumerateDateRange({ startDate: addUtcDays(sorted[0], -6), endDate: sorted[0] });
+}
+
+function buildCoachTrendRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
+  return coachTrendDays({ schedule, purchases, dateRange }).map(day => {
+    const dayRange = { startDate: day, endDate: day };
+    const daySchedule = (schedule || []).filter(row => dateKey(row.startTime || row.date || row.createdAt) === day);
+    const dayPurchases = (purchases || []).filter(row => purchaseDate(row) === day);
+    const rows = buildCoachRows({
+      coaches,
+      schedule: daySchedule,
+      purchases: dayPurchases,
+      allPurchases,
+      dateRange: dayRange,
+      campuses,
+      now
+    });
+    const usedHours = round(rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0), 1);
+    const availableHours = round(rows.reduce((sum, row) => sum + (Number(row.availableHours) || 0), 0), 1);
+    const revenue = money(rows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
+    const trialBase = rows.reduce((sum, row) => sum + (Number(row.trialBase) || 0), 0);
+    const trialConverted = rows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
+    const oldCustomerBase = rows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
+    const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
+    return {
+      date: day,
+      activeCoaches: rows.length,
+      utilizationRate: availableHours ? round(usedHours * 100 / availableHours, 1) : 0,
+      revenue,
+      trialConversionRate: rate(trialConverted, trialBase),
+      renewalRate: rate(renewalCount, oldCustomerBase)
     };
   });
 }
@@ -1668,6 +1730,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
       },
       rows: coachRows,
       period: coachPeriod,
+      trends: buildCoachTrendRows({
+        coaches: data.coaches || [],
+        schedule: rangedData.schedule || [],
+        purchases: rangedData.purchases || [],
+        allPurchases: data.purchases || [],
+        dateRange,
+        campuses: data.campuses || [],
+        now
+      }),
       utilizationBands: buildCoachUtilizationBands(coachRows),
       revenueParetoRows: buildCoachParetoRows(coachRows),
       courseMixRows: buildCoachCourseMixRows(coachRows),

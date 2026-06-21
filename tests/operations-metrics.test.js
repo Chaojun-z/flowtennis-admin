@@ -650,11 +650,32 @@ assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours
 assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
 assert.strictEqual(coachB.revenue, 700, 'coach revenue should not borrow other coaches receipts');
 assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6900, 'coach top cards should sum ownerCoach course receipts only');
+assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
+assert.strictEqual(coachDashboardMetrics.coach.trends.length, 7, 'coach KPI trends should cover each selected day');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the daily selected-period denominator');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use daily ownerCoach course receipts');
+const allTimeCoachTrendMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
+  packages: [],
+  purchases: [{ id: 'course-one', ownerCoach: 'A教练', studentId: 'old-a', amount: 1200, purchaseDate: '2026-06-04', type: '课程购买' }],
+  schedule: [{ id: 'one-lesson', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:00:00+08:00', status: '已排课', courseType: '私教课' }],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04T12:00:00+08:00')
+});
+assert.ok(allTimeCoachTrendMetrics.coach.trends.length >= 7, 'all-time coach KPI trends should still provide enough continuous points for sparklines');
+assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.at(-1)?.date, '2026-06-04', 'all-time coach KPI trends should end at the latest coach activity date');
 assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-40%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
-  ['0%-40% 闲置 #9B5E5E', '40%-60% 偏低 #C58A3A', '60%-75% 待提升 #466A9F', '75%-90% 健康 #2F7D67', '90%+ 负荷 #D97706'],
-  'coach utilization bands should use concise labels and distinct overload color'
+  ['0%-40% 闲置 #E05252', '40%-60% 偏低 #D89135', '60%-75% 待提升 #3B6EA8', '75%-90% 健康 #2E8B6D', '90%+ 负荷 #D89135'],
+  'coach utilization bands should use concise labels and the unified dashboard palette'
 );
 assert.ok(coachDashboardMetrics.coach.revenueParetoRows.find(row => row.coach === 'A教练')?.cumulativeShare > 80, 'coach dashboard should expose pareto contribution rows');
 assert.strictEqual(coachDashboardMetrics.coach.courseMixRows.find(row => row.coach === 'A教练')?.privateHours, 2, 'coach dashboard should expose chart-ready course mix rows');
