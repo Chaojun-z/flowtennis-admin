@@ -382,6 +382,8 @@ function leadFollowupTypeOptions(){
   return LEAD_FOLLOWUP_TYPE_OPTIONS;
 }
 function leadStatusAfterOptions(){
+  const preferred=FlowTennisBusinessTaxonomy.values('leadFollowupStatuses');
+  if(preferred.length)return preferred.map(value=>({value,label:value}));
   return LEAD_STATUS_AFTER_OPTIONS;
 }
 function leadLevelPresetValue(value){

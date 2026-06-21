@@ -106,6 +106,10 @@ assert.doesNotMatch(fnBody('courtBookingDrawerHtml'), /\$\{form\}<div class="sch
 assert.match(pagesCss, /membership-booking-records[\s\S]*detail-drawer-table-wrapper[\s\S]*max-height:min\(72vh,720px\)/, 'booking records table should use a taller drawer table area');
 assert.match(html, /function openCourtBookingEntryInline/, 'booking entry should expand inline on demand');
 assert.match(fnBody('courtBookingDrawerHtml'), /renderStandardDropdownHtml\('nrStudentId','关联学员'[\s\S]*renderStandardDropdownHtml\('nrCompanionCoach','陪打教练'/, 'booking tab should keep linked student and companion coach fields');
+assert.match(fnBody('courtBookingDrawerHtml'), /courtVenueOptionsForCampus\(defaultCampus/, 'booking tab should read venue options from campus config');
+assert.match(fnBody('courtBookingDrawerHtml'), /handleCourtFinanceCampusChange/, 'changing booking campus should refresh the configured venue dropdown');
+assert.match(fnBody('saveCourtFinanceRecord'), /const selectedVenue=courtVenueByValue\(recCampus,venueValue\)/, 'booking save should resolve configured venue metadata');
+assert.match(fnBody('saveCourtFinanceRecord'), /venueId:selectedVenue\?\.id\|\|''[\s\S]*venueSpaceType:selectedVenue\?\.spaceType\|\|''/, 'booking save should persist venue id and indoor/outdoor type');
 assert.match(fnBody('openCourtFinanceModal'), /openCourtMembershipPanel\(courtId,\{tab:'booking'\}\)/, 'legacy booking entry should open the membership booking drawer tab');
 assert.match(fnBody('openCourtFinanceModal'), /membershipBookingEntryOpen=true[\s\S]*openCourtMembershipPanel\(courtId,\{tab:'booking'\}\)/, 'legacy booking entry should open the booking tab with entry form expanded');
 assert.match(html, /function membershipOrderDrawerHtml/, 'membership order form should render inside the drawer');

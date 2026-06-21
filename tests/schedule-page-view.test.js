@@ -85,11 +85,13 @@ assert.match(fnBody('refreshSchEntitlementOptions'), /refreshScheduleStudentEnti
 assert.doesNotMatch(fnBody('refreshSchEntitlementOptions'), /ids\.length>1\)\{setScheduleEntitlementDropdown\(\[\], '', '系统按参与学员自动扣课'\)/, 'multi-student package refresh should not hide package details behind one generic message');
 assert.match(fnBody('openScheduleModal'), /上课教练[\s\S]*sch_coach[\s\S]*地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_ownLocationRow[\s\S]*sch_campus[\s\S]*sch_venue/, 'own campus location fields should sit after coach and location type');
 assert.match(source, /function scheduleVenueOptionsForCampus\(/, 'schedule page should expose venue options by campus');
-assert.match(fnBody('scheduleVenueOptionsForCampus'), /shilipu[\s\S]*5号场/, 'shilipu should expose 1-5 courts');
+assert.match(fnBody('scheduleVenueOptionsForCampus'), /activeCampusVenueRows\(campusCode\)/, 'schedule page should read venue options from campus config');
 assert.match(source, /function scheduleCampusAllowsCustomVenue\(/, 'schedule page should expose custom venue rule by campus');
-assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return true/, 'all campuses should allow custom venue input');
+assert.match(fnBody('scheduleCampusAllowsCustomVenue'), /return !activeCampusVenueRows\(campusCode\)\.length/, 'schedule page should only allow custom venues when a campus has no configured venues');
 assert.match(fnBody('openScheduleModal'), /sch_venueFieldHost/, 'schedule modal should render venue through a dedicated host');
 assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedule campus change should refresh venue options');
+assert.match(fnBody('saveSchedule'), /const selectedVenue=locationType==='own'\?scheduleVenueByValue\(campusValue,venueValue\):null/, 'schedule save should resolve selected venue metadata');
+assert.match(fnBody('saveSchedule'), /venueId:selectedVenue\?\.id\|\|''[\s\S]*venueSpaceType:selectedVenue\?\.spaceType\|\|''/, 'schedule save should persist venue id and indoor/outdoor type for configured venues');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit after coach and location type');
 assert.match(fnBody('openScheduleModal'), /学员姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule modal should follow the adjusted editable field order');
 assert.match(fnBody('openScheduleModal'), /id="sch_lc_label">消课时数/, 'schedule modal should label scheduled lesson hours as 消课时数');

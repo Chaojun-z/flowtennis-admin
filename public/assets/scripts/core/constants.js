@@ -24,6 +24,36 @@ function cn(k){
 }
 function campusOpts(sel){return Object.entries(CAMPUS).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${v}</option>`).join('');}
 const VENUES=['1号场','2号场','3号场','4号场'];
+function normalizeCampusVenueStatus(value){
+  const raw=String(value??'').trim();
+  return raw==='inactive'||raw==='停用'?'inactive':'active';
+}
+function normalizeCampusVenues(venues=[]){
+  if(!Array.isArray(venues))return [];
+  return venues.map((venue,index)=>{
+    const name=String(venue?.name||venue?.venue||venue?.label||'').trim();
+    if(!name)return null;
+    const id=String(venue?.id||venue?.venueId||`venue-${index+1}`).trim();
+    const spaceType=String(venue?.spaceType||venue?.venueSpaceType||venue?.type||'室内').trim()||'室内';
+    const sortOrder=Number.isFinite(Number(venue?.sortOrder))?Number(venue.sortOrder):index+1;
+    return {id,name,spaceType,status:normalizeCampusVenueStatus(venue?.status),sortOrder};
+  }).filter(Boolean).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name,'zh-Hans-CN'));
+}
+function campusRowByValue(value){
+  const raw=campusKey(value);
+  return (Array.isArray(campuses)?campuses:[]).find(c=>[c.code,c.id,c.name].map(v=>campusKey(v)).includes(raw))||null;
+}
+function activeCampusVenueRows(campusValue){
+  return normalizeCampusVenues(campusRowByValue(campusValue)?.venues).filter(v=>v.status!=='inactive');
+}
+function activeCampusVenueCount(campusRow){
+  return normalizeCampusVenues(campusRow?.venues).filter(v=>v.status!=='inactive').length;
+}
+function campusVenueByValue(campusValue,venueValue){
+  const raw=String(venueValue||'').trim();
+  if(!raw)return null;
+  return activeCampusVenueRows(campusValue).find(v=>String(v.id)===raw||String(v.name)===raw)||null;
+}
 function venueOpts(sel){
   const extra=sel&&!VENUES.includes(sel)?[`<option value="${esc(sel)}" selected>${esc(sel)}</option>`]:[];
   return [...extra,...VENUES.map(v=>`<option value="${v}"${sel===v?' selected':''}>${v}</option>`)].join('');

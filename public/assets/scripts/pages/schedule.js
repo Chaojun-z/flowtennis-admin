@@ -158,26 +158,6 @@ function scheduleStudentInlineMeta(student){
 function campusOptionLabel(campusRecord){
   return campusRecord?.name||cn(campusRecord?.code||campusRecord?.id)||campusRecord?.code||campusRecord?.id||'—';
 }
-function scheduleVenueOptionsForCampus(campusCode){
-  if(campusCode==='shilipu')return ['1号场','2号场','3号场','4号场','5号场'];
-  return ['1号场','2号场','3号场','4号场'];
-}
-function scheduleCampusAllowsCustomVenue(campusCode){
-  return true;
-}
-function renderScheduleVenueField(campusCode,venueValue=''){
-  if(scheduleCampusAllowsCustomVenue(campusCode))return `<input class="finput tms-form-control" id="sch_venue" value="${esc(venueValue||'')}" placeholder="请直接填写场地">`;
-  const venueOptions=scheduleVenueOptionsForCampus(campusCode).map(v=>({value:v,label:v}));
-  const nextValue=venueOptions.some(item=>item.value===venueValue)?venueValue:(venueOptions[0]?.value||'');
-  return renderStandardDropdownHtml('sch_venue','场地',venueOptions,nextValue,true);
-}
-function syncScheduleVenueField(preserveValue=''){
-  const host=document.getElementById('sch_venueFieldHost');
-  if(!host)return;
-  const currentValue=preserveValue||document.getElementById('sch_venue')?.value||'';
-  const campusValue=document.getElementById('sch_campus')?.value||'';
-  host.innerHTML=renderScheduleVenueField(campusValue,currentValue);
-}
 function handleScheduleCampusChange(){
   refreshSchEntitlementOptions();
   syncScheduleVenueField();
@@ -1055,7 +1035,9 @@ async function saveSchedule(){
   const coachId=coachIdValue(coach);
   const locationType=document.getElementById('sch_locationType')?.value||'own';
   let campusValue=document.getElementById('sch_campus')?.value||'';
-  let venue=document.getElementById('sch_venue')?.value.trim()||'';
+  const venueValue=document.getElementById('sch_venue')?.value.trim()||'';
+  const selectedVenue=locationType==='own'?scheduleVenueByValue(campusValue,venueValue):null;
+  let venue=selectedVenue?.name||venueValue;
   const externalVenueName=document.getElementById('sch_externalVenueName')?.value.trim()||'';
   const externalCourtName=document.getElementById('sch_externalCourtName')?.value.trim()||'';
   const externalNotes=document.getElementById('sch_externalNotes')?.value.trim()||'';
@@ -1097,7 +1079,7 @@ async function saveSchedule(){
   const coachLateFree=!!document.getElementById('sch_coachLateFree')?.checked;
   const lateReason=document.getElementById('sch_lateReason')?.value.trim()||'';
   if(coachLateFree&&!lateReason){toast('请填写迟到原因','warn');return;}
-  const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,experienceType:selectedExperienceType,smallClassType:selectedSmallClassType,courseTypeLevel2:courseTypeLevel2Label(selectedCourseType,selectedExperienceType,selectedSmallClassType),standardCourseType:standardCourseTypeLabel(selectedCourseType,selectedExperienceType,selectedSmallClassType),isTrial:selectedCourseType==='体验课',coach,coachId,locationType,venue,campus:campusKey(campusValue),externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,settlementType,payMethod,paidAmount:settlementType==='direct'?paidAmount:0,entitlementId:settlementType==='package'&&studentIds.length===1?selectedEntitlementId:'',packageName:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName||''):''):'',purchaseId:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.timeBand||''):'',requiresFieldFee:fieldFeeRequired,fieldFeeReason:settlementType==='package'?(selectedEntitlement?.fieldFeeReason||''):'',fieldFeeAmount:fieldFeeEnabled?fieldFeeAmount:0,fieldFeePayMethod,fieldFeeNote,cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
+  const data={startTime,endTime,classId,studentIds,expectedStudentIds:expectedBase,absentStudentIds,studentName:scheduleStudentTextByIds(studentIds).replace(/（[^）]*）/g,''),courseType:selectedCourseType,experienceType:selectedExperienceType,smallClassType:selectedSmallClassType,courseTypeLevel2:courseTypeLevel2Label(selectedCourseType,selectedExperienceType,selectedSmallClassType),standardCourseType:standardCourseTypeLabel(selectedCourseType,selectedExperienceType,selectedSmallClassType),isTrial:selectedCourseType==='体验课',coach,coachId,locationType,venue,venueId:selectedVenue?.id||'',venueSpaceType:selectedVenue?.spaceType||'',campus:campusKey(campusValue),externalVenueName:locationType==='external'?externalVenueName:'',externalCourtName:locationType==='external'?externalCourtName:'',externalNotes:locationType==='external'?externalNotes:'',lessonCount:lc,status,settlementType,payMethod,paidAmount:settlementType==='direct'?paidAmount:0,entitlementId:settlementType==='package'&&studentIds.length===1?selectedEntitlementId:'',packageName:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?(standardPackageLabel(selectedEntitlement,true)||selectedEntitlement.packageName||''):''):'',purchaseId:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.purchaseId||''):'',timeBand:settlementType==='package'&&studentIds.length===1?(selectedEntitlement?.timeBand||''):'',requiresFieldFee:fieldFeeRequired,fieldFeeReason:settlementType==='package'?(selectedEntitlement?.fieldFeeReason||''):'',fieldFeeAmount:fieldFeeEnabled?fieldFeeAmount:0,fieldFeePayMethod,fieldFeeNote,cancelReason,notifyStatus:'',confirmStatus:'',scheduleSource:document.getElementById('sch_scheduleSource')?.value||'排课表',coachLateFree,lateMinutes:parseInt(document.getElementById('sch_lateMinutes')?.value)||0,lateReason,coachLateFieldFeeAmount:parseFloat(document.getElementById('sch_lateFieldFee')?.value)||0,coachLateHandledAt:coachLateFree?new Date().toISOString():'',coachLateHandledBy:coachLateFree?(currentUser?.name||''):'',notes:document.getElementById('sch_notes').value.trim()};
   if(!await appConfirm(scheduleSaveConfirmText(data,selectedEntitlement),{title:'确认排课',confirmText:'确认保存',html:true,hideIcon:true,boxClass:'schedule-confirm-box'}))return;
   let result;
   result=await runStandardMutation('scheduleSaveBtn',async()=>{

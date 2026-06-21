@@ -33,6 +33,11 @@ assert.match(
   /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'settlementType'[\s\S]*'paidAmount'[\s\S]*'payMethod'[\s\S]*\];/,
   '排课轻投影必须包含直接收款字段，否则财务页课程收入会被算成 0'
 );
+assert.match(
+  apiSource,
+  /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'venue'[\s\S]*'venueId'[\s\S]*'venueSpaceType'[\s\S]*\];/,
+  '排课轻投影必须包含标准场地字段，供场地运转看板使用'
+);
 
 assert.match(
   scheduleRoutesSource,

@@ -40,6 +40,14 @@ assert.match(fnBody('renderCampuses'), /tms-action-cell" style="width:\d+px;padd
 assert.match(pagesCss, /#page-campusmgr \.tms-table td\.tms-action-cell\{display:table-cell\}/, 'campus action cells should keep normal table layout while right-aligning links');
 assert.match(fnBody('openCampusModal'), /openStandardModal/, 'campus create/edit should use the standard modal frame');
 assert.match(fnBody('openCampusModal'), /tms-section-header[\s\S]*tms-form-row[\s\S]*tms-form-label[\s\S]*tms-form-control/, 'campus modal should use court-style form fields');
+assert.match(source, /function normalizeCampusVenues\(/, 'campus page should normalize campus venue config');
+assert.match(fnBody('renderCampuses'), /activeCampusVenueCount\(c\)/, 'campus table should derive court count from enabled venues');
+assert.match(fnBody('openCampusModal'), /场地配置[\s\S]*renderCampusVenueRows/, 'campus modal should render the venue config section');
+assert.match(fnBody('campusVenueRowHtml'), /场地名称[\s\S]*室内\/室外[\s\S]*室内[\s\S]*室外/, 'campus venue rows should only ask for venue name and indoor/outdoor type');
+assert.doesNotMatch(fnBody('campusVenueRowHtml'), /状态|排序|ca_venue_status|data-campus-venue-sort/, 'campus venue rows should not expose status or sort controls');
+assert.match(fnBody('collectCampusVenueFormRows'), /status:'active'[\s\S]*sortOrder:index\+1/, 'campus venue status and sort should be derived automatically');
+assert.match(pagesCss, /#ca_venue_rows\{[\s\S]*flex-direction:column[\s\S]*\.campus-venue-row\{[\s\S]*grid-template-columns/, 'campus venue config should use a compact row layout');
+assert.match(fnBody('saveCampus'), /venues:collectCampusVenueFormRows\(\)/, 'saving a campus should persist venue config rows');
 assert.doesNotMatch(fnBody('openCampusModal'), /class="fgrid"|class="fg"|class="flabel"|class="mactions"/, 'campus modal should not use old form classes');
 assert.doesNotMatch(fnBody('openCampusModal'), /confirmDel\([^)]*'campus'|删除/, 'campus modal should not include delete entry');
 
