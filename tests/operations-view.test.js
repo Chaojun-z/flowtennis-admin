@@ -137,10 +137,15 @@ assert.match(stylesSource, /\.operations-page\{display:flex;flex-direction:colum
 assert.match(stylesSource, /operations-court-skeleton-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:14px\}/, 'court loading skeleton should match the real court layout');
 assert.match(stylesSource, /operations-funnel-head strong\{font-size:13px;line-height:20px;font-weight:400/, 'funnel step labels should be 13px normal weight');
 assert.match(operationsSource, /renderStandardChart/, 'operations page should use standard chart wrapper');
-assert.match(operationsSource, /renderOperationsOverview[\s\S]*经营总览[\s\S]*现金入账质量[\s\S]*转化与留存路径[\s\S]*场地运转摘要[\s\S]*教练人效摘要[\s\S]*经营问题预警/, 'overview page should render a boss-facing command dashboard');
+assert.match(operationsSource, /renderOperationsOverview[\s\S]*公司经营总盘[\s\S]*收入结构图[\s\S]*现金与核销关系[\s\S]*教练经营效率[\s\S]*场地经营效率[\s\S]*转化留存风险[\s\S]*经营问题优先级/, 'overview page should render a boss-facing company operations cockpit');
+assert.doesNotMatch(operationsSource, /operationsOverviewFunnel/, 'overview should not duplicate the conversion page funnel');
+assert.match(operationsSource, /renderStandardChart\('operationsOverviewRevenueMixChart'[\s\S]*buildStandardPieChartOption/, 'overview revenue mix should render as a chart instead of a table-like bar list');
+assert.match(operationsSource, /renderStandardChart\('operationsOverviewCashChart'[\s\S]*buildOperationsOverviewCashChartOption/, 'overview cash and recognition should render as a dedicated chart');
+assert.match(operationsSource, /renderStandardChart\('operationsOverviewCoachMatrixChart'[\s\S]*buildOperationsCoachMatrixChartOption/, 'overview should reuse the coach efficiency matrix for global coach status');
+assert.match(operationsSource, /renderStandardChart\('operationsOverviewCourtQuadrantChart'[\s\S]*buildOperationsCourtQuadrantChartOption/, 'overview should reuse the court quadrant chart for global venue status');
 assert.match(operationsSource, /function operationsOverviewCourtSummary[\s\S]*data\.court\?\.cards[\s\S]*bookingAmount[\s\S]*bookingCount[\s\S]*utilizationRate/, 'overview court summary should reuse operations.court.cards from the court dashboard');
 assert.match(operationsSource, /renderOperationsOverview[\s\S]*operationsOverviewCourtSummary\(data\)/, 'overview should embed the unified court summary instead of recalculating court metrics');
-assert.doesNotMatch(operationsSource, /renderOperationsOverview[\s\S]*buildStandardPieChartOption/, 'overview should not use a pie chart for the first version');
+assert.match(chartsSource, /function buildOperationsOverviewCashChartOption[\s\S]*已入账[\s\S]*未入账[\s\S]*待履约/, 'standard charts should expose a cash-recognition chart for the overview');
 assert.match(operationsSource, /renderProgressFunnel/, 'conversion page should use the Gemini-style progress funnel component');
 assert.match(operationsSource, /renderOperationsCourtComparison[\s\S]*校区经营象限/, 'court page should render a business quadrant chart');
 assert.match(operationsSource, /renderOperationsCourtCampusOverview[\s\S]*校区指标排行/, 'court page should render the ranking matrix');

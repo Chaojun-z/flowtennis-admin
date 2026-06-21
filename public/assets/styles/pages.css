@@ -1156,6 +1156,23 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-overview-cash-track i{display:block;height:100%}
 #page-operations .operations-overview-cash-track .recognized{background:#2F7D67}
 #page-operations .operations-overview-cash-track .pending{background:#C58A3A}
+#page-operations .operations-overview-chart{height:260px;min-height:260px}
+#page-operations .operations-overview-matrix-chart{height:300px;min-height:300px}
+#page-operations .operations-overview-cash-note{margin-top:8px;color:#64748B;font-size:12px;line-height:18px;font-weight:700;text-align:center}
+#page-operations .operations-overview-inline-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+#page-operations .operations-overview-inline-kpis span{min-height:46px;border:1px solid #E5ECF6;border-radius:8px;background:#F8FAFE;padding:8px 10px;box-sizing:border-box;color:#6B7A90;font-size:11px;line-height:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-operations .operations-overview-inline-kpis strong{display:block;margin-top:2px;color:#111827;font-size:15px;line-height:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-operations .operations-overview-risk-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#page-operations .operations-overview-risk-board .operations-insight-card{min-height:116px}
+#page-operations .operations-overview-priority-list{display:flex;flex-direction:column;gap:12px}
+#page-operations .operations-overview-priority{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #E5ECF6;border-radius:8px;background:#F8FAFE;overflow:hidden}
+#page-operations .operations-overview-priority div{position:relative;z-index:1;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+#page-operations .operations-overview-priority span{color:#172033;font-size:13px;line-height:20px;font-weight:800}
+#page-operations .operations-overview-priority strong{color:#65748A;font-size:12px;line-height:18px;font-weight:700;text-align:right}
+#page-operations .operations-overview-priority i{display:block;height:8px;border-radius:999px;background:#2F7D67}
+#page-operations .operations-overview-priority.warn i{background:#C58A3A}
+#page-operations .operations-overview-priority.danger i{background:#9B5E5E}
+#page-operations .operations-overview-priority.good i{background:#2F7D67}
 #page-operations .operations-overview-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 #page-operations .operations-overview-metric{min-height:76px;border:1px solid #E5ECF6;border-radius:8px;background:#F8FAFE;padding:12px;box-sizing:border-box}
 #page-operations .operations-overview-metric span{display:block;color:#6B7A90;font-size:12px;line-height:18px;font-weight:700}
@@ -1398,7 +1415,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-skeleton-panel::before{content:"";position:absolute;left:24px;right:24px;top:28px;height:14px}
 @keyframes operationsSkeleton{0%{background-position:120% 0}100%{background-position:-120% 0}}
 @media(max-width:900px){
-  #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-grid,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}
+  #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-overview-risk-board,#page-operations .operations-overview-inline-kpis,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-grid,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}
   #page-operations .operations-overview-bar-row{grid-template-columns:1fr}
   #page-operations .operations-overview-metric-grid{grid-template-columns:1fr}
   #page-operations .operations-overview-mini-heat{grid-template-columns:1fr}

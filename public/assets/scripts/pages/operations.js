@@ -153,7 +153,7 @@ function renderOperationsLoading() {
       <section class="operations-command-center operations-overview-command">
         <div class="operations-skeleton-line title"></div>
         <div class="operations-skeleton-line caption"></div>
-        <div class="operations-kpi-row">${[1,2,3,4].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}</div>
+        <div class="operations-kpi-row">${[1,2,3,4,5].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}</div>
       </section>
       <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
       <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
@@ -212,104 +212,83 @@ function renderOperationsOverview(data) {
   return `<section class="operations-command-center operations-overview-command">
     <div class="operations-command-head">
       <div>
-        <h2>经营总览</h2>
-        <p>用同一套经营分析聚合口径，看财务、转化留存、场地和教练人效的当前状态</p>
+        <h2>公司经营总盘</h2>
+        <p>先看公司整体收入、入账、待履约、场地效率和教练人效，再下钻到专题页查原因</p>
       </div>
     </div>
     <div class="operations-kpi-row">
       <div class="operations-kpi-card"><span>总收入</span><strong>${operationsCardText(cards.totalIncome)}</strong><p>来自财务总览同口径</p></div>
-      <div class="operations-kpi-card"><span>入账率</span><strong>${fmt(incomeRate)}<em>%</em></strong><p>${operationsMoneyText(recognizedRevenue)} 已入账</p></div>
+      <div class="operations-kpi-card"><span>入账流水</span><strong>${operationsMoneyText(recognizedRevenue)}</strong><p>已入账率 ${fmt(incomeRate)}%</p></div>
+      <div class="operations-kpi-card"><span>待履约余额</span><strong>${operationsMoneyText(pendingRevenue)}</strong><p>未入账/待核销金额</p></div>
       <div class="operations-kpi-card"><span>成交笔数</span><strong>${operationsCardText(cards.tradeCount)}</strong><p>按财务聚合成交数</p></div>
       <div class="operations-kpi-card"><span>场地利用率</span><strong>${operationsCardText(data.court?.cards?.utilizationRate)}</strong><p>复用场地运转口径</p></div>
-      <div class="operations-kpi-card"><span>教练工时利用率</span><strong>${operationsCardText(data.coach?.cards?.utilizationRate)}</strong><p>复用教练人效口径</p></div>
     </div>
   </section>
   <div class="operations-overview-grid">
     ${operationsOverviewRevenueMix(data)}
     ${operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue)}
   </div>
-  <div class="operations-overview-grid">
-    ${operationsOverviewConversionPath(conversion)}
+  <div class="operations-overview-grid operations-overview-visual-grid">
+    ${operationsOverviewCoachSummary(data)}
     ${operationsOverviewCourtSummary(data)}
   </div>
   <div class="operations-overview-grid">
-    ${operationsOverviewCoachSummary(data)}
+    ${operationsOverviewConversionRisk(conversion)}
     ${operationsOverviewWarnings(data, conversion)}
   </div>`;
 }
 
 function operationsOverviewRevenueMix(data = {}) {
-  const rows = data.overview?.revenueMix || [];
-  const total = rows.reduce((sum, row) => sum + (Number(row.value) || 0), 0);
-  const body = rows.length ? rows.map(row => {
-    const value = Number(row.value) || 0;
-    const percent = total ? Math.round(value * 1000 / total) / 10 : 0;
-    return `<div class="operations-overview-bar-row">
-      <div class="operations-overview-bar-label"><span>${esc(row.name || '')}</span><strong>${operationsMoneyText(value)}</strong></div>
-      <div class="operations-overview-bar-track"><i style="width:${Math.max(0, Math.min(100, percent))}%"></i></div>
-      <em>${fmt(percent)}%</em>
-    </div>`;
-  }).join('') : '<div class="operations-channel-empty">暂无收入组成数据</div>';
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>收入组成</h3><span>横向占比条，避免用饼图堆信息</span></div></div>
-    <div class="operations-overview-bars">${body}</div>
+    <div class="operations-module-head"><div><h3>收入结构图</h3><span>看公司收入主要由课程、订场还是会员储值驱动</span></div></div>
+    <div class="operations-chart-host operations-overview-chart" id="operationsOverviewRevenueMixChart"></div>
   </section>`;
 }
 
 function operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue) {
   const recognizedRate = totalIncome ? Math.round(recognizedRevenue * 1000 / totalIncome) / 10 : 0;
-  const pendingRate = Math.max(0, 100 - recognizedRate);
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>现金入账质量</h3><span>总收入、已入账、未入账同财务聚合口径</span></div></div>
-    <div class="operations-overview-cash">
-      <div class="operations-overview-cash-track"><i class="recognized" style="width:${Math.max(0, Math.min(100, recognizedRate))}%"></i><i class="pending" style="width:${Math.max(0, Math.min(100, pendingRate))}%"></i></div>
-      <div class="operations-overview-metric-grid">
-        ${operationsMoneyMetric('总收入', totalIncome)}
-        ${operationsMoneyMetric('已入账', recognizedRevenue)}
-        ${operationsMoneyMetric('未入账', pendingRevenue)}
-      </div>
-    </div>
-  </section>`;
-}
-
-function operationsOverviewConversionPath(conversion = {}) {
-  const funnel = conversion.courseFunnel || [];
-  return `<section class="operations-section operations-overview-funnel">
-    <div class="operations-module-head"><div><h3>转化与留存路径</h3><span>线索、预约、到课、成交、续费同专题页口径</span></div></div>
-    <div class="operations-funnel-host operations-overview-funnel-host" id="operationsOverviewFunnel"></div>
-  </section>`;
-}
-
-function operationsOverviewCourtSummary(data = {}) {
-  const cards = data.court?.cards || {};
-  const heatmaps = data.court?.campusHeatmaps || [];
-  const active = heatmaps.find(item => item.campusName === operationsActiveCourtHeatCampus) || heatmaps[0] || {};
-  return `<section class="operations-section operations-overview-court-card">
-    <div class="operations-module-head"><div><h3>场地运转摘要</h3><span>直接复用场地运转卡片数据</span></div></div>
-    <div class="operations-overview-metric-grid">
-      ${operationsMoneyMetric('订场收入', operationsCardNumber(cards.bookingAmount))}
-      ${operationsPlainMetric('订场次数', operationsCardText(cards.bookingCount), '订场业务记录数')}
-      ${operationsPlainMetric('场地利用率', operationsCardText(cards.utilizationRate), '总占用小时 / 总可经营小时')}
-      ${operationsPlainMetric('启用场地', operationsCardText(cards.activeVenues), '来自校区配置')}
-    </div>
-    <div class="operations-overview-mini-heat">
-      <span>黄金时段 ${fmt(active.goldenUtilizationRate || 0)}%</span>
-      <div><i style="width:${Math.max(0, Math.min(100, Number(active.goldenUtilizationRate) || 0))}%"></i></div>
-      <span>非黄金时段 ${fmt(active.offPeakUtilizationRate || 0)}%</span>
-      <div><i style="width:${Math.max(0, Math.min(100, Number(active.offPeakUtilizationRate) || 0))}%"></i></div>
-    </div>
+    <div class="operations-module-head"><div><h3>现金与核销关系</h3><span>总收入、已入账、待履约同财务聚合口径</span></div></div>
+    <div class="operations-chart-host operations-overview-chart" id="operationsOverviewCashChart"></div>
+    <div class="operations-overview-cash-note">已入账率 ${fmt(recognizedRate)}%，待履约 ${operationsMoneyText(pendingRevenue)}</div>
   </section>`;
 }
 
 function operationsOverviewCoachSummary(data = {}) {
   const cards = data.coach?.cards || {};
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>教练人效摘要</h3><span>只展示团队层面的产能信号</span></div></div>
-    <div class="operations-overview-metric-grid">
-      ${operationsPlainMetric('在岗教练', operationsCardText(cards.activeCoaches))}
-      ${operationsPlainMetric('本周可排工时', operationsCardText(cards.availableHoursThisWeek))}
-      ${operationsPlainMetric('已排课时', operationsCardText(cards.usedHours))}
-      ${operationsPlainMetric('工时利用率', operationsCardText(cards.utilizationRate))}
+    <div class="operations-module-head"><div><h3>教练经营效率</h3><span>复用教练人效的产值、工时利用率和课时量口径</span></div></div>
+    <div class="operations-overview-inline-kpis">
+      <span>在岗 <strong>${operationsCardText(cards.activeCoaches)}</strong></span>
+      <span>归属实收 <strong>${operationsMoneyText(operationsCardNumber(cards.revenue))}</strong></span>
+      <span>工时利用率 <strong>${operationsCardText(cards.utilizationRate)}</strong></span>
+    </div>
+    <div class="operations-chart-host operations-overview-matrix-chart" id="operationsOverviewCoachMatrixChart"></div>
+  </section>`;
+}
+
+function operationsOverviewCourtSummary(data = {}) {
+  const cards = data.court?.cards || {};
+  return `<section class="operations-section operations-overview-court-card">
+    <div class="operations-module-head"><div><h3>场地经营效率</h3><span>复用场地运转的订场收入、次数、利用率口径</span></div></div>
+    <div class="operations-overview-inline-kpis">
+      <span>订场收入 <strong>${operationsMoneyText(operationsCardNumber(cards.bookingAmount))}</strong></span>
+      <span>订场次数 <strong>${operationsCardText(cards.bookingCount)}</strong></span>
+      <span>利用率 <strong>${operationsCardText(cards.utilizationRate)}</strong></span>
+    </div>
+    <div class="operations-chart-host operations-overview-matrix-chart" id="operationsOverviewCourtQuadrantChart"></div>
+  </section>`;
+}
+
+function operationsOverviewConversionRisk(conversion = {}) {
+  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
+  const renewal = summary.renewal || {};
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>转化留存风险</h3><span>首页只看风险位置，完整漏斗在转化与留存页</span></div></div>
+    <div class="operations-overview-risk-board">
+      ${operationsInsightCard('danger', '最大流失', `${summary.worst?.from || '-'} → ${summary.worst?.to || '-'}`, `流失 ${fmt(summary.worst?.lossRate || 0)}%`)}
+      ${operationsInsightCard('warn', '续费环节', `${renewal.from || '-'} → ${renewal.to || '-'}`, `转化 ${fmt(renewal.transitionRate || 0)}%`)}
+      ${operationsInsightCard('good', '最稳环节', `${summary.stable?.from || '-'} → ${summary.stable?.to || '-'}`, `转化 ${fmt(summary.stable?.transitionRate || 0)}%`)}
     </div>
   </section>`;
 }
@@ -318,15 +297,22 @@ function operationsOverviewWarnings(data = {}, conversion = {}) {
   const overviewCards = data.overview?.cards || {};
   const warnings = [];
   const pending = operationsCardNumber(overviewCards.pendingRevenue);
-  if (pending > 0) warnings.push({ tone: 'warn', title: '存在未入账金额', detail: `${operationsMoneyText(pending)} 未入账，需到财务总览核对` });
+  if (pending > 0) warnings.push({ tone: 'warn', title: '待履约余额较高', detail: `${operationsMoneyText(pending)} 未入账/待核销，需关注交付消耗速度`, value: pending });
   const summary = operationsFunnelSummary(conversion.courseFunnel || []);
-  if (summary.worst?.to) warnings.push({ tone: 'danger', title: '最大流失环节', detail: `${summary.worst.from} → ${summary.worst.to}，流失 ${fmt(summary.worst.lossRate)}%` });
+  if (summary.worst?.to) warnings.push({ tone: 'danger', title: '最大流失环节', detail: `${summary.worst.from} → ${summary.worst.to}，流失 ${fmt(summary.worst.lossRate)}%`, value: summary.worst.lossRate });
   const unmatched = (data.court?.campusHeatmaps || []).some(campus => (campus.venues || []).some(venue => venue.isUnmatched));
-  if (unmatched) warnings.push({ tone: 'warn', title: '存在未匹配场地数据', detail: '场地热力中有历史未匹配记录，需到场地运转继续核对' });
-  if (!warnings.length) warnings.push({ tone: 'good', title: '暂无明确预警', detail: '第一版只展示能被现有口径明确判断的问题' });
+  if (unmatched) warnings.push({ tone: 'warn', title: '存在未匹配场地数据', detail: '场地热力中有历史未匹配记录，需到场地运转继续核对', value: 1 });
+  if (!warnings.length) warnings.push({ tone: 'good', title: '暂无明确预警', detail: '只展示能被现有口径明确判断的问题', value: 0 });
+  const maxValue = Math.max(1, ...warnings.map(row => Number(row.value) || 0));
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>经营问题预警</h3><span>只展示能解释、能下钻的问题</span></div></div>
-    <div class="operations-coach-alert-list">${warnings.map(row => `<div class="operations-coach-alert-card ${esc(row.tone)}"><span>预警</span><strong>${esc(row.title)}</strong><p>${esc(row.detail)}</p></div>`).join('')}</div>
+    <div class="operations-module-head"><div><h3>经营问题优先级</h3><span>只展示能解释、能下钻的问题</span></div></div>
+    <div class="operations-overview-priority-list">${warnings.map(row => {
+      const width = Math.max(8, Math.min(100, ((Number(row.value) || 0) * 100 / maxValue)));
+      return `<div class="operations-overview-priority ${esc(row.tone)}">
+        <div><span>${esc(row.title)}</span><strong>${esc(row.detail)}</strong></div>
+        <i style="width:${width}%"></i>
+      </div>`;
+    }).join('')}</div>
   </section>`;
 }
 
@@ -989,7 +975,18 @@ function renderConversionAttributeModule(conversion) {
 
 function renderOperationsCharts(data) {
   const conversion = operationsConversionView(data);
-  renderProgressFunnel('operationsOverviewFunnel', conversion.courseFunnel || []);
+  const overview = data.overview || {};
+  const cards = overview.cards || {};
+  renderStandardChart('operationsOverviewRevenueMixChart', buildStandardPieChartOption({ rows: overview.revenueMix || [], name: '收入结构' }), { height: 260 });
+  renderStandardChart('operationsOverviewCashChart', buildOperationsOverviewCashChartOption({
+    totalIncome: operationsCardNumber(cards.totalIncome),
+    recognizedRevenue: operationsCardNumber(cards.recognizedRevenue),
+    pendingRevenue: operationsCardNumber(cards.pendingRevenue)
+  }), { height: 260 });
+  renderStandardChart('operationsOverviewCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 300 });
+  renderStandardChart('operationsOverviewCourtQuadrantChart', buildOperationsCourtQuadrantChartOption({
+    rows: (data.court?.campusRows || []).length ? data.court.campusRows : (data.court?.campusComparison || [])
+  }), { height: 300 });
   renderStandardChart('operationsCourtComparisonChart', buildOperationsCourtQuadrantChartOption({
     rows: (data.court?.campusRows || []).length ? data.court.campusRows : (data.court?.campusComparison || [])
   }), { height: 296 });

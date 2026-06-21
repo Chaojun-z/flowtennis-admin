@@ -303,6 +303,35 @@ function buildStandardPieChartOption({ rows = [], nameKey = 'name', valueKey = '
   };
 }
 
+function buildOperationsOverviewCashChartOption({ totalIncome = 0, recognizedRevenue = 0, pendingRevenue = 0 } = {}) {
+  const total = Number(totalIncome) || 0;
+  const recognized = Number(recognizedRevenue) || 0;
+  const pending = Number(pendingRevenue) || Math.max(0, total - recognized);
+  if (!(total || recognized || pending)) return { series: [] };
+  return {
+    color: ['#2F7D67', '#C58A3A'],
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: params => {
+        const rows = Array.isArray(params) ? params : [params];
+        return `<div style="min-width:148px;font-size:12px;line-height:1.75;color:#172033">
+          ${rows.map(item => `<div>${item.marker || ''}${esc(item.seriesName || '')}：¥${fmt(item.value || 0)}</div>`).join('')}
+        </div>`;
+      },
+      textStyle: { fontSize: 12, fontWeight: 400 }
+    },
+    legend: { bottom: 0, left: 'center', itemWidth: 18, itemHeight: 10, textStyle: { color: '#6E625A', fontSize: 11 } },
+    grid: { left: 12, right: 12, top: 28, bottom: 42, containLabel: true },
+    xAxis: { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
+    yAxis: { type: 'category', data: ['经营收入'], axisTick: { show: false }, axisLabel: { color: '#8C7B6E', fontSize: 12, fontWeight: 700 } },
+    series: [
+      { name: '已入账', type: 'bar', stack: 'income', data: [recognized], barWidth: 34, itemStyle: { color: '#2F7D67', borderRadius: [6, 0, 0, 6] }, emphasis: { focus: 'series' } },
+      { name: '未入账/待履约', type: 'bar', stack: 'income', data: [pending], barWidth: 34, itemStyle: { color: '#C58A3A', borderRadius: [0, 6, 6, 0] }, emphasis: { focus: 'series' } }
+    ]
+  };
+}
+
 function buildStandardFunnelChartOption({ rows = [], nameKey = 'stage', valueKey = 'count', name = '' } = {}) {
   const data = (rows || []).map(row => ({ name: row[nameKey], value: Number(row[valueKey]) || 0 })).filter(row => row.name);
   if (!data.length) return { series: [] };
