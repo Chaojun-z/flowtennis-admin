@@ -106,6 +106,21 @@ function heatCapacityRange(range = {}, now = new Date()) {
   };
 }
 
+function futureSafeDateRange(range = {}, now = new Date()) {
+  const normalized = normalizeDateRange(range);
+  if (!isDateRangeActive(normalized)) return normalized;
+  const today = beijingDateKey(now);
+  return {
+    startDate: normalized.startDate,
+    endDate: !normalized.endDate || normalized.endDate > today ? today : normalized.endDate
+  };
+}
+
+function futureSafeDays(days = [], now = new Date()) {
+  const today = beijingDateKey(now);
+  return (days || []).filter(day => day && day <= today);
+}
+
 function dateSetSpanDayCount(dateSet = new Set()) {
   const days = [...dateSet].filter(day => /^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))).sort();
   if (!days.length) return 0;
@@ -882,8 +897,8 @@ function buildCoachParetoRows(rows = []) {
   });
 }
 
-function coachTrendDays({ schedule = [], purchases = [], dateRange = {} } = {}) {
-  const selectedDays = enumerateDateRange(dateRange);
+function coachTrendDays({ schedule = [], purchases = [], dateRange = {}, now = new Date() } = {}) {
+  const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
   const days = new Set();
   (schedule || []).forEach(row => {
@@ -894,14 +909,14 @@ function coachTrendDays({ schedule = [], purchases = [], dateRange = {} } = {}) 
     const day = purchaseDate(row);
     if (day) days.add(day);
   });
-  const sorted = [...days].sort();
+  const sorted = futureSafeDays([...days].sort(), now);
   if (sorted.length > 1) return sorted;
   if (sorted.length !== 1) return sorted;
   return sorted;
 }
 
 function buildCoachTrendRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
-  const days = coachTrendDays({ schedule, purchases, dateRange });
+  const days = coachTrendDays({ schedule, purchases, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
     const daySchedule = (schedule || []).filter(row => dateWithinRange(dateKey(row.startTime || row.date || row.createdAt), dayRange));
@@ -924,7 +939,7 @@ function buildCoachTrendRows({ coaches = [], schedule = [], purchases = [], allP
     const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
     return {
       date: day,
-      activeCoaches: rows.length,
+      activeCoaches: rows.filter(row => (Number(row.usedHours) || 0) > 0 || (Number(row.revenue) || 0) > 0).length,
       utilizationRate: availableHours ? round(usedHours * 100 / availableHours, 1) : 0,
       revenue,
       trialConversionRate: trialBase ? rate(trialConverted, trialBase) : null,
@@ -1489,8 +1504,8 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   };
 }
 
-function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], dateRange = {} } = {}) {
-  const selectedDays = enumerateDateRange(dateRange);
+function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], dateRange = {}, now = new Date() } = {}) {
+  const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
   const days = new Set();
   courtHistoryRows(courts).forEach(row => {
@@ -1505,14 +1520,14 @@ function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], da
     const day = dateKey(row.sourceDate || row.relatedDate || row.createdAt);
     if (day) days.add(day);
   });
-  const sorted = [...days].sort();
+  const sorted = futureSafeDays([...days].sort(), now);
   if (sorted.length > 1) return sorted;
   if (sorted.length !== 1) return sorted;
   return sorted;
 }
 
 function buildCourtTrendRows({ campuses = [], courts = [], schedule = [], entitlements = [], entitlementLedger = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
-  const days = courtTrendDays({ courts, schedule, entitlementLedger, dateRange });
+  const days = courtTrendDays({ courts, schedule, entitlementLedger, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
     const configuredMetrics = buildConfiguredCourtMetrics({
@@ -1531,6 +1546,7 @@ function buildCourtTrendRows({ campuses = [], courts = [], schedule = [], entitl
       date: day,
       bookingAmount: Number(cards.bookingAmount?.value) || 0,
       bookingHours: Number(cards.bookingHours?.value) || 0,
+      bookingCount: Number(cards.bookingCount?.value) || 0,
       utilizationRate: Number(cards.utilizationRate?.value) || 0,
       goldenUtilizationRate: Number(cards.goldenUtilizationRate?.value) || 0,
       offPeakUtilizationRate: Number(cards.offPeakUtilizationRate?.value) || 0
@@ -1703,6 +1719,58 @@ function buildOperationsFinanceFallback(data = {}, court = {}) {
   };
 }
 
+function membershipOrderDate(row = {}) {
+  return dateKey(row.purchaseDate || row.createdAt);
+}
+
+function membershipOrderAmount(row = {}) {
+  return money(row.rechargeAmount ?? row.amount ?? 0);
+}
+
+function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends = [], dateRange = {}, now = new Date() } = {}) {
+  const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
+  if (selectedDays.length) return selectedDays;
+  const days = new Set();
+  (purchases || []).forEach(row => {
+    const day = purchaseDate(row);
+    if (day) days.add(day);
+  });
+  (membershipOrders || []).forEach(row => {
+    const day = membershipOrderDate(row);
+    if (day) days.add(day);
+  });
+  (courtTrends || []).forEach(row => {
+    if (row?.date) days.add(row.date);
+  });
+  return futureSafeDays([...days].sort(), now);
+}
+
+function buildOverviewTrendRows({ purchases = [], membershipOrders = [], courtTrends = [], dateRange = {}, now = new Date() } = {}) {
+  const courtByDate = new Map((courtTrends || []).map(row => [row.date, row]));
+  return overviewTrendDays({ purchases, membershipOrders, courtTrends, dateRange, now }).map(day => {
+    const dayPurchases = (purchases || []).filter(row => purchaseDate(row) === day && isValidCoursePurchase(row));
+    const dayMembershipOrders = (membershipOrders || []).filter(row => membershipOrderDate(row) === day && String(row.status || 'active') !== 'voided');
+    const courseIncome = money(dayPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0));
+    const storedValueIncome = money(dayMembershipOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0));
+    const court = courtByDate.get(day) || {};
+    const bookingIncome = money(court.bookingAmount || 0);
+    const pendingRevenue = money(courseIncome + storedValueIncome);
+    return {
+      date: day,
+      totalIncome: money(courseIncome + storedValueIncome + bookingIncome),
+      courseIncome,
+      storedValueIncome,
+      bookingIncome,
+      recognizedRevenue: bookingIncome,
+      pendingRevenue,
+      tradeCount: dayPurchases.filter(row => purchaseAmount(row) > 0).length
+        + dayMembershipOrders.filter(row => membershipOrderAmount(row) > 0).length
+        + (Number(court.bookingCount) || 0),
+      utilizationRate: Number(court.utilizationRate) || 0
+    };
+  });
+}
+
 function firstRowDate(row = {}, keys = []) {
   for (const key of keys) {
     const day = dateKey(row?.[key]);
@@ -1719,14 +1787,19 @@ function filterRowsByDateRange(rows = [], range = {}, keys = []) {
 function buildOperationsMetrics(data = {}, options = {}) {
   const now = options.now || new Date();
   const dateRange = normalizeDateRange(options.dateRange || {});
+  const reportingDateRange = futureSafeDateRange(dateRange, now);
+  const realAllPurchases = (data.purchases || []).filter(row => {
+    const day = purchaseDate(row);
+    return !day || day <= beijingDateKey(now);
+  });
   const rangedData = {
     ...data,
-    leads: filterRowsByDateRange(data.leads || [], dateRange, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
-    purchases: filterRowsByDateRange(data.purchases || [], dateRange, ['purchaseDate', 'createdAt']),
-    membershipOrders: filterRowsByDateRange(data.membershipOrders || [], dateRange, ['purchaseDate', 'createdAt']),
-    entitlementLedger: filterRowsByDateRange(data.entitlementLedger || [], dateRange, ['sourceDate', 'relatedDate', 'createdAt']),
-    schedule: filterRowsByDateRange(data.schedule || [], dateRange, ['startTime', 'date', 'createdAt']),
-    financeNormalizedRows: filterRowsByDateRange(data.financeNormalizedRows || [], dateRange, ['businessDate', 'date', 'createdAt'])
+    leads: filterRowsByDateRange(data.leads || [], reportingDateRange, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
+    purchases: filterRowsByDateRange(data.purchases || [], reportingDateRange, ['purchaseDate', 'createdAt']),
+    membershipOrders: filterRowsByDateRange(data.membershipOrders || [], reportingDateRange, ['purchaseDate', 'createdAt']),
+    entitlementLedger: filterRowsByDateRange(data.entitlementLedger || [], reportingDateRange, ['sourceDate', 'relatedDate', 'createdAt']),
+    schedule: filterRowsByDateRange(data.schedule || [], reportingDateRange, ['startTime', 'date', 'createdAt']),
+    financeNormalizedRows: filterRowsByDateRange(data.financeNormalizedRows || [], reportingDateRange, ['businessDate', 'date', 'createdAt'])
   };
   const financeOverviewData = rangedData.financeOverviewData || {};
   const sets = buildLeadConversionSets(data);
@@ -1743,8 +1816,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
     purchases: rangedData.purchases || [],
-    allPurchases: data.purchases || [],
-    dateRange,
+    allPurchases: realAllPurchases,
+    dateRange: reportingDateRange,
     campuses: data.campuses || [],
     now
   });
@@ -1754,7 +1827,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     schedule: data.schedule || [],
     entitlements: data.entitlements || [],
     entitlementLedger: rangedData.entitlementLedger || [],
-    dateRange,
+    dateRange: reportingDateRange,
     now
   });
   const financeCourtMetrics = buildCourtMetricsFromFinanceRows(rangedData.financeNormalizedRows || []);
@@ -1788,13 +1861,31 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachTrialConverted = coachRows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
   const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
-  const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange, now });
+  const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
   const revenueMix = buildRevenueMix(financeOverviewData);
   const fallbackRevenueMix = [
     { name: '课程收入', value: fallbackFinance.courseIncome },
     { name: '订场收入', value: fallbackFinance.bookingIncome },
     { name: '会员储值', value: fallbackFinance.storedValueIncome }
   ].filter(row => row.value > 0);
+
+  const courtTrends = buildCourtTrendRows({
+    campuses: data.campuses || [],
+    courts: rangedData.courts || data.courts || [],
+    schedule: rangedData.schedule || [],
+    entitlements: data.entitlements || [],
+    entitlementLedger: rangedData.entitlementLedger || [],
+    financeNormalizedRows: rangedData.financeNormalizedRows || [],
+    dateRange: reportingDateRange,
+    now
+  });
+  const overviewTrends = buildOverviewTrendRows({
+    purchases: rangedData.purchases || [],
+    membershipOrders: rangedData.membershipOrders || [],
+    courtTrends,
+    dateRange: reportingDateRange,
+    now
+  });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1809,20 +1900,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
         row.name === '订场收入' && financeIsPartial && !financeBookingIncome && fallbackFinance.bookingIncome
           ? { ...row, value: fallbackFinance.bookingIncome }
           : row
-      ))
+      )),
+      trends: overviewTrends
     },
     court: {
       ...court,
-      trends: buildCourtTrendRows({
-        campuses: data.campuses || [],
-        courts: rangedData.courts || data.courts || [],
-        schedule: rangedData.schedule || [],
-        entitlements: data.entitlements || [],
-        entitlementLedger: rangedData.entitlementLedger || [],
-        financeNormalizedRows: rangedData.financeNormalizedRows || [],
-        dateRange,
-        now
-      })
+      trends: courtTrends
     },
     conversion: {
       cards: {
@@ -1857,8 +1940,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
         coaches: data.coaches || [],
         schedule: rangedData.schedule || [],
         purchases: rangedData.purchases || [],
-        allPurchases: data.purchases || [],
-        dateRange,
+        allPurchases: realAllPurchases,
+        dateRange: reportingDateRange,
         campuses: data.campuses || [],
         now
       }),

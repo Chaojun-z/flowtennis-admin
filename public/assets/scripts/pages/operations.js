@@ -112,11 +112,20 @@ function operationsTrendValues(trends = [], key = '') {
 }
 
 function operationsTrendPoints(trends = [], key = '') {
+  const today = operationsTrendToday();
   return (trends || [])
     .filter(row => row && row.date && Object.prototype.hasOwnProperty.call(row, key))
+    .filter(row => row.date <= today)
     .filter(row => row[key] !== null && row[key] !== undefined && row[key] !== '')
     .map(row => ({ date: row.date, value: Number(row[key]) }))
     .filter(point => Number.isFinite(point.value));
+}
+
+function operationsTrendToday() {
+  const today = dateKey(new Date());
+  const range = typeof activeGlobalDateRange === 'function' ? activeGlobalDateRange() : {};
+  const endDate = String(range?.endDate || '').slice(0, 10);
+  return endDate && endDate < today ? endDate : today;
 }
 
 function operationsShouldShowTrend() {
@@ -286,13 +295,7 @@ function renderOperationsOverview(data) {
   const recognizedRevenue = operationsCardNumber(cards.recognizedRevenue);
   const pendingRevenue = operationsCardNumber(cards.pendingRevenue);
   const conversion = operationsConversionView(data);
-  return `<div class="operations-kpi-row operations-overview-kpi-row">
-    <div class="operations-kpi-card"><span>总收入</span><strong>${operationsCardText(cards.totalIncome)}</strong></div>
-    <div class="operations-kpi-card"><span>入账流水</span><strong>${operationsMoneyText(recognizedRevenue)}</strong></div>
-    <div class="operations-kpi-card"><span>待履约余额</span><strong>${operationsMoneyText(pendingRevenue)}</strong></div>
-    <div class="operations-kpi-card"><span>成交笔数</span><strong>${operationsCardText(cards.tradeCount)}</strong></div>
-    <div class="operations-kpi-card"><span>场地利用率</span><strong>${operationsCardText(data.court?.cards?.utilizationRate)}</strong></div>
-  </div>
+  return `${renderOperationsOverviewKpis(data)}
   <div class="operations-overview-grid">
     ${operationsOverviewRevenueMix(data)}
     ${operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRevenue)}
@@ -304,6 +307,31 @@ function renderOperationsOverview(data) {
   <div class="operations-overview-grid">
     ${operationsOverviewConversionRisk(conversion)}
     ${operationsOverviewWarnings(data, conversion)}
+  </div>`;
+}
+
+function operationsOverviewTrendPoints(trends = [], key = '') {
+  const points = operationsTrendPoints(trends, key);
+  if (!operationsShouldShowTrend()) return [];
+  return points.length >= 2 ? points : [];
+}
+
+function renderOperationsOverviewKpis(data = {}) {
+  const cards = data.overview?.cards || {};
+  const trends = data.overview?.trends || [];
+  const courtCards = data.court?.cards || {};
+  const kpis = [
+    { label: '总收入', value: operationsMoneyText(operationsCardNumber(cards.totalIncome)), trendKey: 'totalIncome', tone: 'revenue' },
+    { label: '入账流水', value: operationsMoneyText(operationsCardNumber(cards.recognizedRevenue)), trendKey: 'recognizedRevenue', tone: 'good' },
+    { label: '待履约余额', value: operationsMoneyText(operationsCardNumber(cards.pendingRevenue)), trendKey: 'pendingRevenue', tone: 'warn' },
+    { label: '成交笔数', value: fmt(operationsCardNumber(cards.tradeCount)), unit: '笔', trendKey: 'tradeCount', tone: 'lead' },
+    { label: '场地利用率', value: fmt(operationsCardNumber(courtCards.utilizationRate)), unit: '%', trendKey: 'utilizationRate', tone: 'utilization' }
+  ];
+  return `<div class="operations-kpi-row operations-overview-kpi-row operations-court-kpi-row">
+    ${kpis.map(card => renderOperationsCourtKpi({
+      ...card,
+      trendPoints: operationsOverviewTrendPoints(trends, card.trendKey)
+    })).join('')}
   </div>`;
 }
 
@@ -898,9 +926,10 @@ function operationsConversionRowDate(row = {}) {
 
 function operationsBuildConversionTrendRows(rows = []) {
   if (!operationsShouldShowTrend()) return [];
+  const today = operationsTrendToday();
   const datedRows = (rows || [])
     .map(row => ({ ...row, _trendDate: operationsConversionRowDate(row) }))
-    .filter(row => row._trendDate)
+    .filter(row => row._trendDate && row._trendDate <= today)
     .sort((a, b) => a._trendDate.localeCompare(b._trendDate));
   const days = [...new Set(datedRows.map(row => row._trendDate))];
   if (days.length < 2) return [];

@@ -582,6 +582,39 @@ const allTimeCourtTrendMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-08T12:00:00+08:00') });
 assert.deepStrictEqual(allTimeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-04'], 'all-time court KPI trends should use active business days instead of filling long zero stretches');
 assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.bookingAmount, 220, 'all-time court KPI trends should expose real bucket income instead of cumulative income');
+const futureSafeCourtTrendMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-future-trend',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'future-safe-past', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'future-safe-today', date: '2026-06-02', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 200, type: '消费', category: '散客订场' },
+        { id: 'future-safe-future', date: '2026-06-03', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 999, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-02T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' } });
+assert.deepStrictEqual(futureSafeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'court KPI trends should never include future selected dates');
+assert.deepStrictEqual(futureSafeCourtTrendMetrics.overview.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'overview KPI trends should use the same future-safe real point dates');
+assert.strictEqual(futureSafeCourtTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.bookingIncome, 200, 'overview trend points should expose the true daily booking income point');
 const configuredCourtFinanceFallbackMetrics = buildOperationsMetrics({
   campuses: [
     {
@@ -735,21 +768,22 @@ const coachDashboardMetrics = buildOperationsMetrics({
 const coachA = coachDashboardMetrics.coach.rows.find(row => row.coach === 'A教练');
 const coachB = coachDashboardMetrics.coach.rows.find(row => row.coach === 'B教练');
 assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C教练'), false, 'coach dashboard should exclude inactive coaches');
-assert.strictEqual(coachA.availableHours, 48, 'coach available hours should use the same selected period as used hours');
+assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
 assert.strictEqual(coachA.usedHours, 4.5, 'coach utilization should include scheduled and completed non-cancelled lessons in the selected period');
-assert.strictEqual(coachA.utilizationRate, 9.4, 'coach utilization should divide used hours by selected-period available hours');
+assert.strictEqual(coachA.utilizationRate, 16.4, 'coach utilization should divide used hours by the real selected-period available hours');
 assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use ownerCoach course receipts inside the selected purchase period');
 assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should count later course purchases for completed trial students');
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
-assert.strictEqual(coachB.revenue, 700, 'coach revenue should not borrow other coaches receipts');
-assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6900, 'coach top cards should sum ownerCoach course receipts only');
+assert.strictEqual(coachB.revenue, 0, 'coach revenue should exclude receipts after today');
+assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6200, 'coach top cards should sum real ownerCoach course receipts up to today only');
 assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
-assert.strictEqual(coachDashboardMetrics.coach.trends.length, 7, 'coach KPI trends should cover each selected day');
+assert.strictEqual(coachDashboardMetrics.coach.trends.length, 4, 'coach KPI trends should cover each real selected day up to today');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the real day bucket utilization');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket ownerCoach course receipts');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-01')?.activeCoaches, 0, 'coach active trend should count coaches with real daily work or receipts, not all roster coaches');
 const allTimeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
@@ -767,6 +801,33 @@ const allTimeCoachTrendMetrics = buildOperationsMetrics({
 });
 assert.deepStrictEqual(allTimeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-04'], 'all-time coach KPI trends should use active business days instead of filling long zero stretches');
 assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.at(-1)?.date, '2026-06-04', 'all-time coach KPI trends should end at the latest coach activity date');
+const futureSafeCoachTrendMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [
+    { id: 'A', name: 'A教练', status: 'active' },
+    { id: 'B', name: 'B教练', status: 'active' }
+  ],
+  purchases: [
+    { id: 'coach-real-today', ownerCoach: 'A教练', studentId: 'stu-a', amount: 500, purchaseDate: '2026-06-02', status: 'active' },
+    { id: 'coach-future-receipt', ownerCoach: 'B教练', studentId: 'stu-b', amount: 9999, purchaseDate: '2026-06-03', status: 'active' }
+  ],
+  schedule: [
+    { id: 'coach-real-today-lesson', coach: 'A教练', studentId: 'stu-a', startTime: '2026-06-02T09:00:00+08:00', endTime: '2026-06-02T10:00:00+08:00', status: '已结束', courseType: '私教课' },
+    { id: 'coach-future-lesson', coach: 'B教练', studentId: 'stu-b', startTime: '2026-06-03T09:00:00+08:00', endTime: '2026-06-03T10:00:00+08:00', status: '已排课', courseType: '私教课' }
+  ],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-02T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' }
+});
+assert.deepStrictEqual(futureSafeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'coach KPI trends should never include future selected dates');
+assert.strictEqual(futureSafeCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-02')?.activeCoaches, 1, 'coach active trend should count only coaches with real work or receipts on that day');
+assert.strictEqual(futureSafeCoachTrendMetrics.coach.cards.revenue.value, 500, 'coach cards should exclude future receipts from the current real period');
 assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-40%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
