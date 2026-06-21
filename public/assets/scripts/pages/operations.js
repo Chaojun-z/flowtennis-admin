@@ -84,6 +84,17 @@ function operationsCourtAverages(rows = []) {
   };
 }
 
+function operationsCourtRankingRows(rows = []) {
+  const displayRows = (rows || []).filter(row => row?.campusName && row.campusName !== '朝珺私教');
+  const byCampus = new Map(displayRows.map(row => [row.campusName, row]));
+  const ordered = operationsCourtHeatCampusTabs
+    .filter(campusName => campusName !== '朝珺私教')
+    .map(campusName => byCampus.get(campusName))
+    .filter(Boolean);
+  const extras = displayRows.filter(row => !operationsCourtHeatCampusTabs.includes(row.campusName));
+  return [...ordered, ...extras];
+}
+
 function operationsRankingMetric(label, value, maxValue, type, tone) {
   const raw = Number(value) || 0;
   const percent = type === 'rate'
@@ -359,9 +370,9 @@ function renderOperationsCourtComparison(data) {
 function renderOperationsCourtCampusOverview(data) {
   const rows = data.court?.campusRows || [];
   const averages = operationsCourtAverages(rows);
-  const maxRevenue = Math.max(1, ...rows.map(row => Number(row.bookingAmount) || 0));
-  const maxCount = Math.max(1, ...rows.map(row => Number(row.bookingCount) || 0));
-  const sortedRows = [...rows].sort((a, b) => (Number(b.bookingAmount) || 0) - (Number(a.bookingAmount) || 0) || (Number(b.utilizationRate) || 0) - (Number(a.utilizationRate) || 0));
+  const sortedRows = operationsCourtRankingRows(rows);
+  const maxRevenue = Math.max(1, ...sortedRows.map(row => Number(row.bookingAmount) || 0));
+  const maxCount = Math.max(1, ...sortedRows.map(row => Number(row.bookingCount) || 0));
   const body = sortedRows.length ? `<div class="operations-court-ranking-matrix">
     ${sortedRows.map(row => {
       const status = operationsCourtStatus(row, averages);
@@ -521,9 +532,9 @@ function renderOperationsCoach(data) {
   </div>
   <div class="operations-coach-secondary-grid">
     <section class="operations-section">
-      <div class="operations-module-head"><div><h3>产值贡献帕累托</h3><span>柱子是归属实收，折线是从左到右的累计收入占比</span></div>${operationsCoachTitleLegend([
+      <div class="operations-module-head"><div><h3>教练产值贡献排行</h3><span>柱子是归属实收，折线是个人收入占比</span></div>${operationsCoachTitleLegend([
         { label: '归属实收', color: '#805435' },
-        { label: '累计收入占比', color: '#466A9F', line: true }
+        { label: '个人收入占比', color: '#466A9F', line: true }
       ])}</div>
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>

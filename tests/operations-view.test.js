@@ -98,9 +98,12 @@ assert.match(chartsSource, /markLine[\s\S]*平均利用率[\s\S]*平均收入/, 
 assert.match(chartsSource, /symbolSize[\s\S]*bookingCount/, 'court quadrant bubble size should express booking count');
 assert.match(chartsSource, /#14B8A6[\s\S]*#CBD5E1/, 'court quadrant should use professional revenue/no-data colors');
 assert.match(chartsSource, /grid: \{ left: 12, right: 12, top: 28, bottom: 34, containLabel: false \}/, 'court quadrant should reduce left whitespace and prevent right-side clipping');
-assert.match(chartsSource, /axisLabel: \{ inside: true[\s\S]*formatter: value => `¥\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant should use compact inside revenue labels');
+assert.match(chartsSource, /max: 50[\s\S]*interval: 10[\s\S]*formatter: value => `\$\{value\}%`/, 'court quadrant x axis should use fixed 0-50% ticks');
+assert.match(chartsSource, /max: 1000000[\s\S]*interval: 200000[\s\S]*formatter: value => `\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant y axis should use fixed 0-100万 ticks');
 assert.match(chartsSource, /const source = rawRows\.filter\(row => row\.hasData\)/, 'court quadrant should only plot campuses that already have data');
 assert.doesNotMatch(chartsSource, /label: \{ color: row\.hasData \?/, 'court quadrant should not style or label no-data campuses in the plot');
+assert.match(chartsSource, /position: 'inside'/, 'court quadrant should put campus names inside bubbles');
+assert.match(chartsSource, /operationsCourtBubbleLabelSize[\s\S]*fontSize: operationsCourtBubbleLabelSize/, 'court quadrant should adapt campus label size by bubble size');
 assert.match(stylesSource, /operations-funnel-row:hover[\s\S]*operations-funnel-track/, 'custom funnel should have visible hover interaction');
 assert.match(stylesSource, /operations-channel-card:hover[\s\S]*transform:translateY/, 'channel cards should have visible hover interaction');
 assert.match(stylesSource, /operations-attribute-card:hover[\s\S]*transform:translateY/, 'attribute cards should have visible hover interaction');
@@ -142,6 +145,8 @@ assert.match(operationsSource, /renderProgressFunnel/, 'conversion page should u
 assert.match(operationsSource, /renderOperationsCourtComparison[\s\S]*校区经营象限/, 'court page should render a business quadrant chart');
 assert.match(operationsSource, /renderOperationsCourtCampusOverview[\s\S]*校区指标排行/, 'court page should render the ranking matrix');
 assert.match(operationsSource, /const rows = data\.court\?\.campusRows \|\| \[\]/, 'court overview should render campus rows');
+assert.match(operationsSource, /operationsCourtRankingRows[\s\S]*operationsCourtHeatCampusTabs[\s\S]*朝珺私教/, 'court ranking should reuse heatmap campus order and filter private training campus');
+assert.match(courtOverviewSource, /const sortedRows = operationsCourtRankingRows\(rows\)/, 'court ranking should render in the heatmap campus order');
 assert.match(operationsSource, /operations-court-ranking-row[\s\S]*收入[\s\S]*利用率[\s\S]*体验转化[\s\S]*老客转化/, 'court overview should render visual metric rows instead of columns');
 assert.match(operationsSource, /operationsCourtStatus/, 'court overview should classify each campus into a readable business status');
 assert.match(operationsSource, /return \{ label: '', tone: 'idle' \}/, 'court overview should not show a pending-input badge for no-data campuses');
@@ -225,13 +230,14 @@ assert.match(stylesSource, /operations-coach-band-legend\{[^}]*flex-wrap:nowrap[
 assert.match(stylesSource, /operations-coach-command-skeleton/, 'coach loading skeleton should have its own layout class');
 assert.match(stylesSource, /operations-module-head h3\{[^}]*color:#887565[^}]*font-size:13px[^}]*font-weight:700/, 'operations card titles should use the approved color and size');
 assert.match(stylesSource, /operations-module-head span\{[^}]*color:#A19080[^}]*font-size:8px[^}]*font-weight:400/, 'operations card subtitles should use the approved color and size');
-assert.match(coachDashboardSource, /operationsCoachTitleLegend\([\s\S]*归属实收[\s\S]*累计收入占比[\s\S]*体验课[\s\S]*私教课[\s\S]*小班课/, 'coach chart legends should render in the card title bar');
+assert.match(coachDashboardSource, /教练产值贡献排行[\s\S]*归属实收[\s\S]*个人收入占比[\s\S]*体验课[\s\S]*私教课[\s\S]*小班课/, 'coach chart legends should render personal revenue share in the card title bar');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*justify-content:flex-end/, 'coach title legends should be right aligned in card headers');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*color:#A19080[^}]*font-size:8px[^}]*font-weight:400/, 'coach chart legends should use the approved color and size');
 assert.match(stylesSource, /operations-utilization-gemini/, 'coach utilization distribution should have a dedicated Gemini-style wrapper');
 assert.match(stylesSource, /operations-utilization-track\{[^}]*background:#F8FAFD/, 'coach utilization distribution should use light background tracks');
 assert.match(stylesSource, /operations-utilization-track i\{[^}]*background:#FF7A91/, 'coach utilization distribution should use the Gemini-style progress fill');
 assert.match(stylesSource, /operations-utilization-row\.active \.operations-utilization-label\{color:#FF2756/, 'coach utilization active label should use the Gemini-style red');
-assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '累计收入占比'/, 'coach pareto line should be named cumulative revenue share and hide the internal chart legend');
+assert.match(chartsSource, /个人收入占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show personal revenue share');
+assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '个人收入占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use personal revenue share and hide the internal chart legend');
 
 console.log('operations view tests passed');

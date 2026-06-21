@@ -170,6 +170,13 @@ function operationsCourtQuadrantTooltip(item = {}) {
   </div>`;
 }
 
+function operationsCourtBubbleLabelSize(name = '', bubbleSize = 18) {
+  const length = String(name || '').length;
+  if (bubbleSize < 28 || length > 5) return 8;
+  if (bubbleSize < 38 || length > 4) return 9;
+  return 10;
+}
+
 function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const rawRows = (rows || []).map(row => {
     const bookingAmount = Number(row.bookingAmount) || 0;
@@ -192,23 +199,24 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const activeRows = source;
   const avgUtilization = activeRows.length ? activeRows.reduce((sum, row) => sum + row.utilizationRate, 0) / activeRows.length : 0;
   const avgRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.bookingAmount, 0) / activeRows.length : 0;
-  const maxRevenue = Math.max(1, ...source.map(row => row.bookingAmount), avgRevenue);
-  const maxUtilization = Math.max(12, ...source.map(row => row.utilizationRate), avgUtilization);
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
-  const data = source.map(row => ({
-    name: row.campusName,
-    raw: row,
-    value: [row.utilizationRate, row.bookingAmount, row.bookingCount, row.trialConversionRate],
-    itemStyle: {
-      color: operationsCourtQuadrantColor(row),
-      opacity: 0.82,
-      borderColor: '#FFFFFF',
-      borderWidth: 2,
-      shadowBlur: 14,
-      shadowColor: 'rgba(20,184,166,.22)'
-    },
-    label: { color: '#172033' }
-  }));
+  const data = source.map(row => {
+    const bubbleSize = Math.max(18, Math.min(58, 18 + (row.bookingCount / maxBookingCount) * 40));
+    return {
+      name: row.campusName,
+      raw: row,
+      value: [row.utilizationRate, row.bookingAmount, row.bookingCount, row.trialConversionRate],
+      itemStyle: {
+        color: operationsCourtQuadrantColor(row),
+        opacity: 0.82,
+        borderColor: '#FFFFFF',
+        borderWidth: 2,
+        shadowBlur: 14,
+        shadowColor: 'rgba(20,184,166,.22)'
+      },
+      label: { color: '#FFFFFF', fontSize: operationsCourtBubbleLabelSize(row.campusName, bubbleSize) }
+    };
+  });
   return {
     color: ['#14B8A6', '#3B82F6', '#F59E0B', '#CBD5E1'],
     grid: { left: 12, right: 12, top: 28, bottom: 34, containLabel: false },
@@ -216,8 +224,9 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     xAxis: {
       type: 'value',
       min: 0,
-      max: Math.ceil(Math.min(100, maxUtilization * 1.35)),
-      axisLabel: { formatter: '{value}%', color: '#94A3B8', fontSize: 11 },
+      max: 50,
+      interval: 10,
+      axisLabel: { formatter: value => `${value}%`, color: '#94A3B8', fontSize: 11 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -225,8 +234,9 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     yAxis: {
       type: 'value',
       min: 0,
-      max: Math.ceil(maxRevenue * 1.24),
-      axisLabel: { inside: true, margin: 8, formatter: value => `¥${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 },
+      max: 1000000,
+      interval: 200000,
+      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#94A3B8', fontSize: 11 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -241,9 +251,9 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       },
       label: {
         show: true,
-        position: 'right',
+        position: 'inside',
         formatter: item => item.name,
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 600
       },
       emphasis: { focus: 'self', scale: true, label: { show: true } },
@@ -466,11 +476,11 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
         const rows = Array.isArray(params) ? params : [params];
         const name = esc(rows[0]?.axisValue || '');
         const revenue = rows.find(item => item.seriesName === '归属实收')?.value || 0;
-        const cumulative = rows.find(item => item.seriesName === '累计收入占比')?.value || 0;
+        const share = rows.find(item => item.seriesName === '个人收入占比')?.value || 0;
         return `<div style="min-width:160px;font-size:12px;line-height:1.75;color:#172033">
           <div style="font-weight:700;margin-bottom:4px">${name}</div>
           <div>归属实收：¥${fmt(revenue)}</div>
-          <div>累计收入占比：${fmt(cumulative)}%</div>
+          <div>个人收入占比：${fmt(share)}%</div>
         </div>`;
       },
       textStyle: { fontSize: 12, fontWeight: 400 }
@@ -484,7 +494,7 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
     ],
     series: [
       { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#805435', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
-      { name: '累计收入占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.cumulativeShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#466A9F' }, itemStyle: { color: '#466A9F' }, emphasis: { focus: 'series' } }
+      { name: '个人收入占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#466A9F' }, itemStyle: { color: '#466A9F' }, emphasis: { focus: 'series' } }
     ]
   };
 }
