@@ -50,7 +50,13 @@ assert.match(stateSource, /async function reloadOperationsPageDataWithInlineLoad
 assert.match(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]*renderOperationsLoading\(\)[\s\S]*ensureDatasetsByName\(\['operationsPage'\],\{force:true\}\)/, 'operations inline refresh should show local skeleton and refresh only operations data');
 assert.doesNotMatch(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]{0,500}pageLoading/, 'operations inline refresh should not show the global loading overlay');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
-assert.match(stateSource, /operationsPage:\(\)=>apiCall\('GET',operationsPageDataUrl\(\)\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
+assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
+assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
+assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
+assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
+assert.match(stateSource, /const requestKey=datasetRequestKey\(name\)/, 'dataset request de-duplication should be scoped by request key');
+assert.match(stateSource, /datasetLoadPromises\.has\(requestKey\)/, 'in-flight operations requests should not reuse a stale all-time request after date changes');
+assert.match(stateSource, /if\(name==='operationsPage'\)[\s\S]*operationsPageRequestSeq/, 'operations refresh should only accept the latest response');
 assert.match(stateSource, /operations:\['operationsPage'\]/, 'operations page should rely on the aggregate endpoint only');
 assert.match(stateSource, /loadedDatasets\.add\('operationsPage'\)/, 'operations aggregate data should be tracked as loaded');
 assert.match(chartsSource, /echarts\.init/, 'only the standard chart wrapper should initialize ECharts');

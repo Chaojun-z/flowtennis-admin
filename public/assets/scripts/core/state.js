@@ -33,6 +33,7 @@ const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
+let operationsPageRequestSeq=0;
 function resolveClientRuntimeStage(){
   const host=String(window.location.hostname||'').trim().toLowerCase();
   if(!host||host==='localhost'||host==='127.0.0.1')return 'local';
@@ -155,6 +156,17 @@ function operationsPageDataUrl(){
   const query=params.toString();
   return query?`/page-data/operations?${query}`:'/page-data/operations';
 }
+function operationsPageDatasetRequestKey(){
+  return 'operationsPage:'+operationsPageDataUrl();
+}
+function datasetRequestKey(name){
+  return name==='operationsPage'?operationsPageDatasetRequestKey():name;
+}
+function loadOperationsPageDataset(){
+  const url=operationsPageDataUrl();
+  const requestKey='operationsPage:'+url;
+  return apiCall('GET',url).then(data=>({...data,__operationsRequestKey:requestKey}));
+}
 const DATASET_LOADERS={
   leads:()=>apiCall('GET','/leads'),
   leadFollowups:()=>apiCall('GET','/lead-followups'),
@@ -183,7 +195,7 @@ const DATASET_LOADERS={
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
   ,courtAccountListViewPage:()=>apiCall('GET','/page-data/court-account-list-view')
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
-  ,operationsPage:()=>apiCall('GET',operationsPageDataUrl())
+  ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
   ,membershipsPage:()=>apiCall('GET','/page-data/memberships')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
@@ -400,9 +412,10 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
   const pending=(names||[]).filter(name=>force||!loadedDatasets.has(name));
   if(!pending.length)return;
   const results=await Promise.all(pending.map(name=>{
-    if(datasetLoadPromises.has(name))return datasetLoadPromises.get(name);
-    const promise=DATASET_LOADERS[name]().then(data=>[name,data]).finally(()=>datasetLoadPromises.delete(name));
-    datasetLoadPromises.set(name,promise);
+    const requestKey=datasetRequestKey(name);
+    if(datasetLoadPromises.has(requestKey))return datasetLoadPromises.get(requestKey);
+    const promise=DATASET_LOADERS[name]().then(data=>[name,data]).finally(()=>datasetLoadPromises.delete(requestKey));
+    datasetLoadPromises.set(requestKey,promise);
     return promise;
   }));
   results.forEach(([name,data])=>{
@@ -424,6 +437,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       return;
     }
     if(name==='operationsPage'){
+      if(data?.__operationsRequestKey&&data.__operationsRequestKey!==operationsPageDatasetRequestKey())return;
       setDatasetValue('campuses',data.campuses||[]);
       operationsPageData=data.operations||null;
       loadedDatasets.add('operationsPage');
@@ -632,11 +646,14 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }
 }
 async function reloadOperationsPageDataWithInlineLoading(){
+  const requestSeq=++operationsPageRequestSeq;
   if(typeof renderOperationsLoading==='function')renderOperationsLoading();
   try{
     await ensureDatasetsByName(['operationsPage'],{force:true});
+    if(requestSeq!==operationsPageRequestSeq)return;
     if(currentPage==='operations')renderOperations();
   }catch(e){
+    if(requestSeq!==operationsPageRequestSeq)return;
     if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
     toast('加载失败：'+e.message,'error');
   }

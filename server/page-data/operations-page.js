@@ -49,7 +49,9 @@ const OPERATIONS_SCHEDULE_FIELDS = [
   'locationType', 'externalVenueName', 'externalCourtName'
 ];
 const OPERATIONS_CACHE_TTL_MS = 60 * 1000;
+const OPERATIONS_RESULT_CACHE_TTL_MS = 60 * 1000;
 const operationsRowsCache = new Map();
+const operationsResultCache = new Map();
 
 async function readOperationsRows({ table, getCachedScan, scanFirstRows, columns, limit = 1000 }) {
   if (typeof scanFirstRows === 'function') {
@@ -65,6 +67,30 @@ function getOperationsRowsCacheKey(user = {}) {
     dataScope: user.dataScope || '',
     campusIds: Array.isArray(user.campusIds) ? [...user.campusIds].sort() : []
   });
+}
+
+function getOperationsDateRange(query) {
+  return {
+    startDate: String(query?.get?.('startDate') || '').slice(0, 10),
+    endDate: String(query?.get?.('endDate') || '').slice(0, 10)
+  };
+}
+
+function getOperationsResultCacheKey(user = {}, dateRange = {}) {
+  return JSON.stringify({
+    user: JSON.parse(getOperationsRowsCacheKey(user)),
+    startDate: dateRange.startDate || '',
+    endDate: dateRange.endDate || ''
+  });
+}
+
+function readOperationsResultCache(resultCacheKey) {
+  const cachedOperations = operationsResultCache.get(resultCacheKey);
+  if (cachedOperations && Date.now() - cachedOperations.createdAt < OPERATIONS_RESULT_CACHE_TTL_MS) {
+    return cachedOperations.payload;
+  }
+  operationsResultCache.delete(resultCacheKey);
+  return null;
 }
 
 async function getOperationsBaseRows({
@@ -158,6 +184,11 @@ async function handleOperationsPageData({
 }) {
   if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
   await init();
+  const dateRange = getOperationsDateRange(query);
+  const resultCacheKey = getOperationsResultCacheKey(user, dateRange);
+  const cachedPayload = readOperationsResultCache(resultCacheKey);
+  if (cachedPayload) return sendJson(res, cachedPayload);
+
   const useGlobalFinanceSnapshot = String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
   const baseRows = await getOperationsBaseRows({
     user,
@@ -197,21 +228,19 @@ async function handleOperationsPageData({
     ? scopedFinanceSnapshot.financeOverviewData
     : { ...(scopedFinanceSnapshot.financeOverviewData || {}), __partial: true };
 
-  const dateRange = {
-    startDate: String(query?.get?.('startDate') || '').slice(0, 10),
-    endDate: String(query?.get?.('endDate') || '').slice(0, 10)
-  };
   const operations = buildOperationsMetrics({
     ...scoped,
     financeOverviewData,
     financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows
   }, { dateRange });
 
-  return sendJson(res, {
+  const payload = {
     campuses: scoped.campuses,
     operations,
     generatedAt: operations.generatedAt
-  });
+  };
+  operationsResultCache.set(resultCacheKey, { createdAt: Date.now(), payload });
+  return sendJson(res, payload);
 }
 
 module.exports = { handleOperationsPageData };

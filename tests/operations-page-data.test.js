@@ -27,6 +27,10 @@ assert.doesNotMatch(operationsPageSource, /getFinancePageSnapshot\(\)/, 'operati
 assert.match(operationsPageSource, /scanFirstRows/, 'operations page-data should use projected first-row reads instead of full raw table scans');
 assert.match(operationsPageSource, /OPERATIONS_CACHE_TTL_MS/, 'operations page-data should cache raw read rows briefly so date switches do not rescan every table');
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations page-data cache should be scoped before reuse');
+assert.match(operationsPageSource, /OPERATIONS_RESULT_CACHE_TTL_MS/, 'operations page-data should cache computed dashboard results for fast date switching');
+assert.match(operationsPageSource, /getOperationsResultCacheKey[\s\S]*dateRange\.startDate[\s\S]*dateRange\.endDate/, 'computed operations cache should be scoped by selected date range');
+assert.match(operationsPageSource, /const cachedOperations = operationsResultCache\.get\(resultCacheKey\)/, 'operations page-data should read the computed result cache before recalculating');
+assert.match(operationsPageSource, /operationsResultCache\.set\(resultCacheKey/, 'operations page-data should save computed operations results after calculation');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*OPERATIONS_SCHEDULE_FIELDS/, 'operations page-data should keep a dedicated projection field list for the operations read model');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*formalCoach/, 'operations page-data should include formalCoach for conversion coach filters');
 assert.match(operationsPageSource, /OPERATIONS_PURCHASE_FIELDS[\s\S]*'paidAmount'[\s\S]*'receivedAmount'[\s\S]*'coachPriceName'[\s\S]*'coachPriceSnapshot'/, 'operations page-data should read real coach ownership and receipt fallback fields for coach efficiency');
