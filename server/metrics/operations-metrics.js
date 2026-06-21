@@ -392,6 +392,7 @@ function courseConversionRows(data = {}, options = {}) {
       source: normalizeText(lead.source || linkedStudent?.source),
       campus: campusLabel(lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
       coach: normalizeText(linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
+      leadDate: firstRowDate(lead, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
       level: normalizeText(lead.level || linkedStudent?.level, ''),
       consultType: normalizeText(lead.consultType || linkedStudent?.consultType, ''),
       studentType: normalizeText(lead.studentType || lead.type || linkedStudent?.studentType || linkedStudent?.type, ''),

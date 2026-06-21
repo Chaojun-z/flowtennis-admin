@@ -28,7 +28,9 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
       const transition = Number(row.transitionRate ?? 0) || 0;
       const loss = Math.max(0, Number(row.lossRate ?? (index > 0 ? 100 - transition : 0)) || 0);
       const stepRate = index > 0 ? transition : percent;
-      return `<div class="operations-funnel-row" title="${esc(row.stage)}：${fmt(count)} 人，环节转化 ${fmt(stepRate)}%">
+      const previousCount = index > 0 ? (Number(list[index - 1]?.count) || 0) : count;
+      const lossCount = Math.max(0, previousCount - count);
+      return `<div class="operations-funnel-row" title="${esc(row.stage)}：${fmt(count)} 人，上一步转化 ${fmt(stepRate)}%，流失 ${fmt(lossCount)} 人">
         <div class="operations-funnel-step">
           <div class="operations-funnel-head">
             <strong>${esc(row.stage)}</strong>
@@ -36,11 +38,11 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
           </div>
           <div class="operations-funnel-track">
             <div class="operations-funnel-fill" style="width:${percent}%"></div>
-            <span class="operations-funnel-step-rate">环节转化 ${fmt(stepRate)}%</span>
           </div>
+          ${index > 0 ? `<div class="operations-funnel-stats"><span>上一步转化 ${fmt(stepRate)}%</span></div>` : '<div class="operations-funnel-stats"></div>'}
         </div>
         <div class="operations-funnel-loss">
-          ${index > 0 ? `<strong class="operations-funnel-loss-badge">流失 ${fmt(loss)}%</strong>` : `<strong class="operations-funnel-base-badge">基准流量</strong>`}
+          ${index > 0 ? `<strong class="operations-funnel-loss-badge">流失 ${fmt(loss)}%</strong><span class="operations-funnel-loss-count">流失 ${fmt(lossCount)} 人</span>` : `<strong class="operations-funnel-base-badge">基准流量</strong>`}
         </div>
       </div>`;
     }).join('')}

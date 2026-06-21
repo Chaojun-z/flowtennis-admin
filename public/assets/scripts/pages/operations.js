@@ -714,7 +714,9 @@ function operationsCoachTrendToneColor(key, values = []) {
   const first = Number(values[0]) || 0;
   const last = Number(values[values.length - 1]) || 0;
   if (key === 'revenue') return '#8B5E3C';
+  if (key === 'leads') return '#8B5E3C';
   if (key === 'activeCoaches') return '#3B6EA8';
+  if (['appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'].includes(key)) return last >= first ? '#2E8B6D' : '#E05252';
   return last >= first ? '#2E8B6D' : '#E05252';
 }
 
@@ -886,6 +888,35 @@ function operationsBuildCourseFunnel(rows = []) {
   }));
 }
 
+function operationsConversionRowDate(row = {}) {
+  const value = row.leadDate || row.createdAt || row.trialAtRaw || row.trialLessonAt || row.trialAt || '';
+  if (!value) return '';
+  const parsed = value instanceof Date ? value : new Date(String(value).replace(' ', 'T'));
+  if (!parsed || Number.isNaN(parsed.getTime())) return '';
+  return dateKey(parsed);
+}
+
+function operationsBuildConversionTrendRows(rows = []) {
+  if (!operationsShouldShowTrend()) return [];
+  const datedRows = (rows || [])
+    .map(row => ({ ...row, _trendDate: operationsConversionRowDate(row) }))
+    .filter(row => row._trendDate)
+    .sort((a, b) => a._trendDate.localeCompare(b._trendDate));
+  const days = [...new Set(datedRows.map(row => row._trendDate))];
+  if (days.length < 2) return [];
+  return days.map(day => {
+    const funnel = operationsBuildCourseFunnel(datedRows.filter(row => row._trendDate <= day));
+    return {
+      date: day,
+      leads: Number(funnel[0]?.count) || 0,
+      appointmentRate: Number(funnel[1]?.percentOfTotal) || 0,
+      attendanceRate: Number(funnel[2]?.transitionRate) || 0,
+      dealRate: Number(funnel[3]?.transitionRate) || 0,
+      renewalRate: Number(funnel[4]?.transitionRate) || 0
+    };
+  });
+}
+
 function operationsBuildSourceRanking(rows = []) {
   const totalDeals = rows.filter(row => row.hasTrialDeal).length;
   return [...operationsGroupRows(rows, 'source').entries()]
@@ -988,12 +1019,40 @@ function operationsConversionKpiCards(funnel = []) {
   const deal = operationsFunnelStep(funnel, 3);
   const renewal = operationsFunnelStep(funnel, 4);
   return [
-    { label: '线索量', value: fmt(total.count || 0), unit: '人', caption: '转化基准流量' },
-    { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, caption: `${fmt(appointment.count || 0)} 人已预约` },
-    { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, caption: `${fmt(attendance.count || 0)} 人实到` },
-    { label: '成交率', value: `${fmt(deal.transitionRate || 0)}%`, caption: `${fmt(deal.count || 0)} 人成交` },
-    { label: '续费率', value: `${fmt(renewal.transitionRate || 0)}%`, caption: `${fmt(renewal.count || 0)} 人续费` }
+    { label: '线索量', value: fmt(total.count || 0), unit: '人', trendKey: 'leads', tone: 'lead' },
+    { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, trendKey: 'appointmentRate', tone: 'conversion' },
+    { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, trendKey: 'attendanceRate', tone: 'conversion' },
+    { label: '成交率', value: `${fmt(deal.transitionRate || 0)}%`, trendKey: 'dealRate', tone: 'conversion' },
+    { label: '续费率', value: `${fmt(renewal.transitionRate || 0)}%`, trendKey: 'renewalRate', tone: 'retention' }
   ];
+}
+
+function operationsConversionTrendPoints(trends = [], key = '') {
+  const points = operationsTrendPoints(trends, key);
+  if (!operationsShouldShowTrend()) return [];
+  if (points.length < 2) return [];
+  const values = points.map(point => Number(point.value) || 0);
+  if (Math.min(...values) === Math.max(...values)) return [];
+  return points;
+}
+
+function operationsConversionSparklineSvg(points = [], key = '') {
+  return operationsKpiSparklineSvg(points, key, 'operations-conversion-kpi-sparkline');
+}
+
+function renderOperationsConversionKpi(card = {}) {
+  return `<div class="operations-court-kpi operations-conversion-kpi ${esc(card.tone || 'neutral')}">
+    <div class="operations-court-kpi-main">
+      <div class="operations-court-kpi-head">
+        <span>${esc(card.label || '')}</span>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendPoints || []))}">${esc(operationsTrendChangeText(card.trendPoints || [], card.trendKey || ''))}</small>
+      </div>
+      <div class="operations-court-kpi-value">
+        <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+      </div>
+    </div>
+    ${operationsConversionSparklineSvg(card.trendPoints || [], card.trendKey || '')}
+  </div>`;
 }
 
 function operationsInsightCard(tone, label, title, caption) {
@@ -1097,14 +1156,18 @@ function operationsConversionView(data) {
       courseFunnel: data.conversion?.courseFunnel || [],
       sourceRanking: data.conversion?.sourceRanking || [],
       channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
-      studentAttributeRows: data.conversion?.studentAttributeRows || []
+      studentAttributeRows: data.conversion?.studentAttributeRows || [],
+      courseRows: [],
+      trendRows: data.conversion?.trends || []
     };
   }
   return {
     courseFunnel: operationsBuildCourseFunnel(rows),
     sourceRanking: operationsBuildSourceRanking(rows),
     channelEfficiencyRows: operationsBuildChannelEfficiencyRows(rows),
-    studentAttributeRows: operationsBuildAttributeRows(rows)
+    studentAttributeRows: operationsBuildAttributeRows(rows),
+    courseRows: rows,
+    trendRows: operationsBuildConversionTrendRows(rows)
   };
 }
 
@@ -1124,31 +1187,27 @@ function operationsConversionFilterOptions(data) {
 }
 
 function renderConversionFunnelModule(data, conversion) {
+  const options = operationsConversionFilterOptions(data);
   return `<section class="operations-section operations-funnel-card">
     <div class="operations-module-head">
       <div><h3>全局转化漏斗</h3><span>转化节点与流失监控</span></div>
+      <div class="operations-funnel-filter-row">
+        ${operationsFilterDropdown('operationsConversionSource', '全部渠道', options.sources || [], operationsConversionFilters.source)}
+        ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
+        ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
+      </div>
     </div>
     <div class="operations-funnel-host" id="operationsCourseFunnel"></div>
   </section>`;
 }
 
 function renderConversionCommandCenter(data, conversion) {
-  const options = operationsConversionFilterOptions(data);
-  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
-  const filters = `<div class="operations-filter-row">
-    ${operationsFilterDropdown('operationsConversionSource', '全部渠道', options.sources || [], operationsConversionFilters.source)}
-    ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
-    ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
-  </div>`;
-  return `<div class="operations-conversion-toolbar">${filters}</div>
-    <div class="operations-kpi-row">
-      ${operationsConversionKpiCards(conversion.courseFunnel || []).map(card => `<div class="operations-kpi-card">
-        <span>${esc(card.label)}</span>
-        <strong>${esc(card.value)}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-      </div>`).join('')}
-    </div>
-    <div class="operations-loss-summary">最大流失环节：${esc(summary.worst?.from || '-')} → ${esc(summary.worst?.to || '-')}，流失 ${fmt(summary.worst?.lossRate || 0)}%</div>
-  `;
+  return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
+      ${operationsConversionKpiCards(conversion.courseFunnel || []).map(card => renderOperationsConversionKpi({
+        ...card,
+        trendPoints: operationsConversionTrendPoints(conversion.trendRows || [], card.trendKey)
+      })).join('')}
+    </div>`;
 }
 
 function renderConversionInsightModule(conversion) {
