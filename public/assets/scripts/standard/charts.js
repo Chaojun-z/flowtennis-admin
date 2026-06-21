@@ -226,6 +226,10 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     tooltip: { trigger: 'item', formatter: operationsCourtQuadrantTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
+      name: '场地利用率',
+      nameLocation: 'middle',
+      nameGap: 28,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: 50,
       interval: 10,
@@ -236,6 +240,10 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     },
     yAxis: {
       type: 'value',
+      name: '订场收入',
+      nameLocation: 'middle',
+      nameGap: 42,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: 1000000,
       interval: 200000,

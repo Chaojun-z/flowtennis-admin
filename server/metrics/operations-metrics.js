@@ -894,15 +894,17 @@ function coachTrendDays({ schedule = [], purchases = [], dateRange = {} } = {}) 
     if (day) days.add(day);
   });
   const sorted = [...days].sort();
+  if (sorted.length > 1) return sorted;
   if (sorted.length !== 1) return sorted;
-  return enumerateDateRange({ startDate: addUtcDays(sorted[0], -6), endDate: sorted[0] });
+  return sorted;
 }
 
 function buildCoachTrendRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
-  return coachTrendDays({ schedule, purchases, dateRange }).map(day => {
+  const days = coachTrendDays({ schedule, purchases, dateRange });
+  return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
-    const daySchedule = (schedule || []).filter(row => dateKey(row.startTime || row.date || row.createdAt) === day);
-    const dayPurchases = (purchases || []).filter(row => purchaseDate(row) === day);
+    const daySchedule = (schedule || []).filter(row => dateWithinRange(dateKey(row.startTime || row.date || row.createdAt), dayRange));
+    const dayPurchases = (purchases || []).filter(row => dateWithinRange(purchaseDate(row), dayRange));
     const rows = buildCoachRows({
       coaches,
       schedule: daySchedule,
@@ -924,8 +926,8 @@ function buildCoachTrendRows({ coaches = [], schedule = [], purchases = [], allP
       activeCoaches: rows.length,
       utilizationRate: availableHours ? round(usedHours * 100 / availableHours, 1) : 0,
       revenue,
-      trialConversionRate: rate(trialConverted, trialBase),
-      renewalRate: rate(renewalCount, oldCustomerBase)
+      trialConversionRate: trialBase ? rate(trialConverted, trialBase) : null,
+      renewalRate: oldCustomerBase ? rate(renewalCount, oldCustomerBase) : null
     };
   });
 }
@@ -1092,6 +1094,36 @@ function rowMinutesInBand(row = {}, bandStart, bandEnd) {
   return Math.max(0, Math.min(end, bandEnd) - Math.max(start, bandStart));
 }
 
+function isWeekendCourtDay(day) {
+  const ms = dateKeyUtcMs(day);
+  if (ms == null) return false;
+  const weekDay = new Date(ms).getUTCDay();
+  return weekDay === 0 || weekDay === 6;
+}
+
+function courtGoldenMinutesForRow(row = {}) {
+  const day = dateFromRow(row) || row.date;
+  if (isWeekendCourtDay(day)) return clampedRowMinutes(row).minutes;
+  return rowMinutesInBand(row, COURT_GOLDEN_START_MINUTES, COURT_DAY_END_MINUTES);
+}
+
+function courtCapacityDates(dateSet = new Set(), dateRange = {}, now = new Date()) {
+  const selectedDays = enumerateDateRange(heatCapacityRange(dateRange, now));
+  if (selectedDays.length) return selectedDays;
+  return [...dateSet].filter(day => /^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))).sort();
+}
+
+function courtCapacityMinutesForDates(days = [], venueCount = 1) {
+  return (days || []).reduce((totals, day) => {
+    const fullDay = COURT_DAY_END_MINUTES - COURT_DAY_START_MINUTES;
+    const golden = isWeekendCourtDay(day) ? fullDay : COURT_DAY_END_MINUTES - COURT_GOLDEN_START_MINUTES;
+    totals.capacity += venueCount * fullDay;
+    totals.goldenCapacity += venueCount * golden;
+    totals.offPeakCapacity += venueCount * Math.max(0, fullDay - golden);
+    return totals;
+  }, { capacity: 0, goldenCapacity: 0, offPeakCapacity: 0 });
+}
+
 function slotHours() {
   const slots = [];
   for (let minutes = COURT_DAY_START_MINUTES; minutes < COURT_DAY_END_MINUTES; minutes += COURT_HEAT_SLOT_MINUTES) {
@@ -1220,6 +1252,8 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
       slots: new Map(),
       slotCounts: new Map(),
       occupiedMinutes: 0,
+      goldenMinutes: 0,
+      offPeakMinutes: 0,
       bookingMinutes: 0,
       bookingAmount: 0,
       bookingCount: 0,
@@ -1230,14 +1264,16 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
       campusName: row.name,
       venueCount: row.venues.length,
       dateSet: new Set(),
-      unmatchedSlots: new Map(),
-      unmatchedSlotCounts: new Map(),
-      unmatchedBookingAmount: 0,
-      unmatchedBookingCount: 0,
-      unmatchedBookingMinutes: 0,
-      unmatchedUsageCount: 0,
-      venueStates
-    }];
+    unmatchedSlots: new Map(),
+    unmatchedSlotCounts: new Map(),
+    unmatchedBookingAmount: 0,
+    unmatchedBookingCount: 0,
+    unmatchedBookingMinutes: 0,
+    unmatchedGoldenMinutes: 0,
+    unmatchedOffPeakMinutes: 0,
+    unmatchedUsageCount: 0,
+    venueStates
+  }];
   }));
 
   const bookingRows = courtHistoryRows(courts)
@@ -1271,9 +1307,13 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
     if (date) campusState.dateSet.add(date);
     const venue = matchCampusVenue(campusRow, row);
     const minutes = clampedRowMinutes(row).minutes;
+    const goldenMinutes = courtGoldenMinutesForRow(row);
+    const offPeakMinutes = Math.max(0, minutes - goldenMinutes);
     if (!venue) {
       if (row.countAsUsage) {
         campusState.unmatchedUsageCount += 1;
+        campusState.unmatchedGoldenMinutes += goldenMinutes;
+        campusState.unmatchedOffPeakMinutes += offPeakMinutes;
         pushSlotMinutes(campusState.unmatchedSlots, row, campusState.unmatchedSlotCounts);
       }
       if (row.countAsBooking) {
@@ -1285,6 +1325,8 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
     }
     const venueState = campusState.venueStates.get(venue.venueId);
     venueState.occupiedMinutes += minutes;
+    venueState.goldenMinutes += goldenMinutes;
+    venueState.offPeakMinutes += offPeakMinutes;
     venueState.usageCount += 1;
     pushSlotMinutes(venueState.slots, row, venueState.slotCounts);
     if (row.countAsBooking) {
@@ -1306,16 +1348,11 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
     const businessBookingCount = Number(businessTotals.bookingCount) || 0;
     const rangeActive = isDateRangeActive(dateRange);
     const usageCount = venueStates.reduce((sum, venue) => sum + venue.usageCount, 0) + row.unmatchedUsageCount;
-    const dateCount = courtHeatDayCount(row.dateSet, selectedDayCount);
-    const capacity = row.venueCount * dateCount * (COURT_DAY_END_MINUTES - COURT_DAY_START_MINUTES);
-    const goldenCapacity = row.venueCount * dateCount * (COURT_DAY_END_MINUTES - COURT_GOLDEN_START_MINUTES);
-    const offPeakCapacity = row.venueCount * dateCount * (COURT_GOLDEN_START_MINUTES - COURT_DAY_START_MINUTES);
+    const capacityDays = courtCapacityDates(row.dateSet, dateRange, now);
+    const { capacity, goldenCapacity, offPeakCapacity } = courtCapacityMinutesForDates(capacityDays, row.venueCount);
     const occupiedMinutes = venueStates.reduce((sum, venue) => sum + venue.occupiedMinutes, 0);
-    const goldenMinutes = venueStates.reduce((sum, venue) => {
-      const rows = [...venue.slots.entries()].map(([hour, minutes]) => ({ hour, minutes }));
-      return sum + rows.filter(slot => Number(slot.hour.slice(0, 2)) >= 16).reduce((slotSum, slot) => slotSum + slot.minutes, 0);
-    }, 0);
-    const offPeakMinutes = Math.max(0, occupiedMinutes - goldenMinutes);
+    const goldenMinutes = venueStates.reduce((sum, venue) => sum + venue.goldenMinutes, 0);
+    const offPeakMinutes = venueStates.reduce((sum, venue) => sum + venue.offPeakMinutes, 0);
     return {
       campusCode: row.campusCode,
       campusName: row.campusName,
@@ -1373,15 +1410,9 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   });
 
   const venueRows = [...state.values()].flatMap(row => {
-    const dateCount = courtHeatDayCount(row.dateSet, selectedDayCount);
-    const capacity = dateCount * (COURT_DAY_END_MINUTES - COURT_DAY_START_MINUTES);
-    const goldenCapacity = dateCount * (COURT_DAY_END_MINUTES - COURT_GOLDEN_START_MINUTES);
-    const offPeakCapacity = dateCount * (COURT_GOLDEN_START_MINUTES - COURT_DAY_START_MINUTES);
+    const capacityDays = courtCapacityDates(row.dateSet, dateRange, now);
+    const { capacity, goldenCapacity, offPeakCapacity } = courtCapacityMinutesForDates(capacityDays, 1);
     const rows = [...row.venueStates.values()].map(venue => {
-      const goldenMinutes = [...venue.slots.entries()]
-        .filter(([hour]) => Number(hour.slice(0, 2)) >= 16)
-        .reduce((sum, [, minutes]) => sum + minutes, 0);
-      const offPeakMinutes = Math.max(0, venue.occupiedMinutes - goldenMinutes);
       return {
         campusCode: row.campusCode,
         campus: row.campusName,
@@ -1392,16 +1423,12 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
         count: venue.bookingCount,
         usageCount: venue.usageCount,
         utilizationRate: capacity ? round(venue.occupiedMinutes * 100 / capacity, 1) : 0,
-        goldenUtilizationRate: goldenCapacity ? round(goldenMinutes * 100 / goldenCapacity, 1) : 0,
-        offPeakUtilizationRate: offPeakCapacity ? round(offPeakMinutes * 100 / offPeakCapacity, 1) : 0
+        goldenUtilizationRate: goldenCapacity ? round(venue.goldenMinutes * 100 / goldenCapacity, 1) : 0,
+        offPeakUtilizationRate: offPeakCapacity ? round(venue.offPeakMinutes * 100 / offPeakCapacity, 1) : 0
       };
     });
     if (row.unmatchedSlots.size) {
       const occupiedMinutes = [...row.unmatchedSlots.values()].reduce((sum, minutes) => sum + minutes, 0);
-      const goldenMinutes = [...row.unmatchedSlots.entries()]
-        .filter(([hour]) => Number(hour.slice(0, 2)) >= 16)
-        .reduce((sum, [, minutes]) => sum + minutes, 0);
-      const offPeakMinutes = Math.max(0, occupiedMinutes - goldenMinutes);
       rows.push({
         campusCode: row.campusCode,
         campus: row.campusName,
@@ -1412,8 +1439,8 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
         count: row.unmatchedBookingCount,
         usageCount: row.unmatchedUsageCount,
         utilizationRate: capacity ? round(occupiedMinutes * 100 / capacity, 1) : 0,
-        goldenUtilizationRate: goldenCapacity ? round(goldenMinutes * 100 / goldenCapacity, 1) : 0,
-        offPeakUtilizationRate: offPeakCapacity ? round(offPeakMinutes * 100 / offPeakCapacity, 1) : 0
+        goldenUtilizationRate: goldenCapacity ? round(row.unmatchedGoldenMinutes * 100 / goldenCapacity, 1) : 0,
+        offPeakUtilizationRate: offPeakCapacity ? round(row.unmatchedOffPeakMinutes * 100 / offPeakCapacity, 1) : 0
       });
     }
     return rows;
@@ -1424,15 +1451,29 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   const totalOccupiedHours = round(campusRows.reduce((sum, row) => sum + row.occupiedHours, 0), 1);
   const totalCapacityHours = campusRows.reduce((sum, row) => {
     const campusState = state.get(row.campusCode);
-    return sum + row.venueCount * courtHeatDayCount(campusState.dateSet, selectedDayCount) * ((COURT_DAY_END_MINUTES - COURT_DAY_START_MINUTES) / 60);
+    return sum + courtCapacityMinutesForDates(courtCapacityDates(campusState.dateSet, dateRange, now), row.venueCount).capacity / 60;
   }, 0);
+  const totalGoldenMinutes = [...state.values()].reduce((sum, row) => (
+    sum + [...row.venueStates.values()].reduce((venueSum, venue) => venueSum + venue.goldenMinutes, 0)
+  ), 0);
+  const totalOffPeakMinutes = [...state.values()].reduce((sum, row) => (
+    sum + [...row.venueStates.values()].reduce((venueSum, venue) => venueSum + venue.offPeakMinutes, 0)
+  ), 0);
+  const totalGoldenCapacity = [...state.values()].reduce((sum, row) => (
+    sum + courtCapacityMinutesForDates(courtCapacityDates(row.dateSet, dateRange, now), row.venueCount).goldenCapacity
+  ), 0);
+  const totalOffPeakCapacity = [...state.values()].reduce((sum, row) => (
+    sum + courtCapacityMinutesForDates(courtCapacityDates(row.dateSet, dateRange, now), row.venueCount).offPeakCapacity
+  ), 0);
   return {
     cards: {
       bookingHours: { title: '订场小时', value: totalBookingHours, unit: '小时' },
       bookingAmount: { title: '订场收入', value: totalBookingAmount, unit: '元' },
       bookingCount: { title: '订场次数', value: totalBookingCount, unit: '次' },
       activeVenues: { title: '启用场地', value: configuredVenueCount, unit: '片' },
-      utilizationRate: { title: '场地利用率', value: totalCapacityHours ? round(totalOccupiedHours * 100 / totalCapacityHours, 1) : 0, unit: '%' }
+      utilizationRate: { title: '场地利用率', value: totalCapacityHours ? round(totalOccupiedHours * 100 / totalCapacityHours, 1) : 0, unit: '%' },
+      goldenUtilizationRate: { title: '黄金时段利用率', value: totalGoldenCapacity ? round(totalGoldenMinutes * 100 / totalGoldenCapacity, 1) : 0, unit: '%' },
+      offPeakUtilizationRate: { title: '非黄金时段利用率', value: totalOffPeakCapacity ? round(totalOffPeakMinutes * 100 / totalOffPeakCapacity, 1) : 0, unit: '%' }
     },
     venueRows,
     heatmap: [],
@@ -1445,6 +1486,55 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
     })),
     campusHeatmaps
   };
+}
+
+function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], dateRange = {} } = {}) {
+  const selectedDays = enumerateDateRange(dateRange);
+  if (selectedDays.length) return selectedDays;
+  const days = new Set();
+  courtHistoryRows(courts).forEach(row => {
+    const day = dateFromRow(row);
+    if (day) days.add(day);
+  });
+  (schedule || []).forEach(row => {
+    const day = dateKey(row.startTime || row.date || row.createdAt);
+    if (day) days.add(day);
+  });
+  (entitlementLedger || []).forEach(row => {
+    const day = dateKey(row.sourceDate || row.relatedDate || row.createdAt);
+    if (day) days.add(day);
+  });
+  const sorted = [...days].sort();
+  if (sorted.length > 1) return sorted;
+  if (sorted.length !== 1) return sorted;
+  return sorted;
+}
+
+function buildCourtTrendRows({ campuses = [], courts = [], schedule = [], entitlements = [], entitlementLedger = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
+  const days = courtTrendDays({ courts, schedule, entitlementLedger, dateRange });
+  return days.map(day => {
+    const dayRange = { startDate: day, endDate: day };
+    const configuredMetrics = buildConfiguredCourtMetrics({
+      campuses,
+      courts,
+      schedule,
+      entitlements,
+      entitlementLedger,
+      dateRange: dayRange,
+      now
+    });
+    const financeMetrics = buildCourtMetricsFromFinanceRows(filterRowsByDateRange(financeNormalizedRows || [], dayRange, ['businessDate', 'date', 'createdAt']));
+    const metrics = mergeConfiguredCourtMetricsWithFinance(configuredMetrics, financeMetrics) || mergeCourtMetrics(buildCourtMetrics(courts), financeMetrics);
+    const cards = metrics.cards || {};
+    return {
+      date: day,
+      bookingAmount: Number(cards.bookingAmount?.value) || 0,
+      bookingHours: Number(cards.bookingHours?.value) || 0,
+      utilizationRate: Number(cards.utilizationRate?.value) || 0,
+      goldenUtilizationRate: Number(cards.goldenUtilizationRate?.value) || 0,
+      offPeakUtilizationRate: Number(cards.offPeakUtilizationRate?.value) || 0
+    };
+  });
 }
 
 function buildCourtMetrics(courts = []) {
@@ -1563,6 +1653,24 @@ function mergeCourtMetrics(historyMetrics, financeMetrics) {
   };
 }
 
+function mergeConfiguredCourtMetricsWithFinance(configuredMetrics, financeMetrics) {
+  if (!configuredMetrics || !financeMetrics?.cards?.bookingCount?.value) return configuredMetrics;
+  const configuredCards = configuredMetrics.cards || {};
+  const financeCards = financeMetrics.cards || {};
+  const nextCards = {
+    ...configuredCards,
+    bookingHours: Number(configuredCards.bookingHours?.value) ? configuredCards.bookingHours : financeCards.bookingHours,
+    bookingAmount: Number(configuredCards.bookingAmount?.value) ? configuredCards.bookingAmount : financeCards.bookingAmount,
+    bookingCount: Number(configuredCards.bookingCount?.value) ? configuredCards.bookingCount : financeCards.bookingCount
+  };
+  return {
+    ...configuredMetrics,
+    cards: nextCards,
+    venueRows: (configuredMetrics.venueRows || []).length ? configuredMetrics.venueRows : (financeMetrics.venueRows || []),
+    heatmap: (configuredMetrics.heatmap || []).length ? configuredMetrics.heatmap : (financeMetrics.heatmap || [])
+  };
+}
+
 function buildRevenueMix(financeOverviewData = {}) {
   const all = financeAll(financeOverviewData);
   return [
@@ -1639,7 +1747,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     campuses: data.campuses || [],
     now
   });
-  const court = buildConfiguredCourtMetrics({
+  const configuredCourt = buildConfiguredCourtMetrics({
     campuses: data.campuses || [],
     courts: data.courts || [],
     schedule: data.schedule || [],
@@ -1647,9 +1755,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     entitlementLedger: rangedData.entitlementLedger || [],
     dateRange,
     now
-  }) || mergeCourtMetrics(
+  });
+  const financeCourtMetrics = buildCourtMetricsFromFinanceRows(rangedData.financeNormalizedRows || []);
+  const court = mergeConfiguredCourtMetricsWithFinance(configuredCourt, financeCourtMetrics) || mergeCourtMetrics(
     buildCourtMetrics(data.courts || []),
-    buildCourtMetricsFromFinanceRows(rangedData.financeNormalizedRows || [])
+    financeCourtMetrics
   );
   if (Array.isArray(court.campusRows)) {
     court.campusRows = court.campusRows.map(row => ({
@@ -1700,7 +1810,19 @@ function buildOperationsMetrics(data = {}, options = {}) {
           : row
       ))
     },
-    court,
+    court: {
+      ...court,
+      trends: buildCourtTrendRows({
+        campuses: data.campuses || [],
+        courts: rangedData.courts || data.courts || [],
+        schedule: rangedData.schedule || [],
+        entitlements: data.entitlements || [],
+        entitlementLedger: rangedData.entitlementLedger || [],
+        financeNormalizedRows: rangedData.financeNormalizedRows || [],
+        dateRange,
+        now
+      })
+    },
     conversion: {
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },

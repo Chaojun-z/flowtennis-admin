@@ -134,12 +134,14 @@ assert.strictEqual(mabaoCampus.bookingAmount, 800, 'campus booking revenue shoul
 assert.strictEqual(mabaoCampus.bookingCount, 3, 'campus booking count should include historical booking rows only');
 assert.strictEqual(mabaoCampus.usageCount, 4, 'campus usage count should include historical booking rows and own-campus schedule occupancy');
 assert.strictEqual(mabaoCampus.utilizationRate, 16.7, 'campus utilization should use active venue capacity as denominator');
-assert.strictEqual(mabaoCampus.goldenUtilizationRate, 25, 'golden utilization should use 16:00-22:00 active venue capacity');
-assert.strictEqual(mabaoCampus.offPeakUtilizationRate, 11.1, 'off-peak utilization should use 07:00-16:00 active venue capacity');
+assert.strictEqual(mabaoCampus.goldenUtilizationRate, 16.7, 'weekend golden utilization should use the whole active day as prime capacity');
+assert.strictEqual(mabaoCampus.offPeakUtilizationRate, 0, 'weekend off-peak utilization should be zero because the whole active day is prime');
+assert.strictEqual(campusVenueMetrics.court.cards.goldenUtilizationRate.value, 16.7, 'court cards should expose weighted golden utilization for top KPI cards');
+assert.strictEqual(campusVenueMetrics.court.cards.offPeakUtilizationRate.value, 0, 'court cards should expose weighted off-peak utilization for top KPI cards');
 assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').usageCount, 2, 'venue rows should expose one row per court with booking plus schedule usage count');
 assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').utilizationRate, 20, 'venue rows should expose per-court utilization');
-assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').goldenUtilizationRate, 16.7, 'venue rows should expose per-court golden utilization');
-assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').offPeakUtilizationRate, 22.2, 'venue rows should expose per-court off-peak utilization');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').goldenUtilizationRate, 20, 'venue rows should treat weekend full-day usage as golden utilization');
+assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').offPeakUtilizationRate, 0, 'venue rows should treat weekend off-peak capacity as zero');
 assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '未匹配').usageCount, 1, 'unmatched historical venue rows should still appear as one row in court overview data');
 assert.strictEqual(gaoxinCampus.venueCount, 1, 'campuses without bookings should still appear from campus config');
 assert.strictEqual(gaoxinCampus.utilizationRate, 0, 'empty campus utilization should be zero');
@@ -186,7 +188,7 @@ assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:00').utiliza
 assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:30').utilizationRate, 0, 'out-of-range bookings should not heat selected-period slots');
 assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingCount, 1, 'court booking counts should follow the selected date range without counting schedules as bookings');
 assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 2, 'court usage counts should follow the selected date range and include own-campus schedule occupancy');
-assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 2.4, 'golden utilization should use selected period capacity, not only days that have records');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 1.7, 'golden utilization should use selected period capacity and treat weekend full days as prime');
 
 const currentMonthHeatMetrics = buildOperationsMetrics({
   campuses: [
@@ -255,7 +257,7 @@ const allTimeSpanMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, { now: new Date('2026-06-18T00:00:00+08:00') });
-assert.strictEqual(allTimeSpanMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 8.3, 'all-time utilization should use active business days instead of diluting by historical gaps');
+assert.strictEqual(allTimeSpanMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 4.8, 'all-time utilization should use active business days and treat weekend full days as prime');
 assert.strictEqual(allTimeSpanMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'all-time heat slots should use active business days instead of diluting by historical gaps');
 
 const importedSourceBandMetrics = buildOperationsMetrics({
@@ -515,6 +517,100 @@ const campusConversionRow = campusConversionCourtMetrics.court.campusRows.find(r
 assert.strictEqual(campusConversionRow.trialConversionRate, 66.7, 'court campus rows should include experience conversion rate by campus');
 assert.strictEqual(campusConversionRow.repeatCustomerConversionRate, 50, 'court campus rows should include repeat customer conversion rate by campus');
 
+const courtTrendMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-trend',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'trend-1', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'trend-2', date: '2026-06-03', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '10:00', amount: 200, type: '消费', category: '会员订场' },
+        { id: 'trend-3', date: '2026-06-06', venue: '1号场', venueId: 'v1', startTime: '09:00', endTime: '11:00', amount: 300, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-08T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+assert.strictEqual(courtTrendMetrics.court.trends.length, 7, 'court KPI trends should cover every selected day');
+assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-03')?.bookingHours, 2, 'court KPI trends should expose the real day bucket, not cumulative booking hours');
+assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-06')?.bookingHours, 2, 'court KPI trends should expose each selected-day bucket value');
+assert.ok(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingHours === 0, 'selected range trend should keep empty days as zero buckets');
+const allTimeCourtTrendMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-trend-all',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'all-trend-1', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'all-trend-2', date: '2026-06-04', venue: '1号场', venueId: 'v1', startTime: '10:00', endTime: '12:00', amount: 220, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  schedule: [],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-08T12:00:00+08:00') });
+assert.deepStrictEqual(allTimeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-04'], 'all-time court KPI trends should use active business days instead of filling long zero stretches');
+assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.bookingAmount, 220, 'all-time court KPI trends should expose real bucket income instead of cumulative income');
+const configuredCourtFinanceFallbackMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [],
+  schedule: [
+    { id: 'configured-usage', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:00:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'finance-booking-1', businessDate: '2026-06-01', businessType: '散客订场', action: '收款', cashDelta: 100, recognizedRevenueDelta: 100, timeText: '08:00-10:00', sourceProject: '1号场' },
+    { id: 'finance-booking-2', businessDate: '2026-06-04', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 220, timeText: '10:00-11:00', sourceProject: '1号场' }
+  ],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-08T12:00:00+08:00') });
+assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingAmount.value, 320, 'configured court dashboard should use finance booking income when court booking history is missing');
+assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingHours.value, 3, 'configured court dashboard should use finance booking hours when court booking history is missing');
+assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.trends.at(-1)?.bookingAmount, 220, 'configured court trends should bucket finance booking income when court booking history is missing');
+
 const noGenderMetrics = buildOperationsMetrics({
   campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
   leads: [
@@ -652,8 +748,8 @@ assert.strictEqual(coachB.revenue, 700, 'coach revenue should not borrow other c
 assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6900, 'coach top cards should sum ownerCoach course receipts only');
 assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
 assert.strictEqual(coachDashboardMetrics.coach.trends.length, 7, 'coach KPI trends should cover each selected day');
-assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the daily selected-period denominator');
-assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use daily ownerCoach course receipts');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the real day bucket utilization');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket ownerCoach course receipts');
 const allTimeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
@@ -669,7 +765,7 @@ const allTimeCoachTrendMetrics = buildOperationsMetrics({
 }, {
   now: new Date('2026-06-04T12:00:00+08:00')
 });
-assert.ok(allTimeCoachTrendMetrics.coach.trends.length >= 7, 'all-time coach KPI trends should still provide enough continuous points for sparklines');
+assert.deepStrictEqual(allTimeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-04'], 'all-time coach KPI trends should use active business days instead of filling long zero stretches');
 assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.at(-1)?.date, '2026-06-04', 'all-time coach KPI trends should end at the latest coach activity date');
 assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-40%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
 assert.deepStrictEqual(
