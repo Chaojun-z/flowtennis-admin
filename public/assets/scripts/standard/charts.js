@@ -157,6 +157,49 @@ function buildStandardBarLineChartOption({ labels = [], barValues = [], lineValu
   };
 }
 
+function buildStandardBubbleMatrixChartOption({
+  color,
+  grid = { left: 18, right: 18, top: 18, bottom: 30, containLabel: true },
+  tooltip = { trigger: 'item' },
+  xAxis = {},
+  yAxis = {},
+  seriesName = '',
+  data = [],
+  symbolSize,
+  label = {},
+  labelLayout = { hideOverlap: true },
+  markLine,
+  markArea
+} = {}) {
+  if (!data.length) return { series: [] };
+  return {
+    ...(color ? { color } : {}),
+    grid,
+    tooltip,
+    xAxis,
+    yAxis,
+    series: [{
+      name: seriesName,
+      type: 'scatter',
+      data,
+      ...(symbolSize ? { symbolSize } : {}),
+      label,
+      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: label.formatter } },
+      ...(labelLayout ? { labelLayout } : {}),
+      ...(markLine ? { markLine } : {}),
+      ...(markArea ? { markArea } : {})
+    }]
+  };
+}
+
+function buildStandardBusinessBubbleMatrixChartOption(option = {}) {
+  return buildStandardBubbleMatrixChartOption(option);
+}
+
+function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
+  return buildStandardBubbleMatrixChartOption(option);
+}
+
 function operationsChannelQualityColor(row = {}) {
   if (row.statusTone === 'good') return '#2E8B6D';
   if (row.statusTone === 'warn') return '#D89135';
@@ -186,7 +229,7 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
   const axisMaxLeads = Math.max(10, Math.ceil(maxLeads / 10) * 10);
   const avgRate = source.reduce((sum, row) => sum + (Number(row.dealConversionRate) || 0), 0) / source.length;
   const avgLeads = source.reduce((sum, row) => sum + (Number(row.leads) || 0), 0) / source.length;
-  return {
+  return buildStandardBusinessBubbleMatrixChartOption({
     grid: { left: 18, right: 18, top: 18, bottom: 30, containLabel: true },
     tooltip: { trigger: 'item', formatter: operationsChannelQualityTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
@@ -215,54 +258,49 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
     },
-    series: [{
-      name: '成交人数',
-      type: 'scatter',
-      data: source.map(row => {
-        const deals = Number(row.deals) || 0;
-        const bubbleSize = Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
-        const bubbleColor = operationsChannelQualityColor(row);
-        return {
-          name: row.source,
-          raw: row,
-          value: [Number(row.dealConversionRate) || 0, Number(row.leads) || 0, deals],
-          symbolSize: bubbleSize,
-          itemStyle: {
-            color: bubbleColor,
-            opacity: 0.86,
-            borderColor: '#FFFFFF',
-            borderWidth: 2,
-            shadowBlur: 14,
-            shadowColor: `${bubbleColor}33`
-          }
-        };
-      }),
-      symbolSize: value => {
-        const deals = Number(value?.[2]) || 0;
-        return Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
-      },
-      label: {
-        show: true,
-        position: 'right',
-        formatter: item => item.name,
-        color: '#172033',
-        fontSize: 10,
-        fontWeight: 700
-      },
-      emphasis: { focus: 'self', scale: true, label: { show: true } },
-      labelLayout: { hideOverlap: true },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-        label: { color: '#64748B', fontSize: 11 },
-        data: [
-          { name: '平均转化', xAxis: avgRate, label: { formatter: '平均转化', position: 'insideEndTop' } },
-          { name: '平均线索', yAxis: avgLeads, label: { formatter: '平均线索', position: 'insideEndTop' } }
-        ]
-      }
-    }]
-  };
+    seriesName: '成交人数',
+    data: source.map(row => {
+      const deals = Number(row.deals) || 0;
+      const bubbleSize = Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+      const bubbleColor = operationsChannelQualityColor(row);
+      return {
+        name: row.source,
+        raw: row,
+        value: [Number(row.dealConversionRate) || 0, Number(row.leads) || 0, deals],
+        symbolSize: bubbleSize,
+        itemStyle: {
+          color: bubbleColor,
+          opacity: 0.86,
+          borderColor: '#FFFFFF',
+          borderWidth: 2,
+          shadowBlur: 14,
+          shadowColor: `${bubbleColor}33`
+        }
+      };
+    }),
+    symbolSize: value => {
+      const deals = Number(value?.[2]) || 0;
+      return Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+    },
+    label: {
+      show: true,
+      position: 'right',
+      formatter: item => item.name,
+      color: '#172033',
+      fontSize: 10,
+      fontWeight: 700
+    },
+    markLine: {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
+      label: { color: '#64748B', fontSize: 11 },
+      data: [
+        { name: '平均转化', xAxis: avgRate, label: { formatter: '平均转化', position: 'insideEndTop' } },
+        { name: '平均线索', yAxis: avgLeads, label: { formatter: '平均线索', position: 'insideEndTop' } }
+      ]
+    }
+  });
 }
 
 function operationsCourtQuadrantColor(row = {}) {
@@ -335,7 +373,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       label: { color: '#FFFFFF', fontSize: operationsCourtBubbleLabelSize(row.campusName, bubbleSize) }
     };
   });
-  return {
+  return buildStandardBusinessBubbleMatrixChartOption({
     color: ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'],
     grid: { left: 18, right: 18, top: 28, bottom: 34, containLabel: true },
     tooltip: { trigger: 'item', formatter: operationsCourtQuadrantTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
@@ -367,46 +405,42 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
     },
-    series: [{
-      name: '校区经营位置',
-      type: 'scatter',
-      data,
-      symbolSize: item => {
-        const bookingCount = Number(item?.[2]) || 0;
-        return Math.max(18, Math.min(58, 18 + (bookingCount / maxBookingCount) * 40));
-      },
-      label: {
-        show: true,
-        position: 'inside',
-        formatter: item => item.name,
-        fontSize: 10,
-        fontWeight: 600
-      },
-      emphasis: { focus: 'self', scale: true, label: { show: true } },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-        label: { color: '#A19080', fontSize: 11 },
-        data: [
-          { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
-          { name: '平均收入', yAxis: avgRevenue, label: { formatter: '平均收入', position: 'insideEndTop' } }
-        ]
-      },
-      markArea: {
-        silent: true,
-        itemStyle: { opacity: 0.42 },
-        label: { show: false },
-        data: [
-          [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 10 }],
-          [{ xAxis: 10, itemStyle: { color: '#FFFBEB' } }, { xAxis: 20 }],
-          [{ xAxis: 20, itemStyle: { color: '#EFF6FF' } }, { xAxis: 30 }],
-          [{ xAxis: 30, itemStyle: { color: '#ECFDF5' } }, { xAxis: 40 }],
-          [{ xAxis: 40, itemStyle: { color: '#F0FDFA' } }, { xAxis: 50 }]
-        ]
-      }
-    }]
-  };
+    seriesName: '校区经营位置',
+    data,
+    symbolSize: item => {
+      const bookingCount = Number(item?.[2]) || 0;
+      return Math.max(18, Math.min(58, 18 + (bookingCount / maxBookingCount) * 40));
+    },
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: item => item.name,
+      fontSize: 10,
+      fontWeight: 600
+    },
+    markLine: {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
+      label: { color: '#A19080', fontSize: 11 },
+      data: [
+        { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
+        { name: '平均收入', yAxis: avgRevenue, label: { formatter: '平均收入', position: 'insideEndTop' } }
+      ]
+    },
+    markArea: {
+      silent: true,
+      itemStyle: { opacity: 0.42 },
+      label: { show: false },
+      data: [
+        [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 10 }],
+        [{ xAxis: 10, itemStyle: { color: '#FFFBEB' } }, { xAxis: 20 }],
+        [{ xAxis: 20, itemStyle: { color: '#EFF6FF' } }, { xAxis: 30 }],
+        [{ xAxis: 30, itemStyle: { color: '#ECFDF5' } }, { xAxis: 40 }],
+        [{ xAxis: 40, itemStyle: { color: '#F0FDFA' } }, { xAxis: 50 }]
+      ]
+    }
+  });
 }
 
 function buildStandardLineChartOption({ labels = [], values = [], name = '' } = {}) {
@@ -568,7 +602,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const maxLessons = Math.max(1, ...source.map(row => Number(row.lessonCount) || 0));
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
-  return {
+  return buildStandardBusinessBubbleMatrixChartOption({
     grid: { left: 4, right: 4, top: 4, bottom: 6, containLabel: true },
     tooltip: {
       trigger: 'item',
@@ -605,64 +639,59 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
     },
-    series: [{
-      name: '教练经营位置',
-      type: 'scatter',
-      data: source.map(row => {
-        const value = [Number(row.utilizationRate) || 0, Number(row.revenue) || 0, Number(row.lessonCount) || 0];
-        const bubbleSize = operationsCoachMatrixSymbolSize(value, maxLessons);
-        const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
-        return {
-          name: row.coach,
-          raw: row,
-          value,
-          symbolSize: bubbleSize,
-          label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
-          itemStyle: {
-            color: operationsCoachBandColor(row.utilizationRate),
-            opacity: 0.86,
-            borderColor: '#FFFFFF',
-            borderWidth: 2,
-            shadowBlur: 14,
-            shadowColor: 'rgba(128,84,53,.18)'
-          }
-        };
-      }),
-      symbolSize: value => operationsCoachMatrixSymbolSize(value, maxLessons),
-      label: {
-        show: true,
-        position: 'inside',
-        formatter: item => operationsCoachBubbleLabel(item).text,
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: 700
-      },
-      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachBubbleLabel(item).text } },
-      labelLayout: { hideOverlap: true },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-        label: { color: '#64748B', fontSize: 11 },
-        data: [
-          { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
-          { name: '平均产值', yAxis: avgRevenue, label: { formatter: '平均产值', position: 'insideEndTop' } }
-        ]
-      },
-      markArea: {
-        silent: true,
-        itemStyle: { opacity: 0.42 },
-        label: { show: false },
-        data: [
-          [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 20 }],
-          [{ xAxis: 20, itemStyle: { color: '#FFFBEB' } }, { xAxis: 40 }],
-          [{ xAxis: 40, itemStyle: { color: '#F3F6FA' } }, { xAxis: 60 }],
-          [{ xAxis: 60, itemStyle: { color: '#E6FBF2' } }, { xAxis: 80 }],
-          [{ xAxis: 80, itemStyle: { color: '#D9F5E5' } }, { xAxis: 100 }]
-        ]
-      }
-    }]
-  };
+    seriesName: '教练经营位置',
+    data: source.map(row => {
+      const value = [Number(row.utilizationRate) || 0, Number(row.revenue) || 0, Number(row.lessonCount) || 0];
+      const bubbleSize = operationsCoachMatrixSymbolSize(value, maxLessons);
+      const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
+      return {
+        name: row.coach,
+        raw: row,
+        value,
+        symbolSize: bubbleSize,
+        label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
+        itemStyle: {
+          color: operationsCoachBandColor(row.utilizationRate),
+          opacity: 0.86,
+          borderColor: '#FFFFFF',
+          borderWidth: 2,
+          shadowBlur: 14,
+          shadowColor: 'rgba(128,84,53,.18)'
+        }
+      };
+    }),
+    symbolSize: value => operationsCoachMatrixSymbolSize(value, maxLessons),
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: item => operationsCoachBubbleLabel(item).text,
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: 700
+    },
+    markLine: {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
+      label: { color: '#64748B', fontSize: 11 },
+      data: [
+        { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
+        { name: '平均产值', yAxis: avgRevenue, label: { formatter: '平均产值', position: 'insideEndTop' } }
+      ]
+    },
+    markArea: {
+      silent: true,
+      itemStyle: { opacity: 0.42 },
+      label: { show: false },
+      data: [
+        [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 20 }],
+        [{ xAxis: 20, itemStyle: { color: '#FFFBEB' } }, { xAxis: 40 }],
+        [{ xAxis: 40, itemStyle: { color: '#F3F6FA' } }, { xAxis: 60 }],
+        [{ xAxis: 60, itemStyle: { color: '#E6FBF2' } }, { xAxis: 80 }],
+        [{ xAxis: 80, itemStyle: { color: '#D9F5E5' } }, { xAxis: 100 }]
+      ]
+    }
+  });
 }
 
 function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
@@ -801,7 +830,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   const hasRenewalBase = source.some(row => (Number(row.oldCustomerBase) || 0) > 0);
   if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
-  return {
+  return buildStandardQuadrantBubbleMatrixChartOption({
     grid: { left: 4, right: 4, top: 4, bottom: 6, containLabel: true },
     tooltip: {
       trigger: 'item',
@@ -816,58 +845,53 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
     },
     xAxis: { type: 'value', nameGap: 18, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 4 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     yAxis: { type: 'value', nameGap: 24, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 4, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    series: [{
-      name: '转化续费能力',
-      type: 'scatter',
-      data: source.map(row => {
-        const ability = operationsCoachCapabilityColor(row);
-        const sample = (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0);
-        const value = [Number(row.trialConversionRate) || 0, Number(row.renewalRate) || 0, sample];
-        const bubbleSize = operationsCoachCapabilitySymbolSize(value, maxSample);
-        const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
-        return {
-          name: row.coach,
-          raw: { ...row, abilityLabel: ability.label },
-          value,
-          symbolSize: bubbleSize,
-          label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
-          itemStyle: { color: ability.color, opacity: 0.84, borderColor: '#fff', borderWidth: 2, shadowBlur: 12, shadowColor: `${ability.color}2E` }
-        };
-      }),
-      symbolSize: value => operationsCoachCapabilitySymbolSize(value, maxSample),
-      label: {
-        show: true,
-        position: 'inside',
-        formatter: item => operationsCoachBubbleLabel(item).text,
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: 700
-      },
-      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachBubbleLabel(item).text } },
-      labelLayout: { hideOverlap: true },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-        label: { color: '#64748B', fontSize: 11 },
-        data: [
-          { name: '转化均线', xAxis: 50, label: { formatter: '转化 50%', position: 'insideEndTop' } },
-          { name: '续费均线', yAxis: 50, label: { formatter: '续费 50%', position: 'insideEndTop' } }
-        ]
-      },
-      markArea: {
-        silent: true,
-        itemStyle: { opacity: 0.42 },
-        label: { show: false },
-        data: [
-          [{ name: '双低', xAxis: 0, yAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 50, yAxis: 50 }],
-          [{ name: '转化高续费低', xAxis: 50, yAxis: 0, itemStyle: { color: '#FFFBEB' } }, { xAxis: 100, yAxis: 50 }],
-          [{ name: '转化低续费高', xAxis: 0, yAxis: 50, itemStyle: { color: '#EFF6FF' } }, { xAxis: 50, yAxis: 100 }],
-          [{ name: '双高', xAxis: 50, yAxis: 50, itemStyle: { color: '#ECFDF5' } }, { xAxis: 100, yAxis: 100 }]
-        ]
-      }
-    }]
-  };
+    seriesName: '转化续费能力',
+    data: source.map(row => {
+      const ability = operationsCoachCapabilityColor(row);
+      const sample = (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0);
+      const value = [Number(row.trialConversionRate) || 0, Number(row.renewalRate) || 0, sample];
+      const bubbleSize = operationsCoachCapabilitySymbolSize(value, maxSample);
+      const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
+      return {
+        name: row.coach,
+        raw: { ...row, abilityLabel: ability.label },
+        value,
+        symbolSize: bubbleSize,
+        label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
+        itemStyle: { color: ability.color, opacity: 0.84, borderColor: '#fff', borderWidth: 2, shadowBlur: 12, shadowColor: `${ability.color}2E` }
+      };
+    }),
+    symbolSize: value => operationsCoachCapabilitySymbolSize(value, maxSample),
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: item => operationsCoachBubbleLabel(item).text,
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: 700
+    },
+    markLine: {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
+      label: { color: '#64748B', fontSize: 11 },
+      data: [
+        { name: '转化均线', xAxis: 50, label: { formatter: '转化 50%', position: 'insideEndTop' } },
+        { name: '续费均线', yAxis: 50, label: { formatter: '续费 50%', position: 'insideEndTop' } }
+      ]
+    },
+    markArea: {
+      silent: true,
+      itemStyle: { opacity: 0.42 },
+      label: { show: false },
+      data: [
+        [{ name: '双低', xAxis: 0, yAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 50, yAxis: 50 }],
+        [{ name: '转化高续费低', xAxis: 50, yAxis: 0, itemStyle: { color: '#FFFBEB' } }, { xAxis: 100, yAxis: 50 }],
+        [{ name: '转化低续费高', xAxis: 0, yAxis: 50, itemStyle: { color: '#EFF6FF' } }, { xAxis: 50, yAxis: 100 }],
+        [{ name: '双高', xAxis: 50, yAxis: 50, itemStyle: { color: '#ECFDF5' } }, { xAxis: 100, yAxis: 100 }]
+      ]
+    }
+  });
 }
 
 window.addEventListener('resize', () => {

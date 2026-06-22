@@ -83,6 +83,9 @@ assert.match(stylesSource, /operations-funnel-transition-label\.inside[\s\S]*rig
 assert.match(stylesSource, /operations-funnel-transition-label\.outside[\s\S]*color:#8B5E3C/, 'short funnel labels should sit inside the pale track without using red');
 assert.doesNotMatch(stylesSource, /operations-funnel-transition-label[^}]*color:#E05252/, 'funnel conversion rate labels should not use red because loss badges already own risk color');
 assert.match(chartsSource, /emphasis[\s\S]*focus/, 'ECharts series should expose hover emphasis');
+assert.match(chartsSource, /function buildStandardBubbleMatrixChartOption/, 'standard charts should expose a shared bubble matrix base builder');
+assert.match(chartsSource, /function buildStandardBusinessBubbleMatrixChartOption/, 'standard charts should expose the shared business bubble matrix builder');
+assert.match(chartsSource, /function buildStandardQuadrantBubbleMatrixChartOption/, 'standard charts should expose the shared quadrant bubble matrix builder');
 assert.match(chartsSource, /buildOperationsCourtQuadrantChartOption/, 'court comparison should use a dedicated quadrant bubble chart builder');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption/, 'coach dashboard should use a dedicated coach revenue-utilization matrix builder');
 assert.match(chartsSource, /buildOperationsCoachParetoChartOption/, 'coach dashboard should use a dedicated pareto contribution builder');
@@ -101,6 +104,14 @@ assert.match(chartsSource, /体验课转化率：\$\{fmt\(row\.trialConversionRa
 assert.match(chartsSource, /function operationsCoachCapabilityColor[\s\S]*双高[\s\S]*转化高续费低[\s\S]*转化低续费高[\s\S]*双低/, 'coach capability matrix should color bubbles by conversion-renewal ability status');
 assert.match(chartsSource, /const maxSample = Math\.max\(1,[\s\S]*trialBase[\s\S]*oldCustomerBase/, 'coach capability bubble size should follow effective sample size');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*markArea[\s\S]*双低[\s\S]*双高/, 'coach capability matrix should use background color areas like the primary matrix');
+[
+  'buildOperationsChannelQualityChartOption',
+  'buildOperationsCourtQuadrantChartOption',
+  'buildOperationsCoachMatrixChartOption'
+].forEach(name => {
+  assert.match(chartsSource, new RegExp(`function ${name}\\([\\s\\S]*buildStandardBusinessBubbleMatrixChartOption`), `${name} should use the shared business bubble matrix base`);
+});
+assert.match(chartsSource, /function buildOperationsCoachCapabilityChartOption\([\s\S]*buildStandardQuadrantBubbleMatrixChartOption/, 'coach capability matrix should use the shared quadrant bubble matrix base');
 assert.doesNotMatch(operationsSource, /function renderOperationsCoachUtilizationBands|renderOperationsCoachUtilizationBands\(/, 'coach utilization distribution renderer should be removed with the card');
 assert.doesNotMatch(operationsSource, /renderStandardChart\('operationsCoachUtilizationBandsChart'/, 'coach utilization distribution should not use the old ECharts bar chart renderer');
 assert.match(chartsSource, /type:\s*'scatter'/, 'court comparison should render as a scatter bubble chart');
