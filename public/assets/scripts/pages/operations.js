@@ -1,6 +1,7 @@
 let operationsActiveTab = 'overview';
 let operationsConversionFilters = { source: '', campus: '', coach: '' };
 let operationsActiveCourtHeatCampus = '顺义马坡';
+let operationsSparklineUid = 0;
 const operationsCourtHeatCampusTabs = ['顺义马坡', '朝阳十里堡', '蓝色港湾', '国网', '朝珺私教'];
 
 function operationsMetricCards(cards = {}) {
@@ -724,17 +725,28 @@ function operationsCoachTrendPoints(trends = [], key = '') {
   return points.length >= 2 ? points : [];
 }
 
-function operationsCoachTrendToneColor(key, values = []) {
+function operationsTrendColor(key, values = []) {
   const first = Number(values[0]) || 0;
   const last = Number(values[values.length - 1]) || 0;
+  if (key === 'totalIncome') return '#8B5E3C';
+  if (key === 'recognizedRevenue') return '#2E8B6D';
+  if (key === 'pendingRevenue') return '#D89135';
+  if (key === 'tradeCount') return '#3B6EA8';
   if (key === 'revenue') return '#8B5E3C';
+  if (key === 'bookingAmount') return '#E05252';
+  if (key === 'bookingHours') return '#2E8B6D';
   if (key === 'leads') return '#8B5E3C';
   if (key === 'activeCoaches') return '#3B6EA8';
   if (key === 'appointmentRate') return '#3B6EA8';
   if (key === 'attendanceRate') return '#2E8B6D';
   if (key === 'dealRate') return '#8B5E3C';
   if (key === 'renewalRate') return '#D89135';
+  if (['utilizationRate', 'trialConversionRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return '#2E8B6D';
   return last >= first ? '#2E8B6D' : '#E05252';
+}
+
+function operationsCoachTrendToneColor(key, values = []) {
+  return operationsTrendColor(key, values);
 }
 
 function operationsCoachSparklineValues(values = []) {
@@ -831,13 +843,19 @@ function operationsTrendChangeClass(comparison = {}) {
 function operationsSmoothPath(coords = []) {
   if (!coords.length) return '';
   if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
-  return coords.slice(1).reduce((path, point) => `${path} L ${point.x} ${point.y}`, `M ${coords[0].x} ${coords[0].y}`);
+  return coords.slice(1).reduce((path, point, index) => {
+    const previous = coords[index];
+    const distance = point.x - previous.x;
+    const cp1x = Math.round((previous.x + distance * 0.18) * 10) / 10;
+    const cp2x = Math.round((point.x - distance * 0.18) * 10) / 10;
+    return `${path} C ${cp1x} ${previous.y}, ${cp2x} ${point.y}, ${point.x} ${point.y}`;
+  }, `M ${coords[0].x} ${coords[0].y}`);
 }
 
 function operationsKpiSparklineSvg(points = [], key = '', className = 'operations-coach-kpi-sparkline') {
   const list = operationsKpiPointList(points);
   if (list.length < 2) return `<div class="${esc(className)}"></div>`;
-  const color = operationsCoachTrendToneColor(key, list.map(point => point.value));
+  const color = operationsTrendColor(key, list.map(point => point.value));
   const values = list.map(point => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -847,15 +865,16 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   const height = 64;
   const coords = list.map((point, index) => {
     const x = list.length === 1 ? 0 : Math.round(index * width / (list.length - 1));
-    const y = isFlat ? Math.round(height / 2) : Math.round(8 + (height - 18) * (1 - ((point.value - min) / range)));
+    const y = isFlat ? Math.round(height / 2) : Math.round(12 + (height - 28) * (1 - ((point.value - min) / range)));
     return { ...point, x, y };
   });
   const linePath = operationsSmoothPath(coords);
   const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
-  const gradientId = `coachSpark${String(key || 'line').replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const safeGradientKey = String(`${className}-${key || 'line'}`).replace(/[^a-zA-Z0-9_-]/g, '');
+  const gradientId = `operationsSpark${++operationsSparklineUid}${safeGradientKey}`;
   return `<div class="${esc(className)}">
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".14"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".035"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".18"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".055"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
       <path class="operations-kpi-area" d="${esc(areaPath)}" fill="url(#${esc(gradientId)})"></path>
       <path class="operations-kpi-line" d="${esc(linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>
       ${coords.map(point => `<g class="operations-kpi-point">

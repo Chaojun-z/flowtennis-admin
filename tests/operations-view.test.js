@@ -120,7 +120,8 @@ assert.match(stylesSource, /operations-channel-ranking-row:hover[\s\S]*backgroun
 assert.match(stylesSource, /operations-attribute-card:hover[\s\S]*transform:translateY/, 'attribute cards should have visible hover interaction');
 assert.match(stylesSource, /operations-court-top-grid\{display:grid;grid-template-columns:minmax\(0,1\.65fr\) minmax\(320px,\.9fr\);gap:14px\}/, 'court quadrant should get the primary visual area beside a ranking matrix');
 assert.match(stylesSource, /operations-court-top-grid \.operations-section\{min-height:380px;padding:18px;overflow:hidden\}/, 'court top cards should have enough height for a professional dashboard chart');
-assert.match(stylesSource, /#page-operations\{[^}]*background:#855B3C/, 'operations content area should use the requested brown background');
+assert.match(stylesSource, /#page-operations\{[^}]*background:var\(--shell-app-bg\)/, 'operations content area should inherit the global shell background');
+assert.doesNotMatch(stylesSource, /#page-operations\{[^}]*--ops-page-bg|background:var\(--ops-page-bg\)|background:#855B3C/, 'operations page must not override the global top/sidebar/content background palette');
 assert.match(stylesSource, /operations-section\{[^}]*background:#FBF7F4[^}]*padding:18px/, 'operations cards should use the requested surface and padding');
 assert.match(stylesSource, /operations-module-head h3\{[^}]*color:#887565[^}]*font-size:15px[^}]*font-weight:700/, 'operations module titles should use the requested title style');
 assert.match(stylesSource, /operations-module-head>div:first-child>span\{[^}]*display:none/, 'operations module subtitles should be visually removed without hiding title legends');
@@ -271,6 +272,11 @@ assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*<svg[\s
 assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*operations-kpi-hover-point[\s\S]*data-tip/, 'KPI sparklines should use HTML hover points so tooltips do not distort inside SVG');
 assert.doesNotMatch(operationsSource, /foreignObject/, 'KPI sparklines should not use SVG foreignObject tooltips that stretch with preserveAspectRatio');
 assert.doesNotMatch(operationsSource, /<polyline|return value \? \[value, value\] : \[\]/, 'KPI sparklines must not use SVG polylines or fake two-point flat trends');
+assert.match(operationsSource, /let operationsSparklineUid = 0/, 'KPI sparkline gradients should have a per-render unique id source');
+assert.match(operationsSource, /const gradientId = `operationsSpark\$\{\+\+operationsSparklineUid\}/, 'KPI sparkline gradients should not reuse ids across cards');
+assert.match(operationsSource, /function operationsTrendColor[\s\S]*totalIncome[\s\S]*recognizedRevenue[\s\S]*pendingRevenue[\s\S]*return/, 'KPI line, area and hover colors should come from one shared trend color function');
+assert.match(operationsSource, /function operationsSmoothPath[\s\S]* C /, 'KPI sparklines should be lightly smoothed instead of hard zigzags');
+assert.doesNotMatch(operationsSource, /operationsSmoothPath[\s\S]*=> `\$\{path\} L \$\{point\.x\}/, 'KPI sparklines should not draw raw straight-line zigzags');
 assert.match(operationsSource, /function operationsKpiPointList[\s\S]*targetCount = 36[\s\S]*Math\.round\(index \* step\)/, 'KPI sparklines should keep denser real points before drawing compact cards');
 assert.match(operationsSource, /operationsKpiPointTip[\s\S]*date[\s\S]*value/, 'KPI sparkline hover text should describe the point date and value');
 assert.match(operationsSource, /appointmentRate[\s\S]*attendanceRate[\s\S]*dealRate[\s\S]*renewalRate[\s\S]*return `\$\{fmt\(number\)\}%`/, 'conversion KPI hover values should render percentage units for appointment, attendance, deal and renewal rates');
@@ -301,6 +307,7 @@ assert.match(stylesSource, /operations-kpi-hit\{[^}]*cursor:crosshair/, 'KPI spa
 assert.match(stylesSource, /operations-kpi-hover-point:hover::after[\s\S]*content:attr\(data-tip\)/, 'KPI sparkline hover should show an undistorted HTML tooltip for each point');
 assert.match(stylesSource, /operations-kpi-hover-point:hover::before[\s\S]*border:1\.5px solid var\(--trend-color/, 'KPI hover point highlight should follow the current sparkline color without feeling heavy');
 assert.match(stylesSource, /operations-kpi-line\{[^}]*stroke-width:2\.1/, 'KPI sparkline should use a thin Apple-like curve');
+assert.doesNotMatch(stylesSource, /operations-(court|coach)-kpi\.[^{]+ \.operations-kpi-line/, 'KPI sparkline colors must not be overridden in CSS because that desynchronizes line, area and hover colors');
 assert.match(stylesSource, /operations-coach-kpi-head\{[^}]*justify-content:flex-start/, 'KPI title row should no longer reserve space for the change value');
 assert.match(stylesSource, /operations-coach-kpi-change\{[^}]*max-width:72px[^}]*text-align:left/, 'KPI change value should sit compactly beside the main number');
 assert.match(stylesSource, /operations-court-kpi\{[^}]*min-height:126px[^}]*display:flex;flex-direction:column/, 'court KPI cards should use the same refined card layout as coach KPI cards');
