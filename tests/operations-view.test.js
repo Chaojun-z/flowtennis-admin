@@ -82,7 +82,7 @@ assert.match(chartsSource, /function operationsCoachShortName[\s\S]*replace\(\/�
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*formatter: item => operationsCoachShortName\(item\.name\)[\s\S]*emphasis: \{ focus: 'self', scale: true, label: \{ show: true, formatter: item => operationsCoachShortName\(item\.name\) \} \}/, 'coach matrix should show coach short names instead of raw numeric values');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*formatter: item => operationsCoachShortName\(item\.name\)[\s\S]*emphasis: \{ focus: 'self', scale: true, label: \{ show: true, formatter: item => operationsCoachShortName\(item\.name\) \} \}/, 'coach capability matrix should show coach short names instead of raw numeric values');
 assert.match(chartsSource, /operationsCoachBandColor[\s\S]*return '#D89135'/, 'coach overload color should use the unified warning color');
-assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*markArea[\s\S]*xAxis: 0[\s\S]*xAxis: 40[\s\S]*xAxis: 60[\s\S]*xAxis: 75[\s\S]*xAxis: 90[\s\S]*xAxis: 100/, 'coach matrix should show five utilization bands as background color areas');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*markArea[\s\S]*xAxis: 0[\s\S]*xAxis: 20[\s\S]*xAxis: 40[\s\S]*xAxis: 60[\s\S]*xAxis: 80[\s\S]*xAxis: 100/, 'coach matrix should show five utilization bands as background color areas');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*健康线 75%/, 'coach matrix should not show the old 75% health marker');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*xAxis: avgUtilization[\s\S]*平均利用率[\s\S]*yAxis: avgRevenue[\s\S]*平均产值/, 'coach matrix should show average utilization and average revenue reference lines');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*min: 0[\s\S]*max: 100[\s\S]*interval: 20/, 'coach matrix x axis should use 0/20/40/60/80/100 ticks');
@@ -294,16 +294,22 @@ assert.match(stylesSource, /operations-coach-command-skeleton/, 'coach loading s
 assert.match(stylesSource, /operations-module-head\{[^}]*border-bottom:0/, 'operations chart headers should not render a divider line between title and chart');
 assert.match(stylesSource, /operations-module-head h3\{[^}]*color:#887565[^}]*font-size:15px[^}]*font-weight:700/, 'operations card titles should use the requested color and size');
 assert.match(stylesSource, /operations-module-head>div:first-child>span\{[^}]*display:none/, 'operations card subtitles should be removed without hiding title legends');
-assert.match(coachDashboardSource, /教练产值贡献排行[\s\S]*归属实收[\s\S]*个人收入占比[\s\S]*体验课[\s\S]*私教课[\s\S]*小班课/, 'coach chart legends should render personal revenue share in the card title bar');
+assert.match(coachDashboardSource, /教练产值贡献排行[\s\S]*归属实收[\s\S]*归属课包占比[\s\S]*体验课[\s\S]*私教课[\s\S]*小班课/, 'coach chart legends should render package attribution share in the card title bar');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*justify-content:flex-end/, 'coach title legends should be right aligned in card headers');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*color:#A19080[^}]*font-size:11px[^}]*font-weight:400/, 'coach chart legends should use the requested axis-like label style');
 assert.doesNotMatch(stylesSource, /operations-utilization-gemini|operations-utilization-track|operations-utilization-row/, 'coach utilization distribution styles should be removed with the card');
-assert.match(chartsSource, /个人收入占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show personal revenue share');
-assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '个人收入占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use personal revenue share and hide the internal chart legend');
+assert.match(chartsSource, /归属课包占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show package attribution share');
+assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '归属课包占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use package attribution share and hide the internal chart legend');
 assert.match(chartsSource, /const bubbleColor = operationsCourtQuadrantColor\(row\)[\s\S]*shadowColor: `\$\{bubbleColor\}33`/, 'court quadrant bubble shadow should follow the bubble color instead of using a green glow');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: \{ left: 18, right: 18[\s\S]*containLabel: true[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 8 \}/, 'coach matrix should keep the full chart inside the 18px content padding without y-axis overlap');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*grid: \{ left: 18, right: 18[\s\S]*containLabel: true[\s\S]*yAxis: \{ type: 'value'[\s\S]*axisLabel: \{ formatter: '\{value\}%', color: '#A19080', fontSize: 11, margin: 8 \}/, 'coach capability matrix should keep the full chart inside the 18px content padding without y-axis overlap');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*inside: true[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis labels should not be placed inside the plot');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*inside: true[\s\S]*window\.addEventListener/, 'coach capability y-axis labels should not be placed inside the plot');
+assert.match(chartsSource, /operationsCoachBandColor[\s\S]*rate < 20[\s\S]*rate < 40[\s\S]*rate < 60[\s\S]*rate < 80/, 'coach matrix point colors should change at each 20% status band');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*markArea[\s\S]*xAxis: 0[\s\S]*xAxis: 20[\s\S]*xAxis: 40[\s\S]*xAxis: 60[\s\S]*xAxis: 80[\s\S]*xAxis: 100/, 'coach matrix background should use five equal 20% status bands');
+assert.match(chartsSource, /axisTick: \{ show: true, lineStyle: \{ color: '#D7DEE8' \} \}/, 'coach matrix axes should keep subtle tick marks');
+assert.match(chartsSource, /function operationsCoachCourseColor[\s\S]*if \(type === '体验课'\) return '#F59E0B'[\s\S]*if \(type === '私教课'\) return '#4F81FF'[\s\S]*if \(type === '小班课'\) return '#10B981'/, 'coach course mix should reuse the schedule calendar course colors');
+assert.match(chartsSource, /buildOperationsCoachParetoChartOption[\s\S]*data: source\.map\(row => operationsCoachShortName\(row\.coach\)\)/, 'coach contribution x-axis should remove the coach suffix');
+assert.match(chartsSource, /buildOperationsCoachCourseMixChartOption[\s\S]*data: displayRows\.map\(row => operationsCoachShortName\(row\.coach\)\)/, 'coach course mix y-axis should remove the coach suffix');
 
 console.log('operations view tests passed');

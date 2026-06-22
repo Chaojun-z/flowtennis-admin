@@ -774,6 +774,12 @@ assert.strictEqual(coachA.utilizationRate, 16.4, 'coach utilization should divid
 assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use ownerCoach course receipts inside the selected purchase period');
 assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should count later course purchases for completed trial students');
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
+assert.strictEqual(coachDashboardMetrics.coach.metricSource, 'standard-course-lifecycle', 'coach dashboard should expose the unified standard metric source');
+assert.strictEqual(coachDashboardMetrics.conversion.metricSource, 'standard-course-lifecycle', 'conversion dashboard should expose the same unified standard metric source');
+assert.deepStrictEqual(coachDashboardMetrics.conversion.standardRates, {
+  trialConversionRate: coachDashboardMetrics.coach.cards.trialConversionRate.value,
+  renewalRate: coachDashboardMetrics.coach.cards.renewalRate.value
+}, 'conversion and coach dashboards should share the same backend standard rate values');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
@@ -828,7 +834,7 @@ const futureSafeCoachTrendMetrics = buildOperationsMetrics({
 assert.deepStrictEqual(futureSafeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'coach KPI trends should never include future selected dates');
 assert.strictEqual(futureSafeCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-02')?.activeCoaches, 1, 'coach active trend should count only coaches with real work or receipts on that day');
 assert.strictEqual(futureSafeCoachTrendMetrics.coach.cards.revenue.value, 500, 'coach cards should exclude future receipts from the current real period');
-assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-40%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
+assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === '0%-20%')?.count >= 2, 'coach dashboard should expose five utilization bands for charting');
 
 const unifiedTrendMetrics = buildOperationsMetrics({
   campuses: [
@@ -910,7 +916,7 @@ assert.ok(longRangeTrendMetrics.conversion.trends.length <= 8, 'long selected da
 
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
-  ['0%-40% 闲置 #E05252', '40%-60% 偏低 #D89135', '60%-75% 待提升 #3B6EA8', '75%-90% 健康 #2E8B6D', '90%+ 负荷 #D89135'],
+  ['0%-20% 闲置 #E05252', '20%-40% 偏低 #D89135', '40%-60% 观察 #8EA0B8', '60%-80% 健康 #7CBF8A', '80%-100% 高效 #2E8B6D'],
   'coach utilization bands should use concise labels and the unified dashboard palette'
 );
 assert.ok(coachDashboardMetrics.coach.revenueParetoRows.find(row => row.coach === 'A教练')?.cumulativeShare > 80, 'coach dashboard should expose pareto contribution rows');

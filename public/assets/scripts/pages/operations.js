@@ -640,15 +640,15 @@ function renderOperationsCoach(data) {
     <section class="operations-section">
       ${operationsCoachChartHeader('教练产值贡献排行', operationsCoachTitleLegend([
         { label: '归属实收', color: '#8B5E3C' },
-        { label: '个人收入占比', color: '#3B6EA8', line: true }
+        { label: '归属课包占比', color: '#3B6EA8', line: true }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>
     <section class="operations-section">
       ${operationsCoachChartHeader('课程结构占比', operationsCoachTitleLegend([
-        { label: '体验课', color: '#D89135' },
-        { label: '私教课', color: '#3B6EA8' },
-        { label: '小班课', color: '#2E8B6D' }
+        { label: '体验课', color: '#F59E0B' },
+        { label: '私教课', color: '#4F81FF' },
+        { label: '小班课', color: '#10B981' }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
     </section>
@@ -975,18 +975,20 @@ function operationsFunnelStep(funnel = [], index) {
   return (funnel || [])[index] || {};
 }
 
-function operationsConversionKpiCards(funnel = []) {
+function operationsConversionKpiCards(funnel = [], standardRates = {}) {
   const total = operationsFunnelStep(funnel, 0);
   const appointment = operationsFunnelStep(funnel, 1);
   const attendance = operationsFunnelStep(funnel, 2);
   const deal = operationsFunnelStep(funnel, 3);
   const renewal = operationsFunnelStep(funnel, 4);
+  const standardTrial = Number(standardRates.trialConversionRate);
+  const standardRenewal = Number(standardRates.renewalRate);
   return [
     { label: '线索量', value: fmt(total.count || 0), unit: '人', trendKey: 'leads', tone: 'lead' },
     { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, trendKey: 'appointmentRate', tone: 'conversion' },
     { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, trendKey: 'attendanceRate', tone: 'conversion' },
-    { label: '成交率', value: `${fmt(deal.transitionRate || 0)}%`, trendKey: 'dealRate', tone: 'conversion' },
-    { label: '续费率', value: `${fmt(renewal.transitionRate || 0)}%`, trendKey: 'renewalRate', tone: 'retention' }
+    { label: '成交率', value: `${fmt(Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0))}%`, trendKey: 'dealRate', tone: 'conversion' },
+    { label: '续费率', value: `${fmt(Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0))}%`, trendKey: 'renewalRate', tone: 'retention' }
   ];
 }
 
@@ -1167,7 +1169,7 @@ function renderConversionFunnelModule(data, conversion) {
 function renderConversionCommandCenter(data, conversion) {
   const comparisons = data.conversion?.trendComparisons || {};
   return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
-      ${operationsConversionKpiCards(conversion.courseFunnel || []).map(card => renderOperationsConversionKpi({
+      ${operationsConversionKpiCards(conversion.courseFunnel || [], data.conversion?.standardRates || {}).map(card => renderOperationsConversionKpi({
         ...card,
         trendPoints: operationsConversionTrendPoints(conversion.trendRows || [], card.trendKey),
         trendComparison: comparisons[card.trendKey]

@@ -759,11 +759,11 @@ function normalizeCoachCourseType(row = {}) {
 
 function coachUtilizationBand(rateValue) {
   const value = Number(rateValue) || 0;
-  if (value < 40) return { band: '0%-40%', label: '闲置', color: '#9B5E5E' };
-  if (value < 60) return { band: '40%-60%', label: '偏低', color: '#C58A3A' };
-  if (value < 75) return { band: '60%-75%', label: '待提升', color: '#466A9F' };
-  if (value < 90) return { band: '75%-90%', label: '健康', color: '#2F7D67' };
-  return { band: '90%+', label: '负荷', color: '#D97706' };
+  if (value < 20) return { band: '0%-20%', label: '闲置', color: '#E05252' };
+  if (value < 40) return { band: '20%-40%', label: '偏低', color: '#D89135' };
+  if (value < 60) return { band: '40%-60%', label: '观察', color: '#8EA0B8' };
+  if (value < 80) return { band: '60%-80%', label: '健康', color: '#7CBF8A' };
+  return { band: '80%-100%', label: '高效', color: '#2E8B6D' };
 }
 
 function selectedCoachAvailableHours(dateRange = {}, now = new Date()) {
@@ -955,11 +955,11 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
 
 function buildCoachUtilizationBands(rows = []) {
   const order = [
-    { band: '0%-40%', label: '闲置', color: '#E05252' },
-    { band: '40%-60%', label: '偏低', color: '#D89135' },
-    { band: '60%-75%', label: '待提升', color: '#3B6EA8' },
-    { band: '75%-90%', label: '健康', color: '#2E8B6D' },
-    { band: '90%+', label: '负荷', color: '#D89135' }
+    { band: '0%-20%', label: '闲置', color: '#E05252' },
+    { band: '20%-40%', label: '偏低', color: '#D89135' },
+    { band: '40%-60%', label: '观察', color: '#8EA0B8' },
+    { band: '60%-80%', label: '健康', color: '#7CBF8A' },
+    { band: '80%-100%', label: '高效', color: '#2E8B6D' }
   ];
   return order.map(band => ({
     ...band,
@@ -2172,6 +2172,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
       trendComparisons: trendComparisonMap(courtValues, previousCourtValues, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'], canComparePrevious)
     },
     conversion: {
+      metricSource: 'standard-course-lifecycle',
+      standardRates: {
+        trialConversionRate: rate(coachTrialConverted, coachTrialBase),
+        renewalRate: rate(coachRenewalCount, coachOldCustomerBase)
+      },
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },
         convertedLeads: { title: '已转化线索', value: convertedLeads, unit: '条' },
@@ -2192,6 +2197,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       renewal
     },
     coach: {
+      metricSource: 'standard-course-lifecycle',
       cards: {
         activeCoaches: { title: '在岗教练', value: coachRows.length, unit: '人' },
         availableHoursThisWeek: { title: '本周可排工时', value: availableCoachHours, unit: '小时' },
