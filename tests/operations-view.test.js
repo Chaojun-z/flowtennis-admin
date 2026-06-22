@@ -255,6 +255,10 @@ assert.doesNotMatch(operationsSource, /foreignObject/, 'KPI sparklines should no
 assert.doesNotMatch(operationsSource, /<polyline|return value \? \[value, value\] : \[\]/, 'KPI sparklines must not use jagged polylines or fake two-point flat trends');
 assert.match(operationsSource, /function operationsKpiPointList[\s\S]*targetCount = 12[\s\S]*Math\.round\(index \* step\)/, 'KPI sparklines should compress dense real points before drawing compact cards');
 assert.match(operationsSource, /operationsKpiPointTip[\s\S]*date[\s\S]*value/, 'KPI sparkline hover text should describe the point date and value');
+assert.match(operationsSource, /appointmentRate[\s\S]*attendanceRate[\s\S]*dealRate[\s\S]*renewalRate[\s\S]*return `\$\{fmt\(number\)\}%`/, 'conversion KPI hover values should render percentage units for appointment, attendance, deal and renewal rates');
+assert.match(operationsSource, /function operationsTrendPoints[\s\S]*numerator: row\[\`\$\{key\}Numerator`\][\s\S]*denominator: row\[\`\$\{key\}Denominator`\]/, 'KPI trend points should keep backend numerator and denominator for hover details');
+assert.match(operationsSource, /function operationsKpiRatioText[\s\S]*point\.numerator[\s\S]*point\.denominator[\s\S]*\/[\s\S]*function operationsKpiPointLabel[\s\S]*operationsKpiRatioText\(point, key\)/, 'KPI hover labels should show numerator and denominator when backend provides them');
+assert.match(operationsSource, /operations-kpi-hover-point" style="--trend-color:\$\{esc\(color\)\}/, 'KPI hover points should receive the current line color');
 assert.doesNotMatch(operationsSource, /持平/, 'KPI cards should never render flat wording');
 assert.doesNotMatch(operationsSource, /较期初|较周初|较月初|较首日/, 'KPI change values should not show comparison scope text in compact cards');
 assert.match(operationsSource, /operations-coach-kpi-head[\s\S]*operations-coach-kpi-change[\s\S]*operations-coach-kpi-value/, 'coach KPI change value should sit in the title row');
@@ -277,6 +281,7 @@ assert.doesNotMatch(stylesSource, /operations-coach-kpi-help/, 'coach KPI help i
 assert.match(stylesSource, /operations-coach-kpi-sparkline\{[^}]*height:64px/, 'coach KPI sparkline wrappers should give mini charts enough height');
 assert.match(stylesSource, /operations-kpi-hit\{[^}]*cursor:crosshair/, 'KPI sparkline points should be hoverable per data point');
 assert.match(stylesSource, /operations-kpi-hover-point:hover::after[\s\S]*content:attr\(data-tip\)/, 'KPI sparkline hover should show an undistorted HTML tooltip for each point');
+assert.match(stylesSource, /operations-kpi-hover-point:hover::before[\s\S]*border:2px solid var\(--trend-color/, 'KPI hover point highlight should follow the current sparkline color');
 assert.match(stylesSource, /operations-kpi-line\{[^}]*stroke-width:3\.4/, 'KPI sparkline should use a stronger professional curve');
 assert.match(stylesSource, /operations-coach-kpi-head\{[^}]*justify-content:space-between/, 'KPI title row should right-align the change value');
 assert.match(stylesSource, /operations-coach-kpi-change\{[^}]*max-width:112px[^}]*text-align:right/, 'KPI change value should have enough room and align right');

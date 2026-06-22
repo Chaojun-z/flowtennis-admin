@@ -117,7 +117,12 @@ function operationsTrendPoints(trends = [], key = '') {
     .filter(row => row && row.date && Object.prototype.hasOwnProperty.call(row, key))
     .filter(row => row.date <= today)
     .filter(row => row[key] !== null && row[key] !== undefined && row[key] !== '')
-    .map(row => ({ date: row.date, value: Number(row[key]) }))
+    .map(row => ({
+      date: row.date,
+      value: Number(row[key]),
+      numerator: row[`${key}Numerator`],
+      denominator: row[`${key}Denominator`]
+    }))
     .filter(point => Number.isFinite(point.value));
 }
 
@@ -706,7 +711,10 @@ function operationsCoachTrendToneColor(key, values = []) {
   if (key === 'revenue') return '#8B5E3C';
   if (key === 'leads') return '#8B5E3C';
   if (key === 'activeCoaches') return '#3B6EA8';
-  if (['appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'].includes(key)) return last >= first ? '#2E8B6D' : '#E05252';
+  if (key === 'appointmentRate') return '#3B6EA8';
+  if (key === 'attendanceRate') return '#2E8B6D';
+  if (key === 'dealRate') return '#8B5E3C';
+  if (key === 'renewalRate') return '#D89135';
   return last >= first ? '#2E8B6D' : '#E05252';
 }
 
@@ -720,7 +728,14 @@ function operationsCoachSparklineValues(values = []) {
 
 function operationsKpiPointList(points = []) {
   const source = (points || []).map((point, index) => {
-    if (typeof point === 'object' && point) return { date: point.date || `第${index + 1}点`, value: Number(point.value) || 0 };
+    if (typeof point === 'object' && point) {
+      return {
+        date: point.date || `第${index + 1}点`,
+        value: Number(point.value) || 0,
+        numerator: point.numerator,
+        denominator: point.denominator
+      };
+    }
     return { date: `第${index + 1}点`, value: Number(point) || 0 };
   }).filter(point => Number.isFinite(point.value));
   if (source.length <= 12) return source;
@@ -734,7 +749,7 @@ function operationsKpiValueText(value = 0, key = '') {
   if (key === 'revenue' || key === 'bookingAmount') return `¥${fmt(number)}`;
   if (key === 'bookingHours') return `${fmt(number)}小时`;
   if (key === 'activeCoaches') return `${fmt(number)}人`;
-  if (['utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${fmt(number)}%`;
+  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${fmt(number)}%`;
   return fmt(number);
 }
 
@@ -746,17 +761,30 @@ function operationsKpiSignedValueText(value = 0, key = '') {
   if (key === 'revenue' || key === 'bookingAmount') return `${sign}¥${fmt(abs)}`;
   if (key === 'bookingHours') return `${sign}${fmt(abs)}小时`;
   if (key === 'activeCoaches') return `${sign}${fmt(abs)}人`;
-  if (['utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${sign}${fmt(abs)}%`;
+  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${sign}${fmt(abs)}%`;
   return `${sign}${fmt(abs)}`;
 }
 
+function operationsKpiRatioText(point = {}, key = '') {
+  const numerator = Number(point.numerator);
+  const denominator = Number(point.denominator);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return '';
+  if (key === 'appointmentRate') return `预约 ${fmt(numerator)} / 线索 ${fmt(denominator)}`;
+  if (key === 'attendanceRate') return `到课 ${fmt(numerator)} / 预约 ${fmt(denominator)}`;
+  if (key === 'dealRate') return `成交 ${fmt(numerator)} / 到课 ${fmt(denominator)}`;
+  if (key === 'renewalRate') return `复购 ${fmt(numerator)} / 付费 ${fmt(denominator)}`;
+  return `${fmt(numerator)} / ${fmt(denominator)}`;
+}
+
 function operationsKpiPointTip(point = {}, key = '') {
-  return `${point.date || ''} ${operationsKpiValueText(point.value, key)}`.trim();
+  const ratio = operationsKpiRatioText(point, key);
+  return `${point.date || ''} ${operationsKpiValueText(point.value, key)}${ratio ? `（${ratio}）` : ''}`.trim();
 }
 
 function operationsKpiPointLabel(point = {}, key = '') {
   const date = String(point.date || '').slice(5).replace('-', '/');
-  return `${date} ${operationsKpiValueText(point.value, key)}`.trim();
+  const ratio = operationsKpiRatioText(point, key);
+  return `${date} ${operationsKpiValueText(point.value, key)}${ratio ? `（${ratio}）` : ''}`.trim();
 }
 
 function operationsTrendChangeText(comparison = {}, key = '') {
@@ -813,7 +841,7 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
         <circle class="operations-kpi-dot" cx="${point.x}" cy="${point.y}" r="3.2" fill="${esc(color)}"></circle>
       </g>`).join('')}
     </svg>
-    ${coords.map(point => `<span class="operations-kpi-hover-point" style="left:${Math.round(point.x * 10000 / width) / 100}%;top:${Math.round(point.y * 10000 / height) / 100}%" data-tip="${esc(operationsKpiPointLabel(point, key))}"></span>`).join('')}
+    ${coords.map(point => `<span class="operations-kpi-hover-point" style="--trend-color:${esc(color)};left:${Math.round(point.x * 10000 / width) / 100}%;top:${Math.round(point.y * 10000 / height) / 100}%" data-tip="${esc(operationsKpiPointLabel(point, key))}"></span>`).join('')}
   </div>`;
 }
 

@@ -154,7 +154,7 @@ function trendBucketDate(day, period = 'day') {
   return day;
 }
 
-function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [] } = {}) {
+function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [], rateFields = [] } = {}) {
   const days = (rows || []).map(row => row.date).filter(Boolean);
   const period = trendPeriodForDays(days);
   if (period === 'day') return { rows, meta: { period } };
@@ -171,12 +171,24 @@ function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [] } = {}) {
       current[key] = (Number(current[key]) || 0) + (Number(row[key]) || 0);
       current._counts[key] = (current._counts[key] || 0) + 1;
     });
+    rateFields.forEach(field => {
+      if (field.aggregate === 'last') {
+        current[field.numeratorKey] = Number(row[field.numeratorKey]) || 0;
+        current[field.denominatorKey] = Number(row[field.denominatorKey]) || 0;
+      } else {
+        current[field.numeratorKey] = (Number(current[field.numeratorKey]) || 0) + (Number(row[field.numeratorKey]) || 0);
+        current[field.denominatorKey] = (Number(current[field.denominatorKey]) || 0) + (Number(row[field.denominatorKey]) || 0);
+      }
+    });
     grouped.set(date, current);
   });
   const compacted = [...grouped.values()].map(row => {
     const next = { ...row };
     averageKeys.forEach(key => {
       next[key] = next._counts[key] ? round((Number(next[key]) || 0) / next._counts[key], 1) : 0;
+    });
+    rateFields.forEach(field => {
+      next[field.key] = rate(next[field.numeratorKey], next[field.denominatorKey]);
     });
     delete next._counts;
     return next;
@@ -812,6 +824,26 @@ function coachPeriodInfo({ schedule = [], purchases = [], dateRange = {}, now = 
 
 function purchaseDate(row = {}) {
   return dateKey(row.purchaseDate || row.createdAt);
+}
+
+function buildPeriodRepurchaseMetrics(purchases = []) {
+  const byStudent = new Map();
+  (purchases || [])
+    .filter(isValidCoursePurchase)
+    .filter(row => purchaseAmount(row) > 0)
+    .forEach(row => {
+      const key = purchaseStudentKey(row);
+      if (!key) return;
+      if (!byStudent.has(key)) byStudent.set(key, []);
+      byStudent.get(key).push(row);
+    });
+  const paidStudents = byStudent.size;
+  const repurchaseStudents = [...byStudent.values()].filter(rows => rows.length > 1).length;
+  return {
+    rate: rate(repurchaseStudents, paidStudents),
+    numerator: repurchaseStudents,
+    denominator: paidStudents
+  };
 }
 
 function isPurchaseBeforeRange(row = {}, dateRange = {}) {
@@ -1893,19 +1925,41 @@ function courseRowDate(row = {}) {
   return dateKey(row.leadDate || row.createdAt || row.trialAtRaw || row.trialLessonAt || row.trialAt);
 }
 
-function buildConversionTrendDailyRows({ rows = [], dateRange = {}, now = new Date() } = {}) {
+function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
-  const days = selectedDays.length ? selectedDays : futureSafeDays([...new Set((rows || []).map(courseRowDate).filter(Boolean))].sort(), now);
+  const days = selectedDays.length ? selectedDays : futureSafeDays([...new Set([
+    ...(rows || []).map(courseRowDate),
+    ...(purchases || []).map(purchaseDate)
+  ].filter(Boolean))].sort(), now);
   return days.map(day => {
-    const dayRows = (rows || []).filter(row => courseRowDate(row) === day);
-    const funnel = buildCourseFunnel(dayRows);
+    const cumulativeRows = (rows || []).filter(row => {
+      const rowDate = courseRowDate(row);
+      return rowDate && rowDate <= day;
+    });
+    const cumulativePurchases = (purchases || []).filter(row => {
+      const rowDate = purchaseDate(row);
+      return rowDate && rowDate <= day;
+    });
+    const funnel = buildCourseFunnel(cumulativeRows);
+    const appointmentCount = Number(funnel[1]?.count) || 0;
+    const attendanceCount = Number(funnel[2]?.count) || 0;
+    const dealCount = Number(funnel[3]?.count) || 0;
+    const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
     return {
       date: day,
       leads: Number(funnel[0]?.count) || 0,
       appointmentRate: Number(funnel[1]?.percentOfTotal) || 0,
+      appointmentRateNumerator: appointmentCount,
+      appointmentRateDenominator: Number(funnel[0]?.count) || 0,
       attendanceRate: Number(funnel[2]?.transitionRate) || 0,
+      attendanceRateNumerator: attendanceCount,
+      attendanceRateDenominator: appointmentCount,
       dealRate: Number(funnel[3]?.transitionRate) || 0,
-      renewalRate: Number(funnel[4]?.transitionRate) || 0
+      dealRateNumerator: dealCount,
+      dealRateDenominator: attendanceCount,
+      renewalRate: repurchase.rate,
+      renewalRateNumerator: repurchase.numerator,
+      renewalRateDenominator: repurchase.denominator
     };
   });
 }
@@ -1913,7 +1967,12 @@ function buildConversionTrendDailyRows({ rows = [], dateRange = {}, now = new Da
 function buildConversionTrendSet(options = {}) {
   return compactTrendRows(buildConversionTrendDailyRows(options), {
     sumKeys: ['leads'],
-    averageKeys: ['appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate']
+    rateFields: [
+      { key: 'appointmentRate', numeratorKey: 'appointmentRateNumerator', denominatorKey: 'appointmentRateDenominator', aggregate: 'last' },
+      { key: 'attendanceRate', numeratorKey: 'attendanceRateNumerator', denominatorKey: 'attendanceRateDenominator', aggregate: 'last' },
+      { key: 'dealRate', numeratorKey: 'dealRateNumerator', denominatorKey: 'dealRateDenominator', aggregate: 'last' },
+      { key: 'renewalRate', numeratorKey: 'renewalRateNumerator', denominatorKey: 'renewalRateDenominator', aggregate: 'last' }
+    ]
   });
 }
 
@@ -2010,6 +2069,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const sourceRows = buildSourceRows(rangedData.leads || [], sets);
   const courseRows = courseConversionRows(rangedData, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
+  const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
   const channelEfficiencyRows = buildChannelEfficiencyRows(courseRows);
   const studentAttributeRows = buildStudentAttributeRows(courseRows);
@@ -2078,7 +2138,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   const overviewTrends = overviewTrendSet.rows;
-  const conversionTrendSet = buildConversionTrendSet({ rows: courseRows, dateRange: reportingDateRange, now });
+  const conversionTrendSet = buildConversionTrendSet({ rows: courseRows, purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
@@ -2092,6 +2152,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousFallbackFinance = previousRangedData ? buildOperationsFinanceFallback(previousRangedData, previousCourt) : {};
   const previousCourseRows = previousRangedData ? courseConversionRows(previousRangedData, { now }) : [];
   const previousCourseFunnel = buildCourseFunnel(previousCourseRows);
+  const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
     schedule: previousRangedData.schedule || [],
@@ -2123,14 +2184,14 @@ function buildOperationsMetrics(data = {}, options = {}) {
     appointmentRate: Number(courseFunnel[1]?.percentOfTotal) || 0,
     attendanceRate: Number(courseFunnel[2]?.transitionRate) || 0,
     dealRate: Number(courseFunnel[3]?.transitionRate) || 0,
-    renewalRate: Number(courseFunnel[4]?.transitionRate) || 0
+    renewalRate: periodRepurchase.rate
   };
   const previousConversionValues = {
     leads: Number(previousCourseFunnel[0]?.count) || 0,
     appointmentRate: Number(previousCourseFunnel[1]?.percentOfTotal) || 0,
     attendanceRate: Number(previousCourseFunnel[2]?.transitionRate) || 0,
     dealRate: Number(previousCourseFunnel[3]?.transitionRate) || 0,
-    renewalRate: Number(previousCourseFunnel[4]?.transitionRate) || 0
+    renewalRate: previousPeriodRepurchase.rate
   };
   const coachValues = {
     activeCoaches: coachRows.length,
@@ -2175,7 +2236,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
       metricSource: 'standard-course-lifecycle',
       standardRates: {
         trialConversionRate: rate(coachTrialConverted, coachTrialBase),
-        renewalRate: rate(coachRenewalCount, coachOldCustomerBase)
+        renewalRate: periodRepurchase.rate,
+        renewalNumerator: periodRepurchase.numerator,
+        renewalDenominator: periodRepurchase.denominator
       },
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },

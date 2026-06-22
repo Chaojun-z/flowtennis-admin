@@ -776,10 +776,10 @@ assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion shou
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
 assert.strictEqual(coachDashboardMetrics.coach.metricSource, 'standard-course-lifecycle', 'coach dashboard should expose the unified standard metric source');
 assert.strictEqual(coachDashboardMetrics.conversion.metricSource, 'standard-course-lifecycle', 'conversion dashboard should expose the same unified standard metric source');
-assert.deepStrictEqual(coachDashboardMetrics.conversion.standardRates, {
-  trialConversionRate: coachDashboardMetrics.coach.cards.trialConversionRate.value,
-  renewalRate: coachDashboardMetrics.coach.cards.renewalRate.value
-}, 'conversion and coach dashboards should share the same backend standard rate values');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.trialConversionRate, coachDashboardMetrics.coach.cards.trialConversionRate.value, 'conversion and coach dashboards should share the same backend trial conversion rate value');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalRate, 0, 'conversion renewal should use selected-period repurchases instead of coach old-customer renewal');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalNumerator, 0, 'conversion renewal should expose selected-period repurchase numerator');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalDenominator, 2, 'conversion renewal should expose selected-period paid-student denominator');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours, 1, 'coach course mix should include trial lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
@@ -913,6 +913,41 @@ const longRangeTrendMetrics = buildOperationsMetrics({
 });
 assert.strictEqual(longRangeTrendMetrics.conversion.trendMeta?.period, 'week', 'long selected date ranges should be bucketed by week to avoid dense points');
 assert.ok(longRangeTrendMetrics.conversion.trends.length <= 8, 'long selected date ranges should not return dense daily conversion trend points');
+
+const periodRepurchaseMetrics = buildOperationsMetrics({
+  leads: [],
+  students: [],
+  purchases: [
+    ...Array.from({ length: 10 }, (_, index) => ({
+      id: `period-first-${index + 1}`,
+      studentId: `period-student-${index + 1}`,
+      actualAmount: 1000,
+      purchaseDate: '2026-06-01',
+      status: 'active',
+      courseType: '私教课'
+    })),
+    { id: 'period-new-11', studentId: 'period-student-11', actualAmount: 1000, purchaseDate: '2026-06-10', status: 'active', courseType: '私教课' },
+    { id: 'period-repeat-1', studentId: 'period-student-1', actualAmount: 1200, purchaseDate: '2026-06-10', status: 'active', courseType: '私教课' },
+    { id: 'period-repeat-2', studentId: 'period-student-2', actualAmount: 1200, purchaseDate: '2026-06-10', status: 'active', courseType: '私教课' }
+  ],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-18T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
+});
+const june10RepurchasePoint = periodRepurchaseMetrics.conversion.trends.find(row => row.date === '2026-06-10');
+assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalRate, 18.2, 'conversion renewal should use period repurchase students over period paid students');
+assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalNumerator, 2, 'conversion renewal numerator should be repurchased students in the selected period');
+assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalDenominator, 11, 'conversion renewal denominator should be unique paid students in the selected period');
+assert.strictEqual(june10RepurchasePoint?.renewalRate, 18.2, 'conversion renewal trend should use cumulative selected-period repurchase rate, never same-day renewals over same-day deals');
+assert.strictEqual(june10RepurchasePoint?.renewalRateNumerator, 2, 'conversion renewal trend should expose hover numerator');
+assert.strictEqual(june10RepurchasePoint?.renewalRateDenominator, 11, 'conversion renewal trend should expose hover denominator');
 
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
