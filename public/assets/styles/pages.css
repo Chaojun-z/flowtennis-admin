@@ -1341,22 +1341,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-matrix-chart{height:340px;min-height:340px}
 #page-operations .operations-coach-secondary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 #page-operations .operations-coach-secondary-grid .operations-section{min-height:340px;overflow:hidden}
-#page-operations .operations-coach-wide-card{grid-column:1/-1}
 #page-operations .operations-coach-chart{height:280px;min-height:280px}
-#page-operations .operations-utilization-gemini{height:280px;box-sizing:border-box;padding:12px 0 0;color:#7B8AA0}
-#page-operations .operations-utilization-axis{display:grid;grid-template-columns:repeat(8,1fr);margin-left:106px;margin-right:72px;color:#A5B2C3;font-size:10px;line-height:14px;font-weight:400}
-#page-operations .operations-utilization-axis span{text-align:center}
-#page-operations .operations-utilization-rule{height:1px;margin:10px 44px 22px 44px;background:#EDF2F8}
-#page-operations .operations-utilization-rows{display:flex;flex-direction:column;gap:20px}
-#page-operations .operations-utilization-row{display:grid;grid-template-columns:86px minmax(0,1fr) 58px;gap:20px;align-items:center}
-#page-operations .operations-utilization-label{color:#718198;font-size:11px;line-height:15px;font-weight:700;text-align:right;white-space:normal}
-#page-operations .operations-utilization-row.active .operations-utilization-label{color:#E05252}
-#page-operations .operations-utilization-track{height:16px;border:1px solid #EEF2F7;background:#F8FAFD;border-radius:3px;box-sizing:border-box;overflow:hidden}
-#page-operations .operations-utilization-track i{display:block;height:100%;background:#E05252;border-radius:3px}
-#page-operations .operations-utilization-value{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8FA0B8;font-size:11px;line-height:13px;font-weight:400}
-#page-operations .operations-utilization-value strong{color:#8FA0B8;font-size:12px;line-height:14px;font-weight:400;white-space:nowrap}
-#page-operations .operations-utilization-row.active .operations-utilization-value strong{color:#111827;font-size:13px;font-weight:800}
-#page-operations .operations-utilization-row.active .operations-utilization-value span{color:#718198}
 #page-operations .operations-funnel-card{min-height:374px}
 #page-operations .operations-funnel-host{min-height:304px}
 #page-operations .operations-progress-funnel{display:flex;flex-direction:column;gap:8px}

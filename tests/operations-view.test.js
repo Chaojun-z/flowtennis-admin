@@ -92,8 +92,7 @@ assert.match(chartsSource, /体验课转化率：\$\{fmt\(row\.trialConversionRa
 assert.match(chartsSource, /function operationsCoachCapabilityColor[\s\S]*双高[\s\S]*转化高续费低[\s\S]*转化低续费高[\s\S]*双低/, 'coach capability matrix should color bubbles by conversion-renewal ability status');
 assert.match(chartsSource, /const maxSample = Math\.max\(1,[\s\S]*trialBase[\s\S]*oldCustomerBase/, 'coach capability bubble size should follow effective sample size');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*markArea[\s\S]*双低[\s\S]*双高/, 'coach capability matrix should use background color areas like the primary matrix');
-assert.match(operationsSource, /function renderOperationsCoachUtilizationBands[\s\S]*operations-utilization-gemini[\s\S]*operations-utilization-axis[\s\S]*operations-utilization-track[\s\S]*operations-utilization-value/, 'coach utilization distribution should render the Gemini-style custom progress chart');
-assert.match(operationsSource, /renderOperationsCoachUtilizationBands\(data\.coach\?\.utilizationBands \|\| \[\]\)/, 'coach utilization distribution should use the custom renderer instead of the default ECharts legend layout');
+assert.doesNotMatch(operationsSource, /function renderOperationsCoachUtilizationBands|renderOperationsCoachUtilizationBands\(/, 'coach utilization distribution renderer should be removed with the card');
 assert.doesNotMatch(operationsSource, /renderStandardChart\('operationsCoachUtilizationBandsChart'/, 'coach utilization distribution should not use the old ECharts bar chart renderer');
 assert.match(chartsSource, /type:\s*'scatter'/, 'court comparison should render as a scatter bubble chart');
 assert.match(chartsSource, /markLine[\s\S]*平均利用率[\s\S]*平均收入/, 'court quadrant should show average lines for business positioning');
@@ -238,7 +237,8 @@ assert.doesNotMatch(coachDashboardSource, /<h2>教练经营效率驾驶舱<\/h2>
 assert.doesNotMatch(coachDashboardSource, /当前周期：[\s\S]*可排小时：/, 'coach page should not render the period text above KPI cards');
 assert.match(coachDashboardSource, /operations-coach-hero-grid[\s\S]*operationsCoachMatrixChart[\s\S]*operationsCoachCapabilityChart/, 'coach page should place the conversion-renewal matrix next to the primary matrix');
 assert.doesNotMatch(coachDashboardSource, /operations-coach-alert-panel|经营预警|operations-coach-alert-list/, 'coach page should remove the diagnostic alert card');
-assert.match(coachDashboardSource, /operationsCoachMatrixChart[\s\S]*operationsCoachCapabilityChart[\s\S]*operationsCoachParetoChart[\s\S]*operationsCoachUtilizationBandsChart[\s\S]*operationsCoachCourseMixChart/, 'coach page should render multiple professional dashboard charts in the approved order');
+assert.match(coachDashboardSource, /operationsCoachMatrixChart[\s\S]*operationsCoachCapabilityChart[\s\S]*operationsCoachParetoChart[\s\S]*operationsCoachCourseMixChart/, 'coach page should place course mix beside the coach contribution ranking');
+assert.doesNotMatch(coachDashboardSource, /利用率五档分布|operationsCoachUtilizationBandsChart/, 'coach page should remove the utilization distribution card');
 assert.doesNotMatch(coachDashboardSource, /operations-coach-band-legend/, 'coach matrix should not render a separate utilization legend');
 assert.match(coachDashboardSource, /const kpis = \[[\s\S]*归属课程实收[\s\S]*体验课转化率[\s\S]*老客续费率[\s\S]*operations-coach-kpi-strip/, 'coach page should render dedicated dashboard KPI strips instead of old generic cards');
 assert.doesNotMatch(coachDashboardSource, /help:/, 'coach KPI cards should not define question-mark help text');
@@ -291,10 +291,7 @@ assert.match(stylesSource, /operations-module-head>div:first-child>span\{[^}]*di
 assert.match(coachDashboardSource, /教练产值贡献排行[\s\S]*归属实收[\s\S]*个人收入占比[\s\S]*体验课[\s\S]*私教课[\s\S]*小班课/, 'coach chart legends should render personal revenue share in the card title bar');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*justify-content:flex-end/, 'coach title legends should be right aligned in card headers');
 assert.match(stylesSource, /operations-coach-title-legend\{[^}]*color:#A19080[^}]*font-size:11px[^}]*font-weight:400/, 'coach chart legends should use the requested axis-like label style');
-assert.match(stylesSource, /operations-utilization-gemini/, 'coach utilization distribution should have a dedicated Gemini-style wrapper');
-assert.match(stylesSource, /operations-utilization-track\{[^}]*background:#F8FAFD/, 'coach utilization distribution should use light background tracks');
-assert.match(stylesSource, /operations-utilization-track i\{[^}]*background:#E05252/, 'coach utilization distribution should use the unified risk color');
-assert.match(stylesSource, /operations-utilization-row\.active \.operations-utilization-label\{color:#E05252/, 'coach utilization active label should use the unified risk color');
+assert.doesNotMatch(stylesSource, /operations-utilization-gemini|operations-utilization-track|operations-utilization-row/, 'coach utilization distribution styles should be removed with the card');
 assert.match(chartsSource, /个人收入占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show personal revenue share');
 assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '个人收入占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use personal revenue share and hide the internal chart legend');
 assert.match(chartsSource, /const bubbleColor = operationsCourtQuadrantColor\(row\)[\s\S]*shadowColor: `\$\{bubbleColor\}33`/, 'court quadrant bubble shadow should follow the bubble color instead of using a green glow');

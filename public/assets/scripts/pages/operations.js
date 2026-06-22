@@ -639,12 +639,6 @@ function renderOperationsCoach(data) {
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>
     <section class="operations-section">
-      ${operationsCoachChartHeader('利用率五档分布')}
-      <div class="operations-chart-host operations-coach-chart" id="operationsCoachUtilizationBandsChart"></div>
-    </section>
-  </div>
-  <div class="operations-coach-secondary-grid">
-    <section class="operations-section operations-coach-wide-card">
       ${operationsCoachChartHeader('课程结构占比', operationsCoachTitleLegend([
         { label: '体验课', color: '#D89135' },
         { label: '私教课', color: '#3B6EA8' },
@@ -661,44 +655,6 @@ function operationsCoachChartHeader(title, extra = '') {
 
 function operationsCoachTitleLegend(items = []) {
   return `<div class="operations-coach-title-legend">${items.map(item => `<span><i class="${item.line ? 'line' : ''}" style="background:${esc(item.color)}"></i>${esc(item.label)}</span>`).join('')}</div>`;
-}
-
-function renderOperationsCoachUtilizationBands(rows = []) {
-  const host = document.getElementById('operationsCoachUtilizationBandsChart');
-  if (!host) return;
-  const source = (rows || []).filter(row => row && row.band);
-  if (!source.length) {
-    host.innerHTML = '<div class="tms-empty-state" style="height:100%;display:flex;align-items:center;justify-content:center"><div class="tms-empty-title">暂无图表数据</div></div>';
-    return;
-  }
-  const total = source.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
-  const maxCount = Math.max(1, ...source.map(row => Number(row.count) || 0));
-  const axisMax = Math.max(21, Math.ceil(maxCount / 3) * 3);
-  const axisStep = Math.max(1, axisMax / 7);
-  const ticks = Array.from({ length: 8 }, (_, index) => Math.round(index * axisStep));
-  const displayRows = [...source].reverse().map(row => {
-    const count = Number(row.count) || 0;
-    return {
-      ...row,
-      count,
-      share: total ? Math.round((count * 100 / total) * 10) / 10 : 0,
-      width: Math.max(0, Math.min(100, count * 100 / axisMax))
-    };
-  });
-  host.innerHTML = `<div class="operations-utilization-gemini">
-    <div class="operations-utilization-axis">${ticks.map(tick => `<span>${fmt(tick)}人</span>`).join('')}</div>
-    <div class="operations-utilization-rule"></div>
-    <div class="operations-utilization-rows">
-      ${displayRows.map(row => {
-        const active = row.count > 0;
-        return `<div class="operations-utilization-row ${active ? 'active' : ''}">
-          <div class="operations-utilization-label">${esc(row.band)} ${esc(row.label)}</div>
-          <div class="operations-utilization-track"><i style="width:${row.width}%"></i></div>
-          <div class="operations-utilization-value"><strong>${fmt(row.count)} 人</strong><span>${fmt(row.share)}%</span></div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
 }
 
 function operationsCoachKpiTone(value) {
@@ -1318,7 +1274,6 @@ function renderOperationsCharts(data) {
   }));
   renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 340 });
   renderStandardChart('operationsCoachParetoChart', buildOperationsCoachParetoChartOption({ rows: data.coach?.revenueParetoRows || [] }), { height: 280 });
-  renderOperationsCoachUtilizationBands(data.coach?.utilizationBands || []);
   renderStandardChart('operationsCoachCourseMixChart', buildOperationsCoachCourseMixChartOption({ rows: data.coach?.courseMixRows || [] }), { height: 280 });
   renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 340, emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
 }
