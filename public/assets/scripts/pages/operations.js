@@ -154,7 +154,7 @@ function renderOperationsCourtKpi(card = {}) {
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendPoints || []))}">${esc(operationsTrendChangeText(card.trendPoints || [], card.trendKey || ''))}</small>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
@@ -167,6 +167,7 @@ function renderOperationsCourtKpi(card = {}) {
 function renderOperationsCourtKpis(data = {}) {
   const cards = data.court?.cards || {};
   const trends = data.court?.trends || [];
+  const comparisons = data.court?.trendComparisons || {};
   const kpis = [
     { label: '订场收入', value: operationsMoneyText(operationsCardNumber(cards.bookingAmount)), trendKey: 'bookingAmount', tone: 'revenue' },
     { label: '订场小时', value: fmt(operationsCardNumber(cards.bookingHours)), unit: '小时', trendKey: 'bookingHours', tone: 'hours' },
@@ -178,7 +179,8 @@ function renderOperationsCourtKpis(data = {}) {
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
       trendValues: operationsCourtTrendValues(trends, card.trendKey),
-      trendPoints: operationsCourtTrendPoints(trends, card.trendKey)
+      trendPoints: operationsCourtTrendPoints(trends, card.trendKey),
+      trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
 }
@@ -319,6 +321,7 @@ function operationsOverviewTrendPoints(trends = [], key = '') {
 function renderOperationsOverviewKpis(data = {}) {
   const cards = data.overview?.cards || {};
   const trends = data.overview?.trends || [];
+  const comparisons = data.overview?.trendComparisons || {};
   const courtCards = data.court?.cards || {};
   const kpis = [
     { label: '总收入', value: operationsMoneyText(operationsCardNumber(cards.totalIncome)), trendKey: 'totalIncome', tone: 'revenue' },
@@ -330,7 +333,8 @@ function renderOperationsOverviewKpis(data = {}) {
   return `<div class="operations-kpi-row operations-overview-kpi-row operations-court-kpi-row">
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
-      trendPoints: operationsOverviewTrendPoints(trends, card.trendKey)
+      trendPoints: operationsOverviewTrendPoints(trends, card.trendKey),
+      trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
 }
@@ -605,6 +609,7 @@ function renderOperationsCoach(data) {
   const rows = coach.rows || [];
   const cards = coach.cards || {};
   const trends = coach.trends || [];
+  const comparisons = coach.trendComparisons || {};
   const used = Number(cards.usedHours?.value) || rows.reduce((sum, row) => sum + (Number(row.usedHours) || 0), 0);
   const available = Number(cards.availableHoursThisWeek?.value) || rows.reduce((sum, row) => sum + (Number(row.availableHours) || 0), 0);
   const revenue = Number(cards.revenue?.value) || rows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0);
@@ -618,7 +623,8 @@ function renderOperationsCoach(data) {
   return `<div class="operations-coach-kpi-strip" data-trend-count="${trends.length}">${kpis.map(card => renderOperationsCoachKpi({
     ...card,
     trendValues: operationsCoachTrendValues(trends, card.trendKey, card.rawValue),
-    trendPoints: operationsCoachTrendPoints(trends, card.trendKey)
+    trendPoints: operationsCoachTrendPoints(trends, card.trendKey),
+    trendComparison: comparisons[card.trendKey]
   })).join('')}</div>
   <div class="operations-coach-hero-grid">
     <section class="operations-section operations-coach-primary-card">
@@ -671,7 +677,7 @@ function renderOperationsCoachKpi(card = {}) {
     <div class="operations-coach-kpi-main">
       <div class="operations-coach-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(card.trendPoints || []))}">${esc(operationsTrendChangeText(card.trendPoints || [], card.trendKey || ''))}</small>
+        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-coach-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
@@ -706,8 +712,8 @@ function operationsCoachTrendToneColor(key, values = []) {
 
 function operationsCoachSparklineValues(values = []) {
   const source = (values || []).map(value => Number(value) || 0).filter(value => Number.isFinite(value));
-  if (source.length <= 31) return source;
-  const targetCount = 24;
+  if (source.length <= 12) return source;
+  const targetCount = 12;
   const step = (source.length - 1) / (targetCount - 1);
   return Array.from({ length: targetCount }, (_, index) => source[Math.round(index * step)]);
 }
@@ -717,8 +723,8 @@ function operationsKpiPointList(points = []) {
     if (typeof point === 'object' && point) return { date: point.date || `第${index + 1}点`, value: Number(point.value) || 0 };
     return { date: `第${index + 1}点`, value: Number(point) || 0 };
   }).filter(point => Number.isFinite(point.value));
-  if (source.length <= 31) return source;
-  const targetCount = 24;
+  if (source.length <= 12) return source;
+  const targetCount = 12;
   const step = (source.length - 1) / (targetCount - 1);
   return Array.from({ length: targetCount }, (_, index) => source[Math.round(index * step)]);
 }
@@ -734,7 +740,7 @@ function operationsKpiValueText(value = 0, key = '') {
 
 function operationsKpiSignedValueText(value = 0, key = '') {
   const number = Number(value) || 0;
-  if (number === 0) return '持平';
+  if (number === 0) return '';
   const abs = Math.abs(number);
   const sign = number > 0 ? '+' : number < 0 ? '-' : '';
   if (key === 'revenue' || key === 'bookingAmount') return `${sign}¥${fmt(abs)}`;
@@ -753,23 +759,17 @@ function operationsKpiPointLabel(point = {}, key = '') {
   return `${date} ${operationsKpiValueText(point.value, key)}`.trim();
 }
 
-function operationsTrendChangeText(points = [], key = '') {
-  const list = operationsKpiPointList(points);
-  if (list.length < 2) return '暂无趋势';
-  const first = Number(list[0].value) || 0;
-  const last = Number(list[list.length - 1].value) || 0;
-  const change = last - first;
-  return operationsKpiSignedValueText(change, key);
+function operationsTrendChangeText(comparison = {}, key = '') {
+  if (!comparison || comparison.mode !== 'previous_period') return '';
+  return operationsKpiSignedValueText(comparison.changeValue, key);
 }
 
-function operationsTrendChangeClass(points = []) {
-  const list = operationsKpiPointList(points);
-  if (list.length < 2) return 'muted';
-  const first = Number(list[0].value) || 0;
-  const last = Number(list[list.length - 1].value) || 0;
-  if (last > first) return 'up';
-  if (last < first) return 'down';
-  return 'flat';
+function operationsTrendChangeClass(comparison = {}) {
+  if (!comparison || comparison.mode !== 'previous_period') return 'muted';
+  const change = Number(comparison.changeValue) || 0;
+  if (change > 0) return 'up';
+  if (change < 0) return 'down';
+  return 'muted';
 }
 
 function operationsSmoothPath(coords = []) {
@@ -878,28 +878,6 @@ function operationsConversionRowDate(row = {}) {
   const parsed = value instanceof Date ? value : new Date(String(value).replace(' ', 'T'));
   if (!parsed || Number.isNaN(parsed.getTime())) return '';
   return dateKey(parsed);
-}
-
-function operationsBuildConversionTrendRows(rows = []) {
-  if (!operationsShouldShowTrend()) return [];
-  const today = operationsTrendToday();
-  const datedRows = (rows || [])
-    .map(row => ({ ...row, _trendDate: operationsConversionRowDate(row) }))
-    .filter(row => row._trendDate && row._trendDate <= today)
-    .sort((a, b) => a._trendDate.localeCompare(b._trendDate));
-  const days = [...new Set(datedRows.map(row => row._trendDate))];
-  if (days.length < 2) return [];
-  return days.map(day => {
-    const funnel = operationsBuildCourseFunnel(datedRows.filter(row => row._trendDate <= day));
-    return {
-      date: day,
-      leads: Number(funnel[0]?.count) || 0,
-      appointmentRate: Number(funnel[1]?.percentOfTotal) || 0,
-      attendanceRate: Number(funnel[2]?.transitionRate) || 0,
-      dealRate: Number(funnel[3]?.transitionRate) || 0,
-      renewalRate: Number(funnel[4]?.transitionRate) || 0
-    };
-  });
 }
 
 function operationsBuildSourceRanking(rows = []) {
@@ -1030,7 +1008,7 @@ function renderOperationsConversionKpi(card = {}) {
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendPoints || []))}">${esc(operationsTrendChangeText(card.trendPoints || [], card.trendKey || ''))}</small>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
@@ -1152,7 +1130,7 @@ function operationsConversionView(data) {
     channelEfficiencyRows: operationsBuildChannelEfficiencyRows(rows),
     studentAttributeRows: operationsBuildAttributeRows(rows),
     courseRows: rows,
-    trendRows: operationsBuildConversionTrendRows(rows)
+    trendRows: data.conversion?.trends || []
   };
 }
 
@@ -1187,10 +1165,12 @@ function renderConversionFunnelModule(data, conversion) {
 }
 
 function renderConversionCommandCenter(data, conversion) {
+  const comparisons = data.conversion?.trendComparisons || {};
   return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
       ${operationsConversionKpiCards(conversion.courseFunnel || []).map(card => renderOperationsConversionKpi({
         ...card,
-        trendPoints: operationsConversionTrendPoints(conversion.trendRows || [], card.trendKey)
+        trendPoints: operationsConversionTrendPoints(conversion.trendRows || [], card.trendKey),
+        trendComparison: comparisons[card.trendKey]
       })).join('')}
     </div>`;
 }
