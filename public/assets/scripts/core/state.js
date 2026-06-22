@@ -382,13 +382,13 @@ function renderBlockLoading(id,text){
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
 }
 function renderPageLoading(pg){
+  if(typeof renderStandardPageLoading==='function'&&renderStandardPageLoading(pg))return;
   if(pg==='students')renderStudentTableLoading();
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
   if(pg==='schedule')renderScheduleTableLoading();
   if(pg==='leads')renderLeadTableLoading();
   if(pg==='operations'&&typeof renderOperationsLoading==='function')renderOperationsLoading();
   else if(pg==='operations')renderBlockLoading('page-operations','经营分析加载中...');
-  if(pg==='packages')renderBlockLoading('packageGrid','售卖课包加载中...');
   if(pg==='purchases')renderTableBodyLoading('purchaseTbody',9,'购买记录加载中...');
   if(pg==='membership-orders')renderTableBodyLoading('membershipOrdersAuditTbody',12,'会员购买记录加载中...');
   if(pg==='membership-ledger')renderTableBodyLoading('membershipLedgerAuditTbody',8,'会员权益流水加载中...');
@@ -403,8 +403,6 @@ function renderPageLoading(pg){
   if(pg==='courts')renderCourtTableLoading();
   if(pg==='matches')renderTableBodyLoading('matchTbody',9,'约球数据加载中...');
   if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
-  if(pg==='workbench')renderBlockLoading('workbenchBody','教练工作台加载中...');
-  if(pg==='postfeedback')renderBlockLoading('postFeedbackBody','课后评价加载中...');
   if(pg==='mystudents')renderBlockLoading('myStudentsBody','学员数据加载中...');
   if(pg==='myclasses')renderBlockLoading('myClassesBody','班次数据加载中...');
 }

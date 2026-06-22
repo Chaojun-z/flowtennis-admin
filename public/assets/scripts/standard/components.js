@@ -194,6 +194,47 @@ function renderStandardPageSkeleton(config={}){
   const sections=Array.isArray(config.sections)?config.sections:[];
   return `<div class="tms-page-skeleton ${esc(cls)}">${sections.map(renderStandardSkeletonSection).join('')}</div>`;
 }
+function standardPageSkeletonConfigs(){
+  return [
+    {page:'products',hostId:'productGrid',variant:'cards',className:'course-showcase-skeleton',sections:[
+      {type:'grid',className:'course-showcase-grid tms-skeleton-card-grid',panels:[{variant:'card'},{variant:'card'},{variant:'card'},{variant:'card'}]}
+    ]},
+    {page:'packages',hostId:'packageGrid',variant:'board',className:'course-package-skeleton',sections:[
+      {type:'grid',className:'course-package-showcase-grid tms-skeleton-board-grid',panels:[{variant:'table'},{variant:'table'},{variant:'table'},{variant:'table'}]}
+    ]},
+    {page:'finance',variant:'finance',onRender:()=>{
+      const stats=document.getElementById('financeOverviewPrimaryStats');
+      if(stats)stats.innerHTML=renderStandardPageSkeleton({className:'finance-skeleton-stats',sections:[{type:'kpis',className:'tms-stats-row finance-ledger-stats',count:5}]});
+      if(typeof renderTableSkeletonLoading==='function'){
+        renderTableSkeletonLoading('financeLedgerTbody',11,'总账加载中...');
+        renderTableSkeletonLoading('financeRevenueTbody',14,'收入表加载中...');
+        renderTableSkeletonLoading('financeConsumeTbody',9,'消耗表加载中...');
+        renderTableSkeletonLoading('financePrepaidTbody',6,'预收余额加载中...');
+        renderTableSkeletonLoading('financeAnomalyTbody',4,'异常检查加载中...');
+      }
+      return true;
+    }},
+    {page:'workbench',hostId:'workbenchBody',variant:'dashboard',className:'coach-wb-container',sections:[
+      {type:'kpis',className:'coach-wb-stats-row',count:3},
+      {type:'grid',className:'tms-skeleton-calendar-grid',panels:[{variant:'table'}]}
+    ]},
+    {page:'postfeedback',hostId:'postFeedbackBody',variant:'cards',className:'coach-wb-container',sections:[
+      {type:'grid',className:'coach-wb-board tms-skeleton-card-grid',panels:[{variant:'card'},{variant:'card'},{variant:'card'}]}
+    ]}
+  ];
+}
+function standardPageSkeletonConfigForPage(pageKey){
+  return standardPageSkeletonConfigs().find(item=>item.page===pageKey)||null;
+}
+function renderStandardPageLoading(pageKey){
+  const config=standardPageSkeletonConfigForPage(pageKey);
+  if(!config)return false;
+  if(typeof config.onRender==='function')return config.onRender();
+  const host=document.getElementById(config.hostId||`page-${pageKey}`);
+  if(!host)return false;
+  host.innerHTML=renderStandardPageSkeleton(config);
+  return true;
+}
 function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',oninput=''}={}){
   return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` oninput="${esc(oninput)}"`:''}></div>`;
 }
@@ -301,6 +342,9 @@ Object.assign(window,{
   renderStandardListPagerShellHtml,
   renderStandardListStateHtml,
   renderStandardListPageShellHtml,
+  standardPageSkeletonConfigs,
+  standardPageSkeletonConfigForPage,
+  renderStandardPageLoading,
   standardListPageShellConfigs,
   mountStandardListShells
 });

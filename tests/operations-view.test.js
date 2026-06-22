@@ -45,7 +45,10 @@ assert.match(bootstrapSource, /OPERATIONS_TITLE_MAP=\{overview:'经营总览',co
 assert.match(bootstrapSource, /n\.dataset\.operationsTab===tab/, 'operations sidebar should only highlight the selected sub menu item');
 assert.match(bootstrapSource, /adminPages=\[[^\]]*'operations'/, 'operations should be admin-only');
 assert.match(stateSource, /if\(pg==='operations'\)renderOperations\(\)/, 'renderPageData should render operations');
-assert.match(operationsSource, /let operationsActiveTab = 'overview'/, 'operations should open overview dashboard by default');
+assert.match(operationsSource, /const OPERATIONS_TAB_KEY='ft_operations_active_tab'/, 'operations should persist the selected dashboard tab');
+assert.match(operationsSource, /function readOperationsActiveTab\(\)[\s\S]*localStorage\.getItem\(OPERATIONS_TAB_KEY\)[\s\S]*return 'overview'/, 'operations should restore the last selected dashboard tab and fall back to overview');
+assert.match(operationsSource, /let operationsActiveTab = readOperationsActiveTab\(\)/, 'operations should initialize the active tab from persisted state');
+assert.match(operationsSource, /localStorage\.setItem\(OPERATIONS_TAB_KEY,operationsActiveTab\)/, 'operations should save tab changes so refresh stays on the same dashboard');
 assert.match(operationsSource, /\['overview', 'court', 'conversion', 'coach'\]\.includes\(tab\)/, 'operations should allow overview, court, conversion and coach dashboards');
 assert.match(componentsSource, /globalTopFilterPages\(\)\{[\s\S]*'operations'/, 'operations page should reuse the global top date filter');
 assert.match(componentsSource, /if\(currentPage==='operations'\)\{\s*return `[^`]*renderStandardTopDropdown\('globalTopDate'/, 'operations top filter should only render the date filter');
@@ -57,6 +60,12 @@ assert.doesNotMatch(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S
 assert.match(standardComponentsSource, /function renderStandardPageSkeleton\(/, 'standard components should expose a global page skeleton renderer');
 assert.match(standardComponentsSource, /function renderStandardSkeletonKpiCard\(/, 'global page skeleton should render metric cards with title, value and supporting lines');
 assert.match(standardComponentsSource, /function renderStandardSkeletonChartPanel\(/, 'global page skeleton should render chart panels with realistic chart placeholders');
+assert.match(standardComponentsSource, /function standardPageSkeletonConfigs\(\)[\s\S]*page:'products'[\s\S]*variant:'cards'[\s\S]*page:'packages'[\s\S]*variant:'board'[\s\S]*page:'finance'[\s\S]*page:'workbench'[\s\S]*page:'postfeedback'/, 'global skeleton configs should cover non-table, complex and dashboard pages');
+assert.match(standardComponentsSource, /function renderStandardPageLoading\(pageKey\)[\s\S]*standardPageSkeletonConfigForPage\(pageKey\)[\s\S]*renderStandardPageSkeleton\(config\)/, 'page loading should route through the shared page skeleton renderer');
+assert.match(stateSource, /if\(typeof renderStandardPageLoading==='function'&&renderStandardPageLoading\(pg\)\)return;/, 'page loading should first try the shared real-layout skeleton');
+assert.doesNotMatch(stateSource, /if\(pg==='packages'\)renderBlockLoading/, 'packages loading should not use a fake text block');
+assert.doesNotMatch(stateSource, /if\(pg==='workbench'\)renderBlockLoading/, 'workbench loading should not use a fake text block');
+assert.doesNotMatch(stateSource, /if\(pg==='postfeedback'\)renderBlockLoading/, 'postfeedback loading should not use a fake text block');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
 assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
@@ -346,6 +355,10 @@ assert.match(stylesSource, /operations-court-ranking-mainbar\{[^}]*height:12px/,
 assert.match(stylesSource, /operations-court-ranking-capacity\{[^}]*font-size:12px/, 'court ranking should show the utilization denominator as readable text');
 assert.match(stylesSource, /operations-skeleton-line\{[^}]*#E6D8CD[\s\S]*#F4EAE3[\s\S]*#E6D8CD/, 'operations skeleton shimmer should use the warm page palette instead of cold silver');
 assert.doesNotMatch(stylesSource, /operations-skeleton-line\{[^}]*#E8EEF7[\s\S]*#F8FAFE/, 'operations skeleton shimmer should not use the old silver-blue gradient');
+assert.match(stylesSource, /\.tms-skeleton-spark::before\{[^}]*height:1px[^}]*background:linear-gradient\(90deg,transparent,#D7C9BE,transparent\)/, 'KPI skeleton sparklines should use one refined baseline instead of uneven bar dots');
+assert.match(stylesSource, /\.tms-skeleton-spark span\{width:5px;height:5px/, 'KPI skeleton sparkline nodes should be small and consistent');
+assert.match(stylesSource, /\.tms-skeleton-chart-body\{[^}]*linear-gradient\(180deg,rgba\(160,143,128,\.12\) 1px,transparent 1px\)/, 'chart skeleton should use a subtle grid background');
+assert.match(stylesSource, /\.tms-skeleton-chart-body i\{width:14px;border-radius:4px 4px 2px 2px;box-shadow:none\}/, 'chart skeleton bars should be fine and flat instead of chunky 3D columns');
 assert.match(stylesSource, /operations-coach-hero-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:14px/, 'coach dashboard should place the two matrix charts side by side');
 assert.doesNotMatch(stylesSource, /operations-coach-alert-card/, 'coach dashboard should remove diagnostic alert card styles from the target surface');
 assert.match(stylesSource, /operations-coach-band-legend[\s\S]*#E05252[\s\S]*#D89135[\s\S]*#3B6EA8[\s\S]*#2E8B6D/, 'coach utilization legend should use the unified dashboard palette');
