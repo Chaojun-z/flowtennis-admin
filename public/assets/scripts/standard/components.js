@@ -163,6 +163,37 @@ function standardListSlice(list,page,pageSize){
   const state=standardListPagination(rows.length,page,pageSize);
   return {...state,slice:rows.slice(state.start,state.end)};
 }
+function renderStandardSkeletonKpiCard(){
+  return '<div class="tms-skeleton-card"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i><b class="tms-skeleton-spark"><span></span><span></span><span></span><span></span></b></div>';
+}
+function renderStandardSkeletonChartPanel(panel={}){
+  const cls=String(panel.className||'').trim();
+  const variant=String(panel.variant||'chart').trim();
+  return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="${esc(variant)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-chart-body"><i></i><i></i><i></i><i></i><i></i></div><div class="tms-skeleton-legend"><span></span><span></span><span></span></div></div>`;
+}
+function renderStandardSkeletonTablePanel(panel={}){
+  const cls=String(panel.className||'').trim();
+  const columns=Math.max(4,Math.min(8,Number(panel.columns)||6));
+  const cells=Array.from({length:columns},(_,index)=>`<span class="tms-skeleton-line ${index===0?'is-strong':''}"></span>`).join('');
+  const rows=Array.from({length:Math.max(3,Math.min(8,Number(panel.rows)||5))},()=>`<div class="tms-skeleton-table-row">${cells}</div>`).join('');
+  return `<div class="tms-skeleton-panel tms-skeleton-table-panel ${esc(cls)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-table">${rows}</div></div>`;
+}
+function renderStandardSkeletonSection(section={}){
+  const type=String(section.type||'grid');
+  const cls=String(section.className||'').trim();
+  if(type==='kpis'){
+    const count=Math.max(1,Math.min(8,Number(section.count)||4));
+    return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${Array.from({length:count},renderStandardSkeletonKpiCard).join('')}</div>`;
+  }
+  if(type==='table')return renderStandardSkeletonTablePanel(section);
+  const panels=Array.isArray(section.panels)&&section.panels.length?section.panels:[{}];
+  return `<div class="${esc(cls||'tms-skeleton-grid')}">${panels.map(renderStandardSkeletonChartPanel).join('')}</div>`;
+}
+function renderStandardPageSkeleton(config={}){
+  const cls=String(config.className||'').trim();
+  const sections=Array.isArray(config.sections)?config.sections:[];
+  return `<div class="tms-page-skeleton ${esc(cls)}">${sections.map(renderStandardSkeletonSection).join('')}</div>`;
+}
 function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',oninput=''}={}){
   return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` oninput="${esc(oninput)}"`:''}></div>`;
 }

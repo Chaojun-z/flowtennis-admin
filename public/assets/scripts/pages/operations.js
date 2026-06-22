@@ -158,6 +158,10 @@ function operationsShouldShowTrend() {
   return !(range?.startDate && range.startDate === range.endDate);
 }
 
+function operationsTrendComparisonForDisplay(comparison = {}, points = []) {
+  return Array.isArray(points) && points.length >= 2 ? comparison : { mode: 'none' };
+}
+
 function operationsCourtTrendValues(trends = [], key = '') {
   const values = operationsTrendValues(trends, key);
   if (!operationsShouldShowTrend()) return [];
@@ -175,6 +179,7 @@ function operationsCourtSparklineSvg(points = [], key = '') {
 }
 
 function renderOperationsCourtKpi(card = {}) {
+  const displayComparison = operationsTrendComparisonForDisplay(card.trendComparison, card.trendPoints);
   return `<div class="operations-court-kpi ${esc(card.tone || 'neutral')}">
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
@@ -182,7 +187,7 @@ function renderOperationsCourtKpi(card = {}) {
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(displayComparison))}">${esc(operationsTrendChangeText(displayComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsCourtSparklineSvg(card.trendPoints || [], card.trendKey || '')}
@@ -262,57 +267,53 @@ function setOperationsConversionFilter() {
 function renderOperationsLoading() {
   const host = document.getElementById('page-operations');
   if (!host) return;
+  if (typeof renderStandardPageSkeleton !== 'function') {
+    host.innerHTML = '<div class="operations-page"><div class="empty"><p>经营分析加载中...</p></div></div>';
+    return;
+  }
   if (operationsActiveTab === 'overview') {
-    host.innerHTML = `<div class="operations-page">
-      <section class="operations-command-center operations-overview-command">
-        <div class="operations-skeleton-line title"></div>
-        <div class="operations-skeleton-line caption"></div>
-        <div class="operations-kpi-row">${[1,2,3,4,5].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}</div>
-      </section>
-      <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
-      <div class="operations-overview-grid"><div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div></div>
-    </div>`;
+    host.innerHTML = renderStandardPageSkeleton({
+      className: 'operations-page',
+      sections: [
+        { type: 'kpis', className: 'operations-kpi-row operations-overview-kpi-row operations-court-kpi-row', count: 5 },
+        { type: 'grid', className: 'operations-overview-grid', panels: [{ className: 'operations-overview-chart' }, { className: 'operations-overview-chart' }] },
+        { type: 'grid', className: 'operations-overview-grid operations-overview-visual-grid', panels: [{ className: 'operations-overview-matrix-chart' }, { className: 'operations-overview-matrix-chart' }] },
+        { type: 'grid', className: 'operations-overview-grid', panels: [{}, {}] }
+      ]
+    });
     return;
   }
   if (operationsActiveTab === 'coach') {
-    host.innerHTML = `<div class="operations-page">
-      <section class="operations-coach-command operations-coach-command-skeleton">
-        <div class="operations-skeleton-line title"></div>
-        <div class="operations-skeleton-line caption"></div>
-        <div class="operations-coach-kpi-strip">
-          ${[1,2,3,4,5].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}
-        </div>
-      </section>
-      <div class="operations-coach-hero-grid">
-        <div class="operations-skeleton-panel operations-coach-matrix-skeleton"></div>
-        <div class="operations-skeleton-panel operations-coach-matrix-skeleton"></div>
-      </div>
-      <div class="operations-coach-secondary-grid">
-        <div class="operations-skeleton-panel"></div>
-        <div class="operations-skeleton-panel"></div>
-      </div>
-      <div class="operations-coach-secondary-grid">
-        <div class="operations-skeleton-panel"></div>
-        <div class="operations-skeleton-panel"></div>
-      </div>
-    </div>`;
+    host.innerHTML = renderStandardPageSkeleton({
+      className: 'operations-page',
+      sections: [
+        { type: 'kpis', className: 'operations-coach-kpi-strip', count: 5 },
+        { type: 'grid', className: 'operations-coach-hero-grid', panels: [{ className: 'operations-coach-matrix-skeleton' }, { className: 'operations-coach-matrix-skeleton' }] },
+        { type: 'grid', className: 'operations-coach-secondary-grid', panels: [{}, {}] }
+      ]
+    });
     return;
   }
   if (operationsActiveTab === 'court') {
-    host.innerHTML = `<div class="operations-page">
-      <div class="operations-court-skeleton-grid">
-        <div class="operations-skeleton-panel"></div>
-        <div class="operations-skeleton-panel"></div>
-      </div>
-      <div class="operations-skeleton-panel operations-court-skeleton-heat"></div>
-    </div>`;
+    host.innerHTML = renderStandardPageSkeleton({
+      className: 'operations-page',
+      sections: [
+        { type: 'kpis', className: 'operations-kpi-row operations-court-kpi-row', count: 5 },
+        { type: 'grid', className: 'operations-court-skeleton-grid', panels: [{}, {}] },
+        { type: 'grid', className: 'operations-court-heatmap-card', panels: [{ className: 'operations-court-skeleton-heat', variant: 'heatmap' }] }
+      ]
+    });
     return;
   }
-  host.innerHTML = `<div class="operations-page"><div class="operations-skeleton-grid">
-    ${[1,2,3,4].map(() => '<div class="operations-skeleton-card"><span></span><strong></strong></div>').join('')}
-  </div><div class="operations-chart-grid">
-    <div class="operations-skeleton-panel"></div><div class="operations-skeleton-panel"></div>
-  </div></div>`;
+  host.innerHTML = renderStandardPageSkeleton({
+    className: 'operations-page',
+    sections: [
+      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 5 },
+      { type: 'grid', className: 'operations-conversion-monitor-grid', panels: [{}, {}] },
+      { type: 'grid', className: 'operations-channel-quality-layout', panels: [{}, { variant: 'table' }] },
+      { type: 'grid', className: 'operations-attribute-layout', panels: [{}, {}] }
+    ]
+  });
 }
 
 function renderOperationsOverview(data) {
@@ -698,6 +699,7 @@ function operationsCoachKpiTone(value) {
 }
 
 function renderOperationsCoachKpi(card = {}) {
+  const displayComparison = operationsTrendComparisonForDisplay(card.trendComparison, card.trendPoints);
   return `<div class="operations-coach-kpi ${esc(card.tone || 'neutral')}">
     <div class="operations-coach-kpi-main">
       <div class="operations-coach-kpi-head">
@@ -705,7 +707,7 @@ function renderOperationsCoachKpi(card = {}) {
       </div>
       <div class="operations-coach-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
+        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(displayComparison))}">${esc(operationsTrendChangeText(displayComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsCoachSparklineSvg(card.trendPoints || [], card.trendKey)}
@@ -1072,6 +1074,7 @@ function operationsConversionSparklineSvg(points = [], key = '') {
 }
 
 function renderOperationsConversionKpi(card = {}) {
+  const displayComparison = operationsTrendComparisonForDisplay(card.trendComparison, card.trendPoints);
   return `<div class="operations-court-kpi operations-conversion-kpi ${esc(card.tone || 'neutral')}">
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
@@ -1079,7 +1082,7 @@ function renderOperationsConversionKpi(card = {}) {
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(displayComparison))}">${esc(operationsTrendChangeText(displayComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsConversionSparklineSvg(card.trendPoints || [], card.trendKey || '')}

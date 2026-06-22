@@ -983,4 +983,87 @@ assert.strictEqual(coachFallbackMetrics.coach.rows.some(row => row.coach === '�
 assert.strictEqual(sirenRow?.revenue, 1800, 'coach dashboard should merge coach aliases and use real receipt fallback fields');
 assert.strictEqual(sirenRow?.usedHours, 2, 'coach dashboard should merge schedule aliases into the same coach row');
 
+const rangedSnapshotGuardMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  leads: [],
+  students: [],
+  purchases: [
+    { id: 'selected-course', studentId: 'selected-student', actualAmount: 1000, purchaseDate: '2026-06-22', status: 'active' },
+    { id: 'future-course', studentId: 'future-student', actualAmount: 9999, purchaseDate: '2026-06-23', status: 'active' },
+    { id: 'previous-course', studentId: 'previous-student', actualAmount: 800, purchaseDate: '2026-06-21', status: 'active' }
+  ],
+  membershipOrders: [
+    { id: 'selected-member', rechargeAmount: 500, purchaseDate: '2026-06-22', status: 'active' },
+    { id: 'future-member', rechargeAmount: 9999, purchaseDate: '2026-06-23', status: 'active' }
+  ],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  financeNormalizedRows: [
+    { id: 'selected-booking', businessDate: '2026-06-22', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '08:00-09:00', sourceProject: '1号场' },
+    { id: 'future-booking', businessDate: '2026-06-23', businessType: '散客订场', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 9999, timeText: '09:00-10:00', sourceProject: '1号场' },
+    { id: 'previous-booking', businessDate: '2026-06-21', businessType: '散客订场', action: '收款', cashDelta: 100, recognizedRevenueDelta: 100, timeText: '10:00-11:00', sourceProject: '1号场' }
+  ],
+  financeOverviewData: {
+    totalIncome: 909700,
+    recognizedRevenue: 295500,
+    pendingRevenue: 614200,
+    tradeCount: 1113,
+    courseIncome: 505900,
+    bookingIncome: 266700,
+    storedValueIncome: 137100
+  }
+}, {
+  now: new Date('2026-06-22T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-22', endDate: '2026-06-28' }
+});
+assert.strictEqual(rangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 1700, 'selected operations overview total income must use ranged rows instead of the all-time finance snapshot');
+assert.strictEqual(rangedSnapshotGuardMetrics.overview.cards.recognizedRevenue.value, 200, 'selected operations overview recognized revenue must use ranged booking rows');
+assert.strictEqual(rangedSnapshotGuardMetrics.overview.cards.pendingRevenue.value, 1500, 'selected operations overview pending revenue must use ranged course and member rows');
+assert.strictEqual(rangedSnapshotGuardMetrics.overview.cards.tradeCount.value, 3, 'selected operations overview trade count must use ranged course, member and booking rows');
+assert.deepStrictEqual(
+  rangedSnapshotGuardMetrics.overview.revenueMix,
+  [
+    { name: '课程收入', value: 1000 },
+    { name: '订场收入', value: 200 },
+    { name: '会员储值', value: 500 }
+  ],
+  'selected operations revenue mix must share the same ranged source as the overview cards'
+);
+assert.strictEqual(
+  rangedSnapshotGuardMetrics.overview.revenueMix.reduce((sum, row) => sum + row.value, 0),
+  rangedSnapshotGuardMetrics.overview.cards.totalIncome.value,
+  'selected revenue mix total must equal the total income card'
+);
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.overview.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for overview trends');
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.court.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for court trends');
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.coach.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for coach trends');
+
+const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
+  leads: [],
+  students: [],
+  purchases: [{ id: 'outside-course', studentId: 'outside', actualAmount: 1000, purchaseDate: '2026-06-21', status: 'active' }],
+  membershipOrders: [{ id: 'outside-member', rechargeAmount: 500, purchaseDate: '2026-06-21', status: 'active' }],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  financeNormalizedRows: [{ id: 'outside-booking', businessDate: '2026-06-21', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200 }],
+  financeOverviewData: { totalIncome: 909700, recognizedRevenue: 295500, pendingRevenue: 614200, tradeCount: 1113, courseIncome: 505900, bookingIncome: 266700, storedValueIncome: 137100 }
+}, {
+  now: new Date('2026-06-22T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-22', endDate: '2026-06-28' }
+});
+assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 0, 'empty selected ranges must stay zero instead of falling back to all-time finance totals');
+assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.tradeCount.value, 0, 'empty selected ranges must not reuse all-time trade counts');
+assert.deepStrictEqual(zeroRangedSnapshotGuardMetrics.overview.revenueMix, [], 'empty selected revenue mix must not show all-time finance categories');
+
 console.log('operations metrics tests passed');

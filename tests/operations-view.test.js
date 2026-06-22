@@ -5,6 +5,7 @@ const path = require('path');
 const repoRoot = path.join(__dirname, '..');
 const indexSource = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
 const componentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/components.js'), 'utf8');
+const standardComponentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/standard/components.js'), 'utf8');
 const bootstrapSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/bootstrap.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/state.js'), 'utf8');
 const chartsPath = path.join(repoRoot, 'public/assets/scripts/standard/charts.js');
@@ -53,6 +54,9 @@ assert.match(componentsSource, /if\(currentPage==='operations'\)reloadOperations
 assert.match(stateSource, /async function reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should have a dedicated inline refresh path');
 assert.match(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]*renderOperationsLoading\(\)[\s\S]*ensureDatasetsByName\(\['operationsPage'\],\{force:true\}\)/, 'operations inline refresh should show local skeleton and refresh only operations data');
 assert.doesNotMatch(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]{0,500}pageLoading/, 'operations inline refresh should not show the global loading overlay');
+assert.match(standardComponentsSource, /function renderStandardPageSkeleton\(/, 'standard components should expose a global page skeleton renderer');
+assert.match(standardComponentsSource, /function renderStandardSkeletonKpiCard\(/, 'global page skeleton should render metric cards with title, value and supporting lines');
+assert.match(standardComponentsSource, /function renderStandardSkeletonChartPanel\(/, 'global page skeleton should render chart panels with realistic chart placeholders');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
 assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
@@ -197,8 +201,8 @@ assert.doesNotMatch(operationsSource, /operationsHelpMark|operations-help-mark|\
 assert.doesNotMatch(courtOverviewSource, /operationsSimpleTable/, 'court overview should not use the standard table component');
 assert.match(operationsSource, /operations-court-ranking-matrix[\s\S]*operations-court-ranking-card/, 'court overview should render as one-card-per-active-campus ranking board');
 assert.match(operationsSource, /renderOperationsCourt[\s\S]*renderOperationsCourtKpis[\s\S]*operations-court-top-grid[\s\S]*renderOperationsCourtComparison[\s\S]*renderOperationsCourtCampusOverview[\s\S]*renderOperationsCourtHeatmaps/, 'court KPI cards should render before the comparison and heatmap');
-assert.match(operationsSource, /renderOperationsLoading[\s\S]*operationsActiveTab === 'court'[\s\S]*operations-court-skeleton-grid/, 'court loading skeleton should use the court layout');
-assert.match(operationsSource, /renderOperationsLoading[\s\S]*operationsActiveTab === 'coach'[\s\S]*operations-coach-command-skeleton[\s\S]*operations-coach-kpi-strip[\s\S]*operations-coach-hero-grid[\s\S]*operations-coach-secondary-grid/, 'coach loading skeleton should match the real coach dashboard layout');
+assert.match(operationsSource, /renderOperationsLoading[\s\S]*renderStandardPageSkeleton[\s\S]*operations-court-skeleton-grid/, 'court loading skeleton should use the global skeleton renderer with the court layout');
+assert.match(operationsSource, /renderOperationsLoading[\s\S]*renderStandardPageSkeleton[\s\S]*operations-coach-kpi-strip[\s\S]*operations-coach-hero-grid[\s\S]*operations-coach-secondary-grid/, 'coach loading skeleton should use the global skeleton renderer with the real coach dashboard layout');
 assert.match(operationsSource, /renderOperationsCourtHeatCell\(slot = \{\}, venue = \{\}, options = \{\}\)/, 'court heat cell should receive venue context and row options for hover detail');
 assert.match(operationsSource, /slot\.heatRate[\s\S]*operationsCourtHeatStyle\(toneRate, usedMinutes\)/, 'court heat cell color should use a continuous relative heat scale while keeping true utilization in the label');
 assert.match(operationsSource, /data-heat="\$\{fmt\(toneRate\)\}"/, 'court heat cell should expose relative heat data for debugging visual gradients');
@@ -226,6 +230,7 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should render monitor KPI cards derived from the funnel');
 assert.match(operationsSource, /function renderOperationsConversionKpi[\s\S]*operations-court-kpi[\s\S]*operationsConversionSparklineSvg/, 'conversion top KPI cards should reuse the court dashboard trend-card standard');
 assert.match(operationsSource, /function operationsTrendToday[\s\S]*activeGlobalDateRange[\s\S]*new Date/, 'operations trend helpers should resolve a real today boundary for all dashboards');
+assert.match(operationsSource, /function operationsTrendComparisonForDisplay[\s\S]*points[\s\S]*length >= 2[\s\S]*mode: 'none'/, 'single-day operation ranges should hide misleading previous-period change text');
 assert.doesNotMatch(operationsSource, /function operationsBuildConversionTrendRows/, 'conversion trend rows should be generated by the backend instead of being rebuilt in the browser');
 assert.match(operationsSource, /trendRows:\s*data\.conversion\?\.trends \|\| \[\]/, 'conversion view should use backend-generated trend rows');
 assert.match(operationsSource, /function operationsConversionTrendPoints[\s\S]*Math\.min\(\.\.\.values\)[\s\S]*Math\.max\(\.\.\.values\)[\s\S]*return \[\]/, 'conversion KPI sparklines should hide flat no-signal trends instead of drawing fake straight lines');

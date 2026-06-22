@@ -2055,6 +2055,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const now = options.now || new Date();
   const dateRange = normalizeDateRange(options.dateRange || {});
   const reportingDateRange = futureSafeDateRange(dateRange, now);
+  const selectedDateRangeActive = isDateRangeActive(reportingDateRange);
   const previousRange = previousDateRange(reportingDateRange, now);
   const realAllPurchases = (data.purchases || []).filter(row => {
     const day = purchaseDate(row);
@@ -2097,9 +2098,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const financeTotalIncome = financeNumber(financeOverviewData, ['totalIncome', 'cash']);
   const financeRecognizedRevenue = financeNumber(financeOverviewData, ['recognizedRevenue', 'recognized']);
   const financePendingRevenue = financeNumber(financeOverviewData, ['pendingRevenue', 'deferred']);
-  const totalIncome = financeIsPartial ? Math.max(financeTotalIncome, fallbackFinance.totalIncome) : (financeTotalIncome || fallbackFinance.totalIncome);
-  const recognizedRevenue = financeIsPartial ? Math.max(financeRecognizedRevenue, fallbackFinance.recognizedRevenue) : (financeRecognizedRevenue || fallbackFinance.recognizedRevenue);
-  const pendingRevenue = financeIsPartial ? Math.max(financePendingRevenue, fallbackFinance.pendingRevenue) : (financePendingRevenue || fallbackFinance.pendingRevenue);
+  const totalIncome = selectedDateRangeActive
+    ? fallbackFinance.totalIncome
+    : financeIsPartial ? Math.max(financeTotalIncome, fallbackFinance.totalIncome) : (financeTotalIncome || fallbackFinance.totalIncome);
+  const recognizedRevenue = selectedDateRangeActive
+    ? fallbackFinance.recognizedRevenue
+    : financeIsPartial ? Math.max(financeRecognizedRevenue, fallbackFinance.recognizedRevenue) : (financeRecognizedRevenue || fallbackFinance.recognizedRevenue);
+  const pendingRevenue = selectedDateRangeActive
+    ? fallbackFinance.pendingRevenue
+    : financeIsPartial ? Math.max(financePendingRevenue, fallbackFinance.pendingRevenue) : (financePendingRevenue || fallbackFinance.pendingRevenue);
   const totalLeads = (rangedData.leads || []).length;
   const convertedLeads = stageRows
     .filter(row => !['未转化', '已约体验', '已体验待转化', '已流失'].includes(row.stage))
@@ -2112,7 +2119,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
   const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
-  const revenueMix = buildRevenueMix(financeOverviewData);
+  const revenueMix = selectedDateRangeActive ? [] : buildRevenueMix(financeOverviewData);
   const fallbackRevenueMix = [
     { name: '课程收入', value: fallbackFinance.courseIncome },
     { name: '订场收入', value: fallbackFinance.bookingIncome },
@@ -2174,7 +2181,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
     totalIncome,
     recognizedRevenue,
     pendingRevenue,
-    tradeCount: financeIsPartial ? Math.max(financeNumber(financeOverviewData, ['tradeCount']), fallbackFinance.tradeCount) : (financeNumber(financeOverviewData, ['tradeCount']) || fallbackFinance.tradeCount),
+    tradeCount: selectedDateRangeActive
+      ? fallbackFinance.tradeCount
+      : financeIsPartial ? Math.max(financeNumber(financeOverviewData, ['tradeCount']), fallbackFinance.tradeCount) : (financeNumber(financeOverviewData, ['tradeCount']) || fallbackFinance.tradeCount),
     utilizationRate: Number(court?.cards?.utilizationRate?.value) || 0
   };
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
