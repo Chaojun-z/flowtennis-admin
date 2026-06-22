@@ -553,7 +553,9 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
 }
 
 function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
-  const source = (rows || []).filter(row => row && row.coach && ((Number(row.revenue) || 0) > 0 || (Number(row.revenueShare) || 0) > 0));
+  const source = (rows || [])
+    .filter(row => row && row.coach && ((Number(row.revenue) || 0) > 0 || (Number(row.revenueShare) || 0) > 0))
+    .slice(0, 10);
   if (!source.length) return { series: [] };
   return {
     ...standardChartBaseOption(),
@@ -574,15 +576,15 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
       textStyle: { fontSize: 12, fontWeight: 400 }
     },
     legend: { show: false },
-    grid: { left: 70, right: 36, top: 12, bottom: 24, containLabel: true },
-    yAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11, margin: 10 } },
-    xAxis: [
+    grid: { left: 48, right: 36, top: 14, bottom: 42, containLabel: true },
+    xAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 10, interval: 0, rotate: 28, margin: 12 } },
+    yAxis: [
       { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
       { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11 }, splitLine: { show: false } }
     ],
     series: [
-      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 18, itemStyle: { color: '#8B5E3C', borderRadius: [0, 6, 6, 0] }, emphasis: { focus: 'series' } },
-      { name: '归属实收占比', type: 'line', xAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
+      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#8B5E3C', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
+      { name: '归属实收占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
     ]
   };
 }
