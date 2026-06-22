@@ -3,6 +3,13 @@ let operationsConversionFilters = { source: '', campus: '', coach: '' };
 let operationsActiveCourtHeatCampus = '顺义马坡';
 let operationsSparklineUid = 0;
 const operationsCourtHeatCampusTabs = ['顺义马坡', '朝阳十里堡', '蓝色港湾', '国网', '朝珺私教'];
+const operationsTrendDefaultColor = '#2F72B8';
+const operationsTrendWarningColor = '#D89135';
+const operationsTrendRiskColor = '#E05252';
+const operationsTrendPositiveColor = '#1F8A68';
+const operationsTrendWarningKeys = new Set(['pendingRevenue']);
+const operationsTrendNegativeKeys = new Set([]);
+const operationsTrendPositiveKeys = new Set(['totalIncome', 'recognizedRevenue', 'revenue', 'bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate', 'tradeCount', 'leads', 'activeCoaches', 'appointmentRate', 'attendanceRate', 'dealRate', 'trialConversionRate', 'renewalRate']);
 
 function operationsMetricCards(cards = {}) {
   return Object.values(cards || {}).map(item => ({
@@ -730,21 +737,10 @@ function operationsCoachTrendPoints(trends = [], key = '') {
 function operationsTrendColor(key, values = []) {
   const first = Number(values[0]) || 0;
   const last = Number(values[values.length - 1]) || 0;
-  if (key === 'totalIncome') return '#8B5E3C';
-  if (key === 'recognizedRevenue') return '#2E8B6D';
-  if (key === 'pendingRevenue') return '#D89135';
-  if (key === 'tradeCount') return '#3B6EA8';
-  if (key === 'revenue') return '#8B5E3C';
-  if (key === 'bookingAmount') return '#E05252';
-  if (key === 'bookingHours') return '#2E8B6D';
-  if (key === 'leads') return '#8B5E3C';
-  if (key === 'activeCoaches') return '#3B6EA8';
-  if (key === 'appointmentRate') return '#3B6EA8';
-  if (key === 'attendanceRate') return '#2E8B6D';
-  if (key === 'dealRate') return '#8B5E3C';
-  if (key === 'renewalRate') return '#D89135';
-  if (['utilizationRate', 'trialConversionRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return '#2E8B6D';
-  return last >= first ? '#2E8B6D' : '#E05252';
+  if (operationsTrendWarningKeys.has(key)) return operationsTrendWarningColor;
+  if (operationsTrendNegativeKeys.has(key)) return last > first ? operationsTrendRiskColor : operationsTrendPositiveColor;
+  if (operationsTrendPositiveKeys.has(key)) return operationsTrendDefaultColor;
+  return operationsTrendDefaultColor;
 }
 
 function operationsCoachTrendToneColor(key, values = []) {
@@ -762,17 +758,25 @@ function operationsCoachSparklineValues(values = []) {
 function operationsKpiPointList(points = []) {
   const source = (points || []).map((point, index) => {
     if (typeof point === 'object' && point) {
+      const rawValue = point.value;
+      if (rawValue === null || rawValue === undefined || rawValue === '') return null;
+      const value = Number(rawValue);
+      if (!Number.isFinite(value)) return null;
       return {
         date: point.date || `第${index + 1}点`,
-        value: Number(point.value) || 0,
+        value,
         numerator: point.numerator,
         denominator: point.denominator
       };
     }
-    return { date: `第${index + 1}点`, value: Number(point) || 0 };
-  }).filter(point => Number.isFinite(point.value));
-  if (source.length <= 36) return source;
-  const targetCount = 36;
+    const rawValue = point;
+    if (rawValue === null || rawValue === undefined || rawValue === '') return null;
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return null;
+    return { date: `第${index + 1}点`, value };
+  }).filter(Boolean);
+  if (source.length <= 60) return source;
+  const targetCount = 60;
   const step = (source.length - 1) / (targetCount - 1);
   return Array.from({ length: targetCount }, (_, index) => source[Math.round(index * step)]);
 }
@@ -867,7 +871,7 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   const height = 64;
   const coords = list.map((point, index) => {
     const x = list.length === 1 ? 0 : Math.round(index * width / (list.length - 1));
-    const y = isFlat ? Math.round(height / 2) : Math.round(12 + (height - 28) * (1 - ((point.value - min) / range)));
+    const y = isFlat ? Math.round(height / 2) : Math.round(8 + (height - 18) * (1 - ((point.value - min) / range)));
     return { ...point, x, y };
   });
   const linePath = operationsSmoothPath(coords);
@@ -876,7 +880,7 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   const gradientId = `operationsSpark${++operationsSparklineUid}${safeGradientKey}`;
   return `<div class="${esc(className)}">
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".18"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".055"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".12"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".035"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
       <path class="operations-kpi-area" d="${esc(areaPath)}" fill="url(#${esc(gradientId)})"></path>
       <path class="operations-kpi-line" d="${esc(linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>
     </svg>
