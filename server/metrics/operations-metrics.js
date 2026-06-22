@@ -461,6 +461,38 @@ function buildPurchaseCounts(purchases = []) {
   return counts;
 }
 
+function buildFirstPurchaseDateByStudent(purchases = []) {
+  const byStudent = new Map();
+  (purchases || [])
+    .filter(isValidCoursePurchase)
+    .filter(row => purchaseAmount(row) > 0)
+    .forEach(row => {
+      const key = purchaseStudentKey(row);
+      const day = purchaseDate(row);
+      if (!key || !day) return;
+      const current = byStudent.get(key);
+      if (!current || day < current) byStudent.set(key, day);
+    });
+  return byStudent;
+}
+
+function buildLeadFollowupIndex(followups = []) {
+  const byLeadId = new Map();
+  (followups || []).forEach(row => {
+    const key = String(row.leadId || '').trim();
+    if (!key) return;
+    if (!byLeadId.has(key)) byLeadId.set(key, []);
+    byLeadId.get(key).push(row);
+  });
+  byLeadId.forEach(rows => rows.sort((a, b) => String(a.followupAt || a.createdAt || '').localeCompare(String(b.followupAt || b.createdAt || ''))));
+  return byLeadId;
+}
+
+function leadFollowupEvidenceDate(rows = [], matcher = () => false) {
+  const row = (rows || []).find(item => matcher(`${item.statusAfter || ''} ${item.conclusion || ''} ${item.communicationNote || ''}`));
+  return firstRowDate(row || {}, ['followupAt', 'createdAt']);
+}
+
 function parseDateValue(value) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -483,6 +515,8 @@ function courseConversionRows(data = {}, options = {}) {
   const sets = buildLeadConversionSets(data);
   const studentIndexes = buildStudentIndexes(data.students || []);
   const purchaseCounts = buildPurchaseCounts(data.purchases || []);
+  const firstPurchaseDateByStudent = buildFirstPurchaseDateByStudent(data.purchases || []);
+  const followupsByLeadId = buildLeadFollowupIndex(data.leadFollowups || []);
   const campusLabels = buildCampusLabelMap(data.campuses || []);
   return (data.leads || []).map(lead => {
     const id = leadId(lead);
@@ -494,6 +528,11 @@ function courseConversionRows(data = {}, options = {}) {
     const hasCourse = /课程/.test(stage) || stage === '直接成交' || !!linkedStudent || ids.some(lid => sets.course?.has(lid));
     const dealPath = String(linkedStudent?.dealPath || lead.dealPath || '').trim();
     const stageText = `${stage} ${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
+    const leadFollowups = ids.flatMap(lid => followupsByLeadId.get(lid) || []);
+    const trialDate = firstRowDate(lead, ['trialAtRaw', 'trialLessonAt', 'trialAt']);
+    const appointmentEventDate = trialDate || leadFollowupEvidenceDate(leadFollowups, text => /已约|预约|约体验|已体验|实到|到课|体验课完成|课程转化|直接成交|成交/.test(text));
+    const attendanceEventDate = trialDate || leadFollowupEvidenceDate(leadFollowups, text => /已体验|实到|到课|体验课完成|课程转化|直接成交|成交/.test(text));
+    const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /课程转化|直接成交|成交|报名|购买/.test(text));
     const trialDone = leadTrialDone(lead, now);
     const hasAttendance = trialDone || /已体验待转化|课程转化|课程\+|已体验|实到|到课|体验课完成/.test(stageText) || (hasCourse && dealPath === '体验转化');
     const hasTrialDeal = hasCourse && dealPath !== '直接成交' && stage !== '直接成交';
@@ -501,6 +540,7 @@ function courseConversionRows(data = {}, options = {}) {
     const hasRenewal = hasTrialDeal && sid && (purchaseCounts.get(sid) || 0) > 1;
     return {
       leadId: id,
+      studentId: sid,
       source: normalizeText(lead.source || linkedStudent?.source),
       campus: campusLabel(lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
       coach: normalizeText(linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
@@ -512,6 +552,9 @@ function courseConversionRows(data = {}, options = {}) {
       trialAtRaw: lead.trialAtRaw || '',
       trialLessonAt: lead.trialLessonAt || '',
       trialAt: lead.trialAt || '',
+      appointmentEventDate,
+      attendanceEventDate,
+      dealEventDate,
       hasAppointment,
       hasAttendance,
       hasTrialDeal,
@@ -1038,11 +1081,15 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
     const dayRange = { startDate: day, endDate: day };
     const daySchedule = (schedule || []).filter(row => dateWithinRange(dateKey(row.startTime || row.date || row.createdAt), dayRange));
     const dayPurchases = (purchases || []).filter(row => dateWithinRange(purchaseDate(row), dayRange));
+    const asOfPurchases = (allPurchases || []).filter(row => {
+      const purchaseDay = purchaseDate(row);
+      return !purchaseDay || purchaseDay <= day;
+    });
     const rows = buildCoachRows({
       coaches,
       schedule: daySchedule,
       purchases: dayPurchases,
-      allPurchases,
+      allPurchases: asOfPurchases,
       dateRange: dayRange,
       campuses,
       now
@@ -1355,18 +1402,7 @@ function isHistoricalCourseOccupancyRow(row = {}) {
 }
 
 function historicalCourseOccupancyRows({ entitlementLedger = [], entitlements = [], campusIndex, dateRange = {} } = {}) {
-  const entitlementById = buildEntitlementIndex(entitlements);
-  return (entitlementLedger || [])
-    .filter(row => dateFromRow(row) && dateWithinRange(dateFromRow(row), dateRange) && isHistoricalCourseOccupancyRow(row))
-    .map(row => ({
-      ...row,
-      campus: entitlementCampusValue(row, entitlementById),
-      date: dateFromRow(row),
-      amount: 0,
-      countAsUsage: true,
-      countAsBooking: false
-    }))
-    .filter(row => campusIndexRowForValue(campusIndex, row.campus || row.campusName));
+  return [];
 }
 
 function cachedCampusCourtTotals(courts = [], campusIndex) {
@@ -1632,7 +1668,7 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   };
 }
 
-function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], dateRange = {}, now = new Date() } = {}) {
+function courtTrendDays({ courts = [], schedule = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
   const days = new Set();
@@ -1644,10 +1680,6 @@ function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], da
     const day = dateKey(row.startTime || row.date || row.createdAt);
     if (day) days.add(day);
   });
-  (entitlementLedger || []).forEach(row => {
-    const day = dateKey(row.sourceDate || row.relatedDate || row.createdAt);
-    if (day) days.add(day);
-  });
   const sorted = futureSafeDays([...days].sort(), now);
   if (sorted.length > 1) return sorted;
   if (sorted.length !== 1) return sorted;
@@ -1655,7 +1687,7 @@ function courtTrendDays({ courts = [], schedule = [], entitlementLedger = [], da
 }
 
 function buildCourtTrendDailyRows({ campuses = [], courts = [], schedule = [], entitlements = [], entitlementLedger = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
-  const days = courtTrendDays({ courts, schedule, entitlementLedger, dateRange, now });
+  const days = courtTrendDays({ courts, schedule, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
     const configuredMetrics = buildConfiguredCourtMetrics({
@@ -1932,29 +1964,37 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
     ...(purchases || []).map(purchaseDate)
   ].filter(Boolean))].sort(), now);
   return days.map(day => {
-    const cumulativeRows = (rows || []).filter(row => {
-      const rowDate = courseRowDate(row);
-      return rowDate && rowDate <= day;
-    });
+    const dayRows = (rows || []).filter(row => courseRowDate(row) === day);
+    const cumulativeRows = (rows || []).filter(row => courseRowDate(row) && courseRowDate(row) <= day);
     const cumulativePurchases = (purchases || []).filter(row => {
       const rowDate = purchaseDate(row);
       return rowDate && rowDate <= day;
     });
-    const funnel = buildCourseFunnel(cumulativeRows);
-    const appointmentCount = Number(funnel[1]?.count) || 0;
-    const attendanceCount = Number(funnel[2]?.count) || 0;
-    const dealCount = Number(funnel[3]?.count) || 0;
+    const leadCount = dayRows.length;
+    const appointmentCount = cumulativeRows.filter(row => {
+      const appointmentDate = dateKey(row.appointmentEventDate);
+      return appointmentDate && appointmentDate <= day && (row.hasAppointment || row.hasAttendance || row.hasTrialDeal);
+    }).length;
+    const attendanceCount = cumulativeRows.filter(row => {
+      const attendanceDate = dateKey(row.attendanceEventDate);
+      return attendanceDate && attendanceDate <= day && row.hasAttendance;
+    }).length;
+    const dealCount = cumulativeRows.filter(row => {
+      if (!row.hasTrialDeal) return false;
+      const dealDate = dateKey(row.dealEventDate);
+      return !!(dealDate && dealDate <= day);
+    }).length;
     const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
     return {
       date: day,
-      leads: Number(funnel[0]?.count) || 0,
-      appointmentRate: Number(funnel[1]?.percentOfTotal) || 0,
+      leads: leadCount,
+      appointmentRate: rate(appointmentCount, cumulativeRows.length),
       appointmentRateNumerator: appointmentCount,
-      appointmentRateDenominator: Number(funnel[0]?.count) || 0,
-      attendanceRate: Number(funnel[2]?.transitionRate) || 0,
+      appointmentRateDenominator: cumulativeRows.length,
+      attendanceRate: rate(attendanceCount, appointmentCount),
       attendanceRateNumerator: attendanceCount,
       attendanceRateDenominator: appointmentCount,
-      dealRate: Number(funnel[3]?.transitionRate) || 0,
+      dealRate: rate(dealCount, attendanceCount),
       dealRateNumerator: dealCount,
       dealRateDenominator: attendanceCount,
       renewalRate: repurchase.rate,
@@ -1996,6 +2036,7 @@ function buildRangedOperationsData(data = {}, range = {}) {
     purchases: filterRowsByDateRange(data.purchases || [], range, ['purchaseDate', 'createdAt']),
     membershipOrders: filterRowsByDateRange(data.membershipOrders || [], range, ['purchaseDate', 'createdAt']),
     entitlementLedger: filterRowsByDateRange(data.entitlementLedger || [], range, ['sourceDate', 'relatedDate', 'createdAt']),
+    leadFollowups: filterRowsByDateRange(data.leadFollowups || [], range, ['followupAt', 'createdAt']),
     schedule: filterRowsByDateRange(data.schedule || [], range, ['startTime', 'date', 'createdAt']),
     financeNormalizedRows: filterRowsByDateRange(data.financeNormalizedRows || [], range, ['businessDate', 'date', 'createdAt'])
   };
@@ -2011,6 +2052,7 @@ function rangeHasAnyActivity(data = {}, range = {}) {
     (data.purchases || []).length ||
     (data.membershipOrders || []).length ||
     (data.entitlementLedger || []).length ||
+    (data.leadFollowups || []).length ||
     (data.schedule || []).length ||
     (data.financeNormalizedRows || []).length ||
     rangeHasCourtActivity(data.courts || [], range)

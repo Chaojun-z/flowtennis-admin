@@ -37,12 +37,16 @@ const OPERATIONS_COURT_FIELDS = [
   'storedValueSpent', 'directPaidSpent', 'bookingCount', 'bookingAmount', 'bookingHours',
   'memberBookingCount', 'memberBookingAmount', 'guestBookingCount', 'guestBookingAmount', 'history'
 ];
+const OPERATIONS_FOLLOWUP_FIELDS = [
+  'id', 'leadId', 'followupAt', 'createdAt', 'followupBy', 'followupType',
+  'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
+];
 const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status'];
 const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus'];
 const OPERATIONS_SCHEDULE_FIELDS = [
   'id', 'studentId', 'studentIds', 'studentName', 'studentNames',
-  'coach', 'coachName', 'primaryCoach', 'teacher', 'startTime', 'endTime',
+  'coach', 'coachName', 'primaryCoach', 'teacher', 'startTime', 'endTime', 'date', 'createdAt',
   'status', 'systemStatus', 'state', 'lessonCount', 'durationHours', 'hours',
   'courseType', 'standardCourseType', 'experienceType', 'packageName', 'productName',
   'campus', 'campusName', 'venue', 'venueId', 'venueSpaceType',
@@ -112,6 +116,7 @@ async function getOperationsBaseRows({
     T_PURCHASES,
     T_ENTITLEMENTS,
     T_ENTITLEMENT_LEDGER,
+    T_LEAD_FOLLOWUPS,
     T_COURTS,
     T_MEMBERSHIP_ORDERS,
     T_MEMBERSHIP_ACCOUNTS,
@@ -125,6 +130,7 @@ async function getOperationsBaseRows({
     purchases,
     entitlements,
     entitlementLedger,
+    leadFollowups,
     courts,
     membershipAccounts,
     membershipOrders,
@@ -138,6 +144,7 @@ async function getOperationsBaseRows({
     readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 1000 }).catch(() => []),
     readOperationsRows({ table: T_ENTITLEMENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_FIELDS, limit: 1200 }).catch(() => []),
     readOperationsRows({ table: T_ENTITLEMENT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_LEDGER_FIELDS, limit: 2000 }).catch(() => []),
+    readOperationsRows({ table: T_LEAD_FOLLOWUPS, getCachedScan, scanFirstRows, columns: OPERATIONS_FOLLOWUP_FIELDS, limit: 1000 }).catch(() => []),
     readOperationsRows({ table: T_COURTS, getCachedScan, scanFirstRows, columns: OPERATIONS_COURT_FIELDS, limit: 500 }).catch(() => []),
     readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 1000 }).catch(() => []),
     readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 1000 }).catch(() => []),
@@ -154,6 +161,7 @@ async function getOperationsBaseRows({
     purchases,
     entitlements,
     entitlementLedger,
+    leadFollowups,
     courts,
     membershipAccounts,
     membershipOrders,
@@ -204,6 +212,7 @@ async function handleOperationsPageData({
   const scoped = filterLoadAllForUser({
     campuses: baseRows.campuses,
     leads: baseRows.leads,
+    leadFollowups: baseRows.leadFollowups,
     students: baseRows.students,
     purchases: baseRows.purchases,
     entitlements: baseRows.entitlements,

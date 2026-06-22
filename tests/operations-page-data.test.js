@@ -14,6 +14,7 @@ assert.ok(fs.existsSync(operationsPagePath), 'operations page-data route should 
 assert.ok(fs.existsSync(operationsMetricsPath), 'operations metric calculations should live in server/metrics/operations-metrics.js');
 
 const operationsPageSource = fs.readFileSync(operationsPagePath, 'utf8');
+const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
 const courtReadModelSource = fs.readFileSync(courtReadModelPath, 'utf8');
 const residualSource = fs.readFileSync(residualPageDataPath, 'utf8');
 const apiSource = fs.readFileSync(apiIndexPath, 'utf8');
@@ -38,6 +39,9 @@ assert.match(operationsPageSource, /OPERATIONS_COURT_FIELDS[\s\S]*'history'/, 'o
 assert.match(operationsPageSource, /OPERATIONS_SCHEDULE_FIELDS[\s\S]*'venueId'[\s\S]*'locationType'[\s\S]*'externalVenueName'/, 'operations page-data should read schedule venue id and external venue flags for utilization');
 assert.match(operationsPageSource, /OPERATIONS_ENTITLEMENT_LEDGER_FIELDS[\s\S]*'sourceDate'[\s\S]*'sourceTimeBand'[\s\S]*'sourceVenue'/, 'operations page-data should read historical course ledger venue and time fields for heatmaps');
 assert.match(operationsPageSource, /T_ENTITLEMENT_LEDGER[\s\S]*OPERATIONS_ENTITLEMENT_LEDGER_FIELDS/, 'operations page-data should scan entitlement ledger rows for court heatmaps');
+assert.match(operationsPageSource, /OPERATIONS_FOLLOWUP_FIELDS[\s\S]*'leadId'[\s\S]*'followupAt'[\s\S]*'statusAfter'/, 'operations page-data should read lead follow-up event dates for evidence-based conversion trends');
+assert.match(operationsPageSource, /T_LEAD_FOLLOWUPS[\s\S]*OPERATIONS_FOLLOWUP_FIELDS/, 'operations page-data should scan lead followups for conversion event evidence');
+assert.match(operationsMetricsSource, /leadFollowups:\s*filterRowsByDateRange/, 'operations metrics should include lead followups in date-range evidence rows');
 assert.match(operationsPageSource, /mergeDuplicateLeadRows/, 'operations page-data should use the same deduped lead pool as the leads page');
 assert.match(residualSource, /require\('\.\/operations-page\.js'\)/, 'residual page-data routes should import operations-page.js');
 assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/, 'residual page-data routes should own /page-data/operations');

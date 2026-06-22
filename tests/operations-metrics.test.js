@@ -469,10 +469,10 @@ const historicalCourseHeatMetrics = buildOperationsMetrics({
   financeOverviewData: {}
 }, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
 const historicalCourseHeatmap = historicalCourseHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
-assert.strictEqual(historicalCourseHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 2, 'historical course ledger rows with venue and time should count as court occupancy');
-assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '10:00').bookedMinutes, 30, 'historical course ledger rows should heat the configured source venue');
-assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '12:00').bookedMinutes, 30, 'free historical lesson rows should also heat the configured source venue');
-assert.ok(!historicalCourseHeatmap.venues.find(row => row.venueName === '未匹配'), 'historical course rows with sourceVenue should not fall into unmatched');
+assert.strictEqual(historicalCourseHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 0, 'historical course ledger rows must not count as court occupancy without a schedule record');
+assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '10:00').bookedMinutes, 0, 'historical course ledger rows must not heat the configured source venue');
+assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '12:00').bookedMinutes, 0, 'free historical lesson rows must not heat the configured source venue');
+assert.ok(!historicalCourseHeatmap.venues.find(row => row.venueName === '未匹配'), 'ignored historical course rows should not create unmatched heat rows');
 
 const campusConversionCourtMetrics = buildOperationsMetrics({
   campuses: [
@@ -948,6 +948,59 @@ assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalDenom
 assert.strictEqual(june10RepurchasePoint?.renewalRate, 18.2, 'conversion renewal trend should use cumulative selected-period repurchase rate, never same-day renewals over same-day deals');
 assert.strictEqual(june10RepurchasePoint?.renewalRateNumerator, 2, 'conversion renewal trend should expose hover numerator');
 assert.strictEqual(june10RepurchasePoint?.renewalRateDenominator, 11, 'conversion renewal trend should expose hover denominator');
+
+const evidenceOnlyConversionTrendMetrics = buildOperationsMetrics({
+  leads: [
+    { id: 'evidence-lead-1', leadDate: '2026-06-01', leadStage: '课程转化', studentId: 'evidence-student-1', source: '小红书' },
+    { id: 'evidence-lead-2', leadDate: '2026-06-01', trialAtRaw: '2026-06-02', source: '小红书' }
+  ],
+  students: [
+    { id: 'evidence-student-1', sourceLeadId: 'evidence-lead-1', dealPath: '体验转化' }
+  ],
+  purchases: [
+    { id: 'evidence-purchase-1', studentId: 'evidence-student-1', actualAmount: 1000, purchaseDate: '2026-06-03', status: 'active' }
+  ],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-04' }
+});
+const june1ConversionPoint = evidenceOnlyConversionTrendMetrics.conversion.trends.find(row => row.date === '2026-06-01');
+const june2ConversionPoint = evidenceOnlyConversionTrendMetrics.conversion.trends.find(row => row.date === '2026-06-02');
+const june3ConversionPoint = evidenceOnlyConversionTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03');
+assert.strictEqual(june1ConversionPoint?.dealRateNumerator, 0, 'conversion trends must not backfill a later purchase into the lead creation day');
+assert.strictEqual(june1ConversionPoint?.attendanceRateNumerator, 0, 'conversion trends must not backfill a later trial date into the lead creation day');
+assert.strictEqual(june2ConversionPoint?.attendanceRateNumerator, 1, 'conversion trends should count attendance on the actual evidence date');
+assert.strictEqual(june3ConversionPoint?.dealRateNumerator, 1, 'conversion trends should count a deal on the actual purchase date');
+
+const asOfCoachTrendMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
+  schedule: [
+    { id: 'coach-trial-asof', coach: 'A教练', studentId: 'trial-asof', startTime: '2026-06-01T09:00:00+08:00', endTime: '2026-06-01T10:00:00+08:00', status: '已结束', courseType: '体验课' }
+  ],
+  purchases: [
+    { id: 'coach-deal-after-trial', ownerCoach: 'A教练', studentId: 'trial-asof', actualAmount: 1000, purchaseDate: '2026-06-03', status: 'active' }
+  ],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-04' }
+});
+assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.trialConversionRate, 0, 'coach trial conversion trend must not count purchases after the trend day');
+assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, null, 'coach trial conversion trend should not invent a same-day trial denominator when there was no trial that day');
+assert.strictEqual(asOfCoachTrendMetrics.coach.cards.trialConversionRate.value, 100, 'coach cards should still show selected-period conversion after the purchase has happened');
 
 assert.deepStrictEqual(
   coachDashboardMetrics.coach.utilizationBands.map(row => `${row.band} ${row.label} ${row.color}`),
