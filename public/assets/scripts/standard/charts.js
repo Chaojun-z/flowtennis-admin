@@ -30,6 +30,11 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
       const stepRate = index > 0 ? transition : percent;
       const previousCount = index > 0 ? (Number(list[index - 1]?.count) || 0) : count;
       const lossCount = Math.max(0, previousCount - count);
+      const labelClass = percent <= 0 ? 'zero' : percent >= 18 ? 'inside' : 'outside';
+      const labelPosition = labelClass === 'outside'
+        ? `left:${Math.max(8, Math.min(92, percent + 6))}%`
+        : labelClass === 'zero' ? 'left:10px' : '';
+      const labelHtml = index > 0 ? `<span class="operations-funnel-transition-label ${labelClass}" style="${labelPosition}">${fmt(stepRate)}%</span>` : '';
       return `<div class="operations-funnel-row" title="${esc(row.stage)}：${fmt(count)} 人，上一步转化 ${fmt(stepRate)}%，流失 ${fmt(lossCount)} 人">
         <div class="operations-funnel-step">
           <div class="operations-funnel-head">
@@ -37,8 +42,8 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
             <span>${fmt(count)} 人</span>
           </div>
           <div class="operations-funnel-track">
-            <div class="operations-funnel-fill" style="width:${percent}%"></div>
-            ${index > 0 ? `<span class="operations-funnel-transition-label" style="left:${Math.max(6, Math.min(96, percent))}%">${fmt(stepRate)}%</span>` : ''}
+            <div class="operations-funnel-fill" style="width:${percent}%">${labelClass === 'inside' ? labelHtml : ''}</div>
+            ${labelClass !== 'inside' ? labelHtml : ''}
           </div>
         </div>
         <div class="operations-funnel-loss">
@@ -238,9 +243,9 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
       },
       label: {
         show: true,
-        position: 'inside',
+        position: 'right',
         formatter: item => item.name,
-        color: '#FFFFFF',
+        color: '#172033',
         fontSize: 10,
         fontWeight: 700
       },

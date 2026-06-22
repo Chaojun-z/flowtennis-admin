@@ -22,6 +22,10 @@ const courtOverviewSource = operationsSource.slice(
   operationsSource.indexOf('function renderOperationsCourtCampusOverview'),
   operationsSource.indexOf('function renderOperationsCourtHeatCell')
 );
+const channelQualityChartSource = chartsSource.slice(
+  chartsSource.indexOf('function buildOperationsChannelQualityChartOption'),
+  chartsSource.indexOf('function operationsCourtQuadrantColor')
+);
 
 assert.match(indexSource, /id="page-operations"/, 'index.html should contain the operations page section');
 assert.match(indexSource, /cdn\.jsdelivr\.net\/npm\/echarts/, 'index.html should load Apache ECharts from a CDN');
@@ -63,16 +67,21 @@ assert.match(chartsSource, /echarts\.init/, 'only the standard chart wrapper sho
 assert.match(chartsSource, /renderStandardChart/, 'standard chart wrapper should expose renderStandardChart');
 assert.match(chartsSource, /buildStandardPieChartOption/, 'standard chart wrapper should expose a reusable pie chart option builder');
 assert.match(chartsSource, /renderProgressFunnel/, 'standard chart wrapper should expose the Gemini-style progress funnel component');
-assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'progress funnel should write previous-step conversion rate directly above each bar');
+assert.match(chartsSource, /labelClass[\s\S]*percent <= 0[\s\S]*'zero'[\s\S]*percent >= 18[\s\S]*'inside'[\s\S]*'outside'/, 'progress funnel should choose inside, outside and zero label modes by filled width');
+assert.match(chartsSource, /operations-funnel-fill[\s\S]*labelClass === 'inside'[\s\S]*labelHtml[\s\S]*labelClass !== 'inside'[\s\S]*labelHtml/, 'progress funnel should put readable labels inside the fill when the bar is wide enough');
 assert.match(chartsSource, /operations-funnel-loss-count[\s\S]*流失 \$\{fmt\(lossCount\)\} 人/, 'progress funnel should move lost people count below the right-side loss rate');
 assert.doesNotMatch(chartsSource, /累计 \$\{fmt\(percent\)\}%/, 'progress funnel should not repeat cumulative rate below each bar');
 assert.doesNotMatch(chartsSource, /占总线索/, 'progress funnel should no longer show overall total-lead rate');
 assert.doesNotMatch(chartsSource, /operations-funnel-total-rate/, 'progress funnel should remove the external total-rate line');
 assert.match(chartsSource, /operations-funnel-scale[\s\S]*25%[\s\S]*50%[\s\S]*75%[\s\S]*100%/, 'progress funnel should include dashboard-style percentage scale marks');
 assert.match(chartsSource, /operations-funnel-loss-badge[\s\S]*流失/, 'progress funnel should show visible loss badges beside each drop-off step');
-assert.match(stylesSource, /operations-funnel-card\{min-height:374px\}/, 'funnel card should be roughly one third shorter than the previous 560px version');
-assert.match(stylesSource, /operations-funnel-host\{min-height:304px\}/, 'funnel host should be roughly one third shorter than the previous 456px version');
+assert.match(stylesSource, /operations-funnel-card\{min-height:0\}/, 'funnel card should not leave a large fixed blank area below the rows');
+assert.match(stylesSource, /operations-funnel-host\{min-height:0\}/, 'funnel host should shrink to the actual funnel content');
 assert.match(stylesSource, /operations-funnel-track\{height:28px/, 'funnel bars should stay compact and leave room for readable detail text');
+assert.match(stylesSource, /operations-funnel-track\{[^}]*overflow:hidden/, 'funnel labels should stay inside the bar track instead of floating above it');
+assert.match(stylesSource, /operations-funnel-transition-label\.inside[\s\S]*right:8px[\s\S]*color:#FFF7EC/, 'wide funnel labels should sit inside the highlighted fill with a warm readable color');
+assert.match(stylesSource, /operations-funnel-transition-label\.outside[\s\S]*color:#8B5E3C/, 'short funnel labels should sit inside the pale track without using red');
+assert.doesNotMatch(stylesSource, /operations-funnel-transition-label[^}]*color:#E05252/, 'funnel conversion rate labels should not use red because loss badges already own risk color');
 assert.match(chartsSource, /emphasis[\s\S]*focus/, 'ECharts series should expose hover emphasis');
 assert.match(chartsSource, /buildOperationsCourtQuadrantChartOption/, 'court comparison should use a dedicated quadrant bubble chart builder');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption/, 'coach dashboard should use a dedicated coach revenue-utilization matrix builder');
@@ -224,6 +233,11 @@ assert.doesNotMatch(operationsSource, /operationsBuildChannelGroups|operations-c
 assert.match(operationsSource, /col\.html/, 'operations simple table should allow trusted HTML cells for progress bars');
 assert.doesNotMatch(operationsSource, /体验到课率/, 'channel efficiency table should not show attendance rate');
 assert.match(chartsSource, /buildOperationsChannelQualityChartOption[\s\S]*成交转化率[\s\S]*线索量[\s\S]*成交人数/, 'channel quality chart should map x to deal conversion, y to leads, and bubble size to deals');
+assert.match(channelQualityChartSource, /label:\s*\{[\s\S]*position: 'right'[\s\S]*color: '#172033'/, 'channel quality chart should place readable dark channel labels outside the bubbles');
+assert.doesNotMatch(channelQualityChartSource, /position: 'inside'[\s\S]*color: '#FFFFFF'/, 'channel quality chart should not put white labels inside bubbles');
+assert.match(stylesSource, /operations-channel-quality-layout\{[^}]*align-items:stretch/, 'channel chart and ranking table should stay the same height');
+assert.match(stylesSource, /operations-channel-quality-chart\{height:360px;min-height:360px/, 'channel matrix should have a fixed professional panel height');
+assert.match(stylesSource, /operations-channel-ranking-table\{[^}]*height:360px[^}]*overflow-y:auto/, 'channel ranking should match matrix height and scroll internally');
 assert.match(operationsSource, /renderStandardChart\('operationsChannelQualityChart'[\s\S]*buildOperationsChannelQualityChartOption/, 'conversion charts should render the channel quality quadrant through the standard wrapper');
 assert.match(operationsSource, /operationsRateTone[\s\S]*<\s*40[\s\S]*danger/, 'conversion progress bars should show low rates in red');
 assert.match(operationsSource, /renderConversionAttributeModule[\s\S]*学员属性与转化[\s\S]*不同人群的商业表现/, 'conversion page should render the student attributes conversion module');

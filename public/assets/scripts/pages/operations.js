@@ -1297,7 +1297,7 @@ function renderOperationsCharts(data) {
   renderProgressFunnel('operationsCourseFunnel', conversion.courseFunnel || []);
   renderStandardChart('operationsChannelQualityChart', buildOperationsChannelQualityChartOption({
     rows: operationsChannelQualityRows(conversion.channelEfficiencyRows || [])
-  }), { height: 280, emptyText: '暂无渠道数据' });
+  }), { height: 360, emptyText: '暂无渠道数据' });
   renderStandardChart('operationsSourceRankingChart', buildStandardBarChartOption({
     labels: (conversion.sourceRanking || []).map(row => row.source),
     values: (conversion.sourceRanking || []).map(row => row.deals),
