@@ -877,10 +877,6 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
       <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".18"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".055"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
       <path class="operations-kpi-area" d="${esc(areaPath)}" fill="url(#${esc(gradientId)})"></path>
       <path class="operations-kpi-line" d="${esc(linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>
-      ${coords.map(point => `<g class="operations-kpi-point">
-        <circle class="operations-kpi-hit" cx="${point.x}" cy="${point.y}" r="8"><title>${esc(operationsKpiPointTip(point, key))}</title></circle>
-        <circle class="operations-kpi-dot" cx="${point.x}" cy="${point.y}" r="3.2" fill="${esc(color)}"></circle>
-      </g>`).join('')}
     </svg>
     ${coords.map(point => `<span class="operations-kpi-hover-point" style="--trend-color:${esc(color)};left:${Math.round(point.x * 10000 / width) / 100}%;top:${Math.round(point.y * 10000 / height) / 100}%" data-tip="${esc(operationsKpiPointLabel(point, key))}"></span>`).join('')}
   </div>`;

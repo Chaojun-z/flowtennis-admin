@@ -1287,10 +1287,10 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-court-kpi-value{display:flex;align-items:flex-end;gap:8px;margin-top:10px;min-width:0}
 #page-operations .operations-court-kpi-main strong{display:block;color:#111827;font-size:30px;line-height:36px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-operations .operations-court-kpi-main em{font-style:normal;margin-left:4px;color:#94A3B8;font-size:14px;font-weight:600}
-#page-operations .operations-court-kpi-sparkline{height:52px;min-height:52px;margin-top:8px;display:block;width:100%;position:relative;cursor:default}
-#page-operations .operations-court-kpi-sparkline svg{display:block;width:100%;height:52px;overflow:visible}
-#page-operations .operations-conversion-kpi-sparkline{height:52px;min-height:52px;margin-top:8px;display:block;width:100%;position:relative;cursor:default}
-#page-operations .operations-conversion-kpi-sparkline svg{display:block;width:100%;height:52px;overflow:visible}
+#page-operations .operations-court-kpi-sparkline{height:60px;min-height:60px;margin-top:8px;margin-left:-22px;margin-right:-20px;width:calc(100% + 42px);margin-bottom:-13px;display:block;position:relative;cursor:default}
+#page-operations .operations-court-kpi-sparkline svg{display:block;width:100%;height:60px;overflow:visible}
+#page-operations .operations-conversion-kpi-sparkline{height:60px;min-height:60px;margin-top:8px;margin-left:-22px;margin-right:-20px;width:calc(100% + 42px);margin-bottom:-13px;display:block;position:relative;cursor:default}
+#page-operations .operations-conversion-kpi-sparkline svg{display:block;width:100%;height:60px;overflow:visible}
 #page-operations .operations-court-kpi-change{flex:0 0 auto;max-width:72px;font-size:13px;line-height:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 #page-operations .operations-court-kpi-change.up{color:#16875E}
 #page-operations .operations-court-kpi-change.down{color:#D64545}
@@ -1306,15 +1306,12 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-kpi-value{display:flex;align-items:flex-end;gap:8px;margin-top:10px;min-width:0}
 #page-operations .operations-coach-kpi strong{display:block;color:#111827;font-size:30px;line-height:36px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-operations .operations-coach-kpi em{font-style:normal;margin-left:4px;color:#94A3B8;font-size:14px;font-weight:600}
-#page-operations .operations-coach-kpi-sparkline{height:52px;min-height:52px;margin-top:8px;display:block;width:100%;position:relative;cursor:default}
-#page-operations .operations-coach-kpi-sparkline svg{display:block;width:100%;height:52px;overflow:visible}
+#page-operations .operations-coach-kpi-sparkline{height:60px;min-height:60px;margin-top:8px;margin-left:-22px;margin-right:-20px;width:calc(100% + 42px);margin-bottom:-13px;display:block;position:relative;cursor:default}
+#page-operations .operations-coach-kpi-sparkline svg{display:block;width:100%;height:60px;overflow:visible}
 #page-operations .operations-coach-kpi-change{flex:0 0 auto;max-width:72px;font-size:13px;line-height:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 #page-operations .operations-coach-kpi-change.up{color:#16875E}
 #page-operations .operations-coach-kpi-change.down{color:#D64545}
 #page-operations .operations-coach-kpi-change.flat,#page-operations .operations-coach-kpi-change.muted{color:#94A3B8}
-#page-operations .operations-kpi-hit{fill:transparent;stroke:transparent;cursor:crosshair;pointer-events:all}
-#page-operations .operations-kpi-dot{opacity:0;pointer-events:none;transition:opacity .12s ease}
-#page-operations .operations-kpi-hit:hover + .operations-kpi-dot{opacity:1}
 #page-operations .operations-kpi-line{stroke-width:2.1;filter:none}
 #page-operations .operations-kpi-area{opacity:1}
 #page-operations .operations-kpi-hover-point{position:absolute;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);z-index:2;cursor:crosshair}
@@ -1458,11 +1455,10 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-court-kpi-change.up,#page-operations .operations-coach-kpi-change.up{color:#087A35}
 #page-operations .operations-court-kpi-change.down,#page-operations .operations-coach-kpi-change.down{color:#D64545}
 #page-operations .operations-court-kpi-change.flat,#page-operations .operations-court-kpi-change.muted,#page-operations .operations-coach-kpi-change.flat,#page-operations .operations-coach-kpi-change.muted{color:var(--ops-muted)}
-#page-operations .operations-court-kpi-sparkline,#page-operations .operations-conversion-kpi-sparkline,#page-operations .operations-coach-kpi-sparkline{height:52px;min-height:52px;margin-top:8px}
-#page-operations .operations-court-kpi-sparkline svg,#page-operations .operations-conversion-kpi-sparkline svg,#page-operations .operations-coach-kpi-sparkline svg{height:52px}
+#page-operations .operations-court-kpi-sparkline,#page-operations .operations-conversion-kpi-sparkline,#page-operations .operations-coach-kpi-sparkline{height:60px;min-height:60px;margin-top:8px;margin-left:-22px;margin-right:-20px;width:calc(100% + 42px);margin-bottom:-13px}
+#page-operations .operations-court-kpi-sparkline svg,#page-operations .operations-conversion-kpi-sparkline svg,#page-operations .operations-coach-kpi-sparkline svg{height:60px}
 #page-operations .operations-kpi-line{stroke-width:2.1;filter:none;shape-rendering:geometricPrecision;vector-effect:non-scaling-stroke}
 #page-operations .operations-kpi-area{opacity:1}
-#page-operations .operations-kpi-dot{opacity:0}
 #page-operations .operations-kpi-hover-point:hover::before{width:6px;height:6px;border:1.5px solid var(--trend-color,#2E8B6D);box-shadow:0 0 0 3px color-mix(in srgb,var(--trend-color,#2E8B6D) 14%,transparent)}
 @media(max-width:900px){
   #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-overview-risk-board,#page-operations .operations-overview-inline-kpis,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-quality-layout,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}

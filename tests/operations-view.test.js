@@ -279,8 +279,10 @@ assert.match(operationsSource, /function renderOperationsCoachKpi[\s\S]*operatio
 assert.doesNotMatch(operationsSource, /operations-coach-kpi-help|\?<\/button>/, 'KPI cards should not render question marks');
 assert.doesNotMatch(operationsSource, /function renderOperationsCourtKpi[\s\S]*<p>[\s\S]*function renderOperationsCourtKpis/, 'court KPI cards should not render subtitle explanations');
 assert.doesNotMatch(operationsSource, /function renderOperationsCoachKpi[\s\S]*<p>[\s\S]*function operationsCoachTrendValues/, 'coach KPI cards should not render subtitle explanations');
-assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*<svg[\s\S]*linearGradient[\s\S]*<path[\s\S]*operations-kpi-hit[\s\S]*<title>/, 'KPI sparklines should use smooth SVG paths, gradient area and per-point hover titles');
-assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*operations-kpi-hover-point[\s\S]*data-tip/, 'KPI sparklines should use HTML hover points so tooltips do not distort inside SVG');
+assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*<svg[\s\S]*linearGradient[\s\S]*<path class="operations-kpi-area"[\s\S]*<path class="operations-kpi-line"/, 'KPI sparklines should keep the line and matching gradient area in SVG');
+assert.doesNotMatch(operationsSource, /function operationsKpiSparklineSvg[\s\S]*<circle[\s\S]*function operationsCoachSparklineSvg/, 'KPI sparklines should not render SVG circles because preserveAspectRatio can stretch them into ovals');
+assert.doesNotMatch(operationsSource, /operations-kpi-hit|operations-kpi-dot/, 'KPI sparklines should not keep SVG hit or dot classes in the renderer');
+assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*operations-kpi-hover-point[\s\S]*data-tip/, 'KPI sparklines should use HTML hover points so tooltips and dots do not distort inside SVG');
 assert.doesNotMatch(operationsSource, /foreignObject/, 'KPI sparklines should not use SVG foreignObject tooltips that stretch with preserveAspectRatio');
 assert.doesNotMatch(operationsSource, /<polyline|return value \? \[value, value\] : \[\]/, 'KPI sparklines must not use SVG polylines or fake two-point flat trends');
 assert.match(operationsSource, /let operationsSparklineUid = 0/, 'KPI sparkline gradients should have a per-render unique id source');
@@ -313,8 +315,9 @@ assert.match(stylesSource, /operations-coach-kpi-strip\{display:grid;grid-templa
 assert.match(stylesSource, /operations-coach-kpi\{[^}]*min-height:126px[^}]*padding:16px 20px 13px 22px/, 'coach KPI cards should use the refined compact Apple-like spacing');
 assert.match(operationsSource, /operationsMoneyCompactText|operationsCompactNumber/, 'top KPI cards should shorten large values before placing change values beside them');
 assert.doesNotMatch(stylesSource, /operations-coach-kpi-help/, 'coach KPI help icon styles should be removed');
-assert.match(stylesSource, /operations-coach-kpi-sparkline\{[^}]*height:52px/, 'coach KPI sparkline wrappers should keep mini charts visually restrained');
-assert.match(stylesSource, /operations-kpi-hit\{[^}]*cursor:crosshair/, 'KPI sparkline points should be hoverable per data point');
+assert.match(stylesSource, /operations-coach-kpi-sparkline\{[^}]*height:60px/, 'coach KPI sparkline wrappers should fill the lower card area like the reference');
+assert.doesNotMatch(stylesSource, /operations-kpi-hit|operations-kpi-dot/, 'KPI hover dots should be HTML elements only, not SVG dots that can stretch');
+assert.match(stylesSource, /operations-court-kpi-sparkline,#page-operations \.operations-conversion-kpi-sparkline,#page-operations \.operations-coach-kpi-sparkline\{[^}]*margin-left:-22px[^}]*width:calc\(100% \+ 42px\)[^}]*margin-bottom:-13px/, 'KPI sparkline wrappers should reclaim the card side and bottom padding');
 assert.match(stylesSource, /operations-kpi-hover-point:hover::after[\s\S]*content:attr\(data-tip\)/, 'KPI sparkline hover should show an undistorted HTML tooltip for each point');
 assert.match(stylesSource, /operations-kpi-hover-point:hover::before[\s\S]*border:1\.5px solid var\(--trend-color/, 'KPI hover point highlight should follow the current sparkline color without feeling heavy');
 assert.match(stylesSource, /operations-kpi-line\{[^}]*stroke-width:2\.1/, 'KPI sparkline should use a thin Apple-like curve');
