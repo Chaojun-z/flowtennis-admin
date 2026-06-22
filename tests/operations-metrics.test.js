@@ -551,6 +551,41 @@ assert.strictEqual(courtTrendMetrics.court.trends.length, 7, 'court KPI trends s
 assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-03')?.bookingHours, 2, 'court KPI trends should expose the real day bucket, not cumulative booking hours');
 assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-06')?.bookingHours, 2, 'court KPI trends should expose each selected-day bucket value');
 assert.ok(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingHours === 0, 'selected range trend should keep empty days as zero buckets');
+
+const courtTrendNoEvidenceMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  courts: [
+    {
+      id: 'court-no-evidence',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'lesson-like-row', date: '2026-02-01', venue: '1号场', venueId: 'v1', startTime: '09:00', endTime: '09:45', amount: 0, type: '消费', category: '课程消课' }
+      ])
+    }
+  ],
+  schedule: [
+    { id: 'schedule-no-venue', campus: 'mabao', startTime: '2026-03-01T09:00:00+08:00', endTime: '2026-03-01T09:45:00+08:00', status: '已排课' }
+  ],
+  leads: [],
+  students: [],
+  purchases: [],
+  coaches: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-03-05T12:00:00+08:00'), dateRange: { startDate: '2026-02-01', endDate: '2026-03-05' } });
+assert.strictEqual(courtTrendNoEvidenceMetrics.court.cards.utilizationRate.value, 0, 'non-booking history rows and schedule rows without court venue evidence must not create court utilization');
+assert.strictEqual(courtTrendNoEvidenceMetrics.court.cards.bookingHours.value, 0, 'non-booking history rows must not create booking hours');
+assert.strictEqual(courtTrendNoEvidenceMetrics.court.campusRows.find(row => row.campusCode === 'mabao')?.usageCount, 0, 'rows without explicit court usage evidence must not create usage count');
+
 const allTimeCourtTrendMetrics = buildOperationsMetrics({
   campuses: [
     {

@@ -790,6 +790,33 @@ function operationsKpiPointList(points = []) {
   return Array.from({ length: targetCount }, (_, index) => source[Math.round(index * step)]);
 }
 
+function operationsPointDateSerial(date = '') {
+  const match = String(date || '').slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return Math.round(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000);
+}
+
+function operationsSparklineSegments(coords = []) {
+  if (!coords.length) return [];
+  return coords.reduce((segments, point, index) => {
+    const previous = coords[index - 1];
+    const shouldBreak = previous &&
+      Number.isFinite(point.dateSerial) &&
+      Number.isFinite(previous.dateSerial) &&
+      point.dateSerial - previous.dateSerial > 1;
+    if (!segments.length || shouldBreak) segments.push([]);
+    segments[segments.length - 1].push(point);
+    return segments;
+  }, []);
+}
+
+function operationsAreaPath(linePath = '', segment = [], height = 0) {
+  if (!linePath || !segment.length) return '';
+  const first = segment[0];
+  const last = segment[segment.length - 1];
+  return `${linePath} L ${last.x} ${height} L ${first.x} ${height} Z`;
+}
+
 function operationsKpiValueText(value = 0, key = '') {
   const number = Number(value) || 0;
   if (key === 'revenue' || key === 'bookingAmount') return `¥${fmt(number)}`;
@@ -878,20 +905,28 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   const range = Math.max(1, max - min);
   const width = 132;
   const height = 64;
+  const dateSerials = list.map(point => operationsPointDateSerial(point.date)).filter(Number.isFinite);
+  const minDateSerial = dateSerials.length === list.length ? Math.min(...dateSerials) : null;
+  const maxDateSerial = dateSerials.length === list.length ? Math.max(...dateSerials) : null;
   const coords = list.map((point, index) => {
-    const x = list.length === 1 ? 0 : Math.round(index * width / (list.length - 1));
+    const dateSerial = operationsPointDateSerial(point.date);
+    const hasDateX = minDateSerial != null && maxDateSerial != null && maxDateSerial > minDateSerial && Number.isFinite(dateSerial);
+    const x = hasDateX ? Math.round((dateSerial - minDateSerial) * width / (maxDateSerial - minDateSerial)) : (list.length === 1 ? 0 : Math.round(index * width / (list.length - 1)));
     const y = isFlat ? Math.round(height / 2) : Math.round(8 + (height - 18) * (1 - ((point.value - min) / range)));
-    return { ...point, x, y };
+    return { ...point, dateSerial, x, y };
   });
-  const linePath = operationsSmoothPath(coords);
-  const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
+  const segments = operationsSparklineSegments(coords);
+  const paths = segments.map(segment => {
+    const linePath = operationsSmoothPath(segment);
+    return { linePath, areaPath: operationsAreaPath(linePath, segment, height) };
+  }).filter(path => path.linePath);
   const safeGradientKey = String(`${className}-${key || 'line'}`).replace(/[^a-zA-Z0-9_-]/g, '');
   const gradientId = `operationsSpark${++operationsSparklineUid}${safeGradientKey}`;
   return `<div class="${esc(className)}">
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
       <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".12"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".035"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
-      <path class="operations-kpi-area" d="${esc(areaPath)}" fill="url(#${esc(gradientId)})"></path>
-      <path class="operations-kpi-line" d="${esc(linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>
+      ${paths.map(path => `<path class="operations-kpi-area" d="${esc(path.areaPath)}" fill="url(#${esc(gradientId)})"></path>`).join('')}
+      ${paths.map(path => `<path class="operations-kpi-line" d="${esc(path.linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>`).join('')}
     </svg>
     ${coords.map(point => `<span class="operations-kpi-hover-point" style="--trend-color:${esc(color)};left:${Math.round(point.x * 10000 / width) / 100}%;top:${Math.round(point.y * 10000 / height) / 100}%" data-tip="${esc(operationsKpiPointLabel(point, key))}"></span>`).join('')}
   </div>`;

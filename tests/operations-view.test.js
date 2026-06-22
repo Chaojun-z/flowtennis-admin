@@ -311,6 +311,8 @@ const trendColorSource = operationsSource.slice(
 assert.doesNotMatch(trendColorSource, /bookingAmount'\) return '#E05252'|dealRate'\) return '#8B5E3C'|renewalRate'\) return '#D89135'/, 'KPI sparklines should not assign loud per-card colors for neutral or positive metrics');
 assert.match(operationsSource, /function operationsSmoothPath[\s\S]* C /, 'KPI sparklines should be lightly smoothed instead of hard zigzags');
 assert.doesNotMatch(operationsSource, /operationsSmoothPath[\s\S]*=> `\$\{path\} L \$\{point\.x\}/, 'KPI sparklines should not draw raw straight-line zigzags');
+assert.match(operationsSource, /function operationsPointDateSerial[\s\S]*Date\.UTC/, 'KPI sparklines should place points by real calendar distance instead of equal spacing');
+assert.match(operationsSource, /function operationsSparklineSegments[\s\S]*point\.dateSerial - previous\.dateSerial > 1/, 'KPI sparklines should break lines across missing calendar days');
 assert.match(operationsSource, /function operationsKpiPointList[\s\S]*rawValue === null \|\| rawValue === undefined \|\| rawValue === ''[\s\S]*return null[\s\S]*targetCount = 60[\s\S]*Math\.round\(index \* step\)/, 'KPI sparklines should skip missing values instead of drawing them as zero and keep more real points');
 assert.match(operationsSource, /operationsKpiPointTip[\s\S]*date[\s\S]*value/, 'KPI sparkline hover text should describe the point date and value');
 assert.match(operationsSource, /appointmentRate[\s\S]*attendanceRate[\s\S]*dealRate[\s\S]*renewalRate[\s\S]*return `\$\{fmt\(number\)\}%`/, 'conversion KPI hover values should render percentage units for appointment, attendance, deal and renewal rates');

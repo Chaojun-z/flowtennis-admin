@@ -2,7 +2,6 @@ const { effectiveScheduleStatus } = require('../schedule.js');
 const {
   bookingDurationHours,
   courtHistoryBusinessDate,
-  isCourtBookingHistoryRow,
   normalizeCourtHistory
 } = require('../page-data/court-account-read-model.js');
 
@@ -1349,8 +1348,30 @@ function hasCourtVenueHint(row = {}) {
   return !!String(row.venue || row.venueId || row.venue_id || row.courtName || row.sourceVenue || row.sourceProject || '').trim();
 }
 
+function courtUsageEvidenceText(row = {}) {
+  return [
+    row.category,
+    row.businessType,
+    row.displayBusinessType,
+    row.revenueBucket,
+    row.sourceType,
+    row.recordType,
+    row.kind
+  ].map(value => String(value || '').trim()).filter(Boolean).join(' ');
+}
+
+function isStrictCourtBookingHistoryRow(row = {}) {
+  const evidence = courtUsageEvidenceText(row);
+  if (/内部占用|场地占用|球场占用|占场/.test(evidence)) return false;
+  return /订场|约球/.test(evidence);
+}
+
+function isInternalCourtUsageHistoryRow(row = {}) {
+  return /内部占用|场地占用|球场占用|占场/.test(courtUsageEvidenceText(row));
+}
+
 function isCourtUsageHistoryRow(row = {}) {
-  return hasCourtVenueHint(row) && clampedRowMinutes(row).minutes > 0;
+  return hasCourtVenueHint(row) && clampedRowMinutes(row).minutes > 0 && (isStrictCourtBookingHistoryRow(row) || isInternalCourtUsageHistoryRow(row));
 }
 
 function pushSlotMinutes(slots, row, slotCounts) {
@@ -1376,7 +1397,7 @@ function isOwnCampusSchedule(row = {}) {
 }
 
 function scheduleOccupancyRows(schedule = [], dateRange = {}) {
-  return (schedule || []).filter(isOwnCampusSchedule).map(row => ({
+  return (schedule || []).filter(isOwnCampusSchedule).filter(hasCourtVenueHint).map(row => ({
     ...row,
     date: dateKey(row.startTime || row.date),
     amount: 0,
@@ -1457,7 +1478,7 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   }));
 
   const bookingRows = courtHistoryRows(courts)
-    .filter(isCourtBookingHistoryRow)
+    .filter(isStrictCourtBookingHistoryRow)
     .filter(row => dateFromRow(row) && dateWithinRange(dateFromRow(row), dateRange))
     .map(row => ({ ...row, date: dateFromRow(row), countAsBooking: true }));
   const campusBookingTotals = new Map();
@@ -1472,7 +1493,7 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   });
   const usageHistoryRows = courtHistoryRows(courts)
     .filter(row => dateFromRow(row) && dateWithinRange(dateFromRow(row), dateRange) && isCourtUsageHistoryRow(row))
-    .map(row => ({ ...row, date: dateFromRow(row), countAsUsage: true, countAsBooking: isCourtBookingHistoryRow(row) }));
+    .map(row => ({ ...row, date: dateFromRow(row), countAsUsage: true, countAsBooking: isStrictCourtBookingHistoryRow(row) }));
   const occupancyRows = [
     ...usageHistoryRows,
     ...scheduleOccupancyRows(schedule, dateRange).map(row => ({ ...row, countAsUsage: true, countAsBooking: false })),
@@ -1727,7 +1748,7 @@ function buildCourtTrendRows(options = {}) {
 
 function buildCourtMetrics(courts = []) {
   const rows = courtHistoryRows(courts);
-  const bookingRows = rows.filter(isCourtBookingHistoryRow).filter(row => courtHistoryBusinessDate(row) || dateKey(row.date || row.occurredDate || row.createdAt));
+  const bookingRows = rows.filter(isStrictCourtBookingHistoryRow).filter(row => courtHistoryBusinessDate(row) || dateKey(row.date || row.occurredDate || row.createdAt));
   const bookingHours = bookingRows.reduce((sum, row) => sum + bookingDurationHours(row), 0);
   const bookingAmount = bookingRows.reduce((sum, row) => sum + purchaseAmount(row), 0);
   const byVenue = new Map();
