@@ -645,7 +645,7 @@ function renderOperationsCoach(data) {
     <section class="operations-section">
       ${operationsCoachChartHeader('教练产值贡献排行', operationsCoachTitleLegend([
         { label: '归属实收', color: '#8B5E3C' },
-        { label: '归属课包占比', color: '#3B6EA8', line: true }
+        { label: '归属实收占比', color: '#3B6EA8', line: true }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>
@@ -1282,10 +1282,10 @@ function renderOperationsCharts(data) {
     values: (data.coach?.rows || []).map(row => row.utilizationRate),
     name: '利用率'
   }));
-  renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 340 });
+  renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 360 });
   renderStandardChart('operationsCoachParetoChart', buildOperationsCoachParetoChartOption({ rows: data.coach?.revenueParetoRows || [] }), { height: 280 });
   renderStandardChart('operationsCoachCourseMixChart', buildOperationsCoachCourseMixChartOption({ rows: data.coach?.courseMixRows || [] }), { height: 280 });
-  renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 340, emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
+  renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 360, emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
 }
 
 function renderOperations() {

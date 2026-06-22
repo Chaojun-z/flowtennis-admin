@@ -401,8 +401,8 @@ function operationsCoachBandColor(value) {
   if (rate < 20) return '#E05252';
   if (rate < 40) return '#D89135';
   if (rate < 60) return '#8EA0B8';
-  if (rate < 80) return '#7CBF8A';
-  return '#2E8B6D';
+  if (rate < 80) return '#5CC8A0';
+  return '#1F8A5B';
 }
 
 function operationsCoachShortName(value) {
@@ -431,6 +431,24 @@ function operationsCoachCapabilityColor(row = {}) {
   return { label: '双低', color: '#E05252' };
 }
 
+function operationsCoachMatrixSymbolSize(value = [], maxLessons = 1) {
+  const lessons = Number(value?.[2]) || 0;
+  return Math.max(14, Math.min(46, 14 + (lessons / Math.max(1, maxLessons)) * 32));
+}
+
+function operationsCoachCapabilitySymbolSize(value = [], maxSample = 1) {
+  const sample = Number(value?.[2]) || 0;
+  return Math.max(14, Math.min(44, 14 + (sample / Math.max(1, maxSample)) * 30));
+}
+
+function operationsCoachBubbleLabel(item = {}) {
+  const symbolSize = Number(item.data?.symbolSize || item.data?.bubbleSize || 0);
+  if (symbolSize < 22) return { text: '', fontSize: 0 };
+  if (symbolSize < 30) return { text: operationsCoachShortName(item.name), fontSize: 8 };
+  if (symbolSize < 40) return { text: operationsCoachShortName(item.name), fontSize: 9 };
+  return { text: operationsCoachShortName(item.name), fontSize: 10 };
+}
+
 function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const source = (rows || []).filter(row => row && row.coach);
   if (!source.length) return { series: [] };
@@ -438,7 +456,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
   return {
-    grid: { left: 18, right: 18, top: 22, bottom: 28, containLabel: true },
+    grid: { left: 8, right: 8, top: 8, bottom: 10, containLabel: true },
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -454,6 +472,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     xAxis: {
       type: 'value',
+      nameGap: 18,
       min: 0,
       max: 100,
       interval: 20,
@@ -464,6 +483,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     yAxis: {
       type: 'value',
+      nameGap: 30,
       min: 0,
       max: 1000000,
       interval: 200000,
@@ -475,29 +495,36 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     series: [{
       name: '教练经营位置',
       type: 'scatter',
-      data: source.map(row => ({
-        name: row.coach,
-        raw: row,
-        value: [Number(row.utilizationRate) || 0, Number(row.revenue) || 0, Number(row.lessonCount) || 0],
-        itemStyle: {
-          color: operationsCoachBandColor(row.utilizationRate),
-          opacity: 0.86,
-          borderColor: '#FFFFFF',
-          borderWidth: 2,
-          shadowBlur: 14,
-          shadowColor: 'rgba(128,84,53,.18)'
-        }
-      })),
-      symbolSize: value => Math.max(18, Math.min(58, 18 + ((Number(value?.[2]) || 0) / maxLessons) * 40)),
+      data: source.map(row => {
+        const value = [Number(row.utilizationRate) || 0, Number(row.revenue) || 0, Number(row.lessonCount) || 0];
+        const bubbleSize = operationsCoachMatrixSymbolSize(value, maxLessons);
+        const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
+        return {
+          name: row.coach,
+          raw: row,
+          value,
+          symbolSize: bubbleSize,
+          label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
+          itemStyle: {
+            color: operationsCoachBandColor(row.utilizationRate),
+            opacity: 0.86,
+            borderColor: '#FFFFFF',
+            borderWidth: 2,
+            shadowBlur: 14,
+            shadowColor: 'rgba(128,84,53,.18)'
+          }
+        };
+      }),
+      symbolSize: value => operationsCoachMatrixSymbolSize(value, maxLessons),
       label: {
         show: true,
         position: 'inside',
-        formatter: item => operationsCoachShortName(item.name),
+        formatter: item => operationsCoachBubbleLabel(item).text,
         color: '#FFFFFF',
         fontSize: 10,
         fontWeight: 700
       },
-      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachShortName(item.name) } },
+      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachBubbleLabel(item).text } },
       labelLayout: { hideOverlap: true },
       markLine: {
         silent: true,
@@ -517,8 +544,8 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
           [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 20 }],
           [{ xAxis: 20, itemStyle: { color: '#FFFBEB' } }, { xAxis: 40 }],
           [{ xAxis: 40, itemStyle: { color: '#F3F6FA' } }, { xAxis: 60 }],
-          [{ xAxis: 60, itemStyle: { color: '#F0FDF4' } }, { xAxis: 80 }],
-          [{ xAxis: 80, itemStyle: { color: '#ECFDF5' } }, { xAxis: 100 }]
+          [{ xAxis: 60, itemStyle: { color: '#E6FBF2' } }, { xAxis: 80 }],
+          [{ xAxis: 80, itemStyle: { color: '#D9F5E5' } }, { xAxis: 100 }]
         ]
       }
     }]
@@ -526,7 +553,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
 }
 
 function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
-  const source = (rows || []).filter(row => row && row.coach);
+  const source = (rows || []).filter(row => row && row.coach && ((Number(row.revenue) || 0) > 0 || (Number(row.revenueShare) || 0) > 0));
   if (!source.length) return { series: [] };
   return {
     ...standardChartBaseOption(),
@@ -537,25 +564,25 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
         const rows = Array.isArray(params) ? params : [params];
         const name = esc(rows[0]?.axisValue || '');
         const revenue = rows.find(item => item.seriesName === '归属实收')?.value || 0;
-        const share = rows.find(item => item.seriesName === '归属课包占比')?.value || 0;
+        const share = rows.find(item => item.seriesName === '归属实收占比')?.value || 0;
         return `<div style="min-width:160px;font-size:12px;line-height:1.75;color:#172033">
           <div style="font-weight:700;margin-bottom:4px">${operationsCoachShortName(name)}</div>
           <div>归属实收：¥${fmt(revenue)}</div>
-          <div>归属课包占比：${fmt(share)}%</div>
+          <div>归属实收占比：${fmt(share)}%</div>
         </div>`;
       },
       textStyle: { fontSize: 12, fontWeight: 400 }
     },
     legend: { show: false },
-    grid: { left: 48, right: 36, top: 14, bottom: 24, containLabel: false },
-    xAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 10, interval: 0, rotate: 0 } },
-    yAxis: [
+    grid: { left: 70, right: 36, top: 12, bottom: 24, containLabel: true },
+    yAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11, margin: 10 } },
+    xAxis: [
       { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
       { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11 }, splitLine: { show: false } }
     ],
     series: [
-      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#8B5E3C', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
-      { name: '归属课包占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
+      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 18, itemStyle: { color: '#8B5E3C', borderRadius: [0, 6, 6, 0] }, emphasis: { focus: 'series' } },
+      { name: '归属实收占比', type: 'line', xAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
     ]
   };
 }
@@ -660,7 +687,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
   return {
-    grid: { left: 18, right: 18, top: 22, bottom: 30, containLabel: true },
+    grid: { left: 8, right: 8, top: 8, bottom: 12, containLabel: true },
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -672,31 +699,36 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
         </div>`;
       }
     },
-    xAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    xAxis: { type: 'value', nameGap: 18, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    yAxis: { type: 'value', nameGap: 24, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     series: [{
       name: '转化续费能力',
       type: 'scatter',
       data: source.map(row => {
         const ability = operationsCoachCapabilityColor(row);
         const sample = (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0);
+        const value = [Number(row.trialConversionRate) || 0, Number(row.renewalRate) || 0, sample];
+        const bubbleSize = operationsCoachCapabilitySymbolSize(value, maxSample);
+        const bubbleLabel = operationsCoachBubbleLabel({ name: row.coach, data: { symbolSize: bubbleSize } });
         return {
           name: row.coach,
           raw: { ...row, abilityLabel: ability.label },
-          value: [Number(row.trialConversionRate) || 0, Number(row.renewalRate) || 0, sample],
+          value,
+          symbolSize: bubbleSize,
+          label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
           itemStyle: { color: ability.color, opacity: 0.84, borderColor: '#fff', borderWidth: 2, shadowBlur: 12, shadowColor: `${ability.color}2E` }
         };
       }),
-      symbolSize: value => Math.max(16, Math.min(54, 16 + ((Number(value?.[2]) || 0) / maxSample) * 38)),
+      symbolSize: value => operationsCoachCapabilitySymbolSize(value, maxSample),
       label: {
         show: true,
         position: 'inside',
-        formatter: item => operationsCoachShortName(item.name),
+        formatter: item => operationsCoachBubbleLabel(item).text,
         color: '#FFFFFF',
         fontSize: 10,
         fontWeight: 700
       },
-      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachShortName(item.name) } },
+      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: item => operationsCoachBubbleLabel(item).text } },
       labelLayout: { hideOverlap: true },
       markLine: {
         silent: true,
