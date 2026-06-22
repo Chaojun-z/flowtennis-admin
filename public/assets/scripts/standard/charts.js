@@ -38,8 +38,8 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
           </div>
           <div class="operations-funnel-track">
             <div class="operations-funnel-fill" style="width:${percent}%"></div>
+            ${index > 0 ? `<span class="operations-funnel-transition-label" style="left:${Math.max(6, Math.min(96, percent))}%">${fmt(stepRate)}%</span>` : ''}
           </div>
-          ${index > 0 ? `<div class="operations-funnel-stats"><span>上一步转化 ${fmt(stepRate)}%</span></div>` : '<div class="operations-funnel-stats"></div>'}
         </div>
         <div class="operations-funnel-loss">
           ${index > 0 ? `<strong class="operations-funnel-loss-badge">流失 ${fmt(loss)}%</strong><span class="operations-funnel-loss-count">流失 ${fmt(lossCount)} 人</span>` : `<strong class="operations-funnel-base-badge">基准流量</strong>`}
@@ -149,6 +149,114 @@ function buildStandardBarLineChartOption({ labels = [], barValues = [], lineValu
         emphasis: { focus: 'series', scale: true }
       }
     ]
+  };
+}
+
+function operationsChannelQualityColor(row = {}) {
+  if (row.statusTone === 'good') return '#2E8B6D';
+  if (row.statusTone === 'warn') return '#D89135';
+  return '#E05252';
+}
+
+function operationsChannelQualityTooltip(item = {}) {
+  const row = item.data?.raw || {};
+  return `<div style="min-width:176px;font-size:12px;line-height:1.75;color:#172033">
+    <div style="font-weight:700;margin-bottom:4px">${esc(row.source || item.name || '-')}</div>
+    <div>线索量：${fmt(row.leads || 0)} 人</div>
+    <div>体验人数：${fmt(row.trialCount || 0)} 人</div>
+    <div>成交人数：${fmt(row.deals || 0)} 人</div>
+    <div>体验转化率：${fmt(row.trialConversionRate || 0)}%</div>
+    <div>成交转化率：${fmt(row.dealConversionRate || 0)}%</div>
+    <div>判断：${esc(row.statusLabel || '-')}</div>
+  </div>`;
+}
+
+function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
+  const source = (rows || []).filter(row => row && row.source && (Number(row.leads) || 0) > 0);
+  if (!source.length) return { series: [] };
+  const maxLeads = Math.max(1, ...source.map(row => Number(row.leads) || 0));
+  const maxDeals = Math.max(1, ...source.map(row => Number(row.deals) || 0));
+  const maxRate = Math.max(20, ...source.map(row => Number(row.dealConversionRate) || 0));
+  const axisMaxRate = Math.min(100, Math.max(20, Math.ceil(maxRate / 10) * 10));
+  const axisMaxLeads = Math.max(10, Math.ceil(maxLeads / 10) * 10);
+  const avgRate = source.reduce((sum, row) => sum + (Number(row.dealConversionRate) || 0), 0) / source.length;
+  const avgLeads = source.reduce((sum, row) => sum + (Number(row.leads) || 0), 0) / source.length;
+  return {
+    grid: { left: 18, right: 18, top: 18, bottom: 30, containLabel: true },
+    tooltip: { trigger: 'item', formatter: operationsChannelQualityTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
+    xAxis: {
+      type: 'value',
+      name: '成交转化率',
+      nameLocation: 'middle',
+      nameGap: 26,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
+      min: 0,
+      max: axisMaxRate,
+      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
+      axisLine: { lineStyle: { color: '#D7DEE8' } },
+      axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
+      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '线索量',
+      nameLocation: 'middle',
+      nameGap: 34,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
+      min: 0,
+      max: axisMaxLeads,
+      axisLabel: { formatter: value => fmt(value), color: '#A19080', fontSize: 11, margin: 8 },
+      axisLine: { lineStyle: { color: '#D7DEE8' } },
+      axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
+      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+    },
+    series: [{
+      name: '成交人数',
+      type: 'scatter',
+      data: source.map(row => {
+        const deals = Number(row.deals) || 0;
+        const bubbleSize = Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+        const bubbleColor = operationsChannelQualityColor(row);
+        return {
+          name: row.source,
+          raw: row,
+          value: [Number(row.dealConversionRate) || 0, Number(row.leads) || 0, deals],
+          symbolSize: bubbleSize,
+          itemStyle: {
+            color: bubbleColor,
+            opacity: 0.86,
+            borderColor: '#FFFFFF',
+            borderWidth: 2,
+            shadowBlur: 14,
+            shadowColor: `${bubbleColor}33`
+          }
+        };
+      }),
+      symbolSize: value => {
+        const deals = Number(value?.[2]) || 0;
+        return Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+      },
+      label: {
+        show: true,
+        position: 'inside',
+        formatter: item => item.name,
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 700
+      },
+      emphasis: { focus: 'self', scale: true, label: { show: true } },
+      labelLayout: { hideOverlap: true },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
+        label: { color: '#64748B', fontSize: 11 },
+        data: [
+          { name: '平均转化', xAxis: avgRate, label: { formatter: '平均转化', position: 'insideEndTop' } },
+          { name: '平均线索', yAxis: avgLeads, label: { formatter: '平均线索', position: 'insideEndTop' } }
+        ]
+      }
+    }]
   };
 }
 

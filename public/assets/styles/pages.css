@@ -1345,18 +1345,19 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-funnel-host{min-height:304px}
 #page-operations .operations-progress-funnel{display:flex;flex-direction:column;gap:8px}
 #page-operations .operations-funnel-scale{display:grid;grid-template-columns:repeat(4,1fr);padding:0 176px 0 0;color:#B7AA9E;font-size:11px;line-height:16px;text-align:right}
-#page-operations .operations-funnel-body{display:flex;flex-direction:column;gap:12px;position:relative}
+#page-operations .operations-funnel-body{display:flex;flex-direction:column;gap:10px;position:relative}
 #page-operations .operations-funnel-body::before{content:"";position:absolute;left:0;right:176px;top:0;bottom:0;background:linear-gradient(90deg,transparent calc(25% - 1px),#E9DDD2 calc(25% - 1px),#E9DDD2 25%,transparent 25%,transparent calc(50% - 1px),#E9DDD2 calc(50% - 1px),#E9DDD2 50%,transparent 50%,transparent calc(75% - 1px),#E9DDD2 calc(75% - 1px),#E9DDD2 75%,transparent 75%,transparent calc(100% - 1px),#E9DDD2 calc(100% - 1px),#E9DDD2 100%);pointer-events:none}
 #page-operations .operations-funnel-row{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:18px;align-items:center;position:relative;z-index:1;transition:transform .16s ease}
 #page-operations .operations-funnel-row:hover{transform:translateY(-2px)}
 #page-operations .operations-funnel-row:hover .operations-funnel-track{border-color:#D1BCA8;box-shadow:0 10px 24px rgba(91,67,49,.10)}
 #page-operations .operations-funnel-row:hover .operations-funnel-fill{filter:saturate(1.04)}
-#page-operations .operations-funnel-step{display:flex;flex-direction:column;gap:5px}
+#page-operations .operations-funnel-step{display:flex;flex-direction:column;gap:6px}
 #page-operations .operations-funnel-head{display:flex;align-items:baseline;gap:10px;color:#172033}
 #page-operations .operations-funnel-head strong{font-size:13px;line-height:20px;font-weight:400}
 #page-operations .operations-funnel-head span{font-size:20px;line-height:26px;font-weight:800;color:#111827}
-#page-operations .operations-funnel-track{height:28px;background:#F2E9E1;border:1px solid #E5D8CC;border-radius:7px;overflow:hidden;position:relative;transition:border-color .16s ease,box-shadow .16s ease}
+#page-operations .operations-funnel-track{height:28px;background:#F2E9E1;border:1px solid #E5D8CC;border-radius:7px;overflow:visible;position:relative;transition:border-color .16s ease,box-shadow .16s ease}
 #page-operations .operations-funnel-fill{height:100%;background:linear-gradient(90deg,#8B5E3C,#C58A5A);border-radius:7px;min-width:6px;box-shadow:none;transition:filter .16s ease}
+#page-operations .operations-funnel-transition-label{position:absolute;top:-22px;transform:translateX(-50%);display:inline-flex;align-items:center;justify-content:center;height:18px;padding:0 6px;border-radius:999px;background:#FBF7F4;border:1px solid #E5D8CC;color:#E05252;font-size:12px;line-height:18px;font-weight:700;white-space:nowrap;box-shadow:0 4px 10px rgba(91,67,49,.06);z-index:2}
 #page-operations .operations-funnel-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;color:#7A6B5F;font-size:11px;line-height:16px}
 #page-operations .operations-funnel-stats span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #page-operations .operations-funnel-loss{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center}
@@ -1387,18 +1388,19 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-rate-badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:24px;border-radius:6px;padding:0 8px;font-weight:800;box-sizing:border-box}
 #page-operations .operations-rate-badge.good{background:#DDFBEA;color:#138A44}
 #page-operations .operations-rate-badge.warn{background:#FFF8E8;color:#B7791F}
-#page-operations .operations-channel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-#page-operations .operations-channel-group{background:#FBF7F4;border:1px solid #E5ECF6;border-radius:8px;padding:18px;box-sizing:border-box}
-#page-operations .operations-channel-group-head{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}
-#page-operations .operations-channel-group-head strong{color:#172033;font-size:15px;line-height:22px}
-#page-operations .operations-channel-group-head span{color:#7A889B;font-size:12px;line-height:18px}
-#page-operations .operations-channel-list{display:flex;flex-direction:column;gap:10px}
-#page-operations .operations-channel-card{background:#FBF7F4;border:1px solid #E6EDF7;border-radius:8px;padding:18px;box-sizing:border-box;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
-#page-operations .operations-channel-card:hover{transform:translateY(-2px);border-color:#D8C8B8;box-shadow:0 10px 22px rgba(91,67,49,.10)}
-#page-operations .operations-channel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
-#page-operations .operations-channel-head strong{color:#172033;font-size:14px;line-height:20px}
-#page-operations .operations-channel-head span{color:#7C8CA2;font-size:12px;line-height:18px;text-align:right}
-#page-operations .operations-channel-metric{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;color:#65748A;font-size:12px;line-height:18px}
+#page-operations .operations-channel-quality-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(520px,.95fr);gap:14px;align-items:stretch}
+#page-operations .operations-channel-quality-chart{height:280px;min-height:280px;border:1px solid #E6EDF7;border-radius:8px;background:#FBF7F4;box-sizing:border-box}
+#page-operations .operations-channel-ranking-table{border:1px solid #E6EDF7;border-radius:8px;background:#FBF7F4;overflow:hidden}
+#page-operations .operations-channel-ranking-head,#page-operations .operations-channel-ranking-row{display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(3,minmax(44px,.5fr)) repeat(2,minmax(72px,.72fr)) minmax(70px,.7fr);gap:10px;align-items:center}
+#page-operations .operations-channel-ranking-head{height:36px;padding:0 12px;background:#F6F0EA;color:#8A7B70;font-size:11px;line-height:16px;font-weight:700}
+#page-operations .operations-channel-ranking-row{min-height:44px;padding:0 12px;border-top:1px solid #EAEFF6;color:#44546A;font-size:12px;line-height:18px}
+#page-operations .operations-channel-ranking-row:hover{background:#FFF9F4}
+#page-operations .operations-channel-ranking-row strong{color:#172033;font-size:13px;line-height:18px}
+#page-operations .operations-channel-ranking-head span:not(:first-child),#page-operations .operations-channel-ranking-row span:not(:first-child){text-align:right}
+#page-operations .operations-channel-status{justify-self:end;display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:52px;padding:0 8px;border-radius:999px;font-size:11px;line-height:20px;font-weight:800;white-space:nowrap;box-sizing:border-box}
+#page-operations .operations-channel-status.good{background:#DDFBEA;color:#138A44}
+#page-operations .operations-channel-status.warn{background:#FFF4D8;color:#B7791F}
+#page-operations .operations-channel-status.danger{background:#FFE3E3;color:#C53030}
 #page-operations .operations-channel-empty{min-height:84px;display:flex;align-items:center;justify-content:center;color:#95A3B6;font-size:13px;line-height:20px;border:1px dashed #D9E2EF;border-radius:8px;background:#FBF7F4}
 #page-operations .operations-attribute-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px}
 #page-operations .operations-attribute-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
@@ -1412,6 +1414,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-attribute-metric-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#596776;font-size:13px;line-height:18px}
 #page-operations .operations-attribute-metric-head strong{color:#44546A;font-size:13px;line-height:18px}
 #page-operations .operations-attribute-metric .operations-rate-track{width:100%;height:6px}
+#page-operations .operations-attribute-note{margin-top:-4px;color:#7A889B;font-size:11px;line-height:16px}
 #page-operations .operations-retention-risk{background:#FBF7F4;border:1px solid #E5ECF6;border-radius:8px;padding:18px;box-sizing:border-box}
 #page-operations .operations-risk-head{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}
 #page-operations .operations-risk-head strong{color:#172033;font-size:15px;line-height:22px}
@@ -1437,7 +1440,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-skeleton-panel::before{content:"";position:absolute;left:24px;right:24px;top:28px;height:14px}
 @keyframes operationsSkeleton{0%{background-position:120% 0}100%{background-position:-120% 0}}
 @media(max-width:900px){
-  #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-overview-risk-board,#page-operations .operations-overview-inline-kpis,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-grid,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}
+  #page-operations .operations-chart-grid,#page-operations .operations-overview-grid,#page-operations .operations-overview-risk-board,#page-operations .operations-overview-inline-kpis,#page-operations .operations-court-top-grid,#page-operations .operations-conversion-monitor-grid,#page-operations .operations-kpi-row,#page-operations .operations-coach-kpi-strip,#page-operations .operations-coach-hero-grid,#page-operations .operations-coach-secondary-grid,#page-operations .operations-channel-quality-layout,#page-operations .operations-attribute-layout,#page-operations .operations-skeleton-grid,#page-operations .operations-court-skeleton-grid{grid-template-columns:1fr}
   #page-operations .operations-overview-bar-row{grid-template-columns:1fr}
   #page-operations .operations-overview-metric-grid{grid-template-columns:1fr}
   #page-operations .operations-overview-mini-heat{grid-template-columns:1fr}

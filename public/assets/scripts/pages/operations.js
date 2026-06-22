@@ -927,6 +927,7 @@ function operationsBuildChannelEfficiencyRows(rows = []) {
       return {
         source,
         leads: items.length,
+        trialCount: attendanceCount,
         trialConversionRate: operationsRate(attendanceCount, items.length),
         dealConversionRate: operationsRate(deals, items.length),
         deals,
@@ -1056,32 +1057,56 @@ function operationsInsightCard(tone, label, title, caption) {
   </div>`;
 }
 
-function operationsChannelMetric(label, value) {
-  return `<div class="operations-channel-metric">
-    <span>${esc(label)}</span>
-    ${operationsPercentBar(value)}
-  </div>`;
+function operationsChannelQualityRows(rows = []) {
+  const labels = { good: '高价值', warn: '待优化', danger: '低效' };
+  return (rows || []).map(row => {
+    const leads = Number(row.leads) || 0;
+    const deals = Number(row.deals) || 0;
+    const trialConversionRate = Number(row.trialConversionRate) || 0;
+    const dealConversionRate = Number(row.dealConversionRate) || 0;
+    const trialCount = Number(row.trialCount ?? row.attendanceCount ?? row.trials) || Math.round(leads * trialConversionRate / 100);
+    let statusLabel = labels.danger;
+    let statusTone = 'danger';
+    if (deals > 0 && dealConversionRate >= 15) {
+      statusLabel = labels.good;
+      statusTone = 'good';
+    } else if (deals > 0) {
+      statusLabel = labels.warn;
+      statusTone = 'warn';
+    }
+    return {
+      source: row.source || '未记录',
+      leads,
+      trialCount,
+      deals,
+      trialConversionRate,
+      dealConversionRate,
+      statusLabel,
+      statusTone
+    };
+  }).filter(row => row.leads > 0)
+    .sort((a, b) => b.leads - a.leads || b.dealConversionRate - a.dealConversionRate || b.deals - a.deals);
 }
 
-function operationsBuildChannelGroups(rows = []) {
-  const sorted = rows || [];
-  const highValue = sorted.filter(row => row.deals > 0 && row.dealConversionRate >= 15).slice(0, 4);
-  const highTrafficLowConversion = sorted
-    .filter(row => row.leads >= 10 && row.dealConversionRate > 0 && row.dealConversionRate < 15)
-    .slice(0, 4);
-  const lowEfficiency = sorted.filter(row => row.leads > 0 && row.deals === 0).slice(0, 4);
-  return [
-    { title: '高价值渠道', caption: '成交率较高，适合继续投入', rows: highValue },
-    { title: '高流量低转化', caption: '有线索但成交偏弱，需要优化跟进', rows: highTrafficLowConversion },
-    { title: '低效渠道', caption: '当前没有成交，先观察或降权', rows: lowEfficiency }
-  ];
+function operationsChannelStatusTag(row = {}) {
+  return `<span class="operations-channel-status ${esc(row.statusTone || 'danger')}">${esc(row.statusLabel || '低效')}</span>`;
 }
 
-function operationsChannelCard(row) {
-  return `<div class="operations-channel-card">
-    <div class="operations-channel-head"><strong>${esc(row.source)}</strong><span>线索 ${fmt(row.leads)}｜成交 ${fmt(row.deals)}</span></div>
-    ${operationsChannelMetric('体验课转化率', row.trialConversionRate)}
-    ${operationsChannelMetric('成交转化率', row.dealConversionRate)}
+function operationsChannelRankingTable(rows = []) {
+  if (!rows.length) return '<div class="operations-channel-empty">暂无渠道数据</div>';
+  return `<div class="operations-channel-ranking-table">
+    <div class="operations-channel-ranking-head">
+      <span>渠道</span><span>线索</span><span>体验</span><span>成交</span><span>体验转化</span><span>成交转化</span><span>判断</span>
+    </div>
+    ${rows.map(row => `<div class="operations-channel-ranking-row">
+      <strong>${esc(row.source)}</strong>
+      <span>${fmt(row.leads)}</span>
+      <span>${fmt(row.trialCount)}</span>
+      <span>${fmt(row.deals)}</span>
+      <span>${fmt(row.trialConversionRate)}%</span>
+      <span>${fmt(row.dealConversionRate)}%</span>
+      ${operationsChannelStatusTag(row)}
+    </div>`).join('')}
   </div>`;
 }
 
@@ -1218,15 +1243,12 @@ function renderConversionInsightModule(conversion) {
 }
 
 function renderConversionChannelEfficiencyModule(conversion) {
+  const rows = operationsChannelQualityRows(conversion.channelEfficiencyRows || []);
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>渠道效率监控</h3><span>按经营价值分组看渠道，而不是堆表格</span></div></div>
-    <div class="operations-channel-grid">
-      ${operationsBuildChannelGroups(conversion.channelEfficiencyRows || []).map(group => `<div class="operations-channel-group">
-        <div class="operations-channel-group-head"><strong>${esc(group.title)}</strong><span>${esc(group.caption)}</span></div>
-        <div class="operations-channel-list">
-          ${group.rows.length ? group.rows.map(operationsChannelCard).join('') : '<div class="operations-channel-empty">暂无符合条件渠道</div>'}
-        </div>
-      </div>`).join('')}
+    <div class="operations-module-head"><div><h3>渠道效率监控</h3><span>用象限图先判断渠道质量，再看排行明细</span></div></div>
+    <div class="operations-channel-quality-layout">
+      <div class="operations-channel-quality-chart" id="operationsChannelQualityChart"></div>
+      ${operationsChannelRankingTable(rows)}
     </div>
   </section>`;
 }
@@ -1238,7 +1260,8 @@ function renderConversionAttributeModule(conversion) {
   <div class="operations-attribute-grid">${rows.map(row => `<div class="operations-attribute-card">
     <div class="operations-attribute-head"><strong>${esc(row.attribute)}</strong><span>基数: ${fmt(row.base)}</span></div>
     ${operationsAttributeMetric('体验转化', row.trialConversionRate)}
-    ${operationsAttributeMetric(`到期续费（首购 ${fmt(row.deals)}）`, row.renewalRate)}
+    ${operationsAttributeMetric(`首购后续费率`, row.renewalRate)}
+    <div class="operations-attribute-note">首购 ${fmt(row.deals)} 人 / 续费 ${fmt(row.renewals)} 人</div>
   </div>`).join('')}</div>
   <aside class="operations-retention-risk">
     <div class="operations-risk-head"><strong>留存/续费风险榜</strong><span>续费偏低的人群</span></div>
@@ -1272,6 +1295,9 @@ function renderOperationsCharts(data) {
     rows: (data.court?.campusRows || []).length ? data.court.campusRows : (data.court?.campusComparison || [])
   }), { height: 296 });
   renderProgressFunnel('operationsCourseFunnel', conversion.courseFunnel || []);
+  renderStandardChart('operationsChannelQualityChart', buildOperationsChannelQualityChartOption({
+    rows: operationsChannelQualityRows(conversion.channelEfficiencyRows || [])
+  }), { height: 280, emptyText: '暂无渠道数据' });
   renderStandardChart('operationsSourceRankingChart', buildStandardBarChartOption({
     labels: (conversion.sourceRanking || []).map(row => row.source),
     values: (conversion.sourceRanking || []).map(row => row.deals),
