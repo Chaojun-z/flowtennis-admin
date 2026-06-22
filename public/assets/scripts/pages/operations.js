@@ -35,6 +35,25 @@ function operationsCardNumber(card = {}) {
   return Number(card?.value) || 0;
 }
 
+function operationsCompactNumber(value, digits = 1) {
+  const number = Number(value) || 0;
+  const abs = Math.abs(number);
+  const sign = number < 0 ? '-' : '';
+  if (abs >= 1000000) {
+    const text = (abs / 1000000).toFixed(digits).replace(/\.0$/, '');
+    return `${sign}${text}M`;
+  }
+  if (abs >= 10000) {
+    const text = (abs / 1000).toFixed(digits).replace(/\.0$/, '');
+    return `${sign}${text}K`;
+  }
+  return `${sign}${fmt(abs)}`;
+}
+
+function operationsMoneyCompactText(value) {
+  return `¥${operationsCompactNumber(value)}`;
+}
+
 function operationsCardText(card = {}, fallbackUnit = '') {
   const unit = card?.unit || fallbackUnit;
   return `${fmt(operationsCardNumber(card))}${unit ? `<em>${esc(unit)}</em>` : ''}`;
@@ -159,10 +178,10 @@ function renderOperationsCourtKpi(card = {}) {
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsCourtSparklineSvg(card.trendPoints || [], card.trendKey || '')}
@@ -174,7 +193,7 @@ function renderOperationsCourtKpis(data = {}) {
   const trends = data.court?.trends || [];
   const comparisons = data.court?.trendComparisons || {};
   const kpis = [
-    { label: '订场收入', value: operationsMoneyText(operationsCardNumber(cards.bookingAmount)), trendKey: 'bookingAmount', tone: 'revenue' },
+    { label: '订场收入', value: operationsMoneyCompactText(operationsCardNumber(cards.bookingAmount)), trendKey: 'bookingAmount', tone: 'revenue' },
     { label: '订场小时', value: fmt(operationsCardNumber(cards.bookingHours)), unit: '小时', trendKey: 'bookingHours', tone: 'hours' },
     { label: '场地利用率', value: `${fmt(operationsCardNumber(cards.utilizationRate))}%`, trendKey: 'utilizationRate', tone: 'utilization' },
     { label: '黄金时段利用率', value: `${fmt(operationsCardNumber(cards.goldenUtilizationRate) || operationsCourtAverageRate(data.court?.campusRows || [], 'goldenUtilizationRate'))}%`, trendKey: 'goldenUtilizationRate', tone: 'golden' },
@@ -329,10 +348,10 @@ function renderOperationsOverviewKpis(data = {}) {
   const comparisons = data.overview?.trendComparisons || {};
   const courtCards = data.court?.cards || {};
   const kpis = [
-    { label: '总收入', value: operationsMoneyText(operationsCardNumber(cards.totalIncome)), trendKey: 'totalIncome', tone: 'revenue' },
-    { label: '入账流水', value: operationsMoneyText(operationsCardNumber(cards.recognizedRevenue)), trendKey: 'recognizedRevenue', tone: 'good' },
-    { label: '待履约余额', value: operationsMoneyText(operationsCardNumber(cards.pendingRevenue)), trendKey: 'pendingRevenue', tone: 'warn' },
-    { label: '成交笔数', value: fmt(operationsCardNumber(cards.tradeCount)), unit: '笔', trendKey: 'tradeCount', tone: 'lead' },
+    { label: '总收入', value: operationsMoneyCompactText(operationsCardNumber(cards.totalIncome)), trendKey: 'totalIncome', tone: 'revenue' },
+    { label: '入账流水', value: operationsMoneyCompactText(operationsCardNumber(cards.recognizedRevenue)), trendKey: 'recognizedRevenue', tone: 'good' },
+    { label: '待履约余额', value: operationsMoneyCompactText(operationsCardNumber(cards.pendingRevenue)), trendKey: 'pendingRevenue', tone: 'warn' },
+    { label: '成交笔数', value: operationsCompactNumber(operationsCardNumber(cards.tradeCount)), unit: '笔', trendKey: 'tradeCount', tone: 'lead' },
     { label: '场地利用率', value: fmt(operationsCardNumber(courtCards.utilizationRate)), unit: '%', trendKey: 'utilizationRate', tone: 'utilization' }
   ];
   return `<div class="operations-kpi-row operations-overview-kpi-row operations-court-kpi-row">
@@ -621,7 +640,7 @@ function renderOperationsCoach(data) {
   const kpis = [
     { label: '在岗教练', value: cards.activeCoaches?.value || rows.length, unit: '人', rawValue: cards.activeCoaches?.value || rows.length, trendKey: 'activeCoaches', tone: 'neutral' },
     { label: '工时利用率', value: `${fmt(cards.utilizationRate?.value || 0)}%`, rawValue: cards.utilizationRate?.value || 0, trendKey: 'utilizationRate', tone: operationsCoachKpiTone(cards.utilizationRate?.value || 0) },
-    { label: '归属课程实收', value: `¥${fmt(revenue)}`, rawValue: revenue, trendKey: 'revenue', tone: revenue > 0 ? 'revenue' : 'warn' },
+    { label: '归属课程实收', value: operationsMoneyCompactText(revenue), rawValue: revenue, trendKey: 'revenue', tone: revenue > 0 ? 'revenue' : 'warn' },
     { label: '体验课转化率', value: `${fmt(cards.trialConversionRate?.value || 0)}%`, rawValue: cards.trialConversionRate?.value || 0, trendKey: 'trialConversionRate', tone: 'good' },
     { label: '老客续费率', value: `${fmt(cards.renewalRate?.value || 0)}%`, rawValue: cards.renewalRate?.value || 0, trendKey: 'renewalRate', tone: 'good' }
   ];
@@ -682,10 +701,10 @@ function renderOperationsCoachKpi(card = {}) {
     <div class="operations-coach-kpi-main">
       <div class="operations-coach-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-coach-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+        <small class="operations-coach-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsCoachSparklineSvg(card.trendPoints || [], card.trendKey)}
@@ -738,8 +757,8 @@ function operationsKpiPointList(points = []) {
     }
     return { date: `第${index + 1}点`, value: Number(point) || 0 };
   }).filter(point => Number.isFinite(point.value));
-  if (source.length <= 12) return source;
-  const targetCount = 12;
+  if (source.length <= 36) return source;
+  const targetCount = 36;
   const step = (source.length - 1) / (targetCount - 1);
   return Array.from({ length: targetCount }, (_, index) => source[Math.round(index * step)]);
 }
@@ -758,11 +777,18 @@ function operationsKpiSignedValueText(value = 0, key = '') {
   if (number === 0) return '';
   const abs = Math.abs(number);
   const sign = number > 0 ? '+' : number < 0 ? '-' : '';
-  if (key === 'revenue' || key === 'bookingAmount') return `${sign}¥${fmt(abs)}`;
+  if (key === 'revenue' || key === 'bookingAmount' || key === 'totalIncome' || key === 'recognizedRevenue' || key === 'pendingRevenue') return `${sign}¥${operationsCompactNumber(abs)}`;
   if (key === 'bookingHours') return `${sign}${fmt(abs)}小时`;
   if (key === 'activeCoaches') return `${sign}${fmt(abs)}人`;
   if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${sign}${fmt(abs)}%`;
-  return `${sign}${fmt(abs)}`;
+  return `${sign}${operationsCompactNumber(abs)}`;
+}
+
+function operationsKpiChangeRateText(value = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return '';
+  const sign = number > 0 ? '+' : '';
+  return `${sign}${fmt(number)}%`;
 }
 
 function operationsKpiRatioText(point = {}, key = '') {
@@ -789,6 +815,8 @@ function operationsKpiPointLabel(point = {}, key = '') {
 
 function operationsTrendChangeText(comparison = {}, key = '') {
   if (!comparison || comparison.mode !== 'previous_period') return '';
+  const rateText = operationsKpiChangeRateText(comparison.changeRate);
+  if (rateText) return rateText;
   return operationsKpiSignedValueText(comparison.changeValue, key);
 }
 
@@ -803,13 +831,7 @@ function operationsTrendChangeClass(comparison = {}) {
 function operationsSmoothPath(coords = []) {
   if (!coords.length) return '';
   if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
-  return coords.slice(1).reduce((path, point, index) => {
-    const previous = coords[index];
-    const distance = point.x - previous.x;
-    const cp1x = Math.round((previous.x + distance * 0.45) * 10) / 10;
-    const cp2x = Math.round((point.x - distance * 0.45) * 10) / 10;
-    return `${path} C ${cp1x} ${previous.y}, ${cp2x} ${point.y}, ${point.x} ${point.y}`;
-  }, `M ${coords[0].x} ${coords[0].y}`);
+  return coords.slice(1).reduce((path, point) => `${path} L ${point.x} ${point.y}`, `M ${coords[0].x} ${coords[0].y}`);
 }
 
 function operationsKpiSparklineSvg(points = [], key = '', className = 'operations-coach-kpi-sparkline') {
@@ -833,7 +855,7 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   const gradientId = `coachSpark${String(key || 'line').replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return `<div class="${esc(className)}">
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".34"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".08"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".14"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".035"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
       <path class="operations-kpi-area" d="${esc(areaPath)}" fill="url(#${esc(gradientId)})"></path>
       <path class="operations-kpi-line" d="${esc(linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>
       ${coords.map(point => `<g class="operations-kpi-point">
@@ -1039,10 +1061,10 @@ function renderOperationsConversionKpi(card = {}) {
     <div class="operations-court-kpi-main">
       <div class="operations-court-kpi-head">
         <span>${esc(card.label || '')}</span>
-        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
       <div class="operations-court-kpi-value">
         <strong>${esc(card.value ?? '')}${card.unit ? `<em>${esc(card.unit)}</em>` : ''}</strong>
+        <small class="operations-court-kpi-change ${esc(operationsTrendChangeClass(card.trendComparison))}">${esc(operationsTrendChangeText(card.trendComparison, card.trendKey || ''))}</small>
       </div>
     </div>
     ${operationsConversionSparklineSvg(card.trendPoints || [], card.trendKey || '')}
