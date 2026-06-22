@@ -172,6 +172,7 @@ function buildStandardBubbleMatrixChartOption({
   markArea
 } = {}) {
   if (!data.length) return { series: [] };
+  const sortedData = operationsBubbleSortData(data);
   return {
     ...(color ? { color } : {}),
     grid,
@@ -181,10 +182,11 @@ function buildStandardBubbleMatrixChartOption({
     series: [{
       name: seriesName,
       type: 'scatter',
-      data,
+      data: sortedData,
       ...(symbolSize ? { symbolSize } : {}),
       label,
-      emphasis: { focus: 'self', scale: true, label: { show: true, formatter: label.formatter } },
+      emphasis: { focus: 'self', scale: false, label: { show: true, formatter: label.formatter }, itemStyle: { borderWidth: 3, shadowBlur: 18 } },
+      blur: { itemStyle: { opacity: 0.22 } },
       ...(labelLayout ? { labelLayout } : {}),
       ...(markLine ? { markLine } : {}),
       ...(markArea ? { markArea } : {})
@@ -200,6 +202,21 @@ function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
   return buildStandardBubbleMatrixChartOption(option);
 }
 
+function operationsBubbleSize(metric, maxMetric, { min = 12, max = 34 } = {}) {
+  const value = Math.max(0, Number(metric) || 0);
+  const maxValue = Math.max(1, Number(maxMetric) || 1);
+  const ratio = Math.min(1, value / maxValue);
+  return Math.round((min + Math.sqrt(ratio) * (max - min)) * 10) / 10;
+}
+
+function operationsBubblePointSize(point = {}) {
+  return Number(point.symbolSize || point.bubbleSize || 0);
+}
+
+function operationsBubbleSortData(data = []) {
+  return [...data].sort((a, b) => operationsBubblePointSize(b) - operationsBubblePointSize(a));
+}
+
 function operationsChannelQualityColor(row = {}) {
   if (row.statusTone === 'good') return '#2E8B6D';
   if (row.statusTone === 'warn') return '#D89135';
@@ -208,13 +225,16 @@ function operationsChannelQualityColor(row = {}) {
 
 function operationsChannelQualityTooltip(item = {}) {
   const row = item.data?.raw || {};
+  const leads = Number(row.leads) || 0;
   return `<div style="min-width:176px;font-size:12px;line-height:1.75;color:#172033">
     <div style="font-weight:700;margin-bottom:4px">${esc(row.source || item.name || '-')}</div>
     <div>线索量：${fmt(row.leads || 0)} 人</div>
     <div>体验人数：${fmt(row.trialCount || 0)} 人</div>
     <div>成交人数：${fmt(row.deals || 0)} 人</div>
+    <div>圆点大小：成交人数</div>
     <div>体验转化率：${fmt(row.trialConversionRate || 0)}%</div>
     <div>成交转化率：${fmt(row.dealConversionRate || 0)}%</div>
+    ${leads > 0 && leads < 10 ? '<div style="color:#A16207">线索样本较小，仅作参考</div>' : ''}
     <div>判断：${esc(row.statusLabel || '-')}</div>
   </div>`;
 }
@@ -261,7 +281,7 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
     seriesName: '成交人数',
     data: source.map(row => {
       const deals = Number(row.deals) || 0;
-      const bubbleSize = Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+      const bubbleSize = operationsBubbleSize(deals, maxDeals, { min: 16, max: 36 });
       const bubbleColor = operationsChannelQualityColor(row);
       return {
         name: row.source,
@@ -280,7 +300,7 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
     }),
     symbolSize: value => {
       const deals = Number(value?.[2]) || 0;
-      return Math.max(18, Math.min(54, 18 + (deals / maxDeals) * 36));
+      return operationsBubbleSize(deals, maxDeals, { min: 16, max: 36 });
     },
     label: {
       show: true,
@@ -320,6 +340,7 @@ function operationsCourtQuadrantTooltip(item = {}) {
     <div>订场收入：¥${fmt(row.bookingAmount || 0)}</div>
     <div>场次利用率：${fmt(row.utilizationRate || 0)}%</div>
     <div>订场次数：${fmt(row.bookingCount || 0)}</div>
+    <div>圆点大小：订场次数</div>
     <div>体验转化：${fmt(row.trialConversionRate || 0)}%</div>
     <div>老客转化：${fmt(row.repeatCustomerConversionRate || 0)}%</div>
   </div>`;
@@ -356,12 +377,13 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const avgRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.bookingAmount, 0) / activeRows.length : 0;
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
   const data = source.map(row => {
-    const bubbleSize = Math.max(18, Math.min(58, 18 + (row.bookingCount / maxBookingCount) * 40));
+    const bubbleSize = operationsBubbleSize(row.bookingCount, maxBookingCount, { min: 16, max: 36 });
     const bubbleColor = operationsCourtQuadrantColor(row);
     return {
       name: row.campusName,
       raw: row,
       value: [row.utilizationRate, row.bookingAmount, row.bookingCount, row.trialConversionRate],
+      symbolSize: bubbleSize,
       itemStyle: {
         color: bubbleColor,
         opacity: 0.82,
@@ -409,7 +431,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     data,
     symbolSize: item => {
       const bookingCount = Number(item?.[2]) || 0;
-      return Math.max(18, Math.min(58, 18 + (bookingCount / maxBookingCount) * 40));
+      return operationsBubbleSize(bookingCount, maxBookingCount, { min: 16, max: 36 });
     },
     label: {
       show: true,
@@ -580,12 +602,12 @@ function operationsCoachCapabilityColor(row = {}) {
 
 function operationsCoachMatrixSymbolSize(value = [], maxLessons = 1) {
   const lessons = Number(value?.[2]) || 0;
-  return Math.max(14, Math.min(46, 14 + (lessons / Math.max(1, maxLessons)) * 32));
+  return operationsBubbleSize(lessons, maxLessons, { min: 14, max: 33 });
 }
 
 function operationsCoachCapabilitySymbolSize(value = [], maxSample = 1) {
   const sample = Number(value?.[2]) || 0;
-  return Math.max(14, Math.min(44, 14 + (sample / Math.max(1, maxSample)) * 30));
+  return operationsBubbleSize(sample, maxSample, { min: 14, max: 33 });
 }
 
 function operationsCoachBubbleLabel(item = {}) {
@@ -613,6 +635,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
           <div>工时利用率：${fmt(row.utilizationRate || 0)}%</div>
           <div>可排/已排：${fmt(row.availableHours || 0)} / ${fmt(row.usedHours || 0)} 小时</div>
           <div>归属课程实收：¥${fmt(row.revenue || 0)}</div>
+          <div>圆点大小：当前筛选课数 ${fmt(row.lessonCount || 0)} 节</div>
         </div>`;
       },
       textStyle: { fontSize: 12, fontWeight: 400 }
@@ -836,10 +859,15 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
       trigger: 'item',
       formatter: item => {
         const row = item.data?.raw || {};
+        const trialBase = Number(row.trialBase) || 0;
+        const oldCustomerBase = Number(row.oldCustomerBase) || 0;
+        const sample = trialBase + oldCustomerBase;
         return `<div style="min-width:160px;font-size:12px;line-height:1.75;color:#172033">
           <div style="font-weight:700;margin-bottom:4px">${esc(operationsCoachShortName(row.coach || '-'))}</div>
           <div>体验课转化率：${fmt(row.trialConversionRate || 0)}%</div>
           <div>老客续费率：${fmt(row.renewalRate || 0)}%</div>
+          <div>样本量：体验课 ${fmt(trialBase)} 人 / 老客 ${fmt(oldCustomerBase)} 人 / 合计 ${fmt(sample)} 人</div>
+          ${sample > 0 && sample < 10 ? '<div style="color:#A16207">样本较小，仅作参考</div>' : ''}
         </div>`;
       }
     },
