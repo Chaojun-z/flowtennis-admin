@@ -31,6 +31,7 @@ const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
 const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
+const OPERATIONS_PAGE_CACHE_VERSION='2026-06-23-real-trends-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
@@ -162,7 +163,7 @@ function operationsPageDatasetRequestKey(){
   return 'operationsPage:'+operationsPageDataUrl();
 }
 function operationsPageClientCacheKey(){
-  return OPERATIONS_PAGE_CACHE_PREFIX+CLIENT_DATA_CACHE_SCOPE+'_'+(currentUser?.id||'anon')+'_'+operationsPageDataUrl();
+  return OPERATIONS_PAGE_CACHE_PREFIX+OPERATIONS_PAGE_CACHE_VERSION+'_'+CLIENT_DATA_CACHE_SCOPE+'_'+(currentUser?.id||'anon')+'_'+operationsPageDataUrl();
 }
 function readOperationsPageClientCache(){
   try{
@@ -174,7 +175,10 @@ function readOperationsPageClientCache(){
 }
 function persistOperationsPageClientCache(data){
   if(!data?.operations)return;
-  try{localStorage.setItem(operationsPageClientCacheKey(),JSON.stringify({savedAt:Date.now(),operations:data.operations,campuses:data.campuses||[]}));}catch(e){}
+  try{
+    const payload={savedAt:Date.now(),cacheVersion:OPERATIONS_PAGE_CACHE_VERSION,operations:data.operations,campuses:data.campuses||[]};
+    localStorage.setItem(operationsPageClientCacheKey(),JSON.stringify(payload));
+  }catch(e){}
 }
 function hydrateOperationsPageFromClientCache(){
   const data=readOperationsPageClientCache();

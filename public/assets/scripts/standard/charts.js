@@ -202,32 +202,53 @@ function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
   return buildStandardBubbleMatrixChartOption(option);
 }
 
-function operationsMatrixGrid() {
-  return { left: 18, right: 12, top: 14, bottom: 30, containLabel: true };
+function operationsTextWidth(text = '', fontSize = 11) {
+  return String(text || '').split('').reduce((sum, char) => {
+    if (/[\u4e00-\u9fff]/.test(char)) return sum + fontSize;
+    if (/[A-Z0-9%¥]/.test(char)) return sum + fontSize * 0.62;
+    return sum + fontSize * 0.52;
+  }, 0);
 }
 
-function operationsNiceAxisInterval(maxValue, tickCount = 5) {
-  const raw = Math.max(1, (Number(maxValue) || 0) / Math.max(1, tickCount));
-  const exponent = Math.floor(Math.log10(raw));
+function operationsMatrixGrid({ xLabels = [], yLabels = [] } = {}) {
+  const yLabelWidth = Math.max(0, ...yLabels.map(label => operationsTextWidth(label, 11)));
+  const lastXLabelWidth = operationsTextWidth(xLabels[xLabels.length - 1] || '', 11);
+  return {
+    left: Math.ceil(yLabelWidth + 14),
+    right: Math.ceil(lastXLabelWidth / 2 + 12),
+    top: 12,
+    bottom: 24,
+    containLabel: false
+  };
+}
+
+function operationsNiceAxisMax(maxValue) {
+  const value = Math.max(1, Number(maxValue) || 1);
+  const exponent = Math.floor(Math.log10(value));
   const unit = Math.pow(10, exponent);
-  const fraction = raw / unit;
-  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+  const fraction = value / unit;
+  const niceFractions = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const niceFraction = niceFractions.find(item => item >= fraction) || 10;
   return niceFraction * unit;
 }
 
 function operationsMoneyAxisRange(values = []) {
   const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
-  const paddedMax = Math.max(1, maxValue * 1.12);
-  const interval = operationsNiceAxisInterval(paddedMax, 5);
-  const max = Math.max(interval * 2, Math.ceil(paddedMax / interval) * interval);
+  const max = operationsNiceAxisMax(Math.max(10000, maxValue * 1.06));
+  const interval = max / 5;
   return { max, interval };
 }
 
-function operationsPercentAxisRange(values = [], { min = 20, max = 100, step = 10 } = {}) {
+function operationsPercentAxisRange(values = [], { min = 10, max = 100 } = {}) {
   const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
-  const paddedMax = maxValue > 0 ? maxValue * 1.08 : min;
-  const axisMax = Math.min(max, Math.max(min, Math.ceil(paddedMax / step) * step));
-  return { max: axisMax, interval: axisMax <= 50 ? 10 : 20 };
+  const axisMax = Math.min(max, Math.max(min, operationsNiceAxisMax(maxValue > 0 ? maxValue * 1.06 : min)));
+  return { max: axisMax, interval: axisMax / 5 };
+}
+
+function operationsAxisTickLabels(axis = {}, formatter = value => value) {
+  const interval = Number(axis.interval) || 0;
+  if (!interval) return [];
+  return Array.from({ length: 6 }, (_, index) => formatter(interval * index));
 }
 
 function operationsBubbleSize(metric, maxMetric, { min = 12, max = 34 } = {}) {
@@ -278,30 +299,29 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
   const avgRate = source.reduce((sum, row) => sum + (Number(row.dealConversionRate) || 0), 0) / source.length;
   const avgLeads = source.reduce((sum, row) => sum + (Number(row.leads) || 0), 0) / source.length;
   return buildStandardBusinessBubbleMatrixChartOption({
-    grid: operationsMatrixGrid(),
+    grid: operationsMatrixGrid({
+      xLabels: operationsAxisTickLabels({ max: axisMaxRate, interval: axisMaxRate / 5 }, value => `${fmt(value)}%`),
+      yLabels: operationsAxisTickLabels({ max: axisMaxLeads, interval: axisMaxLeads / 5 }, value => fmt(value))
+    }),
     tooltip: { trigger: 'item', formatter: operationsChannelQualityTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
-      name: '成交转化率',
-      nameLocation: 'middle',
-      nameGap: 26,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: axisMaxRate,
-      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
+      interval: axisMaxRate / 5,
+      axisLabel: { formatter: value => `${fmt(value)}%`, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
     },
     yAxis: {
       type: 'value',
-      name: '线索量',
-      nameLocation: 'middle',
-      nameGap: 34,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: axisMaxLeads,
-      axisLabel: { formatter: value => fmt(value), color: '#A19080', fontSize: 11, margin: 8 },
+      interval: axisMaxLeads / 5,
+      axisLabel: { formatter: value => fmt(value), color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -404,8 +424,10 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const avgUtilization = activeRows.length ? activeRows.reduce((sum, row) => sum + row.utilizationRate, 0) / activeRows.length : 0;
   const avgRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.bookingAmount, 0) / activeRows.length : 0;
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
-  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 20, max: 50, step: 10 });
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 10, max: 50 });
   const revenueAxis = operationsMoneyAxisRange(source.map(row => row.bookingAmount));
+  const utilizationLabel = value => `${fmt(value)}%`;
+  const revenueLabel = value => `${fmt(value / 10000)}万`;
   const data = source.map(row => {
     const bubbleSize = operationsBubbleSize(row.bookingCount, maxBookingCount, { min: 16, max: 36 });
     const bubbleColor = operationsCourtQuadrantColor(row);
@@ -427,18 +449,18 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   });
   return buildStandardBusinessBubbleMatrixChartOption({
     color: ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'],
-    grid: operationsMatrixGrid(),
+    grid: operationsMatrixGrid({
+      xLabels: operationsAxisTickLabels(utilizationAxis, utilizationLabel),
+      yLabels: operationsAxisTickLabels(revenueAxis, revenueLabel)
+    }),
     tooltip: { trigger: 'item', formatter: operationsCourtQuadrantTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
-      name: '场地利用率',
-      nameLocation: 'middle',
-      nameGap: 28,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: utilizationAxis.max,
       interval: utilizationAxis.interval,
-      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
+      axisLabel: { formatter: utilizationLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -449,7 +471,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       min: 0,
       max: revenueAxis.max,
       interval: revenueAxis.interval,
-      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11, margin: 6 },
+      axisLabel: { formatter: revenueLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -652,10 +674,15 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const maxLessons = Math.max(1, ...source.map(row => Number(row.lessonCount) || 0));
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
-  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 40, max: 100, step: 10 });
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 10, max: 100 });
   const revenueAxis = operationsMoneyAxisRange(source.map(row => row.revenue));
+  const utilizationLabel = value => `${fmt(value)}%`;
+  const revenueLabel = value => operationsCoachRevenueAxisLabel(value);
   return buildStandardBusinessBubbleMatrixChartOption({
-    grid: operationsMatrixGrid(),
+    grid: operationsMatrixGrid({
+      xLabels: operationsAxisTickLabels(utilizationAxis, utilizationLabel),
+      yLabels: operationsAxisTickLabels(revenueAxis, revenueLabel)
+    }),
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -672,14 +699,11 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     xAxis: {
       type: 'value',
-      name: '工时利用率',
-      nameLocation: 'middle',
-      nameGap: 28,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: utilizationAxis.max,
       interval: utilizationAxis.interval,
-      axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
+      axisLabel: { formatter: utilizationLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -690,7 +714,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       min: 0,
       max: revenueAxis.max,
       interval: revenueAxis.interval,
-      axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top' },
+      axisLabel: { formatter: revenueLabel, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -886,8 +910,13 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   const hasRenewalBase = source.some(row => (Number(row.oldCustomerBase) || 0) > 0);
   if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
+  const percentAxis = { max: 100, interval: 20 };
+  const percentLabel = value => `${fmt(value)}%`;
   return buildStandardQuadrantBubbleMatrixChartOption({
-    grid: operationsMatrixGrid(),
+    grid: operationsMatrixGrid({
+      xLabels: operationsAxisTickLabels(percentAxis, percentLabel),
+      yLabels: operationsAxisTickLabels(percentAxis, percentLabel)
+    }),
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -904,8 +933,8 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
         </div>`;
       }
     },
-    xAxis: { type: 'value', name: '体验转化率', nameLocation: 'middle', nameGap: 28, nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: value => value === 0 ? '' : `${value}%`, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    xAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: percentLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    yAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: percentLabel, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     seriesName: '转化续费能力',
     data: source.map(row => {
       const ability = operationsCoachCapabilityColor(row);

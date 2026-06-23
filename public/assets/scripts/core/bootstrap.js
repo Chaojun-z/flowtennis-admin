@@ -34,6 +34,14 @@ function renderTopTitleHtml(pg){
   return `<span class="top-title-breadcrumb"><button type="button" class="top-title-parent" onclick="goPage('${item.parentPage}')">${esc(item.parentTitle)}</button><span class="top-title-separator">/</span><span class="top-title-current">${esc(item.title)}</span></span>`;
 }
 
+function scrollActiveSidebarItemIntoView(){
+  const scroller=document.querySelector('.sb-menu-scroll');
+  const active=document.querySelector('.sb-menu-scroll .sb-item.active');
+  if(!scroller||!active)return;
+  const targetTop=active.offsetTop-(scroller.clientHeight-active.offsetHeight)/2;
+  scroller.scrollTo({top:Math.max(0,targetTop),behavior:'auto'});
+}
+
 function goPage(pg,el,skipRender=false){
   syncViewportMode();
   if(pg==='entitlements')pg='package-students';
@@ -76,6 +84,7 @@ function goPage(pg,el,skipRender=false){
     if(typeof buildCampusTabs==='function')buildCampusTabs();
     const topTitle=document.getElementById('topTitle');
     if(topTitle)topTitle.innerHTML=renderTopTitleHtml(pg);
+    scrollActiveSidebarItemIntoView();
     if(!skipRender)loadPageDataAndRender(pg,{quiet:true});
   };
   if(document.startViewTransition) {

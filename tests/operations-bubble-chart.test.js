@@ -20,6 +20,10 @@ const context = {
 vm.createContext(context);
 vm.runInContext(chartsSource, context, { filename: 'charts.js' });
 
+function nonZeroTickCount(axis) {
+  return Math.round((Number(axis.max) || 0) / (Number(axis.interval) || 1));
+}
+
 const coachOption = context.buildOperationsCoachCapabilityChartOption({
   rows: [
     { coach: 'Big', trialConversionRate: 0, trialBase: 100, trialConverted: 0, renewalRate: 0, oldCustomerBase: 100, renewalCount: 0 },
@@ -37,6 +41,8 @@ assert.ok(bigPoint.symbolSize - smallPoint.symbolSize < 18, 'bubble size should 
 assert.strictEqual(coachSeries.data[0].name, 'Big', 'large bubbles should be drawn first so smaller bubbles stay clickable above them');
 assert.strictEqual(coachSeries.data[1].name, 'Small', 'small bubbles should be drawn after large bubbles');
 assert.strictEqual(coachSeries.emphasis.scale, false, 'bubble hover should not enlarge points and block nearby small bubbles');
+assert.strictEqual(nonZeroTickCount(coachOption.xAxis), 5, 'coach capability x axis should show five non-zero ticks');
+assert.strictEqual(nonZeroTickCount(coachOption.yAxis), 5, 'coach capability y axis should show five non-zero ticks');
 assert.match(
   coachOption.tooltip.formatter({ data: bigPoint, name: bigPoint.name }),
   /样本量：体验课 100 人 \/ 老客 100 人 \/ 合计 200 人/,
@@ -49,14 +55,15 @@ const courtOption = context.buildOperationsCourtQuadrantChartOption({
   ]
 });
 
-assert.ok(courtOption.grid.right <= 16, 'court matrix should not waste a large right gutter inside the canvas');
-assert.ok(courtOption.grid.left <= 22, 'court matrix should not waste a large left gutter inside the canvas');
+assert.ok(courtOption.grid.right >= 12, 'court matrix should reserve room for the rightmost tick label');
+assert.ok(courtOption.grid.left >= 32, 'court matrix should reserve room for y-axis tick labels');
 assert.ok(courtOption.grid.bottom <= 32, 'court matrix should not waste a large bottom gutter inside the canvas');
 assert.ok(!courtOption.yAxis.name, 'court matrix should not reserve space for a vertical y-axis title');
+assert.ok(!courtOption.xAxis.name, 'court matrix should not reserve space for a bottom x-axis title');
 assert.strictEqual(courtOption.yAxis.max, 400000, 'court revenue axis should fit the current data instead of staying fixed at 100万');
-assert.strictEqual(courtOption.yAxis.interval, 100000, 'court revenue axis should keep readable rounded ticks');
-assert.strictEqual(courtOption.xAxis.max, 20, 'court utilization axis should fit low-utilization data instead of leaving the right side empty');
-assert.strictEqual(courtOption.xAxis.interval, 10, 'court utilization axis should keep 10% ticks');
+assert.strictEqual(nonZeroTickCount(courtOption.yAxis), 5, 'court revenue axis should show five non-zero ticks');
+assert.strictEqual(courtOption.xAxis.max, 10, 'court utilization axis should fit low-utilization data instead of leaving the right side empty');
+assert.strictEqual(nonZeroTickCount(courtOption.xAxis), 5, 'court utilization axis should show five non-zero ticks');
 
 const coachMatrixOption = context.buildOperationsCoachMatrixChartOption({
   rows: [
@@ -65,12 +72,13 @@ const coachMatrixOption = context.buildOperationsCoachMatrixChartOption({
   ]
 });
 
-assert.strictEqual(coachMatrixOption.yAxis.max, 600000, 'coach revenue axis should fit current revenue instead of staying fixed at 100万');
-assert.strictEqual(coachMatrixOption.yAxis.interval, 200000, 'coach revenue axis should keep readable rounded ticks');
+assert.strictEqual(coachMatrixOption.yAxis.max, 500000, 'coach revenue axis should fit current revenue instead of staying fixed at 100万');
+assert.strictEqual(nonZeroTickCount(coachMatrixOption.yAxis), 5, 'coach revenue axis should show five non-zero ticks');
 assert.strictEqual(coachMatrixOption.xAxis.max, 40, 'coach utilization axis should fit current utilization instead of staying fixed at 100%');
-assert.strictEqual(coachMatrixOption.xAxis.interval, 10, 'coach utilization axis should use readable ticks when compressed');
-assert.ok(coachMatrixOption.grid.left <= 22, 'coach matrix should not waste a large left gutter inside the canvas');
+assert.strictEqual(nonZeroTickCount(coachMatrixOption.xAxis), 5, 'coach utilization axis should show five non-zero ticks');
+assert.ok(coachMatrixOption.grid.left >= 32, 'coach matrix should reserve room for y-axis tick labels');
 assert.ok(!coachMatrixOption.yAxis.name, 'coach matrix should not reserve space for a vertical y-axis title');
+assert.ok(!coachMatrixOption.xAxis.name, 'coach matrix should not reserve space for a bottom x-axis title');
 
 const channelOption = context.buildOperationsChannelQualityChartOption({
   rows: [
