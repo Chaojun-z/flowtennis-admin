@@ -203,7 +203,31 @@ function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
 }
 
 function operationsMatrixGrid() {
-  return { left: 54, right: 44, top: 24, bottom: 42, containLabel: true };
+  return { left: 46, right: 12, top: 14, bottom: 30, containLabel: true };
+}
+
+function operationsNiceAxisInterval(maxValue, tickCount = 5) {
+  const raw = Math.max(1, (Number(maxValue) || 0) / Math.max(1, tickCount));
+  const exponent = Math.floor(Math.log10(raw));
+  const unit = Math.pow(10, exponent);
+  const fraction = raw / unit;
+  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+  return niceFraction * unit;
+}
+
+function operationsMoneyAxisRange(values = []) {
+  const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
+  const paddedMax = Math.max(1, maxValue * 1.12);
+  const interval = operationsNiceAxisInterval(paddedMax, 5);
+  const max = Math.max(interval * 2, Math.ceil(paddedMax / interval) * interval);
+  return { max, interval };
+}
+
+function operationsPercentAxisRange(values = [], { min = 20, max = 100, step = 10 } = {}) {
+  const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
+  const paddedMax = maxValue > 0 ? maxValue * 1.08 : min;
+  const axisMax = Math.min(max, Math.max(min, Math.ceil(paddedMax / step) * step));
+  return { max: axisMax, interval: axisMax <= 50 ? 10 : 20 };
 }
 
 function operationsBubbleSize(metric, maxMetric, { min = 12, max = 34 } = {}) {
@@ -380,6 +404,8 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const avgUtilization = activeRows.length ? activeRows.reduce((sum, row) => sum + row.utilizationRate, 0) / activeRows.length : 0;
   const avgRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.bookingAmount, 0) / activeRows.length : 0;
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 20, max: 50, step: 10 });
+  const revenueAxis = operationsMoneyAxisRange(source.map(row => row.bookingAmount));
   const data = source.map(row => {
     const bubbleSize = operationsBubbleSize(row.bookingCount, maxBookingCount, { min: 16, max: 36 });
     const bubbleColor = operationsCourtQuadrantColor(row);
@@ -410,8 +436,8 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       nameGap: 28,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
-      max: 50,
-      interval: 10,
+      max: utilizationAxis.max,
+      interval: utilizationAxis.interval,
       axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
@@ -424,8 +450,8 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       nameGap: 42,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
-      max: 1000000,
-      interval: 200000,
+      max: revenueAxis.max,
+      interval: revenueAxis.interval,
       axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
@@ -629,6 +655,8 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const maxLessons = Math.max(1, ...source.map(row => Number(row.lessonCount) || 0));
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 40, max: 100, step: 10 });
+  const revenueAxis = operationsMoneyAxisRange(source.map(row => row.revenue));
   return buildStandardBusinessBubbleMatrixChartOption({
     grid: operationsMatrixGrid(),
     tooltip: {
@@ -652,8 +680,8 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       nameGap: 28,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
-      max: 100,
-      interval: 20,
+      max: utilizationAxis.max,
+      interval: utilizationAxis.interval,
       axisLabel: { formatter: value => `${value}%`, color: '#A19080', fontSize: 11, margin: 8 },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
@@ -666,8 +694,8 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       nameGap: 44,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
-      max: 1000000,
-      interval: 200000,
+      max: revenueAxis.max,
+      interval: revenueAxis.interval,
       axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: false },

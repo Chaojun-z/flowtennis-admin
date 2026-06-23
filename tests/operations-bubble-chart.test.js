@@ -43,6 +43,31 @@ assert.match(
   'coach capability tooltip should explain the sample size behind bubble area'
 );
 
+const courtOption = context.buildOperationsCourtQuadrantChartOption({
+  rows: [
+    { campusName: '顺义马坡', bookingAmount: 295302, utilizationRate: 9, bookingCount: 352 }
+  ]
+});
+
+assert.ok(courtOption.grid.right <= 16, 'court matrix should not waste a large right gutter inside the canvas');
+assert.ok(courtOption.grid.bottom <= 32, 'court matrix should not waste a large bottom gutter inside the canvas');
+assert.strictEqual(courtOption.yAxis.max, 400000, 'court revenue axis should fit the current data instead of staying fixed at 100万');
+assert.strictEqual(courtOption.yAxis.interval, 100000, 'court revenue axis should keep readable rounded ticks');
+assert.strictEqual(courtOption.xAxis.max, 20, 'court utilization axis should fit low-utilization data instead of leaving the right side empty');
+assert.strictEqual(courtOption.xAxis.interval, 10, 'court utilization axis should keep 10% ticks');
+
+const coachMatrixOption = context.buildOperationsCoachMatrixChartOption({
+  rows: [
+    { coach: 'Siren教练', utilizationRate: 30, revenue: 466200, lessonCount: 48, availableHours: 100, usedHours: 30 },
+    { coach: '朝珺教练', utilizationRate: 14, revenue: 150000, lessonCount: 20, availableHours: 100, usedHours: 14 }
+  ]
+});
+
+assert.strictEqual(coachMatrixOption.yAxis.max, 600000, 'coach revenue axis should fit current revenue instead of staying fixed at 100万');
+assert.strictEqual(coachMatrixOption.yAxis.interval, 200000, 'coach revenue axis should keep readable rounded ticks');
+assert.strictEqual(coachMatrixOption.xAxis.max, 40, 'coach utilization axis should fit current utilization instead of staying fixed at 100%');
+assert.strictEqual(coachMatrixOption.xAxis.interval, 10, 'coach utilization axis should use readable ticks when compressed');
+
 const channelOption = context.buildOperationsChannelQualityChartOption({
   rows: [
     { source: 'BigSource', leads: 100, trialCount: 20, deals: 100, trialConversionRate: 20, dealConversionRate: 10, statusLabel: '正常' },
