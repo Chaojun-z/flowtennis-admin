@@ -1189,4 +1189,42 @@ assert.strictEqual(
   'conversion top renewal rate should use the same rate as the visible funnel renewal step'
 );
 
+const financeBackedTrendMetrics = buildOperationsMetrics({
+  campuses: [
+    {
+      id: 'mabao',
+      code: 'mabao',
+      name: '顺义马坡',
+      venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
+    }
+  ],
+  leads: [
+    { id: 'finance-backed-lead', leadStage: '课程转化', studentId: 'finance-backed-student', source: '小红书', campus: 'mabao' }
+  ],
+  leadFollowups: [
+    { id: 'finance-backed-appointment', leadId: 'finance-backed-lead', followupAt: '2026-06-01T10:00:00+08:00', statusAfter: '已约体验' },
+    { id: 'finance-backed-deal', leadId: 'finance-backed-lead', followupAt: '2026-06-03T10:00:00+08:00', statusAfter: '课程转化' }
+  ],
+  students: [{ id: 'finance-backed-student', sourceLeadId: 'finance-backed-lead', dealPath: '体验转化', primaryCoach: '张教练' }],
+  purchases: [],
+  coaches: [{ id: 'finance-backed-coach', name: '张教练', status: 'active', campus: 'mabao' }],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'finance-course-real', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, collector: '张教练', operator: '张教练' },
+    { id: 'finance-member-real', businessDate: '2026-06-02', businessType: '会员储值', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0 },
+    { id: 'finance-court-real', businessDate: '2026-06-03', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '08:00-09:00', sourceProject: '1号场' },
+    { id: 'finance-member-court-real', businessDate: '2026-06-04', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 180, timeText: '10:00-11:00', sourceProject: '1号场' }
+  ],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-05T12:00:00+08:00') });
+assert.deepStrictEqual(financeBackedTrendMetrics.overview.trends.map(row => row.date), ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04'], 'all-time overview KPI trends should use real finance row dates when detailed purchase or court history rows are unavailable');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-01')?.courseIncome, 1000, 'overview course income trend should come from real finance rows');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.storedValueIncome, 500, 'overview stored value trend should come from real finance rows');
+assert.strictEqual(financeBackedTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingAmount, 180, 'court trends should include real member booking finance rows without court history');
+assert.strictEqual(financeBackedTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03')?.dealRateNumerator, 1, 'conversion trends should use real follow-up evidence dates when the lead has no leadDate');
+assert.strictEqual(financeBackedTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.revenue, 1000, 'coach trends should use real course finance rows when purchase detail rows are unavailable');
+
 console.log('operations metrics tests passed');

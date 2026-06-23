@@ -1694,7 +1694,7 @@ function buildConfiguredCourtMetrics({ campuses = [], courts = [], schedule = []
   };
 }
 
-function courtTrendDays({ courts = [], schedule = [], dateRange = {}, now = new Date() } = {}) {
+function courtTrendDays({ courts = [], schedule = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
   const days = new Set();
@@ -1706,6 +1706,10 @@ function courtTrendDays({ courts = [], schedule = [], dateRange = {}, now = new 
     const day = dateKey(row.startTime || row.date || row.createdAt);
     if (day) days.add(day);
   });
+  financeCourtBookingRows(financeNormalizedRows || []).forEach(row => {
+    const day = financeBusinessDate(row);
+    if (day) days.add(day);
+  });
   const sorted = futureSafeDays([...days].sort(), now);
   if (sorted.length > 1) return sorted;
   if (sorted.length !== 1) return sorted;
@@ -1713,7 +1717,7 @@ function courtTrendDays({ courts = [], schedule = [], dateRange = {}, now = new 
 }
 
 function buildCourtTrendDailyRows({ campuses = [], courts = [], schedule = [], entitlements = [], entitlementLedger = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
-  const days = courtTrendDays({ courts, schedule, dateRange, now });
+  const days = courtTrendDays({ courts, schedule, financeNormalizedRows, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
     const configuredMetrics = buildConfiguredCourtMetrics({
@@ -1811,6 +1815,18 @@ function buildCourtMetricsFromCachedRows(courts = []) {
 
 function financeCourtBookingRows(rows = []) {
   return (rows || []).filter(row => ['会员订场', '散客订场', '约球局'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
+}
+
+function financeCourseRows(rows = []) {
+  return (rows || []).filter(row => String(row.businessType || row.displayBusinessType || '').trim() === '课程');
+}
+
+function financeStoredValueRows(rows = []) {
+  return (rows || []).filter(row => String(row.businessType || row.displayBusinessType || '').trim() === '会员储值');
+}
+
+function financeBusinessDate(row = {}) {
+  return firstRowDate(row, ['businessDate', 'date', 'createdAt']);
 }
 
 function parseTimeTextHours(value) {
@@ -1961,7 +1977,7 @@ function membershipOrderAmount(row = {}) {
   return money(row.rechargeAmount ?? row.amount ?? 0);
 }
 
-function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends = [], dateRange = {}, now = new Date() } = {}) {
+function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
   const days = new Set();
@@ -1976,30 +1992,41 @@ function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends 
   (courtTrends || []).forEach(row => {
     if (row?.date) days.add(row.date);
   });
+  (financeNormalizedRows || []).forEach(row => {
+    const day = financeBusinessDate(row);
+    if (day) days.add(day);
+  });
   return futureSafeDays([...days].sort(), now);
 }
 
-function buildOverviewTrendDailyRows({ purchases = [], membershipOrders = [], courtTrends = [], dateRange = {}, now = new Date() } = {}) {
+function buildOverviewTrendDailyRows({ purchases = [], membershipOrders = [], courtTrends = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
   const courtByDate = new Map((courtTrends || []).map(row => [row.date, row]));
-  return overviewTrendDays({ purchases, membershipOrders, courtTrends, dateRange, now }).map(day => {
+  return overviewTrendDays({ purchases, membershipOrders, courtTrends, financeNormalizedRows, dateRange, now }).map(day => {
     const dayPurchases = (purchases || []).filter(row => purchaseDate(row) === day && isValidCoursePurchase(row));
     const dayMembershipOrders = (membershipOrders || []).filter(row => membershipOrderDate(row) === day && String(row.status || 'active') !== 'voided');
-    const courseIncome = money(dayPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0));
-    const storedValueIncome = money(dayMembershipOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0));
+    const dayFinanceRows = (financeNormalizedRows || []).filter(row => financeBusinessDate(row) === day);
+    const dayFinanceCourseRows = financeCourseRows(dayFinanceRows);
+    const dayFinanceStoredValueRows = financeStoredValueRows(dayFinanceRows);
+    const hasFinanceRows = dayFinanceRows.length > 0;
+    const courseIncome = money(hasFinanceRows ? dayFinanceCourseRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : dayPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0));
+    const storedValueIncome = money(hasFinanceRows ? dayFinanceStoredValueRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : dayMembershipOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0));
     const court = courtByDate.get(day) || {};
     const bookingIncome = money(court.bookingAmount || 0);
     const pendingRevenue = money(courseIncome + storedValueIncome);
+    const financeRecognizedRevenue = money(dayFinanceRows.reduce((sum, row) => sum + (Number(row.recognizedRevenueDelta) || 0), 0));
     return {
       date: day,
       totalIncome: money(courseIncome + storedValueIncome + bookingIncome),
       courseIncome,
       storedValueIncome,
       bookingIncome,
-      recognizedRevenue: bookingIncome,
+      recognizedRevenue: hasFinanceRows ? money(financeRecognizedRevenue + bookingIncome - money(financeCourtBookingRows(dayFinanceRows).reduce((sum, row) => sum + (Number(row.recognizedRevenueDelta) || 0), 0))) : bookingIncome,
       pendingRevenue,
-      tradeCount: dayPurchases.filter(row => purchaseAmount(row) > 0).length
-        + dayMembershipOrders.filter(row => membershipOrderAmount(row) > 0).length
-        + (Number(court.bookingCount) || 0),
+      tradeCount: hasFinanceRows
+        ? dayFinanceRows.filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0).length
+        : dayPurchases.filter(row => purchaseAmount(row) > 0).length
+          + dayMembershipOrders.filter(row => membershipOrderAmount(row) > 0).length
+          + (Number(court.bookingCount) || 0),
       utilizationRate: Number(court.utilizationRate) || 0
     };
   });
@@ -2020,15 +2047,31 @@ function courseRowDate(row = {}) {
   return dateKey(row.leadDate || row.createdAt || row.trialAtRaw || row.trialLessonAt || row.trialAt);
 }
 
+function conversionTrendSourceDates(row = {}) {
+  return [
+    courseRowDate(row),
+    dateKey(row.appointmentEventDate),
+    dateKey(row.attendanceEventDate),
+    dateKey(row.dealEventDate)
+  ].filter(Boolean);
+}
+
+function conversionTrendFirstSourceDate(row = {}) {
+  return conversionTrendSourceDates(row).sort()[0] || '';
+}
+
 function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   const days = selectedDays.length ? selectedDays : futureSafeDays([...new Set([
-    ...(rows || []).map(courseRowDate),
+    ...(rows || []).flatMap(conversionTrendSourceDates),
     ...(purchases || []).map(purchaseDate)
   ].filter(Boolean))].sort(), now);
   return days.map(day => {
     const dayRows = (rows || []).filter(row => courseRowDate(row) === day);
-    const cumulativeRows = (rows || []).filter(row => courseRowDate(row) && courseRowDate(row) <= day);
+    const cumulativeRows = (rows || []).filter(row => {
+      const firstDate = conversionTrendFirstSourceDate(row);
+      return firstDate && firstDate <= day;
+    });
     const cumulativePurchases = (purchases || []).filter(row => {
       const rowDate = purchaseDate(row);
       return rowDate && rowDate <= day;
@@ -2090,6 +2133,24 @@ function firstRowDate(row = {}, keys = []) {
 function filterRowsByDateRange(rows = [], range = {}, keys = []) {
   if (!isDateRangeActive(range)) return rows || [];
   return (rows || []).filter(row => dateWithinRange(firstRowDate(row, keys), range));
+}
+
+function financeCoachName(row = {}) {
+  return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || row.collector || row.operator || '');
+}
+
+function financeRowsAsCoachPurchases(rows = []) {
+  return financeCourseRows(rows || [])
+    .filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0)
+    .map(row => ({
+      id: row.id,
+      studentId: row.studentId || row.customer || row.customerName || row.sourceDocument || row.id,
+      ownerCoach: financeCoachName(row),
+      actualAmount: money(row.cashDelta),
+      purchaseDate: financeBusinessDate(row),
+      status: 'active',
+      courseType: row.courseType || row.packageName || row.incomeType || '课程'
+    }));
 }
 
 function buildRangedOperationsData(data = {}, range = {}) {
@@ -2250,16 +2311,20 @@ function buildOperationsMetrics(data = {}, options = {}) {
     purchases: rangedData.purchases || [],
     membershipOrders: rangedData.membershipOrders || [],
     courtTrends,
+    financeNormalizedRows: rangedData.financeNormalizedRows || [],
     dateRange: reportingDateRange,
     now
   });
   const overviewTrends = overviewTrendSet.rows;
   const conversionTrendSet = buildConversionTrendSet({ rows: courseRows, purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
+  const financeCoachPurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
+  const coachTrendPurchases = (rangedData.purchases || []).length ? (rangedData.purchases || []) : financeCoachPurchases;
+  const allCoachTrendPurchases = realAllPurchases.length ? realAllPurchases : financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
-    purchases: rangedData.purchases || [],
-    allPurchases: realAllPurchases,
+    purchases: coachTrendPurchases,
+    allPurchases: allCoachTrendPurchases,
     dateRange: reportingDateRange,
     campuses: data.campuses || [],
     now

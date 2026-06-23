@@ -46,6 +46,10 @@ assert.match(operationsPageSource, /T_ENTITLEMENT_LEDGER[\s\S]*OPERATIONS_ENTITL
 assert.match(operationsPageSource, /OPERATIONS_FOLLOWUP_FIELDS[\s\S]*'leadId'[\s\S]*'followupAt'[\s\S]*'statusAfter'/, 'operations page-data should read lead follow-up event dates for evidence-based conversion trends');
 assert.match(operationsPageSource, /T_LEAD_FOLLOWUPS[\s\S]*OPERATIONS_FOLLOWUP_FIELDS/, 'operations page-data should scan lead followups for conversion event evidence');
 assert.match(operationsMetricsSource, /leadFollowups:\s*filterRowsByDateRange/, 'operations metrics should include lead followups in date-range evidence rows');
+assert.match(operationsMetricsSource, /function buildOverviewTrendDailyRows\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourseRows[\s\S]*financeStoredValueRows/, 'overview KPI trends should aggregate real finance rows when purchase detail rows are unavailable');
+assert.match(operationsMetricsSource, /function courtTrendDays\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourtBookingRows/, 'court KPI trends should use real finance booking row dates when court history is unavailable');
+assert.match(operationsMetricsSource, /function conversionTrendSourceDates[\s\S]*appointmentEventDate[\s\S]*attendanceEventDate[\s\S]*dealEventDate/, 'conversion KPI trends should use real event evidence dates instead of leadDate only');
+assert.match(operationsMetricsSource, /function financeRowsAsCoachPurchases[\s\S]*financeCourseRows[\s\S]*cashDelta[\s\S]*purchaseDate: financeBusinessDate/, 'coach KPI trends should use real course finance rows when purchase detail rows are unavailable');
 assert.match(operationsPageSource, /mergeDuplicateLeadRows/, 'operations page-data should use the same deduped lead pool as the leads page');
 assert.match(residualSource, /require\('\.\/operations-page\.js'\)/, 'residual page-data routes should import operations-page.js');
 assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/, 'residual page-data routes should own /page-data/operations');
