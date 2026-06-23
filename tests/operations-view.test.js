@@ -120,6 +120,7 @@ assert.match(chartsSource, /const utilizationAxis = operationsPercentAxisRange\(
 assert.match(chartsSource, /const revenueAxis = operationsMoneyAxisRange\([\s\S]*row\.revenue/, 'coach matrix y axis should fit current revenue data');
 assert.match(chartsSource, /max: utilizationAxis\.max[\s\S]*interval: utilizationAxis\.interval/, 'coach matrix x axis should use the dynamic utilization range');
 assert.match(chartsSource, /max: revenueAxis\.max[\s\S]*interval: revenueAxis\.interval[\s\S]*formatter: value => operationsCoachRevenueAxisLabel\(value\)/, 'coach matrix y axis should use the dynamic revenue range');
+assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*name: '归属实收'[\s\S]*seriesName: '教练经营位置'/, 'coach matrix should not reserve left gutter for a vertical y-axis title');
 assert.match(chartsSource, /工时利用率：\$\{fmt\(row\.utilizationRate \|\| 0\)\}%[\s\S]*可排\/已排：\$\{fmt\(row\.availableHours \|\| 0\)\} \/ \$\{fmt\(row\.usedHours \|\| 0\)\} 小时[\s\S]*归属课程实收：¥\$\{fmt\(row\.revenue \|\| 0\)\}/, 'coach matrix hover should only show the approved fields');
 assert.match(chartsSource, /体验课转化率：\$\{fmt\(row\.trialConversionRate \|\| 0\)\}%[\s\S]*老客续费率：\$\{fmt\(row\.renewalRate \|\| 0\)\}%/, 'coach capability hover should only show conversion and renewal rates');
 assert.match(chartsSource, /function operationsCoachCapabilityColor[\s\S]*双高[\s\S]*转化高续费低[\s\S]*转化低续费高[\s\S]*双低/, 'coach capability matrix should color bubbles by conversion-renewal ability status');
@@ -147,6 +148,7 @@ assert.match(chartsSource, /const revenueAxis = operationsMoneyAxisRange\([\s\S]
 assert.match(chartsSource, /max: utilizationAxis\.max[\s\S]*interval: utilizationAxis\.interval[\s\S]*formatter: value => `\$\{value\}%`/, 'court quadrant x axis should use the dynamic utilization range');
 assert.match(chartsSource, /max: revenueAxis\.max[\s\S]*interval: revenueAxis\.interval[\s\S]*formatter: value => `\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant y axis should use the dynamic revenue range');
 assert.doesNotMatch(chartsSource, /max: 1000000[\s\S]*interval: 200000[\s\S]*formatter: value => `\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant y axis should not be fixed at 100万');
+assert.doesNotMatch(chartsSource, /buildOperationsCourtQuadrantChartOption[\s\S]*name: '订场收入'[\s\S]*seriesName: '校区经营位置'/, 'court quadrant should not reserve left gutter for a vertical y-axis title');
 assert.match(chartsSource, /buildOperationsCourtQuadrantChartOption[\s\S]*markArea[\s\S]*xAxis: 0[\s\S]*xAxis: 10[\s\S]*xAxis: 20[\s\S]*xAxis: 30[\s\S]*xAxis: 40[\s\S]*xAxis: 50/, 'court quadrant should show utilization color bands every 10%');
 assert.match(chartsSource, /const source = rawRows\.filter\(row => row\.hasData\)/, 'court quadrant should only plot campuses that already have data');
 assert.doesNotMatch(chartsSource, /label: \{ color: row\.hasData \?/, 'court quadrant should not style or label no-data campuses in the plot');
@@ -401,8 +403,9 @@ assert.match(operationsSource, /data-tip="\$\{esc\(label\)\}"/, 'court heatmap h
 assert.doesNotMatch(operationsSource, /operations-court-heat-tooltip/, 'court heatmap should not render tooltips as clipped children inside the scroll grid');
 assert.match(stylesSource, /operations-court-heat-floating-tooltip\.show\{display:block\}/, 'court heatmap hover tooltip should render as a floating layer outside the scroll grid');
 assert.match(stylesSource, /operations-court-heat-kpis div:hover\{border-color:var\(--ops-card-border\);background:var\(--ops-card-bg\)\}/, 'court heat KPI cards should keep the unified operations card hover style');
-assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' \}[\s\S]*axisTick: \{ show: false \}/, 'coach matrix should keep edge labels visible and remove crowded y-axis tick marks');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top' \}[\s\S]*axisTick: \{ show: false \}/, 'coach matrix should keep edge labels visible and remove crowded y-axis tick marks');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*yAxis: \{ type: 'value'[\s\S]*formatter: value => value === 0 \? '' : `\$\{value\}%`[\s\S]*axisTick: \{ show: false \}/, 'coach capability matrix should keep edge labels visible, hide y-axis zero and remove crowded tick marks');
+assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*name: '老客续费率'[\s\S]*seriesName: '转化续费能力'/, 'coach capability matrix should not reserve left gutter for a vertical y-axis title');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*inside: true[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis labels should not be placed inside the plot');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*inside: true[\s\S]*window\.addEventListener/, 'coach capability y-axis labels should not be placed inside the plot');
 assert.match(chartsSource, /operationsCoachBandColor[\s\S]*rate < 20[\s\S]*rate < 40[\s\S]*rate < 60[\s\S]*rate < 80/, 'coach matrix point colors should change at each 20% status band');
@@ -420,7 +423,7 @@ assert.match(chartsSource, /buildOperationsCoachParetoChartOption[\s\S]*filter\(
 assert.match(chartsSource, /slice\(0, 10\)/, 'coach contribution chart should cap visible coach count to avoid crowded vertical labels');
 assert.match(chartsSource, /yAxis: \[[\s\S]*\{ type: 'value'[\s\S]*\{ type: 'value', min: 0, max: 100/, 'coach contribution chart should keep amount and share axes for the vertical layout');
 assert.match(chartsSource, /if \(rate < 80\) return '#5CC8A0'[\s\S]*return '#1F8A5B'/, 'coach high utilization bands should be visually distinct');
-assert.match(chartsSource, /function operationsMatrixGrid\(\) \{\s*return \{ left: 46, right: 12, top: 14, bottom: 30, containLabel: true \};\s*\}/, 'coach matrix should use a compact shared matrix grid');
+assert.match(chartsSource, /function operationsMatrixGrid\(\) \{\s*return \{ left: 18, right: 12, top: 14, bottom: 30, containLabel: true \};\s*\}/, 'coach matrix should use a compact shared matrix grid');
 assert.match(stylesSource, /operations-coach-primary-card\{padding:14px 16px 12px\}/, 'coach matrix cards should reduce inner padding');
 assert.match(stylesSource, /operations-coach-matrix-chart\{height:360px;min-height:360px/, 'coach matrix charts should get enough height after tighter padding');
 assert.match(operationsSource, /renderStandardChart\('operationsCoachMatrixChart'[\s\S]*\{ height: 360 \}/, 'coach matrix render height should match the tighter chart container');

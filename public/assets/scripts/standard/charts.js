@@ -203,7 +203,7 @@ function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
 }
 
 function operationsMatrixGrid() {
-  return { left: 46, right: 12, top: 14, bottom: 30, containLabel: true };
+  return { left: 18, right: 12, top: 14, bottom: 30, containLabel: true };
 }
 
 function operationsNiceAxisInterval(maxValue, tickCount = 5) {
@@ -445,14 +445,11 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     },
     yAxis: {
       type: 'value',
-      name: '订场收入',
-      nameLocation: 'middle',
-      nameGap: 42,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: revenueAxis.max,
       interval: revenueAxis.interval,
-      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11, margin: 8 },
+      axisLabel: { formatter: value => `${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11, margin: 6 },
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -689,14 +686,11 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     yAxis: {
       type: 'value',
-      name: '归属实收',
-      nameLocation: 'middle',
-      nameGap: 44,
       nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: revenueAxis.max,
       interval: revenueAxis.interval,
-      axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' },
+      axisLabel: { formatter: value => operationsCoachRevenueAxisLabel(value), color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top' },
       axisLine: { lineStyle: { color: '#D7DEE8' } },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
@@ -911,7 +905,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
       }
     },
     xAxis: { type: 'value', name: '体验转化率', nameLocation: 'middle', nameGap: 28, nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', name: '老客续费率', nameLocation: 'middle', nameGap: 38, nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: value => value === 0 ? '' : `${value}%`, color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    yAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: value => value === 0 ? '' : `${value}%`, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     seriesName: '转化续费能力',
     data: source.map(row => {
       const ability = operationsCoachCapabilityColor(row);

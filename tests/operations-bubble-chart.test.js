@@ -50,7 +50,9 @@ const courtOption = context.buildOperationsCourtQuadrantChartOption({
 });
 
 assert.ok(courtOption.grid.right <= 16, 'court matrix should not waste a large right gutter inside the canvas');
+assert.ok(courtOption.grid.left <= 22, 'court matrix should not waste a large left gutter inside the canvas');
 assert.ok(courtOption.grid.bottom <= 32, 'court matrix should not waste a large bottom gutter inside the canvas');
+assert.ok(!courtOption.yAxis.name, 'court matrix should not reserve space for a vertical y-axis title');
 assert.strictEqual(courtOption.yAxis.max, 400000, 'court revenue axis should fit the current data instead of staying fixed at 100万');
 assert.strictEqual(courtOption.yAxis.interval, 100000, 'court revenue axis should keep readable rounded ticks');
 assert.strictEqual(courtOption.xAxis.max, 20, 'court utilization axis should fit low-utilization data instead of leaving the right side empty');
@@ -67,6 +69,8 @@ assert.strictEqual(coachMatrixOption.yAxis.max, 600000, 'coach revenue axis shou
 assert.strictEqual(coachMatrixOption.yAxis.interval, 200000, 'coach revenue axis should keep readable rounded ticks');
 assert.strictEqual(coachMatrixOption.xAxis.max, 40, 'coach utilization axis should fit current utilization instead of staying fixed at 100%');
 assert.strictEqual(coachMatrixOption.xAxis.interval, 10, 'coach utilization axis should use readable ticks when compressed');
+assert.ok(coachMatrixOption.grid.left <= 22, 'coach matrix should not waste a large left gutter inside the canvas');
+assert.ok(!coachMatrixOption.yAxis.name, 'coach matrix should not reserve space for a vertical y-axis title');
 
 const channelOption = context.buildOperationsChannelQualityChartOption({
   rows: [
