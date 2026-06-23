@@ -588,12 +588,16 @@ function rate(part, total) {
 
 function buildCourseFunnel(rows = []) {
   const total = rows.length;
+  const appointmentRows = rows.filter(row => row.hasAppointment);
+  const attendanceRows = appointmentRows.filter(row => row.hasAttendance);
+  const dealRows = attendanceRows.filter(row => row.hasTrialDeal);
+  const renewalRows = dealRows.filter(row => row.hasRenewal);
   const steps = [
     { stage: '线索量', count: total },
-    { stage: '预约体验客户', count: rows.filter(row => row.hasAppointment).length },
-    { stage: '体验课实到人数', count: rows.filter(row => row.hasAttendance).length },
-    { stage: '体验后成交人数', count: rows.filter(row => row.hasTrialDeal).length },
-    { stage: '成交后续费人数', count: rows.filter(row => row.hasRenewal).length }
+    { stage: '预约体验客户', count: appointmentRows.length },
+    { stage: '体验课实到人数', count: attendanceRows.length },
+    { stage: '体验后成交人数', count: dealRows.length },
+    { stage: '成交后续费人数', count: renewalRows.length }
   ];
   return steps.map((row, index) => ({
     ...row,
@@ -1087,10 +1091,7 @@ function coachTrendDays({ schedule = [], purchases = [], dateRange = {}, now = n
     const day = purchaseDate(row);
     if (day) days.add(day);
   });
-  const sorted = futureSafeDays([...days].sort(), now);
-  if (sorted.length > 1) return sorted;
-  if (sorted.length !== 1) return sorted;
-  return sorted;
+  return operationsTrendDays({ dateRange, now, sourceDays: [...days] });
 }
 
 function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
@@ -1729,10 +1730,7 @@ function courtTrendDays({ courts = [], schedule = [], financeNormalizedRows = []
     const day = financeBusinessDate(row);
     if (day) days.add(day);
   });
-  const sorted = futureSafeDays([...days].sort(), now);
-  if (sorted.length > 1) return sorted;
-  if (sorted.length !== 1) return sorted;
-  return sorted;
+  return operationsTrendDays({ dateRange, now, sourceDays: [...days] });
 }
 
 function buildCourtTrendDailyRows({ campuses = [], courts = [], schedule = [], entitlements = [], entitlementLedger = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
@@ -1842,6 +1840,48 @@ function financeCourseRows(rows = []) {
 
 function financeStoredValueRows(rows = []) {
   return (rows || []).filter(row => String(row.businessType || row.displayBusinessType || '').trim() === '会员储值');
+}
+
+function sumFinanceRows(rows = [], field) {
+  return money((rows || []).reduce((sum, row) => sum + (Number(row?.[field]) || 0), 0));
+}
+
+function buildFinanceOverviewFromNormalizedRows(rows = []) {
+  const businessRows = (rows || []).filter(row => !row?.differenceReason);
+  const courseRows = financeCourseRows(businessRows);
+  const bookingRows = businessRows.filter(row => ['散客订场', '约球局'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
+  const storedValueRows = financeStoredValueRows(businessRows);
+  return {
+    hasRows: businessRows.length > 0,
+    totalIncome: sumFinanceRows(businessRows, 'cashDelta'),
+    recognizedRevenue: sumFinanceRows(businessRows, 'recognizedRevenueDelta'),
+    pendingRevenue: sumFinanceRows(businessRows, 'deferredRevenueDelta'),
+    courseIncome: sumFinanceRows(courseRows, 'cashDelta'),
+    bookingIncome: sumFinanceRows(bookingRows, 'cashDelta'),
+    storedValueIncome: sumFinanceRows(storedValueRows, 'cashDelta'),
+    tradeCount: businessRows.filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0).length
+  };
+}
+
+function buildFinanceOverviewFromOverviewData(financeOverviewData = {}) {
+  return {
+    hasRows: Object.keys(financeAll(financeOverviewData)).length > 0,
+    totalIncome: financeNumber(financeOverviewData, ['totalIncome', 'cash']),
+    recognizedRevenue: financeNumber(financeOverviewData, ['recognizedRevenue', 'recognized']),
+    pendingRevenue: financeNumber(financeOverviewData, ['pendingRevenue', 'deferred']),
+    courseIncome: financeNumber(financeOverviewData, ['courseIncome']),
+    bookingIncome: financeNumber(financeOverviewData, ['bookingIncome', 'courtIncome']),
+    storedValueIncome: financeNumber(financeOverviewData, ['storedValueIncome']),
+    tradeCount: financeNumber(financeOverviewData, ['tradeCount'])
+  };
+}
+
+function selectFinanceOverviewValues({ financeRowsOverview = {}, financeOverviewData = {}, selectedDateRangeActive = false } = {}) {
+  if (selectedDateRangeActive) return financeRowsOverview;
+  const financeSnapshotOverview = buildFinanceOverviewFromOverviewData(financeOverviewData);
+  if (financeSnapshotOverview.hasRows && !financeOverviewData.__partial) return financeSnapshotOverview;
+  if (financeRowsOverview.hasRows) return financeRowsOverview;
+  return financeSnapshotOverview;
 }
 
 function financeBusinessDate(row = {}) {
@@ -1966,28 +2006,6 @@ function buildRevenueMix(financeOverviewData = {}) {
   ].filter(row => row.value > 0 || Object.keys(all).length);
 }
 
-function buildOperationsFinanceFallback(data = {}, court = {}) {
-  const courseIncome = money((data.purchases || [])
-    .filter(row => !['voided', 'refunded', 'deleted'].includes(String(row.status || 'active')))
-    .reduce((sum, row) => sum + purchaseAmount(row), 0));
-  const storedValueIncome = money((data.membershipOrders || [])
-    .filter(row => String(row.status || 'active') !== 'voided')
-    .reduce((sum, row) => sum + money(row.rechargeAmount ?? row.amount ?? 0), 0));
-  const bookingIncome = money(court?.cards?.bookingAmount?.value || 0);
-  const tradeCount = (data.purchases || []).filter(row => purchaseAmount(row) > 0).length
-    + (data.membershipOrders || []).filter(row => money(row.rechargeAmount ?? row.amount ?? 0) > 0).length
-    + (Number(court?.cards?.bookingCount?.value) || 0);
-  return {
-    courseIncome,
-    storedValueIncome,
-    bookingIncome,
-    totalIncome: money(courseIncome + storedValueIncome + bookingIncome),
-    recognizedRevenue: bookingIncome,
-    pendingRevenue: money(courseIncome + storedValueIncome),
-    tradeCount
-  };
-}
-
 function membershipOrderDate(row = {}) {
   return dateKey(row.purchaseDate || row.createdAt);
 }
@@ -1996,9 +2014,25 @@ function membershipOrderAmount(row = {}) {
   return money(row.rechargeAmount ?? row.amount ?? 0);
 }
 
-function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
+function defaultTrendDateRange(now = new Date(), days = 30) {
+  const endDate = beijingDateKey(now);
+  const startDate = addUtcDays(endDate, 1 - days);
+  return startDate ? { startDate, endDate } : {};
+}
+
+function operationsTrendDays({ dateRange = {}, now = new Date(), sourceDays = [] } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
   if (selectedDays.length) return selectedDays;
+  const activeDays = futureSafeDays([...new Set(sourceDays.filter(Boolean))].sort(), now);
+  if (activeDays.length) {
+    const lastDate = activeDays[activeDays.length - 1];
+    const startDate = addUtcDays(lastDate, -29);
+    return enumerateDateRange({ startDate, endDate: lastDate });
+  }
+  return enumerateDateRange(defaultTrendDateRange(now));
+}
+
+function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
   const days = new Set();
   (purchases || []).forEach(row => {
     const day = purchaseDate(row);
@@ -2015,22 +2049,20 @@ function overviewTrendDays({ purchases = [], membershipOrders = [], courtTrends 
     const day = financeBusinessDate(row);
     if (day) days.add(day);
   });
-  return futureSafeDays([...days].sort(), now);
+  return operationsTrendDays({ dateRange, now, sourceDays: [...days] });
 }
 
 function buildOverviewTrendDailyRows({ purchases = [], membershipOrders = [], courtTrends = [], financeNormalizedRows = [], dateRange = {}, now = new Date() } = {}) {
   const courtByDate = new Map((courtTrends || []).map(row => [row.date, row]));
+  const useFinanceRows = (financeNormalizedRows || []).length > 0;
   return overviewTrendDays({ purchases, membershipOrders, courtTrends, financeNormalizedRows, dateRange, now }).map(day => {
-    const dayPurchases = (purchases || []).filter(row => purchaseDate(row) === day && isValidCoursePurchase(row));
-    const dayMembershipOrders = (membershipOrders || []).filter(row => membershipOrderDate(row) === day && String(row.status || 'active') !== 'voided');
     const dayFinanceRows = (financeNormalizedRows || []).filter(row => financeBusinessDate(row) === day);
     const dayFinanceCourseRows = financeCourseRows(dayFinanceRows);
     const dayFinanceStoredValueRows = financeStoredValueRows(dayFinanceRows);
-    const hasFinanceRows = dayFinanceRows.length > 0;
-    const courseIncome = money(hasFinanceRows ? dayFinanceCourseRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : dayPurchases.reduce((sum, row) => sum + purchaseAmount(row), 0));
-    const storedValueIncome = money(hasFinanceRows ? dayFinanceStoredValueRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : dayMembershipOrders.reduce((sum, row) => sum + membershipOrderAmount(row), 0));
+    const courseIncome = money(useFinanceRows ? dayFinanceCourseRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
+    const storedValueIncome = money(useFinanceRows ? dayFinanceStoredValueRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
+    const bookingIncome = money(useFinanceRows ? financeCourtBookingRows(dayFinanceRows).reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
     const court = courtByDate.get(day) || {};
-    const bookingIncome = money(court.bookingAmount || 0);
     const pendingRevenue = money(courseIncome + storedValueIncome);
     const financeRecognizedRevenue = money(dayFinanceRows.reduce((sum, row) => sum + (Number(row.recognizedRevenueDelta) || 0), 0));
     return {
@@ -2039,13 +2071,11 @@ function buildOverviewTrendDailyRows({ purchases = [], membershipOrders = [], co
       courseIncome,
       storedValueIncome,
       bookingIncome,
-      recognizedRevenue: hasFinanceRows ? money(financeRecognizedRevenue + bookingIncome - money(financeCourtBookingRows(dayFinanceRows).reduce((sum, row) => sum + (Number(row.recognizedRevenueDelta) || 0), 0))) : bookingIncome,
+      recognizedRevenue: useFinanceRows ? financeRecognizedRevenue : bookingIncome,
       pendingRevenue,
-      tradeCount: hasFinanceRows
+      tradeCount: useFinanceRows
         ? dayFinanceRows.filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0).length
-        : dayPurchases.filter(row => purchaseAmount(row) > 0).length
-          + dayMembershipOrders.filter(row => membershipOrderAmount(row) > 0).length
-          + (Number(court.bookingCount) || 0),
+        : 0,
       utilizationRate: Number(court.utilizationRate) || 0
     };
   });
@@ -2081,10 +2111,11 @@ function conversionTrendFirstSourceDate(row = {}) {
 
 function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = {}, now = new Date() } = {}) {
   const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
-  const days = selectedDays.length ? selectedDays : futureSafeDays([...new Set([
+  const sourceDays = [...new Set([
     ...(rows || []).flatMap(conversionTrendSourceDates),
     ...(purchases || []).map(purchaseDate)
-  ].filter(Boolean))].sort(), now);
+  ].filter(Boolean))];
+  const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
   return days.map(day => {
     const dayRows = (rows || []).filter(row => courseRowDate(row) === day);
     const cumulativeRows = (rows || []).filter(row => {
@@ -2096,20 +2127,23 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
       return rowDate && rowDate <= day;
     });
     const leadCount = dayRows.length;
-    const appointmentCount = cumulativeRows.filter(row => {
+    const appointmentRows = cumulativeRows.filter(row => {
       const appointmentDate = dateKey(row.appointmentEventDate);
       return appointmentDate && appointmentDate <= day && (row.hasAppointment || row.hasAttendance || row.hasTrialDeal);
-    }).length;
-    const attendanceCount = cumulativeRows.filter(row => {
+    });
+    const attendanceRows = appointmentRows.filter(row => {
       const attendanceDate = dateKey(row.attendanceEventDate);
       return attendanceDate && attendanceDate <= day && row.hasAttendance;
-    }).length;
-    const dealCount = cumulativeRows.filter(row => {
+    });
+    const dealRows = attendanceRows.filter(row => {
       if (!row.hasTrialDeal) return false;
       const dealDate = dateKey(row.dealEventDate);
       return !!(dealDate && dealDate <= day);
-    }).length;
+    });
     const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
+    const appointmentCount = appointmentRows.length;
+    const attendanceCount = attendanceRows.length;
+    const dealCount = dealRows.length;
     return {
       date: day,
       leads: leadCount,
@@ -2209,12 +2243,12 @@ function cardValueMap(cards = {}, keys = []) {
   }, {});
 }
 
-function overviewValueMapFromFallback(fallback = {}) {
+function overviewValueMapFromFinance(finance = {}) {
   return {
-    totalIncome: Number(fallback.totalIncome) || 0,
-    recognizedRevenue: Number(fallback.recognizedRevenue) || 0,
-    pendingRevenue: Number(fallback.pendingRevenue) || 0,
-    tradeCount: Number(fallback.tradeCount) || 0,
+    totalIncome: Number(finance.totalIncome) || 0,
+    recognizedRevenue: Number(finance.recognizedRevenue) || 0,
+    pendingRevenue: Number(finance.pendingRevenue) || 0,
+    tradeCount: Number(finance.tradeCount) || 0,
     utilizationRate: 0
   };
 }
@@ -2283,21 +2317,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
       ...(campusConversionRates.get(row.campusName) || { trialConversionRate: 0, repeatCustomerConversionRate: 0 })
     }));
   }
-  const fallbackFinance = buildOperationsFinanceFallback(rangedData, court);
-  const financeIsPartial = !!financeOverviewData.__partial;
-  const financeBookingIncome = financeNumber(financeOverviewData, ['bookingIncome', 'courtIncome']);
-  const financeTotalIncome = financeNumber(financeOverviewData, ['totalIncome', 'cash']);
-  const financeRecognizedRevenue = financeNumber(financeOverviewData, ['recognizedRevenue', 'recognized']);
-  const financePendingRevenue = financeNumber(financeOverviewData, ['pendingRevenue', 'deferred']);
-  const totalIncome = selectedDateRangeActive
-    ? fallbackFinance.totalIncome
-    : financeIsPartial ? Math.max(financeTotalIncome, fallbackFinance.totalIncome) : (financeTotalIncome || fallbackFinance.totalIncome);
-  const recognizedRevenue = selectedDateRangeActive
-    ? fallbackFinance.recognizedRevenue
-    : financeIsPartial ? Math.max(financeRecognizedRevenue, fallbackFinance.recognizedRevenue) : (financeRecognizedRevenue || fallbackFinance.recognizedRevenue);
-  const pendingRevenue = selectedDateRangeActive
-    ? fallbackFinance.pendingRevenue
-    : financeIsPartial ? Math.max(financePendingRevenue, fallbackFinance.pendingRevenue) : (financePendingRevenue || fallbackFinance.pendingRevenue);
+  const financeRowsOverview = buildFinanceOverviewFromNormalizedRows(rangedData.financeNormalizedRows || []);
+  const financeOverviewValues = selectFinanceOverviewValues({
+    financeRowsOverview,
+    financeOverviewData,
+    selectedDateRangeActive
+  });
+  const totalIncome = financeOverviewValues.totalIncome;
+  const recognizedRevenue = financeOverviewValues.recognizedRevenue;
+  const pendingRevenue = financeOverviewValues.pendingRevenue;
   const totalLeads = (rangedData.leads || []).length;
   const convertedLeads = stageRows
     .filter(row => !['未转化', '已约体验', '已体验待转化', '已流失'].includes(row.stage))
@@ -2310,12 +2338,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
   const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
-  const revenueMix = selectedDateRangeActive ? [] : buildRevenueMix(financeOverviewData);
-  const fallbackRevenueMix = [
-    { name: '课程收入', value: fallbackFinance.courseIncome },
-    { name: '订场收入', value: fallbackFinance.bookingIncome },
-    { name: '会员储值', value: fallbackFinance.storedValueIncome }
-  ].filter(row => row.value > 0);
+  const financeSnapshotOverview = buildFinanceOverviewFromOverviewData(financeOverviewData);
+  const useRowsRevenueMix = selectedDateRangeActive || (financeRowsOverview.hasRows && (financeOverviewData.__partial || !financeSnapshotOverview.hasRows));
+  const revenueMix = (useRowsRevenueMix ? [
+    { name: '课程收入', value: financeOverviewValues.courseIncome },
+    { name: '订场收入', value: financeOverviewValues.bookingIncome },
+    { name: '会员储值', value: financeOverviewValues.storedValueIncome }
+  ] : buildRevenueMix(financeOverviewData)).filter(row => row.value > 0);
 
   const courtTrendSet = buildCourtTrendSet({
     campuses: data.campuses || [],
@@ -2352,7 +2381,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   const previousCourt = previousRangedData ? buildCourtMetricsForRange(data, previousRangedData, previousRange, now) : {};
-  const previousFallbackFinance = previousRangedData ? buildOperationsFinanceFallback(previousRangedData, previousCourt) : {};
+  const previousFinanceRowsOverview = previousRangedData ? buildFinanceOverviewFromNormalizedRows(previousRangedData.financeNormalizedRows || []) : {};
+  const previousFinanceOverviewValues = previousRangedData ? selectFinanceOverviewValues({
+    financeRowsOverview: previousFinanceRowsOverview,
+    financeOverviewData: previousRangedData.financeOverviewData || {},
+    selectedDateRangeActive: true
+  }) : {};
   const previousCourseRows = previousRangedData ? courseConversionRows(previousRangedData, { now }) : [];
   const previousCourseFunnel = buildCourseFunnel(previousCourseRows);
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
@@ -2371,15 +2405,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousCoachTrialConverted = previousCoachRows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
   const previousCoachOldCustomerBase = previousCoachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const previousCoachRenewalCount = previousCoachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
-  const previousOverviewValues = overviewValueMapFromFallback(previousFallbackFinance);
+  const previousOverviewValues = overviewValueMapFromFinance(previousFinanceOverviewValues);
   previousOverviewValues.utilizationRate = Number(previousCourt?.cards?.utilizationRate?.value) || 0;
   const overviewValues = {
     totalIncome,
     recognizedRevenue,
     pendingRevenue,
-    tradeCount: selectedDateRangeActive
-      ? fallbackFinance.tradeCount
-      : financeIsPartial ? Math.max(financeNumber(financeOverviewData, ['tradeCount']), fallbackFinance.tradeCount) : (financeNumber(financeOverviewData, ['tradeCount']) || fallbackFinance.tradeCount),
+    tradeCount: financeOverviewValues.tradeCount,
     utilizationRate: Number(court?.cards?.utilizationRate?.value) || 0
   };
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
@@ -2422,11 +2454,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
         pendingRevenue: { title: '未入账', value: pendingRevenue, unit: '元' },
         tradeCount: { title: '成交笔数', value: overviewValues.tradeCount, unit: '笔' }
       },
-      revenueMix: (revenueMix.length ? revenueMix : fallbackRevenueMix).map(row => (
-        row.name === '订场收入' && financeIsPartial && !financeBookingIncome && fallbackFinance.bookingIncome
-          ? { ...row, value: fallbackFinance.bookingIncome }
-          : row
-      )),
+      revenueMix,
       trends: overviewTrends,
       trendMeta: overviewTrendSet.meta,
       trendDiagnostics: buildTrendDiagnostics(overviewTrends, ['financeNormalizedRows', 'purchases', 'membershipOrders', 'courtTrends']),

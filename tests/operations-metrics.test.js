@@ -662,7 +662,10 @@ const allTimeCourtTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, { now: new Date('2026-06-08T12:00:00+08:00') });
-assert.deepStrictEqual(allTimeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-04'], 'all-time court KPI trends should use active business days instead of filling long zero stretches');
+assert.strictEqual(allTimeCourtTrendMetrics.court.trends.length, 30, 'all-time court KPI trends should return a visible continuous 30-day window');
+assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.date, '2026-06-04', 'all-time court KPI trends should end at the latest real business day');
+assert.strictEqual(allTimeCourtTrendMetrics.court.trends.find(row => row.date === '2026-06-01')?.bookingAmount, 100, 'all-time court KPI trends should expose real bucket income');
+assert.strictEqual(allTimeCourtTrendMetrics.court.trends.find(row => row.date === '2026-06-02')?.bookingAmount, 0, 'all-time court KPI trends should fill empty days with zero buckets');
 assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.bookingAmount, 220, 'all-time court KPI trends should expose real bucket income instead of cumulative income');
 const futureSafeCourtTrendMetrics = buildOperationsMetrics({
   campuses: [
@@ -691,7 +694,11 @@ const futureSafeCourtTrendMetrics = buildOperationsMetrics({
   coaches: [],
   membershipAccounts: [],
   membershipOrders: [],
-  financeNormalizedRows: [],
+  financeNormalizedRows: [
+    { id: 'future-safe-finance-past', businessDate: '2026-06-01', businessType: '散客订场', action: '收款', cashDelta: 100, recognizedRevenueDelta: 100, timeText: '18:00-19:00', sourceProject: '1号场' },
+    { id: 'future-safe-finance-today', businessDate: '2026-06-02', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '18:00-19:00', sourceProject: '1号场' },
+    { id: 'future-safe-finance-future', businessDate: '2026-06-03', businessType: '散客订场', action: '收款', cashDelta: 999, recognizedRevenueDelta: 999, timeText: '18:00-19:00', sourceProject: '1号场' }
+  ],
   financeOverviewData: {}
 }, { now: new Date('2026-06-02T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' } });
 assert.deepStrictEqual(futureSafeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'court KPI trends should never include future selected dates');
@@ -892,7 +899,8 @@ const allTimeCoachTrendMetrics = buildOperationsMetrics({
 }, {
   now: new Date('2026-06-04T12:00:00+08:00')
 });
-assert.deepStrictEqual(allTimeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-04'], 'all-time coach KPI trends should use active business days instead of filling long zero stretches');
+assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.length, 30, 'all-time coach KPI trends should return a visible continuous 30-day window');
+assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.revenue, 0, 'all-time coach KPI trends should fill empty days with zero buckets');
 assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.at(-1)?.date, '2026-06-04', 'all-time coach KPI trends should end at the latest coach activity date');
 const futureSafeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
@@ -958,7 +966,12 @@ const unifiedTrendMetrics = buildOperationsMetrics({
   ],
   membershipAccounts: [],
   membershipOrders: [],
-  financeNormalizedRows: [],
+  financeNormalizedRows: [
+    { id: 'prev-finance-course', businessDate: '2026-06-03', businessType: '课程', action: '收款', cashDelta: 100, recognizedRevenueDelta: 0, deferredRevenueDelta: 100 },
+    { id: 'prev-finance-court', businessDate: '2026-06-04', businessType: '散客订场', action: '收款', cashDelta: 80, recognizedRevenueDelta: 80, deferredRevenueDelta: 0, timeText: '18:00-19:00', sourceProject: '1号场' },
+    { id: 'current-finance-course', businessDate: '2026-06-10', businessType: '课程', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0, deferredRevenueDelta: 500 },
+    { id: 'current-finance-court', businessDate: '2026-06-11', businessType: '散客订场', action: '收款', cashDelta: 180, recognizedRevenueDelta: 180, deferredRevenueDelta: 0, timeText: '18:00-19:00', sourceProject: '1号场' }
+  ],
   financeOverviewData: {}
 }, {
   now: new Date('2026-06-14T12:00:00+08:00'),
@@ -1064,7 +1077,7 @@ const june3ConversionPoint = evidenceOnlyConversionTrendMetrics.conversion.trend
 assert.strictEqual(june1ConversionPoint?.dealRateNumerator, 0, 'conversion trends must not backfill a later purchase into the lead creation day');
 assert.strictEqual(june1ConversionPoint?.attendanceRateNumerator, 0, 'conversion trends must not backfill a later trial date into the lead creation day');
 assert.strictEqual(june2ConversionPoint?.attendanceRateNumerator, 1, 'conversion trends should count attendance on the actual evidence date');
-assert.strictEqual(june3ConversionPoint?.dealRateNumerator, 1, 'conversion trends should count a deal on the actual purchase date');
+assert.strictEqual(june3ConversionPoint?.dealRateNumerator, 0, 'closed conversion trends must not count a deal without prior attendance evidence');
 
 const asOfCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
@@ -1148,7 +1161,11 @@ const rangedSnapshotGuardMetrics = buildOperationsMetrics({
   schedule: [],
   membershipAccounts: [],
   financeNormalizedRows: [
+    { id: 'selected-course-finance', businessDate: '2026-06-22', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, deferredRevenueDelta: 1000 },
+    { id: 'selected-member-finance', businessDate: '2026-06-22', businessType: '会员储值', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0, deferredRevenueDelta: 500 },
     { id: 'selected-booking', businessDate: '2026-06-22', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '08:00-09:00', sourceProject: '1号场' },
+    { id: 'future-course-finance', businessDate: '2026-06-23', businessType: '课程', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 0, deferredRevenueDelta: 9999 },
+    { id: 'future-member-finance', businessDate: '2026-06-23', businessType: '会员储值', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 0, deferredRevenueDelta: 9999 },
     { id: 'future-booking', businessDate: '2026-06-23', businessType: '散客订场', action: '收款', cashDelta: 9999, recognizedRevenueDelta: 9999, timeText: '09:00-10:00', sourceProject: '1号场' },
     { id: 'previous-booking', businessDate: '2026-06-21', businessType: '散客订场', action: '收款', cashDelta: 100, recognizedRevenueDelta: 100, timeText: '10:00-11:00', sourceProject: '1号场' }
   ],
@@ -1205,6 +1222,111 @@ const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
 assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 0, 'empty selected ranges must stay zero instead of falling back to all-time finance totals');
 assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.tradeCount.value, 0, 'empty selected ranges must not reuse all-time trade counts');
 assert.deepStrictEqual(zeroRangedSnapshotGuardMetrics.overview.revenueMix, [], 'empty selected revenue mix must not show all-time finance categories');
+
+const financeSingleSourceMetrics = buildOperationsMetrics({
+  leads: [],
+  students: [],
+  purchases: [
+    { id: 'fallback-course-should-not-count', studentId: 'fallback-student', actualAmount: 999999, purchaseDate: '2026-06-01', status: 'active' }
+  ],
+  membershipOrders: [
+    { id: 'fallback-member-should-not-count', rechargeAmount: 999999, purchaseDate: '2026-06-01', status: 'active' }
+  ],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  financeNormalizedRows: [
+    { id: 'finance-course-1', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 120, deferredRevenueDelta: 880 },
+    { id: 'finance-member-1', businessDate: '2026-06-01', businessType: '会员储值', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0, deferredRevenueDelta: 500 },
+    { id: 'finance-booking-1', businessDate: '2026-06-01', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, deferredRevenueDelta: 0, timeText: '08:00-09:00', sourceProject: '1号场' }
+  ],
+  financeOverviewData: {
+    __partial: true,
+    all: {
+      cash: 9,
+      recognized: 8,
+      deferred: 7,
+      courseIncome: 6,
+      bookingIncome: 5,
+      storedValueIncome: 4,
+      tradeCount: 3
+    }
+  }
+}, {
+  now: new Date('2026-06-02T12:00:00+08:00')
+});
+assert.strictEqual(financeSingleSourceMetrics.overview.cards.totalIncome.value, 1700, 'operations overview total income must come from finance normalized rows, not stale financeOverviewData or fallback rows');
+assert.strictEqual(financeSingleSourceMetrics.overview.cards.recognizedRevenue.value, 320, 'operations overview recognized revenue must come from finance normalized rows');
+assert.strictEqual(financeSingleSourceMetrics.overview.cards.pendingRevenue.value, 1380, 'operations overview pending revenue must come from finance normalized rows');
+assert.strictEqual(financeSingleSourceMetrics.overview.cards.tradeCount.value, 3, 'operations overview trade count must use finance receipt rows');
+assert.deepStrictEqual(financeSingleSourceMetrics.overview.revenueMix, [
+  { name: '课程收入', value: 1000 },
+  { name: '订场收入', value: 200 },
+  { name: '会员储值', value: 500 }
+], 'operations revenue mix must use the same finance normalized rows as the overview cards');
+
+const noFinanceFallbackMetrics = buildOperationsMetrics({
+  leads: [],
+  students: [],
+  purchases: [
+    { id: 'no-finance-course', studentId: 'fallback-student', actualAmount: 999999, purchaseDate: '2026-06-01', status: 'active' }
+  ],
+  membershipOrders: [
+    { id: 'no-finance-member', rechargeAmount: 999999, purchaseDate: '2026-06-01', status: 'active' }
+  ],
+  courts: [
+    {
+      id: 'no-finance-court',
+      history: JSON.stringify([
+        { date: '2026-06-01', venue: '1号场', startTime: '08:00', endTime: '09:00', amount: 999999, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-02T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-02' }
+});
+assert.strictEqual(noFinanceFallbackMetrics.overview.cards.totalIncome.value, 0, 'operations overview total income must not fall back to business rows when finance rows are missing');
+assert.strictEqual(noFinanceFallbackMetrics.overview.cards.recognizedRevenue.value, 0, 'operations overview recognized revenue must not fall back to court rows when finance rows are missing');
+assert.strictEqual(noFinanceFallbackMetrics.overview.cards.pendingRevenue.value, 0, 'operations overview pending revenue must not fall back to purchase or member rows when finance rows are missing');
+assert.strictEqual(noFinanceFallbackMetrics.overview.cards.tradeCount.value, 0, 'operations overview trade count must not fall back to business rows when finance rows are missing');
+assert.deepStrictEqual(noFinanceFallbackMetrics.overview.revenueMix, [], 'operations revenue mix must not fall back to business rows when finance rows are missing');
+assert.strictEqual(noFinanceFallbackMetrics.overview.trends.find(row => row.date === '2026-06-01')?.totalIncome, 0, 'operations overview trends must not fall back to business rows when finance rows are missing');
+
+const closedFunnelMetrics = buildOperationsMetrics({
+  leads: [
+    { id: 'closed-lead-attended', leadDate: '2026-06-01', trialAt: '2026-06-01', source: '小红书' },
+    { id: 'closed-lead-deal-no-attendance', leadDate: '2026-06-01', source: '小红书', studentId: 'closed-student-deal' }
+  ],
+  students: [
+    { id: 'closed-student-deal', sourceLeadId: 'closed-lead-deal-no-attendance', dealPath: '体验转化' }
+  ],
+  purchases: [
+    { id: 'closed-purchase-deal', studentId: 'closed-student-deal', actualAmount: 1000, purchaseDate: '2026-06-02', status: 'active' }
+  ],
+  courts: [],
+  coaches: [],
+  schedule: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-03T12:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' }
+});
+const closedFunnelDealStep = closedFunnelMetrics.conversion.courseFunnel[3];
+const closedFunnelTrendPoint = closedFunnelMetrics.conversion.trends.find(row => row.date === '2026-06-02');
+assert.ok(closedFunnelDealStep.count <= closedFunnelMetrics.conversion.courseFunnel[2].count, 'closed funnel deal count must be a subset of attended leads');
+assert.ok(closedFunnelDealStep.transitionRate <= 100, 'closed funnel deal rate must never exceed 100%');
+assert.ok((closedFunnelTrendPoint?.dealRateNumerator || 0) <= (closedFunnelTrendPoint?.dealRateDenominator || 0), 'conversion trend deal numerator must be inside its attendance denominator');
+assert.ok((closedFunnelTrendPoint?.dealRate || 0) <= 100, 'conversion trend deal rate must never exceed 100%');
 
 const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
   campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
@@ -1267,9 +1389,11 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
   ],
   financeOverviewData: {}
 }, { now: new Date('2026-06-05T12:00:00+08:00') });
-assert.deepStrictEqual(financeBackedTrendMetrics.overview.trends.map(row => row.date), ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04'], 'all-time overview KPI trends should use real finance row dates when detailed purchase or court history rows are unavailable');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.length, 30, 'all-time overview KPI trends should return a visible continuous 30-day window when finance rows are available');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.at(-1)?.date, '2026-06-04', 'all-time overview KPI trends should end at the latest real finance row date');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-01')?.courseIncome, 1000, 'overview course income trend should come from real finance rows');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.storedValueIncome, 500, 'overview stored value trend should come from real finance rows');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-05-31')?.totalIncome, 0, 'all-time overview KPI trends should fill empty finance days with zero buckets');
 assert.strictEqual(financeBackedTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingAmount, 180, 'court trends should include real member booking finance rows without court history');
 assert.strictEqual(financeBackedTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03')?.dealRateNumerator, 1, 'conversion trends should use real follow-up evidence dates when the lead has no leadDate');
 assert.strictEqual(financeBackedTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.revenue, 1000, 'coach trends should use real course finance rows when purchase detail rows are unavailable');

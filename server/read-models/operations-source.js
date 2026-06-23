@@ -62,7 +62,7 @@ function invalidateOperationsSourceCache() {
 
 async function readOperationsRows({ table, getCachedScan, scanFirstRows, columns, limit = 1000 }) {
   if (typeof scanFirstRows === 'function') {
-    return scanFirstRows(table, { limit, columns, detectOverflow: false });
+    return scanFirstRows(table, { limit, columns, detectOverflow: true });
   }
   return getCachedScan(table, { columns });
 }
@@ -120,16 +120,16 @@ async function getOperationsBaseRows({
   ] = await Promise.all([
     listCampusesWithDefaults(),
     readLeadSourceRows({ isProductionRuntime, scanFirstRows, getCachedScan, table: T_LEADS, columns: OPERATIONS_LEAD_FIELDS }),
-    readOperationsRows({ table: T_STUDENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_STUDENT_FIELDS, limit: 1000 }).catch(() => []),
-    readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 1000 }).catch(() => []),
-    readOperationsRows({ table: T_ENTITLEMENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_FIELDS, limit: 1200 }).catch(() => []),
-    readOperationsRows({ table: T_ENTITLEMENT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_LEDGER_FIELDS, limit: 2000 }).catch(() => []),
-    readOperationsRows({ table: T_LEAD_FOLLOWUPS, getCachedScan, scanFirstRows, columns: OPERATIONS_FOLLOWUP_FIELDS, limit: 1000 }).catch(() => []),
-    readOperationsRows({ table: T_COURTS, getCachedScan, scanFirstRows, columns: OPERATIONS_COURT_FIELDS, limit: 500 }).catch(() => []),
-    readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 1000 }).catch(() => []),
-    readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 1000 }).catch(() => []),
+    readOperationsRows({ table: T_STUDENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_STUDENT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_ENTITLEMENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_ENTITLEMENT_LEDGER, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_LEDGER_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_LEAD_FOLLOWUPS, getCachedScan, scanFirstRows, columns: OPERATIONS_FOLLOWUP_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_COURTS, getCachedScan, scanFirstRows, columns: OPERATIONS_COURT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_MEMBERSHIP_ACCOUNTS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS, limit: 2000 }),
+    readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
-    readOperationsRows({ table: T_SCHEDULE, getCachedScan, scanFirstRows, columns: OPERATIONS_SCHEDULE_FIELDS, limit: 700 }).catch(() => []),
+    readOperationsRows({ table: T_SCHEDULE, getCachedScan, scanFirstRows, columns: OPERATIONS_SCHEDULE_FIELDS, limit: 2000 }),
     useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
       ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
       : Promise.resolve(null)

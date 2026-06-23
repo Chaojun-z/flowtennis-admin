@@ -40,6 +40,7 @@ async function buildOperationsPagePayload({
   filterLoadAllForUser,
   mergeDuplicateLeadRows,
   buildFinancePageSnapshot,
+  getFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
   tables
 }) {
@@ -55,6 +56,9 @@ async function buildOperationsPagePayload({
     getFinancePageSnapshotIfCached,
     tables
   });
+  const fullFinanceSnapshot = useGlobalFinanceSnapshot && typeof getFinancePageSnapshot === 'function'
+    ? await getFinancePageSnapshot()
+    : null;
 
   const scoped = filterLoadAllForUser({
     campuses: baseRows.campuses,
@@ -71,7 +75,7 @@ async function buildOperationsPagePayload({
     schedule: baseRows.schedule
   }, user);
 
-  const scopedFinanceSnapshot = baseRows.cachedFinanceSnapshot || buildFinancePageSnapshot({
+  const scopedFinanceSnapshot = fullFinanceSnapshot || baseRows.cachedFinanceSnapshot || buildFinancePageSnapshot({
     campuses: scoped.campuses,
     students: scoped.students,
     purchases: scoped.purchases,
@@ -80,7 +84,7 @@ async function buildOperationsPagePayload({
     membershipAccounts: scoped.membershipAccounts,
     schedule: scoped.schedule
   });
-  const financeOverviewData = baseRows.cachedFinanceSnapshot
+  const financeOverviewData = fullFinanceSnapshot || baseRows.cachedFinanceSnapshot
     ? scopedFinanceSnapshot.financeOverviewData
     : { ...(scopedFinanceSnapshot.financeOverviewData || {}), __partial: true };
 
@@ -115,6 +119,7 @@ async function handleOperationsPageData({
   filterLoadAllForUser,
   mergeDuplicateLeadRows,
   buildFinancePageSnapshot,
+  getFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
   FINANCE_PAGE_COURT_PROJECTION_FIELDS,
   tables
@@ -135,6 +140,7 @@ async function handleOperationsPageData({
     filterLoadAllForUser,
     mergeDuplicateLeadRows,
     buildFinancePageSnapshot,
+    getFinancePageSnapshot,
     getFinancePageSnapshotIfCached,
     tables
   });

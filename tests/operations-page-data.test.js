@@ -29,13 +29,14 @@ const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
 assert.match(operationsPageSource, /function handleOperationsPageData/, 'operations page-data module should expose handleOperationsPageData');
 assert.match(operationsPageSource, /buildOperationsMetrics/, 'operations page-data should delegate calculations to server/metrics/operations-metrics.js');
 assert.match(courtReadModelSource, /module\.exports = \{[\s\S]*bookingDurationHours[\s\S]*courtHistoryBusinessDate[\s\S]*isCourtBookingHistoryRow[\s\S]*normalizeCourtHistory/, 'court account read model should export the court history helpers used by operations metrics');
-assert.match(operationsPageSource, /getFinancePageSnapshotIfCached/, 'operations page-data should reuse only the cached finance page snapshot when scope allows it');
-assert.doesNotMatch(operationsPageSource, /getFinancePageSnapshot\(\)/, 'operations page-data should not cold-build the full finance snapshot');
+assert.match(operationsPageSource, /getFinancePageSnapshot/, 'operations page-data should be able to read the same full finance snapshot as the finance overview');
+assert.match(operationsPageSource, /await getFinancePageSnapshot\(\)/, 'operations page-data should cold-build the full finance snapshot instead of depending on a lucky cache hit');
 assert.match(operationsPageSource, /scanFirstRows/, 'operations page-data should use projected first-row reads instead of full raw table scans');
 assert.match(operationsSourceModelSource, /OPERATIONS_CACHE_TTL_MS/, 'operations source model should cache raw read rows briefly so date switches do not rescan every table');
 assert.match(leadSourceReadModelSource, /const LEAD_SOURCE_READ_LIMIT = 2000;/, 'shared lead source should use one current full-pool read limit instead of page-specific 300/600 limits');
 assert.match(leadSourceReadModelSource, /detectOverflow:\s*true/, 'shared lead source should fail loudly when the unified read limit is exceeded');
 assert.match(operationsSourceModelSource, /readLeadSourceRows/, 'operations conversion should read leads from the shared lead source');
+assert.match(operationsSourceModelSource, /detectOverflow:\s*true/, 'operations source reads should fail loudly when a table exceeds the trusted projection limit');
 assert.doesNotMatch(operationsPageSource, /T_LEADS[\s\S]{0,160}limit:\s*600/, 'operations conversion must not keep its own 600-row lead source');
 assert.match(operationsPageSource, /require\('\.\.\/read-models\/operations-source\.js'\)/, 'operations page-data should depend on the shared operations source model');
 assert.match(operationsSourceModelSource, /function getOperationsBaseRows/, 'operations source model should own the shared base row loading');
@@ -76,7 +77,7 @@ assert.match(residualSource, /path==='\/page-data\/operations'&&method==='GET'/,
 assert.match(residualSource, /handleOperationsPageData/, 'residual page-data routes should delegate the operations route');
 assert.doesNotMatch(apiSource, /\/page-data\/operations[\s\S]{0,300}buildOperationsMetrics/, 'api/index.js should not inline operations calculations');
 assert.match(apiSource, /T_LEADS/, 'api/index.js should pass lead tables into extracted page-data routes');
-assert.match(apiSource, /getFinancePageSnapshotIfCached/, 'api/index.js should pass the cached finance snapshot accessor into extracted page-data routes');
+assert.match(apiSource, /getFinancePageSnapshot/, 'api/index.js should pass the full finance snapshot accessor into extracted page-data routes');
 assert.match(apiSource, /scanFirstRows/, 'api/index.js should pass projected read support into extracted page-data routes');
 assert.ok(
   budget.extractedModules.includes('server/page-data/operations-page.js') &&

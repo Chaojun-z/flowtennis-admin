@@ -862,17 +862,7 @@ function operationsPointDateSerial(date = '') {
 }
 
 function operationsSparklineSegments(coords = []) {
-  if (!coords.length) return [];
-  return coords.reduce((segments, point, index) => {
-    const previous = coords[index - 1];
-    const shouldBreak = previous &&
-      Number.isFinite(point.dateSerial) &&
-      Number.isFinite(previous.dateSerial) &&
-      point.dateSerial - previous.dateSerial > 1;
-    if (!segments.length || shouldBreak) segments.push([]);
-    segments[segments.length - 1].push(point);
-    return segments;
-  }, []);
+  return coords.length ? [coords] : [];
 }
 
 function operationsAreaPath(linePath = '', segment = [], height = 0) {
