@@ -28,6 +28,7 @@ assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260613-finance-list-v1/, 'index.html should version coachops.js after finance list updates');
+assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260623-single-trend-line-v1/, 'index.html should bust stale cached operations.js after single-point trend line updates');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260609-campus-scope-v1/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
@@ -37,7 +38,7 @@ assert.match(html, /id="sidebarHost"/, 'index.html should keep the shared sideba
 assert.match(html, /id="topbarHost"/, 'index.html should keep the shared topbar mount host');
 assert.doesNotMatch(html, /goPage\('leads',this\)[\s\S]*线索池/, 'index.html should not keep sidebar entries inline');
 assert.doesNotMatch(html, /<div class="topbar">[\s\S]*id="topTitle"/, 'index.html should not keep topbar markup inline');
-assert.match(components, /goPage\('leads',this\)[\s\S]*线索管理/, 'components.js should render the leads sidebar entry');
+assert.match(components, /goPage\('leads',this\)[\s\S]*线索池/, 'components.js should render the leads sidebar entry');
 assert.match(components, /function renderTopbarShell\(/, 'components.js should render the shared topbar');
 assert.match(html, /id="page-leads"/, 'index.html should render the leads page section');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js\?v=/, 'index.html should version schedule.js to avoid stale modal behavior');

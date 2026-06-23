@@ -180,13 +180,13 @@ function operationsTrendComparisonForDisplay(comparison = {}, points = []) {
 function operationsCourtTrendValues(trends = [], key = '') {
   const values = operationsTrendValues(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  return values.length >= 2 ? values : [];
+  return values.length ? values : [];
 }
 
 function operationsCourtTrendPoints(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  return points.length >= 2 ? points : [];
+  return points.length ? points : [];
 }
 
 function operationsCourtSparklineSvg(points = [], key = '') {
@@ -357,7 +357,7 @@ function renderOperationsOverview(data) {
 function operationsOverviewTrendPoints(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  return points.length >= 2 ? points : [];
+  return points.length ? points : [];
 }
 
 function renderOperationsOverviewKpis(data = {}) {
@@ -777,14 +777,13 @@ function renderOperationsCoachKpi(card = {}) {
 function operationsCoachTrendValues(trends = [], key = '') {
   const values = operationsTrendValues(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  if (values.length >= 2) return values;
-  return [];
+  return values.length ? values : [];
 }
 
 function operationsCoachTrendPoints(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  return points.length >= 2 ? points : [];
+  return points.length ? points : [];
 }
 
 function operationsTrendColor(key, values = []) {
@@ -940,22 +939,23 @@ function operationsSmoothPath(coords = []) {
 
 function operationsKpiSparklineSvg(points = [], key = '', className = 'operations-coach-kpi-sparkline') {
   const list = operationsKpiPointList(points);
-  if (list.length < 2) return `<div class="${esc(className)}"></div>`;
-  const color = operationsTrendColor(key, list.map(point => point.value));
-  const values = list.map(point => point.value);
+  if (!list.length) return `<div class="${esc(className)}"></div>`;
+  const drawablePoints = list.length === 1 ? [list[0], { ...list[0] }] : list;
+  const color = operationsTrendColor(key, drawablePoints.map(point => point.value));
+  const values = drawablePoints.map(point => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const isFlat = max === min;
   const range = Math.max(1, max - min);
   const width = 132;
   const height = 64;
-  const dateSerials = list.map(point => operationsPointDateSerial(point.date)).filter(Number.isFinite);
-  const minDateSerial = dateSerials.length === list.length ? Math.min(...dateSerials) : null;
-  const maxDateSerial = dateSerials.length === list.length ? Math.max(...dateSerials) : null;
-  const coords = list.map((point, index) => {
+  const dateSerials = drawablePoints.map(point => operationsPointDateSerial(point.date)).filter(Number.isFinite);
+  const minDateSerial = dateSerials.length === drawablePoints.length ? Math.min(...dateSerials) : null;
+  const maxDateSerial = dateSerials.length === drawablePoints.length ? Math.max(...dateSerials) : null;
+  const coords = drawablePoints.map((point, index) => {
     const dateSerial = operationsPointDateSerial(point.date);
     const hasDateX = minDateSerial != null && maxDateSerial != null && maxDateSerial > minDateSerial && Number.isFinite(dateSerial);
-    const x = hasDateX ? Math.round((dateSerial - minDateSerial) * width / (maxDateSerial - minDateSerial)) : (list.length === 1 ? 0 : Math.round(index * width / (list.length - 1)));
+    const x = hasDateX ? Math.round((dateSerial - minDateSerial) * width / (maxDateSerial - minDateSerial)) : Math.round(index * width / Math.max(1, drawablePoints.length - 1));
     const y = isFlat ? Math.round(height / 2) : Math.round(8 + (height - 18) * (1 - ((point.value - min) / range)));
     return { ...point, dateSerial, x, y };
   });
@@ -1155,7 +1155,6 @@ function operationsConversionKpiCards(funnel = [], standardRates = {}) {
 function operationsConversionTrendPoints(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
-  if (points.length < 2) return [];
   return points;
 }
 
