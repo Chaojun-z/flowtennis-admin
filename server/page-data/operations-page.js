@@ -1,4 +1,5 @@
 const { buildOperationsMetrics } = require('../metrics/operations-metrics.js');
+const { readLeadSourceRows } = require('../lead-source-read-model.js');
 
 const OPERATIONS_LEAD_FIELDS = [
   'id', 'displayName', 'name', 'source', 'campus', 'campusName', 'owner', 'coach', 'coachName',
@@ -112,6 +113,7 @@ async function getOperationsBaseRows({
   listCampusesWithDefaults,
   getCachedScan,
   scanFirstRows,
+  isProductionRuntime,
   mergeDuplicateLeadRows,
   getFinancePageSnapshotIfCached,
   tables
@@ -148,7 +150,7 @@ async function getOperationsBaseRows({
     cachedFinanceSnapshot
   ] = await Promise.all([
     listCampusesWithDefaults(),
-    readOperationsRows({ table: T_LEADS, getCachedScan, scanFirstRows, columns: OPERATIONS_LEAD_FIELDS, limit: 600 }).catch(() => []),
+    readLeadSourceRows({ isProductionRuntime, scanFirstRows, getCachedScan, table: T_LEADS, columns: OPERATIONS_LEAD_FIELDS }),
     readOperationsRows({ table: T_STUDENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_STUDENT_FIELDS, limit: 1000 }).catch(() => []),
     readOperationsRows({ table: T_PURCHASES, getCachedScan, scanFirstRows, columns: OPERATIONS_PURCHASE_FIELDS, limit: 1000 }).catch(() => []),
     readOperationsRows({ table: T_ENTITLEMENTS, getCachedScan, scanFirstRows, columns: OPERATIONS_ENTITLEMENT_FIELDS, limit: 1200 }).catch(() => []),
@@ -188,6 +190,7 @@ async function buildOperationsPagePayload({
   listCampusesWithDefaults,
   getCachedScan,
   scanFirstRows,
+  isProductionRuntime,
   filterLoadAllForUser,
   mergeDuplicateLeadRows,
   buildFinancePageSnapshot,
@@ -201,6 +204,7 @@ async function buildOperationsPagePayload({
     listCampusesWithDefaults,
     getCachedScan,
     scanFirstRows,
+    isProductionRuntime,
     mergeDuplicateLeadRows,
     getFinancePageSnapshotIfCached,
     tables
@@ -271,6 +275,7 @@ async function handleOperationsPageData({
   listCampusesWithDefaults,
   getCachedScan,
   scanFirstRows,
+  isProductionRuntime,
   getFinancePageScheduleRows,
   filterLoadAllForUser,
   mergeDuplicateLeadRows,
@@ -291,6 +296,7 @@ async function handleOperationsPageData({
     listCampusesWithDefaults,
     getCachedScan,
     scanFirstRows,
+    isProductionRuntime,
     filterLoadAllForUser,
     mergeDuplicateLeadRows,
     buildFinancePageSnapshot,

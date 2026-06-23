@@ -7,15 +7,18 @@ const operationsPagePath = path.join(repoRoot, 'server/page-data/operations-page
 const operationsMetricsPath = path.join(repoRoot, 'server/metrics/operations-metrics.js');
 const residualPageDataPath = path.join(repoRoot, 'server/page-data/residual-pages.js');
 const courtReadModelPath = path.join(repoRoot, 'server/page-data/court-account-read-model.js');
+const leadSourceReadModelPath = path.join(repoRoot, 'server/lead-source-read-model.js');
 const apiIndexPath = path.join(repoRoot, 'api/index.js');
 const budgetPath = path.join(repoRoot, 'config/api-index-budget.json');
 
 assert.ok(fs.existsSync(operationsPagePath), 'operations page-data route should live in server/page-data/operations-page.js');
 assert.ok(fs.existsSync(operationsMetricsPath), 'operations metric calculations should live in server/metrics/operations-metrics.js');
+assert.ok(fs.existsSync(leadSourceReadModelPath), 'lead list and operations conversion should share one lead source read model');
 
 const operationsPageSource = fs.readFileSync(operationsPagePath, 'utf8');
 const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
 const courtReadModelSource = fs.readFileSync(courtReadModelPath, 'utf8');
+const leadSourceReadModelSource = fs.readFileSync(leadSourceReadModelPath, 'utf8');
 const residualSource = fs.readFileSync(residualPageDataPath, 'utf8');
 const apiSource = fs.readFileSync(apiIndexPath, 'utf8');
 const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
@@ -27,6 +30,10 @@ assert.match(operationsPageSource, /getFinancePageSnapshotIfCached/, 'operations
 assert.doesNotMatch(operationsPageSource, /getFinancePageSnapshot\(\)/, 'operations page-data should not cold-build the full finance snapshot');
 assert.match(operationsPageSource, /scanFirstRows/, 'operations page-data should use projected first-row reads instead of full raw table scans');
 assert.match(operationsPageSource, /OPERATIONS_CACHE_TTL_MS/, 'operations page-data should cache raw read rows briefly so date switches do not rescan every table');
+assert.match(leadSourceReadModelSource, /const LEAD_SOURCE_READ_LIMIT = 2000;/, 'shared lead source should use one current full-pool read limit instead of page-specific 300/600 limits');
+assert.match(leadSourceReadModelSource, /detectOverflow:\s*true/, 'shared lead source should fail loudly when the unified read limit is exceeded');
+assert.match(operationsPageSource, /readLeadSourceRows/, 'operations conversion should read leads from the shared lead source');
+assert.doesNotMatch(operationsPageSource, /T_LEADS[\s\S]{0,160}limit:\s*600/, 'operations conversion must not keep its own 600-row lead source');
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations page-data cache should be scoped before reuse');
 assert.match(operationsPageSource, /OPERATIONS_RESULT_CACHE_TTL_MS/, 'operations page-data should cache computed dashboard results for fast date switching');
 assert.match(operationsPageSource, /OPERATIONS_RESULT_STALE_TTL_MS/, 'operations page-data should keep stale computed results briefly for sub-second repeat loads');

@@ -1,3 +1,5 @@
+const { readLeadSourceRows } = require('./lead-source-read-model.js');
+
 function createLeadsRoutes(deps={}){
   const {
     init,sendJson,getCachedScan,get,scan,put,filterLoadAllForUser,isProductionRuntime,isCampusScopedAdmin,
@@ -24,7 +26,7 @@ function createLeadsRoutes(deps={}){
       const leadId=cleanLeadText(query.get('leadId'));
       const rows=isProductionRuntime()?await scanFirstRows(T_LEAD_FOLLOWUPS,{limit:PRODUCTION_PAGE_READ_LIMITS.leadFollowups,columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
       if(!isCampusScopedAdmin(user))return sendJson(res,leadId?rows.filter(row=>String(row.leadId||'')===leadId):rows);
-      const leads=await getCachedScan(T_LEADS,{columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+      const leads=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
       const scoped=filterLoadAllForUser({leads,leadFollowups:rows},user).leadFollowups;
       return sendJson(res,leadId?scoped.filter(row=>String(row.leadId||'')===leadId):scoped);
     }
@@ -33,7 +35,7 @@ function createLeadsRoutes(deps={}){
       await init();
       await ensureLeadTables();
       if(method==='GET'){
-        const rows=isProductionRuntime()?await scanFirstRows(T_LEADS,{limit:PRODUCTION_PAGE_READ_LIMITS.leads,columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]):await getCachedScan(T_LEADS,{columns:LEAD_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+        const rows=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
         const q=cleanLeadText(query.get('q')).toLowerCase();
         const source=cleanLeadText(query.get('source'));
         const consultType=cleanLeadText(query.get('consultType'));

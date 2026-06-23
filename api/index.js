@@ -37,6 +37,7 @@ const { createPackageRoutes, assertCanDeletePackage } = require('../server/packa
 const { createStudentRoutes } = require('../server/students-routes');
 const { createFeedbackRoutes } = require('../server/feedbacks-routes');
 const { createCoachProposalRoutes } = require('../server/coach-proposals-routes');
+const { LEAD_SOURCE_READ_LIMIT } = require('../server/lead-source-read-model.js');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const { buildNotificationCenterSnapshot, toChinaDateKey } = require('../scripts/lib/notification-center-export.js');
 const { buildFeishuCard: buildFeishuScheduleCard, generateReport: generateFeishuScheduleReport } = require('../standalone-services/feishu-report.js');
@@ -291,7 +292,7 @@ const HOT_GET_TABLES=new Map([
 ]);
 const PRODUCTION_PAGE_READ_LIMITS={
   default:500,
-  leads:300,
+  leads:LEAD_SOURCE_READ_LIMIT,
   leadFollowups:1000,
   schedule:800,entitlementLedger:2000,
   [T_COURTS]:1000,
@@ -4161,7 +4162,7 @@ const {
   computeCourtFinance
 });
 const handleResidualPageDataRoutes=createResidualPageDataRoutes({
-  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,scanFirstRows,getFinancePageScheduleRows,
+  init,sendJson:routeSendJson,listCampusesWithDefaults,getCachedScan,scanFirstRows,isProductionRuntime,getFinancePageScheduleRows,
   filterLoadAllForUser,mergeDuplicateLeadRows,buildFinancePageSnapshot,getFinancePageSnapshotIfCached,FINANCE_PAGE_COURT_PROJECTION_FIELDS,
   tables:{T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS,T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE}
 });

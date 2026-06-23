@@ -19,6 +19,7 @@ assert.match(storageSource, /const normalizedLimit=limit===undefined\?production
 assert.match(storageSource, /function productionReadTruncatedError\(t,limit\)/, '生产限量读取应有明确截断错误');
 assert.match(storageSource, /scanFirstRows\(t,\{limit:normalizedLimit,detectOverflow:true\}\)/, '生产 cappedScan 应多读一条检测是否被截断');
 assert.doesNotMatch(storageSource, /console\.error\('cappedScan err:',\s*e\);\s*return \[\];/, '生产 cappedScan 不应在截断或读取失败时静默返回空数组');
+assert.match(apiSource, /leads:LEAD_SOURCE_READ_LIMIT,/, '线索池和经营分析必须共用同一个线索读取上限，避免 297/353 这种多口径');
 assert.match(apiSource, /const LEAD_LIST_PROJECTION_FIELDS=\[/, '线索池应定义首屏轻投影字段，避免继续全量扫描 leads 大对象');
 assert.match(apiSource, /const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=\[/, '线索跟进列表应定义轻投影字段，避免继续全量扫描 followups');
 assert.match(apiSource, /const ADMIN_USER_LIST_PROJECTION_FIELDS=\[/, '账号管理应定义首屏轻投影字段，避免继续全量扫描 users 大对象');
@@ -59,8 +60,8 @@ assert.match(
 
 assert.match(
   leadsRoutesSource,
-  /const rows=isProductionRuntime\(\)\?await scanFirstRows\(T_LEADS,\{limit:PRODUCTION_PAGE_READ_LIMITS\.leads,columns:LEAD_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\):await getCachedScan\(T_LEADS,\{columns:LEAD_LIST_PROJECTION_FIELDS\}\)\.catch\(\(\)=>\[\]\);/,
-  '线索池列表应在 production 改成限量轻投影读取'
+  /const rows=await readLeadSourceRows\(\{isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS\}\);/,
+  '线索池列表和经营分析应共用同一个线索读取模型'
 );
 
 assert.match(apiSource, /const FINANCE_PAGE_COURT_PROJECTION_FIELDS=\[/, '财务总览应定义订场账户轻投影字段');
