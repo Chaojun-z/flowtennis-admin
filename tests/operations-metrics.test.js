@@ -228,6 +228,53 @@ assert.strictEqual(currentMonthSlot.occupiedCount, 4, 'heatmap slots should expo
 assert.strictEqual(currentMonthSlot.dayCount, 20, 'heatmap slots should expose selected business days for hover denominator');
 assert.strictEqual(currentMonthSlot.capacityMinutes, 600, 'heatmap slots should expose capacity minutes for hover denominator');
 
+const singleDayTrendMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡', venues: [{ id: 'v1', name: '1号场', status: 'active' }] }],
+  leads: [
+    { id: 'lead-old', leadStage: '课程转化', studentId: 'student-old', source: '小红书', leadDate: '2026-06-16', campus: 'mabao' },
+    { id: 'lead-today', leadStage: '课程转化', studentId: 'student-today', source: '转介绍', leadDate: '2026-06-18', campus: 'mabao' }
+  ],
+  students: [
+    { id: 'student-old', sourceLeadId: 'lead-old', primaryCoach: 'Siren 教练' },
+    { id: 'student-today', sourceLeadId: 'lead-today', primaryCoach: 'Siren 教练' }
+  ],
+  purchases: [
+    { id: 'purchase-old', studentId: 'student-old', amount: 800, actualAmount: 800, purchaseDate: '2026-06-16', ownerCoach: 'Siren 教练' },
+    { id: 'purchase-today', studentId: 'student-today', amount: 1200, actualAmount: 1200, purchaseDate: '2026-06-18', ownerCoach: 'Siren 教练' }
+  ],
+  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'mabao' }],
+  schedule: [
+    { id: 'schedule-old', coach: 'Siren 教练', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-16T10:00:00+08:00', endTime: '2026-06-16T11:00:00+08:00', status: '已排课' },
+    { id: 'schedule-today', coach: 'Siren 教练', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-18T10:00:00+08:00', endTime: '2026-06-18T11:00:00+08:00', status: '已排课' }
+  ],
+  courts: [
+    {
+      id: 'court-single-day-trend',
+      campus: 'mabao',
+      history: JSON.stringify([
+        { id: 'court-old', date: '2026-06-16', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '09:00', amount: 100, type: '消费', category: '散客订场' },
+        { id: 'court-today', date: '2026-06-18', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '09:00', amount: 200, type: '消费', category: '散客订场' }
+      ])
+    }
+  ],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-20T00:00:00+08:00'),
+  dateRange: { startDate: '2026-06-18', endDate: '2026-06-18' }
+});
+
+assert.strictEqual(singleDayTrendMetrics.conversion.cards.totalLeads.value, 1, 'single-day KPI should still use the selected day only');
+['overview', 'court', 'conversion', 'coach'].forEach(section => {
+  assert.strictEqual(singleDayTrendMetrics[section].trendDiagnostics.pointCount, singleDayTrendMetrics[section].trends.length, `${section} trend diagnostics should match returned trend rows`);
+  assert.strictEqual(singleDayTrendMetrics[section].trendDiagnostics.emptyReason, '', `${section} trend diagnostics should not report empty when trend rows exist`);
+  assert.ok(singleDayTrendMetrics[section].trendDiagnostics.firstDate <= '2026-06-16', `${section} single-day filter should still expose a real multi-day trend window`);
+  assert.strictEqual(singleDayTrendMetrics[section].trendDiagnostics.lastDate, '2026-06-18', `${section} trend window should end at the selected day`);
+  assert.ok(singleDayTrendMetrics[section].trends.length >= 2, `${section} should return enough trend points for a visible top sparkline even when the filter is one day`);
+});
+
 const allTimeSpanMetrics = buildOperationsMetrics({
   campuses: [
     {
@@ -1136,9 +1183,9 @@ assert.strictEqual(
   rangedSnapshotGuardMetrics.overview.cards.totalIncome.value,
   'selected revenue mix total must equal the total income card'
 );
-assert.deepStrictEqual(rangedSnapshotGuardMetrics.overview.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for overview trends');
-assert.deepStrictEqual(rangedSnapshotGuardMetrics.court.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for court trends');
-assert.deepStrictEqual(rangedSnapshotGuardMetrics.coach.trends.map(row => row.date), ['2026-06-22'], 'future selected dates should be clipped to today for coach trends');
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.overview.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for overview trends');
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.court.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for court trends');
+assert.deepStrictEqual(rangedSnapshotGuardMetrics.coach.trends.map(row => row.date), ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'], 'future selected dates should be clipped to today while preserving a real trend window for coach trends');
 
 const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
   leads: [],

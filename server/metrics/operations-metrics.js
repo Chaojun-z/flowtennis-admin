@@ -130,6 +130,25 @@ function previousDateRange(range = {}, now = new Date()) {
   return startDate && endDate ? { startDate, endDate } : null;
 }
 
+function operationsTrendDateRange(range = {}, now = new Date()) {
+  const normalized = futureSafeDateRange(range, now);
+  if (!normalized.startDate || !normalized.endDate) return normalized;
+  if (normalized.startDate !== normalized.endDate) return normalized;
+  const startDate = addUtcDays(normalized.endDate, -6);
+  return startDate ? { startDate, endDate: normalized.endDate } : normalized;
+}
+
+function buildTrendDiagnostics(trends = [], sourceTypes = []) {
+  const dates = (trends || []).map(row => String(row?.date || '')).filter(Boolean).sort();
+  return {
+    pointCount: (trends || []).length,
+    sourceTypes,
+    firstDate: dates[0] || '',
+    lastDate: dates[dates.length - 1] || '',
+    emptyReason: dates.length ? '' : 'no_trend_points'
+  };
+}
+
 function trendPeriodForDays(days = []) {
   const sorted = [...new Set(days || [])].filter(Boolean).sort();
   if (!sorted.length) return 'day';
@@ -2221,6 +2240,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const now = options.now || new Date();
   const dateRange = normalizeDateRange(options.dateRange || {});
   const reportingDateRange = futureSafeDateRange(dateRange, now);
+  const trendDateRange = operationsTrendDateRange(reportingDateRange, now);
   const selectedDateRangeActive = isDateRangeActive(reportingDateRange);
   const previousRange = previousDateRange(reportingDateRange, now);
   const realAllPurchases = (data.purchases || []).filter(row => {
@@ -2228,6 +2248,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     return !day || day <= beijingDateKey(now);
   });
   const rangedData = buildRangedOperationsData(data, reportingDateRange);
+  const trendRangedData = isDateRangeActive(trendDateRange) ? buildRangedOperationsData(data, trendDateRange) : rangedData;
   const previousRangedData = previousRange ? buildRangedOperationsData(data, previousRange) : null;
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
   const financeOverviewData = rangedData.financeOverviewData || {};
@@ -2298,34 +2319,35 @@ function buildOperationsMetrics(data = {}, options = {}) {
 
   const courtTrendSet = buildCourtTrendSet({
     campuses: data.campuses || [],
-    courts: rangedData.courts || data.courts || [],
-    schedule: rangedData.schedule || [],
+    courts: trendRangedData.courts || data.courts || [],
+    schedule: trendRangedData.schedule || [],
     entitlements: data.entitlements || [],
-    entitlementLedger: rangedData.entitlementLedger || [],
-    financeNormalizedRows: rangedData.financeNormalizedRows || [],
-    dateRange: reportingDateRange,
+    entitlementLedger: trendRangedData.entitlementLedger || [],
+    financeNormalizedRows: trendRangedData.financeNormalizedRows || [],
+    dateRange: trendDateRange,
     now
   });
   const courtTrends = courtTrendSet.rows;
   const overviewTrendSet = buildOverviewTrendSet({
-    purchases: rangedData.purchases || [],
-    membershipOrders: rangedData.membershipOrders || [],
+    purchases: trendRangedData.purchases || [],
+    membershipOrders: trendRangedData.membershipOrders || [],
     courtTrends,
-    financeNormalizedRows: rangedData.financeNormalizedRows || [],
-    dateRange: reportingDateRange,
+    financeNormalizedRows: trendRangedData.financeNormalizedRows || [],
+    dateRange: trendDateRange,
     now
   });
   const overviewTrends = overviewTrendSet.rows;
-  const conversionTrendSet = buildConversionTrendSet({ rows: courseRows, purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
-  const financeCoachPurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
-  const coachTrendPurchases = (rangedData.purchases || []).length ? (rangedData.purchases || []) : financeCoachPurchases;
+  const trendCourseRows = courseConversionRows(trendRangedData, { now });
+  const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
+  const financeCoachPurchases = financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []);
+  const coachTrendPurchases = (trendRangedData.purchases || []).length ? (trendRangedData.purchases || []) : financeCoachPurchases;
   const allCoachTrendPurchases = realAllPurchases.length ? realAllPurchases : financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
-    schedule: rangedData.schedule || [],
+    schedule: trendRangedData.schedule || [],
     purchases: coachTrendPurchases,
     allPurchases: allCoachTrendPurchases,
-    dateRange: reportingDateRange,
+    dateRange: trendDateRange,
     campuses: data.campuses || [],
     now
   });
@@ -2407,12 +2429,14 @@ function buildOperationsMetrics(data = {}, options = {}) {
       )),
       trends: overviewTrends,
       trendMeta: overviewTrendSet.meta,
+      trendDiagnostics: buildTrendDiagnostics(overviewTrends, ['financeNormalizedRows', 'purchases', 'membershipOrders', 'courtTrends']),
       trendComparisons: trendComparisonMap(overviewValues, previousOverviewValues, ['totalIncome', 'recognizedRevenue', 'pendingRevenue', 'tradeCount', 'utilizationRate'], canComparePrevious)
     },
     court: {
       ...court,
       trends: courtTrends,
       trendMeta: courtTrendSet.meta,
+      trendDiagnostics: buildTrendDiagnostics(courtTrends, ['courts.history', 'schedule', 'financeNormalizedRows']),
       trendComparisons: trendComparisonMap(courtValues, previousCourtValues, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'], canComparePrevious)
     },
     conversion: {
@@ -2434,6 +2458,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       courseRows,
       trends: conversionTrendSet.rows,
       trendMeta: conversionTrendSet.meta,
+      trendDiagnostics: buildTrendDiagnostics(conversionTrendSet.rows, ['leads', 'leadFollowups', 'students', 'purchases']),
       trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
       courseFunnel,
       sourceRanking,
@@ -2457,6 +2482,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       period: coachPeriod,
       trends: coachTrendSet.rows,
       trendMeta: coachTrendSet.meta,
+      trendDiagnostics: buildTrendDiagnostics(coachTrendSet.rows, ['schedule', 'purchases', 'financeNormalizedRows', 'coaches']),
       trendComparisons: trendComparisonMap(coachValues, previousCoachValues, ['activeCoaches', 'utilizationRate', 'revenue', 'trialConversionRate', 'renewalRate'], canComparePrevious),
       utilizationBands: buildCoachUtilizationBands(coachRows),
       revenueParetoRows: buildCoachParetoRows(coachRows),

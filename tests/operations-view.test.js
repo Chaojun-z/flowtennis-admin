@@ -74,7 +74,7 @@ assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache should be scoped by the active date range URL');
-assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-06-23-real-trends-v1'/, 'operations client cache should have an explicit version so old empty trend caches are ignored');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-06-23-real-trends-v2'/, 'operations client cache should invalidate the old v1 cache after trend diagnostics and single-day trend fixes');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache key should include the cache version');
 assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
 assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*cacheVersion:OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest versioned view model for fast repeat entry');
@@ -213,7 +213,8 @@ assert.match(operationsSource, /const rows = data\.court\?\.campusRows \|\| \[\]
 assert.match(operationsSource, /operationsCourtRankingRows[\s\S]*operationsCourtHeatCampusTabs[\s\S]*朝珺私教/, 'court ranking should reuse heatmap campus order and filter private training campus');
 assert.match(courtOverviewSource, /const sortedRows = operationsCourtRankingRows\(rows\)/, 'court ranking should render in the heatmap campus order');
 assert.match(operationsSource, /renderOperationsCourtKpis[\s\S]*订场收入[\s\S]*订场小时[\s\S]*场地利用率[\s\S]*黄金时段利用率[\s\S]*非黄金时段利用率/, 'court page should render five top KPI cards for the approved venue metrics');
-assert.match(operationsSource, /function operationsCourtTrendValues[\s\S]*if \(!operationsShouldShowTrend\(\)\) return \[\];[\s\S]*return values\.length \? values : \[\]/, 'court KPI cards should keep one real trend point and only hide one-day or missing trends');
+assert.doesNotMatch(operationsSource, /function operationsShouldShowTrend\(\)[\s\S]*range\?\.startDate && range\.startDate === range\.endDate/, 'operations KPI cards should not hide real backend trends just because the selected filter is one day');
+assert.match(operationsSource, /function operationsCourtTrendValues[\s\S]*return values\.length \? values : \[\]/, 'court KPI cards should render real backend trend points when present');
 assert.doesNotMatch(operationsSource, /return value \? \[value, value\] : \[\]/, 'court KPI cards must not fake a flat trend from the current value');
 assert.match(operationsSource, /function operationsCourtSparklineSvg[\s\S]*operationsKpiSparklineSvg[\s\S]*operations-court-kpi-sparkline/, 'court KPI cards should reuse the shared professional inline sparkline with hover point context');
 assert.match(operationsSource, /operations-court-ranking-card[\s\S]*场地利用率 = 已用小时 \/ 可用小时[\s\S]*已用 \$\{fmt\(bookingHours\)\} 小时 \/ 可用约 \$\{fmt\(capacityHours\)\} 小时[\s\S]*平均每小时收入/, 'court ranking should explain the primary utilization number with numerator and denominator');
@@ -272,9 +273,9 @@ assert.doesNotMatch(operationsSource, /function operationsConversionTrendPoints[
 assert.match(operationsSource, /function operationsConversionTrendPoints[\s\S]*return points/, 'conversion KPI sparklines should return real backend trend points whenever at least one point exists');
 assert.match(operationsSource, /function operationsOverviewTrendPoints[\s\S]*return points\.length \? points : \[\]/, 'overview KPI sparklines should keep a single real trend point instead of rendering an empty card bottom');
 assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*drawablePoints[\s\S]*list\.length === 1[\s\S]*\.\.\.list\[0\]/, 'KPI sparklines should draw a horizontal line when only one real trend point exists');
-assert.match(operationsSource, /function operationsTrendPointsWithFallback[\s\S]*operationsTrendPoints\(trends, key\)[\s\S]*fallbackValue[\s\S]*operationsTrendToday\(\)/, 'KPI sparklines should build a drawable fallback point from the current metric when backend trend rows are empty');
-assert.match(operationsSource, /renderOperationsOverviewKpis[\s\S]*trendValue:[\s\S]*totalIncome[\s\S]*trendPoints: operationsTrendPointsWithFallback\(trends, card\.trendKey, card\.trendValue\)/, 'overview KPI cards should use the current value fallback when overview trends are empty');
-assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*trendValue:[\s\S]*card\.trendValue[\s\S]*trendPoints: operationsTrendPointsWithFallback\(conversion\.trendRows \|\| \[\], card\.trendKey, card\.trendValue\)/, 'conversion KPI cards should use the current value fallback when conversion trends are empty');
+assert.doesNotMatch(operationsSource, /function operationsTrendPointsWithFallback[\s\S]*fallbackValue[\s\S]*operationsTrendToday\(\)/, 'KPI sparklines should not fake a trend from the current metric when backend trend rows are empty');
+assert.match(operationsSource, /renderOperationsOverviewKpis[\s\S]*trendValue:[\s\S]*totalIncome[\s\S]*trendPoints: operationsTrendPointsWithFallback\(trends, card\.trendKey\)/, 'overview KPI cards should only use backend trend rows');
+assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*trendValue:[\s\S]*card\.trendValue[\s\S]*trendPoints: operationsTrendPointsWithFallback\(conversion\.trendRows \|\| \[\], card\.trendKey\)/, 'conversion KPI cards should only use backend trend rows');
 assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*operations-funnel-filter-row[\s\S]*operationsFilterDropdown\('operationsConversionSource'[\s\S]*operationsFilterDropdown\('operationsConversionCampus'[\s\S]*operationsFilterDropdown\('operationsConversionCoach'/, 'conversion filters should live inside the funnel module header');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-filter-row[\s\S]*function renderConversionInsightModule/, 'conversion filters should not float above the KPI cards');
 assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
@@ -356,7 +357,7 @@ assert.doesNotMatch(operationsSource, /持平/, 'KPI cards should never render f
 assert.doesNotMatch(operationsSource, /较期初|较周初|较月初|较首日/, 'KPI change values should not show comparison scope text in compact cards');
 assert.match(operationsSource, /operations-coach-kpi-value[\s\S]*operations-coach-kpi-change/, 'coach KPI change value should sit next to the main number');
 assert.doesNotMatch(operationsSource, /renderOperationsCoachTrendCharts/, 'coach KPI sparklines should not depend on async ECharts rendering');
-assert.match(operationsSource, /function operationsCoachTrendValues[\s\S]*if \(!operationsShouldShowTrend\(\)\) return \[\];[\s\S]*return values\.length \? values : \[\]/, 'coach KPI sparklines should keep one real trend point and hide only one-day or missing trends');
+assert.match(operationsSource, /function operationsCoachTrendValues[\s\S]*return values\.length \? values : \[\]/, 'coach KPI sparklines should render real backend trend points when present');
 assert.doesNotMatch(coachDashboardSource, /operationsSimpleTable/, 'coach page should not use a table as the main display');
 assert.doesNotMatch(coachDashboardSource, /renderStandardDataCards/, 'coach page should not reuse the old generic data-card block');
 assert.doesNotMatch(coachDashboardSource, /教练工时利用率[\s\S]*operationsCoachChart/, 'coach page should remove the old single utilization bar chart');

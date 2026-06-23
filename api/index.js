@@ -10,6 +10,8 @@ const mabaoFinanceSeed = require('../server/seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('../server/lib/perf-metrics');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
+const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js');
+const { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
@@ -141,6 +143,7 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
   T_SCHEDULE,
   T_CAMPUSES
 ]);
+const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_COURTS,T_PURCHASES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_CAMPUSES]);
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName','name','wechatName','phone','level','leadDate','source','campus','consultType','intentLevel','profileNote','owner',
   'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','formalCoach',
@@ -335,7 +338,7 @@ const {
   hotGetTables:HOT_GET_TABLES,
   productionPageReadLimits:PRODUCTION_PAGE_READ_LIMITS,
   isProductionRuntime,
-  onTableWrite(t){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;}
+  onTableWrite(t){if(FINANCE_SNAPSHOT_SOURCE_TABLES.has(t))financeSnapshotCache=null;if(OPERATIONS_SOURCE_TABLES.has(t)){invalidateOperationsSourceCache();invalidateOperationsPageDataCache();}}
 });
 function getMatchSqlPool(){
   if(!MATCH_DATABASE_URL)throw new Error('缺少 MATCH_DATABASE_URL 或 DATABASE_URL，约球真实数据不能使用 mock 或 TableStore');

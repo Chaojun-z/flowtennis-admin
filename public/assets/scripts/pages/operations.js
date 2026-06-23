@@ -169,16 +169,14 @@ function operationsTrendToday() {
 }
 
 function operationsShouldShowTrend() {
-  const range = typeof activeGlobalDateRange === 'function' ? activeGlobalDateRange() : {};
-  return !(range?.startDate && range.startDate === range.endDate);
+  return true;
 }
 
-function operationsTrendPointsWithFallback(trends = [], key = '', fallbackValue) {
+function operationsTrendPointsWithFallback(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
   if (points.length) return points;
-  const value = Number(fallbackValue);
-  return Number.isFinite(value) ? [{ date: operationsTrendToday(), value }] : [];
+  return [];
 }
 
 function operationsTrendComparisonForDisplay(comparison = {}, points = []) {
@@ -234,7 +232,7 @@ function renderOperationsCourtKpis(data = {}) {
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
       trendValues: operationsCourtTrendValues(trends, card.trendKey),
-      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.trendValue),
+      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey),
       trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
@@ -391,7 +389,7 @@ function renderOperationsOverviewKpis(data = {}) {
   return `<div class="operations-kpi-row operations-overview-kpi-row operations-court-kpi-row">
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
-      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.trendValue),
+      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey),
       trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
@@ -725,7 +723,7 @@ function renderOperationsCoach(data) {
   return `<div class="operations-coach-kpi-strip" data-trend-count="${trends.length}">${kpis.map(card => renderOperationsCoachKpi({
     ...card,
     trendValues: operationsCoachTrendValues(trends, card.trendKey, card.rawValue),
-    trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.rawValue),
+    trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey),
     trendComparison: comparisons[card.trendKey]
   })).join('')}</div>
   <div class="operations-coach-hero-grid">
@@ -1378,7 +1376,7 @@ function renderConversionCommandCenter(data, conversion) {
       ${operationsConversionKpiCards(conversion.courseFunnel || [], data.conversion?.standardRates || {}).map(card => renderOperationsConversionKpi({
         ...card,
         trendValue: card.trendValue,
-        trendPoints: operationsTrendPointsWithFallback(conversion.trendRows || [], card.trendKey, card.trendValue),
+        trendPoints: operationsTrendPointsWithFallback(conversion.trendRows || [], card.trendKey),
         trendComparison: comparisons[card.trendKey]
       })).join('')}
     </div>`;
