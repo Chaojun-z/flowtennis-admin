@@ -119,7 +119,8 @@ assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*labe
 assert.match(chartsSource, /operationsCoachBandColors[\s\S]*'#D89135'/, 'coach overload color should use the unified warning color');
 assert.match(chartsSource, /operationsPercentAxisRange\(source\.map\(row => row\.utilizationRate\), \{ defaultMax: 75, max: 100 \}/, 'coach matrix x axis should default to 0-75% and expand up to 100% when data breaks through');
 assert.match(chartsSource, /operationsMoneyAxisRange\(source\.map\(row => row\.revenue\), \{ defaultMax: 500000 \}/, 'coach matrix y axis should default to 0-50万 and expand when revenue breaks through');
-assert.match(chartsSource, /operationsAxisBandMarkAreas\(utilizationAxis, operationsCoachBandColors\)/, 'coach matrix should fill each current x-axis interval with a matching color band');
+assert.match(chartsSource, /operationsCoachBandFills[\s\S]*'#FFF1F2'[\s\S]*'#FFFBEB'[\s\S]*'#F3F6FA'[\s\S]*'#ECFDF5'/, 'coach matrix background should use pale capability-style fill colors');
+assert.match(chartsSource, /operationsAxisBandMarkAreas\(utilizationAxis, operationsCoachBandFills\)/, 'coach matrix should fill each current x-axis interval with pale background bands');
 assert.match(chartsSource, /operationsCoachBandColor\(row\.utilizationRate, utilizationAxis\)/, 'coach matrix bubbles should use the same current x-axis interval color as the background band');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*健康线 75%/, 'coach matrix should not show the old 75% health marker');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*xAxis: avgUtilization[\s\S]*平均利用率[\s\S]*yAxis: avgRevenue[\s\S]*平均产值/, 'coach matrix should show average utilization and average revenue reference lines');
@@ -159,7 +160,8 @@ assert.match(chartsSource, /const revenueLabel = value => `\$\{fmt\(value \/ 100
 assert.doesNotMatch(chartsSource, /max: 1000000[\s\S]*interval: 200000[\s\S]*formatter: value => `\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant y axis should not be fixed at 100万');
 assert.doesNotMatch(chartsSource, /buildOperationsCourtQuadrantChartOption[\s\S]*name: '订场收入'[\s\S]*seriesName: '校区经营位置'/, 'court quadrant should not reserve left gutter for a vertical y-axis title');
 assert.doesNotMatch(chartsSource, /buildOperationsCourtQuadrantChartOption[\s\S]*name: '场地利用率'[\s\S]*yAxis:/, 'court quadrant should not reserve bottom space for an x-axis title');
-assert.match(chartsSource, /operationsAxisBandMarkAreas\(utilizationAxis, operationsCourtBandColors\)/, 'court quadrant should fill each current x-axis interval with a matching color band');
+assert.match(chartsSource, /operationsCourtBandFills[\s\S]*'#FFF1F2'[\s\S]*'#FFFBEB'[\s\S]*'#EFF6FF'[\s\S]*'#ECFDF5'/, 'court quadrant background should use pale capability-style fill colors');
+assert.match(chartsSource, /operationsAxisBandMarkAreas\(utilizationAxis, operationsCourtBandFills\)/, 'court quadrant should fill each current x-axis interval with pale background bands');
 assert.match(chartsSource, /const source = rawRows\.filter\(row => row\.hasData\)/, 'court quadrant should only plot campuses that already have data');
 assert.doesNotMatch(chartsSource, /label: \{ color: row\.hasData \?/, 'court quadrant should not style or label no-data campuses in the plot');
 assert.match(chartsSource, /position: 'inside'/, 'court quadrant should put campus names inside bubbles');
@@ -426,7 +428,7 @@ assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*inside: true[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis labels should not be placed inside the plot');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*inside: true[\s\S]*window\.addEventListener/, 'coach capability y-axis labels should not be placed inside the plot');
 assert.match(chartsSource, /function operationsCoachBandColor\(value, axis = \{\}\)[\s\S]*operationsAxisBandColor\(value, axis, operationsCoachBandColors\)/, 'coach matrix point colors should follow the current x-axis status bands');
-assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*operationsAxisBandMarkAreas\(utilizationAxis, operationsCoachBandColors\)/, 'coach matrix background should use five equal current-axis status bands');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*operationsAxisBandMarkAreas\(utilizationAxis, operationsCoachBandFills\)/, 'coach matrix background should use five equal pale status bands');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*axisTick: \{ show: false \}[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis tick marks should be hidden to avoid overlapping labels');
 assert.match(chartsSource, /function operationsCoachCourseColor[\s\S]*if \(type === '体验课'\) return '#F59E0B'[\s\S]*if \(type === '私教课'\) return '#4F81FF'[\s\S]*if \(type === '小班课'\) return '#10B981'/, 'coach course mix should reuse the schedule calendar course colors');
 assert.match(chartsSource, /buildOperationsCoachParetoChartOption[\s\S]*xAxis: \{ type: 'category'[\s\S]*data: source\.map\(row => operationsCoachShortName\(row\.coach\)\)[\s\S]*rotate: 28/, 'coach contribution chart should stay vertical with angled short-name x-axis labels');

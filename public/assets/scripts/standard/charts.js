@@ -389,6 +389,8 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
 
 const operationsCourtBandColors = ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'];
 const operationsCoachBandColors = ['#E05252', '#D89135', '#8EA0B8', '#5CC8A0', '#1F8A5B'];
+const operationsCourtBandFills = ['#FFF1F2', '#FFFBEB', '#EFF6FF', '#ECFDF5', '#F0FDFA'];
+const operationsCoachBandFills = ['#FFF1F2', '#FFFBEB', '#F3F6FA', '#ECFDF5', '#E5F7EE'];
 
 function operationsCourtQuadrantColor(row = {}, axis = {}) {
   if (!row.hasData) return '#CBD5E1';
@@ -517,7 +519,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       silent: true,
       itemStyle: { opacity: 0.42 },
       label: { show: false },
-      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCourtBandColors)
+      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCourtBandFills)
     }
   });
 }
@@ -764,7 +766,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       silent: true,
       itemStyle: { opacity: 0.42 },
       label: { show: false },
-      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCoachBandColors)
+      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCoachBandFills)
     }
   });
 }
