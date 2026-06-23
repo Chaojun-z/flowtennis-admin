@@ -823,9 +823,9 @@ function financeCurrentMetrics(rows=financeLedgerRows()){
   const businessRows=(rows||[]).filter(row=>!row.differenceReason&&row.transactionType!=='废弃');
   const courseRows=businessRows.filter(row=>row.businessTypeLevel1==='课程'||row.businessType==='课程');
   const directCourseRows=courseRows.filter(row=>row.transactionType==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
-  const directCourseRecognizedRows=courseRows.filter(row=>String(row.sourceDocument||'').startsWith('排课')&&Number(row.recognizedRevenueDelta));
+  const directCourseRecognizedRows=directCourseRows.filter(row=>Number(row.recognizedRevenueDelta));
   const packageReceiptRows=courseRows.filter(row=>row.transactionType==='收款'&&String(row.sourceDocument||'').startsWith('购买记录'));
-  const packageRecognizedRows=courseRows.filter(row=>row.transactionType==='消耗'&&String(row.normalizedPaymentMethod||row.paymentChannel||'')==='课包划扣');
+  const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(String(row.action||row.transactionType||''))&&String(row.normalizedPaymentMethod||row.paymentChannel||'')==='课包划扣');
   const storedValueRows=businessRows.filter(row=>row.businessTypeLevel1==='储值'||row.businessType==='会员储值');
   const storedValueConsumedRows=businessRows.filter(row=>(row.businessTypeLevel1==='场地'&&row.businessTypeLevel2==='会员订场')||row.businessType==='会员订场');
   const bookingRows=businessRows.filter(row=>(row.businessTypeLevel1==='场地'&&['散客订场','约球局','课程订场'].includes(row.businessTypeLevel2))||['散客订场','约球局'].includes(row.businessType));
@@ -834,13 +834,13 @@ function financeCurrentMetrics(rows=financeLedgerRows()){
   const packageIncome=financeRowsSum(packageReceiptRows,'cashDelta');
   const packageRecognized=financeRowsSum(packageRecognizedRows,'recognizedRevenueDelta');
   const courseIncome=directCourseIncome+packageIncome;
-  const courseRecognized=directCourseRecognized+packageRecognized;
+  const courseRecognized=financeRowsSum(courseRows,'recognizedRevenueDelta');
   const storedValueIncome=financeRowsSum(storedValueRows.filter(row=>row.transactionType==='收款'||row.action==='收款'),'cashDelta');
   const storedValueRecognized=financeRowsSum(storedValueConsumedRows,'recognizedRevenueDelta');
   const bookingIncome=financeRowsSum(bookingRows.filter(row=>row.transactionType==='收款'||row.action==='收款'),'cashDelta');
   const bookingRecognized=financeRowsSum(bookingRows,'recognizedRevenueDelta')||bookingIncome;
   const totalCash=directCourseIncome+packageIncome+storedValueIncome+bookingIncome;
-  const totalRecognized=directCourseRecognized+packageRecognized+storedValueRecognized+bookingRecognized;
+  const totalRecognized=financeRowsSum(businessRows,'recognizedRevenueDelta');
   return {businessRows,directCourseIncome,directCourseRecognized,packageIncome,packageRecognized,courseIncome,courseRecognized,storedValueIncome,storedValueRecognized,bookingIncome,bookingRecognized,totalCash,totalRecognized};
 }
 function financeCoursePackageMetrics(rows=[],overview=null){
@@ -1229,14 +1229,14 @@ function renderFinanceConsumeReport(){
   const courseRows=rows.filter(row=>row.businessType==='课程');
   const storedValueRows=rows.filter(row=>row.businessType==='会员订场');
   const bookingRows=rows.filter(row=>['散客订场','约球局'].includes(row.businessType));
-  const directCourseRows=courseRows.filter(row=>String(row.sourceDocument||'').startsWith('排课'));
+  const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
   const packageRows=courseRows.filter(row=>String(row.paymentChannel||row.payMethod||'')==='课包划扣');
   const directCourseRecognized=directCourseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const packageRecognized=packageRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const courseRecognized=directCourseRecognized+packageRecognized;
+  const courseRecognized=courseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const storedValueRecognized=storedValueRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const bookingRecognized=bookingRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const recognizedRevenue=directCourseRecognized+packageRecognized+storedValueRecognized+bookingRecognized;
+  const recognizedRevenue=rows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   stats.innerHTML=[
     {label:'流水条数',value:`${rows.length} <span>条</span>`},
     {label:'确收合计',value:financeCardMoney(recognizedRevenue)},

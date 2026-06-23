@@ -1,11 +1,28 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { appSource: source } = require('./helpers/read-index-bundle');
 function sliceBetween(text,startMarker,endMarker){
   const start = text.indexOf(startMarker);
   const end = start === -1 ? -1 : text.indexOf(endMarker, start);
   return text.slice(start, end === -1 ? text.length : end);
+}
+function functionSource(text,name){
+  const start = text.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  let depth = 0;
+  let seenOpen = false;
+  for (let i = start; i < text.length; i += 1) {
+    if (text[i] === '{') {
+      depth += 1;
+      seenOpen = true;
+    } else if (text[i] === '}') {
+      depth -= 1;
+      if (seenOpen && depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  throw new Error(`${name} body should be complete`);
 }
 const ledgerShell = sliceBetween(source, "key:'finance-ledger'", "key:'finance-revenue'");
 const revenueShell = sliceBetween(source, "key:'finance-revenue'", "key:'finance-recognized'");
@@ -112,11 +129,27 @@ assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome\)
 assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
 assert.match(source,/const metrics=financeCurrentMetrics\(financeLedgerRows\(\)\)/,'overview cards should calculate from the currently filtered ledger rows');
 assert.match(source,/const courseIncome=directCourseIncome\+packageIncome/,'current overview metrics should merge direct course and package income');
+{
+  const rows = [
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'购买记录 p1', normalizedPaymentMethod:'微信', cashDelta:1000, recognizedRevenueDelta:0 },
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'消耗', action:'消耗', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:400 },
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'回退', action:'回退', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:-50 },
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'已入账', action:'已入账', sourceDocument:'排课 s3', normalizedPaymentMethod:'储值卡', paymentChannel:'储值卡', cashDelta:0, recognizedRevenueDelta:150 },
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'排课 s2', normalizedPaymentMethod:'微信', cashDelta:100, recognizedRevenueDelta:100 }
+  ];
+  const sandbox = { rows, result:null, Math, Number, String };
+  vm.runInNewContext(`${functionSource(source,'financeRowsSum')}\n${functionSource(source,'financeCurrentMetrics')}\nresult=financeCurrentMetrics(rows);`, sandbox);
+  assert.strictEqual(sandbox.result.packageRecognized, 350, 'course package consume and return should be counted once as package recognized');
+  assert.strictEqual(sandbox.result.directCourseRecognized, 100, 'direct course recognized should only include direct course receipts');
+  assert.strictEqual(sandbox.result.courseRecognized, 600, 'course recognized should include every course recognized row exactly once');
+  assert.strictEqual(sandbox.result.totalRecognized, 600, 'total recognized should include every recognized row exactly once');
+}
 assert.match(source,/directCourseIncome=businessRows\.filter\(row=>row\.sourceBusinessCategory==='课程'&&String\(row\.relatedDocument\|\|''\)\.startsWith\('排课'\)\)/,'revenue stats should derive direct course income from filtered schedule receipts');
 assert.match(source,/const courseIncome=directCourseIncome\+packageIncome[\s\S]*课程流水/,'revenue stats should merge direct course and package income into course flow');
 assert.match(source,/成交笔数[\s\S]*实收合计[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程流水/,'revenue stats should show requested income card labels');
 assert.doesNotMatch(source,/散客课程|课包收入/,'revenue stats should not show direct course or package as separate cards');
-assert.match(source,/const courseRecognized=directCourseRecognized\+packageRecognized[\s\S]*课程已入账/,'recognized stats should merge direct course and package recognized revenue');
+assert.match(source,/const courseRecognized=courseRows\.reduce\(\(sum,row\)=>sum\+\(Number\(row\.recognizedRevenueDelta\)\|\|0\),0\)[\s\S]*课程已入账/,'recognized stats should include every course recognized row exactly once');
+assert.match(source,/const directCourseRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|''\)\.startsWith\('排课'\)\)/,'recognized stats should not count package consume rows as direct course recognized revenue');
 assert.match(source,/流水条数[\s\S]*确收合计[\s\S]*散客订场核销[\s\S]*会员耗卡核销[\s\S]*课程已入账/,'recognized stats should show requested recognized card labels');
 assert.doesNotMatch(source,/课包消课核销|散客课程核销/,'recognized stats should not show direct course or package recognized cards separately');
 assert.doesNotMatch(source,/\['课程总收入'/,'revenue stats should not label package-inclusive course income as course revenue');
