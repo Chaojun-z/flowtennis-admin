@@ -173,6 +173,14 @@ function operationsShouldShowTrend() {
   return !(range?.startDate && range.startDate === range.endDate);
 }
 
+function operationsTrendPointsWithFallback(trends = [], key = '', fallbackValue) {
+  const points = operationsTrendPoints(trends, key);
+  if (!operationsShouldShowTrend()) return [];
+  if (points.length) return points;
+  const value = Number(fallbackValue);
+  return Number.isFinite(value) ? [{ date: operationsTrendToday(), value }] : [];
+}
+
 function operationsTrendComparisonForDisplay(comparison = {}, points = []) {
   return Array.isArray(points) && points.length >= 2 ? comparison : { mode: 'none' };
 }
@@ -213,18 +221,20 @@ function renderOperationsCourtKpis(data = {}) {
   const cards = data.court?.cards || {};
   const trends = data.court?.trends || [];
   const comparisons = data.court?.trendComparisons || {};
+  const goldenRate = operationsCardNumber(cards.goldenUtilizationRate) || operationsCourtAverageRate(data.court?.campusRows || [], 'goldenUtilizationRate');
+  const offPeakRate = operationsCardNumber(cards.offPeakUtilizationRate) || operationsCourtAverageRate(data.court?.campusRows || [], 'offPeakUtilizationRate');
   const kpis = [
-    { label: '订场收入', value: operationsMoneyCompactText(operationsCardNumber(cards.bookingAmount)), trendKey: 'bookingAmount', tone: 'revenue' },
-    { label: '订场小时', value: fmt(operationsCardNumber(cards.bookingHours)), unit: '小时', trendKey: 'bookingHours', tone: 'hours' },
-    { label: '场地利用率', value: `${fmt(operationsCardNumber(cards.utilizationRate))}%`, trendKey: 'utilizationRate', tone: 'utilization' },
-    { label: '黄金时段利用率', value: `${fmt(operationsCardNumber(cards.goldenUtilizationRate) || operationsCourtAverageRate(data.court?.campusRows || [], 'goldenUtilizationRate'))}%`, trendKey: 'goldenUtilizationRate', tone: 'golden' },
-    { label: '非黄金时段利用率', value: `${fmt(operationsCardNumber(cards.offPeakUtilizationRate) || operationsCourtAverageRate(data.court?.campusRows || [], 'offPeakUtilizationRate'))}%`, trendKey: 'offPeakUtilizationRate', tone: 'offpeak' }
+    { label: '订场收入', value: operationsMoneyCompactText(operationsCardNumber(cards.bookingAmount)), trendValue: operationsCardNumber(cards.bookingAmount), trendKey: 'bookingAmount', tone: 'revenue' },
+    { label: '订场小时', value: fmt(operationsCardNumber(cards.bookingHours)), unit: '小时', trendValue: operationsCardNumber(cards.bookingHours), trendKey: 'bookingHours', tone: 'hours' },
+    { label: '场地利用率', value: `${fmt(operationsCardNumber(cards.utilizationRate))}%`, trendValue: operationsCardNumber(cards.utilizationRate), trendKey: 'utilizationRate', tone: 'utilization' },
+    { label: '黄金时段利用率', value: `${fmt(goldenRate)}%`, trendValue: goldenRate, trendKey: 'goldenUtilizationRate', tone: 'golden' },
+    { label: '非黄金时段利用率', value: `${fmt(offPeakRate)}%`, trendValue: offPeakRate, trendKey: 'offPeakUtilizationRate', tone: 'offpeak' }
   ];
   return `<div class="operations-kpi-row operations-court-kpi-row">
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
       trendValues: operationsCourtTrendValues(trends, card.trendKey),
-      trendPoints: operationsCourtTrendPoints(trends, card.trendKey),
+      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.trendValue),
       trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
@@ -365,17 +375,22 @@ function renderOperationsOverviewKpis(data = {}) {
   const trends = data.overview?.trends || [];
   const comparisons = data.overview?.trendComparisons || {};
   const courtCards = data.court?.cards || {};
+  const totalIncome = operationsCardNumber(cards.totalIncome);
+  const recognizedRevenue = operationsCardNumber(cards.recognizedRevenue);
+  const pendingRevenue = operationsCardNumber(cards.pendingRevenue);
+  const tradeCount = operationsCardNumber(cards.tradeCount);
+  const utilizationRate = operationsCardNumber(courtCards.utilizationRate);
   const kpis = [
-    { label: '总收入', value: operationsMoneyCompactText(operationsCardNumber(cards.totalIncome)), trendKey: 'totalIncome', tone: 'revenue' },
-    { label: '入账流水', value: operationsMoneyCompactText(operationsCardNumber(cards.recognizedRevenue)), trendKey: 'recognizedRevenue', tone: 'good' },
-    { label: '待履约余额', value: operationsMoneyCompactText(operationsCardNumber(cards.pendingRevenue)), trendKey: 'pendingRevenue', tone: 'warn' },
-    { label: '成交笔数', value: operationsCompactNumber(operationsCardNumber(cards.tradeCount)), unit: '笔', trendKey: 'tradeCount', tone: 'lead' },
-    { label: '场地利用率', value: fmt(operationsCardNumber(courtCards.utilizationRate)), unit: '%', trendKey: 'utilizationRate', tone: 'utilization' }
+    { label: '总收入', value: operationsMoneyCompactText(totalIncome), trendValue: totalIncome, trendKey: 'totalIncome', tone: 'revenue' },
+    { label: '入账流水', value: operationsMoneyCompactText(recognizedRevenue), trendValue: recognizedRevenue, trendKey: 'recognizedRevenue', tone: 'good' },
+    { label: '待履约余额', value: operationsMoneyCompactText(pendingRevenue), trendValue: pendingRevenue, trendKey: 'pendingRevenue', tone: 'warn' },
+    { label: '成交笔数', value: operationsCompactNumber(tradeCount), unit: '笔', trendValue: tradeCount, trendKey: 'tradeCount', tone: 'lead' },
+    { label: '场地利用率', value: fmt(utilizationRate), unit: '%', trendValue: utilizationRate, trendKey: 'utilizationRate', tone: 'utilization' }
   ];
   return `<div class="operations-kpi-row operations-overview-kpi-row operations-court-kpi-row">
     ${kpis.map(card => renderOperationsCourtKpi({
       ...card,
-      trendPoints: operationsOverviewTrendPoints(trends, card.trendKey),
+      trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.trendValue),
       trendComparison: comparisons[card.trendKey]
     })).join('')}
   </div>`;
@@ -709,7 +724,7 @@ function renderOperationsCoach(data) {
   return `<div class="operations-coach-kpi-strip" data-trend-count="${trends.length}">${kpis.map(card => renderOperationsCoachKpi({
     ...card,
     trendValues: operationsCoachTrendValues(trends, card.trendKey, card.rawValue),
-    trendPoints: operationsCoachTrendPoints(trends, card.trendKey),
+    trendPoints: operationsTrendPointsWithFallback(trends, card.trendKey, card.rawValue),
     trendComparison: comparisons[card.trendKey]
   })).join('')}</div>
   <div class="operations-coach-hero-grid">
@@ -1144,11 +1159,11 @@ function operationsConversionKpiCards(funnel = [], standardRates = {}) {
   const standardTrial = Number(standardRates.trialConversionRate);
   const standardRenewal = Number(standardRates.renewalRate);
   return [
-    { label: '线索量', value: fmt(total.count || 0), unit: '人', trendKey: 'leads', tone: 'lead' },
-    { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, trendKey: 'appointmentRate', tone: 'conversion' },
-    { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, trendKey: 'attendanceRate', tone: 'conversion' },
-    { label: '成交率', value: `${fmt(Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0))}%`, trendKey: 'dealRate', tone: 'conversion' },
-    { label: '续费率', value: `${fmt(Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0))}%`, trendKey: 'renewalRate', tone: 'retention' }
+    { label: '线索量', value: fmt(total.count || 0), unit: '人', trendValue: total.count || 0, trendKey: 'leads', tone: 'lead' },
+    { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, trendValue: appointment.percentOfTotal || 0, trendKey: 'appointmentRate', tone: 'conversion' },
+    { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, trendValue: attendance.transitionRate || 0, trendKey: 'attendanceRate', tone: 'conversion' },
+    { label: '成交率', value: `${fmt(Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0))}%`, trendValue: Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0), trendKey: 'dealRate', tone: 'conversion' },
+    { label: '续费率', value: `${fmt(Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0))}%`, trendValue: Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0), trendKey: 'renewalRate', tone: 'retention' }
   ];
 }
 
@@ -1353,7 +1368,8 @@ function renderConversionCommandCenter(data, conversion) {
   return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
       ${operationsConversionKpiCards(conversion.courseFunnel || [], data.conversion?.standardRates || {}).map(card => renderOperationsConversionKpi({
         ...card,
-        trendPoints: operationsConversionTrendPoints(conversion.trendRows || [], card.trendKey),
+        trendValue: card.trendValue,
+        trendPoints: operationsTrendPointsWithFallback(conversion.trendRows || [], card.trendKey, card.trendValue),
         trendComparison: comparisons[card.trendKey]
       })).join('')}
     </div>`;
