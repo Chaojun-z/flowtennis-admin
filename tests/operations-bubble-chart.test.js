@@ -62,7 +62,7 @@ assert.ok(!courtOption.yAxis.name, 'court matrix should not reserve space for a 
 assert.ok(!courtOption.xAxis.name, 'court matrix should not reserve space for a bottom x-axis title');
 assert.strictEqual(courtOption.yAxis.max, 400000, 'court revenue axis should fit the current data instead of staying fixed at 100万');
 assert.strictEqual(nonZeroTickCount(courtOption.yAxis), 5, 'court revenue axis should show five non-zero ticks');
-assert.strictEqual(courtOption.xAxis.max, 10, 'court utilization axis should fit low-utilization data instead of leaving the right side empty');
+assert.strictEqual(courtOption.xAxis.max, 50, 'court utilization axis should default to 0-50% for stable comparison');
 assert.strictEqual(nonZeroTickCount(courtOption.xAxis), 5, 'court utilization axis should show five non-zero ticks');
 
 const coachMatrixOption = context.buildOperationsCoachMatrixChartOption({
@@ -74,7 +74,7 @@ const coachMatrixOption = context.buildOperationsCoachMatrixChartOption({
 
 assert.strictEqual(coachMatrixOption.yAxis.max, 500000, 'coach revenue axis should fit current revenue instead of staying fixed at 100万');
 assert.strictEqual(nonZeroTickCount(coachMatrixOption.yAxis), 5, 'coach revenue axis should show five non-zero ticks');
-assert.strictEqual(coachMatrixOption.xAxis.max, 40, 'coach utilization axis should fit current utilization instead of staying fixed at 100%');
+assert.strictEqual(coachMatrixOption.xAxis.max, 75, 'coach utilization axis should default to 0-75% for stable comparison');
 assert.strictEqual(nonZeroTickCount(coachMatrixOption.xAxis), 5, 'coach utilization axis should show five non-zero ticks');
 assert.ok(coachMatrixOption.grid.left >= 32, 'coach matrix should reserve room for y-axis tick labels');
 assert.ok(!coachMatrixOption.yAxis.name, 'coach matrix should not reserve space for a vertical y-axis title');

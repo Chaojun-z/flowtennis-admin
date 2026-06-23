@@ -227,21 +227,21 @@ function operationsNiceAxisMax(maxValue) {
   const exponent = Math.floor(Math.log10(value));
   const unit = Math.pow(10, exponent);
   const fraction = value / unit;
-  const niceFractions = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const niceFractions = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10];
   const niceFraction = niceFractions.find(item => item >= fraction) || 10;
   return niceFraction * unit;
 }
 
-function operationsMoneyAxisRange(values = []) {
+function operationsMoneyAxisRange(values = [], { defaultMax = 10000 } = {}) {
   const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
-  const max = operationsNiceAxisMax(Math.max(10000, maxValue * 1.06));
+  const max = maxValue > defaultMax ? operationsNiceAxisMax(maxValue * 1.06) : defaultMax;
   const interval = max / 5;
   return { max, interval };
 }
 
-function operationsPercentAxisRange(values = [], { min = 10, max = 100 } = {}) {
+function operationsPercentAxisRange(values = [], { defaultMax = 100, max = 100 } = {}) {
   const maxValue = Math.max(0, ...values.map(value => Number(value) || 0));
-  const axisMax = Math.min(max, Math.max(min, operationsNiceAxisMax(maxValue > 0 ? maxValue * 1.06 : min)));
+  const axisMax = Math.min(max, maxValue > defaultMax ? operationsNiceAxisMax(maxValue * 1.06) : defaultMax);
   return { max: axisMax, interval: axisMax / 5 };
 }
 
@@ -249,6 +249,22 @@ function operationsAxisTickLabels(axis = {}, formatter = value => value) {
   const interval = Number(axis.interval) || 0;
   if (!interval) return [];
   return Array.from({ length: 6 }, (_, index) => formatter(interval * index));
+}
+
+function operationsAxisBandColor(value, axis = {}, colors = []) {
+  const interval = Number(axis.interval) || 0;
+  if (!interval || !colors.length) return colors[0] || '#E05252';
+  const index = Math.max(0, Math.min(colors.length - 1, Math.floor((Number(value) || 0) / interval)));
+  return colors[index];
+}
+
+function operationsAxisBandMarkAreas(axis = {}, colors = []) {
+  const interval = Number(axis.interval) || 0;
+  if (!interval || !colors.length) return [];
+  return colors.map((color, index) => [
+    { xAxis: interval * index, itemStyle: { color } },
+    { xAxis: interval * (index + 1) }
+  ]);
 }
 
 function operationsBubbleSize(metric, maxMetric, { min = 12, max = 34 } = {}) {
@@ -371,14 +387,12 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
   });
 }
 
-function operationsCourtQuadrantColor(row = {}) {
+const operationsCourtBandColors = ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'];
+const operationsCoachBandColors = ['#E05252', '#D89135', '#8EA0B8', '#5CC8A0', '#1F8A5B'];
+
+function operationsCourtQuadrantColor(row = {}, axis = {}) {
   if (!row.hasData) return '#CBD5E1';
-  const utilization = Number(row.utilizationRate) || 0;
-  if (utilization < 10) return '#E05252';
-  if (utilization < 20) return '#D89135';
-  if (utilization < 30) return '#3B6EA8';
-  if (utilization < 40) return '#2E8B6D';
-  return '#14B8A6';
+  return operationsAxisBandColor(row.utilizationRate, axis, operationsCourtBandColors);
 }
 
 function operationsCourtQuadrantTooltip(item = {}) {
@@ -424,13 +438,13 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   const avgUtilization = activeRows.length ? activeRows.reduce((sum, row) => sum + row.utilizationRate, 0) / activeRows.length : 0;
   const avgRevenue = activeRows.length ? activeRows.reduce((sum, row) => sum + row.bookingAmount, 0) / activeRows.length : 0;
   const maxBookingCount = Math.max(1, ...source.map(row => row.bookingCount));
-  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 10, max: 50 });
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { defaultMax: 50, max: 100 });
   const revenueAxis = operationsMoneyAxisRange(source.map(row => row.bookingAmount));
   const utilizationLabel = value => `${fmt(value)}%`;
   const revenueLabel = value => `${fmt(value / 10000)}万`;
   const data = source.map(row => {
     const bubbleSize = operationsBubbleSize(row.bookingCount, maxBookingCount, { min: 16, max: 36 });
-    const bubbleColor = operationsCourtQuadrantColor(row);
+    const bubbleColor = operationsCourtQuadrantColor(row, utilizationAxis);
     return {
       name: row.campusName,
       raw: row,
@@ -448,7 +462,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
     };
   });
   return buildStandardBusinessBubbleMatrixChartOption({
-    color: ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'],
+    color: operationsCourtBandColors,
     grid: operationsMatrixGrid({
       xLabels: operationsAxisTickLabels(utilizationAxis, utilizationLabel),
       yLabels: operationsAxisTickLabels(revenueAxis, revenueLabel)
@@ -503,13 +517,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
       silent: true,
       itemStyle: { opacity: 0.42 },
       label: { show: false },
-      data: [
-        [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 10 }],
-        [{ xAxis: 10, itemStyle: { color: '#FFFBEB' } }, { xAxis: 20 }],
-        [{ xAxis: 20, itemStyle: { color: '#EFF6FF' } }, { xAxis: 30 }],
-        [{ xAxis: 30, itemStyle: { color: '#ECFDF5' } }, { xAxis: 40 }],
-        [{ xAxis: 40, itemStyle: { color: '#F0FDFA' } }, { xAxis: 50 }]
-      ]
+      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCourtBandColors)
     }
   });
 }
@@ -614,13 +622,8 @@ function buildStandardHeatmapChartOption({ rows = [] } = {}) {
   };
 }
 
-function operationsCoachBandColor(value) {
-  const rate = Number(value) || 0;
-  if (rate < 20) return '#E05252';
-  if (rate < 40) return '#D89135';
-  if (rate < 60) return '#8EA0B8';
-  if (rate < 80) return '#5CC8A0';
-  return '#1F8A5B';
+function operationsCoachBandColor(value, axis = {}) {
+  return operationsAxisBandColor(value, axis, operationsCoachBandColors);
 }
 
 function operationsCoachShortName(value) {
@@ -629,9 +632,7 @@ function operationsCoachShortName(value) {
 
 function operationsCoachRevenueAxisLabel(value) {
   const amount = Number(value) || 0;
-  if (amount <= 0) return '';
-  if (amount % 200000 === 0) return `¥${fmt(amount / 10000)}万`;
-  return '';
+  return `¥${fmt(amount / 10000)}万`;
 }
 
 function operationsCoachCourseColor(type = '') {
@@ -674,8 +675,8 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const maxLessons = Math.max(1, ...source.map(row => Number(row.lessonCount) || 0));
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
-  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { min: 10, max: 100 });
-  const revenueAxis = operationsMoneyAxisRange(source.map(row => row.revenue));
+  const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { defaultMax: 75, max: 100 });
+  const revenueAxis = operationsMoneyAxisRange(source.map(row => row.revenue), { defaultMax: 500000 });
   const utilizationLabel = value => `${fmt(value)}%`;
   const revenueLabel = value => operationsCoachRevenueAxisLabel(value);
   return buildStandardBusinessBubbleMatrixChartOption({
@@ -731,7 +732,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
         symbolSize: bubbleSize,
         label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
         itemStyle: {
-          color: operationsCoachBandColor(row.utilizationRate),
+          color: operationsCoachBandColor(row.utilizationRate, utilizationAxis),
           opacity: 0.86,
           borderColor: '#FFFFFF',
           borderWidth: 2,
@@ -763,13 +764,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       silent: true,
       itemStyle: { opacity: 0.42 },
       label: { show: false },
-      data: [
-        [{ xAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 20 }],
-        [{ xAxis: 20, itemStyle: { color: '#FFFBEB' } }, { xAxis: 40 }],
-        [{ xAxis: 40, itemStyle: { color: '#F3F6FA' } }, { xAxis: 60 }],
-        [{ xAxis: 60, itemStyle: { color: '#E6FBF2' } }, { xAxis: 80 }],
-        [{ xAxis: 80, itemStyle: { color: '#D9F5E5' } }, { xAxis: 100 }]
-      ]
+      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCoachBandColors)
     }
   });
 }

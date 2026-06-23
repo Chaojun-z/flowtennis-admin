@@ -505,7 +505,7 @@ function operationsCourtHeatVenueName(venue = {}) {
 
 function renderOperationsCourtComparison(data) {
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>校区经营象限</h3><span>收入、利用率与转化表现综合定位</span></div>${operationsMatrixTitleLegend('场地利用率', '订场收入', '订场次数')}</div>
+    <div class="operations-module-head"><div><h3>校区收入 x 场地利用率</h3><span>收入、利用率与转化表现综合定位</span></div>${operationsMatrixTitleLegend('场地利用率', '订场收入', '订场次数')}</div>
     <div class="operations-chart-host operations-court-comparison-chart" id="operationsCourtComparisonChart"></div>
   </section>`;
 }
