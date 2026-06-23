@@ -833,13 +833,13 @@ function financeCurrentMetrics(rows=financeLedgerRows()){
   const directCourseRecognized=financeRowsSum(directCourseRecognizedRows,'recognizedRevenueDelta')||financeRowsSum(directCourseRows,'recognizedRevenueDelta');
   const packageIncome=financeRowsSum(packageReceiptRows,'cashDelta');
   const packageRecognized=financeRowsSum(packageRecognizedRows,'recognizedRevenueDelta');
-  const courseIncome=directCourseIncome+packageIncome;
+  const courseIncome=financeRowsSum(courseRows,'cashDelta');
   const courseRecognized=financeRowsSum(courseRows,'recognizedRevenueDelta');
   const storedValueIncome=financeRowsSum(storedValueRows.filter(row=>row.transactionType==='收款'||row.action==='收款'),'cashDelta');
   const storedValueRecognized=financeRowsSum(storedValueConsumedRows,'recognizedRevenueDelta');
   const bookingIncome=financeRowsSum(bookingRows.filter(row=>row.transactionType==='收款'||row.action==='收款'),'cashDelta');
   const bookingRecognized=financeRowsSum(bookingRows,'recognizedRevenueDelta')||bookingIncome;
-  const totalCash=directCourseIncome+packageIncome+storedValueIncome+bookingIncome;
+  const totalCash=financeRowsSum(businessRows,'cashDelta');
   const totalRecognized=financeRowsSum(businessRows,'recognizedRevenueDelta');
   return {businessRows,directCourseIncome,directCourseRecognized,packageIncome,packageRecognized,courseIncome,courseRecognized,storedValueIncome,storedValueRecognized,bookingIncome,bookingRecognized,totalCash,totalRecognized};
 }

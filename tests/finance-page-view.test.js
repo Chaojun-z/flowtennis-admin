@@ -128,21 +128,24 @@ assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome/,
 assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome\)\|\|Math\.max\(0,courseIncome-packageIncome\)/,'finance page should fall back to course minus package when backend direct course field is stale zero');
 assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
 assert.match(source,/const metrics=financeCurrentMetrics\(financeLedgerRows\(\)\)/,'overview cards should calculate from the currently filtered ledger rows');
-assert.match(source,/const courseIncome=directCourseIncome\+packageIncome/,'current overview metrics should merge direct course and package income');
+assert.match(source,/const courseIncome=financeRowsSum\(courseRows,'cashDelta'\)/,'current overview metrics should sum course cash from standardized rows instead of stitching categories');
 {
   const rows = [
     { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'购买记录 p1', normalizedPaymentMethod:'微信', cashDelta:1000, recognizedRevenueDelta:0 },
     { businessTypeLevel1:'课程', businessType:'课程', transactionType:'消耗', action:'消耗', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:400 },
     { businessTypeLevel1:'课程', businessType:'课程', transactionType:'回退', action:'回退', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:-50 },
     { businessTypeLevel1:'课程', businessType:'课程', transactionType:'已入账', action:'已入账', sourceDocument:'排课 s3', normalizedPaymentMethod:'储值卡', paymentChannel:'储值卡', cashDelta:0, recognizedRevenueDelta:150 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'排课 s2', normalizedPaymentMethod:'微信', cashDelta:100, recognizedRevenueDelta:100 }
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'排课 s2', normalizedPaymentMethod:'微信', cashDelta:100, recognizedRevenueDelta:100 },
+    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'课程补录 x1', normalizedPaymentMethod:'微信', cashDelta:25, recognizedRevenueDelta:25 }
   ];
   const sandbox = { rows, result:null, Math, Number, String };
   vm.runInNewContext(`${functionSource(source,'financeRowsSum')}\n${functionSource(source,'financeCurrentMetrics')}\nresult=financeCurrentMetrics(rows);`, sandbox);
   assert.strictEqual(sandbox.result.packageRecognized, 350, 'course package consume and return should be counted once as package recognized');
   assert.strictEqual(sandbox.result.directCourseRecognized, 100, 'direct course recognized should only include direct course receipts');
-  assert.strictEqual(sandbox.result.courseRecognized, 600, 'course recognized should include every course recognized row exactly once');
-  assert.strictEqual(sandbox.result.totalRecognized, 600, 'total recognized should include every recognized row exactly once');
+  assert.strictEqual(sandbox.result.courseIncome, 1125, 'course income should include every course cash row exactly once');
+  assert.strictEqual(sandbox.result.totalCash, 1125, 'total cash should include every business cash row exactly once');
+  assert.strictEqual(sandbox.result.courseRecognized, 625, 'course recognized should include every course recognized row exactly once');
+  assert.strictEqual(sandbox.result.totalRecognized, 625, 'total recognized should include every recognized row exactly once');
 }
 assert.match(source,/directCourseIncome=businessRows\.filter\(row=>row\.sourceBusinessCategory==='课程'&&String\(row\.relatedDocument\|\|''\)\.startsWith\('排课'\)\)/,'revenue stats should derive direct course income from filtered schedule receipts');
 assert.match(source,/const courseIncome=directCourseIncome\+packageIncome[\s\S]*课程流水/,'revenue stats should merge direct course and package income into course flow');
