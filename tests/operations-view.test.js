@@ -166,8 +166,8 @@ assert.match(stylesSource, /operations-rate-cell strong\{[^}]*font-size:12px[^}]
 assert.doesNotMatch(stylesSource, /@media\(max-width:1500px\)\{[\s\S]*operations-court-top-grid\{grid-template-columns:1fr\}/, 'court comparison and overview should stay side by side on normal desktop widths');
 assert.doesNotMatch(stylesSource, /operations-court-overview-table/, 'court overview should no longer use a table shell');
 assert.match(stylesSource, /operations-court-heat-cell:hover[\s\S]*transform:translateY[\s\S]*box-shadow[\s\S]*z-index/, 'court heat cells should lift and highlight on hover');
-assert.match(stylesSource, /operations-court-heat-tooltip\{[\s\S]*position:absolute[\s\S]*pointer-events:none/, 'court heat cells should use custom hover tooltip instead of the browser title bubble');
-assert.match(stylesSource, /operations-court-heat-cell:hover \.operations-court-heat-tooltip\{[\s\S]*opacity:1[\s\S]*visibility:visible/, 'custom heat tooltip should appear on cell hover');
+assert.match(stylesSource, /operations-court-heat-floating-tooltip\{[\s\S]*position:fixed[\s\S]*pointer-events:none/, 'court heat cells should use a floating custom tooltip instead of the browser title bubble');
+assert.match(operationsSource, /function bindOperationsHeatTooltips\(\)[\s\S]*mouseenter[\s\S]*mousemove[\s\S]*mouseleave/, 'court heat tooltip should be bound after render and follow hovered cells');
 assert.match(stylesSource, /operations-court-heat-scroll\{[^}]*scrollbar-width:none/, 'court heatmap horizontal scroll should stay usable with an invisible scrollbar');
 assert.match(stylesSource, /operations-court-heat-scroll::-webkit-scrollbar\{display:none\}/, 'court heatmap should hide the WebKit scrollbar track');
 assert.match(stylesSource, /operations-court-heatmap-card\{gap:12px;background:#FBF7F4;border-color:#E3E8F2\}/, 'court heatmap should share the requested dashboard card surface as the top charts');
@@ -225,7 +225,7 @@ assert.match(operationsSource, /slot\.heatRate[\s\S]*operationsCourtHeatStyle\(t
 assert.match(operationsSource, /data-heat="\$\{fmt\(toneRate\)\}"/, 'court heat cell should expose relative heat data for debugging visual gradients');
 assert.match(operationsSource, /operationsCourtHeatNextHour\(hour\)/, 'court heat tooltip should show a half-hour time range');
 assert.match(operationsSource, /inferredCapacity[\s\S]*capacityMinutes[\s\S]*occupiedText[\s\S]*dayText/, 'court heat tooltip should avoid showing zero denominators when the API provides utilization but omits numerator fields');
-assert.match(operationsSource, /display:block[\s\S]*使用：\$\{esc\(occupiedText\)\} 次 \/ \$\{esc\(dayText\)\} 天[\s\S]*display:block[\s\S]*使用时长：\$\{fmt\(usedMinutes\)\} \/ \$\{fmt\(capacityMinutes\)\} 分钟[\s\S]*display:block[\s\S]*利用率：\$\{fmt\(rate\)\}%/, 'court heat tooltip should render usage detail vertically with numerator/denominator');
+assert.match(operationsSource, /data-tip="\$\{esc\(label\)\}"/, 'court heat tooltip should render usage detail from a data attribute with numerator/denominator');
 assert.match(operationsSource, /operationsCourtHeatVenueName[\s\S]*legacyUnmatchedVenueNames[\s\S]*未匹配/, 'court heatmap should normalize legacy unmatched names at render time');
 assert.match(operationsSource, /aria-label="[^"]*\$\{esc\(venueName\)\}[\s\S]*\$\{esc\(hour\)\}-\$\{esc\(endHour\)\}[\s\S]*\$\{fmt\(rate\)\}%[\s\S]*使用时长 \$\{fmt\(usedMinutes\)\} \/ \$\{fmt\(capacityMinutes\)\}分钟/, 'court heat cell should expose venue, time range, utilization and occupied minutes for hover/accessibility');
 assert.doesNotMatch(operationsSource, /title="\$\{esc\(label\)\}"/, 'court heat cell should not rely on the browser native tooltip');
@@ -387,6 +387,10 @@ assert.doesNotMatch(stylesSource, /operations-utilization-gemini|operations-util
 assert.match(chartsSource, /归属实收占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show attributed receipt share');
 assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '归属实收占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use attributed receipt share and hide the internal chart legend');
 assert.match(chartsSource, /const bubbleColor = operationsCourtQuadrantColor\(row\)[\s\S]*shadowColor: `\$\{bubbleColor\}33`/, 'court quadrant bubble shadow should follow the bubble color instead of using a green glow');
+assert.match(operationsSource, /data-tip="\$\{esc\(label\)\}"/, 'court heatmap hover should render tooltip text from a cell data attribute');
+assert.doesNotMatch(operationsSource, /operations-court-heat-tooltip/, 'court heatmap should not render tooltips as clipped children inside the scroll grid');
+assert.match(stylesSource, /operations-court-heat-floating-tooltip\.show\{display:block\}/, 'court heatmap hover tooltip should render as a floating layer outside the scroll grid');
+assert.match(stylesSource, /operations-court-heat-kpis div:hover\{border-color:var\(--ops-card-border\);background:var\(--ops-card-bg\)\}/, 'court heat KPI cards should keep the unified operations card hover style');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' \}[\s\S]*axisTick: \{ show: false \}/, 'coach matrix should keep edge labels visible and remove crowded y-axis tick marks');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*yAxis: \{ type: 'value'[\s\S]*formatter: value => value === 0 \? '' : `\$\{value\}%`[\s\S]*axisTick: \{ show: false \}/, 'coach capability matrix should keep edge labels visible, hide y-axis zero and remove crowded tick marks');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*inside: true[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis labels should not be placed inside the plot');

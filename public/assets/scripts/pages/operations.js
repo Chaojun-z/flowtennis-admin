@@ -550,9 +550,53 @@ function renderOperationsCourtHeatCell(slot = {}, venue = {}, options = {}) {
   const dayRaw = Number(slot.dayCount ?? slot.days);
   const occupiedText = Number.isFinite(occupiedRaw) && occupiedRaw >= 0 ? fmt(occupiedRaw) : '-';
   const dayText = Number.isFinite(dayRaw) && dayRaw > 0 ? fmt(dayRaw) : (capacityMinutes ? fmt(Math.round(capacityMinutes / 30)) : '-');
-  const label = `<strong style="display:block;margin-bottom:4px">${esc(venueName)} ${esc(hour)}-${esc(endHour)}</strong><span style="display:block">使用：${esc(occupiedText)} 次 / ${esc(dayText)} 天</span><span style="display:block">使用时长：${fmt(usedMinutes)} / ${fmt(capacityMinutes)} 分钟</span><span style="display:block">利用率：${fmt(rate)}%</span>`;
+  const label = `${venueName} ${hour}-${endHour}\n使用：${occupiedText} 次 / ${dayText} 天\n使用时长：${fmt(usedMinutes)} / ${fmt(capacityMinutes)} 分钟\n利用率：${fmt(rate)}%`;
   const firstRowClass = options.firstRow ? ' is-first-row' : '';
-  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)}-${esc(endHour)} 利用率 ${fmt(rate)}%，使用时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟" data-rate="${fmt(rate)}" data-heat="${fmt(toneRate)}" data-minutes="${fmt(usedMinutes)}"><span class="operations-court-heat-tooltip">${label}</span></span>`;
+  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)}-${esc(endHour)} 利用率 ${fmt(rate)}%，使用时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟" data-rate="${fmt(rate)}" data-heat="${fmt(toneRate)}" data-minutes="${fmt(usedMinutes)}" data-tip="${esc(label)}"></span>`;
+}
+
+function operationsHeatTooltipEl() {
+  let el = document.getElementById('operationsCourtHeatTooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'operationsCourtHeatTooltip';
+    el.className = 'operations-court-heat-floating-tooltip';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showOperationsHeatTooltip(cell) {
+  const text = cell?.dataset?.tip || '';
+  if (!text) return;
+  const el = operationsHeatTooltipEl();
+  el.textContent = text;
+  el.classList.add('show');
+  moveOperationsHeatTooltip(cell);
+}
+
+function moveOperationsHeatTooltip(cell) {
+  const el = document.getElementById('operationsCourtHeatTooltip');
+  if (!el || !cell) return;
+  const rect = cell.getBoundingClientRect();
+  const tooltipRect = el.getBoundingClientRect();
+  const top = Math.max(8, rect.top - tooltipRect.height - 10);
+  const left = Math.min(window.innerWidth - tooltipRect.width - 8, Math.max(8, rect.left + rect.width / 2 - tooltipRect.width / 2));
+  el.style.top = `${Math.round(top)}px`;
+  el.style.left = `${Math.round(left)}px`;
+}
+
+function hideOperationsHeatTooltip() {
+  const el = document.getElementById('operationsCourtHeatTooltip');
+  if (el) el.classList.remove('show');
+}
+
+function bindOperationsHeatTooltips() {
+  document.querySelectorAll('#page-operations .operations-court-heat-cell[data-tip]').forEach(cell => {
+    cell.addEventListener('mouseenter', () => showOperationsHeatTooltip(cell));
+    cell.addEventListener('mousemove', () => moveOperationsHeatTooltip(cell));
+    cell.addEventListener('mouseleave', hideOperationsHeatTooltip);
+  });
 }
 
 function operationsCourtHeatNextHour(hour = '') {
@@ -1416,5 +1460,8 @@ function renderOperations() {
   };
   const renderPanel = panels[operationsActiveTab] || panels.overview;
   host.innerHTML = `<div class="operations-page">${renderPanel(data)}</div>`;
-  requestAnimationFrame(() => renderOperationsCharts(data));
+  requestAnimationFrame(() => {
+    bindOperationsHeatTooltips();
+    renderOperationsCharts(data);
+  });
 }

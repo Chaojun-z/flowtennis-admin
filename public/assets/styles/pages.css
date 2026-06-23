@@ -1223,10 +1223,10 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-court-heat-campus-tabs button.active:hover{background:#2563EB;color:#FFFFFF}
 #page-operations .operations-court-heat-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 #page-operations .operations-court-heat-kpis div{display:flex;align-items:center;justify-content:space-between;min-height:52px;background:#FBF7F4;border:1px solid #E5ECF6;border-radius:8px;padding:18px;box-sizing:border-box}
-#page-operations .operations-court-heat-kpis div:hover{border-color:#C9D8EC;background:#FBF7F4}
+#page-operations .operations-court-heat-kpis div:hover{border-color:var(--ops-card-border);background:var(--ops-card-bg)}
 #page-operations .operations-court-heat-kpis span{display:block;color:#6B7C92;font-size:12px;line-height:18px;margin:0}
 #page-operations .operations-court-heat-kpis strong{display:block;color:#111827;font-size:22px;line-height:28px;font-weight:700}
-#page-operations .operations-court-heat-scroll{overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-ms-overflow-style:none}
+#page-operations .operations-court-heat-scroll{overflow-x:auto;overflow-y:visible;padding-bottom:2px;scrollbar-width:none;-ms-overflow-style:none}
 #page-operations .operations-court-heat-scroll::-webkit-scrollbar{display:none}
 #page-operations .operations-court-heat-grid{display:grid;gap:4px;align-items:center;width:100%;min-width:980px}
 #page-operations .operations-court-heat-hour{color:#90A0B6;font-size:10px;line-height:16px;text-align:center;font-weight:600}
@@ -1234,11 +1234,8 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-court-heat-venue.is-unmatched{color:#9A5B00}
 #page-operations .operations-court-heat-cell{display:block;height:24px;border-radius:5px;border:1px solid #E4EBF5;box-sizing:border-box;position:relative;cursor:default;transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease}
 #page-operations .operations-court-heat-cell:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(47,107,255,.18);opacity:.88;z-index:2}
-#page-operations .operations-court-heat-tooltip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);min-width:max-content;max-width:220px;padding:7px 9px;border:1px solid #9FB3CC;border-radius:4px;background:#F8FAFC;color:#334155;font-size:12px;line-height:18px;font-weight:500;box-shadow:0 8px 18px rgba(15,23,42,.16);opacity:0;visibility:hidden;pointer-events:none;z-index:8;transition:opacity .12s ease,transform .12s ease,visibility .12s ease}
-#page-operations .operations-court-heat-tooltip::after{content:"";position:absolute;left:50%;top:100%;width:8px;height:8px;background:#F8FAFC;border-right:1px solid #9FB3CC;border-bottom:1px solid #9FB3CC;transform:translate(-50%,-4px) rotate(45deg)}
-#page-operations .operations-court-heat-cell.is-first-row .operations-court-heat-tooltip{top:calc(100% + 8px);bottom:auto;transform:translateX(-50%) translateY(-4px)}
-#page-operations .operations-court-heat-cell.is-first-row .operations-court-heat-tooltip::after{top:auto;bottom:100%;border-right:0;border-bottom:0;border-left:1px solid #9FB3CC;border-top:1px solid #9FB3CC;transform:translate(-50%,4px) rotate(45deg)}
-#page-operations .operations-court-heat-cell:hover .operations-court-heat-tooltip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.operations-court-heat-floating-tooltip{position:fixed;z-index:3000;display:none;max-width:220px;padding:7px 9px;border:1px solid #9FB3CC;border-radius:4px;background:#F8FAFC;color:#334155;font-size:12px;line-height:18px;font-weight:500;box-shadow:0 8px 18px rgba(15,23,42,.16);white-space:pre-line;pointer-events:none}
+.operations-court-heat-floating-tooltip.show{display:block}
 #page-operations .operations-court-heat-cell.idle{background:#F1F5F9}
 #page-operations .operations-court-heat-cell.low{background:#93C5FD;border-color:#7FB3F7}
 #page-operations .operations-court-heat-cell.medium{background:#60A5FA;border-color:#4C94EE}

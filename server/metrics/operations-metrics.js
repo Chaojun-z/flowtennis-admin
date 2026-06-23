@@ -1229,6 +1229,11 @@ function campusIndexRowForValue(index, value) {
   return index.aliases.get(textKey(value)) || null;
 }
 
+function campusIndexRowFromFinanceRow(index, row = {}) {
+  return campusIndexRowForValue(index, row.campusCode || row.campus || row.campusName || row.sourceCampus || row.location || row.sourceLocation)
+    || (index.rows.length === 1 ? index.rows[0] : null);
+}
+
 function dateFromRow(row = {}) {
   return courtHistoryBusinessDate(row) || dateKey(row.date || row.occurredDate || row.businessDate || row.sourceDate || row.relatedDate || row.startTime || row.createdAt);
 }
@@ -1880,6 +1885,43 @@ function mergeConfiguredCourtMetricsWithFinance(configuredMetrics, financeMetric
   };
 }
 
+function applyFinanceCourtRowsToCampusRows(court = {}, financeRows = [], campuses = []) {
+  if (!Array.isArray(court?.campusRows) || !court.campusRows.length || !Array.isArray(financeRows) || !financeRows.length) return court;
+  const campusIndex = buildCampusIndex(campuses);
+  const totals = new Map();
+  financeCourtBookingRows(financeRows).forEach(row => {
+    const campusRow = campusIndexRowFromFinanceRow(campusIndex, row);
+    if (!campusRow) return;
+    const current = totals.get(campusRow.code) || { bookingAmount: 0, bookingCount: 0, bookingHours: 0 };
+    current.bookingAmount = money(current.bookingAmount + (Number(row.cashDelta) || Number(row.recognizedRevenueDelta) || 0));
+    current.bookingCount += 1;
+    current.bookingHours = round(current.bookingHours + parseTimeTextHours(row.timeText), 1);
+    totals.set(campusRow.code, current);
+  });
+  if (!totals.size) return court;
+  const campusRows = court.campusRows.map(row => {
+    const campusRow = campusIndexRowForValue(campusIndex, row.campusCode || row.campusName);
+    const total = campusRow ? totals.get(campusRow.code) : null;
+    if (!total) return row;
+    return {
+      ...row,
+      bookingAmount: Math.max(Number(row.bookingAmount) || 0, total.bookingAmount),
+      bookingCount: Math.max(Number(row.bookingCount) || 0, total.bookingCount),
+      bookingHours: Math.max(Number(row.bookingHours) || 0, total.bookingHours)
+    };
+  });
+  return {
+    ...court,
+    campusRows,
+    campusComparison: campusRows.map(row => ({
+      campusCode: row.campusCode,
+      campusName: row.campusName,
+      bookingAmount: row.bookingAmount,
+      utilizationRate: row.utilizationRate
+    }))
+  };
+}
+
 function buildRevenueMix(financeOverviewData = {}) {
   const all = financeAll(financeOverviewData);
   return [
@@ -2148,7 +2190,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     campuses: data.campuses || [],
     now
   });
-  const court = buildCourtMetricsForRange(data, rangedData, reportingDateRange, now);
+  const court = applyFinanceCourtRowsToCampusRows(
+    buildCourtMetricsForRange(data, rangedData, reportingDateRange, now),
+    rangedData.financeNormalizedRows || [],
+    data.campuses || []
+  );
   if (Array.isArray(court.campusRows)) {
     court.campusRows = court.campusRows.map(row => ({
       ...row,
@@ -2307,8 +2353,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
     conversion: {
       metricSource: 'standard-course-lifecycle',
       standardRates: {
-        trialConversionRate: rate(coachTrialConverted, coachTrialBase),
-        renewalRate: periodRepurchase.rate,
+        trialConversionRate: Number(courseFunnel[3]?.transitionRate) || 0,
+        renewalRate: Number(courseFunnel[4]?.transitionRate) || 0,
         renewalNumerator: periodRepurchase.numerator,
         renewalDenominator: periodRepurchase.denominator
       },

@@ -677,6 +677,11 @@ const configuredCourtFinanceFallbackMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-08T12:00:00+08:00') });
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingAmount.value, 320, 'configured court dashboard should use finance booking income when court booking history is missing');
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingHours.value, 3, 'configured court dashboard should use finance booking hours when court booking history is missing');
+assert.strictEqual(
+  configuredCourtFinanceFallbackMetrics.court.campusRows.reduce((sum, row) => sum + (Number(row.bookingAmount) || 0), 0),
+  configuredCourtFinanceFallbackMetrics.court.cards.bookingAmount.value,
+  'court campus rows should share the same ranged booking income as the top court KPI card'
+);
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.trends.at(-1)?.bookingAmount, 220, 'configured court trends should bucket finance booking income when court booking history is missing');
 
 const noGenderMetrics = buildOperationsMetrics({
@@ -811,7 +816,7 @@ assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion shou
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
 assert.strictEqual(coachDashboardMetrics.coach.metricSource, 'standard-course-lifecycle', 'coach dashboard should expose the unified standard metric source');
 assert.strictEqual(coachDashboardMetrics.conversion.metricSource, 'standard-course-lifecycle', 'conversion dashboard should expose the same unified standard metric source');
-assert.strictEqual(coachDashboardMetrics.conversion.standardRates.trialConversionRate, coachDashboardMetrics.coach.cards.trialConversionRate.value, 'conversion and coach dashboards should share the same backend trial conversion rate value');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.trialConversionRate, coachDashboardMetrics.conversion.courseFunnel[3].transitionRate, 'conversion top deal rate should share the same backend value as the visible funnel deal step');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalRate, 0, 'conversion renewal should use selected-period repurchases instead of coach old-customer renewal');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalNumerator, 0, 'conversion renewal should expose selected-period repurchase numerator');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalDenominator, 2, 'conversion renewal should expose selected-period paid-student denominator');
@@ -977,7 +982,7 @@ const periodRepurchaseMetrics = buildOperationsMetrics({
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 const june10RepurchasePoint = periodRepurchaseMetrics.conversion.trends.find(row => row.date === '2026-06-10');
-assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalRate, 18.2, 'conversion renewal should use period repurchase students over period paid students');
+assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalRate, periodRepurchaseMetrics.conversion.courseFunnel[4].transitionRate, 'conversion top renewal rate should share the same backend value as the visible funnel renewal step');
 assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalNumerator, 2, 'conversion renewal numerator should be repurchased students in the selected period');
 assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalDenominator, 11, 'conversion renewal denominator should be unique paid students in the selected period');
 assert.strictEqual(june10RepurchasePoint?.renewalRate, 18.2, 'conversion renewal trend should use cumulative selected-period repurchase rate, never same-day renewals over same-day deals');
@@ -1153,5 +1158,35 @@ const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
 assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 0, 'empty selected ranges must stay zero instead of falling back to all-time finance totals');
 assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.tradeCount.value, 0, 'empty selected ranges must not reuse all-time trade counts');
 assert.deepStrictEqual(zeroRangedSnapshotGuardMetrics.overview.revenueMix, [], 'empty selected revenue mix must not show all-time finance categories');
+
+const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  leads: [
+    { id: 'conversion-lead-1', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', leadStage: '已约体验', trialAt: '2026-06-01' },
+    { id: 'conversion-lead-2', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', studentId: 'conversion-student-1', leadStage: '课程转化', trialAt: '2026-06-01' }
+  ],
+  students: [{ id: 'conversion-student-1', sourceLeadId: 'conversion-lead-2', primaryCoach: '张教练' }],
+  purchases: [{ id: 'conversion-purchase-1', studentId: 'conversion-student-1', actualAmount: 1000, purchaseDate: '2026-06-01', status: 'active', primaryCoach: '张教练' }],
+  coaches: [{ id: 'conversion-coach-1', name: '张教练', status: 'active', campus: 'mabao' }],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-23T08:00:00+08:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
+});
+assert.strictEqual(
+  conversionDashboardConsistencyMetrics.conversion.standardRates.trialConversionRate,
+  conversionDashboardConsistencyMetrics.conversion.courseFunnel[3].transitionRate,
+  'conversion top deal rate should use the same rate as the visible funnel deal step'
+);
+assert.strictEqual(
+  conversionDashboardConsistencyMetrics.conversion.standardRates.renewalRate,
+  conversionDashboardConsistencyMetrics.conversion.courseFunnel[4].transitionRate,
+  'conversion top renewal rate should use the same rate as the visible funnel renewal step'
+);
 
 console.log('operations metrics tests passed');
