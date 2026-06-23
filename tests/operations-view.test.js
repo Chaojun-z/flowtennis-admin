@@ -71,6 +71,12 @@ assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const ur
 assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
+assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache should be scoped by the active date range URL');
+assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
+assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest view model for fast repeat entry');
+assert.match(stateSource, /function hydrateOperationsPageFromClientCache\(\)[\s\S]*operationsPageData=data\.operations[\s\S]*renderOperations\(\)/, 'operations should render cached data immediately while fresh data loads in the background');
+assert.match(stateSource, /if\(pg==='operations'&&hydrateOperationsPageFromClientCache\(\)\)return;/, 'operations loading should skip skeleton when a cached view model is available');
+assert.match(stateSource, /persistOperationsPageClientCache\(data\)/, 'operations refresh should update the client view-model cache after a successful response');
 assert.match(stateSource, /const requestKey=datasetRequestKey\(name\)/, 'dataset request de-duplication should be scoped by request key');
 assert.match(stateSource, /datasetLoadPromises\.has\(requestKey\)/, 'in-flight operations requests should not reuse a stale all-time request after date changes');
 assert.match(stateSource, /if\(name==='operationsPage'\)[\s\S]*operationsPageRequestSeq/, 'operations refresh should only accept the latest response');
@@ -131,7 +137,9 @@ assert.match(chartsSource, /type:\s*'scatter'/, 'court comparison should render 
 assert.match(chartsSource, /markLine[\s\S]*平均利用率[\s\S]*平均收入/, 'court quadrant should show average lines for business positioning');
 assert.match(chartsSource, /symbolSize[\s\S]*bookingCount/, 'court quadrant bubble size should express booking count');
 assert.match(chartsSource, /operationsCourtQuadrantColor[\s\S]*utilizationRate[\s\S]*return '#E05252'[\s\S]*return '#D89135'[\s\S]*return '#3B6EA8'[\s\S]*return '#2E8B6D'/, 'court quadrant bubbles should follow the utilization band color');
-assert.match(chartsSource, /grid: \{ left: 18, right: 18, top: 28, bottom: 34, containLabel: true \}/, 'court quadrant should keep y-axis labels visible inside the card padding');
+assert.match(chartsSource, /function operationsMatrixGrid\(/, 'bubble matrices should share one grid padding helper');
+assert.match(chartsSource, /operationsMatrixGrid\(\)/, 'bubble matrices should use the shared grid padding helper');
+assert.match(chartsSource, /right: 44/, 'bubble matrices should reserve enough right space so the 100% axis label is not clipped');
 assert.match(chartsSource, /max: 50[\s\S]*interval: 10[\s\S]*formatter: value => `\$\{value\}%`/, 'court quadrant x axis should use fixed 0-50% ticks');
 assert.match(chartsSource, /max: 1000000[\s\S]*interval: 200000[\s\S]*formatter: value => `\$\{fmt\(value \/ 10000\)\}万`/, 'court quadrant y axis should use fixed 0-100万 ticks');
 assert.match(chartsSource, /buildOperationsCourtQuadrantChartOption[\s\S]*markArea[\s\S]*xAxis: 0[\s\S]*xAxis: 10[\s\S]*xAxis: 20[\s\S]*xAxis: 30[\s\S]*xAxis: 40[\s\S]*xAxis: 50/, 'court quadrant should show utilization color bands every 10%');
@@ -239,10 +247,13 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should render monitor KPI cards derived from the funnel');
 assert.match(operationsSource, /function renderOperationsConversionKpi[\s\S]*operations-court-kpi[\s\S]*operationsConversionSparklineSvg/, 'conversion top KPI cards should reuse the court dashboard trend-card standard');
 assert.match(operationsSource, /function operationsTrendToday[\s\S]*activeGlobalDateRange[\s\S]*new Date/, 'operations trend helpers should resolve a real today boundary for all dashboards');
+assert.match(operationsSource, /operationsCoachTitleLegend\(\[\{ label: '圆点大小 = 课数'/, 'coach matrices should use a dot legend with spaced bubble-size copy');
+assert.match(stylesSource, /operations-coach-title-legend i\{[^}]*width:10px[^}]*height:10px[^}]*border-radius:50%/, 'matrix legend marker should be a dot instead of a long rectangle');
 assert.match(operationsSource, /function operationsTrendComparisonForDisplay[\s\S]*points[\s\S]*length >= 2[\s\S]*mode: 'none'/, 'single-day operation ranges should hide misleading previous-period change text');
 assert.doesNotMatch(operationsSource, /function operationsBuildConversionTrendRows/, 'conversion trend rows should be generated by the backend instead of being rebuilt in the browser');
 assert.match(operationsSource, /trendRows:\s*data\.conversion\?\.trends \|\| \[\]/, 'conversion view should use backend-generated trend rows');
-assert.match(operationsSource, /function operationsConversionTrendPoints[\s\S]*Math\.min\(\.\.\.values\)[\s\S]*Math\.max\(\.\.\.values\)[\s\S]*return \[\]/, 'conversion KPI sparklines should hide flat no-signal trends instead of drawing fake straight lines');
+assert.doesNotMatch(operationsSource, /function operationsConversionTrendPoints[\s\S]*Math\.min\(\.\.\.values\)[\s\S]*Math\.max\(\.\.\.values\)[\s\S]*return \[\]/, 'conversion KPI sparklines should draw real flat trends instead of hiding them');
+assert.match(operationsSource, /function operationsConversionTrendPoints[\s\S]*return points/, 'conversion KPI sparklines should return real backend trend points whenever at least two points exist');
 assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*operations-funnel-filter-row[\s\S]*operationsFilterDropdown\('operationsConversionSource'[\s\S]*operationsFilterDropdown\('operationsConversionCampus'[\s\S]*operationsFilterDropdown\('operationsConversionCoach'/, 'conversion filters should live inside the funnel module header');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-filter-row[\s\S]*function renderConversionInsightModule/, 'conversion filters should not float above the KPI cards');
 assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
@@ -376,8 +387,8 @@ assert.doesNotMatch(stylesSource, /operations-utilization-gemini|operations-util
 assert.match(chartsSource, /归属实收占比：\$\{fmt\(share\)\}%/, 'coach contribution tooltip should show attributed receipt share');
 assert.match(chartsSource, /legend: \{ show: false \}[\s\S]*name: '归属实收占比'[\s\S]*source\.map\(row => row\.revenueShare\)/, 'coach contribution line should use attributed receipt share and hide the internal chart legend');
 assert.match(chartsSource, /const bubbleColor = operationsCourtQuadrantColor\(row\)[\s\S]*shadowColor: `\$\{bubbleColor\}33`/, 'court quadrant bubble shadow should follow the bubble color instead of using a green glow');
-assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: \{ left: 10, right: 28, top: 8, bottom: 18, containLabel: true \}[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' \}[\s\S]*axisTick: \{ show: false \}/, 'coach matrix should keep edge labels visible and remove crowded y-axis tick marks');
-assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*grid: \{ left: 10, right: 28, top: 8, bottom: 18, containLabel: true \}[\s\S]*yAxis: \{ type: 'value'[\s\S]*formatter: value => value === 0 \? '' : `\$\{value\}%`[\s\S]*axisTick: \{ show: false \}/, 'coach capability matrix should keep edge labels visible, hide y-axis zero and remove crowded tick marks');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*axisLabel: \{ formatter: value => operationsCoachRevenueAxisLabel\(value\), color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' \}[\s\S]*axisTick: \{ show: false \}/, 'coach matrix should keep edge labels visible and remove crowded y-axis tick marks');
+assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*grid: operationsMatrixGrid\(\)[\s\S]*yAxis: \{ type: 'value'[\s\S]*formatter: value => value === 0 \? '' : `\$\{value\}%`[\s\S]*axisTick: \{ show: false \}/, 'coach capability matrix should keep edge labels visible, hide y-axis zero and remove crowded tick marks');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*inside: true[\s\S]*buildOperationsCoachParetoChartOption/, 'coach matrix y-axis labels should not be placed inside the plot');
 assert.doesNotMatch(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*inside: true[\s\S]*window\.addEventListener/, 'coach capability y-axis labels should not be placed inside the plot');
 assert.match(chartsSource, /operationsCoachBandColor[\s\S]*rate < 20[\s\S]*rate < 40[\s\S]*rate < 60[\s\S]*rate < 80/, 'coach matrix point colors should change at each 20% status band');
@@ -395,7 +406,7 @@ assert.match(chartsSource, /buildOperationsCoachParetoChartOption[\s\S]*filter\(
 assert.match(chartsSource, /slice\(0, 10\)/, 'coach contribution chart should cap visible coach count to avoid crowded vertical labels');
 assert.match(chartsSource, /yAxis: \[[\s\S]*\{ type: 'value'[\s\S]*\{ type: 'value', min: 0, max: 100/, 'coach contribution chart should keep amount and share axes for the vertical layout');
 assert.match(chartsSource, /if \(rate < 80\) return '#5CC8A0'[\s\S]*return '#1F8A5B'/, 'coach high utilization bands should be visually distinct');
-assert.match(chartsSource, /xAxis: \{[\s\S]*nameGap: 18[\s\S]*yAxis: \{[\s\S]*nameGap: 30/, 'coach matrix should reduce axis name gaps to reclaim plot area');
+assert.match(chartsSource, /function operationsMatrixGrid\(\) \{\s*return \{ left: 54, right: 44, top: 24, bottom: 42, containLabel: true \};\s*\}/, 'coach matrix should use the shared aligned matrix grid with enough right padding');
 assert.match(stylesSource, /operations-coach-primary-card\{padding:14px 16px 12px\}/, 'coach matrix cards should reduce inner padding');
 assert.match(stylesSource, /operations-coach-matrix-chart\{height:360px;min-height:360px/, 'coach matrix charts should get enough height after tighter padding');
 assert.match(operationsSource, /renderStandardChart\('operationsCoachMatrixChart'[\s\S]*\{ height: 360 \}/, 'coach matrix render height should match the tighter chart container');

@@ -29,8 +29,12 @@ assert.match(operationsPageSource, /scanFirstRows/, 'operations page-data should
 assert.match(operationsPageSource, /OPERATIONS_CACHE_TTL_MS/, 'operations page-data should cache raw read rows briefly so date switches do not rescan every table');
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations page-data cache should be scoped before reuse');
 assert.match(operationsPageSource, /OPERATIONS_RESULT_CACHE_TTL_MS/, 'operations page-data should cache computed dashboard results for fast date switching');
+assert.match(operationsPageSource, /OPERATIONS_RESULT_STALE_TTL_MS/, 'operations page-data should keep stale computed results briefly for sub-second repeat loads');
 assert.match(operationsPageSource, /getOperationsResultCacheKey[\s\S]*dateRange\.startDate[\s\S]*dateRange\.endDate/, 'computed operations cache should be scoped by selected date range');
 assert.match(operationsPageSource, /const cachedOperations = operationsResultCache\.get\(resultCacheKey\)/, 'operations page-data should read the computed result cache before recalculating');
+assert.match(operationsPageSource, /function readStaleOperationsResultCache[\s\S]*OPERATIONS_RESULT_STALE_TTL_MS/, 'operations page-data should return a usable stale result while refreshing in the background');
+assert.match(operationsPageSource, /function refreshOperationsResultCacheInBackground[\s\S]*operationsResultRefreshPromises/, 'operations page-data should de-duplicate stale-result background refreshes');
+assert.match(operationsPageSource, /if \(stalePayload\) \{[\s\S]*refreshOperationsResultCacheInBackground\(resultCacheKey, buildPayload\)[\s\S]*return sendJson\(res, stalePayload\)/, 'operations page-data should answer stale-cache hits immediately instead of blocking on a fresh aggregate');
 assert.match(operationsPageSource, /operationsResultCache\.set\(resultCacheKey/, 'operations page-data should save computed operations results after calculation');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*OPERATIONS_SCHEDULE_FIELDS/, 'operations page-data should keep a dedicated projection field list for the operations read model');
 assert.match(operationsPageSource, /OPERATIONS_LEAD_FIELDS[\s\S]*formalCoach/, 'operations page-data should include formalCoach for conversion coach filters');

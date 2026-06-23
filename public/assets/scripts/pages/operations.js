@@ -400,7 +400,7 @@ function operationsOverviewCashQuality(totalIncome, recognizedRevenue, pendingRe
 function operationsOverviewCoachSummary(data = {}) {
   const cards = data.coach?.cards || {};
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>教练经营效率</h3><span>复用教练人效的产值、工时利用率和课时量口径</span></div>${operationsCoachTitleLegend([{ label: '圆点大小=课数', color: '#8EA0B8' }])}</div>
+    <div class="operations-module-head"><div><h3>教练经营效率</h3><span>复用教练人效的产值、工时利用率和课时量口径</span></div>${operationsCoachTitleLegend([{ label: '圆点大小 = 课数', color: '#8EA0B8' }])}</div>
     <div class="operations-overview-inline-kpis">
       <span>在岗 <strong>${operationsCardText(cards.activeCoaches)}</strong></span>
       <span>归属实收 <strong>${operationsMoneyText(operationsCardNumber(cards.revenue))}</strong></span>
@@ -413,7 +413,7 @@ function operationsOverviewCoachSummary(data = {}) {
 function operationsOverviewCourtSummary(data = {}) {
   const cards = data.court?.cards || {};
   return `<section class="operations-section operations-overview-court-card">
-    <div class="operations-module-head"><div><h3>场地经营效率</h3><span>复用场地运转的订场收入、次数、利用率口径</span></div>${operationsCoachTitleLegend([{ label: '圆点大小=订场次数', color: '#8EA0B8' }])}</div>
+    <div class="operations-module-head"><div><h3>场地经营效率</h3><span>复用场地运转的订场收入、次数、利用率口径</span></div>${operationsCoachTitleLegend([{ label: '圆点大小 = 订场次数', color: '#8EA0B8' }])}</div>
     <div class="operations-overview-inline-kpis">
       <span>订场收入 <strong>${operationsMoneyText(operationsCardNumber(cards.bookingAmount))}</strong></span>
       <span>订场次数 <strong>${operationsCardText(cards.bookingCount)}</strong></span>
@@ -670,11 +670,11 @@ function renderOperationsCoach(data) {
   })).join('')}</div>
   <div class="operations-coach-hero-grid">
     <section class="operations-section operations-coach-primary-card">
-      ${operationsCoachChartHeader('产值 × 工时利用率矩阵', operationsCoachTitleLegend([{ label: '圆点大小=课数', color: '#8EA0B8' }]))}
+      ${operationsCoachChartHeader('产值 × 工时利用率矩阵', operationsCoachTitleLegend([{ label: '圆点大小 = 课数', color: '#8EA0B8' }]))}
       <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachMatrixChart"></div>
     </section>
     <section class="operations-section operations-coach-primary-card">
-      ${operationsCoachChartHeader('转化 × 续费能力矩阵', operationsCoachTitleLegend([{ label: '圆点大小=样本量', color: '#8EA0B8' }]))}
+      ${operationsCoachChartHeader('转化 × 续费能力矩阵', operationsCoachTitleLegend([{ label: '圆点大小 = 样本量', color: '#8EA0B8' }]))}
       <div class="operations-chart-host operations-coach-matrix-chart" id="operationsCoachCapabilityChart"></div>
     </section>
   </div>
@@ -1112,8 +1112,6 @@ function operationsConversionTrendPoints(trends = [], key = '') {
   const points = operationsTrendPoints(trends, key);
   if (!operationsShouldShowTrend()) return [];
   if (points.length < 2) return [];
-  const values = points.map(point => Number(point.value) || 0);
-  if (Math.min(...values) === Math.max(...values)) return [];
   return points;
 }
 
@@ -1333,7 +1331,7 @@ function renderConversionInsightModule(conversion) {
 function renderConversionChannelEfficiencyModule(conversion) {
   const rows = operationsChannelQualityRows(conversion.channelEfficiencyRows || []);
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>渠道效率监控</h3><span>用象限图先判断渠道质量，再看排行明细</span></div>${operationsCoachTitleLegend([{ label: '圆点大小=成交人数', color: '#8EA0B8' }])}</div>
+    <div class="operations-module-head"><div><h3>渠道效率监控</h3><span>用象限图先判断渠道质量，再看排行明细</span></div>${operationsCoachTitleLegend([{ label: '圆点大小 = 成交人数', color: '#8EA0B8' }])}</div>
     <div class="operations-channel-quality-layout">
       <div class="operations-channel-quality-chart" id="operationsChannelQualityChart"></div>
       ${operationsChannelRankingTable(rows)}

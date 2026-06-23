@@ -202,6 +202,10 @@ function buildStandardQuadrantBubbleMatrixChartOption(option = {}) {
   return buildStandardBubbleMatrixChartOption(option);
 }
 
+function operationsMatrixGrid() {
+  return { left: 54, right: 44, top: 24, bottom: 42, containLabel: true };
+}
+
 function operationsBubbleSize(metric, maxMetric, { min = 12, max = 34 } = {}) {
   const value = Math.max(0, Number(metric) || 0);
   const maxValue = Math.max(1, Number(maxMetric) || 1);
@@ -250,7 +254,7 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
   const avgRate = source.reduce((sum, row) => sum + (Number(row.dealConversionRate) || 0), 0) / source.length;
   const avgLeads = source.reduce((sum, row) => sum + (Number(row.leads) || 0), 0) / source.length;
   return buildStandardBusinessBubbleMatrixChartOption({
-    grid: { left: 18, right: 18, top: 18, bottom: 30, containLabel: true },
+    grid: operationsMatrixGrid(),
     tooltip: { trigger: 'item', formatter: operationsChannelQualityTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
@@ -397,7 +401,7 @@ function buildOperationsCourtQuadrantChartOption({ rows = [] } = {}) {
   });
   return buildStandardBusinessBubbleMatrixChartOption({
     color: ['#E05252', '#D89135', '#3B6EA8', '#2E8B6D', '#14B8A6'],
-    grid: { left: 18, right: 18, top: 28, bottom: 34, containLabel: true },
+    grid: operationsMatrixGrid(),
     tooltip: { trigger: 'item', formatter: operationsCourtQuadrantTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
@@ -626,7 +630,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const avgUtilization = source.reduce((sum, row) => sum + (Number(row.utilizationRate) || 0), 0) / source.length;
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
   return buildStandardBusinessBubbleMatrixChartOption({
-    grid: { left: 10, right: 28, top: 8, bottom: 18, containLabel: true },
+    grid: operationsMatrixGrid(),
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -643,7 +647,10 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     xAxis: {
       type: 'value',
-      nameGap: 18,
+      name: '工时利用率',
+      nameLocation: 'middle',
+      nameGap: 28,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: 100,
       interval: 20,
@@ -654,7 +661,10 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
     },
     yAxis: {
       type: 'value',
-      nameGap: 30,
+      name: '归属实收',
+      nameLocation: 'middle',
+      nameGap: 44,
+      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
       min: 0,
       max: 1000000,
       interval: 200000,
@@ -855,7 +865,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
   return buildStandardQuadrantBubbleMatrixChartOption({
-    grid: { left: 10, right: 28, top: 8, bottom: 18, containLabel: true },
+    grid: operationsMatrixGrid(),
     tooltip: {
       trigger: 'item',
       formatter: item => {
@@ -872,8 +882,8 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
         </div>`;
       }
     },
-    xAxis: { type: 'value', nameGap: 18, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', nameGap: 24, min: 0, max: 100, interval: 20, axisLabel: { formatter: value => value === 0 ? '' : `${value}%`, color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    xAxis: { type: 'value', name: '体验转化率', nameLocation: 'middle', nameGap: 28, nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11, margin: 8 }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    yAxis: { type: 'value', name: '老客续费率', nameLocation: 'middle', nameGap: 38, nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: value => value === 0 ? '' : `${value}%`, color: '#A19080', fontSize: 11, margin: 8, verticalAlign: 'top' }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
     seriesName: '转化续费能力',
     data: source.map(row => {
       const ability = operationsCoachCapabilityColor(row);

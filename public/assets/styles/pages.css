@@ -1327,7 +1327,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-band-legend .band-full{background:#D89135}
 #page-operations .operations-coach-title-legend{display:flex;align-items:center;justify-content:flex-end;gap:18px;white-space:nowrap;color:#A19080;font-size:11px;line-height:16px;font-weight:400}
 #page-operations .operations-coach-title-legend span{display:inline-flex;align-items:center;gap:7px}
-#page-operations .operations-coach-title-legend i{display:inline-block;width:18px;height:10px;border-radius:3px;box-sizing:border-box}
+#page-operations .operations-coach-title-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;box-sizing:border-box}
 #page-operations .operations-coach-title-legend i.line{height:3px;border-radius:999px;position:relative}
 #page-operations .operations-coach-title-legend i.line::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;border:2px solid #3B6EA8;background:#FFFFFF;border-radius:50%;transform:translate(-50%,-50%)}
 #page-operations .operations-coach-hero-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}

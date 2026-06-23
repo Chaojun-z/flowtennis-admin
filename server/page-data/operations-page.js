@@ -54,8 +54,10 @@ const OPERATIONS_SCHEDULE_FIELDS = [
 ];
 const OPERATIONS_CACHE_TTL_MS = 60 * 1000;
 const OPERATIONS_RESULT_CACHE_TTL_MS = 60 * 1000;
+const OPERATIONS_RESULT_STALE_TTL_MS = 10 * 60 * 1000;
 const operationsRowsCache = new Map();
 const operationsResultCache = new Map();
+const operationsResultRefreshPromises = new Map();
 
 async function readOperationsRows({ table, getCachedScan, scanFirstRows, columns, limit = 1000 }) {
   if (typeof scanFirstRows === 'function') {
@@ -93,6 +95,13 @@ function readOperationsResultCache(resultCacheKey) {
   if (cachedOperations && Date.now() - cachedOperations.createdAt < OPERATIONS_RESULT_CACHE_TTL_MS) {
     return cachedOperations.payload;
   }
+  return null;
+}
+
+function readStaleOperationsResultCache(resultCacheKey) {
+  const cachedOperations = operationsResultCache.get(resultCacheKey);
+  if (!cachedOperations) return null;
+  if (Date.now() - cachedOperations.createdAt < OPERATIONS_RESULT_STALE_TTL_MS) return cachedOperations.payload;
   operationsResultCache.delete(resultCacheKey);
   return null;
 }
@@ -173,30 +182,18 @@ async function getOperationsBaseRows({
   return rows;
 }
 
-async function handleOperationsPageData({
-  query,
+async function buildOperationsPagePayload({
+  dateRange,
   user,
-  res,
-  sendJson,
-  init,
   listCampusesWithDefaults,
   getCachedScan,
   scanFirstRows,
-  getFinancePageScheduleRows,
   filterLoadAllForUser,
   mergeDuplicateLeadRows,
   buildFinancePageSnapshot,
   getFinancePageSnapshotIfCached,
-  FINANCE_PAGE_COURT_PROJECTION_FIELDS,
   tables
 }) {
-  if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
-  await init();
-  const dateRange = getOperationsDateRange(query);
-  const resultCacheKey = getOperationsResultCacheKey(user, dateRange);
-  const cachedPayload = readOperationsResultCache(resultCacheKey);
-  if (cachedPayload) return sendJson(res, cachedPayload);
-
   const useGlobalFinanceSnapshot = String(user.dataScope || '').trim() !== 'campus' && !(Array.isArray(user.campusIds) && user.campusIds.length);
   const baseRows = await getOperationsBaseRows({
     user,
@@ -243,11 +240,69 @@ async function handleOperationsPageData({
     financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows
   }, { dateRange });
 
-  const payload = {
+  return {
     campuses: scoped.campuses,
     operations,
     generatedAt: operations.generatedAt
   };
+}
+
+function refreshOperationsResultCacheInBackground(resultCacheKey, buildPayload) {
+  if (operationsResultRefreshPromises.has(resultCacheKey)) return;
+  const promise = buildPayload()
+    .then(payload => {
+      operationsResultCache.set(resultCacheKey, { createdAt: Date.now(), payload });
+    })
+    .catch(error => {
+      console.warn('operations stale cache refresh failed', error);
+    })
+    .finally(() => {
+      operationsResultRefreshPromises.delete(resultCacheKey);
+    });
+  operationsResultRefreshPromises.set(resultCacheKey, promise);
+}
+
+async function handleOperationsPageData({
+  query,
+  user,
+  res,
+  sendJson,
+  init,
+  listCampusesWithDefaults,
+  getCachedScan,
+  scanFirstRows,
+  getFinancePageScheduleRows,
+  filterLoadAllForUser,
+  mergeDuplicateLeadRows,
+  buildFinancePageSnapshot,
+  getFinancePageSnapshotIfCached,
+  FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  tables
+}) {
+  if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
+  await init();
+  const dateRange = getOperationsDateRange(query);
+  const resultCacheKey = getOperationsResultCacheKey(user, dateRange);
+  const cachedPayload = readOperationsResultCache(resultCacheKey);
+  if (cachedPayload) return sendJson(res, cachedPayload);
+  const buildPayload = () => buildOperationsPagePayload({
+    dateRange,
+    user,
+    listCampusesWithDefaults,
+    getCachedScan,
+    scanFirstRows,
+    filterLoadAllForUser,
+    mergeDuplicateLeadRows,
+    buildFinancePageSnapshot,
+    getFinancePageSnapshotIfCached,
+    tables
+  });
+  const stalePayload = readStaleOperationsResultCache(resultCacheKey);
+  if (stalePayload) {
+    refreshOperationsResultCacheInBackground(resultCacheKey, buildPayload);
+    return sendJson(res, stalePayload);
+  }
+  const payload = await buildPayload();
   operationsResultCache.set(resultCacheKey, { createdAt: Date.now(), payload });
   return sendJson(res, payload);
 }

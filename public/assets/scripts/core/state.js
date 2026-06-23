@@ -30,10 +30,12 @@ let loadedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
 const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
+const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
 let operationsPageRequestSeq=0;
+let operationsPageBackgroundRefreshSeq=0;
 function resolveClientRuntimeStage(){
   const host=String(window.location.hostname||'').trim().toLowerCase();
   if(!host||host==='localhost'||host==='127.0.0.1')return 'local';
@@ -158,6 +160,29 @@ function operationsPageDataUrl(){
 }
 function operationsPageDatasetRequestKey(){
   return 'operationsPage:'+operationsPageDataUrl();
+}
+function operationsPageClientCacheKey(){
+  return OPERATIONS_PAGE_CACHE_PREFIX+CLIENT_DATA_CACHE_SCOPE+'_'+(currentUser?.id||'anon')+'_'+operationsPageDataUrl();
+}
+function readOperationsPageClientCache(){
+  try{
+    const raw=localStorage.getItem(operationsPageClientCacheKey());
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    return parsed&&parsed.operations?parsed:null;
+  }catch(e){return null;}
+}
+function persistOperationsPageClientCache(data){
+  if(!data?.operations)return;
+  try{localStorage.setItem(operationsPageClientCacheKey(),JSON.stringify({savedAt:Date.now(),operations:data.operations,campuses:data.campuses||[]}));}catch(e){}
+}
+function hydrateOperationsPageFromClientCache(){
+  const data=readOperationsPageClientCache();
+  if(!data?.operations)return false;
+  setDatasetValue('campuses',data.campuses||[],{persist:false});
+  operationsPageData=data.operations;
+  if(currentPage==='operations'&&typeof renderOperations==='function')renderOperations();
+  return true;
 }
 function datasetRequestKey(name){
   return name==='operationsPage'?operationsPageDatasetRequestKey():name;
@@ -382,6 +407,7 @@ function renderBlockLoading(id,text){
   if(el)el.innerHTML=`<div class="empty"><p>${esc(text)}</p></div>`;
 }
 function renderPageLoading(pg){
+  if(pg==='operations'&&hydrateOperationsPageFromClientCache())return;
   if(typeof renderStandardPageLoading==='function'&&renderStandardPageLoading(pg))return;
   if(pg==='students')renderStudentTableLoading();
   if(isStudentListPage(pg)&&pg!=='students')renderStudentTableLoading();
@@ -438,6 +464,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       if(data?.__operationsRequestKey&&data.__operationsRequestKey!==operationsPageDatasetRequestKey())return;
       setDatasetValue('campuses',data.campuses||[]);
       operationsPageData=data.operations||null;
+      persistOperationsPageClientCache(data);
       loadedDatasets.add('operationsPage');
       return;
     }
@@ -656,6 +683,16 @@ async function reloadOperationsPageDataWithInlineLoading(){
     toast('加载失败：'+e.message,'error');
   }
 }
+function refreshOperationsPageDataInBackground(){
+  const requestSeq=++operationsPageBackgroundRefreshSeq;
+  ensureDatasetsByName(['operationsPage'],{force:true}).then(()=>{
+    if(requestSeq!==operationsPageBackgroundRefreshSeq)return;
+    if(currentPage==='operations')renderOperations();
+  }).catch(e=>{
+    if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+    console.warn('operations background refresh failed',e);
+  });
+}
 async function loadCourtReadModelGuardData({force=false}={}){
   if(!shouldUseCourtReadModelByDefault()){
     courtAccountListViewData=null;
@@ -777,6 +814,10 @@ function renderAll(){
 
 function renderPageData(pg){
   if(pageNeedsInlineLoading(pg)){
+    if(pg==='operations'&&hydrateOperationsPageFromClientCache()){
+      refreshOperationsPageDataInBackground();
+      return;
+    }
     renderPageLoading(pg);
     return;
   }
