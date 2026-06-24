@@ -7,7 +7,7 @@
   const TRANSACTION_TYPES = ['收款', '消耗', '退款', '废弃'];
   const PAYMENT_METHODS = ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他'];
   const PAYMENT_METHOD_OPTIONS = PAYMENT_METHODS.map(value => ({ value, label: value }));
-  const SOURCES = ['转介绍', '小红书', '大众点评', '视频号', '抖音', '播客', '孙老师', '直接线下到电', '群友', '小班课转化', '开业活动期间', '其他'];
+  const SOURCES = ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'];
   const PRODUCT_TYPES = ['私教课', '体验课', '小班课', '大师课', '陪打'];
   const STANDARD_COURSE_TYPE_OPTIONS = [
     { value: '私教课', label: '私教课' },
@@ -38,8 +38,8 @@
   const SCHEDULE_SOURCES = ['排课表', '教练运营', '班次', '学员', '学习计划'];
   const CLASS_STATUSES = ['已排班', '已取消', '已结课'];
   const STUDENT_STATUS_LABELS = ['上课中', '待转化', '沉默30天', '仅订场', '无班次'];
-  const LEAD_SOURCE_OPTIONS = ['大众点评', '抖音', '小红书', '直接线下到店', '朋友转介绍', '孙老师介绍', '小班课转化', '群友', '开业活动期间', '未知'].map(value => ({ value, label: value }));
-  const LEAD_CONSULT_OPTIONS = ['成人私教课', '成人小班课', '青少年私教课', '青少年小班课', '订场', '约球', '陪打', '发球机', '穿线', '咨询储值卡（会员）', '合作等', '未说明需求'].map(value => ({ value, label: value }));
+  const LEAD_SOURCE_OPTIONS = SOURCES.map(value => ({ value, label: value }));
+  const LEAD_CONSULT_OPTIONS = ['成人私教课', '成人小班课', '成人小班课/训练营', '青少年私教课', '青少年小班课', '青少年小班课/训练营', '订场', '储值', '陪打', '约球', '穿线', '合作', '发球机', '其他'].map(value => ({ value, label: value }));
   const LEAD_INTENT_OPTIONS = ['沉默', '20%-40%', '40%-60%', '60%-80%', '80%-100%'].map(value => ({ value, label: value }));
   const LEAD_LEVEL_OPTIONS = ['0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
   const LEAD_FOLLOWUP_STATUS_OPTIONS = ['体验课完成', '体验课预约', '无意向', '新线索', '已报名-私教', '已报名-随到随学', '已报名-训练营', '已报名-专项', '已订场', '已对接其他校区', '已沟通', '已流失', '转化跟进中'].map(value => ({ value, label: value }));
@@ -149,6 +149,49 @@
   function includesAny(value, keywords) {
     const raw = text(value);
     return keywords.some(keyword => raw.includes(keyword));
+  }
+
+  function normalizeLeadSource(value) {
+    const raw = text(value);
+    if (!raw) return '未知';
+    if (includesAny(raw, ['转介绍', '朋友介绍', '朋友转介'])) return '转介绍';
+    if (includesAny(raw, ['线下到店', '线下到电', '到店'])) return '线下到店';
+    if (includesAny(raw, ['小红书'])) return '小红书';
+    if (includesAny(raw, ['视频号'])) return '视频号';
+    if (includesAny(raw, ['抖音'])) return '抖音';
+    if (includesAny(raw, ['大众点评', '美团'])) return '大众点评';
+    if (includesAny(raw, ['群友', '微信群'])) return '群友';
+    if (includesAny(raw, ['小班课转化'])) return '小班课转化';
+    if (includesAny(raw, ['孙老师'])) return '孙老师';
+    if (SOURCES.includes(raw)) return raw;
+    return '未知';
+  }
+
+  function normalizeLeadConsultType(value) {
+    const raw = text(value);
+    if (!raw) return '其他';
+    if (includesAny(raw, ['青少年', '少儿', '儿童', '孩子'])) {
+      if (includesAny(raw, ['训练营', '专项'])) return '青少年小班课/训练营';
+      if (includesAny(raw, ['小班', '班课'])) return '青少年小班课';
+      if (includesAny(raw, ['私教'])) return '青少年私教课';
+    }
+    if (includesAny(raw, ['成人'])) {
+      if (includesAny(raw, ['训练营', '专项'])) return '成人小班课/训练营';
+      if (includesAny(raw, ['小班', '班课'])) return '成人小班课';
+      if (includesAny(raw, ['私教'])) return '成人私教课';
+    }
+    if (includesAny(raw, ['训练营', '专项'])) return '成人小班课/训练营';
+    if (includesAny(raw, ['小班', '班课'])) return '成人小班课';
+    if (includesAny(raw, ['私教'])) return '成人私教课';
+    if (includesAny(raw, ['订场', '定场', '场地'])) return '订场';
+    if (includesAny(raw, ['储值', '会员'])) return '储值';
+    if (includesAny(raw, ['陪打'])) return '陪打';
+    if (includesAny(raw, ['约球'])) return '约球';
+    if (includesAny(raw, ['穿线'])) return '穿线';
+    if (includesAny(raw, ['合作'])) return '合作';
+    if (includesAny(raw, ['发球机'])) return '发球机';
+    if (LEAD_CONSULT_OPTIONS.some(option => option.value === raw)) return raw;
+    return '其他';
   }
 
   function normalizePaymentMethod(value) {
@@ -271,6 +314,8 @@
     optionList,
     values,
     normalizePaymentMethod,
+    normalizeLeadSource,
+    normalizeLeadConsultType,
     normalizeTransactionType,
     normalizeCourseType,
     normalizeBusinessType,

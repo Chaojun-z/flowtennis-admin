@@ -18,7 +18,7 @@ assert.strictEqual(typeof taxonomy.optionList, 'function', 'business taxonomy sh
 
 assert.deepStrictEqual(
   taxonomy.optionList('leadSources').map(item => item.value),
-  ['大众点评', '抖音', '小红书', '直接线下到店', '朋友转介绍', '孙老师介绍', '小班课转化', '群友', '开业活动期间', '未知']
+  ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知']
 );
 assert.deepStrictEqual(
   taxonomy.optionList('matchStatuses').map(item => item.value),

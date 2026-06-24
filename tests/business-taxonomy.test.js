@@ -1,6 +1,24 @@
 const assert = require('assert');
 const taxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 
+assert.deepStrictEqual(taxonomy.SOURCES, ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知']);
+assert.deepStrictEqual(taxonomy.LEAD_SOURCE_OPTIONS.map(item => item.value), taxonomy.SOURCES);
+assert.strictEqual(taxonomy.normalizeLeadSource('朋友转介绍'), '转介绍');
+assert.strictEqual(taxonomy.normalizeLeadSource('直接线下到电'), '线下到店');
+assert.strictEqual(taxonomy.normalizeLeadSource('直接线下到店'), '线下到店');
+assert.strictEqual(taxonomy.normalizeLeadSource('孙老师介绍'), '孙老师');
+assert.strictEqual(taxonomy.normalizeLeadSource('抖音/美团'), '抖音');
+assert.strictEqual(taxonomy.normalizeLeadSource('播客'), '未知');
+assert.strictEqual(taxonomy.normalizeLeadSource('其他'), '未知');
+
+assert.deepStrictEqual(taxonomy.LEAD_CONSULT_OPTIONS.map(item => item.value), ['成人私教课', '成人小班课', '成人小班课/训练营', '青少年私教课', '青少年小班课', '青少年小班课/训练营', '订场', '储值', '陪打', '约球', '穿线', '合作', '发球机', '其他']);
+assert.strictEqual(taxonomy.normalizeLeadConsultType('成人私教'), '成人私教课');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('成人小班课（专项/训练营）'), '成人小班课/训练营');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('青少年小班课（训练营）'), '青少年小班课/训练营');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('咨询储值卡（会员）'), '储值');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('合作等'), '合作');
+assert.strictEqual(taxonomy.normalizeLeadConsultType('未说明需求'), '其他');
+
 assert.deepStrictEqual(taxonomy.PAYMENT_METHODS, ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他']);
 assert.strictEqual(taxonomy.normalizePaymentMethod('储值卡'), '储值扣款');
 assert.strictEqual(taxonomy.normalizePaymentMethod('大众点评支付'), '大众点评券码');

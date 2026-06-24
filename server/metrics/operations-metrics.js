@@ -4,6 +4,7 @@ const {
   courtHistoryBusinessDate,
   normalizeCourtHistory
 } = require('../page-data/court-account-read-model.js');
+const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
   const base = 10 ** digits;
@@ -362,7 +363,7 @@ function buildStageRows(leads = [], sets = {}) {
 function buildSourceRows(leads = [], sets = {}) {
   const grouped = new Map();
   (leads || []).forEach(lead => {
-    const source = String(lead.source || '未记录').trim() || '未记录';
+    const source = businessTaxonomy.normalizeLeadSource(lead.source);
     const row = grouped.get(source) || { source, leads: 0, converted: 0 };
     row.leads += 1;
     if (!['未转化', '已约体验', '已体验待转化', '已流失'].includes(normalizeLeadStage(lead, sets))) row.converted += 1;
@@ -559,7 +560,7 @@ function courseConversionRows(data = {}, options = {}) {
     return {
       leadId: id,
       studentId: sid,
-      source: normalizeText(lead.source || linkedStudent?.source),
+      source: businessTaxonomy.normalizeLeadSource(lead.source || linkedStudent?.source),
       campus: campusLabel(lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
       coach: normalizeText(linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
       leadDate: firstRowDate(lead, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),

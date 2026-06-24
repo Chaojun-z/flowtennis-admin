@@ -74,6 +74,10 @@ assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.sour
 assert.ok(metrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年女性'), 'student attributes should combine youth and gender when available');
 assert.strictEqual(metrics.conversion.studentAttributeRows.find(row => row.attribute === '零基础')?.renewalRate, 100, 'student attribute renewal rate should use paid deal count as denominator');
 assert.ok(metrics.conversion.filterOptions.sources.includes('小红书'), 'conversion filters should include source options');
+assert.ok(metrics.conversion.filterOptions.sources.includes('转介绍'), 'conversion filters should normalize referral source values');
+assert.strictEqual(metrics.conversion.filterOptions.sources.includes('朋友转介绍'), false, 'conversion filters should not expose legacy referral source values');
+assert.ok(metrics.conversion.filterOptions.sources.includes('抖音'), 'conversion filters should normalize mixed douyin source values');
+assert.strictEqual(metrics.conversion.filterOptions.sources.includes('抖音/美团'), false, 'conversion filters should not expose mixed legacy douyin source values');
 assert.ok(metrics.conversion.filterOptions.campuses.includes('顺义马坡'), 'conversion filters should display campus names instead of campus codes');
 assert.ok(metrics.conversion.filterOptions.coaches.includes('Siren 教练'), 'conversion filters should include coach options');
 assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 75.4, 'coach module should use the current data span when all-time is selected');

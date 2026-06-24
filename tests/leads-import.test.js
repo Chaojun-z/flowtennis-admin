@@ -14,6 +14,17 @@ const rows = rules.normalizeLeadImportRows({ csvText: csv });
 assert.strictEqual(rows.length, 2);
 assert.strictEqual(rows[0].displayName, 'Leah');
 assert.strictEqual(rows[0].source, '大众点评');
+assert.strictEqual(rows[0].consultType, '成人私教课');
+
+const normalizedRows = rules.normalizeLeadImportRows({
+  rows: [
+    { source: '朋友转介绍', consultType: '成人小班课（专项/训练营）' },
+    { source: '直接线下到电', consultType: '青少年小班课（训练营）' },
+    { source: '播客', consultType: '合作等' }
+  ]
+});
+assert.deepStrictEqual(normalizedRows.map(row => row.source), ['转介绍', '线下到店', '未知']);
+assert.deepStrictEqual(normalizedRows.map(row => row.consultType), ['成人小班课/训练营', '青少年小班课/训练营', '合作']);
 
 const deduped = rules.dedupeLeadRows(rows);
 assert.strictEqual(deduped.length, 1);
