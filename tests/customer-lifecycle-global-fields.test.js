@@ -15,8 +15,13 @@ const corePageSource = read('server/page-data/core-pages.js');
 const financePageSource = read('server/page-data/finance-page.js');
 const residualPageSource = read('server/page-data/residual-pages.js');
 const apiSource = read('api/index.js');
+const agentsSource = read('AGENTS.md');
 const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 const vm = require('vm');
+
+assert.match(agentsSource, /一个事实源 \+ 一个生命周期口径 \+ 多个页面只做展示/, 'AGENTS should tell new threads to use one fact source and one lifecycle standard');
+assert.match(agentsSource, /同一个业务含义只能有：[\s\S]*一个标准字段定义[\s\S]*一个计算规则[\s\S]*一个展示口径[\s\S]*一个权威数据来源/, 'AGENTS should define the platform-wide single field standard');
+assert.match(agentsSource, /新增核心字段前，必须先补标准字段定义、统一读模型、页面访问器和回归测试/, 'AGENTS should forbid temporary page-level core fields');
 
 [
   'customerLifecycleRowsForRecord',
