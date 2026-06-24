@@ -38,7 +38,7 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   taxonomy.optionList('leadStatusAfter').map(item => item.value),
-  ['新线索', '跟进中', '已约体验', '已转课程', '已转订场', '已转课程+订场', '已流失']
+  ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失']
 );
 assert.deepStrictEqual(
   taxonomy.optionList('entitlementStatuses').map(item => item.value),
@@ -75,7 +75,8 @@ assert.deepStrictEqual(
 });
 
 assert.match(leadsSource, /function leadSourceOptions\(\)\{[\s\S]*optionList\('leadSources'\)/, 'lead source options should come from global business taxonomy');
-assert.match(leadsSource, /function leadConsultOptions\(\)\{[\s\S]*optionList\('leadConsultTypes'\)/, 'lead consult options should come from global business taxonomy');
+assert.match(leadsSource, /function leadCustomerTypeOptions\(\)\{[\s\S]*optionList\('leadCustomerTypes'\)/, 'lead customer type options should come from global business taxonomy');
+assert.match(leadsSource, /function leadDemandProductOptions\(\)\{[\s\S]*optionList\('leadDemandProducts'\)/, 'lead demand product options should come from global business taxonomy');
 assert.match(leadsSource, /function leadIntentOptions\(\)\{[\s\S]*optionList\('leadIntentLevels'\)/, 'lead intent options should come from global business taxonomy');
 assert.match(leadsSource, /function leadLevelOptions\(\)\{[\s\S]*optionList\('leadLevels'\)/, 'lead level options should come from global business taxonomy');
 assert.match(leadsSource, /const preferred=FlowTennisBusinessTaxonomy\.values\('leadFollowupStatuses'\)/, 'lead follow-up statuses should come from global business taxonomy');

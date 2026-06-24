@@ -39,12 +39,16 @@
   const CLASS_STATUSES = ['已排班', '已取消', '已结课'];
   const STUDENT_STATUS_LABELS = ['上课中', '待转化', '沉默30天', '仅订场', '无班次'];
   const LEAD_SOURCE_OPTIONS = SOURCES.map(value => ({ value, label: value }));
-  const LEAD_CONSULT_OPTIONS = ['成人私教课', '成人小班课', '成人小班课/训练营', '青少年私教课', '青少年小班课', '青少年小班课/训练营', '订场', '储值', '陪打', '约球', '穿线', '合作', '发球机', '其他'].map(value => ({ value, label: value }));
+  const LEAD_STAGE_OPTIONS = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].map(value => ({ value, label: value }));
+  const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '会员', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员'].map(value => ({ value, label: value }));
+  const LEAD_CUSTOMER_TYPE_OPTIONS = ['成人', '青少年'].map(value => ({ value, label: value }));
+  const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教', '小班', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
+  const LEAD_CONSULT_OPTIONS = LEAD_DEMAND_PRODUCT_OPTIONS;
   const LEAD_INTENT_OPTIONS = ['沉默', '20%-40%', '40%-60%', '60%-80%', '80%-100%'].map(value => ({ value, label: value }));
   const LEAD_LEVEL_OPTIONS = ['0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
-  const LEAD_FOLLOWUP_STATUS_OPTIONS = ['体验课完成', '体验课预约', '无意向', '新线索', '已报名-私教', '已报名-随到随学', '已报名-训练营', '已报名-专项', '已订场', '已对接其他校区', '已沟通', '已流失', '转化跟进中'].map(value => ({ value, label: value }));
+  const LEAD_FOLLOWUP_STATUS_OPTIONS = LEAD_STAGE_OPTIONS;
   const LEAD_FOLLOWUP_TYPE_OPTIONS = ['电话', '微信', '到店', '面谈', '其他'].map(value => ({ value, label: value }));
-  const LEAD_STATUS_AFTER_OPTIONS = ['新线索', '跟进中', '已约体验', '已转课程', '已转订场', '已转课程+订场', '已流失'].map(value => ({ value, label: value }));
+  const LEAD_STATUS_AFTER_OPTIONS = LEAD_STAGE_OPTIONS;
   const ENTITLEMENT_STATUS_OPTIONS = [
     { value: 'active', label: '正常' },
     { value: 'depleted', label: '已用完' },
@@ -122,6 +126,10 @@
     classStatuses: CLASS_STATUSES,
     studentStatusLabels: STUDENT_STATUS_LABELS,
     leadSources: LEAD_SOURCE_OPTIONS,
+    leadStages: LEAD_STAGE_OPTIONS,
+    leadDealTypes: LEAD_DEAL_TYPE_OPTIONS,
+    leadCustomerTypes: LEAD_CUSTOMER_TYPE_OPTIONS,
+    leadDemandProducts: LEAD_DEMAND_PRODUCT_OPTIONS,
     leadConsultTypes: LEAD_CONSULT_OPTIONS,
     leadIntentLevels: LEAD_INTENT_OPTIONS,
     leadLevels: LEAD_LEVEL_OPTIONS,
@@ -180,29 +188,35 @@
   }
 
   function normalizeLeadConsultType(value) {
+    return normalizeLeadDemandProduct(value);
+  }
+
+  function normalizeLeadCustomerType(value) {
+    const raw = text(value);
+    if (includesAny(raw, ['青少年', '少儿', '儿童', '孩子'])) return '青少年';
+    return raw ? '成人' : '';
+  }
+
+  function normalizeLeadDemandProduct(value) {
     const raw = text(value);
     if (!raw) return '其他';
     if (includesAny(raw, ['青少年', '少儿', '儿童', '孩子'])) {
-      if (includesAny(raw, ['训练营', '专项'])) return '青少年小班课/训练营';
-      if (includesAny(raw, ['小班', '班课'])) return '青少年小班课';
-      if (includesAny(raw, ['私教'])) return '青少年私教课';
+      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班';
+      if (includesAny(raw, ['私教'])) return '私教';
     }
     if (includesAny(raw, ['成人'])) {
-      if (includesAny(raw, ['训练营', '专项'])) return '成人小班课/训练营';
-      if (includesAny(raw, ['小班', '班课'])) return '成人小班课';
-      if (includesAny(raw, ['私教'])) return '成人私教课';
+      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班';
+      if (includesAny(raw, ['私教'])) return '私教';
     }
-    if (includesAny(raw, ['训练营', '专项'])) return '成人小班课/训练营';
-    if (includesAny(raw, ['小班', '班课'])) return '成人小班课';
-    if (includesAny(raw, ['私教'])) return '成人私教课';
+    if (includesAny(raw, ['训练营', '专项', '小班', '班课'])) return '小班';
+    if (includesAny(raw, ['私教'])) return '私教';
     if (includesAny(raw, ['订场', '定场', '场地'])) return '订场';
-    if (includesAny(raw, ['储值', '会员'])) return '储值';
+    if (includesAny(raw, ['储值', '会员'])) return '会员';
     if (includesAny(raw, ['陪打'])) return '陪打';
     if (includesAny(raw, ['约球'])) return '约球';
     if (includesAny(raw, ['穿线'])) return '穿线';
     if (includesAny(raw, ['合作'])) return '合作';
-    if (includesAny(raw, ['发球机'])) return '发球机';
-    if (LEAD_CONSULT_OPTIONS.some(option => option.value === raw)) return raw;
+    if (LEAD_DEMAND_PRODUCT_OPTIONS.some(option => option.value === raw)) return raw;
     return '其他';
   }
 
@@ -305,6 +319,10 @@
     CLASS_STATUSES,
     STUDENT_STATUS_LABELS,
     LEAD_SOURCE_OPTIONS,
+    LEAD_STAGE_OPTIONS,
+    LEAD_DEAL_TYPE_OPTIONS,
+    LEAD_CUSTOMER_TYPE_OPTIONS,
+    LEAD_DEMAND_PRODUCT_OPTIONS,
     LEAD_CONSULT_OPTIONS,
     LEAD_INTENT_OPTIONS,
     LEAD_LEVEL_OPTIONS,
@@ -329,6 +347,8 @@
     values,
     normalizePaymentMethod,
     normalizeLeadSource,
+    normalizeLeadCustomerType,
+    normalizeLeadDemandProduct,
     normalizeLeadConsultType,
     normalizeTransactionType,
     normalizeCourseType,

@@ -17,7 +17,7 @@ function fnBody(name){
 
 assert.match(source, /let leadDetailActiveTab='basic'/, 'lead drawer should keep active tab state');
 assert.match(source, /function leadDetailTabsHtml\(/, 'lead detail should expose drawer tabs');
-assert.match(fnBody('leadDetailTabsHtml'), /基础信息[\s\S]*跟进记录[\s\S]*转化信息/, 'lead drawer should have the agreed three tabs');
+assert.match(fnBody('leadDetailTabsHtml'), /基础信息[\s\S]*跟进记录[\s\S]*成交信息/, 'lead drawer should have the agreed three tabs');
 assert.match(fnBody('openLeadDetail'), /openStandardDetailDrawer\(/, 'lead detail should use the standard right drawer');
 assert.match(fnBody('openLeadDetail'), /leadDetailActiveTab==='basic'[\s\S]*leadDetailBasicTabHtml\(lead\)[\s\S]*leadDetailActiveTab==='followups'[\s\S]*leadDetailFollowupsTabHtml\(lead\)[\s\S]*leadDetailConversionTabHtml\(lead\)/, 'lead detail should route each tab to its own content');
 assert.match(source, /function leadFollowupDrawerFormHtml\(/, 'lead follow-up editing should render inside the drawer');
@@ -43,7 +43,7 @@ assert.match(source, /function openLeadDetailFromList\(/, 'lead list view action
 assert.match(source, /function openLeadFollowupFromList\(/, 'lead list follow-up action should open drawer edit form');
 assert.match(fnBody('renderLeads'), /openLeadDetailFromList\('\$\{lead\.id\}'\)[\s\S]*openLeadFollowupFromList\('\$\{lead\.id\}'\)/, 'lead list should show view and follow-up actions');
 assert.doesNotMatch(fnBody('renderLeads'), /openLeadConvertModal\('\$\{lead\.id\}'\)/, 'lead list should not show conversion action');
-assert.match(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)[\s\S]*renderLeadTag\(leadConsultText\(lead\),'consult'\)[\s\S]*renderStandardCellText\(leadLevelText\(lead\)/, 'lead list should place normalized consult need before level');
+assert.match(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*renderStandardCellText\(leadLevelText\(lead\)/, 'lead list should place customer type and demand product before level');
 assert.match(css, /\.modal\.modal-court\.modal-lead-drawer/, 'lead drawer should have scoped drawer styles');
 assert.doesNotMatch(css, /lead-followup-item::before\{display:none\}/, 'lead follow-up timeline should keep the shared vertical line');
 

@@ -144,9 +144,9 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
 ]);
 const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_COURTS,T_PURCHASES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_CAMPUSES]);
 const LEAD_LIST_PROJECTION_FIELDS=[
-  'displayName','name','wechatName','phone','level','leadDate','source','campus','consultType','intentLevel','profileNote','owner',
+  'displayName','name','wechatName','phone','level','leadDate','source','campus','customerType','demandProduct','consultType','intentLevel','profileNote','owner',
   'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','followupPriority','formalCoach',
-  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','conversionType','updatedAt','createdAt','lostReason'
+  'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','leadStage','dealType','conversionType','updatedAt','createdAt','lostReason'
 ];
 const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
   'leadId',
@@ -5695,32 +5695,38 @@ function extractLeadPhoneMeta(value){
   return {raw,phone,wechatName};
 }
 function deriveLeadSystemStatus(input={}){
-  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter);
-  const studentId=cleanLeadText(input.studentId);
-  const courtId=cleanLeadText(input.courtId);
-  if(studentId&&courtId)return '已转课程+订场';
-  if(studentId)return '已转课程';
-  if(courtId)return '已转订场';
-  if(rawStatus.includes('已报名'))return '已转课程';
-  if(rawStatus==='已定场'||rawStatus.includes('定场'))return '已转订场';
+  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.leadStage||input.systemStatus);
+  const linked=cleanLeadText(input.studentId)||cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
+  if(linked||/已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值|成交/.test(rawStatus))return '已成交';
   if(rawStatus==='已流失'||rawStatus==='无意向')return '已流失';
   if(rawStatus==='体验课预约'||rawStatus==='已约体验')return '已约体验';
-  return '跟进中';
+  if(['体验课完成','已体验待转化','已体验待成交'].includes(rawStatus))return '已体验待成交';
+  return rawStatus==='新线索'?'新线索':'跟进中';
 }
-function deriveLeadConversionType(input={}){
-  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus);
+const LEAD_DEAL_TYPE_VALUES=['课程','订场','会员','课程+订场','课程+会员','订场+会员','课程+订场+会员'];
+function normalizeLeadDealType(value){
+  const raw=cleanLeadText(value);
+  if(!raw||raw==='未转化')return '';
+  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'');
+  return LEAD_DEAL_TYPE_VALUES.includes(raw)?raw:LEAD_DEAL_TYPE_VALUES.includes(normalized)?normalized:'';
+}
+function deriveLeadDealType(input={}){
+  const stored=normalizeLeadDealType(input.dealType||input.conversionType);
+  if(stored)return stored;
+  const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus||input.leadStage);
   const parts=[['课程',cleanLeadText(input.studentId)||input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
-  return parts.length?`${parts.join('+')}转化`.replace('+订场转化','+订场').replace('+会员转化','+会员'):(input.convertedFlag===true?'课程转化':'未转化');
+  return parts.length?parts.join('+'):(input.convertedFlag===true?'课程':'');
 }
+function deriveLeadConversionType(input={}){return deriveLeadDealType(input);}
+function applyLeadOutcomeFields(next){next.leadStage=deriveLeadSystemStatus(next);next.systemStatus=next.leadStage;next.dealType=deriveLeadDealType(next);next.conversionType=next.dealType;return next;}
 function normalizeLeadRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
   const id=input.id||opts.id||uuidv4();
   const phoneMeta=extractLeadPhoneMeta(input['微信名/电话']??input.contactRaw??input.displayName??'');
   const studentId=cleanLeadText(input.studentId);
   const courtId=cleanLeadText(input.courtId);
-  const concern=cleanLeadText(input.latestConcern??input['用户顾虑点']);
-  const conclusion=cleanLeadText(input.latestConclusion??input['沟通情况和方案建议']);
-  const rawStatus=cleanLeadText(input.rawStatus??input['跟进状态']);
+  const concern=cleanLeadText(input.latestConcern??input['用户顾虑点']),conclusion=cleanLeadText(input.latestConclusion??input['沟通情况和方案建议']),rawStatus=cleanLeadText(input.rawStatus??input['跟进状态']);
+  const customerType=businessTaxonomy.normalizeLeadCustomerType(input.customerType??input['客户类型']??input.consultType??input['咨询需求']??input.profileNote??input['其他信息（包含年纪等）']),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(input.demandProduct??input['需求产品']??input.consultType??input['咨询需求']);
   const next={
     id,
     leadDate:cleanLeadText(input.leadDate??input['线索时间']),
@@ -5731,8 +5737,7 @@ function normalizeLeadRecord(input={},opts={}){
     profileNote:cleanLeadText(input.profileNote??input['其他信息（包含年纪等）']),
     source:businessTaxonomy.normalizeLeadSource(input.source??input['线索渠道']),
     campus:normalizeCampusValue(cleanLeadText(input.campus??input['所属校区'])),
-    consultType:businessTaxonomy.normalizeLeadConsultType(input.consultType??input['咨询需求']),
-    intentLevel:cleanLeadText(input.intentLevel??input['意向类型']),
+    customerType,demandProduct,consultType:demandProduct,intentLevel:cleanLeadText(input.intentLevel??input['意向类型']),
     owner:cleanLeadText(input.owner??input['跟进人']),
     rawStatus,
     trialAtRaw:cleanLeadText(input.trialAtRaw??input['体验课时间']),
@@ -5756,9 +5761,7 @@ function normalizeLeadRecord(input={},opts={}){
     createdAt:input.createdAt||now,
     updatedAt:now
   };
-  next.systemStatus=deriveLeadSystemStatus(next);
-  next.conversionType=deriveLeadConversionType(next);
-  return next;
+  return applyLeadOutcomeFields(next);
 }
 function normalizeLeadFollowupRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
@@ -5789,9 +5792,7 @@ function applyLeadFollowupSnapshot(lead,followup){
     rawStatus:cleanLeadText(followup.statusAfter)||lead.rawStatus||'',
     updatedAt:followup.updatedAt||new Date().toISOString()
   };
-  next.systemStatus=deriveLeadSystemStatus(next);
-  next.conversionType=deriveLeadConversionType(next);
-  return next;
+  return applyLeadOutcomeFields(next);
 }
 function latestLeadFollowupSnapshot(followups=[]){
   return [...(followups||[])].filter(Boolean).sort((a,b)=>
@@ -5803,8 +5804,7 @@ function applyLeadFollowupsSnapshot(lead,followups=[]){
   const latest=latestLeadFollowupSnapshot(followups);
   if(latest)return applyLeadFollowupSnapshot(lead,latest);
   const next={...lead,lastFollowupAt:'',latestConcern:'',latestConclusion:'',nextFollowupAt:'',nextAction:''};
-  next.systemStatus=deriveLeadSystemStatus(next);
-  return next;
+  return applyLeadOutcomeFields(next);
 }
 function splitCsvLine(line=''){
   const cells=[];
@@ -5954,9 +5954,7 @@ function mergeLeadRows(rows=[]){
   merged.updatedAt=latest[0]?.updatedAt||primary.updatedAt||'';
   merged.lastFollowupAt=latest.map(row=>cleanLeadText(row.lastFollowupAt)).filter(Boolean).sort().pop()||merged.lastFollowupAt||'';
   merged._mergedLeadIds=Array.from(new Set(list.map(row=>cleanLeadText(row.id)).filter(Boolean)));
-  merged.systemStatus=deriveLeadSystemStatus(merged);
-  merged.conversionType=deriveLeadConversionType(merged);
-  return merged;
+  return applyLeadOutcomeFields(merged);
 }
 function mergeDuplicateLeadRows(rows=[]){
   const groups=new Map();
@@ -6014,6 +6012,7 @@ function buildLeadImportPreviewRows(leads,{students=[],courts=[],membershipAccou
     const studentMatch=matchLeadToStudent(lead,students);
     const courtMatch=matchLeadToCourt(lead,courts);
     const membershipMatch=courtMatch.matchType==='auto'?matchLeadToMembership(courtMatch.record?.id||'',membershipAccounts):null;
+    const linkedLead={...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:'',membershipAccountId:membershipMatch?.id||''},leadStage=deriveLeadSystemStatus(linkedLead),dealType=deriveLeadDealType(linkedLead);
     return {
       ...lead,
       studentId:studentMatch.matchType==='auto'?studentMatch.record.id:'',
@@ -6028,8 +6027,7 @@ function buildLeadImportPreviewRows(leads,{students=[],courts=[],membershipAccou
       courtMatchType:courtMatch.matchType,
       courtMatchId:courtMatch.record?.id||'',
       courtMatchName:courtMatch.record?.name||'',
-      systemStatus:deriveLeadSystemStatus({...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:''}),
-      conversionType:deriveLeadConversionType({...lead,studentId:studentMatch.matchType==='auto'?studentMatch.record?.id:'',courtId:courtMatch.matchType==='auto'?courtMatch.record?.id:'',membershipAccountId:membershipMatch?.id||''})
+      leadStage,systemStatus:leadStage,dealType,conversionType:dealType
     };
   });
 }
@@ -7139,6 +7137,7 @@ module.exports._test={
   TEST_DATA_RESET_TABLES,
   extractLeadPhoneMeta,
   deriveLeadSystemStatus,
+  deriveLeadDealType,
   deriveLeadConversionType,
   normalizeLeadRecord,
   normalizeLeadFollowupRecord,
