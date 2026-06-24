@@ -10,6 +10,9 @@ const diagnosticsSource = fs.readFileSync(path.join(root, 'server', 'diagnostics
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const wechatIndexScript = fs.readFileSync(path.join(root, 'scripts', 'backfill-wechat-user-index.js'), 'utf8');
 const matchKeepaliveWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'match-supabase-keepalive.yml'), 'utf8');
+const officialAccountRemindersWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'official-account-reminders.yml'), 'utf8');
+const officialAccountDailyDigestsWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'official-account-daily-digests.yml'), 'utf8');
+const feishuCoachDailyDigestsWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'feishu-coach-daily-digests.yml'), 'utf8');
 
 assert.doesNotMatch(
   apiSource,
@@ -58,5 +61,17 @@ assert.doesNotMatch(readme, /JWT_SECRET`\s*—\s*`flowtennis-jwt-2026`/, 'README
 
 assert.match(matchKeepaliveWorkflow, /DIAG_TOKEN:\s*\$\{\{\s*secrets\.DIAG_TOKEN\s*\}\}/, 'match diagnostics workflow must use DIAG_TOKEN');
 assert.match(matchKeepaliveWorkflow, /Authorization:\s*Bearer \$DIAG_TOKEN/, 'match diagnostics workflow must call protected diagnostics with authorization');
+
+for (const [name, source] of [
+  ['official account reminders', officialAccountRemindersWorkflow],
+  ['official account daily digests', officialAccountDailyDigestsWorkflow],
+  ['feishu coach daily digests', feishuCoachDailyDigestsWorkflow]
+]) {
+  assert.match(
+    source,
+    /CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\|\|\s*secrets\.FLOWTENNIS_ADMIN_TOKEN\s*\}\}/,
+    `${name} workflow should reuse FLOWTENNIS_ADMIN_TOKEN when CRON_SECRET is not configured`
+  );
+}
 
 console.log('production safety locks tests passed');

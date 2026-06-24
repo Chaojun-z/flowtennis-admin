@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 10
     env:
       TZ: Asia/Shanghai
-      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.FLOWTENNIS_ADMIN_TOKEN }}
       TARGET_URL: https://www.flowtennis.cn/api/cron/official-account-reminders
 
     steps:
