@@ -4410,9 +4410,10 @@ const handleMatchRoutes=createMatchRoutes({
   adminHandleBookedWithdrawal,adminTransferMatchReplacement,generateMatchFeeLedger,markMatchFeeSplit
 });
 function diagnosticsTokenAllowed(req){
-  const token=String(process.env.DIAG_TOKEN||process.env.CRON_SECRET||'').trim();
-  if(!token)return false;
-  return String(req?.headers?.authorization||'')===`Bearer ${token}`;
+  const tokens=[process.env.DIAG_TOKEN,process.env.CRON_SECRET].map(value=>String(value||'').trim()).filter(Boolean);
+  if(!tokens.length)return false;
+  const auth=String(req?.headers?.authorization||'');
+  return tokens.some(token=>auth===`Bearer ${token}`);
 }
 function requireDiagnosticsAccess(req,res){
   const user=authUser(req);

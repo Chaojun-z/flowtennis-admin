@@ -39,6 +39,8 @@ assert.match(apiSource, /function applyCorsHeaders\(req,res\)/, 'API should cent
 assert.match(apiSource, /if\(req\.method==='OPTIONS'\)\{applyCorsHeaders\(req,res\);return res\.status\(200\)\.end\(\);\}/, 'OPTIONS should use the same CORS guard');
 
 assert.match(apiSource, /function requireDiagnosticsAccess\(req,res\)/, 'diagnostics endpoints should have an auth guard');
+assert.doesNotMatch(apiSource, /process\.env\.DIAG_TOKEN\|\|process\.env\.CRON_SECRET/, 'diagnostics auth must accept DIAG_TOKEN and CRON_SECRET independently');
+assert.match(apiSource, /DIAG_TOKEN,process\.env\.CRON_SECRET/, 'diagnostics auth should consider both DIAG_TOKEN and CRON_SECRET');
 assert.match(apiSource, /if\(path==='\/match-diag'&&method==='GET'\)\{[\s\S]*if\(!requireDiagnosticsAccess\(req,res\)\)return;/, 'match diagnostics must be protected');
 assert.match(apiSource, /if\(path==='\/diag'&&method==='GET'\)\{[\s\S]*if\(!requireDiagnosticsAccess\(req,res\)\)return;/, 'TableStore diagnostics must be protected');
 assert.match(apiSource, /require\('\.\.\/server\/diagnostics'\)/, 'diagnostics handlers should live outside api/index.js');
