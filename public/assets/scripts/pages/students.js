@@ -1041,7 +1041,7 @@ async function saveStudent(){
   const duplicates=getStudentDuplicateCandidates(data,editId);
   if(duplicates.length){
     const summary=duplicates.map(s=>`${s.name}${s.phone?`（${s.phone}）`:''}`).join('、');
-    if(!confirm(`发现可能重复的学员：${summary}。是否继续保存？`)){
+    if(!await appConfirm(`发现可能重复的学员：${summary}。是否继续保存？`,{title:'发现重复学员',confirmText:'继续保存'})){
       if(btn){btn.disabled=false;btn.textContent='保存';}
       return;
     }

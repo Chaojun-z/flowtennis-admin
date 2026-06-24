@@ -1,11 +1,36 @@
 function createStudentRoutes(deps={}){
   const {
-    init,sendJson,getFastStudentsRead,getCachedScan,filterLoadAllForUser,buildCoachRefs,
+    init,sendJson,getFastStudentsRead,getCachedScan,scan,filterLoadAllForUser,buildCoachRefs,
     assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,
     buildStudentReminderLinkUpdate,normalizeStudentReminderMode,normalizeStudentReminderCustomHours,
     buildStudentOfficialAccountUnboundUpdate,applyStudentIdentityUpdate,deleteStudentCascade,
     T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
+
+  function studentUniqueText(value){
+    return String(value||'').trim();
+  }
+  function studentUniquePhone(value){
+    try{return assertPhone(value||'');}
+    catch{return String(value||'').replace(/\s+/g,'').trim();}
+  }
+  function studentUniqueCampus(value){
+    return studentUniqueText(value).toLowerCase();
+  }
+  function studentDuplicateReason(input,row){
+    const phone=studentUniquePhone(input.phone);
+    const rowPhone=studentUniquePhone(row.phone);
+    if(phone&&rowPhone===phone)return '手机号已存在';
+    const sameName=studentUniqueText(input.name)&&studentUniqueText(input.name)===studentUniqueText(row.name);
+    const sameCampus=studentUniqueCampus(input.campus)===studentUniqueCampus(row.campus);
+    if(sameName&&sameCampus&&(!phone||!rowPhone))return '同名同校区学员已存在';
+    return '';
+  }
+  async function findStudentDuplicate(input,editingId=''){
+    const rows=await scan(T_STUDENTS);
+    return rows.map(row=>({row,reason:studentDuplicateReason(input,row)}))
+      .find(item=>item.reason&&String(item.row.id||'')!==String(editingId||''))||null;
+  }
 
   return async function handleStudentRoutes({path,method,body,user,res}){
     if(path==='/students'){
@@ -25,6 +50,8 @@ function createStudentRoutes(deps={}){
       }
       if(method==='POST'){
         assertStudentWriteAccess(user);
+        const duplicate=await findStudentDuplicate(body);
+        if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
         const id=uuidv4();
         const r={...body,phone:assertPhone(body.phone),id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
         await put(T_STUDENTS,id,r);
@@ -76,6 +103,8 @@ function createStudentRoutes(deps={}){
         assertStudentWriteAccess(user);
         const old=await get(T_STUDENTS,id).catch(()=>null);
         const r={...(old||{}),...body,phone:assertPhone(body.phone),id,updatedAt:new Date().toISOString()};
+        const duplicate=await findStudentDuplicate(r,id);
+        if(duplicate)return sendJson(res,{error:duplicate.reason,duplicateStudentId:duplicate.row.id,duplicateStudentName:duplicate.row.name||''},409);
         await put(T_STUDENTS,id,r);
         const studentUpdates=old?await applyStudentIdentityUpdate(old,r):{plans:[],schedule:[],purchases:[],entitlements:[],feedbacks:[]};
         return sendJson(res,{...r,studentUpdates});

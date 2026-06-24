@@ -660,7 +660,7 @@ const handleMembershipRoutes=createMembershipRoutes({
   T_MEMBERSHIP_PLANS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,
   T_MEMBERSHIP_ACCOUNT_EVENTS,T_COURTS,T_USERS
 });
-const handleStudentRoutes=createStudentRoutes({init,sendJson:routeSendJson,getFastStudentsRead,getCachedScan,filterLoadAllForUser,buildCoachRefs,
+const handleStudentRoutes=createStudentRoutes({init,sendJson:routeSendJson,getFastStudentsRead,getCachedScan,scan,filterLoadAllForUser,buildCoachRefs,
   assertStudentWriteAccess,uuidv4,assertPhone,put,get,buildStudentReminderBindToken,buildStudentReminderLinkUpdate,
   normalizeStudentReminderMode,normalizeStudentReminderCustomHours,buildStudentOfficialAccountUnboundUpdate,
   applyStudentIdentityUpdate,deleteStudentCascade,T_STUDENTS,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS});
