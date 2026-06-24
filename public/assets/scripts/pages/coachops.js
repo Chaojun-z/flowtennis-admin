@@ -667,8 +667,9 @@ function financeCampusNameFromValue(value){
 }
 function financeCampusNameForPurchase(purchase,entitlement={}){
   const entitlementCampus=parseArr(entitlement.campusIds)[0]||entitlement.campus||'';
-  const studentCampus=(students.find(s=>s.id===purchase.studentId)||{}).campus||'';
-  return financeCampusNameFromValue(entitlementCampus||purchase.campus||studentCampus);
+  const student=students.find(s=>s.id===purchase.studentId)||{};
+  const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(purchase,student.campus):'';
+  return financeCampusNameFromValue(entitlementCampus||purchase.campus||lifecycleCampus||student.campus);
 }
 function financeMatchesCampusName(name){
   if(!campus||campus==='all')return true;

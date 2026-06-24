@@ -18,6 +18,102 @@ function financeNormalizedRows(){
 function financeSettlementRowsFromSnapshot(){
   return Array.isArray(financeSettlementSummaryRows)?financeSettlementSummaryRows:[];
 }
+function customerLifecycleText(value){
+  return String(value||'').trim();
+}
+function customerLifecycleParseArray(value){
+  if(Array.isArray(value))return value;
+  if(typeof value==='string'&&value.trim()){
+    try{
+      const parsed=JSON.parse(value);
+      return Array.isArray(parsed)?parsed:[];
+    }catch(e){return [];}
+  }
+  return [];
+}
+function customerLifecycleAllRows(){
+  return Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
+}
+function customerLifecycleHasValue(record={},fields=[]){
+  return fields.some(field=>customerLifecycleText(record[field]));
+}
+function customerLifecycleOwnIdKind(record={}){
+  if(!record||typeof record!=='object'||!customerLifecycleText(record.id))return '';
+  if(customerLifecycleHasValue(record,['studentId','packageId','purchaseId','entitlementId','classId','scheduleId']))return '';
+  if(customerLifecycleParseArray(record.studentIds).length)return '';
+  if(customerLifecycleHasValue(record,['membershipAccountId','accountId']))return '';
+  if(customerLifecycleHasValue(record,['courtId'])){
+    return customerLifecycleHasValue(record,['membershipPlanId','planId','cashBalance','giftBalance','balance','availableBalance','rechargeAmount'])?'membershipAccount':'';
+  }
+  if(customerLifecycleHasValue(record,['courtName','courtPhone','bookingCount','lastBookingAt','totalSpent'])||Array.isArray(record.history))return 'court';
+  if(customerLifecycleHasValue(record,['primaryCoach','studentNo','studentName','type','level','birthdate']))return 'student';
+  return '';
+}
+function customerLifecycleRowsForRecord(record={}){
+  const rows=customerLifecycleAllRows();
+  if(!rows.length||!record)return [];
+  const sourceId=customerLifecycleText(record.sourceLeadId||record.leadId||record.fromLeadId);
+  const ownIdKind=customerLifecycleOwnIdKind(record);
+  const studentIds=[
+    customerLifecycleText(record.studentId),
+    ownIdKind==='student'?customerLifecycleText(record.id):'',
+    ...customerLifecycleParseArray(record.studentIds).map(customerLifecycleText)
+  ].filter(Boolean);
+  const courtId=customerLifecycleText(record.courtId||(ownIdKind==='court'?record.id:''));
+  const membershipAccountId=customerLifecycleText(record.membershipAccountId||record.accountId||(ownIdKind==='membershipAccount'?record.id:''));
+  const matches=[],seen=new Set();
+  const addMatches=predicate=>rows.forEach(row=>{
+    const key=customerLifecycleText(row.customerKey||row.sourceLeadId||row.studentId||row.courtId||row.membershipAccountId);
+    if(predicate(row)&&!seen.has(key)){seen.add(key);matches.push(row);}
+  });
+  addMatches(row=>!!(sourceId&&(customerLifecycleText(row.sourceLeadId)===sourceId||customerLifecycleText(row.leadId)===sourceId)));
+  addMatches(row=>!!(studentIds.length&&studentIds.includes(customerLifecycleText(row.studentId))));
+  addMatches(row=>!!(courtId&&customerLifecycleText(row.courtId)===courtId));
+  addMatches(row=>!!(membershipAccountId&&customerLifecycleText(row.membershipAccountId)===membershipAccountId));
+  return matches;
+}
+function customerLifecycleByStudentId(studentId){
+  const id=customerLifecycleText(studentId);
+  if(!id)return null;
+  return customerLifecycleAllRows().find(row=>customerLifecycleText(row.studentId)===id)||null;
+}
+function customerLifecycleByCourtId(courtId){
+  const id=customerLifecycleText(courtId);
+  if(!id)return null;
+  return customerLifecycleAllRows().find(row=>customerLifecycleText(row.courtId)===id)||null;
+}
+function customerLifecycleByMembershipAccountId(accountId){
+  const id=customerLifecycleText(accountId);
+  if(!id)return null;
+  return customerLifecycleAllRows().find(row=>customerLifecycleText(row.membershipAccountId)===id)||null;
+}
+function customerLifecycleForRecord(record={}){
+  return customerLifecycleRowsForRecord(record)[0]||null;
+}
+function customerLifecycleSource(record={},fallback=''){
+  const value=customerLifecycleText(customerLifecycleForRecord(record)?.source||fallback||record?.source);
+  if(typeof FlowTennisBusinessTaxonomy==='object'&&FlowTennisBusinessTaxonomy?.normalizeLeadSource){
+    return FlowTennisBusinessTaxonomy.normalizeLeadSource(value);
+  }
+  return value;
+}
+function customerLifecycleCampus(record={},fallback=''){
+  const row=customerLifecycleForRecord(record);
+  return customerLifecycleText(row?.campus||fallback||record?.campus||record?.campusId||record?.campusName);
+}
+function customerLifecycleOwner(record={},fallback=''){
+  const row=customerLifecycleForRecord(record);
+  return customerLifecycleText(row?.owner||fallback||record?.owner||record?.primaryCoach||record?.coach||record?.coachName);
+}
+function customerLifecycleStudentStage(record={}){
+  return customerLifecycleText(customerLifecycleForRecord(record)?.studentStage);
+}
+function customerLifecycleCourtStage(record={}){
+  return customerLifecycleText(customerLifecycleForRecord(record)?.courtStage);
+}
+function customerLifecycleMembershipStatus(record={}){
+  return customerLifecycleText(customerLifecycleForRecord(record)?.membershipStatus);
+}
 // 教学售卖治理口径：
 // 现行业务主链路是 packages -> purchases -> entitlements -> schedule。
 // products / classes / plans 仅保留历史兼容，不应再作为新增功能默认依赖。
@@ -485,7 +581,9 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     }
     if(name==='financePage'){
       setDatasetValue('campuses',data.campuses||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('customerLifecycleRows');
       financeOverviewData=data.financeOverviewData||null;
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
@@ -553,6 +651,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('classes');
@@ -562,6 +661,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('entitlementLedger');
+      staleCachedDatasets.delete('customerLifecycleRows');
       window.coachWorkbenchStats=data.stats||{};
       loadedDatasets.add('workbenchPage');
       return;

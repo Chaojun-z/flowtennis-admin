@@ -1,3 +1,11 @@
+const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
+const { readLeadSourceRows } = require('../lead-source-read-model.js');
+
+const CUSTOMER_LIFECYCLE_LEAD_FIELDS=[
+  'id','leadId','displayName','wechatName','name','phone','source','campus','campusName',
+  'owner','coach','coachName','studentId','courtId','membershipAccountId'
+];
+
 async function handleFinancePageData({
   user,
   res,
@@ -8,14 +16,16 @@ async function handleFinancePageData({
   getFinancePageScheduleRows,
   filterLoadAllForUser,
   buildFinancePageSnapshot,
+  isProductionRuntime,
+  scanFirstRows,
   tables,
   FINANCE_PAGE_COURT_PROJECTION_FIELDS
 }){
   if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
   await init();
-  const {T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_USERS}=tables;
+  const {T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_USERS,T_LEADS}=tables;
   const campuses=await listCampusesWithDefaults();
-  const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule,users]=await Promise.all([
+  const [students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule,users,leads]=await Promise.all([
     getCachedScan(T_STUDENTS).catch(()=>[]),
     getCachedScan(T_PURCHASES).catch(()=>[]),
     getCachedScan(T_ENTITLEMENTS).catch(()=>[]),
@@ -24,16 +34,29 @@ async function handleFinancePageData({
     getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),
     getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]),
     getFinancePageScheduleRows(),
-    getCachedScan(T_USERS).catch(()=>[])
+    getCachedScan(T_USERS).catch(()=>[]),
+    T_LEADS?readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:CUSTOMER_LIFECYCLE_LEAD_FIELDS}).catch(()=>[]):Promise.resolve([])
   ]);
   const scoped=filterLoadAllForUser({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule},user);
+  const scopedLeads=filterLoadAllForUser({campuses:scoped.campuses,students:scoped.students,courts:scoped.courts,membershipAccounts:scoped.membershipAccounts,leads},user).leads;
   scoped.users=users;
   const financeSnapshot=buildFinancePageSnapshot(scoped);
+  const customerLifecycleRows=buildCustomerLifecycleRows({
+    leads:scopedLeads,
+    students:scoped.students,
+    purchases:scoped.purchases,
+    entitlements:scoped.entitlements,
+    schedule:scoped.schedule,
+    courts:scoped.courts,
+    membershipOrders:scoped.membershipOrders,
+    membershipAccounts:scoped.membershipAccounts
+  });
   return sendJson(res,{
     campuses:scoped.campuses,
     financeOverviewData:financeSnapshot.financeOverviewData,
     financeNormalizedRows:financeSnapshot.financeNormalizedRows,
     financeSettlementRows:financeSnapshot.financeSettlementRows,
+    customerLifecycleRows,
     generatedAt:''
   });
 }

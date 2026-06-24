@@ -414,15 +414,15 @@ function membershipVisibleCourt(account){
   return court;
 }
 function membershipLifecycleRows(){
-  const seen=new Set(),rows=typeof customerLifecycleRows!=='undefined'&&Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
+  const seen=new Set(),rows=typeof customerLifecycleAllRows==='function'?customerLifecycleAllRows():(typeof customerLifecycleRows!=='undefined'&&Array.isArray(customerLifecycleRows)?customerLifecycleRows:[]);
   return rows.filter(row=>String(row.courtStage||'')==='member').map(row=>{
-    const courtId=String(row.courtId||'');
-    const accountId=String(row.membershipAccountId||'');
+    const courtId=String(row.courtId||''),accountId=String(row.membershipAccountId||'');
+    const lifecycle=(accountId&&typeof customerLifecycleByMembershipAccountId==='function'?customerLifecycleByMembershipAccountId(accountId):null)||(courtId&&typeof customerLifecycleByCourtId==='function'?customerLifecycleByCourtId(courtId):null)||row;
     const account=membershipAccounts.find(a=>(accountId&&String(a.id||'')===accountId)||(courtId&&String(a.courtId||'')===courtId));
     const court=courts.find(c=>String(c.id||'')===courtId)||membershipVisibleCourt(account);
     if(!court||!isActiveCourtRecord(court))return null;
-    const nextAccount=account||{id:accountId,courtId:court.id,status:row.membershipStatus||'active',courtName:row.displayName,phone:row.phone};
-    const status=String(nextAccount.status||row.membershipStatus||'').trim();
+    const lifecycleStatus=typeof customerLifecycleMembershipStatus==='function'?customerLifecycleMembershipStatus(lifecycle):String(lifecycle.membershipStatus||'').trim(),nextAccount=account||{id:accountId,courtId:court.id,status:lifecycleStatus||'active',courtName:lifecycle.displayName,phone:lifecycle.phone};
+    const status=String(nextAccount.status||lifecycleStatus||'').trim();
     if(['voided','cleared','deleted','inactive'].includes(status))return null;
     const key=accountId||court.id;
     if(seen.has(key))return null;

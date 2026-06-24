@@ -31,11 +31,10 @@ function studentHasTrialPath(stu){
 function studentLifecycleRow(stu){
   const sid=String(stu?.id||stu?.studentId||'');
   if(!sid)return null;
-  const rows=typeof customerLifecycleRows!=='undefined'&&Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
-  return rows.find(row=>String(row.studentId||'')===sid)||null;
+  return typeof customerLifecycleByStudentId==='function'?customerLifecycleByStudentId(sid):null;
 }
 function studentLifecycleStage(stu){
-  return String(studentLifecycleRow(stu)?.studentStage||'').trim();
+  return typeof customerLifecycleStudentStage==='function'?customerLifecycleStudentStage(stu):String(studentLifecycleRow(stu)?.studentStage||'').trim();
 }
 function studentMatchesListPage(stu){
   const lifecycleStage=studentLifecycleStage(stu);
@@ -48,8 +47,8 @@ function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
 function studentSourceText(s){
-  const lifecycle=studentLifecycleRow(s);
-  return FlowTennisBusinessTaxonomy.normalizeLeadSource(lifecycle?.source||s?.source);
+  if(typeof customerLifecycleSource==='function')return customerLifecycleSource(s,s?.source);
+  return FlowTennisBusinessTaxonomy.normalizeLeadSource(s?.source);
 }
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';

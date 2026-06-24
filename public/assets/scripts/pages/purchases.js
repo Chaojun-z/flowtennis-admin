@@ -84,7 +84,9 @@ function purchaseCampusValues(p={}){
   const ent=entitlements.find(e=>e.purchaseId===p.id)||{};
   const pkg=packages.find(row=>String(row.id||'')===String(p.packageId||p.originalPackageId||''))||{};
   const stu=students.find(s=>String(s.id||'')===String(p.studentId||''))||{};
+  const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(p,stu.campus):'';
   return [
+    lifecycleCampus,
     ...parseArr(p.campusIds),
     ...parseArr(ent.campusIds),
     ...parseArr(pkg.campusIds),

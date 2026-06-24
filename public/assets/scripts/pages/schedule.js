@@ -123,7 +123,7 @@ function scheduleStudentTextByIds(ids){
 }
 function scheduleSelectedStudentHomeCampusMeta(ids){
   const selected=parseArr(ids).map(id=>students.find(s=>s.id===id)).filter(Boolean);
-  const campusIds=[...new Set(selected.map(s=>s.campus).filter(Boolean))];
+  const campusIds=[...new Set(selected.map(s=>typeof customerLifecycleCampus==='function'?customerLifecycleCampus(s,s.campus):s.campus).filter(Boolean))];
   if(!selected.length)return {text:'归属校区：未选择学员',campus:''};
   if(!campusIds.length)return {text:'归属校区：未设置',campus:''};
   if(campusIds.length===1)return {text:`归属校区：${cn(campusIds[0])||campusIds[0]}`,campus:campusIds[0]};
@@ -131,7 +131,7 @@ function scheduleSelectedStudentHomeCampusMeta(ids){
 }
 function scheduleSelectedStudentCoachMeta(ids){
   const selected=parseArr(ids).map(id=>students.find(s=>s.id===id)).filter(Boolean);
-  const coaches=[...new Set(selected.map(s=>coachName(s.primaryCoach)).filter(Boolean))];
+  const coaches=[...new Set(selected.map(s=>coachName(typeof customerLifecycleOwner==='function'?customerLifecycleOwner(s,s.primaryCoach):s.primaryCoach)).filter(Boolean))];
   if(!selected.length||coaches.length!==1)return {coach:''};
   return {coach:coaches[0]};
 }
@@ -148,10 +148,12 @@ function scheduleStudentPhone(student){
   return String(student?.phone||student?.mobile||student?.studentPhone||'').trim();
 }
 function scheduleStudentSearchTokens(student){
-  return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(student?.campus),student?.campus].filter(Boolean);
+  const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
+  return [scheduleStudentDisplayName(student),scheduleStudentPhone(student),cn(lifecycleCampus),lifecycleCampus].filter(Boolean);
 }
 function scheduleStudentInlineMeta(student){
-  const campus=cn(student?.campus)||'未设校区';
+  const lifecycleCampus=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(student,student?.campus):student?.campus;
+  const campus=cn(lifecycleCampus)||'未设校区';
   const last=scheduleStudentLastLessonBrief(student);
   return `${campus}｜${last}上课`;
 }

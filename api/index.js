@@ -10,9 +10,8 @@ const mabaoFinanceSeed = require('../server/seeds/mabao-finance-seed.json');
 const { recordPerfMetric } = require('../server/lib/perf-metrics');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
-const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js');
-const { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
-const { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
+const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
+const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
 const { normalizePermissionProfile, userHasFeaturePermission } = require('../server/permissions');
 const { handleMatchDiag, handleTableStoreDiag } = require('../server/diagnostics');
 const { createAuthServices } = require('../server/auth');
@@ -7078,7 +7077,8 @@ module.exports = async (req, res) => {
         feedbacks:Array.isArray(feedbacks)?feedbacks:[],
         coachProposals:Array.isArray(coachProposals)?coachProposals:[]
       },user);
-      return sendJson(res,{...loaded,user});
+      const customerLifecycleRows=buildCustomerLifecycleRows(loaded);
+      return sendJson(res,{...loaded,user,customerLifecycleRows});
     }
     if(path==='/price-plans'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

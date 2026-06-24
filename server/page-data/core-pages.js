@@ -136,6 +136,12 @@ function createCorePageDataRoutes(deps={}){
           : decoratedSchedule;
         const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,purchases:scoped.purchases||[],now});
+        const customerLifecycleRows=buildCustomerLifecycleRows({
+          students:scoped.students,
+          purchases:scoped.purchases,
+          entitlements:scoped.entitlements,
+          schedule:scoped.schedule
+        });
         return sendJson(res,{
           campuses:scoped.campuses||[],
           students:decoratedStudents,
@@ -146,6 +152,7 @@ function createCorePageDataRoutes(deps={}){
           coachProposals:scoped.coachProposals||[],
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],
+          customerLifecycleRows,
           stats
         });
       },{role:user.role||''});

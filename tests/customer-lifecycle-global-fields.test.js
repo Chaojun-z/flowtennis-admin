@@ -1,0 +1,127 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+const stateSource = read('public/assets/scripts/core/state.js');
+const studentsSource = read('public/assets/scripts/pages/students.js');
+const courtsSource = read('public/assets/scripts/pages/courts.js');
+const purchasesSource = read('public/assets/scripts/pages/purchases.js');
+const scheduleSource = read('public/assets/scripts/pages/schedule.js');
+const financeSource = read('public/assets/scripts/pages/coachops.js');
+const corePageSource = read('server/page-data/core-pages.js');
+const financePageSource = read('server/page-data/finance-page.js');
+const residualPageSource = read('server/page-data/residual-pages.js');
+const apiSource = read('api/index.js');
+const businessTaxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
+const vm = require('vm');
+
+[
+  'customerLifecycleRowsForRecord',
+  'customerLifecycleByStudentId',
+  'customerLifecycleByCourtId',
+  'customerLifecycleByMembershipAccountId',
+  'customerLifecycleForRecord',
+  'customerLifecycleSource',
+  'customerLifecycleCampus',
+  'customerLifecycleOwner',
+  'customerLifecycleStudentStage',
+  'customerLifecycleCourtStage',
+  'customerLifecycleMembershipStatus'
+].forEach(name => {
+  assert.match(stateSource, new RegExp(`function ${name}\\(`), `${name} should be the single frontend lifecycle field accessor`);
+});
+
+assert.match(financePageSource, /require\('\.\.\/read-models\/customer-lifecycle\.js'\)/, 'finance page-data should import the unified customer lifecycle read model');
+assert.match(financePageSource, /const customerLifecycleRows=buildCustomerLifecycleRows\(\{[\s\S]*students:scoped\.students[\s\S]*purchases:scoped\.purchases[\s\S]*entitlements:scoped\.entitlements[\s\S]*schedule:scoped\.schedule[\s\S]*courts:scoped\.courts[\s\S]*membershipOrders:scoped\.membershipOrders[\s\S]*membershipAccounts:scoped\.membershipAccounts[\s\S]*\}\);/, 'finance page-data should build lifecycle rows from the same scoped source rows as finance');
+assert.match(financePageSource, /customerLifecycleRows/, 'finance page-data should return lifecycle rows with the finance payload');
+assert.match(residualPageSource, /T_LEADS[\s\S]*handleFinancePageData/, 'residual finance route should pass the lead table to finance page-data for the lifecycle source chain');
+
+assert.match(corePageSource, /if\(path==='\/page-data\/workbench'&&method==='GET'\)[\s\S]*const customerLifecycleRows=buildCustomerLifecycleRows\(\{[\s\S]*students:scoped\.students[\s\S]*purchases:scoped\.purchases[\s\S]*entitlements:scoped\.entitlements[\s\S]*schedule:scoped\.schedule[\s\S]*\}\);[\s\S]*customerLifecycleRows/, 'workbench page-data should include unified lifecycle rows');
+
+assert.match(apiSource, /require\('\.\.\/server\/read-models\/customer-lifecycle\.js'\)/, 'load-all should import the unified lifecycle read model');
+assert.match(apiSource, /const customerLifecycleRows=buildCustomerLifecycleRows\(loaded\);[\s\S]*return sendJson\(res,\{\.\.\.loaded,user,customerLifecycleRows\}\);/, '/load-all should return lifecycle rows built from the same scoped loaded payload');
+
+assert.match(stateSource, /if\(name==='financePage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'finance aggregate loader should hydrate lifecycle rows');
+assert.match(stateSource, /if\(name==='workbenchPage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'workbench aggregate loader should hydrate lifecycle rows');
+
+assert.match(studentsSource, /customerLifecycleByStudentId/, 'student pages should read studentStage/source from the shared lifecycle accessor');
+assert.match(courtsSource, /customerLifecycleByCourtId|customerLifecycleByMembershipAccountId/, 'court and membership pages should read courtStage/membershipStatus from the shared lifecycle accessor');
+assert.match(purchasesSource, /customerLifecycleCampus/, 'purchase pages should resolve customer campus through the shared lifecycle accessor');
+assert.match(scheduleSource, /customerLifecycleCampus[\s\S]*customerLifecycleOwner/, 'schedule pages should resolve student campus and owner through the shared lifecycle accessor');
+assert.match(financeSource, /customerLifecycleCampus/, 'finance legacy fallback should resolve customer campus through the shared lifecycle accessor without changing finance math');
+
+[
+  'public/assets/scripts/pages/packages.js',
+  'public/assets/scripts/pages/products.js',
+  'public/assets/scripts/pages/prices.js',
+  'public/assets/scripts/pages/campusmgr.js',
+  'public/assets/scripts/pages/admin-users.js'
+].forEach(file => {
+  const source = read(file);
+  assert.doesNotMatch(source, /studentStage|courtStage|membershipStatus|sourceLeadId|fromLeadId/, `${file} should not define customer lifecycle meaning locally`);
+});
+
+const financeFieldDefinitions = businessTaxonomy.FINANCE_FIELD_DEFINITIONS || {};
+[
+  'totalIncome',
+  'recognizedRevenue',
+  'pendingRevenue',
+  'storedValueIncome',
+  'bookingIncome',
+  'packageIncome',
+  'cashDelta',
+  'recognizedRevenueDelta'
+].forEach(field => {
+  assert.ok(financeFieldDefinitions[field], `${field} should have one standard finance field definition`);
+  assert.strictEqual(typeof financeFieldDefinitions[field].label, 'string', `${field} should expose a stable label`);
+  assert.strictEqual(typeof financeFieldDefinitions[field].rule, 'string', `${field} should expose a stable calculation rule`);
+});
+
+const localStorageMock = {
+  store: {},
+  get length() { return Object.keys(this.store).length; },
+  getItem(key) { return Object.prototype.hasOwnProperty.call(this.store, key) ? this.store[key] : null; },
+  setItem(key, value) { this.store[key] = String(value); },
+  removeItem(key) { delete this.store[key]; },
+  key(index) { return Object.keys(this.store)[index] || null; }
+};
+const lifecycleContext = {
+  console,
+  URLSearchParams,
+  localStorage: localStorageMock,
+  window: {
+    innerWidth: 1280,
+    location: { hostname: 'localhost', search: '' },
+    coachWorkbenchStats: null,
+    addEventListener() {}
+  },
+  document: {
+    hidden: false,
+    body: { classList: { toggle() {} } },
+    addEventListener() {},
+    hasFocus() { return true; },
+    getElementById() { return null; }
+  },
+  setInterval() {},
+  FlowTennisBusinessTaxonomy: { normalizeLeadSource(value) { return String(value || '').trim(); } }
+};
+vm.runInNewContext(`${stateSource}
+customerLifecycleRows=[
+  {courtId:'same-id',source:'订场来源',campus:'订场校区',owner:'订场负责人',courtStage:'member',membershipStatus:'active'},
+  {studentId:'stu-1',source:'学员来源',campus:'学员校区',owner:'学员负责人',studentStage:'formal'}
+];
+globalThis.__customerLifecycleProbe={
+  purchaseCampus:customerLifecycleCampus({id:'same-id',studentId:'stu-1',packageId:'pkg-1'},'兜底校区'),
+  purchaseSource:customerLifecycleSource({id:'same-id',studentId:'stu-1',packageId:'pkg-1'},'兜底来源'),
+  studentStage:customerLifecycleStudentStage({id:'stu-1',name:'王同学',primaryCoach:'学员负责人'}),
+  courtStage:customerLifecycleCourtStage({id:'same-id',name:'订场客户',history:[]})
+};`, lifecycleContext);
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.purchaseCampus, '学员校区', 'purchase lookup should prefer explicit studentId over a colliding purchase id');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.purchaseSource, '学员来源', 'purchase source should not be taken from a colliding court row');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.studentStage, 'formal', 'student own id should still resolve student lifecycle stage');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.courtStage, 'member', 'court own id should still resolve court lifecycle stage');
+
+console.log('customer lifecycle global field tests passed');
