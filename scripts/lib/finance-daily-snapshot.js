@@ -130,6 +130,55 @@ function buildFinanceSummary(overviewData) {
   };
 }
 
+const FINANCE_DISPLAY_CONSISTENCY_METRICS = [
+  'cash',
+  'recognized',
+  'courseIncome',
+  'courseRecognized',
+  'storedValueIncome',
+  'storedValueConsumed',
+  'bookingIncome',
+  'bookingRecognized'
+];
+
+function deriveFinanceDisplayMetricsFromRows(rows) {
+  const overview = deriveFinanceOverviewFromRows(rows);
+  return FINANCE_DISPLAY_CONSISTENCY_METRICS.reduce((result, metric) => {
+    result[metric] = roundMoney(overview[metric]);
+    return result;
+  }, {});
+}
+
+function compareFinanceDisplayConsistency({ overviewData, normalizedRows }) {
+  const actual = overviewData?.all || {};
+  const expected = deriveFinanceDisplayMetricsFromRows(normalizedRows);
+  const details = FINANCE_DISPLAY_CONSISTENCY_METRICS
+    .map((metric) => ({
+      metric,
+      expected: roundMoney(expected[metric]),
+      actual: roundMoney(actual[metric])
+    }))
+    .filter((item) => item.expected !== item.actual)
+    .map((item) => ({
+      ...item,
+      delta: roundMoney(item.actual - item.expected)
+    }));
+  return {
+    ok: details.length === 0,
+    source: 'financeNormalizedRows',
+    metrics: expected,
+    details
+  };
+}
+
+function assertFinanceDisplayConsistency(displayConsistency) {
+  if (displayConsistency?.ok) return;
+  const detailText = normalizeRows(displayConsistency?.details)
+    .map((item) => `${item.metric}: expected=${item.expected}, actual=${item.actual}, delta=${item.delta}`)
+    .join('; ');
+  throw new Error(`财务展示一致性校验失败：${detailText || '未知差异'}`);
+}
+
 function buildShadowLedgerSnapshot({ normalizedRows, financePage, tables }) {
   const shadowLedgerRows = normalizeRows(financePage?.shadowLedgerRows).length
     ? normalizeRows(financePage?.shadowLedgerRows)
@@ -177,6 +226,7 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
   const normalizedRows = normalizeRows(financePage?.financeNormalizedRows);
   const settlementRows = normalizeRows(financePage?.financeSettlementRows);
   const overviewData = normalizeFinanceOverviewData(financePage, normalizedRows);
+  const displayConsistency = compareFinanceDisplayConsistency({ overviewData, normalizedRows });
   const shadowLedger = buildShadowLedgerSnapshot({ normalizedRows, financePage, tables });
 
   return {
@@ -195,6 +245,7 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
     financePage: {
       generatedAt: financePage?.generatedAt || generatedAt,
       overviewData,
+      displayConsistency,
       normalizedRowCount: normalizedRows.length,
       settlementRowCount: settlementRows.length,
       normalizedRows,
@@ -204,6 +255,7 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
     shadowLedgerCompareReport: shadowLedger.shadowLedgerCompareReport,
     summary: {
       tableRowCounts,
+      displayConsistency,
       ...buildFinanceSummary(overviewData)
     }
   };
@@ -221,8 +273,13 @@ function buildSnapshotOutputPath({ baseDir, snapshotDate, generatedAt }) {
   );
 }
 
-async function fetchOnlineDiag({ fetchImpl = fetch, diagUrl = 'https://www.flowtennis.cn/api/diag' } = {}) {
-  const response = await fetchImpl(diagUrl, { headers: { 'Cache-Control': 'no-cache' } });
+async function fetchOnlineDiag({ fetchImpl = fetch, diagUrl = 'https://www.flowtennis.cn/api/diag', env = process.env } = {}) {
+  const headers = { 'Cache-Control': 'no-cache' };
+  const token = String(env?.FLOWTENNIS_ADMIN_TOKEN || '').trim();
+  const cookie = String(env?.FLOWTENNIS_ADMIN_COOKIE || '').trim();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (cookie) headers.Cookie = cookie;
+  const response = await fetchImpl(diagUrl, { headers });
   if (!response.ok) throw new Error(`停止快照：线上 /api/diag 请求失败 ${response.status}`);
   return response.json();
 }
@@ -264,7 +321,7 @@ async function runFinanceDailySnapshot({
   if (!scanTable) throw new Error('缺少 scanTable');
   if (!buildFinancePageSnapshot) throw new Error('缺少 buildFinancePageSnapshot');
 
-  const onlineDiag = await fetchOnlineDiag({ fetchImpl, diagUrl });
+  const onlineDiag = await fetchOnlineDiag({ fetchImpl, diagUrl, env });
   const target = assertDiagMatchesLocalTarget({ onlineDiag, env });
   const client = createClientFromEnv(env);
   const scannedTables = await scanTables({ client, scanTable });
@@ -276,6 +333,7 @@ async function runFinanceDailySnapshot({
     tables: scannedTables,
     financePage
   });
+  assertFinanceDisplayConsistency(snapshot.financePage.displayConsistency);
   const outputPath = buildSnapshotOutputPath({ baseDir, snapshotDate, generatedAt });
   if (writeFile) await writeSnapshotFile(snapshot, outputPath);
 
@@ -293,7 +351,10 @@ module.exports = {
   assertDiagMatchesLocalTarget,
   buildDailyFinanceSnapshot,
   buildShadowLedgerSnapshot,
+  assertFinanceDisplayConsistency,
+  compareFinanceDisplayConsistency,
   buildSnapshotOutputPath,
+  deriveFinanceDisplayMetricsFromRows,
   deriveFinanceOverviewFromRows,
   fetchOnlineDiag,
   scanTables,
