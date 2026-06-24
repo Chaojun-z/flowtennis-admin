@@ -27,9 +27,11 @@ let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let scheduleLocalMutationAt=0;
 let courtAccountListViewData=null,courtAccountListViewCompareData=null;
 let loadedDatasets=new Set();
+let staleCachedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
 const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
+const DATA_CACHE_TTL_MS=60000;
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
 const OPERATIONS_PAGE_CACHE_VERSION='2026-06-23-real-trends-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
@@ -261,14 +263,24 @@ function persistDatasetCache(name,data){
   if(shouldBypassDatasetCache(name))return;
   try{localStorage.setItem(datasetCacheKey(name),JSON.stringify({savedAt:Date.now(),data:Array.isArray(data)?data:[]}));}catch(e){}
 }
-function readDatasetCache(name){
+function readDatasetCacheEntry(name){
   if(shouldBypassDatasetCache(name))return null;
   try{
     const raw=localStorage.getItem(datasetCacheKey(name));
     if(!raw)return null;
     const parsed=JSON.parse(raw);
-    return Array.isArray(parsed?.data)?parsed.data:null;
+    return Array.isArray(parsed?.data)?parsed:null;
   }catch(e){return null;}
+}
+function readDatasetCache(name){
+  const entry=readDatasetCacheEntry(name);
+  return Array.isArray(entry?.data)?entry.data:null;
+}
+function isDatasetCacheFresh(name,entry,now=Date.now()){
+  if(!entry||shouldBypassDatasetCache(name))return false;
+  const savedAt=Number(entry.savedAt)||0;
+  if(savedAt<=0)return false;
+  return now-savedAt<=DATA_CACHE_TTL_MS;
 }
 function setDatasetValue(name,data,{persist=true}={}){
   const rows=Array.isArray(data)?data:[];
@@ -327,12 +339,18 @@ function setScheduleRowsFromRemote(rows,{persist=true}={}){
 function hydrateDatasetsFromCache(){
   ensureDatasetCacheVersion();
   clearNonProductionSensitiveDatasetCache();
+  staleCachedDatasets=new Set();
+  let latestSavedAt=0;
   GLOBAL_DATASET_NAMES.forEach(name=>{
-    const cached=readDatasetCache(name);
-    if(cached)setDatasetValue(name,cached,{persist:false});
+    const cached=readDatasetCacheEntry(name);
+    if(!cached)return;
+    setDatasetValue(name,cached.data,{persist:false});
+    const savedAt=Number(cached.savedAt)||0;
+    if(savedAt>latestSavedAt)latestSavedAt=savedAt;
+    if(!isDatasetCacheFresh(name,cached))staleCachedDatasets.add(name);
   });
   CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
-  lastDataSyncAt=Date.now();
+  lastDataSyncAt=latestSavedAt||0;
 }
 function requiredDatasetsForPage(pg){
   return PAGE_DATA_REQUIREMENTS[pg]||[];
@@ -437,7 +455,7 @@ function renderPageLoading(pg){
   if(pg==='myclasses')renderBlockLoading('myClassesBody','班次数据加载中...');
 }
 async function ensureDatasetsByName(names=[],{force=false}={}){
-  const pending=(names||[]).filter(name=>force||!loadedDatasets.has(name));
+  const pending=(names||[]).filter(name=>force||staleCachedDatasets.has(name)||!loadedDatasets.has(name));
   if(!pending.length)return;
   const results=await Promise.all(pending.map(name=>{
     const requestKey=datasetRequestKey(name);
@@ -453,11 +471,17 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('students',data.students||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      staleCachedDatasets.delete('purchases');
+      staleCachedDatasets.delete('packages');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('entitlements');
+      staleCachedDatasets.delete('entitlementLedger');
       loadedDatasets.add('purchasesPage');
       return;
     }
     if(name==='financePage'){
       setDatasetValue('campuses',data.campuses||[]);
+      staleCachedDatasets.delete('campuses');
       financeOverviewData=data.financeOverviewData||null;
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
@@ -467,6 +491,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     if(name==='operationsPage'){
       if(data?.__operationsRequestKey&&data.__operationsRequestKey!==operationsPageDatasetRequestKey())return;
       setDatasetValue('campuses',data.campuses||[]);
+      staleCachedDatasets.delete('campuses');
       operationsPageData=data.operations||null;
       persistOperationsPageClientCache(data);
       loadedDatasets.add('operationsPage');
@@ -476,11 +501,15 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('campuses',data.campuses||[]);
       setDatasetValue('students',data.students||[]);
       setDatasetValue('courts',data.courts||[]);
+      staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('courts');
       loadedDatasets.add('courtsPage');
       return;
     }
     if(name==='matchesPage'){
       setDatasetValue('matches',data.items||[]);
+      staleCachedDatasets.delete('matches');
       loadedDatasets.add('matchesPage');
       return;
     }
@@ -494,6 +523,15 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
       setDatasetValue('membershipPlans',data.membershipPlans||[]);
       setDatasetValue('coaches',data.coaches||[]);
+      staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('courts');
+      staleCachedDatasets.delete('membershipAccounts');
+      staleCachedDatasets.delete('membershipOrders');
+      staleCachedDatasets.delete('membershipBenefitLedger');
+      staleCachedDatasets.delete('membershipAccountEvents');
+      staleCachedDatasets.delete('membershipPlans');
+      staleCachedDatasets.delete('coaches');
       loadedDatasets.add('membershipsPage');
       return;
     }
@@ -507,11 +545,21 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('students');
+      staleCachedDatasets.delete('classes');
+      staleCachedDatasets.delete('schedule');
+      staleCachedDatasets.delete('feedbacks');
+      staleCachedDatasets.delete('coachProposals');
+      staleCachedDatasets.delete('purchases');
+      staleCachedDatasets.delete('entitlements');
+      staleCachedDatasets.delete('entitlementLedger');
       window.coachWorkbenchStats=data.stats||{};
       loadedDatasets.add('workbenchPage');
       return;
     }
     setDatasetValue(name,data);
+    staleCachedDatasets.delete(name);
   });
   CAMPUS={};campuses.forEach(x=>{CAMPUS[x.code||x.id]=x.name||x.code||x.id;});
   lastDataSyncAt=Date.now();
@@ -562,6 +610,7 @@ function clearLoadedData(){
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
   loadedDatasets=new Set();
+  staleCachedDatasets=new Set();
 }
 function normalizeCurrentPageForRole(){
   const isCoach=currentUser?.role==='editor'&&currentUser?.coachName;

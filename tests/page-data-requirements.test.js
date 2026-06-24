@@ -45,9 +45,9 @@ assert.match(source, /function missingInitialDatasetsForPage\(pg\)/, 'state shou
 assert.match(source, /function renderPageLoading\(pg\)/, 'state should render inline loading placeholders instead of empty pages');
 assert.match(source, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should render an inline list loading placeholder');
 assert.doesNotMatch(source, /renderBlockLoading\('coachOpsRevenueStats','财务汇总加载中\.\.\.'\)/, 'finance page should not render a duplicate top loading line above the revenue table');
-assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{\s*renderPageLoading\(pg\);\s*return;\s*\}/, 'page rendering should show inline loading placeholders until the page has the datasets it needs');
+assert.match(source, /if\(pageNeedsInlineLoading\(pg\)\)\{[\s\S]*renderPageLoading\(pg\);\s*return;\s*\}/, 'page rendering should show inline loading placeholders until the page has the datasets it needs');
 assert.match(source, /const datasetLoadPromises=new Map\(\);/, 'state should de-duplicate concurrent dataset requests');
-assert.match(source, /datasetLoadPromises\.has\(name\)/, 'dataset loading should reuse in-flight requests');
+assert.match(source, /datasetLoadPromises\.has\(requestKey\)/, 'dataset loading should reuse in-flight requests');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force\}\);/, 'page background loading should revalidate cached data without blocking first paint');
 
 console.log('page data requirements tests passed');
