@@ -48,6 +48,7 @@ assert.match(bootstrapSource, /scrollActiveSidebarItemIntoView\(\)/, 'page navig
 assert.match(bootstrapSource, /adminPages=\[[^\]]*'operations'/, 'operations should be admin-only');
 assert.match(stateSource, /if\(pg==='operations'\)renderOperations\(\)/, 'renderPageData should render operations');
 assert.match(operationsSource, /const OPERATIONS_TAB_KEY='ft_operations_active_tab'/, 'operations should persist the selected dashboard tab');
+assert.match(operationsSource, /function operationsSourceFilterValues\([\s\S]*FlowTennisBusinessTaxonomy\.SOURCES[\s\S]*available\.has\(source\)/, 'operations source filter fallback should use the lead source dictionary order');
 assert.match(operationsSource, /function readOperationsActiveTab\(\)[\s\S]*localStorage\.getItem\(OPERATIONS_TAB_KEY\)[\s\S]*return 'overview'/, 'operations should restore the last selected dashboard tab and fall back to overview');
 assert.match(operationsSource, /let operationsActiveTab = readOperationsActiveTab\(\)/, 'operations should initialize the active tab from persisted state');
 assert.match(operationsSource, /localStorage\.setItem\(OPERATIONS_TAB_KEY,operationsActiveTab\)/, 'operations should save tab changes so refresh stays on the same dashboard');
@@ -74,7 +75,7 @@ assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache should be scoped by the active date range URL');
-assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-06-23-real-trends-v2'/, 'operations client cache should invalidate the old v1 cache after trend diagnostics and single-day trend fixes');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-06-24-source-order-v1'/, 'operations client cache should invalidate stale source filter ordering');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache key should include the cache version');
 assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
 assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*cacheVersion:OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest versioned view model for fast repeat entry');

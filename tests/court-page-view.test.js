@@ -25,7 +25,8 @@ assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped to
 assert.match(pagesCss, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(fnBody('renderCourtStatsCards'), /document\.getElementById\('courtStatsRow'\)/, 'court page should use the standard stats row host');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.doesNotMatch(html, /label:'处置态度'/, 'court table should not keep the old disposition attitude label');
 assert.match(html, /courtAccountTypeFilter/, 'court toolbar should provide account type filter');
 assert.match(html, /courtOwnerFilter/, 'court toolbar should provide owner filter');
 assert.match(html, /courtMoreActions/, 'court toolbar should provide more actions menu');

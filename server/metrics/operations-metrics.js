@@ -700,7 +700,7 @@ function buildConversionFilterOptions(rows = [], campuses = []) {
     ...(campuses || []).map(row => normalizeText(row.name || row.displayName || row.code || row.id, '')).filter(Boolean)
   ])].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
   return {
-    sources: values('source'),
+    sources: businessTaxonomy.SOURCES,
     campuses: campusValues,
     coaches: values('coach')
   };

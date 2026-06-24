@@ -78,6 +78,7 @@ assert.ok(metrics.conversion.filterOptions.sources.includes('转介绍'), 'conve
 assert.strictEqual(metrics.conversion.filterOptions.sources.includes('朋友转介绍'), false, 'conversion filters should not expose legacy referral source values');
 assert.ok(metrics.conversion.filterOptions.sources.includes('抖音'), 'conversion filters should normalize mixed douyin source values');
 assert.strictEqual(metrics.conversion.filterOptions.sources.includes('抖音/美团'), false, 'conversion filters should not expose mixed legacy douyin source values');
+assert.deepStrictEqual(metrics.conversion.filterOptions.sources, ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'], 'conversion source filters should use the same order as the lead pool');
 assert.ok(metrics.conversion.filterOptions.campuses.includes('顺义马坡'), 'conversion filters should display campus names instead of campus codes');
 assert.ok(metrics.conversion.filterOptions.coaches.includes('Siren 教练'), 'conversion filters should include coach options');
 assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 75.4, 'coach module should use the current data span when all-time is selected');

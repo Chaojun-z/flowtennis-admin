@@ -41,6 +41,8 @@ assert.match(source, /search:\{id:'stuSearch',oninput:'onStudentFilterChange\(\)
 assert.match(source, /function renderStudentToolbarFilters\(/, 'student filters should render through the booking-style dropdown helper');
 assert.match(source, /stuTypeFilterHost[\s\S]*onStudentFilterChange/, 'student type filter should reset pagination before rendering');
 assert.match(source, /stuSourceFilterHost[\s\S]*onStudentFilterChange/, 'student source filter should reset pagination before rendering');
+assert.match(source, /function studentSourceOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadSources'\)/, 'student source options should reuse the same source dictionary as leads');
+assert.match(source, /function studentSourceText\(s\)[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadSource\(s\?\.source\)/, 'student source display should normalize legacy source values');
 assert.match(source, /stuCoachFilterHost[\s\S]*onStudentFilterChange/, 'student primary coach filter should reset pagination before rendering');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
@@ -347,6 +349,7 @@ assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown f
 assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown filters should support linked count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
 assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'coach'/, 'student toolbar filters should use linked count labels');
+assert.match(source, /renderStudentToolbarFilters[\s\S]*options:\[\{value:'',label:'全部',emptyDisplay:'来源'\},\.\.\.studentSourceOptions\(\)\][\s\S]*match:\(s,value\)=>studentSourceText\(s\)===value/, 'student source filter should use normalized source options and matching');
 assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');
 assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');

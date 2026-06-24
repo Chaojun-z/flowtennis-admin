@@ -1334,12 +1334,19 @@ function operationsFilterDropdown(id, label, values, value) {
   return renderStandardDropdownHtml(id, label, [{ value: '', label }, ...(values || []).map(item => ({ value: item, label: item }))], value, false, 'setOperationsConversionFilter');
 }
 
+function operationsSourceFilterValues(values = []) {
+  const available = new Set((values || []).map(item => String(item || '').trim()).filter(Boolean));
+  const ordered = ((typeof FlowTennisBusinessTaxonomy === 'object' && FlowTennisBusinessTaxonomy.SOURCES) || []).filter(source => available.has(source));
+  const extra = [...available].filter(source => !ordered.includes(source)).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+  return [...ordered, ...extra];
+}
+
 function operationsConversionFilterOptions(data) {
   const rows = (data.conversion?.courseRows || []).length ? data.conversion.courseRows : operationsFallbackCourseRows(data);
   const values = key => [...new Set(rows.map(row => String(row[key] || '').trim()).filter(Boolean).filter(item => item !== '未记录'))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
   const apiOptions = data.conversion?.filterOptions || {};
   return {
-    sources: (apiOptions.sources || []).length ? apiOptions.sources : values('source'),
+    sources: (apiOptions.sources || []).length ? apiOptions.sources : operationsSourceFilterValues(values('source')),
     campuses: (apiOptions.campuses || []).length ? apiOptions.campuses : values('campus'),
     coaches: (apiOptions.coaches || []).length ? apiOptions.coaches : values('coach')
   };

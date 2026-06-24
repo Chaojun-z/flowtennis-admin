@@ -57,7 +57,7 @@ assert.match(html, /membershipOrders=Array\.isArray\(data\?\.membershipOrders\)\
 assert.match(html, /membershipBenefitLedger=Array\.isArray\(data\?\.membershipBenefitLedger\)\?data\.membershipBenefitLedger:\[\]/, 'load-all should store membership benefit ledger');
 
 assert.match(courtShell, /账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场/, 'courts table should show membership status columns');
-assert.match(courtShell, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*处置态度[\s\S]*备注/, 'courts table should show requested account columns');
+assert.match(courtShell, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*储值态度[\s\S]*备注/, 'courts table should show requested account columns');
 assert.match(fnBody('renderCourtHeaderFilters'), /const accountTypes=\['会员','普通'\]/, 'court account filter should only expose member and normal account states');
 assert.match(fnBody('renderCourtAccountListView'), /courtAccountStateLabel\(item\)/, 'court read-model list should filter and render by displayed account state');
 assert.match(fnBody('renderCourts'), /courtAccountStateLabel\(m\)/, 'court legacy list should filter and render by displayed account state');
