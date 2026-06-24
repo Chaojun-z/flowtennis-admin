@@ -51,12 +51,20 @@ async function main() {
   const studentRes = makeRes();
   await handle({ path: '/leads/lead-1/convert-student', method: 'POST', body: {}, user: { role: 'admin' }, res: studentRes, query: new URLSearchParams() });
   assert.strictEqual(studentRes.body.student.id, 'student-1');
-  assert.ok(!writes.some((item) => item.table === 'ft_students'), '同名学员存在时不应新建学员');
+  assert.ok(!writes.some((item) => item.table === 'ft_students' && item.id === 'new-student'), '同名学员存在时不应新建学员');
+  assert.ok(
+    writes.some((item) => item.table === 'ft_students' && item.id === 'student-1' && item.row.sourceLeadId === 'lead-1'),
+    '复用同名学员时也要补齐线索来源链路'
+  );
 
   const courtRes = makeRes();
   await handle({ path: '/leads/lead-1/convert-court', method: 'POST', body: {}, user: { role: 'admin' }, res: courtRes, query: new URLSearchParams() });
   assert.strictEqual(courtRes.body.court.id, 'court-1');
-  assert.ok(!writes.some((item) => item.table === 'ft_courts'), '同名订场用户存在时不应新建订场用户');
+  assert.ok(!writes.some((item) => item.table === 'ft_courts' && item.id === 'new-court'), '同名订场用户存在时不应新建订场用户');
+  assert.ok(
+    writes.some((item) => item.table === 'ft_courts' && item.id === 'court-1' && item.row.sourceLeadId === 'lead-1'),
+    '复用同名订场用户时也要补齐线索来源链路'
+  );
 
   console.log('leads convert dedupe tests passed');
 }

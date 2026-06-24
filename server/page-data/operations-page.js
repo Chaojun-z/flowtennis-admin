@@ -1,4 +1,5 @@
 const { buildOperationsMetrics } = require('../metrics/operations-metrics.js');
+const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const {
   getOperationsRowsCacheKey,
   getOperationsBaseRows
@@ -74,6 +75,7 @@ async function buildOperationsPagePayload({
     coaches: baseRows.coaches,
     schedule: baseRows.schedule
   }, user);
+  const customerLifecycleRows=buildCustomerLifecycleRows(scoped);
 
   const scopedFinanceSnapshot = fullFinanceSnapshot || baseRows.cachedFinanceSnapshot || buildFinancePageSnapshot({
     campuses: scoped.campuses,
@@ -90,6 +92,7 @@ async function buildOperationsPagePayload({
 
   const operations = buildOperationsMetrics({
     ...scoped,
+    customerLifecycleRows,
     financeOverviewData,
     financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows
   }, { dateRange });

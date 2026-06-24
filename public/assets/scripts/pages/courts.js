@@ -413,6 +413,28 @@ function membershipVisibleCourt(account){
   if(!court||!isActiveCourtRecord(court))return null;
   return court;
 }
+function membershipLifecycleRows(){
+  const seen=new Set(),rows=typeof customerLifecycleRows!=='undefined'&&Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
+  return rows.filter(row=>String(row.courtStage||'')==='member').map(row=>{
+    const courtId=String(row.courtId||'');
+    const accountId=String(row.membershipAccountId||'');
+    const account=membershipAccounts.find(a=>(accountId&&String(a.id||'')===accountId)||(courtId&&String(a.courtId||'')===courtId));
+    const court=courts.find(c=>String(c.id||'')===courtId)||membershipVisibleCourt(account);
+    if(!court||!isActiveCourtRecord(court))return null;
+    const nextAccount=account||{id:accountId,courtId:court.id,status:row.membershipStatus||'active',courtName:row.displayName,phone:row.phone};
+    const status=String(nextAccount.status||row.membershipStatus||'').trim();
+    if(['voided','cleared','deleted','inactive'].includes(status))return null;
+    const key=accountId||court.id;
+    if(seen.has(key))return null;
+    seen.add(key);
+    return {court,account:nextAccount};
+  }).filter(Boolean);
+}
+function membershipBaseRows(){
+  const lifecycleBase=membershipLifecycleRows();
+  if(lifecycleBase.length)return lifecycleBase;
+  return membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account}));
+}
 function renderMembershipStats(rows=[]){
   const host=document.getElementById('membershipStatsRow');if(!host)return;
   const visibleCourtIds=new Set(rows.map(row=>row.court?.id||row.courtId));
@@ -489,7 +511,7 @@ function renderMembershipPagerControls(total,pages){
   btns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(membershipPage,pages,'setMembershipPage');
 }
 function setMembershipPage(value){
-  const total=membershipAccounts.filter(a=>membershipVisibleCourt(a)).length;
+  const total=membershipBaseRows().length;
   const pages=Math.max(1,Math.ceil(total/membershipPageSize));
   membershipPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
   renderMemberships();
@@ -532,7 +554,7 @@ function membershipSortMetric(row,key){
 }
 function getMembershipRows(){
   const q=(document.getElementById('membershipSearch')?.value||'').toLowerCase();
-  const base=membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account}));
+  const base=membershipBaseRows();
   return base.filter(row=>{
     if(membershipTierFilterValue&&membershipTierForRow(row)!==membershipTierFilterValue)return false;
     return searchHit(q,row.court.name,row.court.phone,row.account.courtName,row.account.memberLabel,row.account.phone);
@@ -540,7 +562,7 @@ function getMembershipRows(){
 }
 function renderMemberships(){
   const body=document.getElementById('membershipTbody');if(!body)return;
-  renderMembershipHeaderFilters(membershipAccounts.filter(a=>membershipVisibleCourt(a)).map(account=>({court:membershipVisibleCourt(account),account})));
+  renderMembershipHeaderFilters(membershipBaseRows());
   const rows=getMembershipRows();
   renderMembershipStats(rows);
   const sortedRows=[...rows];

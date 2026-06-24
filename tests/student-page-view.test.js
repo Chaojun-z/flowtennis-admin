@@ -42,7 +42,7 @@ assert.match(source, /function renderStudentToolbarFilters\(/, 'student filters 
 assert.match(source, /stuTypeFilterHost[\s\S]*onStudentFilterChange/, 'student type filter should reset pagination before rendering');
 assert.match(source, /stuSourceFilterHost[\s\S]*onStudentFilterChange/, 'student source filter should reset pagination before rendering');
 assert.match(source, /function studentSourceOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadSources'\)/, 'student source options should reuse the same source dictionary as leads');
-assert.match(source, /function studentSourceText\(s\)[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadSource\(s\?\.source\)/, 'student source display should normalize legacy source values');
+assert.match(source, /function studentSourceText\(s\)[\s\S]*const lifecycle=studentLifecycleRow\(s\);[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadSource\(lifecycle\?\.source\|\|s\?\.source\)/, 'student source display should normalize unified lifecycle source before legacy source values');
 assert.match(source, /stuCoachFilterHost[\s\S]*onStudentFilterChange/, 'student primary coach filter should reset pagination before rendering');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');

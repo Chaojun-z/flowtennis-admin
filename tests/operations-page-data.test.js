@@ -28,6 +28,8 @@ const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
 
 assert.match(operationsPageSource, /function handleOperationsPageData/, 'operations page-data module should expose handleOperationsPageData');
 assert.match(operationsPageSource, /buildOperationsMetrics/, 'operations page-data should delegate calculations to server/metrics/operations-metrics.js');
+assert.match(operationsPageSource, /require\('\.\.\/read-models\/customer-lifecycle\.js'\)/, 'operations page-data should import the unified customer lifecycle read model');
+assert.match(operationsPageSource, /const customerLifecycleRows=buildCustomerLifecycleRows\(scoped\);[\s\S]*customerLifecycleRows,/, 'operations page-data should pass unified lifecycle rows into operations metrics');
 assert.match(courtReadModelSource, /module\.exports = \{[\s\S]*bookingDurationHours[\s\S]*courtHistoryBusinessDate[\s\S]*isCourtBookingHistoryRow[\s\S]*normalizeCourtHistory/, 'court account read model should export the court history helpers used by operations metrics');
 assert.match(operationsPageSource, /getFinancePageSnapshot/, 'operations page-data should be able to read the same full finance snapshot as the finance overview');
 assert.match(operationsPageSource, /await getFinancePageSnapshot\(\)/, 'operations page-data should cold-build the full finance snapshot instead of depending on a lucky cache hit');
@@ -62,6 +64,8 @@ assert.match(operationsSourceModelSource, /OPERATIONS_FOLLOWUP_FIELDS[\s\S]*'lea
 assert.match(operationsSourceModelSource, /T_LEAD_FOLLOWUPS[\s\S]*OPERATIONS_FOLLOWUP_FIELDS/, 'operations source model should scan lead followups for conversion event evidence');
 assert.match(operationsMetricsSource, /leadFollowups:\s*filterRowsByDateRange/, 'operations metrics should include lead followups in date-range evidence rows');
 assert.match(operationsMetricsSource, /function buildOverviewTrendDailyRows\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourseRows[\s\S]*financeStoredValueRows/, 'overview KPI trends should aggregate real finance rows when purchase detail rows are unavailable');
+assert.match(operationsMetricsSource, /function lifecycleRowsForData\(data = \{\}\)/, 'operations metrics should use one lifecycle row source for conversion calculations');
+assert.match(operationsMetricsSource, /if \(Array\.isArray\(data\.customerLifecycleRows\) && data\.customerLifecycleRows\.length\) return data\.customerLifecycleRows;/, 'operations metrics should prefer lifecycle rows already built by page-data');
 assert.match(operationsMetricsSource, /function courtTrendDays\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourtBookingRows/, 'court KPI trends should use real finance booking row dates when court history is unavailable');
 assert.match(operationsMetricsSource, /function conversionTrendSourceDates[\s\S]*appointmentEventDate[\s\S]*attendanceEventDate[\s\S]*dealEventDate/, 'conversion KPI trends should use real event evidence dates instead of leadDate only');
 assert.match(operationsMetricsSource, /function financeRowsAsCoachPurchases[\s\S]*financeCourseRows[\s\S]*cashDelta[\s\S]*purchaseDate: financeBusinessDate/, 'coach KPI trends should use real course finance rows when purchase detail rows are unavailable');

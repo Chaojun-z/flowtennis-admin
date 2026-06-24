@@ -6,7 +6,10 @@ assert.match(source, /function isStudentListPage\(/, 'student split pages should
 assert.match(source, /package-students[\s\S]*trial-students/, 'student split pages should expose dedicated routes');
 assert.match(source, /function studentHasNonTrialPackage\(/, 'student split pages should identify non-trial package students');
 assert.match(source, /function studentHasTrialPath\(/, 'trial student page should identify students who have entered the trial path');
-assert.match(source, /studentListViewMode\(\)==='trial'\?studentHasTrialPath\(stu\)&&!hasPackage:hasPackage/, 'normal student page should remove students after they buy formal packages');
+assert.match(source, /customerLifecycleRows=\[\]/, 'student split pages should receive the unified customer lifecycle rows');
+assert.match(source, /function studentLifecycleRow\(stu\)/, 'student split pages should lookup the unified lifecycle row for a student');
+assert.match(source, /function studentLifecycleStage\(stu\)/, 'student split pages should read the standard studentStage field');
+assert.match(source, /if\(lifecycleStage\)return studentListViewMode\(\)==='trial'\?lifecycleStage!=='formal'&&lifecycleStage!=='none':lifecycleStage==='formal';/, 'normal and official student pages should split by standard studentStage before local fallback');
 assert.match(source, /function studentDealPathText\(/, 'official student page should expose a deal path helper');
 assert.match(source, /体验转化[\s\S]*直接成交[\s\S]*老客续费/, 'official student deal path should cover trial conversion, direct deal, and renewal');
 assert.match(source, /'package-students':\['campuses','students','purchasesPage'\][\s\S]*'trial-students':\['campuses','students','purchasesPage'\]/, 'student split pages should load package data before first render');

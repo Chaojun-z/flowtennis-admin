@@ -18,6 +18,19 @@ function createLeadsRoutes(deps={}){
     return values.some(v=>String(v||'').toLowerCase().includes(keyword));
   }
 
+  function lifecycleSourcePatch(row,lead,now){
+    const sourceLeadId=cleanLeadText(row?.sourceLeadId||row?.leadId||row?.fromLeadId||lead?.id);
+    if(!row?.id||!sourceLeadId||cleanLeadText(row.sourceLeadId)===sourceLeadId)return null;
+    return {...row,sourceLeadId,updatedAt:now};
+  }
+
+  async function ensureLifecycleSourceLink(table,row,lead,now){
+    const next=lifecycleSourcePatch(row,lead,now);
+    if(!next)return row;
+    await put(table,next.id,next);
+    return next;
+  }
+
   return async function handleLeadsRoutes({path,method,body,user,res,query}){
     if(path==='/lead-followups'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -190,7 +203,8 @@ function createLeadsRoutes(deps={}){
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(lead.studentId){
-        const student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
+        let student=await get(T_STUDENTS,lead.studentId).catch(()=>null);
+        if(student)student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,new Date().toISOString());
         return sendJson(res,{lead,student,created:false});
       }
       let student=body.studentId?await get(T_STUDENTS,body.studentId).catch(()=>null):null;
@@ -202,7 +216,9 @@ function createLeadsRoutes(deps={}){
           await put(T_STUDENTS,student.id,student);
         }
       }
-      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      const now=new Date().toISOString();
+      student=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,membershipAccountId:lead.membershipAccountId||'',updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
       return sendJson(res,{lead:nextLead,student,created:!body.studentId});
     }
@@ -215,7 +231,8 @@ function createLeadsRoutes(deps={}){
       const lead=await get(T_LEADS,leadId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(lead.courtId){
-        const court=await get(T_COURTS,lead.courtId).catch(()=>null);
+        let court=await get(T_COURTS,lead.courtId).catch(()=>null);
+        if(court)court=await ensureLifecycleSourceLink(T_COURTS,court,lead,new Date().toISOString());
         return sendJson(res,{lead,court,created:false});
       }
       let court=body.courtId?await get(T_COURTS,body.courtId).catch(()=>null):null;
@@ -227,8 +244,10 @@ function createLeadsRoutes(deps={}){
           await put(T_COURTS,court.id,court);
         }
       }
+      const now=new Date().toISOString();
+      court=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
       const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
-      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:new Date().toISOString(),createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||lead.membershipAccountId||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,updatedAt:now,createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
       return sendJson(res,{lead:nextLead,court,created:!body.courtId});
     }
@@ -241,9 +260,11 @@ function createLeadsRoutes(deps={}){
       const student=await get(T_STUDENTS,body.studentId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(!student)return sendJson(res,{error:'学员不存在'},404);
-      const nextLead=normalizeLeadRecord({...lead,studentId:student.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      const now=new Date().toISOString();
+      const linkedStudent=await ensureLifecycleSourceLink(T_STUDENTS,student,lead,now);
+      const nextLead=normalizeLeadRecord({...lead,studentId:linkedStudent.id,isCourseConverted:true,createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student});
+      return sendJson(res,{lead:nextLead,student:linkedStudent});
     }
     const leadLinkCourtM=path.match(/^\/leads\/([^/]+)\/link-court$/);
     if(leadLinkCourtM&&method==='POST'){
@@ -254,10 +275,12 @@ function createLeadsRoutes(deps={}){
       const court=await get(T_COURTS,body.courtId).catch(()=>null);
       if(!lead)return sendJson(res,{error:'线索不存在'},404);
       if(!court)return sendJson(res,{error:'订场用户不存在'},404);
+      const now=new Date().toISOString();
+      const linkedCourt=await ensureLifecycleSourceLink(T_COURTS,court,lead,now);
       const membershipAccount=(await scan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[])).find(account=>String(account.courtId||'')===String(court.id)&&account.status!=='voided')||null;
-      const nextLead=normalizeLeadRecord({...lead,courtId:court.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now:new Date().toISOString()});
+      const nextLead=normalizeLeadRecord({...lead,courtId:linkedCourt.id,membershipAccountId:membershipAccount?.id||'',isCourtConverted:true,isMembershipConverted:!!membershipAccount,createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court,membershipAccount});
+      return sendJson(res,{lead:nextLead,court:linkedCourt,membershipAccount});
     }
     return false;
   };

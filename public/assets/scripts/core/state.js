@@ -7,6 +7,7 @@ function syncViewportMode(){
 
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
+let customerLifecycleRows=[];
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 let operationsPageData=null;
@@ -312,6 +313,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='feedbacks')feedbacks=rows;
   if(name==='coachProposals')coachProposals=rows;
   if(name==='matches')matches=rows;
+  if(name==='customerLifecycleRows')customerLifecycleRows=rows;
   loadedDatasets.add(name);
   if(persist)persistDatasetCache(name,rows);
 }
@@ -471,11 +473,13 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('students',data.students||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('entitlementLedger');
+      staleCachedDatasets.delete('customerLifecycleRows');
       loadedDatasets.add('purchasesPage');
       return;
     }
@@ -501,9 +505,11 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('campuses',data.campuses||[]);
       setDatasetValue('students',data.students||[]);
       setDatasetValue('courts',data.courts||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('courts');
+      staleCachedDatasets.delete('customerLifecycleRows');
       loadedDatasets.add('courtsPage');
       return;
     }
@@ -523,6 +529,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
       setDatasetValue('membershipPlans',data.membershipPlans||[]);
       setDatasetValue('coaches',data.coaches||[]);
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('courts');
@@ -532,6 +539,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('membershipAccountEvents');
       staleCachedDatasets.delete('membershipPlans');
       staleCachedDatasets.delete('coaches');
+      staleCachedDatasets.delete('customerLifecycleRows');
       loadedDatasets.add('membershipsPage');
       return;
     }
@@ -654,7 +662,8 @@ function applyLoadedData(data){
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
   operationsPageData=data?.operations||null;
-  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches']);
+  customerLifecycleRows=Array.isArray(data?.customerLifecycleRows)?data.customerLifecycleRows:[];
+  loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches','customerLifecycleRows']);
   if(data?.user){
     currentUser=data.user;
     localStorage.setItem('ft_user',JSON.stringify(currentUser));

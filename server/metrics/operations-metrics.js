@@ -4,6 +4,10 @@ const {
   courtHistoryBusinessDate,
   normalizeCourtHistory
 } = require('../page-data/court-account-read-model.js');
+const {
+  buildCustomerLifecycleRows,
+  buildLeadConversionSetsFromLifecycle
+} = require('../read-models/customer-lifecycle.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -302,23 +306,27 @@ function sourceLeadId(row) {
   return String(row?.sourceLeadId || row?.leadId || row?.fromLeadId || '').trim();
 }
 
-function buildLeadConversionSets({ students = [], courts = [], membershipAccounts = [] } = {}) {
-  const course = new Set();
-  const booking = new Set();
-  const membership = new Set();
-  (students || []).forEach(row => {
-    const id = sourceLeadId(row);
-    if (id) course.add(id);
+function lifecycleRowsForData(data = {}) {
+  if (Array.isArray(data.customerLifecycleRows) && data.customerLifecycleRows.length) return data.customerLifecycleRows;
+  return buildCustomerLifecycleRows(data);
+}
+
+function buildLifecycleByLeadId(rows = []) {
+  const byLeadId = new Map();
+  (rows || []).forEach(row => {
+    [row.sourceLeadId, row.leadId].map(value => String(value || '').trim()).filter(Boolean).forEach(id => {
+      if (!byLeadId.has(id)) byLeadId.set(id, row);
+    });
   });
-  (courts || []).forEach(row => {
-    const id = sourceLeadId(row);
-    if (id) booking.add(id);
-  });
-  (membershipAccounts || []).forEach(row => {
-    const id = sourceLeadId(row);
-    if (id) membership.add(id);
-  });
-  return { course, booking, membership };
+  return byLeadId;
+}
+
+function lifecycleForLead(lead = {}, byLeadId = new Map()) {
+  return leadIds(lead).map(id => byLeadId.get(id)).find(Boolean) || {};
+}
+
+function buildLeadConversionSets(data = {}) {
+  return buildLeadConversionSetsFromLifecycle(lifecycleRowsForData(data));
 }
 
 function normalizeLeadStage(lead = {}, sets = {}) {
@@ -360,10 +368,11 @@ function buildStageRows(leads = [], sets = {}) {
   return [...counts.entries()].map(([stage, count]) => ({ stage, count })).filter(row => row.count > 0);
 }
 
-function buildSourceRows(leads = [], sets = {}) {
+function buildSourceRows(leads = [], sets = {}, lifecycleByLeadId = new Map()) {
   const grouped = new Map();
   (leads || []).forEach(lead => {
-    const source = businessTaxonomy.normalizeLeadSource(lead.source);
+    const lifecycle = lifecycleForLead(lead, lifecycleByLeadId);
+    const source = businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source);
     const row = grouped.get(source) || { source, leads: 0, converted: 0 };
     row.leads += 1;
     if (!['未转化', '已约体验', '已体验待转化', '已流失'].includes(normalizeLeadStage(lead, sets))) row.converted += 1;
@@ -532,6 +541,7 @@ function leadTrialDone(lead = {}, now = new Date()) {
 function courseConversionRows(data = {}, options = {}) {
   const now = options.now || new Date();
   const sets = buildLeadConversionSets(data);
+  const lifecycleByLeadId = buildLifecycleByLeadId(lifecycleRowsForData(data));
   const studentIndexes = buildStudentIndexes(data.students || []);
   const purchaseCounts = buildPurchaseCounts(data.purchases || []);
   const firstPurchaseDateByStudent = buildFirstPurchaseDateByStudent(data.purchases || []);
@@ -540,6 +550,7 @@ function courseConversionRows(data = {}, options = {}) {
   return (data.leads || []).map(lead => {
     const id = leadId(lead);
     const ids = leadIds(lead);
+    const lifecycle = lifecycleForLead(lead, lifecycleByLeadId);
     const directStudent = studentIndexes.byId.get(String(lead.studentId || lead.formalStudentId || lead.courseStudentId || '').trim());
     const linkedStudent = directStudent || ids.map(lid => studentIndexes.byLeadId.get(lid)).find(Boolean) || null;
     const sid = studentId(linkedStudent || {});
@@ -560,9 +571,9 @@ function courseConversionRows(data = {}, options = {}) {
     return {
       leadId: id,
       studentId: sid,
-      source: businessTaxonomy.normalizeLeadSource(lead.source || linkedStudent?.source),
-      campus: campusLabel(lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
-      coach: normalizeText(linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
+      source: businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source || linkedStudent?.source),
+      campus: campusLabel(lifecycle.campus || lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
+      coach: normalizeText(lifecycle.owner || linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
       leadDate: firstRowDate(lead, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
       level: normalizeText(lead.level || linkedStudent?.level, ''),
       consultType: normalizeText(lead.consultType || linkedStudent?.consultType, ''),
@@ -2287,10 +2298,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousRangedData = previousRange ? buildRangedOperationsData(data, previousRange) : null;
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
   const financeOverviewData = rangedData.financeOverviewData || {};
-  const sets = buildLeadConversionSets(data);
+  const customerLifecycleRows = lifecycleRowsForData(data);
+  const lifecycleByLeadId = buildLifecycleByLeadId(customerLifecycleRows);
+  const sets = buildLeadConversionSets({ ...data, customerLifecycleRows });
   const stageRows = buildStageRows(rangedData.leads || [], sets);
-  const sourceRows = buildSourceRows(rangedData.leads || [], sets);
-  const courseRows = courseConversionRows(rangedData, { now });
+  const sourceRows = buildSourceRows(rangedData.leads || [], sets, lifecycleByLeadId);
+  const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);

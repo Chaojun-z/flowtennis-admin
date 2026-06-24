@@ -826,6 +826,40 @@ assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal,
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate, 75, 'course funnel should expose transition rate from previous step');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 25, 'course funnel should expose loss rate from previous step');
 
+const lifecycleBackedMetrics = buildOperationsMetrics({
+  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  leads: [
+    { id: 'lifecycle-lead', source: '旧来源', campus: 'old-campus', owner: '旧教练', leadDate: '2026-06-12' }
+  ],
+  students: [],
+  purchases: [],
+  coaches: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  customerLifecycleRows: [
+    {
+      sourceLeadId: 'lifecycle-lead',
+      source: '转介绍',
+      campus: '顺义马坡',
+      owner: '统一教练',
+      studentStage: 'formal',
+      courtStage: 'member',
+      membershipStatus: 'active',
+      hasCourseConversion: true,
+      hasBookingConversion: true,
+      hasMembershipConversion: true
+    }
+  ],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, { now: new Date('2026-06-18T00:00:00+08:00') });
+
+assert.strictEqual(lifecycleBackedMetrics.conversion.stageRows.find(row => row.stage === '课程+订场+会员')?.count, 1, 'conversion stage should use lifecycle conversion sets');
+assert.strictEqual(lifecycleBackedMetrics.conversion.sourceRows.find(row => row.source === '转介绍')?.converted, 1, 'conversion source rows should use lifecycle standard source');
+assert.ok(lifecycleBackedMetrics.conversion.filterOptions.coaches.includes('统一教练'), 'conversion coach filters should use lifecycle owner');
+
 const coachDashboardMetrics = buildOperationsMetrics({
   campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
   coaches: [

@@ -92,6 +92,7 @@ const court = {
   id: 'court-1',
   name: '王大人',
   phone: '15001010368',
+  sourceLeadId: 'lead-1',
   studentIds: ['stu-1'],
   history: []
 };
@@ -161,6 +162,12 @@ assert.strictEqual(first.historyRow.systemAmount, 5000);
 assert.strictEqual(first.historyRow.finalAmount, 5000);
 assert.strictEqual(first.historyRow.priceOverridden, false);
 assert.strictEqual(first.historyRow.overrideReason, '');
+assert.strictEqual(first.account.sourceLeadId, 'lead-1', 'membership account should inherit court source lead');
+assert.strictEqual(first.order.sourceLeadId, 'lead-1', 'membership order should inherit court source lead');
+assert.strictEqual(first.historyRow.sourceLeadId, 'lead-1', 'membership recharge history should inherit court source lead');
+const firstGrantRows = rules.buildMembershipGrantLedgerRows(first.order, { idFactory: () => 'benefit-ledger-1', now: '2026-04-12T00:00:00.000Z' });
+assert.ok(firstGrantRows.length > 0, 'membership purchase should grant benefit ledger rows');
+assert.strictEqual(firstGrantRows[0].sourceLeadId, 'lead-1', 'membership benefit ledger should inherit court source lead');
 
 const discountedMembershipPurchase = rules.buildMembershipPurchase({
   court,

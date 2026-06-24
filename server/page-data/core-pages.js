@@ -1,3 +1,5 @@
+const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
+
 function createCorePageDataRoutes(deps={}){
   const {
     init,sendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -33,7 +35,12 @@ function createCorePageDataRoutes(deps={}){
         cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger)
       ]);
       const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger},user);
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger});
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        students:scoped.students,
+        purchases:scoped.purchases,
+        entitlements:scoped.entitlements
+      });
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -44,7 +51,11 @@ function createCorePageDataRoutes(deps={}){
         getCachedScan(T_COURTS,{columns:COURTS_PAGE_COURT_PROJECTION_FIELDS}).catch(()=>[])
       ]);
       const scoped=filterLoadAllForUser({campuses,students,courts},user);
-      return sendJson(res,{campuses:scoped.campuses,students:scoped.students,courts:scoped.courts,membershipAccounts:[],coaches:[],pricePlans:[]});
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        students:scoped.students,
+        courts:scoped.courts
+      });
+      return sendJson(res,{campuses:scoped.campuses,students:scoped.students,courts:scoped.courts,membershipAccounts:[],coaches:[],pricePlans:[],customerLifecycleRows});
     }
     if(path==='/page-data/memberships'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -74,6 +85,12 @@ function createCorePageDataRoutes(deps={}){
         membershipPlans:normalizedMembershipPlans,
         coaches
       },user);
+      const customerLifecycleRows=buildCustomerLifecycleRows({
+        students:scoped.students,
+        courts:scoped.courts,
+        membershipAccounts:scoped.membershipAccounts,
+        membershipOrders:scoped.membershipOrders
+      });
       return sendJson(res,{
         campuses:scoped.campuses,
         students:scoped.students,
@@ -83,7 +100,8 @@ function createCorePageDataRoutes(deps={}){
         membershipBenefitLedger:scoped.membershipBenefitLedger,
         membershipAccountEvents:scoped.membershipAccountEvents,
         membershipPlans:scoped.membershipPlans,
-        coaches:scoped.coaches
+        coaches:scoped.coaches,
+        customerLifecycleRows
       });
     }
     if(path==='/page-data/workbench'&&method==='GET'){

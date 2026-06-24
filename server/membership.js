@@ -157,6 +157,7 @@ function isMembershipAccountInTerm(account,purchaseDate){
 function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=new Date().toISOString(),accountId=uuidv4(),orderId=uuidv4(),historyId=uuidv4(),operationTrace=null}){
   if(!court?.id)throw new Error('订场用户不存在');
   if(!plan?.id)throw new Error('会员方案不存在');
+  const inheritedSourceLeadId=String(existingAccount?.sourceLeadId||court.sourceLeadId||court.leadId||court.fromLeadId||'').trim();
   const purchaseDate=body.purchaseDate||now.slice(0,10);
   const systemAmount=normalizeMoney(plan.rechargeAmount);
   const rechargeAmount=normalizeMoney(body.rechargeAmount??plan.rechargeAmount);
@@ -195,6 +196,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     courtId:court.id,
     courtName:court.name||court.id,
     phone:court.phone||'',
+    sourceLeadId:inheritedSourceLeadId,
     studentIds:normalizeStudentIds(court),
     status:'active',
     memberTag:plan.tierCode||'',
@@ -215,6 +217,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     membershipAccountId:account.id,
     courtId:court.id,
     courtName:court.name||court.id,
+    sourceLeadId:inheritedSourceLeadId,
     studentIds:normalizeStudentIds(court),
     membershipPlanId:plan.id,
     membershipPlanName:plan.name||'',
@@ -256,6 +259,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     bonusAmount:order.bonusAmount,
     membershipOrderId:order.id,
     membershipAccountId:account.id,
+    sourceLeadId:inheritedSourceLeadId,
     membershipPlanId:plan.id,
     membershipPlanName:plan.name||'',
     systemAmount,
@@ -345,6 +349,7 @@ function buildMembershipGrantLedgerRows(order,opts={}){
     membershipOrderId:order.id,
     membershipAccountId:order.membershipAccountId,
     courtId:order.courtId,
+    sourceLeadId:order.sourceLeadId||'',
     benefitCode:item.benefitCode,
     benefitLabel:item.benefitLabel,
     unit:item.unit,

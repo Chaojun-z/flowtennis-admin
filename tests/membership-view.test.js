@@ -312,7 +312,8 @@ assert.match(pagesCss, /\.tms-membership-audit-action\{[^}]*display:inline-flex[
 assert.match(pagesCss, /\.tms-membership-audit-action svg\{[^}]*width:16px[^}]*height:16px[^}]*color:#F1E9E2/, 'membership audit icons should use 16px cream icons');
 assert.match(html, /const statusMeta=membershipStatusTagMeta\(a\);/, 'membership management rows should derive status tag metadata');
 assert.match(html, /function membershipVisibleCourt/, 'membership management should ignore deleted or archived court users');
-assert.match(fnBody('getMembershipRows'), /membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should build rows from membership accounts returned by the API');
+assert.match(html, /function membershipLifecycleRows\(/, 'membership management should build rows from the unified lifecycle model first');
+assert.match(fnBody('membershipBaseRows'), /const lifecycleBase=membershipLifecycleRows\(\);[\s\S]*if\(lifecycleBase\.length\)return lifecycleBase;[\s\S]*membershipAccounts\.filter\(a=>membershipVisibleCourt\(a\)\)\.map/, 'membership management should prefer lifecycle courtStage rows and keep membership account fallback');
 assert.match(html, /function isActiveCourtRecord\(/, 'frontend should centralize active court filtering');
 assert.match(fnBody('isActiveCourtRecord'), /status!=='inactive'&&status!=='deleted'&&!court\?\.deletedAt&&!court\?\.mergedIntoCourtId/, 'active court filtering should exclude hidden, deleted and merged users');
 assert.match(fnBody('renderMemberships'), /openCourtMembershipPanel\('\$\{court\.id\}'\)/, 'membership account action should open the account for the visible row court');

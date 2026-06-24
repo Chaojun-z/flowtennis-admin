@@ -28,7 +28,18 @@ function studentHasTrialPath(stu){
   if(purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p)))return true;
   return schedules.some(s=>scheduleHasStudent(s,stu)&&scheduleCourseType(s)==='体验课'&&effectiveScheduleStatus(s)!=='已取消');
 }
+function studentLifecycleRow(stu){
+  const sid=String(stu?.id||stu?.studentId||'');
+  if(!sid)return null;
+  const rows=typeof customerLifecycleRows!=='undefined'&&Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
+  return rows.find(row=>String(row.studentId||'')===sid)||null;
+}
+function studentLifecycleStage(stu){
+  return String(studentLifecycleRow(stu)?.studentStage||'').trim();
+}
 function studentMatchesListPage(stu){
+  const lifecycleStage=studentLifecycleStage(stu);
+  if(lifecycleStage)return studentListViewMode()==='trial'?lifecycleStage!=='formal'&&lifecycleStage!=='none':lifecycleStage==='formal';
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)&&!hasPackage:hasPackage;
 }
@@ -37,7 +48,8 @@ function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
 function studentSourceText(s){
-  return FlowTennisBusinessTaxonomy.normalizeLeadSource(s?.source);
+  const lifecycle=studentLifecycleRow(s);
+  return FlowTennisBusinessTaxonomy.normalizeLeadSource(lifecycle?.source||s?.source);
 }
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
