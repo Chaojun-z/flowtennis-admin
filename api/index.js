@@ -146,7 +146,7 @@ const FINANCE_SNAPSHOT_SOURCE_TABLES=new Set([
 const OPERATIONS_SOURCE_TABLES=new Set([T_LEADS,T_LEAD_FOLLOWUPS,T_SCHEDULE,T_COURTS,T_PURCHASES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_COACHES,T_CAMPUSES]);
 const LEAD_LIST_PROJECTION_FIELDS=[
   'displayName','name','wechatName','phone','level','leadDate','source','campus','consultType','intentLevel','profileNote','owner',
-  'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','formalCoach',
+  'systemStatus','rawStatus','trialAtRaw','enrollAtRaw','convertedFlag','nextFollowupAt','lastFollowupAt','latestConcern','latestConclusion','nextAction','followupPriority','formalCoach',
   'studentId','courtId','membershipAccountId','isCourseConverted','isCourtConverted','isMembershipConverted','conversionType','updatedAt','createdAt','lostReason'
 ];
 const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
@@ -5683,6 +5683,10 @@ function normalizeLeadBoolean(value){
   if(!raw)return false;
   return /^(是|已转化|已报名|true|1|yes)$/i.test(raw);
 }
+function normalizeLeadPriority(value){
+  const raw=cleanLeadText(value).toUpperCase();
+  return /^P[0-4]$/.test(raw)?raw:'';
+}
 function extractLeadPhoneMeta(value){
   const raw=cleanLeadText(value);
   const match=raw.match(/1[3-9]\d{9}/);
@@ -5739,6 +5743,7 @@ function normalizeLeadRecord(input={},opts={}){
     latestConcern:concern,
     latestConclusion:conclusion,
     nextAction:cleanLeadText(input.nextAction),
+    followupPriority:normalizeLeadPriority(input.followupPriority??input['跟进优先级']),
     lastFollowupAt:cleanLeadText(input.lastFollowupAt),
     nextFollowupAt:cleanLeadText(input.nextFollowupAt),
     studentId,

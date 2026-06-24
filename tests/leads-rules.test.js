@@ -29,6 +29,7 @@ const lead = rules.normalizeLeadRecord({
   '线索渠道': '大众点评',
   '咨询需求': '成人私教',
   '意向类型': '高意向',
+  '跟进优先级': 'P1',
   '跟进人': 'Mira',
   '跟进状态': '跟进中',
   '用户顾虑点': '价格',
@@ -39,6 +40,8 @@ assert.strictEqual(lead.id, 'lead-1');
 assert.strictEqual(lead.phone, '13800138000');
 assert.strictEqual(lead.wechatName, 'Leah');
 assert.strictEqual(rules.normalizeLeadRecord({ level: 0 }, { id: 'lead-zero', now: '2026-06-11T00:00:00.000Z' }).level, '0');
+assert.strictEqual(lead.followupPriority, 'P1');
+assert.strictEqual(rules.normalizeLeadRecord({ followupPriority: 'P9' }, { id: 'lead-bad-priority', now: '2026-06-11T00:00:00.000Z' }).followupPriority, '');
 assert.strictEqual(lead.systemStatus, '跟进中');
 assert.strictEqual(lead.conversionType, '未转化');
 assert.strictEqual(
