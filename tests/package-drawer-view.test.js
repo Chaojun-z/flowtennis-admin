@@ -44,7 +44,7 @@ assert.doesNotMatch(openPackageModal, /setCourtModalFrame\(id\?'编辑课包':'�
 assert.match(openPackageDetail, /openStandardDetailDrawer\(/, 'package view should open as the standard right-side drawer');
 assert.match(openPackageDetail, /modal-schedule-drawer/, 'package view should reuse the schedule detail drawer shell');
 assert.match(openPackageDetail, /renderDetailDrawerCard\('基础属性'[\s\S]*renderDetailDrawerCard\('规格与价格'[\s\S]*renderDetailDrawerCard\('时间规则'[\s\S]*renderDetailDrawerCard\('教练和场地'/, 'package view should show all package fields in schedule-style cards');
-assert.match(openPackageDetail, /renderDetailDrawerField\('活动时间'[\s\S]*renderDetailDrawerField\('可用时间'[\s\S]*renderDetailDrawerField\('时段类型'[\s\S]*renderDetailDrawerField\('可用时段',packageTimeWindowsText\(p\)\)/, 'package view time rules should render activity/available time and time band/windows as two rows');
+assert.match(openPackageDetail, /renderDetailDrawerField\('活动时间',packageSingleDateText\(p\.saleStartDate,p\.saleEndDate\)\)[\s\S]*renderDetailDrawerField\('可用时间',packageSingleDateText\(p\.usageStartDate,p\.usageEndDate\)\)[\s\S]*renderDetailDrawerField\('时段类型'[\s\S]*renderDetailDrawerField\('可用时段',packageTimeWindowsText\(p\)\)/, 'package view time rules should render activity/available dates and time band/windows as two rows');
 assert.doesNotMatch(openPackageDetail, /renderDetailDrawerField\('可用时段',packageTimeWindowsText\(p\),\{full:true\}\)/, 'available windows should not span the whole row');
 assert.doesNotMatch(openPackageDetail, /setCourtModalFrame/, 'package view should not use the old centered modal frame');
 
@@ -52,7 +52,9 @@ assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-reso
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-lesson-shortcuts/, 'package drawer lesson shortcuts should be scoped to the drawer');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-drawer-danger-help[\s\S]*color:#B42318/, 'locked package warning should use red text');
 assert.doesNotMatch(cssRule('.modal.modal-court.modal-schedule-drawer .package-drawer-danger-help'), /background:|border:/, 'locked package warning should not use a background box or border');
-assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-date-range/, 'date range controls should use drawer-scoped input styling');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-date-single/, 'single date controls should use drawer-scoped input styling');
+assert.match(openPackageModal, /id="pkg_saleStartDate_btn"[\s\S]*id="pkg_usageStartDate_btn"/, 'package drawer should render one date button for activity and one for available date');
+assert.doesNotMatch(openPackageModal, /pkg_saleEndDate|pkg_usageEndDate|活动结束|使用结束/, 'package drawer should not render end-date controls');
 assert.match(cssRule('.modal.modal-court.modal-schedule-drawer .package-time-window-row'), /width:298px/, 'time window rows should match the date range control width so weekday and weekend controls do not overlap');
 assert.match(cssRule('.modal.modal-court.modal-schedule-drawer .package-time-window-fields'), /grid-template-columns:108px 16px 108px/, 'time window controls should mirror the date range spacing');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-choice-grid/, 'campus and coach options should use the new drawer choice UI');

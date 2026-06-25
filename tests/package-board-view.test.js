@@ -73,6 +73,7 @@ assert.doesNotMatch(packageBoardCardHtml, /packageCoachSummary\(p\)|packageCoach
 assert.match(cssRule('.package-card-meta'), /font-size:10px/, 'package created date should use 10px text');
 assert.match(cssRule('.package-card-meta button'), /font-size:10px/, 'package order count should use 10px text');
 assert.match(packageBoardCardHtml, /packageAvailableDate\(p\)/, 'package card footer should show available date instead of created date');
+assert.match(fnBody('packageAvailableDate'), /packageSingleDateText\(p\.usageStartDate,p\.usageEndDate\)/, 'package card footer should show one available date instead of a range');
 assert.doesNotMatch(packageBoardCardHtml, /packageCreatedDate\(p\)/, 'package card footer should not show created date');
 assert.match(cssRule('.package-meta-token'), /overflow:hidden/, 'package available date should not overlap the order count');
 assert.match(cssRule('.package-sales-footer .showcase-action-btn'), /padding:4px 10px/, 'package view button padding should shrink by 2px horizontally');
