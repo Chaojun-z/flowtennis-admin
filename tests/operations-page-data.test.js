@@ -66,10 +66,10 @@ assert.match(operationsMetricsSource, /leadFollowups:\s*filterRowsByDateRange/, 
 assert.match(operationsMetricsSource, /function buildOverviewTrendDailyRows\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourseRows[\s\S]*financeStoredValueRows/, 'overview KPI trends should aggregate real finance rows when purchase detail rows are unavailable');
 assert.match(operationsMetricsSource, /function lifecycleRowsForData\(data = \{\}\)/, 'operations metrics should use one lifecycle row source for conversion calculations');
 assert.match(operationsMetricsSource, /if \(Array\.isArray\(data\.customerLifecycleRows\) && data\.customerLifecycleRows\.length\) return data\.customerLifecycleRows;/, 'operations metrics should prefer lifecycle rows already built by page-data');
-assert.match(operationsMetricsSource, /require\('\.\.\/read-models\/platform-metrics\.js'\)/, 'operations metrics should read conversion totals from the platform metric read model');
-assert.match(operationsMetricsSource, /const platformMetrics = buildPlatformMetrics\(\{ \.\.\.rangedData, customerLifecycleRows: rangedLifecycleRows \}\)/, 'operations conversion should use the ranged platform lead pool');
-assert.match(operationsMetricsSource, /const stageRows = platformMetrics\.conversionMetrics\.stageRows/, 'operations stage rows must come from platform metrics');
-assert.match(operationsMetricsSource, /const sourceRows = platformMetrics\.conversionMetrics\.sourceRows/, 'operations source rows must come from platform metrics');
+assert.doesNotMatch(operationsMetricsSource, /buildPlatformMetrics/, 'operations conversion must not use the full searchable customer pool as course lead statistics');
+assert.match(operationsMetricsSource, /const totalLeads = \(rangedData\.leads \|\| \[\]\)\.length/, 'operations conversion lead total should use raw course leads only');
+assert.match(operationsMetricsSource, /const convertedLeads = Number\(courseFunnel\[3\]\?\.count\) \|\| 0/, 'operations converted leads should use the course deal funnel step only');
+assert.match(operationsMetricsSource, /const sourceRows = buildCourseSourceRows\(courseRows\)/, 'operations source rows should use course conversion rows, not booking or member rows');
 assert.match(operationsMetricsSource, /function courtTrendDays\(\{[\s\S]*financeNormalizedRows[\s\S]*financeCourtBookingRows/, 'court KPI trends should use real finance booking row dates when court history is unavailable');
 assert.match(operationsMetricsSource, /function conversionTrendSourceDates[\s\S]*appointmentEventDate[\s\S]*attendanceEventDate[\s\S]*dealEventDate/, 'conversion KPI trends should use real event evidence dates instead of leadDate only');
 assert.match(operationsMetricsSource, /function financeRowsAsCoachPurchases[\s\S]*financeCourseRows[\s\S]*cashDelta[\s\S]*purchaseDate: financeBusinessDate/, 'coach KPI trends should use real course finance rows when purchase detail rows are unavailable');

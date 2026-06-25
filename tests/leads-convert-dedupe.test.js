@@ -20,8 +20,12 @@ async function main() {
   const writes = [];
   const rows = {
     ft_leads: [{ id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17T00:00:00.000Z' }],
-    ft_students: [{ id: 'student-1', name: '小成' }],
+    ft_students: [{ id: 'student-1', name: '小成' }, { id: 'student-2', name: '可搜学员', phone: '13900000002' }],
     ft_courts: [{ id: 'court-1', name: '小成', status: 'active' }],
+    ft_purchases: [{ id: 'purchase-1', studentId: 'student-2', packageName: '正式课包', status: 'active' }],
+    ft_entitlements: [],
+    ft_schedule: [],
+    ft_membership_orders: [],
     ft_membership_accounts: []
   };
   const handle = createLeadsRoutes({
@@ -30,13 +34,17 @@ async function main() {
       res.status(status).json(payload);
       return true;
     },
+    getCachedScan: async (table) => rows[table] || [],
     get: async (table, id) => (rows[table] || []).find((row) => row.id === id) || null,
     scan: async (table) => rows[table] || [],
     put: async (table, id, row) => {
       writes.push({ table, id, row });
     },
     ensureLeadTables: async () => {},
+    isProductionRuntime: () => false,
+    filterLoadAllForUser: (payload) => payload,
     cleanLeadText: (value) => String(value || '').trim(),
+    mergeDuplicateLeadRows: (items) => items,
     normalizeLeadRecord: (row) => row,
     buildLeadStudentRecord: () => ({ id: 'new-student', name: '小成' }),
     buildLeadCourtRecord: () => ({ id: 'new-court', name: '小成' }),
@@ -45,8 +53,20 @@ async function main() {
     T_LEADS: 'ft_leads',
     T_STUDENTS: 'ft_students',
     T_COURTS: 'ft_courts',
-    T_MEMBERSHIP_ACCOUNTS: 'ft_membership_accounts'
+    T_MEMBERSHIP_ACCOUNTS: 'ft_membership_accounts',
+    T_PURCHASES: 'ft_purchases',
+    T_ENTITLEMENTS: 'ft_entitlements',
+    T_SCHEDULE: 'ft_schedule',
+    T_MEMBERSHIP_ORDERS: 'ft_membership_orders'
   });
+
+  const listRes = makeRes();
+  await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: listRes, query: new URLSearchParams() });
+  assert.strictEqual(listRes.body.length, 1, '线索池默认列表只能统计真实线索，不能把可搜索学员加进线索总数');
+
+  const searchRes = makeRes();
+  await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: searchRes, query: new URLSearchParams('q=可搜学员') });
+  assert.ok(searchRes.body.find((row) => row.displayName === '可搜学员'), '线索池搜索应能搜到缺少真实线索绑定的学员');
 
   const studentRes = makeRes();
   await handle({ path: '/leads/lead-1/convert-student', method: 'POST', body: {}, user: { role: 'admin' }, res: studentRes, query: new URLSearchParams() });

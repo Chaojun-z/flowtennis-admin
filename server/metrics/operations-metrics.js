@@ -8,7 +8,6 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
-const { buildPlatformMetrics } = require('../read-models/platform-metrics.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -382,6 +381,20 @@ function buildSourceRows(leads = [], sets = {}, lifecycleByLeadId = new Map()) {
   return [...grouped.values()]
     .map(row => ({ ...row, conversionRate: row.leads ? round(row.converted * 100 / row.leads, 1) : 0 }))
     .sort((a, b) => b.converted - a.converted || b.leads - a.leads);
+}
+
+function buildCourseSourceRows(rows = []) {
+  return [...groupRows(rows, 'source').entries()]
+    .map(([source, items]) => {
+      const converted = items.filter(row => row.hasTrialDeal).length;
+      return {
+        source,
+        leads: items.length,
+        converted,
+        conversionRate: items.length ? round(converted * 100 / items.length, 1) : 0
+      };
+    })
+    .sort((a, b) => b.converted - a.converted || b.leads - a.leads || a.source.localeCompare(b.source, 'zh-Hans-CN'));
 }
 
 function normalizeText(value, fallback = '未记录') {
@@ -2201,10 +2214,6 @@ function filterRowsByDateRange(rows = [], range = {}, keys = []) {
   return (rows || []).filter(row => dateWithinRange(firstRowDate(row, keys), range));
 }
 
-function filterLifecycleRowsByDateRange(rows = [], range = {}) {
-  return filterRowsByDateRange(rows || [], range, ['leadDate', 'createdAt']);
-}
-
 function financeCoachName(row = {}) {
   return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || row.collector || row.operator || '');
 }
@@ -2304,15 +2313,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
-  const rangedLifecycleRows = filterLifecycleRowsByDateRange(customerLifecycleRows, reportingDateRange);
-  const trendLifecycleRows = filterLifecycleRowsByDateRange(customerLifecycleRows, trendDateRange);
-  const previousLifecycleRows = previousRange ? filterLifecycleRowsByDateRange(customerLifecycleRows, previousRange) : [];
-  const platformMetrics = buildPlatformMetrics({ ...rangedData, customerLifecycleRows: rangedLifecycleRows });
-  const leadPoolRows = platformMetrics.leadPoolRows;
-  const stageRows = platformMetrics.conversionMetrics.stageRows;
-  const sourceRows = platformMetrics.conversionMetrics.sourceRows;
-  const courseRows = courseConversionRows({ ...rangedData, leads: leadPoolRows, customerLifecycleRows: rangedLifecycleRows }, { now });
+  const sets = buildLeadConversionSets({ ...data, customerLifecycleRows });
+  const stageRows = buildStageRows(rangedData.leads || [], sets);
+  const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
+  const sourceRows = buildCourseSourceRows(courseRows);
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
   const channelEfficiencyRows = buildChannelEfficiencyRows(courseRows);
@@ -2348,8 +2353,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const totalIncome = financeOverviewValues.totalIncome;
   const recognizedRevenue = financeOverviewValues.recognizedRevenue;
   const pendingRevenue = financeOverviewValues.pendingRevenue;
-  const totalLeads = platformMetrics.conversionMetrics.totalLeads;
-  const convertedLeads = platformMetrics.conversionMetrics.convertedLeads;
+  const totalLeads = (rangedData.leads || []).length;
+  const convertedLeads = Number(courseFunnel[3]?.count) || 0;
   const usedCoachHours = round(coachRows.reduce((sum, row) => sum + row.usedHours, 0), 1);
   const availableCoachHours = round(coachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);
   const coachRevenue = money(coachRows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
@@ -2386,8 +2391,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   const overviewTrends = overviewTrendSet.rows;
-  const trendPlatformMetrics = buildPlatformMetrics({ ...trendRangedData, customerLifecycleRows: trendLifecycleRows });
-  const trendCourseRows = courseConversionRows({ ...trendRangedData, leads: trendPlatformMetrics.leadPoolRows, customerLifecycleRows: trendLifecycleRows }, { now });
+  const trendCourseRows = courseConversionRows({ ...trendRangedData, customerLifecycleRows }, { now });
   const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
   const financeCoachPurchases = financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []);
   const coachTrendPurchases = (trendRangedData.purchases || []).length ? (trendRangedData.purchases || []) : financeCoachPurchases;
@@ -2408,8 +2412,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     financeOverviewData: previousRangedData.financeOverviewData || {},
     selectedDateRangeActive: true
   }) : {};
-  const previousPlatformMetrics = previousRangedData ? buildPlatformMetrics({ ...previousRangedData, customerLifecycleRows: previousLifecycleRows }) : null;
-  const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, leads: previousPlatformMetrics?.leadPoolRows || [], customerLifecycleRows: previousLifecycleRows }, { now }) : [];
+  const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, customerLifecycleRows }, { now }) : [];
   const previousCourseFunnel = buildCourseFunnel(previousCourseRows);
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = previousRangedData ? buildCoachRows({

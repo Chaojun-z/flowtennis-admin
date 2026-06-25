@@ -51,9 +51,10 @@ assert.match(corePageSource, /if\(path==='\/page-data\/workbench'&&method==='GET
 assert.match(apiSource, /require\('\.\.\/server\/read-models\/customer-lifecycle\.js'\)/, 'load-all should import the unified lifecycle read model');
 assert.match(apiSource, /const customerLifecycleRows=buildCustomerLifecycleRows\(loaded\);[\s\S]*return sendJson\(res,\{\.\.\.loaded,user,customerLifecycleRows\}\);/, '/load-all should return lifecycle rows built from the same scoped loaded payload');
 assert.match(platformMetricsSource, /function buildPlatformMetrics\(data = \{\}\)/, 'platform metrics should own the shared customer/source/stage conversion read model');
-assert.match(platformMetricsSource, /function buildLeadPoolRows/, 'platform metrics should expose the lead pool rows used by lead pool and operations');
+assert.match(platformMetricsSource, /function buildLeadPoolRows/, 'platform metrics should expose lifecycle search rows without making them operations conversion totals');
 assert.match(leadsRouteSource, /buildCustomerLifecycleRows/, 'lead pool route should build lifecycle rows before returning list data');
 assert.match(leadsRouteSource, /buildLeadPoolRows/, 'lead pool route should include student, court and member lifecycle identities, not only ft_leads');
+assert.match(leadsRouteSource, /readVisibleLeadRows\(\{expandLifecycleSearch:!!q\}\)/, 'lead pool route should expand lifecycle identities for search, not for default lead totals');
 assert.match(apiSource, /T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS/, 'lead pool route should receive course and membership fact tables for lifecycle stages');
 
 assert.match(stateSource, /if\(name==='financePage'\)\{[\s\S]*setDatasetValue\('customerLifecycleRows',data\.customerLifecycleRows\|\|\[\],\{persist:false\}\);/, 'finance aggregate loader should hydrate lifecycle rows');

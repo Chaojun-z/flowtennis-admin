@@ -37,8 +37,8 @@ assert.strictEqual(platform.studentStageStats.find(row => row.stage === 'formal'
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18T00:00:00+08:00') });
 
-assert.strictEqual(operations.conversion.cards.totalLeads.value, platform.conversionMetrics.totalLeads, 'operations conversion should use the same lead pool total as platform metrics');
-assert.strictEqual(operations.conversion.stageRows.find(row => row.stage === '课程转化')?.count, 2, 'operations stage rows should include both linked students and student-only lifecycle customers');
-assert.strictEqual(operations.conversion.sourceRows.find(row => row.source === '小红书')?.leads, 1, 'operations source rows should use platform source stats');
+assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');
+assert.strictEqual(operations.conversion.cards.convertedLeads.value, 1, 'operations converted leads may count raw leads linked to students');
+assert.strictEqual(operations.conversion.sourceRows.find(row => row.source === '小红书'), undefined, 'operations source rows must not include student-only searchable rows when there is no raw lead');
 
 console.log('platform metrics tests passed');

@@ -59,6 +59,12 @@ function createLeadsRoutes(deps={}){
     return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows});
   }
 
+  async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
+    if(expandLifecycleSearch)return readLeadPoolRows();
+    const leads=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
+    return mergeDuplicateLeadRows(leads);
+  }
+
   return async function handleLeadsRoutes({path,method,body,user,res,query}){
     if(path==='/lead-followups'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -76,8 +82,8 @@ function createLeadsRoutes(deps={}){
       await init();
       await ensureLeadTables();
       if(method==='GET'){
-        const rows=await readLeadPoolRows();
         const q=cleanLeadText(query.get('q')).toLowerCase();
+        const rows=await readVisibleLeadRows({expandLifecycleSearch:!!q});
         const source=cleanLeadText(query.get('source'));
         const consultType=cleanLeadText(query.get('consultType'));
         const owner=cleanLeadText(query.get('owner'));
