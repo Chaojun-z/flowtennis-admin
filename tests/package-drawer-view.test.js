@@ -33,7 +33,7 @@ assert.match(openPackageModal, /openStandardDetailDrawer\(/, 'package create/edi
 assert.match(openPackageModal, /modal-schedule-drawer/, 'package create/edit should reuse the schedule detail drawer shell');
 assert.match(openPackageModal, /schedule-drawer-overlay/, 'package create/edit should slide in from the right like schedule detail');
 assert.match(source, /function packageDrawerHeaderHtml\([\s\S]*renderDetailDrawerHero/, 'package create/edit should use the shared drawer hero');
-assert.match(openPackageModal, /renderDetailDrawerFormCard\('基础属性'[\s\S]*renderDetailDrawerFormCard\('规格与价格'[\s\S]*renderDetailDrawerFormCard\('上课时间与效期'[\s\S]*renderDetailDrawerFormCard\('教练和场地'/, 'package create/edit should keep all package fields inside schedule-style cards');
+assert.match(openPackageModal, /renderDetailDrawerFormCard\('基础属性'[\s\S]*renderDetailDrawerFormCard\('规格与价格'[\s\S]*renderDetailDrawerFormCard\('时间规则'[\s\S]*renderDetailDrawerFormCard\('教练和场地'/, 'package create/edit should keep all package fields inside schedule-style cards');
 assert.match(openPackageModal, /schedule-detail-card-actions[\s\S]*取消[\s\S]*class="schedule-detail-action primary btn-save"[\s\S]*保存/, 'package save actions should sit in the drawer card header using schedule detail action styles');
 assert.doesNotMatch(openPackageModal, /schedule-detail-action danger[\s\S]*下架/, 'package drawer should not show deactivate action in the header');
 assert.match(openPackageModal, /package-drawer-danger-help/, 'locked purchased packages should show the warning with red styling');
@@ -43,7 +43,9 @@ assert.match(openPackageModal, /packageCoachPickerHtml/, 'package coach selectio
 assert.doesNotMatch(openPackageModal, /setCourtModalFrame\(id\?'编辑课包':'创建课包'/, 'package create/edit should not use the old centered modal frame');
 assert.match(openPackageDetail, /openStandardDetailDrawer\(/, 'package view should open as the standard right-side drawer');
 assert.match(openPackageDetail, /modal-schedule-drawer/, 'package view should reuse the schedule detail drawer shell');
-assert.match(openPackageDetail, /renderDetailDrawerCard\('基础属性'[\s\S]*renderDetailDrawerCard\('规格与价格'[\s\S]*renderDetailDrawerCard\('上课时间与效期'[\s\S]*renderDetailDrawerCard\('教练和场地'/, 'package view should show all package fields in schedule-style cards');
+assert.match(openPackageDetail, /renderDetailDrawerCard\('基础属性'[\s\S]*renderDetailDrawerCard\('规格与价格'[\s\S]*renderDetailDrawerCard\('时间规则'[\s\S]*renderDetailDrawerCard\('教练和场地'/, 'package view should show all package fields in schedule-style cards');
+assert.match(openPackageDetail, /renderDetailDrawerField\('活动时间'[\s\S]*renderDetailDrawerField\('可用时间'[\s\S]*renderDetailDrawerField\('时段类型'[\s\S]*renderDetailDrawerField\('可用时段',packageTimeWindowsText\(p\)\)/, 'package view time rules should render activity/available time and time band/windows as two rows');
+assert.doesNotMatch(openPackageDetail, /renderDetailDrawerField\('可用时段',packageTimeWindowsText\(p\),\{full:true\}\)/, 'available windows should not span the whole row');
 assert.doesNotMatch(openPackageDetail, /setCourtModalFrame/, 'package view should not use the old centered modal frame');
 
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.package-resource-panel/, 'package drawer resource fields should have scoped schedule drawer styling');
@@ -59,6 +61,7 @@ assert.match(cssRule('.modal.modal-court.modal-schedule-drawer .package-resource
 assert.match(cssRule('.modal.modal-court.modal-schedule-drawer .package-choice-pill'), /position:relative/, 'choice pills should contain their hidden input so clicks do not create an extra layout box');
 assert.match(cssRule('.modal.modal-court.modal-schedule-drawer .package-choice-pill input'), /inset:0[\s\S]*width:100%[\s\S]*height:100%/, 'hidden choice inputs should stay inside the pill hit area');
 assert.match(source, /renderDetailDrawerHero\(\{title,avatar:'课',subtitle,statusHtml:status\}\)/, 'package status should render beside the title');
+assert.match(source, /function packageDrawerHeaderHtml\([\s\S]*packageListTitle\(p\)/, 'package drawer title should match the package card title');
 assert.doesNotMatch(source, /p\?\.lessons\?`\$\{p\.lessons\}\$\{packageLessonUnitLabel\(p\)\}`:''/, 'package drawer subtitle should not include lesson count');
 
 console.log('package drawer view tests passed');

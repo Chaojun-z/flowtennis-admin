@@ -26,9 +26,7 @@ function syncPackageFilterOptions(){
   });
 }
 function packageDisplayTitle(p){
-  const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
-  const unit=packageLessonUnitLabel(p);
-  return [packageCoreClassLabel(p),lessons?`${lessons}${unit}`:'',packageTimeBandShortLabel(p.timeBand||p.packageTimeBand||'全天')].filter(Boolean).join(' · ')||p.name||'课包';
+  return packageListTitle(p);
 }
 function renderPackageTopFilters(){
   if(typeof renderStandardTopDropdown!=='function'||typeof standardTopLocationIcon!=='function')return '';
@@ -62,12 +60,27 @@ function packageListStatusValue(p){
   return'active';
 }
 function packageListTitle(p){
-  return packageCoreClassLabel(p)||p.name||'课包';
-}
-function packageListSubtitle(p){
   const lessons=parseInt(p.lessons||p.packageLessons||p.totalLessons)||0;
   const unit=packageLessonUnitLabel(p);
-  return [packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]),lessons?`${lessons}${unit}`:'' ].filter(Boolean).join(' · ');
+  return [packageListClassLabel(p),packageListTimeBandLabel(p.timeBand||p.packageTimeBand||'全天'),lessons?`${lessons} ${unit}`:''].filter(Boolean).join(' · ')||p.name||'课包';
+}
+function packageListClassLabel(p){
+  const form=normalizeCourseTypeForForm(p);
+  const text=[p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
+  const detectedSize=/1v4/.test(text)?4:/1v3/.test(text)?3:/1v2/.test(text)?2:p.maxStudents;
+  if(form.courseType==='私教课')return packageClassSizeLabel(detectedSize);
+  return packageCoreClassLabel(p)||form.courseType||'课包';
+}
+function packageListTimeBandLabel(timeBand='全天'){
+  const label=packageTimeBandShortLabel(timeBand||'全天');
+  return label==='非黄金'?'非黄':label;
+}
+function packageAudienceBadgeHtml(p={}){
+  const label=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes]);
+  return label?`<span class="package-audience-badge">${esc(label)}</span>`:'';
+}
+function packageAvailableDate(p={}){
+  return packageDateRangeText(p.usageStartDate,p.usageEndDate,'使用开始','使用结束')||'-';
 }
 function packageDisplayShortId(p){
   const raw=String(p?.id||'');
@@ -163,7 +176,11 @@ function packageStatusBadge(p){
 function packageRuleIcon(kind){
   if(kind==='campus')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
   if(kind==='time')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  if(kind==='course')return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M8 7h6"/><path d="M8 11h5"/></svg>';
   return'<svg class="package-rule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+}
+function packageCourseTypeTitle(p){
+  return standardCourseTypeFilterValue(p)||normalizeCourseTypeForForm(p).standardCourseType||'未设置';
 }
 function packageCoachSummary(p){
   const ownerCoach=coachName(p.ownerCoach);
@@ -225,13 +242,11 @@ function hidePackageRuleTooltip(){
   if(tip)tip.classList.remove('show');
 }
 function packageBoardCardHtml(p){
-  const windows=parseArr(p.dailyTimeWindows).map(packageTimeWindowText).filter(Boolean).join('、');
+  const courseTypeTitle=packageCourseTypeTitle(p);
   const campusTitle=packageCampusTitle(p.campusIds);
-  const coachTitle=packageCoachDetail(p);
   const title=packageListTitle(p);
-  const subtitle=packageListSubtitle(p);
   const inactive=packageListStatusValue(p)==='inactive';
-  return `<div class="package-card-shell ${inactive?'is-inactive':''}" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${packageTimeBandBadgeHtml(p)}</div>${subtitle?`<div class="showcase-card-meta package-sales-subtitle">${esc(subtitle)}</div>`:''}</div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price"><span class="package-sales-currency">¥</span><span class="package-sales-amount">${fmt(p.price)}</span></div><div class="package-sales-rules"><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCoachSummary(p))}</span>${packageRuleIcon('coach')}<div class="package-rule-tooltip">${esc(coachTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token">${esc(packageCreatedDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}',${jsArg(p.ownerCoach||'')})">${packagePurchaseCount(p.id,p.ownerCoach)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageDetail('${p.id}')">查看</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
+  return `<div class="package-card-shell ${inactive?'is-inactive':''}" draggable="true" onDragStart="startPackageDrag(event,'${p.id}')" ondragover="allowPackageDrop(event,'${p.id}')" ondrop="dropPackageCard(event,'${p.id}')" ondragend="endPackageDrag()"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><div class="showcase-card-title package-sales-title">${esc(title)}</div>${packageAudienceBadgeHtml(p)}</div></div>${packageStatusBadge(p)}</div><div class="package-sales-core"><div class="package-sales-price"><span class="package-sales-currency">¥</span><span class="package-sales-amount">${fmt(p.price)}</span></div><div class="package-sales-rules"><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(courseTypeTitle)}</span>${packageRuleIcon('course')}<div class="package-rule-tooltip">${esc(courseTypeTitle)}</div></div><div class="package-rule-line" onmouseenter="showPackageRuleTooltip(event)" onmouseleave="hidePackageRuleTooltip()"><span>${esc(packageCampusSummaryText(p.campusIds))}</span>${packageRuleIcon('campus')}<div class="package-rule-tooltip">${esc(campusTitle)}</div></div></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token">${esc(packageAvailableDate(p))}</span><span class="package-meta-dot"></span><button class="package-order-link" type="button" onclick="focusPurchaseByPackage('${p.id}',${jsArg(p.ownerCoach||'')})">${packagePurchaseCount(p.id,p.ownerCoach)} 笔订单<span class="package-order-chevron">›</span></button></div><div class="showcase-card-actions"><button class="showcase-action-btn" onclick="openPackageDetail('${p.id}')">查看</button><button class="showcase-action-btn is-danger package-off-btn" onclick="deactivatePackage('${p.id}')">下架</button></div></div></div>`;
 }
 function getFilteredPackages(){
   const q=(document.getElementById('pkgSearch')?.value||'').toLowerCase();
@@ -617,7 +632,7 @@ function packageSmallClassTypeText(value){
   return ({single:'单次',bootcamp:'训练营',dropin:'随到随学'})[value]||value||'';
 }
 function packageDrawerHeaderHtml(p,mode){
-  const title=mode==='create'?'创建课包':(packageCoreClassLabel(p)||p?.name||'课包');
+  const title=mode==='create'?'创建课包':packageListTitle(p);
   const subtitle=mode==='create'?'配置售卖课包规则':[packageAudienceLabelFromText([p?.audience,p?.type,p?.productName,p?.name,p?.packageName,p?.notes]),p?.price?`¥${fmt(p.price)}`:''].filter(Boolean).join(' · ');
   const status=p?packageStatusBadge(p):'<span class="package-status-badge is-on">新建</span>';
   return renderDetailDrawerHero({title,avatar:'课',subtitle,statusHtml:status});
@@ -645,7 +660,7 @@ function openPackageDetail(id){
     renderDetailDrawerField('活动时间',packageDateRangeText(p.saleStartDate,p.saleEndDate,'活动开始','活动结束')),
     renderDetailDrawerField('可用时间',packageDateRangeText(p.usageStartDate,p.usageEndDate,'使用开始','使用结束')),
     renderDetailDrawerField('时段类型',rv(p,'timeBand','全天')),
-    renderDetailDrawerField('可用时段',packageTimeWindowsText(p),{full:true})
+    renderDetailDrawerField('可用时段',packageTimeWindowsText(p))
   ].join('');
   const resource=[
     renderDetailDrawerField('归属教练',coachName(p.ownerCoach)),
@@ -657,7 +672,7 @@ function openPackageDetail(id){
   const body=renderDetailDrawerContent([
     renderDetailDrawerCard('基础属性',basic,{actionsHtml:editAction,className:'package-detail-card'}),
     renderDetailDrawerCard('规格与价格',spec,{className:'package-detail-card'}),
-    renderDetailDrawerCard('上课时间与效期',time,{className:'package-detail-card'}),
+    renderDetailDrawerCard('时间规则',time,{className:'package-detail-card'}),
     renderDetailDrawerCard('教练和场地',resource,{className:'package-detail-card'})
   ].join(''));
   openStandardDetailDrawer({
@@ -692,7 +707,7 @@ function openPackageModal(id,presetProductId=''){
   const body=renderDetailDrawerContent([
     renderDetailDrawerFormCard('基础属性',basicForm,actions),
     renderDetailDrawerFormCard('规格与价格',specForm),
-    renderDetailDrawerFormCard('上课时间与效期',timeForm),
+    renderDetailDrawerFormCard('时间规则',timeForm),
     renderDetailDrawerFormCard('教练和场地',resourceForm),
     packageDrawerHiddenFields(p)
   ].join(''));

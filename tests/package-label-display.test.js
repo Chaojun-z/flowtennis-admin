@@ -46,8 +46,12 @@ vm.createContext(context);
 vm.runInContext(read('public/assets/scripts/core/business-taxonomy.js'), context, { filename: 'business-taxonomy.js' });
 vm.runInContext(read('public/assets/scripts/core/constants.js'), context, { filename: 'constants.js' });
 vm.runInContext(read('public/assets/scripts/core/utils.js'), context, { filename: 'utils.js' });
-vm.runInContext(extractFunction(read('public/assets/scripts/pages/packages.js'), 'packageDisplayTitle'), context, { filename: 'packages.js' });
-vm.runInContext(extractFunction(read('public/assets/scripts/pages/packages.js'), 'packageListSubtitle'), context, { filename: 'packages.js' });
+[
+  'packageListTimeBandLabel',
+  'packageListClassLabel',
+  'packageListTitle',
+  'packageDisplayTitle'
+].forEach(name => vm.runInContext(extractFunction(read('public/assets/scripts/pages/packages.js'), name), context, { filename: 'packages.js' }));
 vm.runInContext(extractFunction(read('public/assets/scripts/pages/purchases.js'), 'purchaseDisplayPackageMeta'), context, { filename: 'purchases.js' });
 vm.runInContext(extractFunction(read('public/assets/scripts/pages/purchases.js'), 'purchasePackageListLabel'), context, { filename: 'purchases.js' });
 
@@ -69,13 +73,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   context.packageDisplayTitle(smallTrialPackage),
-  '小班体验课 · 2次 · 全天',
-  'small group trial package card title should use count unit'
-);
-assert.strictEqual(
-  context.packageListSubtitle(smallTrialPackage),
-  '成人 · 2次',
-  'small group trial package card subtitle should use count unit'
+  '小班体验课 · 全天 · 2 次',
+  'small group trial package card title should use count unit without the second subtitle line'
 );
 
 assert.strictEqual(
@@ -107,8 +106,20 @@ assert.strictEqual(
 );
 assert.strictEqual(
   context.packageDisplayTitle(staleDropinPackage),
-  '小班随到随学 · 12次 · 全天',
+  '小班随到随学 · 全天 · 12 次',
   '1499 stale small group package title should show dropin instead of single'
+);
+
+assert.strictEqual(
+  context.packageDisplayTitle({
+    courseType: '私教课',
+    audience: '成人',
+    maxStudents: 1,
+    lessons: 10,
+    timeBand: '非黄金时段'
+  }),
+  '1v1 · 非黄 · 10 课时',
+  'private lesson package card title should show class size, time band and lessons'
 );
 
 context.packages = [smallTrialPackage];
