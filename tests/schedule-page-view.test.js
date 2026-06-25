@@ -191,7 +191,9 @@ assert.match(source, /label:'日期'[\s\S]*className:'tms-sticky-l'[\s\S]*style:
 assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
 assert.doesNotMatch(fnBody('renderSchedule'), /schedule-date-repeat|prevDate/, 'schedule rows should show the date on every row');
 assert.match(fnBody('renderSchedule'), /scheduleProposalStatusHtml\(s\)[\s\S]*scheduleFeedbackStatusHtml\(s\)[\s\S]*scheduleRepeatDisplayText\(s\)/, 'schedule rows should order lesson plan, feedback, then repeat status');
-assert.match(styles, /schedule-check-status[\s\S]*is-filled[\s\S]*#047857[\s\S]*is-missing/, 'lesson plan and feedback status should share one colored tag style');
+assert.match(source, /schedule-check-text/, 'lesson plan and feedback status should render as plain text instead of tags');
+assert.match(styles, /schedule-check-text[\s\S]*is-filled[\s\S]*#047857[\s\S]*is-missing/, 'lesson plan and feedback status should share one colored text style');
+assert.doesNotMatch(styles, /schedule-check-status/, 'lesson plan and feedback status should not use pill tag styles');
 assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
 assert.match(styles, /\.tms-pagination\{[^}]*font-size:12px[^}]*line-height:16px[^}]*color:#78716C/, 'schedule pager should use the shared 12px footer standard');
 assert.match(source, /function renderScheduleTableLoading\([\s\S]*renderTableSkeletonLoading\('schTbody',12,'排课数据加载中\.\.\.'\)/, 'schedule loading state should use the shared full-table skeleton');

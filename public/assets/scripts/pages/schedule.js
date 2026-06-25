@@ -17,7 +17,7 @@ function syncScheduleFilterOptions(){
   });
 }
 function scheduleFeedbackFilterValue(s){return hasScheduleFeedback(s)?'filled':'missing';}
-function scheduleChecklistStatusHtml(text,onClick=''){const cls=text==='已填写'?'is-filled':text==='未填写'?'is-missing':'is-na';return `<span class="schedule-check-status ${cls}"${onClick?` onclick="${onClick}"`:''}>${esc(text)}</span>`;}
+function scheduleChecklistStatusHtml(text,onClick=''){const cls=text==='已填写'?'is-filled':text==='未填写'?'is-missing':'is-na';return `<span class="schedule-check-text ${cls}"${onClick?` onclick="${onClick}"`:''}>${esc(text)}</span>`;}
 function scheduleFeedbackStatusHtml(s){return scheduleChecklistStatusHtml(scheduleFeedbackStatusText(s),`openFeedbackModal('${s.id}')`);}
 function scheduleProposalStatusText(s){return !isSmallGroupSchedule(s)?'-':(scheduleCoachProposal(s)?'已填写':'未填写');}
 function scheduleProposalFilterValue(s){if(!isSmallGroupSchedule(s))return 'none';return scheduleCoachProposal(s)?'filled':'missing';}

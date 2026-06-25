@@ -323,13 +323,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag.type-small,.tms-tag.type-camp{background:#F0FDF4;color:#047857}
 .tms-tag.type-master{background:#FEF2F2;color:#B91C1C}
 .tms-tag.type-partner{background:#F5F3FF;color:#6D28D9}
-.schedule-check-status{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:24px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;line-height:1;box-sizing:border-box}
-.schedule-check-status.is-filled{background:#EAF7EF;color:#047857}
-.schedule-check-status.is-missing{background:#FFF7ED;color:#9A5622}
-.schedule-check-status.is-na{background:#F3F4F6;color:#9CA3AF}
-.schedule-check-status[onclick]{cursor:pointer}
+.schedule-check-text{font-size:13px;font-weight:500;line-height:20px}
+.schedule-check-text.is-filled{color:#047857}
+.schedule-check-text.is-missing{color:#9A5622}
+.schedule-check-text.is-na{color:#9CA3AF}
+.schedule-check-text[onclick]{cursor:pointer}
 .schedule-status-ended{background:#F3F4F6;color:#9CA3AF}
-.schedule-course-type-tag{white-space:nowrap}
+.schedule-course-type-tag{white-space:nowrap;max-width:92px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
 .tms-tag-red{background-color:#FCECE3;color:#C06031}
 .tms-tag-tier-gold{background:#FFF1D6;color:#A16207}
 .tms-tag-tier-blue{background:#E9F1FF;color:#3157B7}

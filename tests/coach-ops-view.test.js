@@ -946,6 +946,7 @@ assert.match(
   /\{key:'schedule'[\s\S]*filterHostIds:\['schCourseTypeFilterHost','schCoachFilterHost','schProposalFilterHost','schFeedbackFilterHost','schStatusFilterHost'\][\s\S]*columns:\[\{label:'日期'[\s\S]*\{label:'上课时间'[\s\S]*\{label:'时长'[\s\S]*\{label:'校区\/场地'[\s\S]*\{label:'教练'[\s\S]*\{label:'学员'[\s\S]*\{label:'课程类型'[\s\S]*\{label:'课前教案'[\s\S]*\{label:'课后反馈'[\s\S]*\{label:'重复\?'/,
   'schedule list should use the refreshed column set'
 );
+assert.match(html, /\{label:'课程类型',style:'width:100px'\}/, 'schedule course type column should use the compact 100px width');
 
 assert.match(
   html,
