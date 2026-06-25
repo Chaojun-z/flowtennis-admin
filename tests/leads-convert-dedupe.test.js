@@ -62,11 +62,12 @@ async function main() {
 
   const listRes = makeRes();
   await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: listRes, query: new URLSearchParams() });
-  assert.strictEqual(listRes.body.length, 1, '线索池默认列表只能统计真实线索，不能把可搜索学员加进线索总数');
+  assert.ok(listRes.body.find((row) => row.displayName === '可搜学员'), '线索池默认列表必须补入缺少真实线索绑定的学员');
+  assert.ok(!listRes.body.find((row) => row.courtId === 'court-1'), '线索池课程默认列表不能把订场用户也混入课程线索总数');
 
   const searchRes = makeRes();
-  await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: searchRes, query: new URLSearchParams('q=可搜学员') });
-  assert.ok(searchRes.body.find((row) => row.displayName === '可搜学员'), '线索池搜索应能搜到缺少真实线索绑定的学员');
+  await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: searchRes, query: new URLSearchParams('q=小成') });
+  assert.ok(searchRes.body.find((row) => row.courtId === 'court-1'), '线索池搜索应能扩展到订场用户生命周期');
 
   const studentRes = makeRes();
   await handle({ path: '/leads/lead-1/convert-student', method: 'POST', body: {}, user: { role: 'admin' }, res: studentRes, query: new URLSearchParams() });

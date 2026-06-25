@@ -168,7 +168,7 @@ function leadDealTypeText(lead){
   const stored=leadNormalizeDealType(lead?.dealType||lead?.conversionType);
   if(stored)return stored;
   const status=String(lead?.rawStatus||lead?.systemStatus||lead?.leadStage||'');
-  const course=!!(lead?.studentId||lead?.isCourseConverted||/已报名|已转课程|课程/.test(status));
+  const course=!!(lead?.hasCourseConversion||lead?.isCourseConverted||String(lead?.studentStage||'').trim()==='formal'||/已报名|已转课程|课程/.test(status));
   const court=!!(lead?.courtId||lead?.isCourtConverted||/已定场|已订场|订场|定场/.test(status));
   const member=!!(lead?.membershipAccountId||lead?.isMembershipConverted||/已转会员|会员|储值/.test(status));
   const parts=[];
@@ -684,7 +684,9 @@ function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
 }
 function leadTrialDoneByStatus(lead){
-  return [lead?.rawStatus,lead?.systemStatus].some(value=>String(value||'').trim()==='体验课完成');
+  if(lead?.hasTrialExperience===true)return true;
+  if(String(lead?.studentStage||'').trim()==='trial')return true;
+  return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
 }
 function leadTrialDoneByTime(lead){
   const raw=lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt;

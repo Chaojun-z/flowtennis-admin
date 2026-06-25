@@ -36,7 +36,8 @@ assert.strictEqual(taxonomy.normalizeLeadDemandProduct('青少年小班课（训
 
 assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '已报名-私教' }), '已成交');
 assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '体验课完成' }), '已体验待成交');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1' }), '');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
 
 const normalizedLead = rules.normalizeLeadRecord({
   '线索时间': '2026-06-24',

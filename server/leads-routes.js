@@ -34,7 +34,7 @@ function createLeadsRoutes(deps={}){
     return next;
   }
 
-  async function readLeadPoolRows(){
+  async function readLeadPoolRows({lifecycleScope='all'}={}){
     const [leads,students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
       readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS}),
       T_STUDENTS?getCachedScan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
@@ -56,13 +56,11 @@ function createLeadsRoutes(deps={}){
       membershipAccounts,
       membershipOrders
     });
-    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows});
+    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope});
   }
 
   async function readVisibleLeadRows({expandLifecycleSearch=false}={}){
-    if(expandLifecycleSearch)return readLeadPoolRows();
-    const leads=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
-    return mergeDuplicateLeadRows(leads);
+    return readLeadPoolRows({lifecycleScope:expandLifecycleSearch?'all':'course'});
   }
 
   return async function handleLeadsRoutes({path,method,body,user,res,query}){

@@ -53,12 +53,12 @@ assert.deepStrictEqual(
     total: 5,
     trialDone: 3,
     trialCompletionRate: '60%',
-    trialConverted: 2,
-    trialConversionRate: '66.7%',
-    converted: 3,
-    leadConversionRate: '60%',
-    trialPendingConversion: 1,
-    trialPendingConversionRate: '33.3%'
+    trialConverted: 1,
+    trialConversionRate: '33.3%',
+    converted: 2,
+    leadConversionRate: '40%',
+    trialPendingConversion: 2,
+    trialPendingConversionRate: '66.7%'
   }
 );
 

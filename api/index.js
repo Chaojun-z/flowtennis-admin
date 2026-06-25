@@ -5697,7 +5697,7 @@ function extractLeadPhoneMeta(value){
 }
 function deriveLeadSystemStatus(input={}){
   const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.leadStage||input.systemStatus);
-  const linked=cleanLeadText(input.studentId)||cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
+  const linked=cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
   if(linked||/已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值|成交/.test(rawStatus))return '已成交';
   if(rawStatus==='已流失'||rawStatus==='无意向')return '已流失';
   if(rawStatus==='体验课预约'||rawStatus==='已约体验')return '已约体验';
@@ -5715,7 +5715,7 @@ function deriveLeadDealType(input={}){
   const stored=normalizeLeadDealType(input.dealType||input.conversionType);
   if(stored)return stored;
   const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus||input.leadStage);
-  const parts=[['课程',cleanLeadText(input.studentId)||input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
+  const parts=[['课程',input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
   return parts.length?parts.join('+'):(input.convertedFlag===true?'课程':'');
 }
 function deriveLeadConversionType(input={}){return deriveLeadDealType(input);}

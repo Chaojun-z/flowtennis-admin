@@ -77,6 +77,7 @@ assert.strictEqual(row.sourceLeadId, 'lead-1');
 assert.strictEqual(row.displayName, '小王');
 assert.strictEqual(row.source, '转介绍', 'source should use the global source taxonomy');
 assert.strictEqual(row.studentStage, 'formal', 'formal purchase should move the student out of trial stage');
+assert.strictEqual(row.hasTrialExperience, true, 'formal students should keep the trial experience fact after conversion');
 assert.strictEqual(row.courtStage, 'member', 'membership account should make the court user a member view row');
 assert.strictEqual(row.hasCourseConversion, true);
 assert.strictEqual(row.hasBookingConversion, true);

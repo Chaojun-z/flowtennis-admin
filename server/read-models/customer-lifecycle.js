@@ -64,6 +64,16 @@ function scheduleIsTrial(row = {}) {
   return normalized.level1 === '体验课' || /体验/.test(textValue);
 }
 
+function studentHasTrialExperience(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+  const sid = text(student.id || student.studentId);
+  if (!sid) return false;
+  const studentPurchases = (purchases || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  return studentPurchases.some(purchaseIsTrial)
+    || entitlementRows.some(purchaseIsTrial)
+    || (schedule || []).some(row => rowHasStudent(row, sid) && activeStatus(row) && scheduleIsTrial(row));
+}
+
 function studentStage(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return 'none';
@@ -71,9 +81,7 @@ function studentStage(student = {}, { purchases = [], entitlements = [], schedul
   const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
   const hasFormal = studentPurchases.some(row => !purchaseIsTrial(row)) || entitlementRows.some(row => !purchaseIsTrial(row));
   if (hasFormal) return 'formal';
-  const hasTrial = studentPurchases.some(purchaseIsTrial)
-    || entitlementRows.some(purchaseIsTrial)
-    || (schedule || []).some(row => rowHasStudent(row, sid) && activeStatus(row) && scheduleIsTrial(row));
+  const hasTrial = studentHasTrialExperience(student, { purchases, entitlements, schedule });
   if (hasTrial) return 'trial';
   return 'student';
 }
@@ -110,6 +118,7 @@ function makeEmptyRow(key) {
     studentStage: 'none',
     courtStage: 'none',
     membershipStatus: '',
+    hasTrialExperience: false,
     leadDate: '',
     createdAt: '',
     hasCourseConversion: false,
@@ -188,6 +197,7 @@ function buildCustomerLifecycleRows({
     const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '');
     const row = rowFor(sourceId, `student:${sid}`);
     const stage = studentStage(student, { purchases, entitlements, schedule });
+    const hasTrialExperience = studentHasTrialExperience(student, { purchases, entitlements, schedule });
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
       studentId: sid,
@@ -197,10 +207,12 @@ function buildCustomerLifecycleRows({
       campus: firstValue(student.campus, student.campusName),
       owner: firstValue(student.primaryCoach, student.owner, student.coach, student.coachName),
       studentStage: stage,
+      hasTrialExperience,
       leadDate: firstValue(student.leadDate, student.createdAt),
       createdAt: firstValue(student.createdAt, student.leadDate)
     });
-    row.hasCourseConversion = stage === 'formal' || stage === 'trial' || stage === 'student';
+    row.hasTrialExperience = row.hasTrialExperience || hasTrialExperience;
+    row.hasCourseConversion = stage === 'formal';
   });
 
   const courtsById = new Map();
@@ -280,7 +292,8 @@ function buildCustomerLifecycleRows({
         owner: firstValue(lead.owner, lead.coach, lead.coachName)
       });
     }
-    row.hasCourseConversion = row.hasCourseConversion || ['trial', 'formal', 'student'].includes(row.studentStage);
+    row.hasCourseConversion = row.hasCourseConversion || row.studentStage === 'formal';
+    row.hasTrialExperience = !!row.hasTrialExperience;
     row.hasBookingConversion = row.hasBookingConversion || row.courtStage === 'booking' || row.courtStage === 'member';
     row.hasMembershipConversion = row.hasMembershipConversion || row.courtStage === 'member';
     return row;
@@ -305,6 +318,7 @@ module.exports = {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle,
   sourceLeadId,
+  studentHasTrialExperience,
   studentStage,
   courtStage
 };

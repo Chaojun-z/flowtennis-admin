@@ -503,10 +503,28 @@ function buildPurchaseCounts(purchases = []) {
   return counts;
 }
 
+function purchaseIsTrialForOperations(row = {}) {
+  const normalized = businessTaxonomy.normalizeCourseType(row);
+  const haystack = [
+    row.courseType,
+    row.packageCourseType,
+    row.type,
+    row.productType,
+    row.experienceType,
+    row.courseTypeLevel2,
+    row.packageName,
+    row.productName,
+    row.name,
+    row.notes
+  ].filter(Boolean).join(' ');
+  return normalized.level1 === '体验课' || /体验/.test(haystack);
+}
+
 function buildFirstPurchaseDateByStudent(purchases = []) {
   const byStudent = new Map();
   (purchases || [])
     .filter(isValidCoursePurchase)
+    .filter(row => !purchaseIsTrialForOperations(row))
     .filter(row => purchaseAmount(row) > 0)
     .forEach(row => {
       const key = purchaseStudentKey(row);
@@ -569,7 +587,8 @@ function courseConversionRows(data = {}, options = {}) {
     const linkedStudent = directStudent || ids.map(lid => studentIndexes.byLeadId.get(lid)).find(Boolean) || null;
     const sid = studentId(linkedStudent || {});
     const stage = normalizeLeadStage(lead, sets);
-    const hasCourse = /课程/.test(stage) || stage === '直接成交' || !!linkedStudent || ids.some(lid => sets.course?.has(lid));
+    const linkedStudentFormal = sid && firstPurchaseDateByStudent.has(sid);
+    const hasCourse = /课程/.test(stage) || stage === '直接成交' || linkedStudentFormal || ids.some(lid => sets.course?.has(lid));
     const dealPath = String(linkedStudent?.dealPath || lead.dealPath || '').trim();
     const stageText = `${stage} ${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
     const leadFollowups = ids.flatMap(lid => followupsByLeadId.get(lid) || []);

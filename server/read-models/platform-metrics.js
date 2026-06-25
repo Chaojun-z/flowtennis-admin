@@ -18,8 +18,16 @@ function isConvertedStage(stage = '') {
   return !['未转化', '已约体验', '已体验待转化', '已流失'].includes(text(stage));
 }
 
+function lifecycleInScope(row = {}, scope = 'all') {
+  if (scope === 'all') return true;
+  if (scope === 'course') return text(row.studentStage) !== 'none';
+  if (scope === 'raw') return !!text(row.sourceLeadId || row.leadId);
+  return true;
+}
+
 function lifecycleLeadStage(row = {}, lead = {}) {
-  const hasCourse = !!row.hasCourseConversion || ['student', 'trial', 'formal'].includes(text(row.studentStage));
+  const studentStage = text(row.studentStage);
+  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal';
   const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
   const converted = [
@@ -31,6 +39,8 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   if (hasCourse) return '课程转化';
   if (hasBooking) return '订场转化';
   if (hasMembership) return '会员转化';
+  if (studentStage === 'trial') return '已体验待转化';
+  if (studentStage === 'student') return '已约体验';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
   if (/流失/.test(explicit)) return '已流失';
   if (/已体验|体验待转化/.test(explicit)) return '已体验待转化';
@@ -38,16 +48,18 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   return explicit || '未转化';
 }
 
-function buildLeadPoolRows({ leads = [], customerLifecycleRows = [] } = {}) {
+function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleScope = 'all' } = {}) {
   const leadRows = new Map((leads || []).map(row => [rowId(row), row]).filter(([id]) => id));
   const rows = new Map();
 
   (customerLifecycleRows || []).forEach(lifecycle => {
+    if (!lifecycleInScope(lifecycle, lifecycleScope)) return;
     const sourceLeadId = text(lifecycle.sourceLeadId || lifecycle.leadId);
     const existing = sourceLeadId ? leadRows.get(sourceLeadId) : null;
     const id = sourceLeadId || text(lifecycle.customerKey || lifecycle.studentId || lifecycle.courtId || lifecycle.membershipAccountId);
     if (!id) return;
     const lead = existing || {};
+    const leadStage = lifecycleLeadStage(lifecycle, lead);
     const next = {
       ...lead,
       id,
@@ -65,8 +77,10 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [] } = {}) {
       membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),
       leadDate: text(lead.leadDate || lifecycle.leadDate || lifecycle.createdAt),
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
-      leadStage: lifecycleLeadStage(lifecycle, lead),
+      leadStage,
+      systemStatus: text(lead.systemStatus || leadStage),
       studentStage: text(lifecycle.studentStage),
+      hasTrialExperience: !!lifecycle.hasTrialExperience,
       courtStage: text(lifecycle.courtStage),
       membershipStatus: text(lifecycle.membershipStatus),
       hasCourseConversion: !!lifecycle.hasCourseConversion,

@@ -32,13 +32,14 @@ assert.strictEqual(platform.leadPoolRows.length, 3, 'lead pool should expose eve
 assert.ok(platform.leadPoolRows.find(row => row.id === 'student:student-2' && row.displayName === '无原始线索学员'), 'student without ft_leads should still be searchable in the lead pool');
 assert.ok(platform.leadPoolRows.find(row => row.id === 'court:court-1' && row.leadStage === '订场+会员'), 'member court customer should stay a booking user and enter member stage');
 assert.strictEqual(platform.conversionMetrics.totalLeads, 3, 'standard conversion total should use lead pool rows');
+assert.strictEqual(platform.conversionMetrics.convertedLeads, 2, 'only formal students, booking users and members should count as converted lifecycle customers');
 assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '小红书')?.leads, 1, 'source stats should use one normalized source definition');
 assert.strictEqual(platform.studentStageStats.find(row => row.stage === 'formal')?.count, 1, 'formal student count should use the lifecycle studentStage');
 
 const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18T00:00:00+08:00') });
 
 assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');
-assert.strictEqual(operations.conversion.cards.convertedLeads.value, 1, 'operations converted leads may count raw leads linked to students');
+assert.strictEqual(operations.conversion.cards.convertedLeads.value, 0, 'operations converted leads must not treat a student link without formal purchase as course成交');
 assert.strictEqual(operations.conversion.sourceRows.find(row => row.source === '小红书'), undefined, 'operations source rows must not include student-only searchable rows when there is no raw lead');
 
 console.log('platform metrics tests passed');
