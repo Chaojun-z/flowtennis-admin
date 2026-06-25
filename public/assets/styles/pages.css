@@ -323,7 +323,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag.type-small,.tms-tag.type-camp{background:#F0FDF4;color:#047857}
 .tms-tag.type-master{background:#FEF2F2;color:#B91C1C}
 .tms-tag.type-partner{background:#F5F3FF;color:#6D28D9}
-.schedule-check-text{font-size:13px;font-weight:500;line-height:20px}
+.schedule-check-text{font-size:12px;font-weight:400;line-height:20px}
 .schedule-check-text.is-filled{color:#047857}
 .schedule-check-text.is-missing{color:#9A5622}
 .schedule-check-text.is-na{color:#9CA3AF}
