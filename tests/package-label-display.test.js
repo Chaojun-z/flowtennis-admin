@@ -60,6 +60,7 @@ const smallTrialPackage = {
   courseType: '体验课',
   experienceType: '小班体验课',
   audience: '成人',
+  maxStudents: 4,
   lessons: 2,
   packageLessons: 2,
   timeBand: '全天',
@@ -73,8 +74,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   context.packageDisplayTitle(smallTrialPackage),
-  '小班体验课 · 全天 · 2 次',
-  'small group trial package card title should use count unit without the second subtitle line'
+  '1v4 · 全天 · 2 次',
+  'package card title should use class size and count unit without the course type'
 );
 
 assert.strictEqual(
@@ -106,8 +107,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
   context.packageDisplayTitle(staleDropinPackage),
-  '小班随到随学 · 全天 · 12 次',
-  '1499 stale small group package title should show dropin instead of single'
+  '1v1 · 全天 · 12 次',
+  'package card title should show class size instead of small group course type'
 );
 
 assert.strictEqual(
