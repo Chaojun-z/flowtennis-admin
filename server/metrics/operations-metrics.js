@@ -1876,7 +1876,7 @@ function buildCourtMetricsFromCachedRows(courts = []) {
 }
 
 function financeCourtBookingRows(rows = []) {
-  return (rows || []).filter(row => ['会员订场', '散客订场', '约球局'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
+  return (rows || []).filter(row => ['会员订场', '散客订场', '约球局', '课程订场'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
 }
 
 function financeCourseRows(rows = []) {
@@ -1894,7 +1894,7 @@ function sumFinanceRows(rows = [], field) {
 function buildFinanceOverviewFromNormalizedRows(rows = []) {
   const businessRows = (rows || []).filter(row => !row?.differenceReason);
   const courseRows = financeCourseRows(businessRows);
-  const bookingRows = businessRows.filter(row => ['散客订场', '约球局'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
+  const bookingRows = businessRows.filter(row => ['散客订场', '约球局', '课程订场'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
   const storedValueRows = financeStoredValueRows(businessRows);
   return {
     hasRows: businessRows.length > 0,

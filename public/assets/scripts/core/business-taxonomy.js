@@ -92,7 +92,7 @@
     recognizedRevenue: { label: '已入账收入', rule: '标准财务流水 recognizedRevenueDelta 的确认收入合计，对应 financeOverviewData.all.recognized' },
     pendingRevenue: { label: '待履约收入', rule: '总收入减已入账收入后的待履约金额，对应 financeOverviewData.all.deferred' },
     storedValueIncome: { label: '会员储值收入', rule: 'businessType 为会员储值的标准财务流水 cashDelta 合计' },
-    bookingIncome: { label: '订场收入', rule: 'businessType 为散客订场或约球局的标准财务流水 cashDelta 合计' },
+    bookingIncome: { label: '订场收入', rule: 'businessType 为散客订场、约球局或课程订场的标准财务流水 cashDelta 合计' },
     packageIncome: { label: '课包实收', rule: 'sourceDocument 为购买记录的课程收款标准财务流水 cashDelta 合计' },
     cashDelta: { label: '实收变化', rule: '单条标准财务流水的现金收入或退款变化' },
     recognizedRevenueDelta: { label: '入账变化', rule: '单条标准财务流水的收入确认或回退变化' }

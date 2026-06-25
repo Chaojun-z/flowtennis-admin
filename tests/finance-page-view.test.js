@@ -158,7 +158,7 @@ assert.doesNotMatch(source,/课包消课核销|散客课程核销/,'recognized s
 assert.doesNotMatch(source,/\['课程总收入'/,'revenue stats should not label package-inclusive course income as course revenue');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
-assert.match(source,/bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category');
+assert.match(source,/bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局','课程订场'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category');
 assert.match(source,/storedValueConsumedRows=businessRows\.filter\(row=>[\s\S]*row\.businessTypeLevel2==='会员订场'[\s\S]*row\.businessType==='会员订场'/,'stored value recognized amount should use standardized member booking consumption rows');
 assert.match(financeSnapshotSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
 assert.match(revenueShell,/infoId:'financeRevenuePagerInfo'/,'revenue should expose pager info');

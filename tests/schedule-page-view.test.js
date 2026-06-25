@@ -181,13 +181,17 @@ assert.match(fnBody('renderSchedule'), /scheduleStatusLabel/, 'schedule list sho
 assert.match(source, /function scheduleRepeatDisplayText\(/, 'schedule list should define a repeat display helper');
 assert.match(fnBody('renderSchedule'), /scheduleRepeatDisplayText\(s\)/, 'schedule rows should render a user-facing repeat value');
 assert.match(source, /function onScheduleFilterChange\(\)\{schPage=standardListFirstPage\(\);renderSchedule\(\);\}/, 'schedule filters should reset pagination through the standard list flow before rendering');
-assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'status'[\s\S]*key:'coach'[\s\S]*key:'courseType'/, 'schedule toolbar filters should use linked count labels');
+assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'courseType'[\s\S]*key:'coach'[\s\S]*key:'proposal'[\s\S]*key:'feedback'[\s\S]*key:'status'/, 'schedule toolbar filters should use linked count labels in the requested order');
+assert.match(source, /schCourseTypeFilterHost[\s\S]*schCoachFilterHost[\s\S]*schProposalFilterHost[\s\S]*schFeedbackFilterHost[\s\S]*schStatusFilterHost/, 'schedule toolbar should order filters as course type, coach, lesson plan, feedback, status');
 assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');
 assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function scheduleEmptyStateHtml\([\s\S]*没有匹配的排课[\s\S]*暂无排课[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加排课开始安排课程/, 'schedule empty state should distinguish filtered empty results from no data');
 assert.match(source, /pageSizeId:'schPageSize'/, 'schedule pager should expose a page size selector host');
 assert.match(source, /label:'日期'[\s\S]*className:'tms-sticky-l'[\s\S]*style:'width:84px;padding-left:14px'/, 'schedule table should keep the date column fixed on the left');
 assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
+assert.doesNotMatch(fnBody('renderSchedule'), /schedule-date-repeat|prevDate/, 'schedule rows should show the date on every row');
+assert.match(fnBody('renderSchedule'), /scheduleProposalStatusHtml\(s\)[\s\S]*scheduleFeedbackStatusHtml\(s\)[\s\S]*scheduleRepeatDisplayText\(s\)/, 'schedule rows should order lesson plan, feedback, then repeat status');
+assert.match(styles, /schedule-check-status[\s\S]*is-filled[\s\S]*#047857[\s\S]*is-missing/, 'lesson plan and feedback status should share one colored tag style');
 assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
 assert.match(styles, /\.tms-pagination\{[^}]*font-size:12px[^}]*line-height:16px[^}]*color:#78716C/, 'schedule pager should use the shared 12px footer standard');
 assert.match(source, /function renderScheduleTableLoading\([\s\S]*renderTableSkeletonLoading\('schTbody',12,'排课数据加载中\.\.\.'\)/, 'schedule loading state should use the shared full-table skeleton');

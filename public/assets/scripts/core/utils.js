@@ -1004,13 +1004,12 @@ function studentBookingMembershipSummary(stu){
 }
 function productTypeTagClass(type){
   const normalized=normalizeCourseType(type);
-  if(normalized==='私教课')return 'tms-tag-tier-gold';
-  if(normalized==='体验课')return 'tms-tag-tier-blue';
-  if(normalized==='训练营')return 'tms-tag-green';
-  if(normalized==='大师课')return 'tms-tag-tier-slate';
-  if(normalized==='小班课')return 'tms-tag-green';
-  if(normalized==='陪打')return 'tms-tag-tier-blue';
-  return 'tms-tag-tier-slate';
+  if(normalized==='体验课')return 'type-trial';
+  if(normalized==='训练营')return 'type-camp';
+  if(normalized==='大师课')return 'type-master';
+  if(normalized==='小班课')return 'type-small';
+  if(normalized==='陪打')return 'type-partner';
+  return 'type-private';
 }
 function classDisplayName(cls){
   if(!cls)return '—';

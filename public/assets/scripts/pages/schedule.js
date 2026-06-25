@@ -1,27 +1,27 @@
 // ===== 排课表 =====
 function onScheduleFilterChange(){schPage=standardListFirstPage();renderSchedule();}
 function syncScheduleFilterOptions(){
-  const statusValue=document.getElementById('schStatusFilter')?.value||'';
-  const coachValue=document.getElementById('schCoachFilter')?.value||'';
-  const courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'';
-  const feedbackValue=document.getElementById('schFeedbackFilter')?.value||'';
+  const statusValue=document.getElementById('schStatusFilter')?.value||'',coachValue=document.getElementById('schCoachFilter')?.value||'',courseTypeValue=document.getElementById('schCourseTypeFilter')?.value||'',proposalValue=document.getElementById('schProposalFilter')?.value||'',feedbackValue=document.getElementById('schFeedbackFilter')?.value||'';
   const baseRows=schedules.filter(s=>(campus==='all'||sameCampusValue(s.campus,campus))&&globalDateWithinRange(s.startTime));
   const coachNames=[...new Set([...activeCoachNames(),...schedules.map(s=>coachName(s.coach)).filter(Boolean)])];
   const linked=withLinkedFilterCounts([
-    {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}],match:(s,value)=>effectiveScheduleStatus(s)===value},
-    {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:(s,value)=>coachName(s.coach)===value},
     {key:'courseType',value:courseTypeValue,options:[{value:'',label:'全部',emptyDisplay:'课程类型'},...STANDARD_COURSE_TYPE_OPTIONS],match:(s,value)=>standardCourseTypeFilterValue(s)===value},
-    {key:'feedback',value:feedbackValue,options:[{value:'',label:'全部',emptyDisplay:'反馈状态'},{value:'missing',label:'未填写'},{value:'filled',label:'已填写'}],match:(s,value)=>scheduleFeedbackFilterValue(s)===value}
+    {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'教练'},...coachNames.map(name=>({value:name,label:name}))],match:(s,value)=>coachName(s.coach)===value},
+    {key:'proposal',value:proposalValue,options:[{value:'',label:'全部',emptyDisplay:'课前教案'},{value:'missing',label:'未填写'},{value:'filled',label:'已填写'}],match:(s,value)=>scheduleProposalFilterValue(s)===value},
+    {key:'feedback',value:feedbackValue,options:[{value:'',label:'全部',emptyDisplay:'课后反馈'},{value:'missing',label:'未填写'},{value:'filled',label:'已填写'}],match:(s,value)=>scheduleFeedbackFilterValue(s)===value},
+    {key:'status',value:statusValue,options:[{value:'',label:'全部',emptyDisplay:'状态'},{value:'已排课',label:'待上课'},{value:'已结束',label:'已下课'},{value:'已取消',label:'已取消'}],match:(s,value)=>effectiveScheduleStatus(s)===value}
   ],baseRows);
-  [['schStatusFilterHost','schStatusFilter','状态',linked.status.options,linked.status.value],['schCoachFilterHost','schCoachFilter','教练',linked.coach.options,linked.coach.value],['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',linked.courseType.options,linked.courseType.value],['schFeedbackFilterHost','schFeedbackFilter','反馈状态',linked.feedback.options,linked.feedback.value]].forEach(([hostId,id,label,options,value])=>{
+  [['schCourseTypeFilterHost','schCourseTypeFilter','课程类型',linked.courseType.options,linked.courseType.value],['schCoachFilterHost','schCoachFilter','教练',linked.coach.options,linked.coach.value],['schProposalFilterHost','schProposalFilter','课前教案',linked.proposal.options,linked.proposal.value],['schFeedbackFilterHost','schFeedbackFilter','课后反馈',linked.feedback.options,linked.feedback.value],['schStatusFilterHost','schStatusFilter','状态',linked.status.options,linked.status.value]].forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onScheduleFilterChange');
   });
 }
 function scheduleFeedbackFilterValue(s){return hasScheduleFeedback(s)?'filled':'missing';}
-function scheduleFeedbackStatusHtml(s){const text=scheduleFeedbackStatusText(s),cls=hasScheduleFeedback(s)?'schedule-status-filled':'';return `<span class="tms-action-link ${cls}" onclick="openFeedbackModal('${s.id}')">${esc(text)}</span>`;}
+function scheduleChecklistStatusHtml(text,onClick=''){const cls=text==='已填写'?'is-filled':text==='未填写'?'is-missing':'is-na';return `<span class="schedule-check-status ${cls}"${onClick?` onclick="${onClick}"`:''}>${esc(text)}</span>`;}
+function scheduleFeedbackStatusHtml(s){return scheduleChecklistStatusHtml(scheduleFeedbackStatusText(s),`openFeedbackModal('${s.id}')`);}
 function scheduleProposalStatusText(s){return !isSmallGroupSchedule(s)?'-':(scheduleCoachProposal(s)?'已填写':'未填写');}
-function scheduleProposalStatusHtml(s){const text=scheduleProposalStatusText(s);return text==='-'?renderStandardCellText('-',false):`<span class="${text==='已填写'?'schedule-status-filled':'tms-text-primary'}">${esc(text)}</span>`;}
+function scheduleProposalFilterValue(s){if(!isSmallGroupSchedule(s))return 'none';return scheduleCoachProposal(s)?'filled':'missing';}
+function scheduleProposalStatusHtml(s){return scheduleChecklistStatusHtml(scheduleProposalStatusText(s));}
 function isExternalSchedule(s){
   return s?.locationType==='external'||s?.campus==='__external__';
 }
@@ -73,6 +73,7 @@ function getFilteredSchedules(){
   const sf=document.getElementById('schStatusFilter')?.value||'';
   const coachFilter=document.getElementById('schCoachFilter')?.value||'';
   const tf=document.getElementById('schCourseTypeFilter')?.value||'';
+  const proposalFilter=document.getElementById('schProposalFilter')?.value||'';
   const feedbackFilter=document.getElementById('schFeedbackFilter')?.value||'';
   const now=new Date();
   return schedules.filter(s=>{
@@ -85,6 +86,7 @@ function getFilteredSchedules(){
     if(sf&&effectiveStatus!==sf)return false;
     if(coachFilter&&coachName(s.coach)!==coachFilter)return false;
     if(tf&&standardCourseTypeFilterValue(s)!==tf)return false;
+    if(proposalFilter&&scheduleProposalFilterValue(s)!==proposalFilter)return false;
     if(feedbackFilter&&scheduleFeedbackFilterValue(s)!==feedbackFilter)return false;
     return true;
   }).map(s=>({...s,_effectiveStatus:effectiveScheduleStatus(s,now)}));
@@ -95,7 +97,7 @@ function jumpSchedulePage(value){
   renderSchedule();
 }
 function scheduleHasActiveSearchOrFilter(){
-  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value||document.getElementById('schFeedbackFilter')?.value);
+  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value||document.getElementById('schProposalFilter')?.value||document.getElementById('schFeedbackFilter')?.value);
 }
 function scheduleEmptyStateHtml(){
   const filtered=scheduleHasActiveSearchOrFilter();
@@ -117,10 +119,8 @@ function renderSchedule(){
     const status=s._effectiveStatus||effectiveScheduleStatus(s);
     const isCancelled=status==='已取消';
     const dateText=String(s.startTime||'').slice(0,10)||'—';
-    const prevDate=String(slice[index-1]?.startTime||'').slice(0,10)||'';
-    const dateHtml=prevDate===dateText?'<span class="schedule-date-repeat"></span>':renderStandardCellText(dateText,false);
     const timeText=s.startTime?`${s.startTime.slice(11,16)}-${(s.endTime||'').slice(11,16)}`:'—';
-    return `<tr><td class="tms-sticky-l" style="padding-left:14px">${dateHtml}</td><td>${renderStandardCellText(timeText,false)}</td><td>${renderStandardCellText(scheduleDurationText(s),false)}</td><td><div class="tms-cell-text" title="${esc(s.externalNotes||scheduleLocationText(s))}">${esc(scheduleLocationText(s))}</div></td><td>${renderStandardCellText(coachName(s.coach),false)}</td><td><div class="tms-text-primary">${esc(scheduleListStudentSummary(s))}</div></td><td><span class="tms-tag schedule-course-type-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseTypeLabel(s))}</span></td><td>${scheduleProposalStatusHtml(s)}</td><td>${renderStandardCellText(scheduleRepeatDisplayText(s),false)}</td><td>${scheduleFeedbackStatusHtml(s)}</td><td><span class="tms-tag ${scheduleStatusTagClass(status)}">${scheduleStatusLabel(status)}</span>${status==='已取消'&&s.cancelReason?`<div class="tms-text-secondary" style="margin-top:6px">${esc(s.cancelReason)}</div>`:''}</td><td class="tms-sticky-r tms-action-cell schedule-action-cell"><span class="tms-action-link" onclick="openScheduleDetail('${s.id}')">查看</span>${isCancelled?`<span class="tms-action-link" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</span>`:`<span class="tms-action-link" onclick="openCancelScheduleModal('${s.id}')">取消</span>`}</td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:14px">${renderStandardCellText(dateText,false)}</td><td>${renderStandardCellText(timeText,false)}</td><td>${renderStandardCellText(scheduleDurationText(s),false)}</td><td><div class="tms-cell-text" title="${esc(s.externalNotes||scheduleLocationText(s))}">${esc(scheduleLocationText(s))}</div></td><td>${renderStandardCellText(coachName(s.coach),false)}</td><td><div class="tms-text-primary">${esc(scheduleListStudentSummary(s))}</div></td><td><span class="tms-tag schedule-course-type-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseTypeLabel(s))}</span></td><td>${scheduleProposalStatusHtml(s)}</td><td>${scheduleFeedbackStatusHtml(s)}</td><td>${renderStandardCellText(scheduleRepeatDisplayText(s),false)}</td><td><span class="tms-tag ${scheduleStatusTagClass(status)}">${scheduleStatusLabel(status)}</span>${status==='已取消'&&s.cancelReason?`<div class="tms-text-secondary" style="margin-top:6px">${esc(s.cancelReason)}</div>`:''}</td><td class="tms-sticky-r tms-action-cell schedule-action-cell"><span class="tms-action-link" onclick="openScheduleDetail('${s.id}')">查看</span>${isCancelled?`<span class="tms-action-link" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</span>`:`<span class="tms-action-link" onclick="openCancelScheduleModal('${s.id}')">取消</span>`}</td></tr>`;
   }).join(''):scheduleEmptyStateHtml();
 }
 function scheduleStudentTextByIds(ids){

@@ -365,6 +365,11 @@ assert.match(
   /normalized==='小班课'[\s\S]*type-small/,
   'coach ops should color small group lessons as their own course type'
 );
+assert.match(
+  html,
+  /function productTypeTagClass\([\s\S]*type-trial[\s\S]*type-small[\s\S]*type-partner[\s\S]*type-private/,
+  'global course type tags should reuse the coach schedule type color classes'
+);
 
 assert.doesNotMatch(
   html,
@@ -938,7 +943,7 @@ assert.doesNotMatch(
 
 assert.match(
   html,
-  /\{key:'schedule'[\s\S]*columns:\[\{label:'日期'[\s\S]*\{label:'上课时间'[\s\S]*\{label:'时长'[\s\S]*\{label:'校区\/场地'[\s\S]*\{label:'教练'[\s\S]*\{label:'学员'[\s\S]*\{label:'课程类型'[\s\S]*\{label:'教案'[\s\S]*\{label:'反馈'/,
+  /\{key:'schedule'[\s\S]*filterHostIds:\['schCourseTypeFilterHost','schCoachFilterHost','schProposalFilterHost','schFeedbackFilterHost','schStatusFilterHost'\][\s\S]*columns:\[\{label:'日期'[\s\S]*\{label:'上课时间'[\s\S]*\{label:'时长'[\s\S]*\{label:'校区\/场地'[\s\S]*\{label:'教练'[\s\S]*\{label:'学员'[\s\S]*\{label:'课程类型'[\s\S]*\{label:'课前教案'[\s\S]*\{label:'课后反馈'[\s\S]*\{label:'重复\?'/,
   'schedule list should use the refreshed column set'
 );
 
