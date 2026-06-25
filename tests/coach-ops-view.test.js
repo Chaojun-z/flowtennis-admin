@@ -938,7 +938,7 @@ assert.doesNotMatch(
 
 assert.match(
   html,
-  /\{key:'schedule'[\s\S]*columns:\[\{label:'日期'[\s\S]*\{label:'上课时间'[\s\S]*\{label:'时长'[\s\S]*\{label:'校区\/场地'[\s\S]*\{label:'教练'[\s\S]*\{label:'学员'[\s\S]*\{label:'课程类型'[\s\S]*\{label:'反馈'/,
+  /\{key:'schedule'[\s\S]*columns:\[\{label:'日期'[\s\S]*\{label:'上课时间'[\s\S]*\{label:'时长'[\s\S]*\{label:'校区\/场地'[\s\S]*\{label:'教练'[\s\S]*\{label:'学员'[\s\S]*\{label:'课程类型'[\s\S]*\{label:'教案'[\s\S]*\{label:'反馈'/,
   'schedule list should use the refreshed column set'
 );
 

@@ -287,15 +287,15 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       timeText:item.startTime&&item.endTime?`${String(item.startTime).slice(11,16)}-${String(item.endTime).slice(11,16)}`:financeTimeText(item.startTime),
       customer:item.studentName||'—',
       campusName:campusName.fromValue(item.campus)||'—',
-      businessType:'课程',
+      businessType:'课程订场',
       action:'收款',
       cashDelta:amount,
       recognizedRevenueDelta:amount,
       deferredRevenueDelta:0,
       paymentChannel:item.fieldFeePayMethod||'—',
       sourceDocument:`排课 ${item.id}`,
-      notes:item.fieldFeeNote||item.fieldFeeReason||'非黄金课包排入黄金时段补差',
-      incomeType:'课程补差收入',
+      notes:item.fieldFeeNote||item.fieldFeeReason||'排课场地费',
+      incomeType:'课程订场',
       packageName:item.packageName||'',
       collector:operator,
       operator,
@@ -304,8 +304,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
       totalLessons:0,
       usedLessons:0,
       remainingLessons:0,
-      sourceProject:`课程补差 ${financeDateTimeText(item.startTime)}`,
-      debitTarget:'补差收入'
+      sourceProject:`排课场地费 ${financeDateTimeText(item.startTime)}`,
+      debitTarget:'场地费'
     };
   });
   const courtRows=(courts||[]).flatMap(court=>{
@@ -422,7 +422,7 @@ function buildFinanceOverviewDataFromRows(rows=[]){
   const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
   const storedValueRows=businessRows.filter(row=>row.businessType==='会员储值');
   const storedValueConsumedRows=businessRows.filter(row=>row.businessType==='会员订场');
-  const bookingRows=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType));
+  const bookingRows=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType));
   const bookingIncome=sumFinanceRows(bookingRows,'cashDelta');
   const bookingRecognized=sumFinanceRows(bookingRows,'recognizedRevenueDelta');
   return {
@@ -531,8 +531,8 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
   const packageRecognizedDelta=packageRecognizedRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const storedValueCashDelta=businessRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
   const storedValueRecognizedDelta=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const bookingCashDelta=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const bookingRecognizedDelta=businessRows.filter(row=>['散客订场','约球局'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
+  const bookingCashDelta=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
+  const bookingRecognizedDelta=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
   const tradeCountDelta=businessRows.filter(row=>['课程','会员储值'].includes(row.businessType)&&row.action==='收款'&&Number(row.cashDelta)>0).length;
   const all={...(baseOverview.all||{})};
   all.cash=roundMoney((Number(all.cash)||0)+cashDelta);

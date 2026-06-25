@@ -36,6 +36,11 @@ assert.match(
 );
 assert.match(
   apiSource,
+  /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'fieldFeeAmount'[\s\S]*'fieldFeePayMethod'[\s\S]*'fieldFeeNote'[\s\S]*\];/,
+  '排课轻投影必须包含场地费字段，否则财务页订场收入会漏算排课场地费'
+);
+assert.match(
+  apiSource,
   /const SCHEDULE_LIST_PROJECTION_FIELDS=\[[\s\S]*'venue'[\s\S]*'venueId'[\s\S]*'venueSpaceType'[\s\S]*\];/,
   '排课轻投影必须包含标准场地字段，供场地运转看板使用'
 );

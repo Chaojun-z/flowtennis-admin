@@ -159,7 +159,7 @@ assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /需补差价\/场地费
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /需补差价\/场地费|到期 \$\{selected\.validUntil\|\|'-'\}/, 'package recommendation hint should hide surcharge copy and empty expiry text');
 assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package picker should avoid repeating the package time-band label when the name already contains it');
 assert.match(source, /function scheduleEntitlementExpiryText\(/, 'package picker should only show expiry text when a real expiry exists');
-assert.match(fnBody('scheduleSaveConfirmText'), /requiresFieldFee[\s\S]*补差价[\s\S]*fieldFeeReason/, 'schedule confirm should show the price-difference entry before saving');
+assert.match(fnBody('scheduleSaveConfirmText'), /requiresFieldFee[\s\S]*场地费[\s\S]*fieldFeeAmount/, 'schedule confirm should show the field fee entry before saving');
 assert.match(source, /function scheduleEntitlementSmallClassType\(/, 'schedule package picker should read small group subtype from the selected package');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'auto package matching should keep the selected course type');
 assert.doesNotMatch(fnBody('handleScheduleEntitlementChange'), /setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'manual package selection should not overwrite course type');
@@ -190,7 +190,7 @@ assert.match(source, /label:'日期'[\s\S]*className:'tms-sticky-l'[\s\S]*style:
 assert.match(fnBody('renderSchedule'), /<td class="tms-sticky-l" style="padding-left:14px">/, 'schedule rows should keep the date cell fixed on the left');
 assert.match(styles, /#page-schedule \.tms-table th\.tms-sticky-l[\s\S]*#page-schedule \.tms-table td\.tms-sticky-r/, 'schedule table should define scoped fixed column styles');
 assert.match(styles, /\.tms-pagination\{[^}]*font-size:12px[^}]*line-height:16px[^}]*color:#78716C/, 'schedule pager should use the shared 12px footer standard');
-assert.match(source, /function renderScheduleTableLoading\([\s\S]*renderTableSkeletonLoading\('schTbody',11,'排课数据加载中\.\.\.'\)/, 'schedule loading state should use the shared full-table skeleton');
+assert.match(source, /function renderScheduleTableLoading\([\s\S]*renderTableSkeletonLoading\('schTbody',12,'排课数据加载中\.\.\.'\)/, 'schedule loading state should use the shared full-table skeleton');
 assert.match(source, /function renderScheduleTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'schedule load failure should render an inline retry state');
 assert.doesNotMatch(fnBody('openScheduleDetail'), /setCourtModalFrame\('排课详情'[\s\S]*modal-wide/, 'schedule detail should no longer use the old centered modal');
 assert.doesNotMatch(fnBody('openScheduleDetail'), /<input|finput|tms-form-control|<textarea|<select/, 'schedule detail should not look editable');
@@ -284,8 +284,8 @@ assert.match(styles, /border:1px solid #E6E7EB/, 'schedule drawer inputs should 
 assert.match(fnBody('openScheduleModal'), /id="sch_ent_hint" class="schedule-entitlement-alert"/, 'package unavailable hint should render as a styled inline alert');
 assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-entitlement-alert\{[\s\S]*display:none[\s\S]*margin-top:6px[\s\S]*font-size:12px[\s\S]*color:#EF4444/, 'package unavailable hint should use the red inline alert style');
 assert.match(fnBody('applySchEntitlementOptions'), /hint\.innerHTML=.*schedule-entitlement-alert-icon[\s\S]*hint\.style\.display/, 'package unavailable hint should include an alert icon and toggle visibility');
-assert.match(fnBody('openScheduleModal'), /schedule-settlement-controls[\s\S]*sch_settlementType[\s\S]*sch_directPaymentFields[\s\S]*sch_payMethod[\s\S]*sch_paidAmount/, 'direct payment controls should live beside settlement type');
-assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-settlement-row\.is-direct \.schedule-settlement-controls\{[\s\S]*grid-template-columns:repeat\(3,1fr\)/, 'direct settlement should split settlement, pay method, and amount equally');
+assert.match(fnBody('openScheduleModal'), /sch_settlementType[\s\S]*sch_fieldFeeMode[\s\S]*schedule-payment-row[\s\S]*sch_payMethod[\s\S]*sch_paidAmount[\s\S]*sch_fieldFeeAmount/, 'schedule modal should split settlement, field fee mode, pay method, lesson fee, and field fee');
+assert.match(styles, /\.modal\.modal-court\.modal-schedule-drawer \.schedule-detail-form \.schedule-payment-row\{[\s\S]*grid-template-columns:repeat\(3,156px\)/, 'payment row should split pay method, lesson fee, and field fee into compact equal columns');
 assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_paidAmount[\s\S]*refreshScheduleStoredValueHint[\s\S]*sch_storedValueHint/, 'stored-value direct payment should show a balance hint below the amount input');
 assert.match(source, /function refreshScheduleStoredValueHint\(/, 'schedule page should refresh stored-value balance hint');
 assert.match(fnBody('scheduleStoredValuePaymentState'), /isStoredValuePayMethod[\s\S]*courtFinanceLocal/, 'stored-value hint should read the selected student membership balance');

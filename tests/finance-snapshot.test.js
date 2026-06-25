@@ -185,12 +185,12 @@ assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.courseRecogniz
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.directCourseRecognized, 99, 'direct course recognized should include only non-package paid schedules');
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageRecognized, 0, 'package recognized should stay package-only');
 
-const surchargeScheduleSnapshot = _test.buildFinancePageSnapshot({
+const fieldFeeScheduleSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
   schedule:[{
     id:'sch-surcharge-1',
     studentId:'stu-surcharge',
-    studentName:'补差学员',
+    studentName:'场地费学员',
     coach:'Siren',
     campus:'mabao',
     courseType:'私教课',
@@ -204,16 +204,18 @@ const surchargeScheduleSnapshot = _test.buildFinancePageSnapshot({
     requiresFieldFee:true,
     fieldFeeAmount:80,
     fieldFeePayMethod:'微信',
-    fieldFeeNote:'非黄金课包排入黄金时段补差'
+    fieldFeeNote:'排课场地费'
   }]
 });
 
-const surchargeIncome = surchargeScheduleSnapshot.financeNormalizedRows.find(row=>row.sourceDocument==='排课 sch-surcharge-1'&&row.incomeType==='课程补差收入');
-assert.ok(surchargeIncome, 'non-prime package surcharge should create a course finance income row');
-assert.strictEqual(surchargeIncome.cashDelta, 80, 'surcharge should increase cash income');
-assert.strictEqual(surchargeIncome.recognizedRevenueDelta, 80, 'surcharge should be recognized immediately');
-assert.strictEqual(surchargeIncome.paymentChannel, '微信', 'surcharge should keep the selected system payment method');
-assert.strictEqual(surchargeScheduleSnapshot.financeOverviewData.all.courseIncome, 80, 'course total income should include surcharge income');
+const fieldFeeIncome = fieldFeeScheduleSnapshot.financeNormalizedRows.find(row=>row.sourceDocument==='排课 sch-surcharge-1'&&row.incomeType==='课程订场');
+assert.ok(fieldFeeIncome, 'schedule field fee should create a court booking finance income row');
+assert.strictEqual(fieldFeeIncome.businessType, '课程订场', 'schedule field fee should use court booking business type');
+assert.strictEqual(fieldFeeIncome.cashDelta, 80, 'field fee should increase cash income');
+assert.strictEqual(fieldFeeIncome.recognizedRevenueDelta, 80, 'field fee should be recognized immediately');
+assert.strictEqual(fieldFeeIncome.paymentChannel, '微信', 'field fee should keep the selected system payment method');
+assert.strictEqual(fieldFeeScheduleSnapshot.financeOverviewData.all.courseIncome, 0, 'course total income should not include field fee income');
+assert.strictEqual(fieldFeeScheduleSnapshot.financeOverviewData.all.bookingIncome, 80, 'booking income should include schedule field fee income');
 
 const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],

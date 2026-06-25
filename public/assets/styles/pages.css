@@ -318,6 +318,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-cell-text.is-muted{color:#A3968F}
 .tms-tag{display:inline-block;background-color:#F1EAE2;color:#8C7B6E;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:400}
 .tms-tag-green{background-color:#EAF4EA;color:#5BAE65}
+.schedule-status-filled{color:#2F7D32;font-weight:500}
+.schedule-status-ended{color:#7B8490}
+.schedule-course-type-tag{white-space:nowrap}
+.schedule-date-repeat{display:block;min-height:20px}
 .tms-tag-red{background-color:#FCECE3;color:#C06031}
 .tms-tag-tier-gold{background:#FFF1D6;color:#A16207}
 .tms-tag-tier-blue{background:#E9F1FF;color:#3157B7}
@@ -1067,6 +1071,10 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-schedule-drawer .schedule-lesson-count-controls{display:block;width:232px;max-width:232px}
 .modal.modal-court.modal-schedule-drawer .schedule-lesson-count-controls .finput{width:100%;max-width:100%}
 .modal.modal-court.modal-schedule-drawer .schedule-settlement-controls{width:232px;max-width:232px}
+.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row{grid-template-columns:repeat(3,156px);gap:12px;width:492px;max-width:492px}
+.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row .tms-form-item{width:156px;max-width:156px}
+.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row .tms-form-control,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row .finput,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row .tms-dropdown,.modal.modal-court.modal-schedule-drawer .schedule-detail-form .schedule-payment-row .tms-dropdown.tms-dropdown-form .tms-dropdown-display{width:156px;max-width:156px;min-width:0}
+.modal.modal-court.modal-schedule-drawer .schedule-payment-row .schedule-stored-value-hint{width:156px}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-display{position:relative;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:28px;line-height:30px}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-display::after{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-menu{left:auto;right:0;width:max-content;max-width:492px}

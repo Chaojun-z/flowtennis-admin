@@ -209,6 +209,7 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'purchaseId',
   'requiresFieldFee',
   'fieldFeeReason',
+  'fieldFeeAmount','fieldFeePayMethod','fieldFeeNote',
   'settlementType',
   'paymentType',
   'paidAmount',
@@ -1069,25 +1070,25 @@ function normalizeScheduleFieldFee(input={}){
   const amount=requiresFieldFee?roundMoney(input.fieldFeeAmount||0):0;
   return {
     requiresFieldFee,
-    fieldFeeReason:requiresFieldFee?String(input.fieldFeeReason||'非黄金课包排入黄金时段，需补差价/场地费').trim():'',
+    fieldFeeReason:requiresFieldFee?String(input.fieldFeeReason||'排课场地费').trim():'',
     fieldFeeAmount:amount,
     fieldFeePayMethod:amount>0?String(input.fieldFeePayMethod||'').trim():'',
-    fieldFeeNote:amount>0?String(input.fieldFeeNote||'非黄金课包排入黄金时段补差').trim():''
+    fieldFeeNote:amount>0?String(input.fieldFeeNote||'排课场地费').trim():''
   };
 }
 function assertScheduleFieldFeeInput(schedule){
   if(!schedule?.requiresFieldFee)return;
   const amount=roundMoney(schedule.fieldFeeAmount||0);
   if(amount<=0)return;
-  if(!String(schedule.fieldFeePayMethod||'').trim())throw new Error('请选择补差支付方式');
-  if(['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(String(schedule.fieldFeePayMethod||'').trim()))throw new Error('补差支付方式不可用');
+  if(!String(schedule.fieldFeePayMethod||'').trim())throw new Error('请选择场地费支付方式');
+  if(['储值扣款','课包划扣','大众点评券码','抖音券码','其他'].includes(String(schedule.fieldFeePayMethod||'').trim()))throw new Error('场地费支付方式不可用');
 }
 function buildScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date().toISOString()){
   const amount=roundMoney(schedule?.fieldFeeAmount||0);
   if(!schedule?.requiresFieldFee||amount<=0)return null;
   return {
     id:`schedule-field-fee-${schedule.id}`,
-    ledgerType:'course_surcharge',
+    ledgerType:'schedule_field_fee',
     status:'active',
     sourceType:'schedule',
     sourceId:schedule.id,
@@ -1095,14 +1096,14 @@ function buildScheduleFieldFeeFinancialLedger(schedule,user={},now=new Date().to
     userId:String(schedule.studentId||parseArr(schedule.studentIds)[0]||''),
     userName:schedule.studentName||'',
     campus:schedule.campus||'',
-    productSnapshotName:'课程补差收入',
-    businessType:'课程',
+    productSnapshotName:'排课场地费',
+    businessType:'课程订场',
     action:'收款',
     paymentChannel:String(schedule.fieldFeePayMethod||'').trim(),
     cashDelta:Math.round(amount*100),
     recognizedRevenueDelta:Math.round(amount*100),
     deferredRevenueDelta:0,
-    notes:schedule.fieldFeeNote||schedule.fieldFeeReason||'非黄金课包排入黄金时段补差',
+    notes:schedule.fieldFeeNote||schedule.fieldFeeReason||'排课场地费',
     createdBy:user.name||'系统记录',
     createdAt:now,
     updatedAt:now
@@ -1224,7 +1225,7 @@ function recommendEntitlements(entitlements,schedule){
       timeBand:ent.timeBand||'',
       ownerCoach:ent.ownerCoach||'',
       requiresFieldFee,
-      fieldFeeReason:requiresFieldFee?'非黄金课包排入黄金/周末时段，需补差价/场地费':'',
+      fieldFeeReason:requiresFieldFee?'排课场地费':'',
       selectable:warnings.length===0,
       warnings,
       _source:ent

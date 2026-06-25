@@ -509,11 +509,11 @@ function renderLeadTableError(message){
   if(el)el.innerHTML=`<tr><td colspan="14"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderScheduleTableLoading(){
-  renderTableSkeletonLoading('schTbody',11,'排课数据加载中...');
+  renderTableSkeletonLoading('schTbody',12,'排课数据加载中...');
 }
 function renderScheduleTableError(message){
   const el=document.getElementById('schTbody');
-  if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('schedule',{force:true})">重新加载</button></div></td></tr>`;
+  if(el)el.innerHTML=`<tr><td colspan="12"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('schedule',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderCourtTableLoading(){
   renderTableSkeletonLoading('courtTbody',16,'订场用户加载中...');

@@ -4,7 +4,7 @@ function scheduleStatusLabel(status){
   return status||'待上课';
 }
 function scheduleStatusTagClass(status){
-  return status==='已排课'?'tms-tag-tier-blue':status==='已结束'?'tms-tag-green':status==='已取消'?'tms-tag-tier-slate':'tms-tag-tier-slate';
+  return status==='已排课'?'tms-tag-tier-blue':status==='已结束'?'tms-tag-tier-slate schedule-status-ended':status==='已取消'?'tms-tag-red':'tms-tag-tier-slate';
 }
 function scheduleVenueOptionsForCampus(campusCode){
   return activeCampusVenueRows(campusCode).map(v=>({value:v.id,label:v.name}));
