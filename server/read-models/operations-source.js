@@ -10,6 +10,7 @@ const OPERATIONS_LEAD_FIELDS = [
 ];
 const OPERATIONS_STUDENT_FIELDS = [
   'id', 'name', 'source', 'campus', 'campusName', 'sourceLeadId', 'leadId', 'fromLeadId',
+  'leadDate', 'createdAt',
   'dealPath', 'primaryCoach', 'coach', 'coachName', 'level', 'gender', 'sex',
   'studentType', 'type', 'ageGroup', 'age', 'birthDate'
 ];
@@ -33,6 +34,7 @@ const OPERATIONS_ENTITLEMENT_LEDGER_FIELDS = [
 const OPERATIONS_COURT_FIELDS = [
   'name', 'courtName', 'campus', 'campusName', 'sourceLeadId', 'leadId',
   'fromLeadId', 'courtId', 'bookingCourtId', 'membershipAccountId', 'memberId',
+  'leadDate', 'createdAt',
   'status', 'cachedTotalSpent', 'cachedTotalReceived', 'spentAmount', 'receivedAmount',
   'storedValueSpent', 'directPaidSpent', 'bookingCount', 'bookingAmount', 'bookingHours',
   'memberBookingCount', 'memberBookingAmount', 'guestBookingCount', 'guestBookingAmount', 'history'
@@ -41,7 +43,7 @@ const OPERATIONS_FOLLOWUP_FIELDS = [
   'id', 'leadId', 'followupAt', 'createdAt', 'followupBy', 'followupType',
   'communicationNote', 'concern', 'conclusion', 'statusAfter', 'nextFollowupAt', 'nextAction'
 ];
-const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status'];
+const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt'];
 const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus'];
 const OPERATIONS_SCHEDULE_FIELDS = [

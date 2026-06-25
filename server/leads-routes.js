@@ -1,4 +1,6 @@
 const { readLeadSourceRows } = require('./lead-source-read-model.js');
+const { buildCustomerLifecycleRows } = require('./read-models/customer-lifecycle.js');
+const { buildLeadPoolRows } = require('./read-models/platform-metrics.js');
 
 function createLeadsRoutes(deps={}){
   const {
@@ -9,7 +11,8 @@ function createLeadsRoutes(deps={}){
     normalizeLeadFollowupRecord,applyLeadFollowupsSnapshot,applyLeadFollowupSnapshot,normalizeLeadImportRows,
     buildLeadImportPreviewRows,leadImportPreviewSummary,dedupeLeadRows,buildLeadDedupKey,
     buildLeadStudentRecord,buildLeadCourtRecord,matchLeadToStudent,matchLeadToCourt,
-    T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS
+    T_LEADS,T_LEAD_FOLLOWUPS,T_LEAD_IMPORT_BATCHES,T_STUDENTS,T_COURTS,T_MEMBERSHIP_ACCOUNTS,
+    T_PURCHASES,T_ENTITLEMENTS,T_SCHEDULE,T_MEMBERSHIP_ORDERS
   }=deps;
 
   function leadSearchHit(q,...values){
@@ -31,6 +34,31 @@ function createLeadsRoutes(deps={}){
     return next;
   }
 
+  async function readLeadPoolRows(){
+    const [leads,students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
+      readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS}),
+      T_STUDENTS?getCachedScan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
+      T_PURCHASES?getCachedScan(T_PURCHASES).catch(()=>[]):Promise.resolve([]),
+      T_ENTITLEMENTS?getCachedScan(T_ENTITLEMENTS).catch(()=>[]):Promise.resolve([]),
+      T_SCHEDULE?getCachedScan(T_SCHEDULE).catch(()=>[]):Promise.resolve([]),
+      T_COURTS?getCachedScan(T_COURTS).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
+      T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
+    ]);
+    const mergedLeads=mergeDuplicateLeadRows(leads);
+    const customerLifecycleRows=buildCustomerLifecycleRows({
+      leads:mergedLeads,
+      students,
+      purchases,
+      entitlements,
+      schedule,
+      courts,
+      membershipAccounts,
+      membershipOrders
+    });
+    return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows});
+  }
+
   return async function handleLeadsRoutes({path,method,body,user,res,query}){
     if(path==='/lead-followups'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -48,7 +76,7 @@ function createLeadsRoutes(deps={}){
       await init();
       await ensureLeadTables();
       if(method==='GET'){
-        const rows=await readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS});
+        const rows=await readLeadPoolRows();
         const q=cleanLeadText(query.get('q')).toLowerCase();
         const source=cleanLeadText(query.get('source'));
         const consultType=cleanLeadText(query.get('consultType'));
@@ -58,9 +86,9 @@ function createLeadsRoutes(deps={}){
         const dateFrom=cleanLeadText(query.get('dateFrom'));
         const dateTo=cleanLeadText(query.get('dateTo'));
         const todayStr=new Date().toISOString().slice(0,10);
-        const visibleRows=filterLoadAllForUser({leads:mergeDuplicateLeadRows(rows)},user).leads;
+        const visibleRows=filterLoadAllForUser({leads:rows},user).leads;
         const filtered=visibleRows.filter(row=>{
-          if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
+          if(q&&!leadSearchHit(q,row.displayName,row.wechatName,row.name,row.phone,row.source,row.consultType,row.intentLevel,row.owner,row.rawStatus,row.systemStatus,row.leadStage,row.studentStage,row.courtStage,row.membershipStatus,row.latestConcern,row.latestConclusion,row.nextAction))return false;
           if(source&&row.source!==source)return false;
           if(consultType&&row.consultType!==consultType)return false;
           if(owner&&row.owner!==owner)return false;

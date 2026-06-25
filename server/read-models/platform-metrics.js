@@ -1,0 +1,176 @@
+const { buildCustomerLifecycleRows } = require('./customer-lifecycle.js');
+const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
+
+function text(value) {
+  return String(value || '').trim();
+}
+
+function round(value, digits = 1) {
+  const base = 10 ** digits;
+  return Math.round((Number(value) || 0) * base) / base;
+}
+
+function rowId(row = {}) {
+  return text(row.id || row.leadId);
+}
+
+function isConvertedStage(stage = '') {
+  return !['未转化', '已约体验', '已体验待转化', '已流失'].includes(text(stage));
+}
+
+function lifecycleLeadStage(row = {}, lead = {}) {
+  const hasCourse = !!row.hasCourseConversion || ['student', 'trial', 'formal'].includes(text(row.studentStage));
+  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
+  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
+  const converted = [
+    hasCourse ? '课程' : '',
+    hasBooking ? '订场' : '',
+    hasMembership ? '会员' : ''
+  ].filter(Boolean);
+  if (converted.length >= 2) return converted.join('+');
+  if (hasCourse) return '课程转化';
+  if (hasBooking) return '订场转化';
+  if (hasMembership) return '会员转化';
+  const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
+  if (/流失/.test(explicit)) return '已流失';
+  if (/已体验|体验待转化/.test(explicit)) return '已体验待转化';
+  if (/已约|预约|约体验/.test(explicit)) return '已约体验';
+  return explicit || '未转化';
+}
+
+function buildLeadPoolRows({ leads = [], customerLifecycleRows = [] } = {}) {
+  const leadRows = new Map((leads || []).map(row => [rowId(row), row]).filter(([id]) => id));
+  const rows = new Map();
+
+  (customerLifecycleRows || []).forEach(lifecycle => {
+    const sourceLeadId = text(lifecycle.sourceLeadId || lifecycle.leadId);
+    const existing = sourceLeadId ? leadRows.get(sourceLeadId) : null;
+    const id = sourceLeadId || text(lifecycle.customerKey || lifecycle.studentId || lifecycle.courtId || lifecycle.membershipAccountId);
+    if (!id) return;
+    const lead = existing || {};
+    const next = {
+      ...lead,
+      id,
+      sourceLeadId,
+      customerKey: text(lifecycle.customerKey),
+      displayName: text(lead.displayName || lead.wechatName || lead.name || lifecycle.displayName),
+      name: text(lead.name || lifecycle.displayName),
+      phone: text(lead.phone || lifecycle.phone),
+      source: businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source),
+      campus: text(lifecycle.campus || lead.campus || lead.campusName),
+      campusName: text(lifecycle.campus || lead.campusName || lead.campus),
+      owner: text(lifecycle.owner || lead.owner || lead.coach || lead.coachName),
+      studentId: text(lifecycle.studentId || lead.studentId || lead.formalStudentId || lead.courseStudentId),
+      courtId: text(lifecycle.courtId || lead.courtId || lead.bookingCourtId),
+      membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),
+      leadDate: text(lead.leadDate || lifecycle.leadDate || lifecycle.createdAt),
+      createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
+      leadStage: lifecycleLeadStage(lifecycle, lead),
+      studentStage: text(lifecycle.studentStage),
+      courtStage: text(lifecycle.courtStage),
+      membershipStatus: text(lifecycle.membershipStatus),
+      hasCourseConversion: !!lifecycle.hasCourseConversion,
+      hasBookingConversion: !!lifecycle.hasBookingConversion,
+      hasMembershipConversion: !!lifecycle.hasMembershipConversion,
+      isLifecycleSynthetic: !existing
+    };
+    rows.set(id, next);
+  });
+
+  (leads || []).forEach(lead => {
+    const id = rowId(lead);
+    if (!id || rows.has(id)) return;
+    const source = businessTaxonomy.normalizeLeadSource(lead.source);
+    rows.set(id, {
+      ...lead,
+      id,
+      sourceLeadId: id,
+      source,
+      leadStage: lifecycleLeadStage({}, lead),
+      isLifecycleSynthetic: false
+    });
+  });
+
+  return [...rows.values()];
+}
+
+function buildStageRows(leadPoolRows = []) {
+  const counts = new Map();
+  (leadPoolRows || []).forEach(row => {
+    const stage = text(row.leadStage) || '未转化';
+    counts.set(stage, (counts.get(stage) || 0) + 1);
+  });
+  const order = ['未转化', '已约体验', '已体验待转化', '课程转化', '直接成交', '订场转化', '会员转化', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员', '已流失'];
+  return [...counts.entries()]
+    .map(([stage, count]) => ({ stage, count }))
+    .sort((a, b) => {
+      const ai = order.indexOf(a.stage);
+      const bi = order.indexOf(b.stage);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      return a.stage.localeCompare(b.stage, 'zh-Hans-CN');
+    });
+}
+
+function buildSourceChannelStats(leadPoolRows = []) {
+  const grouped = new Map();
+  (leadPoolRows || []).forEach(row => {
+    const source = businessTaxonomy.normalizeLeadSource(row.source);
+    const current = grouped.get(source) || { source, leads: 0, converted: 0 };
+    current.leads += 1;
+    if (isConvertedStage(row.leadStage)) current.converted += 1;
+    grouped.set(source, current);
+  });
+  return [...grouped.values()]
+    .map(row => ({
+      ...row,
+      conversionRate: row.leads ? round(row.converted * 100 / row.leads, 1) : 0
+    }))
+    .sort((a, b) => b.converted - a.converted || b.leads - a.leads || a.source.localeCompare(b.source, 'zh-Hans-CN'));
+}
+
+function countBy(rows = [], field, allowed = []) {
+  const counts = new Map(allowed.map(key => [key, 0]));
+  (rows || []).forEach(row => {
+    const value = text(row[field]) || 'none';
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+  return [...counts.entries()].map(([stage, count]) => ({ stage, count })).filter(row => row.count > 0);
+}
+
+function buildPlatformMetrics(data = {}) {
+  const customerLifecycleRows = Array.isArray(data.customerLifecycleRows) && data.customerLifecycleRows.length
+    ? data.customerLifecycleRows
+    : buildCustomerLifecycleRows(data);
+  const leadPoolRows = buildLeadPoolRows({
+    leads: data.leads || [],
+    customerLifecycleRows
+  });
+  const stageRows = buildStageRows(leadPoolRows);
+  const sourceChannelStats = buildSourceChannelStats(leadPoolRows);
+  const totalLeads = leadPoolRows.length;
+  const convertedLeads = leadPoolRows.filter(row => isConvertedStage(row.leadStage)).length;
+
+  return {
+    customerLifecycleRows,
+    leadPoolRows,
+    conversionMetrics: {
+      totalLeads,
+      convertedLeads,
+      leadConversionRate: totalLeads ? round(convertedLeads * 100 / totalLeads, 1) : 0,
+      stageRows,
+      sourceRows: sourceChannelStats
+    },
+    sourceChannelStats,
+    studentStageStats: countBy(customerLifecycleRows.filter(row => text(row.studentStage) !== 'none'), 'studentStage', ['student', 'trial', 'formal']),
+    courtStageStats: countBy(customerLifecycleRows.filter(row => text(row.courtStage) !== 'none'), 'courtStage', ['booking', 'member']),
+    membershipStageStats: countBy(customerLifecycleRows.filter(row => text(row.membershipStatus)), 'membershipStatus', ['active', 'extended', 'expired', 'cleared'])
+  };
+}
+
+module.exports = {
+  buildPlatformMetrics,
+  buildLeadPoolRows,
+  buildStageRows,
+  buildSourceChannelStats,
+  lifecycleLeadStage
+};

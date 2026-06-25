@@ -25,6 +25,10 @@ function leadId(row = {}) {
   return text(row.id || row.leadId);
 }
 
+function mergedLeadIds(row = {}) {
+  return parseArr(row._mergedLeadIds).map(text).filter(Boolean);
+}
+
 function activeStatus(row = {}) {
   const status = text(row.status || row.systemStatus || 'active');
   return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
@@ -106,6 +110,8 @@ function makeEmptyRow(key) {
     studentStage: 'none',
     courtStage: 'none',
     membershipStatus: '',
+    leadDate: '',
+    createdAt: '',
     hasCourseConversion: false,
     hasBookingConversion: false,
     hasMembershipConversion: false
@@ -132,16 +138,25 @@ function buildCustomerLifecycleRows({
 } = {}) {
   const byKey = new Map();
   const leadsById = new Map((leads || []).map(row => [leadId(row), row]).filter(([id]) => id));
+  const leadAliasToId = new Map();
   const leadByStudentId = new Map();
   const leadByCourtId = new Map();
   const leadByMembershipAccountId = new Map();
   (leads || []).forEach(row => {
     const id = leadId(row);
     if (!id) return;
+    [id, ...mergedLeadIds(row)].forEach(alias => {
+      if (alias) leadAliasToId.set(alias, id);
+    });
     if (text(row.studentId)) leadByStudentId.set(text(row.studentId), id);
     if (text(row.courtId)) leadByCourtId.set(text(row.courtId), id);
     if (text(row.membershipAccountId)) leadByMembershipAccountId.set(text(row.membershipAccountId), id);
   });
+
+  function resolveLeadSourceId(value) {
+    const id = text(value);
+    return id ? (leadAliasToId.get(id) || id) : '';
+  }
 
   function rowFor(sourceId, fallbackKey) {
     const key = sourceId ? `lead:${sourceId}` : fallbackKey;
@@ -159,7 +174,9 @@ function buildCustomerLifecycleRows({
       phone: text(lead.phone),
       source: businessTaxonomy.normalizeLeadSource(lead.source),
       campus: firstValue(lead.campus, lead.campusName),
-      owner: firstValue(lead.owner, lead.coach, lead.coachName)
+      owner: firstValue(lead.owner, lead.coach, lead.coachName),
+      leadDate: firstValue(lead.leadDate, lead.createdAt),
+      createdAt: firstValue(lead.createdAt, lead.leadDate)
     });
   });
 
@@ -168,7 +185,7 @@ function buildCustomerLifecycleRows({
     const sid = text(student.id || student.studentId);
     if (!sid) return;
     studentsById.set(sid, student);
-    const sourceId = sourceLeadId(student) || leadByStudentId.get(sid) || '';
+    const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '');
     const row = rowFor(sourceId, `student:${sid}`);
     const stage = studentStage(student, { purchases, entitlements, schedule });
     mergeIntoRow(row, {
@@ -179,7 +196,9 @@ function buildCustomerLifecycleRows({
       source: businessTaxonomy.normalizeLeadSource(student.source),
       campus: firstValue(student.campus, student.campusName),
       owner: firstValue(student.primaryCoach, student.owner, student.coach, student.coachName),
-      studentStage: stage
+      studentStage: stage,
+      leadDate: firstValue(student.leadDate, student.createdAt),
+      createdAt: firstValue(student.createdAt, student.leadDate)
     });
     row.hasCourseConversion = stage === 'formal' || stage === 'trial' || stage === 'student';
   });
@@ -189,7 +208,7 @@ function buildCustomerLifecycleRows({
     const cid = text(court.id || court.courtId);
     if (!cid) return;
     courtsById.set(cid, court);
-    const sourceId = sourceLeadId(court) || leadByCourtId.get(cid) || '';
+    const sourceId = resolveLeadSourceId(sourceLeadId(court) || leadByCourtId.get(cid) || '');
     const row = rowFor(sourceId, `court:${cid}`);
     const stage = courtStage(court, membershipAccounts);
     mergeIntoRow(row, {
@@ -200,7 +219,9 @@ function buildCustomerLifecycleRows({
       source: businessTaxonomy.normalizeLeadSource(court.source),
       campus: firstValue(court.campus, court.campusName),
       owner: firstValue(court.owner, court.coach, court.coachName),
-      courtStage: stage
+      courtStage: stage,
+      leadDate: firstValue(court.leadDate, court.createdAt),
+      createdAt: firstValue(court.createdAt, court.leadDate)
     });
     row.hasBookingConversion = true;
   });
@@ -209,17 +230,21 @@ function buildCustomerLifecycleRows({
     const accountId = text(account.id || account.membershipAccountId);
     if (!accountId) return;
     const court = courtsById.get(text(account.courtId)) || {};
-    const sourceId = sourceLeadId(account) || sourceLeadId(court) || leadByMembershipAccountId.get(accountId) || '';
-    const row = rowFor(sourceId, `membership:${accountId}`);
+    const courtId = text(account.courtId);
+    if (!courtId) return;
+    const sourceId = resolveLeadSourceId(sourceLeadId(account) || sourceLeadId(court) || leadByMembershipAccountId.get(accountId) || '');
+    const row = rowFor(sourceId, courtId ? `court:${courtId}` : `membership:${accountId}`);
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
-      courtId: text(account.courtId),
+      courtId,
       membershipAccountId: accountId,
       displayName: firstValue(court.name, account.courtName),
       phone: firstValue(court.phone, account.phone),
       source: businessTaxonomy.normalizeLeadSource(court.source || account.source),
       campus: firstValue(court.campus, court.campusName, account.campus, account.campusName),
-      membershipStatus: text(account.status)
+      membershipStatus: text(account.status),
+      leadDate: firstValue(court.leadDate, account.createdAt, court.createdAt),
+      createdAt: firstValue(account.createdAt, court.createdAt, court.leadDate)
     });
     if (accountIsVisibleMembership(account)) {
       row.courtStage = 'member';
@@ -230,12 +255,13 @@ function buildCustomerLifecycleRows({
   (membershipOrders || []).forEach(order => {
     const account = (membershipAccounts || []).find(row => text(row.id) === text(order.membershipAccountId)) || {};
     const court = courtsById.get(text(order.courtId || account.courtId)) || {};
-    const sourceId = sourceLeadId(order) || sourceLeadId(account) || sourceLeadId(court);
-    if (!sourceId) return;
-    const row = rowFor(sourceId, `membership-order:${text(order.id)}`);
+    const sourceId = resolveLeadSourceId(sourceLeadId(order) || sourceLeadId(account) || sourceLeadId(court));
+    const courtId = text(order.courtId || account.courtId);
+    if (!courtId) return;
+    const row = rowFor(sourceId, courtId ? `court:${courtId}` : `membership-order:${text(order.id)}`);
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
-      courtId: text(order.courtId || account.courtId),
+      courtId,
       membershipAccountId: text(order.membershipAccountId || account.id)
     });
     if (activeStatus(order)) {

@@ -1258,48 +1258,8 @@ function operationsRiskRows(rows = []) {
     .slice(0, 5);
 }
 
-function operationsFallbackCourseRows(data) {
-  const stageRows = data.conversion?.stageRows || [];
-  const sourceRows = data.conversion?.sourceRows || [];
-  const rows = [];
-  sourceRows.forEach(source => {
-    const leads = Number(source.leads) || 0;
-    const converted = Number(source.converted) || 0;
-    for (let i = 0; i < leads; i += 1) {
-      rows.push({
-        source: source.source || '未记录',
-        campus: '未记录',
-        coach: '未记录',
-        hasAppointment: i < converted,
-        hasAttendance: i < converted,
-        hasTrialDeal: i < converted,
-        hasRenewal: false,
-        personas: []
-      });
-    }
-  });
-  if (rows.length) return rows;
-  const total = Number(data.conversion?.cards?.totalLeads?.value) || stageRows.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
-  const courseDeals = stageRows
-    .filter(row => /课程|直接成交/.test(String(row.stage || '')) && !/订场|会员/.test(String(row.stage || '')))
-    .reduce((sum, row) => sum + (Number(row.count) || 0), 0);
-  for (let i = 0; i < total; i += 1) {
-    rows.push({
-      source: '未记录',
-      campus: '未记录',
-      coach: '未记录',
-      hasAppointment: i < courseDeals,
-      hasAttendance: i < courseDeals,
-      hasTrialDeal: i < courseDeals,
-      hasRenewal: false,
-      personas: []
-    });
-  }
-  return rows;
-}
-
 function operationsFilteredCourseRows(data) {
-  const rows = (data.conversion?.courseRows || []).length ? data.conversion.courseRows : operationsFallbackCourseRows(data);
+  const rows = data.conversion?.courseRows || [];
   return rows.filter(row => {
     if (operationsConversionFilters.source && row.source !== operationsConversionFilters.source) return false;
     if (operationsConversionFilters.campus && row.campus !== operationsConversionFilters.campus) return false;
@@ -1309,13 +1269,24 @@ function operationsFilteredCourseRows(data) {
 }
 
 function operationsConversionView(data) {
-  const rows = operationsFilteredCourseRows(data);
-  if (!rows.length && !(data.conversion?.courseRows || []).length && !(data.conversion?.stageRows || []).length && !(data.conversion?.sourceRows || []).length) {
+  const hasFilters = !!(operationsConversionFilters.source || operationsConversionFilters.campus || operationsConversionFilters.coach);
+  if (!hasFilters) {
     return {
       courseFunnel: data.conversion?.courseFunnel || [],
       sourceRanking: data.conversion?.sourceRanking || [],
       channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
       studentAttributeRows: data.conversion?.studentAttributeRows || [],
+      courseRows: data.conversion?.courseRows || [],
+      trendRows: data.conversion?.trends || []
+    };
+  }
+  const rows = operationsFilteredCourseRows(data);
+  if (!rows.length) {
+    return {
+      courseFunnel: [],
+      sourceRanking: [],
+      channelEfficiencyRows: [],
+      studentAttributeRows: [],
       courseRows: [],
       trendRows: data.conversion?.trends || []
     };
@@ -1342,7 +1313,7 @@ function operationsSourceFilterValues(values = []) {
 }
 
 function operationsConversionFilterOptions(data) {
-  const rows = (data.conversion?.courseRows || []).length ? data.conversion.courseRows : operationsFallbackCourseRows(data);
+  const rows = data.conversion?.courseRows || [];
   const values = key => [...new Set(rows.map(row => String(row[key] || '').trim()).filter(Boolean).filter(item => item !== '未记录'))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
   const apiOptions = data.conversion?.filterOptions || {};
   return {

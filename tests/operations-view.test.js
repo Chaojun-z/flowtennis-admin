@@ -259,7 +259,8 @@ assert.match(operationsSource, /空闲[\s\S]*低利用[\s\S]*中等[\s\S]*健康
 assert.doesNotMatch(operationsSource, /历史未匹配场地/, 'court heatmap UI should rename historical unmatched venues to unmatched');
 assert.doesNotMatch(operationsSource, /场地使用排行/, 'court page should remove the old venue ranking card');
 assert.doesNotMatch(operationsSource, /场地时段热力/, 'court page should remove the old single heatmap chart card');
-assert.match(operationsSource, /operationsFallbackCourseRows[\s\S]*stageRows[\s\S]*sourceRows/, 'conversion page should fall back to existing operations summary data instead of rendering empty panels');
+assert.doesNotMatch(operationsSource, /operationsFallbackCourseRows/, 'conversion page must not fabricate course rows from summary data');
+assert.match(operationsSource, /if \(!hasFilters\) \{[\s\S]*courseFunnel: data\.conversion\?\.courseFunnel/, 'conversion page should display backend standard metrics when no local filter is active');
 assert.doesNotMatch(operationsSource, /echarts\.init/, 'operations page should not initialize ECharts directly');
 assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/, 'operations page should not reuse schedule detail tabs as its top navigation');
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
