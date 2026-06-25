@@ -42,7 +42,7 @@
   const LEAD_STAGE_OPTIONS = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].map(value => ({ value, label: value }));
   const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '会员', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员'].map(value => ({ value, label: value }));
   const LEAD_CUSTOMER_TYPE_OPTIONS = ['成人', '青少年'].map(value => ({ value, label: value }));
-  const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教', '小班', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
+  const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
   const LEAD_CONSULT_OPTIONS = LEAD_DEMAND_PRODUCT_OPTIONS;
   const LEAD_INTENT_OPTIONS = ['沉默', '20%-40%', '40%-60%', '60%-80%', '80%-100%'].map(value => ({ value, label: value }));
   const LEAD_LEVEL_OPTIONS = ['0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
@@ -201,15 +201,15 @@
     const raw = text(value);
     if (!raw) return '其他';
     if (includesAny(raw, ['青少年', '少儿', '儿童', '孩子'])) {
-      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班';
-      if (includesAny(raw, ['私教'])) return '私教';
+      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班课';
+      if (includesAny(raw, ['私教'])) return '私教课';
     }
     if (includesAny(raw, ['成人'])) {
-      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班';
-      if (includesAny(raw, ['私教'])) return '私教';
+      if (includesAny(raw, ['小班', '班课', '训练营', '专项'])) return '小班课';
+      if (includesAny(raw, ['私教'])) return '私教课';
     }
-    if (includesAny(raw, ['训练营', '专项', '小班', '班课'])) return '小班';
-    if (includesAny(raw, ['私教'])) return '私教';
+    if (includesAny(raw, ['训练营', '专项', '小班', '班课'])) return '小班课';
+    if (includesAny(raw, ['私教'])) return '私教课';
     if (includesAny(raw, ['订场', '定场', '场地'])) return '订场';
     if (includesAny(raw, ['储值', '会员'])) return '会员';
     if (includesAny(raw, ['陪打'])) return '陪打';

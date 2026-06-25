@@ -49,7 +49,7 @@ assert.strictEqual(lead.followupPriority, 'P1');
 assert.strictEqual(rules.normalizeLeadRecord({ followupPriority: 'P9' }, { id: 'lead-bad-priority', now: '2026-06-11T00:00:00.000Z' }).followupPriority, '');
 assert.strictEqual(lead.systemStatus, '跟进中');
 assert.strictEqual(lead.customerType, '成人');
-assert.strictEqual(lead.demandProduct, '私教');
+assert.strictEqual(lead.demandProduct, '私教课');
 assert.strictEqual(lead.dealType, '');
 assert.strictEqual(lead.conversionType, '');
 assert.strictEqual(

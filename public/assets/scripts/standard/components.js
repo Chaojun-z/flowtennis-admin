@@ -38,6 +38,51 @@ function renderStandardEmptyText(value){
   const raw=String(value??'').trim();
   return raw&&raw!=='—'?raw:'-';
 }
+function standardBusinessTagClass(kind,value=''){
+  const text=String(value||'').trim();
+  if(kind==='source'){
+    if(text==='大众点评')return 'tms-tag-business-source-dianping';
+    if(text==='小红书')return 'tms-tag-business-source-xiaohongshu';
+    if(text==='抖音'||text==='视频号')return 'tms-tag-business-source-video';
+    if(text==='线下到店')return 'tms-tag-business-source-store';
+    if(text==='转介绍'||text==='群友')return 'tms-tag-business-source-referral';
+    return 'tms-tag-business-neutral';
+  }
+  if(kind==='customerType'||kind==='type')return text==='青少年'?'tms-tag-business-type-youth':text==='成人'?'tms-tag-business-type-adult':'tms-tag-business-neutral';
+  if(kind==='demandProduct'||kind==='consult'||kind==='demand'){
+    if(/私教/.test(text))return 'tms-tag-business-demand-private';
+    if(/小班/.test(text))return 'tms-tag-business-demand-group';
+    if(/订场|场地/.test(text))return 'tms-tag-business-demand-court';
+    if(/会员/.test(text))return 'tms-tag-business-demand-member';
+    if(/陪打|约球|穿线|合作/.test(text))return 'tms-tag-business-demand-other';
+    return 'tms-tag-business-neutral';
+  }
+  if(kind==='stage'){
+    if(text==='新线索')return 'tms-tag-business-stage-new';
+    if(text==='跟进中')return 'tms-tag-business-stage-following';
+    if(text==='已约体验')return 'tms-tag-business-stage-booked';
+    if(text==='已体验待成交'||text==='已体验待转化')return 'tms-tag-business-stage-trial-done';
+    if(text.startsWith('已成交'))return 'tms-tag-business-stage-won';
+    if(text==='已流失')return 'tms-tag-business-stage-lost';
+    return 'tms-tag-business-neutral';
+  }
+  if(kind==='priority'){
+    if(text==='P0')return 'tms-tag-priority-p0';
+    if(text==='P1')return 'tms-tag-priority-p1';
+    if(text==='P2')return 'tms-tag-priority-p2';
+    if(text==='P3')return 'tms-tag-priority-p3';
+    return 'tms-tag-priority-p4';
+  }
+  return 'tms-tag-business-neutral';
+}
+function renderStandardBusinessTag(value,kind){
+  const text=String(value||'').trim()||'-';
+  return `<span class="tms-tag ${standardBusinessTagClass(kind,text)}">${esc(text)}</span>`;
+}
+function renderStandardTooltipText(value,className='tms-text-remark tms-text-remark-1'){
+  const text=renderStandardEmptyText(value);
+  return `<div class="${esc(className)} tms-tooltip-text" data-tooltip="${esc(text)}">${esc(text)}</div>`;
+}
 function renderStandardCellText(value,mutedWhenEmpty=true){
   const raw=String(value??'').trim();
   const text=renderStandardEmptyText(raw);
@@ -281,7 +326,7 @@ function renderStandardListPageShellHtml(config={}){
 }
 function standardListPageShellConfigs(){
   return [
-    {key:'leads',statsId:'leadStatsRow',toolbar:{search:{id:'leadSearch',oninput:'applyLeadSearch()'},filterHostIds:['leadSourceFilterHost','leadConsultFilterHost','leadStageFilterHost','leadOwnerFilterHost'],actionsHtml:'<span class="tms-import-action" onclick="openLeadImportPreviewModal()">导入</span><button class="tms-btn tms-btn-primary" onclick="openLeadModal(null)">新增线索</button>'},table:{bodyId:'leadTbody',pager:{infoId:'leadPagerInfo',pageSizeId:'leadPageSize',buttonsId:'leadPagerBtns'},columns:[{label:'微信名',className:'tms-sticky-l',style:'width:130px;padding-left:20px'},{style:'width:120px',html:'<button class="tms-sort-header" data-lead-sort="leadDate" onclick="cycleLeadSort(\'leadDate\')">线索时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'线索渠道',style:'width:110px'},{label:'客户类型',style:'width:90px'},{label:'需求产品',style:'width:110px'},{label:'水平',style:'width:80px'},{label:'基本信息',style:'width:220px'},{label:'线索阶段',style:'width:140px'},{label:'跟进优先级',style:'width:100px'},{label:'跟进人',style:'width:100px'},{style:'width:220px',html:'<button class="tms-sort-header" data-lead-sort="trialLessonAt" onclick="cycleLeadSort(\'trialLessonAt\')">体验课时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'成交教练',style:'width:110px'},{label:'流失原因',style:'width:170px'},{label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}]}},
+    {key:'leads',statsId:'leadStatsRow',toolbar:{search:{id:'leadSearch',oninput:'applyLeadSearch()'},filterHostIds:['leadSourceFilterHost','leadCustomerTypeFilterHost','leadConsultFilterHost','leadStageFilterHost','leadOwnerFilterHost'],actionsHtml:'<span class="tms-import-action" onclick="openLeadImportPreviewModal()">导入</span><button class="tms-btn tms-btn-primary" onclick="openLeadModal(null)">新增线索</button>'},table:{bodyId:'leadTbody',pager:{infoId:'leadPagerInfo',pageSizeId:'leadPageSize',buttonsId:'leadPagerBtns'},columns:[{label:'微信名',className:'tms-sticky-l',style:'width:130px;padding-left:20px'},{style:'width:120px',html:'<button class="tms-sort-header" data-lead-sort="leadDate" onclick="cycleLeadSort(\'leadDate\')">线索时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'来源',style:'width:110px'},{label:'类型',style:'width:90px'},{label:'需求产品',style:'width:110px'},{label:'水平',style:'width:80px'},{label:'基本信息',style:'width:280px'},{label:'线索阶段',style:'width:140px'},{label:'跟进优先级',style:'width:100px'},{label:'跟进人',style:'width:100px'},{style:'width:220px',html:'<button class="tms-sort-header" data-lead-sort="trialLessonAt" onclick="cycleLeadSort(\'trialLessonAt\')">体验课时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'成交教练',style:'width:110px'},{label:'流失原因',style:'width:170px'},{label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}]}},
     {key:'students',statsId:'studentStatsRow',toolbar:{search:{id:'stuSearch',oninput:'onStudentFilterChange()'},filterHostIds:['stuTypeFilterHost','stuSourceFilterHost','stuCoachFilterHost'],actionsHtml:'<span class="tms-export-action" onclick="exportStudentCSV()">导出</span><button class="tms-btn tms-btn-primary" onclick="openStudentModal(null)">添加学员</button>'},table:{bodyId:'stuTbody',pager:{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'},columns:[{label:'学员',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},{label:'电话',style:'width:94px'},{label:'类型',style:'width:58px'},{label:'校区',style:'width:105px'},{style:'width:110px',html:'<button class="tms-sort-header" data-student-sort="packagePurchaseDate" onclick="cycleStudentSort(\'packagePurchaseDate\')">课包购买时间<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{style:'width:100px',html:'<button class="tms-sort-header" data-student-sort="completedLessons" onclick="cycleStudentSort(\'completedLessons\')">累计上课<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'负责教练',style:'width:110px'},{style:'width:90px',html:'<button class="tms-sort-header" data-student-sort="packageLessons" onclick="cycleStudentSort(\'packageLessons\')">课时/课包<span class="tms-sort-icon"><span class="tms-sort-up"></span><span class="tms-sort-down"></span></span></button>'},{label:'来源',style:'width:90px'},{label:'备注',style:'width:180px'},{label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}]}},
     {key:'schedule',toolbar:{search:{id:'schSearch',oninput:'onScheduleFilterChange()'},filterHostIds:['schStatusFilterHost','schCoachFilterHost','schCourseTypeFilterHost','schFeedbackFilterHost'],actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="openScheduleModal(null)">添加排课</button>'},table:{bodyId:'schTbody',pager:{infoId:'schPagerInfo',pageSizeId:'schPageSize',buttonsId:'schPagerBtns',pageSizeTag:'span'},columns:[{label:'日期',className:'tms-sticky-l',style:'width:84px;padding-left:14px'},{label:'上课时间',style:'width:92px'},{label:'时长',style:'width:52px'},{label:'校区/场地',style:'width:125px'},{label:'教练',style:'width:68px'},{label:'学员',style:'width:120px'},{label:'课程类型',style:'width:156px'},{label:'教案',style:'width:58px'},{label:'重复?',style:'width:64px'},{label:'反馈',style:'width:58px'},{label:'状态',style:'width:68px'},{label:'操作',className:'tms-sticky-r',style:'width:118px;padding-right:10px;text-align:right'}]}},
     {key:'admin-users',toolbar:{search:{id:'adminUserSearch',oninput:'onAdminUserFilterChange()'},actionsHtml:'<button class="tms-btn tms-btn-primary" onclick="openAdminUserModal(null)">新增账号</button>'},table:{bodyId:'adminUserTbody',pager:{infoId:'adminUserPagerInfo',pageSizeId:'adminUserPageSize',buttonsId:'adminUserPagerBtns'},columns:[{label:'账号名',className:'tms-sticky-l',style:'width:130px;padding-left:20px'},{label:'姓名',style:'width:100px'},{label:'手机号',style:'width:112px'},{label:'角色',style:'width:90px'},{label:'绑定教练',style:'width:100px'},{label:'微信绑定',style:'width:130px'},{label:'服务号绑定',style:'width:130px'},{label:'状态',style:'width:82px'},{label:'权限说明',style:'width:260px'},{label:'操作',className:'tms-sticky-r',style:'width:170px;padding-right:20px;text-align:right'}]}},
@@ -323,6 +368,9 @@ Object.assign(window,{
   closeStandardTopDropdowns,
   toggleStandardTopDropdown,
   renderStandardEmptyText,
+  standardBusinessTagClass,
+  renderStandardBusinessTag,
+  renderStandardTooltipText,
   renderStandardCellText,
   renderStandardDropdownHtml,
   closeStandardDropdowns,

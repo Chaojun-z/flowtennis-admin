@@ -15,8 +15,8 @@ assert.strictEqual(rows.length, 2);
 assert.strictEqual(rows[0].displayName, 'Leah');
 assert.strictEqual(rows[0].source, '大众点评');
 assert.strictEqual(rows[0].customerType, '成人');
-assert.strictEqual(rows[0].demandProduct, '私教');
-assert.strictEqual(rows[0].consultType, '私教');
+assert.strictEqual(rows[0].demandProduct, '私教课');
+assert.strictEqual(rows[0].consultType, '私教课');
 
 const normalizedRows = rules.normalizeLeadImportRows({
   rows: [
@@ -27,8 +27,8 @@ const normalizedRows = rules.normalizeLeadImportRows({
 });
 assert.deepStrictEqual(normalizedRows.map(row => row.source), ['转介绍', '线下到店', '未知']);
 assert.deepStrictEqual(normalizedRows.map(row => row.customerType), ['成人', '青少年', '成人']);
-assert.deepStrictEqual(normalizedRows.map(row => row.demandProduct), ['小班', '小班', '合作']);
-assert.deepStrictEqual(normalizedRows.map(row => row.consultType), ['小班', '小班', '合作']);
+assert.deepStrictEqual(normalizedRows.map(row => row.demandProduct), ['小班课', '小班课', '合作']);
+assert.deepStrictEqual(normalizedRows.map(row => row.consultType), ['小班课', '小班课', '合作']);
 
 const deduped = rules.dedupeLeadRows(rows);
 assert.strictEqual(deduped.length, 1);
