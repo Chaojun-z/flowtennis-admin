@@ -15,7 +15,7 @@ function rowId(row = {}) {
 }
 
 function isConvertedStage(stage = '') {
-  return !['未转化', '已约体验', '已体验待转化', '已流失'].includes(text(stage));
+  return !['新线索', '跟进中', '未转化', '已约体验', '已体验待转化', '已流失'].includes(text(stage));
 }
 
 function lifecycleInScope(row = {}, scope = 'all') {
@@ -40,7 +40,7 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   if (hasBooking) return '订场转化';
   if (hasMembership) return '会员转化';
   if (studentStage === 'trial') return '已体验待转化';
-  if (studentStage === 'student') return '已约体验';
+  if (studentStage === 'student') return '跟进中';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
   if (/流失/.test(explicit)) return '已流失';
   if (/已体验|体验待转化/.test(explicit)) return '已体验待转化';
@@ -72,6 +72,14 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       campus: text(lifecycle.campus || lead.campus || lead.campusName),
       campusName: text(lifecycle.campus || lead.campusName || lead.campus),
       owner: text(lifecycle.owner || lead.owner || lead.coach || lead.coachName),
+      customerType: text(lifecycle.customerType || lead.customerType),
+      demandProduct: businessTaxonomy.normalizeLeadDemandProduct(lifecycle.demandProduct || lead.demandProduct || lead.consultType),
+      consultType: businessTaxonomy.normalizeLeadDemandProduct(lifecycle.demandProduct || lead.consultType || lead.demandProduct),
+      trialAtRaw: text(lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || lifecycle.trialAtRaw),
+      enrollAtRaw: text(lead.enrollAtRaw || lead.formalSignupAt || lead.enrollAt || lifecycle.courseFirstPurchaseAt),
+      conversionAt: text(lead.conversionAt || lifecycle.conversionAt),
+      formalCoach: text(lead.formalCoach || lifecycle.formalCoach),
+      profileNote: text(lead.profileNote || lifecycle.profileNote),
       studentId: text(lifecycle.studentId || lead.studentId || lead.formalStudentId || lead.courseStudentId),
       courtId: text(lifecycle.courtId || lead.courtId || lead.bookingCourtId),
       membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),

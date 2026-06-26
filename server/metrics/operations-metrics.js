@@ -606,7 +606,7 @@ function courseConversionRows(data = {}, options = {}) {
       studentId: sid,
       source: businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source || linkedStudent?.source),
       campus: campusLabel(lifecycle.campus || lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
-      coach: normalizeText(lifecycle.owner || linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.formalCoach || lead.primaryCoach || lead.coach || lead.coachName || lead.owner),
+      coach: normalizeText(lifecycle.formalCoach || lead.formalCoach || linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.primaryCoach || lead.coach || lead.coachName || lifecycle.owner || lead.owner),
       leadDate: firstRowDate(lead, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
       level: normalizeText(lead.level || linkedStudent?.level, ''),
       consultType: normalizeText(lead.consultType || linkedStudent?.consultType, ''),

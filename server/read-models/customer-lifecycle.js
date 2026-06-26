@@ -58,29 +58,90 @@ function rowHasStudent(row = {}, studentId = '') {
   return parseArr(row.studentIds).map(text).includes(id);
 }
 
+function dateValue(value) {
+  const raw = text(value);
+  if (!raw) return Number.POSITIVE_INFINITY;
+  const parsed = Date.parse(raw.replace(' ', 'T'));
+  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+}
+
+function firstDate(...values) {
+  return values
+    .flat()
+    .map(text)
+    .filter(Boolean)
+    .sort((a, b) => dateValue(a) - dateValue(b) || a.localeCompare(b))[0] || '';
+}
+
+function businessDate(row = {}) {
+  return firstValue(row.leadDate, row.followupAt, row.startTime, row.purchaseDate, row.businessDate, row.createdAt);
+}
+
+function rowAmount(row = {}) {
+  const fields = ['actualAmount', 'paidAmount', 'payAmount', 'amount', 'totalAmount', 'price', 'cashDelta', 'rechargeAmount'];
+  const values = fields
+    .filter(field => row[field] !== undefined && row[field] !== null && text(row[field]) !== '')
+    .map(field => Number(row[field]))
+    .filter(value => Number.isFinite(value));
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + Math.abs(value), 0);
+}
+
+function paidBusinessRow(row = {}) {
+  const amount = rowAmount(row);
+  return amount === null ? activeStatus(row) : activeStatus(row) && amount > 0;
+}
+
 function scheduleIsTrial(row = {}) {
   const normalized = businessTaxonomy.normalizeCourseType(row);
   const textValue = [row.courseType, row.standardCourseType, row.experienceType, row.packageName, row.productName].filter(Boolean).join(' ');
   return normalized.level1 === '体验课' || /体验/.test(textValue);
 }
 
+function demandFromCourseRow(row = {}) {
+  const normalized = businessTaxonomy.normalizeCourseType(row);
+  if (normalized.level1 === '体验课') return normalized.level2 === '小班体验课' ? '小班课' : '私教课';
+  return businessTaxonomy.normalizeLeadDemandProduct(normalized.level1);
+}
+
+function ownerForCampus(campus = '', owner = '') {
+  const current = text(owner);
+  if (current) return current;
+  const normalized = text(campus).toLowerCase();
+  return normalized === 'mabao' || normalized.includes('马坡') ? 'Mira' : '';
+}
+
+function studentRows(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+  const sid = text(student.id || student.studentId);
+  const studentPurchases = (purchases || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const scheduleRows = (schedule || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const formalPurchases = [...studentPurchases, ...entitlementRows]
+    .filter(row => !purchaseIsTrial(row) && paidBusinessRow(row))
+    .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
+  const trialRows = [...studentPurchases, ...entitlementRows, ...scheduleRows]
+    .filter(row => (purchaseIsTrial(row) || scheduleIsTrial(row)) && activeStatus(row))
+    .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
+  const courseRows = scheduleRows
+    .filter(row => !scheduleIsTrial(row))
+    .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
+  return { studentPurchases, entitlementRows, scheduleRows, formalPurchases, trialRows, courseRows };
+}
+
 function studentHasTrialExperience(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return false;
-  const studentPurchases = (purchases || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
-  const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const { studentPurchases, entitlementRows, scheduleRows } = studentRows(student, { purchases, entitlements, schedule });
   return studentPurchases.some(purchaseIsTrial)
     || entitlementRows.some(purchaseIsTrial)
-    || (schedule || []).some(row => rowHasStudent(row, sid) && activeStatus(row) && scheduleIsTrial(row));
+    || scheduleRows.some(scheduleIsTrial);
 }
 
 function studentStage(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return 'none';
-  const studentPurchases = (purchases || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
-  const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
-  const hasFormal = studentPurchases.some(row => !purchaseIsTrial(row)) || entitlementRows.some(row => !purchaseIsTrial(row));
-  if (hasFormal) return 'formal';
+  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
+  if (formalPurchases.length) return 'formal';
   const hasTrial = studentHasTrialExperience(student, { purchases, entitlements, schedule });
   if (hasTrial) return 'trial';
   return 'student';
@@ -115,10 +176,18 @@ function makeEmptyRow(key) {
     source: '未知',
     campus: '',
     owner: '',
+    customerType: '',
+    demandProduct: '',
+    trialAtRaw: '',
+    courseFirstPurchaseAt: '',
+    conversionAt: '',
+    formalCoach: '',
+    profileNote: '',
     studentStage: 'none',
     courtStage: 'none',
     membershipStatus: '',
     hasTrialExperience: false,
+    hasFreeCourseFollowup: false,
     leadDate: '',
     createdAt: '',
     hasCourseConversion: false,
@@ -183,7 +252,14 @@ function buildCustomerLifecycleRows({
       phone: text(lead.phone),
       source: businessTaxonomy.normalizeLeadSource(lead.source),
       campus: firstValue(lead.campus, lead.campusName),
-      owner: firstValue(lead.owner, lead.coach, lead.coachName),
+      owner: ownerForCampus(firstValue(lead.campus, lead.campusName), firstValue(lead.owner, lead.coach, lead.coachName)),
+      customerType: businessTaxonomy.normalizeLeadCustomerType(firstValue(lead.customerType, lead.consultType, lead.demandProduct, lead.profileNote)),
+      demandProduct: businessTaxonomy.normalizeLeadDemandProduct(firstValue(lead.demandProduct, lead.consultType)),
+      trialAtRaw: firstValue(lead.trialAtRaw, lead.trialLessonAt, lead.trialAt),
+      courseFirstPurchaseAt: firstValue(lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
+      conversionAt: firstValue(lead.conversionAt, lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
+      formalCoach: firstValue(lead.formalCoach, lead.dealCoach, lead.conversionCoach),
+      profileNote: firstValue(lead.profileNote, lead.notes),
       leadDate: firstValue(lead.leadDate, lead.createdAt),
       createdAt: firstValue(lead.createdAt, lead.leadDate)
     });
@@ -198,21 +274,56 @@ function buildCustomerLifecycleRows({
     const row = rowFor(sourceId, `student:${sid}`);
     const stage = studentStage(student, { purchases, entitlements, schedule });
     const hasTrialExperience = studentHasTrialExperience(student, { purchases, entitlements, schedule });
+    const { formalPurchases, trialRows, courseRows } = studentRows(student, { purchases, entitlements, schedule });
+    const firstFormal = formalPurchases[0] || null;
+    const firstTrial = trialRows[0] || null;
+    const firstCourse = courseRows[0] || null;
+    const firstBusinessDate = firstDate(
+      student.leadDate,
+      firstTrial ? businessDate(firstTrial) : '',
+      firstCourse ? businessDate(firstCourse) : '',
+      firstFormal ? businessDate(firstFormal) : '',
+      student.createdAt
+    );
+    const demandProduct = firstFormal
+      ? demandFromCourseRow(firstFormal)
+      : firstTrial
+        ? demandFromCourseRow(firstTrial)
+        : firstCourse
+          ? demandFromCourseRow(firstCourse)
+          : businessTaxonomy.normalizeLeadDemandProduct(firstValue(student.demandProduct, student.consultType, student.type, student.studentType));
+    const formalCoach = firstFormal ? firstValue(
+      firstFormal.ownerCoach,
+      firstFormal.coach,
+      firstFormal.coachName,
+      student.primaryCoach,
+      student.coach,
+      student.coachName
+    ) : '';
+    const campus = firstValue(student.campus, student.campusName);
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
       studentId: sid,
       displayName: firstValue(student.name, student.studentName),
       phone: text(student.phone),
       source: businessTaxonomy.normalizeLeadSource(student.source),
-      campus: firstValue(student.campus, student.campusName),
-      owner: firstValue(student.primaryCoach, student.owner, student.coach, student.coachName),
+      campus,
+      owner: ownerForCampus(campus, firstValue(student.owner, student.followupOwner)),
+      customerType: businessTaxonomy.normalizeLeadCustomerType(firstValue(student.customerType, student.type, student.studentType, student.profileNote, student.notes)),
+      demandProduct,
+      trialAtRaw: firstTrial ? businessDate(firstTrial) : '',
+      courseFirstPurchaseAt: firstFormal ? businessDate(firstFormal) : '',
+      conversionAt: firstFormal ? businessDate(firstFormal) : '',
+      formalCoach,
+      profileNote: firstValue(student.profileNote, student.notes, firstCourse && firstCourse.notes, firstFormal && firstFormal.notes),
       studentStage: stage,
       hasTrialExperience,
-      leadDate: firstValue(student.leadDate, student.createdAt),
+      leadDate: firstBusinessDate,
       createdAt: firstValue(student.createdAt, student.leadDate)
     });
     row.hasTrialExperience = row.hasTrialExperience || hasTrialExperience;
-    row.hasCourseConversion = stage === 'formal';
+    row.hasFreeCourseFollowup = row.hasFreeCourseFollowup || (!firstFormal && !!firstCourse);
+    row.hasCourseConversion = row.hasCourseConversion || stage === 'formal';
   });
 
   const courtsById = new Map();
@@ -289,9 +400,17 @@ function buildCustomerLifecycleRows({
         displayName: firstValue(lead.displayName, lead.wechatName, lead.name),
         source: businessTaxonomy.normalizeLeadSource(lead.source),
         campus: firstValue(lead.campus, lead.campusName),
-        owner: firstValue(lead.owner, lead.coach, lead.coachName)
+        owner: ownerForCampus(firstValue(lead.campus, lead.campusName), firstValue(lead.owner, lead.coach, lead.coachName)),
+        customerType: businessTaxonomy.normalizeLeadCustomerType(firstValue(lead.customerType, lead.consultType, lead.demandProduct, lead.profileNote)),
+        demandProduct: businessTaxonomy.normalizeLeadDemandProduct(firstValue(lead.demandProduct, lead.consultType)),
+        trialAtRaw: firstValue(lead.trialAtRaw, lead.trialLessonAt, lead.trialAt),
+        courseFirstPurchaseAt: firstValue(lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
+        conversionAt: firstValue(lead.conversionAt, lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
+        formalCoach: firstValue(lead.formalCoach, lead.dealCoach, lead.conversionCoach),
+        profileNote: firstValue(lead.profileNote, lead.notes)
       });
     }
+    row.owner = ownerForCampus(row.campus, row.owner);
     row.hasCourseConversion = row.hasCourseConversion || row.studentStage === 'formal';
     row.hasTrialExperience = !!row.hasTrialExperience;
     row.hasBookingConversion = row.hasBookingConversion || row.courtStage === 'booking' || row.courtStage === 'member';

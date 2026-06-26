@@ -4,6 +4,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../server/read-models/customer-lifecycle.js');
+const { buildLeadPoolRows } = require('../server/read-models/platform-metrics.js');
 
 const rows = buildCustomerLifecycleRows({
   leads: [
@@ -88,5 +89,79 @@ const sets = buildLeadConversionSetsFromLifecycle(rows);
 assert.ok(sets.course.has('lead-1'), 'course conversion set should use lifecycle sourceLeadId');
 assert.ok(sets.booking.has('lead-1'), 'booking conversion set should use lifecycle sourceLeadId');
 assert.ok(sets.membership.has('lead-1'), 'membership conversion set should use lifecycle sourceLeadId');
+
+const freePrivateRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-free-private',
+      name: '小鹿',
+      type: '成人',
+      campus: 'mabao',
+      createdAt: '2026-05-20T00:00:00.000Z',
+      notes: '未参加标准体验课，跟随朝军上免费私教课'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-free-private',
+      studentId: 'student-free-private',
+      courseType: '私教课',
+      coach: '朝军',
+      status: '已结束',
+      startTime: '2026-03-18T10:00:00.000Z',
+      actualAmount: 0,
+      paidAmount: 0,
+      notes: '免费私教跟进'
+    }
+  ]
+});
+
+const freePrivate = freePrivateRows[0];
+assert.strictEqual(freePrivate.leadDate, '2026-03-18T10:00:00.000Z', 'synthetic lead time should use the earliest business behavior, not later import/create time');
+assert.strictEqual(freePrivate.source, '未知');
+assert.strictEqual(freePrivate.customerType, '成人');
+assert.strictEqual(freePrivate.demandProduct, '私教课');
+assert.strictEqual(freePrivate.owner, 'Mira', 'mabao synthetic leads without an owner should default to Mira');
+assert.strictEqual(freePrivate.formalCoach, '', 'free private follow-up should not fill the paid deal coach field');
+assert.strictEqual(freePrivate.hasCourseConversion, false, 'free classes without paid purchase should not count as course conversion');
+assert.strictEqual(freePrivate.hasTrialExperience, false, 'free private classes should not be treated as standard trial lessons');
+
+const freePrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: freePrivateRows, lifecycleScope: 'course' });
+assert.strictEqual(freePrivateLeadRows[0].leadStage, '跟进中', 'free class follow-up should not become 已约体验 or 已成交');
+assert.strictEqual(freePrivateLeadRows[0].demandProduct, '私教课');
+
+const directPrivateRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-direct-private',
+      name: '私教直转',
+      type: '成人',
+      campus: 'mabao',
+      createdAt: '2026-05-20T00:00:00.000Z'
+    }
+  ],
+  purchases: [
+    {
+      id: 'purchase-direct-private',
+      studentId: 'student-direct-private',
+      packageName: '成人私教课 10 节',
+      courseType: '私教课',
+      status: 'active',
+      actualAmount: 6800,
+      purchaseDate: '2026-04-02'
+    }
+  ]
+});
+
+const directPrivate = directPrivateRows[0];
+assert.strictEqual(directPrivate.leadDate, '2026-04-02', 'paid direct conversion should use first paid purchase as the earliest known business time');
+assert.strictEqual(directPrivate.courseFirstPurchaseAt, '2026-04-02');
+assert.strictEqual(directPrivate.conversionAt, '2026-04-02');
+assert.strictEqual(directPrivate.demandProduct, '私教课');
+assert.strictEqual(directPrivate.hasCourseConversion, true, 'paid private purchase should count as course conversion');
+
+const directPrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: directPrivateRows, lifecycleScope: 'course' });
+assert.strictEqual(directPrivateLeadRows[0].leadStage, '课程转化');
+assert.strictEqual(directPrivateLeadRows[0].enrollAtRaw, '2026-04-02');
 
 console.log('customer lifecycle read model tests passed');
