@@ -205,7 +205,7 @@ function studentSortHeader(key,label){
 }
 function studentTableColumns(){
   if(studentListViewMode()==='trial')return [
-    {label:'学员',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
+    {label:'姓名',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
     {label:'类型',style:'width:58px'},
     {label:'来源',style:'width:90px'},
     {label:'校区',style:'width:105px'},
@@ -217,7 +217,7 @@ function studentTableColumns(){
     {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
   ];
   return [
-    {label:'学员',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
+    {label:'姓名',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
     {label:'电话',style:'width:94px'},
     {label:'类型',style:'width:58px'},
     {label:'校区',style:'width:105px'},
@@ -496,9 +496,9 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'学员数',valueHtml:stats.total},
-    {label:'体验课人数',valueHtml:stats.trialStudentCount,percent:studentPercentText(stats.trialStudentCount,stats.total),sub:'体验课人数 / 学员数占比'},
-    {label:'体验课转化',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'体验课人数 vs 体验课转正人数'},
+    {label:'当前列表人数',valueHtml:stats.total},
+    {label:'当前列表体验学员',valueHtml:stats.trialStudentCount,percent:studentPercentText(stats.trialStudentCount,stats.total),sub:'当前筛选学员范围'},
+    {label:'当前列表课程成交',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'当前列表体验学员 vs 课程成交'},
     {label:'体验课收入',valueHtml:`¥${fmt(stats.trialIncome)}`}
   ];
   return [

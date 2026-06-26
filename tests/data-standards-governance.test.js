@@ -18,6 +18,7 @@ assert.ok(fs.existsSync(checklistPath), 'data-standard checklist should exist fo
 
 const prTemplate = fs.readFileSync(prTemplatePath, 'utf8');
 const checklist = fs.readFileSync(checklistPath, 'utf8');
+const standardComponentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/standard/components.js'), 'utf8');
 
 assert.match(agentsSource, /口径变更开发流程硬规则/, 'AGENTS should expose a mandatory data-standard development workflow');
 assert.match(agentsSource, /docs\/FlowTennis全平台数据口径总表\.md/, 'AGENTS should point every data-related change to the single metric standard');
@@ -26,6 +27,23 @@ assert.match(agentsSource, /tests\/cross-page-metric-consistency\.test\.js/, 'AG
 assert.match(packageJson.scripts.test, /node tests\/cross-page-metric-consistency\.test\.js/, 'npm test should run cross-page metric consistency guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standards-governance\.test\.js/, 'npm test should run data-standard governance guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.test\.js/, 'npm test should run source-level data-standard guard');
+
+[
+  { key: 'leads', label: '姓名' },
+  { key: 'students', label: '姓名' },
+  { key: 'purchases', label: '姓名' },
+  { key: 'entitlements', label: '姓名' },
+  { key: 'mystudents', label: '姓名' },
+  { key: 'memberships', label: '姓名' },
+  { key: 'courts', label: '姓名' }
+].forEach(({ key, label }) => {
+  const marker = `key:'${key}'`;
+  const start = standardComponentsSource.indexOf(marker);
+  assert.notStrictEqual(start, -1, `${key} standard list shell should exist`);
+  const block = standardComponentsSource.slice(start, standardComponentsSource.indexOf('\n    {key:', start + 1) === -1 ? standardComponentsSource.length : standardComponentsSource.indexOf('\n    {key:', start + 1));
+  assert.match(block, new RegExp(`label:'${label}'|>${label}<|<span>${label}</span>`), `${key} first customer identity column should use 姓名`);
+  assert.doesNotMatch(block, /label:'微信名'|label:'学员'|label:'会员姓名'|label:'客户姓名'|label:'用户名'/, `${key} should not create another customer-name label`);
+});
 
 [
   '数据口径总表已更新或确认无需更新',

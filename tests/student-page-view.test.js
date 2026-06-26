@@ -52,7 +52,7 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*学员数[\s\S]*体验课人数[\s\S]*体验课人数 \/ 学员数占比[\s\S]*体验课转化[\s\S]*体验课收入/, 'trial student top stats should show the requested four-card data');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*当前列表人数[\s\S]*当前列表体验学员[\s\S]*当前筛选学员范围[\s\S]*当前列表课程成交[\s\S]*体验课收入/, 'trial student top stats should show explicit list-scope cards instead of global funnel labels');
 assert.match(source, /function studentFinanceStatsForBase\(/, 'student finance cards should read the unified finance row model');
 assert.match(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)/, 'student top finance stats should use the unified finance model for income and recognized amount');
 assert.match(fnBody('studentPageStats'), /trialIncome:Math\.round\(\(financeStats\?financeStats\.trialIncome:trialIncome\)\*100\)\/100/, 'trial student stats should expose trial-only income from the finance read model');
@@ -75,12 +75,12 @@ assert.match(source, /data-student-sort="packagePurchaseDate"[\s\S]*课包购买
 assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should hide the current class column');
 assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
 assert.match(source, /function studentPackageNameText\(/, 'student list should expose package-name display text for normal students');
-assert.match(source, /function studentTableColumns\(\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*label:'学员'[\s\S]*label:'类型'[\s\S]*label:'来源'[\s\S]*label:'校区'[\s\S]*label:'体验状态'[\s\S]*studentSortHeader\('packagePurchaseDate','课包购买时间'\)[\s\S]*label:'课包'[\s\S]*label:'负责教练'[\s\S]*label:'备注'/, 'normal student table should use the requested column order');
+assert.match(source, /function studentTableColumns\(\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*label:'姓名'[\s\S]*label:'类型'[\s\S]*label:'来源'[\s\S]*label:'校区'[\s\S]*label:'体验状态'[\s\S]*studentSortHeader\('packagePurchaseDate','课包购买时间'\)[\s\S]*label:'课包'[\s\S]*label:'负责教练'[\s\S]*label:'备注'/, 'normal student table should use the requested column order');
 assert.match(source, /label:'成交路径'/, 'official student table should show the deal path');
 const trialStudentColumns = fnBody('studentTableColumns').match(/if\(studentListViewMode\(\)==='trial'\)return \[([\s\S]*?)\];/)?.[1] || '';
 assert.doesNotMatch(trialStudentColumns, /label:'电话'/, 'trial student table should not show phone column');
 assert.doesNotMatch(trialStudentColumns, /最近上课|累计上课|课包\/课时/, 'normal student table should remove lesson recency, cumulative lessons, and lesson-count package balance');
-const officialStudentColumns = fnBody('studentTableColumns').match(/return \[\s*\n    \{label:'学员'[\s\S]*?\n  \];\n\}/)?.[0] || '';
+const officialStudentColumns = fnBody('studentTableColumns').match(/return \[\s*\n    \{label:'姓名'[\s\S]*?\n  \];\n\}/)?.[0] || '';
 assert.doesNotMatch(officialStudentColumns, /最近上课/, 'official student table should remove recent lesson column');
 assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='packagePurchaseDate';stuSortDir='desc'/, 'normal and official student lists should default to latest purchase descending');
 assert.match(source, /return studentListViewMode\(\)==='trial'\?studentHasTrialPath\(stu\)&&!hasPackage:hasPackage;/, 'normal student list should exclude students who already bought formal packages');
@@ -338,7 +338,7 @@ assert.match(source, /实际成交价与系统价格不一致时必填/, 'purcha
 assert.match(source, /tms-readonly-text/, 'student detail long readonly fields should use padded readonly text blocks');
 assert.match(source, /purchase-coach-picker[\s\S]*purchase-notes-row/, 'purchase allowed coach picker should reuse the student picker block style');
 assert.match(source, /function purchaseAllowedCoachChecks[\s\S]*tms-checkbox-wrap[\s\S]*tms-checkbox/, 'purchase allowed coach options should use the standard checkbox row style');
-assert.match(source, /\{key:'purchases'[\s\S]*columns:\[\{label:'支付日期',style:'width:100px;padding-left:20px'\},\{label:'学员',style:'width:80px'\},\{label:'课包',style:'width:260px'\},\{label:'实收',style:'width:70px'\},\{label:'余额',style:'width:80px'\},\{label:'状态',style:'width:64px'\},\{label:'归属教练',style:'width:78px'\},\{label:'支付方式',style:'width:78px'\}/, 'purchase record table should follow the current column order');
+assert.match(source, /\{key:'purchases'[\s\S]*columns:\[\{label:'支付日期',style:'width:100px;padding-left:20px'\},\{label:'姓名',style:'width:80px'\},\{label:'课包',style:'width:260px'\},\{label:'实收',style:'width:70px'\},\{label:'余额',style:'width:80px'\},\{label:'状态',style:'width:64px'\},\{label:'归属教练',style:'width:78px'\},\{label:'支付方式',style:'width:78px'\}/, 'purchase record table should follow the current column order');
 assert.match(source, /pager:\{infoId:'purPagerInfo',pageSizeId:'purPageSize',buttonsId:'purPagerBtns'\}/, 'purchase record page should expose the standard pager');
 assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=standardListFirstPage\(\)[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination through the standard list flow');
 assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');

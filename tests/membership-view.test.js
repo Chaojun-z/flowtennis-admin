@@ -362,7 +362,7 @@ assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,
 assert.match(fnBody('renderMemberships'), /membershipReadModelBookingForCourt\(court\)[\s\S]*memberBookingCount[\s\S]*bookingCount/, 'membership management should show member bookings and total bookings from the unified read model');
 assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{court\.id\}'\)">订场/, 'membership management should provide view and booking actions');
 assert.match(membershipShell, /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
-assert.match(membershipShell, /label:'会员姓名'[\s\S]*className:'tms-sticky-l'/, 'membership management should freeze the member name column');
+assert.match(membershipShell, /label:'姓名'[\s\S]*className:'tms-sticky-l'/, 'membership management should freeze the member name column using the global customer display name');
 assert.match(membershipShell, /membershipPagerInfo[\s\S]*membershipPageSize[\s\S]*membershipPagerBtns/, 'membership management should use the standard compact pager');
 assert.match(fnBody('renderMemberships'), /renderStandardEmptyText\(benefits\)/, 'membership management should normalize empty benefit text to hyphen');
 assert.match(pagesCss, /#page-memberships \.tms-table th\.tms-sticky-l[\s\S]*left:0/s, 'membership management table should freeze the left name column');

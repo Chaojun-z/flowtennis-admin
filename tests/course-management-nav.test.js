@@ -329,7 +329,7 @@ assert.doesNotMatch(purchaseShellConfig, /purDateFrom/, 'purchase page should re
 assert.doesNotMatch(purchaseShellConfig, /purDateTo/, 'purchase page should remove end date filter');
 assert.match(html, /function openPurchaseModal[\s\S]*支付方式[\s\S]*margin-bottom:0[\s\S]*可上课教练/, 'purchase modal should put pay method and allowed coach fields on separate rows to avoid layout overlap');
 assert.match(html, /openPurchaseEntryModal\(\)">课包购买/, 'purchase page should expose a direct package purchase entry button');
-assert.match(purchaseShellConfig, /label:'支付日期',style:'width:100px;padding-left:20px'[\s\S]*label:'学员',style:'width:80px'[\s\S]*label:'课包',style:'width:260px'[\s\S]*label:'实收',style:'width:70px'[\s\S]*label:'余额',style:'width:80px'[\s\S]*label:'状态',style:'width:64px'[\s\S]*label:'归属教练',style:'width:78px'[\s\S]*label:'支付方式',style:'width:78px'/, 'purchase table should widen package column and compact secondary columns');
+assert.match(purchaseShellConfig, /label:'支付日期',style:'width:100px;padding-left:20px'[\s\S]*label:'姓名',style:'width:80px'[\s\S]*label:'课包',style:'width:260px'[\s\S]*label:'实收',style:'width:70px'[\s\S]*label:'余额',style:'width:80px'[\s\S]*label:'状态',style:'width:64px'[\s\S]*label:'归属教练',style:'width:78px'[\s\S]*label:'支付方式',style:'width:78px'/, 'purchase table should widen package column and compact secondary columns');
 assert.doesNotMatch(html, /购买记录用于查账和追溯/, 'purchase page should remove the long audit explanation');
 assert.doesNotMatch(fnBody('purchasePackageListLabel'), /replace\(\s*\/\^1v\\d私教课/, 'purchase package column should keep the 1v1/1v2 prefix');
 assert.match(fnBody('purchasePackageListLabel'), /replace\([^)]*已停售/, 'purchase package column should only remove stopped-sale copy from the package label');
