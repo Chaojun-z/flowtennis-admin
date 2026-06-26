@@ -67,6 +67,9 @@ assert.match(operationsMetricsSource, /function buildOverviewTrendDailyRows\(\{[
 assert.match(operationsMetricsSource, /function lifecycleRowsForData\(data = \{\}\)/, 'operations metrics should use one lifecycle row source for conversion calculations');
 assert.match(operationsMetricsSource, /if \(Array\.isArray\(data\.customerLifecycleRows\) && data\.customerLifecycleRows\.length\) return data\.customerLifecycleRows;/, 'operations metrics should prefer lifecycle rows already built by page-data');
 assert.doesNotMatch(operationsMetricsSource, /buildPlatformMetrics/, 'operations conversion must not use the full searchable customer pool as course lead statistics');
+assert.match(operationsMetricsSource, /require\('\.\.\/read-models\/platform-metrics\.js'\)/, 'operations metrics should reuse the unified lead-pool read model when deriving raw lead stages');
+assert.match(operationsMetricsSource, /function leadPoolRowsForData\(data = \{\}\)/, 'operations metrics should materialize raw lead-pool rows from the unified lifecycle read model');
+assert.match(operationsMetricsSource, /const rangedLeadPoolByLeadId = buildLeadPoolByLeadId\(leadPoolRowsForData\(/, 'operations stage rows should be driven by unified raw lead-pool rows instead of a second local stage tree');
 assert.match(operationsMetricsSource, /const totalLeads = \(rangedData\.leads \|\| \[\]\)\.length/, 'operations conversion lead total should use raw course leads only');
 assert.match(operationsMetricsSource, /const convertedLeads = Number\(courseFunnel\[3\]\?\.count\) \|\| 0/, 'operations converted leads should use the course deal funnel step only');
 assert.match(operationsMetricsSource, /const sourceRows = buildCourseSourceRows\(courseRows\)/, 'operations source rows should use course conversion rows, not booking or member rows');
