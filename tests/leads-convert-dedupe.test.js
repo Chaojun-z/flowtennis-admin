@@ -42,13 +42,30 @@ async function main() {
         dealType: '课程',
         leadDate: '2026-06-26T03:37:16.269Z',
         createdAt: '2026-06-26T03:37:16.269Z'
+      },
+      {
+        id: 'lead-from-student-student-shell',
+        displayName: '学生壳',
+        wechatName: '学生壳',
+        studentId: 'student-shell',
+        source: '小红书',
+        customerType: '成人',
+        demandProduct: '其他',
+        leadStage: '已成交',
+        systemStatus: '已成交',
+        conversionType: '课程',
+        dealType: '课程',
+        isCourseConverted: true,
+        leadDate: '',
+        createdAt: '2026-06-26T03:37:16.269Z'
       }
     ],
     ft_students: [
       { id: 'student-1', name: '小成' },
       { id: 'student-2', name: '可搜学员', phone: '13900000002', createdAt: '2026-06-26T03:37:16.269Z' },
       { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26T03:37:16.269Z' },
-      { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26T03:37:16.269Z' }
+      { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26T03:37:16.269Z' },
+      { id: 'student-shell', name: '学生壳', phone: '', campus: 'chaojun', updatedAt: '2026-06-01T09:51:06.467Z' }
     ],
     ft_courts: [{ id: 'court-1', name: '小成', status: 'active' }],
     ft_purchases: [{
@@ -128,6 +145,11 @@ async function main() {
   assert.notStrictEqual(String(missingStudentLead.leadDate || '').slice(0, 10), '2026-06-26', '找不到学员事实的倒推线索不能继续展示错误落表日期 6 月 26');
   assert.notStrictEqual(missingStudentLead.leadStage, '已成交', '找不到学员/购课/上课事实时不能仅凭旧状态显示已成交');
   assert.strictEqual(missingStudentLead.dealType, '', '找不到学员/购课/上课事实时不能仅凭旧字段显示已成交课程');
+  const shellStudentLead = listRes.body.find((row) => row.displayName === '学生壳');
+  assert.ok(shellStudentLead, '有学生壳但没有购课/排课事实的倒推线索仍应出现在列表，方便后续人工处理');
+  assert.strictEqual(shellStudentLead.leadDate, '', '学生壳没有业务事实时不能用合成线索 createdAt 显示为 6 月 26');
+  assert.strictEqual(shellStudentLead.leadStage, '跟进中', '学生壳没有业务事实时不能显示已成交');
+  assert.strictEqual(shellStudentLead.dealType, '', '学生壳没有业务事实时不能显示已成交课程');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
     writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),

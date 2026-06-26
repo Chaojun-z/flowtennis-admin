@@ -25,6 +25,14 @@ function leadId(row = {}) {
   return text(row.id || row.leadId);
 }
 
+function materializedStudentLead(row = {}) {
+  return /^lead-from-student-/.test(leadId(row));
+}
+
+function materializedLifecycleSource(row = {}) {
+  return /^lead-from-student-/.test(text(row.sourceLeadId || row.leadId));
+}
+
 function mergedLeadIds(row = {}) {
   return parseArr(row._mergedLeadIds).map(text).filter(Boolean);
 }
@@ -326,8 +334,8 @@ function buildCustomerLifecycleRows({
       conversionAt: firstValue(lead.conversionAt, lead.courseFirstPurchaseAt, lead.enrollAtRaw, lead.formalSignupAt, lead.enrollAt),
       formalCoach: firstValue(lead.formalCoach, lead.dealCoach, lead.conversionCoach),
       profileNote: firstValue(lead.profileNote, lead.notes),
-      leadDate: firstValue(lead.leadDate, lead.createdAt),
-      leadEnteredAt: firstValue(lead.leadDate, lead.createdAt),
+      leadDate: firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt),
+      leadEnteredAt: firstValue(lead.leadDate, materializedStudentLead(lead) ? '' : lead.createdAt),
       firstTouchAt: firstDate(
         lead.leadDate,
         lead.trialAtRaw,
@@ -338,7 +346,7 @@ function buildCustomerLifecycleRows({
         lead.formalSignupAt,
         lead.enrollAt,
         lead.conversionAt,
-        lead.createdAt
+        materializedStudentLead(lead) ? '' : lead.createdAt
       ),
       createdAt: firstValue(lead.createdAt, lead.leadDate)
     });
@@ -510,6 +518,7 @@ function buildCustomerLifecycleRows({
 
   return [...byKey.values()].map(row => {
     const lead = leadsById.get(row.sourceLeadId) || {};
+    const ignoreSystemCreatedAtAsBusinessDate = materializedLifecycleSource(row);
     if (lead && lead.id) {
       mergeIntoRow(row, {
         displayName: firstValue(lead.displayName, lead.wechatName, lead.name),
@@ -538,7 +547,7 @@ function buildCustomerLifecycleRows({
       row.courseFirstPurchaseAt,
       row.bookingFirstAt,
       row.membershipFirstAt,
-      row.createdAt
+      ignoreSystemCreatedAtAsBusinessDate ? '' : row.createdAt
     );
     row.hasCourseConversion = row.hasCourseConversion || row.studentStage === 'formal';
     row.hasTrialExperience = !!row.hasTrialExperience;
