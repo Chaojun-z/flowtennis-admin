@@ -202,6 +202,18 @@ function membershipTierLabel(account, membershipOrders = [], membershipPlans = [
   return account?.tierCode || latestOrder?.tierCode || plan?.tierCode || '-';
 }
 
+function validMembershipOrdersForAccount(account, membershipOrders = []) {
+  if (!account) return [];
+  const accountId = String(account?.id || '').trim();
+  const courtId = String(account?.courtId || '').trim();
+  return (membershipOrders || []).filter((row) => {
+    const status = String(row?.status || '').trim();
+    if (['voided', 'refunded', 'deleted', 'cancelled', 'canceled'].includes(status)) return false;
+    if (accountId && String(row?.membershipAccountId || '').trim() === accountId) return true;
+    return courtId && String(row?.courtId || '').trim() === courtId;
+  });
+}
+
 function linkedStudentSummary(court, students = []) {
   const ids = [...new Set([
     ...parseArr(court?.studentIds).map((item) => String(item || '').trim()).filter(Boolean),
@@ -232,6 +244,7 @@ function buildLegacyItem(court, ctx) {
   const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
   const studentSummary = linkedStudentSummary(court, ctx.students);
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
+  const membershipRechargeCount = validMembershipOrdersForAccount(account, ctx.membershipOrders).length;
   return {
     id: court.id,
     history: normalizeCourtHistory(court?.history),
@@ -254,6 +267,9 @@ function buildLegacyItem(court, ctx) {
     linkedStudentSummary: studentSummary,
     lowBalance: finance.balance > 0 && finance.balance <= 500,
     memberBookingCount: bookingSummary.memberBookingCount,
+    membershipRechargeCount,
+    hasMembershipRepeatRecharge: membershipRechargeCount > 1,
+    hasMembershipBookingRetention: bookingSummary.memberBookingCount > 0,
     bookingCount: bookingSummary.bookingCount,
     bookingHours: bookingSummary.bookingHours,
     memberBookingAmount: bookingSummary.memberBookingAmount,
@@ -300,6 +316,9 @@ function buildSummary(items = []) {
     totalBookingHours: money(items.reduce((sum, item) => sum + money(item?.bookingHours), 0)),
     totalMemberBookingCount: items.reduce((sum, item) => sum + (Number(item?.memberBookingCount) || 0), 0),
     totalMemberBookingAmount: money(items.reduce((sum, item) => sum + money(item?.memberBookingAmount), 0)),
+    totalMembershipRechargeCount: items.reduce((sum, item) => sum + (Number(item?.membershipRechargeCount) || 0), 0),
+    totalMembershipRepeatRechargeCount: items.filter((item) => item?.hasMembershipRepeatRecharge).length,
+    totalMembershipRetainedCount: memberItems.filter((item) => item?.hasMembershipBookingRetention).length,
     totalGuestBookingCount: items.reduce((sum, item) => sum + (Number(item?.guestBookingCount) || 0), 0),
     totalGuestBookingAmount: money(items.reduce((sum, item) => sum + money(item?.guestBookingAmount), 0)),
     totalBookingAmount: money(items.reduce((sum, item) => sum + money(item?.bookingAmount), 0))
@@ -384,6 +403,9 @@ function createCourtAccountListCompareLoader(deps) {
     'membershipDiscountText',
     'membershipValidUntil',
     'linkedStudentSummary',
+    'membershipRechargeCount',
+    'hasMembershipRepeatRecharge',
+    'hasMembershipBookingRetention',
     'balance',
     'totalDeposit',
     'totalSpent',

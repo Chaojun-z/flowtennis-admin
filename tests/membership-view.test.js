@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { appSource: html } = require('./helpers/read-index-bundle');
+const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
 const pagesCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/pages.css'), 'utf8');
 const statusCss = fs.readFileSync(path.join(__dirname, '../public/assets/styles/components/status-tags.css'), 'utf8');
@@ -43,6 +44,12 @@ assert.match(html, /会员储值[\s\S]*充值金额[\s\S]*需履约总金额[\s\
 assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 赠送金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
 assert.match(fnBody('renderMembershipStats'), /renderStandardDataCards\(/, 'membership summary should use the global data card renderer');
 assert.match(fnBody('renderMembershipStats'), /percent:statPercentText\(totalRecognized,poolTotal\)[\s\S]*percent:statPercentText\(pendingTotal,poolTotal\)/, 'membership recognized and pending cards should use global percentage formatting');
+assert.match(html, /function membershipReadModelItemForCourt\(/, 'membership management should resolve account facts from the court account read model');
+assert.match(fnBody('renderMembershipStats'), /membershipReadModelFinanceForCourt\(/, 'membership summary should read balances and booking facts from the court account read model');
+assert.match(fnBody('membershipSortMetric'), /membershipReadModelFinanceForCourt\([\s\S]*membershipReadModelBookingForCourt\(/, 'membership sorting should read balance and booking facts from the court account read model');
+assert.match(fnBody('renderMemberships'), /membershipReadModelItemForCourt\(/, 'membership list rows should read balances and booking facts from the court account read model');
+assert.match(fnBody('courtMembershipPanelHtml'), /membershipReadModelItemForCourt\(/, 'membership account detail should read account overview facts from the court account read model');
+assert.match(stateSource, /if\(pg==='courts'\|\|pg==='memberships'\)\{[\s\S]*await loadCourtReadModelGuardData\(\{force\}\);/, 'memberships page should load the court account read model before rendering membership metrics');
 assert.match(html, /id="page-memberships" data-standard-list-shell="memberships"/, 'membership management page should mount the standard list shell');
 assert.match(membershipShell, /search:\{id:'membershipSearch'/, 'membership management page should use the court-style toolbar');
 assert.match(membershipShell, /bodyId:'membershipTbody'/, 'membership management page should use the standard table shell');
@@ -352,7 +359,7 @@ assert.match(html, /function onMembershipToolbarFilterChange\(\)/, 'membership m
 assert.match(membershipShell, /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
 assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订场次数/, 'membership management should remove old column labels');
 assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
-assert.match(fnBody('renderMemberships'), /membershipBookingCount\(court\)[\s\S]*courtBookingSummary\(court\)\.count/, 'membership management should show member bookings and total bookings separately');
+assert.match(fnBody('renderMemberships'), /membershipReadModelBookingForCourt\(court\)[\s\S]*memberBookingCount[\s\S]*bookingCount/, 'membership management should show member bookings and total bookings from the unified read model');
 assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{court\.id\}'\)">订场/, 'membership management should provide view and booking actions');
 assert.match(membershipShell, /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"[\s\S]*data-membership-sort="validUntil"/, 'membership management should expose sortable first-open date, booking count, balance and validity columns');
 assert.match(membershipShell, /label:'会员姓名'[\s\S]*className:'tms-sticky-l'/, 'membership management should freeze the member name column');

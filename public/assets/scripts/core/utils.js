@@ -550,7 +550,7 @@ function latestCourtUseDateForStudent(stu){
 function studentAccountSummaryHtml(stu){
   const linkedCourts=courtsForStudent(stu);
   if(!linkedCourts.length)return '<div style="color:var(--td);font-size:12px">暂无关联订场账户</div>';
-  return linkedCourts.map(c=>{const f=courtFinanceLocal(c);return `<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.name)}：余额 ¥${fmt(f.balance)}，累计消费 ¥${fmt(f.spentAmount)}</div>`;}).join('');
+  return linkedCourts.map(c=>{const f=typeof membershipReadModelFinanceForCourt==='function'?membershipReadModelFinanceForCourt(c):courtFinanceLocal(c);return `<div style="font-size:12px;color:var(--tb);margin:3px 0">${esc(c.name)}：余额 ¥${fmt(f.balance)}，累计消费 ¥${fmt(f.spentAmount)}</div>`;}).join('');
 }
 function membershipStatusText(status){
   return ({active:'正常',extended:'延续期',expired:'已到期',cleared:'已清零',voided:'已作废',inactive:'未启用'}[status]||status||'—');
@@ -935,7 +935,7 @@ function courtMembershipTierTagClass(tierLabel){
 function studentMembershipSummaryHtml(stu){
   const linked=courtsForStudent(stu);
   if(!linked.length)return '<div style="font-size:12px;color:var(--td)">暂无关联订场账户会员摘要</div>';
-  return linked.map(c=>{const m=courtMembershipSummary(c);return `<div style="font-size:12px;color:var(--tb);margin:3px 0">关联订场账户会员摘要：${esc(c.name)} · ${m.accountType} · ${esc(m.memberLabel)} · ${m.status} · ${m.discount} · 到期 ${m.validUntil}</div>`;}).join('');
+  return linked.map(c=>{const item=typeof membershipReadModelItemForCourt==='function'?membershipReadModelItemForCourt(c):null;const m=courtMembershipSummary(c);return `<div style="font-size:12px;color:var(--tb);margin:3px 0">关联订场账户会员摘要：${esc(c.name)} · ${item?.accountType||m.accountType} · ${esc(m.memberLabel)} · ${item?.membershipStatus||m.status} · ${item?.membershipDiscountText||m.discount} · 到期 ${item?.membershipValidUntil||m.validUntil}</div>`;}).join('');
 }
 function studentClasses(stu){
   return classes.filter(c=>parseArr(c.studentIds).includes(stu?.id));

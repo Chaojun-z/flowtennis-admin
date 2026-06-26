@@ -48,6 +48,8 @@ assert.match(fnBody('studentDetailOrdersTabHtml'), /studentDetailMetricsHtml\(s\
 assert.match(fnBody('studentBasicInfoReadonlyHtml'), /studentDetailFieldHtml\('备注'/, 'student notes should render as a normal readonly field');
 assert.doesNotMatch(fnBody('studentBasicInfoReadonlyHtml'), /studentDetailBlockHtml\('备注'/, 'student notes should not render as a block box');
 assert.match(source, /studentDetailOrdersTabHtml\(s\)[\s\S]*useGrid:false/, 'student lesson records should span the full drawer width');
+assert.match(fnBody('studentAccountSummaryHtml'), /membershipReadModelFinanceForCourt/, 'student detail linked booking account summary should read balance and spending from the court account read model');
+assert.match(fnBody('studentMembershipSummaryHtml'), /membershipReadModelItemForCourt/, 'student detail linked membership summary should read membership facts from the court account read model');
 assert.match(fnBody('studentLessonRecordHtml'), /renderDetailDrawerTimeline\(items,\{emptyText:'暂无上课记录'\}\)/, 'student lesson records should use the shared drawer timeline');
 assert.match(source, /studentDetailBenefitsTabHtml\(s\)[\s\S]*useGrid:false/, 'student benefit records should span the full drawer width');
 assert.match(source, /studentBenefitListTableHtml\(s\)[\s\S]*renderDetailDrawerTable/, 'student benefit list should use the shared drawer table');

@@ -81,7 +81,11 @@ async function main() {
       validUntil: '2026-12-31',
       updatedAt: '2026-05-13T10:00:00.000Z'
     }],
-    membershipOrders: [],
+    membershipOrders: [
+      { id: 'order-1', courtId: 'court-1', membershipAccountId: 'ma-1', status: 'paid', rechargeAmount: 500, purchaseDate: '2026-05-01' },
+      { id: 'order-2', courtId: 'court-1', membershipAccountId: 'ma-1', status: 'paid', rechargeAmount: 300, purchaseDate: '2026-05-15' },
+      { id: 'order-voided', courtId: 'court-1', membershipAccountId: 'ma-1', status: 'voided', rechargeAmount: 999, purchaseDate: '2026-05-20' }
+    ],
     membershipPlans: []
   };
   const getCachedScan = async (tableName) => datasets[tableName] || [];
@@ -112,6 +116,9 @@ async function main() {
   assert.strictEqual(view.items[0].bookingHours, 3.5, '读模型应统计订场总时长');
   assert.strictEqual(view.items[0].bookingAmount, 500, '读模型应汇总订场消费金额');
   assert.strictEqual(view.items[0].memberBookingAmount, 300, '读模型应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.items[0].membershipRechargeCount, 2, '读模型应输出会员有效储值次数');
+  assert.strictEqual(view.items[0].hasMembershipRepeatRecharge, true, '读模型应输出会员复充标记');
+  assert.strictEqual(view.items[0].hasMembershipBookingRetention, true, '读模型应输出会员储值后继续订场消费标记');
   assert.strictEqual(view.items[0].guestBookingCount, 1, '会员名下的微信订场仍应按散客订场统计');
   assert.strictEqual(view.items[0].guestBookingAmount, 200, '会员名下的微信订场金额应计入散客金额');
   assert.strictEqual(view.items[0].lastBookingDate, '2026-05-12', '读模型应输出最近订场日期');
@@ -120,6 +127,9 @@ async function main() {
   assert.strictEqual(view.summary.totalBookingHours, 3.5, '读模型汇总应统计订场总时长');
   assert.strictEqual(view.summary.totalMemberBookingCount, 1, '读模型汇总应按储值扣款流水统计会员订场次数');
   assert.strictEqual(view.summary.totalMemberBookingAmount, 300, '读模型汇总应按储值扣款流水统计会员订场金额');
+  assert.strictEqual(view.summary.totalMembershipRechargeCount, 2, '读模型汇总应统计有效储值次数');
+  assert.strictEqual(view.summary.totalMembershipRepeatRechargeCount, 1, '读模型汇总应统计复充会员人数');
+  assert.strictEqual(view.summary.totalMembershipRetainedCount, 1, '读模型汇总应统计储值后仍有订场消费的会员人数');
   assert.strictEqual(view.summary.totalGuestBookingCount, 1, '读模型汇总应把非储值扣款订场统计为散客次数');
   assert.strictEqual(view.summary.totalGuestBookingAmount, 200, '读模型汇总应把非储值扣款订场统计为散客金额');
   assert.strictEqual(view.summary.totalBalance, 100, '订场用户页会员余额只统计有效会员账户余额，不混入散客余额');

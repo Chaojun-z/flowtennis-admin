@@ -804,7 +804,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
       renderAll();
     }
     await ensurePageDatasets(pg,{force});
-    if(pg==='courts'){
+    if(pg==='courts'||pg==='memberships'){
       try{
         const needsCompare=shouldLoadCourtReadModelCompare();
         await loadCourtReadModelGuardData({force});
