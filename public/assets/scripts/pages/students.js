@@ -118,12 +118,16 @@ function studentNonTrialPurchaseRows(stu){
   return purchases.filter(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p));
 }
 function studentDealPathText(stu){
+  const lifecycleDealPath=typeof customerLifecycleStudentDealPath==='function'?customerLifecycleStudentDealPath(stu):'';
+  if(lifecycleDealPath)return lifecycleDealPath;
   const rows=studentNonTrialPurchaseRows(stu);
   if(!rows.length)return '-';
   if(rows.length>1)return STUDENT_DEAL_PATH_LABELS[2];
   return studentHasTrialPath(stu)?STUDENT_DEAL_PATH_LABELS[0]:STUDENT_DEAL_PATH_LABELS[1];
 }
 function studentTrialPathStatusText(stu){
+  const lifecycleTrialStatus=typeof customerLifecycleStudentTrialStatus==='function'?customerLifecycleStudentTrialStatus(stu):'';
+  if(lifecycleTrialStatus)return lifecycleTrialStatus;
   if(studentHasNonTrialPackage(stu))return '已成交';
   if(studentLastLessonDate(stu))return '已体验待成交';
   return '已约体验';

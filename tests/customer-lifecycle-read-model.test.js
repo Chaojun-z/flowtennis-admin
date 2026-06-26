@@ -79,6 +79,8 @@ assert.strictEqual(row.displayName, '小王');
 assert.strictEqual(row.source, '转介绍', 'source should use the global source taxonomy');
 assert.strictEqual(row.studentStage, 'formal', 'formal purchase should move the student out of trial stage');
 assert.strictEqual(row.hasTrialExperience, true, 'formal students should keep the trial experience fact after conversion');
+assert.strictEqual(row.courseDealPath, '体验转化', 'course deal path should be owned by the lifecycle read model');
+assert.strictEqual(row.trialStatus, '已成交', 'trial status should be owned by the lifecycle read model');
 assert.strictEqual(row.trialBookedAt, '2026-06-02');
 assert.strictEqual(row.courtStage, 'member', 'membership account should make the court user a member view row');
 assert.strictEqual(row.hasCourseConversion, true);
@@ -162,6 +164,8 @@ assert.strictEqual(directPrivate.courseFirstPurchaseAt, '2026-04-02');
 assert.strictEqual(directPrivate.conversionAt, '2026-04-02');
 assert.strictEqual(directPrivate.demandProduct, '私教课');
 assert.strictEqual(directPrivate.hasCourseConversion, true, 'paid private purchase should count as course conversion');
+assert.strictEqual(directPrivate.courseDealPath, '直接成交');
+assert.strictEqual(directPrivate.trialStatus, '已成交');
 
 const directPrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: directPrivateRows, lifecycleScope: 'course' });
 assert.strictEqual(directPrivateLeadRows[0].leadStage, '已成交');

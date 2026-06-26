@@ -760,6 +760,50 @@ function buildStudentAttributeRows(rows = []) {
     .sort((a, b) => b.trialConversionRate - a.trialConversionRate || b.renewalRate - a.renewalRate || b.base - a.base);
 }
 
+function conversionFilterViewKey({ source = '', campus = '', coach = '' } = {}) {
+  return `source:${normalizeText(source, '')}|campus:${normalizeText(campus, '')}|coach:${normalizeText(coach, '')}`;
+}
+
+function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
+  const courseFunnel = buildCourseFunnel(rows);
+  return {
+    courseFunnel,
+    sourceRanking: buildCourseSourceRanking(rows),
+    channelEfficiencyRows: buildChannelEfficiencyRows(rows),
+    studentAttributeRows: buildStudentAttributeRows(rows),
+    courseRows: includeRows ? rows : [],
+    standardRates: {
+      trialConversionRate: Number(courseFunnel[3]?.transitionRate) || 0,
+      renewalRate: Number(courseFunnel[4]?.transitionRate) || 0
+    }
+  };
+}
+
+function buildConversionFilteredViews(rows = []) {
+  const grouped = new Map();
+  (rows || []).forEach(row => {
+    const dimensions = {
+      source: normalizeText(row.source, ''),
+      campus: normalizeText(row.campus, ''),
+      coach: normalizeText(row.coach, '')
+    };
+    const sourceValues = ['', dimensions.source].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
+    const campusValues = ['', dimensions.campus].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
+    const coachValues = ['', dimensions.coach].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
+    sourceValues.forEach(source => {
+      campusValues.forEach(campus => {
+        coachValues.forEach(coach => {
+          if (!source && !campus && !coach) return;
+          const key = conversionFilterViewKey({ source, campus, coach });
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key).push(row);
+        });
+      });
+    });
+  });
+  return Object.fromEntries([...grouped.entries()].map(([key, items]) => [key, buildConversionMetricView(items, { includeRows: false })]));
+}
+
 function buildCampusConversionRateMap(rows = []) {
   const grouped = new Map();
   (rows || []).forEach(row => {
@@ -2585,6 +2629,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       sourceRanking,
       channelEfficiencyRows,
       studentAttributeRows,
+      filteredViews: buildConversionFilteredViews(courseRows),
       filterOptions: buildConversionFilterOptions(courseRows, data.campuses || []),
       renewal
     },

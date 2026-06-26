@@ -171,6 +171,22 @@ function studentStage(student = {}, { purchases = [], entitlements = [], schedul
   return 'student';
 }
 
+function studentCourseDealPath(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
+  if (!formalPurchases.length) return '';
+  if (formalPurchases.length > 1) return '老客续费';
+  return studentHasTrialExperience(student, { purchases, entitlements, schedule }) ? '体验转化' : '直接成交';
+}
+
+function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
+  if (formalPurchases.length) return '已成交';
+  const facts = studentTrialFacts(student, { purchases, entitlements, schedule });
+  if (facts.hasTrialAttended) return '已体验待成交';
+  if (facts.hasTrialBooked) return '已约体验';
+  return '';
+}
+
 function accountIsVisibleMembership(account = {}) {
   return !!account && activeStatus(account) && text(account.status) !== 'cleared';
 }
@@ -214,6 +230,8 @@ function makeEmptyRow(key) {
     formalCoach: '',
     profileNote: '',
     studentStage: 'none',
+    courseDealPath: '',
+    trialStatus: '',
     courtStage: 'none',
     membershipStatus: '',
     hasTrialExperience: false,
@@ -317,6 +335,8 @@ function buildCustomerLifecycleRows({
     const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '');
     const row = rowFor(sourceId, `student:${sid}`);
     const stage = studentStage(student, { purchases, entitlements, schedule });
+    const courseDealPath = studentCourseDealPath(student, { purchases, entitlements, schedule });
+    const trialStatus = studentTrialStatus(student, { purchases, entitlements, schedule });
     const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule });
     const hasTrialExperience = trialFacts.hasTrialBooked;
     const { formalPurchases, trialRows, courseRows } = studentRows(student, { purchases, entitlements, schedule });
@@ -365,6 +385,8 @@ function buildCustomerLifecycleRows({
       formalCoach,
       profileNote: firstValue(student.profileNote, student.notes, firstCourse && firstCourse.notes, firstFormal && firstFormal.notes),
       studentStage: stage,
+      courseDealPath,
+      trialStatus,
       hasTrialExperience,
       leadDate: firstValue(student.leadDate),
       leadEnteredAt: firstValue(student.leadDate),
@@ -374,6 +396,8 @@ function buildCustomerLifecycleRows({
     row.hasTrialExperience = row.hasTrialExperience || hasTrialExperience;
     row.hasFreeCourseFollowup = row.hasFreeCourseFollowup || (!firstFormal && !!firstCourse);
     row.hasCourseConversion = row.hasCourseConversion || stage === 'formal';
+    row.courseDealPath = row.courseDealPath || courseDealPath;
+    row.trialStatus = row.trialStatus || trialStatus;
   });
 
   const courtsById = new Map();
@@ -517,5 +541,7 @@ module.exports = {
   sourceLeadId,
   studentHasTrialExperience,
   studentStage,
+  studentCourseDealPath,
+  studentTrialStatus,
   courtStage
 };

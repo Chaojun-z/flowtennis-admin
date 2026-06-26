@@ -162,8 +162,8 @@ function operationsTrendPoints(trends = [], key = '') {
 }
 
 function operationsTrendToday() {
-  const today = dateKey(new Date());
   const range = typeof activeGlobalDateRange === 'function' ? activeGlobalDateRange() : {};
+  const today = dateKey(new Date());
   const endDate = String(range?.endDate || '').slice(0, 10);
   return endDate && endDate < today ? endDate : today;
 }
@@ -992,139 +992,6 @@ function operationsCoachSparklineSvg(points = [], key = '') {
   return operationsKpiSparklineSvg(points, key, 'operations-coach-kpi-sparkline');
 }
 
-function operationsRate(part, total) {
-  return total ? Math.round((Number(part) || 0) * 1000 / (Number(total) || 1)) / 10 : 0;
-}
-
-function operationsTrialDone(row = {}) {
-  const now = Date.now();
-  return ['trialAttendedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
-    const date = row[key] ? new Date(row[key]) : null;
-    return date && !Number.isNaN(date.getTime()) && date.getTime() <= now;
-  });
-}
-
-function operationsHasAttendance(row = {}) {
-  if (row.hasAttendance) return true;
-  const text = `${row.stage || ''} ${row.rawStatus || ''} ${row.status || ''} ${row.statusAfter || ''} ${row.trialStatus || ''}`;
-  return operationsTrialDone(row) || /已体验待成交|已成交|课程\+|已体验|实到|到课|体验课完成/.test(text);
-}
-
-function operationsHasAppointment(row = {}) {
-  if (row.hasAppointment || operationsHasAttendance(row) || row.hasTrialDeal) return true;
-  const text = `${row.stage || ''} ${row.rawStatus || ''} ${row.status || ''} ${row.statusAfter || ''} ${row.trialStatus || ''}`;
-  return /已约体验|已体验待成交|已成交|课程\+|约体验|预约/.test(text);
-}
-
-function operationsGroupRows(rows, key) {
-  const grouped = new Map();
-  (rows || []).forEach(row => {
-    const name = String(row?.[key] || '未记录').trim() || '未记录';
-    if (!grouped.has(name)) grouped.set(name, []);
-    grouped.get(name).push(row);
-  });
-  return grouped;
-}
-
-function operationsBuildCourseFunnel(rows = []) {
-  const total = rows.length;
-  const steps = [
-    { stage: '线索量', count: total },
-    { stage: '预约体验客户', count: rows.filter(row => operationsHasAppointment(row)).length },
-    { stage: '体验课实到人数', count: rows.filter(row => operationsHasAttendance(row)).length },
-    { stage: '体验后成交人数', count: rows.filter(row => row.hasTrialDeal).length },
-    { stage: '成交后续费人数', count: rows.filter(row => row.hasRenewal).length }
-  ];
-  return steps.map((row, index) => ({
-    ...row,
-    percentOfTotal: operationsRate(row.count, total),
-    transitionRate: index === 0 ? 100 : operationsRate(row.count, steps[index - 1].count),
-    lossRate: index === 0 ? 0 : Math.round((100 - operationsRate(row.count, steps[index - 1].count)) * 10) / 10
-  }));
-}
-
-function operationsConversionRowDate(row = {}) {
-  const value = row.leadDate || row.createdAt || row.trialAtRaw || row.trialLessonAt || row.trialAt || '';
-  if (!value) return '';
-  const parsed = value instanceof Date ? value : new Date(String(value).replace(' ', 'T'));
-  if (!parsed || Number.isNaN(parsed.getTime())) return '';
-  return dateKey(parsed);
-}
-
-function operationsBuildSourceRanking(rows = []) {
-  const totalDeals = rows.filter(row => row.hasTrialDeal).length;
-  return [...operationsGroupRows(rows, 'source').entries()]
-    .map(([source, items]) => {
-      const deals = items.filter(row => row.hasTrialDeal).length;
-      return { source, deals, dealShare: operationsRate(deals, totalDeals) };
-    })
-    .filter(row => row.deals > 0)
-    .sort((a, b) => b.deals - a.deals || a.source.localeCompare(b.source, 'zh-Hans-CN'));
-}
-
-function operationsBuildChannelEfficiencyRows(rows = []) {
-  return [...operationsGroupRows(rows, 'source').entries()]
-    .map(([source, items]) => {
-      const deals = items.filter(row => row.hasTrialDeal).length;
-      const attendanceCount = items.filter(row => operationsHasAttendance(row)).length;
-      return {
-        source,
-        leads: items.length,
-        trialCount: attendanceCount,
-        trialConversionRate: operationsRate(attendanceCount, items.length),
-        dealConversionRate: operationsRate(deals, items.length),
-        deals,
-        finalConversionRate: operationsRate(deals, items.length)
-      };
-    })
-    .sort((a, b) => b.finalConversionRate - a.finalConversionRate || b.deals - a.deals || b.leads - a.leads);
-}
-
-function operationsExtractPersonas(row = {}) {
-  const text = `${row.level || ''} ${row.consultType || ''} ${row.studentType || ''} ${row.type || ''} ${row.gender || ''}`.trim();
-  const personas = new Set();
-  if (/零基础|小白|初学|新手/.test(text)) personas.add('零基础');
-  if (/进阶|提升|提高|提高班|强化/.test(text)) personas.add('进阶提升');
-  if (/成人/.test(text)) personas.add('成人');
-  if (/青少年|少儿|儿童|孩子|中小学生|学生/.test(text)) personas.add('青少年');
-  if (/女|female/i.test(text) && personas.has('成人')) personas.add('成人女性');
-  if (/男|male/i.test(text) && personas.has('成人')) personas.add('成人男性');
-  if (/女|female/i.test(text) && personas.has('青少年')) personas.add('青少年女性');
-  if (/男|male/i.test(text) && personas.has('青少年')) personas.add('青少年男性');
-  if (/私教/.test(text)) personas.add('私教课');
-  if (/私教体验|体验.*私教|私教.*体验/.test(text)) personas.add('体验私教课');
-  if (/小班|班课|训练营|随到随学/.test(text)) personas.add('小班课');
-  if (/小班体验|体验.*小班|小班.*体验/.test(text)) personas.add('体验小班课');
-  return [...personas];
-}
-
-function operationsRowPersonas(row = {}) {
-  const personas = (row.personas || []).map(item => String(item || '').trim()).filter(Boolean);
-  if (personas.length) return personas;
-  const extracted = operationsExtractPersonas(row);
-  return extracted.length ? extracted : ['未标注人群'];
-}
-
-function operationsBuildAttributeRows(rows = []) {
-  const grouped = new Map();
-  rows.forEach(row => operationsRowPersonas(row).forEach(attribute => {
-    const current = grouped.get(attribute) || { attribute, base: 0, attendance: 0, deals: 0, renewals: 0 };
-    current.base += 1;
-    if (operationsHasAttendance(row)) current.attendance += 1;
-    if (row.hasTrialDeal) current.deals += 1;
-    if (row.hasRenewal) current.renewals += 1;
-    grouped.set(attribute, current);
-  }));
-  return [...grouped.values()]
-    .map(row => ({
-      ...row,
-      trialConversionRate: operationsRate(row.attendance, row.base),
-      dealConversionRate: operationsRate(row.deals, row.base),
-      renewalRate: operationsRate(row.renewals, row.deals)
-    }))
-    .sort((a, b) => b.trialConversionRate - a.trialConversionRate || b.renewalRate - a.renewalRate || b.base - a.base);
-}
-
 function operationsFunnelDropRows(funnel = []) {
   return (funnel || []).slice(1).map((row, index) => ({
     from: funnel[index]?.stage || '',
@@ -1258,14 +1125,12 @@ function operationsRiskRows(rows = []) {
     .slice(0, 5);
 }
 
-function operationsFilteredCourseRows(data) {
-  const rows = data.conversion?.courseRows || [];
-  return rows.filter(row => {
-    if (operationsConversionFilters.source && row.source !== operationsConversionFilters.source) return false;
-    if (operationsConversionFilters.campus && row.campus !== operationsConversionFilters.campus) return false;
-    if (operationsConversionFilters.coach && row.coach !== operationsConversionFilters.coach) return false;
-    return true;
-  });
+function operationsConversionFilterViewKey() {
+  return [
+    `source:${String(operationsConversionFilters.source || '').trim()}`,
+    `campus:${String(operationsConversionFilters.campus || '').trim()}`,
+    `coach:${String(operationsConversionFilters.coach || '').trim()}`
+  ].join('|');
 }
 
 function operationsConversionView(data) {
@@ -1277,26 +1142,29 @@ function operationsConversionView(data) {
       channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
       studentAttributeRows: data.conversion?.studentAttributeRows || [],
       courseRows: data.conversion?.courseRows || [],
+      standardRates: data.conversion?.standardRates || {},
       trendRows: data.conversion?.trends || []
     };
   }
-  const rows = operationsFilteredCourseRows(data);
-  if (!rows.length) {
+  const view = data.conversion?.filteredViews?.[operationsConversionFilterViewKey()];
+  if (!view) {
     return {
       courseFunnel: [],
       sourceRanking: [],
       channelEfficiencyRows: [],
       studentAttributeRows: [],
       courseRows: [],
+      standardRates: {},
       trendRows: data.conversion?.trends || []
     };
   }
   return {
-    courseFunnel: operationsBuildCourseFunnel(rows),
-    sourceRanking: operationsBuildSourceRanking(rows),
-    channelEfficiencyRows: operationsBuildChannelEfficiencyRows(rows),
-    studentAttributeRows: operationsBuildAttributeRows(rows),
-    courseRows: rows,
+    courseFunnel: view.courseFunnel || [],
+    sourceRanking: view.sourceRanking || [],
+    channelEfficiencyRows: view.channelEfficiencyRows || [],
+    studentAttributeRows: view.studentAttributeRows || [],
+    courseRows: view.courseRows || [],
+    standardRates: view.standardRates || {},
     trendRows: data.conversion?.trends || []
   };
 }
@@ -1341,7 +1209,7 @@ function renderConversionFunnelModule(data, conversion) {
 function renderConversionCommandCenter(data, conversion) {
   const comparisons = data.conversion?.trendComparisons || {};
   return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
-      ${operationsConversionKpiCards(conversion.courseFunnel || [], data.conversion?.standardRates || {}).map(card => renderOperationsConversionKpi({
+      ${operationsConversionKpiCards(conversion.courseFunnel || [], conversion.standardRates || {}).map(card => renderOperationsConversionKpi({
         ...card,
         trendValue: card.trendValue,
         trendPoints: operationsTrendPointsWithFallback(conversion.trendRows || [], card.trendKey),

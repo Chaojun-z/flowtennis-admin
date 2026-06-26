@@ -106,7 +106,16 @@ function customerLifecycleOwner(record={},fallback=''){
   return customerLifecycleText(row?.owner||fallback||record?.owner||record?.primaryCoach||record?.coach||record?.coachName);
 }
 function customerLifecycleStudentStage(record={}){
-  return customerLifecycleText(customerLifecycleForRecord(record)?.studentStage);
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return customerLifecycleText(row?.studentStage);
+}
+function customerLifecycleStudentDealPath(record={}){
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return customerLifecycleText(row?.courseDealPath);
+}
+function customerLifecycleStudentTrialStatus(record={}){
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return customerLifecycleText(row?.trialStatus);
 }
 function customerLifecycleCourtStage(record={}){
   return customerLifecycleText(customerLifecycleForRecord(record)?.courtStage);
