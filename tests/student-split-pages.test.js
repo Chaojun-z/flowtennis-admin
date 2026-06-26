@@ -9,7 +9,7 @@ assert.match(source, /function studentHasTrialPath\(/, 'trial student page shoul
 assert.match(source, /customerLifecycleRows=\[\]/, 'student split pages should receive the unified customer lifecycle rows');
 assert.match(source, /function studentLifecycleRow\(stu\)/, 'student split pages should lookup the unified lifecycle row for a student');
 assert.match(source, /function studentLifecycleStage\(stu\)/, 'student split pages should read the standard studentStage field');
-assert.match(source, /if\(lifecycleStage\)return studentListViewMode\(\)==='trial'\?lifecycleStage!=='formal'&&lifecycleStage!=='none':lifecycleStage==='formal';/, 'normal and official student pages should split by standard studentStage before local fallback');
+assert.match(source, /if\(lifecycleStage\)return studentListViewMode\(\)==='trial'\?lifecycleStage==='trial':lifecycleStage==='formal';/, 'normal student page should include only预约体验或已体验待成交 students from the standard trial stage');
 assert.match(source, /function studentDealPathText\(/, 'official student page should expose a deal path helper');
 assert.match(source, /体验转化[\s\S]*直接成交[\s\S]*老客续费/, 'official student deal path should cover trial conversion, direct deal, and renewal');
 assert.match(source, /'package-students':\['campuses','students','purchasesPage'\][\s\S]*'trial-students':\['campuses','students','purchasesPage'\]/, 'student split pages should load package data before first render');

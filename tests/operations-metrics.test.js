@@ -17,8 +17,8 @@ const metrics = buildOperationsMetrics({
   campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
   leads: [
     { id: 'lead-1', leadStage: '未转化', source: '小红书', leadDate: '2026-06-01', campus: 'mabao', owner: '张教练', level: '零基础', gender: '女', studentType: '成人' },
-    { id: 'lead-2', leadStage: '课程转化', studentId: 'student-2', source: '小红书', leadDate: '2026-06-02', campus: 'mabao', owner: '张教练', level: '进阶提升', gender: '男', studentType: '成人' },
-    { id: 'lead-3', studentId: 'student-1', courtId: 'court-1', source: '转介绍', leadDate: '2026-06-03', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
+    { id: 'lead-2', leadStage: '课程转化', studentId: 'student-2', source: '小红书', leadDate: '2026-06-02', trialAtRaw: '2026-06-04', trialAttendedAt: '2026-06-04', campus: 'mabao', owner: '张教练', level: '进阶提升', gender: '男', studentType: '成人' },
+    { id: 'lead-3', studentId: 'student-1', courtId: 'court-1', source: '转介绍', leadDate: '2026-06-03', trialAtRaw: '2026-06-07', trialAttendedAt: '2026-06-07', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
     { id: 'lead-4', rawStatus: '已流失', source: '大众点评', leadDate: '2026-06-04', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '成人' },
     { id: 'lead-5', leadStage: '订场转化', courtId: 'court-2', source: '抖音/美团', leadDate: '2026-06-05', campus: 'mabao', owner: '张教练', level: '零基础', gender: '男', studentType: '成人' }
   ],
@@ -535,9 +535,9 @@ const campusConversionCourtMetrics = buildOperationsMetrics({
     }
   ],
   leads: [
-    { id: 'campus-lead-1', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-1', trialAtRaw: '2026-06-01' },
-    { id: 'campus-lead-2', campus: 'mabao', leadStage: '已体验待转化', trialAtRaw: '2026-06-02' },
-    { id: 'campus-lead-3', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-2', trialAtRaw: '2026-06-03' }
+    { id: 'campus-lead-1', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-1', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' },
+    { id: 'campus-lead-2', campus: 'mabao', leadStage: '已体验待转化', trialAtRaw: '2026-06-02', trialAttendedAt: '2026-06-02' },
+    { id: 'campus-lead-3', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-2', trialAtRaw: '2026-06-03', trialAttendedAt: '2026-06-03' }
   ],
   students: [
     { id: 'campus-student-1', sourceLeadId: 'campus-lead-1', dealPath: '体验转化' },
@@ -768,7 +768,7 @@ assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attrib
 
 const mergedLeadMetrics = buildOperationsMetrics({
   leads: [
-    { id: 'lead-primary', _mergedLeadIds: ['lead-primary', 'lead-duplicate'], source: '小红书', campus: 'mabao', formalCoach: '王教练', consultType: '成人私教课' }
+    { id: 'lead-primary', _mergedLeadIds: ['lead-primary', 'lead-duplicate'], source: '小红书', campus: 'mabao', formalCoach: '王教练', consultType: '成人私教课', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' }
   ],
   students: [
     { id: 'student-merged', sourceLeadId: 'lead-duplicate', dealPath: '体验转化', primaryCoach: '王教练', type: '成人' }
@@ -791,9 +791,9 @@ assert.ok(mergedLeadMetrics.conversion.filterOptions.coaches.includes('王教练
 
 const unifiedRateMetrics = buildOperationsMetrics({
   leads: [
-    { id: 'rate-lead-1', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-10' },
-    { id: 'rate-lead-2', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-11' },
-    { id: 'rate-lead-3', source: '视频号', consultType: '成人私教课', studentId: 'rate-student-3' },
+    { id: 'rate-lead-1', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-10', trialAttendedAt: '2026-06-10' },
+    { id: 'rate-lead-2', source: '视频号', consultType: '成人私教课', trialAtRaw: '2026-06-11', trialAttendedAt: '2026-06-11' },
+    { id: 'rate-lead-3', source: '视频号', consultType: '成人私教课', studentId: 'rate-student-3', trialAtRaw: '2026-06-12', trialAttendedAt: '2026-06-12' },
     { id: 'rate-lead-4', source: '视频号', consultType: '成人私教课', rawStatus: '已约体验' },
     { id: 'rate-lead-5', source: '视频号', consultType: '成人私教课' }
   ],
@@ -1090,7 +1090,7 @@ assert.strictEqual(june10RepurchasePoint?.renewalRateDenominator, 11, 'conversio
 const evidenceOnlyConversionTrendMetrics = buildOperationsMetrics({
   leads: [
     { id: 'evidence-lead-1', leadDate: '2026-06-01', leadStage: '课程转化', studentId: 'evidence-student-1', source: '小红书' },
-    { id: 'evidence-lead-2', leadDate: '2026-06-01', trialAtRaw: '2026-06-02', source: '小红书' }
+    { id: 'evidence-lead-2', leadDate: '2026-06-01', trialAtRaw: '2026-06-02', trialAttendedAt: '2026-06-02', source: '小红书' }
   ],
   students: [
     { id: 'evidence-student-1', sourceLeadId: 'evidence-lead-1', dealPath: '体验转化' }
@@ -1339,7 +1339,7 @@ assert.strictEqual(noFinanceFallbackMetrics.overview.trends.find(row => row.date
 
 const closedFunnelMetrics = buildOperationsMetrics({
   leads: [
-    { id: 'closed-lead-attended', leadDate: '2026-06-01', trialAt: '2026-06-01', source: '小红书' },
+    { id: 'closed-lead-attended', leadDate: '2026-06-01', trialAt: '2026-06-01', trialAttendedAt: '2026-06-01', source: '小红书' },
     { id: 'closed-lead-deal-no-attendance', leadDate: '2026-06-01', source: '小红书', studentId: 'closed-student-deal' }
   ],
   students: [
@@ -1370,7 +1370,7 @@ const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
   campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
   leads: [
     { id: 'conversion-lead-1', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', leadStage: '已约体验', trialAt: '2026-06-01' },
-    { id: 'conversion-lead-2', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', studentId: 'conversion-student-1', leadStage: '课程转化', trialAt: '2026-06-01' }
+    { id: 'conversion-lead-2', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', studentId: 'conversion-student-1', leadStage: '课程转化', trialAt: '2026-06-01', trialAttendedAt: '2026-06-01' }
   ],
   students: [{ id: 'conversion-student-1', sourceLeadId: 'conversion-lead-2', primaryCoach: '张教练' }],
   purchases: [{ id: 'conversion-purchase-1', studentId: 'conversion-student-1', actualAmount: 1000, purchaseDate: '2026-06-01', status: 'active', primaryCoach: '张教练' }],
@@ -1425,6 +1425,7 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
   ],
   leadFollowups: [
     { id: 'finance-backed-appointment', leadId: 'finance-backed-lead', followupAt: '2026-06-01T10:00:00+08:00', statusAfter: '已约体验' },
+    { id: 'finance-backed-attendance', leadId: 'finance-backed-lead', followupAt: '2026-06-02T10:00:00+08:00', statusAfter: '已体验' },
     { id: 'finance-backed-deal', leadId: 'finance-backed-lead', followupAt: '2026-06-03T10:00:00+08:00', statusAfter: '课程转化' }
   ],
   students: [{ id: 'finance-backed-student', sourceLeadId: 'finance-backed-lead', dealPath: '体验转化', primaryCoach: '张教练' }],

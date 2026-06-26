@@ -38,7 +38,7 @@ function studentLifecycleStage(stu){
 }
 function studentMatchesListPage(stu){
   const lifecycleStage=studentLifecycleStage(stu);
-  if(lifecycleStage)return studentListViewMode()==='trial'?lifecycleStage!=='formal'&&lifecycleStage!=='none':lifecycleStage==='formal';
+  if(lifecycleStage)return studentListViewMode()==='trial'?lifecycleStage==='trial':lifecycleStage==='formal';
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)&&!hasPackage:hasPackage;
 }
@@ -434,7 +434,7 @@ function studentLifecycleStats(base=[]){
   return {
     purchaseCount:rows.reduce((sum,{student})=>sum+(typeof customerLifecycleStudentCoursePurchaseCount==='function'?customerLifecycleStudentCoursePurchaseCount(student):0),0),
     courseRepeatCount:rows.filter(({student})=>typeof customerLifecycleStudentHasCourseRepeat==='function'&&customerLifecycleStudentHasCourseRepeat(student)).length,
-    trialStudentCount:rows.filter(({lifecycle})=>!!(lifecycle.hasTrialExperience||lifecycle.trialStatus||lifecycle.trialBookedAt||lifecycle.trialAttendedAt)).length,
+    trialStudentCount:studentListViewMode()==='trial'?base.length:rows.filter(({lifecycle})=>!!(lifecycle.hasTrialExperience||lifecycle.trialStatus||lifecycle.trialBookedAt||lifecycle.trialAttendedAt)).length,
     trialConvertedCount:rows.filter(({student})=>typeof customerLifecycleStudentHasTrialToCourseConversion==='function'&&customerLifecycleStudentHasTrialToCourseConversion(student)).length
   };
 }

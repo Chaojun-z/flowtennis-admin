@@ -602,10 +602,20 @@ function parseDateValue(value) {
 
 function leadTrialDone(lead = {}, now = new Date()) {
   const current = now instanceof Date ? now : new Date(now);
-  return ['trialAttendedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
+  return ['trialAttendedAt'].some(key => {
     const date = parseDateValue(lead[key]);
     return date && date.getTime() <= current.getTime();
   });
+}
+
+function hasExplicitTrialAppointmentText(value = '') {
+  const text = normalizeText(value);
+  return /已约|预约|约体验/.test(text);
+}
+
+function hasExplicitTrialAttendanceText(value = '') {
+  const text = normalizeText(value);
+  return /已体验|实到|到课|体验课完成/.test(text);
 }
 
 function courseConversionRows(data = {}, options = {}) {
@@ -636,12 +646,12 @@ function courseConversionRows(data = {}, options = {}) {
     const trialBookedAt = pooled.trialBookedAt || lifecycle.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || '';
     const trialAttendedAt = pooled.trialAttendedAt || lifecycle.trialAttendedAt || '';
     const trialDone = leadTrialDone({ trialAttendedAt, trialAtRaw: trialBookedAt, trialLessonAt: lead.trialLessonAt, trialAt: lead.trialAt }, now);
-    const appointmentEventDate = trialBookedAt || leadFollowupEvidenceDate(leadFollowups, text => /已约|预约|约体验|已体验|实到|到课|体验课完成|已成交|课程转化|直接成交|成交/.test(text));
-    const attendanceEventDate = trialAttendedAt || (trialDone ? trialBookedAt : '') || leadFollowupEvidenceDate(leadFollowups, text => /已体验|实到|到课|体验课完成|已成交|课程转化|直接成交|成交/.test(text));
+    const appointmentEventDate = trialBookedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAppointmentText);
+    const attendanceEventDate = trialAttendedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAttendanceText);
     const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /已成交|课程转化|直接成交|成交|报名|购买/.test(text));
-    const hasAttendance = !!trialAttendedAt || trialDone || /已体验待成交|已体验|实到|到课|体验课完成/.test(stageText) || (hasCourse && dealPath === '体验转化');
-    const hasTrialDeal = hasCourse && dealPath !== '直接成交';
-    const hasAppointment = !!trialBookedAt || /已约体验|已体验待成交|约体验|预约/.test(stageText) || hasAttendance || hasTrialDeal;
+    const hasAttendance = !!trialAttendedAt || trialDone || !!attendanceEventDate || hasExplicitTrialAttendanceText(stageText);
+    const hasAppointment = !!trialBookedAt || !!appointmentEventDate || hasExplicitTrialAppointmentText(stageText) || hasAttendance;
+    const hasTrialDeal = hasCourse && hasAttendance && dealPath !== '直接成交';
     const hasRenewal = hasTrialDeal && sid && (purchaseCounts.get(sid) || 0) > 1;
     return {
       leadId: id,

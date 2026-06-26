@@ -68,6 +68,17 @@ assert.strictEqual(
   50,
   'operations total lead conversion rate should be 总成交人数 / 有效线索数, not the course-only trial funnel rate'
 );
+assert.deepStrictEqual(
+  operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
+  [
+    ['线索量', 6],
+    ['预约体验客户', 2],
+    ['体验课实到人数', 1],
+    ['体验后成交人数', 0],
+    ['成交后续费人数', 0]
+  ],
+  'course funnel must count strict trial appointments only; direct course/booking/member deals must not be backfilled into预约体验客户'
+);
 
 assert.deepStrictEqual(
   stageCountMap(operations.conversion.stageRows),

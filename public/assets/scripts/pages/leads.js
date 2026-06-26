@@ -695,8 +695,6 @@ function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
 }
 function leadTrialDoneByStatus(lead){
-  if(lead?.hasTrialExperience===true)return true;
-  if(String(lead?.studentStage||'').trim()==='trial')return true;
   return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
 }
 function leadTrialDoneByTime(lead){
@@ -710,8 +708,7 @@ function leadTrialDone(lead){
 function leadTrialBooked(lead){
   const lifecycle=typeof customerLifecycleForRecord==='function'?customerLifecycleForRecord(lead):null;
   if([lifecycle?.trialBookedAt,lifecycle?.trialAtRaw,lead?.trialBookedAt,lead?.trialAtRaw,lead?.trialLessonAt,lead?.trialAt].some(value=>String(value||'').trim()))return true;
-  const stage=leadStageText(lead);
-  if(['已约体验','已体验待成交','已成交'].includes(stage))return true;
+  if([lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['已约体验','体验课预约'].includes(String(value||'').trim())))return true;
   return leadTrialDone(lead);
 }
 function leadCourseConverted(lead){
