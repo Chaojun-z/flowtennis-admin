@@ -92,6 +92,12 @@ assert.match(source,/订场收入细项修数\|会员订场修正\|马坡补账\
 assert.match(source,/consumeRecordText='课包消耗'\+'记录'/,'finance note cleaner should hide generated package consume audit text');
 assert.match(source,/financeHumanNote\(row\.notes\)/,'finance tables should render cleaned human notes');
 assert.match(source,/financeHumanNote\(row\.notes\)[\s\S]*renderFinancePrepaidBalance/,'prepaid balance notes should render cleaned human notes');
+assert.match(source,/function financeDeferredRowsFromUnifiedLedger\(/,'prepaid balance should build pending rows from the unified finance ledger');
+assert.match(functionSource(source,'financePrepaidRows'), /financeDeferredRowsFromUnifiedLedger\(\)/, 'prepaid balance rows should read unified finance deferred deltas');
+assert.doesNotMatch(functionSource(source,'financePrepaidRows'), /financeRevenueRows\(\)|courtFinanceLocal\(/, 'prepaid balance rows should not recalculate pending amounts from purchases or court account balances');
+assert.match(functionSource(source,'renderFinancePrepaidBalance'), /financeDeferredRowsFromUnifiedLedger\(\)/, 'prepaid balance stats should use the same unified deferred ledger rows as the table');
+assert.doesNotMatch(functionSource(source,'renderFinancePrepaidBalance'), /financeLessonDeferredRows|financeStoredValueRows/, 'prepaid balance stats should not call legacy pending calculators');
+assert.match(functionSource(source,'financeDeferredRowsFromUnifiedLedger'), /deferredRevenueDelta/, 'prepaid balance should use deferred revenue deltas as the single pending amount source');
 assert.match(source,/collector==='未记录'/,'finance tables should not show missing historical operators as 未记录');
 assert.match(source,/importHint\|\|collector==='未记录'[\s\S]*return '系统导入'/,'finance tables should show imported or repaired rows as 系统导入 when no account operator exists');
 assert.doesNotMatch(ledgerPanel,/>\s*查询\s*</,'ledger toolbar should not keep a local query button');

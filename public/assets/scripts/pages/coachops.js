@@ -1265,37 +1265,41 @@ function exportCoachOpsConsumeCsv(){
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_消耗表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
-function financeStoredValueRows(){
-  return courts.filter(court=>{
-    const campusName=financeCampusNameFromValue(court.campus);
-    if(!financeMatchesCampusName(campusName))return false;
-    return courtFinanceLocal(court).balance>0;
-  }).map(court=>{
-    const finance=courtFinanceLocal(court);
-    return {
-      id:court.id,
-      customer:courtDisplayName(court)||court.name||court.id,
-      campusName:financeCampusNameFromValue(court.campus),
-      deferredType:'会员储值待确认',
-      deferredAmount:finance.balance,
-      source:'订场账户',
-      notes:'储值余额'
-    };
-  });
+function financeDeferredTypeForLedgerRow(row={}){
+  if(row.businessTypeLevel1==='课程'||row.businessType==='课程')return '课包待确认';
+  if(row.businessTypeLevel1==='储值'||['会员储值','会员订场'].includes(row.businessType))return '会员储值待确认';
+  return '';
 }
-function financeLessonDeferredRows(){
-  return financeRevenueRows().filter(row=>Number(row.remainingLessons)>0&&Number(row.totalLessons)>0&&Number(row.actualAmount)>0).map(row=>({
-    id:row.id,
-    customer:row.studentName||'—',
-    campusName:row.campusName,
-    deferredType:'课包待确认',
-    deferredAmount:Math.round((Number(row.actualAmount)||0)*(Number(row.remainingLessons)||0)/Math.max(1,Number(row.totalLessons)||1)*100)/100,
-    source:row.incomeType||'课包购买',
-    notes:row.relatedDocument
-  }));
+function financeDeferredSourceForLedgerRow(row={}){
+  const type=financeDeferredTypeForLedgerRow(row);
+  if(type==='会员储值待确认')return '订场会员储值';
+  return row.debitTarget||row.packageName||row.incomeType||row.sourceProject||'课包';
+}
+function financeDeferredRowsFromUnifiedLedger(){
+  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
+  const endDate=String(range?.endDate||'').slice(0,10);
+  const grouped=new Map();
+  financeUnifiedRows().forEach(row=>{
+    if(row?.differenceReason)return;
+    const amount=Number(row?.deferredRevenueDelta)||0;
+    if(!amount)return;
+    const businessDate=String(row.businessDate||row.purchaseDate||row.createdAt||'').slice(0,10);
+    if(endDate&&businessDate&&businessDate>endDate)return;
+    const deferredType=financeDeferredTypeForLedgerRow(row);
+    if(!deferredType)return;
+    const customer=row.customer||row.studentName||'—';
+    const campusName=row.campusName||'—';
+    const source=financeDeferredSourceForLedgerRow(row);
+    const key=[deferredType,customer,campusName,source].join('|');
+    const current=grouped.get(key)||{id:key,customer,campusName,deferredType,deferredAmount:0,source,notes:''};
+    current.deferredAmount=financeRowsSum([{deferredRevenueDelta:current.deferredAmount},{deferredRevenueDelta:amount}],'deferredRevenueDelta');
+    current.notes=current.notes||row.sourceDocument||row.notes||'';
+    grouped.set(key,current);
+  });
+  return [...grouped.values()].filter(row=>Number(row.deferredAmount)>0.009);
 }
 function financePrepaidRows(){
-  const rows=[...financeLessonDeferredRows(),...financeStoredValueRows()];
+  const rows=financeDeferredRowsFromUnifiedLedger();
   const filteredRows=rows.filter(row=>{
     if(financePrepaidFilter==='lesson')return row.deferredType==='课包待确认';
     if(financePrepaidFilter==='stored')return row.deferredType==='会员储值待确认';
@@ -1488,7 +1492,7 @@ function renderFinancePrepaidBalance(){
   const body=document.getElementById('financePrepaidTbody');
   const stats=document.getElementById('financePrepaidStats');
   if(!body||!stats)return;
-  const allRows=[...financeLessonDeferredRows(),...financeStoredValueRows()];
+  const allRows=financeDeferredRowsFromUnifiedLedger();
   const rows=financePrepaidRows();
   const lessonDeferred=allRows.filter(row=>row.deferredType==='课包待确认');
   const storedDeferred=allRows.filter(row=>row.deferredType==='会员储值待确认');
