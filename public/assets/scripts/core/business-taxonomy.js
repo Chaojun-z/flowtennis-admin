@@ -45,7 +45,9 @@
   const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
   const LEAD_CONSULT_OPTIONS = LEAD_DEMAND_PRODUCT_OPTIONS;
   const LEAD_INTENT_OPTIONS = ['沉默', '20%-40%', '40%-60%', '60%-80%', '80%-100%'].map(value => ({ value, label: value }));
-  const LEAD_LEVEL_OPTIONS = ['0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
+  const LEAD_LEVEL_OPTIONS = ['未知', '0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义'].map(value => ({ value, label: value }));
+  const LEAD_PRIORITY_OPTIONS = ['P0', 'P1', 'P2', 'P3', 'P4'].map(value => ({ value, label: value }));
+  const CAMPUS_OPTIONS = ['顺义马坡', '蓝色港湾', '朝阳十里堡', '国家网球中心', '朝珺私教'].map(value => ({ value, label: value }));
   const LEAD_FOLLOWUP_STATUS_OPTIONS = LEAD_STAGE_OPTIONS;
   const LEAD_FOLLOWUP_TYPE_OPTIONS = ['电话', '微信', '到店', '面谈', '其他'].map(value => ({ value, label: value }));
   const LEAD_STATUS_AFTER_OPTIONS = LEAD_STAGE_OPTIONS;
@@ -133,9 +135,11 @@
     leadConsultTypes: LEAD_CONSULT_OPTIONS,
     leadIntentLevels: LEAD_INTENT_OPTIONS,
     leadLevels: LEAD_LEVEL_OPTIONS,
+    leadPriorities: LEAD_PRIORITY_OPTIONS,
     leadFollowupStatuses: LEAD_FOLLOWUP_STATUS_OPTIONS,
     leadFollowupTypes: LEAD_FOLLOWUP_TYPE_OPTIONS,
     leadStatusAfter: LEAD_STATUS_AFTER_OPTIONS,
+    campuses: CAMPUS_OPTIONS,
     entitlementStatuses: ENTITLEMENT_STATUS_OPTIONS,
     membershipPlanStatuses: MEMBERSHIP_PLAN_STATUS_OPTIONS,
     matchStatuses: MATCH_STATUS_OPTIONS,
@@ -326,9 +330,11 @@
     LEAD_CONSULT_OPTIONS,
     LEAD_INTENT_OPTIONS,
     LEAD_LEVEL_OPTIONS,
+    LEAD_PRIORITY_OPTIONS,
     LEAD_FOLLOWUP_STATUS_OPTIONS,
     LEAD_FOLLOWUP_TYPE_OPTIONS,
     LEAD_STATUS_AFTER_OPTIONS,
+    CAMPUS_OPTIONS,
     ENTITLEMENT_STATUS_OPTIONS,
     MEMBERSHIP_PLAN_STATUS_OPTIONS,
     MATCH_STATUS_OPTIONS,

@@ -79,6 +79,7 @@ assert.strictEqual(row.displayName, '小王');
 assert.strictEqual(row.source, '转介绍', 'source should use the global source taxonomy');
 assert.strictEqual(row.studentStage, 'formal', 'formal purchase should move the student out of trial stage');
 assert.strictEqual(row.hasTrialExperience, true, 'formal students should keep the trial experience fact after conversion');
+assert.strictEqual(row.trialBookedAt, '2026-06-02');
 assert.strictEqual(row.courtStage, 'member', 'membership account should make the court user a member view row');
 assert.strictEqual(row.hasCourseConversion, true);
 assert.strictEqual(row.hasBookingConversion, true);
@@ -117,7 +118,8 @@ const freePrivateRows = buildCustomerLifecycleRows({
 });
 
 const freePrivate = freePrivateRows[0];
-assert.strictEqual(freePrivate.leadDate, '2026-03-18T10:00:00.000Z', 'synthetic lead time should use the earliest business behavior, not later import/create time');
+assert.strictEqual(freePrivate.leadDate, '', 'student-only synthetic lifecycle rows should not backfill lead time from later business behavior');
+assert.strictEqual(freePrivate.firstTouchAt, '2026-03-18T10:00:00.000Z', 'first touch should keep the earliest known business behavior');
 assert.strictEqual(freePrivate.source, '未知');
 assert.strictEqual(freePrivate.customerType, '成人');
 assert.strictEqual(freePrivate.demandProduct, '私教课');
@@ -154,14 +156,16 @@ const directPrivateRows = buildCustomerLifecycleRows({
 });
 
 const directPrivate = directPrivateRows[0];
-assert.strictEqual(directPrivate.leadDate, '2026-04-02', 'paid direct conversion should use first paid purchase as the earliest known business time');
+assert.strictEqual(directPrivate.leadDate, '', 'direct conversion without a raw lead should keep lead time empty');
+assert.strictEqual(directPrivate.firstTouchAt, '2026-04-02', 'first touch should preserve the first paid business date');
 assert.strictEqual(directPrivate.courseFirstPurchaseAt, '2026-04-02');
 assert.strictEqual(directPrivate.conversionAt, '2026-04-02');
 assert.strictEqual(directPrivate.demandProduct, '私教课');
 assert.strictEqual(directPrivate.hasCourseConversion, true, 'paid private purchase should count as course conversion');
 
 const directPrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: directPrivateRows, lifecycleScope: 'course' });
-assert.strictEqual(directPrivateLeadRows[0].leadStage, '课程转化');
+assert.strictEqual(directPrivateLeadRows[0].leadStage, '已成交');
+assert.strictEqual(directPrivateLeadRows[0].dealType, '课程');
 assert.strictEqual(directPrivateLeadRows[0].enrollAtRaw, '2026-04-02');
 
 console.log('customer lifecycle read model tests passed');

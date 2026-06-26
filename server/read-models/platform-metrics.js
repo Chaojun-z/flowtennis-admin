@@ -15,7 +15,7 @@ function rowId(row = {}) {
 }
 
 function isConvertedStage(stage = '') {
-  return !['新线索', '跟进中', '未转化', '已约体验', '已体验待转化', '已流失'].includes(text(stage));
+  return text(stage) === '已成交';
 }
 
 function lifecycleInScope(row = {}, scope = 'all') {
@@ -30,22 +30,33 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   const hasCourse = !!row.hasCourseConversion || studentStage === 'formal';
   const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
-  const converted = [
-    hasCourse ? '课程' : '',
-    hasBooking ? '订场' : '',
-    hasMembership ? '会员' : ''
-  ].filter(Boolean);
-  if (converted.length >= 2) return converted.join('+');
-  if (hasCourse) return '课程转化';
-  if (hasBooking) return '订场转化';
-  if (hasMembership) return '会员转化';
-  if (studentStage === 'trial') return '已体验待转化';
+  const hasTrialAttended = !!text(row.trialAttendedAt);
+  const hasTrialBooked = !!text(row.trialBookedAt || row.trialAtRaw) || !!row.hasTrialExperience;
+  if (hasCourse || hasBooking || hasMembership) return '已成交';
+  if (hasTrialAttended || studentStage === 'trial') return '已体验待成交';
+  if (hasTrialBooked) return '已约体验';
   if (studentStage === 'student') return '跟进中';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
   if (/流失/.test(explicit)) return '已流失';
-  if (/已体验|体验待转化/.test(explicit)) return '已体验待转化';
+  if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
   if (/已约|预约|约体验/.test(explicit)) return '已约体验';
-  return explicit || '未转化';
+  if (/新线索/.test(explicit)) return '新线索';
+  if (/跟进/.test(explicit)) return '跟进中';
+  return explicit || '跟进中';
+}
+
+function lifecycleDealType(row = {}, lead = {}) {
+  const stored = text(lead.dealType || lead.conversionType || row.dealType);
+  if (stored) return stored;
+  const studentStage = text(row.studentStage);
+  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal';
+  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
+  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
+  return [
+    hasCourse ? '课程' : '',
+    hasBooking ? '订场' : '',
+    hasMembership ? '会员' : ''
+  ].filter(Boolean).join('+');
 }
 
 function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleScope = 'all' } = {}) {
@@ -60,6 +71,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     if (!id) return;
     const lead = existing || {};
     const leadStage = lifecycleLeadStage(lifecycle, lead);
+    const dealType = lifecycleDealType(lifecycle, lead);
     const next = {
       ...lead,
       id,
@@ -80,6 +92,8 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       conversionAt: text(lead.conversionAt || lifecycle.conversionAt),
       formalCoach: text(lead.formalCoach || lifecycle.formalCoach),
       profileNote: text(lead.profileNote || lifecycle.profileNote),
+      dealType,
+      conversionType: dealType,
       studentId: text(lifecycle.studentId || lead.studentId || lead.formalStudentId || lead.courseStudentId),
       courtId: text(lifecycle.courtId || lead.courtId || lead.bookingCourtId),
       membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),
@@ -119,10 +133,10 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
 function buildStageRows(leadPoolRows = []) {
   const counts = new Map();
   (leadPoolRows || []).forEach(row => {
-    const stage = text(row.leadStage) || '未转化';
+    const stage = text(row.leadStage) || '跟进中';
     counts.set(stage, (counts.get(stage) || 0) + 1);
   });
-  const order = ['未转化', '已约体验', '已体验待转化', '课程转化', '直接成交', '订场转化', '会员转化', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员', '已流失'];
+  const order = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'];
   return [...counts.entries()]
     .map(([stage, count]) => ({ stage, count }))
     .sort((a, b) => {

@@ -30,7 +30,7 @@ const platform = buildPlatformMetrics(source);
 assert.strictEqual(platform.customerLifecycleRows.length, 3, 'lifecycle should contain existing leads, student-only customers and court/member customers');
 assert.strictEqual(platform.leadPoolRows.length, 3, 'lead pool should expose every lifecycle customer identity');
 assert.ok(platform.leadPoolRows.find(row => row.id === 'student:student-2' && row.displayName === '无原始线索学员'), 'student without ft_leads should still be searchable in the lead pool');
-assert.ok(platform.leadPoolRows.find(row => row.id === 'court:court-1' && row.leadStage === '订场+会员'), 'member court customer should stay a booking user and enter member stage');
+assert.ok(platform.leadPoolRows.find(row => row.id === 'court:court-1' && row.leadStage === '已成交' && row.dealType === '订场+会员'), 'member court customer should expose standard lead stage and separate deal type');
 assert.strictEqual(platform.conversionMetrics.totalLeads, 3, 'standard conversion total should use lead pool rows');
 assert.strictEqual(platform.conversionMetrics.convertedLeads, 2, 'only formal students, booking users and members should count as converted lifecycle customers');
 assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '小红书')?.leads, 1, 'source stats should use one normalized source definition');

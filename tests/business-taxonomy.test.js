@@ -16,6 +16,9 @@ assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), 
 assert.deepStrictEqual(taxonomy.LEAD_CUSTOMER_TYPE_OPTIONS.map(item => item.value), ['成人', '青少年']);
 assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
 assert.deepStrictEqual(taxonomy.LEAD_CONSULT_OPTIONS.map(item => item.value), taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value));
+assert.deepStrictEqual(taxonomy.LEAD_LEVEL_OPTIONS.map(item => item.value), ['未知', '0', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '自定义']);
+assert.deepStrictEqual(taxonomy.LEAD_PRIORITY_OPTIONS.map(item => item.value), ['P0', 'P1', 'P2', 'P3', 'P4']);
+assert.deepStrictEqual(taxonomy.CAMPUS_OPTIONS.map(item => item.value), ['顺义马坡', '蓝色港湾', '朝阳十里堡', '国家网球中心', '朝珺私教']);
 assert.strictEqual(taxonomy.normalizeLeadCustomerType('青少年小班课'), '青少年');
 assert.strictEqual(taxonomy.normalizeLeadCustomerType('成人私教'), '成人');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('成人私教'), '私教课');
