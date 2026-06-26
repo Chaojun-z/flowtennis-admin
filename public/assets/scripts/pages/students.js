@@ -124,8 +124,8 @@ function studentDealPathText(stu){
   return studentHasTrialPath(stu)?STUDENT_DEAL_PATH_LABELS[0]:STUDENT_DEAL_PATH_LABELS[1];
 }
 function studentTrialPathStatusText(stu){
-  if(studentHasNonTrialPackage(stu))return '已转正式';
-  if(studentLastLessonDate(stu))return '已体验待转化';
+  if(studentHasNonTrialPackage(stu))return '已成交';
+  if(studentLastLessonDate(stu))return '已体验待成交';
   return '已约体验';
 }
 function studentHasRemainingPackage(stu){

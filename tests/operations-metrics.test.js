@@ -55,8 +55,7 @@ const metrics = buildOperationsMetrics({
 
 assert.strictEqual(metrics.overview.cards.totalIncome.value, 2500, 'overview should reuse finance total income');
 assert.strictEqual(metrics.conversion.cards.totalLeads.value, 5, 'conversion should count all leads');
-assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '课程转化').count, 1, 'lead funnel should use the unified lead stage');
-assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '课程+订场').count, 1, 'multiple conversion results should be merged into one lead stage');
+assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '已成交').count, 3, 'lead funnel should collapse all deal paths into the single standard converted stage');
 assert.strictEqual(metrics.conversion.cards.sameProjectRenewalRate.value, 100, 'same package renewal should count as same-project renewal');
 assert.deepStrictEqual(
   metrics.conversion.courseFunnel.map(row => row.stage),
@@ -856,7 +855,7 @@ const lifecycleBackedMetrics = buildOperationsMetrics({
   financeOverviewData: {}
 }, { now: new Date('2026-06-18T00:00:00+08:00') });
 
-assert.strictEqual(lifecycleBackedMetrics.conversion.stageRows.find(row => row.stage === '课程+订场+会员')?.count, 1, 'conversion stage should use lifecycle conversion sets');
+assert.strictEqual(lifecycleBackedMetrics.conversion.stageRows.find(row => row.stage === '已成交')?.count, 1, 'conversion stage should reuse the unified converted stage from lifecycle data');
 assert.strictEqual(lifecycleBackedMetrics.conversion.sourceRows.find(row => row.source === '转介绍')?.converted, 1, 'conversion source rows should use lifecycle standard source');
 assert.ok(lifecycleBackedMetrics.conversion.filterOptions.coaches.includes('统一教练'), 'conversion coach filters should use lifecycle owner');
 

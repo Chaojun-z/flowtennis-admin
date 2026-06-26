@@ -998,7 +998,7 @@ function operationsRate(part, total) {
 
 function operationsTrialDone(row = {}) {
   const now = Date.now();
-  return ['trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
+  return ['trialAttendedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
     const date = row[key] ? new Date(row[key]) : null;
     return date && !Number.isNaN(date.getTime()) && date.getTime() <= now;
   });
@@ -1007,13 +1007,13 @@ function operationsTrialDone(row = {}) {
 function operationsHasAttendance(row = {}) {
   if (row.hasAttendance) return true;
   const text = `${row.stage || ''} ${row.rawStatus || ''} ${row.status || ''} ${row.statusAfter || ''} ${row.trialStatus || ''}`;
-  return operationsTrialDone(row) || /已体验待转化|课程转化|课程\+|已体验|实到|到课|体验课完成/.test(text);
+  return operationsTrialDone(row) || /已体验待成交|已成交|课程\+|已体验|实到|到课|体验课完成/.test(text);
 }
 
 function operationsHasAppointment(row = {}) {
   if (row.hasAppointment || operationsHasAttendance(row) || row.hasTrialDeal) return true;
   const text = `${row.stage || ''} ${row.rawStatus || ''} ${row.status || ''} ${row.statusAfter || ''} ${row.trialStatus || ''}`;
-  return /已约体验|已体验待转化|课程转化|课程\+|约体验|预约/.test(text);
+  return /已约体验|已体验待成交|已成交|课程\+|约体验|预约/.test(text);
 }
 
 function operationsGroupRows(rows, key) {

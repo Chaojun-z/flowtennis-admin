@@ -8,6 +8,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
+const { buildLeadPoolRows } = require('../read-models/platform-metrics.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -325,57 +326,94 @@ function lifecycleForLead(lead = {}, byLeadId = new Map()) {
   return leadIds(lead).map(id => byLeadId.get(id)).find(Boolean) || {};
 }
 
+function leadPoolRowsForData(data = {}) {
+  return buildLeadPoolRows({
+    leads: data.leads || [],
+    customerLifecycleRows: lifecycleRowsForData(data),
+    lifecycleScope: 'all'
+  });
+}
+
+function buildLeadPoolByLeadId(rows = []) {
+  const byLeadId = new Map();
+  (rows || []).forEach(row => {
+    const ids = new Set([
+      row?.id,
+      row?.leadId,
+      row?.sourceLeadId,
+      ...(Array.isArray(row?._mergedLeadIds) ? row._mergedLeadIds : [])
+    ].map(value => String(value || '').trim()).filter(Boolean));
+    ids.forEach(id => {
+      if (!byLeadId.has(id)) byLeadId.set(id, row);
+    });
+  });
+  return byLeadId;
+}
+
+function leadPoolForLead(lead = {}, leadPoolByLeadId = new Map()) {
+  return leadIds(lead).map(id => leadPoolByLeadId.get(id)).find(Boolean) || {};
+}
+
 function buildLeadConversionSets(data = {}) {
   return buildLeadConversionSetsFromLifecycle(lifecycleRowsForData(data));
 }
 
-function normalizeLeadStage(lead = {}, sets = {}) {
-  const explicit = String(lead.leadStage || lead.systemStatus || lead.stage || '').trim();
-  const allowed = new Set([
-    '未转化', '已约体验', '已体验待转化', '课程转化', '直接成交',
-    '订场转化', '会员转化', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员', '已流失'
-  ]);
-  if (allowed.has(explicit)) return explicit;
+function normalizeLeadDealType(lead = {}, leadPoolByLeadId = new Map(), sets = {}) {
+  const pooled = leadPoolForLead(lead, leadPoolByLeadId);
+  const explicit = String(pooled.dealType || pooled.conversionType || lead.dealType || lead.conversionType || '').trim();
+  if (explicit) return explicit.split('+').map(value => String(value || '').trim()).filter(Boolean);
 
   const ids = leadIds(lead);
   const hasCourse = !!(lead.studentId || lead.formalStudentId || lead.courseStudentId || ids.some(id => sets.course?.has(id)));
   const hasBooking = !!(lead.courtId || lead.bookingCourtId || ids.some(id => sets.booking?.has(id)));
   const hasMembership = !!(lead.membershipAccountId || lead.memberId || ids.some(id => sets.membership?.has(id)));
-  const converted = [
+  return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',
     hasMembership ? '会员' : ''
   ].filter(Boolean);
-  if (converted.length >= 2) return converted.join('+');
-  if (hasCourse) return '课程转化';
-  if (hasBooking) return '订场转化';
-  if (hasMembership) return '会员转化';
+}
+
+function normalizeLeadStage(lead = {}, sets = {}, leadPoolByLeadId = new Map()) {
+  const pooled = leadPoolForLead(lead, leadPoolByLeadId);
+  const explicit = String(pooled.leadStage || lead.leadStage || lead.systemStatus || lead.stage || '').trim();
+  if (['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].includes(explicit)) return explicit;
+  if (explicit === '未转化') return '跟进中';
+  if (/流失|无意向/.test(explicit)) return '已流失';
+  if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
+  if (/已约|预约|约体验/.test(explicit)) return '已约体验';
+
+  const dealType = normalizeLeadDealType(lead, leadPoolByLeadId, sets);
+  if (dealType.length) return '已成交';
+
+  if (String(pooled.trialAttendedAt || '').trim()) return '已体验待成交';
+  if (String(pooled.trialBookedAt || pooled.trialAtRaw || '').trim()) return '已约体验';
 
   const raw = `${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
   if (/流失/.test(raw)) return '已流失';
-  if (/已体验|体验待转化/.test(raw)) return '已体验待转化';
+  if (/已体验|体验待转化|体验待成交/.test(raw)) return '已体验待成交';
   if (/已约|预约|约体验/.test(raw)) return '已约体验';
-  return '未转化';
+  return '跟进中';
 }
 
-function buildStageRows(leads = [], sets = {}) {
-  const order = ['未转化', '已约体验', '已体验待转化', '课程转化', '直接成交', '订场转化', '会员转化', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员', '已流失'];
+function buildStageRows(leads = [], sets = {}, leadPoolByLeadId = new Map()) {
+  const order = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'];
   const counts = new Map(order.map(stage => [stage, 0]));
   (leads || []).forEach(lead => {
-    const stage = normalizeLeadStage(lead, sets);
+    const stage = normalizeLeadStage(lead, sets, leadPoolByLeadId);
     counts.set(stage, (counts.get(stage) || 0) + 1);
   });
   return [...counts.entries()].map(([stage, count]) => ({ stage, count })).filter(row => row.count > 0);
 }
 
-function buildSourceRows(leads = [], sets = {}, lifecycleByLeadId = new Map()) {
+function buildSourceRows(leads = [], sets = {}, lifecycleByLeadId = new Map(), leadPoolByLeadId = new Map()) {
   const grouped = new Map();
   (leads || []).forEach(lead => {
     const lifecycle = lifecycleForLead(lead, lifecycleByLeadId);
     const source = businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source);
     const row = grouped.get(source) || { source, leads: 0, converted: 0 };
     row.leads += 1;
-    if (!['未转化', '已约体验', '已体验待转化', '已流失'].includes(normalizeLeadStage(lead, sets))) row.converted += 1;
+    if (normalizeLeadStage(lead, sets, leadPoolByLeadId) === '已成交') row.converted += 1;
     grouped.set(source, row);
   });
   return [...grouped.values()]
@@ -564,7 +602,7 @@ function parseDateValue(value) {
 
 function leadTrialDone(lead = {}, now = new Date()) {
   const current = now instanceof Date ? now : new Date(now);
-  return ['trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
+  return ['trialAttendedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt'].some(key => {
     const date = parseDateValue(lead[key]);
     return date && date.getTime() <= current.getTime();
   });
@@ -574,6 +612,7 @@ function courseConversionRows(data = {}, options = {}) {
   const now = options.now || new Date();
   const sets = buildLeadConversionSets(data);
   const lifecycleByLeadId = buildLifecycleByLeadId(lifecycleRowsForData(data));
+  const leadPoolByLeadId = buildLeadPoolByLeadId(leadPoolRowsForData(data));
   const studentIndexes = buildStudentIndexes(data.students || []);
   const purchaseCounts = buildPurchaseCounts(data.purchases || []);
   const firstPurchaseDateByStudent = buildFirstPurchaseDateByStudent(data.purchases || []);
@@ -583,23 +622,26 @@ function courseConversionRows(data = {}, options = {}) {
     const id = leadId(lead);
     const ids = leadIds(lead);
     const lifecycle = lifecycleForLead(lead, lifecycleByLeadId);
+    const pooled = leadPoolForLead(lead, leadPoolByLeadId);
     const directStudent = studentIndexes.byId.get(String(lead.studentId || lead.formalStudentId || lead.courseStudentId || '').trim());
     const linkedStudent = directStudent || ids.map(lid => studentIndexes.byLeadId.get(lid)).find(Boolean) || null;
     const sid = studentId(linkedStudent || {});
-    const stage = normalizeLeadStage(lead, sets);
+    const stage = normalizeLeadStage(lead, sets, leadPoolByLeadId);
+    const dealType = normalizeLeadDealType(lead, leadPoolByLeadId, sets).join('+');
     const linkedStudentFormal = sid && firstPurchaseDateByStudent.has(sid);
-    const hasCourse = /课程/.test(stage) || stage === '直接成交' || linkedStudentFormal || ids.some(lid => sets.course?.has(lid));
+    const hasCourse = dealType.includes('课程') || linkedStudentFormal || ids.some(lid => sets.course?.has(lid));
     const dealPath = String(linkedStudent?.dealPath || lead.dealPath || '').trim();
-    const stageText = `${stage} ${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
+    const stageText = `${stage} ${dealType} ${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
     const leadFollowups = ids.flatMap(lid => followupsByLeadId.get(lid) || []);
-    const trialDate = firstRowDate(lead, ['trialAtRaw', 'trialLessonAt', 'trialAt']);
-    const appointmentEventDate = trialDate || leadFollowupEvidenceDate(leadFollowups, text => /已约|预约|约体验|已体验|实到|到课|体验课完成|课程转化|直接成交|成交/.test(text));
-    const attendanceEventDate = trialDate || leadFollowupEvidenceDate(leadFollowups, text => /已体验|实到|到课|体验课完成|课程转化|直接成交|成交/.test(text));
-    const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /课程转化|直接成交|成交|报名|购买/.test(text));
-    const trialDone = leadTrialDone(lead, now);
-    const hasAttendance = trialDone || /已体验待转化|课程转化|课程\+|已体验|实到|到课|体验课完成/.test(stageText) || (hasCourse && dealPath === '体验转化');
-    const hasTrialDeal = hasCourse && dealPath !== '直接成交' && stage !== '直接成交';
-    const hasAppointment = /已约体验|已体验待转化|课程转化|课程\+|约体验|预约/.test(stageText) || hasAttendance || hasTrialDeal;
+    const trialBookedAt = pooled.trialBookedAt || lifecycle.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || '';
+    const trialAttendedAt = pooled.trialAttendedAt || lifecycle.trialAttendedAt || '';
+    const trialDone = leadTrialDone({ trialAttendedAt, trialAtRaw: trialBookedAt, trialLessonAt: lead.trialLessonAt, trialAt: lead.trialAt }, now);
+    const appointmentEventDate = trialBookedAt || leadFollowupEvidenceDate(leadFollowups, text => /已约|预约|约体验|已体验|实到|到课|体验课完成|已成交|课程转化|直接成交|成交/.test(text));
+    const attendanceEventDate = trialAttendedAt || (trialDone ? trialBookedAt : '') || leadFollowupEvidenceDate(leadFollowups, text => /已体验|实到|到课|体验课完成|已成交|课程转化|直接成交|成交/.test(text));
+    const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /已成交|课程转化|直接成交|成交|报名|购买/.test(text));
+    const hasAttendance = !!trialAttendedAt || trialDone || /已体验待成交|已体验|实到|到课|体验课完成/.test(stageText) || (hasCourse && dealPath === '体验转化');
+    const hasTrialDeal = hasCourse && dealPath !== '直接成交';
+    const hasAppointment = !!trialBookedAt || /已约体验|已体验待成交|约体验|预约/.test(stageText) || hasAttendance || hasTrialDeal;
     const hasRenewal = hasTrialDeal && sid && (purchaseCounts.get(sid) || 0) > 1;
     return {
       leadId: id,
@@ -607,12 +649,14 @@ function courseConversionRows(data = {}, options = {}) {
       source: businessTaxonomy.normalizeLeadSource(lifecycle.source || lead.source || linkedStudent?.source),
       campus: campusLabel(lifecycle.campus || lead.campus || lead.campusName || linkedStudent?.campus || linkedStudent?.campusName, campusLabels),
       coach: normalizeText(lifecycle.formalCoach || lead.formalCoach || linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.primaryCoach || lead.coach || lead.coachName || lifecycle.owner || lead.owner),
-      leadDate: firstRowDate(lead, ['leadDate', 'createdAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
+      leadDate: firstRowDate(pooled.leadDate ? pooled : lead, ['leadDate', 'createdAt', 'trialBookedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
       level: normalizeText(lead.level || linkedStudent?.level, ''),
       consultType: normalizeText(lead.consultType || linkedStudent?.consultType, ''),
       studentType: normalizeText(lead.studentType || lead.type || linkedStudent?.studentType || linkedStudent?.type, ''),
       gender: normalizeText(lead.gender || lead.sex || linkedStudent?.gender || linkedStudent?.sex, ''),
-      trialAtRaw: lead.trialAtRaw || '',
+      trialBookedAt,
+      trialAttendedAt,
+      trialAtRaw: lead.trialAtRaw || pooled.trialAtRaw || '',
       trialLessonAt: lead.trialLessonAt || '',
       trialAt: lead.trialAt || '',
       appointmentEventDate,
@@ -2333,7 +2377,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
   const sets = buildLeadConversionSets({ ...data, customerLifecycleRows });
-  const stageRows = buildStageRows(rangedData.leads || [], sets);
+  const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(leadPoolRowsForData({ ...data, leads: rangedData.leads || [], customerLifecycleRows }));
+  const stageRows = buildStageRows(rangedData.leads || [], sets, rangedLeadPoolByLeadId);
   const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
   const sourceRows = buildCourseSourceRows(courseRows);
