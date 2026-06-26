@@ -653,7 +653,6 @@ function renderCoachOps(){
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }
-
 function coachOpsDateWithinRange(value,from,to){
   const day=String(value||'').slice(0,10);
   if(!day)return false;
