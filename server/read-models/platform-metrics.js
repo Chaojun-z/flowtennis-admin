@@ -28,6 +28,10 @@ function visibleLeadProfileNote(lead = {}) {
   return note;
 }
 
+function isOrphanMaterializedStudentLead(lead = {}) {
+  return /^lead-from-student-/.test(text(lead.id || lead.leadId));
+}
+
 function lifecycleInScope(row = {}, scope = 'all') {
   if (scope === 'all') return true;
   if (scope === 'course') return text(row.studentStage) !== 'none';
@@ -137,12 +141,16 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     const id = rowId(lead);
     if (!id || rows.has(id)) return;
     const source = businessTaxonomy.normalizeLeadSource(lead.source);
+    const orphanMaterialized = isOrphanMaterializedStudentLead(lead);
     rows.set(id, {
       ...lead,
       id,
       sourceLeadId: id,
       source,
-      leadStage: lifecycleLeadStage({}, lead),
+      leadDate: orphanMaterialized ? '' : text(lead.leadDate),
+      dealType: orphanMaterialized ? '' : text(lead.dealType || lead.conversionType),
+      conversionType: orphanMaterialized ? '' : text(lead.conversionType || lead.dealType),
+      leadStage: orphanMaterialized ? '跟进中' : lifecycleLeadStage({}, lead),
       isLifecycleSynthetic: false
     });
   });

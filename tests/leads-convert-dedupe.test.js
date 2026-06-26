@@ -28,6 +28,20 @@ async function main() {
         studentId: 'student-4',
         leadDate: '2026-06-26T03:37:16.269Z',
         createdAt: '2026-06-26T03:37:16.269Z'
+      },
+      {
+        id: 'lead-from-student-student-missing',
+        displayName: '董凡轩',
+        wechatName: '董凡轩',
+        studentId: 'student-missing',
+        source: '小红书',
+        customerType: '成人',
+        demandProduct: '其他',
+        leadStage: '已成交',
+        conversionType: '课程',
+        dealType: '课程',
+        leadDate: '2026-06-26T03:37:16.269Z',
+        createdAt: '2026-06-26T03:37:16.269Z'
       }
     ],
     ft_students: [
@@ -109,6 +123,11 @@ async function main() {
   assert.strictEqual(materializedStudentLead.profileNote, '', '学员倒推线索不能把课包消耗记录、余额等系统流水塞进基本信息');
   const existingBadDateLead = listRes.body.find((row) => row.displayName === '丫丫');
   assert.strictEqual(existingBadDateLead.leadDate, '2026-03-21', '已落表的学员倒推线索如果错误显示 6 月 26，必须用学员最早业务时间纠正展示');
+  const missingStudentLead = listRes.body.find((row) => row.displayName === '董凡轩');
+  assert.ok(missingStudentLead, '已落表但没有学员事实的线索仍应出现在原始线索池');
+  assert.notStrictEqual(String(missingStudentLead.leadDate || '').slice(0, 10), '2026-06-26', '找不到学员事实的倒推线索不能继续展示错误落表日期 6 月 26');
+  assert.notStrictEqual(missingStudentLead.leadStage, '已成交', '找不到学员/购课/上课事实时不能仅凭旧状态显示已成交');
+  assert.strictEqual(missingStudentLead.dealType, '', '找不到学员/购课/上课事实时不能仅凭旧字段显示已成交课程');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
     writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),
