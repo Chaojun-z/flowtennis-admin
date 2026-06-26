@@ -18,6 +18,16 @@ function isConvertedStage(stage = '') {
   return text(stage) === '已成交';
 }
 
+function leadBusinessDate(row = {}, lead = {}) {
+  return text(lead.leadDate || row.leadDate || row.firstTouchAt || row.leadEnteredAt || row.trialAtRaw || row.courseFirstPurchaseAt || row.conversionAt);
+}
+
+function visibleLeadProfileNote(lead = {}) {
+  const note = text(lead.profileNote);
+  if (/课包消耗记录#|余额\d+\/\d+|来源价格\d*[：:]/.test(note)) return '';
+  return note;
+}
+
 function lifecycleInScope(row = {}, scope = 'all') {
   if (scope === 'all') return true;
   if (scope === 'course') return text(row.studentStage) !== 'none';
@@ -101,13 +111,13 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       enrollAtRaw: text(lead.enrollAtRaw || lead.formalSignupAt || lead.enrollAt || lifecycle.courseFirstPurchaseAt),
       conversionAt: text(lead.conversionAt || lifecycle.conversionAt),
       formalCoach: text(lead.formalCoach || lifecycle.formalCoach),
-      profileNote: text(lead.profileNote || lifecycle.profileNote),
+      profileNote: visibleLeadProfileNote(lead),
       dealType,
       conversionType: dealType,
       studentId: text(lifecycle.studentId || lead.studentId || lead.formalStudentId || lead.courseStudentId),
       courtId: text(lifecycle.courtId || lead.courtId || lead.bookingCourtId),
       membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),
-      leadDate: text(lead.leadDate || lifecycle.leadDate || lifecycle.createdAt),
+      leadDate: leadBusinessDate(lifecycle, lead),
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
       leadStage,
       systemStatus: text(lead.systemStatus || leadStage),

@@ -40,6 +40,7 @@ function createLeadsRoutes(deps={}){
   }
 
   function buildSyntheticLeadRecord(row={},id,now){
+    const leadDate=cleanLeadText(row.firstTouchAt||row.leadEnteredAt||row.leadDate||row.trialAtRaw||row.courseFirstPurchaseAt||row.conversionAt);
     const raw={
       id,
       displayName:cleanLeadText(row.displayName),
@@ -51,14 +52,14 @@ function createLeadsRoutes(deps={}){
       customerType:cleanLeadText(row.customerType),
       demandProduct:cleanLeadText(row.demandProduct),
       consultType:cleanLeadText(row.demandProduct),
-      profileNote:cleanLeadText(row.profileNote),
+      profileNote:'',
       owner:cleanLeadText(row.owner),
-      leadDate:cleanLeadText(row.leadDate),
+      leadDate,
       trialAtRaw:cleanLeadText(row.trialAtRaw),
       enrollAtRaw:cleanLeadText(row.courseFirstPurchaseAt),
       formalCoach:cleanLeadText(row.formalCoach),
       studentId:cleanLeadText(row.studentId),
-      createdAt:cleanLeadText(row.createdAt||row.leadDate)||now,
+      createdAt:cleanLeadText(row.createdAt)||now,
       updatedAt:now
     };
     return normalizeLeadRecord?normalizeLeadRecord(raw,{id,now}):raw;
