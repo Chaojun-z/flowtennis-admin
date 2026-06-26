@@ -25,6 +25,7 @@ assert.match(agentsSource, /docs\/数据口径变更检查清单\.md/, 'AGENTS s
 assert.match(agentsSource, /tests\/cross-page-metric-consistency\.test\.js/, 'AGENTS should require cross-page consistency tests for shared metrics');
 assert.match(packageJson.scripts.test, /node tests\/cross-page-metric-consistency\.test\.js/, 'npm test should run cross-page metric consistency guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standards-governance\.test\.js/, 'npm test should run data-standard governance guard');
+assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.test\.js/, 'npm test should run source-level data-standard guard');
 
 [
   '数据口径总表已更新或确认无需更新',
