@@ -137,6 +137,64 @@ const freePrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: freePriva
 assert.strictEqual(freePrivateLeadRows[0].leadStage, '跟进中', 'free class follow-up should not become 已约体验 or 已成交');
 assert.strictEqual(freePrivateLeadRows[0].demandProduct, '私教课');
 
+const staleMaterializedFreeRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-from-student-student-free-private',
+      displayName: '小鹿',
+      studentId: 'student-free-private',
+      leadDate: '2026-03-01',
+      leadStage: '已成交',
+      systemStatus: '已成交',
+      rawStatus: '已报名-私教',
+      dealType: '课程',
+      conversionType: '课程',
+      isCourseConverted: true,
+      createdAt: '2026-06-26T03:37:16.269Z'
+    }
+  ],
+  students: [
+    {
+      id: 'student-free-private',
+      name: '小鹿',
+      campus: 'mabao'
+    }
+  ],
+  schedule: [
+    {
+      id: 'schedule-free-private',
+      studentId: 'student-free-private',
+      courseType: '私教课',
+      status: '已结束',
+      startTime: '2026-03-18T10:00:00.000Z',
+      actualAmount: 0,
+      paidAmount: 0
+    }
+  ]
+});
+const staleMaterializedFreeLeadRows = buildLeadPoolRows({ customerLifecycleRows: staleMaterializedFreeRows, lifecycleScope: 'course' });
+assert.strictEqual(staleMaterializedFreeLeadRows[0].leadDate, '2026-03-01', 'manual corrected lead date should be preserved when it exists');
+assert.strictEqual(staleMaterializedFreeLeadRows[0].leadStage, '跟进中', 'stale materialized deal fields must not override lifecycle facts for free course follow-up');
+assert.strictEqual(staleMaterializedFreeLeadRows[0].dealType, '', 'free course follow-up should not keep stale course deal type');
+const staleMaterializedFreeLeadRowsWithRawLead = buildLeadPoolRows({
+  leads: [{
+    id: 'lead-from-student-student-free-private',
+    displayName: '小鹿',
+    studentId: 'student-free-private',
+    leadDate: '2026-03-01',
+    leadStage: '已成交',
+    systemStatus: '已成交',
+    rawStatus: '已报名-私教',
+    dealType: '课程',
+    conversionType: '课程',
+    isCourseConverted: true
+  }],
+  customerLifecycleRows: staleMaterializedFreeRows,
+  lifecycleScope: 'course'
+});
+assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].leadStage, '跟进中', 'raw lead stage must not override lifecycle facts when the student has no paid purchase');
+assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].dealType, '', 'raw lead deal type must not override lifecycle facts when the student has no paid purchase');
+
 const directPrivateRows = buildCustomerLifecycleRows({
   students: [
     {

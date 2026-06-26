@@ -32,6 +32,23 @@ function isOrphanMaterializedStudentLead(lead = {}) {
   return /^lead-from-student-/.test(text(lead.id || lead.leadId));
 }
 
+function hasLifecycleBusinessFact(row = {}) {
+  return !!(
+    text(row.studentId || row.courtId || row.membershipAccountId) ||
+    text(row.trialBookedAt || row.trialAttendedAt || row.courseFirstPurchaseAt || row.bookingFirstAt || row.membershipFirstAt) ||
+    row.hasCourseConversion ||
+    row.hasBookingConversion ||
+    row.hasMembershipConversion ||
+    text(row.studentStage) !== 'none' ||
+    text(row.courtStage) !== 'none' ||
+    text(row.membershipStatus)
+  );
+}
+
+function shouldIgnoreLegacyLeadOutcome(row = {}) {
+  return hasLifecycleBusinessFact(row) && text(row.studentStage) !== 'formal';
+}
+
 function lifecycleInScope(row = {}, scope = 'all') {
   if (scope === 'all') return true;
   if (scope === 'course') return text(row.studentStage) !== 'none';
@@ -62,9 +79,10 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 }
 
 function lifecycleDealType(row = {}, lead = {}) {
-  const stored = text(lead.dealType || lead.conversionType || row.dealType);
+  const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row);
+  const stored = ignoreLegacyOutcome ? '' : text(lead.dealType || lead.conversionType || row.dealType);
   if (stored) return stored;
-  const legacyText = text([
+  const legacyText = ignoreLegacyOutcome ? '' : text([
     lead.leadStage,
     lead.systemStatus,
     lead.stage,
@@ -73,7 +91,7 @@ function lifecycleDealType(row = {}, lead = {}) {
     lead.statusAfter
   ].filter(Boolean).join(' '));
   const studentStage = text(row.studentStage);
-  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId) || /课程|课包|报名|私教|小班/.test(legacyText);
+  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || (!ignoreLegacyOutcome && !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) || /课程|课包|报名|私教|小班/.test(legacyText);
   const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage)) || !!text(lead.courtId || lead.bookingCourtId) || /订场|定场|场地/.test(legacyText);
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member' || !!text(lead.membershipAccountId || lead.memberId) || /会员|储值/.test(legacyText);
   return [

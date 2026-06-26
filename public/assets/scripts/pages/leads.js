@@ -259,11 +259,7 @@ function leadDateInputValue(lead){
   return leadDateOnly(lead?.leadDate,lead)||today();
 }
 function leadDateDisplayText(lead){
-  const date=leadDateOnly(lead?.leadDate,lead);
-  if(!date)return '-';
-  const raw=String(lead?.leadDate||'').trim();
-  const time=raw.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
-  return time?`${date} ${String(time[1]).padStart(2,'0')}:${time[2]}`:date;
+  return leadDateOnly(lead?.leadDate,lead)||'-';
 }
 function leadTimeRangeText(value,lead={}){
   const raw=String(value||'').trim();
