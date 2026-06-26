@@ -39,6 +39,11 @@ async function main() {
     scan: async (table) => rows[table] || [],
     put: async (table, id, row) => {
       writes.push({ table, id, row });
+      const list = rows[table] || [];
+      const index = list.findIndex((item) => item.id === id);
+      if (index >= 0) list[index] = row;
+      else list.push(row);
+      rows[table] = list;
     },
     ensureLeadTables: async () => {},
     isProductionRuntime: () => false,
@@ -62,7 +67,15 @@ async function main() {
 
   const listRes = makeRes();
   await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: listRes, query: new URLSearchParams() });
-  assert.ok(listRes.body.find((row) => row.displayName === '可搜学员'), '线索池默认列表必须补入缺少真实线索绑定的学员');
+  const materializedStudentLead = listRes.body.find((row) => row.displayName === '可搜学员');
+  assert.ok(materializedStudentLead, '线索池默认列表必须补入缺少真实线索绑定的学员');
+  assert.strictEqual(materializedStudentLead.id, 'lead-from-student-student-2', '学员倒推进入线索池时必须返回真实线索 ID');
+  assert.strictEqual(materializedStudentLead.sourceLeadId, 'lead-from-student-student-2', '学员倒推线索必须能通过 sourceLeadId 回写真实线索');
+  assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
+  assert.ok(
+    writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2'),
+    '学员倒推线索进入列表时必须先落成 ft_leads 真实记录'
+  );
   assert.ok(!listRes.body.find((row) => row.courtId === 'court-1'), '线索池课程默认列表不能把订场用户也混入课程线索总数');
 
   const searchRes = makeRes();

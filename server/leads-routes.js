@@ -34,6 +34,55 @@ function createLeadsRoutes(deps={}){
     return next;
   }
 
+  function syntheticLeadIdForLifecycle(row={}){
+    const studentId=cleanLeadText(row.studentId);
+    return studentId?`lead-from-student-${studentId}`:'';
+  }
+
+  function buildSyntheticLeadRecord(row={},id,now){
+    const raw={
+      id,
+      displayName:cleanLeadText(row.displayName),
+      name:cleanLeadText(row.displayName),
+      wechatName:cleanLeadText(row.displayName),
+      phone:cleanLeadText(row.phone),
+      source:cleanLeadText(row.source),
+      campus:cleanLeadText(row.campus),
+      customerType:cleanLeadText(row.customerType),
+      demandProduct:cleanLeadText(row.demandProduct),
+      consultType:cleanLeadText(row.demandProduct),
+      profileNote:cleanLeadText(row.profileNote),
+      owner:cleanLeadText(row.owner),
+      leadDate:cleanLeadText(row.leadDate),
+      trialAtRaw:cleanLeadText(row.trialAtRaw),
+      enrollAtRaw:cleanLeadText(row.courseFirstPurchaseAt),
+      formalCoach:cleanLeadText(row.formalCoach),
+      studentId:cleanLeadText(row.studentId),
+      createdAt:cleanLeadText(row.createdAt||row.leadDate)||now,
+      updatedAt:now
+    };
+    return normalizeLeadRecord?normalizeLeadRecord(raw,{id,now}):raw;
+  }
+
+  async function materializeStudentLifecycleLeads(mergedLeads=[],customerLifecycleRows=[]){
+    const existingIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.id)).filter(Boolean));
+    const existingStudentIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.studentId)).filter(Boolean));
+    const now=new Date().toISOString();
+    const created=[];
+    for(const row of customerLifecycleRows||[]){
+      const studentId=cleanLeadText(row.studentId);
+      if(!studentId||cleanLeadText(row.sourceLeadId)||existingStudentIds.has(studentId))continue;
+      const id=syntheticLeadIdForLifecycle(row);
+      if(!id||existingIds.has(id))continue;
+      const lead=buildSyntheticLeadRecord(row,id,now);
+      await put(T_LEADS,id,lead);
+      created.push(lead);
+      existingIds.add(id);
+      existingStudentIds.add(studentId);
+    }
+    return created;
+  }
+
   async function readLeadPoolRows({lifecycleScope='all'}={}){
     const [leads,students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
       readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS}),
@@ -45,8 +94,8 @@ function createLeadsRoutes(deps={}){
       T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
       T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
-    const mergedLeads=mergeDuplicateLeadRows(leads);
-    const customerLifecycleRows=buildCustomerLifecycleRows({
+    let mergedLeads=mergeDuplicateLeadRows(leads);
+    let customerLifecycleRows=buildCustomerLifecycleRows({
       leads:mergedLeads,
       students,
       purchases,
@@ -56,6 +105,20 @@ function createLeadsRoutes(deps={}){
       membershipAccounts,
       membershipOrders
     });
+    const createdLeads=await materializeStudentLifecycleLeads(mergedLeads,customerLifecycleRows);
+    if(createdLeads.length){
+      mergedLeads=mergeDuplicateLeadRows([...mergedLeads,...createdLeads]);
+      customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:mergedLeads,
+        students,
+        purchases,
+        entitlements,
+        schedule,
+        courts,
+        membershipAccounts,
+        membershipOrders
+      });
+    }
     return buildLeadPoolRows({leads:mergedLeads,customerLifecycleRows,lifecycleScope});
   }
 
