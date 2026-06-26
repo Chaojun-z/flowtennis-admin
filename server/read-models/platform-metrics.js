@@ -37,9 +37,11 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   if (hasTrialBooked) return '已约体验';
   if (studentStage === 'student') return '跟进中';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
+  if (/未转化|未成交/.test(explicit)) return '跟进中';
   if (/流失/.test(explicit)) return '已流失';
   if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
   if (/已约|预约|约体验/.test(explicit)) return '已约体验';
+  if (/成交|转化|已报名|已订场|已定场|储值|会员/.test(explicit)) return '已成交';
   if (/新线索/.test(explicit)) return '新线索';
   if (/跟进/.test(explicit)) return '跟进中';
   return explicit || '跟进中';
@@ -48,10 +50,18 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 function lifecycleDealType(row = {}, lead = {}) {
   const stored = text(lead.dealType || lead.conversionType || row.dealType);
   if (stored) return stored;
+  const legacyText = text([
+    lead.leadStage,
+    lead.systemStatus,
+    lead.stage,
+    lead.rawStatus,
+    lead.status,
+    lead.statusAfter
+  ].filter(Boolean).join(' '));
   const studentStage = text(row.studentStage);
-  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal';
-  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage));
-  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
+  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId) || /课程|课包|报名|私教|小班/.test(legacyText);
+  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage)) || !!text(lead.courtId || lead.bookingCourtId) || /订场|定场|场地/.test(legacyText);
+  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member' || !!text(lead.membershipAccountId || lead.memberId) || /会员|储值/.test(legacyText);
   return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',
@@ -164,6 +174,32 @@ function buildSourceChannelStats(leadPoolRows = []) {
     .sort((a, b) => b.converted - a.converted || b.leads - a.leads || a.source.localeCompare(b.source, 'zh-Hans-CN'));
 }
 
+function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
+  const rawLeadIds = new Set((leads || []).map(row => rowId(row)).filter(Boolean));
+  return (leadPoolRows || []).filter(row => {
+    const id = text(row.id || row.sourceLeadId || row.leadId);
+    return rawLeadIds.has(id);
+  });
+}
+
+function buildRawLeadConversionMetrics({ leads = [], customerLifecycleRows = [] } = {}) {
+  const leadPoolRows = buildLeadPoolRows({ leads, customerLifecycleRows });
+  const rawLeadPoolRows = rawLeadPoolRowsForLeads(leadPoolRows, leads);
+  const stageRows = buildStageRows(rawLeadPoolRows);
+  const sourceRows = buildSourceChannelStats(rawLeadPoolRows);
+  const totalLeads = rawLeadPoolRows.length;
+  const convertedLeads = rawLeadPoolRows.filter(row => isConvertedStage(row.leadStage)).length;
+  return {
+    leadPoolRows,
+    rawLeadPoolRows,
+    totalLeads,
+    convertedLeads,
+    leadConversionRate: totalLeads ? round(convertedLeads * 100 / totalLeads, 1) : 0,
+    stageRows,
+    sourceRows
+  };
+}
+
 function countBy(rows = [], field, allowed = []) {
   const counts = new Map(allowed.map(key => [key, 0]));
   (rows || []).forEach(row => {
@@ -177,22 +213,20 @@ function buildPlatformMetrics(data = {}) {
   const customerLifecycleRows = Array.isArray(data.customerLifecycleRows) && data.customerLifecycleRows.length
     ? data.customerLifecycleRows
     : buildCustomerLifecycleRows(data);
-  const leadPoolRows = buildLeadPoolRows({
+  const leadConversionMetrics = buildRawLeadConversionMetrics({
     leads: data.leads || [],
     customerLifecycleRows
   });
-  const stageRows = buildStageRows(leadPoolRows);
-  const sourceChannelStats = buildSourceChannelStats(leadPoolRows);
-  const totalLeads = leadPoolRows.length;
-  const convertedLeads = leadPoolRows.filter(row => isConvertedStage(row.leadStage)).length;
+  const { leadPoolRows, stageRows, sourceRows: sourceChannelStats, totalLeads, convertedLeads, leadConversionRate } = leadConversionMetrics;
 
   return {
     customerLifecycleRows,
     leadPoolRows,
+    rawLeadPoolRows: leadConversionMetrics.rawLeadPoolRows,
     conversionMetrics: {
       totalLeads,
       convertedLeads,
-      leadConversionRate: totalLeads ? round(convertedLeads * 100 / totalLeads, 1) : 0,
+      leadConversionRate,
       stageRows,
       sourceRows: sourceChannelStats
     },
@@ -206,6 +240,8 @@ function buildPlatformMetrics(data = {}) {
 module.exports = {
   buildPlatformMetrics,
   buildLeadPoolRows,
+  buildRawLeadConversionMetrics,
+  rawLeadPoolRowsForLeads,
   buildStageRows,
   buildSourceChannelStats,
   lifecycleLeadStage

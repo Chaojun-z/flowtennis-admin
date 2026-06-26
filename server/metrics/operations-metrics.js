@@ -8,7 +8,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
-const { buildLeadPoolRows } = require('../read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildRawLeadConversionMetrics } = require('../read-models/platform-metrics.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -2377,11 +2377,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
   const sets = buildLeadConversionSets({ ...data, customerLifecycleRows });
-  const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(leadPoolRowsForData({ ...data, leads: rangedData.leads || [], customerLifecycleRows }));
-  const stageRows = buildStageRows(rangedData.leads || [], sets, rangedLeadPoolByLeadId);
+  const rawLeadConversion = buildRawLeadConversionMetrics({
+    leads: rangedData.leads || [],
+    customerLifecycleRows
+  });
+  const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
+  const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
-  const sourceRows = buildCourseSourceRows(courseRows);
+  const sourceRows = rawLeadConversion.sourceRows;
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
   const channelEfficiencyRows = buildChannelEfficiencyRows(courseRows);
@@ -2417,8 +2421,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const totalIncome = financeOverviewValues.totalIncome;
   const recognizedRevenue = financeOverviewValues.recognizedRevenue;
   const pendingRevenue = financeOverviewValues.pendingRevenue;
-  const totalLeads = (rangedData.leads || []).length;
-  const convertedLeads = Number(courseFunnel[3]?.count) || 0;
+  const totalLeads = rawLeadConversion.totalLeads;
+  const convertedLeads = rawLeadConversion.convertedLeads;
   const usedCoachHours = round(coachRows.reduce((sum, row) => sum + row.usedHours, 0), 1);
   const availableCoachHours = round(coachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);
   const coachRevenue = money(coachRows.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
@@ -2567,7 +2571,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },
         convertedLeads: { title: '已转化线索', value: convertedLeads, unit: '条' },
-        leadConversionRate: { title: '线索转化率', value: totalLeads ? round(convertedLeads * 100 / totalLeads, 1) : 0, unit: '%' },
+        leadConversionRate: { title: '线索转化率', value: rawLeadConversion.leadConversionRate, unit: '%' },
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }
       },
       stageRows,

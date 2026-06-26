@@ -156,6 +156,10 @@ function leadSystemStatusText(lead){
 function leadFollowupStatusText(lead){
   return String(lead?.rawStatus||lead?.systemStatus||'新线索').trim()||'新线索';
 }
+function leadStandardField(lead,key){
+  const lifecycle=typeof customerLifecycleForRecord==='function'?customerLifecycleForRecord(lead):null;
+  return String(lifecycle?.[key]||lead?.[key]||'').trim();
+}
 function leadNormalizeDealType(value){
   const raw=String(value||'').trim();
   if(!raw||raw==='未转化'||raw==='未成交')return '';
@@ -164,8 +168,11 @@ function leadNormalizeDealType(value){
   const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'');
   return standard.includes(normalized)?normalized:'';
 }
+function leadStandardDealTypeText(lead){
+  return leadNormalizeDealType(leadStandardField(lead,'dealType')||leadStandardField(lead,'conversionType'));
+}
 function leadDealTypeText(lead){
-  const stored=leadNormalizeDealType(lead?.dealType||lead?.conversionType);
+  const stored=leadStandardDealTypeText(lead);
   if(stored)return stored;
   const status=String(lead?.rawStatus||lead?.systemStatus||lead?.leadStage||'');
   const course=!!(lead?.hasCourseConversion||lead?.isCourseConverted||String(lead?.studentStage||'').trim()==='formal'||/已报名|已转课程|课程/.test(status));
@@ -185,8 +192,9 @@ function leadConversionTypeText(lead){
   return leadDealTypeText(lead);
 }
 function leadStageText(lead){
-  const status=String(lead?.leadStage||lead?.systemStatus||lead?.rawStatus||'').trim();
+  const status=leadStandardField(lead,'leadStage')||String(lead?.systemStatus||lead?.rawStatus||'').trim();
   if(leadDealTypeText(lead)||status==='已成交')return '已成交';
+  if(status==='未转化'||status==='未成交')return '跟进中';
   if(status==='已流失'||status==='无意向')return '已流失';
   if(status==='已约体验'||status==='体验课预约')return '已约体验';
   if(status==='体验课完成'||status==='已体验待转化'||status==='已体验待成交'||leadTrialDone(lead))return '已体验待成交';
@@ -692,7 +700,7 @@ function leadTrialDoneByStatus(lead){
   return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
 }
 function leadTrialDoneByTime(lead){
-  const raw=lead?.trialAtRaw||lead?.trialLessonAt||lead?.trialAt;
+  const raw=leadStandardField(lead,'trialAttendedAt')||lead?.trialAttendedAt;
   const date=leadDateOnly(raw,lead);
   return !!date&&date<=today();
 }

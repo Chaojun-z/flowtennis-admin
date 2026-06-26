@@ -58,6 +58,16 @@ assert.strictEqual(rawLeadPoolRows.length, sample.leads.length, 'raw lead pool s
 assert.strictEqual(allLeadPoolRows.length, rawLeadPoolRows.length + 1, 'unified lead-pool builder may include synthetic direct-conversion customers beyond the raw lead cohort');
 assert.strictEqual(platform.leadPoolRows.length, allLeadPoolRows.length, 'platform metrics should expose the full searchable customer pool');
 assert.strictEqual(operations.conversion.cards.totalLeads.value, rawLeadPoolRows.length, 'operations raw lead total should stay aligned with the raw lead pool cohort');
+assert.strictEqual(
+  operations.conversion.cards.convertedLeads.value,
+  rawLeadPoolRows.filter(row => row.leadStage === '已成交').length,
+  'operations converted lead card must use the same total成交口径 as the unified raw lead pool'
+);
+assert.strictEqual(
+  operations.conversion.cards.leadConversionRate.value,
+  50,
+  'operations total lead conversion rate should be 总成交人数 / 有效线索数, not the course-only trial funnel rate'
+);
 
 assert.deepStrictEqual(
   stageCountMap(operations.conversion.stageRows),
@@ -82,6 +92,16 @@ assert.strictEqual(
   operations.conversion.stageRows.find(row => row.stage === '已成交')?.count,
   3,
   'operations converted stage should aggregate all raw成交路径 into the single standard 已成交 stage'
+);
+assert.deepStrictEqual(
+  operations.conversion.sourceRows.map(row => [row.source, row.leads, row.converted, row.conversionRate]),
+  [
+    ['小红书', 2, 1, 50],
+    ['转介绍', 2, 1, 50],
+    ['抖音', 1, 1, 100],
+    ['大众点评', 1, 0, 0]
+  ],
+  'operations source conversion rows must use total成交口径 from unified raw lead rows'
 );
 assert.strictEqual(
   platform.leadPoolRows.find(row => row.id === 'student:stu-synthetic')?.leadStage,

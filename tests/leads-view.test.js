@@ -83,6 +83,10 @@ assert.match(leadsSource, /function renderLeads\([\s\S]*const list=getSortedLead
 assert.match(leadsSource, /function leadCommunicationText\(/, 'leads page should expose the communication summary helper');
 assert.match(leadsSource, /function leadDealTypeText\(/, 'leads page should expose a deal type helper');
 assert.match(leadsSource, /function leadStageText\(/, 'leads page should expose a single lead stage helper');
+assert.match(leadsSource, /function leadStandardField\(/, 'leads page should read lifecycle-standard fields before legacy page fields');
+assert.match(fnBody('leadDealTypeText'), /leadStandardDealTypeText\(lead\)/, 'lead deal type should prefer unified lifecycle dealType');
+assert.match(fnBody('leadStageText'), /leadStandardField\(lead,'leadStage'\)/, 'lead stage should prefer unified lifecycle leadStage');
+assert.match(fnBody('leadTrialDoneByTime'), /trialAttendedAt/, 'lead stats should use actual attended time instead of treating booked trial time as completed');
 assert.match(leadsSource, /leadStageText\(lead\)/, 'leads list and detail should render the lead stage');
 assert.match(leadsSource, /stageValue&&leadStageText\(lead\)!==stageValue/, 'lead filtering should support lead stage');
 assert.match(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)[\s\S]*leadStageText\(lead\)==='已成交'/, 'converted yes/no should align with displayed deal type');
