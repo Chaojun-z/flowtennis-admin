@@ -340,6 +340,69 @@ function studentStatsDirectCourseRows(){
     return studentRoundMoney(row.paidAmount||row.paymentAmount)>0;
   });
 }
+function studentFinanceRowDocumentId(row,prefix){
+  const match=String(row?.sourceDocument||'').match(new RegExp(`^${prefix}\\s+(.+)$`));
+  return match?String(match[1]||'').trim():'';
+}
+function studentFinanceRowsForBase(base=[]){
+  const rows=typeof financeNormalizedRows==='function'?financeNormalizedRows():[];
+  if(!rows.length)return [];
+  const studentIds=new Set((base||[]).map(s=>String(s.id||'')).filter(Boolean));
+  const studentNames=new Set((base||[]).map(s=>String(s.name||'').trim()).filter(Boolean));
+  return rows.filter(row=>{
+    const rowStudentId=String(row.studentId||row.customerId||'').trim();
+    if(rowStudentId&&studentIds.has(rowStudentId))return true;
+    const customer=String(row.customer||row.studentName||row.customerName||'').trim();
+    if(customer&&studentNames.has(customer))return true;
+    const purchaseId=studentFinanceRowDocumentId(row,'购买记录');
+    if(purchaseId){
+      const purchase=purchases.find(p=>String(p.id||'')===purchaseId);
+      if(purchase&&(studentIds.has(String(purchase.studentId||''))||studentNames.has(String(purchase.studentName||'').trim())))return true;
+    }
+    return false;
+  });
+}
+function studentFinanceRowIsCourse(row={}){
+  return [row.businessType,row.displayBusinessType,row.businessTypeLevel1].some(v=>String(v||'').trim()==='课程');
+}
+function studentFinanceRowIsReceipt(row={}){
+  return [row.action,row.transactionType].some(v=>String(v||'').trim()==='收款')&&studentRoundMoney(row.cashDelta)>0;
+}
+function studentFinanceRowIsTrial(row={}){
+  const text=[row.packageName,row.incomeType,row.sourceProject,row.debitTarget,row.notes].map(v=>String(v||'')).join(' ');
+  return /体验/.test(text);
+}
+function studentFinanceSum(rows,field){
+  return studentRoundMoney((rows||[]).reduce((sum,row)=>sum+(Number(row?.[field])||0),0));
+}
+function studentFinanceStatsForBase(base=[]){
+  const rows=studentFinanceRowsForBase(base);
+  if(!rows.length)return null;
+  const courseRows=rows.filter(studentFinanceRowIsCourse);
+  const receiptRows=courseRows.filter(studentFinanceRowIsReceipt);
+  const packageReceiptRows=receiptRows.filter(row=>String(row.sourceDocument||'').startsWith('购买记录'));
+  const directReceiptRows=receiptRows.filter(row=>String(row.sourceDocument||'').startsWith('排课'));
+  const formalPackageRows=packageReceiptRows.filter(row=>!studentFinanceRowIsTrial(row));
+  const trialPackageRows=packageReceiptRows.filter(studentFinanceRowIsTrial);
+  const formalRecognizedRows=courseRows.filter(row=>{
+    if(studentFinanceRowIsTrial(row))return false;
+    const method=String(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'').trim();
+    return method==='课包划扣'&&studentRoundMoney(row.recognizedRevenueDelta)!==0;
+  });
+  const totalIncome=studentFinanceSum(formalPackageRows,'cashDelta');
+  const recognized=studentFinanceSum(formalRecognizedRows,'recognizedRevenueDelta');
+  const trialIncome=studentFinanceSum(trialPackageRows,'cashDelta');
+  const directCourseIncome=studentFinanceSum(directReceiptRows,'cashDelta');
+  return {
+    totalIncome,
+    recognized,
+    packageBalance:studentRoundMoney(totalIncome-recognized),
+    trialIncome,
+    directCourseIncome,
+    courseIncome:studentRoundMoney(totalIncome+directCourseIncome),
+    courseRecognized:studentRoundMoney(recognized+directCourseIncome)
+  };
+}
 function studentTrialKeys(schedule){
   const ids=[...parseArr(schedule?.studentIds),schedule?.studentId].map(v=>String(v||'').trim()).filter(Boolean);
   if(ids.length)return ids.map(id=>`id:${id}`);
@@ -385,6 +448,7 @@ function studentStatsMatchesPackageCampus(purchase,entitlement={}){
 }
 function studentPageStats(base){
   const lifecycleStats=studentLifecycleStats(base);
+  const financeStats=studentFinanceStatsForBase(base);
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
   const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
@@ -394,50 +458,31 @@ function studentPageStats(base){
     const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
     return rowMatchesBase(e)&&includePackageRow(e)&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废';
   });
-  const validEntitlementIds=new Set(validEntitlements.map(e=>String(e.id||'')));
   const validEntitlementPurchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
   const validPurchases=purchases.filter(p=>{
     if(purchaseStatusText(p)==='已作废')return false;
     if(!includePackageRow(p))return false;
     return rowMatchesBase(p)||validEntitlementPurchaseIds.has(String(p.id||''));
   });
-  const purchaseIds=new Set([
-    ...validEntitlementPurchaseIds,
-    ...validPurchases.map(p=>String(p.id||'')).filter(Boolean)
-  ]);
-  const purchaseMap=new Map(validPurchases.map(p=>[String(p.id||''),p]));
-  const entitlementMap=new Map(validEntitlements.map(e=>[String(e.id||''),e]));
   const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
   const trialIncome=purchases.filter(p=>purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p))
     .filter(p=>studentIds.has(String(p.studentId||''))||studentNames.has(String(p.studentName||'').trim()))
     .reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
   const directCourseIncome=studentStatsDirectCourseRows().reduce((sum,row)=>sum+studentRoundMoney(row.paidAmount||row.paymentAmount),0);
-  const recognized=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))
-    .filter(row=>Number(row.lessonDelta||0)!==0)
-    .filter(row=>validEntitlementIds.has(String(row.entitlementId||''))||purchaseIds.has(String(row.purchaseId||'')))
-    .reduce((sum,row)=>{
-      const entitlement=entitlementMap.get(String(row.entitlementId||''))||{};
-      const purchase=purchaseMap.get(String(entitlement.purchaseId||row.purchaseId||''))||{};
-      const lessonDelta=Math.abs(Number(row.lessonDelta)||0);
-      const totalLessons=Math.max(1,Number(entitlement.totalLessons)||Number(purchase.packageLessons)||lessonDelta||1);
-      const amountPaid=Number(purchase.amountPaid??purchase.finalAmount??0)||0;
-      if(!amountPaid||!lessonDelta)return sum;
-      const sign=Number(row.lessonDelta||0)>0?-1:1;
-      return sum+(Math.round((amountPaid/totalLessons)*lessonDelta*100)/100)*sign;
-    },0);
+  const recognized=0;
   return {
     total:base.length,
     packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
     activePackageStudentCount:base.filter(s=>studentHasRemainingPackage(s)).length,
     purchaseCount:lifecycleStats?lifecycleStats.purchaseCount:validPurchases.length,
     courseRepeatCount:lifecycleStats?lifecycleStats.courseRepeatCount:0,
-    totalIncome:Math.round(totalIncome*100)/100,
-    recognized:Math.round(recognized*100)/100,
-    packageBalance:Math.round((totalIncome-recognized)*100)/100,
-    trialIncome:Math.round(trialIncome*100)/100,
-    directCourseIncome:Math.round(directCourseIncome*100)/100,
-    courseIncome:Math.round((totalIncome+directCourseIncome)*100)/100,
-    courseRecognized:Math.round((recognized+directCourseIncome)*100)/100,
+    totalIncome:Math.round((financeStats?financeStats.totalIncome:totalIncome)*100)/100,
+    recognized:Math.round((financeStats?financeStats.recognized:recognized)*100)/100,
+    packageBalance:Math.round((financeStats?financeStats.packageBalance:(totalIncome-recognized))*100)/100,
+    trialIncome:Math.round((financeStats?financeStats.trialIncome:trialIncome)*100)/100,
+    directCourseIncome:Math.round((financeStats?financeStats.directCourseIncome:directCourseIncome)*100)/100,
+    courseIncome:Math.round((financeStats?financeStats.courseIncome:(totalIncome+directCourseIncome))*100)/100,
+    courseRecognized:Math.round((financeStats?financeStats.courseRecognized:(recognized+directCourseIncome))*100)/100,
     ...(lifecycleStats?{
       trialStudentCount:lifecycleStats.trialStudentCount,
       trialConvertedCount:lifecycleStats.trialConvertedCount

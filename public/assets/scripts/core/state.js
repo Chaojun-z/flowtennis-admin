@@ -238,8 +238,8 @@ const PAGE_DATA_REQUIREMENTS={
 };
 const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
-  'package-students':['classes','schedule','courts'],
-  'trial-students':['classes','schedule','courts'],
+  'package-students':['classes','schedule','courts','financePage'],
+  'trial-students':['classes','schedule','courts','financePage'],
   leads:['leadFollowups','purchases'],
   packages:[],
   purchases:['purchasesPage'],
