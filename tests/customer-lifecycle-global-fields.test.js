@@ -37,6 +37,9 @@ assert.match(agentsSource, /新增核心字段(?:或指标)?前，必须先补(?
   'customerLifecycleStudentStage',
   'customerLifecycleStudentDealPath',
   'customerLifecycleStudentTrialStatus',
+  'customerLifecycleStudentCoursePurchaseCount',
+  'customerLifecycleStudentHasCourseRepeat',
+  'customerLifecycleStudentHasTrialToCourseConversion',
   'customerLifecycleCourtStage',
   'customerLifecycleMembershipStatus'
 ].forEach(name => {
@@ -65,6 +68,9 @@ assert.match(stateSource, /if\(name==='workbenchPage'\)\{[\s\S]*setDatasetValue\
 assert.match(studentsSource, /customerLifecycleByStudentId/, 'student pages should read studentStage/source from the shared lifecycle accessor');
 assert.match(studentsSource, /studentDealPathText[\s\S]*customerLifecycleStudentDealPath\(stu\)/, 'student deal path should prefer the unified lifecycle accessor');
 assert.match(studentsSource, /studentTrialPathStatusText[\s\S]*customerLifecycleStudentTrialStatus\(stu\)/, 'student trial status should prefer the unified lifecycle accessor');
+assert.match(studentsSource, /studentLifecycleStats\(base\)/, 'student top conversion stats should start from unified lifecycle facts');
+assert.match(studentsSource, /customerLifecycleStudentCoursePurchaseCount\(/, 'student purchase count should read the lifecycle course purchase count');
+assert.match(studentsSource, /customerLifecycleStudentHasTrialToCourseConversion\(/, 'student trial conversion count should read the lifecycle trial-to-course fact');
 assert.match(courtsSource, /customerLifecycleByCourtId|customerLifecycleByMembershipAccountId/, 'court and membership pages should read courtStage/membershipStatus from the shared lifecycle accessor');
 assert.match(purchasesSource, /customerLifecycleCampus/, 'purchase pages should resolve customer campus through the shared lifecycle accessor');
 assert.match(scheduleSource, /customerLifecycleCampus[\s\S]*customerLifecycleOwner/, 'schedule pages should resolve student campus and owner through the shared lifecycle accessor');
@@ -128,7 +134,7 @@ const lifecycleContext = {
 vm.runInNewContext(`${stateSource}
 customerLifecycleRows=[
   {courtId:'same-id',source:'订场来源',campus:'订场校区',owner:'订场负责人',courtStage:'member',membershipStatus:'active'},
-  {studentId:'stu-1',source:'学员来源',campus:'学员校区',owner:'学员负责人',studentStage:'formal',courseDealPath:'老客续费',trialStatus:'已成交'}
+  {studentId:'stu-1',source:'学员来源',campus:'学员校区',owner:'学员负责人',studentStage:'formal',courseDealPath:'老客续费',trialStatus:'已成交',coursePurchaseCount:2,hasCourseRepeatPurchase:true,hasTrialToCourseConversion:true}
 ];
 globalThis.__customerLifecycleProbe={
   purchaseCampus:customerLifecycleCampus({id:'same-id',studentId:'stu-1',packageId:'pkg-1'},'兜底校区'),
@@ -136,6 +142,9 @@ globalThis.__customerLifecycleProbe={
   studentStage:customerLifecycleStudentStage({id:'stu-1',name:'王同学',primaryCoach:'学员负责人'}),
   studentDealPath:customerLifecycleStudentDealPath({id:'stu-1',name:'王同学'}),
   studentTrialStatus:customerLifecycleStudentTrialStatus({id:'stu-1',name:'王同学'}),
+  coursePurchaseCount:customerLifecycleStudentCoursePurchaseCount({id:'stu-1',name:'王同学'}),
+  hasCourseRepeat:customerLifecycleStudentHasCourseRepeat({id:'stu-1',name:'王同学'}),
+  hasTrialToCourseConversion:customerLifecycleStudentHasTrialToCourseConversion({id:'stu-1',name:'王同学'}),
   courtStage:customerLifecycleCourtStage({id:'same-id',name:'订场客户',history:[]})
 };`, lifecycleContext);
 assert.strictEqual(lifecycleContext.__customerLifecycleProbe.purchaseCampus, '学员校区', 'purchase lookup should prefer explicit studentId over a colliding purchase id');
@@ -143,6 +152,9 @@ assert.strictEqual(lifecycleContext.__customerLifecycleProbe.purchaseSource, '�
 assert.strictEqual(lifecycleContext.__customerLifecycleProbe.studentStage, 'formal', 'student own id should still resolve student lifecycle stage');
 assert.strictEqual(lifecycleContext.__customerLifecycleProbe.studentDealPath, '老客续费', 'student deal path should come from lifecycle repeat/course facts');
 assert.strictEqual(lifecycleContext.__customerLifecycleProbe.studentTrialStatus, '已成交', 'student trial status should come from lifecycle trial/course facts');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.coursePurchaseCount, 2, 'student purchase count should come from lifecycle facts');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.hasCourseRepeat, true, 'student repeat flag should come from lifecycle facts');
+assert.strictEqual(lifecycleContext.__customerLifecycleProbe.hasTrialToCourseConversion, true, 'student trial conversion flag should come from lifecycle facts');
 assert.strictEqual(lifecycleContext.__customerLifecycleProbe.courtStage, 'member', 'court own id should still resolve court lifecycle stage');
 
 console.log('customer lifecycle global field tests passed');

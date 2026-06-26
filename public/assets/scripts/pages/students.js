@@ -365,6 +365,16 @@ function studentTrialStats(){
   })).length;
   return {trialStudentCount:trialMap.size,trialConvertedCount:converted};
 }
+function studentLifecycleStats(base=[]){
+  const rows=(base||[]).map(s=>({student:s,lifecycle:studentLifecycleRow(s)})).filter(item=>item.lifecycle);
+  if(!rows.length)return null;
+  return {
+    purchaseCount:rows.reduce((sum,{student})=>sum+(typeof customerLifecycleStudentCoursePurchaseCount==='function'?customerLifecycleStudentCoursePurchaseCount(student):0),0),
+    courseRepeatCount:rows.filter(({student})=>typeof customerLifecycleStudentHasCourseRepeat==='function'&&customerLifecycleStudentHasCourseRepeat(student)).length,
+    trialStudentCount:rows.filter(({lifecycle})=>!!(lifecycle.hasTrialExperience||lifecycle.trialStatus||lifecycle.trialBookedAt||lifecycle.trialAttendedAt)).length,
+    trialConvertedCount:rows.filter(({student})=>typeof customerLifecycleStudentHasTrialToCourseConversion==='function'&&customerLifecycleStudentHasTrialToCourseConversion(student)).length
+  };
+}
 function studentStatsCampusNameForPurchase(purchase,entitlement={}){
   const student=students.find(s=>String(s.id||'')===String(purchase?.studentId||entitlement?.studentId||''));
   return cn(parseArr(entitlement?.campusIds)[0]||entitlement?.campus||purchase?.campus||student?.campus||'');
@@ -374,6 +384,7 @@ function studentStatsMatchesPackageCampus(purchase,entitlement={}){
   return sameCampusValue(studentStatsCampusNameForPurchase(purchase,entitlement),cn(campus));
 }
 function studentPageStats(base){
+  const lifecycleStats=studentLifecycleStats(base);
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
   const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
@@ -418,7 +429,8 @@ function studentPageStats(base){
     total:base.length,
     packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
     activePackageStudentCount:base.filter(s=>studentHasRemainingPackage(s)).length,
-    purchaseCount:validPurchases.length,
+    purchaseCount:lifecycleStats?lifecycleStats.purchaseCount:validPurchases.length,
+    courseRepeatCount:lifecycleStats?lifecycleStats.courseRepeatCount:0,
     totalIncome:Math.round(totalIncome*100)/100,
     recognized:Math.round(recognized*100)/100,
     packageBalance:Math.round((totalIncome-recognized)*100)/100,
@@ -426,7 +438,10 @@ function studentPageStats(base){
     directCourseIncome:Math.round(directCourseIncome*100)/100,
     courseIncome:Math.round((totalIncome+directCourseIncome)*100)/100,
     courseRecognized:Math.round((recognized+directCourseIncome)*100)/100,
-    ...studentTrialStats()
+    ...(lifecycleStats?{
+      trialStudentCount:lifecycleStats.trialStudentCount,
+      trialConvertedCount:lifecycleStats.trialConvertedCount
+    }:studentTrialStats())
   };
 }
 function studentPercentText(value,total){
@@ -442,7 +457,7 @@ function studentTopStatsCards(stats){
     {label:'体验课收入',valueHtml:`¥${fmt(stats.trialIncome)}`}
   ];
   return [
-    {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span>`,sub:'正式学员数 vs 购买次数'},
+    {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span><span class="student-stat-divider">｜</span><span>${stats.courseRepeatCount}</span>`,sub:'正式学员数 vs 购买次数 vs 课包复购人数'},
     {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'},
     {label:'课包实收金额',valueHtml:`¥${fmt(stats.totalIncome)}`},
     {label:'已履约金额',valueHtml:`¥${fmt(stats.recognized)}`,percent:studentPercentText(stats.recognized,stats.totalIncome),sub:'已履约金额 / 课包实收金额占比'},

@@ -165,22 +165,35 @@ function studentStage(student = {}, { purchases = [], entitlements = [], schedul
   const sid = text(student.id || student.studentId);
   if (!sid) return 'none';
   const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
-  if (formalPurchases.length) return 'formal';
+  if (studentCoursePurchaseCountFromRows(formalPurchases)) return 'formal';
   const hasTrial = studentHasTrialExperience(student, { purchases, entitlements, schedule });
   if (hasTrial) return 'trial';
   return 'student';
 }
 
-function studentCourseDealPath(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+function coursePurchaseIdentity(row = {}) {
+  const purchaseId = text(row.purchaseId || row.id);
+  return purchaseId ? `purchase:${purchaseId}` : `fallback:${businessDate(row)}:${rowAmount(row) || ''}:${text(row.courseType || row.packageName || row.productName || row.name)}`;
+}
+
+function studentCoursePurchaseCountFromRows(rows = []) {
+  return new Set((rows || []).map(coursePurchaseIdentity).filter(Boolean)).size;
+}
+
+function studentCoursePurchaseCount(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
   const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
-  if (!formalPurchases.length) return '';
-  if (formalPurchases.length > 1) return '老客续费';
+  return studentCoursePurchaseCountFromRows(formalPurchases);
+}
+
+function studentCourseDealPath(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+  const coursePurchaseCount = studentCoursePurchaseCount(student, { purchases, entitlements, schedule });
+  if (!coursePurchaseCount) return '';
+  if (coursePurchaseCount > 1) return '老客续费';
   return studentHasTrialExperience(student, { purchases, entitlements, schedule }) ? '体验转化' : '直接成交';
 }
 
 function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
-  if (formalPurchases.length) return '已成交';
+  if (studentCoursePurchaseCount(student, { purchases, entitlements, schedule })) return '已成交';
   const facts = studentTrialFacts(student, { purchases, entitlements, schedule });
   if (facts.hasTrialAttended) return '已体验待成交';
   if (facts.hasTrialBooked) return '已约体验';
@@ -232,6 +245,9 @@ function makeEmptyRow(key) {
     studentStage: 'none',
     courseDealPath: '',
     trialStatus: '',
+    coursePurchaseCount: 0,
+    hasCourseRepeatPurchase: false,
+    hasTrialToCourseConversion: false,
     courtStage: 'none',
     membershipStatus: '',
     hasTrialExperience: false,
@@ -340,6 +356,9 @@ function buildCustomerLifecycleRows({
     const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule });
     const hasTrialExperience = trialFacts.hasTrialBooked;
     const { formalPurchases, trialRows, courseRows } = studentRows(student, { purchases, entitlements, schedule });
+    const coursePurchaseCount = studentCoursePurchaseCountFromRows(formalPurchases);
+    const hasCourseRepeatPurchase = coursePurchaseCount > 1;
+    const hasTrialToCourseConversion = coursePurchaseCount > 0 && hasTrialExperience;
     const firstFormal = formalPurchases[0] || null;
     const firstTrial = trialRows[0] || null;
     const firstCourse = courseRows[0] || null;
@@ -387,6 +406,9 @@ function buildCustomerLifecycleRows({
       studentStage: stage,
       courseDealPath,
       trialStatus,
+      coursePurchaseCount,
+      hasCourseRepeatPurchase,
+      hasTrialToCourseConversion,
       hasTrialExperience,
       leadDate: firstValue(student.leadDate),
       leadEnteredAt: firstValue(student.leadDate),
@@ -398,6 +420,9 @@ function buildCustomerLifecycleRows({
     row.hasCourseConversion = row.hasCourseConversion || stage === 'formal';
     row.courseDealPath = row.courseDealPath || courseDealPath;
     row.trialStatus = row.trialStatus || trialStatus;
+    row.coursePurchaseCount = Math.max(Number(row.coursePurchaseCount) || 0, coursePurchaseCount);
+    row.hasCourseRepeatPurchase = row.hasCourseRepeatPurchase || hasCourseRepeatPurchase;
+    row.hasTrialToCourseConversion = row.hasTrialToCourseConversion || hasTrialToCourseConversion;
   });
 
   const courtsById = new Map();
@@ -543,5 +568,6 @@ module.exports = {
   studentStage,
   studentCourseDealPath,
   studentTrialStatus,
+  studentCoursePurchaseCount,
   courtStage
 };

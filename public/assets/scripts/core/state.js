@@ -117,6 +117,18 @@ function customerLifecycleStudentTrialStatus(record={}){
   const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
   return customerLifecycleText(row?.trialStatus);
 }
+function customerLifecycleStudentCoursePurchaseCount(record={}){
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return Number(row?.coursePurchaseCount)||0;
+}
+function customerLifecycleStudentHasCourseRepeat(record={}){
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return !!row?.hasCourseRepeatPurchase;
+}
+function customerLifecycleStudentHasTrialToCourseConversion(record={}){
+  const row=customerLifecycleForRecord(record)||customerLifecycleByStudentId(record?.studentId||record?.id);
+  return !!row?.hasTrialToCourseConversion;
+}
 function customerLifecycleCourtStage(record={}){
   return customerLifecycleText(customerLifecycleForRecord(record)?.courtStage);
 }

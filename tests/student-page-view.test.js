@@ -55,7 +55,7 @@ assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stat
 assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*学员数[\s\S]*体验课人数[\s\S]*体验课人数 \/ 学员数占比[\s\S]*体验课转化[\s\S]*体验课收入/, 'trial student top stats should show the requested four-card data');
 assert.match(source, /trialIncome:Math\.round\(trialIncome\*100\)\/100/, 'trial student stats should expose trial-only income');
 assert.match(source, /studentPackageRecordIsTrial\(p\)[\s\S]*studentIds\.has\(String\(p\.studentId\|\|''\)\)/, 'trial income should only count trial package purchases from students in the current list');
-assert.match(source, /正式学员[\s\S]*正式学员数 vs 购买次数[\s\S]*有效课包学员[\s\S]*课包实收金额[\s\S]*已履约金额[\s\S]*待履约金额/, 'package student top stats should show official students, package income, recognized, and pending amounts');
+assert.match(source, /正式学员[\s\S]*正式学员数 vs 购买次数 vs 课包复购人数[\s\S]*有效课包学员[\s\S]*课包实收金额[\s\S]*已履约金额[\s\S]*待履约金额/, 'package student top stats should show official students, repeat facts, package income, recognized, and pending amounts');
 assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /有效课包学员 \/ 总学员数占比/, 'student active package card should explain the requested formula');
 assert.match(source, /已履约金额 \/ 课包实收金额占比[\s\S]*待履约金额 \/ 课包实收金额占比/, 'student package finance cards should use the requested fulfillment captions');

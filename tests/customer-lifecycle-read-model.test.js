@@ -81,6 +81,9 @@ assert.strictEqual(row.studentStage, 'formal', 'formal purchase should move the 
 assert.strictEqual(row.hasTrialExperience, true, 'formal students should keep the trial experience fact after conversion');
 assert.strictEqual(row.courseDealPath, '体验转化', 'course deal path should be owned by the lifecycle read model');
 assert.strictEqual(row.trialStatus, '已成交', 'trial status should be owned by the lifecycle read model');
+assert.strictEqual(row.coursePurchaseCount, 1, 'formal course purchase count should be owned by the lifecycle read model');
+assert.strictEqual(row.hasCourseRepeatPurchase, false, 'one formal course purchase is not course repeat');
+assert.strictEqual(row.hasTrialToCourseConversion, true, 'trial to course conversion should be an explicit lifecycle fact');
 assert.strictEqual(row.trialBookedAt, '2026-06-02');
 assert.strictEqual(row.courtStage, 'member', 'membership account should make the court user a member view row');
 assert.strictEqual(row.hasCourseConversion, true);
@@ -166,6 +169,25 @@ assert.strictEqual(directPrivate.demandProduct, '私教课');
 assert.strictEqual(directPrivate.hasCourseConversion, true, 'paid private purchase should count as course conversion');
 assert.strictEqual(directPrivate.courseDealPath, '直接成交');
 assert.strictEqual(directPrivate.trialStatus, '已成交');
+assert.strictEqual(directPrivate.coursePurchaseCount, 1);
+assert.strictEqual(directPrivate.hasCourseRepeatPurchase, false);
+assert.strictEqual(directPrivate.hasTrialToCourseConversion, false);
+
+const repeatRows = buildCustomerLifecycleRows({
+  students: [{ id: 'student-repeat', name: '复购学员', sourceLeadId: 'lead-repeat' }],
+  purchases: [
+    { id: 'purchase-repeat-1', studentId: 'student-repeat', courseType: '私教课', status: 'active', actualAmount: 1000, purchaseDate: '2026-05-01' },
+    { id: 'purchase-repeat-2', studentId: 'student-repeat', courseType: '小班课', status: 'active', actualAmount: 800, purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'ent-repeat-1', studentId: 'student-repeat', purchaseId: 'purchase-repeat-1', courseType: '私教课', status: 'active', totalLessons: 10 },
+    { id: 'ent-repeat-2', studentId: 'student-repeat', purchaseId: 'purchase-repeat-2', courseType: '小班课', status: 'active', totalLessons: 10 }
+  ]
+});
+const repeatStudent = repeatRows[0];
+assert.strictEqual(repeatStudent.coursePurchaseCount, 2, 'purchase-linked entitlements must not double count formal purchase count');
+assert.strictEqual(repeatStudent.hasCourseRepeatPurchase, true, 'second formal package purchase should mark course repeat');
+assert.strictEqual(repeatStudent.courseDealPath, '老客续费');
 
 const directPrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: directPrivateRows, lifecycleScope: 'course' });
 assert.strictEqual(directPrivateLeadRows[0].leadStage, '已成交');
