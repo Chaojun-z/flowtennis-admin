@@ -40,21 +40,14 @@ function renderStandardEmptyText(value){
 }
 function standardBusinessTagClass(kind,value=''){
   const text=String(value||'').trim();
-  if(kind==='source'){
-    if(text==='大众点评')return 'tms-tag-business-source-dianping';
-    if(text==='小红书')return 'tms-tag-business-source-xiaohongshu';
-    if(text==='抖音'||text==='视频号')return 'tms-tag-business-source-video';
-    if(text==='线下到店')return 'tms-tag-business-source-store';
-    if(text==='转介绍'||text==='群友')return 'tms-tag-business-source-referral';
-    return 'tms-tag-business-neutral';
-  }
   if(kind==='customerType'||kind==='type')return text==='青少年'?'tms-tag-business-type-youth':text==='成人'?'tms-tag-business-type-adult':'tms-tag-business-neutral';
   if(kind==='demandProduct'||kind==='consult'||kind==='demand'){
-    if(/私教/.test(text))return 'tms-tag-business-demand-private';
-    if(/小班/.test(text))return 'tms-tag-business-demand-group';
+    if(/私教/.test(text))return 'tms-tag-course-private';
+    if(/小班/.test(text))return 'tms-tag-course-small';
+    if(/陪打/.test(text))return 'tms-tag-course-partner';
     if(/订场|场地/.test(text))return 'tms-tag-business-demand-court';
     if(/会员/.test(text))return 'tms-tag-business-demand-member';
-    if(/陪打|约球|穿线|合作/.test(text))return 'tms-tag-business-demand-other';
+    if(/约球|穿线|合作/.test(text))return 'tms-tag-business-demand-other';
     return 'tms-tag-business-neutral';
   }
   if(kind==='stage'){
@@ -77,8 +70,64 @@ function standardBusinessTagClass(kind,value=''){
 }
 function renderStandardBusinessTag(value,kind){
   const text=String(value||'').trim()||'-';
+  if(kind==='source')return renderStandardCellText(text,text==='-');
   return `<span class="tms-tag ${standardBusinessTagClass(kind,text)}">${esc(text)}</span>`;
 }
+let standardTooltipTarget=null;
+let standardTooltipElement=null;
+function ensureStandardTooltipElement(){
+  if(typeof document==='undefined')return null;
+  if(standardTooltipElement&&document.body.contains(standardTooltipElement))return standardTooltipElement;
+  standardTooltipElement=document.createElement('div');
+  standardTooltipElement.className='tms-global-tooltip';
+  document.body.appendChild(standardTooltipElement);
+  return standardTooltipElement;
+}
+function hideStandardTooltip(){
+  standardTooltipTarget=null;
+  if(standardTooltipElement)standardTooltipElement.classList.remove('show');
+}
+function positionStandardTooltip(target){
+  const el=ensureStandardTooltipElement();
+  if(!el||!target)return;
+  const rect=target.getBoundingClientRect();
+  const tooltipRect=el.getBoundingClientRect();
+  const margin=8;
+  let left=Math.min(Math.max(margin,rect.left),window.innerWidth-tooltipRect.width-margin);
+  let top=rect.bottom+8;
+  if(top+tooltipRect.height+margin>window.innerHeight)top=rect.top-tooltipRect.height-8;
+  el.style.left=`${Math.max(margin,left)}px`;
+  el.style.top=`${Math.max(margin,top)}px`;
+}
+function showStandardTooltip(target){
+  const text=String(target?.dataset?.tooltip||'').trim();
+  if(!text)return hideStandardTooltip();
+  const el=ensureStandardTooltipElement();
+  if(!el)return;
+  standardTooltipTarget=target;
+  el.textContent=text;
+  el.classList.add('show');
+  positionStandardTooltip(target);
+}
+function installStandardTooltip(){
+  if(typeof document==='undefined'||typeof window==='undefined'||document.__flowTennisStandardTooltipInstalled)return;
+  document.__flowTennisStandardTooltipInstalled=true;
+  document.addEventListener('mouseover',event=>{
+    const target=event.target?.closest?.('[data-tooltip]');
+    if(!target)return;
+    showStandardTooltip(target);
+  });
+  document.addEventListener('mouseout',event=>{
+    const target=event.target?.closest?.('[data-tooltip]');
+    if(!target)return;
+    const next=event.relatedTarget;
+    if(next&&target.contains(next))return;
+    hideStandardTooltip();
+  });
+  document.addEventListener('scroll',()=>standardTooltipTarget&&positionStandardTooltip(standardTooltipTarget),true);
+  window.addEventListener('resize',hideStandardTooltip);
+}
+installStandardTooltip();
 function renderStandardTooltipText(value,className='tms-text-remark tms-text-remark-1'){
   const text=renderStandardEmptyText(value);
   return `<div class="${esc(className)} tms-tooltip-text" data-tooltip="${esc(text)}">${esc(text)}</div>`;

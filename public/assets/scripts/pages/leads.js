@@ -428,10 +428,13 @@ function leadLevelOptions(){
 function leadFollowupTypeOptions(){
   return LEAD_FOLLOWUP_TYPE_OPTIONS;
 }
-function leadStatusAfterOptions(){
-  const preferred=FlowTennisBusinessTaxonomy.values('leadFollowupStatuses');
+function leadStageOptions(){
+  const preferred=FlowTennisBusinessTaxonomy.values('leadStages');
   if(preferred.length)return preferred.map(value=>({value,label:value}));
   return LEAD_STATUS_AFTER_OPTIONS;
+}
+function leadStatusAfterOptions(){
+  return leadStageOptions();
 }
 function leadLevelPresetValue(value){
   const text=leadLevelCanonicalValue(value);
@@ -620,7 +623,7 @@ function leadOwnerFilterValues(){
 function leadOwnerFilterHtml(options=[],selectedValues=[]){
   const selected=new Set(selectedValues);
   const values=options.map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt).filter(opt=>String(opt.value||''));
-  const display=selected.size?`跟进人 ${selected.size}`:'全部跟进人';
+  const display=selected.size?`跟进人 ${selected.size}`:'跟进人';
   return `<div class="tms-dropdown${selected.size?' has-value':''}" id="leadOwnerFilter_dropdown" data-target="leadOwnerFilter" onclick="toggleStandardDropdown('leadOwnerFilter',event)"><input type="hidden" id="leadOwnerFilter" value="${esc([...selected].join(','))}"><div class="tms-dropdown-display">${esc(display)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onclick="event.stopPropagation()" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${values.map(opt=>`<label class="tms-dropdown-item" style="gap:8px" onclick="event.stopPropagation()"><input type="checkbox" class="tms-checkbox lead-owner-filter-cb" value="${esc(opt.value)}" ${selected.has(String(opt.value))?'checked':''} onchange="toggleLeadOwnerFilter()"><span>${esc(renderStandardOptionLabel(opt))}</span></label>`).join('')}</div></div>`;
 }
 function toggleLeadOwnerFilter(){
@@ -665,7 +668,7 @@ function renderLeadToolbarFilters(){
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...leadSourceOptions()],match:(lead,value)=>leadSourceText(lead)===String(value)},
     {key:'customerType',value:customerTypeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},...leadCustomerTypeOptions()],match:(lead,value)=>leadCustomerTypeText(lead)===String(value)},
     {key:'consult',value:consultValue,options:[{value:'',label:'全部',emptyDisplay:'需求'},...leadDemandProductOptions()],match:(lead,value)=>leadDemandProductText(lead)===String(value)},
-    {key:'stage',value:stageValue,options:[{value:'',label:'全部',emptyDisplay:'线索阶段'},...Array.from(new Set(rows.map(leadStageText).filter(Boolean))).map(value=>({value,label:value}))],match:(lead,value)=>leadStageText(lead)===String(value)}
+    {key:'stage',value:stageValue,options:[{value:'',label:'全部',emptyDisplay:'线索阶段'},...leadStageOptions()],match:(lead,value)=>leadStageText(lead)===String(value)}
   ],rows);
   const configs=[
     ['leadSourceFilterHost','leadSourceFilter','来源',linked.source.options,linked.source.value],
@@ -1289,7 +1292,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderLeadTag(leadSourceText(lead),'source')}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateOnly(lead?.leadDate,lead)||'-',!lead?.leadDate)}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);

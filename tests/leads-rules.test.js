@@ -13,18 +13,20 @@ assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '已报名-私教' 
 assert.strictEqual(rules.deriveLeadSystemStatus({ rawStatus: '已定场' }), '已成交');
 assert.strictEqual(rules.deriveLeadSystemStatus({ studentId: 'stu-1', courtId: 'court-1' }), '已成交');
 assert.strictEqual(rules.deriveLeadDealType({}), '');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1' }), '课程');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1' }), '');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true }), '课程');
 assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1' }), '订场');
 assert.strictEqual(rules.deriveLeadDealType({ membershipAccountId: 'member-1' }), '会员');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', courtId: 'court-1' }), '课程+订场');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', membershipAccountId: 'member-1' }), '课程+会员');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1' }), '课程+订场');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+会员');
 assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+会员');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
 assert.strictEqual(rules.deriveLeadConversionType({}), '');
-assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1' }), '课程+订场');
-assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', membershipAccountId: 'member-1' }), '课程+会员');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1' }), '订场');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1' }), '课程+订场');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+会员');
 assert.strictEqual(rules.deriveLeadConversionType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+会员');
-assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
 
 const lead = rules.normalizeLeadRecord({
   '线索时间': '2026-04-10',

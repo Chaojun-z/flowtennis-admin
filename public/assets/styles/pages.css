@@ -323,6 +323,9 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag.type-small,.tms-tag.type-camp{background:#F0FDF4;color:#047857}
 .tms-tag.type-master{background:#FEF2F2;color:#B91C1C}
 .tms-tag.type-partner{background:#F5F3FF;color:#6D28D9}
+.tms-tag-course-private{background:#EFF4FF;color:#305CC8}
+.tms-tag-course-small{background:#F0FDF4;color:#047857}
+.tms-tag-course-partner{background:#F5F3FF;color:#6D28D9}
 .schedule-check-text{font-size:12px;font-weight:400;line-height:20px}
 .schedule-check-text.is-filled{color:#047857}
 .schedule-check-text.is-missing{color:#9A5622}
@@ -335,22 +338,15 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag-tier-blue{background:#E9F1FF;color:#3157B7}
 .tms-tag-tier-teal{background:#E3F5F1;color:#0F766E}
 .tms-tag-tier-slate{background:#EEF1F5;color:#52606D}
-.tms-tag-business-source-dianping{background:#E5EEF9;color:#355C8A}
-.tms-tag-business-source-xiaohongshu{background:#F7E9E2;color:#C06031}
-.tms-tag-business-source-video{background:#F7E8C8;color:#9A5B00}
-.tms-tag-business-source-store{background:#FFF1D6;color:#A16207}
-.tms-tag-business-source-referral{background:#E3F0ED;color:#2E766E}
 .tms-tag-business-type-adult{background:#E3F0ED;color:#2E766E}
 .tms-tag-business-type-youth{background:#E5EEF9;color:#355C8A}
-.tms-tag-business-demand-private{background:#E7F1E9;color:#3F7E2B}
-.tms-tag-business-demand-group{background:#E5EEF9;color:#355C8A}
 .tms-tag-business-demand-court{background:#E3F0ED;color:#2E766E}
 .tms-tag-business-demand-member{background:#F7E8C8;color:#9A5B00}
 .tms-tag-business-demand-other{background:#F7E9E2;color:#C06031}
 .tms-tag-business-stage-new{background:#E5EEF9;color:#355C8A}
 .tms-tag-business-stage-following{background:#E9ECEF;color:#57606A}
 .tms-tag-business-stage-booked{background:#E3F0ED;color:#2E766E}
-.tms-tag-business-stage-trial-done{background:#E7F1E9;color:#3F7E2B}
+.tms-tag-business-stage-trial-done{background:#FFF1D6;color:#A16207;font-weight:600}
 .tms-tag-business-stage-won{background:#E7F1E9;color:#2F7D32}
 .tms-tag-business-stage-lost{background:#E9ECEF;color:#57606A}
 .tms-tag-business-neutral{background:#E9ECEF;color:#57606A}
@@ -359,11 +355,9 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .tms-tag-priority-p2{background:#E5EEF9;color:#355C8A}
 .tms-tag-priority-p3{background:#E3F0ED;color:#2E766E}
 .tms-tag-priority-p4{background:#E9ECEF;color:#57606A}
-.tms-tooltip-text{position:relative;cursor:default}
-.tms-tooltip-text:hover::after{content:attr(data-tooltip);position:absolute;left:0;top:calc(100% + 6px);z-index:500;box-sizing:border-box;min-width:180px;max-width:420px;width:max-content;padding:8px 10px;border:1px solid #D9D0C7;border-radius:6px;background:#F8F6F2;color:#4F463F;box-shadow:0 8px 24px rgba(45,36,31,.14);font-size:12px;font-weight:400;line-height:1.45;white-space:normal;word-break:break-word}
-.tms-tooltip-text:hover::before{content:"";position:absolute;left:12px;top:100%;z-index:501;border:6px solid transparent;border-bottom-color:#F8F6F2}
-.tms-table td:has(.tms-tooltip-text:hover){overflow:visible;z-index:160}
-.tms-table td.tms-tooltip-text:hover{overflow:visible;z-index:160}
+.tms-tooltip-text{cursor:default}
+.tms-global-tooltip{position:fixed;z-index:9999;box-sizing:border-box;display:none;max-width:420px;padding:8px 10px;border:1px solid #D9D0C7;border-radius:6px;background:#F8F6F2;color:#4F463F;box-shadow:0 8px 24px rgba(45,36,31,.14);font-size:12px;font-weight:400;line-height:1.45;white-space:normal;word-break:break-word;pointer-events:none}
+.tms-global-tooltip.show{display:block}
 .student-reminder-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#6F6259;font-size:13px}
 .student-reminder-options{display:flex;align-items:center;gap:22px;flex-wrap:wrap;max-width:720px}
 .student-reminder-option{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;cursor:pointer;min-height:22px;color:#333333;font-size:13px;line-height:22px}

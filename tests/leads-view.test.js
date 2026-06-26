@@ -102,6 +102,8 @@ assert.match(leadsSource, /withLinkedFilterCounts\(\[[\s\S]*key:'source'[\s\S]*k
 assert.match(fnBody('getFilteredLeads'), /const customerTypeValue=document\.getElementById\('leadCustomerTypeFilter'\)\?\.value\|\|''[\s\S]*if\(customerTypeValue&&leadCustomerTypeText\(lead\)!==customerTypeValue\)return false;/, 'lead filtering should support customer type');
 assert.match(leadsSource, /function leadOwnerFilterValues\([\s\S]*lead-owner-filter-cb:checked/, 'lead owner filter should collect checked owners');
 assert.match(leadsSource, /function leadOwnerFilterHtml\([\s\S]*tms-dropdown[\s\S]*leadOwnerFilter_dropdown[\s\S]*type="checkbox"[\s\S]*lead-owner-filter-cb[\s\S]*toggleLeadOwnerFilter/, 'lead owner filter should render as a checkbox dropdown');
+assert.match(fnBody('leadOwnerFilterHtml'), /const display=selected\.size\?`跟进人 \$\{selected\.size\}`:'跟进人'/, 'lead owner filter default display should be 跟进人');
+assert.doesNotMatch(fnBody('leadOwnerFilterHtml'), /全部跟进人/, 'lead owner filter should not display 全部跟进人 by default');
 assert.match(leadsSource, /function toggleLeadOwnerFilter\([\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'checking lead owners should refresh the list');
 assert.match(fnBody('getFilteredLeads'), /const ownerValues=leadOwnerFilterValues\(\)[\s\S]*if\(ownerValues\.length&&!ownerValues\.includes\(String\(lead\?\.owner\|\|''\)\)\)return false;/, 'lead filtering should support multiple checked owners');
 assert.match(leadsSource, /function leadPriorityOptions\(\)[\s\S]*\['P0','P1','P2','P3','P4'\]/, 'lead page should expose P0-P4 follow-up priority options');
@@ -151,6 +153,8 @@ assert.match(leadsSource, /function leadDemandProductOptions\(\)[\s\S]*FlowTenni
 assert.match(leadsSource, /function leadSourceText\(lead\)[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadSource\(lead\?\.source\)/, 'lead source display should normalize legacy source values');
 assert.match(leadsSource, /function leadCustomerTypeText\(lead\)[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadCustomerType/, 'lead customer type display should normalize legacy values');
 assert.match(leadsSource, /function leadDemandProductText\(lead\)[\s\S]*FlowTennisBusinessTaxonomy\.normalizeLeadDemandProduct/, 'lead demand product display should normalize legacy values');
+assert.match(leadsSource, /function leadStageOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.values\('leadStages'\)/, 'lead stage dropdown options should use the global lead stage order');
+assert.match(fnBody('renderLeadToolbarFilters'), /key:'stage'[\s\S]*options:\[\{value:'',label:'全部',emptyDisplay:'线索阶段'\},\.\.\.leadStageOptions\(\)\]/, 'lead stage filter should keep the fixed global stage order instead of row order');
 assert.match(leadsSource, /function leadIntentOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadIntentLevels'\)/, 'lead intent options should use the global business dictionary');
 assert.match(leadsSource, /function leadLevelOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadLevels'\)/, 'lead level options should use the global business dictionary');
 assert.match(leadsSource, /function leadLevelCanonicalValue\(value\)[\s\S]*\['1','2','3','4','5'\]\.includes\(text\)[\s\S]*`\$\{text\}\.0`/, 'lead standard integer levels should display and edit as x.0');
@@ -167,7 +171,8 @@ assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspa
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
 assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
-assert.match(fnBody('renderLeads'), /leadDateOnly\(lead\?\.leadDate,lead\)[\s\S]*renderLeadTag\(leadSourceText\(lead\),'source'\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*leadLevelText\(lead\)[\s\S]*leadProfileText\(lead\)[\s\S]*renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)/, 'lead list rows should show normalized source, customer type, demand product, level, basic info, and stage in the table order');
+assert.match(fnBody('renderLeads'), /leadDateOnly\(lead\?\.leadDate,lead\)[\s\S]*renderStandardCellText\(leadSourceText\(lead\),false\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*leadLevelText\(lead\)[\s\S]*leadProfileText\(lead\)[\s\S]*renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)/, 'lead list rows should show source as plain text and keep type, demand, level, basic info, and stage in table order');
+assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)/, 'lead list source should not render as a tag');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:12px\}/, 'leads table header should match the standard table font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
@@ -178,7 +183,11 @@ assert.match(css, /#page-leads \.tms-text-primary,#page-leads \.tms-cell-text,#p
 assert.match(css, /#page-leads \.tms-tag-lead-communicated\{background:#E3F0ED;color:#2E766E\}/, 'leads tags should use grounded colors instead of purple');
 assert.match(css, /\.tms-tag-priority-p0\{background:#FDE8E4;color:#9F2A17;font-weight:700\}/, 'priority P0 should use the strongest red style');
 assert.match(css, /\.tms-tag-priority-p4\{background:#E9ECEF;color:#57606A\}/, 'priority P4 should use gray');
-assert.match(css, /\.tms-tooltip-text:hover::after/, 'standard table tooltip should replace native title hover for long text');
+assert.match(standardSource, /function installStandardTooltip\([\s\S]*document\.addEventListener\('mouseover'[\s\S]*closest\?\.\('\[data-tooltip\]'\)[\s\S]*showStandardTooltip\(target\)/, 'standard long-text hover should use a global tooltip listener');
+assert.match(css, /\.tms-global-tooltip\{position:fixed;z-index:9999/, 'standard long-text hover should render through a fixed global tooltip');
+assert.doesNotMatch(css, /\.tms-tooltip-text:hover::after/, 'standard table tooltip should not depend on clipped pseudo-element hover');
+assert.match(standardSource, /if\(\/私教\/\.test\(text\)\)return 'tms-tag-course-private'[\s\S]*if\(\/小班\/\.test\(text\)\)return 'tms-tag-course-small'[\s\S]*if\(\/陪打\/\.test\(text\)\)return 'tms-tag-course-partner'/, 'demand product tags should reuse schedule course type classes for private, small group, and partner');
+assert.match(css, /\.tms-tag-course-private\{background:#EFF4FF;color:#305CC8\}[\s\S]*\.tms-tag-course-small\{background:#F0FDF4;color:#047857\}[\s\S]*\.tms-tag-course-partner\{background:#F5F3FF;color:#6D28D9\}/, 'demand product course classes should reuse schedule course type colors');
 assert.match(css, /\.modal\.modal-court\.modal-leads-form \.mbody\{overflow:visible\}/, 'lead form modal should keep dropdowns from being clipped');
 assert.match(css, /\.modal\.modal-court \.lead-form-row-4\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);gap:14px\}/, 'lead form should use four equal columns');
 assert.match(css, /\.modal\.modal-court \.tms-readonly-card\{[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*border:1px solid #E6E1DC[^}]*box-shadow:0 1px 2px rgba\(0,0,0,\.05\)[^}]*padding:24px[^}]*margin-bottom:32px/, 'readonly detail sections should sit on the shared white card');

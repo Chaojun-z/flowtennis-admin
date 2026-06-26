@@ -79,7 +79,7 @@ assert.match(leadsSource, /function leadCustomerTypeOptions\(\)\{[\s\S]*optionLi
 assert.match(leadsSource, /function leadDemandProductOptions\(\)\{[\s\S]*optionList\('leadDemandProducts'\)/, 'lead demand product options should come from global business taxonomy');
 assert.match(leadsSource, /function leadIntentOptions\(\)\{[\s\S]*optionList\('leadIntentLevels'\)/, 'lead intent options should come from global business taxonomy');
 assert.match(leadsSource, /function leadLevelOptions\(\)\{[\s\S]*optionList\('leadLevels'\)/, 'lead level options should come from global business taxonomy');
-assert.match(leadsSource, /const preferred=FlowTennisBusinessTaxonomy\.values\('leadFollowupStatuses'\)/, 'lead follow-up statuses should come from global business taxonomy');
+assert.match(leadsSource, /const preferred=FlowTennisBusinessTaxonomy\.values\('leadStages'\)/, 'lead stage statuses should come from global business taxonomy');
 assert.match(matchesSource, /function matchStatusOptions\(\)\{[\s\S]*optionList\('matchStatuses'\)/, 'match status options should come from global business taxonomy');
 assert.match(pricesSource, /function priceTypeOptions\(/, 'price page should expose taxonomy-backed price type options');
 assert.match(pricesSource, /optionList\('priceChannels'\)/, 'price channels should come from global business taxonomy');
@@ -89,7 +89,7 @@ assert.match(pricesSource, /optionList\('priceStatuses'\)/, 'price statuses shou
 assert.match(packagesSource, /PACKAGE_STATUS_OPTIONS/, 'package statuses should come from global business taxonomy');
 assert.match(packagesSource, /PACKAGE_TIME_BAND_OPTIONS/, 'package time bands should come from global business taxonomy');
 assert.match(leadsSource, /function leadFollowupTypeOptions\(\)[\s\S]*LEAD_FOLLOWUP_TYPE_OPTIONS/, 'lead follow-up type options should come from global business taxonomy');
-assert.match(leadsSource, /function leadStatusAfterOptions\(\)[\s\S]*LEAD_STATUS_AFTER_OPTIONS/, 'lead status-after options should come from global business taxonomy');
+assert.match(leadsSource, /function leadStatusAfterOptions\(\)\{[\s\S]*return leadStageOptions\(\);[\s\S]*\}/, 'lead status-after options should reuse the global lead stage options');
 assert.match(entitlementsSource, /ENTITLEMENT_STATUS_OPTIONS/, 'entitlement statuses should come from global business taxonomy');
 assert.match(courtsSource, /MEMBERSHIP_PLAN_STATUS_OPTIONS/, 'membership plan statuses should come from global business taxonomy');
 assert.match(courtsSource, /COURT_FINANCE_TRANSACTION_TYPES=FlowTennisBusinessTaxonomy\.TRANSACTION_TYPES/, 'court finance transaction types should come from global business taxonomy');
