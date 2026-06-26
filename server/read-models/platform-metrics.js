@@ -19,7 +19,7 @@ function isConvertedStage(stage = '') {
 }
 
 function leadBusinessDate(row = {}, lead = {}) {
-  return text(lead.leadDate || row.leadDate || row.firstTouchAt || row.leadEnteredAt || row.trialAtRaw || row.courseFirstPurchaseAt || row.conversionAt);
+  return text(row.firstTouchAt || row.leadDate || row.leadEnteredAt || row.trialAtRaw || row.courseFirstPurchaseAt || row.conversionAt || lead.leadDate);
 }
 
 function visibleLeadProfileNote(lead = {}) {

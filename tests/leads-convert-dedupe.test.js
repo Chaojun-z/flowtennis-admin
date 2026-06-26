@@ -19,11 +19,22 @@ function makeRes() {
 async function main() {
   const writes = [];
   const rows = {
-    ft_leads: [{ id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17T00:00:00.000Z' }],
+    ft_leads: [
+      { id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17T00:00:00.000Z' },
+      {
+        id: 'lead-from-student-student-4',
+        displayName: '丫丫',
+        wechatName: '丫丫',
+        studentId: 'student-4',
+        leadDate: '2026-06-26T03:37:16.269Z',
+        createdAt: '2026-06-26T03:37:16.269Z'
+      }
+    ],
     ft_students: [
       { id: 'student-1', name: '小成' },
       { id: 'student-2', name: '可搜学员', phone: '13900000002', createdAt: '2026-06-26T03:37:16.269Z' },
-      { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26T03:37:16.269Z' }
+      { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26T03:37:16.269Z' },
+      { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26T03:37:16.269Z' }
     ],
     ft_courts: [{ id: 'court-1', name: '小成', status: 'active' }],
     ft_purchases: [{
@@ -39,6 +50,12 @@ async function main() {
       packageName: '正式课包',
       status: 'active',
       purchaseDate: '2026-04-18'
+    }, {
+      id: 'purchase-3',
+      studentId: 'student-4',
+      packageName: '正式课包',
+      status: 'active',
+      purchaseDate: '2026-03-21'
     }],
     ft_entitlements: [],
     ft_schedule: [],
@@ -90,6 +107,8 @@ async function main() {
   assert.strictEqual(materializedStudentLead.sourceLeadId, 'lead-from-student-student-2', '学员倒推线索必须能通过 sourceLeadId 回写真实线索');
   assert.strictEqual(materializedStudentLead.leadDate, '2026-04-15', '学员倒推线索必须用最早业务时间作为线索时间，不能显示落表当天');
   assert.strictEqual(materializedStudentLead.profileNote, '', '学员倒推线索不能把课包消耗记录、余额等系统流水塞进基本信息');
+  const existingBadDateLead = listRes.body.find((row) => row.displayName === '丫丫');
+  assert.strictEqual(existingBadDateLead.leadDate, '2026-03-21', '已落表的学员倒推线索如果错误显示 6 月 26，必须用学员最早业务时间纠正展示');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
     writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),
