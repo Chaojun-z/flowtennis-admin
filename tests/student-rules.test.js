@@ -18,16 +18,16 @@ const data = {
   leadFollowups: [{ id: 'lf-1', studentId: 'stu-1', studentName: '张三' }]
 };
 
-const updates = rules.buildStudentIdentityUpdates(oldStudent,nextStudent,data,'2026-04-12T00:00:00.000Z');
+const updates = rules.buildStudentIdentityUpdates(oldStudent,nextStudent,data,'2026-04-12 00:00:00');
 
-assert.deepStrictEqual(updates.plans.map(x=>[x.id,x.studentName,x.studentPhone,x.updatedAt]), [['plan-1','张三丰','13900000000','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.schedule.map(x=>[x.id,x.studentName,x.updatedAt]), [['sch-1','张三丰','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.purchases.map(x=>[x.id,x.studentName,x.studentPhone,x.updatedAt]), [['pur-1','张三丰','13900000000','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.entitlements.map(x=>[x.id,x.studentName,x.updatedAt]), [['ent-1','张三丰','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.feedbacks.map(x=>[x.id,x.studentName,x.updatedAt]), [['fb-1','张三丰','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.courts.map(x=>[x.id,x.studentId,x.studentIds,x.updatedAt]), [['court-1','stu-1',['stu-1'],'2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.leads.map(x=>[x.id,x.studentName,x.studentMatchName,x.updatedAt]), [['lead-1','张三丰','张三丰','2026-04-12T00:00:00.000Z']]);
-assert.deepStrictEqual(updates.leadFollowups.map(x=>[x.id,x.studentName,x.updatedAt]), [['lf-1','张三丰','2026-04-12T00:00:00.000Z']]);
+assert.deepStrictEqual(updates.plans.map(x=>[x.id,x.studentName,x.studentPhone,x.updatedAt]), [['plan-1','张三丰','13900000000','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.schedule.map(x=>[x.id,x.studentName,x.updatedAt]), [['sch-1','张三丰','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.purchases.map(x=>[x.id,x.studentName,x.studentPhone,x.updatedAt]), [['pur-1','张三丰','13900000000','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.entitlements.map(x=>[x.id,x.studentName,x.updatedAt]), [['ent-1','张三丰','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.feedbacks.map(x=>[x.id,x.studentName,x.updatedAt]), [['fb-1','张三丰','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.courts.map(x=>[x.id,x.studentId,x.studentIds,x.updatedAt]), [['court-1','stu-1',['stu-1'],'2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.leads.map(x=>[x.id,x.studentName,x.studentMatchName,x.updatedAt]), [['lead-1','张三丰','张三丰','2026-04-12 00:00:00']]);
+assert.deepStrictEqual(updates.leadFollowups.map(x=>[x.id,x.studentName,x.updatedAt]), [['lf-1','张三丰','2026-04-12 00:00:00']]);
 
 const cascadePlan = rules.buildStudentCascadeDeletePlan('stu-1',{
   classes: [
@@ -63,10 +63,10 @@ const cascadePlan = rules.buildStudentCascadeDeletePlan('stu-1',{
   leads: [{ id: 'lead-1', studentId: 'stu-1', studentMatchId: 'stu-1', studentName: '张三', studentMatchName: '张三', isCourseConverted: true }],
   leadFollowups: [{ id: 'lf-1', studentId: 'stu-1', studentName: '张三' }],
   students: [{ id: 'stu-2', name: '李四' }]
-},'2026-06-12T00:00:00.000Z');
+},'2026-06-12 00:00:00');
 
 assert.deepStrictEqual(cascadePlan.deletes.classes, ['class-solo']);
-assert.deepStrictEqual(cascadePlan.updates.classes.map(x=>[x.id,x.studentIds,x.updatedAt]), [['class-shared',['stu-2'],'2026-06-12T00:00:00.000Z']]);
+assert.deepStrictEqual(cascadePlan.updates.classes.map(x=>[x.id,x.studentIds,x.updatedAt]), [['class-shared',['stu-2'],'2026-06-12 00:00:00']]);
 assert.deepStrictEqual(cascadePlan.deletes.schedule, ['sch-solo']);
 assert.deepStrictEqual(cascadePlan.updates.schedule.map(x=>[x.id,x.studentIds,x.expectedStudentIds,x.absentStudentIds,x.studentName]), [['sch-shared',['stu-2'],['stu-2'],[],'李四']]);
 assert.deepStrictEqual(cascadePlan.deletes.plans, ['plan-1']);

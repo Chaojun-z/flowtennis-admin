@@ -14,7 +14,7 @@ const {
   normalizeName,
   normalizeCourtHistory,
   money
-} = require('./lib/mabao-import-core');
+} = require('./lib/shunyi_mapo-import-core');
 
 const EXTRA_TABLES = {
   membershipAccounts: 'ft_membership_accounts',
@@ -22,7 +22,7 @@ const EXTRA_TABLES = {
   membershipBenefitLedger: 'ft_membership_benefit_ledger',
   membershipAccountEvents: 'ft_membership_account_events'
 };
-const IMPORT_TAG = 'mabao-finance-import-20260524';
+const IMPORT_TAG = 'shunyi_mapo-finance-import-20260524';
 const IMPORT_COURT_PREFIX = 'private_lesson_csv_import_20260524-court-';
 const AMBIGUOUS_KEYS = new Set(['王', '李', '赵', '黄', '先生', '散客']);
 
@@ -35,7 +35,7 @@ function parseArgs(argv) {
 
 function makeOperationTrace(now = new Date().toISOString()) {
   const stamp = String(now).replace(/[^0-9]/g, '').slice(0, 17) || String(Date.now());
-  const operationId = `mabao-duplicate-courts-repair-20260524-${stamp}`;
+  const operationId = `shunyi_mapo-duplicate-courts-repair-20260524-${stamp}`;
   return { operationId, batchId: `batch-${operationId}` };
 }
 

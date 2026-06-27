@@ -111,7 +111,7 @@ assert.deepStrictEqual(
         category: '会员充值',
         amount: 5000,
         bonusAmount: 498,
-        membershipOrderId: 'mord-1',
+        membershipOrderRef: 'mord-1',
         membershipAccountId: 'macc-1',
         membershipPlanId: 'mplan-gold',
         membershipPlanName: '黄金卡'
@@ -302,7 +302,7 @@ const datedBooking = normalizeCourtRecord({
   history: [{
     id: 'dated-booking-1',
     date: '2026-04-20',
-    createdAt: '2026-04-21T09:30:00.000Z',
+    createdAt: '2026-04-21 09:30:00',
     type: '消费',
     category: '订场',
     payMethod: '代用户订场',
@@ -310,7 +310,7 @@ const datedBooking = normalizeCourtRecord({
   }]
 });
 assert.strictEqual(datedBooking.history[0].occurredDate, '2026-04-20', 'finance rows should expose the real occurrence date');
-assert.strictEqual(datedBooking.history[0].recordedAt, '2026-04-21T09:30:00.000Z', 'finance rows should expose the system entry time');
+assert.strictEqual(datedBooking.history[0].recordedAt, '2026-04-21 09:30:00', 'finance rows should expose the system entry time');
 assert.strictEqual(datedBooking.history[0].revenueBucket, '代用户订场', 'finance rows should classify proxy booking income');
 
 assert.deepStrictEqual(
@@ -431,7 +431,7 @@ assert.throws(
   () => normalizeCourtRecord({
     name: '订场用户冲突',
     phone: '15001010368',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     history: [
       {
         id: 'recharge-1',
@@ -458,7 +458,7 @@ assert.throws(
       id: 'sch-1',
       startTime: '2026-04-11 09:30',
       endTime: '2026-04-11 10:30',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       status: '已排课'
     }]
@@ -470,7 +470,7 @@ assert.throws(
 const stickyBookingCourt = normalizeCourtRecord({
   name: '订场用户归属',
   phone: '15001010368',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   history: [
     {
       id: 'recharge-2',
@@ -494,14 +494,14 @@ const stickyBookingCourt = normalizeCourtRecord({
   ]
 });
 
-assert.strictEqual(stickyBookingCourt.history[1].campus, 'mabao');
+assert.strictEqual(stickyBookingCourt.history[1].campus, 'shunyi_mapo');
 
 const movedStickyBookingCourt = normalizeCourtRecord({
   ...stickyBookingCourt,
   campus: 'shilipu'
 });
 
-assert.strictEqual(movedStickyBookingCourt.history[1].campus, 'mabao');
+assert.strictEqual(movedStickyBookingCourt.history[1].campus, 'shunyi_mapo');
 
 const legacy = normalizeCourtRecord({
   name: '旧客户',

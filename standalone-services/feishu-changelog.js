@@ -92,7 +92,7 @@ function fallbackChineseSummary(input) {
   else if (/schedule/.test(lower)) domain = '排课';
   else if (/student/.test(lower)) domain = '学员';
   else if (/finance/.test(lower)) domain = '财务';
-  else if (/campus|mabao/.test(lower)) domain = '校区';
+  else if (/campus|shunyi_mapo/.test(lower)) domain = '校区';
   else if (/court/.test(lower)) domain = '订场';
   else if (/match/.test(lower)) domain = '约球';
 
@@ -148,7 +148,7 @@ function summarizeText(input) {
   if (/document finance import display/.test(lower)) return '记录财务导入展示保护逻辑';
   if (/parse official account reminder times/.test(lower) && /beijing/.test(lower)) return '支持公众号提醒按北京时间解析';
   if (/weekday weekend package time windows/.test(lower)) return '支持课包区分工作日和周末可用时段';
-  if (/unify mabao/.test(lower) && /package signup dates/.test(lower)) return '统一玛宝校区和课包报名日期';
+  if (/unify shunyi_mapo/.test(lower) && /package signup dates/.test(lower)) return '统一玛宝校区和课包报名日期';
   if (/harden official account reminders/.test(lower)) return '增强公众号提醒稳定性';
   if (/speed up schedule and package first paint/.test(lower)) return '提升排课和课包页面首屏加载速度';
   if (/wait products package (page|页面)/.test(lower)) return '等待产品与课包页面数据加载完成';

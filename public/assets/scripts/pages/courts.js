@@ -614,7 +614,7 @@ function membershipOrderDisplayText(orderId){
 }
 function membershipLedgerAuditRows(){
   const q=(document.getElementById('membershipLedgerAuditSearch')?.value||'').toLowerCase();
-  return membershipBenefitLedger.filter(l=>l.action!=='grant'&&searchHit(q,courts.find(c=>c.id===l.courtId)?.name,l.benefitLabel,l.reason,l.operator,l.membershipOrderId)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
+  return membershipBenefitLedger.filter(l=>l.action!=='grant'&&searchHit(q,courts.find(c=>c.id===l.courtId)?.name,l.benefitLabel,l.reason,l.operator,l.membershipOrderRef)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
 }
 function renderMembershipLedgerAuditPagerControls(total,pages){
   const pageSizeHost=document.getElementById('membershipLedgerAuditPageSize');
@@ -647,7 +647,7 @@ function renderMembershipLedgerAuditPage(){
   const info=document.getElementById('membershipLedgerAuditPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderMembershipLedgerAuditPagerControls(total,pages);
-  host.innerHTML=slice.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(courts.find(c=>c.id===l.courtId)?.name||l.courtId)}</td><td>${renderStandardCellText(membershipOrderDisplayText(l.membershipOrderId))}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无权益流水</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
+  host.innerHTML=slice.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(courts.find(c=>c.id===l.courtId)?.name||l.courtId)}</td><td>${renderStandardCellText(membershipOrderDisplayText(l.membershipOrderRef))}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无权益流水</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
 }
 function openMembershipPlanModal(id){
   editId=id;const p=id?membershipPlans.find(x=>x.id===id):null;
@@ -765,7 +765,7 @@ function refreshMembershipBenefitConsumePreview(courtId,benefitCode){
   const preview=membershipBenefitConsumePreview(account,benefitCode,count);
   const el=document.getElementById('membershipBenefitConsumePreview');
   if(!el)return;
-  el.innerHTML=`当前总剩余：${preview.totalRemaining} 次<br>优先扣减批次：${preview.allocations.map(row=>`${membershipOrderDisplayText(row.membershipOrderId)}（到期 ${row.benefitValidUntil||'—'}）-${row.delta}`).join('；')||'—'}${preview.allocations.length>1?'<br>如果当前批次不足，将继续扣减下一批':''}`;
+  el.innerHTML=`当前总剩余：${preview.totalRemaining} 次<br>优先扣减批次：${preview.allocations.map(row=>`${membershipOrderDisplayText(row.membershipOrderRef)}（到期 ${row.benefitValidUntil||'—'}）-${row.delta}`).join('；')||'—'}${preview.allocations.length>1?'<br>如果当前批次不足，将继续扣减下一批':''}`;
 }
 function openMembershipBenefitActionModal(courtId,benefitCode,mode){
   const account=courtMembershipAccount(courtId);if(!account){toast('该订场用户还没有会员账户','warn');return;}
@@ -788,7 +788,7 @@ async function saveMembershipBenefit(courtId,mode,benefitCode=''){
   const count=Math.abs(parseInt(document.getElementById('mb_count').value)||1);
   const label=membershipBenefitLabelForCode(benefitCode,account);
   const data={membershipAccountId:account.id,courtId,benefitCode,benefitLabel:label,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('mb_reason').value.trim(),relatedDate:today()};
-  if(mode==='supplement')data.membershipOrderId=document.getElementById('mb_order').value;
+  if(mode==='supplement')data.membershipOrderRef=document.getElementById('mb_order').value;
   await runStandardMutation('membershipBenefitSaveBtn',async()=>{
     const r=await apiCall('POST','/membership-benefit-ledger',data);
     const rows=Array.isArray(r?.records)?r.records:[r];
@@ -813,7 +813,7 @@ async function saveMembershipBenefitInline(button,courtId,mode,benefitCode=''){
   if(mode==='supplement'){
     const latestOrder=membershipOrdersForAccount(account.id)[0];
     if(!latestOrder){toast('暂无可归属的购买批次','warn');return;}
-    data.membershipOrderId=latestOrder.id;
+    data.membershipOrderRef=latestOrder.id;
   }
   await runStandardMutation(button,async()=>{
     const r=await apiCall('POST','/membership-benefit-ledger',data);

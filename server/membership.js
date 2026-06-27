@@ -257,7 +257,7 @@ function buildMembershipPurchase({court,plan,existingAccount=null,body={},now=ne
     category:'会员充值',
     amount:rechargeAmount,
     bonusAmount:order.bonusAmount,
-    membershipOrderId:order.id,
+    membershipOrderRef:order.id,
     membershipAccountId:account.id,
     sourceLeadId:inheritedSourceLeadId,
     membershipPlanId:plan.id,
@@ -286,17 +286,17 @@ function membershipBenefitItemsFromOrder(order){
   Object.entries(snap).forEach(([code,value])=>{
     if(code==='customBenefits')return;
     const count=parseInt(value?.count)||0;
-    if(count>0)items.push({membershipOrderId:order.id,membershipAccountId:order.membershipAccountId,courtId:order.courtId,benefitCode:code,benefitLabel:value.label||code,unit:value.unit||'次',total:count,benefitValidUntil:order.benefitValidUntil});
+    if(count>0)items.push({membershipOrderRef:order.id,membershipAccountId:order.membershipAccountId,courtId:order.courtId,benefitCode:code,benefitLabel:value.label||code,unit:value.unit||'次',total:count,benefitValidUntil:order.benefitValidUntil});
   });
   parseArr(snap.customBenefits).forEach((value,idx)=>{
     const count=parseInt(value?.count)||0;
-    if(count>0)items.push({membershipOrderId:order.id,membershipAccountId:order.membershipAccountId,courtId:order.courtId,benefitCode:`custom_${idx+1}`,benefitLabel:value.label||`自定义权益${idx+1}`,unit:value.unit||'次',total:count,benefitValidUntil:order.benefitValidUntil});
+    if(count>0)items.push({membershipOrderRef:order.id,membershipAccountId:order.membershipAccountId,courtId:order.courtId,benefitCode:`custom_${idx+1}`,benefitLabel:value.label||`自定义权益${idx+1}`,unit:value.unit||'次',total:count,benefitValidUntil:order.benefitValidUntil});
   });
   return items;
 }
 function summarizeMembershipBenefits({orders=[],ledger=[],today=new Date().toISOString().slice(0,10)}={}){
   return (orders||[]).filter(o=>o.status!=='voided'&&o.status!=='refunded').flatMap(order=>membershipBenefitItemsFromOrder(order).map(item=>{
-    const rows=(ledger||[]).filter(l=>l.membershipOrderId===item.membershipOrderId&&l.benefitCode===item.benefitCode&&l.action!=='grant');
+    const rows=(ledger||[]).filter(l=>l.membershipOrderRef===item.membershipOrderRef&&l.benefitCode===item.benefitCode&&l.action!=='grant');
     const positiveDelta=rows.filter(l=>(parseInt(l.delta)||0)>0).reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
     const negativeDelta=rows.filter(l=>(parseInt(l.delta)||0)<0).reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
     const total=(item.total||0)+positiveDelta;
@@ -346,7 +346,7 @@ function buildStudentBenefitLedgerRecord(input,opts={}){
 }
 function buildMembershipGrantLedgerRows(order,opts={}){
   return membershipBenefitItemsFromOrder(order).map(item=>buildMembershipBenefitLedgerRecord({
-    membershipOrderId:order.id,
+    membershipOrderRef:order.id,
     membershipAccountId:order.membershipAccountId,
     courtId:order.courtId,
     sourceLeadId:order.sourceLeadId||'',
@@ -381,7 +381,7 @@ function isDuplicateMembershipOrderSubmission({courtId,membershipPlanId,purchase
   });
 }
 function buildMembershipBenefitLedgerRecord(input,opts={}){
-  if(!input?.membershipOrderId)throw new Error('会员权益流水必须关联购买批次');
+  if(!input?.membershipOrderRef)throw new Error('会员权益流水必须关联购买批次');
   if(!input?.membershipAccountId)throw new Error('会员权益流水必须关联会员账户');
   if(!input?.courtId)throw new Error('会员权益流水必须关联订场用户');
   if(!input?.benefitCode)throw new Error('请选择会员权益');
@@ -426,7 +426,7 @@ function allocateMembershipBenefitUsage({membershipAccountId,courtId,benefitCode
       const av=String(a.benefitValidUntil||'9999-99-99');
       const bv=String(b.benefitValidUntil||'9999-99-99');
       if(av!==bv)return av.localeCompare(bv);
-      return String(a.membershipOrderId||'').localeCompare(String(b.membershipOrderId||''));
+      return String(a.membershipOrderRef||'').localeCompare(String(b.membershipOrderRef||''));
     });
   const available=batches.reduce((sum,item)=>sum+(parseInt(item.remaining)||0),0);
   if(available<need)throw new Error('剩余权益不足');
@@ -437,7 +437,7 @@ function allocateMembershipBenefitUsage({membershipAccountId,courtId,benefitCode
     const delta=Math.min(remaining,parseInt(batch.remaining)||0);
     if(delta<=0)continue;
     rows.push(buildMembershipBenefitLedgerRecord({
-      membershipOrderId:batch.membershipOrderId,
+      membershipOrderRef:batch.membershipOrderRef,
       membershipAccountId,
       courtId,
       benefitCode,

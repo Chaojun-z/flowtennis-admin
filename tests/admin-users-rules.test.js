@@ -52,9 +52,9 @@ assert.deepStrictEqual(
   rules.buildWechatBoundUser(
     { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed' },
     'openid-123',
-    '2026-04-19T12:00:00.000Z'
+    '2026-04-19 12:00:00'
   ),
-  { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed', wechatOpenId: 'openid-123', wechatBoundAt: '2026-04-19T12:00:00.000Z' },
+  { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed', wechatOpenId: 'openid-123', wechatBoundAt: '2026-04-19 12:00:00' },
   'wechat bind helper should preserve user fields and attach openid'
 );
 
@@ -68,7 +68,7 @@ assert.deepStrictEqual(
     coachId: 'coach-id',
     coachName: '朝珺',
     wechatOpenId: 'openid-secret',
-    wechatBoundAt: '2026-04-19T12:00:00.000Z'
+    wechatBoundAt: '2026-04-19 12:00:00'
   }),
   {
     id: 'coach_1',
@@ -84,7 +84,7 @@ assert.deepStrictEqual(
     featurePermissions: [],
     matchPermissions: [],
     wechatBound: true,
-    wechatBoundAt: '2026-04-19T12:00:00.000Z',
+    wechatBoundAt: '2026-04-19 12:00:00',
     officialAccountBound: false,
     officialAccountBoundAt: ''
   },
@@ -97,7 +97,7 @@ assert.deepStrictEqual(
     name: 'Mira',
     role: 'admin',
     dataScope: 'campus',
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     matchPermissions: ['match_ops']
   }),
   {
@@ -107,7 +107,7 @@ assert.deepStrictEqual(
     role: 'admin',
     systemType: 'management',
     dataScope: 'campus',
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     status: 'active',
     coachId: '',
     coachName: '',
@@ -126,7 +126,7 @@ assert.deepStrictEqual(
     id: 'coach_1',
     name: '朝珺',
     wechatOpenId: 'openid-secret',
-    wechatBoundAt: '2026-04-19T12:00:00.000Z'
+    wechatBoundAt: '2026-04-19 12:00:00'
   }),
   { id: 'coach_1', name: '朝珺', wechatOpenId: '', wechatBoundAt: '' },
   'wechat unbind helper should clear openid and bind time'
@@ -136,9 +136,9 @@ assert.deepStrictEqual(
   rules.buildOfficialAccountBoundUser(
     { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed' },
     'oa-openid-123',
-    '2026-04-19T12:00:00.000Z'
+    '2026-04-19 12:00:00'
   ),
-  { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed', officialAccountOpenId: 'oa-openid-123', officialAccountBoundAt: '2026-04-19T12:00:00.000Z' },
+  { id: 'coach_1', name: '朝珺', role: 'editor', password: 'hashed', officialAccountOpenId: 'oa-openid-123', officialAccountBoundAt: '2026-04-19 12:00:00' },
   'official account bind helper should preserve user fields and attach openid'
 );
 
@@ -147,7 +147,7 @@ assert.deepStrictEqual(
     id: 'coach_1',
     name: '朝珺',
     officialAccountOpenId: 'oa-openid-123',
-    officialAccountBoundAt: '2026-04-19T12:00:00.000Z'
+    officialAccountBoundAt: '2026-04-19 12:00:00'
   }),
   { id: 'coach_1', name: '朝珺', officialAccountOpenId: '', officialAccountBoundAt: '' },
   'official account unbind helper should clear service account openid and bind time'

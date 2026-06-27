@@ -19,8 +19,8 @@ const ENTITLEMENT_ID = 'private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-ent
 const DUPLICATE_LEDGER_ID = 'private_lesson_csv_import_20260524-ledger-1952-笑笑';
 
 const CORRECT_LESSONS = [
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-6f6b6741-4a42-aa2b-2be4-72f5c8b4122c-2026-05-02-15:00-16:00-0', scheduleId: '', startTime: '2026-05-02 15:00', endTime: '2026-05-02 16:00', relatedDate: '2026-05-02', sourceTimeBand: '15:00-16:00', venue: '3号场' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-6f6b6741-4a42-aa2b-2be4-72f5c8b4122c-2026-05-04-10:00-11:00-1', scheduleId: '', startTime: '2026-05-04 10:00', endTime: '2026-05-04 11:00', relatedDate: '2026-05-04', sourceTimeBand: '10:00-11:00', venue: '3号场' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-6f6b6741-4a42-aa2b-2be4-72f5c8b4122c-2026-05-02-15:00-16:00-0', scheduleId: '', startTime: '2026-05-02 15:00', endTime: '2026-05-02 16:00', relatedDate: '2026-05-02', sourceTimeBand: '15:00-16:00', venue: '3号场' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH4_FINAL_LIVE-entitlement-6f6b6741-4a42-aa2b-2be4-72f5c8b4122c-2026-05-04-10:00-11:00-1', scheduleId: '', startTime: '2026-05-04 10:00', endTime: '2026-05-04 11:00', relatedDate: '2026-05-04', sourceTimeBand: '10:00-11:00', venue: '3号场' },
   { id: 'd59d1025-3619-4df1-a702-f54a655b5683', scheduleId: '79e4d2fe-6441-4587-8b16-0395a2f77c32', startTime: '2026-05-16 09:00', endTime: '2026-05-16 10:00', relatedDate: '2026-05-16', sourceTimeBand: '09:00-10:00', venue: '4号场' },
   { id: '33bbc423-a3f5-4378-9809-c48fe6ba0b22', scheduleId: 'd76a9498-651e-4ad3-a79a-4be47b4ecc87', startTime: '2026-05-24 15:00', endTime: '2026-05-24 16:00', relatedDate: '2026-05-24', sourceTimeBand: '15:00-16:00', venue: '3号场' }
 ];
@@ -72,8 +72,8 @@ function normalizePurchase(row = {}) {
     allowedCoaches: ['Siren'],
     coachIds: ['Siren'],
     coachNames: ['Siren'],
-    campusIds: ['mabao'],
-    saleCampusId: 'mabao',
+    campusIds: ['shunyi_mapo'],
+    saleCampusId: 'shunyi_mapo',
     packageTimeBand: '非黄金时段',
     timeBand: '非黄金时段',
     status: 'active',
@@ -99,8 +99,8 @@ function normalizeEntitlement(row = {}) {
     allowedCoaches: ['Siren'],
     coachIds: ['Siren'],
     coachNames: ['Siren'],
-    campusIds: ['mabao'],
-    saleCampusId: 'mabao',
+    campusIds: ['shunyi_mapo'],
+    saleCampusId: 'shunyi_mapo',
     timeBand: '非黄金时段',
     packageTimeBand: '非黄金时段',
     usageStartDate: '2026-05-02',
@@ -123,7 +123,7 @@ function buildSchedule(base = {}, lesson) {
     courseType: '私教课',
     coach: 'Siren',
     coachId: 'Siren',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: lesson.venue,
     locationType: 'campus',
     lessonCount: 1,

@@ -43,8 +43,8 @@
 | 手动课包消课/退回 `POST /entitlements/:id/manual-adjust` | `api/index.js:10259-10290` | `ft_entitlements`, `ft_entitlement_ledger` | 部分。ledger 带 trace；entitlement 旧记录可能保留旧 trace | 可找到 ledger；entitlement 更新不可靠 | 可识别 ledger | 更新旧 entitlement 时本次操作 trace 不可靠 | P1 |
 | 约球收款同步 | `api/index.js:8035-8116` | `ft_courts` | 否。match fee history row 无 operationId/batchId | 不可按 operationId 校验 | 不可识别 | 约球收款进入订场财务，应补 trace | P0 |
 | 约球退款同步 | `api/index.js:8070-8134` | `ft_courts` | 否。refund history row 无 operationId/batchId | 不可按 operationId 校验 | 不可识别 | 退款/冲正必须优先补 trace | P0 |
-| 马包最终导入写入 | `scripts/apply-mabao-final-import-20260524.js` | `ft_students`, `ft_purchases`, `ft_entitlements`, `ft_schedule`, `ft_entitlement_ledger`, `ft_courts`, `ft_student_active_entitlement_index` | 否。脚本有 dry-run/--write 和生产实例校验，但未见 operationId/batchId | 不可按 operationId 校验 | 不可识别 | 大批量生产导入必须统一 batchId，并写入所有业务/流水行 | P0 |
-| 马包订场历史导入/重复订场修复 | `scripts/repair-mabao-court-history-import-20260524.js`, `scripts/repair-mabao-duplicate-courts-20260524.js` | `ft_courts` | 否 | 不可按 operationId 校验 | 不可识别 | 订场 history 修复必须给新增/修改 history 打 trace | P0 |
+| 马包最终导入写入 | `scripts/apply-shunyi_mapo-final-import-20260524.js` | `ft_students`, `ft_purchases`, `ft_entitlements`, `ft_schedule`, `ft_entitlement_ledger`, `ft_courts`, `ft_student_active_entitlement_index` | 否。脚本有 dry-run/--write 和生产实例校验，但未见 operationId/batchId | 不可按 operationId 校验 | 不可识别 | 大批量生产导入必须统一 batchId，并写入所有业务/流水行 | P0 |
+| 马包订场历史导入/重复订场修复 | `scripts/repair-shunyi_mapo-court-history-import-20260524.js`, `scripts/repair-shunyi_mapo-duplicate-courts-20260524.js` | `ft_courts` | 否 | 不可按 operationId 校验 | 不可识别 | 订场 history 修复必须给新增/修改 history 打 trace | P0 |
 | 老课包专项 repair 脚本 | `scripts/repair-xiaoman-package-20260522.js`, `scripts/repair-yaya-xiaoman-20260522.js`, `scripts/repair-songtiti-package-20260523.js`, `scripts/repair-liqin-package-20260525.js`, `scripts/repair-xiaoxiao-package-20260525.js`, `scripts/repair-course-package-five-students-20260528.js`, `scripts/repair-j-package-20260526.js`, `scripts/repair-small-trial-count-orders-20260606.js` | `ft_purchases`, `ft_entitlements`, `ft_schedule`, `ft_entitlement_ledger`, `ft_student_active_entitlement_index` | 否。多数有 `--write` 和生产实例校验，但未见 operationId/batchId | 不可按 operationId 校验 | 不可识别；删除类更无法识别 | 统一 repair operationId/batchId；删除改为可审计的作废/冲正或额外审计记录 | P1 |
 | 新课包流水 repair 脚本 | `scripts/repair-six-package-ledgers-20260601.js` | `ft_purchases`, `ft_entitlements`, `ft_schedule`, `ft_entitlement_ledger`, `ft_student_active_entitlement_index` | 是。`touch()` 写入 `operationId` 和 `batchId` | 表级可找到；财务摘要受 normalized rows 未透传限制 | 可识别写入行；删除行仍不可识别 | 删除行仍需审计；财务行未透传 trace | P1 |
 | 权益余额 repair 脚本 | `scripts/repair-package-entitlement-balances-20260601.js` | `ft_entitlements`, `ft_student_active_entitlement_index` | 是。更新 entitlement 写入 `operationId` 和 `batchId` | 表级可找到 | 可识别 `ft_entitlements` | active index 不在 B1/B2 工具范围；不直接形成财务流水摘要 | P2 |
@@ -58,7 +58,7 @@
 
 2. **P0：补约球收款/退款、订场导入、马包导入的 operationId/batchId。**
    - 约球收款/退款直接进入 `ft_courts.history` 财务流水，目前完全无 trace。
-   - `POST /courts/import` 和 `scripts/apply-mabao-final-import-20260524.js` 是批量生产写入口，目前无法按批次回溯。
+   - `POST /courts/import` 和 `scripts/apply-shunyi_mapo-final-import-20260524.js` 是批量生产写入口，目前无法按批次回溯。
 
 3. **P0/P1：补作废/删除/修数入口的独立操作 trace。**
    - 优先：`DELETE /purchases/:id`、`DELETE /membership-orders/:id`、`DELETE /schedule/:id`、订场用户删除/合并。

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fix = require('../scripts/fix-package-ownership-20260521.js');
 
-const now = '2026-05-21T12:00:00.000Z';
+const now = '2026-05-21 12:00:00';
 const oldPackage = { id: 'seed-package-adult-1v1-history', name: '成人1v1 历史特殊课包' };
 const targetPackage = {
   id: 'pkg-gold-10',
@@ -14,7 +14,7 @@ const targetPackage = {
   dailyTimeWindows: [],
   coachIds: [],
   coachNames: [],
-  campusIds: ['mabao'],
+  campusIds: ['shunyi_mapo'],
   maxStudents: 1
 };
 
@@ -34,7 +34,7 @@ const packages = [
     dailyTimeWindows: [],
     coachIds: [],
     coachNames: [],
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     maxStudents: 1
   }
 ];
@@ -76,7 +76,7 @@ assert.ok(plan.creates.every((row) => !['黄金时间', '非黄时间'].includes
 const touchedTables = ['ft_packages', 'ft_purchases', 'ft_entitlements'];
 assert.ok(!touchedTables.includes('ft_entitlement_ledger'), '脚本不应写消课流水表');
 
-const seedPurchases = require('../server/seeds/mabao-finance-seed.json').purchases;
+const seedPurchases = require('../server/seeds/shunyi_mapo-finance-seed.json').purchases;
 const seedStatsRows = fix.buildStatsRowsFromSeedPurchases(seedPurchases);
 
 const sourceRows = fix.buildMappingRowsFromSourceCsv({

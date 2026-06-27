@@ -20,8 +20,8 @@ async function main() {
   const writes = [];
   const rows = {
     ft_students: [
-      { id: 'student-phone', name: '手机号重复', phone: '13800138000', campus: 'mabao' },
-      { id: 'student-name-campus', name: '一帆（YING）', phone: '', campus: 'mabao' }
+      { id: 'student-phone', name: '手机号重复', phone: '13800138000', campus: 'shunyi_mapo' },
+      { id: 'student-name-campus', name: '一帆（YING）', phone: '', campus: 'shunyi_mapo' }
     ]
   };
   const handle = createStudentRoutes({
@@ -70,7 +70,7 @@ async function main() {
   await handle({
     path: '/students',
     method: 'POST',
-    body: { name: '一帆（YING）', phone: '', campus: 'mabao' },
+    body: { name: '一帆（YING）', phone: '', campus: 'shunyi_mapo' },
     user: { role: 'admin' },
     res: sameNameCampusRes
   });
@@ -91,7 +91,7 @@ async function main() {
   await handle({
     path: '/students/student-name-campus',
     method: 'PUT',
-    body: { name: '一帆（YING）', phone: '', campus: 'mabao', notes: '更新备注' },
+    body: { name: '一帆（YING）', phone: '', campus: 'shunyi_mapo', notes: '更新备注' },
     user: { role: 'admin' },
     res: editSelfRes
   });
@@ -99,7 +99,7 @@ async function main() {
   assert.strictEqual(editSelfRes.body.id, 'student-name-campus');
 
   assert.ok(!writes.some((item) => item.id === 'new-student' && item.row.phone === '13800138000'), 'duplicate phone row should not be written');
-  assert.ok(!writes.some((item) => item.id === 'new-student' && item.row.campus === 'mabao'), 'duplicate name-campus row should not be written');
+  assert.ok(!writes.some((item) => item.id === 'new-student' && item.row.campus === 'shunyi_mapo'), 'duplicate name-campus row should not be written');
 
   console.log('student duplicate guard tests passed');
 }

@@ -11,7 +11,7 @@ const snapshotPath = path.join(tmpDir, 'snapshot.json');
 
 fs.writeFileSync(snapshotPath, JSON.stringify({
   snapshotDate: '2026-06-14',
-  generatedAt: '2026-06-14T10:00:00.000Z',
+  generatedAt: '2026-06-14 10:00:00',
   financePage: {
     normalizedRows: [{
       id: 'finance-row-1',

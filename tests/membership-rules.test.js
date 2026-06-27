@@ -60,7 +60,7 @@ const plan = rules.buildMembershipPlanRecord({
   designatedCoachPartnerCount: 1,
   designatedCoachIds: ['coach-zj'],
   customBenefits: [{ label: '节日赠礼', unit: '份', count: 1 }]
-}, { id: 'mplan-gold', now: '2026-04-12T00:00:00.000Z' });
+}, { id: 'mplan-gold', now: '2026-04-12 00:00:00' });
 
 assert.strictEqual(plan.id, 'mplan-gold');
 assert.strictEqual(plan.status, 'draft');
@@ -108,7 +108,7 @@ const first = rules.buildMembershipPurchase({
     },
     operator: '管理员'
   },
-  now: '2026-04-12T00:00:00.000Z',
+  now: '2026-04-12 00:00:00',
   accountId: 'macc-1',
   orderId: 'mord-1',
   historyId: 'his-1'
@@ -165,7 +165,7 @@ assert.strictEqual(first.historyRow.overrideReason, '');
 assert.strictEqual(first.account.sourceLeadId, 'lead-1', 'membership account should inherit court source lead');
 assert.strictEqual(first.order.sourceLeadId, 'lead-1', 'membership order should inherit court source lead');
 assert.strictEqual(first.historyRow.sourceLeadId, 'lead-1', 'membership recharge history should inherit court source lead');
-const firstGrantRows = rules.buildMembershipGrantLedgerRows(first.order, { idFactory: () => 'benefit-ledger-1', now: '2026-04-12T00:00:00.000Z' });
+const firstGrantRows = rules.buildMembershipGrantLedgerRows(first.order, { idFactory: () => 'benefit-ledger-1', now: '2026-04-12 00:00:00' });
 assert.ok(firstGrantRows.length > 0, 'membership purchase should grant benefit ledger rows');
 assert.strictEqual(firstGrantRows[0].sourceLeadId, 'lead-1', 'membership benefit ledger should inherit court source lead');
 
@@ -178,7 +178,7 @@ const discountedMembershipPurchase = rules.buildMembershipPurchase({
     overrideReason: '续充优惠',
     operator: '管理员'
   },
-  now: '2026-04-12T00:00:00.000Z',
+  now: '2026-04-12 00:00:00',
   accountId: 'macc-price',
   orderId: 'mord-price',
   historyId: 'his-price'
@@ -203,7 +203,7 @@ assert.throws(
       rechargeAmount: 4600,
       overrideReason: ''
     },
-    now: '2026-04-12T00:00:00.000Z',
+    now: '2026-04-12 00:00:00',
     accountId: 'macc-price',
     orderId: 'mord-price',
     historyId: 'his-price'
@@ -225,7 +225,7 @@ const adjustedPurchase = rules.buildMembershipPurchase({
     designatedCoachIds: ['coach-zj', 'coach-chen'],
     customBenefits: [{ label: '节日赠礼', unit: '份', count: 2 }]
   },
-  now: '2026-04-12T00:00:00.000Z',
+  now: '2026-04-12 00:00:00',
   accountId: 'macc-2',
   orderId: 'mord-4',
   historyId: 'his-4'
@@ -265,7 +265,7 @@ const swappedBenefitPurchase = rules.buildMembershipPurchase({
     designatedCoachPartnerCount: 0,
     notes: '不要大师公开课和发球机，都换成穿线服务'
   },
-  now: '2026-04-12T00:00:00.000Z',
+  now: '2026-04-12 00:00:00',
   accountId: 'macc-3',
   orderId: 'mord-5',
   historyId: 'his-5'
@@ -372,7 +372,7 @@ const customizedPublicLessonSummary = rules.summarizeMembershipBenefits({
   orders: [customizedPublicLessonOrder],
   ledger: [{
     id: 'b-led-public-1',
-    membershipOrderId: 'mord-public-20',
+    membershipOrderRef: 'mord-public-20',
     membershipAccountId: 'macc-public-20',
     courtId: court.id,
     benefitCode: 'publicLesson',
@@ -380,7 +380,7 @@ const customizedPublicLessonSummary = rules.summarizeMembershipBenefits({
     unit: '次',
     delta: -1,
     action: 'consume',
-    createdAt: '2026-04-13T08:56:18.836Z'
+    createdAt: '2026-04-13 08:56:18'
   }],
   today: '2026-04-13'
 });
@@ -402,7 +402,7 @@ const allZeroBenefitPurchase = rules.buildMembershipPurchase({
     level2PartnerCount: 0,
     designatedCoachPartnerCount: 0
   },
-  now: '2026-04-12T00:00:00.000Z',
+  now: '2026-04-12 00:00:00',
   accountId: 'macc-zero',
   orderId: 'mord-zero',
   historyId: 'his-zero'
@@ -423,7 +423,7 @@ const renewal = rules.buildMembershipPurchase({
   plan: { ...plan, name: '钻石卡', tierCode: 'diamond', rechargeAmount: 10000, discountRate: 0.7 },
   existingAccount: first.account,
   body: { purchaseDate: '2026-10-01' },
-  now: '2026-10-01T00:00:00.000Z',
+  now: '2026-10-01 00:00:00',
   orderId: 'mord-2',
   historyId: 'his-2'
 });
@@ -438,7 +438,7 @@ const lowRenewal = rules.buildMembershipPurchase({
   plan: { ...plan, name: '白银卡', tierCode: 'silver', rechargeAmount: 3000, discountRate: 0.9 },
   existingAccount: first.account,
   body: { purchaseDate: '2026-10-01' },
-  now: '2026-10-01T00:00:00.000Z',
+  now: '2026-10-01 00:00:00',
   orderId: 'mord-3',
   historyId: 'his-3'
 });
@@ -451,7 +451,7 @@ const extended = rules.reconcileMembershipAccounts({
   accounts: [first.account],
   courts: [{ ...court, history: [first.historyRow] }],
   today: '2027-04-05',
-  now: '2027-04-05T00:00:00.000Z',
+  now: '2027-04-05 00:00:00',
   eventIdFactory: () => 'evt-extend'
 });
 
@@ -464,7 +464,7 @@ const cleared = rules.reconcileMembershipAccounts({
   accounts: [first.account],
   courts: [{ ...court, history: [first.historyRow] }],
   today: '2028-04-05',
-  now: '2028-04-05T00:00:00.000Z',
+  now: '2028-04-05 00:00:00',
   eventIdFactory: () => 'evt-clear',
   historyIdFactory: () => 'his-clear'
 });
@@ -479,7 +479,7 @@ const benefitSummary = rules.summarizeMembershipBenefits({
   orders: [first.order],
   ledger: [{
     id: 'b-led-1',
-    membershipOrderId: 'mord-1',
+    membershipOrderRef: 'mord-1',
     membershipAccountId: 'macc-1',
     courtId: 'court-1',
     benefitCode: 'ballMachine',
@@ -487,21 +487,21 @@ const benefitSummary = rules.summarizeMembershipBenefits({
     unit: '次',
     delta: -2,
     action: 'consume',
-    createdAt: '2026-05-01T00:00:00.000Z'
+    createdAt: '2026-05-01 00:00:00'
   }],
   today: '2026-05-02'
 });
 
 const ballMachineSummary = benefitSummary.find(x => x.benefitCode === 'ballMachine');
 assert.ok(ballMachineSummary, 'benefit summary should include ballMachine batch');
-assert.strictEqual(ballMachineSummary.membershipOrderId, 'mord-1');
+assert.strictEqual(ballMachineSummary.membershipOrderRef, 'mord-1');
 assert.strictEqual(ballMachineSummary.remaining, 6);
 
 const supplementedBenefitSummary = rules.summarizeMembershipBenefits({
   orders: [first.order],
   ledger: [{
     id: 'b-led-supplement-1',
-    membershipOrderId: 'mord-1',
+    membershipOrderRef: 'mord-1',
     membershipAccountId: 'macc-1',
     courtId: 'court-1',
     benefitCode: 'stringingLabor',
@@ -509,7 +509,7 @@ const supplementedBenefitSummary = rules.summarizeMembershipBenefits({
     unit: '次',
     delta: 50,
     action: 'supplement',
-    createdAt: '2026-05-01T00:00:00.000Z'
+    createdAt: '2026-05-01 00:00:00'
   }],
   today: '2026-05-02'
 });
@@ -548,7 +548,7 @@ const allocatedUsage = rules.allocateMembershipBenefitUsage({
     }
   ],
   ledger: [],
-  now: '2026-05-01T00:00:00.000Z',
+  now: '2026-05-01 00:00:00',
   idFactory: (() => {
     let i = 0;
     return () => `alloc-${++i}`;
@@ -556,10 +556,10 @@ const allocatedUsage = rules.allocateMembershipBenefitUsage({
 });
 
 assert.deepStrictEqual(
-  allocatedUsage.map(x => ({ membershipOrderId: x.membershipOrderId, delta: x.delta })),
+  allocatedUsage.map(x => ({ membershipOrderRef: x.membershipOrderRef, delta: x.delta })),
   [
-    { membershipOrderId: 'mord-1', delta: -2 },
-    { membershipOrderId: 'mord-2', delta: -1 }
+    { membershipOrderRef: 'mord-1', delta: -2 },
+    { membershipOrderRef: 'mord-2', delta: -1 }
   ],
   'benefit consumption should deduct the earliest-expiring batch first'
 );
@@ -580,14 +580,14 @@ const legacyAllocatedUsage = rules.allocateMembershipBenefitUsage({
     status: 'active'
   }],
   ledger: [],
-  now: '2026-05-01T00:00:00.000Z',
+  now: '2026-05-01 00:00:00',
   idFactory: () => 'legacy-alloc-1'
 });
 
 assert.deepStrictEqual(
-  legacyAllocatedUsage.map(x => ({ membershipOrderId: x.membershipOrderId, delta: x.delta, benefitCode: x.benefitCode })),
+  legacyAllocatedUsage.map(x => ({ membershipOrderRef: x.membershipOrderRef, delta: x.delta, benefitCode: x.benefitCode })),
   [
-    { membershipOrderId: 'legacy-order-1', delta: -1, benefitCode: 'stringingLabor' }
+    { membershipOrderRef: 'legacy-order-1', delta: -1, benefitCode: 'stringingLabor' }
   ],
   'legacy membership orders without benefitSnapshot should still be consumable by benefit ledger allocation'
 );
@@ -603,7 +603,7 @@ assert.throws(
       benefitSnapshot: { ballMachine: { label: '发球机免费使用', unit: '次', count: 1 } }
     }],
     ledger: [],
-    now: '2026-05-01T00:00:00.000Z'
+    now: '2026-05-01 00:00:00'
   }),
   /剩余权益不足/,
   'benefit consumption should reject requests that exceed remaining batches'
@@ -650,9 +650,9 @@ assert.strictEqual(
       purchaseDate: '2026-04-05',
       rechargeAmount: 5000,
       status: 'active',
-      createdAt: '2026-04-12T00:00:05.000Z'
+      createdAt: '2026-04-12 00:00:05'
     }],
-    now: '2026-04-12T00:00:10.000Z'
+    now: '2026-04-12 00:00:10'
   }),
   true,
   'membership order should reject short-window duplicate submissions'
@@ -673,9 +673,9 @@ assert.strictEqual(
       rechargeAmount: 5000,
       requestKey: 'req-1',
       status: 'active',
-      createdAt: '2026-04-12T00:00:05.000Z'
+      createdAt: '2026-04-12 00:00:05'
     }],
-    now: '2026-04-12T00:01:10.000Z'
+    now: '2026-04-12 00:01:10'
   }),
   true,
   'same request key should be treated as duplicate even outside the short window'
@@ -706,7 +706,7 @@ const voidedEvent = rules.buildMembershipAccountEventRecord({
   afterStatus: 'voided',
   operator: '管理员',
   reason: '手动作废会员'
-}, { id: 'evt-void-1', now: '2026-04-12T10:00:00.000Z' });
+}, { id: 'evt-void-1', now: '2026-04-12 10:00:00' });
 
 assert.deepStrictEqual(
   {
@@ -820,7 +820,7 @@ const mergedCourt = rules.mergeCourtRecords({
     id: 'court-target',
     name: '正式用户',
     phone: '13800138000',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     studentIds: ['stu-a'],
     notes: '原备注',
     history: [{ id: 'h-target', date: '2026-04-10', type: '充值', amount: 500, payMethod: '微信', category: '储值' }]
@@ -829,7 +829,7 @@ const mergedCourt = rules.mergeCourtRecords({
     id: 'court-source',
     name: '导入用户',
     mergedIntoCourtId: 'old-target',
-    mergedAt: '2026-04-01T00:00:00.000Z',
+    mergedAt: '2026-04-01 00:00:00',
     phone: '',
     campus: '',
     studentIds: ['stu-b'],
@@ -840,7 +840,7 @@ const mergedCourt = rules.mergeCourtRecords({
   membershipOrders: [{ id: 'mord-merge', membershipAccountId: 'macc-merge', courtId: 'court-source', courtName: '导入用户', studentIds: ['stu-b'] }],
   membershipBenefitLedger: [{ id: 'mled-merge', membershipAccountId: 'macc-merge', courtId: 'court-source', benefitCode: 'ballMachine', delta: -1 }],
   membershipAccountEvents: [{ id: 'mevt-merge', membershipAccountId: 'macc-merge', courtId: 'court-source', eventType: 'opened' }],
-  now: '2026-04-14T10:00:00.000Z'
+  now: '2026-04-14 10:00:00'
 });
 
 assert.deepStrictEqual(
@@ -893,7 +893,7 @@ let importedMerged = rules.mergeCourtRecords({
     id: 'court-sky',
     name: 'sky',
     phone: '18813066492',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     history: [
       { id: 'sky-topup', date: '2026-04-13', type: '充值', amount: 5000, bonusAmount: 0, payMethod: '会员充值', category: '会员充值' }
     ]
@@ -901,24 +901,24 @@ let importedMerged = rules.mergeCourtRecords({
   sourceCourt: {
     id: 'court-sky-import-1',
     name: 'sky 订场',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     history: [
-      { id: 'sky-import-1', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
+      { id: 'sky-import-1', seedTag: 'shunyi_mapo-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
     ]
   },
-  now: '2026-05-24T10:00:00.000Z'
+  now: '2026-05-24 10:00:00'
 });
 importedMerged = rules.mergeCourtRecords({
   targetCourt: importedMerged.targetCourt,
   sourceCourt: {
     id: 'court-sky-import-2',
     name: 'Sky',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     history: [
-      { id: 'sky-import-2', seedTag: 'mabao-finance-import-20260524', date: '2026-05-19', type: '消费', amount: 224, payMethod: '储值扣款', category: '订场' }
+      { id: 'sky-import-2', seedTag: 'shunyi_mapo-finance-import-20260524', date: '2026-05-19', type: '消费', amount: 224, payMethod: '储值扣款', category: '订场' }
     ]
   },
-  now: '2026-05-24T10:00:00.000Z'
+  now: '2026-05-24 10:00:00'
 });
 
 assert.deepStrictEqual(
@@ -954,10 +954,10 @@ const orderedImportedMerge = rules.mergeCourtRecords({
     id: 'court-member-import',
     name: '会员用户 订场',
     history: [
-      { id: 'consume-early-date', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
+      { id: 'consume-early-date', seedTag: 'shunyi_mapo-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 392, payMethod: '储值扣款', category: '订场' }
     ]
   },
-  now: '2026-05-24T10:00:00.000Z'
+  now: '2026-05-24 10:00:00'
 });
 assert.strictEqual(orderedImportedMerge.targetCourt.balance, 4496, 'court merge should order recharge before imported stored-value consumption');
 
@@ -974,10 +974,10 @@ const negativeImportedMerge = rules.mergeCourtRecords({
     id: 'court-sky-import-overdraw',
     name: 'sky 订场',
     history: [
-      { id: 'sky-overdraw', seedTag: 'mabao-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 784, payMethod: '储值扣款', category: '订场' }
+      { id: 'sky-overdraw', seedTag: 'shunyi_mapo-finance-import-20260524', date: '2026-05-18', type: '消费', amount: 784, payMethod: '储值扣款', category: '订场' }
     ]
   },
-  now: '2026-05-24T10:00:00.000Z'
+  now: '2026-05-24 10:00:00'
 });
 assert.strictEqual(negativeImportedMerge.targetCourt.balance, -392, 'historical import merge should keep stored-value consumption on one user even when it reveals a negative balance');
 

@@ -6,7 +6,7 @@ const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
-const mabaoFinanceSeed = require('../server/seeds/mabao-finance-seed.json');
+const shunyi_mapoFinanceSeed = require('../server/seeds/shunyi_mapo-finance-seed.json');
 const { recordPerfMetric } = require('../server/lib/perf-metrics');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
@@ -60,7 +60,7 @@ const ENABLE_DEFAULT_USER_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS.enableDefaultUserBo
 const ENABLE_TABLE_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS.enableTableBootstrap;
 const ENABLE_RUNTIME_TABLE_ENSURE = BOOTSTRAP_SAFETY_FLAGS.enableRuntimeTableEnsure;
 const ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS.enableDefaultPricePlanBootstrap;
-const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS.enableMabaoFinanceSeedBootstrap;
+const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS.enableShunyiMapoFinanceSeedBootstrap;
 const ENABLE_IMPORTED_LEDGER_AUTO_REPAIR = BOOTSTRAP_SAFETY_FLAGS.enableImportedLedgerAutoRepair;
 const RUNTIME_STAGE = BOOTSTRAP_SAFETY_FLAGS.runtimeStage;
 const IS_PRODUCTION_RUNTIME = RUNTIME_STAGE === 'production';
@@ -96,8 +96,8 @@ const LEGACY_STATIC_COACH_REFS=[
 ];
 
 const T_USERS='ft_users',T_COURTS='ft_courts',T_STUDENTS='ft_students',T_PRODUCTS='ft_products',T_PLANS='ft_plans',T_SCHEDULE='ft_schedule',T_COACHES='ft_coaches',T_CLASSES='ft_classes',T_CLASS_NOS='ft_class_nos',T_CAMPUSES='ft_campuses',T_FEEDBACKS='ft_feedbacks',T_COACH_PROPOSALS='ft_coach_proposals',T_PACKAGES='ft_packages',T_PURCHASES='ft_purchases',T_ENTITLEMENTS='ft_entitlements',T_ENTITLEMENT_LEDGER='ft_entitlement_ledger',T_FINANCIAL_LEDGER='ft_financial_ledger',T_MEMBERSHIP_PLANS='ft_membership_plans',T_MEMBERSHIP_ACCOUNTS='ft_membership_accounts',T_MEMBERSHIP_ORDERS='ft_membership_orders',T_MEMBERSHIP_BENEFIT_LEDGER='ft_membership_benefit_ledger',T_MEMBERSHIP_ACCOUNT_EVENTS='ft_membership_account_events',T_PRICE_PLANS='ft_price_plans',T_MATCH_SETTINGS='ft_match_settings',T_USER_WECHAT_INDEX='ft_user_wechat_index',T_COACH_SCHEDULE_INDEX='ft_coach_schedule_index',T_STUDENT_ACTIVE_ENTITLEMENT_INDEX='ft_student_active_entitlement_index',T_OFFICIAL_ACCOUNT_QUERY_SESSIONS='ft_official_account_query_sessions',T_LEADS='ft_leads',T_LEAD_FOLLOWUPS='ft_lead_followups',T_LEAD_IMPORT_BATCHES='ft_lead_import_batches';
-const CAMPUS_DISPLAY_NAMES={mabao:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
-const CAMPUS_ALIASES={'顺义马坡':'mabao','马坡':'mabao','mabao':'mabao','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
+const CAMPUS_DISPLAY_NAMES={shunyi_mapo:'顺义马坡',shilipu:'朝阳十里堡',guowang:'国家网球中心',langang:'蓝色港湾',chaojun:'朝珺私教'};
+const CAMPUS_ALIASES={'顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo','shunyi_mapo':'shunyi_mapo','朝阳十里堡':'shilipu','十里堡':'shilipu','shilipu':'shilipu','国家网球中心':'guowang','国网':'guowang','guowang':'guowang','蓝色港湾':'langang','蓝港':'langang','langang':'langang','朝珺私教':'chaojun','chaojun':'chaojun'};
 function normalizeCampusValue(value){const raw=String(value||'').trim();return CAMPUS_ALIASES[raw]||raw;}
 function displayCampusName(value){const key=normalizeCampusValue(value);return CAMPUS_DISPLAY_NAMES[key]||String(value||'').trim();}
 const MATCH_COURT_FINANCE_ACCOUNT_ID='match-court-finance';
@@ -392,7 +392,7 @@ function campusDisplayName(value,externalVenueName=''){
   const raw=String(value||'').trim();
   if(!raw)return '';
   if(raw==='__external__'||raw==='external')return String(externalVenueName||'').trim()||'校区外';
-  if(raw==='mabao'||raw==='顺义马坡')return '马坡';
+  if(raw==='shunyi_mapo'||raw==='顺义马坡')return '马坡';
   if(raw==='shilipu'||raw==='朝阳十里堡')return '朝阳十里堡';
   if(raw==='guowang'||raw==='朝阳国网'||raw==='国家网球中心')return '国家网球中心';
   if(raw==='langang'||raw==='朝阳蓝色港湾')return '蓝色港湾';
@@ -442,7 +442,7 @@ const bootstrapRuntime=createBootstrapRuntime({
     enableDefaultUserBootstrap:RAW_ENABLE_DEFAULT_USER_BOOTSTRAP,
     enableTableBootstrap:RAW_ENABLE_TABLE_BOOTSTRAP,
     enableDefaultPricePlanBootstrap:RAW_ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP,
-    enableMabaoFinanceSeedBootstrap:RAW_ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP,
+    enableShunyiMapoFinanceSeedBootstrap:RAW_ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP,
     enableImportedLedgerAutoRepair:RAW_ENABLE_IMPORTED_LEDGER_AUTO_REPAIR
   },
   runtimeEnsuredTables:RUNTIME_ENSURED_TABLES,
@@ -468,11 +468,11 @@ const bootstrapRuntime=createBootstrapRuntime({
   storage:{get,put,del,scan,mkTable},
   seedHelpers:{
     importedLedgerMonthKey,
-    isMabaoFinanceSeedRow,
+    isShunyiMapoFinanceSeedRow,
     isImportedMonthlyLedgerRow,
     collectDuplicateImportedLedgerIds
   },
-  mabaoFinanceSeed,
+  shunyi_mapoFinanceSeed,
   syncDefaultPricePlans,
   prewarmHotScanCache,
   isProductionRuntime,
@@ -483,8 +483,8 @@ const {
   init,
   scheduleInitInBackground,
   getRuntimeEnsuredTables,
-  collectMabaoSeedStaleRowIds,
-  collectMabaoSeedImportedLedgerReplacementIds
+  collectShunyiMapoSeedStaleRowIds,
+  collectShunyiMapoSeedImportedLedgerReplacementIds
 }=bootstrapRuntime;
 function parseArr(v){if(Array.isArray(v))return v;if(typeof v==='string'&&v){try{return JSON.parse(v)}catch{return[]}}return[];}
 function parseLessonValue(v,fallback=0){
@@ -1720,7 +1720,7 @@ function campusSetForScopedRow(row,type,ctx){
     addRow(ctx.byCourtId.get(String(row?.courtId||account?.courtId||'')));
   }else if(type==='membershipBenefitLedger'||type==='membershipAccountEvents'){
     const account=ctx.byMembershipAccountId.get(String(row?.membershipAccountId||''));
-    const order=ctx.byMembershipOrderId.get(String(row?.membershipOrderId||''));
+    const order=ctx.byMembershipOrderId.get(String(row?.membershipOrderRef||''));
     addRow(account);
     addRow(order);
     addRow(ctx.byCourtId.get(String(row?.courtId||account?.courtId||order?.courtId||'')));
@@ -2429,7 +2429,7 @@ function officialAccountScheduleQueryRange(kind,now=new Date()){
 function findOfficialAccountQueryCampus(text){
   const normalized=normalizeOfficialAccountScheduleQueryText(text);
   const aliases=[
-    ['顺义马坡','mabao'],['马坡','mabao'],['mabao','mabao'],
+    ['顺义马坡','shunyi_mapo'],['马坡','shunyi_mapo'],['shunyi_mapo','shunyi_mapo'],
     ['朝阳十里堡','shilipu'],['十里堡','shilipu'],['shilipu','shilipu'],
     ['国家网球中心','guowang'],['国网','guowang'],['guowang','guowang'],
     ['蓝色港湾','langang'],['蓝港','langang'],['langang','langang'],
@@ -3858,8 +3858,8 @@ async function validateScheduleSave(nextRec,oldRec){
   return {warnings:collectScheduleRiskWarnings(nextRec,schedules,nextRec.id)};
 }
 
-function isMabaoFinanceSeedRow(row){
-  return String(row?.seedTag||'').startsWith('mabao-finance-seed-');
+function isShunyiMapoFinanceSeedRow(row){
+  return String(row?.seedTag||'').startsWith('shunyi_mapo-finance-seed-');
 }
 function importedLedgerMonthKey(row){
   const sourceMonth=String(row?.sourceMonth||'').trim();
@@ -3886,7 +3886,7 @@ function importedLedgerDuplicateKey(row){
   ].join('|');
 }
 function isCurrentImportedLedgerRow(row){
-  return !!(importedLedgerMonthKey(row)&&String(row?.sourceMonth||'').trim()&&isMabaoFinanceSeedRow(row)&&String(row?.studentId||'').trim());
+  return !!(importedLedgerMonthKey(row)&&String(row?.sourceMonth||'').trim()&&isShunyiMapoFinanceSeedRow(row)&&String(row?.studentId||'').trim());
 }
 function importedLedgerExactKey(row){
   const monthKey=importedLedgerMonthKey(row);
@@ -3906,7 +3906,7 @@ function importedLedgerExactKey(row){
 function importedLedgerRowScore(row){
   return [
     String(row?.sourceMonth||'').trim()?1:0,
-    isMabaoFinanceSeedRow(row)?1:0,
+    isShunyiMapoFinanceSeedRow(row)?1:0,
     String(row?.relatedDate||''),
     String(row?.createdAt||'')
   ];
@@ -4124,7 +4124,7 @@ function buildFinanceCampusResolvers(campuses=[]){
       if(direct)return direct;
     }
     const hintText=values.flatMap(value=>Array.isArray(value)?value:[value]).map(value=>String(value||'')).join(' ');
-    if(/mabao|马坡/i.test(hintText))return '顺义马坡';
+    if(/shunyi_mapo|马坡/i.test(hintText))return '顺义马坡';
     if(/shilipu|十里堡/i.test(hintText))return '朝阳十里堡';
     if(/guowang|国网/i.test(hintText))return '朝阳国网';
     if(/langang|蓝色港湾/i.test(hintText))return '朝阳蓝色港湾';
@@ -7186,8 +7186,8 @@ module.exports._test={
   assertCanEditPurchaseWithLedger,
   assertScheduleEntitlementRequired,
   scheduleParticipantSummary,
-  collectMabaoSeedStaleRowIds,
-  collectMabaoSeedImportedLedgerReplacementIds,
+  collectShunyiMapoSeedStaleRowIds,
+  collectShunyiMapoSeedImportedLedgerReplacementIds,
   collectDuplicateImportedLedgerIds,
   normalizeEntitlementLedgerRowsForView,
   normalizeEntitlementLedgerRowsForDetailView,

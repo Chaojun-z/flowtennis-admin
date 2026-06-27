@@ -115,12 +115,12 @@
   "timeBand": "非黄金时段",
   "coachIds": ["coach-a"],
   "coachNames": ["朝珺"],
-  "campusIds": ["mabao"],
+  "campusIds": ["shunyi_mapo"],
   "maxStudents": 1,
   "status": "active",
   "notes": "五一活动课包",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -156,8 +156,8 @@
   "operator": "Admin John",
   "status": "active",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -202,11 +202,11 @@
   "timeBand": "非黄金时段",
   "coachIds": ["coach-a"],
   "coachNames": ["朝珺"],
-  "campusIds": ["mabao"],
+  "campusIds": ["shunyi_mapo"],
   "maxStudents": 1,
   "status": "active",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -236,7 +236,7 @@
   "action": "consume",
   "reason": "排课消课",
   "operator": "Admin John",
-  "createdAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -613,7 +613,7 @@ POST /entitlements/recommend
   "studentIds": ["stu-a"],
   "courseType": "私教课",
   "coach": "朝珺",
-  "campus": "mabao",
+  "campus": "shunyi_mapo",
   "startTime": "2026-05-10 09:00",
   "endTime": "2026-05-10 10:00",
   "lessonCount": 1,

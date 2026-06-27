@@ -11,7 +11,7 @@ const {
   money,
   scanImportTables,
   createClientFromEnv
-} = require('./lib/mabao-import-core');
+} = require('./lib/shunyi_mapo-import-core');
 
 const EXPECTED_FINANCE = {
   cash: 1056018,

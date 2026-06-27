@@ -14,7 +14,7 @@ async function runOkSnapshot() {
     TS_ENDPOINT: 'https://flowtennis-ue.us-east-1.ots.aliyuncs.com',
     TS_INSTANCE: 'flowtennis-ue'
   },
-  generatedAt: '2026-05-31T10:11:12.000Z',
+  generatedAt: '2026-05-31 10:11:12',
   snapshotDate: '2026-05-31',
   baseDir: tmpDir,
   fetchImpl: async () => ({
@@ -34,7 +34,7 @@ async function runOkSnapshot() {
   buildFinancePageSnapshot: (source) => {
     assert.deepStrictEqual(source.purchases, [{ id: 'purchase-1', amountPaid: 1000 }]);
     return {
-      generatedAt: '2026-05-31T10:11:12.000Z',
+      generatedAt: '2026-05-31 10:11:12',
       financeOverviewData: { all: { cash: 1000, recognized: 0, deferred: 1000, courseIncome: 1000, courseRecognized: 0, storedValueIncome: 0, storedValueConsumed: 0, bookingIncome: 0, bookingRecognized: 0 } },
       financeNormalizedRows: [{
         id: 'receipt-1',
@@ -69,7 +69,7 @@ async function runDisplayMismatchSnapshot() {
         TS_ENDPOINT: 'https://flowtennis-ue.us-east-1.ots.aliyuncs.com',
         TS_INSTANCE: 'flowtennis-ue'
       },
-      generatedAt: '2026-05-31T10:11:12.000Z',
+      generatedAt: '2026-05-31 10:11:12',
       snapshotDate: '2026-05-31',
       baseDir: tmpDir,
       fetchImpl: async () => ({

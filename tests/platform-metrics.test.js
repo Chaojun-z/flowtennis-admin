@@ -38,7 +38,7 @@ assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '转�
 assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '小红书'), undefined, 'student-only searchable customers should not enter raw lead source conversion stats');
 assert.strictEqual(platform.studentStageStats.find(row => row.stage === 'formal')?.count, 1, 'formal student count should use the lifecycle studentStage');
 
-const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18T00:00:00+08:00') });
+const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');
 assert.strictEqual(operations.conversion.cards.convertedLeads.value, 0, 'operations converted leads must not treat a student link without formal purchase as course成交');

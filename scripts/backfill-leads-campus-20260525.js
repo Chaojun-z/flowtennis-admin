@@ -21,7 +21,7 @@ function parseArgs(argv) {
 
 function normalizeCampus(value) {
   const raw = String(value || '').trim();
-  if (raw === 'mabao' || raw === '顺义马坡' || raw === '马坡') return 'mabao';
+  if (raw === 'shunyi_mapo' || raw === '顺义马坡' || raw === '马坡') return 'shunyi_mapo';
   return raw;
 }
 
@@ -63,8 +63,8 @@ async function main() {
   const client = createClientFromEnv();
   const leads = await scanTable(client, T_LEADS);
   const updates = leads
-    .filter((lead) => normalizeCampus(lead.campus) !== 'mabao')
-    .map((lead) => ({ ...lead, campus: 'mabao', updatedAt: new Date().toISOString() }));
+    .filter((lead) => normalizeCampus(lead.campus) !== 'shunyi_mapo')
+    .map((lead) => ({ ...lead, campus: 'shunyi_mapo', updatedAt: new Date().toISOString() }));
 
   if (args.write) {
     for (let i = 0; i < updates.length; i += 1) {
@@ -73,7 +73,7 @@ async function main() {
   }
 
   const after = args.write ? await scanTable(client, T_LEADS) : leads;
-  const campusOk = after.filter((lead) => normalizeCampus(lead.campus) === 'mabao').length;
+  const campusOk = after.filter((lead) => normalizeCampus(lead.campus) === 'shunyi_mapo').length;
   const missingCampus = after.length - campusOk;
 
   console.log(JSON.stringify({
@@ -82,7 +82,7 @@ async function main() {
     onlineTarget: { endpoint: target.onlineEndpoint, instance: target.onlineInstance },
     totalLeads: leads.length,
     plannedUpdates: updates.length,
-    campusMabaoAfter: campusOk,
+    campusShunyiMapoAfter: campusOk,
     missingCampusAfter: missingCampus
   }, null, 2));
 }

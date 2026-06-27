@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 const scheduleJs = fs.readFileSync(path.join(root, 'wechat-miniprogram/miniprogram/pages/schedule/schedule.js'), 'utf8');
 const scheduleWxss = fs.readFileSync(path.join(root, 'wechat-miniprogram/miniprogram/pages/schedule/schedule.wxss'), 'utf8');
 
-const now = new Date('2026-04-27T23:40:00+08:00');
+const now = new Date('2026-04-27 23:40:00');
 const staleUpcoming = workbenchTodoState({
   startTime: '2026-04-27 16:00',
   endTime: '2026-04-27 17:00',

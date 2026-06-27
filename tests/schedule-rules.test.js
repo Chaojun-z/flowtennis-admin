@@ -53,7 +53,7 @@ assert.ok(rules.buildFeedbackRecord, 'api._test should expose feedback record bu
 assert.strictEqual(
   rules.effectiveScheduleStatus(
     { status: '已排课', endTime: '2026-04-11 10:00' },
-    new Date('2026-04-11T10:01:00')
+    new Date('2026-04-11 10:01:00')
   ),
   '已结束',
   'past active schedule should behave as ended for filtering'
@@ -62,7 +62,7 @@ assert.strictEqual(
 assert.strictEqual(
   rules.effectiveScheduleStatus(
     { status: '已下课', endTime: '2026-04-11 10:00' },
-    new Date('2026-04-11T10:01:00')
+    new Date('2026-04-11 10:01:00')
   ),
   '已结束',
   'legacy or user-facing 已下课 status should normalize to ended'
@@ -71,7 +71,7 @@ assert.strictEqual(
 assert.strictEqual(
   rules.effectiveScheduleStatus(
     { status: '已取消', endTime: '2026-04-11 10:00' },
-    new Date('2026-04-11T10:01:00')
+    new Date('2026-04-11 10:01:00')
   ),
   '已取消',
   'cancelled schedule should stay cancelled'
@@ -172,7 +172,7 @@ assert.deepStrictEqual(
 
 assert.deepStrictEqual(
   rules.buildWorkbenchStats({
-    now: new Date('2026-04-23T12:00:00+08:00'),
+    now: new Date('2026-04-23 12:00:00'),
     schedule: [
       { id: 's1', startTime: '2026-04-21 09:00', endTime: '2026-04-21 10:00', status: '已结束', lessonCount: 1 },
       { id: 's2', startTime: '2026-04-22 09:00', endTime: '2026-04-22 11:00', status: '已结束', lessonCount: 2 },
@@ -197,7 +197,7 @@ assert.deepStrictEqual(
 
 assert.deepStrictEqual(
   rules.buildWorkbenchStats({
-    now: new Date('2026-04-23T12:00:00+08:00'),
+    now: new Date('2026-04-23 12:00:00'),
     schedule: [
       { id: 't1', coach: '朝珺', startTime: '2026-04-01 09:00', endTime: '2026-04-01 10:00', status: '已结束', courseType: '体验课', studentIds: ['stu-1'], studentName: '学员A' },
       { id: 't2', coach: '朝珺', startTime: '2026-04-08 09:00', endTime: '2026-04-08 10:00', status: '已结束', courseType: '体验课', studentIds: ['stu-1'], studentName: '学员A' },
@@ -233,7 +233,7 @@ assert.deepStrictEqual(
     [
       { id: 'sch-class-1', classId: 'class-1', startTime: '2026-04-10 19:00', endTime: '2026-04-10 21:00', status: '已结束', lessonCount: 2, studentIds: '["stu-class"]' }
     ],
-    new Date('2026-04-23T12:00:00+08:00')
+    new Date('2026-04-23 12:00:00')
   );
   assert.strictEqual(
     decoratedStudents[0].lessonUnitsCompleted,
@@ -268,30 +268,30 @@ assert.deepStrictEqual(
 {
   const scoped = rules.filterLoadAllForUser(
     {
-      campuses: [{ id: 'mabao', name: '马坡' }, { id: 'shilipu', name: '十里堡' }],
+      campuses: [{ id: 'shunyi_mapo', name: '马坡' }, { id: 'shilipu', name: '十里堡' }],
       students: [
-        { id: 'stu-1', name: '马坡学员', campus: 'mabao' },
+        { id: 'stu-1', name: '马坡学员', campus: 'shunyi_mapo' },
         { id: 'stu-2', name: '十里堡学员', campus: 'shilipu' }
       ],
       coaches: [
-        { id: 'coach-1', name: '马坡教练', campus: 'mabao' },
+        { id: 'coach-1', name: '马坡教练', campus: 'shunyi_mapo' },
         { id: 'coach-2', name: '十里堡教练', campus: 'shilipu' }
       ],
       classes: [
-        { id: 'class-1', className: '马坡班', campus: 'mabao', studentIds: ['stu-1'], coach: '马坡教练' },
+        { id: 'class-1', className: '马坡班', campus: 'shunyi_mapo', studentIds: ['stu-1'], coach: '马坡教练' },
         { id: 'class-2', className: '十里堡班', campus: 'shilipu', studentIds: ['stu-2'], coach: '十里堡教练' }
       ],
       schedule: [
-        { id: 'sch-1', campus: 'mabao', classId: 'class-1', studentIds: ['stu-1'], coach: '马坡教练', status: '已结束', lessonCount: 1 },
+        { id: 'sch-1', campus: 'shunyi_mapo', classId: 'class-1', studentIds: ['stu-1'], coach: '马坡教练', status: '已结束', lessonCount: 1 },
         { id: 'sch-2', campus: 'shilipu', classId: 'class-2', studentIds: ['stu-2'], coach: '十里堡教练', status: '已结束', lessonCount: 1 }
       ],
       courts: [
-        { id: 'court-1', name: '马坡订场用户', campus: 'mabao' },
+        { id: 'court-1', name: '马坡订场用户', campus: 'shunyi_mapo' },
         { id: 'court-2', name: '十里堡订场用户', campus: 'shilipu' }
       ],
       packages: [
         { id: 'pkg-all', name: '不限校区课包', campusIds: [] },
-        { id: 'pkg-1', name: '马坡课包', campusIds: ['mabao'] },
+        { id: 'pkg-1', name: '马坡课包', campusIds: ['shunyi_mapo'] },
         { id: 'pkg-2', name: '十里堡课包', campusIds: ['shilipu'] }
       ],
       purchases: [
@@ -307,13 +307,13 @@ assert.deepStrictEqual(
         { id: 'mem-2', courtId: 'court-2' }
       ],
       leads: [
-        { id: 'lead-1', campus: 'mabao' },
+        { id: 'lead-1', campus: 'shunyi_mapo' },
         { id: 'lead-2', campus: 'shilipu' }
       ]
     },
-    { role: 'admin', id: 'mira', name: 'Mira', dataScope: 'campus', campusIds: ['mabao'] }
+    { role: 'admin', id: 'mira', name: 'Mira', dataScope: 'campus', campusIds: ['shunyi_mapo'] }
   );
-  assert.deepStrictEqual(scoped.campuses.map(row => row.id), ['mabao'], 'campus-scoped admin should only see assigned campus rows');
+  assert.deepStrictEqual(scoped.campuses.map(row => row.id), ['shunyi_mapo'], 'campus-scoped admin should only see assigned campus rows');
   assert.deepStrictEqual(scoped.students.map(row => row.id), ['stu-1'], 'campus-scoped admin should only see matching students');
   assert.deepStrictEqual(scoped.coaches.map(row => row.id), ['coach-1'], 'campus-scoped admin should only see matching coaches');
   assert.deepStrictEqual(scoped.classes.map(row => row.id), ['class-1'], 'campus-scoped admin should only see matching classes');
@@ -334,7 +334,7 @@ assert.deepStrictEqual(
       status: '已排课'
     },
     null,
-    new Date('2026-04-21T12:15:00+08:00')
+    new Date('2026-04-21 12:15:00')
   ),
   {
     code: 'live',
@@ -351,7 +351,7 @@ assert.deepStrictEqual(
       status: '已排课'
     },
     null,
-    new Date('2026-04-21T12:00:00+08:00')
+    new Date('2026-04-21 12:00:00')
   ),
   {
     code: 'upcoming',
@@ -368,7 +368,7 @@ assert.deepStrictEqual(
       status: '已排课'
     },
     null,
-    new Date('2026-04-21T12:30:00+08:00')
+    new Date('2026-04-21 12:30:00')
   ),
   {
     code: 'pending',
@@ -428,7 +428,7 @@ assert.deepStrictEqual(
     startTime: '2026-04-21 10:00',
     endTime: '2026-04-21 11:00',
     lessonCount: 1.5
-  }], new Date('2026-04-21T12:00:00+08:00')),
+  }], new Date('2026-04-21 12:00:00')),
   [{
     id: 'stu-1',
     mobile: '13800000000',
@@ -589,7 +589,7 @@ assert.deepStrictEqual(
       courseType: '私教课',
       startTime: '2026-04-20 16:00',
       endTime: '2026-04-20 17:00',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentName: '小鹿',
       coach: '朝珺'
@@ -614,11 +614,11 @@ assert.deepStrictEqual(
     { id: 'sch-notify-1', notifyStatus: '未通知', notificationLogs: [] },
     { sent: true, userId: 'coach-user' },
     'schedule_created',
-    '2026-04-20T10:00:00.000Z'
+    '2026-04-20 10:00:00'
   ),
   {
     notifyStatus: '已通知教练',
-    lastNotifyAt: '2026-04-20T10:00:00.000Z',
+    lastNotifyAt: '2026-04-20 10:00:00',
     lastNotifyError: '',
     notificationLogs: [{
       type: 'schedule_created',
@@ -627,7 +627,7 @@ assert.deepStrictEqual(
       targetUserId: 'coach-user',
       reason: '',
       error: '',
-      createdAt: '2026-04-20T10:00:00.000Z'
+      createdAt: '2026-04-20 10:00:00'
     }]
   },
   'successful schedule notification should create an auditable notification log'
@@ -638,11 +638,11 @@ assert.deepStrictEqual(
     { id: 'sch-notify-2', notifyStatus: '未通知', notificationLogs: [] },
     { skipped: true, reason: 'missing_openid' },
     'schedule_created',
-    '2026-04-20T10:05:00.000Z'
+    '2026-04-20 10:05:00'
   ),
   {
     notifyStatus: '通知失败',
-    lastNotifyAt: '2026-04-20T10:05:00.000Z',
+    lastNotifyAt: '2026-04-20 10:05:00',
     lastNotifyError: 'missing_openid',
     notificationLogs: [{
       type: 'schedule_created',
@@ -651,7 +651,7 @@ assert.deepStrictEqual(
       targetUserId: '',
       reason: 'missing_openid',
       error: '',
-      createdAt: '2026-04-20T10:05:00.000Z'
+      createdAt: '2026-04-20 10:05:00'
     }]
   },
   'skipped schedule notification should still leave a failure reason for traceability'
@@ -661,14 +661,14 @@ assert.deepStrictEqual(
   rules.buildOfficialAccountBoundUser(
     { id: 'coach_1', name: '朝珺', role: 'editor' },
     'oa-openid-1',
-    '2026-05-15T09:00:00.000Z'
+    '2026-05-15 09:00:00'
   ),
   {
     id: 'coach_1',
     name: '朝珺',
     role: 'editor',
     officialAccountOpenId: 'oa-openid-1',
-    officialAccountBoundAt: '2026-05-15T09:00:00.000Z'
+    officialAccountBoundAt: '2026-05-15 09:00:00'
   },
   'official account bind helper should attach service account openid'
 );
@@ -678,7 +678,7 @@ assert.deepStrictEqual(
     id: 'coach_1',
     name: '朝珺',
     officialAccountOpenId: 'oa-openid-1',
-    officialAccountBoundAt: '2026-05-15T09:00:00.000Z'
+    officialAccountBoundAt: '2026-05-15 09:00:00'
   }),
   {
     id: 'coach_1',
@@ -702,17 +702,17 @@ assert.deepStrictEqual(
 );
 
 const reminderRows = [
-  { id: 'prev-cross', coach: '朝珺', startTime: '2026-04-20 09:30', endTime: '2026-04-20 10:30', campus: 'mabao', venue: '1号场', status: '已排课' },
-  { id: 'too-late', coach: '朝珺', startTime: '2026-04-20 11:20', endTime: '2026-04-20 12:20', campus: 'mabao', status: '已排课' },
-  { id: 'delayed-edge', coach: '朝珺', startTime: '2026-04-20 11:35', endTime: '2026-04-20 12:35', campus: 'mabao', status: '已排课' },
+  { id: 'prev-cross', coach: '朝珺', startTime: '2026-04-20 09:30', endTime: '2026-04-20 10:30', campus: 'shunyi_mapo', venue: '1号场', status: '已排课' },
+  { id: 'too-late', coach: '朝珺', startTime: '2026-04-20 11:20', endTime: '2026-04-20 12:20', campus: 'shunyi_mapo', status: '已排课' },
+  { id: 'delayed-edge', coach: '朝珺', startTime: '2026-04-20 11:35', endTime: '2026-04-20 12:35', campus: 'shunyi_mapo', status: '已排课' },
   { id: 'due-cross', coach: '朝珺', startTime: '2026-04-20 12:00', endTime: '2026-04-20 13:00', campus: 'shunyi', venue: '2号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
-  { id: 'too-soon', coach: '朝珺', startTime: '2026-04-20 10:20', endTime: '2026-04-20 11:20', campus: 'mabao', status: '已排课' },
-  { id: 'early-edge', coach: '朝珺', startTime: '2026-04-20 12:29', endTime: '2026-04-20 13:29', campus: 'mabao', status: '已排课' },
-  { id: 'too-early', coach: '朝珺', startTime: '2026-04-20 12:40', endTime: '2026-04-20 13:40', campus: 'mabao', status: '已排课' },
-  { id: 'sent', coach: '朝珺', startTime: '2026-04-20 12:05', endTime: '2026-04-20 13:05', campus: 'mabao', status: '已排课', courseReminderSentAt: '2026-04-20T09:50:00.000Z' },
-  { id: 'cancelled', coach: '朝珺', startTime: '2026-04-20 12:10', endTime: '2026-04-20 13:10', campus: 'mabao', status: '已取消' }
+  { id: 'too-soon', coach: '朝珺', startTime: '2026-04-20 10:20', endTime: '2026-04-20 11:20', campus: 'shunyi_mapo', status: '已排课' },
+  { id: 'early-edge', coach: '朝珺', startTime: '2026-04-20 12:29', endTime: '2026-04-20 13:29', campus: 'shunyi_mapo', status: '已排课' },
+  { id: 'too-early', coach: '朝珺', startTime: '2026-04-20 12:40', endTime: '2026-04-20 13:40', campus: 'shunyi_mapo', status: '已排课' },
+  { id: 'sent', coach: '朝珺', startTime: '2026-04-20 12:05', endTime: '2026-04-20 13:05', campus: 'shunyi_mapo', status: '已排课', courseReminderSentAt: '2026-04-20 09:50:00' },
+  { id: 'cancelled', coach: '朝珺', startTime: '2026-04-20 12:10', endTime: '2026-04-20 13:10', campus: 'shunyi_mapo', status: '已取消' }
 ];
-const reminderCandidates = rules.collectCourseReminderCandidates(reminderRows, new Date('2026-04-20T10:00:00+08:00'));
+const reminderCandidates = rules.collectCourseReminderCandidates(reminderRows, new Date('2026-04-20 10:00:00'));
 assert.deepStrictEqual(
   reminderCandidates.map(x => [x.schedule.id, x.crossCampus]),
   [['delayed-edge', false], ['due-cross', true], ['early-edge', false]],
@@ -810,16 +810,16 @@ assert.deepStrictEqual(
 );
 
 const coachFeedbackReminderRows = [
-  { id: 'fb-rem-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-01 10:00', endTime: '2026-05-01 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-rem-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-03 10:00', endTime: '2026-05-03 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-rem-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-05 10:00', endTime: '2026-05-05 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-rem-4', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-07 10:00', endTime: '2026-05-07 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-rem-5', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-09 10:00', endTime: '2026-05-09 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-plan-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-02 16:00', endTime: '2026-05-02 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-plan-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-04 16:00', endTime: '2026-05-04 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-plan-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-06 16:00', endTime: '2026-05-06 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-plan-4', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-08 16:00', endTime: '2026-05-08 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-  { id: 'fb-sent-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-3', studentIds: ['stu-3'], studentName: '已提醒', entitlementId: 'ent-3', classId: 'class-3', startTime: '2026-05-10 09:00', endTime: '2026-05-10 10:00', campus: 'mabao', venue: '3号场', courseType: '私教课', lessonCount: 1, status: '已排课', coachFeedbackReminderSentAt: '2026-05-10T10:20:00.000Z' }
+  { id: 'fb-rem-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-01 10:00', endTime: '2026-05-01 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-rem-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-03 10:00', endTime: '2026-05-03 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-rem-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-05 10:00', endTime: '2026-05-05 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-rem-4', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-07 10:00', endTime: '2026-05-07 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-rem-5', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', classId: 'class-1', startTime: '2026-05-09 10:00', endTime: '2026-05-09 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-plan-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-02 16:00', endTime: '2026-05-02 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-plan-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-04 16:00', endTime: '2026-05-04 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-plan-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-06 16:00', endTime: '2026-05-06 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-plan-4', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-2', studentIds: ['stu-2'], studentName: 'Misha', classId: 'class-2', startTime: '2026-05-08 16:00', endTime: '2026-05-08 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+  { id: 'fb-sent-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-3', studentIds: ['stu-3'], studentName: '已提醒', entitlementId: 'ent-3', classId: 'class-3', startTime: '2026-05-10 09:00', endTime: '2026-05-10 10:00', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', lessonCount: 1, status: '已排课', coachFeedbackReminderSentAt: '2026-05-10 10:20:00' }
 ];
 const coachFeedbackReminderCandidates = rules.collectCoachFeedbackReminderCandidates({
   rows: coachFeedbackReminderRows,
@@ -831,7 +831,7 @@ const coachFeedbackReminderCandidates = rules.collectCoachFeedbackReminderCandid
   plans: [
     { id: 'plan-2', classId: 'class-2', studentId: 'stu-2', totalLessons: 4 }
   ],
-  now: new Date('2026-05-12T12:00:00+08:00')
+  now: new Date('2026-05-12 12:00:00')
 });
 assert.deepStrictEqual(
   coachFeedbackReminderCandidates.map(item => ({
@@ -878,14 +878,14 @@ assert.deepStrictEqual(
 
 const digestCandidates = rules.collectCoachDailyDigestCandidates(
   [
-    { id: 'dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 09:00', endTime: '2026-05-16 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
-    { id: 'dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 14:00', endTime: '2026-05-16 15:00', campus: 'mabao', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' },
-    { id: 'dig-3', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 18:00', endTime: '2026-05-16 19:00', campus: 'mabao', venue: '3号场', courseType: '私教课', studentName: '已发', status: '已排课', coachDailyDigestSentDate: '2026-05-16' },
+    { id: 'dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 09:00', endTime: '2026-05-16 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+    { id: 'dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 14:00', endTime: '2026-05-16 15:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' },
+    { id: 'dig-3', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 18:00', endTime: '2026-05-16 19:00', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', studentName: '已发', status: '已排课', coachDailyDigestSentDate: '2026-05-16' },
     { id: 'dig-4', coachId: 'coach-other', coach: '其他教练', startTime: '2026-05-16 10:00', endTime: '2026-05-16 11:00', campus: 'guowang', venue: '1号场', courseType: '私教课', studentName: '学员B', status: '已排课' },
-    { id: 'dig-5', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-17 09:00', endTime: '2026-05-17 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '后天', status: '已排课' },
-    { id: 'dig-6', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 11:00', endTime: '2026-05-16 12:00', campus: 'mabao', venue: '4号场', courseType: '私教课', studentName: '取消课', status: '已取消' }
+    { id: 'dig-5', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-17 09:00', endTime: '2026-05-17 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '后天', status: '已排课' },
+    { id: 'dig-6', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-16 11:00', endTime: '2026-05-16 12:00', campus: 'shunyi_mapo', venue: '4号场', courseType: '私教课', studentName: '取消课', status: '已取消' }
   ],
-  new Date('2026-05-15T21:00:00+08:00')
+  new Date('2026-05-15 21:00:00')
 );
 
 assert.match(
@@ -898,13 +898,13 @@ assert.deepStrictEqual(
   rules.buildStudentReminderLinkUpdate(
     { id: 'stu-1', name: '小鹿', officialAccountBindToken: 'old-token' },
     'new-token',
-    '2026-05-27T09:00:00.000Z'
+    '2026-05-27 09:00:00'
   ),
   {
     id: 'stu-1',
     name: '小鹿',
     officialAccountBindToken: 'new-token',
-    officialAccountBindTokenCreatedAt: '2026-05-27T09:00:00.000Z',
+    officialAccountBindTokenCreatedAt: '2026-05-27 09:00:00',
     officialAccountReminderMode: 'all',
     officialAccountReminderCustomHours: 12
   },
@@ -915,7 +915,7 @@ assert.deepStrictEqual(
   rules.buildStudentOfficialAccountBoundUpdate(
     { id: 'stu-1', name: '小鹿', officialAccountBindToken: 'token-1', officialAccountReminderMode: 'only24h' },
     'oa-student-openid',
-    '2026-05-27T10:00:00.000Z'
+    '2026-05-27 10:00:00'
   ),
   {
     id: 'stu-1',
@@ -925,14 +925,14 @@ assert.deepStrictEqual(
     officialAccountReminderMode: 'only24h',
     officialAccountReminderCustomHours: 12,
     officialAccountOpenId: 'oa-student-openid',
-    officialAccountBoundAt: '2026-05-27T10:00:00.000Z'
+    officialAccountBoundAt: '2026-05-27 10:00:00'
   },
   'student service account binding should attach openid and consume the one-time token'
 );
 
 assert.deepStrictEqual(
   rules.buildStudentOfficialAccountUnboundUpdate(
-    { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-student-openid', officialAccountBoundAt: '2026-05-27T10:00:00.000Z', officialAccountReminderMode: 'all' }
+    { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-student-openid', officialAccountBoundAt: '2026-05-27 10:00:00', officialAccountReminderMode: 'all' }
   ),
   {
     id: 'stu-1',
@@ -966,11 +966,11 @@ assert.deepStrictEqual(
 );
 
 const studentReminderRows = [
-  { id: 'stu-rem-48', startTime: '2026-05-29 10:00', endTime: '2026-05-29 11:30', campus: 'mabao', venue: '室内3号场', courseType: '1v1 私教正式课', lessonCount: 1.5, status: '已排课', studentIds: ['stu-1'] },
-  { id: 'stu-rem-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] },
-  { id: 'stu-rem-custom', startTime: '2026-05-27 22:00', endTime: '2026-05-27 23:00', campus: 'mabao', venue: '5号场', status: '已排课', studentIds: ['stu-4'] },
-  { id: 'stu-rem-off', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '2号场', status: '已排课', studentIds: ['stu-3'] },
-  { id: 'stu-rem-sent', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '3号场', status: '已排课', studentIds: ['stu-1'], studentReminderLogs: [{ studentId: 'stu-1', stage: '24h', status: 'sent', createdAt: '2026-05-27T09:50:00.000Z' }] }
+  { id: 'stu-rem-48', startTime: '2026-05-29 10:00', endTime: '2026-05-29 11:30', campus: 'shunyi_mapo', venue: '室内3号场', courseType: '1v1 私教正式课', lessonCount: 1.5, status: '已排课', studentIds: ['stu-1'] },
+  { id: 'stu-rem-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] },
+  { id: 'stu-rem-custom', startTime: '2026-05-27 22:00', endTime: '2026-05-27 23:00', campus: 'shunyi_mapo', venue: '5号场', status: '已排课', studentIds: ['stu-4'] },
+  { id: 'stu-rem-off', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'shunyi_mapo', venue: '2号场', status: '已排课', studentIds: ['stu-3'] },
+  { id: 'stu-rem-sent', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'shunyi_mapo', venue: '3号场', status: '已排课', studentIds: ['stu-1'], studentReminderLogs: [{ studentId: 'stu-1', stage: '24h', status: 'sent', createdAt: '2026-05-27 09:50:00' }] }
 ];
 const studentReminderStudents = [
   { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' },
@@ -979,7 +979,7 @@ const studentReminderStudents = [
   { id: 'stu-4', name: '自定义提醒', officialAccountOpenId: 'oa-stu-4', officialAccountReminderMode: 'custom', officialAccountReminderCustomHours: 12 }
 ];
 assert.deepStrictEqual(
-  rules.collectStudentCourseReminderCandidates(studentReminderRows, studentReminderStudents, new Date('2026-05-27T10:00:00+08:00')).map(item => [item.schedule.id, item.student.id, item.stage]).sort(),
+  rules.collectStudentCourseReminderCandidates(studentReminderRows, studentReminderStudents, new Date('2026-05-27 10:00:00')).map(item => [item.schedule.id, item.student.id, item.stage]).sort(),
   [
     ['stu-rem-48', 'stu-1', '48h'],
     ['stu-rem-24', 'stu-1', '24h'],
@@ -1214,8 +1214,8 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'f-dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
-      { id: 'f-dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'mabao', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' }
+      { id: 'f-dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+      { id: 'f-dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' }
     ];
     const users=[
       { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', phone: '13800138000' }
@@ -1236,7 +1236,7 @@ assert.strictEqual(
     };
     const writes=[];
     const result=await rules.sendFeishuCoachDailyDigests({
-      now: new Date('2026-05-19T20:02:00+08:00'),
+      now: new Date('2026-05-19 20:02:00'),
       rows,
       users,
       coaches: [],
@@ -1260,7 +1260,7 @@ assert.strictEqual(
   {
     const token='flowtennisoa2026';
     const appId='wx4c76dc29b1d48df3';
-    const now=new Date('2026-05-19T20:02:00.000Z');
+    const now=new Date('2026-05-19 20:02:00');
     const timestamp='1715763720';
     const nonce='123456';
     const query=new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) });
@@ -1281,14 +1281,14 @@ assert.strictEqual(
     assert.strictEqual(result.encrypted, false, 'plain callback should stay in plain mode');
     assert.match(result.plainReply, /绑定成功/, 'binding reply should confirm success');
     assert.strictEqual(users.coach_1.officialAccountOpenId, 'oa-openid-123', 'binding callback should write the service account openid to the matching coach');
-    assert.strictEqual(users.coach_1.officialAccountBoundAt, '2026-05-19T20:02:00.000Z', 'binding callback should record the bind time');
+    assert.strictEqual(users.coach_1.officialAccountBoundAt, now.toISOString(), 'binding callback should record the bind time');
   }
 
   {
     const token='flowtennisoa2026';
     const appId='wx4c76dc29b1d48df3';
     const encodingAesKey='abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG';
-    const now=new Date('2026-05-19T20:02:00.000Z');
+    const now=new Date('2026-05-19 20:02:00');
     const timestamp='1715763720';
     const nonce='123456';
     const plainIncoming='<xml><ToUserName><![CDATA[gh_test]]></ToUserName><FromUserName><![CDATA[oa-openid-456]]></FromUserName><CreateTime>1715763720</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[#绑定 13800138001]]></Content></xml>';
@@ -1329,15 +1329,15 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'previous-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'mabao', venue: '1号场', status: '已排课' },
-      { id: 'due-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 22:02', endTime: '2026-05-19 23:00', campus: 'mabao', venue: '1号场', status: '已排课' }
+      { id: 'previous-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'shunyi_mapo', venue: '1号场', status: '已排课' },
+      { id: 'due-1', coach: '朝珺', coachId: 'coach-chaojun', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 22:02', endTime: '2026-05-19 23:00', campus: 'shunyi_mapo', venue: '1号场', status: '已排课' }
     ];
     const users=[
       { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-123' }
     ];
     const writes=[];
     const sent=[];
-    const reminderNow=new Date('2026-05-19T20:02:00+08:00');
+    const reminderNow=new Date('2026-05-19 20:02:00');
     const result=await rules.sendOfficialAccountCourseReminders({
       now: reminderNow,
       rows,
@@ -1361,9 +1361,9 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'fb-send-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-01 10:00', endTime: '2026-05-01 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', coachFeedbackReminderSentAt: '2026-05-01T11:20:00.000Z' },
-      { id: 'fb-send-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-03 10:00', endTime: '2026-05-03 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
-      { id: 'fb-send-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-05 10:00', endTime: '2026-05-05 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' }
+      { id: 'fb-send-1', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-01 10:00', endTime: '2026-05-01 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', coachFeedbackReminderSentAt: '2026-05-01 11:20:00' },
+      { id: 'fb-send-2', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-03 10:00', endTime: '2026-05-03 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' },
+      { id: 'fb-send-3', coachId: 'coach-chaojun', coach: '朝珺', studentId: 'stu-1', studentIds: ['stu-1'], studentName: '小鹿', entitlementId: 'ent-1', startTime: '2026-05-05 10:00', endTime: '2026-05-05 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课' }
     ];
     const users=[
       { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-123' }
@@ -1376,7 +1376,7 @@ assert.strictEqual(
     ];
     const writes=[];
     const sent=[];
-    const reminderNow=new Date('2026-05-05T12:00:00+08:00');
+    const reminderNow=new Date('2026-05-05 12:00:00');
     const result=await rules.sendOfficialAccountCoachFeedbackReminders({
       now: reminderNow,
       rows,
@@ -1408,13 +1408,13 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'student-due-delayed', startTime: '2026-05-28 12:30', endTime: '2026-05-28 13:30', campus: 'mabao', venue: '1号场', status: '已排课', studentIds: ['stu-1'] }
+      { id: 'student-due-delayed', startTime: '2026-05-28 12:30', endTime: '2026-05-28 13:30', campus: 'shunyi_mapo', venue: '1号场', status: '已排课', studentIds: ['stu-1'] }
     ];
     const students=[
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' }
     ];
     assert.deepStrictEqual(
-      rules.collectStudentCourseReminderCandidates(rows, students, new Date('2026-05-27T13:20:00+08:00')).map(item=>[item.schedule.id,item.student.id,item.stage]),
+      rules.collectStudentCourseReminderCandidates(rows, students, new Date('2026-05-27 13:20:00')).map(item=>[item.schedule.id,item.student.id,item.stage]),
       [['student-due-delayed','stu-1','24h']],
       'student reminders should tolerate delayed cron runs and still send pending 24h reminders'
     );
@@ -1422,7 +1422,7 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'student-due-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'mabao', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] }
+      { id: 'student-due-24', startTime: '2026-05-28 10:00', endTime: '2026-05-28 11:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', lessonCount: 1, status: '已排课', studentIds: ['stu-1','stu-2'] }
     ];
     const students=[
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-stu-1', officialAccountReminderMode: 'all' },
@@ -1430,7 +1430,7 @@ assert.strictEqual(
     ];
     const writes=[];
     const sent=[];
-    const reminderNow=new Date('2026-05-27T10:00:00+08:00');
+    const reminderNow=new Date('2026-05-27 10:00:00');
     const result=await rules.sendOfficialAccountStudentCourseReminders({
       now: reminderNow,
       rows,
@@ -1456,16 +1456,16 @@ assert.strictEqual(
 
   {
     const rows=[
-      { id: 'dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
-      { id: 'dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'mabao', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' },
-      { id: 'dig-3', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 18:00', endTime: '2026-05-20 19:00', campus: 'mabao', venue: '3号场', courseType: '私教课', studentName: '已发', status: '已排课', coachDailyDigestSentDate: '2026-05-20' }
+      { id: 'dig-1', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', studentName: '小鹿', status: '已排课' },
+      { id: 'dig-2', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 14:00', endTime: '2026-05-20 15:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '双人课', studentName: 'Misha', status: '已排课' },
+      { id: 'dig-3', coachId: 'coach-chaojun', coach: '朝珺', startTime: '2026-05-20 18:00', endTime: '2026-05-20 19:00', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', studentName: '已发', status: '已排课', coachDailyDigestSentDate: '2026-05-20' }
     ];
     const users=[
       { id: 'coach_1', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-123' }
     ];
     const writes=[];
     const sent=[];
-    const digestNow=new Date('2026-05-19T20:02:00+08:00');
+    const digestNow=new Date('2026-05-19 20:02:00');
     const result=await rules.sendOfficialAccountDailyDigests({
       now: digestNow,
       rows,
@@ -1492,7 +1492,7 @@ assert.strictEqual(
     const appId='wx4c76dc29b1d48df3';
     const timestamp='1715763720';
     const nonce='123456';
-    const now=new Date('2026-05-19T10:00:00.000Z');
+    const now=new Date(Date.UTC(2026,4,19,10,0,0));
     const users=[
       { id: 'coach_1', name: '朝珺', role: 'editor', status: 'active', phone: '13800138000', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-coach' }
     ];
@@ -1500,8 +1500,8 @@ assert.strictEqual(
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-openid-stu', officialAccountReminderMode: 'all' }
     ];
     const rows=[
-      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' },
-      { id: 'sch-past', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', status: '已排课' }
+      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 19:00', endTime: '2026-05-19 20:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', status: '已排课' },
+      { id: 'sch-past', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', status: '已排课' }
     ];
     const result=await rules.processOfficialAccountCallbackRequest({
       query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
@@ -1534,7 +1534,7 @@ assert.strictEqual(
     const appId='wx4c76dc29b1d48df3';
     const timestamp='1715763720';
     const nonce='123456';
-    const now=new Date('2026-05-19T10:00:00.000Z');
+    const now=new Date(Date.UTC(2026,4,19,10,0,0));
     const users=[
       { id: 'coach_1', name: '朝珺', role: 'editor', status: 'active', phone: '13800138000', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-openid-dual' }
     ];
@@ -1542,7 +1542,7 @@ assert.strictEqual(
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-openid-dual', officialAccountReminderMode: 'all' }
     ];
     const rows=[
-      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' }
+      { id: 'sch-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 09:00', endTime: '2026-05-20 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', status: '已排课' }
     ];
     let storedSession=null;
     let clearedSessionId='';
@@ -1598,7 +1598,7 @@ assert.strictEqual(
     const appId='wx4c76dc29b1d48df3';
     const timestamp='1715763720';
     const nonce='123456';
-    const now=new Date('2026-05-19T06:30:00.000Z'); // 北京时间 14:30
+    const now=new Date(Date.UTC(2026,4,19,6,30,0)); // 北京时间 14:30
     const users=[
       { id: 'coach_1', name: '朝珺', role: 'editor', status: 'active', coachId: 'coach-chaojun', coachName: '朝珺', officialAccountOpenId: 'oa-query-coach' }
     ];
@@ -1607,11 +1607,11 @@ assert.strictEqual(
       { id: 'stu-2', name: 'Misha' }
     ];
     const rows=[
-      { id: 'today-past', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 09:00', endTime: '2026-05-19 10:00', campus: 'mabao', venue: '1号场', courseType: '私教课', status: '已排课' },
-      { id: 'today-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'mabao', venue: '2号场', courseType: '双人课', status: '已排课' },
+      { id: 'today-past', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 09:00', endTime: '2026-05-19 10:00', campus: 'shunyi_mapo', venue: '1号场', courseType: '私教课', status: '已排课' },
+      { id: 'today-future', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '双人课', status: '已排课' },
       { id: 'tomorrow-first', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-20 08:00', endTime: '2026-05-20 09:00', campus: 'guowang', venue: '1号场', courseType: '私教课', status: '已排课' },
-      { id: 'tomorrow-second', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-20 10:00', endTime: '2026-05-20 11:00', campus: 'mabao', venue: '3号场', courseType: '私教课', status: '已排课' },
-      { id: 'last-week', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-12 18:00', endTime: '2026-05-12 19:00', campus: 'mabao', venue: '4号场', courseType: '私教课', status: '已排课' }
+      { id: 'tomorrow-second', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-2'], studentName: 'Misha', startTime: '2026-05-20 10:00', endTime: '2026-05-20 11:00', campus: 'shunyi_mapo', venue: '3号场', courseType: '私教课', status: '已排课' },
+      { id: 'last-week', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-12 18:00', endTime: '2026-05-12 19:00', campus: 'shunyi_mapo', venue: '4号场', courseType: '私教课', status: '已排课' }
     ];
     const ask=content=>rules.processOfficialAccountCallbackRequest({
       query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
@@ -1656,7 +1656,7 @@ assert.strictEqual(
     const appId='wx4c76dc29b1d48df3';
     const timestamp='1715763720';
     const nonce='123456';
-    const now=new Date('2026-05-19T06:30:00.000Z');
+    const now=new Date(Date.UTC(2026,4,19,6,30,0));
     const users=[
       { id: 'coach_1', name: '朝珺', role: 'editor', coachId: 'coach-chaojun', coachName: '朝珺' }
     ];
@@ -1664,7 +1664,7 @@ assert.strictEqual(
       { id: 'stu-1', name: '小鹿', officialAccountOpenId: 'oa-query-student' }
     ];
     const rows=[
-      { id: 'student-next', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'mabao', venue: '2号场', courseType: '私教课', status: '已排课' }
+      { id: 'student-next', coachId: 'coach-chaojun', coach: '朝珺', studentIds: ['stu-1'], studentName: '小鹿', startTime: '2026-05-19 16:00', endTime: '2026-05-19 17:00', campus: 'shunyi_mapo', venue: '2号场', courseType: '私教课', status: '已排课' }
     ];
     const result=await rules.processOfficialAccountCallbackRequest({
       query:new URLSearchParams({ timestamp, nonce, signature: rules.buildWechatSignature(token,timestamp,nonce) }),
@@ -1904,7 +1904,7 @@ assert.deepStrictEqual(
     lateMinutes: '12',
     lateReason: '堵车',
     coachLateFieldFeeAmount: '220',
-    coachLateHandledAt: '2026-04-18T12:00:00.000Z',
+    coachLateHandledAt: '2026-04-18 12:00:00',
     coachLateHandledBy: '管理员'
   }),
   {
@@ -1912,7 +1912,7 @@ assert.deepStrictEqual(
     lateMinutes: 12,
     lateReason: '堵车',
     coachLateFieldFeeAmount: 220,
-    coachLateHandledAt: '2026-04-18T12:00:00.000Z',
+    coachLateHandledAt: '2026-04-18 12:00:00',
     coachLateHandledBy: '管理员'
   },
   'coach late info should normalize settlement fields'
@@ -1920,8 +1920,8 @@ assert.deepStrictEqual(
 
 assert.deepStrictEqual(
   rules.buildCoachLateSettlementRows([
-    { id: 'sch-late', coach: '朝珺', studentName: '张三', startTime: '2026-04-18 16:00', endTime: '2026-04-18 17:00', campus: 'mabao', venue: '1号场', coachLateFree: true, lateMinutes: 8, coachLateFieldFeeAmount: 220 },
-    { id: 'sch-ok', coach: '朝珺', startTime: '2026-04-18 18:00', endTime: '2026-04-18 19:00', campus: 'mabao', venue: '2号场', coachLateFree: false }
+    { id: 'sch-late', coach: '朝珺', studentName: '张三', startTime: '2026-04-18 16:00', endTime: '2026-04-18 17:00', campus: 'shunyi_mapo', venue: '1号场', coachLateFree: true, lateMinutes: 8, coachLateFieldFeeAmount: 220 },
+    { id: 'sch-ok', coach: '朝珺', startTime: '2026-04-18 18:00', endTime: '2026-04-18 19:00', campus: 'shunyi_mapo', venue: '2号场', coachLateFree: false }
   ], '2026-04'),
   [{
     scheduleId: 'sch-late',
@@ -1929,7 +1929,7 @@ assert.deepStrictEqual(
     coach: '朝珺',
     date: '2026-04-18',
     time: '16:00-17:00',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: '1号场',
     studentName: '张三',
     lateMinutes: 8,
@@ -1939,7 +1939,7 @@ assert.deepStrictEqual(
 );
 
 assert.strictEqual(
-  rules.scheduleNotifyLocation({ campus: 'mabao', venue: '1号场' }),
+  rules.scheduleNotifyLocation({ campus: 'shunyi_mapo', venue: '1号场' }),
   '顺义马坡 1号场',
   'schedule notification should display campus name instead of internal code'
 );
@@ -1948,7 +1948,7 @@ assert.strictEqual(
   rules.buildCoachDailyDigestMessage({
     coachName: 'Siren',
     digestDate: '2026-05-16',
-    schedules: [{ startTime: '2026-05-16 14:00', endTime: '2026-05-16 15:00', courseType: '私教课', studentName: 'LKY', campus: 'mabao', venue: '1号场' }]
+    schedules: [{ startTime: '2026-05-16 14:00', endTime: '2026-05-16 15:00', courseType: '私教课', studentName: 'LKY', campus: 'shunyi_mapo', venue: '1号场' }]
   }).lines[0],
   '14:00-15:00 私教课｜LKY｜顺义马坡 1号场',
   'daily digest should display campus name instead of internal code'
@@ -1982,7 +1982,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-2'],
       status: '已排课'
@@ -1992,7 +1992,7 @@ assert.throws(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '2号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2009,7 +2009,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-2'],
       status: '已排课'
@@ -2027,7 +2027,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '李教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-2'],
       status: '已排课'
@@ -2037,7 +2037,7 @@ assert.throws(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '王教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2054,7 +2054,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '李教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-2'],
       status: '已排课'
@@ -2064,7 +2064,7 @@ assert.throws(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '王教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '马坡1号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2112,7 +2112,7 @@ assert.doesNotThrow(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '陪打教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       scheduleSource: '订场陪打',
       status: '已排课'
@@ -2120,13 +2120,13 @@ assert.doesNotThrow(
     [{
       id: 'court-1',
       name: '小鹿',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: [{
         id: 'hist-1',
         type: '消费',
         category: '订场',
         date: '2026-04-11',
-        campus: 'mabao',
+        campus: 'shunyi_mapo',
         venue: '1号场',
         startTime: '10:00',
         endTime: '12:00'
@@ -2143,7 +2143,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '李教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '2号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2153,7 +2153,7 @@ assert.throws(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '王教练',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2170,7 +2170,7 @@ assert.doesNotThrow(
       startTime: '2026-04-11 11:00',
       endTime: '2026-04-11 12:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2180,7 +2180,7 @@ assert.doesNotThrow(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-1'],
       status: '已排课'
@@ -2205,7 +2205,7 @@ assert.deepStrictEqual(
       startTime: '2026-04-11 09:00',
       endTime: '2026-04-11 10:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       status: '已排课'
     }]
@@ -2272,7 +2272,7 @@ assert.throws(
       startTime: '2026-04-11 10:00',
       endTime: '2026-04-11 11:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       courseType: '私教',
       isTrial: false,
@@ -2288,7 +2288,7 @@ assert.throws(
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       courseType: '私教',
       isTrial: false,
@@ -2334,14 +2334,14 @@ assert.throws(
     {
       startTime: '2026-04-11 09:30',
       endTime: '2026-04-11 10:30',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       status: '已排课'
     },
     [{
       id: 'court-1',
       name: '订场用户A',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: [{
         type: '消费',
         category: '订场',
@@ -2364,7 +2364,7 @@ assert.throws(
       startTime: '2026-04-14 23:00',
       endTime: '2026-04-15 00:00',
       coach: '朝珺',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       venue: '1号场',
       studentIds: ['stu-1'],
       status: '已排课'

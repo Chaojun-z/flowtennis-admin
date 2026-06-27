@@ -658,13 +658,13 @@ function membershipBenefitSummaryForOrder(order){
   Object.entries(snap).forEach(([code,v])=>{if(code!=='customBenefits'&&(parseInt(v?.count)||0)>0)items.push({code,label:v.label||code,unit:v.unit||'次',total:parseInt(v.count)||0});});
   parseArr(snap.customBenefits).forEach((v,i)=>{if((parseInt(v?.count)||0)>0)items.push({code:`custom_${i+1}`,label:v.label||`自定义权益${i+1}`,unit:v.unit||'次',total:parseInt(v.count)||0});});
   return items.map(item=>{
-    const rows=membershipBenefitLedger.filter(l=>l.membershipOrderId===order.id&&l.benefitCode===item.code&&l.action!=='grant');
+    const rows=membershipBenefitLedger.filter(l=>l.membershipOrderRef===order.id&&l.benefitCode===item.code&&l.action!=='grant');
     const positiveDelta=rows.filter(l=>(parseInt(l.delta)||0)>0).reduce((n,l)=>n+(parseInt(l.delta)||0),0);
     const negativeDelta=rows.filter(l=>(parseInt(l.delta)||0)<0).reduce((n,l)=>n+(parseInt(l.delta)||0),0);
     const total=(item.total||0)+positiveDelta;
     const benefitValidUntil=order?.benefitValidUntil||'';
     const expired=benefitValidUntil&&benefitValidUntil<today();
-    return {...item,total,membershipOrderId:order.id,benefitValidUntil,remaining:expired?0:Math.max(0,total+negativeDelta),expired,designatedCoachIds:parseArr(snap?.[item.code]?.designatedCoachIds)};
+    return {...item,total,membershipOrderRef:order.id,benefitValidUntil,remaining:expired?0:Math.max(0,total+negativeDelta),expired,designatedCoachIds:parseArr(snap?.[item.code]?.designatedCoachIds)};
   });
 }
 function membershipBenefitRowsForAccount(account){
@@ -676,7 +676,7 @@ function membershipBenefitRowsForAccount(account){
       if(!rows[item.code])rows[item.code]={code:item.code,label:item.label,unit:item.unit,total:0,remaining:0,batches:[],designatedCoachIds:[]};
       rows[item.code].total+=item.total||0;
       rows[item.code].remaining+=item.remaining||0;
-      rows[item.code].batches.push({membershipOrderId:item.membershipOrderId,total:item.total,remaining:item.remaining,benefitValidUntil:item.benefitValidUntil,expired:item.expired});
+      rows[item.code].batches.push({membershipOrderRef:item.membershipOrderRef,total:item.total,remaining:item.remaining,benefitValidUntil:item.benefitValidUntil,expired:item.expired});
       rows[item.code].designatedCoachIds=[...new Set([...rows[item.code].designatedCoachIds,...parseArr(item.designatedCoachIds)])];
     });
   });
@@ -693,7 +693,7 @@ function membershipBenefitBatchCardsHtml(account){
     const items=membershipBenefitSummaryForOrder(order);
     const lines=items.length?items.map(item=>{
       const supplementCount=membershipBenefitLedger
-        .filter(l=>l.membershipOrderId===order.id&&l.benefitCode===item.code&&parseInt(l.delta)>0&&l.action!=='grant')
+        .filter(l=>l.membershipOrderRef===order.id&&l.benefitCode===item.code&&parseInt(l.delta)>0&&l.action!=='grant')
         .reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
       return `<div style="font-size:12px;color:var(--tb);margin-top:4px">${esc(item.label)}：${item.remaining}/${item.total}${esc(item.unit)}${supplementCount>0?` · 含补发 +${supplementCount}`:''}</div>`;
     }).join(''):'<div style="font-size:12px;color:var(--td);margin-top:4px">本批次无权益</div>';
@@ -703,7 +703,7 @@ function membershipBenefitBatchCardsHtml(account){
 function membershipBenefitBatchRows(account){
   if(!account)return [];
   return membershipOrdersForAccount(account.id).flatMap(order=>membershipBenefitSummaryForOrder(order).map(item=>({
-    membershipOrderId:order.id,
+    membershipOrderRef:order.id,
     courtId:order.courtId||account.courtId,
     courtName:order.courtName||'—',
     purchaseDate:order.purchaseDate||'—',
@@ -896,7 +896,7 @@ function membershipBenefitConsumePreview(account,benefitCode,count){
       const av=String(a.benefitValidUntil||'9999-99-99');
       const bv=String(b.benefitValidUntil||'9999-99-99');
       if(av!==bv)return av.localeCompare(bv);
-      return String(a.membershipOrderId||'').localeCompare(String(b.membershipOrderId||''));
+      return String(a.membershipOrderRef||'').localeCompare(String(b.membershipOrderRef||''));
     });
   let remaining=need;
   const allocations=[];
@@ -904,7 +904,7 @@ function membershipBenefitConsumePreview(account,benefitCode,count){
     if(remaining<=0)return;
     const delta=Math.min(remaining,parseInt(batch.remaining)||0);
     if(delta<=0)return;
-    allocations.push({membershipOrderId:batch.membershipOrderId,benefitValidUntil:batch.benefitValidUntil,delta});
+    allocations.push({membershipOrderRef:batch.membershipOrderRef,benefitValidUntil:batch.benefitValidUntil,delta});
     remaining-=delta;
   });
   return {totalRemaining:batches.reduce((sum,row)=>sum+(parseInt(row.remaining)||0),0),allocations};
@@ -1167,7 +1167,7 @@ function importedLedgerMonthlyGroupKey(row){
   return [row.entitlementId,row.purchaseId,row.reason||'',monthKey].join('|');
 }
 function isCurrentImportedLedgerRow(row){
-  return !!(historicalImportedLedgerMonthKey(row)&&String(row?.sourceMonth||'').trim()&&String(row?.seedTag||'').startsWith('mabao-finance-seed-')&&String(row?.studentId||'').trim());
+  return !!(historicalImportedLedgerMonthKey(row)&&String(row?.sourceMonth||'').trim()&&String(row?.seedTag||'').startsWith('shunyi_mapo-finance-seed-')&&String(row?.studentId||'').trim());
 }
 function filterImportedLedgerRowsForDisplay(rows){
   const grouped=new Map();

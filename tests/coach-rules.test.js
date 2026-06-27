@@ -20,7 +20,7 @@ const renamed = rules.buildCoachRenameUpdates(
     purchases: [{ id: 'pur-1', ownerCoach: '测试1号教练', allowedCoaches: ['测试1号教练'], coachIds: ['测试1号教练'] }],
     entitlements: [{ id: 'ent-1', ownerCoach: '测试1号教练', allowedCoaches: ['测试1号教练'], coachNames: ['测试1号教练'] }]
   },
-  '2026-04-12T00:00:00.000Z',
+  '2026-04-12 00:00:00',
   { oldCoachId: 'coach-old', newCoachId: 'coach-new' }
 );
 
@@ -34,7 +34,7 @@ assert.deepStrictEqual(renamed.students.map(x => [x.id, x.primaryCoach, x.primar
 assert.deepStrictEqual(renamed.packages.map(x => [x.id, x.ownerCoach, x.coachNames, x.coachIds]), [['pkg-1', '测试教练', ['测试教练'], ['coach-new']]]);
 assert.deepStrictEqual(renamed.purchases.map(x => [x.id, x.ownerCoach, x.allowedCoaches, x.coachIds]), [['pur-1', '测试教练', ['测试教练'], ['coach-new']]]);
 assert.deepStrictEqual(renamed.entitlements.map(x => [x.id, x.ownerCoach, x.allowedCoaches, x.coachNames]), [['ent-1', '测试教练', ['测试教练'], ['测试教练']]]);
-assert.strictEqual(renamed.classes[0].updatedAt, '2026-04-12T00:00:00.000Z');
+assert.strictEqual(renamed.classes[0].updatedAt, '2026-04-12 00:00:00');
 
 assert.deepStrictEqual(
   rules.buildCoachRenameUpdates('测试教练', '测试教练', { classes: [{ id: 'class-1', coach: '测试教练' }] }).classes,
@@ -43,7 +43,7 @@ assert.deepStrictEqual(
 );
 
 assert.deepStrictEqual(
-  rules.buildCoachRenameUpdates('朝珺教练', '朝珺教练', { schedule: [{ id: 'sch-alias', coach: '朝珺', coachId: '朝珺' }] }, '2026-04-12T00:00:00.000Z').schedule.map(x => [x.id, x.coach, x.coachId]),
+  rules.buildCoachRenameUpdates('朝珺教练', '朝珺教练', { schedule: [{ id: 'sch-alias', coach: '朝珺', coachId: '朝珺' }] }, '2026-04-12 00:00:00').schedule.map(x => [x.id, x.coach, x.coachId]),
   [['sch-alias', '朝珺教练', '朝珺教练']],
   'saving an already renamed coach should normalize old suffix aliases'
 );

@@ -6,9 +6,9 @@ const path = require('path');
 const {
   parseArgs,
   run
-} = require('../scripts/apply-mabao-final-import-20260524');
+} = require('../scripts/apply-shunyi_mapo-final-import-20260524');
 
-const now = '2026-06-14T09:00:00.000Z';
+const now = '2026-06-14 09:00:00';
 const target = {
   onlineEndpoint: 'https://flowtennis-ue.us-east-1.ots.aliyuncs.com',
   onlineInstance: 'flowtennis-ue',
@@ -37,7 +37,7 @@ const context = {
   ],
   entitlementLedger: [],
   courts: [
-    { id: 'court-existing', name: '散客王', campus: 'mabao', status: 'active', history: [] }
+    { id: 'court-existing', name: '散客王', campus: 'shunyi_mapo', status: 'active', history: [] }
   ],
   purchases: [],
   membershipOrders: []
@@ -115,7 +115,7 @@ const sourceRows = {
 
 function makeDeps(overrides = {}) {
   const writes = [];
-  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mabao-apply-report-'));
+  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shunyi_mapo-apply-report-'));
   return {
     writes,
     deps: {
@@ -151,7 +151,7 @@ async function testWriteAddsTraceAndReport() {
   const result = await run(['--write'], deps);
 
   assert.strictEqual(result.report.mode, 'write');
-  assert.ok(result.report.operationId.startsWith('mabao-final-import-20260524-'));
+  assert.ok(result.report.operationId.startsWith('shunyi_mapo-final-import-20260524-'));
   assert.strictEqual(result.report.batchId, `batch-${result.report.operationId}`);
   assert.ok(writes.length > 0, 'write mode should write planned rows');
 
@@ -181,7 +181,7 @@ async function main() {
   assert.deepStrictEqual(parseArgs(['--write']), { write: true, dryRun: false });
   await testDefaultDryRunDoesNotWrite();
   await testWriteAddsTraceAndReport();
-  console.log('mabao final import script tests passed');
+  console.log('shunyi_mapo final import script tests passed');
 }
 
 main().catch((err) => {

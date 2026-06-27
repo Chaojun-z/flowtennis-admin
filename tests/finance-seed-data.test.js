@@ -1,5 +1,5 @@
 const assert = require('assert');
-const seed = require('../server/seeds/mabao-finance-seed.json');
+const seed = require('../server/seeds/shunyi_mapo-finance-seed.json');
 
 assert.strictEqual(seed.purchases.length, 72, 'income report should include the confirmed package buyers and renewals');
 assert.strictEqual(seed.entitlements.length, 72, 'confirmed purchases and renewal rows should create course entitlements');

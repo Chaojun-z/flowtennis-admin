@@ -14,9 +14,9 @@ assert.match(apiSource, /require\('\.\.\/server\/bootstrap'\)/, 'api/index.js sh
 assert.match(bootstrapSource, /function createBootstrapRuntime/, 'bootstrap module should expose a runtime factory');
 assert.match(bootstrapSource, /function buildBootstrapSafetyFlags/, 'bootstrap module should own bootstrap safety flags');
 assert.match(bootstrapSource, /async function init/, 'bootstrap module should own init');
-assert.match(bootstrapSource, /async function bootstrapMabaoFinanceSeed/, 'bootstrap module should own mabao finance seed bootstrap');
+assert.match(bootstrapSource, /async function bootstrapShunyiMapoFinanceSeed/, 'bootstrap module should own shunyi_mapo finance seed bootstrap');
 assert.match(bootstrapSource, /async function repairImportedLedgerDuplicates/, 'bootstrap module should own imported ledger repair');
-assert.doesNotMatch(apiSource, /async function bootstrapMabaoFinanceSeed/, 'api/index.js should not keep mabao finance seed bootstrap inline');
+assert.doesNotMatch(apiSource, /async function bootstrapShunyiMapoFinanceSeed/, 'api/index.js should not keep shunyi_mapo finance seed bootstrap inline');
 assert.doesNotMatch(apiSource, /async function repairImportedLedgerDuplicates/, 'api/index.js should not keep imported ledger repair inline');
 
 console.log('bootstrap-layer-split tests passed');

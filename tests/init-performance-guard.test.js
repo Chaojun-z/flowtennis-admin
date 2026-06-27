@@ -8,7 +8,7 @@ const stateSource = fs.readFileSync(path.join(__dirname, '../public/assets/scrip
 
 assert.match(apiSource, /const ENABLE_RUNTIME_TABLE_ENSURE = BOOTSTRAP_SAFETY_FLAGS\.enableRuntimeTableEnsure;/, 'api should expose runtime table ensure through the centralized safety flags');
 assert.match(bootstrapSource, /function buildBootstrapSafetyFlags\(env=process\.env\)/, 'bootstrap module should centralize bootstrap safety flags');
-assert.match(apiSource, /const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS\.enableMabaoFinanceSeedBootstrap;/, 'finance seed bootstrap should be filtered by runtime safety flags');
+assert.match(apiSource, /const ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP = BOOTSTRAP_SAFETY_FLAGS\.enableShunyiMapoFinanceSeedBootstrap;/, 'finance seed bootstrap should be filtered by runtime safety flags');
 assert.match(apiSource, /const ENABLE_IMPORTED_LEDGER_AUTO_REPAIR = BOOTSTRAP_SAFETY_FLAGS\.enableImportedLedgerAutoRepair;/, 'imported ledger auto repair should be filtered by runtime safety flags');
 assert.match(bootstrapSource, /if\(enableRuntimeTableEnsure\|\|enableTableBootstrap\)\{[\s\S]*?for\(const t of runtimeEnsuredTables\)await mkTable\(t\);/s, 'init should only run runtime table ensure when explicit switch is enabled');
 assert.doesNotMatch(bootstrapSource, /for\(const t of runtimeEnsuredTables\)await mkTable\(t\);\s*if\(enableTableBootstrap\)/, 'init should not unconditionally ensure runtime tables before bootstrap flag check');
@@ -22,7 +22,7 @@ assert.match(bootstrapSource, /function scheduleInitInBackground\(\)/, 'bootstra
 assert.match(bootstrapSource, /if\(isProductionRuntimeValue\)return;/, 'production request path should bypass background init dispatch');
 assert.match(bootstrapSource, /if\(isProductionRuntimeValue\)\{[\s\S]*production request-ready without heavy bootstrap/, 'production init should short-circuit before heavy bootstrap work');
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] ensureDefaultCampuses done \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log the ensureDefaultCampuses step duration');
-assert.match(bootstrapSource, /console\.log\(`\[api-init\] bootstrapMabaoFinanceSeed done \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log the finance seed step duration');
+assert.match(bootstrapSource, /console\.log\(`\[api-init\] bootstrapShunyiMapoFinanceSeed done \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log the finance seed step duration');
 assert.doesNotMatch(apiSource, /if\(path==='\/load-all'&&method==='GET'\)\{[\s\S]*await maybeRepairImportedLedgerDuplicates\(\);/s, 'load-all should not trigger imported ledger repair from the request path');
 assert.match(bootstrapSource, /console\.log\(`\[api-init\] prewarmHotScanCache dispatched \$\{Date\.now\(\)-stepStartedAt\}ms \(total \$\{Date\.now\(\)-startedAt\}ms\)`\);/, 'init should log when cache prewarm is dispatched');
 assert.doesNotMatch(stateSource, /load-all/, 'front-end page loading should not fall back to the heavy load-all endpoint');

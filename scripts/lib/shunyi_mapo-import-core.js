@@ -7,7 +7,7 @@ const { assertProductionWriteTarget } = require('./production-write-guard');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PROD_DIAG_URL = 'https://www.flowtennis.cn/api/diag';
-const REPORT_DIR = path.join(ROOT, 'docs/reports/mabao-import-preview-2026-05-23-final');
+const REPORT_DIR = path.join(ROOT, 'docs/reports/shunyi_mapo-import-preview-2026-05-23-final');
 const SOURCE_FILES = {
   schedule: path.join(REPORT_DIR, 'final-schedule-import.csv'),
   entitlement: path.join(REPORT_DIR, 'final-entitlement-consume.csv'),
@@ -23,7 +23,7 @@ const TABLES = {
   membershipOrders: 'ft_membership_orders',
   activeEntitlementIndex: 'ft_student_active_entitlement_index'
 };
-const IMPORT_TAG = 'mabao-finance-import-20260524';
+const IMPORT_TAG = 'shunyi_mapo-finance-import-20260524';
 const IMPORT_PREFIX = 'private_lesson_csv_import_20260524';
 const STUDENT_ALIASES = {
   mjh小胡: 'mjh（小胡）',
@@ -537,7 +537,7 @@ function buildStudentRecord(name, now = new Date().toISOString(), extra = {}) {
     name: safeText(name),
     phone: extra.phone || '',
     status: extra.status || 'active',
-    campus: extra.campus || 'mabao',
+    campus: extra.campus || 'shunyi_mapo',
     notes: extra.notes || '',
     createdAt: extra.createdAt || now,
     updatedAt: now
@@ -583,7 +583,7 @@ function buildPurchaseRecordFromIncome(row, student, opts = {}) {
     coachNames: coach ? [coach] : [],
     ownerCoach: coach,
     allowedCoaches: coach ? [coach] : [],
-    campusIds: opts.campusIds || ['mabao'],
+    campusIds: opts.campusIds || ['shunyi_mapo'],
     usageStartDate: opts.usageStartDate || row['日期'] || '',
     usageEndDate: opts.usageEndDate || row['日期'] || '',
     purchaseDate: row['日期'] || '',
@@ -629,7 +629,7 @@ function buildEntitlementRecordFromPurchase(purchase, student, opts = {}) {
     coachNames,
     ownerCoach: purchase.ownerCoach || '',
     allowedCoaches: purchase.allowedCoaches || [],
-    campusIds: purchase.campusIds || ['mabao'],
+    campusIds: purchase.campusIds || ['shunyi_mapo'],
     maxStudents: opts.maxStudents || 1,
     status: 'active',
     sourceSheet: '马坡收入记录',
@@ -653,7 +653,7 @@ function buildScheduleRecord(row, student, opts = {}) {
     courseType: row['课程类型'] || '私教课',
     coach: row['教练'] || '',
     coachId: row['教练'] || '',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: row['场地'] || row['场馆'] || '',
     locationType: 'campus',
     lessonCount: Number(row['课时'] || 1) || 1,
@@ -770,7 +770,7 @@ function buildCourtHistoryWriteRows(rows, courts, opts = {}) {
     const baseCourt = byCourtId.get(courtId) || existingCourt || {
       id: courtId,
       name: courtName,
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       status: 'active',
       history: [],
       createdAt: now

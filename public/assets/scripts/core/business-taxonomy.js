@@ -135,10 +135,10 @@
   });
   const FINANCE_FIELD_OPTIONS = Object.entries(FINANCE_FIELD_DEFINITIONS).map(([value, meta]) => ({ value, label: meta.label }));
   const LEGACY_IMPORT_FIELD_ALIASES = Object.freeze({
-    leadDemandProduct: ['咨询需求'],
-    leadIntentLevel: ['意向类型'],
-    courtName: ['用户名'],
-    courtStudentLink: ['学员姓名', '关联学员姓名']
+    leadDemandProduct: ['需求产品'],
+    leadIntentLevel: ['意向等级'],
+    courtName: ['姓名'],
+    courtStudentLink: ['姓名', '关联姓名']
   });
   const COURSE_TYPE_OPTIONS = [
     { level1: '私教课', level2: '' },

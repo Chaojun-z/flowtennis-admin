@@ -160,7 +160,7 @@ function createMembershipRoutes(deps={}){
           return sendJson(res,r);
         }
         if(account&&['voided','cleared'].includes(account.status)&&['consume','supplement'].includes(body.action))return sendJson(res,{error:'当前会员状态不可再消耗或补发权益，请先重新开卡'},400);
-        if(!body.membershipOrderId&&(body.action==='consume'||parseInt(body.delta)<0)){
+        if(!body.membershipOrderRef&&(body.action==='consume'||parseInt(body.delta)<0)){
           const [orders,ledger]=await Promise.all([getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]),getCachedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])]);
           const relevantOrders=(orders||[]).filter(order=>order.membershipAccountId===body.membershipAccountId&&order.courtId===body.courtId);
           const needsPlanFallback=relevantOrders.some(order=>{

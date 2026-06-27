@@ -1,7 +1,7 @@
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const TIMETABLE_START_HOUR = 7;
 const CAMPUS_DISPLAY = {
-  mabao: '顺义马坡',
+  shunyi_mapo: '顺义马坡',
   shilipu: '朝阳十里堡',
   guowang: '朝阳国网',
   chaojun: '朝珺私教'

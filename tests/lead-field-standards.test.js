@@ -42,9 +42,9 @@ assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConver
 const normalizedLead = rules.normalizeLeadRecord({
   '线索时间': '2026-06-24',
   '微信名/电话': 'Mira/13800138000',
-  '咨询需求': '青少年小班课（训练营）',
+  '需求产品': '青少年小班课（训练营）',
   '跟进状态': '新线索'
-}, { id: 'lead-standard', now: '2026-06-24T00:00:00.000Z' });
+}, { id: 'lead-standard', now: '2026-06-24 00:00:00' });
 assert.strictEqual(normalizedLead.customerType, '青少年');
 assert.strictEqual(normalizedLead.demandProduct, '小班课');
 assert.strictEqual(normalizedLead.leadStage, '新线索');
@@ -52,13 +52,13 @@ assert.strictEqual(normalizedLead.systemStatus, '新线索');
 assert.strictEqual(normalizedLead.dealType, '');
 
 assert.match(standardSource, /来源[\s\S]*类型[\s\S]*需求产品[\s\S]*线索阶段[\s\S]*成交教练[\s\S]*流失原因/, 'lead list should use the new standard field labels');
-assert.doesNotMatch(standardSource, /咨询需求|转化教练|未转化原因/, 'lead list should not expose old lead field labels');
+assert.doesNotMatch(standardSource, /转化教练|未转化原因/, 'lead list should not expose old lead field labels');
 
 assert.match(leadsSource, /function leadCustomerTypeText\(/, 'lead page should expose customer type helper');
 assert.match(leadsSource, /function leadDemandProductText\(/, 'lead page should expose demand product helper');
 assert.match(leadsSource, /function leadDealTypeText\(/, 'lead page should expose deal type helper');
 assert.match(leadsSource, /已成交 · \$\{dealType\}/, 'lead stage display should combine stage and deal type without adding a duplicate table column');
-assert.doesNotMatch(leadsSource, /正式课报名时间|未转化原因|转化教练|是否转化|咨询需求/, 'lead page copy should migrate old conversion and consult labels');
+assert.doesNotMatch(leadsSource, /正式课报名时间|未转化原因|转化教练|是否转化/, 'lead page copy should migrate old conversion labels');
 
 assert.match(dictionaryDoc, /`leadStage`[\s\S]*线索阶段[\s\S]*新线索[\s\S]*已成交[\s\S]*已流失/, 'data dictionary should define standard lead stage');
 assert.match(dictionaryDoc, /`dealType`[\s\S]*成交类型[\s\S]*课程\+订场\+会员/, 'data dictionary should define standard deal type');

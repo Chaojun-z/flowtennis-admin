@@ -121,7 +121,7 @@ function ownerForCampus(campus = '', owner = '') {
   const current = text(owner);
   if (current) return current;
   const normalized = text(campus).toLowerCase();
-  return normalized === 'mabao' || normalized.includes('马坡') ? 'Mira' : '';
+  return normalized === 'shunyi_mapo' || normalized.includes('马坡') ? 'Mira' : '';
 }
 
 function studentRows(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {

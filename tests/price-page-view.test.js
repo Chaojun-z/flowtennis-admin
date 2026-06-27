@@ -41,10 +41,10 @@ assert.match(appSource, /function priceNameText\(/, 'price page should expose a 
 assert.match(appSource, /function priceVenueSpaceTypeText\(/, 'price page should expose a dedicated venue space type renderer');
 assert.match(appSource, /function priceAmountText\(/, 'price page should expose a dedicated amount renderer');
 assert.doesNotMatch(fnBody('priceAmountText'), /\/小时/, 'price page should not render hourly suffix in amount text');
-assert.match(appSource, /青少年1v1私教体验课/, 'default Mabao products should use the updated 1v1 youth trial name');
-assert.match(appSource, /1小时/, 'default Mabao products should keep fixed one-hour durations as text');
-assert.match(appSource, /1-2小时/, 'default Mabao products should support range durations as text');
-assert.match(appSource, /新客福利 约球双打局 2H/, 'default Mabao products should keep the updated 2H product');
-assert.match(appSource, /venueSpaceType:\s*'室内'/, 'default Mabao venue prices should default to indoor');
+assert.match(appSource, /青少年1v1私教体验课/, 'default ShunyiMapo products should use the updated 1v1 youth trial name');
+assert.match(appSource, /1小时/, 'default ShunyiMapo products should keep fixed one-hour durations as text');
+assert.match(appSource, /1-2小时/, 'default ShunyiMapo products should support range durations as text');
+assert.match(appSource, /新客福利 约球双打局 2H/, 'default ShunyiMapo products should keep the updated 2H product');
+assert.match(appSource, /venueSpaceType:\s*'室内'/, 'default ShunyiMapo venue prices should default to indoor');
 
 console.log('price page view tests passed');

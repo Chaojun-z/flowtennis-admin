@@ -139,7 +139,7 @@
 
 本次只是在 `history` 里增加会员相关字段：
 
-- `membershipOrderId`
+- `membershipOrderRef`
 - `membershipAccountId`
 - `membershipPlanId`
 - `membershipPlanName`
@@ -177,8 +177,8 @@
   "maxMonths": 24,
   "status": "active",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -213,8 +213,8 @@
   "lastQualifiedRechargeAmount": 5000,
   "lastOrderId": "mord-uuid",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -264,8 +264,8 @@
   "operator": "管理员",
   "status": "active",
   "notes": "特批增加朝珺陪打一次",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -283,7 +283,7 @@
 ```json
 {
   "id": "mbled-uuid",
-  "membershipOrderId": "mord-uuid",
+  "membershipOrderRef": "mord-uuid",
   "membershipAccountId": "macc-uuid",
   "courtId": "court-uuid",
   "benefitCode": "ballMachine",
@@ -295,14 +295,14 @@
   "relatedDate": "2026-05-08",
   "operator": "管理员",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00"
 }
 ```
 
 说明：
 
 - 每次扣减/补发/作废都记流水。
-- 必须精确到某个购买记录 `membershipOrderId`，因为赠送权益按批次失效。
+- 必须精确到某个购买记录 `membershipOrderRef`，因为赠送权益按批次失效。
 
 ## 4.6 会员账户事件 `membership_account_events`
 
@@ -324,7 +324,7 @@
   "afterValidUntil": "2028-04-04",
   "operator": "system",
   "reason": "一年期到期仍有余额，自动延续 12 个月",
-  "createdAt": "2027-04-05T00:00:00.000Z"
+  "createdAt": "2027-04-05 00:00:00"
 }
 ```
 

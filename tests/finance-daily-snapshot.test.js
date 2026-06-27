@@ -73,7 +73,7 @@ assert.throws(
 );
 
 const built = snapshot.buildDailyFinanceSnapshot({
-  generatedAt: '2026-05-31T10:00:00.000Z',
+  generatedAt: '2026-05-31 10:00:00',
   snapshotDate: '2026-05-31',
   diag: {
     env: {
@@ -174,7 +174,7 @@ assert.strictEqual(built.shadowLedgerCompareReport.ok, true, 'matching shadow le
 assert.deepStrictEqual(built.shadowLedgerCompareReport.summaryDifference, { cash: 0, recognized: 0, deferred: 0 });
 
 const mismatchBuilt = snapshot.buildDailyFinanceSnapshot({
-  generatedAt: '2026-05-31T10:00:00.000Z',
+  generatedAt: '2026-05-31 10:00:00',
   snapshotDate: '2026-05-31',
   diag: { env: { TS_ENDPOINT: 'endpoint', TS_INSTANCE: 'instance' } },
   tables: {},
@@ -213,7 +213,7 @@ assert.strictEqual(mismatchBuilt.shadowLedgerCompareReport.ok, false, 'snapshot 
 assert.ok(mismatchBuilt.shadowLedgerCompareReport.details.some((item) => item.type === 'amount_mismatch'));
 
 const displayMismatchBuilt = snapshot.buildDailyFinanceSnapshot({
-  generatedAt: '2026-05-31T10:00:00.000Z',
+  generatedAt: '2026-05-31 10:00:00',
   snapshotDate: '2026-05-31',
   diag: { env: { TS_ENDPOINT: 'endpoint', TS_INSTANCE: 'instance' } },
   tables: {},
@@ -250,7 +250,7 @@ assert.ok(displayMismatchBuilt.financePage.displayConsistency.details.some((item
 assert.strictEqual(displayMismatchBuilt.summary.displayConsistency.ok, false, 'summary should expose display consistency failures');
 
 const derived = snapshot.buildDailyFinanceSnapshot({
-  generatedAt: '2026-05-31T10:00:00.000Z',
+  generatedAt: '2026-05-31 10:00:00',
   snapshotDate: '2026-05-31',
   diag: { env: { TS_ENDPOINT: 'endpoint', TS_INSTANCE: 'instance' } },
   tables: {},
@@ -311,11 +311,11 @@ assert.deepStrictEqual(derived.summary.financeOverview, {
 const outputPath = snapshot.buildSnapshotOutputPath({
   baseDir: '/tmp/flowtennis-snapshots',
   snapshotDate: '2026-05-31',
-  generatedAt: '2026-05-31T10:11:12.000Z'
+  generatedAt: new Date(Date.UTC(2026,4,31,10,11,12)).toISOString()
 });
 assert.strictEqual(
   outputPath,
-  path.join('/tmp/flowtennis-snapshots', '2026-05-31', 'finance-daily-snapshot-2026-05-31T10-11-12-000Z.json')
+  path.join('/tmp/flowtennis-snapshots', '2026-05-31', 'finance-daily-snapshot-2026-05-31_10-11-12-000.json')
 );
 
 console.log('finance daily snapshot tests passed');

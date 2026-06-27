@@ -6,9 +6,9 @@ const path = require('path');
 const {
   parseArgs,
   run
-} = require('../scripts/repair-mabao-court-history-import-20260524');
+} = require('../scripts/repair-shunyi_mapo-court-history-import-20260524');
 
-const now = '2026-06-14T10:00:00.000Z';
+const now = '2026-06-14 10:00:00';
 const target = {
   onlineEndpoint: 'https://flowtennis-ue.us-east-1.ots.aliyuncs.com',
   onlineInstance: 'flowtennis-ue',
@@ -18,7 +18,7 @@ const target = {
 
 const tables = {
   courts: [
-    { id: 'court-existing', name: '散客王', campus: 'mabao', status: 'active', history: [] }
+    { id: 'court-existing', name: '散客王', campus: 'shunyi_mapo', status: 'active', history: [] }
   ]
 };
 
@@ -38,7 +38,7 @@ const sourceRows = [
 
 function makeDeps(overrides = {}) {
   const writes = [];
-  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mabao-court-history-report-'));
+  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shunyi_mapo-court-history-report-'));
   return {
     writes,
     deps: {
@@ -88,7 +88,7 @@ async function main() {
   assert.deepStrictEqual(parseArgs(['--write']), { write: true, dryRun: false });
   await testDefaultDryRunDoesNotWrite();
   await testWriteAddsHistoryTraceAndReport();
-  console.log('mabao court history import repair script tests passed');
+  console.log('shunyi_mapo court history import repair script tests passed');
 }
 
 main().catch((err) => {

@@ -13,7 +13,7 @@ const rows = buildCustomerLifecycleRows({
       displayName: '小王',
       phone: '15000000000',
       source: '朋友转介绍',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       owner: '张教练',
       leadDate: '2026-06-01'
     }
@@ -102,8 +102,8 @@ const freePrivateRows = buildCustomerLifecycleRows({
       id: 'student-free-private',
       name: '小鹿',
       type: '成人',
-      campus: 'mabao',
-      createdAt: '2026-05-20T00:00:00.000Z',
+      campus: 'shunyi_mapo',
+      createdAt: '2026-05-20 00:00:00',
       notes: '未参加标准体验课，跟随朝军上免费私教课'
     }
   ],
@@ -114,7 +114,7 @@ const freePrivateRows = buildCustomerLifecycleRows({
       courseType: '私教课',
       coach: '朝军',
       status: '已结束',
-      startTime: '2026-03-18T10:00:00.000Z',
+      startTime: '2026-03-18 10:00:00',
       actualAmount: 0,
       paidAmount: 0,
       notes: '免费私教跟进'
@@ -124,11 +124,11 @@ const freePrivateRows = buildCustomerLifecycleRows({
 
 const freePrivate = freePrivateRows[0];
 assert.strictEqual(freePrivate.leadDate, '', 'student-only synthetic lifecycle rows should not backfill lead time from later business behavior');
-assert.strictEqual(freePrivate.firstTouchAt, '2026-03-18T10:00:00.000Z', 'first touch should keep the earliest known business behavior');
+assert.strictEqual(freePrivate.firstTouchAt, '2026-03-18 10:00:00', 'first touch should keep the earliest known business behavior');
 assert.strictEqual(freePrivate.source, '未知');
 assert.strictEqual(freePrivate.customerType, '成人');
 assert.strictEqual(freePrivate.demandProduct, '私教课');
-assert.strictEqual(freePrivate.owner, 'Mira', 'mabao synthetic leads without an owner should default to Mira');
+assert.strictEqual(freePrivate.owner, 'Mira', 'shunyi_mapo synthetic leads without an owner should default to Mira');
 assert.strictEqual(freePrivate.formalCoach, '', 'free private follow-up should not fill the paid deal coach field');
 assert.strictEqual(freePrivate.hasCourseConversion, false, 'free classes without paid purchase should not count as course conversion');
 assert.strictEqual(freePrivate.hasTrialExperience, false, 'free private classes should not be treated as standard trial lessons');
@@ -150,14 +150,14 @@ const staleMaterializedFreeRows = buildCustomerLifecycleRows({
       dealType: '课程',
       conversionType: '课程',
       isCourseConverted: true,
-      createdAt: '2026-06-26T03:37:16.269Z'
+      createdAt: '2026-06-26 03:37:16'
     }
   ],
   students: [
     {
       id: 'student-free-private',
       name: '小鹿',
-      campus: 'mabao'
+      campus: 'shunyi_mapo'
     }
   ],
   schedule: [
@@ -166,7 +166,7 @@ const staleMaterializedFreeRows = buildCustomerLifecycleRows({
       studentId: 'student-free-private',
       courseType: '私教课',
       status: '已结束',
-      startTime: '2026-03-18T10:00:00.000Z',
+      startTime: '2026-03-18 10:00:00',
       actualAmount: 0,
       paidAmount: 0
     }
@@ -201,8 +201,8 @@ const directPrivateRows = buildCustomerLifecycleRows({
       id: 'student-direct-private',
       name: '私教直转',
       type: '成人',
-      campus: 'mabao',
-      createdAt: '2026-05-20T00:00:00.000Z'
+      campus: 'shunyi_mapo',
+      createdAt: '2026-05-20 00:00:00'
     }
   ],
   purchases: [

@@ -18,14 +18,14 @@ const PURCHASE_ID = 'private_lesson_csv_import_20260519_BATCH3_15_LIVE-purchase-
 const ENTITLEMENT_ID = 'private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350';
 
 const PAID_LESSONS = [
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-02-12:00-13:00-0', scheduleId: '', date: '2026-04-02', time: '12:00-13:00' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-09-12:30-13:30-1', scheduleId: '', date: '2026-04-09', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-16-12:30-13:30-2', scheduleId: '', date: '2026-04-16', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-23-12:30-13:30-fixed', scheduleId: 'songtiti-schedule-20260423-1230', date: '2026-04-23', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-30-12:30-13:30-4', scheduleId: 'b4d98154-ebc2-42a8-870d-13b1735b7181', date: '2026-04-30', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-07-12:30-13:30-5', scheduleId: '98a8726d-b75d-426a-aaa1-686892e2170f', date: '2026-05-07', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-08-12:30-13:30-6', scheduleId: 'e26e0713-fda3-4a27-b1ec-f387427ba1be', date: '2026-05-08', time: '12:30-13:30' },
-  { id: 'mabao-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-14-12:30-13:30-7', scheduleId: '', date: '2026-05-14', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-02-12:00-13:00-0', scheduleId: '', date: '2026-04-02', time: '12:00-13:00' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-09-12:30-13:30-1', scheduleId: '', date: '2026-04-09', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-16-12:30-13:30-2', scheduleId: '', date: '2026-04-16', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-23-12:30-13:30-fixed', scheduleId: 'songtiti-schedule-20260423-1230', date: '2026-04-23', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-04-30-12:30-13:30-4', scheduleId: 'b4d98154-ebc2-42a8-870d-13b1735b7181', date: '2026-04-30', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-07-12:30-13:30-5', scheduleId: '98a8726d-b75d-426a-aaa1-686892e2170f', date: '2026-05-07', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-08-12:30-13:30-6', scheduleId: 'e26e0713-fda3-4a27-b1ec-f387427ba1be', date: '2026-05-08', time: '12:30-13:30' },
+  { id: 'shunyi_mapo-reconcile-20260515-private_lesson_csv_import_20260519_BATCH3_15_LIVE-entitlement-0715f895-d2a9-6db6-d7ef-b7ea5ad67350-2026-05-14-12:30-13:30-7', scheduleId: '', date: '2026-05-14', time: '12:30-13:30' },
   { id: 'songtiti-ledger-20260515-1230', scheduleId: 'songtiti-schedule-20260515-1230', date: '2026-05-15', time: '12:30-13:30' },
   { id: 'songtiti-ledger-20260521-1230', scheduleId: 'songtiti-schedule-20260521-1230', date: '2026-05-21', time: '12:30-13:30' }
 ];
@@ -139,7 +139,7 @@ function buildSchedule(base = {}, lesson, options = {}) {
     courseType: '私教课',
     coach: free ? '小宋' : '朝珺',
     coachId: free ? '小宋' : '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: '2号场',
     locationType: 'campus',
     lessonCount: free ? 0 : 1,

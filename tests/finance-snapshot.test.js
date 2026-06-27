@@ -2,8 +2,8 @@ const assert = require('assert');
 const { _test } = require('../api/index.js');
 
 const snapshot = _test.buildFinancePageSnapshot({
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
-  students:[{ id:'stu-1', campus:'mabao' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-1', campus:'shunyi_mapo' }],
   purchases:[{
     id:'purchase-1',
     studentId:'stu-1',
@@ -27,7 +27,7 @@ const snapshot = _test.buildFinancePageSnapshot({
     packageName:'成人10节课包',
     totalLessons:10,
     remainingLessons:9,
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   }],
   entitlementLedger:[{
     id:'ledger-1',
@@ -38,14 +38,14 @@ const snapshot = _test.buildFinancePageSnapshot({
     action:'consume',
     reason:'正常扣课',
     relatedDate:'2026-04-24',
-    createdAt:'2026-04-24T10:00:00.000Z',
+    createdAt:'2026-04-24 10:00:00',
     operationId:'op-ledger-1',
     batchId:'batch-ledger-1'
   }],
   courts:[{
     id:'court-1',
     name:'李四 订场',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     history:[{
       id:'court-row-1',
       date:'2026-04-23',
@@ -64,7 +64,7 @@ const snapshot = _test.buildFinancePageSnapshot({
       type:'充值',
       amount:5000,
       payMethod:'会员充值',
-      membershipOrderId:'member-order-1'
+      membershipOrderRef:'member-order-1'
     }]
   }],
   membershipOrders:[{
@@ -82,12 +82,12 @@ const snapshot = _test.buildFinancePageSnapshot({
     id:'sch-1',
     studentName:'张三',
     coach:'王教练',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     courseType:'私教',
     lessonCount:1,
     status:'已结束',
-    startTime:'2026-04-24T09:00:00.000Z',
-    endTime:'2026-04-24T10:00:00.000Z'
+    startTime:'2026-04-24 09:00:00',
+    endTime:'2026-04-24 10:00:00'
   }]
 });
 
@@ -139,12 +139,12 @@ assert.strictEqual(memberTraceRow.cashDelta, 1200, 'membership trace passthrough
 assert.strictEqual(memberTraceRow.deferredRevenueDelta, 1200, 'membership trace passthrough must not change deferred amount');
 
 const directScheduleSnapshot = _test.buildFinancePageSnapshot({
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   schedule:[{
     id:'sch-direct-1',
     studentName:'点评体验用户',
     coach:'Siren',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     courseType:'体验课',
     experienceType:'私教体验课',
     lessonCount:1,
@@ -159,7 +159,7 @@ const directScheduleSnapshot = _test.buildFinancePageSnapshot({
     id:'sch-gift-1',
     studentName:'赠送体验用户',
     coach:'Siren',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     courseType:'体验课',
     lessonCount:1,
     status:'已结束',
@@ -186,13 +186,13 @@ assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.directCourseRe
 assert.strictEqual(directScheduleSnapshot.financeOverviewData.all.packageRecognized, 0, 'package recognized should stay package-only');
 
 const fieldFeeScheduleSnapshot = _test.buildFinancePageSnapshot({
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   schedule:[{
     id:'sch-surcharge-1',
     studentId:'stu-surcharge',
     studentName:'场地费学员',
     coach:'Siren',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     courseType:'私教课',
     lessonCount:1,
     status:'已排课',
@@ -218,8 +218,8 @@ assert.strictEqual(fieldFeeScheduleSnapshot.financeOverviewData.all.courseIncome
 assert.strictEqual(fieldFeeScheduleSnapshot.financeOverviewData.all.bookingIncome, 80, 'booking income should include schedule field fee income');
 
 const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
-  students:[{ id:'stu-voided', campus:'mabao' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-voided', campus:'shunyi_mapo' }],
   purchases:[{
     id:'purchase-voided',
     studentId:'stu-voided',
@@ -248,7 +248,7 @@ const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
     totalLessons:10,
     remainingLessons:10,
     status:'voided',
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   },{
     id:'ent-active',
     purchaseId:'purchase-active',
@@ -258,7 +258,7 @@ const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
     totalLessons:10,
     remainingLessons:10,
     status:'active',
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   }],
   entitlementLedger:[{
     id:'ledger-voided-marker',
@@ -268,7 +268,7 @@ const voidedPurchaseSnapshot = _test.buildFinancePageSnapshot({
     lessonDelta:0,
     action:'void_purchase',
     relatedDate:'2026-06-01',
-    createdAt:'2026-06-01T10:00:00.000Z'
+    createdAt:'2026-06-01 10:00:00'
   }],
   courts:[],
   schedule:[]
@@ -280,8 +280,8 @@ assert.strictEqual(voidedPurchaseSnapshot.financeOverviewData.all.tradeCount, 1,
 assert.strictEqual(voidedPurchaseSnapshot.financeNormalizedRows.some(row=>String(row.sourceDocument||'').includes('purchase-voided')), false, 'voided package purchase should not create finance receipt rows');
 
 const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
-  students:[{ id:'stu-live', campus:'mabao' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-live', campus:'shunyi_mapo' }],
   purchases:[{
     id:'old-live-purchase-now-counts',
     studentId:'stu-live',
@@ -309,7 +309,7 @@ const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
     packageName:'成人10节课包',
     totalLessons:10,
     remainingLessons:9,
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   },{
     id:'private_lesson_csv_import_20260519_TEST:entitlement:实时导入',
     purchaseId:'private_lesson_csv_import_20260519_TEST:purchase:实时导入',
@@ -318,7 +318,7 @@ const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
     packageName:'成人10节课包',
     totalLessons:10,
     remainingLessons:9,
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   }],
   entitlementLedger:[{
     id:'old-live-ledger-now-counts',
@@ -326,12 +326,12 @@ const realTimeOverviewSnapshot = _test.buildFinancePageSnapshot({
     studentId:'stu-live',
     lessonDelta:-1,
     relatedDate:'2026-04-30',
-    createdAt:'2026-04-30T10:00:00.000Z'
+    createdAt:'2026-04-30 10:00:00'
   }],
   courts:[{
     id:'court-live',
     name:'实时订场',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     history:[{
       id:'old-court-history-now-counts',
       date:'2026-05-22',
@@ -368,8 +368,8 @@ const verifiedFinance = {
 };
 
 const merged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
-  students:[{ id:'stu-import', campus:'mabao' },{ id:'stu-old', campus:'mabao' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
+  students:[{ id:'stu-import', campus:'shunyi_mapo' },{ id:'stu-old', campus:'shunyi_mapo' }],
   purchases:[{
     id:'private_lesson_csv_import_20260519_TEST:purchase:张三',
     studentId:'stu-import',
@@ -397,14 +397,14 @@ const merged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
     packageName:'成人10节课包',
     totalLessons:10,
     remainingLessons:9,
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   },{
     id:'old-entitlement-should-not-double-count',
     purchaseId:'old-purchase-should-not-double-count',
     studentId:'stu-old',
     totalLessons:10,
     remainingLessons:0,
-    campusIds:['mabao']
+    campusIds:['shunyi_mapo']
   }],
   entitlementLedger:[{
     id:'private_lesson_csv_import_20260519_TEST:ledger:张三:2026-04',
@@ -414,7 +414,7 @@ const merged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
     lessonDelta:-1,
     reason:'4月消课',
     relatedDate:'2026-04-30',
-    createdAt:'2026-04-30T10:00:00.000Z',
+    createdAt:'2026-04-30 10:00:00',
     importSource:'系统导入'
   },{
     id:'old-ledger-should-not-double-count',
@@ -438,12 +438,12 @@ assert.strictEqual(merged.overviewData.all.tradeCount, 11, 'finance import incre
 assert.strictEqual(merged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-purchase-should-not-double-count')), false, 'old live purchase rows should not be appended to verified finance');
 
 const directScheduleMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   schedule:[{
     id:'sch-direct-merge',
     studentName:'点评体验用户',
     coach:'Siren',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     courseType:'体验课',
     status:'已结束',
     startTime:'2026-05-29 09:00',
@@ -465,7 +465,7 @@ assert.strictEqual(directScheduleMerged.overviewData.all.packageRecognized, 200,
 assert.strictEqual(directScheduleMerged.overviewData.all.tradeCount, 11, 'direct paid schedule should add one trade');
 
 const membershipMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   membershipOrders:[{
     id:'membership-import-order-20260520-test',
     courtId:'court-import',
@@ -518,14 +518,14 @@ assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueDeposit, 
 assert.strictEqual(membershipBalanceMerged.overviewData.all.storedValueBonus, 100, 'finance overview member bonus should ignore non-member and cleared courts');
 
 const courtMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinance, {
-  campuses:[{ id:'mabao', code:'mabao', name:'顺义马坡' }],
+  campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   courts:[{
     id:'court-import',
     name:'马坡订场导入',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     history:[{
       id:'private_lesson_csv_import_20260524-court-test',
-      seedTag:'mabao-finance-import-20260524',
+      seedTag:'shunyi_mapo-finance-import-20260524',
       date:'2026-05-22',
       type:'消费',
       category:'订场',
@@ -543,11 +543,11 @@ const courtMerged = _test.buildVerifiedFinanceWithImportIncrements(verifiedFinan
   },{
     id:'court-archived-import',
     name:'已合并旧账户',
-    campus:'mabao',
+    campus:'shunyi_mapo',
     status:'inactive',
     history:[{
       id:'private_lesson_csv_import_20260524-court-archived',
-      seedTag:'mabao-finance-import-20260524',
+      seedTag:'shunyi_mapo-finance-import-20260524',
       date:'2026-05-22',
       type:'消费',
       category:'订场',

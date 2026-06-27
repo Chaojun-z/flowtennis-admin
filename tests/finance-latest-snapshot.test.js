@@ -16,7 +16,7 @@ fs.writeFileSync(path.join(olderDir, 'finance-daily-snapshot-older.json'), JSON.
   baselineType: 'operating_finance_snapshot',
   sourceOfTruth: 'online_readonly_snapshot',
   snapshotDate: '2026-06-14',
-  generatedAt: '2026-06-14T15:30:00.000Z',
+  generatedAt: '2026-06-14 15:30:00',
   environment: { tsInstance: 'flowtennis-ue' },
   summary: { financeOverview: { storedValueIncome: 130000 } }
 }, null, 2));
@@ -26,7 +26,7 @@ fs.writeFileSync(newerPath, JSON.stringify({
   baselineType: 'operating_finance_snapshot',
   sourceOfTruth: 'online_readonly_snapshot',
   snapshotDate: '2026-06-15',
-  generatedAt: '2026-06-15T15:30:00.000Z',
+  generatedAt: '2026-06-15 15:30:00',
   environment: { tsInstance: 'flowtennis-ue' },
   summary: { financeOverview: { storedValueIncome: 137000 } }
 }, null, 2));

@@ -530,7 +530,7 @@ function membershipBenefitConsumePreview(account, benefitCode, count){
   return {
     totalRemaining: 6,
     allocations: [
-      { membershipOrderId: 'mord-1', benefitValidUntil: '2027-04-11', delta: 1 }
+      { membershipOrderRef: 'mord-1', benefitValidUntil: '2027-04-11', delta: 1 }
     ]
   };
 }
@@ -576,10 +576,10 @@ function membershipBenefitConsumePreview(account, benefitCode, count){
 
 ```js
 assert.deepStrictEqual(
-  allocatedUsage.map(x => ({ membershipOrderId: x.membershipOrderId, delta: x.delta })),
+  allocatedUsage.map(x => ({ membershipOrderRef: x.membershipOrderRef, delta: x.delta })),
   [
-    { membershipOrderId: 'mord-1', delta: -2 },
-    { membershipOrderId: 'mord-2', delta: -1 }
+    { membershipOrderRef: 'mord-1', delta: -2 },
+    { membershipOrderRef: 'mord-2', delta: -1 }
   ]
 );
 ```
@@ -925,7 +925,7 @@ court finance tests passed
    - 前端需消费 `warning`
 4. `POST /membership-benefit-ledger`
    - 保持现有模型
-   - 补发继续要求带 `membershipOrderId`
+   - 补发继续要求带 `membershipOrderRef`
 
 ### 4.2 一期不做的接口
 

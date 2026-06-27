@@ -143,8 +143,8 @@ assert.throws(() => rules.assertMatchPostInput({
   ntrpMax: 3.5,
   genderPreference: '不限',
   estimatedCourtFee: 100,
-  startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00'
+  startTime: '2026-04-22 10:00:00',
+  endTime: '2026-04-22 12:00:00'
 }), /NTRP 范围不正确/);
 assert.throws(() => rules.assertMatchPostInput({
   title: '周末双打',
@@ -154,8 +154,8 @@ assert.throws(() => rules.assertMatchPostInput({
   ntrpMax: 3.5,
   genderPreference: '不限',
   estimatedCourtFee: 0,
-  startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00',
+  startTime: '2026-04-22 10:00:00',
+  endTime: '2026-04-22 12:00:00',
   venueName: '马坡网球馆',
   venueAddress: '马坡',
   venueLatitude: 40.1,
@@ -171,8 +171,8 @@ assert.throws(() => rules.assertMatchPostInput({
   ntrpMax: 3.5,
   genderPreference: '不限',
   estimatedCourtFee: 100,
-  startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00'
+  startTime: '2026-04-22 10:00:00',
+  endTime: '2026-04-22 12:00:00'
 }), /请选择球场/);
 assert.throws(() => rules.assertMatchPostInput({
   title: '周末双打',
@@ -186,8 +186,8 @@ assert.throws(() => rules.assertMatchPostInput({
   ntrpMax: 3.5,
   genderPreference: '不限',
   estimatedCourtFee: 100,
-  startTime: '2026-04-22T23:00:00',
-  endTime: '2026-04-23T01:00:00'
+  startTime: '2026-04-22 23:00:00',
+  endTime: '2026-04-23 01:00:00'
 }), /不能跨天/);
 
 const valid = rules.assertMatchPostInput({
@@ -202,8 +202,8 @@ const valid = rules.assertMatchPostInput({
   ntrpMax: 3.5,
   genderPreference: '不限',
   estimatedCourtFee: 500,
-  startTime: '2026-04-22T10:00:00',
-  endTime: '2026-04-22T12:00:00',
+  startTime: '2026-04-22 10:00:00',
+  endTime: '2026-04-22 12:00:00',
   venueName: '马坡网球馆',
   venueAddress: '马坡',
   venueLatitude: 40.1,
@@ -225,8 +225,8 @@ const firstJoinLevelMatch = rules.assertMatchPostInput({
   ntrpMax: '',
   genderPreference: '不限',
   estimatedCourtFee: 400,
-  startTime: '2026-04-22T19:00:00',
-  endTime: '2026-04-22T21:00:00'
+  startTime: '2026-04-22 19:00:00',
+  endTime: '2026-04-22 21:00:00'
 });
 assert.equal(firstJoinLevelMatch.levelMode, 'first_join');
 assert.equal(firstJoinLevelMatch.ntrpMin, 0);
@@ -267,14 +267,14 @@ assert.deepEqual(rules.splitAaFee(500, ['u1', 'u2', 'u3', 'u4']).map(x => x.amou
 
 assert.equal(rules.deriveMatchStatus({
   status: 'booked',
-  startTime: '2026-04-21T10:00:00',
-  endTime: '2026-04-21T12:00:00'
-}, new Date('2026-04-21T11:00:00')), 'playing');
+  startTime: '2026-04-21 10:00:00',
+  endTime: '2026-04-21 12:00:00'
+}, new Date('2026-04-21 11:00:00')), 'playing');
 assert.equal(rules.deriveMatchStatus({
   status: 'booked',
-  startTime: '2026-04-21T10:00:00',
-  endTime: '2026-04-21T12:00:00'
-}, new Date('2026-04-21T13:00:00')), 'attendance_pending');
+  startTime: '2026-04-21 10:00:00',
+  endTime: '2026-04-21 12:00:00'
+}, new Date('2026-04-21 13:00:00')), 'attendance_pending');
 
 assert.throws(() => rules.requireAdminUser({ type: 'match_user', id: 'm1' }), /无管理端权限/);
 assert.deepEqual(rules.userMatchPermissions({ id: 'dandan', role: 'editor', name: '陈丹丹', matchPermissions: ['match_ops', 'match_finance'] }).sort(), ['match_finance', 'match_ops']);
@@ -293,8 +293,8 @@ const matchView = rules.toMatchView({
   title: '周二双打',
   matchType: 'double',
   targetHeadcount: 6,
-  startTime: '2026-04-28T10:00:00.000Z',
-  endTime: '2026-04-28T12:00:00.000Z',
+  startTime: '2026-04-28 10:00:00',
+  endTime: '2026-04-28 12:00:00',
   venueName: '网球兄弟·马坡',
   venueAddress: '北京市顺义区白马路65号',
   venueLatitude: 40.1,
@@ -408,7 +408,7 @@ assert.equal(
     status: 'open',
     startTime: '2026-04-28 10:00',
     endTime: '2026-04-28 12:00'
-  }, new Date('2026-04-27T12:00:00+08:00')),
+  }, new Date('2026-04-27 12:00:00')),
   '待开始'
 );
 assert.equal(
@@ -416,7 +416,7 @@ assert.equal(
     status: 'open',
     startTime: '2026-04-27 10:00',
     endTime: '2026-04-27 12:00'
-  }, new Date('2026-04-27T11:00:00+08:00')),
+  }, new Date('2026-04-27 11:00:00')),
   '进行中'
 );
 assert.equal(
@@ -424,7 +424,7 @@ assert.equal(
     status: 'open',
     startTime: '2026-04-27 10:00',
     endTime: '2026-04-27 12:00'
-  }, new Date('2026-04-27T13:00:00+08:00')),
+  }, new Date('2026-04-27 13:00:00')),
   '已结束'
 );
 
@@ -470,7 +470,7 @@ const matchAdminMessage = rules.buildOfficialAccountMatchAdminMessage({
   match: {
     id: 'match-1',
     title: '周末双打',
-    startTime: '2026-06-12T20:00:00.000Z',
+    startTime: '2026-06-12 20:00:00',
     venueName: '马坡网球馆',
     targetHeadcount: 4
   }
@@ -502,14 +502,14 @@ const matchCourtHistoryRow = rules.buildMatchCourtFinanceHistoryRow({
   match: {
     id: 'm1',
     title: '周末双打',
-    starttime: '2026-04-22T10:00:00.000Z',
-    endtime: '2026-04-22T12:00:00.000Z',
+    starttime: '2026-04-22 10:00:00',
+    endtime: '2026-04-22 12:00:00',
     venuename: '马坡网球馆'
   },
   split: { id: 'split-1', amount: 125 },
   user: { nickName: '球友A', phone: '13800000000' },
   operatorId: 'dandan',
-  now: '2026-04-22T13:00:00.000Z'
+  now: '2026-04-22 13:00:00'
 });
 assert.equal(matchCourtHistoryRow.type, '消费');
 assert.equal(matchCourtHistoryRow.category, '订场');
@@ -538,7 +538,7 @@ const matchRefundHistoryRow = rules.buildMatchCourtFinanceRefundRow({
   split: { id: 'split-1', amount: 125, paidAmount: 125 },
   operatorId: 'dandan',
   note: '用户退款',
-  now: '2026-04-22T14:00:00.000Z'
+  now: '2026-04-22 14:00:00'
 });
 assert.equal(matchRefundHistoryRow.type, '退款');
 assert.equal(matchRefundHistoryRow.category, '订场');
@@ -560,13 +560,13 @@ assert.equal(rules.assertMatchFeeSplitUpdateInput({ payStatus: 'refunded', note:
 const dailyReport = rules.buildMatchFinanceDailyReport({
   date: '2026-04-22',
   feeSplits: [
-    { id: 'split-1', matchId: 'm1', userId: 'u1', amount: 125, paidAmount: 125, payStatus: 'paid', updatedAt: '2026-04-22T10:00:00.000Z' },
-    { id: 'split-2', matchId: 'm1', userId: 'u2', amount: 125, paidAmount: 0, payStatus: 'pending', updatedAt: '2026-04-22T10:00:00.000Z' },
-    { id: 'split-3', matchId: 'm2', userId: 'u3', amount: 80, paidAmount: 0, payStatus: 'waived', updatedAt: '2026-04-22T10:00:00.000Z' },
-    { id: 'split-4', matchId: 'm3', userId: 'u4', amount: 60, paidAmount: 0, payStatus: 'abnormal', updatedAt: '2026-04-22T10:00:00.000Z' }
+    { id: 'split-1', matchId: 'm1', userId: 'u1', amount: 125, paidAmount: 125, payStatus: 'paid', updatedAt: '2026-04-22 10:00:00' },
+    { id: 'split-2', matchId: 'm1', userId: 'u2', amount: 125, paidAmount: 0, payStatus: 'pending', updatedAt: '2026-04-22 10:00:00' },
+    { id: 'split-3', matchId: 'm2', userId: 'u3', amount: 80, paidAmount: 0, payStatus: 'waived', updatedAt: '2026-04-22 10:00:00' },
+    { id: 'split-4', matchId: 'm3', userId: 'u4', amount: 60, paidAmount: 0, payStatus: 'abnormal', updatedAt: '2026-04-22 10:00:00' }
   ],
   financeHistory: [
-    { id: 'income-1', type: '消费', category: '订场', sourceCategory: '约球订场', amount: 125, occurredDate: 'Wed Apr 22', createdAt: '2026-04-22T11:00:00.000Z', matchFeeSplitId: 'split-1' },
+    { id: 'income-1', type: '消费', category: '订场', sourceCategory: '约球订场', amount: 125, occurredDate: 'Wed Apr 22', createdAt: '2026-04-22 11:00:00', matchFeeSplitId: 'split-1' },
     { id: 'refund-1', type: '退款', category: '订场', sourceCategory: '约球订场', amount: 25, occurredDate: '2026-04-22', matchFeeSplitId: 'split-1' }
   ]
 });

@@ -13,9 +13,9 @@ const { assertProductionWriteTarget } = require('./lib/production-write-guard');
 
 const ROOT = path.join(__dirname, '..');
 const DIAG_URL = 'https://www.flowtennis.cn/api/diag';
-const PATCH_ROWS_FILE = path.join(ROOT, 'docs/reports/mabao-leads-patch-2026-05-24/final-patch-rows.json');
-const REPORT_FILE = path.join(ROOT, 'docs/reports/mabao-leads-patch-2026-05-24/apply-report.json');
-const IMPORT_BATCH = 'mabao_leads_patch_20260524';
+const PATCH_ROWS_FILE = path.join(ROOT, 'docs/reports/shunyi_mapo-leads-patch-2026-05-24/final-patch-rows.json');
+const REPORT_FILE = path.join(ROOT, 'docs/reports/shunyi_mapo-leads-patch-2026-05-24/apply-report.json');
+const IMPORT_BATCH = 'shunyi_mapo_leads_patch_20260524';
 const T_LEADS = 'ft_leads';
 const T_LEAD_FOLLOWUPS = 'ft_lead_followups';
 const CONVERTED_STATUSES = new Set(['已转课程', '已转订场', '已转课程+订场']);
@@ -80,7 +80,7 @@ function makeNewLeadId(row) {
     .update([row['原表序号'], row['姓名/电话'], row['线索时间']].map(text).join('|'))
     .digest('hex')
     .slice(0, 10);
-  return `mabao-lead-xlsx-20260524-${text(row['原表序号'])}-${hash}`;
+  return `shunyi_mapo-lead-xlsx-20260524-${text(row['原表序号'])}-${hash}`;
 }
 
 function makeFollowupId(leadId, seq) {
@@ -101,8 +101,8 @@ function leadFromPatchRow(row, existing = {}, now = new Date().toISOString()) {
     level: text(existing.level),
     profileNote: text(existing.profileNote),
     source: text(row['线索渠道']) || text(existing.source),
-    consultType: text(row['咨询需求']) || text(existing.consultType),
-    intentLevel: text(row['意向类型']) || text(existing.intentLevel),
+    consultType: text(row['需求产品']) || text(existing.consultType),
+    intentLevel: text(row['意向等级']) || text(existing.intentLevel),
     owner: text(row['跟进人']) || text(existing.owner),
     rawStatus: text(row['表内跟进状态']) || text(existing.rawStatus),
     trialAtRaw: text(row['体验课时间']) || text(existing.trialAtRaw),

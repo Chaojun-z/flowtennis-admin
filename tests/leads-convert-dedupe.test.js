@@ -20,14 +20,14 @@ async function main() {
   const writes = [];
   const rows = {
     ft_leads: [
-      { id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17T00:00:00.000Z' },
+      { id: 'lead-1', displayName: '小成', wechatName: '小成', createdAt: '2026-06-17 00:00:00' },
       {
         id: 'lead-from-student-student-4',
         displayName: '丫丫',
         wechatName: '丫丫',
         studentId: 'student-4',
-        leadDate: '2026-06-26T03:37:16.269Z',
-        createdAt: '2026-06-26T03:37:16.269Z'
+        leadDate: '2026-06-26 03:37:16',
+        createdAt: '2026-06-26 03:37:16'
       },
       {
         id: 'lead-from-student-student-missing',
@@ -40,8 +40,8 @@ async function main() {
         leadStage: '已成交',
         conversionType: '课程',
         dealType: '课程',
-        leadDate: '2026-06-26T03:37:16.269Z',
-        createdAt: '2026-06-26T03:37:16.269Z'
+        leadDate: '2026-06-26 03:37:16',
+        createdAt: '2026-06-26 03:37:16'
       },
       {
         id: 'lead-from-student-student-shell',
@@ -57,15 +57,15 @@ async function main() {
         dealType: '课程',
         isCourseConverted: true,
         leadDate: '',
-        createdAt: '2026-06-26T03:37:16.269Z'
+        createdAt: '2026-06-26 03:37:16'
       }
     ],
     ft_students: [
       { id: 'student-1', name: '小成' },
-      { id: 'student-2', name: '可搜学员', phone: '13900000002', createdAt: '2026-06-26T03:37:16.269Z' },
-      { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26T03:37:16.269Z' },
-      { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26T03:37:16.269Z' },
-      { id: 'student-shell', name: '学生壳', phone: '', campus: 'chaojun', updatedAt: '2026-06-01T09:51:06.467Z' }
+      { id: 'student-2', name: '可搜学员', phone: '13900000002', createdAt: '2026-06-26 03:37:16' },
+      { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26 03:37:16' },
+      { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26 03:37:16' },
+      { id: 'student-shell', name: '学生壳', phone: '', campus: 'chaojun', updatedAt: '2026-06-01 09:51:06' }
     ],
     ft_courts: [{ id: 'court-1', name: '小成', status: 'active' }],
     ft_purchases: [{
@@ -161,7 +161,7 @@ async function main() {
     studentId: 'student-3',
     profileNote: '来源价格1：课包消耗记录#281；1；余额9/10',
     leadDate: '2026-04-18',
-    createdAt: '2026-06-26T03:37:16.269Z'
+    createdAt: '2026-06-26 03:37:16'
   });
   const pollutedRes = makeRes();
   await handle({ path: '/leads', method: 'GET', body: {}, user: { role: 'admin' }, res: pollutedRes, query: new URLSearchParams() });

@@ -19,7 +19,7 @@ const record = rules.buildFeedbackRecord(
     studentName: '学员A',
     coach: '朝珺',
     startTime: '2026-04-11 09:00',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     venue: '1号场',
     lessonCount: 1,
     isTrial: true,
@@ -102,7 +102,7 @@ const isolated = rules.filterLoadAllForUser(
     schedule: [{ id: 'sch-1', coach: '朝珺', studentIds: ['stu-1'], classId: 'class-1' }, { id: 'sch-2', coach: '其他教练', studentIds: ['stu-2'], classId: 'class-2' }],
     coaches: [{ id: 'coach-1', name: '朝珺' }, { id: 'coach-2', name: '其他教练' }],
     classes: [{ id: 'class-1', coach: '朝珺', studentIds: ['stu-1'] }, { id: 'class-2', coach: '其他教练', studentIds: ['stu-2'] }],
-    campuses: [{ id: 'mabao' }],
+    campuses: [{ id: 'shunyi_mapo' }],
     feedbacks: [{ id: 'fb-1', scheduleId: 'sch-1' }, { id: 'fb-2', scheduleId: 'sch-2' }]
   },
   { role: 'editor', coachName: '朝珺', name: '朝珺' }

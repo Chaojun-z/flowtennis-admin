@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { IDS, buildPlan } = require('../scripts/repair-six-package-ledgers-20260601');
 
-const now = '2026-06-01T13:00:00.000Z';
+const now = '2026-06-01 13:00:00';
 const operationId = 'op-six-package-test';
 
 const deleteLedgerIds = [

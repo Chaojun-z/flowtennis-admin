@@ -594,7 +594,7 @@ async function main(){
   const statsFile = requireArgAlias(args, ['stats-file', 'stats-csv']);
   const detailFileA = requireArgAlias(args, ['detail-file-a', 'detail-csv']);
   const detailFileB = requireArgAlias(args, ['detail-file-b', 'detail-csv-2']);
-  const outputDir = path.resolve(args['output-dir'] || path.join(process.cwd(), 'tmp', `mabao-audit-${Date.now()}`));
+  const outputDir = path.resolve(args['output-dir'] || path.join(process.cwd(), 'tmp', `shunyi_mapo-audit-${Date.now()}`));
 
   ensureDir(outputDir);
 

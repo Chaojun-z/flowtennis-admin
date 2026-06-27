@@ -2,8 +2,8 @@ const assert = require('assert');
 const { _test } = require('../api/index.js');
 
 const snapshot = _test.buildFinancePageSnapshot({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
-  students: [{ id: 'stu-1', campus: 'mabao' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  students: [{ id: 'stu-1', campus: 'shunyi_mapo' }],
   purchases: [{
     id: 'purchase-1',
     studentId: 'stu-1',
@@ -12,7 +12,7 @@ const snapshot = _test.buildFinancePageSnapshot({
     courseType: '训练营',
     amountPaid: 3000,
     purchaseDate: '2026-06-01',
-    createdAt: '2026-06-01T08:09:10.000Z',
+    createdAt: '2026-06-01 08:09:10',
     payMethod: '微信转账支付',
     status: 'active'
   }],
@@ -24,7 +24,7 @@ const snapshot = _test.buildFinancePageSnapshot({
     packageName: '训练营10节课包',
     totalLessons: 10,
     remainingLessons: 9,
-    campusIds: ['mabao']
+    campusIds: ['shunyi_mapo']
   }],
   entitlementLedger: [{
     id: 'ledger-1',
@@ -33,12 +33,12 @@ const snapshot = _test.buildFinancePageSnapshot({
     lessonDelta: -1,
     scheduleId: 'schedule-1',
     relatedDate: '2026-06-02',
-    createdAt: '2026-06-02T10:00:00.000Z'
+    createdAt: '2026-06-02 10:00:00'
   }],
   courts: [{
     id: 'court-1',
     name: '李四',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     history: [{
       id: 'h1',
       date: '2026-06-03',
@@ -46,7 +46,7 @@ const snapshot = _test.buildFinancePageSnapshot({
       category: '订场',
       payMethod: '储值扣款',
       amount: 200,
-      startTime: '2026-06-03T12:34:56.000Z'
+      startTime: '2026-06-03 12:34:56'
     }, {
       id: 'h2',
       date: '2026-06-04',
@@ -60,10 +60,10 @@ const snapshot = _test.buildFinancePageSnapshot({
     id: 'schedule-1',
     studentName: '张三',
     coach: '王教练',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     courseType: '私教',
-    startTime: '2026-06-02T15:30:45.000Z',
-    endTime: '2026-06-02T16:30:45.000Z',
+    startTime: '2026-06-02 15:30:45',
+    endTime: '2026-06-02 16:30:45',
     status: '已结束'
   }]
 });

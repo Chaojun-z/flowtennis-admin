@@ -31,7 +31,7 @@ const {
   makeImportId,
   createClientFromEnv,
   putRow
-} = require('./lib/mabao-import-core');
+} = require('./lib/shunyi_mapo-import-core');
 
 function parseArgs(argv) {
   return {
@@ -42,7 +42,7 @@ function parseArgs(argv) {
 
 function makeOperationTrace(now = new Date().toISOString()) {
   const stamp = String(now).replace(/[^0-9]/g, '').slice(0, 17) || String(Date.now());
-  const operationId = `mabao-final-import-20260524-${stamp}`;
+  const operationId = `shunyi_mapo-final-import-20260524-${stamp}`;
   return {
     operationId,
     batchId: `batch-${operationId}`
@@ -230,7 +230,7 @@ async function run(argv = process.argv.slice(2), deps = {}) {
     if (!shouldCreateCoursePurchase(row)) continue;
     const studentName = extractCourseName(row['客户/学员']);
     const existingStudent = studentResolver.resolve(studentName);
-    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'mabao' });
+    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'shunyi_mapo' });
     if (!existingStudent) {
       pendingStudents.push(student);
       studentResolver.register(student);
@@ -256,7 +256,7 @@ async function run(argv = process.argv.slice(2), deps = {}) {
   for (const row of sourceRows.schedule) {
     const studentName = lessonStudentName(row['学员']);
     const existingStudent = studentResolver.resolve(studentName);
-    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'mabao' });
+    const student = existingStudent || buildStudentRecord(studentName, now, { rowNo: row.__rowNo, campus: 'shunyi_mapo' });
     if (!existingStudent) {
       pendingStudents.push(student);
       studentResolver.register(student);

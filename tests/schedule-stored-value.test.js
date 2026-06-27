@@ -5,7 +5,7 @@ const rules = api._test;
 
 assert.ok(rules.buildScheduleStoredValueCourtUpdate, 'api._test should expose stored-value schedule court update helper');
 
-const now = '2026-06-11T10:30:00.000Z';
+const now = '2026-06-11 10:30:00';
 const trace = rules.buildOperationTrace({
   operationType: 'lesson-consume',
   operator: '管理员',
@@ -18,7 +18,7 @@ const baseCourt = {
   name: '会员A',
   phone: '13800138000',
   studentIds: ['stu-1'],
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   history: [
     { id: 'recharge-1', date: '2026-06-01', type: '充值', category: '会员充值', payMethod: '微信', amount: 1280 }
   ]
@@ -33,7 +33,7 @@ const schedule = {
   startTime: '2026-06-12 12:00',
   endTime: '2026-06-12 13:00',
   courseType: '私教课',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   venue: '2号场',
   coach: '朝珺教练'
 };
@@ -81,9 +81,9 @@ const edited = rules.buildScheduleStoredValueCourtUpdate({
   nextSchedule: { ...created.schedule, paidAmount: 300 },
   courts: [created.court],
   students: [student],
-  now: '2026-06-11T11:00:00.000Z',
+  now: '2026-06-11 11:00:00',
   operator: '管理员',
-  operationTrace: { ...trace, operationId: 'op-edit', batchId: 'batch-op-edit', operationAt: '2026-06-11T11:00:00.000Z' }
+  operationTrace: { ...trace, operationId: 'op-edit', batchId: 'batch-op-edit', operationAt: '2026-06-11 11:00:00' }
 });
 assert.strictEqual(edited.historyRows.length, 1);
 assert.strictEqual(edited.historyRows[0].type, '消费');
@@ -96,9 +96,9 @@ const cancelled = rules.buildScheduleStoredValueCourtUpdate({
   nextSchedule: { ...edited.schedule, status: '已取消', cancelReason: '学员请假' },
   courts: [edited.court],
   students: [student],
-  now: '2026-06-11T12:00:00.000Z',
+  now: '2026-06-11 12:00:00',
   operator: '管理员',
-  operationTrace: { ...trace, operationId: 'op-cancel', batchId: 'batch-op-cancel', operationAt: '2026-06-11T12:00:00.000Z' }
+  operationTrace: { ...trace, operationId: 'op-cancel', batchId: 'batch-op-cancel', operationAt: '2026-06-11 12:00:00' }
 });
 assert.strictEqual(cancelled.historyRows.length, 1);
 assert.strictEqual(cancelled.historyRows[0].type, '冲正');
@@ -107,7 +107,7 @@ assert.match(cancelled.historyRows[0].note, /取消排课退回储值卡/);
 assert.strictEqual(rules.computeCourtFinance(cancelled.court).balance, 1280);
 
 const financeRows = rules.buildFinanceUnifiedRows({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   students: [student],
   courts: [created.court],
   schedule: [created.schedule]

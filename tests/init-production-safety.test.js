@@ -20,7 +20,7 @@ assert.strictEqual(productionFlags.allowProductionBootstrapWrites, false, 'produ
 assert.strictEqual(productionFlags.enableDefaultUserBootstrap, false, 'default user bootstrap should be off in production without explicit override');
 assert.strictEqual(productionFlags.enableTableBootstrap, false, 'table bootstrap should be off in production without explicit override');
 assert.strictEqual(productionFlags.enableDefaultPricePlanBootstrap, false, 'default price plan bootstrap should be off in production without explicit override');
-assert.strictEqual(productionFlags.enableMabaoFinanceSeedBootstrap, false, 'mabao finance seed bootstrap should be off in production without explicit override');
+assert.strictEqual(productionFlags.enableShunyiMapoFinanceSeedBootstrap, false, 'shunyi_mapo finance seed bootstrap should be off in production without explicit override');
 assert.strictEqual(productionFlags.enableImportedLedgerAutoRepair, false, 'imported ledger auto repair should be off in production without explicit override');
 assert.strictEqual(productionFlags.enableRuntimeTableEnsure, true, 'runtime table ensure can stay opt-in because it does not write business rows');
 
@@ -38,7 +38,7 @@ assert.strictEqual(productionOverrideFlags.allowProductionBootstrapWrites, true,
 assert.strictEqual(productionOverrideFlags.enableDefaultUserBootstrap, true, 'production override should allow default user bootstrap');
 assert.strictEqual(productionOverrideFlags.enableTableBootstrap, true, 'production override should allow table bootstrap');
 assert.strictEqual(productionOverrideFlags.enableDefaultPricePlanBootstrap, true, 'production override should allow default price plan bootstrap');
-assert.strictEqual(productionOverrideFlags.enableMabaoFinanceSeedBootstrap, true, 'production override should allow mabao finance seed bootstrap');
+assert.strictEqual(productionOverrideFlags.enableShunyiMapoFinanceSeedBootstrap, true, 'production override should allow shunyi_mapo finance seed bootstrap');
 assert.strictEqual(productionOverrideFlags.enableImportedLedgerAutoRepair, true, 'production override should allow imported ledger auto repair');
 
 const developmentFlags = rules.buildBootstrapSafetyFlags({
@@ -54,7 +54,7 @@ assert.strictEqual(developmentFlags.isProduction, false, 'development env should
 assert.strictEqual(developmentFlags.enableDefaultUserBootstrap, true, 'development can still opt into bootstrap flows');
 assert.strictEqual(developmentFlags.enableTableBootstrap, true, 'development can still opt into table bootstrap');
 assert.strictEqual(developmentFlags.enableDefaultPricePlanBootstrap, true, 'development can still opt into price plan bootstrap');
-assert.strictEqual(developmentFlags.enableMabaoFinanceSeedBootstrap, true, 'development can still opt into mabao finance seed bootstrap');
+assert.strictEqual(developmentFlags.enableShunyiMapoFinanceSeedBootstrap, true, 'development can still opt into shunyi_mapo finance seed bootstrap');
 assert.strictEqual(developmentFlags.enableImportedLedgerAutoRepair, true, 'development can still opt into imported ledger auto repair');
 
 console.log('init production safety tests passed');

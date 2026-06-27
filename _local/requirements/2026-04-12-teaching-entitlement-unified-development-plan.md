@@ -222,8 +222,8 @@
   "price": 0,
   "lessons": 0,
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -265,12 +265,12 @@
   "timeBand": "非黄金时段",
   "coachIds": ["coach-id"],
   "coachNames": ["朝珺"],
-  "campusIds": ["mabao"],
+  "campusIds": ["shunyi_mapo"],
   "maxStudents": 1,
   "status": "active",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -307,8 +307,8 @@
   "operator": "管理员",
   "status": "active",
   "notes": "",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -349,8 +349,8 @@
   "campusIds": [],
   "maxStudents": 1,
   "status": "active",
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -377,7 +377,7 @@
   "action": "consume",
   "reason": "排课消课",
   "operator": "管理员",
-  "createdAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -405,7 +405,7 @@
   "courseType": "私教课",
   "coach": "朝珺",
   "coachId": "coach-id",
-  "campus": "mabao",
+  "campus": "shunyi_mapo",
   "venue": "1号场",
   "lessonCount": 1,
   "status": "已排课",
@@ -426,7 +426,7 @@
   "courseType": "团课",
   "coach": "朝珺",
   "coachId": "coach-id",
-  "campus": "mabao",
+  "campus": "shunyi_mapo",
   "venue": "1号场",
   "lessonCount": 1,
   "status": "已排课",
@@ -471,7 +471,7 @@
   "studentName": "张三",
   "coach": "朝珺",
   "startTime": "2026-05-04 09:00",
-  "campus": "mabao",
+  "campus": "shunyi_mapo",
   "venue": "1号场",
   "lessonCount": 1,
   "remainingLessons": 3,
@@ -479,8 +479,8 @@
   "knowledgePoint": "重心转移",
   "nextTraining": "反手和步伐",
   "sentToStudent": false,
-  "createdAt": "2026-04-12T00:00:00.000Z",
-  "updatedAt": "2026-04-12T00:00:00.000Z"
+  "createdAt": "2026-04-12 00:00:00",
+  "updatedAt": "2026-04-12 00:00:00"
 }
 ```
 
@@ -508,7 +508,7 @@
   "category": "会员充值",
   "amount": 5000,
   "bonusAmount": 498,
-  "membershipOrderId": "mord-id",
+  "membershipOrderRef": "mord-id",
   "membershipAccountId": "macc-id",
   "membershipPlanId": "mplan-gold",
   "membershipPlanName": "黄金卡",
@@ -662,7 +662,7 @@
 ```json
 {
   "id": "mbled-id",
-  "membershipOrderId": "mord-id",
+  "membershipOrderRef": "mord-id",
   "membershipAccountId": "macc-id",
   "courtId": "court-id",
   "benefitCode": "ballMachine",
@@ -680,7 +680,7 @@
 规则：
 
 - 每次使用、补发、作废都记流水。
-- 必须精确到 `membershipOrderId`，因为赠送权益按购买批次独立失效。
+- 必须精确到 `membershipOrderRef`，因为赠送权益按购买批次独立失效。
 - 赠送权益不进入上课课包权益表。
 
 #### 3.8.6 `membership_account_events` 会员账户事件
@@ -699,7 +699,7 @@
   "afterValidUntil": "2028-04-04",
   "operator": "system",
   "reason": "一年期到期仍有余额，自动延续 12 个月",
-  "createdAt": "2027-04-05T00:00:00.000Z"
+  "createdAt": "2027-04-05 00:00:00"
 }
 ```
 

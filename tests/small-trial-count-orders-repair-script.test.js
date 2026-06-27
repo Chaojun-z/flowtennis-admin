@@ -9,7 +9,7 @@ const data = {
   activeEntitlementIndex: TARGETS.map(t => ({ id: t.studentId, studentId: t.studentId, entitlementIds: [t.entitlementId] }))
 };
 
-const plan = buildPlan(data, '2026-06-06T00:00:00.000Z');
+const plan = buildPlan(data, '2026-06-06 00:00:00');
 
 assert.deepStrictEqual(
   plan.putPurchases.map(row => ({ studentName: row.studentName, packageName: row.packageName, experienceType: row.experienceType, total: row.totalLessons })),

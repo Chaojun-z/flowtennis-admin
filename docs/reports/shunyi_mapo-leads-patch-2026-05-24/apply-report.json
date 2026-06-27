@@ -1,6 +1,6 @@
 {
   "mode": "write",
-  "importBatch": "mabao_leads_patch_20260524",
+  "importBatch": "shunyi_mapo_leads_patch_20260524",
   "target": {
     "onlineEndpoint": "https://flowtennis-ue.us-east-1.ots.aliyuncs.com",
     "onlineInstance": "flowtennis-ue",
@@ -44,5 +44,5 @@
   ],
   "missingLeadIds": [],
   "missingFollowupIds": [],
-  "generatedAt": "2026-05-24T04:17:36.918Z"
+  "generatedAt": "2026-05-24 04:17:36"
 }

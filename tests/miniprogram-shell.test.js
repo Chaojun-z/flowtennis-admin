@@ -267,14 +267,14 @@ assert.strictEqual(
   300,
   'timetable course blocks should be positioned from 07:00'
 );
-const todoNow = new Date('2026-04-21T12:00:00+08:00');
+const todoNow = new Date('2026-04-21 12:00:00');
 assert.strictEqual(
   scheduleUtils.workbenchTodoState({ startTime: '2026-04-21 15:00', endTime: '2026-04-21 16:00', status: '已排课' }, todoNow),
   null,
   'future later courses should not expose a standalone later state'
 );
 assert.strictEqual(
-  scheduleUtils.formatScheduleItem({ campus: 'mabao', venue: '1号场' }).locationText,
+  scheduleUtils.formatScheduleItem({ campus: 'shunyi_mapo', venue: '1号场' }).locationText,
   '顺义马坡 · 1号场',
   'mini program schedule items should render campus display names instead of raw campus codes'
 );
@@ -283,11 +283,11 @@ assert.strictEqual(
   '国网北区 · C1',
   'mini program schedule items should hide the internal external-campus sentinel value'
 );
-const sundayNow = new Date('2026-04-26T09:00:00+08:00');
+const sundayNow = new Date('2026-04-26 09:00:00');
 const sundayWindow = scheduleUtils.buildTimetableDays([
-  { id: 'sun', startTime: '2026-04-26 13:00', endTime: '2026-04-26 15:00', campus: 'mabao', venue: '1号场' },
-  { id: 'mon', startTime: '2026-04-27 09:00', endTime: '2026-04-27 11:00', campus: 'mabao', venue: '1号场' },
-  { id: 'tue', startTime: '2026-04-28 10:00', endTime: '2026-04-28 12:00', campus: 'mabao', venue: '1号场' }
+  { id: 'sun', startTime: '2026-04-26 13:00', endTime: '2026-04-26 15:00', campus: 'shunyi_mapo', venue: '1号场' },
+  { id: 'mon', startTime: '2026-04-27 09:00', endTime: '2026-04-27 11:00', campus: 'shunyi_mapo', venue: '1号场' },
+  { id: 'tue', startTime: '2026-04-28 10:00', endTime: '2026-04-28 12:00', campus: 'shunyi_mapo', venue: '1号场' }
 ], 0, sundayNow);
 assert.strictEqual(
   sundayWindow.length,

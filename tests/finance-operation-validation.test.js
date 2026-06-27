@@ -226,7 +226,7 @@ const realFinanceTrace = _test.buildFinancePageSnapshot({
     lessonDelta: -1,
     action: 'consume',
     relatedDate: '2026-06-14',
-    createdAt: '2026-06-14T10:00:00.000Z',
+    createdAt: '2026-06-14 10:00:00',
     operationId: 'op-real-finance-1',
     batchId: 'batch-real-finance-1'
   }],

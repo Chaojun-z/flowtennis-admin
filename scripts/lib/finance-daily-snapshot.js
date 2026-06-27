@@ -262,7 +262,7 @@ function buildDailyFinanceSnapshot({ generatedAt, snapshotDate, diag, tables, fi
 }
 
 function safeTimestamp(value) {
-  return String(value || '').replace(/[:.]/g, '-');
+  return String(value || '').replace('T', '_').replace(/Z$/g, '').replace(/\s+/g, '_').replace(/[:.]/g, '-');
 }
 
 function buildSnapshotOutputPath({ baseDir, snapshotDate, generatedAt }) {

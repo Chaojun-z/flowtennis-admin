@@ -38,13 +38,13 @@ async function main() {
     membershipPlans: 'membershipPlans'
   };
   const datasets = {
-    campuses: [{ code: 'mabao', name: '马坡' }],
+    campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
     students: [{ id: 'stu-1', name: '学员甲' }],
     courts: [{
       id: 'court-1',
       name: '客户A',
       phone: '13800000000',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       owner: '顾问A',
       familiarity: '熟',
       depositAttitude: '高',
@@ -61,12 +61,12 @@ async function main() {
         { type: '消费', amount: 300, payMethod: '储值扣款', category: '订场', date: '2026-05-10', startTime: '10:00', endTime: '12:00', venue: '1号场' },
         { type: '消费', amount: 200, payMethod: '微信', category: '其他', businessDate: '2026.05.12', startTime: '14:00', endTime: '15:30', venue: '2号场' }
       ],
-      updatedAt: '2026-05-13T10:00:00.000Z',
-      createdAt: '2026-05-01T10:00:00.000Z'
+      updatedAt: '2026-05-13 10:00:00',
+      createdAt: '2026-05-01 10:00:00'
     }, {
       id: 'court-non-member',
       name: '散客负余额',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       cachedBalance: -60,
       history: [],
       status: 'active'
@@ -79,7 +79,7 @@ async function main() {
       tierCode: '金卡',
       discountRate: 0.9,
       validUntil: '2026-12-31',
-      updatedAt: '2026-05-13T10:00:00.000Z'
+      updatedAt: '2026-05-13 10:00:00'
     }],
     membershipOrders: [
       { id: 'order-1', courtId: 'court-1', membershipAccountId: 'ma-1', status: 'paid', rechargeAmount: 500, purchaseDate: '2026-05-01' },

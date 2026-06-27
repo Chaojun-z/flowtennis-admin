@@ -5,7 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const scriptsDir = path.join(root, 'scripts');
 const guardPath = path.join(root, 'scripts', 'lib', 'production-write-guard.js');
-const mabaoCorePath = path.join(root, 'scripts', 'lib', 'mabao-import-core.js');
+const shunyi_mapoCorePath = path.join(root, 'scripts', 'lib', 'shunyi_mapo-import-core.js');
 
 assert.ok(fs.existsSync(guardPath), '生产写脚本必须有统一安全入口 scripts/lib/production-write-guard.js');
 
@@ -96,9 +96,9 @@ function listJsFiles(dir) {
   return files;
 }
 
-const mabaoCoreSource = fs.readFileSync(mabaoCorePath, 'utf8');
+const shunyi_mapoCoreSource = fs.readFileSync(shunyi_mapoCorePath, 'utf8');
 assert.match(
-  mabaoCoreSource,
+  shunyi_mapoCoreSource,
   /production-write-guard/,
   '马坡导入公共核心也必须走统一生产写安全入口'
 );
@@ -119,8 +119,8 @@ for (const filePath of writeScripts) {
   const source = fs.readFileSync(filePath, 'utf8');
   const rel = path.relative(root, filePath);
   const directGuard = /production-write-guard/.test(source);
-  const viaMabaoCore = /require\(['"]\.\/lib\/mabao-import-core['"]\)/.test(source);
-  assert.ok(directGuard || viaMabaoCore, `${rel} 会写数据，必须接入统一生产写安全入口`);
+  const viaShunyiMapoCore = /require\(['"]\.\/lib\/shunyi_mapo-import-core['"]\)/.test(source);
+  assert.ok(directGuard || viaShunyiMapoCore, `${rel} 会写数据，必须接入统一生产写安全入口`);
 }
 
 testDiagTokenAndTargetCheck().then(() => {

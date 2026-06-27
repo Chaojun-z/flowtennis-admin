@@ -6,7 +6,7 @@ const {
   buildPlan
 } = require('../scripts/repair-course-package-five-students-20260528');
 
-const now = '2026-05-28T12:00:00.000Z';
+const now = '2026-05-28 12:00:00';
 
 const entitlements = Object.values(IDS.entitlements).map((id) => ({
   id,

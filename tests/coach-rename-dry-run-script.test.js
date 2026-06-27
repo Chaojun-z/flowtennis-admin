@@ -34,7 +34,7 @@ const plan = dryRun.buildCoachRenameDryRunPlan({
       { id: 'ent-untouched', ownerCoach: '其他教练' }
     ]
   },
-  now: '2026-05-27T10:00:00.000Z'
+  now: '2026-05-27 10:00:00'
 });
 
 assert.deepStrictEqual(plan.coachRows, {
@@ -81,7 +81,7 @@ const accountPlan = dryRun.buildCoachAccountNameRepairPlan({
     ],
     students: [{ id: 'stu-rive', primaryCoachId: '天昊', primaryCoach: 'rive' }]
   },
-  now: '2026-05-28T10:00:00.000Z'
+  now: '2026-05-28 10:00:00'
 });
 
 assert.strictEqual(accountPlan.counts.schedule, 3);

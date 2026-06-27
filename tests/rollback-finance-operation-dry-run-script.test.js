@@ -11,7 +11,7 @@ const snapshotPath = path.join(tmpDir, 'snapshot.json');
 
 const snapshot = {
   schemaVersion: 1,
-  generatedAt: '2026-06-14T10:00:00.000Z',
+  generatedAt: '2026-06-14 10:00:00',
   tables: {
     ft_purchases: {
       rowCount: 2,

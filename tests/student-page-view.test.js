@@ -359,8 +359,8 @@ assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studen
 assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');
 assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');
 assert.match(source, /entitlements\.filter\(e=>e\.studentId===stu\?\.id\)\.sort\(\(a,b\)=>String\(studentEntitlementPurchaseDate\(a,purchases\.find\(p=>p\.id===a\.purchaseId\)\|\|\{\}\)\)\.localeCompare\(String\(studentEntitlementPurchaseDate\(b,purchases\.find\(p=>p\.id===b\.purchaseId\)\|\|\{\}\)\)\)\)/, 'student package purchase records should sort older purchases first');
-assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so mabao and 顺义马坡 stay one campus');
-assert.match(source, /sameCampusValue\(s\.campus,campus\)/, 'student page campus filter should treat mabao and 顺义马坡 as the same campus');
+assert.match(source, /function sameCampusValue\(/, 'campus matching should use one helper so shunyi_mapo and 顺义马坡 stay one campus');
+assert.match(source, /sameCampusValue\(s\.campus,campus\)/, 'student page campus filter should treat shunyi_mapo and 顺义马坡 as the same campus');
 assert.match(source, /const purchaseDate=studentEntitlementPurchaseDate\(e,purchase\);/, 'student package purchase records should use a dedicated purchase date resolver');
 assert.doesNotMatch(source, /const purchaseDate=e\.purchaseDate\|\|purchase\.purchaseDate\|\|String\(e\.createdAt\|\|purchase\.createdAt\|\|''\)\.slice\(0,10\);/, 'student package purchase date should not fall back to import createdAt');
 

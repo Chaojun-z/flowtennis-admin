@@ -120,8 +120,8 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const courtMap=new Map((courts||[]).map(item=>[String(item.id||''),item]));
   const courtMembershipOrderIds=new Set();
   (courts||[]).forEach(court=>normalizeCourtHistory(court.history).forEach(historyRow=>{
-    const membershipOrderId=String(historyRow.membershipOrderId||'').trim();
-    if(membershipOrderId)courtMembershipOrderIds.add(membershipOrderId);
+    const membershipOrderRef=String(historyRow.membershipOrderRef||'').trim();
+    if(membershipOrderRef)courtMembershipOrderIds.add(membershipOrderRef);
   }));
   const courseReceiptRows=(purchases||[]).filter(purchase=>!['voided','refunded','deleted'].includes(String(purchase?.status||'active'))).map(purchase=>{
     const entitlement=entitlementByPurchaseId.get(String(purchase.id))||{};
@@ -458,7 +458,7 @@ function buildFinancePageSnapshot(source={}){
 }
 const FINANCE_IMPORT_INCREMENT_PREFIX='private_lesson_csv_import_';
 const FINANCE_MEMBERSHIP_IMPORT_ORDER_PREFIX='membership-import-order-';
-const MABAO_FINAL_IMPORT_TAG='mabao-finance-import-20260524';
+const MABAO_FINAL_IMPORT_TAG='shunyi_mapo-finance-import-20260524';
 function isFinanceImportIncrementRow(row){
   return String(row?.id||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX)||String(row?.importBatchId||'').startsWith(FINANCE_IMPORT_INCREMENT_PREFIX);
 }

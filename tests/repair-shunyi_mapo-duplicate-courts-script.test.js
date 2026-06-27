@@ -6,9 +6,9 @@ const path = require('path');
 const {
   parseArgs,
   run
-} = require('../scripts/repair-mabao-duplicate-courts-20260524');
+} = require('../scripts/repair-shunyi_mapo-duplicate-courts-20260524');
 
-const now = '2026-06-14T10:30:00.000Z';
+const now = '2026-06-14 10:30:00';
 const target = {
   onlineEndpoint: 'https://flowtennis-ue.us-east-1.ots.aliyuncs.com',
   onlineInstance: 'flowtennis-ue',
@@ -28,7 +28,7 @@ const data = {
       id: 'private_lesson_csv_import_20260524-court-source',
       name: '散客王',
       status: 'active',
-      history: [{ id: 'history-import', type: '消费', category: '订场', payMethod: '微信', amount: 200, seedTag: 'mabao-finance-import-20260524' }]
+      history: [{ id: 'history-import', type: '消费', category: '订场', payMethod: '微信', amount: 200, seedTag: 'shunyi_mapo-finance-import-20260524' }]
     }
   ],
   membershipAccounts: [],
@@ -59,7 +59,7 @@ function fakeMergeCourtRecords({ targetCourt, sourceCourt, now: mergeNow }) {
 
 function makeDeps(overrides = {}) {
   const writes = [];
-  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mabao-duplicate-courts-report-'));
+  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shunyi_mapo-duplicate-courts-report-'));
   return {
     writes,
     deps: {
@@ -118,7 +118,7 @@ async function main() {
   assert.deepStrictEqual(parseArgs(['--write']), { write: true, dryRun: false });
   await testDefaultDryRunDoesNotWrite();
   await testWriteAddsHistoryTraceAndReport();
-  console.log('mabao duplicate courts repair script tests passed');
+  console.log('shunyi_mapo duplicate courts repair script tests passed');
 }
 
 main().catch((err) => {

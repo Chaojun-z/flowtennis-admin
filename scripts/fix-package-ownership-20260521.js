@@ -5,7 +5,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const { createClientFromEnv, scanTable, putRow, deleteRow } = require('./lib/staging-data-store');
 const { assertProductionWriteTarget } = require('./lib/production-write-guard');
-const seed = require('../server/seeds/mabao-finance-seed.json');
+const seed = require('../server/seeds/shunyi_mapo-finance-seed.json');
 
 const TABLES = {
   packages: 'ft_packages',
@@ -345,7 +345,7 @@ function buildPackage(name, now) {
     ownerCoach: spec.ownerCoach || '',
     coachIds: spec.coachNames || [],
     coachNames: spec.coachNames || [],
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     maxStudents: spec.maxStudents || 1,
     status: /（历史）/.test(name) ? 'inactive' : 'active',
     sourceType: 'package_ownership_fix_20260521',
@@ -735,7 +735,7 @@ function buildMappingRowsFromSourceCsv({ packages = [], purchases = [] } = {}, o
       classSize: row.classSize,
       timeBand: packageField(targetName, (name, spec) => normalizePackageTimeBand(spec.timeBand || (/黄金/.test(name) ? '黄金时间' : /非黄/.test(name) ? '非黄时间' : ''))),
       ownerCoach: packageField(targetName, (name, spec) => spec.ownerCoach) || normalizeCoachName(row.ownerCoach),
-      campus: packageField(targetName, (_name, spec) => (spec.campusIds || ['mabao']).join('|')) || 'mabao',
+      campus: packageField(targetName, (_name, spec) => (spec.campusIds || ['shunyi_mapo']).join('|')) || 'shunyi_mapo',
       maxStudents: packageField(targetName, (_name, spec) => spec.maxStudents),
       status: notInSystem ? '不录入系统' : (targets.some((name) => /（历史）/.test(name)) ? '已停售' : '售卖中'),
       source: `${path.basename(options.statsCsv || DEFAULT_STATS_CSV)}#${row.sourceRowNo}${purchase ? '' : '；当前线上未找到订单'}`
@@ -762,7 +762,7 @@ function buildMappingRows({ packages = [], purchases = [] } = {}) {
         paidAmount: purchase?.amountPaid ?? purchase?.finalAmount ?? '',
         timeBand: normalizePackageTimeBand(spec.timeBand),
         ownerCoach: spec.ownerCoach || purchase?.ownerCoach || '',
-        campus: (spec.campusIds || pkg.campusIds || ['mabao']).join('|'),
+        campus: (spec.campusIds || pkg.campusIds || ['shunyi_mapo']).join('|'),
         maxStudents: spec.maxStudents || '',
         status: /（历史）/.test(targetName) ? '已停售' : '售卖中',
         source
@@ -829,7 +829,7 @@ function applySourcePackageSnapshot(row, targetPackage, sourceRow, now, kind) {
   next.coachNames = targetPackage.coachNames?.length ? targetPackage.coachNames : (next.ownerCoach ? [next.ownerCoach] : next.coachNames || []);
   next.coachIds = next.coachNames;
   next.allowedCoaches = next.coachNames;
-  next.campusIds = targetPackage.campusIds || ['mabao'];
+  next.campusIds = targetPackage.campusIds || ['shunyi_mapo'];
   if (kind === 'purchase') {
     next.packageName = targetPackage.name || '';
     next.packageId = targetPackage.id || '';

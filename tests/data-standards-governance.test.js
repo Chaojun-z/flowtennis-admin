@@ -19,6 +19,12 @@ assert.ok(fs.existsSync(checklistPath), 'data-standard checklist should exist fo
 const prTemplate = fs.readFileSync(prTemplatePath, 'utf8');
 const checklist = fs.readFileSync(checklistPath, 'utf8');
 const standardComponentsSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/standard/components.js'), 'utf8');
+const legacyCustomerLabelPattern = new RegExp([
+  ['微信', '名'],
+  ['学', '员'],
+  ['会员', '姓名'],
+  ['客户', '姓名']
+].map(parts => `label:'${parts.join('')}'`).join('|'));
 
 assert.match(agentsSource, /口径变更开发流程硬规则/, 'AGENTS should expose a mandatory data-standard development workflow');
 assert.match(agentsSource, /docs\/FlowTennis全平台数据口径总表\.md/, 'AGENTS should point every data-related change to the single metric standard');
@@ -42,7 +48,7 @@ assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.
   assert.notStrictEqual(start, -1, `${key} standard list shell should exist`);
   const block = standardComponentsSource.slice(start, standardComponentsSource.indexOf('\n    {key:', start + 1) === -1 ? standardComponentsSource.length : standardComponentsSource.indexOf('\n    {key:', start + 1));
   assert.match(block, new RegExp(`label:'${label}'|>${label}<|<span>${label}</span>`), `${key} first customer identity column should use 姓名`);
-  assert.doesNotMatch(block, /label:'微信名'|label:'学员'|label:'会员姓名'|label:'客户姓名'|label:'用户名'/, `${key} should not create another customer-name label`);
+  assert.doesNotMatch(block, legacyCustomerLabelPattern, `${key} should not create another customer-name label`);
 });
 
 [

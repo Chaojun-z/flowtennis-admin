@@ -24,14 +24,14 @@ assert.deepStrictEqual(
     id: 'mira',
     role: 'admin',
     dataScope: 'campus',
-    campusIds: ['mabao', 'mabao', ''],
+    campusIds: ['shunyi_mapo', 'shunyi_mapo', ''],
     matchPermissions: ['match_ops']
   }),
   {
     role: 'admin',
     systemType: 'management',
     dataScope: 'campus',
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     coachId: '',
     coachName: '',
     featurePermissions: ['match_ops', 'match_finance']
@@ -54,13 +54,13 @@ assert.deepStrictEqual(
 );
 
 assert.strictEqual(
-  permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: ['mabao'] }, 'mabao'),
+  permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }, 'shunyi_mapo'),
   true,
   'campus scoped user should access matching campus'
 );
 
 assert.strictEqual(
-  permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: ['mabao'] }, 'shilipu'),
+  permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }, 'shilipu'),
   false,
   'campus scoped user should not access another campus'
 );

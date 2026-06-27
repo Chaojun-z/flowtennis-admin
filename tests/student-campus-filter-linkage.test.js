@@ -29,30 +29,30 @@ const context = {
   localStorage: { getItem: () => null, setItem: () => null, removeItem: () => null },
   currentPage: 'package-students',
   campus: 'chaojun',
-  campuses: [{ id: 'chaojun', code: 'chaojun', name: '朝珺私教' }, { id: 'mabao', code: 'mabao', name: '顺义马坡' }],
-  CAMPUS: { chaojun: '朝珺私教', mabao: '顺义马坡' },
+  campuses: [{ id: 'chaojun', code: 'chaojun', name: '朝珺私教' }, { id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
+  CAMPUS: { chaojun: '朝珺私教', shunyi_mapo: '顺义马坡' },
   FlowTennisBusinessTaxonomy: {
     EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
     PRODUCT_TYPES: ['私教课', '体验课', '小班课', '大师课', '陪打']
   },
   students: [
-    { id: 'stu-17', name: '一七&zzxxyy', campus: 'mabao' },
-    { id: 'stu-xd', name: '铣大象', campus: 'mabao' },
-    { id: 'stu-misha', name: 'misha', campus: 'mabao' },
-    { id: 'stu-huang', name: '黄总', campus: 'mabao' },
-    { id: 'stu-putao', name: '葡萄', campus: 'mabao' }
+    { id: 'stu-17', name: '一七&zzxxyy', campus: 'shunyi_mapo' },
+    { id: 'stu-xd', name: '铣大象', campus: 'shunyi_mapo' },
+    { id: 'stu-misha', name: 'misha', campus: 'shunyi_mapo' },
+    { id: 'stu-huang', name: '黄总', campus: 'shunyi_mapo' },
+    { id: 'stu-putao', name: '葡萄', campus: 'shunyi_mapo' }
   ],
   purchases: [
-    { id: 'pur-17', studentId: 'stu-17', studentName: '一七&zzxxyy', packageId: 'pkg-gold', packageName: '1v1私教课', amountPaid: 5000, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '私教课' },
-    { id: 'pur-xd-paid', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 3500, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
-    { id: 'pur-putao-1', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 4500, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
-    { id: 'pur-putao-2', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 4000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
-    { id: 'pur-misha-paid', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
-    { id: 'pur-huang-paid', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['mabao'], courseType: '私教课' },
-    { id: 'pur-xd-free', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
-    { id: 'pur-misha-free', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
-    { id: 'pur-huang-free', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' },
-    { id: 'pur-putao-free', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'mabao'], courseType: '小班课' }
+    { id: 'pur-17', studentId: 'stu-17', studentName: '一七&zzxxyy', packageId: 'pkg-gold', packageName: '1v1私教课', amountPaid: 5000, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-xd-paid', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 3500, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-putao-1', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '1v1私教课', amountPaid: 4500, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-putao-2', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 4000, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-misha-paid', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-huang-paid', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-private', packageName: '成人1v1', amountPaid: 6000, status: 'active', campusIds: ['shunyi_mapo'], courseType: '私教课' },
+    { id: 'pur-xd-free', studentId: 'stu-xd', studentName: '铣大象', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '小班课' },
+    { id: 'pur-misha-free', studentId: 'stu-misha', studentName: 'misha', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '小班课' },
+    { id: 'pur-huang-free', studentId: 'stu-huang', studentName: '黄总', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '小班课' },
+    { id: 'pur-putao-free', studentId: 'stu-putao', studentName: '葡萄', packageId: 'pkg-gold', packageName: '小班训练营', amountPaid: 0, status: 'active', campusIds: ['chaojun', 'shunyi_mapo'], courseType: '小班课' }
   ],
   entitlements: [],
   entitlementLedger: [],

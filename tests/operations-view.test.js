@@ -246,14 +246,14 @@ assert.match(operationsSource, /renderOperationsLoading[\s\S]*renderStandardPage
 assert.match(operationsSource, /renderOperationsLoading[\s\S]*renderStandardPageSkeleton[\s\S]*operations-coach-kpi-strip[\s\S]*operations-coach-hero-grid[\s\S]*operations-coach-secondary-grid/, 'coach loading skeleton should use the global skeleton renderer with the real coach dashboard layout');
 assert.match(operationsSource, /renderOperationsCourtHeatCell\(slot = \{\}, venue = \{\}, options = \{\}\)/, 'court heat cell should receive venue context and row options for hover detail');
 assert.match(operationsSource, /slot\.heatRate[\s\S]*operationsCourtHeatStyle\(toneRate, usedMinutes\)/, 'court heat cell color should use a continuous relative heat scale while keeping true utilization in the label');
-assert.doesNotMatch(operationsSource, /data-rate|data-heat|data-minutes/, 'court heat cell should not expose internal debug data attributes');
+assert.doesNotMatch(operationsSource, /data-utilization|data-load|data-used-minutes/, 'court heat cell should not expose internal debug data attributes');
 assert.match(operationsSource, /operationsCourtHeatNextHour\(hour\)/, 'court heat tooltip should show a half-hour time range');
 assert.match(operationsSource, /inferredCapacity[\s\S]*capacityMinutes[\s\S]*occupiedText[\s\S]*dayText/, 'court heat tooltip should avoid showing zero denominators when the API provides utilization but omits numerator fields');
 assert.match(operationsSource, /data-tip="\$\{esc\(label\)\}"/, 'court heat tooltip should render usage detail from a data attribute with numerator/denominator');
 assert.match(operationsSource, /operationsCourtHeatVenueName[\s\S]*legacyUnmatchedVenueNames[\s\S]*未匹配/, 'court heatmap should normalize legacy unmatched names at render time');
 assert.match(operationsSource, /aria-label="[^"]*\$\{esc\(venueName\)\}[\s\S]*\$\{esc\(hour\)\}-\$\{esc\(endHour\)\}[\s\S]*\$\{fmt\(rate\)\}%[\s\S]*使用时长 \$\{fmt\(usedMinutes\)\} \/ \$\{fmt\(capacityMinutes\)\}分钟/, 'court heat cell should expose venue, time range, utilization and occupied minutes for hover/accessibility');
 assert.doesNotMatch(operationsSource, /title="\$\{esc\(label\)\}"/, 'court heat cell should not rely on the browser native tooltip');
-assert.doesNotMatch(operationsSource, /data-rate="\$\{fmt\(rate\)\}"/, 'court heat cell should not expose utilization debug data');
+assert.doesNotMatch(operationsSource, /data-utilization="\$\{fmt\(rate\)\}"/, 'court heat cell should not expose utilization debug data');
 assert.match(operationsSource, /operations-court-empty-heat[\s\S]*暂无启用场地/, 'campus heatmap should show a clear empty state when no active venues exist');
 assert.match(operationsSource, /operationsCourtHeatTone\(value, minutes = 0\)[\s\S]*usedMinutes > 0[\s\S]*return 'low'/, 'court heatmap should show any occupied slot as low load instead of looking empty');
 assert.match(operationsSource, /黄金时段利用率[\s\S]*非黄金时段利用率/, 'court heatmap should expose golden and off-peak utilization rates');

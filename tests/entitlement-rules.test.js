@@ -4,8 +4,8 @@ const api = require('../api/index.js');
 const rules = api._test;
 
 assert.ok(rules, 'api._test should expose entitlement rule helpers');
-assert.ok(rules.collectMabaoSeedStaleRowIds, 'api._test should expose mabao seed stale row cleanup helper');
-assert.ok(rules.collectMabaoSeedImportedLedgerReplacementIds, 'api._test should expose imported ledger replacement cleanup helper');
+assert.ok(rules.collectShunyiMapoSeedStaleRowIds, 'api._test should expose shunyi_mapo seed stale row cleanup helper');
+assert.ok(rules.collectShunyiMapoSeedImportedLedgerReplacementIds, 'api._test should expose imported ledger replacement cleanup helper');
 assert.ok(rules.collectDuplicateImportedLedgerIds, 'api._test should expose generic duplicate imported ledger cleanup helper');
 assert.ok(rules.normalizeEntitlementLedgerRowsForView, 'api._test should expose ledger view normalization helper');
 assert.ok(rules.normalizeEntitlementLedgerRowsForDetailView, 'api._test should expose ledger detail view normalization helper');
@@ -28,7 +28,7 @@ const pkg = {
   timeBand: '非黄金时段',
   coachIds: ['coach-1'],
   coachNames: ['朝珺'],
-  campusIds: ['mabao'],
+  campusIds: ['shunyi_mapo'],
   maxStudents: 1
 };
 
@@ -43,7 +43,7 @@ const purchase = {
   allowedCoaches: ['mira', '小舟']
 };
 
-const entitlement = rules.buildEntitlementFromPurchase(pkg, purchase, { id: 'stu-1', name: '张三' }, 'ent-1', '2026-04-12T00:00:00.000Z');
+const entitlement = rules.buildEntitlementFromPurchase(pkg, purchase, { id: 'stu-1', name: '张三' }, 'ent-1', '2026-04-12 00:00:00');
 
 const oldImportedLedger = {
   id: 'old-2',
@@ -65,7 +65,7 @@ const currentImportedLedger = {
   reason: '历史导入 2月消课',
   relatedDate: '2026-02-28',
   sourceMonth: '2026-02',
-  seedTag: 'mabao-finance-seed-v8'
+  seedTag: 'shunyi_mapo-finance-seed-v8'
 };
 
 assert.deepStrictEqual(
@@ -91,11 +91,11 @@ assert.deepStrictEqual(
 
 assert.strictEqual(
   rules.userCanManageManualEntitlementAdjustment(
-    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     {
-      entitlement: { campusIds: ['mabao'] },
+      entitlement: { campusIds: ['shunyi_mapo'] },
       purchase: { campusIds: ['shilipu'] },
-      packageRow: { campusIds: ['mabao'] },
+      packageRow: { campusIds: ['shunyi_mapo'] },
       student: { campus: 'shilipu' }
     }
   ),
@@ -105,12 +105,12 @@ assert.strictEqual(
 
 assert.strictEqual(
   rules.userCanManageManualEntitlementAdjustment(
-    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     {
       entitlement: { campusIds: [] },
       purchase: { campusIds: ['shilipu'] },
       packageRow: { campusIds: [] },
-      student: { campus: 'mabao' }
+      student: { campus: 'shunyi_mapo' }
     }
   ),
   false,
@@ -119,7 +119,7 @@ assert.strictEqual(
 
 assert.strictEqual(
   rules.userCanManageManualEntitlementAdjustment(
-    { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     {
       entitlement: { campusIds: [] },
       purchase: {},
@@ -135,9 +135,9 @@ assert.doesNotThrow(
   () => rules.validateManualEntitlementAdjustment({
     entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
     purchase: { id: 'pur-1' },
-    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    packageRow: { id: 'pkg-1', campusIds: ['shunyi_mapo'] },
     student: { id: 'stu-1' },
-    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     lessonDelta: -5,
     relatedDate: '2026-04-10',
     reason: '补录历史训练营课时'
@@ -149,9 +149,9 @@ assert.throws(
   () => rules.validateManualEntitlementAdjustment({
     entitlement: { id: 'ent-1', status: 'active', remainingLessons: 4, usedLessons: 6, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
     purchase: { id: 'pur-1' },
-    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    packageRow: { id: 'pkg-1', campusIds: ['shunyi_mapo'] },
     student: { id: 'stu-1' },
-    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     lessonDelta: -5,
     relatedDate: '2026-04-10',
     reason: '补录历史训练营课时'
@@ -164,7 +164,7 @@ assert.throws(
   () => rules.validateManualEntitlementAdjustment({
     entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
     purchase: { id: 'pur-1' },
-    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    packageRow: { id: 'pkg-1', campusIds: ['shunyi_mapo'] },
     student: { id: 'stu-1' },
     user: { role: 'admin', dataScope: 'campus', campusIds: ['shilipu'] },
     lessonDelta: -1,
@@ -179,9 +179,9 @@ assert.throws(
   () => rules.validateManualEntitlementAdjustment({
     entitlement: { id: 'ent-1', status: 'active', remainingLessons: 5, usedLessons: 5, totalLessons: 10, validFrom: '2026-03-01', validUntil: '2026-06-30' },
     purchase: { id: 'pur-1' },
-    packageRow: { id: 'pkg-1', campusIds: ['mabao'] },
+    packageRow: { id: 'pkg-1', campusIds: ['shunyi_mapo'] },
     student: { id: 'stu-1' },
-    user: { role: 'admin', dataScope: 'campus', campusIds: ['mabao'] },
+    user: { role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] },
     lessonDelta: -1,
     relatedDate: '2026-07-10',
     reason: '补录历史训练营课时'
@@ -198,7 +198,7 @@ assert.deepStrictEqual(
     reason: '补录历史训练营课时',
     user: { name: '马坡管理员' },
     operationTrace: { operationId: 'op-manual-1', batchId: 'batch-op-manual-1' }
-  }, { id: 'ledger-manual-1', now: '2026-06-12T10:00:00.000Z' }),
+  }, { id: 'ledger-manual-1', now: '2026-06-12 10:00:00' }),
   {
     id: 'ledger-manual-1',
     entitlementId: 'ent-1',
@@ -212,7 +212,7 @@ assert.deepStrictEqual(
     relatedDate: '2026-04-10',
     sourceDate: '2026-04-10',
     operator: '马坡管理员',
-    createdAt: '2026-06-12T10:00:00.000Z',
+    createdAt: '2026-06-12 10:00:00',
     packageName: '小班训练营',
     coach: '朝珺',
     operationId: 'op-manual-1',
@@ -254,7 +254,7 @@ assert.deepStrictEqual(
 );
 
 assert.deepStrictEqual(
-  rules.buildPurchaseRecord(pkg, purchase, { id: 'stu-1', name: '张三', phone: '13800000000' }, { id: 'pur-1', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }),
+  rules.buildPurchaseRecord(pkg, purchase, { id: 'stu-1', name: '张三', phone: '13800000000' }, { id: 'pur-1', now: '2026-04-12 00:00:00', operator: '管理员' }),
   {
     id: 'pur-1',
     studentId: 'stu-1',
@@ -271,7 +271,7 @@ assert.deepStrictEqual(
     dailyTimeWindows: [{ label: '非黄金时段', startTime: '07:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] }],
     coachIds: ['coach-1'],
     coachNames: ['朝珺'],
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     ownerCoach: '朝珺',
     allowedCoaches: ['mira', '小舟'],
     priceSource: 'package',
@@ -288,8 +288,8 @@ assert.deepStrictEqual(
     payMethod: '微信',
     operator: '管理员',
     status: 'active',
-    createdAt: '2026-04-12T00:00:00.000Z',
-    updatedAt: '2026-04-12T00:00:00.000Z'
+    createdAt: '2026-04-12 00:00:00',
+    updatedAt: '2026-04-12 00:00:00'
   },
   'purchase should store immutable package and student snapshots'
 );
@@ -300,25 +300,25 @@ assert.deepStrictEqual(
       pkg,
       { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
       { id: 'stu-1', name: '张三', phone: '13800000000' },
-      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+      { id: 'pur-override', now: '2026-04-12 00:00:00', operator: '管理员' }
     ).systemAmount,
     finalAmount: rules.buildPurchaseRecord(
       pkg,
       { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
       { id: 'stu-1', name: '张三', phone: '13800000000' },
-      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+      { id: 'pur-override', now: '2026-04-12 00:00:00', operator: '管理员' }
     ).finalAmount,
     priceOverridden: rules.buildPurchaseRecord(
       pkg,
       { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
       { id: 'stu-1', name: '张三', phone: '13800000000' },
-      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+      { id: 'pur-override', now: '2026-04-12 00:00:00', operator: '管理员' }
     ).priceOverridden,
     overrideReason: rules.buildPurchaseRecord(
       pkg,
       { ...purchase, amountPaid: 880, overrideReason: '老客补差优惠' },
       { id: 'stu-1', name: '张三', phone: '13800000000' },
-      { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+      { id: 'pur-override', now: '2026-04-12 00:00:00', operator: '管理员' }
     ).overrideReason
   },
   {
@@ -335,7 +335,7 @@ assert.throws(
     pkg,
     { ...purchase, amountPaid: 880, overrideReason: '' },
     { id: 'stu-1', name: '张三', phone: '13800000000' },
-    { id: 'pur-override', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+    { id: 'pur-override', now: '2026-04-12 00:00:00', operator: '管理员' }
   ),
   /请填写改价原因/,
   'purchase snapshot should require override reason when final deal price differs from system price'
@@ -372,36 +372,36 @@ assert.throws(
 );
 
 assert.throws(
-  () => rules.validatePackageInput({ ...pkg, productId: 'missing' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, productId: 'missing' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   /课程产品不存在/,
   'package must reference an existing product'
 );
 
 assert.doesNotThrow(
-  () => rules.validatePackageInput({ ...pkg, productId: '', productName: '' }, { products: [{ id: 'prod-1' }], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, productId: '', productName: '' }, { products: [{ id: 'prod-1' }], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   'package-only rule should allow package without product id when course type is present'
 );
 
 assert.throws(
-  () => rules.validatePackageInput({ ...pkg, courseType: '', type: '' }, { products: [{ id: 'prod-1' }], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, courseType: '', type: '' }, { products: [{ id: 'prod-1' }], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   /请填写课程类型/,
   'package should require course type even when product still exists'
 );
 
 assert.throws(
-  () => rules.validatePackageInput({ ...pkg, saleStartDate: '2026-06-01', saleEndDate: '2026-05-01' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, saleStartDate: '2026-06-01', saleEndDate: '2026-05-01' }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   /活动结束时间不能早于活动开始时间/,
   'package sale date range must be valid'
 );
 
 assert.throws(
-  () => rules.validatePackageInput({ ...pkg, price: 0 }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, price: 0 }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   /价格必须大于 0/,
   'package price must be positive'
 );
 
 assert.throws(
-  () => rules.validatePackageInput({ ...pkg, dailyTimeWindows: [{ startTime: '10:00', endTime: '09:00' }] }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput({ ...pkg, dailyTimeWindows: [{ startTime: '10:00', endTime: '09:00' }] }, { products: [{ id: 'prod-1' }], coaches: [{ name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   /可用结束时间必须晚于开始时间/,
   'package daily time windows must be valid'
 );
@@ -430,13 +430,13 @@ const smallGroupBootcampPackage = {
 };
 
 assert.doesNotThrow(
-  () => rules.validatePackageInput(smallGroupBootcampPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+  () => rules.validatePackageInput(smallGroupBootcampPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
   'small group bootcamp package should be a valid package-only small class product'
 );
 
 for(const lessons of [10,20,12]){
   assert.doesNotThrow(
-    () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+    () => rules.validatePackageInput({ ...smallGroupBootcampPackage, lessons }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
     `small group bootcamp should allow ${lessons} lessons`
   );
 }
@@ -447,7 +447,7 @@ for(const smallClassPackage of [
   { ...smallGroupBootcampPackage, smallClassType: 'dropin', price: 999, lessons: 6, timeBand: '全天', fixedStudentCount: 0, freeAbsenceLimit: 0 }
 ]){
   assert.doesNotThrow(
-    () => rules.validatePackageInput(smallClassPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }),
+    () => rules.validatePackageInput(smallClassPackage, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
     `${smallClassPackage.smallClassType} small group package should allow custom price`
   );
 }
@@ -456,7 +456,7 @@ assert.strictEqual(
   rules.normalizePackageRecord(
     { ...smallGroupBootcampPackage, smallClassType: 'single', name: '小班单次课 · 12次 · 全天', price: 1499, lessons: 6, timeBand: '全天', fixedStudentCount: 0, freeAbsenceLimit: 0 },
     null,
-    { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'mabao' }] }
+    { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }
   ).smallClassType,
   'dropin',
   '1499 small group package should be corrected to dropin when changing the count back to 6'
@@ -466,7 +466,7 @@ const smallGroupPurchase = rules.buildPurchaseRecord(
   smallGroupBootcampPackage,
   { ...purchase, id: 'pur-small-1', amountPaid: 1888 },
   { id: 'stu-small-1', name: '小班学员', phone: '13800000001' },
-  { id: 'pur-small-1', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+  { id: 'pur-small-1', now: '2026-04-12 00:00:00', operator: '管理员' }
 );
 
 assert.deepStrictEqual(
@@ -498,7 +498,7 @@ const smallGroupEntitlement = rules.buildEntitlementFromPurchase(
   smallGroupPurchase,
   { id: 'stu-small-1', name: '小班学员' },
   'ent-small-1',
-  '2026-04-12T00:00:00.000Z'
+  '2026-04-12 00:00:00'
 );
 
 assert.deepStrictEqual(
@@ -534,7 +534,7 @@ const smallTrialEntitlement = {
   maxStudents: 4,
   timeBand: '全天',
   dailyTimeWindows: [],
-  campusIds: ['mabao']
+  campusIds: ['shunyi_mapo']
 };
 const smallTrialSchedule = {
   id: 'sch-small-trial',
@@ -545,7 +545,7 @@ const smallTrialSchedule = {
   settlementType: 'package',
   startTime: '2026-06-04 14:00',
   endTime: '2026-06-04 15:30',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   lessonCount: 1.5,
   status: '已排课'
 };
@@ -562,21 +562,21 @@ assert.deepStrictEqual(
 );
 
 assert.deepStrictEqual(
-  rules.collectMabaoSeedStaleRowIds(
+  rules.collectShunyiMapoSeedStaleRowIds(
     [
-      { id: 'seed-ledger-old', seedTag: 'mabao-finance-seed-v7' },
-      { id: 'seed-ledger-keep', seedTag: 'mabao-finance-seed-v8' },
+      { id: 'seed-ledger-old', seedTag: 'shunyi_mapo-finance-seed-v7' },
+      { id: 'seed-ledger-keep', seedTag: 'shunyi_mapo-finance-seed-v8' },
       { id: 'manual-ledger', seedTag: '' }
     ],
     [{ id: 'seed-ledger-keep' }],
-    'mabao-finance-seed-v8'
+    'shunyi_mapo-finance-seed-v8'
   ),
   ['seed-ledger-old'],
-  'seed bootstrap should clean old mabao finance rows that are no longer in the current seed set'
+  'seed bootstrap should clean old shunyi_mapo finance rows that are no longer in the current seed set'
 );
 
 assert.deepStrictEqual(
-  rules.collectMabaoSeedImportedLedgerReplacementIds(
+  rules.collectShunyiMapoSeedImportedLedgerReplacementIds(
     [
       { id: 'legacy-month-1', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', relatedDate: '2026-01-28', sourceMonth: '', seedTag: '' },
       { id: 'legacy-month-2', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -2, reason: '历史导入 2月消课', relatedDate: '2026-02-28', sourceMonth: '', seedTag: '' },
@@ -584,8 +584,8 @@ assert.deepStrictEqual(
       { id: 'other-student', entitlementId: 'seed-entitlement-999', purchaseId: 'seed-purchase-999', studentId: 'seed-student-999', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', relatedDate: '2026-01-31', sourceMonth: '', seedTag: '' }
     ],
     [
-      { id: 'seed-ledger-001-01-1', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', sourceMonth: '2026-01', seedTag: 'mabao-finance-seed-v8' },
-      { id: 'seed-ledger-001-02-1', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -2, reason: '历史导入 2月消课', sourceMonth: '2026-02', seedTag: 'mabao-finance-seed-v8' }
+      { id: 'seed-ledger-001-01-1', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', sourceMonth: '2026-01', seedTag: 'shunyi_mapo-finance-seed-v8' },
+      { id: 'seed-ledger-001-02-1', entitlementId: 'seed-entitlement-001', purchaseId: 'seed-purchase-001', studentId: 'seed-student-001', scheduleId: '', lessonDelta: -2, reason: '历史导入 2月消课', sourceMonth: '2026-02', seedTag: 'shunyi_mapo-finance-seed-v8' }
     ]
   ),
   ['legacy-month-1', 'legacy-month-2'],
@@ -596,7 +596,7 @@ assert.deepStrictEqual(
   rules.collectDuplicateImportedLedgerIds(
     [
       { id: 'legacy-1', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', relatedDate: '2026-01-28', sourceMonth: '', notes: '固定周六', seedTag: '' },
-      { id: 'seed-1', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', relatedDate: '2026-01-31', sourceMonth: '2026-01', notes: '固定周六', seedTag: 'mabao-finance-seed-v8' },
+      { id: 'seed-1', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -5, reason: '历史导入 1月消课', relatedDate: '2026-01-31', sourceMonth: '2026-01', notes: '固定周六', seedTag: 'shunyi_mapo-finance-seed-v8' },
       { id: 'legacy-2', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -2, reason: '历史导入 2月消课', relatedDate: '2026-02-28', sourceMonth: '', notes: '固定周六', seedTag: '' },
       { id: 'manual-adjust', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -1, reason: '人工补扣', relatedDate: '2026-02-28', sourceMonth: '', notes: '异常处理', seedTag: '' },
       { id: 'different-delta', entitlementId: 'ent-1', purchaseId: 'pur-1', studentId: 'stu-1', scheduleId: '', lessonDelta: -1, reason: '历史导入 1月消课', relatedDate: '2026-01-31', sourceMonth: '', notes: '固定周六', seedTag: '' }
@@ -616,7 +616,7 @@ const packageOnlyPurchase = rules.buildPurchaseRecord(
   { ...pkg, productId: '', productName: '' },
   purchase,
   { id: 'stu-1', name: '张三', phone: '13800000000' },
-  { id: 'pur-package-only', now: '2026-04-12T00:00:00.000Z', operator: '管理员' }
+  { id: 'pur-package-only', now: '2026-04-12 00:00:00', operator: '管理员' }
 );
 
 const packageOnlyEntitlement = rules.buildEntitlementFromPurchase(
@@ -624,7 +624,7 @@ const packageOnlyEntitlement = rules.buildEntitlementFromPurchase(
   { ...purchase, id: 'pur-package-only' },
   { id: 'stu-1', name: '张三' },
   'ent-package-only',
-  '2026-04-12T00:00:00.000Z'
+  '2026-04-12 00:00:00'
 );
 
 assert.deepStrictEqual(
@@ -650,7 +650,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -681,7 +681,7 @@ assert.doesNotThrow(
     studentIds: ['stu-1'],
     courseType: '私教课',
     coach: 'mira',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -697,7 +697,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coach: '朝珺',
     coachRefs: [{ id: 'chaojun', name: '朝珺' }],
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -712,7 +712,7 @@ assert.doesNotThrow(
     studentIds: ['stu-1'],
     courseType: '私教课',
     coach: '小舟',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -728,7 +728,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 18:00',
     endTime: '2026-05-04 19:00',
     lessonCount: 1,
@@ -744,7 +744,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 16:30',
     endTime: '2026-05-04 17:30',
     lessonCount: 1,
@@ -763,7 +763,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-09 09:00',
     endTime: '2026-05-09 10:00',
     lessonCount: 1,
@@ -782,7 +782,7 @@ assert.doesNotThrow(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-06 09:00',
     endTime: '2026-05-06 10:00',
     lessonCount: 1,
@@ -798,7 +798,7 @@ assert.throws(
     courseType: '团课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -815,7 +815,7 @@ assert.throws(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -834,7 +834,7 @@ assert.deepStrictEqual(
     courseType: '私教课',
     coachId: 'coach-1',
     coach: '朝珺',
-    campus: 'mabao',
+    campus: 'shunyi_mapo',
     startTime: '2026-05-04 09:00',
     endTime: '2026-05-04 10:00',
     lessonCount: 1,
@@ -874,7 +874,7 @@ const staleWindowGoldRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: 'coach-1',
   coach: '朝珺',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-04 18:00',
   endTime: '2026-05-04 19:00',
   lessonCount: 1,
@@ -900,7 +900,7 @@ const goldToNonPrimeRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: 'coach-1',
   coach: '朝珺',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-06 09:00',
   endTime: '2026-05-06 10:00',
   lessonCount: 1,
@@ -925,7 +925,7 @@ const compoundCoachSlashRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: 'Rive 天昊教练',
   coach: 'Rive 天昊教练',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-04 18:00',
   endTime: '2026-05-04 19:00',
   lessonCount: 1,
@@ -951,7 +951,7 @@ const compoundCoachPlusRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: '刘润扬教练',
   coach: '刘润扬教练',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-09 16:00',
   endTime: '2026-05-09 17:00',
   lessonCount: 1,
@@ -984,7 +984,7 @@ const coachSuffixRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: '晓哲',
   coach: '晓哲',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-16 10:00',
   endTime: '2026-05-16 11:30',
   lessonCount: 1.5,
@@ -1002,7 +1002,7 @@ const coachUuidRecommendation = rules.recommendEntitlements([
     coachIds: ['coach-siren-uuid'],
     coachNames: ['Siren 教练'],
     remainingLessons: 6,
-    campusIds: ['mabao'],
+    campusIds: ['shunyi_mapo'],
     timeBand: '非黄金时段'
   }
 ], {
@@ -1010,7 +1010,7 @@ const coachUuidRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: 'Siren 教练',
   coach: 'Siren 教练',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-26 10:00',
   endTime: '2026-05-26 11:00',
   lessonCount: 1,
@@ -1036,7 +1036,7 @@ const anyCoachRecommendation = rules.recommendEntitlements([
   courseType: '私教课',
   coachId: '晓哲',
   coach: '晓哲',
-  campus: 'mabao',
+  campus: 'shunyi_mapo',
   startTime: '2026-05-26 10:00',
   endTime: '2026-05-26 11:00',
   lessonCount: 1,
@@ -1082,8 +1082,8 @@ assert.deepStrictEqual(
     { ...pkg, id: 'pkg-2', name: '新课包', lessons: 8, usageEndDate: '2026-08-01' },
     { ...purchase, id: 'pur-1', packageId: 'pkg-2', packageName: '新课包', purchaseDate: '2026-05-03' },
     { id: 'stu-1', name: '张三' },
-    { ...entitlement, id: 'ent-1', usedLessons: 2, remainingLessons: 3, createdAt: '2026-04-01T00:00:00.000Z' },
-    '2026-04-12T00:00:00.000Z'
+    { ...entitlement, id: 'ent-1', usedLessons: 2, remainingLessons: 3, createdAt: '2026-04-01 00:00:00' },
+    '2026-04-12 00:00:00'
   ).remainingLessons,
   6,
   'editing purchase should rebuild entitlement snapshot while preserving used lessons'
@@ -1127,11 +1127,11 @@ assert.doesNotThrow(
 
 assert.deepStrictEqual(
   rules.buildPackageDeactivateUpdate(
-    { ...pkg, validDays: undefined, status: 'active', updatedAt: '2026-05-01T00:00:00.000Z' },
+    { ...pkg, validDays: undefined, status: 'active', updatedAt: '2026-05-01 00:00:00' },
     { ...pkg, validDays: undefined, status: 'inactive' },
-    '2026-06-04T00:00:00.000Z'
+    '2026-06-04 00:00:00'
   ),
-  { ...pkg, validDays: undefined, status: 'inactive', updatedAt: '2026-06-04T00:00:00.000Z' },
+  { ...pkg, validDays: undefined, status: 'inactive', updatedAt: '2026-06-04 00:00:00' },
   'deactivating a legacy package should only change sale status even when validDays is missing'
 );
 
@@ -1159,7 +1159,7 @@ assert.deepStrictEqual(
       { id: 'ent-voided', packageId: 'pkg-1', status: 'voided' },
       { id: 'ent-other', packageId: 'pkg-other', status: 'active' }
     ],
-    '2026-05-20T00:00:00.000Z'
+    '2026-05-20 00:00:00'
   ),
   {
     purchases: [{
@@ -1179,7 +1179,7 @@ assert.deepStrictEqual(
       usageEndDate: '',
       purchaseDate: '2026-05-02',
       status: 'active',
-      updatedAt: '2026-05-20T00:00:00.000Z'
+      updatedAt: '2026-05-20 00:00:00'
     }],
     entitlements: [{
       id: 'ent-1',
@@ -1197,7 +1197,7 @@ assert.deepStrictEqual(
       usageStartDate: '2026-05-10',
       usageEndDate: '',
       status: 'active',
-      updatedAt: '2026-05-20T00:00:00.000Z'
+      updatedAt: '2026-05-20 00:00:00'
     }]
   },
   'editing sold package usage rules should sync active purchase and entitlement snapshots without expiry'
@@ -1208,7 +1208,7 @@ assert.strictEqual(
     { ...pkg, usageEndDate: '', validDays: 90 },
     [{ id: 'pur-1', packageId: 'pkg-1', purchaseDate: '2026-05-02', status: 'active' }],
     [{ id: 'ent-1', packageId: 'pkg-1', purchaseId: 'pur-1', validFrom: '2026-05-02', validUntil: '2026-07-01', status: 'active' }],
-    '2026-05-20T00:00:00.000Z'
+    '2026-05-20 00:00:00'
   ).entitlements[0].validUntil,
   '',
   'editing sold package valid days should not create entitlement expiry'

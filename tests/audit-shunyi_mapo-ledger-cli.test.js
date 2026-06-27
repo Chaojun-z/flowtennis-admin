@@ -5,8 +5,8 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const repoRoot = path.join(__dirname, '..');
-const scriptPath = path.join(repoRoot, 'scripts/audit-mabao-ledger.js');
-const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mabao-audit-test-'));
+const scriptPath = path.join(repoRoot, 'scripts/audit-shunyi_mapo-ledger.js');
+const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shunyi_mapo-audit-test-'));
 
 const runOutput = execFileSync('node', [
   scriptPath,
@@ -15,7 +15,7 @@ const runOutput = execFileSync('node', [
   '--stats-csv', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - 课时统计.csv',
   '--detail-csv', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - Halena、Willian.csv',
   '--detail-csv-2', '/Users/shaobaolu/Downloads/网球兄弟·马坡私教名单 - Lam、Loon.csv',
-  '--seed-json', path.join(repoRoot, 'server/seeds/mabao-finance-seed.json'),
+  '--seed-json', path.join(repoRoot, 'server/seeds/shunyi_mapo-finance-seed.json'),
   '--output-dir', outputDir
 ], {
   cwd: repoRoot,
@@ -31,4 +31,4 @@ const summaryDiffCsv = fs.readFileSync(path.join(outputDir, 'summary_diff_by_mon
 assert.doesNotMatch(summaryDiffCsv, /^"周[一二三四五六日天]"/m, 'weekday labels should not leak into month summary');
 assert.doesNotMatch(summaryDiffCsv, /^"3月12"/m, 'month summary should normalize purchase dates before grouping');
 
-console.log('audit mabao ledger cli test passed');
+console.log('audit shunyi_mapo ledger cli test passed');

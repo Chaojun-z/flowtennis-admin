@@ -1,5 +1,5 @@
 const assert = require('assert');
-const core = require('../scripts/lib/mabao-import-core');
+const core = require('../scripts/lib/shunyi_mapo-import-core');
 
 assert.strictEqual(core.lessonStudentName('哈库呐'), '线熙宇（哈库呐玛塔塔）', '哈库呐 should map to the confirmed package owner');
 assert.strictEqual(core.lessonStudentName('siren  张佳良 老大 私教课'), '张佳良老大', '张佳良老大 should not collapse to parent name');
@@ -54,15 +54,15 @@ const duplicateMemberRows = [
     '实收/核销': '112'
   }
 ];
-const courtWrites = core.buildCourtHistoryWriteRows(duplicateMemberRows, [{ id: 'court-wang', name: '王大人 订场', history: [] }], { now: '2026-05-24T00:00:00.000Z' });
+const courtWrites = core.buildCourtHistoryWriteRows(duplicateMemberRows, [{ id: 'court-wang', name: '王大人 订场', history: [] }], { now: '2026-05-24 00:00:00' });
 assert.strictEqual(courtWrites.length, 1, 'same court member should be written once');
 assert.strictEqual(courtWrites[0].history.filter((row) => row.seedTag === core.IMPORT_TAG).length, 2, 'same court member should keep all import history rows');
 assert.strictEqual(courtWrites[0].storedValueSpent, 224, 'same court member should aggregate all stored value booking rows');
 
-const partialCourt = core.buildCourtHistoryWriteRows([duplicateMemberRows[0]], [{ id: 'court-wang', name: '王大人 订场', history: [] }], { now: '2026-05-24T00:00:00.000Z' })[0];
-const repairWrites = core.buildMissingCourtHistoryWriteRows(duplicateMemberRows, [partialCourt], { now: '2026-05-24T00:00:00.000Z' });
+const partialCourt = core.buildCourtHistoryWriteRows([duplicateMemberRows[0]], [{ id: 'court-wang', name: '王大人 订场', history: [] }], { now: '2026-05-24 00:00:00' })[0];
+const repairWrites = core.buildMissingCourtHistoryWriteRows(duplicateMemberRows, [partialCourt], { now: '2026-05-24 00:00:00' });
 assert.strictEqual(repairWrites.length, 1, 'court repair should write only accounts with missing history');
 assert.strictEqual(repairWrites[0].history.filter((row) => row.seedTag === core.IMPORT_TAG).length, 2, 'court repair should append missing rows without duplicating existing rows');
 assert.strictEqual(repairWrites[0].storedValueSpent, 224, 'court repair should recalculate finance after appending missing rows');
 
-console.log('mabao finance import guard tests passed');
+console.log('shunyi_mapo finance import guard tests passed');

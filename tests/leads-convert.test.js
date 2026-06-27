@@ -11,14 +11,14 @@ const lead = rules.normalizeLeadRecord({
   consultType: '定场',
   profileNote: '周末想订场',
   owner: 'Mira'
-}, { id: 'lead-1', now: '2026-05-08T00:00:00.000Z' });
+}, { id: 'lead-1', now: '2026-05-08 00:00:00' });
 
-const student = rules.buildLeadStudentRecord(lead, { id: 'stu-1', now: '2026-05-08T00:00:00.000Z' });
+const student = rules.buildLeadStudentRecord(lead, { id: 'stu-1', now: '2026-05-08 00:00:00' });
 assert.strictEqual(student.name, 'Sandy');
 assert.strictEqual(student.phone, '13800138000');
 assert.strictEqual(student.source, '大众点评');
 
-const court = rules.buildLeadCourtRecord(lead, { id: 'court-1', studentId: 'stu-1', now: '2026-05-08T00:00:00.000Z' });
+const court = rules.buildLeadCourtRecord(lead, { id: 'court-1', studentId: 'stu-1', now: '2026-05-08 00:00:00' });
 assert.strictEqual(court.name, 'Sandy');
 assert.strictEqual(court.studentId, 'stu-1');
 assert.deepStrictEqual(court.studentIds, ['stu-1']);

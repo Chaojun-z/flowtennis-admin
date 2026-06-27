@@ -21,7 +21,7 @@ const masterPackage = {
   ownerCoach: '朝珺',
   coachIds: ['朝珺'],
   coachNames: ['朝珺'],
-  campusIds: ['mabao'],
+  campusIds: ['shunyi_mapo'],
   maxStudents: 1,
   status: 'active'
 };
@@ -32,7 +32,7 @@ const sourcePackage = {
   name: '成人1v1 10课时非黄金时间课包'
 };
 
-const now = '2026-05-19T10:00:00.000Z';
+const now = '2026-05-19 10:00:00';
 
 const purchase = {
   id: 'pur-b',
@@ -46,7 +46,7 @@ const purchase = {
   packageLessons: 10,
   packagePrice: 4800,
   packageTimeBand: '非黄金时段',
-  updatedAt: '2026-05-01T00:00:00.000Z'
+  updatedAt: '2026-05-01 00:00:00'
 };
 
 const entitlement = {
@@ -61,7 +61,7 @@ const entitlement = {
   usedLessons: 2,
   remainingLessons: 8,
   timeBand: '非黄金时段',
-  updatedAt: '2026-05-01T00:00:00.000Z'
+  updatedAt: '2026-05-01 00:00:00'
 };
 
 const schedule = {
@@ -70,7 +70,7 @@ const schedule = {
   packageName: sourcePackage.name,
   purchaseId: 'pur-b',
   timeBand: '非黄金时段',
-  updatedAt: '2026-05-01T00:00:00.000Z'
+  updatedAt: '2026-05-01 00:00:00'
 };
 
 assert.ok(rules.assertCanMergePackages, 'api._test should expose package merge validation');

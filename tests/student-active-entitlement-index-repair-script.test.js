@@ -17,11 +17,11 @@ const rows = buildIndexRows([
   { id: 'ent-3', studentId: 'stu-2', status: 'active', remainingLessons: 0 },
   { id: 'ent-4', studentId: 'stu-2', status: 'active', remainingLessons: 1 },
   { id: 'ent-5', studentId: '', status: 'active', remainingLessons: 1 }
-], '2026-05-22T10:00:00.000Z');
+], '2026-05-22 10:00:00');
 
 assert.deepStrictEqual(rows, [
-  { id: 'stu-1', studentId: 'stu-1', entitlementIds: ['ent-1'], updatedAt: '2026-05-22T10:00:00.000Z' },
-  { id: 'stu-2', studentId: 'stu-2', entitlementIds: ['ent-4'], updatedAt: '2026-05-22T10:00:00.000Z' }
+  { id: 'stu-1', studentId: 'stu-1', entitlementIds: ['ent-1'], updatedAt: '2026-05-22 10:00:00' },
+  { id: 'stu-2', studentId: 'stu-2', entitlementIds: ['ent-4'], updatedAt: '2026-05-22 10:00:00' }
 ]);
 
 console.log('student active entitlement index repair script tests passed');

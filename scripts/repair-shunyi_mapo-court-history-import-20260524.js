@@ -19,7 +19,7 @@ const {
   normalizeCourtHistory,
   IMPORT_TAG,
   IMPORT_PREFIX
-} = require('./lib/mabao-import-core');
+} = require('./lib/shunyi_mapo-import-core');
 
 function parseArgs(argv) {
   return {
@@ -30,7 +30,7 @@ function parseArgs(argv) {
 
 function makeOperationTrace(now = new Date().toISOString()) {
   const stamp = String(now).replace(/[^0-9]/g, '').slice(0, 17) || String(Date.now());
-  const operationId = `mabao-court-history-repair-20260524-${stamp}`;
+  const operationId = `shunyi_mapo-court-history-repair-20260524-${stamp}`;
   return { operationId, batchId: `batch-${operationId}` };
 }
 

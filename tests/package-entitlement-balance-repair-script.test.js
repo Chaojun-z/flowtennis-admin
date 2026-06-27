@@ -1,7 +1,7 @@
 const assert = require('assert');
 const repair = require('../scripts/repair-package-entitlement-balances-20260601');
 
-const now = '2026-06-01T12:00:00.000Z';
+const now = '2026-06-01 12:00:00';
 const reportRows = [
   {
     studentName: '可修一',

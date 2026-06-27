@@ -7,7 +7,7 @@ const { createClientFromEnv, scanTable } = require('./lib/staging-data-store');
 
 const ROOT = path.join(__dirname, '..');
 const PROD_DIAG_URL = 'https://www.flowtennis.cn/api/diag';
-const REPORT_DIR = path.join(ROOT, 'docs/reports/mabao-import-preview-2026-05-23-final');
+const REPORT_DIR = path.join(ROOT, 'docs/reports/shunyi_mapo-import-preview-2026-05-23-final');
 const OUT_DIR = path.join(REPORT_DIR, 'dry-run');
 
 const FILES = {

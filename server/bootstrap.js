@@ -18,7 +18,7 @@ function buildBootstrapSafetyFlags(env=process.env){
     enableTableBootstrap:readBooleanEnv(env,'ENABLE_TABLE_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
     enableRuntimeTableEnsure:readBooleanEnv(env,'ENABLE_RUNTIME_TABLE_ENSURE'),
     enableDefaultPricePlanBootstrap:readBooleanEnv(env,'ENABLE_DEFAULT_PRICE_PLAN_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
-    enableMabaoFinanceSeedBootstrap:readBooleanEnv(env,'ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
+    enableShunyiMapoFinanceSeedBootstrap:readBooleanEnv(env,'ENABLE_MABAO_FINANCE_SEED_BOOTSTRAP')&&allowHighRiskBootstrapWrites,
     enableImportedLedgerAutoRepair:readBooleanEnv(env,'ENABLE_IMPORTED_LEDGER_AUTO_REPAIR')&&allowHighRiskBootstrapWrites
   };
 }
@@ -28,7 +28,7 @@ function logBlockedAutoWrite(action){
 
 const DEFAULT_COACH_USERS=['baiyangj','chendand','yuekez','zhoux','sunmingy'];
 const DEFAULT_CAMPUSES=[
-  {id:'mabao',name:'顺义马坡',code:'mabao'},
+  {id:'shunyi_mapo',name:'顺义马坡',code:'shunyi_mapo'},
   {id:'shilipu',name:'朝阳十里堡',code:'shilipu'},
   {id:'guowang',name:'朝阳国网',code:'guowang'},
   {id:'langang',name:'朝阳蓝色港湾',code:'langang'},
@@ -46,7 +46,7 @@ function createBootstrapRuntime(options={}){
   const runtimeEnsuredTables=options.runtimeEnsuredTables||[];
   const storage=options.storage||{};
   const seedHelpers=options.seedHelpers||{};
-  const mabaoFinanceSeed=options.mabaoFinanceSeed||{};
+  const shunyi_mapoFinanceSeed=options.shunyi_mapoFinanceSeed||{};
   const syncDefaultPricePlans=options.syncDefaultPricePlans||async function syncDefaultPricePlans(){};
   const prewarmHotScanCache=options.prewarmHotScanCache||async function prewarmHotScanCache(){};
   const isProductionRuntime=options.isProductionRuntime||(()=>bootstrapSafetyFlags.runtimeStage==='production');
@@ -60,7 +60,7 @@ function createBootstrapRuntime(options={}){
   }=storage;
   const {
     importedLedgerMonthKey,
-    isMabaoFinanceSeedRow,
+    isShunyiMapoFinanceSeedRow,
     isImportedMonthlyLedgerRow,
     collectDuplicateImportedLedgerIds
   }=seedHelpers;
@@ -68,7 +68,7 @@ function createBootstrapRuntime(options={}){
   const enableTableBootstrap=bootstrapSafetyFlags.enableTableBootstrap;
   const enableRuntimeTableEnsure=bootstrapSafetyFlags.enableRuntimeTableEnsure;
   const enableDefaultPricePlanBootstrap=bootstrapSafetyFlags.enableDefaultPricePlanBootstrap;
-  const enableMabaoFinanceSeedBootstrap=bootstrapSafetyFlags.enableMabaoFinanceSeedBootstrap;
+  const enableShunyiMapoFinanceSeedBootstrap=bootstrapSafetyFlags.enableShunyiMapoFinanceSeedBootstrap;
   const enableImportedLedgerAutoRepair=bootstrapSafetyFlags.enableImportedLedgerAutoRepair;
   const isProduction=bootstrapSafetyFlags.isProduction;
   const isProductionRuntimeValue=isProductionRuntime();
@@ -111,13 +111,13 @@ function createBootstrapRuntime(options={}){
       await Promise.all(rows.slice(i,i+chunkSize).map(row=>put(table,row.id,row)));
     }
   }
-  function collectMabaoSeedStaleRowIds(existingRows=[],seedRows=[],tag=''){
+  function collectShunyiMapoSeedStaleRowIds(existingRows=[],seedRows=[],tag=''){
     const nextIds=new Set((seedRows||[]).map(row=>row.id));
     return (existingRows||[])
-      .filter(row=>isMabaoFinanceSeedRow(row)&&(!nextIds.has(row.id)||String(row.seedTag||'')!==String(tag||'')))
+      .filter(row=>isShunyiMapoFinanceSeedRow(row)&&(!nextIds.has(row.id)||String(row.seedTag||'')!==String(tag||'')))
       .map(row=>row.id);
   }
-  function collectMabaoSeedImportedLedgerReplacementIds(existingRows=[],seedRows=[]){
+  function collectShunyiMapoSeedImportedLedgerReplacementIds(existingRows=[],seedRows=[]){
     const seedKeys=new Set((seedRows||[]).map(row=>{
       const monthKey=importedLedgerMonthKey(row);
       if(!monthKey)return '';
@@ -125,7 +125,7 @@ function createBootstrapRuntime(options={}){
     }).filter(Boolean));
     if(!seedKeys.size)return [];
     return (existingRows||[])
-      .filter(row=>!isMabaoFinanceSeedRow(row)&&isImportedMonthlyLedgerRow(row))
+      .filter(row=>!isShunyiMapoFinanceSeedRow(row)&&isImportedMonthlyLedgerRow(row))
       .filter(row=>seedKeys.has([row.entitlementId,row.purchaseId,row.studentId,importedLedgerMonthKey(row)].join('|')))
       .map(row=>row.id);
   }
@@ -135,15 +135,15 @@ function createBootstrapRuntime(options={}){
       await Promise.all(ids.slice(i,i+chunkSize).map(id=>del(table,id).catch(()=>null)));
     }
   }
-  async function replaceMabaoSeedRows(table,seedRows=[],tag=''){
-    const staleIds=collectMabaoSeedStaleRowIds(await scan(table).catch(()=>[]),seedRows,tag);
+  async function replaceShunyiMapoSeedRows(table,seedRows=[],tag=''){
+    const staleIds=collectShunyiMapoSeedStaleRowIds(await scan(table).catch(()=>[]),seedRows,tag);
     if(staleIds.length)await deleteSeedRows(table,staleIds);
     await putSeedRows(table,seedRows);
   }
-  async function replaceMabaoSeedLedgerRows(seedRows=[],tag=''){
+  async function replaceShunyiMapoSeedLedgerRows(seedRows=[],tag=''){
     const existingRows=await scan(tables.T_ENTITLEMENT_LEDGER).catch(()=>[]);
-    const staleIds=collectMabaoSeedStaleRowIds(existingRows,seedRows,tag);
-    const replacementIds=collectMabaoSeedImportedLedgerReplacementIds(existingRows,seedRows);
+    const staleIds=collectShunyiMapoSeedStaleRowIds(existingRows,seedRows,tag);
+    const replacementIds=collectShunyiMapoSeedImportedLedgerReplacementIds(existingRows,seedRows);
     const duplicateIds=collectDuplicateImportedLedgerIds(existingRows);
     const removeIds=[...new Set([...staleIds,...replacementIds,...duplicateIds])];
     if(removeIds.length)await deleteSeedRows(tables.T_ENTITLEMENT_LEDGER,removeIds);
@@ -170,44 +170,44 @@ function createBootstrapRuntime(options={}){
       throw err;
     }
   }
-  function hasCurrentMabaoSeedRows(existingRows=[],seedRows=[],tag=''){
+  function hasCurrentShunyiMapoSeedRows(existingRows=[],seedRows=[],tag=''){
     const seedIds=new Set((seedRows||[]).map(row=>row.id));
-    const existingSeedRows=(existingRows||[]).filter(isMabaoFinanceSeedRow);
+    const existingSeedRows=(existingRows||[]).filter(isShunyiMapoFinanceSeedRow);
     return existingSeedRows.length===seedRows.length&&existingSeedRows.every(row=>seedIds.has(row.id)&&String(row.seedTag||'')===String(tag||''));
   }
-  async function isMabaoFinanceSeedCurrent(){
-    const tag=mabaoFinanceSeed?.meta?.tag;
+  async function isShunyiMapoFinanceSeedCurrent(){
+    const tag=shunyi_mapoFinanceSeed?.meta?.tag;
     if(!tag)return false;
     const [purchases,entitlements,ledger]=await Promise.all([
       scan(tables.T_PURCHASES).catch(()=>[]),
       scan(tables.T_ENTITLEMENTS).catch(()=>[]),
       scan(tables.T_ENTITLEMENT_LEDGER).catch(()=>[])
     ]);
-    if(!hasCurrentMabaoSeedRows(purchases,mabaoFinanceSeed.purchases,tag))return false;
-    if(!hasCurrentMabaoSeedRows(entitlements,mabaoFinanceSeed.entitlements,tag))return false;
-    if(!hasCurrentMabaoSeedRows(ledger,mabaoFinanceSeed.entitlementLedger,tag))return false;
-    if(collectMabaoSeedImportedLedgerReplacementIds(ledger,mabaoFinanceSeed.entitlementLedger).length)return false;
-    for(const id of mabaoFinanceSeed?.meta?.deletePurchases||[]){
+    if(!hasCurrentShunyiMapoSeedRows(purchases,shunyi_mapoFinanceSeed.purchases,tag))return false;
+    if(!hasCurrentShunyiMapoSeedRows(entitlements,shunyi_mapoFinanceSeed.entitlements,tag))return false;
+    if(!hasCurrentShunyiMapoSeedRows(ledger,shunyi_mapoFinanceSeed.entitlementLedger,tag))return false;
+    if(collectShunyiMapoSeedImportedLedgerReplacementIds(ledger,shunyi_mapoFinanceSeed.entitlementLedger).length)return false;
+    for(const id of shunyi_mapoFinanceSeed?.meta?.deletePurchases||[]){
       const old=await get(tables.T_PURCHASES,id).catch(()=>null);
       if(old)return false;
     }
     return true;
   }
-  async function bootstrapMabaoFinanceSeed(){
-    if(!enableMabaoFinanceSeedBootstrap){
-      if(rawFlags.enableMabaoFinanceSeedBootstrap&&isProduction&&!bootstrapSafetyFlags.allowProductionBootstrapWrites)blockedLogger('bootstrapMabaoFinanceSeed');
+  async function bootstrapShunyiMapoFinanceSeed(){
+    if(!enableShunyiMapoFinanceSeedBootstrap){
+      if(rawFlags.enableShunyiMapoFinanceSeedBootstrap&&isProduction&&!bootstrapSafetyFlags.allowProductionBootstrapWrites)blockedLogger('bootstrapShunyiMapoFinanceSeed');
       return;
     }
-    if(await isMabaoFinanceSeedCurrent())return;
-    const tag=mabaoFinanceSeed?.meta?.tag||'';
-    await deleteSeedRows(tables.T_PURCHASES,mabaoFinanceSeed?.meta?.deletePurchases||[]);
-    await deleteSeedRows(tables.T_PACKAGES,mabaoFinanceSeed?.meta?.deletePackages||[]);
-    await replaceMabaoSeedRows(tables.T_STUDENTS,mabaoFinanceSeed.students,tag);
-    await replaceMabaoSeedRows(tables.T_PRODUCTS,mabaoFinanceSeed.products,tag);
-    await replaceMabaoSeedRows(tables.T_PACKAGES,mabaoFinanceSeed.packages,tag);
-    await replaceMabaoSeedRows(tables.T_PURCHASES,mabaoFinanceSeed.purchases,tag);
-    await replaceMabaoSeedRows(tables.T_ENTITLEMENTS,mabaoFinanceSeed.entitlements,tag);
-    await replaceMabaoSeedLedgerRows(mabaoFinanceSeed.entitlementLedger,tag);
+    if(await isShunyiMapoFinanceSeedCurrent())return;
+    const tag=shunyi_mapoFinanceSeed?.meta?.tag||'';
+    await deleteSeedRows(tables.T_PURCHASES,shunyi_mapoFinanceSeed?.meta?.deletePurchases||[]);
+    await deleteSeedRows(tables.T_PACKAGES,shunyi_mapoFinanceSeed?.meta?.deletePackages||[]);
+    await replaceShunyiMapoSeedRows(tables.T_STUDENTS,shunyi_mapoFinanceSeed.students,tag);
+    await replaceShunyiMapoSeedRows(tables.T_PRODUCTS,shunyi_mapoFinanceSeed.products,tag);
+    await replaceShunyiMapoSeedRows(tables.T_PACKAGES,shunyi_mapoFinanceSeed.packages,tag);
+    await replaceShunyiMapoSeedRows(tables.T_PURCHASES,shunyi_mapoFinanceSeed.purchases,tag);
+    await replaceShunyiMapoSeedRows(tables.T_ENTITLEMENTS,shunyi_mapoFinanceSeed.entitlements,tag);
+    await replaceShunyiMapoSeedLedgerRows(shunyi_mapoFinanceSeed.entitlementLedger,tag);
   }
   function scheduleInitInBackground(){
     if(requiredEnvVars.some((k)=>!env[k]))return;
@@ -225,7 +225,7 @@ function createBootstrapRuntime(options={}){
       if(rawFlags.enableDefaultUserBootstrap&&!enableDefaultUserBootstrap&&isProduction)blockedLogger('bootstrapDefaultUsers');
       if(rawFlags.enableTableBootstrap&&!enableTableBootstrap&&isProduction)blockedLogger('ENABLE_TABLE_BOOTSTRAP');
       if(rawFlags.enableDefaultPricePlanBootstrap&&!enableDefaultPricePlanBootstrap&&isProduction)blockedLogger('syncDefaultPricePlans');
-      if(rawFlags.enableMabaoFinanceSeedBootstrap&&!enableMabaoFinanceSeedBootstrap&&isProduction)blockedLogger('bootstrapMabaoFinanceSeed');
+      if(rawFlags.enableShunyiMapoFinanceSeedBootstrap&&!enableShunyiMapoFinanceSeedBootstrap&&isProduction)blockedLogger('bootstrapShunyiMapoFinanceSeed');
       if(rawFlags.enableImportedLedgerAutoRepair&&!enableImportedLedgerAutoRepair&&isProduction)blockedLogger('repairImportedLedgerDuplicates');
       if(isProductionRuntimeValue){
         inited=true;
@@ -237,10 +237,10 @@ function createBootstrapRuntime(options={}){
         for(const t of runtimeEnsuredTables)await mkTable(t);
         console.log(`[api-init] ensure runtime tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       }
-      if(enableMabaoFinanceSeedBootstrap){
+      if(enableShunyiMapoFinanceSeedBootstrap){
         const stepStartedAt=Date.now();
         for(const t of [tables.T_STUDENTS,tables.T_PRODUCTS,tables.T_PACKAGES,tables.T_PURCHASES,tables.T_ENTITLEMENTS,tables.T_ENTITLEMENT_LEDGER])await mkTable(t);
-        console.log(`[api-init] ensure mabao seed tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+        console.log(`[api-init] ensure shunyi_mapo seed tables done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       }
       if(enableTableBootstrap){
         let stepStartedAt=Date.now();
@@ -256,10 +256,10 @@ function createBootstrapRuntime(options={}){
         await ensureCoachBindings();
         console.log(`[api-init] ensureCoachBindings done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       }
-      if(enableMabaoFinanceSeedBootstrap){
+      if(enableShunyiMapoFinanceSeedBootstrap){
         const stepStartedAt=Date.now();
-        await bootstrapMabaoFinanceSeed();
-        console.log(`[api-init] bootstrapMabaoFinanceSeed done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
+        await bootstrapShunyiMapoFinanceSeed();
+        console.log(`[api-init] bootstrapShunyiMapoFinanceSeed done ${Date.now()-stepStartedAt}ms (total ${Date.now()-startedAt}ms)`);
       }
       if(enableImportedLedgerAutoRepair){
         const stepStartedAt=Date.now();
@@ -291,11 +291,11 @@ function createBootstrapRuntime(options={}){
     bootstrapDefaultUsers,
     ensureCoachBindings,
     ensureDefaultCampuses,
-    collectMabaoSeedStaleRowIds,
-    collectMabaoSeedImportedLedgerReplacementIds,
+    collectShunyiMapoSeedStaleRowIds,
+    collectShunyiMapoSeedImportedLedgerReplacementIds,
     repairImportedLedgerDuplicates,
     maybeRepairImportedLedgerDuplicates,
-    bootstrapMabaoFinanceSeed,
+    bootstrapShunyiMapoFinanceSeed,
     scheduleInitInBackground,
     init,
     getRuntimeEnsuredTables

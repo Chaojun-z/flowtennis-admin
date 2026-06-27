@@ -34,29 +34,29 @@ const lead = rules.normalizeLeadRecord({
   '水平': '2.5',
   '其他信息（包含年纪等）': '成人',
   '线索渠道': '大众点评',
-  '咨询需求': '成人私教',
-  '意向类型': '高意向',
+  '需求产品': '成人私教',
+  '意向等级': '高意向',
   '跟进优先级': 'P1',
   '跟进人': 'Mira',
   '跟进状态': '跟进中',
   '用户顾虑点': '价格',
   '沟通情况和方案建议': '继续跟进'
-}, { id: 'lead-1', now: '2026-05-08T00:00:00.000Z' });
+}, { id: 'lead-1', now: '2026-05-08 00:00:00' });
 
 assert.strictEqual(lead.id, 'lead-1');
 assert.strictEqual(lead.phone, '13800138000');
 assert.strictEqual(lead.wechatName, 'Leah');
-assert.strictEqual(rules.normalizeLeadRecord({ level: 0 }, { id: 'lead-zero', now: '2026-06-11T00:00:00.000Z' }).level, '0');
+assert.strictEqual(rules.normalizeLeadRecord({ level: 0 }, { id: 'lead-zero', now: '2026-06-11 00:00:00' }).level, '0');
 assert.strictEqual(lead.followupPriority, 'P1');
-assert.strictEqual(rules.normalizeLeadRecord({ followupPriority: 'P9' }, { id: 'lead-bad-priority', now: '2026-06-11T00:00:00.000Z' }).followupPriority, '');
+assert.strictEqual(rules.normalizeLeadRecord({ followupPriority: 'P9' }, { id: 'lead-bad-priority', now: '2026-06-11 00:00:00' }).followupPriority, '');
 assert.strictEqual(lead.systemStatus, '跟进中');
 assert.strictEqual(lead.customerType, '成人');
 assert.strictEqual(lead.demandProduct, '私教课');
 assert.strictEqual(lead.dealType, '');
 assert.strictEqual(lead.conversionType, '');
 assert.strictEqual(
-  rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08T00:00:00.000Z' }).campus,
-  'mabao'
+  rules.normalizeLeadRecord({ '所属校区': '马坡' }, { id: 'lead-campus', now: '2026-05-08 00:00:00' }).campus,
+  'shunyi_mapo'
 );
 
 const updated = rules.applyLeadFollowupSnapshot(lead, rules.normalizeLeadFollowupRecord({
@@ -66,7 +66,7 @@ const updated = rules.applyLeadFollowupSnapshot(lead, rules.normalizeLeadFollowu
   conclusion: '已约体验',
   statusAfter: '已约体验',
   nextAction: '周末体验'
-}, { id: 'fu-1', now: '2026-05-09T02:00:00.000Z' }));
+}, { id: 'fu-1', now: '2026-05-09 02:00:00' }));
 
 assert.strictEqual(updated.lastFollowupAt, '2026-05-09 10:00');
 assert.strictEqual(updated.latestConcern, '时间');
@@ -87,7 +87,7 @@ const sameNameMerged = rules.mergeDuplicateLeadRows([
     consultType: '成人私教',
     profileNote: '咨询成人私教课',
     rawStatus: '跟进中'
-  }, { id: 'old-lead', now: '2026-06-03T00:00:00.000Z' }),
+  }, { id: 'old-lead', now: '2026-06-03 00:00:00' }),
   rules.normalizeLeadRecord({
     displayName: 'MMJUAN',
     wechatName: 'MMJUAN',
@@ -96,7 +96,7 @@ const sameNameMerged = rules.mergeDuplicateLeadRows([
     consultType: '成人私教',
     profileNote: '已经预约6月4日，18-19',
     rawStatus: '已约体验'
-  }, { id: 'new-lead', now: '2026-06-05T00:00:00.000Z' })
+  }, { id: 'new-lead', now: '2026-06-05 00:00:00' })
 ]);
 assert.strictEqual(sameNameMerged.length, 1, 'same wechat name leads should merge');
 assert.strictEqual(sameNameMerged[0].id, 'old-lead', 'merge should keep the older lead id');

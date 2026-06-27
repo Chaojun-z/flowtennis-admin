@@ -8,19 +8,19 @@ const {
 assert.strictEqual(coachAvailableHours({ period: 'today' }), 8, 'coach daily available hours should be 8');
 assert.strictEqual(coachAvailableHours({ period: 'week' }), 48, 'coach weekly available hours should be 6 days * 8 hours');
 assert.strictEqual(
-  coachAvailableHours({ period: 'month', now: new Date('2026-06-18T00:00:00+08:00') }),
+  coachAvailableHours({ period: 'month', now: new Date('2026-06-18 00:00:00') }),
   205.7,
   'coach monthly available hours should use natural days * 8 * 6 / 7'
 );
 
 const metrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   leads: [
-    { id: 'lead-1', leadStage: '未转化', source: '小红书', leadDate: '2026-06-01', campus: 'mabao', owner: '张教练', level: '零基础', gender: '女', studentType: '成人' },
-    { id: 'lead-2', leadStage: '课程转化', studentId: 'student-2', source: '小红书', leadDate: '2026-06-02', trialAtRaw: '2026-06-04', trialAttendedAt: '2026-06-04', campus: 'mabao', owner: '张教练', level: '进阶提升', gender: '男', studentType: '成人' },
-    { id: 'lead-3', studentId: 'student-1', courtId: 'court-1', source: '转介绍', leadDate: '2026-06-03', trialAtRaw: '2026-06-07', trialAttendedAt: '2026-06-07', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
-    { id: 'lead-4', rawStatus: '已流失', source: '大众点评', leadDate: '2026-06-04', campus: 'mabao', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '成人' },
-    { id: 'lead-5', leadStage: '订场转化', courtId: 'court-2', source: '抖音/美团', leadDate: '2026-06-05', campus: 'mabao', owner: '张教练', level: '零基础', gender: '男', studentType: '成人' }
+    { id: 'lead-1', leadStage: '未转化', source: '小红书', leadDate: '2026-06-01', campus: 'shunyi_mapo', owner: '张教练', level: '零基础', gender: '女', studentType: '成人' },
+    { id: 'lead-2', leadStage: '课程转化', studentId: 'student-2', source: '小红书', leadDate: '2026-06-02', trialAtRaw: '2026-06-04', trialAttendedAt: '2026-06-04', campus: 'shunyi_mapo', owner: '张教练', level: '进阶提升', gender: '男', studentType: '成人' },
+    { id: 'lead-3', studentId: 'student-1', courtId: 'court-1', source: '转介绍', leadDate: '2026-06-03', trialAtRaw: '2026-06-07', trialAttendedAt: '2026-06-07', campus: 'shunyi_mapo', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
+    { id: 'lead-4', rawStatus: '已流失', source: '大众点评', leadDate: '2026-06-04', campus: 'shunyi_mapo', owner: 'Siren 教练', level: '零基础', gender: '女', studentType: '成人' },
+    { id: 'lead-5', leadStage: '订场转化', courtId: 'court-2', source: '抖音/美团', leadDate: '2026-06-05', campus: 'shunyi_mapo', owner: '张教练', level: '零基础', gender: '男', studentType: '成人' }
   ],
   students: [
     { id: 'student-1', sourceLeadId: 'lead-3', dealPath: '体验转化', primaryCoach: 'Siren 教练', level: '零基础', gender: '女', studentType: '青少年' },
@@ -31,14 +31,14 @@ const metrics = buildOperationsMetrics({
     { id: 'purchase-2', studentId: 'student-1', packageId: 'pkg-a', amount: 1200, actualAmount: 1200, purchaseDate: '2026-06-15' },
     { id: 'purchase-3', studentId: 'student-2', packageId: 'pkg-b', amount: 900, actualAmount: 900, purchaseDate: '2026-06-08' }
   ],
-  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'mabao' }],
+  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'shunyi_mapo' }],
   schedule: [
-    { id: 'sch-1', coach: 'Siren 教练', startTime: '2026-06-05T10:00:00+08:00', endTime: '2026-06-05T12:00:00+08:00', status: '已排课', campus: 'mabao' }
+    { id: 'sch-1', coach: 'Siren 教练', startTime: '2026-06-05 10:00:00', endTime: '2026-06-05 12:00:00', status: '已排课', campus: 'shunyi_mapo' }
   ],
   courts: [
     {
       id: 'court-1',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { date: '2026-06-06', venue: '1号场', startTime: '08:00', endTime: '10:00', amount: 300, type: '消费', category: '散客订场' }
       ])
@@ -51,7 +51,7 @@ const metrics = buildOperationsMetrics({
     { id: 'finance-court-2', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 180, timeText: '10:00-11:00', sourceProject: '2号场' }
   ],
   financeOverviewData: { totalIncome: 2500, recognizedRevenue: 700, pendingRevenue: 1800 }
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(metrics.overview.cards.totalIncome.value, 2500, 'overview should reuse finance total income');
 assert.strictEqual(metrics.conversion.cards.totalLeads.value, 5, 'conversion should count all leads');
@@ -89,8 +89,8 @@ assert.strictEqual(metrics.court.cards.bookingAmount.value, 480, 'court module s
 const campusVenueMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [
         { id: 'v1', name: '1号红土场', status: 'active', sortOrder: 1 },
@@ -107,8 +107,8 @@ const campusVenueMetrics = buildOperationsMetrics({
   ],
   courts: [
     {
-      id: 'court-mabao',
-      campus: 'mabao',
+      id: 'court-shunyi_mapo',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'h1', date: '2026-06-06', venue: '1号红土场', venueId: 'v1', startTime: '08:00', endTime: '10:00', amount: 300, type: '消费', category: '散客订场' },
         { id: 'h2', date: '2026-06-06', venue: '2号硬地场', startTime: '18:00', endTime: '20:00', amount: 400, type: '消费', category: '会员订场' },
@@ -117,8 +117,8 @@ const campusVenueMetrics = buildOperationsMetrics({
     }
   ],
   schedule: [
-    { id: 's1', campus: 'mabao', venueId: 'v1', venue: '1号红土场', startTime: '2026-06-06T16:00:00+08:00', endTime: '2026-06-06T17:00:00+08:00', status: '已排课' },
-    { id: 's2', campus: 'mabao', venue: '外部球馆', locationType: 'external', startTime: '2026-06-06T18:00:00+08:00', endTime: '2026-06-06T19:00:00+08:00', status: '已排课' }
+    { id: 's1', campus: 'shunyi_mapo', venueId: 'v1', venue: '1号红土场', startTime: '2026-06-06 16:00:00', endTime: '2026-06-06 17:00:00', status: '已排课' },
+    { id: 's2', campus: 'shunyi_mapo', venue: '外部球馆', locationType: 'external', startTime: '2026-06-06 18:00:00', endTime: '2026-06-06 19:00:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -128,18 +128,18 @@ const campusVenueMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
-const mabaoCampus = campusVenueMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+const shunyi_mapoCampus = campusVenueMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo');
 const gaoxinCampus = campusVenueMetrics.court.campusRows.find(row => row.campusCode === 'gaoxin');
 assert.strictEqual(campusVenueMetrics.court.cards.activeVenues.value, 3, 'court module should count enabled venues from campus config');
-assert.strictEqual(mabaoCampus.venueCount, 2, 'campus row should derive venue count from active campus venues');
-assert.strictEqual(mabaoCampus.bookingAmount, 800, 'campus booking revenue should include matched and historical unmatched booking rows');
-assert.strictEqual(mabaoCampus.bookingCount, 3, 'campus booking count should include historical booking rows only');
-assert.strictEqual(mabaoCampus.usageCount, 4, 'campus usage count should include historical booking rows and own-campus schedule occupancy');
-assert.strictEqual(mabaoCampus.utilizationRate, 16.7, 'campus utilization should use active venue capacity as denominator');
-assert.strictEqual(mabaoCampus.goldenUtilizationRate, 16.7, 'weekend golden utilization should use the whole active day as prime capacity');
-assert.strictEqual(mabaoCampus.offPeakUtilizationRate, 0, 'weekend off-peak utilization should be zero because the whole active day is prime');
+assert.strictEqual(shunyi_mapoCampus.venueCount, 2, 'campus row should derive venue count from active campus venues');
+assert.strictEqual(shunyi_mapoCampus.bookingAmount, 800, 'campus booking revenue should include matched and historical unmatched booking rows');
+assert.strictEqual(shunyi_mapoCampus.bookingCount, 3, 'campus booking count should include historical booking rows only');
+assert.strictEqual(shunyi_mapoCampus.usageCount, 4, 'campus usage count should include historical booking rows and own-campus schedule occupancy');
+assert.strictEqual(shunyi_mapoCampus.utilizationRate, 16.7, 'campus utilization should use active venue capacity as denominator');
+assert.strictEqual(shunyi_mapoCampus.goldenUtilizationRate, 16.7, 'weekend golden utilization should use the whole active day as prime capacity');
+assert.strictEqual(shunyi_mapoCampus.offPeakUtilizationRate, 0, 'weekend off-peak utilization should be zero because the whole active day is prime');
 assert.strictEqual(campusVenueMetrics.court.cards.goldenUtilizationRate.value, 16.7, 'court cards should expose weighted golden utilization for top KPI cards');
 assert.strictEqual(campusVenueMetrics.court.cards.offPeakUtilizationRate.value, 0, 'court cards should expose weighted off-peak utilization for top KPI cards');
 assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '1号红土场').usageCount, 2, 'venue rows should expose one row per court with booking plus schedule usage count');
@@ -149,16 +149,16 @@ assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus ===
 assert.strictEqual(campusVenueMetrics.court.venueRows.find(row => row.campus === '顺义马坡' && row.venue === '未匹配').usageCount, 1, 'unmatched historical venue rows should still appear as one row in court overview data');
 assert.strictEqual(gaoxinCampus.venueCount, 1, 'campuses without bookings should still appear from campus config');
 assert.strictEqual(gaoxinCampus.utilizationRate, 0, 'empty campus utilization should be zero');
-assert.ok(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueName === '未匹配'), 'unmatched historical venue rows should be displayed separately');
+assert.ok(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo').venues.find(row => row.venueName === '未匹配'), 'unmatched historical venue rows should be displayed separately');
 assert.ok(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'gaoxin').venues.find(row => row.venueName === 'A号场'), 'configured venues with no orders should still render in heatmap');
-assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '16:00').utilizationRate, 100, 'own campus schedules should occupy configured venue heatmap slots');
-assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'legacy rows should match configured venues by campus and venue name');
+assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '16:00').utilizationRate, 100, 'own campus schedules should occupy configured venue heatmap slots');
+assert.strictEqual(campusVenueMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo').venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'legacy rows should match configured venues by campus and venue name');
 
 const rangedHeatMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -166,7 +166,7 @@ const rangedHeatMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-ranged',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'in-range', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' },
         { id: 'out-range', date: '2026-05-31', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' }
@@ -174,7 +174,7 @@ const rangedHeatMetrics = buildOperationsMetrics({
     }
   ],
   schedule: [
-    { id: 'schedule-in-range', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-02T18:00:00+08:00', endTime: '2026-06-02T18:30:00+08:00', status: '已排课' }
+    { id: 'schedule-in-range', campus: 'shunyi_mapo', venueId: 'v1', venue: '1号场', startTime: '2026-06-02 18:00:00', endTime: '2026-06-02 18:30:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -184,21 +184,21 @@ const rangedHeatMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
-const rangedCampus = rangedHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-18 00:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+const rangedCampus = rangedHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo');
 const rangedVenue = rangedCampus.venues.find(row => row.venueId === 'v1');
 assert.ok(rangedCampus.hours.includes('18:30'), 'court heatmap should use half-hour slots');
 assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:00').utilizationRate, 28.6, 'half-hour heat rate should use selected period capacity as denominator and include booking plus schedule occupancy');
 assert.strictEqual(rangedVenue.slots.find(slot => slot.hour === '18:30').utilizationRate, 0, 'out-of-range bookings should not heat selected-period slots');
-assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingCount, 1, 'court booking counts should follow the selected date range without counting schedules as bookings');
-assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 2, 'court usage counts should follow the selected date range and include own-campus schedule occupancy');
-assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 1.7, 'golden utilization should use selected period capacity and treat weekend full days as prime');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').bookingCount, 1, 'court booking counts should follow the selected date range without counting schedules as bookings');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').usageCount, 2, 'court usage counts should follow the selected date range and include own-campus schedule occupancy');
+assert.strictEqual(rangedHeatMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').goldenUtilizationRate, 1.7, 'golden utilization should use selected period capacity and treat weekend full days as prime');
 
 const currentMonthHeatMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -206,7 +206,7 @@ const currentMonthHeatMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-current-month',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'jun-01', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' },
         { id: 'jun-05', date: '2026-06-05', venue: '1号场', venueId: 'v1', startTime: '14:00', endTime: '14:30', amount: 100, type: '消费', category: '散客订场' },
@@ -224,8 +224,8 @@ const currentMonthHeatMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
-const currentMonthSlot = currentMonthHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '14:00');
+}, { now: new Date('2026-06-20 14:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const currentMonthSlot = currentMonthHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '14:00');
 assert.strictEqual(currentMonthSlot.utilizationRate, 20, 'current month heatmap should not dilute utilization with future dates');
 assert.strictEqual(currentMonthSlot.heatRate, 100, 'heatmap color strength should use relative heat within the selected campus');
 assert.strictEqual(currentMonthSlot.occupiedCount, 4, 'heatmap slots should expose occupied count for hover numerator');
@@ -233,10 +233,10 @@ assert.strictEqual(currentMonthSlot.dayCount, 20, 'heatmap slots should expose s
 assert.strictEqual(currentMonthSlot.capacityMinutes, 600, 'heatmap slots should expose capacity minutes for hover denominator');
 
 const singleDayTrendMetrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡', venues: [{ id: 'v1', name: '1号场', status: 'active' }] }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡', venues: [{ id: 'v1', name: '1号场', status: 'active' }] }],
   leads: [
-    { id: 'lead-old', leadStage: '课程转化', studentId: 'student-old', source: '小红书', leadDate: '2026-06-16', campus: 'mabao' },
-    { id: 'lead-today', leadStage: '课程转化', studentId: 'student-today', source: '转介绍', leadDate: '2026-06-18', campus: 'mabao' }
+    { id: 'lead-old', leadStage: '课程转化', studentId: 'student-old', source: '小红书', leadDate: '2026-06-16', campus: 'shunyi_mapo' },
+    { id: 'lead-today', leadStage: '课程转化', studentId: 'student-today', source: '转介绍', leadDate: '2026-06-18', campus: 'shunyi_mapo' }
   ],
   students: [
     { id: 'student-old', sourceLeadId: 'lead-old', primaryCoach: 'Siren 教练' },
@@ -246,15 +246,15 @@ const singleDayTrendMetrics = buildOperationsMetrics({
     { id: 'purchase-old', studentId: 'student-old', amount: 800, actualAmount: 800, purchaseDate: '2026-06-16', ownerCoach: 'Siren 教练' },
     { id: 'purchase-today', studentId: 'student-today', amount: 1200, actualAmount: 1200, purchaseDate: '2026-06-18', ownerCoach: 'Siren 教练' }
   ],
-  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'mabao' }],
+  coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'shunyi_mapo' }],
   schedule: [
-    { id: 'schedule-old', coach: 'Siren 教练', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-16T10:00:00+08:00', endTime: '2026-06-16T11:00:00+08:00', status: '已排课' },
-    { id: 'schedule-today', coach: 'Siren 教练', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-18T10:00:00+08:00', endTime: '2026-06-18T11:00:00+08:00', status: '已排课' }
+    { id: 'schedule-old', coach: 'Siren 教练', campus: 'shunyi_mapo', venueId: 'v1', venue: '1号场', startTime: '2026-06-16 10:00:00', endTime: '2026-06-16 11:00:00', status: '已排课' },
+    { id: 'schedule-today', coach: 'Siren 教练', campus: 'shunyi_mapo', venueId: 'v1', venue: '1号场', startTime: '2026-06-18 10:00:00', endTime: '2026-06-18 11:00:00', status: '已排课' }
   ],
   courts: [
     {
       id: 'court-single-day-trend',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'court-old', date: '2026-06-16', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '09:00', amount: 100, type: '消费', category: '散客订场' },
         { id: 'court-today', date: '2026-06-18', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '09:00', amount: 200, type: '消费', category: '散客订场' }
@@ -266,7 +266,7 @@ const singleDayTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-20T00:00:00+08:00'),
+  now: new Date('2026-06-20 00:00:00'),
   dateRange: { startDate: '2026-06-18', endDate: '2026-06-18' }
 });
 
@@ -282,8 +282,8 @@ assert.strictEqual(singleDayTrendMetrics.conversion.cards.totalLeads.value, 1, '
 const allTimeSpanMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -291,7 +291,7 @@ const allTimeSpanMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-all-time',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'first-day', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' },
         { id: 'last-day', date: '2026-06-07', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '18:30', amount: 100, type: '消费', category: '散客订场' }
@@ -307,15 +307,15 @@ const allTimeSpanMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
-assert.strictEqual(allTimeSpanMetrics.court.campusRows.find(row => row.campusCode === 'mabao').goldenUtilizationRate, 4.8, 'all-time utilization should use active business days and treat weekend full days as prime');
-assert.strictEqual(allTimeSpanMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'all-time heat slots should use active business days instead of diluting by historical gaps');
+}, { now: new Date('2026-06-18 00:00:00') });
+assert.strictEqual(allTimeSpanMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').goldenUtilizationRate, 4.8, 'all-time utilization should use active business days and treat weekend full days as prime');
+assert.strictEqual(allTimeSpanMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo').venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'all-time heat slots should use active business days instead of diluting by historical gaps');
 
 const importedSourceBandMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [
         { id: 'v1', name: '1号场', status: 'active', sortOrder: 1 },
@@ -326,7 +326,7 @@ const importedSourceBandMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-imported-band',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       bookingCount: 4,
       bookingAmount: 500,
       history: JSON.stringify([
@@ -345,11 +345,11 @@ const importedSourceBandMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
-const importedBandCampus = importedSourceBandMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-18 00:00:00') });
+const importedBandCampus = importedSourceBandMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo');
 assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').isUnmatched, true, 'unmatched heatmap rows should be flagged as data-cleaning rows');
-assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingCount, 4, 'campus booking count should keep the cached business total when it is higher than heat-eligible rows');
-assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'mabao').bookingAmount, 500, 'campus booking amount should keep the cached business total when it is higher than heat-eligible rows');
+assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').bookingCount, 4, 'campus booking count should keep the cached business total when it is higher than heat-eligible rows');
+assert.strictEqual(importedSourceBandMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').bookingAmount, 500, 'campus booking amount should keep the cached business total when it is higher than heat-eligible rows');
 assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').slots.find(slot => slot.hour === '10:30').utilizationRate, 100, 'imported rows without configured venue should heat the unmatched venue row');
 assert.strictEqual(importedBandCampus.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '18:00').utilizationRate, 100, 'sourceVenue should match configured venue names when available');
 assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未匹配').slots.find(slot => slot.hour === '15:00').utilizationRate, 100, 'imported sourceTimeBand rows like 15-17点 should heat the unmatched venue row');
@@ -357,8 +357,8 @@ assert.strictEqual(importedBandCampus.venues.find(row => row.venueName === '未�
 const cachedSpendIsNotBookingMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -366,7 +366,7 @@ const cachedSpendIsNotBookingMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-cached-spend',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       cachedTotalSpent: 404867,
       spentAmount: 404867,
       bookingCount: 2,
@@ -382,16 +382,16 @@ const cachedSpendIsNotBookingMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-20T14:00:00+08:00') });
-const cachedSpendCampus = cachedSpendIsNotBookingMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-20 14:00:00') });
+const cachedSpendCampus = cachedSpendIsNotBookingMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo');
 assert.strictEqual(cachedSpendCampus.bookingAmount, 0, 'campus booking revenue should not fall back to cachedTotalSpent or spentAmount');
 assert.strictEqual(cachedSpendIsNotBookingMetrics.court.cards.bookingAmount.value, 0, 'court booking revenue card should not use total spent as booking income');
 
 const rangedCachedTotalsMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -399,7 +399,7 @@ const rangedCachedTotalsMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-cached-all-time',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       bookingCount: 2,
       bookingAmount: 500,
       bookingHours: 3,
@@ -417,8 +417,8 @@ const rangedCachedTotalsMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
-const rangedCachedCampus = rangedCachedTotalsMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-20 14:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const rangedCachedCampus = rangedCachedTotalsMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo');
 assert.strictEqual(rangedCachedCampus.bookingCount, 0, 'selected date ranges should not reuse all-time cached booking counts');
 assert.strictEqual(rangedCachedCampus.bookingAmount, 0, 'selected date ranges should not reuse all-time cached booking income');
 assert.strictEqual(rangedCachedCampus.bookingHours, 0, 'selected date ranges should not reuse all-time cached booking hours');
@@ -426,8 +426,8 @@ assert.strictEqual(rangedCachedCampus.bookingHours, 0, 'selected date ranges sho
 const normalizedVenueNameMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1 号场', status: 'active', sortOrder: 1 }]
     }
@@ -435,7 +435,7 @@ const normalizedVenueNameMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-normalized-venue',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'space-name', date: '2026-06-01', venue: '1 号场', startTime: '08:00', endTime: '08:30', amount: 100, type: '消费', category: '订场' },
         { id: 'compact-name', date: '2026-06-01', venue: '1号场', startTime: '08:30', endTime: '09:00', amount: 100, type: '消费', category: '订场' },
@@ -445,7 +445,7 @@ const normalizedVenueNameMetrics = buildOperationsMetrics({
     }
   ],
   schedule: [
-    { id: 'schedule-short-name', campus: 'mabao', venue: '1号', startTime: '2026-06-01T10:00:00+08:00', endTime: '2026-06-01T10:30:00+08:00', status: '已排课' }
+    { id: 'schedule-short-name', campus: 'shunyi_mapo', venue: '1号', startTime: '2026-06-01 10:00:00', endTime: '2026-06-01 10:30:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -455,9 +455,9 @@ const normalizedVenueNameMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
-const normalizedVenueCampus = normalizedVenueNameMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
-const normalizedVenueHeatmap = normalizedVenueNameMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-18 00:00:00') });
+const normalizedVenueCampus = normalizedVenueNameMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo');
+const normalizedVenueHeatmap = normalizedVenueNameMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo');
 const normalizedVenue = normalizedVenueHeatmap.venues.find(row => row.venueId === 'v1');
 assert.strictEqual(normalizedVenueCampus.bookingCount, 3, 'booking count should exclude internal occupancy and schedules');
 assert.strictEqual(normalizedVenueCampus.usageCount, 5, 'usage count should include bookings, internal occupancy and schedules');
@@ -472,8 +472,8 @@ assert.strictEqual(normalizedVenue.slots.find(slot => slot.hour === '10:00').boo
 const historicalCourseHeatMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [
         { id: 'v1', name: '1号场', status: 'active', sortOrder: 1 },
@@ -482,7 +482,7 @@ const historicalCourseHeatMetrics = buildOperationsMetrics({
     }
   ],
   entitlements: [
-    { id: 'ent-course-1', campusIds: ['mabao'] }
+    { id: 'ent-course-1', campusIds: ['shunyi_mapo'] }
   ],
   entitlementLedger: [
     {
@@ -518,9 +518,9 @@ const historicalCourseHeatMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-20T14:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
-const historicalCourseHeatmap = historicalCourseHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'mabao');
-assert.strictEqual(historicalCourseHeatMetrics.court.campusRows.find(row => row.campusCode === 'mabao').usageCount, 0, 'historical course ledger rows must not count as court occupancy without a schedule record');
+}, { now: new Date('2026-06-20 14:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' } });
+const historicalCourseHeatmap = historicalCourseHeatMetrics.court.campusHeatmaps.find(row => row.campusCode === 'shunyi_mapo');
+assert.strictEqual(historicalCourseHeatMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo').usageCount, 0, 'historical course ledger rows must not count as court occupancy without a schedule record');
 assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v1').slots.find(slot => slot.hour === '10:00').bookedMinutes, 0, 'historical course ledger rows must not heat the configured source venue');
 assert.strictEqual(historicalCourseHeatmap.venues.find(row => row.venueId === 'v2').slots.find(slot => slot.hour === '12:00').bookedMinutes, 0, 'free historical lesson rows must not heat the configured source venue');
 assert.ok(!historicalCourseHeatmap.venues.find(row => row.venueName === '未匹配'), 'ignored historical course rows should not create unmatched heat rows');
@@ -528,16 +528,16 @@ assert.ok(!historicalCourseHeatmap.venues.find(row => row.venueName === '未匹�
 const campusConversionCourtMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
   ],
   leads: [
-    { id: 'campus-lead-1', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-1', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' },
-    { id: 'campus-lead-2', campus: 'mabao', leadStage: '已体验待转化', trialAtRaw: '2026-06-02', trialAttendedAt: '2026-06-02' },
-    { id: 'campus-lead-3', campus: 'mabao', leadStage: '课程转化', studentId: 'campus-student-2', trialAtRaw: '2026-06-03', trialAttendedAt: '2026-06-03' }
+    { id: 'campus-lead-1', campus: 'shunyi_mapo', leadStage: '课程转化', studentId: 'campus-student-1', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' },
+    { id: 'campus-lead-2', campus: 'shunyi_mapo', leadStage: '已体验待转化', trialAtRaw: '2026-06-02', trialAttendedAt: '2026-06-02' },
+    { id: 'campus-lead-3', campus: 'shunyi_mapo', leadStage: '课程转化', studentId: 'campus-student-2', trialAtRaw: '2026-06-03', trialAttendedAt: '2026-06-03' }
   ],
   students: [
     { id: 'campus-student-1', sourceLeadId: 'campus-lead-1', dealPath: '体验转化' },
@@ -551,7 +551,7 @@ const campusConversionCourtMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'campus-conversion-court',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'campus-conversion-booking', date: '2026-06-01', venue: '1号场', startTime: '08:00', endTime: '09:00', amount: 100, type: '消费', category: '订场' }
       ])
@@ -563,16 +563,16 @@ const campusConversionCourtMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
-const campusConversionRow = campusConversionCourtMetrics.court.campusRows.find(row => row.campusCode === 'mabao');
+}, { now: new Date('2026-06-18 00:00:00') });
+const campusConversionRow = campusConversionCourtMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo');
 assert.strictEqual(campusConversionRow.trialConversionRate, 66.7, 'court campus rows should include experience conversion rate by campus');
 assert.strictEqual(campusConversionRow.repeatCustomerConversionRate, 50, 'court campus rows should include repeat customer conversion rate by campus');
 
 const courtTrendMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -580,7 +580,7 @@ const courtTrendMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-trend',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'trend-1', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
         { id: 'trend-2', date: '2026-06-03', venue: '1号场', venueId: 'v1', startTime: '08:00', endTime: '10:00', amount: 200, type: '消费', category: '会员订场' },
@@ -597,7 +597,7 @@ const courtTrendMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-08T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+}, { now: new Date('2026-06-08 12:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
 assert.strictEqual(courtTrendMetrics.court.trends.length, 7, 'court KPI trends should cover every selected day');
 assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-03')?.bookingHours, 2, 'court KPI trends should expose the real day bucket, not cumulative booking hours');
 assert.strictEqual(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-06')?.bookingHours, 2, 'court KPI trends should expose each selected-day bucket value');
@@ -606,8 +606,8 @@ assert.ok(courtTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?
 const courtTrendNoEvidenceMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -615,14 +615,14 @@ const courtTrendNoEvidenceMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-no-evidence',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'lesson-like-row', date: '2026-02-01', venue: '1号场', venueId: 'v1', startTime: '09:00', endTime: '09:45', amount: 0, type: '消费', category: '课程消课' }
       ])
     }
   ],
   schedule: [
-    { id: 'schedule-no-venue', campus: 'mabao', startTime: '2026-03-01T09:00:00+08:00', endTime: '2026-03-01T09:45:00+08:00', status: '已排课' }
+    { id: 'schedule-no-venue', campus: 'shunyi_mapo', startTime: '2026-03-01 09:00:00', endTime: '2026-03-01 09:45:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -632,16 +632,16 @@ const courtTrendNoEvidenceMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-03-05T12:00:00+08:00'), dateRange: { startDate: '2026-02-01', endDate: '2026-03-05' } });
+}, { now: new Date('2026-03-05 12:00:00'), dateRange: { startDate: '2026-02-01', endDate: '2026-03-05' } });
 assert.strictEqual(courtTrendNoEvidenceMetrics.court.cards.utilizationRate.value, 0, 'non-booking history rows and schedule rows without court venue evidence must not create court utilization');
 assert.strictEqual(courtTrendNoEvidenceMetrics.court.cards.bookingHours.value, 0, 'non-booking history rows must not create booking hours');
-assert.strictEqual(courtTrendNoEvidenceMetrics.court.campusRows.find(row => row.campusCode === 'mabao')?.usageCount, 0, 'rows without explicit court usage evidence must not create usage count');
+assert.strictEqual(courtTrendNoEvidenceMetrics.court.campusRows.find(row => row.campusCode === 'shunyi_mapo')?.usageCount, 0, 'rows without explicit court usage evidence must not create usage count');
 
 const allTimeCourtTrendMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -649,7 +649,7 @@ const allTimeCourtTrendMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-trend-all',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'all-trend-1', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
         { id: 'all-trend-2', date: '2026-06-04', venue: '1号场', venueId: 'v1', startTime: '10:00', endTime: '12:00', amount: 220, type: '消费', category: '散客订场' }
@@ -665,7 +665,7 @@ const allTimeCourtTrendMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-08T12:00:00+08:00') });
+}, { now: new Date('2026-06-08 12:00:00') });
 assert.strictEqual(allTimeCourtTrendMetrics.court.trends.length, 30, 'all-time court KPI trends should return a visible continuous 30-day window');
 assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.date, '2026-06-04', 'all-time court KPI trends should end at the latest real business day');
 assert.strictEqual(allTimeCourtTrendMetrics.court.trends.find(row => row.date === '2026-06-01')?.bookingAmount, 100, 'all-time court KPI trends should expose real bucket income');
@@ -674,8 +674,8 @@ assert.strictEqual(allTimeCourtTrendMetrics.court.trends.at(-1)?.bookingAmount, 
 const futureSafeCourtTrendMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -683,7 +683,7 @@ const futureSafeCourtTrendMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'court-future-trend',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'future-safe-past', date: '2026-06-01', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 100, type: '消费', category: '散客订场' },
         { id: 'future-safe-today', date: '2026-06-02', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 200, type: '消费', category: '散客订场' },
@@ -704,22 +704,22 @@ const futureSafeCourtTrendMetrics = buildOperationsMetrics({
     { id: 'future-safe-finance-future', businessDate: '2026-06-03', businessType: '散客订场', action: '收款', cashDelta: 999, recognizedRevenueDelta: 999, timeText: '18:00-19:00', sourceProject: '1号场' }
   ],
   financeOverviewData: {}
-}, { now: new Date('2026-06-02T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' } });
+}, { now: new Date('2026-06-02 12:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' } });
 assert.deepStrictEqual(futureSafeCourtTrendMetrics.court.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'court KPI trends should never include future selected dates');
 assert.deepStrictEqual(futureSafeCourtTrendMetrics.overview.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'overview KPI trends should use the same future-safe real point dates');
 assert.strictEqual(futureSafeCourtTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.bookingIncome, 200, 'overview trend points should expose the true daily booking income point');
 const configuredCourtFinanceFallbackMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
   ],
   courts: [],
   schedule: [
-    { id: 'configured-usage', campus: 'mabao', venueId: 'v1', venue: '1号场', startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:00:00+08:00', status: '已排课' }
+    { id: 'configured-usage', campus: 'shunyi_mapo', venueId: 'v1', venue: '1号场', startTime: '2026-06-04 09:00:00', endTime: '2026-06-04 10:00:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -732,7 +732,7 @@ const configuredCourtFinanceFallbackMetrics = buildOperationsMetrics({
     { id: 'finance-booking-2', businessDate: '2026-06-04', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 220, timeText: '10:00-11:00', sourceProject: '1号场' }
   ],
   financeOverviewData: {}
-}, { now: new Date('2026-06-08T12:00:00+08:00') });
+}, { now: new Date('2026-06-08 12:00:00') });
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingAmount.value, 320, 'configured court dashboard should use finance booking income when court booking history is missing');
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.cards.bookingHours.value, 3, 'configured court dashboard should use finance booking hours when court booking history is missing');
 assert.strictEqual(
@@ -743,11 +743,11 @@ assert.strictEqual(
 assert.strictEqual(configuredCourtFinanceFallbackMetrics.court.trends.at(-1)?.bookingAmount, 220, 'configured court trends should bucket finance booking income when court booking history is missing');
 
 const noGenderMetrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   leads: [
-    { id: 'lead-no-gender-1', leadStage: '未转化', source: '小红书', campus: 'mabao', consultType: '成人私教课' },
-    { id: 'lead-no-gender-2', leadStage: '未转化', source: '小红书', campus: 'mabao', consultType: '青少年小班课' },
-    { id: 'lead-no-gender-3', leadStage: '未转化', source: '小红书', campus: 'mabao' }
+    { id: 'lead-no-gender-1', leadStage: '未转化', source: '小红书', campus: 'shunyi_mapo', consultType: '成人私教课' },
+    { id: 'lead-no-gender-2', leadStage: '未转化', source: '小红书', campus: 'shunyi_mapo', consultType: '青少年小班课' },
+    { id: 'lead-no-gender-3', leadStage: '未转化', source: '小红书', campus: 'shunyi_mapo' }
   ],
   students: [],
   purchases: [],
@@ -758,7 +758,7 @@ const noGenderMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
 assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '成人'), 'student attributes should classify adult demand even without gender');
 assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年'), 'student attributes should classify youth demand even without gender');
@@ -768,7 +768,7 @@ assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attrib
 
 const mergedLeadMetrics = buildOperationsMetrics({
   leads: [
-    { id: 'lead-primary', _mergedLeadIds: ['lead-primary', 'lead-duplicate'], source: '小红书', campus: 'mabao', formalCoach: '王教练', consultType: '成人私教课', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' }
+    { id: 'lead-primary', _mergedLeadIds: ['lead-primary', 'lead-duplicate'], source: '小红书', campus: 'shunyi_mapo', formalCoach: '王教练', consultType: '成人私教课', trialAtRaw: '2026-06-01', trialAttendedAt: '2026-06-01' }
   ],
   students: [
     { id: 'student-merged', sourceLeadId: 'lead-duplicate', dealPath: '体验转化', primaryCoach: '王教练', type: '成人' }
@@ -783,7 +783,7 @@ const mergedLeadMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[0].count, 1, 'merged duplicate leads should count as one lead');
 assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[3].count, 1, 'merged duplicate lead ids should still link to course conversion');
@@ -810,7 +810,7 @@ const unifiedRateMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
 const videoChannel = unifiedRateMetrics.conversion.channelEfficiencyRows.find(row => row.source === '视频号');
 assert.strictEqual(videoChannel?.trialConversionRate, 60, 'channel trial conversion rate should use trial attendance over leads');
@@ -826,7 +826,7 @@ assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate,
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 25, 'course funnel should expose loss rate from previous step');
 
 const lifecycleBackedMetrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   leads: [
     { id: 'lifecycle-lead', source: '旧来源', campus: 'old-campus', owner: '旧教练', leadDate: '2026-06-12' }
   ],
@@ -853,18 +853,18 @@ const lifecycleBackedMetrics = buildOperationsMetrics({
   ],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-18T00:00:00+08:00') });
+}, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(lifecycleBackedMetrics.conversion.stageRows.find(row => row.stage === '已成交')?.count, 1, 'conversion stage should reuse the unified converted stage from lifecycle data');
 assert.strictEqual(lifecycleBackedMetrics.conversion.sourceRows.find(row => row.source === '转介绍')?.converted, 1, 'conversion source rows should use lifecycle standard source');
 assert.ok(lifecycleBackedMetrics.conversion.filterOptions.coaches.includes('统一教练'), 'conversion coach filters should use lifecycle owner');
 
 const coachDashboardMetrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   coaches: [
-    { id: 'coach-a', name: 'A教练', status: 'active', campus: 'mabao' },
-    { id: 'coach-b', name: 'B教练', status: 'active', campus: 'mabao' },
-    { id: 'coach-c', name: 'C教练', status: 'inactive', campus: 'mabao' }
+    { id: 'coach-a', name: 'A教练', status: 'active', campus: 'shunyi_mapo' },
+    { id: 'coach-b', name: 'B教练', status: 'active', campus: 'shunyi_mapo' },
+    { id: 'coach-c', name: 'C教练', status: 'inactive', campus: 'shunyi_mapo' }
   ],
   students: [
     { id: 'old-a', primaryCoach: 'A教练' },
@@ -880,11 +880,11 @@ const coachDashboardMetrics = buildOperationsMetrics({
     { id: 'trial-b-deal', studentId: 'trial-b', ownerCoach: 'B教练', actualAmount: 700, purchaseDate: '2026-06-06', status: 'active', courseType: '小班课' }
   ],
   schedule: [
-    { id: 'a-private', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-02T09:00:00+08:00', endTime: '2026-06-02T11:00:00+08:00', status: '已排课', campus: 'mabao', courseType: '私教课' },
-    { id: 'a-trial', coach: 'A教练', studentId: 'trial-a', startTime: '2026-06-03T09:00:00+08:00', endTime: '2026-06-03T10:00:00+08:00', status: '已结束', campus: 'mabao', courseType: '体验课', experienceType: '私教体验课' },
-    { id: 'a-small', coach: 'A教练', studentIds: ['old-a', 'trial-a'], startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:30:00+08:00', status: '待上课', campus: 'mabao', courseType: '小班课' },
-    { id: 'a-cancel', coach: 'A教练', startTime: '2026-06-05T09:00:00+08:00', endTime: '2026-06-05T12:00:00+08:00', status: '已取消', campus: 'mabao', courseType: '私教课' },
-    { id: 'b-trial', coach: 'B教练', studentId: 'trial-b', startTime: '2026-06-03T11:00:00+08:00', endTime: '2026-06-03T12:00:00+08:00', status: '已结束', campus: 'mabao', courseType: '体验课' }
+    { id: 'a-private', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 11:00:00', status: '已排课', campus: 'shunyi_mapo', courseType: '私教课' },
+    { id: 'a-trial', coach: 'A教练', studentId: 'trial-a', startTime: '2026-06-03 09:00:00', endTime: '2026-06-03 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课', experienceType: '私教体验课' },
+    { id: 'a-small', coach: 'A教练', studentIds: ['old-a', 'trial-a'], startTime: '2026-06-04 09:00:00', endTime: '2026-06-04 10:30:00', status: '待上课', campus: 'shunyi_mapo', courseType: '小班课' },
+    { id: 'a-cancel', coach: 'A教练', startTime: '2026-06-05 09:00:00', endTime: '2026-06-05 12:00:00', status: '已取消', campus: 'shunyi_mapo', courseType: '私教课' },
+    { id: 'b-trial', coach: 'B教练', studentId: 'trial-b', startTime: '2026-06-03 11:00:00', endTime: '2026-06-03 12:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课' }
   ],
   leads: [],
   courts: [],
@@ -893,7 +893,7 @@ const coachDashboardMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-04T12:00:00+08:00'),
+  now: new Date('2026-06-04 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' }
 });
 
@@ -927,7 +927,7 @@ const allTimeCoachTrendMetrics = buildOperationsMetrics({
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
   packages: [],
   purchases: [{ id: 'course-one', ownerCoach: 'A教练', studentId: 'old-a', amount: 1200, purchaseDate: '2026-06-04', type: '课程购买' }],
-  schedule: [{ id: 'one-lesson', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-04T09:00:00+08:00', endTime: '2026-06-04T10:00:00+08:00', status: '已排课', courseType: '私教课' }],
+  schedule: [{ id: 'one-lesson', coach: 'A教练', studentId: 'old-a', startTime: '2026-06-04 09:00:00', endTime: '2026-06-04 10:00:00', status: '已排课', courseType: '私教课' }],
   leads: [],
   courts: [],
   membershipAccounts: [],
@@ -935,7 +935,7 @@ const allTimeCoachTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-04T12:00:00+08:00')
+  now: new Date('2026-06-04 12:00:00')
 });
 assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.length, 30, 'all-time coach KPI trends should return a visible continuous 30-day window');
 assert.strictEqual(allTimeCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.revenue, 0, 'all-time coach KPI trends should fill empty days with zero buckets');
@@ -951,8 +951,8 @@ const futureSafeCoachTrendMetrics = buildOperationsMetrics({
     { id: 'coach-future-receipt', ownerCoach: 'B教练', studentId: 'stu-b', amount: 9999, purchaseDate: '2026-06-03', status: 'active' }
   ],
   schedule: [
-    { id: 'coach-real-today-lesson', coach: 'A教练', studentId: 'stu-a', startTime: '2026-06-02T09:00:00+08:00', endTime: '2026-06-02T10:00:00+08:00', status: '已结束', courseType: '私教课' },
-    { id: 'coach-future-lesson', coach: 'B教练', studentId: 'stu-b', startTime: '2026-06-03T09:00:00+08:00', endTime: '2026-06-03T10:00:00+08:00', status: '已排课', courseType: '私教课' }
+    { id: 'coach-real-today-lesson', coach: 'A教练', studentId: 'stu-a', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', courseType: '私教课' },
+    { id: 'coach-future-lesson', coach: 'B教练', studentId: 'stu-b', startTime: '2026-06-03 09:00:00', endTime: '2026-06-03 10:00:00', status: '已排课', courseType: '私教课' }
   ],
   leads: [],
   courts: [],
@@ -961,7 +961,7 @@ const futureSafeCoachTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-02T12:00:00+08:00'),
+  now: new Date('2026-06-02 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' }
 });
 assert.deepStrictEqual(futureSafeCoachTrendMetrics.coach.trends.map(row => row.date), ['2026-06-01', '2026-06-02'], 'coach KPI trends should never include future selected dates');
@@ -972,16 +972,16 @@ assert.ok(coachDashboardMetrics.coach.utilizationBands.find(row => row.band === 
 const unifiedTrendMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
   ],
   leads: [
-    { id: 'prev-lead', leadStage: '未转化', source: '小红书', leadDate: '2026-06-02', campus: 'mabao' },
-    { id: 'current-lead-1', leadStage: '已约体验', source: '小红书', leadDate: '2026-06-09', campus: 'mabao' },
-    { id: 'current-lead-2', leadStage: '课程转化', studentId: 'current-student-2', source: '小红书', leadDate: '2026-06-10', campus: 'mabao' }
+    { id: 'prev-lead', leadStage: '未转化', source: '小红书', leadDate: '2026-06-02', campus: 'shunyi_mapo' },
+    { id: 'current-lead-1', leadStage: '已约体验', source: '小红书', leadDate: '2026-06-09', campus: 'shunyi_mapo' },
+    { id: 'current-lead-2', leadStage: '课程转化', studentId: 'current-student-2', source: '小红书', leadDate: '2026-06-10', campus: 'shunyi_mapo' }
   ],
   students: [
     { id: 'current-student-2', sourceLeadId: 'current-lead-2', dealPath: '体验转化', primaryCoach: 'A教练' }
@@ -995,7 +995,7 @@ const unifiedTrendMetrics = buildOperationsMetrics({
   courts: [
     {
       id: 'unified-court',
-      campus: 'mabao',
+      campus: 'shunyi_mapo',
       history: JSON.stringify([
         { id: 'prev-court', date: '2026-06-04', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 80, type: '消费', category: '散客订场' },
         { id: 'current-court', date: '2026-06-11', venue: '1号场', venueId: 'v1', startTime: '18:00', endTime: '19:00', amount: 180, type: '消费', category: '散客订场' }
@@ -1012,7 +1012,7 @@ const unifiedTrendMetrics = buildOperationsMetrics({
   ],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-14T12:00:00+08:00'),
+  now: new Date('2026-06-14 12:00:00'),
   dateRange: { startDate: '2026-06-08', endDate: '2026-06-14' }
 });
 assert.ok(Array.isArray(unifiedTrendMetrics.conversion.trends), 'conversion dashboard should receive backend-generated trend points');
@@ -1032,7 +1032,7 @@ const allTimeComparisonMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-14T12:00:00+08:00') });
+}, { now: new Date('2026-06-14 12:00:00') });
 assert.strictEqual(allTimeComparisonMetrics.overview.trendComparisons?.totalIncome?.mode, 'none', 'all-time dashboards should not show trend comparison values');
 
 const longRangeTrendMetrics = buildOperationsMetrics({
@@ -1046,7 +1046,7 @@ const longRangeTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-20T12:00:00+08:00'),
+  now: new Date('2026-06-20 12:00:00'),
   dateRange: { startDate: '2026-05-01', endDate: '2026-06-14' }
 });
 assert.strictEqual(longRangeTrendMetrics.conversion.trendMeta?.period, 'week', 'long selected date ranges should be bucketed by week to avoid dense points');
@@ -1076,7 +1076,7 @@ const periodRepurchaseMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-18T12:00:00+08:00'),
+  now: new Date('2026-06-18 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 const june10RepurchasePoint = periodRepurchaseMetrics.conversion.trends.find(row => row.date === '2026-06-10');
@@ -1106,7 +1106,7 @@ const evidenceOnlyConversionTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-04T12:00:00+08:00'),
+  now: new Date('2026-06-04 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-04' }
 });
 const june1ConversionPoint = evidenceOnlyConversionTrendMetrics.conversion.trends.find(row => row.date === '2026-06-01');
@@ -1121,7 +1121,7 @@ const asOfCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
   schedule: [
-    { id: 'coach-trial-asof', coach: 'A教练', studentId: 'trial-asof', startTime: '2026-06-01T09:00:00+08:00', endTime: '2026-06-01T10:00:00+08:00', status: '已结束', courseType: '体验课' }
+    { id: 'coach-trial-asof', coach: 'A教练', studentId: 'trial-asof', startTime: '2026-06-01 09:00:00', endTime: '2026-06-01 10:00:00', status: '已结束', courseType: '体验课' }
   ],
   purchases: [
     { id: 'coach-deal-after-trial', ownerCoach: 'A教练', studentId: 'trial-asof', actualAmount: 1000, purchaseDate: '2026-06-03', status: 'active' }
@@ -1133,7 +1133,7 @@ const asOfCoachTrendMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-04T12:00:00+08:00'),
+  now: new Date('2026-06-04 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-04' }
 });
 assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.trialConversionRate, 0, 'coach trial conversion trend must not count purchases after the trend day');
@@ -1158,8 +1158,8 @@ const coachFallbackMetrics = buildOperationsMetrics({
     { id: 'unassigned', studentId: 'stu-3', ownerCoach: '没有固定教练', amountPaid: 9999, purchaseDate: '2026-06-03', status: 'active' }
   ],
   schedule: [
-    { id: 'siren-hour', coach: 'Siren', startTime: '2026-06-01T10:00:00+08:00', endTime: '2026-06-01T11:00:00+08:00', status: '已排课' },
-    { id: 'siren-lower-hour', coach: 'siren', startTime: '2026-06-02T10:00:00+08:00', endTime: '2026-06-02T11:00:00+08:00', status: '已排课' }
+    { id: 'siren-hour', coach: 'Siren', startTime: '2026-06-01 10:00:00', endTime: '2026-06-01 11:00:00', status: '已排课' },
+    { id: 'siren-lower-hour', coach: 'siren', startTime: '2026-06-02 10:00:00', endTime: '2026-06-02 11:00:00', status: '已排课' }
   ],
   leads: [],
   students: [],
@@ -1168,7 +1168,7 @@ const coachFallbackMetrics = buildOperationsMetrics({
   membershipOrders: [],
   financeNormalizedRows: [],
   financeOverviewData: {}
-}, { now: new Date('2026-06-04T12:00:00+08:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
+}, { now: new Date('2026-06-04 12:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
 const sirenRow = coachFallbackMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
 assert.strictEqual(coachFallbackMetrics.coach.rows.some(row => row.coach === '没有固定教练'), false, 'coach dashboard should exclude unassigned ownership from person efficiency');
 assert.strictEqual(sirenRow?.revenue, 1800, 'coach dashboard should merge coach aliases and use real receipt fallback fields');
@@ -1177,8 +1177,8 @@ assert.strictEqual(sirenRow?.usedHours, 2, 'coach dashboard should merge schedul
 const rangedSnapshotGuardMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
@@ -1217,7 +1217,7 @@ const rangedSnapshotGuardMetrics = buildOperationsMetrics({
     storedValueIncome: 137100
   }
 }, {
-  now: new Date('2026-06-22T12:00:00+08:00'),
+  now: new Date('2026-06-22 12:00:00'),
   dateRange: { startDate: '2026-06-22', endDate: '2026-06-28' }
 });
 assert.strictEqual(rangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 1700, 'selected operations overview total income must use ranged rows instead of the all-time finance snapshot');
@@ -1254,7 +1254,7 @@ const zeroRangedSnapshotGuardMetrics = buildOperationsMetrics({
   financeNormalizedRows: [{ id: 'outside-booking', businessDate: '2026-06-21', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200 }],
   financeOverviewData: { totalIncome: 909700, recognizedRevenue: 295500, pendingRevenue: 614200, tradeCount: 1113, courseIncome: 505900, bookingIncome: 266700, storedValueIncome: 137100 }
 }, {
-  now: new Date('2026-06-22T12:00:00+08:00'),
+  now: new Date('2026-06-22 12:00:00'),
   dateRange: { startDate: '2026-06-22', endDate: '2026-06-28' }
 });
 assert.strictEqual(zeroRangedSnapshotGuardMetrics.overview.cards.totalIncome.value, 0, 'empty selected ranges must stay zero instead of falling back to all-time finance totals');
@@ -1292,7 +1292,7 @@ const financeSingleSourceMetrics = buildOperationsMetrics({
     }
   }
 }, {
-  now: new Date('2026-06-02T12:00:00+08:00')
+  now: new Date('2026-06-02 12:00:00')
 });
 assert.strictEqual(financeSingleSourceMetrics.overview.cards.totalIncome.value, 1700, 'operations overview total income must come from finance normalized rows, not stale financeOverviewData or fallback rows');
 assert.strictEqual(financeSingleSourceMetrics.overview.cards.recognizedRevenue.value, 320, 'operations overview recognized revenue must come from finance normalized rows');
@@ -1327,7 +1327,7 @@ const noFinanceFallbackMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-02T12:00:00+08:00'),
+  now: new Date('2026-06-02 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-02' }
 });
 assert.strictEqual(noFinanceFallbackMetrics.overview.cards.totalIncome.value, 0, 'operations overview total income must not fall back to business rows when finance rows are missing');
@@ -1356,7 +1356,7 @@ const closedFunnelMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-03T12:00:00+08:00'),
+  now: new Date('2026-06-03 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' }
 });
 const closedFunnelDealStep = closedFunnelMetrics.conversion.courseFunnel[3];
@@ -1367,14 +1367,14 @@ assert.ok((closedFunnelTrendPoint?.dealRateNumerator || 0) <= (closedFunnelTrend
 assert.ok((closedFunnelTrendPoint?.dealRate || 0) <= 100, 'conversion trend deal rate must never exceed 100%');
 
 const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
-  campuses: [{ id: 'mabao', code: 'mabao', name: '顺义马坡' }],
+  campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   leads: [
-    { id: 'conversion-lead-1', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', leadStage: '已约体验', trialAt: '2026-06-01' },
-    { id: 'conversion-lead-2', leadDate: '2026-06-01', source: '小红书', campus: 'mabao', studentId: 'conversion-student-1', leadStage: '课程转化', trialAt: '2026-06-01', trialAttendedAt: '2026-06-01' }
+    { id: 'conversion-lead-1', leadDate: '2026-06-01', source: '小红书', campus: 'shunyi_mapo', leadStage: '已约体验', trialAt: '2026-06-01' },
+    { id: 'conversion-lead-2', leadDate: '2026-06-01', source: '小红书', campus: 'shunyi_mapo', studentId: 'conversion-student-1', leadStage: '课程转化', trialAt: '2026-06-01', trialAttendedAt: '2026-06-01' }
   ],
   students: [{ id: 'conversion-student-1', sourceLeadId: 'conversion-lead-2', primaryCoach: '张教练' }],
   purchases: [{ id: 'conversion-purchase-1', studentId: 'conversion-student-1', actualAmount: 1000, purchaseDate: '2026-06-01', status: 'active', primaryCoach: '张教练' }],
-  coaches: [{ id: 'conversion-coach-1', name: '张教练', status: 'active', campus: 'mabao' }],
+  coaches: [{ id: 'conversion-coach-1', name: '张教练', status: 'active', campus: 'shunyi_mapo' }],
   schedule: [],
   courts: [],
   membershipAccounts: [],
@@ -1382,7 +1382,7 @@ const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
   financeNormalizedRows: [],
   financeOverviewData: {}
 }, {
-  now: new Date('2026-06-23T08:00:00+08:00'),
+  now: new Date('2026-06-23 08:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 assert.strictEqual(
@@ -1414,23 +1414,23 @@ assert.strictEqual(
 const financeBackedTrendMetrics = buildOperationsMetrics({
   campuses: [
     {
-      id: 'mabao',
-      code: 'mabao',
+      id: 'shunyi_mapo',
+      code: 'shunyi_mapo',
       name: '顺义马坡',
       venues: [{ id: 'v1', name: '1号场', status: 'active', sortOrder: 1 }]
     }
   ],
   leads: [
-    { id: 'finance-backed-lead', leadStage: '课程转化', studentId: 'finance-backed-student', source: '小红书', campus: 'mabao' }
+    { id: 'finance-backed-lead', leadStage: '课程转化', studentId: 'finance-backed-student', source: '小红书', campus: 'shunyi_mapo' }
   ],
   leadFollowups: [
-    { id: 'finance-backed-appointment', leadId: 'finance-backed-lead', followupAt: '2026-06-01T10:00:00+08:00', statusAfter: '已约体验' },
-    { id: 'finance-backed-attendance', leadId: 'finance-backed-lead', followupAt: '2026-06-02T10:00:00+08:00', statusAfter: '已体验' },
-    { id: 'finance-backed-deal', leadId: 'finance-backed-lead', followupAt: '2026-06-03T10:00:00+08:00', statusAfter: '课程转化' }
+    { id: 'finance-backed-appointment', leadId: 'finance-backed-lead', followupAt: '2026-06-01 10:00:00', statusAfter: '已约体验' },
+    { id: 'finance-backed-attendance', leadId: 'finance-backed-lead', followupAt: '2026-06-02 10:00:00', statusAfter: '已体验' },
+    { id: 'finance-backed-deal', leadId: 'finance-backed-lead', followupAt: '2026-06-03 10:00:00', statusAfter: '课程转化' }
   ],
   students: [{ id: 'finance-backed-student', sourceLeadId: 'finance-backed-lead', dealPath: '体验转化', primaryCoach: '张教练' }],
   purchases: [],
-  coaches: [{ id: 'finance-backed-coach', name: '张教练', status: 'active', campus: 'mabao' }],
+  coaches: [{ id: 'finance-backed-coach', name: '张教练', status: 'active', campus: 'shunyi_mapo' }],
   schedule: [],
   courts: [],
   membershipAccounts: [],
@@ -1442,7 +1442,7 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
     { id: 'finance-member-court-real', businessDate: '2026-06-04', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 180, timeText: '10:00-11:00', sourceProject: '1号场' }
   ],
   financeOverviewData: {}
-}, { now: new Date('2026-06-05T12:00:00+08:00') });
+}, { now: new Date('2026-06-05 12:00:00') });
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.length, 30, 'all-time overview KPI trends should return a visible continuous 30-day window when finance rows are available');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.at(-1)?.date, '2026-06-04', 'all-time overview KPI trends should end at the latest real finance row date');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-01')?.courseIncome, 1000, 'overview course income trend should come from real finance rows');

@@ -143,8 +143,8 @@ const importedDateRows = context.applyCourtDateRangeFilter([{
   id: 'court-imported-date',
   history: [
     { type: '消费', category: '散客订场', amount: 120, businessDate: '2026-06-05', startTime: '09:00', endTime: '10:00', payMethod: '现场收款', venue: '1号场' },
-    { type: '消费', category: '会员订场', amount: 80, recordedAt: '2026-06-07T12:20:00.000Z', startTime: '10:00', endTime: '11:00', payMethod: '储值扣款', venue: '2号场' },
-    { type: '消费', category: '会员订场', amount: 70, operationAt: '2026-05-31T12:20:00.000Z', startTime: '11:00', endTime: '12:00', payMethod: '储值扣款', venue: '3号场' }
+    { type: '消费', category: '会员订场', amount: 80, recordedAt: '2026-06-07 12:20:00', startTime: '10:00', endTime: '11:00', payMethod: '储值扣款', venue: '2号场' },
+    { type: '消费', category: '会员订场', amount: 70, operationAt: '2026-05-31 12:20:00', startTime: '11:00', endTime: '12:00', payMethod: '储值扣款', venue: '3号场' }
   ]
 }], { startDate: '2026-06-01', endDate: '2026-06-30' });
 assert.strictEqual(importedDateRows.length, 1, 'date range should support imported booking rows with businessDate or recordedAt');

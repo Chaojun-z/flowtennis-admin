@@ -86,25 +86,25 @@ assert.doesNotMatch(
     fnBody(leadsSource, 'openLeadModal'),
     fnBody(leadsSource, 'renderLeadImportPreviewBody')
   ].join('\n'),
-  /意向类型/,
-  'lead visible labels should use 意向等级 instead of 意向类型'
+  /意向等级/,
+  'lead visible labels should use 意向等级 instead of 意向等级'
 );
 
 assert.doesNotMatch(
   [fnBody(scheduleSource, 'openScheduleModal'), fnBody(scheduleSource, 'scheduleDetailInfoHtml')].join('\n'),
-  /学员姓名/,
-  'schedule visible identity labels should use 姓名 instead of 学员姓名'
+  /姓名/,
+  'schedule visible identity labels should use 姓名 instead of 姓名'
 );
 
 assert.doesNotMatch(
   [fnBody(studentsSource, 'studentLeadSummaryHtml'), fnBody(courtsSource, 'courtLeadSummaryHtml')].join('\n'),
-  /咨询需求/,
-  'lead summary blocks should use 需求产品 instead of 咨询需求'
+  /需求产品/,
+  'lead summary blocks should use 需求产品 instead of 需求产品'
 );
 
 assert.doesNotMatch(
   fnBody(purchasesSource, 'openPurchaseDetailModal'),
-  /系统录入时间/,
+  /录入时间/,
   'purchase details should not expose internal system insertion time'
 );
 
@@ -116,13 +116,13 @@ assert.doesNotMatch(
 
 assert.doesNotMatch(
   fnBody(courtsSource, 'renderMembershipLedgerAuditPage'),
-  /renderStandardCellText\(l\.membershipOrderId\)/,
+  /renderStandardCellText\(l\.membershipOrderRef\)/,
   'membership benefit ledger should not display raw membership order ids'
 );
 
 assert.doesNotMatch(
   fnBody(courtsSource, 'refreshMembershipBenefitConsumePreview'),
-  /\$\{row\.membershipOrderId\}/,
+  /\$\{row\.membershipOrderRef\}/,
   'membership benefit consume preview should not display raw membership order ids'
 );
 

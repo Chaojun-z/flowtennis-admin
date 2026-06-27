@@ -35,7 +35,7 @@ const sample = {
   ],
   entitlements: [],
   schedule: [
-    { id: 'schedule-trial-attended', studentId: 'stu-attended', courseType: '体验课', startTime: '2026-06-06T10:00:00+08:00', endTime: '2026-06-06T11:00:00+08:00', status: '已完成' }
+    { id: 'schedule-trial-attended', studentId: 'stu-attended', courseType: '体验课', startTime: '2026-06-06 10:00:00', endTime: '2026-06-06 11:00:00', status: '已完成' }
   ],
   courts: [
     { id: 'court-booking', name: '订场成交客户', sourceLeadId: 'lead-booking', createdAt: '2026-06-07' },
@@ -52,7 +52,7 @@ const allLeadPoolRows = buildLeadPoolRows({ leads: sample.leads, customerLifecyc
 const rawLeadIds = new Set(sample.leads.map(row => String(row.id || '').trim()).filter(Boolean));
 const rawLeadPoolRows = allLeadPoolRows.filter(row => rawLeadIds.has(String(row?.id || row?.sourceLeadId || '').trim()));
 const platform = buildPlatformMetrics({ ...sample, customerLifecycleRows: lifecycleRows });
-const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows: lifecycleRows }, { now: new Date('2026-06-18T00:00:00+08:00') });
+const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows: lifecycleRows }, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(rawLeadPoolRows.length, sample.leads.length, 'raw lead pool should keep exactly the raw lead cohort');
 assert.strictEqual(allLeadPoolRows.length, rawLeadPoolRows.length + 1, 'unified lead-pool builder may include synthetic direct-conversion customers beyond the raw lead cohort');
@@ -139,9 +139,9 @@ const teachingSample = {
     { id: 'purchase-trial-course', studentId: 'stu-trial-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-07' }
   ],
   schedule: [
-    { id: 'schedule-booked-only', studentId: 'stu-booked-only', courseType: '体验课', startTime: '2026-06-08T10:00:00+08:00', endTime: '2026-06-08T11:00:00+08:00', status: '待上课' },
-    { id: 'schedule-attended-only', studentId: 'stu-attended-only', courseType: '体验课', startTime: '2026-06-09T10:00:00+08:00', endTime: '2026-06-09T11:00:00+08:00', status: '已完成' },
-    { id: 'schedule-trial-course', studentId: 'stu-trial-course', courseType: '体验课', startTime: '2026-06-10T10:00:00+08:00', endTime: '2026-06-10T11:00:00+08:00', status: '已完成' }
+    { id: 'schedule-booked-only', studentId: 'stu-booked-only', courseType: '体验课', startTime: '2026-06-08 10:00:00', endTime: '2026-06-08 11:00:00', status: '待上课' },
+    { id: 'schedule-attended-only', studentId: 'stu-attended-only', courseType: '体验课', startTime: '2026-06-09 10:00:00', endTime: '2026-06-09 11:00:00', status: '已完成' },
+    { id: 'schedule-trial-course', studentId: 'stu-trial-course', courseType: '体验课', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已完成' }
   ],
   courts: [
     { id: 'court-booking-only', name: '只订场', sourceLeadId: 'lead-booking-only', history: JSON.stringify([{ date: '2026-06-06', startTime: '09:00', endTime: '10:00', amount: 100, type: '消费' }]) }
@@ -151,7 +151,7 @@ const teachingSample = {
 };
 const teachingLifecycleRows = buildCustomerLifecycleRows(teachingSample);
 const teachingPlatform = buildPlatformMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows });
-const teachingOperations = buildOperationsMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows }, { now: new Date('2026-06-18T00:00:00+08:00') });
+const teachingOperations = buildOperationsMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows }, { now: new Date('2026-06-18 00:00:00') });
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialStudents.map(row => row.studentId).sort(),
   ['stu-attended-only', 'stu-booked-only'],
