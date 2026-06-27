@@ -31,13 +31,45 @@
     { value: 'inactive', label: '已停售' }
   ];
   const PACKAGE_TIME_BAND_OPTIONS = ['全天', '黄金时段', '非黄金时段'].map(value => ({ value, label: value }));
+  const PACKAGE_TIME_SCOPE_OPTIONS = [
+    { value: 'weekday', label: '工作日' },
+    { value: 'weekend', label: '周末' }
+  ];
+  const PACKAGE_CLASS_SIZE_OPTIONS = [
+    { value: '1', label: '1v1' },
+    { value: '2', label: '1v2' },
+    { value: '3', label: '1v3' },
+    { value: '4', label: '1v4' }
+  ];
   const SCHEDULE_STATUSES = ['已排课', '已结束', '已取消'];
   const SCHEDULE_CANCEL_REASONS = ['学员请假', '教练请假', '天气 / 场地', '临时调整', '体验课未到', '其他'];
   const SCHEDULE_NOTIFY_STATUSES = ['未通知', '已通知学员', '已通知教练', '都已通知'];
   const SCHEDULE_CONFIRM_STATUSES = ['待确认', '已确认'];
   const SCHEDULE_SOURCES = ['排课表', '教练运营', '班次', '学员', '学习计划'];
+  const SCHEDULE_SETTLEMENT_TYPE_OPTIONS = [
+    { value: 'package', label: '课包扣减' },
+    { value: 'direct', label: '直接收款' },
+    { value: 'gift', label: '赠送/免费' }
+  ];
+  const SCHEDULE_FIELD_FEE_MODE_OPTIONS = [
+    { value: 'none', label: '不收场地费' },
+    { value: 'separate', label: '单独支付场地费' }
+  ];
   const CLASS_STATUSES = ['已排班', '已取消', '已结课'];
   const STUDENT_STATUS_LABELS = ['上课中', '待转化', '沉默30天', '仅订场', '无班次'];
+  const ADMIN_USER_ROLE_OPTIONS = [
+    { value: 'editor', label: '教练账号' },
+    { value: 'admin', label: '管理员' }
+  ];
+  const ADMIN_USER_DATA_SCOPE_OPTIONS = [
+    { value: 'all', label: '全部校区' },
+    { value: 'campus', label: '指定校区' },
+    { value: 'coach', label: '仅本人教练' }
+  ];
+  const COACH_STATUS_OPTIONS = [
+    { value: 'active', label: '在职' },
+    { value: 'inactive', label: '离职' }
+  ];
   const LEAD_SOURCE_OPTIONS = SOURCES.map(value => ({ value, label: value }));
   const LEAD_STAGE_OPTIONS = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].map(value => ({ value, label: value }));
   const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '会员', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员'].map(value => ({ value, label: value }));
@@ -86,6 +118,8 @@
     { value: 'active', label: '启用' },
     { value: 'inactive', label: '停用' }
   ];
+  const PRICE_VENUE_SPACE_TYPE_OPTIONS = ['室内', '室外'].map(value => ({ value, label: value }));
+  const PRICE_DATE_TYPE_OPTIONS = ['工作日', '周末节假日'].map(value => ({ value, label: value }));
   const COURT_FINANCE_BUSINESS_TYPES = ['会员订场', '散客订场', '课程订场', '领导订场', '内部使用', '约球局'];
   const COURT_FINANCE_BUSINESS_OPTIONS = COURT_FINANCE_BUSINESS_TYPES.map(value => ({ value, label: value }));
   const FINANCE_TRANSACTION_TYPE_OPTIONS = TRANSACTION_TYPES.map(value => ({ value, label: value }));
@@ -119,14 +153,21 @@
     studentTypes: STUDENT_TYPE_OPTIONS,
     packageStatuses: PACKAGE_STATUS_OPTIONS,
     packageTimeBands: PACKAGE_TIME_BAND_OPTIONS,
+    packageTimeScopes: PACKAGE_TIME_SCOPE_OPTIONS,
+    packageClassSizes: PACKAGE_CLASS_SIZE_OPTIONS,
     payMethods: PAYMENT_METHODS,
     scheduleStatuses: SCHEDULE_STATUSES,
     scheduleCancelReasons: SCHEDULE_CANCEL_REASONS,
     scheduleNotifyStatuses: SCHEDULE_NOTIFY_STATUSES,
     scheduleConfirmStatuses: SCHEDULE_CONFIRM_STATUSES,
     scheduleSources: SCHEDULE_SOURCES,
+    scheduleSettlementTypes: SCHEDULE_SETTLEMENT_TYPE_OPTIONS,
+    scheduleFieldFeeModes: SCHEDULE_FIELD_FEE_MODE_OPTIONS,
     classStatuses: CLASS_STATUSES,
     studentStatusLabels: STUDENT_STATUS_LABELS,
+    adminUserRoles: ADMIN_USER_ROLE_OPTIONS,
+    adminUserDataScopes: ADMIN_USER_DATA_SCOPE_OPTIONS,
+    coachStatuses: COACH_STATUS_OPTIONS,
     leadSources: LEAD_SOURCE_OPTIONS,
     leadStages: LEAD_STAGE_OPTIONS,
     leadDealTypes: LEAD_DEAL_TYPE_OPTIONS,
@@ -148,6 +189,8 @@
     priceProductTypes: PRICE_PRODUCT_TYPE_OPTIONS,
     priceBusinessTypes: PRICE_BUSINESS_TYPE_OPTIONS,
     priceStatuses: PRICE_STATUS_OPTIONS,
+    priceVenueSpaceTypes: PRICE_VENUE_SPACE_TYPE_OPTIONS,
+    priceDateTypes: PRICE_DATE_TYPE_OPTIONS,
     financeTransactionTypes: FINANCE_TRANSACTION_TYPE_OPTIONS,
     financeFields: FINANCE_FIELD_OPTIONS,
     courtFinanceBusinessTypes: COURT_FINANCE_BUSINESS_OPTIONS
@@ -314,14 +357,21 @@
     STUDENT_TYPE_OPTIONS,
     PACKAGE_STATUS_OPTIONS,
     PACKAGE_TIME_BAND_OPTIONS,
+    PACKAGE_TIME_SCOPE_OPTIONS,
+    PACKAGE_CLASS_SIZE_OPTIONS,
     PAY_METHODS: PAYMENT_METHODS,
     SCHEDULE_STATUSES,
     SCHEDULE_CANCEL_REASONS,
     SCHEDULE_NOTIFY_STATUSES,
     SCHEDULE_CONFIRM_STATUSES,
     SCHEDULE_SOURCES,
+    SCHEDULE_SETTLEMENT_TYPE_OPTIONS,
+    SCHEDULE_FIELD_FEE_MODE_OPTIONS,
     CLASS_STATUSES,
     STUDENT_STATUS_LABELS,
+    ADMIN_USER_ROLE_OPTIONS,
+    ADMIN_USER_DATA_SCOPE_OPTIONS,
+    COACH_STATUS_OPTIONS,
     LEAD_SOURCE_OPTIONS,
     LEAD_STAGE_OPTIONS,
     LEAD_DEAL_TYPE_OPTIONS,
@@ -343,6 +393,8 @@
     PRICE_PRODUCT_TYPE_OPTIONS,
     PRICE_BUSINESS_TYPE_OPTIONS,
     PRICE_STATUS_OPTIONS,
+    PRICE_VENUE_SPACE_TYPE_OPTIONS,
+    PRICE_DATE_TYPE_OPTIONS,
     COURT_FINANCE_BUSINESS_TYPES,
     COURT_FINANCE_BUSINESS_OPTIONS,
     FINANCE_TRANSACTION_TYPE_OPTIONS,

@@ -524,7 +524,7 @@ function packageCampusPickerHtml(ids){
   return `<div class="package-choice-grid package-choice-grid-multi">${campuses.map(c=>{const value=c.code||c.id;return `<label class="package-choice-pill"><input type="checkbox" value="${esc(value)}" class="pkg-campus-cb" ${ids.includes(value)?'checked':''}><span>${esc(c.name)}</span></label>`;}).join('')||'<span class="package-choice-empty">暂无校区</span>'}</div>`;
 }
 function packageTimeScopeOptions(){
-  return [{value:'weekday',label:'工作日'},{value:'weekend',label:'周末'}];
+  return FlowTennisBusinessTaxonomy.optionList('packageTimeScopes');
 }
 function packageTimeBandPresetWindows(timeBand='全天'){
   if(timeBand==='黄金时段')return[
@@ -690,7 +690,7 @@ function openPackageModal(id,presetProductId=''){
   const audience=rv(p,'audience')||packageAudienceLabelFromText([p?.type,p?.productName,p?.name,p?.packageName,p?.notes])||'成人';
   const audienceOptions=STUDENT_TYPE_OPTIONS;
   const courseTypeOptions=PRODUCT_TYPES.map(t=>({value:t,label:t}));
-  const classSizeOptions=[{value:'1',label:'1v1'},{value:'2',label:'1v2'},{value:'3',label:'1v3'},{value:'4',label:'1v4'}];
+  const classSizeOptions=FlowTennisBusinessTaxonomy.optionList('packageClassSizes');
   const experienceType=courseTypeForm.experienceType||packageExperienceTypeLabel(p)||'私教体验课';
   const smallClassType=courseTypeForm.smallClassType||'single';
   const smallClassOptions=SMALL_CLASS_TYPE_OPTIONS;

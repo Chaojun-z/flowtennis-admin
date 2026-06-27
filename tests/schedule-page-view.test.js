@@ -93,7 +93,7 @@ assert.match(fnBody('openScheduleModal'), /handleScheduleCampusChange/, 'schedul
 assert.match(fnBody('saveSchedule'), /const selectedVenue=locationType==='own'\?scheduleVenueByValue\(campusValue,venueValue\):null/, 'schedule save should resolve selected venue metadata');
 assert.match(fnBody('saveSchedule'), /venueId:selectedVenue\?\.id\|\|''[\s\S]*venueSpaceType:selectedVenue\?\.spaceType\|\|''/, 'schedule save should persist venue id and indoor/outdoor type for configured venues');
 assert.match(fnBody('openScheduleModal'), /地点类型[\s\S]*sch_locationType[\s\S]*schedule-location-row[\s\S]*sch_externalLocationRow[\s\S]*sch_externalVenueName[\s\S]*sch_externalCourtName[\s\S]*sch_externalNotes/, 'external location fields should sit after coach and location type');
-assert.match(fnBody('openScheduleModal'), /学员姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule modal should follow the adjusted editable field order');
+assert.match(fnBody('openScheduleModal'), /姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule modal should follow the adjusted editable field order');
 assert.match(fnBody('openScheduleModal'), /id="sch_lc_label">消课时数/, 'schedule modal should label scheduled lesson hours as 消课时数');
 assert.match(fnBody('openScheduleModal'), /id="sch_countItem"[\s\S]*id="sch_count"[\s\S]*readonly/, 'count-based packages should keep a readonly lesson count value');
 assert.match(source, /function refreshScheduleCountFields\(/, 'schedule modal should refresh the separate lesson count field when package selection changes');
@@ -130,7 +130,7 @@ assert.match(styles, /\.modal\.modal-court \.schedule-repeat-control\.is-disable
 assert.match(styles, /\.modal\.modal-court \.schedule-time-field\{flex:1 1 auto/, 'schedule time field should use flexible width instead of forcing cramped fixed controls');
 assert.match(styles, /\.modal\.modal-court \.schedule-repeat-row\{align-items:flex-end;gap:18px\}/, 'schedule repeat controls should have their own row spacing');
 assert.doesNotMatch(fnBody('openScheduleModal'), /上课地点|排课会校验时间冲突|取消勾选的人本次记为缺勤|按周生成多节课/, 'schedule modal should remove the extra notice, separate location section, and old repeat copy');
-assert.match(fnBody('openScheduleModal'), /学员姓名<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
+assert.match(fnBody('openScheduleModal'), /姓名<\/label>[\s\S]*sch_stuSearch[\s\S]*sch_studentSuggest[\s\S]*sch_selectedStudentTags/, 'schedule modal should use search suggestions and selected student tags');
 assert.match(source, /function scheduleStudentInlineMeta\([\s\S]*\$\{campus\}｜\$\{last\}上课/, 'schedule student metadata should use compact campus and last lesson copy');
 assert.match(source, /function scheduleStudentDisplayName\(/, 'schedule student search should resolve real student display names');
 assert.match(fnBody('renderScheduleStudentSuggestions'), /scheduleStudentSearchTokens\(s\)/, 'schedule student suggestions should search real name and phone fields');
@@ -207,7 +207,7 @@ assert.match(fnBody('openScheduleDetail'), /renderScheduleDetailCard\('基础信
 assert.match(source, /function scheduleDetailHeaderHtml\([\s\S]*studentNames[\s\S]*renderDetailDrawerHero/, 'schedule detail drawer title should use student names through the shared drawer header');
 assert.match(source, /function scheduleResolveStudentName\(/, 'schedule detail should resolve student names from related datasets before rendering');
 assert.doesNotMatch(fnBody('scheduleStudentSummary'), /students\.find\(st=>st\.id===id\)\?\.name\|\|id/, 'schedule student summary should not fall back to displaying raw student ids');
-assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*学员姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*lessonField\.label[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
+assert.match(source, /function scheduleDetailInfoHtml\([\s\S]*姓名[\s\S]*课程类型[\s\S]*standardCourseTypeLabel[\s\S]*结算方式[\s\S]*扣减课包[\s\S]*上课时间[\s\S]*lessonField\.label[\s\S]*上课教练[\s\S]*地点类型[\s\S]*上课校区\/场馆名称[\s\S]*场地[\s\S]*循环排课/, 'schedule detail basic fields should show standard course type and keep repeat scheduling as the last field');
 assert.doesNotMatch(source, /历史问题/, 'schedule detail drawer should remove the historical issue field');
 assert.match(source, /排课备注/, 'schedule detail drawer should rename coach note to schedule note');
 assert.doesNotMatch(source, /if\(!isSmallGroupSchedule\(s\)\)return scheduleDetailField\('教练提案'/, 'schedule detail proposal tab should not collapse non-small-group lessons into one placeholder field');
@@ -258,7 +258,7 @@ assert.match(fnBody('openStandardDetailDrawer'), /event\.target===ov[\s\S]*close
 assert.doesNotMatch(fnBody('openScheduleModal'), /setCourtModalFrame\(id\?'编辑排课':'添加排课'/, 'schedule create and edit should no longer use the old centered modal frame');
 assert.match(fnBody('openScheduleModal'), /modal-schedule-drawer/, 'schedule create and edit should use the same right-side drawer container');
 assert.match(fnBody('openScheduleModal'), /scheduleDetailHeaderHtml[\s\S]*scheduleDetailTabsHtml/, 'schedule create and edit should reuse the detail drawer header and tabs');
-assert.match(fnBody('openScheduleModal'), /学员姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule create and edit should edit the adjusted field order inside the detail card structure');
+assert.match(fnBody('openScheduleModal'), /姓名[\s\S]*课程类型[\s\S]*sch_standardCourseType[\s\S]*schedule-settlement-row[\s\S]*schedule-time-row[\s\S]*上课教练[\s\S]*地点类型[\s\S]*sch_locationPlaceLabel[\s\S]*场地[\s\S]*schedule-repeat-row/, 'schedule create and edit should edit the adjusted field order inside the detail card structure');
 assert.match(fnBody('openScheduleModal'), /renderScheduleDetailFormCard\('基础信息'[\s\S]*renderScheduleDetailFormCard\('设置迟到'[\s\S]*renderScheduleDetailFormCard\('备注信息'/, 'schedule create and edit should place late settings between basic info and notes');
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-drawer-form-head/, 'schedule create and edit should not use a separate form drawer header');
 assert.match(source, /function renderScheduleDetailFormCard\(/, 'schedule drawer should expose a card renderer for editable detail modules');
@@ -338,7 +338,7 @@ assert.match(fnBody('openCoachLateSettlementModal'), /迟到分钟/, 'late settl
 assert.match(fnBody('openCoachLateSettlementModal'), /承担合计/, 'late settlement summary should include payable total');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-table/, 'late settlement modal should use a scoped compact table');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-empty/, 'late settlement modal should use a compact empty state');
-assert.match(fnBody('openScheduleModal'), /课包扣减[\s\S]*直接收款[\s\S]*赠送\/免费[\s\S]*sch_settlementType/, 'schedule modal should let ops choose package, direct payment, or gift settlement');
+assert.match(fnBody('openScheduleModal'), /optionList\('scheduleSettlementTypes'\)[\s\S]*sch_settlementType/, 'schedule modal should let ops choose package, direct payment, or gift settlement from the shared dictionary');
 assert.match(fnBody('openScheduleModal'), /sch_payMethod[\s\S]*sch_paidAmount/, 'schedule modal should collect payment method and amount for direct paid lessons');
 assert.match(fnBody('saveSchedule'), /settlementType[\s\S]*paidAmount[\s\S]*payMethod/, 'schedule save should send settlement and payment fields to backend');
 assert.match(fnBody('refreshSchEntitlementOptions'), /currentScheduleSettlementType\(\)!=='package'/, 'non-package settlement should not try to match entitlements');

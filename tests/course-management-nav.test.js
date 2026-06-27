@@ -336,7 +336,8 @@ assert.match(fnBody('purchasePackageListLabel'), /replace\([^)]*已停售/, 'pur
 assert.doesNotMatch(html, /先选择学员[\s\S]*下一步/, 'purchase modal should not require a separate first-step student gate');
 assert.match(html, /购买时规则快照/, 'purchase detail should show package snapshot');
 assert.match(html, /系统价格[\s\S]*成交金额[\s\S]*改价原因/, 'purchase detail should show price snapshot fields');
-assert.match(html, /支付日期[\s\S]*系统录入时间/, 'purchase detail should show business date and system recorded time');
+assert.match(html, /支付日期[\s\S]*学员/, 'purchase detail should show business date and customer identity');
+assert.doesNotMatch(html, /系统录入时间/, 'purchase detail should not expose system insertion time');
 assert.match(html, /function openPurchaseVoidModal/, 'purchase page should use dedicated void modal');
 assert.match(html, /function voidPurchase/, 'purchase page should send void reason');
 assert.match(html, /作废原因/, 'void modal should require reason');

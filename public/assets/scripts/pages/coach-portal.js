@@ -19,7 +19,7 @@ function workbenchScheduleState(schedule,prevSchedule,now){
   return null;
 }
 function workbenchMetricHelpHtml(){
-  return `<div class="coach-wb-help-wrap"><button type="button" class="coach-wb-help-btn" aria-label="查看指标口径" onclick="toggleWorkbenchMetricHelp(event)"><span>?</span></button><div class="coach-wb-help-popover" id="workbenchMetricHelp"><div>本月课时 = 本月已结束课程课时数</div><div>本周课时 = 本周已结束课程课时数</div><div>今天课时 = 今天已结束课程课时数</div><div>本月反馈 = 本月已结束且已填写课后反馈的课程数</div><div>未反馈 = 已结束但未填写反馈的课程数</div><div>本月体验课转化率 = 本月已结束体验课中，后续已购买任意产品的学员占比</div></div></div>`;
+  return `<div class="coach-wb-help-wrap"><button type="button" class="coach-wb-help-btn" aria-label="查看指标口径" onclick="toggleWorkbenchMetricHelp(event)"><span>?</span></button><div class="coach-wb-help-popover" id="workbenchMetricHelp"><div>本月课时 = 本月已结束课程课时数</div><div>本周课时 = 本周已结束课程课时数</div><div>今天课时 = 今天已结束课程课时数</div><div>本月反馈 = 本月已结束且已填写课后反馈的课程数</div><div>未反馈 = 已结束但未填写反馈的课程数</div><div>本月体验课转化率 = 本月已结束体验课中，后续购买正式课包的客户占比</div></div></div>`;
 }
 function toggleWorkbenchMetricHelp(event){
   if(event)event.stopPropagation();

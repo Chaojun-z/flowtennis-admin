@@ -44,12 +44,12 @@ assert.match(fnBody('coachOpsScheduleItemText'), /coachOpsScheduleStudentTitle/,
 assert.match(fnBody('openCoachOpsMorePopover'), /coach-ops-more-popover/, 'coach schedule more trigger should render a floating popover');
 assert.match(styles, /#page-coachschedule \.coach-ops-head\{[\s\S]*position:sticky[\s\S]*top:0/, 'coach schedule time header should stay fixed while scrolling');
 assert.match(styles, /#page-coachschedule \.coach-ops-name,#page-coachschedule \.coach-ops-corner\{[\s\S]*position:sticky[\s\S]*left:0/, 'coach schedule left coach column should stay fixed while scrolling');
-assert.match(source, /function coachTrialConversionText\(/, 'coach workload should calculate trial conversion by coach');
-assert.match(fnBody('coachTrialConversionText'), /ownerCoach/, 'trial conversion should count later purchases by owner coach');
+assert.match(source, /function operationsCoachTrialConversionText\(/, 'coach workload should display trial conversion from the unified operations read model');
+assert.match(fnBody('operationsCoachTrialConversionText'), /operationsPageData\?\.coach\?\.rows/, 'trial conversion should read the operations coach metrics');
 assert.match(source, /function coachCourseTypeDistributionText\(/, 'coach workload should show course type distribution');
 assert.match(source, /function coachOpsComparisonText\(/, 'coach workload should show period-over-period comparison');
-assert.match(fnBody('coachTrialConversionText'), /return '-%'/, 'trial conversion should show -% when no trial data exists');
-assert.doesNotMatch(fnBody('coachTrialConversionText'), /coach-workload-rate down/, 'empty trial conversion should not render red');
+assert.match(fnBody('operationsCoachTrialConversionText'), /return '-%'/, 'trial conversion should show -% when no trial data exists');
+assert.doesNotMatch(fnBody('operationsCoachTrialConversionText'), /coach-workload-rate down/, 'empty trial conversion should not render red');
 assert.match(fnBody('coachCourseTypeDistributionText'), /\|\|'-'/, 'empty course type distribution should show short hyphen');
 assert.match(fnBody('coachOpsComparisonText'), /if\(!previous\)return current\?'<span class="coach-workload-compare up">新增<\/span>':'<span class="coach-workload-compare">-%<\/span>'/, 'zero comparison should show -% without red');
 assert.match(fnBody('renderCoachOps'), /coach-workload-course-types[\s\S]*coach-workload-campus[\s\S]*coach-workload-timeband/, 'workload should render course, campus and time distribution cells');

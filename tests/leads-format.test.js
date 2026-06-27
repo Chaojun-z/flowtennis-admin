@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const standardSource = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/platform-data-standards.js'), 'utf8');
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pages/leads.js'), 'utf8');
 const context = {
   console,
@@ -17,6 +18,7 @@ const context = {
   }
 };
 vm.createContext(context);
+vm.runInContext(standardSource, context);
 vm.runInContext(source, context);
 
 assert.strictEqual(
@@ -51,14 +53,19 @@ assert.deepStrictEqual(
   ]))),
   {
     total: 5,
-    trialDone: 3,
-    trialCompletionRate: '60%',
-    trialConverted: 1,
-    trialConversionRate: '33.3%',
+    trialBooked: 4,
+    trialBookedRate: '80%',
+    trialDone: 1,
+    trialAttendanceRate: '25%',
+    courseConverted: 1,
+    courseConversionRate: '20%',
+    trialCourseConverted: 0,
+    trialCourseConversionRate: '0%',
+    directCourseConverted: 1,
     converted: 2,
     leadConversionRate: '40%',
-    trialPendingConversion: 2,
-    trialPendingConversionRate: '66.7%'
+    trialPendingConversion: 1,
+    trialPendingConversionRate: '100%'
   }
 );
 

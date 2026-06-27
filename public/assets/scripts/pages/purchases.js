@@ -460,7 +460,6 @@ function openPurchaseDetailModal(id,tab='deal'){
   const editAction=p.status==='voided'?'':`<button type="button" class="schedule-detail-action" onclick="openPurchaseEditModal('${p.id}')">编辑</button>`;
   const dealFields=[
     renderDetailDrawerField('支付日期',p.purchaseDate),
-    renderDetailDrawerField('系统录入时间',fmtDt(p.createdAt)),
     renderDetailDrawerField('学员',p.studentName),
     renderDetailDrawerField('售卖课包',standardPackageLabel(meta,true)||meta.packageName),
     purchasePriceSummaryDrawerFields(p),

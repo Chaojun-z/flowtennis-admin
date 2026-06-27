@@ -101,4 +101,33 @@ assertFunctionGuard({
   forbidden: [/purchases\b/, /courts\b/, /entitlementLedger\b/, /membershipOrders\b/, /amountPaid/, /finalAmount/]
 });
 
+assertFunctionGuard({
+  file: 'public/assets/scripts/pages/coachops.js',
+  name: 'operationsCoachTrialConversionText',
+  required: [/operationsPageData\?\.coach\?\.rows/],
+  forbidden: [/purchases\.some/, /scheduleIsTrial/, /purchaseMatchesCoachTrialStudent/]
+});
+assertFunctionGuard({
+  file: 'public/assets/scripts/pages/coachops.js',
+  name: 'renderCoachOps',
+  required: [/operationsCoachTrialConversionText\(r\.name\)/],
+  forbidden: [/coachTrialConversionText\(r\.name,r\.rangeRows\)/]
+});
+
+assertFunctionGuard({
+  file: 'public/assets/scripts/pages/leads.js',
+  name: 'leadStatsData',
+  required: [/FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/],
+  forbidden: [/base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
+});
+
+[
+  ['public/assets/scripts/pages/admin-users.js', 'adminUserAccountFormCardHtml', [/optionList\('adminUserRoles'\)/, /optionList\('adminUserDataScopes'\)/], [/const roleOptions=\[/, /const dataScopeOptions=\[/]],
+  ['public/assets/scripts/pages/coaches.js', 'openCoachModal', [/optionList\('coachStatuses'\)/], [/const statusOptions=\[/]],
+  ['public/assets/scripts/pages/schedule.js', 'openScheduleModal', [/optionList\('scheduleSettlementTypes'\)/, /optionList\('scheduleFieldFeeModes'\)/], [/const settlementOptions=\[/, /const fieldFeeModeOptions=\[/]],
+  ['public/assets/scripts/pages/prices.js', 'openPriceModal', [/optionList\('priceVenueSpaceTypes'\)/, /optionList\('priceDateTypes'\)/], [/\{value:'室内',label:'室内'\}/, /\{value:'工作日',label:'工作日'\}/]],
+  ['public/assets/scripts/pages/packages.js', 'packageTimeScopeOptions', [/optionList\('packageTimeScopes'\)/], [/\{value:'weekday',label:'工作日'\}/]],
+  ['public/assets/scripts/pages/packages.js', 'openPackageModal', [/optionList\('packageClassSizes'\)/], [/const classSizeOptions=\[/]]
+].forEach(([file, name, required, forbidden]) => assertFunctionGuard({ file, name, required, forbidden }));
+
 console.log('data standard source guard tests passed');

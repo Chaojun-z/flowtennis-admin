@@ -7,7 +7,7 @@ const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const coreScriptDir = path.join(publicDir, 'assets', 'scripts', 'core');
 const standardScriptDir = path.join(publicDir, 'assets', 'scripts', 'standard');
 const pageScriptDir = path.join(publicDir, 'assets', 'scripts', 'pages');
-const coreScriptFiles = ['business-taxonomy.js', 'constants.js', 'utils.js', 'permissions.js', 'api.js', 'shell.js', 'components.js', 'state.js', 'bootstrap.js'];
+const coreScriptFiles = ['business-taxonomy.js', 'platform-data-standards.js', 'constants.js', 'utils.js', 'permissions.js', 'api.js', 'shell.js', 'components.js', 'state.js', 'bootstrap.js'];
 const standardScriptFiles = ['components.js'];
 const pageScriptFiles = [
   'admin-users.js',

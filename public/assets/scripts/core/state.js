@@ -220,7 +220,7 @@ const PAGE_DATA_REQUIREMENTS={
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
-  coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
+  coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages','operationsPage'],
   finance:[],
   products:['products'],
   packages:['packages','products','purchases','entitlements','packageBoardPreferences'],

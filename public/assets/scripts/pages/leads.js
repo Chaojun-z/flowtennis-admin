@@ -730,36 +730,15 @@ function leadTrialCourseConverted(lead){
   if(Object.prototype.hasOwnProperty.call(lead||{},'hasTrialToCourseConversion'))return lead?.hasTrialToCourseConversion===true;
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
-function leadRateText(value,total){
-  if(!total)return '0%';
-  const percent=(value/total)*100;
-  return `${Number.isInteger(percent)?percent:percent.toFixed(1)}%`;
-}
 function leadStatsData(list){
   const base=Array.isArray(list)?list:[];
-  const trialBookedRows=base.filter(leadTrialBooked);
-  const trialDoneRows=base.filter(leadTrialDone);
-  const convertedRows=base.filter(leadConverted);
-  const courseConvertedRows=base.filter(leadCourseConverted);
-  const trialCourseConvertedRows=base.filter(leadTrialCourseConverted);
-  const directCourseConvertedRows=courseConvertedRows.filter(row=>!leadTrialCourseConverted(row));
-  const trialPendingConversion=trialDoneRows.length-trialCourseConvertedRows.length;
-  return {
-    total:base.length,
-    trialBooked:trialBookedRows.length,
-    trialBookedRate:leadRateText(trialBookedRows.length,base.length),
-    trialDone:trialDoneRows.length,
-    trialAttendanceRate:leadRateText(trialDoneRows.length,trialBookedRows.length),
-    courseConverted:courseConvertedRows.length,
-    courseConversionRate:leadRateText(courseConvertedRows.length,base.length),
-    trialCourseConverted:trialCourseConvertedRows.length,
-    trialCourseConversionRate:leadRateText(trialCourseConvertedRows.length,trialDoneRows.length),
-    directCourseConverted:directCourseConvertedRows.length,
-    converted:convertedRows.length,
-    leadConversionRate:leadRateText(convertedRows.length,base.length),
-    trialPendingConversion,
-    trialPendingConversionRate:leadRateText(trialPendingConversion,trialDoneRows.length)
-  };
+  return FlowTennisPlatformDataStandards.leadFunnelStats(base,{
+    trialBooked:leadTrialBooked,
+    trialDone:leadTrialDone,
+    converted:leadConverted,
+    courseConverted:leadCourseConverted,
+    trialCourseConverted:leadTrialCourseConverted
+  });
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);
@@ -859,14 +838,14 @@ function leadBasicInfoReadonlyHtml(lead){
     leadDetailFieldHtml('所属校区',leadCampusText(lead)),
     leadDetailFieldHtml('类型',leadCustomerTypeText(lead)||'-'),
     leadDetailFieldHtml('需求产品',leadDemandProductText(lead)||'-'),
-    leadDetailFieldHtml('意向类型',lead?.intentLevel||'-'),
+    leadDetailFieldHtml('意向等级',lead?.intentLevel||'-'),
     leadDetailFieldHtml('跟进优先级',leadPriorityText(lead)),
     leadDetailFieldHtml('跟进人',lead?.owner||'-'),
     leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})
   ].join('');
 }
 function leadBasicInfoFormHtml(lead){
-  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),lead?.campus||(campus!=='all'?campus:'mabao'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向类型</label>${renderStandardDropdownHtml('lead_intentLevel','意向类型',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),lead?.campus||(campus!=='all'?campus:'mabao'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
 }
 function leadPayloadFromForm(){
   const displayName=document.getElementById('lead_wechatName')?.value?.trim?.()||'';
@@ -1056,7 +1035,7 @@ function openLeadFollowupFromList(leadId){
 function openLeadModal(leadId){
   const lead=leadById(leadId)||null;
   const campusValue=lead?.campus||(campus!=='all'?campus:'mabao');
-  const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向类型</label>${renderStandardDropdownHtml('lead_intentLevel','意向类型',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
+  const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadSaveBtn" onclick="saveLead('${leadId||''}')">保存</button>`;
   openStandardModal({title:leadId?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'});
 }
@@ -1126,7 +1105,7 @@ function renderLeadImportPreviewBody(){
   const unmatchedHost=document.getElementById('leadImportUnmatched');
   const tableHost=document.getElementById('leadImportPreviewRows');
   const commitBtn=document.getElementById('leadImportCommitBtn');
-  if(fieldsHost)fieldsHost.innerHTML='线索时间 / 姓名/电话 / 水平 / 类型 / 需求产品 / 来源 / 意向类型 / 跟进人 / 线索阶段 / 体验课时间 / 成交时间 / 用户顾虑点 / 沟通情况和方案建议 / 成交类型 / 成交教练 / 流失原因';
+  if(fieldsHost)fieldsHost.innerHTML='线索时间 / 姓名/电话 / 水平 / 类型 / 需求产品 / 来源 / 意向等级 / 跟进人 / 线索阶段 / 体验课时间 / 成交时间 / 用户顾虑点 / 沟通情况和方案建议 / 成交类型 / 成交教练 / 流失原因';
   if(missingHost)missingHost.innerHTML=leadImportState.error?esc(leadImportState.error):'CSV 字段校验通过';
   if(totalHost)totalHost.textContent=summary?String(summary.totalRows||0):'0';
   if(statusHost)statusHost.innerHTML=summary?Object.entries(summary.byStatus||{}).map(([key,value])=>`${esc(key)}：${value}`).join('<br>'):'新线索 / 跟进中 / 已约体验 / 已体验待成交 / 已成交 / 已流失';

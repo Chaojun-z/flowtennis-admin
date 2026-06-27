@@ -262,9 +262,9 @@ function toggleAdminUserPermissionFields(){
 function adminUserAccountFormCardHtml(user,{title='编辑账号',isCreate=false,actionsHtml=''}={}){
   const profile=adminUserProfile(user||{role:'editor',dataScope:'coach',campusIds:[],matchPermissions:[]});
   const campusIds=profile.campusIds||[];
-  const roleOptions=[{value:'editor',label:'教练账号'},{value:'admin',label:'管理员'}];
+  const roleOptions=FlowTennisBusinessTaxonomy.optionList('adminUserRoles');
   const coachOptions=[{value:'',label:'暂不绑定'}].concat(coaches.map(c=>({value:c.id,label:c.name})));
-  const dataScopeOptions=[{value:'all',label:'全部校区'},{value:'campus',label:'指定校区'},{value:'coach',label:'仅本人教练'}];
+  const dataScopeOptions=FlowTennisBusinessTaxonomy.optionList('adminUserDataScopes');
   const roleControl=renderStandardDropdownHtml('au_role','角色',roleOptions,rv(user,'role','editor'),true,'toggleAdminUserPermissionFields');
   const dataScopeRow=`<div class="tms-form-row" id="auDataScopeRow" data-admin-drawer-scope="1"><div class="tms-form-item"><label class="tms-form-label">数据范围</label>${renderStandardDropdownHtml('au_dataScope','数据范围',dataScopeOptions,profile.dataScope,true,'toggleAdminUserScopeFields')}</div></div>`;
   const campusScopeRow=`<div class="tms-form-row" id="auCampusScopeWrap"><div class="tms-form-item full-width"><label class="tms-form-label">可看校区</label><div class="tms-checkbox-matrix">${adminUserCampusScopeChecks(campusIds)}</div></div></div>`;

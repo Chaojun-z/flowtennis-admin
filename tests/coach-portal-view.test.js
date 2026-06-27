@@ -89,7 +89,7 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /function workbenchMetricHelpHtml\([\s\S]*coach-wb-help-btn[\s\S]*本月已结束体验课中，后续已购买任意产品的学员占比/,
+  /function workbenchMetricHelpHtml\([\s\S]*coach-wb-help-btn[\s\S]*本月已结束体验课中，后续购买正式课包的客户占比/,
   'coach workbench should expose a metric help trigger with the updated conversion-rate definition'
 );
 
