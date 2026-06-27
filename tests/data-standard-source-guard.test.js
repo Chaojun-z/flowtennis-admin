@@ -105,7 +105,7 @@ assertFunctionGuard({
   file: 'public/assets/scripts/pages/coachops.js',
   name: 'operationsCoachTrialConversionText',
   required: [/operationsPageData\?\.coach\?\.rows/],
-  forbidden: [/purchases\.some/, /scheduleIsTrial/, /purchaseMatchesCoachTrialStudent/]
+  forbidden: [/purchases\.some/, /scheduleIsTrial/, /purchaseMatchesCoachTrialStudent/, /converted\s*\/\s*total\s*\*\s*100/]
 });
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/coachops.js',
@@ -117,8 +117,8 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/],
-  forbidden: [/base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
+  required: [/leadStandardMetricValue\('validLeads'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/],
+  forbidden: [/FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
 });
 
 [

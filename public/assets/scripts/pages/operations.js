@@ -438,14 +438,15 @@ function operationsOverviewCourtSummary(data = {}) {
 }
 
 function operationsOverviewConversionRisk(conversion = {}) {
-  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
-  const renewal = summary.renewal || {};
+  const courseEntry = conversion.standardLifecycleMetrics?.metrics?.courseChainStudents || {};
+  const formal = conversion.standardLifecycleMetrics?.metrics?.formalStudents || {};
+  const trialDeal = conversion.standardLifecycleMetrics?.metrics?.trialPathDeals || {};
   return `<section class="operations-section">
     <div class="operations-module-head"><div><h3>转化留存风险</h3><span>首页只看风险位置，完整漏斗在转化与留存页</span></div></div>
     <div class="operations-overview-risk-board">
-      ${operationsInsightCard('danger', '最大流失', `${summary.worst?.from || '-'} → ${summary.worst?.to || '-'}`, `流失 ${fmt(summary.worst?.lossRate || 0)}%`)}
-      ${operationsInsightCard('warn', '续费环节', `${renewal.from || '-'} → ${renewal.to || '-'}`, `转化 ${fmt(renewal.transitionRate || 0)}%`)}
-      ${operationsInsightCard('good', '最稳环节', `${summary.stable?.from || '-'} → ${summary.stable?.to || '-'}`, `转化 ${fmt(summary.stable?.transitionRate || 0)}%`)}
+      ${operationsInsightCard('neutral', '课程链入口', '有效线索 → 普通学员', `转化 ${courseEntry.rateText || '0%'}`)}
+      ${operationsInsightCard('good', '正式成交', '普通学员 → 正式学员', `转化 ${formal.transitionRateText || formal.rateText || '0%'}`)}
+      ${operationsInsightCard('warn', '体验路径成交', '体验路径学员 → 体验路径成交', `转化 ${trialDeal.rateText || '0%'}`)}
     </div>
   </section>`;
 }
@@ -455,8 +456,8 @@ function operationsOverviewWarnings(data = {}, conversion = {}) {
   const warnings = [];
   const pending = operationsCardNumber(overviewCards.pendingRevenue);
   if (pending > 0) warnings.push({ tone: 'warn', title: '待履约余额较高', detail: `${operationsMoneyText(pending)} 未入账/待核销，需关注交付消耗速度`, value: pending });
-  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
-  if (summary.worst?.to) warnings.push({ tone: 'danger', title: '最大流失环节', detail: `${summary.worst.from} → ${summary.worst.to}，流失 ${fmt(summary.worst.lossRate)}%`, value: summary.worst.lossRate });
+  const formal = conversion.standardLifecycleMetrics?.metrics?.formalStudents || {};
+  if (Number.isFinite(Number(formal.transitionRate)) && Number(formal.transitionRate) < 50) warnings.push({ tone: 'danger', title: '正式成交偏低', detail: `普通学员 → 正式学员，转化 ${formal.transitionRateText || formal.rateText || '0%'}`, value: 50 - Number(formal.transitionRate) });
   const unmatched = (data.court?.campusHeatmaps || []).some(campus => (campus.venues || []).some(venue => venue.isUnmatched));
   if (unmatched) warnings.push({ tone: 'warn', title: '存在未匹配场地数据', detail: '场地热力中有历史未匹配记录，需到场地运转继续核对', value: 1 });
   if (!warnings.length) warnings.push({ tone: 'good', title: '暂无明确预警', detail: '只展示能被现有口径明确判断的问题', value: 0 });
@@ -992,57 +993,17 @@ function operationsCoachSparklineSvg(points = [], key = '') {
   return operationsKpiSparklineSvg(points, key, 'operations-coach-kpi-sparkline');
 }
 
-function operationsFunnelDropRows(funnel = []) {
-  return (funnel || []).slice(1).map((row, index) => ({
-    from: funnel[index]?.stage || '',
-    to: row.stage || '',
-    count: Number(row.count) || 0,
-    transitionRate: Number(row.transitionRate) || 0,
-    lossRate: Number(row.lossRate) || 0
-  }));
-}
-
-function operationsFunnelSummary(funnel = []) {
-  const drops = operationsFunnelDropRows(funnel);
-  const worst = drops.reduce((best, row) => (!best || row.lossRate > best.lossRate ? row : best), null);
-  const stable = drops.reduce((best, row) => (!best || row.transitionRate > best.transitionRate ? row : best), null);
-  const renewal = drops[drops.length - 1] || null;
-  return { worst, stable, renewal };
-}
-
-function operationsFunnelStep(funnel = [], index) {
-  return (funnel || [])[index] || {};
-}
-
-function operationsConversionKpiCards(conversionOrFunnel = [], standardRates = {}) {
-  if (!Array.isArray(conversionOrFunnel)) {
-    const conversion = conversionOrFunnel || {};
-    const metricCard = (key, label, unit, trendKey, tone) => {
-      const metric = operationsStandardMetric(conversion, key) || {};
-      return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
-    };
-    return [
-      metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
-      metricCard('courseChainStudents', '普通学员', '人', 'courseChainStudents', 'conversion'),
-      metricCard('formalStudents', '正式学员', '人', 'formalStudents', 'conversion'),
-      metricCard('trialPathStudents', '体验路径学员', '人', 'trialPathStudents', 'conversion'),
-      metricCard('trialPathDeals', '体验路径成交', '人', 'trialPathDeals', 'retention')
-    ];
-  }
-  const funnel = conversionOrFunnel;
-  const total = operationsFunnelStep(funnel, 0);
-  const appointment = operationsFunnelStep(funnel, 1);
-  const attendance = operationsFunnelStep(funnel, 2);
-  const deal = operationsFunnelStep(funnel, 3);
-  const renewal = operationsFunnelStep(funnel, 4);
-  const standardTrial = Number(standardRates.trialConversionRate);
-  const standardRenewal = Number(standardRates.renewalRate);
+function operationsConversionKpiCards(conversion = {}) {
+  const metricCard = (key, label, unit, trendKey, tone) => {
+    const metric = operationsStandardMetric(conversion, key) || {};
+    return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
+  };
   return [
-    { label: '线索量', value: fmt(total.count || 0), unit: '人', trendValue: total.count || 0, trendKey: 'leads', tone: 'lead' },
-    { label: '预约率', value: `${fmt(appointment.percentOfTotal || 0)}%`, trendValue: appointment.percentOfTotal || 0, trendKey: 'appointmentRate', tone: 'conversion' },
-    { label: '到课率', value: `${fmt(attendance.transitionRate || 0)}%`, trendValue: attendance.transitionRate || 0, trendKey: 'attendanceRate', tone: 'conversion' },
-    { label: '成交率', value: `${fmt(Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0))}%`, trendValue: Number.isFinite(standardTrial) ? standardTrial : (deal.transitionRate || 0), trendKey: 'dealRate', tone: 'conversion' },
-    { label: '续费率', value: `${fmt(Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0))}%`, trendValue: Number.isFinite(standardRenewal) ? standardRenewal : (renewal.transitionRate || 0), trendKey: 'renewalRate', tone: 'retention' }
+    metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
+    metricCard('courseChainStudents', '普通学员', '人', 'courseChainStudents', 'conversion'),
+    metricCard('formalStudents', '正式学员', '人', 'formalStudents', 'conversion'),
+    metricCard('trialPathStudents', '体验路径学员', '人', 'trialPathStudents', 'conversion'),
+    metricCard('trialPathDeals', '体验路径成交', '人', 'trialPathDeals', 'retention')
   ];
 }
 
@@ -1153,6 +1114,7 @@ function operationsConversionView(data) {
   if (!hasFilters) {
     return {
       courseFunnel: data.conversion?.courseFunnel || [],
+      standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
       sourceRanking: data.conversion?.sourceRanking || [],
       channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
       studentAttributeRows: data.conversion?.studentAttributeRows || [],
@@ -1175,6 +1137,7 @@ function operationsConversionView(data) {
   }
   return {
     courseFunnel: view.courseFunnel || [],
+    standardLifecycleMetrics: view.standardLifecycleMetrics || {},
     sourceRanking: view.sourceRanking || [],
     channelEfficiencyRows: view.channelEfficiencyRows || [],
     studentAttributeRows: view.studentAttributeRows || [],
@@ -1297,8 +1260,8 @@ function renderConversionCommandCenter(data, conversion) {
 }
 
 function renderConversionInsightModule(conversion) {
-  const summary = operationsFunnelSummary(conversion.courseFunnel || []);
-  if (!operationsStandardMetricValue(conversion, 'validLeads') || !(conversion.courseFunnel || []).length) {
+  const validLeads = operationsStandardMetricValue(conversion, 'validLeads');
+  if (!validLeads) {
     return `<section class="operations-section operations-insight-panel">
       <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
       <div class="operations-insight-list">
@@ -1306,12 +1269,15 @@ function renderConversionInsightModule(conversion) {
       </div>
     </section>`;
   }
+  const courseEntry = operationsStandardMetric(conversion, 'courseChainStudents') || {};
+  const formal = operationsStandardMetric(conversion, 'formalStudents') || {};
+  const trialDeal = operationsStandardMetric(conversion, 'trialPathDeals') || {};
   return `<section class="operations-section operations-insight-panel">
     <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
     <div class="operations-insight-list">
-      ${operationsInsightCard('danger', '最大问题', `${summary.worst?.from || '-'} → ${summary.worst?.to || '-'}`, `该环节流失 ${fmt(summary.worst?.lossRate || 0)}%，优先检查触达和预约话术`)}
-      ${operationsInsightCard('good', '最稳环节', `${summary.stable?.from || '-'} → ${summary.stable?.to || '-'}`, `该环节转化 ${fmt(summary.stable?.transitionRate || 0)}%，可以沉淀为标准动作`)}
-      ${operationsInsightCard('warn', '续费风险', `${summary.renewal?.from || '-'} → ${summary.renewal?.to || '-'}`, `续费转化 ${fmt(summary.renewal?.transitionRate || 0)}%，建议对已成交学员提前跟进`)}
+      ${operationsInsightCard('neutral', '课程链入口', '有效线索 → 普通学员', `转化 ${courseEntry.rateText || '0%'}`)}
+      ${operationsInsightCard('good', '正式成交', '普通学员 → 正式学员', `转化 ${formal.transitionRateText || formal.rateText || '0%'}`)}
+      ${operationsInsightCard('warn', '体验路径成交', '体验路径学员 → 体验路径成交', `转化 ${trialDeal.rateText || '0%'}`)}
     </div>
   </section>`;
 }

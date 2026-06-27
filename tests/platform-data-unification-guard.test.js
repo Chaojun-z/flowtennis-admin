@@ -131,8 +131,8 @@ assert.doesNotMatch(
 
 assert.match(
   fnBody(leadsSource, 'leadStatsData'),
-  /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/,
-  'lead stats should use the shared platform data standard formula'
+  /leadStandardMetricValue\('validLeads'\)[\s\S]*leadStandardMetricValue\('courseChainStudents'\)[\s\S]*leadStandardMetricValue\('formalStudents'\)/,
+  'lead stats should use the backend standard lifecycle metric object'
 );
 
 assert.match(

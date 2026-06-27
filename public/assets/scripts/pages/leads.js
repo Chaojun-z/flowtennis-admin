@@ -750,56 +750,25 @@ function leadTrialCourseConverted(lead){
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadStatsData(list){
-  const base=Array.isArray(list)?list:[];
-  if(leadStandardMetric('validLeads')){
-    const total=leadStandardMetricValue('validLeads')||base.length;
-    const courseStudents=leadStandardMetricValue('courseChainStudents');
-    const courseConverted=leadStandardMetricValue('formalStudents');
-    const trialPath=leadStandardMetricValue('trialPathStudents');
-    const trialPathDeal=leadStandardMetricValue('trialPathDeals');
-    const trialPathPending=leadStandardMetricValue('trialPathPending');
-    return {
-      total,
-      courseStudents,
-      courseStudentRate:leadStandardMetricRate('courseChainStudents',courseStudents,total),
-      courseConverted,
-      courseConversionRate:leadStandardMetricRate('formalStudents',courseConverted,total),
-      trialBooked:trialPath,
-      trialBookedRate:leadStandardMetricRate('trialPathStudents',trialPath,total),
-      trialPathDeal,
-      trialPathDealRate:leadStandardMetricRate('trialPathDeals',trialPathDeal,trialPath),
-      trialPendingConversion:trialPathPending,
-      trialPendingConversionRate:leadStandardMetricRate('trialPathPending',trialPathPending,trialPath)
-    };
-  }
-  const teachingSummary=typeof teachingStudentViews==='object'&&teachingStudentViews?teachingStudentViews.summary||{}:{};
-  if(Number(teachingSummary.courseStudentCount)||Number(teachingSummary.courseDealCustomers)||Number(teachingSummary.trialPathStudents)){
-    const courseStudents=Number(teachingSummary.courseStudentCount)||0;
-    const courseConverted=Number(teachingSummary.courseDealCustomers)||0;
-    const trialPath=Number(teachingSummary.trialPathStudents)||0;
-    const trialPathDeal=Number(teachingSummary.trialPathDealCustomers)||0;
-    const trialPathPending=Number(teachingSummary.trialPathPendingCustomers)||Math.max(0,trialPath-trialPathDeal);
-    return {
-      total:base.length,
-      courseStudents,
-      courseStudentRate:leadRateText(courseStudents,base.length),
-      courseConverted,
-      courseConversionRate:leadRateText(courseConverted,base.length),
-      trialBooked:trialPath,
-      trialBookedRate:leadRateText(trialPath,base.length),
-      trialPathDeal,
-      trialPathDealRate:leadRateText(trialPathDeal,trialPath),
-      trialPendingConversion:trialPathPending,
-      trialPendingConversionRate:leadRateText(trialPathPending,trialPath)
-    };
-  }
-  return FlowTennisPlatformDataStandards.leadFunnelStats(base,{
-    trialBooked:leadTrialBooked,
-    trialDone:leadTrialDone,
-    converted:leadConverted,
-    courseConverted:leadCourseConverted,
-    trialCourseConverted:leadTrialCourseConverted
-  });
+  const total=leadStandardMetricValue('validLeads');
+  const courseStudents=leadStandardMetricValue('courseChainStudents');
+  const courseConverted=leadStandardMetricValue('formalStudents');
+  const trialPath=leadStandardMetricValue('trialPathStudents');
+  const trialPathDeal=leadStandardMetricValue('trialPathDeals');
+  const trialPathPending=leadStandardMetricValue('trialPathPending');
+  return {
+    total,
+    courseStudents,
+    courseStudentRate:leadStandardMetricRate('courseChainStudents',courseStudents,total),
+    courseConverted,
+    courseConversionRate:leadStandardMetricRate('formalStudents',courseConverted,total),
+    trialBooked:trialPath,
+    trialBookedRate:leadStandardMetricRate('trialPathStudents',trialPath,total),
+    trialPathDeal,
+    trialPathDealRate:leadStandardMetricRate('trialPathDeals',trialPathDeal,trialPath),
+    trialPendingConversion:trialPathPending,
+    trialPendingConversionRate:leadStandardMetricRate('trialPathPending',trialPathPending,trialPath)
+  };
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);

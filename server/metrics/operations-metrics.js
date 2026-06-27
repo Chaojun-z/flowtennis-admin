@@ -680,6 +680,7 @@ function courseConversionRows(data = {}, options = {}) {
       hasRenewal,
       studentStage: normalizeText(lifecycle.studentStage),
       courseDealPath: normalizeText(lifecycle.courseDealPath || dealPath),
+      hasTrialExperience: !!lifecycle.hasTrialExperience,
       personas: profilePersonas({ ...lead, consultType: normalizedConsultType, studentType: normalizedStudentType }, linkedStudent || {}, now)
     };
   });
@@ -689,51 +690,89 @@ function rate(part, total) {
   return total ? round(Number(part) * 100 / Number(total), 1) : 0;
 }
 
-function buildCourseFunnel(rows = []) {
-  const total = rows.length;
-  const appointmentRows = rows.filter(row => row.hasAppointment);
-  const attendanceRows = appointmentRows.filter(row => row.hasAttendance);
-  const dealRows = attendanceRows.filter(row => row.hasTrialDeal);
-  const renewalRows = dealRows.filter(row => row.hasRenewal);
-  const steps = [
-    { stage: '线索量', count: total },
-    { stage: '预约体验客户', count: appointmentRows.length },
-    { stage: '体验课实到人数', count: attendanceRows.length },
-    { stage: '体验后成交人数', count: dealRows.length },
-    { stage: '成交后续费人数', count: renewalRows.length }
-  ];
-  return steps.map((row, index) => ({
-    ...row,
-    percentOfTotal: rate(row.count, total),
-    transitionRate: index === 0 ? 100 : rate(row.count, steps[index - 1].count),
-    lossRate: index === 0 ? 0 : round(100 - rate(row.count, steps[index - 1].count), 1)
-  }));
+function buildStandardCourseFunnelFromConversionRows(rows = []) {
+  return buildStandardLifecycleMetricsFromConversionRows(rows).funnels.courseChain;
 }
 
-function buildStandardCourseFunnelFromConversionRows(rows = []) {
+function standardConversionMetric(id, label, value, denominator, sourceMetric, unit = '人') {
+  const safeValue = Number(value) || 0;
+  const safeDenominator = Number(denominator) || 0;
+  return {
+    id,
+    label,
+    value: safeValue,
+    numerator: safeValue,
+    denominator: safeDenominator,
+    rate: rate(safeValue, safeDenominator),
+    rateText: `${Number.isInteger(rate(safeValue, safeDenominator)) ? rate(safeValue, safeDenominator) : rate(safeValue, safeDenominator).toFixed(1)}%`,
+    unit,
+    sourceMetric
+  };
+}
+
+function standardConversionFunnelRows(rows = []) {
+  const total = Number(rows[0]?.value) || 0;
+  return rows.map((row, index) => {
+    const count = Number(row.value) || 0;
+    const previous = index > 0 ? Number(rows[index - 1]?.value) || 0 : total;
+    const transitionRate = index === 0 ? 100 : rate(count, previous);
+    return {
+      id: row.id,
+      stage: row.label,
+      label: row.label,
+      count,
+      value: count,
+      unit: row.unit || '人',
+      percentOfTotal: rate(count, total),
+      transitionRate,
+      lossRate: index === 0 ? 0 : Math.max(0, round(100 - transitionRate, 1)),
+      numerator: count,
+      denominator: index === 0 ? total : previous,
+      rateText: index === 0 ? '100%' : `${Number.isInteger(transitionRate) ? transitionRate : transitionRate.toFixed(1)}%`
+    };
+  });
+}
+
+function buildStandardLifecycleMetricsFromConversionRows(rows = []) {
   const total = rows.length;
   const courseRows = rows.filter(row => {
     const stage = normalizeText(row.studentStage);
     return ['trial', 'formal'].includes(stage) || (!!row.studentId && row.hasCourse);
   });
   const formalRows = rows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
-  return [
-    { id: 'VALID_LEADS', stage: '有效线索', label: '有效线索', count: total, value: total, unit: '条' },
-    { id: 'COURSE_CHAIN_STUDENTS', stage: '普通学员', label: '普通学员', count: courseRows.length, value: courseRows.length, unit: '人' },
-    { id: 'FORMAL_STUDENTS', stage: '正式学员', label: '正式学员', count: formalRows.length, value: formalRows.length, unit: '人' }
-  ].map((row, index, all) => {
-    const previous = index > 0 ? Number(all[index - 1].count) || 0 : total;
-    const transitionRate = index === 0 ? 100 : rate(row.count, previous);
-    return {
-      ...row,
-      percentOfTotal: rate(row.count, total),
-      transitionRate,
-      lossRate: index === 0 ? 0 : Math.max(0, round(100 - transitionRate, 1)),
-      numerator: row.count,
-      denominator: index === 0 ? total : previous,
-      rateText: `${Number.isInteger(transitionRate) ? transitionRate : transitionRate.toFixed(1)}%`
-    };
-  });
+  const trialPathRows = rows.filter(row => row.hasTrialExperience);
+  const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
+  const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
+  const directCourseRows = formalRows.filter(row => !trialPathDealRows.includes(row));
+  const metrics = {
+    validLeads: standardConversionMetric('VALID_LEADS', '有效线索', total, total, 'FILTERED_RAW_LEADS', '条'),
+    courseChainStudents: standardConversionMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseRows.length, total, 'FILTERED_COURSE_CHAIN_STUDENTS / FILTERED_VALID_LEADS'),
+    formalStudents: standardConversionMetric('FORMAL_STUDENTS', '正式学员', formalRows.length, total, 'FILTERED_FORMAL_STUDENTS / FILTERED_VALID_LEADS'),
+    trialPathStudents: standardConversionMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathRows.length, total, 'FILTERED_TRIAL_PATH_STUDENTS / FILTERED_VALID_LEADS'),
+    trialPathDeals: standardConversionMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDealRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_DEALS / FILTERED_TRIAL_PATH_STUDENTS'),
+    trialPathPending: standardConversionMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPendingRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_PENDING / FILTERED_TRIAL_PATH_STUDENTS'),
+    directCourseDeals: standardConversionMetric('DIRECT_COURSE_DEALS', '直接课程成交', directCourseRows.length, formalRows.length || total, 'FILTERED_DIRECT_COURSE_DEALS / FILTERED_FORMAL_STUDENTS'),
+    totalDeals: standardConversionMetric('TOTAL_DEALS', '总成交', formalRows.length, total, 'FILTERED_TOTAL_DEALS / FILTERED_VALID_LEADS', '条')
+  };
+  metrics.formalStudents.transitionRate = rate(formalRows.length, courseRows.length);
+  metrics.formalStudents.transitionRateText = `${Number.isInteger(metrics.formalStudents.transitionRate) ? metrics.formalStudents.transitionRate : metrics.formalStudents.transitionRate.toFixed(1)}%`;
+  metrics.directCourseDeals.rate = rate(directCourseRows.length, formalRows.length);
+  metrics.directCourseDeals.rateText = `${Number.isInteger(metrics.directCourseDeals.rate) ? metrics.directCourseDeals.rate : metrics.directCourseDeals.rate.toFixed(1)}%`;
+  return {
+    metrics,
+    funnels: {
+      courseChain: standardConversionFunnelRows([
+        { id: 'VALID_LEADS', label: '有效线索', value: total, unit: '条' },
+        { id: 'COURSE_CHAIN_STUDENTS', label: '普通学员', value: courseRows.length },
+        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalRows.length }
+      ]),
+      trialPath: standardConversionFunnelRows([
+        { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathRows.length },
+        { id: 'TRIAL_PATH_DEALS', label: '体验路径成交', value: trialPathDealRows.length },
+        { id: 'TRIAL_PATH_PENDING', label: '体验路径未成交', value: trialPathPendingRows.length }
+      ])
+    }
+  };
 }
 
 function groupRows(rows = [], key) {
@@ -805,15 +844,17 @@ function conversionFilterViewKey({ source = '', campus = '', coach = '' } = {}) 
 }
 
 function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
-  const courseFunnel = buildStandardCourseFunnelFromConversionRows(rows);
+  const standardLifecycleMetrics = buildStandardLifecycleMetricsFromConversionRows(rows);
+  const courseFunnel = standardLifecycleMetrics.funnels.courseChain;
   return {
     courseFunnel,
+    standardLifecycleMetrics,
     sourceRanking: buildCourseSourceRanking(rows),
     channelEfficiencyRows: buildChannelEfficiencyRows(rows),
     studentAttributeRows: buildStudentAttributeRows(rows),
     courseRows: includeRows ? rows : [],
     standardRates: {
-      trialConversionRate: Number(courseFunnel[2]?.transitionRate) || 0,
+      trialConversionRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
       renewalRate: 0
     }
   };
@@ -2521,7 +2562,6 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
   const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...rangedData, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
-  const legacyCourseFunnel = buildCourseFunnel(courseRows);
   const standardLifecycleMetrics = buildStandardLifecycleMetrics({
     ...rangedData,
     customerLifecycleRows
@@ -2771,7 +2811,6 @@ function buildOperationsMetrics(data = {}, options = {}) {
       trendDiagnostics: buildTrendDiagnostics(conversionTrendSet.rows, ['leads', 'leadFollowups', 'students', 'purchases']),
       trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
       courseFunnel,
-      legacyCourseFunnel,
       sourceRanking,
       channelEfficiencyRows,
       studentAttributeRows,

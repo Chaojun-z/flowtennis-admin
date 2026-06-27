@@ -445,7 +445,8 @@ function operationsCoachTrialConversionText(coach){
   const total=Number(standardRow.trialBase)||0;
   if(!total)return '-%';
   const converted=Number(standardRow.trialConverted)||0;
-  const percent=Number.isFinite(Number(standardRow.trialConversionRate))?Number(standardRow.trialConversionRate):(converted/total*100);
+  const percent=Number(standardRow.trialConversionRate);
+  if(!Number.isFinite(percent))return `${converted}/${total} <span class="coach-workload-rate down">-%</span>`;
   const rate=Number.isInteger(percent)?percent:percent.toFixed(1);
   return `${converted}/${total} <span class="coach-workload-rate ${converted>=total?'up':converted>0?'up':'down'}">${rate}%</span>`;
 }

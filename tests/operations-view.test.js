@@ -264,12 +264,15 @@ assert.doesNotMatch(operationsSource, /场地使用排行/, 'court page should r
 assert.doesNotMatch(operationsSource, /场地时段热力/, 'court page should remove the old single heatmap chart card');
 assert.doesNotMatch(operationsSource, /operationsFallbackCourseRows/, 'conversion page must not fabricate course rows from summary data');
 assert.match(operationsSource, /if \(!hasFilters\) \{[\s\S]*courseFunnel: data\.conversion\?\.courseFunnel/, 'conversion page should display backend standard metrics when no local filter is active');
+assert.match(operationsSource, /if \(!hasFilters\) \{[\s\S]*standardLifecycleMetrics:\s*data\.conversion\?\.standardLifecycleMetrics/, 'conversion page should pass backend standard metrics into the unfiltered view');
+assert.match(operationsSource, /standardLifecycleMetrics:\s*view\.standardLifecycleMetrics \|\| \{\}/, 'conversion page should pass backend standard metrics into filtered views');
 assert.doesNotMatch(operationsSource, /echarts\.init/, 'operations page should not initialize ECharts directly');
 assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/, 'operations page should not reuse schedule detail tabs as its top navigation');
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should render monitor KPI cards derived from the funnel');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*validLeads[\s\S]*courseChainStudents[\s\S]*formalStudents[\s\S]*trialPathStudents[\s\S]*trialPathDeals/, 'conversion page should render top KPI cards from standard lifecycle metrics');
+assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
 assert.match(operationsSource, /function renderOperationsConversionKpi[\s\S]*operations-court-kpi[\s\S]*operationsConversionSparklineSvg/, 'conversion top KPI cards should reuse the court dashboard trend-card standard');
 assert.match(operationsSource, /function operationsTrendToday[\s\S]*activeGlobalDateRange[\s\S]*new Date/, 'operations trend helpers should resolve a real today boundary for all dashboards');
 assert.match(operationsSource, /operationsMatrixTitleLegend\('工时利用率', '归属实收', '课数'/, 'coach matrices should show x axis, y axis and bubble-size copy in the title bar');
@@ -295,7 +298,7 @@ assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*operations-fu
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-filter-row[\s\S]*function renderConversionInsightModule/, 'conversion filters should not float above the KPI cards');
 assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
-assert.match(operationsSource, /renderConversionInsightModule[\s\S]*关键洞察[\s\S]*最大问题[\s\S]*最稳环节[\s\S]*续费风险/, 'conversion page should render business insight cards next to the funnel');
+assert.match(operationsSource, /renderConversionInsightModule[\s\S]*关键洞察[\s\S]*课程链入口[\s\S]*正式成交[\s\S]*体验路径成交/, 'conversion page should render standard-metric business insight cards next to the funnel');
 assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*标准转化漏斗[\s\S]*课程总漏斗[\s\S]*体验路径漏斗[\s\S]*订场链漏斗/, 'conversion page should render the three standard text funnels');
 assert.match(operationsSource, /operations-conversion-monitor-grid[\s\S]*renderConversionFunnelModule[\s\S]*renderConversionInsightModule/, 'conversion funnel and insight panel should render side by side in the monitor grid');
 assert.match(operationsSource, /renderConversionChannelEfficiencyModule[\s\S]*渠道效率监控/, 'conversion page should render channel efficiency as a professional monitor module');
