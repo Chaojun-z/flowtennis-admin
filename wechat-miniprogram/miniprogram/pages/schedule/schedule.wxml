@@ -406,7 +406,7 @@
             <text>基础信息</text>
           </view>
           <view class="student-detail-row">
-            <text class="student-detail-label">学员姓名</text>
+            <text class="student-detail-label">姓名</text>
             <text class="student-detail-value is-strong">{{selectedStudentDetail.basic.name}}</text>
           </view>
           <view class="student-detail-row">

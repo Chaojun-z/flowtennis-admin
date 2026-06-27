@@ -566,7 +566,7 @@ function renderOperationsCourtHeatCell(slot = {}, venue = {}, options = {}) {
   const dayText = Number.isFinite(dayRaw) && dayRaw > 0 ? fmt(dayRaw) : (capacityMinutes ? fmt(Math.round(capacityMinutes / 30)) : '-');
   const label = `${venueName} ${hour}-${endHour}\n使用：${occupiedText} 次 / ${dayText} 天\n使用时长：${fmt(usedMinutes)} / ${fmt(capacityMinutes)} 分钟\n利用率：${fmt(rate)}%`;
   const firstRowClass = options.firstRow ? ' is-first-row' : '';
-  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)}-${esc(endHour)} 利用率 ${fmt(rate)}%，使用时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟" data-rate="${fmt(rate)}" data-heat="${fmt(toneRate)}" data-minutes="${fmt(usedMinutes)}" data-tip="${esc(label)}"></span>`;
+  return `<span class="operations-court-heat-cell ${operationsCourtHeatTone(toneRate, usedMinutes)}${firstRowClass}" style="${esc(operationsCourtHeatStyle(toneRate, usedMinutes))}" aria-label="${esc(venueName)} ${esc(hour)}-${esc(endHour)} 利用率 ${fmt(rate)}%，使用时长 ${fmt(usedMinutes)} / ${fmt(capacityMinutes)}分钟" data-tip="${esc(label)}"></span>`;
 }
 
 function operationsHeatTooltipEl() {

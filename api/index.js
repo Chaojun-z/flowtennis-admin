@@ -5676,14 +5676,9 @@ function safeDatabaseUrlHost(value){
     return '';
   }
 }
-function cleanLeadText(value){
-  return String(value??'').trim();
-}
-function normalizeLeadBoolean(value){
-  const raw=String(value||'').trim();
-  if(!raw)return false;
-  return /^(是|已转化|已报名|true|1|yes)$/i.test(raw);
-}
+function cleanLeadText(value){return String(value??'').trim();}
+function readStandardOrLegacyField(input={},standardKeys=[],legacyAliasKey=''){for(const key of [...(Array.isArray(standardKeys)?standardKeys:[standardKeys]),...businessTaxonomy.legacyAliases(legacyAliasKey)]){if(input[key]!=null&&cleanLeadText(input[key])!=='')return input[key];}return '';}
+function normalizeLeadBoolean(value){const raw=String(value||'').trim();return raw?/^(是|已转化|已报名|true|1|yes)$/i.test(raw):false;}
 function normalizeLeadPriority(value){
   const raw=cleanLeadText(value).toUpperCase();
   return /^P[0-4]$/.test(raw)?raw:'';
@@ -5727,7 +5722,9 @@ function normalizeLeadRecord(input={},opts={}){
   const studentId=cleanLeadText(input.studentId);
   const courtId=cleanLeadText(input.courtId);
   const concern=cleanLeadText(input.latestConcern??input['用户顾虑点']),conclusion=cleanLeadText(input.latestConclusion??input['沟通情况和方案建议']),rawStatus=cleanLeadText(input.rawStatus??input['跟进状态']);
-  const customerType=businessTaxonomy.normalizeLeadCustomerType(input.customerType??input['客户类型']??input.consultType??input['咨询需求']??input.profileNote??input['其他信息（包含年纪等）']),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(input.demandProduct??input['需求产品']??input.consultType??input['咨询需求']);
+  const demandProductInput=readStandardOrLegacyField(input,['demandProduct','需求产品','consultType'],'leadDemandProduct');
+  const customerTypeInput=input.customerType??input['客户类型']??input.consultType??(demandProductInput||input.profileNote||input['其他信息（包含年纪等）']);
+  const customerType=businessTaxonomy.normalizeLeadCustomerType(customerTypeInput),demandProduct=businessTaxonomy.normalizeLeadDemandProduct(demandProductInput);
   const next={
     id,
     leadDate:cleanLeadText(input.leadDate??input['线索时间']),
@@ -5738,7 +5735,7 @@ function normalizeLeadRecord(input={},opts={}){
     profileNote:cleanLeadText(input.profileNote??input['其他信息（包含年纪等）']),
     source:businessTaxonomy.normalizeLeadSource(input.source??input['线索渠道']),
     campus:normalizeCampusValue(cleanLeadText(input.campus??input['所属校区'])),
-    customerType,demandProduct,consultType:demandProduct,intentLevel:cleanLeadText(input.intentLevel??input['意向类型']),
+    customerType,demandProduct,consultType:demandProduct,intentLevel:cleanLeadText(readStandardOrLegacyField(input,['intentLevel','意向等级'],'leadIntentLevel')),
     owner:cleanLeadText(input.owner??input['跟进人']),
     rawStatus,
     trialAtRaw:cleanLeadText(input.trialAtRaw??input['体验课时间']),
@@ -5832,9 +5829,9 @@ function parseCsvText(text=''){
   const lines=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(line=>line!==''||text.includes('\n'));
   return lines.map(splitCsvLine);
 }
-const LEAD_IMPORT_REQUIRED_COLUMNS=[
-  '线索时间','微信名/电话','水平','其他信息（包含年纪等）','线索渠道','咨询需求','意向类型','跟进人','跟进状态','体验课时间','正式课报名时间','用户顾虑点','沟通情况和方案建议','是否转化','正式课教练','未成交原因'
-];
+const LEAD_IMPORT_REQUIRED_COLUMNS=['线索时间','微信名/电话','水平','其他信息（包含年纪等）','线索渠道','需求产品','意向等级','跟进人','跟进状态','体验课时间','正式课报名时间','用户顾虑点','沟通情况和方案建议','是否转化','正式课教练','未成交原因'];
+const LEAD_IMPORT_COLUMN_CANONICAL_NAMES=new Map([...businessTaxonomy.legacyAliases('leadDemandProduct').map(alias=>[alias,'需求产品']),...businessTaxonomy.legacyAliases('leadIntentLevel').map(alias=>[alias,'意向等级'])]);
+function canonicalLeadImportColumnName(value){const raw=cleanLeadText(value);return LEAD_IMPORT_COLUMN_CANONICAL_NAMES.get(raw)||raw;}
 function findLeadImportHeaderIndex(rows=[]){
   return rows.findIndex(row=>{
     const cells=(row||[]).map(cell=>cleanLeadText(cell));
@@ -5842,8 +5839,8 @@ function findLeadImportHeaderIndex(rows=[]){
   });
 }
 function buildLeadImportHeaderRows(rows=[],headerIndex=-1){
-  const mainHeader=(rows[headerIndex]||[]).map(cell=>cleanLeadText(cell));
-  const subHeader=(rows[headerIndex+1]||[]).map(cell=>cleanLeadText(cell));
+  const mainHeader=(rows[headerIndex]||[]).map(cell=>canonicalLeadImportColumnName(cell));
+  const subHeader=(rows[headerIndex+1]||[]).map(cell=>canonicalLeadImportColumnName(cell));
   const isTwoRowHeader=subHeader.some(cell=>['水平','其他信息（包含年纪等）','用户顾虑点','沟通情况和方案建议'].includes(cell));
   if(!isTwoRowHeader)return {header:mainHeader,dataStartIndex:headerIndex+1};
   const header=mainHeader.map((cell,index)=>subHeader[index]||cell);
@@ -6066,7 +6063,7 @@ function buildLeadCourtRecord(lead,{studentId='',id=uuidv4(),now=new Date().toIS
     updatedAt:now
   });
 }
-function defaultMabaoPricePlans(){
+function defaultVenuePricePlans(){const defaultCampus=Object.keys(CAMPUS_DISPLAY_NAMES)[0]||'';
   const venue=[
     ['工作日','06:00','08:00',100],
     ['工作日','08:00','16:00',140],
@@ -6074,7 +6071,7 @@ function defaultMabaoPricePlans(){
     ['工作日','20:00','22:00',180],
     ['周末节假日','06:00','08:00',100],
     ['周末节假日','08:00','22:00',220]
-  ].map(([dateType,startTime,endTime,unitPrice])=>({type:'venue_rate',campus:'mabao',venueSpaceType:'室内',dateType,startTime,endTime,unitPrice,status:'active',notes:'默认马坡场地价'}));
+  ].map(([dateType,startTime,endTime,unitPrice])=>({type:'venue_rate',campus:defaultCampus,venueSpaceType:'室内',dateType,startTime,endTime,unitPrice,status:'active',notes:'默认场地价'}));
   const products=[
     ['青少年1v1私教体验课','体验课','lesson','1小时',60,199],
     ['成人1v1私教体验课','体验课','lesson','1小时',60,239],
@@ -6169,7 +6166,7 @@ function normalizePricePlan(input={},id=uuidv4(),now=new Date().toISOString(),ol
 async function syncDefaultPricePlans(){
   const existing=await scan(T_PRICE_PLANS).catch(()=>[]);
   const now=new Date().toISOString();
-  for(const row of defaultMabaoPricePlans()){
+  for(const row of defaultVenuePricePlans()){
     const same=existing.find(p=>{
       if(p.type!==row.type)return false;
       if(row.type==='venue_rate')return p.campus===row.campus&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;

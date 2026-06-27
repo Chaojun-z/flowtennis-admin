@@ -2123,6 +2123,12 @@ function collectUnknownNotes(row,knownKeys){
   }
   return notes;
 }
+const COURT_IMPORT_NAME_FIELDS=['姓名',...FlowTennisBusinessTaxonomy.legacyAliases('courtName'),'用户','订场用户','名称','客户'];
+const COURT_IMPORT_STUDENT_LINK_FIELDS=['关联学员','学员',...FlowTennisBusinessTaxonomy.legacyAliases('courtStudentLink')];
+const COURT_IMPORT_KNOWN_FIELDS=['序号',...COURT_IMPORT_NAME_FIELDS,'手机号','电话','手机','联系方式',...COURT_IMPORT_STUDENT_LINK_FIELDS,'校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','末次跟进日期','末次跟进','最近跟进日期','最近跟进','跟进日期','下次跟进日期','下次跟进','跟进提醒日期','备注','说明','基本情况','沟通情况','消费金额','消费','消费金额（仅自己订场部分）','对接人','负责人','对储值态度','对储值的态度','熟悉程度'];
+function defaultCourtCampusCode(){
+  return campuses[0]?.code||campuses[0]?.id||Object.keys(CAMPUS)[0]||'';
+}
 function getCourtDedupKeys(item){
   const keys=[];
   const phone=normalizeImportPhone(item.phone);
@@ -2134,7 +2140,7 @@ function getCourtDedupKeys(item){
 }
 function normalizeCampusCode(value){
   const raw=String(value||'').trim();
-  if(!raw)return 'mabao';
+  if(!raw)return defaultCourtCampusCode();
   if(CAMPUS[raw])return raw;
   const match=Object.entries(CAMPUS).find(([,name])=>String(name).trim()===raw);
   return match?match[0]:raw;
@@ -2144,11 +2150,11 @@ function normalizeCourtImportRows(rawRows){
   courts.forEach(item=>getCourtDedupKeys(item).forEach(k=>existingKeys.add(k)));
   const seenKeys=new Set();
   const rows=rawRows.map((row,index)=>{
-    const name=readRowValue(row,['姓名','用户名','用户','订场用户','名称','客户']);
+    const name=readRowValue(row,COURT_IMPORT_NAME_FIELDS);
     const phone=readRowValue(row,['手机号','电话','手机','联系方式']);
-    const studentId=resolveStudentIdByText(readRowValue(row,['关联学员','学员','学员姓名','关联学员姓名'])||phone||name);
+    const studentId=resolveStudentIdByText(readRowValue(row,COURT_IMPORT_STUDENT_LINK_FIELDS)||phone||name);
     const campusRaw=readRowValue(row,['校区','门店','区域']);
-    const campus=normalizeCampusCode(campusRaw||'mabao');
+    const campus=normalizeCampusCode(campusRaw);
     const balanceRaw=readRowValue(row,['余额']);
     const depositRaw=readRowValue(row,['储值','历史储值','总储值','累计储值']);
     const joinDate=readRowValue(row,['加入日期','加入时间','日期']);
@@ -2159,7 +2165,7 @@ function normalizeCourtImportRows(rawRows){
     const depositAttitude=readRowValue(row,['对储值态度','对储值的态度']);
     const familiarity=readRowValue(row,['熟悉程度']);
     const baseNotes=[readRowValue(row,['备注','说明']),readRowValue(row,['基本情况']),readRowValue(row,['沟通情况'])].filter(Boolean).join('；');
-    const extras=collectUnknownNotes(row,['序号','姓名','用户名','用户','订场用户','名称','客户','手机号','电话','手机','联系方式','关联学员','学员','学员姓名','关联学员姓名','校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','末次跟进日期','末次跟进','最近跟进日期','最近跟进','跟进日期','下次跟进日期','下次跟进','跟进提醒日期','备注','说明','基本情况','沟通情况','消费金额','消费','消费金额（仅自己订场部分）','对接人','负责人','对储值态度','对储值的态度','熟悉程度']);
+    const extras=collectUnknownNotes(row,COURT_IMPORT_KNOWN_FIELDS);
     const notes=[baseNotes,...extras].filter(Boolean).join('；');
     const parsedSpent=importMoney(spentAmount);
     const parsedDeposit=importMoney(depositRaw)||extractDepositAmountFromText(depositAttitude);
@@ -2267,7 +2273,7 @@ function normalizePackageIdByText(value){
 }
 function normalizePurchaseImportRows(rawRows){
   const rows=rawRows.map((row,index)=>{
-    const studentText=readRowValue(row,['学员','学员姓名','姓名','手机号','电话']);
+    const studentText=readRowValue(row,['学员',...FlowTennisBusinessTaxonomy.legacyAliases('courtStudentLink'),'姓名','手机号','电话']);
     const phone=readRowValue(row,['手机号','电话','手机']);
     const studentMatch=resolveUniqueStudentIdByText(studentText||phone);
     const packageMatch=resolveUniquePackageIdByText(readRowValue(row,['售卖课包','课包','课包名称']));

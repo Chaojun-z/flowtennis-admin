@@ -154,7 +154,7 @@ assert.doesNotMatch(leadsSource, /<div class="tms-section-header" style="margin-
 assert.match(leadsSource, /openStandardModal\(\{title:leadId\?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'\}\)/, 'lead create and edit modal should use the standard 800px complex modal');
 assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索'/, 'lead create and edit modal should not keep the old shell');
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
-assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|\(campus!=='all'\?campus:'mabao'\)/, 'new leads should default to the current campus or mabao');
+assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|leadDefaultCampusValue\(\)/, 'new leads should default to the current campus or the first configured campus');
 assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit modal should remove the current status field');
 assert.match(leadsSource, /function leadConversionActionPanelHtml\(lead\)[\s\S]*转为学员[\s\S]*转为订场用户[\s\S]*关联已有学员[\s\S]*关联已有订场用户/, 'lead conversion tab should expose conversion actions inside the drawer');
 assert.match(leadsSource, /查看[\s\S]*跟进/, 'lead rows should expose view and follow-up actions');

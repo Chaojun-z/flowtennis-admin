@@ -164,7 +164,8 @@ async function togglePricePlanStatus(id){
     if(i>=0)pricePlans[i]=saved;
   },{errorPrefix:'更新失败',refresh:renderPrices});
 }
-function defaultMabaoPricePlans(){
+function defaultVenuePricePlans(){
+  const defaultCampus=campuses[0]?.code||campuses[0]?.id||'';
   const venue=[
     ['工作日','06:00','08:00',100],
     ['工作日','08:00','16:00',140],
@@ -172,7 +173,7 @@ function defaultMabaoPricePlans(){
     ['工作日','20:00','22:00',180],
     ['周末节假日','06:00','08:00',100],
     ['周末节假日','08:00','22:00',220]
-  ].map(([dateType,startTime,endTime,unitPrice])=>({type:'venue_rate',campus:'mabao',venueSpaceType:'室内',dateType,startTime,endTime,unitPrice,status:'active',notes:'默认马坡场地价'}));
+  ].map(([dateType,startTime,endTime,unitPrice])=>({type:'venue_rate',campus:defaultCampus,venueSpaceType:'室内',dateType,startTime,endTime,unitPrice,status:'active',notes:'默认场地价'}));
   const products=[
     ['青少年1v1私教体验课','体验课','lesson','1小时',60,199],
     ['成人1v1私教体验课','体验课','lesson','1小时',60,239],
@@ -203,11 +204,11 @@ function hasSameActivePricePlan(row){
     return p.channel===row.channel&&normalizeDefaultPriceName(p.productName)===normalizeDefaultPriceName(row.productName);
   });
 }
-async function importDefaultMabaoPrices(){
-  if(!await appConfirm('同步默认马坡场地价和大众点评商品价？已存在的价格会按最新模板更新。',{title:'同步默认马坡价格',confirmText:'确认同步'}))return;
+async function importDefaultVenuePrices(){
+  if(!await appConfirm('同步默认场地价和渠道商品价？已存在的价格会按最新模板更新。',{title:'同步默认价格',confirmText:'确认同步'}))return;
   let ok=0,updated=0,created=0;
   try{
-    for(const row of defaultMabaoPricePlans()){
+    for(const row of defaultVenuePricePlans()){
       const same=pricePlans.find(p=>{
         if(p.type!==row.type)return false;
         if(row.type==='venue_rate')return p.campus===row.campus&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;

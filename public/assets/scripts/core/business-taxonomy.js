@@ -134,6 +134,12 @@
     recognizedRevenueDelta: { label: '入账变化', rule: '单条标准财务流水的收入确认或回退变化' }
   });
   const FINANCE_FIELD_OPTIONS = Object.entries(FINANCE_FIELD_DEFINITIONS).map(([value, meta]) => ({ value, label: meta.label }));
+  const LEGACY_IMPORT_FIELD_ALIASES = Object.freeze({
+    leadDemandProduct: ['咨询需求'],
+    leadIntentLevel: ['意向类型'],
+    courtName: ['用户名'],
+    courtStudentLink: ['学员姓名', '关联学员姓名']
+  });
   const COURSE_TYPE_OPTIONS = [
     { level1: '私教课', level2: '' },
     { level1: '小班课', level2: '单次' },
@@ -207,6 +213,11 @@
 
   function values(name) {
     return optionList(name).map(option => option.value);
+  }
+
+  function legacyAliases(name) {
+    const aliases = LEGACY_IMPORT_FIELD_ALIASES[name] || [];
+    return Array.isArray(aliases) ? aliases.slice() : [];
   }
 
   function text(value) {
@@ -400,9 +411,11 @@
     FINANCE_TRANSACTION_TYPE_OPTIONS,
     FINANCE_FIELD_DEFINITIONS,
     FINANCE_FIELD_OPTIONS,
+    LEGACY_IMPORT_FIELD_ALIASES,
     COURSE_TYPE_OPTIONS,
     optionList,
     values,
+    legacyAliases,
     normalizePaymentMethod,
     normalizeLeadSource,
     normalizeLeadCustomerType,
