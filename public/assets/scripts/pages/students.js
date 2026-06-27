@@ -38,9 +38,9 @@ function studentLifecycleStage(stu){
 }
 function studentMatchesListPage(stu){
   const lifecycleStage=studentLifecycleStage(stu);
-  if(lifecycleStage)return studentListViewMode()==='trial'?lifecycleStage==='trial':lifecycleStage==='formal';
+  if(lifecycleStage)return studentListViewMode()==='trial'?['trial','formal'].includes(lifecycleStage):lifecycleStage==='formal';
   const hasPackage=studentHasNonTrialPackage(stu);
-  return studentListViewMode()==='trial'?studentHasTrialPath(stu)&&!hasPackage:hasPackage;
+  return studentListViewMode()==='trial'?studentHasTrialPath(stu)||hasPackage:hasPackage;
 }
 function studentUnifiedViewRows(){
   const rows=typeof teachingStudentViewRows==='function'?teachingStudentViewRows(studentListViewMode()):[];
@@ -150,6 +150,14 @@ function studentTrialPathStatusText(stu){
   if(studentHasNonTrialPackage(stu))return '已成交';
   if(studentLastLessonDate(stu))return '已体验待成交';
   return '已约体验';
+}
+function studentHasTrialPathEvidence(stu){
+  return !!(stu?.hasTrialExperience||studentHasTrialPath(stu));
+}
+function studentIsFormalCourseDeal(stu){
+  const lifecycleStage=studentLifecycleStage(stu)||String(stu?.studentStage||'').trim();
+  if(lifecycleStage==='formal')return true;
+  return studentHasNonTrialPackage(stu);
 }
 function studentHasRemainingPackage(stu){
   return studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)&&(Number(e.remainingLessons)||0)>0);
@@ -472,6 +480,10 @@ function studentPageStats(base){
   const financeStats=studentFinanceStatsForBase(base);
   const trialBookedOnlyCount=base.filter(s=>studentTrialPathStatusText(s)==='已约体验').length;
   const trialAttendedPendingCount=base.filter(s=>studentTrialPathStatusText(s)==='已体验待成交').length;
+  const trialPathCount=base.filter(studentHasTrialPathEvidence).length;
+  const trialPathDealCount=base.filter(s=>studentHasTrialPathEvidence(s)&&studentIsFormalCourseDeal(s)).length;
+  const trialPathPendingCount=Math.max(0,trialPathCount-trialPathDealCount);
+  const directCourseDealCount=base.filter(s=>!studentHasTrialPathEvidence(s)&&studentIsFormalCourseDeal(s)).length;
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
   const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
@@ -508,6 +520,10 @@ function studentPageStats(base){
     courseRecognized:Math.round((financeStats?financeStats.courseRecognized:(recognized+directCourseIncome))*100)/100,
     trialBookedOnlyCount,
     trialAttendedPendingCount,
+    trialPathCount,
+    trialPathDealCount,
+    trialPathPendingCount,
+    directCourseDealCount,
     ...(lifecycleStats?{
       trialStudentCount:lifecycleStats.trialStudentCount,
       trialConvertedCount:lifecycleStats.trialConvertedCount
@@ -521,10 +537,10 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'普通学员数',valueHtml:stats.total,sub:'已预约或已体验，未买正式课包'},
-    {label:'已预约未体验',valueHtml:stats.trialBookedOnlyCount||0,percent:studentPercentText(stats.trialBookedOnlyCount||0,stats.total),sub:'当前普通学员范围'},
-    {label:'已体验待成交',valueHtml:stats.trialAttendedPendingCount||0,percent:studentPercentText(stats.trialAttendedPendingCount||0,stats.total),sub:'当前普通学员范围'},
-    {label:'体验课收入',valueHtml:`¥${fmt(stats.trialIncome)}`}
+    {label:'普通学员',valueHtml:stats.total,sub:'进入课程链学员'},
+    {label:'体验路径学员',valueHtml:stats.trialPathCount||0,percent:studentPercentText(stats.trialPathCount||0,stats.total),sub:'体验路径学员 / 普通学员'},
+    {label:'体验路径成交',valueHtml:stats.trialPathDealCount||0,percent:studentPercentText(stats.trialPathDealCount||0,stats.trialPathCount||0),sub:'体验路径成交 / 体验路径学员'},
+    {label:'直接成交学员',valueHtml:stats.directCourseDealCount||0,percent:studentPercentText(stats.directCourseDealCount||0,stats.total),sub:'直接成交学员 / 普通学员'}
   ];
   return [
     {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span><span class="student-stat-divider">｜</span><span>${stats.courseRepeatCount}</span>`,sub:'正式学员数 vs 购买次数 vs 课包复购人数'},

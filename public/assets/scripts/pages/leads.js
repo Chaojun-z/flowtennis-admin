@@ -735,6 +735,27 @@ function leadTrialCourseConverted(lead){
 }
 function leadStatsData(list){
   const base=Array.isArray(list)?list:[];
+  const teachingSummary=typeof teachingStudentViews==='object'&&teachingStudentViews?teachingStudentViews.summary||{}:{};
+  if(Number(teachingSummary.courseStudentCount)||Number(teachingSummary.courseDealCustomers)||Number(teachingSummary.trialPathStudents)){
+    const courseStudents=Number(teachingSummary.courseStudentCount)||0;
+    const courseConverted=Number(teachingSummary.courseDealCustomers)||0;
+    const trialPath=Number(teachingSummary.trialPathStudents)||0;
+    const trialPathDeal=Number(teachingSummary.trialPathDealCustomers)||0;
+    const trialPathPending=Number(teachingSummary.trialPathPendingCustomers)||Math.max(0,trialPath-trialPathDeal);
+    return {
+      total:base.length,
+      courseStudents,
+      courseStudentRate:leadRateText(courseStudents,base.length),
+      courseConverted,
+      courseConversionRate:leadRateText(courseConverted,base.length),
+      trialBooked:trialPath,
+      trialBookedRate:leadRateText(trialPath,base.length),
+      trialPathDeal,
+      trialPathDealRate:leadRateText(trialPathDeal,trialPath),
+      trialPendingConversion:trialPathPending,
+      trialPendingConversionRate:leadRateText(trialPathPending,trialPath)
+    };
+  }
   return FlowTennisPlatformDataStandards.leadFunnelStats(base,{
     trialBooked:leadTrialBooked,
     trialDone:leadTrialDone,
@@ -747,11 +768,10 @@ function renderLeadStats(list){
   const stats=leadStatsData(list);
   const cardData=[
     {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
-    {label:'全盘最终成交',valueHtml:stats.converted,percent:stats.leadConversionRate,sub:'总成交人数 / 有效线索数'},
-    {label:'预约体验客户',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'预约体验客户 / 有效线索数'},
-    {label:'体验课实到人数',valueHtml:stats.trialDone,percent:stats.trialAttendanceRate,sub:'已体验人数 / 预约体验客户'},
-    {label:'课包成交客户',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:`正式课包成交；体验后 ${stats.trialCourseConverted} / 直接 ${stats.directCourseConverted}`},
-    {label:'高意向蓄水池',valueHtml:`${stats.trialPendingConversion}<span>人 / ${stats.trialPendingConversionRate}</span>`,sub:'已体验待成交 / 已体验人数'}
+    {label:'普通学员',valueHtml:stats.courseStudents,percent:stats.courseStudentRate,sub:'进入课程链学员 / 线索数'},
+    {label:'正式学员',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:'正式课包成交 / 线索数'},
+    {label:'体验路径学员',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'体验路径学员 / 线索数'},
+    {label:'体验路径未成交',valueHtml:stats.trialPendingConversion,percent:stats.trialPendingConversionRate,sub:'体验路径未成交 / 体验路径学员'}
   ];
   const host=document.getElementById('leadStatsRow');
   if(host)host.innerHTML=renderStandardDataCards(cardData);

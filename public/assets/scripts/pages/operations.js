@@ -1191,18 +1191,68 @@ function operationsConversionFilterOptions(data) {
   };
 }
 
+function operationsCardValue(cards = {}, key = '') {
+  return Number(cards?.[key]?.value) || 0;
+}
+
+function operationsRateText(part, total) {
+  if (!total) return '0%';
+  const value = (Number(part) || 0) * 100 / (Number(total) || 0);
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+}
+
+function operationsTextFunnel(title, rows = []) {
+  return `<div class="operations-insight-card">
+    <span>${esc(title)}</span>
+    ${rows.map(row => `<p><strong>${esc(row.label)}</strong> ${fmt(row.value || 0)}${row.unit || '人'}${row.rate ? ` · ${esc(row.rate)}` : ''}</p>`).join('')}
+  </div>`;
+}
+
+function operationsStandardFunnelRows(conversion = {}) {
+  const cards = conversion.cards || {};
+  const courtChain = conversion.courtChain || {};
+  const leads = operationsCardValue(cards, 'totalLeads');
+  const courseStudents = operationsCardValue(cards, 'courseStudents');
+  const formalStudents = operationsCardValue(cards, 'courseDealCustomers');
+  const trialPathStudents = operationsCardValue(cards, 'trialPathStudents');
+  const trialPathDeals = operationsCardValue(cards, 'trialPathDealCustomers');
+  const trialPathPending = operationsCardValue(cards, 'trialPathPendingCustomers');
+  const courtUsers = Number(courtChain.courtUsers) || 0;
+  const courtMembers = Number(courtChain.courtMembers) || 0;
+  const memberRepeat = Number(courtChain.memberRepeatCustomers) || 0;
+  const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
+  return [
+    operationsTextFunnel('课程总漏斗', [
+      { label: '线索数', value: leads, unit: '条' },
+      { label: '普通学员', value: courseStudents, rate: operationsRateText(courseStudents, leads) },
+      { label: '正式学员', value: formalStudents, rate: operationsRateText(formalStudents, courseStudents) }
+    ]),
+    operationsTextFunnel('体验路径漏斗', [
+      { label: '体验路径学员', value: trialPathStudents },
+      { label: '体验路径成交', value: trialPathDeals, rate: operationsRateText(trialPathDeals, trialPathStudents) },
+      { label: '体验路径未成交', value: trialPathPending, rate: operationsRateText(trialPathPending, trialPathStudents) }
+    ]),
+    operationsTextFunnel('订场链漏斗', [
+      { label: '订场用户', value: courtUsers },
+      { label: '订场会员', value: courtMembers, rate: operationsRateText(courtMembers, courtUsers) },
+      { label: '会员复购', value: memberRepeat, rate: operationsRateText(memberRepeat, courtMembers) },
+      { label: '订场复订', value: courtRepeat, rate: operationsRateText(courtRepeat, courtUsers) }
+    ])
+  ];
+}
+
 function renderConversionFunnelModule(data, conversion) {
   const options = operationsConversionFilterOptions(data);
   return `<section class="operations-section operations-funnel-card">
     <div class="operations-module-head">
-      <div><h3>全局转化漏斗</h3><span>转化节点与流失监控</span></div>
+      <div><h3>标准转化漏斗</h3><span>课程总漏斗、体验路径漏斗、订场链漏斗</span></div>
       <div class="operations-funnel-filter-row">
         ${operationsFilterDropdown('operationsConversionSource', '全部渠道', options.sources || [], operationsConversionFilters.source)}
         ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
         ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
       </div>
     </div>
-    <div class="operations-funnel-host" id="operationsCourseFunnel"></div>
+    <div class="operations-insight-list">${operationsStandardFunnelRows(conversion).join('')}</div>
   </section>`;
 }
 

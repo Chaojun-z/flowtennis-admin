@@ -33,6 +33,8 @@ const metrics = buildOperationsMetrics({
   ],
   coaches: [{ id: 'coach-1', name: 'Siren 教练', status: 'active', campus: 'shunyi_mapo' }],
   schedule: [
+    { id: 'trial-sch-1', studentId: 'student-1', courseType: '体验课', startTime: '2026-06-05 09:00:00', endTime: '2026-06-05 10:00:00', status: '已完成', campus: 'shunyi_mapo' },
+    { id: 'trial-sch-2', studentId: 'student-2', courseType: '体验课', startTime: '2026-06-05 11:00:00', endTime: '2026-06-05 12:00:00', status: '已完成', campus: 'shunyi_mapo' },
     { id: 'sch-1', coach: 'Siren 教练', startTime: '2026-06-05 10:00:00', endTime: '2026-06-05 12:00:00', status: '已排课', campus: 'shunyi_mapo' }
   ],
   courts: [
@@ -541,6 +543,7 @@ const campusConversionCourtMetrics = buildOperationsMetrics({
   ],
   students: [
     { id: 'campus-student-1', sourceLeadId: 'campus-lead-1', dealPath: '体验转化' },
+    { id: 'campus-student-pending', sourceLeadId: 'campus-lead-2' },
     { id: 'campus-student-2', sourceLeadId: 'campus-lead-3', dealPath: '体验转化' }
   ],
   purchases: [
@@ -557,7 +560,11 @@ const campusConversionCourtMetrics = buildOperationsMetrics({
       ])
     }
   ],
-  schedule: [],
+  schedule: [
+    { id: 'campus-trial-1', studentId: 'campus-student-1', courseType: '体验课', startTime: '2026-06-01 09:00:00', endTime: '2026-06-01 10:00:00', status: '已完成', campus: 'shunyi_mapo' },
+    { id: 'campus-trial-pending', studentId: 'campus-student-pending', courseType: '体验课', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已完成', campus: 'shunyi_mapo' },
+    { id: 'campus-trial-2', studentId: 'campus-student-2', courseType: '体验课', startTime: '2026-06-03 09:00:00', endTime: '2026-06-03 10:00:00', status: '已完成', campus: 'shunyi_mapo' }
+  ],
   coaches: [],
   membershipAccounts: [],
   membershipOrders: [],
@@ -777,7 +784,9 @@ const mergedLeadMetrics = buildOperationsMetrics({
     { id: 'purchase-merged', studentId: 'student-merged', packageId: 'pkg-a', actualAmount: 1000 }
   ],
   coaches: [],
-  schedule: [],
+  schedule: [
+    { id: 'schedule-merged-trial', studentId: 'student-merged', courseType: '体验课', startTime: '2026-06-01 09:00:00', endTime: '2026-06-01 10:00:00', status: '已完成', campus: 'shunyi_mapo' }
+  ],
   courts: [],
   membershipAccounts: [],
   membershipOrders: [],
@@ -798,13 +807,21 @@ const unifiedRateMetrics = buildOperationsMetrics({
     { id: 'rate-lead-5', source: '视频号', consultType: '成人私教课' }
   ],
   students: [
-    { id: 'rate-student-3', sourceLeadId: 'rate-lead-3', dealPath: '体验转化', type: '成人', consultType: '成人私教课' }
+    { id: 'rate-student-1', sourceLeadId: 'rate-lead-1', type: '成人', consultType: '成人私教课' },
+    { id: 'rate-student-2', sourceLeadId: 'rate-lead-2', type: '成人', consultType: '成人私教课' },
+    { id: 'rate-student-3', sourceLeadId: 'rate-lead-3', dealPath: '体验转化', type: '成人', consultType: '成人私教课' },
+    { id: 'rate-student-4', sourceLeadId: 'rate-lead-4', type: '成人', consultType: '成人私教课' }
   ],
   purchases: [
     { id: 'rate-purchase-3', studentId: 'rate-student-3', packageId: 'pkg-rate', actualAmount: 1000 }
   ],
   coaches: [],
-  schedule: [],
+  schedule: [
+    { id: 'rate-trial-1', studentId: 'rate-student-1', courseType: '体验课', startTime: '2026-06-10 09:00:00', endTime: '2026-06-10 10:00:00', status: '已完成' },
+    { id: 'rate-trial-2', studentId: 'rate-student-2', courseType: '体验课', startTime: '2026-06-11 09:00:00', endTime: '2026-06-11 10:00:00', status: '已完成' },
+    { id: 'rate-trial-3', studentId: 'rate-student-3', courseType: '体验课', startTime: '2026-06-12 09:00:00', endTime: '2026-06-12 10:00:00', status: '已完成' },
+    { id: 'rate-trial-4', studentId: 'rate-student-4', courseType: '体验课', startTime: '2026-06-13 09:00:00', endTime: '2026-06-13 10:00:00', status: '待上课' }
+  ],
   courts: [],
   membershipAccounts: [],
   membershipOrders: [],
@@ -1449,7 +1466,7 @@ assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.dat
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.storedValueIncome, 500, 'overview stored value trend should come from real finance rows');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-05-31')?.totalIncome, 0, 'all-time overview KPI trends should fill empty finance days with zero buckets');
 assert.strictEqual(financeBackedTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingAmount, 180, 'court trends should include real member booking finance rows without court history');
-assert.strictEqual(financeBackedTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03')?.dealRateNumerator, 1, 'conversion trends should use real follow-up evidence dates when the lead has no leadDate');
+assert.strictEqual(financeBackedTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03')?.dealRateNumerator, 0, 'conversion trends should not treat follow-up status text as a paid course conversion without a course purchase fact');
 assert.strictEqual(financeBackedTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.revenue, 1000, 'coach trends should use real course finance rows when purchase detail rows are unavailable');
 
 console.log('operations metrics tests passed');

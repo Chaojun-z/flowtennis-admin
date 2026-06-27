@@ -16,6 +16,7 @@ function stageCountMap(rows = []) {
 const sample = {
   leads: [
     { id: 'lead-followup', displayName: '跟进客户', source: '朋友转介绍', leadDate: '2026-06-01' },
+    { id: 'lead-followup-duplicate', displayName: '跟进客户', source: '朋友转介绍', leadDate: '2026-06-02' },
     { id: 'lead-booked', displayName: '已约体验客户', source: '小红书', leadDate: '2026-06-02', trialAtRaw: '2026-06-05' },
     { id: 'lead-attended', displayName: '已体验客户', source: '大众点评', leadDate: '2026-06-03' },
     { id: 'lead-course', displayName: '课程成交客户', source: '小红书', leadDate: '2026-06-04' },
@@ -49,12 +50,11 @@ const sample = {
 
 const lifecycleRows = buildCustomerLifecycleRows(sample);
 const allLeadPoolRows = buildLeadPoolRows({ leads: sample.leads, customerLifecycleRows: lifecycleRows });
-const rawLeadIds = new Set(sample.leads.map(row => String(row.id || '').trim()).filter(Boolean));
-const rawLeadPoolRows = allLeadPoolRows.filter(row => rawLeadIds.has(String(row?.id || row?.sourceLeadId || '').trim()));
 const platform = buildPlatformMetrics({ ...sample, customerLifecycleRows: lifecycleRows });
+const rawLeadPoolRows = platform.rawLeadPoolRows;
 const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows: lifecycleRows }, { now: new Date('2026-06-18 00:00:00') });
 
-assert.strictEqual(rawLeadPoolRows.length, sample.leads.length, 'raw lead pool should keep exactly the raw lead cohort');
+assert.strictEqual(rawLeadPoolRows.length, sample.leads.length - 1, 'raw lead pool should count the standard valid lead-customer cohort, not duplicate raw lead rows');
 assert.strictEqual(allLeadPoolRows.length, rawLeadPoolRows.length + 1, 'unified lead-pool builder may include synthetic direct-conversion customers beyond the raw lead cohort');
 assert.strictEqual(platform.leadPoolRows.length, allLeadPoolRows.length, 'platform metrics should expose the full searchable customer pool');
 assert.strictEqual(operations.conversion.cards.totalLeads.value, rawLeadPoolRows.length, 'operations raw lead total should stay aligned with the raw lead pool cohort');
@@ -123,6 +123,7 @@ assert.strictEqual(
 const teachingSample = {
   leads: [
     { id: 'lead-direct-course', displayName: '直接成交', leadDate: '2026-06-01' },
+    { id: 'lead-direct-course-manual-trial', displayName: '线索手工邀约后直接成交', leadDate: '2026-06-01', trialAtRaw: '2026-06-05 10:00' },
     { id: 'lead-booked-only', displayName: '已约未上', leadDate: '2026-06-02' },
     { id: 'lead-attended-only', displayName: '已体验待成交', leadDate: '2026-06-03' },
     { id: 'lead-trial-course', displayName: '体验后成交', leadDate: '2026-06-04' },
@@ -130,12 +131,14 @@ const teachingSample = {
   ],
   students: [
     { id: 'stu-direct-course', name: '直接成交', sourceLeadId: 'lead-direct-course' },
+    { id: 'stu-direct-course-manual-trial', name: '线索手工邀约后直接成交', sourceLeadId: 'lead-direct-course-manual-trial' },
     { id: 'stu-booked-only', name: '已约未上', sourceLeadId: 'lead-booked-only' },
     { id: 'stu-attended-only', name: '已体验待成交', sourceLeadId: 'lead-attended-only' },
     { id: 'stu-trial-course', name: '体验后成交', sourceLeadId: 'lead-trial-course' }
   ],
   purchases: [
     { id: 'purchase-direct-course', studentId: 'stu-direct-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' },
+    { id: 'purchase-direct-course-manual-trial', studentId: 'stu-direct-course-manual-trial', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' },
     { id: 'purchase-trial-course', studentId: 'stu-trial-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-07' }
   ],
   schedule: [
@@ -152,20 +155,60 @@ const teachingSample = {
 const teachingLifecycleRows = buildCustomerLifecycleRows(teachingSample);
 const teachingPlatform = buildPlatformMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows });
 const teachingOperations = buildOperationsMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows }, { now: new Date('2026-06-18 00:00:00') });
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.courseStudents), '教学链读模型必须提供普通学员 courseStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathStudents), '教学链读模型必须提供体验路径学员 trialPathStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathDealStudents), '教学链读模型必须提供体验路径成交 trialPathDealStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathPendingStudents), '教学链读模型必须提供体验路径未成交 trialPathPendingStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.directCourseDealStudents), '教学链读模型必须提供直接成交 directCourseDealStudents');
 assert.deepStrictEqual(
-  teachingPlatform.teachingStudentViews.trialStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-booked-only'],
-  '普通学员视图只能包含仍停留在体验阶段且未买正式课包的人，不能包含体验后成交或直接成交'
+  teachingPlatform.teachingStudentViews.courseStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only', 'stu-booked-only', 'stu-direct-course', 'stu-direct-course-manual-trial', 'stu-trial-course'],
+  '普通学员视图必须表示进入课程链的人，包含体验路径学员和直接正式成交学员'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.formalStudents.map(row => row.studentId).sort(),
-  ['stu-direct-course', 'stu-trial-course'],
+  ['stu-direct-course', 'stu-direct-course-manual-trial', 'stu-trial-course'],
   '正式学员视图必须包含直接课程成交和体验后课程成交'
 );
 assert.strictEqual(
-  teachingPlatform.teachingStudentViews.trialStudents.some(row => teachingPlatform.teachingStudentViews.formalStudents.some(item => item.customerKey === row.customerKey)),
-  false,
-  '普通学员和正式学员必须互斥'
+  teachingPlatform.teachingStudentViews.formalStudents.every(row => teachingPlatform.teachingStudentViews.courseStudents.some(item => item.customerKey === row.customerKey)),
+  true,
+  '正式学员必须是普通学员的下级漏斗，不能从普通学员中剔除'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.trialPathStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only', 'stu-booked-only', 'stu-trial-course'],
+  '体验路径学员只包含有体验课排课/体验课包证据的人，不包含只有线索手工邀约时间的直接正式成交'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.trialPathDealStudents.map(row => row.studentId).sort(),
+  ['stu-trial-course'],
+  '体验路径成交只统计体验路径学员中买正式课包的人'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.directCourseDealStudents.map(row => row.studentId).sort(),
+  ['stu-direct-course', 'stu-direct-course-manual-trial'],
+  '直接成交学员只统计没有体验路径但买正式课包的人'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.trialPathPendingStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only', 'stu-booked-only'],
+  '体验路径未成交只统计有体验路径但未买正式课包的人'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.summary,
+  {
+    courseStudentCount: 5,
+    trialStudentCount: 2,
+    formalStudentCount: 3,
+    courseDealCustomers: 3,
+    trialPathStudents: 3,
+    trialPathDealCustomers: 1,
+    trialPathPendingCustomers: 2,
+    trialToCourseCustomers: 1,
+    directCourseCustomers: 2
+  },
+  '教学链汇总必须同时提供课程总漏斗和体验路径漏斗，并保持恒等关系'
 );
 assert.strictEqual(
   teachingOperations.conversion.cards.courseDealCustomers.value,
@@ -173,9 +216,14 @@ assert.strictEqual(
   '转化与留存课包成交客户数必须等于正式学员视图人数'
 );
 assert.strictEqual(
-  teachingOperations.conversion.cards.trialToCourseCustomers.value,
+  teachingOperations.conversion.cards.trialPathDealCustomers.value,
   1,
-  '体验后成交人数只统计体验后买正式课包，不能把直接成交算进去'
+  '体验路径成交人数只统计体验路径学员中买正式课包，不能把直接成交算进去'
+);
+assert.strictEqual(
+  teachingOperations.conversion.cards.directCourseCustomers.value,
+  2,
+  '直接成交人数必须统计没有体验路径但买正式课包的人'
 );
 
 console.log('cross page metric consistency tests passed');

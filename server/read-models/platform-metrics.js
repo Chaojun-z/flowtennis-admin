@@ -14,6 +14,78 @@ function rowId(row = {}) {
   return text(row.id || row.leadId);
 }
 
+function leadIdentityName(value) {
+  return text(value)
+    .replace(/1[3-9]\d{9}/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[·.。_\-\/|｜，,;；]/g, '');
+}
+
+function leadDedupPhone(row = {}) {
+  const direct = text(row.phone).replace(/\s+/g, '');
+  if (direct) return direct;
+  const match = text(row.displayName || row.wechatName || row.name).match(/1[3-9]\d{9}/);
+  return match ? match[0] : '';
+}
+
+function leadCanonicalNameKey(row = {}) {
+  const carrier = row.isLifecycleSynthetic
+    ? (text(row.courtId) ? 'court' : text(row.studentId) ? 'student' : text(row.membershipAccountId) ? 'membership' : 'synthetic')
+    : 'lead';
+  const phone = leadDedupPhone(row);
+  if (phone) return `${carrier}|phone:${phone}`;
+  const name = leadIdentityName(row.wechatName || row.displayName || row.name);
+  return name ? `${carrier}|name:${name}` : `${carrier}|id:${rowId(row)}`;
+}
+
+function leadDateMs(value) {
+  const parsed = Date.parse(text(value).replace(' ', 'T'));
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function leadStageRank(stage = '') {
+  const value = text(stage);
+  const order = {
+    '已成交': 5,
+    '已体验待成交': 4,
+    '已约体验': 3,
+    '跟进中': 2,
+    '新线索': 1,
+    '已流失': 0
+  };
+  return order[value] ?? 1;
+}
+
+function mergeLeadPoolGroup(rows = []) {
+  const list = rows.filter(Boolean);
+  if (!list.length) return null;
+  const primary = [...list].sort((a, b) => (
+    leadDateMs(a.leadDate || a.createdAt) - leadDateMs(b.leadDate || b.createdAt) ||
+    text(a.id).localeCompare(text(b.id))
+  ))[0];
+  const merged = { ...primary };
+  const bestStage = [...list].sort((a, b) => leadStageRank(b.leadStage) - leadStageRank(a.leadStage))[0];
+  const bestDeal = list.map(row => text(row.dealType || row.conversionType)).find(Boolean);
+  merged._mergedLeadIds = [...new Set(list.map(row => text(row.id || row.sourceLeadId || row.leadId)).filter(Boolean))];
+  merged.leadStage = text(bestStage?.leadStage || merged.leadStage);
+  merged.systemStatus = text(bestStage?.systemStatus || merged.systemStatus || merged.leadStage);
+  merged.dealType = bestDeal || text(merged.dealType);
+  merged.conversionType = bestDeal || text(merged.conversionType);
+  return merged;
+}
+
+function mergeDuplicateLeadPoolRows(rows = []) {
+  const groups = new Map();
+  (rows || []).forEach(row => {
+    const key = leadCanonicalNameKey(row);
+    const group = groups.get(key) || [];
+    group.push(row);
+    groups.set(key, group);
+  });
+  return [...groups.values()].map(mergeLeadPoolGroup).filter(Boolean);
+}
+
 function isConvertedStage(stage = '') {
   return text(stage) === '已成交';
 }
@@ -179,7 +251,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     });
   });
 
-  return [...rows.values()];
+  return mergeDuplicateLeadPoolRows([...rows.values()]);
 }
 
 function buildStageRows(leadPoolRows = []) {
@@ -218,10 +290,11 @@ function buildSourceChannelStats(leadPoolRows = []) {
 
 function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
   const rawLeadIds = new Set((leads || []).map(row => rowId(row)).filter(Boolean));
-  return (leadPoolRows || []).filter(row => {
+  const rawRows = (leadPoolRows || []).filter(row => {
     const id = text(row.id || row.sourceLeadId || row.leadId);
     return rawLeadIds.has(id);
   });
+  return mergeDuplicateLeadPoolRows(rawRows);
 }
 
 function teachingStudentViewRow(row = {}) {
@@ -245,22 +318,42 @@ function teachingStudentViewRow(row = {}) {
 
 function buildTeachingStudentViews(customerLifecycleRows = []) {
   const studentRows = (customerLifecycleRows || []).filter(row => text(row.studentId));
-  const trialStudents = studentRows
-    .filter(row => text(row.studentStage) === 'trial')
+  const hasTrialPath = row => !!row.hasTrialExperience;
+  const courseStudents = studentRows
+    .filter(row => ['trial', 'formal'].includes(text(row.studentStage)))
     .map(teachingStudentViewRow);
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')
     .map(teachingStudentViewRow);
-  const trialToCourseStudents = formalStudents.filter(row => !!row.hasTrialToCourseConversion);
-  const directCourseStudents = formalStudents.filter(row => text(row.courseDealPath) === '直接成交');
+  const trialStudents = studentRows
+    .filter(row => text(row.studentStage) === 'trial')
+    .map(teachingStudentViewRow);
+  const courseStudentIds = new Set(courseStudents.map(row => text(row.studentId)).filter(Boolean));
+  const trialPathStudents = studentRows
+    .filter(hasTrialPath)
+    .filter(row => courseStudentIds.has(text(row.studentId)))
+    .map(teachingStudentViewRow);
+  const trialPathDealStudents = formalStudents.filter(hasTrialPath);
+  const trialPathDealIds = new Set(trialPathDealStudents.map(row => text(row.studentId)).filter(Boolean));
+  const trialPathPendingStudents = trialPathStudents.filter(row => !trialPathDealIds.has(text(row.studentId)));
+  const directCourseStudents = formalStudents.filter(row => !trialPathDealIds.has(text(row.studentId)));
   return {
+    courseStudents,
     trialStudents,
     formalStudents,
+    trialPathStudents,
+    trialPathDealStudents,
+    trialPathPendingStudents,
+    directCourseDealStudents: directCourseStudents,
     summary: {
+      courseStudentCount: courseStudents.length,
       trialStudentCount: trialStudents.length,
       formalStudentCount: formalStudents.length,
       courseDealCustomers: formalStudents.length,
-      trialToCourseCustomers: trialToCourseStudents.length,
+      trialPathStudents: trialPathStudents.length,
+      trialPathDealCustomers: trialPathDealStudents.length,
+      trialPathPendingCustomers: trialPathPendingStudents.length,
+      trialToCourseCustomers: trialPathDealStudents.length,
       directCourseCustomers: directCourseStudents.length
     }
   };

@@ -52,8 +52,8 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员数[\s\S]*已预约或已体验，未买正式课包[\s\S]*已预约未体验[\s\S]*已体验待成交[\s\S]*体验课收入/, 'trial student top stats should show current-stage cards instead of global funnel labels');
-assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show course deals because converted students leave the normal-student view');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员[\s\S]*进入课程链学员[\s\S]*体验路径学员[\s\S]*体验路径成交[\s\S]*直接成交学员/, 'trial student top stats should show course-chain funnel cards');
+assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
 assert.match(source, /function studentFinanceStatsForBase\(/, 'student finance cards should read the unified finance row model');
 assert.match(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)/, 'student top finance stats should use the unified finance model for income and recognized amount');
 assert.match(fnBody('studentPageStats'), /trialIncome:Math\.round\(\(financeStats\?financeStats\.trialIncome:trialIncome\)\*100\)\/100/, 'trial student stats should expose trial-only income from the finance read model');
@@ -84,7 +84,7 @@ assert.doesNotMatch(trialStudentColumns, /最近上课|累计上课|课包\/课�
 const officialStudentColumns = fnBody('studentTableColumns').match(/return \[\s*\n    \{label:'姓名'[\s\S]*?\n  \];\n\}/)?.[0] || '';
 assert.doesNotMatch(officialStudentColumns, /最近上课/, 'official student table should remove recent lesson column');
 assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='packagePurchaseDate';stuSortDir='desc'/, 'normal and official student lists should default to latest purchase descending');
-assert.match(source, /return studentListViewMode\(\)==='trial'\?studentHasTrialPath\(stu\)&&!hasPackage:hasPackage;/, 'normal student list should exclude students who already bought formal packages');
+assert.match(source, /return studentListViewMode\(\)==='trial'\?studentHasTrialPath\(stu\)\|\|hasPackage:hasPackage;/, 'normal student list should include all course-chain students, including direct formal deals');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');

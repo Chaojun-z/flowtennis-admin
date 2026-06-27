@@ -8,7 +8,7 @@ function syncViewportMode(){
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let customerLifecycleRows=[];
-let teachingStudentViews={trialStudents:[],formalStudents:[],summary:{}};
+let teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 let operationsPageData=null;
@@ -36,7 +36,7 @@ function customerLifecycleAllRows(){
   return Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
 }
 function teachingStudentViewRows(mode){
-  const key=mode==='trial'?'trialStudents':'formalStudents';
+  const key=mode==='trial'?'courseStudents':'formalStudents';
   return Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
 }
 function customerLifecycleHasValue(record={},fields=[]){
@@ -216,7 +216,7 @@ const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students'],
   'package-students':['campuses','students','purchasesPage'],
   'trial-students':['campuses','students','purchasesPage'],
-  leads:['campuses','leads'],
+  leads:['campuses','leads','purchasesPage'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
@@ -596,7 +596,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      teachingStudentViews=data.teachingStudentViews||{trialStudents:[],formalStudents:[],summary:{}};
+      teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');

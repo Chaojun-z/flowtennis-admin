@@ -552,8 +552,7 @@ function purchaseIsTrialForOperations(row = {}) {
     row.courseTypeLevel2,
     row.packageName,
     row.productName,
-    row.name,
-    row.notes
+    row.name
   ].filter(Boolean).join(' ');
   return normalized.level1 === '体验课' || /体验/.test(haystack);
 }
@@ -649,10 +648,12 @@ function courseConversionRows(data = {}, options = {}) {
     const appointmentEventDate = trialBookedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAppointmentText);
     const attendanceEventDate = trialAttendedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAttendanceText);
     const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /已成交|课程转化|直接成交|成交|报名|购买/.test(text));
-    const hasAttendance = !!trialAttendedAt || trialDone || !!attendanceEventDate || hasExplicitTrialAttendanceText(stageText);
+    const hasAttendance = !!trialAttendedAt || trialDone || !!attendanceEventDate;
     const hasAppointment = !!trialBookedAt || !!appointmentEventDate || hasExplicitTrialAppointmentText(stageText) || hasAttendance;
-    const hasTrialDeal = hasCourse && hasAttendance && dealPath !== '直接成交';
+    const hasTrialDeal = !!lifecycle.hasTrialToCourseConversion;
     const hasRenewal = hasTrialDeal && sid && (purchaseCounts.get(sid) || 0) > 1;
+    const normalizedConsultType = normalizeText(lead.consultType || lead.demandProduct || linkedStudent?.consultType || linkedStudent?.demandProduct, '');
+    const normalizedStudentType = normalizeText(lead.studentType || lead.type || lead.customerType || linkedStudent?.studentType || linkedStudent?.type || linkedStudent?.customerType, '');
     return {
       leadId: id,
       studentId: sid,
@@ -661,8 +662,8 @@ function courseConversionRows(data = {}, options = {}) {
       coach: normalizeText(lifecycle.formalCoach || lead.formalCoach || linkedStudent?.primaryCoach || linkedStudent?.coach || linkedStudent?.coachName || lead.primaryCoach || lead.coach || lead.coachName || lifecycle.owner || lead.owner),
       leadDate: firstRowDate(pooled.leadDate ? pooled : lead, ['leadDate', 'createdAt', 'trialBookedAt', 'trialAtRaw', 'trialLessonAt', 'trialAt']),
       level: normalizeText(lead.level || linkedStudent?.level, ''),
-      consultType: normalizeText(lead.consultType || linkedStudent?.consultType, ''),
-      studentType: normalizeText(lead.studentType || lead.type || linkedStudent?.studentType || linkedStudent?.type, ''),
+      consultType: normalizedConsultType,
+      studentType: normalizedStudentType,
       gender: normalizeText(lead.gender || lead.sex || linkedStudent?.gender || linkedStudent?.sex, ''),
       trialBookedAt,
       trialAttendedAt,
@@ -677,7 +678,7 @@ function courseConversionRows(data = {}, options = {}) {
       hasCourse,
       hasTrialDeal,
       hasRenewal,
-      personas: profilePersonas(lead, linkedStudent || {}, now)
+      personas: profilePersonas({ ...lead, consultType: normalizedConsultType, studentType: normalizedStudentType }, linkedStudent || {}, now)
     };
   });
 }
@@ -864,6 +865,59 @@ function purchaseAmount(row = {}) {
     ?? row.price
     ?? 0
   );
+}
+
+function activeBusinessRow(row = {}) {
+  const status = String(row.status || row.systemStatus || 'active').trim();
+  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
+}
+
+function courtHasBooking(court = {}) {
+  const history = normalizeCourtHistory(court.history).filter(activeBusinessRow);
+  if (history.length) return true;
+  return !!String(court.firstBookingAt || court.bookingAt || court.lastBookingAt || court.createdAt || '').trim();
+}
+
+function courtBookingCount(court = {}) {
+  const history = normalizeCourtHistory(court.history).filter(activeBusinessRow);
+  if (history.length) return history.length;
+  const cached = Number(court.bookingCount || court.totalBookings || court.bookingsCount);
+  if (Number.isFinite(cached) && cached > 0) return cached;
+  return courtHasBooking(court) ? 1 : 0;
+}
+
+function buildCourtChainMetrics({ courts = [], membershipAccounts = [], membershipOrders = [] } = {}) {
+  const courtUsers = (courts || []).filter(row => activeBusinessRow(row) && courtHasBooking(row));
+  const memberAccounts = (membershipAccounts || []).filter(row => activeBusinessRow(row) && String(row.status || '').trim() !== 'cleared');
+  const memberCourtIds = new Set(memberAccounts.map(row => String(row.courtId || '').trim()).filter(Boolean));
+  const validOrders = (membershipOrders || []).filter(row => activeBusinessRow(row) && purchaseAmount(row) > 0);
+  const ordersByAccount = new Map();
+  validOrders.forEach(row => {
+    const accountId = String(row.membershipAccountId || row.accountId || '').trim();
+    if (!accountId) return;
+    ordersByAccount.set(accountId, (ordersByAccount.get(accountId) || 0) + 1);
+  });
+  const accountById = new Map(memberAccounts.map(row => [String(row.id || row.membershipAccountId || '').trim(), row]).filter(([id]) => id));
+  const repeatMemberCourtIds = new Set();
+  ordersByAccount.forEach((count, accountId) => {
+    if (count < 2) return;
+    const account = accountById.get(accountId);
+    const courtId = String(account?.courtId || '').trim();
+    if (courtId) repeatMemberCourtIds.add(courtId);
+  });
+  const courtUserCount = courtUsers.length;
+  const memberCount = memberCourtIds.size;
+  const repeatBookingCount = courtUsers.filter(row => courtBookingCount(row) >= 2).length;
+  const memberRepeatCount = repeatMemberCourtIds.size;
+  return {
+    courtUsers: courtUserCount,
+    courtMembers: memberCount,
+    memberRepeatCustomers: memberRepeatCount,
+    courtRepeatCustomers: repeatBookingCount,
+    memberConversionRate: rate(memberCount, courtUserCount),
+    memberRepeatRate: rate(memberRepeatCount, memberCount),
+    courtRepeatRate: rate(repeatBookingCount, courtUserCount)
+  };
 }
 
 function buildRenewalMetrics(purchases = []) {
@@ -2438,12 +2492,16 @@ function buildOperationsMetrics(data = {}, options = {}) {
   });
   const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
   const stageRows = rawLeadConversion.stageRows;
-  const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
+  const courseRows = courseConversionRows({ ...rangedData, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
   const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
-  const courseDealCustomers = courseRows.filter(row => row.hasCourse).length;
-  const trialToCourseCustomers = courseRows.filter(row => row.hasTrialDeal).length;
-  const directCourseCustomers = Math.max(0, courseDealCustomers - trialToCourseCustomers);
+  const teachingSummary = teachingStudentViews.summary || {};
+  const courseDealCustomers = Number(teachingSummary.courseDealCustomers) || 0;
+  const courseStudentCount = Number(teachingSummary.courseStudentCount) || 0;
+  const trialPathStudents = Number(teachingSummary.trialPathStudents) || 0;
+  const trialPathDealCustomers = Number(teachingSummary.trialPathDealCustomers) || 0;
+  const trialPathPendingCustomers = Number(teachingSummary.trialPathPendingCustomers) || 0;
+  const directCourseCustomers = Number(teachingSummary.directCourseCustomers) || 0;
   const sourceRows = rawLeadConversion.sourceRows;
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
@@ -2465,6 +2523,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     rangedData.financeNormalizedRows || [],
     data.campuses || []
   );
+  const courtChain = buildCourtChainMetrics({
+    courts: rangedData.courts || data.courts || [],
+    membershipAccounts: rangedData.membershipAccounts || data.membershipAccounts || [],
+    membershipOrders: rangedData.membershipOrders || data.membershipOrders || []
+  });
   if (Array.isArray(court.campusRows)) {
     court.campusRows = court.campusRows.map(row => ({
       ...row,
@@ -2518,7 +2581,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   const overviewTrends = overviewTrendSet.rows;
-  const trendCourseRows = courseConversionRows({ ...trendRangedData, customerLifecycleRows }, { now });
+  const trendRawLeadConversion = buildRawLeadConversionMetrics({
+    leads: trendRangedData.leads || [],
+    customerLifecycleRows
+  });
+  const trendCourseRows = courseConversionRows({ ...trendRangedData, leads: trendRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
   const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
   const financeCoachPurchases = financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []);
   const coachTrendPurchases = (trendRangedData.purchases || []).length ? (trendRangedData.purchases || []) : financeCoachPurchases;
@@ -2539,7 +2606,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     financeOverviewData: previousRangedData.financeOverviewData || {},
     selectedDateRangeActive: true
   }) : {};
-  const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, customerLifecycleRows }, { now }) : [];
+  const previousRawLeadConversion = previousRangedData ? buildRawLeadConversionMetrics({
+    leads: previousRangedData.leads || [],
+    customerLifecycleRows
+  }) : null;
+  const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, leads: previousRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now }) : [];
   const previousCourseFunnel = buildCourseFunnel(previousCourseRows);
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = previousRangedData ? buildCoachRows({
@@ -2630,12 +2701,17 @@ function buildOperationsMetrics(data = {}, options = {}) {
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },
         convertedLeads: { title: '已转化线索', value: convertedLeads, unit: '条' },
+        courseStudents: { title: '普通学员', value: courseStudentCount, unit: '人' },
         courseDealCustomers: { title: '课包成交客户', value: courseDealCustomers, unit: '人' },
-        trialToCourseCustomers: { title: '体验后课程成交', value: trialToCourseCustomers, unit: '人' },
+        trialPathStudents: { title: '体验路径学员', value: trialPathStudents, unit: '人' },
+        trialPathDealCustomers: { title: '体验路径成交', value: trialPathDealCustomers, unit: '人' },
+        trialPathPendingCustomers: { title: '体验路径未成交', value: trialPathPendingCustomers, unit: '人' },
+        trialToCourseCustomers: { title: '体验路径成交', value: trialPathDealCustomers, unit: '人' },
         directCourseCustomers: { title: '直接课程成交', value: directCourseCustomers, unit: '人' },
         leadConversionRate: { title: '线索转化率', value: rawLeadConversion.leadConversionRate, unit: '%' },
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }
       },
+      courtChain,
       teachingStudentViews,
       stageRows,
       sourceRows,

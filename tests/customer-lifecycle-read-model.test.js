@@ -231,6 +231,33 @@ assert.strictEqual(directPrivate.coursePurchaseCount, 1);
 assert.strictEqual(directPrivate.hasCourseRepeatPurchase, false);
 assert.strictEqual(directPrivate.hasTrialToCourseConversion, false);
 
+const formalPurchaseWithTrialNoteRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-formal-note',
+      name: '备注含体验的正式成交',
+      sourceLeadId: 'lead-formal-note'
+    }
+  ],
+  purchases: [
+    {
+      id: 'purchase-formal-note',
+      studentId: 'student-formal-note',
+      packageName: '成人私教课 10 节',
+      courseType: '私教课',
+      status: 'active',
+      actualAmount: 6800,
+      purchaseDate: '2026-04-03',
+      notes: '体验后直接购买，备注仅作跟进记录'
+    }
+  ]
+});
+const formalPurchaseWithTrialNote = formalPurchaseWithTrialNoteRows[0];
+assert.strictEqual(formalPurchaseWithTrialNote.studentStage, 'formal', '正式课包备注里出现体验二字，不能把正式课包误判为体验课包');
+assert.strictEqual(formalPurchaseWithTrialNote.hasTrialExperience, false, '订单备注不是体验路径事实证据');
+assert.strictEqual(formalPurchaseWithTrialNote.courseDealPath, '直接成交');
+assert.strictEqual(formalPurchaseWithTrialNote.hasTrialToCourseConversion, false);
+
 const repeatRows = buildCustomerLifecycleRows({
   students: [{ id: 'student-repeat', name: '复购学员', sourceLeadId: 'lead-repeat' }],
   purchases: [

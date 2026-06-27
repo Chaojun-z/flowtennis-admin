@@ -53,8 +53,7 @@ function purchaseIsTrial(row = {}) {
     row.courseTypeLevel2,
     row.packageName,
     row.productName,
-    row.name,
-    row.notes
+    row.name
   ].filter(Boolean).join(' ');
   return normalized.level1 === '体验课' || /体验/.test(haystack);
 }

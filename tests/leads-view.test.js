@@ -73,8 +73,8 @@ assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
-assert.match(leadsSource, /线索数[\s\S]*全盘最终成交[\s\S]*预约体验客户[\s\S]*体验课实到人数[\s\S]*课包成交客户[\s\S]*高意向蓄水池/, 'lead stats should expose the unified lifecycle funnel and course-deal metrics');
-assert.match(leadsSource, /总成交人数 \/ 有效线索数[\s\S]*预约体验客户 \/ 有效线索数[\s\S]*已体验人数 \/ 预约体验客户[\s\S]*正式课包成交；体验后[\s\S]*直接[\s\S]*已体验待成交 \/ 已体验人数/, 'lead stats should explain the unified formulas and split course deals by trial/direct path');
+assert.match(leadsSource, /线索数[\s\S]*普通学员[\s\S]*正式学员[\s\S]*体验路径学员[\s\S]*体验路径未成交/, 'lead stats should expose the standard course-chain funnel metrics');
+assert.match(leadsSource, /进入课程链学员 \/ 线索数[\s\S]*正式课包成交 \/ 线索数[\s\S]*体验路径学员 \/ 线索数[\s\S]*体验路径未成交 \/ 体验路径学员/, 'lead stats should explain the standard course-chain formulas');
 assert.match(leadsSource, /function leadDateRangeForPreset\(/, 'leads page should expose date preset range helper');
 assert.match(leadsSource, /function setLeadDatePreset\(/, 'leads page should expose lead date preset switching');
 assert.match(leadsSource, /function setLeadCustomDateRange\(/, 'leads page should expose custom lead date range switching');
@@ -182,7 +182,7 @@ assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSk
 assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="14"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
-assert.match(stateSource, /leads:\['campuses','leads'\]/, 'leads page should require campuses so the campus tabs can render');
+assert.match(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should require the unified teaching read model for standard course-chain stats');
 assert.match(fnBody('renderLeads'), /leadDateDisplayText\(lead\)[\s\S]*renderStandardCellText\(leadSourceText\(lead\),false\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*leadLevelText\(lead\)[\s\S]*leadProfileText\(lead\)[\s\S]*renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)/, 'lead list rows should show formatted lead date, source as plain text, and keep type, demand, level, basic info, and stage in table order');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)/, 'lead list source should not render as a tag');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');

@@ -296,7 +296,7 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
 assert.match(operationsSource, /renderConversionInsightModule[\s\S]*关键洞察[\s\S]*最大问题[\s\S]*最稳环节[\s\S]*续费风险/, 'conversion page should render business insight cards next to the funnel');
-assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*全局转化漏斗/, 'conversion page should render the global conversion funnel module');
+assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*标准转化漏斗[\s\S]*课程总漏斗[\s\S]*体验路径漏斗[\s\S]*订场链漏斗/, 'conversion page should render the three standard text funnels');
 assert.match(operationsSource, /operations-conversion-monitor-grid[\s\S]*renderConversionFunnelModule[\s\S]*renderConversionInsightModule/, 'conversion funnel and insight panel should render side by side in the monitor grid');
 assert.match(operationsSource, /renderConversionChannelEfficiencyModule[\s\S]*渠道效率监控/, 'conversion page should render channel efficiency as a professional monitor module');
 assert.match(operationsSource, /operationsChannelQualityRows[\s\S]*高价值[\s\S]*待优化[\s\S]*低效[\s\S]*statusLabel/, 'channel efficiency should classify every channel with a compact business status tag');
