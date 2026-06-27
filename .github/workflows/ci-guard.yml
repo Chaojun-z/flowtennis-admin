@@ -27,14 +27,6 @@ jobs:
         run: npm ci
         working-directory: .
 
-      - name: Dependency security guard
-        run: npm run guard:deps-security
-        working-directory: .
-
-      - name: Run critical tests
-        run: npm test
-        working-directory: .
-
-      - name: Finance regression guard
-        run: npm run guard:finance
+      - name: Run release guard
+        run: npm run guard:release
         working-directory: .

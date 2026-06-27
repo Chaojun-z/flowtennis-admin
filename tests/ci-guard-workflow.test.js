@@ -29,10 +29,9 @@ const requiredReleaseGuardSteps = [
   'node tests/login-timeout-hotfix.test.js'
 ];
 
-assert.match(source, /name:\s*Finance regression guard/i, 'workflow should expose a real finance guard step');
-assert.match(source, /npm run guard:finance/, 'workflow should execute the real finance regression script');
-assert.match(source, /name:\s*Dependency security guard/i, 'workflow should expose dependency security guard step');
-assert.match(source, /npm run guard:deps-security/, 'workflow should execute dependency security guard');
+assert.match(source, /name:\s*Run release guard/i, 'workflow should expose one full release guard step');
+assert.match(source, /npm run guard:release/, 'workflow should execute the full release guard, not a partial subset');
+assert.doesNotMatch(source, /run:\s*npm test/, 'workflow should not run a partial npm test subset outside guard:release');
 assert.match(source, /TZ:\s*Asia\/Shanghai/, 'workflow should run the CI guard in Beijing time');
 assert.doesNotMatch(source, /Finance guard placeholder|TODO: 接入真实财务回归脚本后替换本步骤/, 'workflow should not keep placeholder finance guard text');
 
