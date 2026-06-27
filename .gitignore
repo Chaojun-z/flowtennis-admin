@@ -13,6 +13,9 @@ docs/
 !/docs/2026-06-01-课程课包经营可信基线.md
 !/docs/FlowTennis全平台数据口径总表.md
 !/docs/数据口径变更检查清单.md
+!/docs/全平台页面字段矩阵.md
+!/docs/全平台指标使用矩阵.md
+!/docs/2026-06-27-全仓库口径审计报告.md
 .worktrees/
 var/finance-snapshots/
 var/ops-backups/
