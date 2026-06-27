@@ -130,6 +130,8 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       demandProduct: businessTaxonomy.normalizeLeadDemandProduct(lifecycle.demandProduct || lead.demandProduct || lead.consultType),
       consultType: businessTaxonomy.normalizeLeadDemandProduct(lifecycle.demandProduct || lead.consultType || lead.demandProduct),
       trialAtRaw: text(lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || lifecycle.trialAtRaw),
+      trialBookedAt: text(lifecycle.trialBookedAt || lead.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt),
+      trialAttendedAt: text(lifecycle.trialAttendedAt || lead.trialAttendedAt),
       enrollAtRaw: text(lead.enrollAtRaw || lead.formalSignupAt || lead.enrollAt || lifecycle.courseFirstPurchaseAt),
       conversionAt: text(lead.conversionAt || lifecycle.conversionAt),
       formalCoach: text(lead.formalCoach || lifecycle.formalCoach),
@@ -145,6 +147,10 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       systemStatus: text(lead.systemStatus || leadStage),
       studentStage: text(lifecycle.studentStage),
       hasTrialExperience: !!lifecycle.hasTrialExperience,
+      hasTrialBooked: !!text(lifecycle.trialBookedAt || lifecycle.trialAtRaw || lead.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || lifecycle.trialAttendedAt),
+      hasTrialAttended: !!text(lifecycle.trialAttendedAt || lead.trialAttendedAt),
+      hasTrialToCourseConversion: !!lifecycle.hasTrialToCourseConversion,
+      courseDealPath: text(lifecycle.courseDealPath),
       courtStage: text(lifecycle.courtStage),
       membershipStatus: text(lifecycle.membershipStatus),
       hasCourseConversion: !!lifecycle.hasCourseConversion,
@@ -218,6 +224,48 @@ function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
   });
 }
 
+function teachingStudentViewRow(row = {}) {
+  return {
+    ...row,
+    id: text(row.studentId || row.customerKey || row.sourceLeadId),
+    name: text(row.displayName),
+    displayName: text(row.displayName),
+    phone: text(row.phone),
+    type: text(row.customerType),
+    source: businessTaxonomy.normalizeLeadSource(row.source),
+    campus: text(row.campus),
+    primaryCoach: text(row.formalCoach || row.owner),
+    sourceLeadId: text(row.sourceLeadId),
+    studentId: text(row.studentId),
+    studentStage: text(row.studentStage),
+    trialStatus: text(row.trialStatus),
+    courseDealPath: text(row.courseDealPath)
+  };
+}
+
+function buildTeachingStudentViews(customerLifecycleRows = []) {
+  const studentRows = (customerLifecycleRows || []).filter(row => text(row.studentId));
+  const trialStudents = studentRows
+    .filter(row => text(row.studentStage) === 'trial')
+    .map(teachingStudentViewRow);
+  const formalStudents = studentRows
+    .filter(row => text(row.studentStage) === 'formal')
+    .map(teachingStudentViewRow);
+  const trialToCourseStudents = formalStudents.filter(row => !!row.hasTrialToCourseConversion);
+  const directCourseStudents = formalStudents.filter(row => text(row.courseDealPath) === '直接成交');
+  return {
+    trialStudents,
+    formalStudents,
+    summary: {
+      trialStudentCount: trialStudents.length,
+      formalStudentCount: formalStudents.length,
+      courseDealCustomers: formalStudents.length,
+      trialToCourseCustomers: trialToCourseStudents.length,
+      directCourseCustomers: directCourseStudents.length
+    }
+  };
+}
+
 function buildRawLeadConversionMetrics({ leads = [], customerLifecycleRows = [] } = {}) {
   const leadPoolRows = buildLeadPoolRows({ leads, customerLifecycleRows });
   const rawLeadPoolRows = rawLeadPoolRowsForLeads(leadPoolRows, leads);
@@ -254,9 +302,11 @@ function buildPlatformMetrics(data = {}) {
     customerLifecycleRows
   });
   const { leadPoolRows, stageRows, sourceRows: sourceChannelStats, totalLeads, convertedLeads, leadConversionRate } = leadConversionMetrics;
+  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
 
   return {
     customerLifecycleRows,
+    teachingStudentViews,
     leadPoolRows,
     rawLeadPoolRows: leadConversionMetrics.rawLeadPoolRows,
     conversionMetrics: {
@@ -276,6 +326,7 @@ function buildPlatformMetrics(data = {}) {
 module.exports = {
   buildPlatformMetrics,
   buildLeadPoolRows,
+  buildTeachingStudentViews,
   buildRawLeadConversionMetrics,
   rawLeadPoolRowsForLeads,
   buildStageRows,

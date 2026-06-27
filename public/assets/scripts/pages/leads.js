@@ -709,19 +709,26 @@ function leadTrialDoneByTime(lead){
   return !!date&&date<=today();
 }
 function leadTrialDone(lead){
+  if(Object.prototype.hasOwnProperty.call(lead||{},'hasTrialAttended'))return lead?.hasTrialAttended===true;
   return leadTrialDoneByStatus(lead)||leadTrialDoneByTime(lead);
 }
 function leadTrialBooked(lead){
+  if(Object.prototype.hasOwnProperty.call(lead||{},'hasTrialBooked'))return lead?.hasTrialBooked===true;
   const lifecycle=typeof customerLifecycleForRecord==='function'?customerLifecycleForRecord(lead):null;
   if([lifecycle?.trialBookedAt,lifecycle?.trialAtRaw,lead?.trialBookedAt,lead?.trialAtRaw,lead?.trialLessonAt,lead?.trialAt].some(value=>String(value||'').trim()))return true;
   if([lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['已约体验','体验课预约'].includes(String(value||'').trim())))return true;
   return leadTrialDone(lead);
 }
 function leadCourseConverted(lead){
+  if(Object.prototype.hasOwnProperty.call(lead||{},'hasCourseConversion'))return lead?.hasCourseConversion===true;
   const lifecycle=typeof customerLifecycleForRecord==='function'?customerLifecycleForRecord(lead):null;
   if(lifecycle?.hasCourseConversion===true)return true;
   if(String(lifecycle?.studentStage||lead?.studentStage||'').trim()==='formal')return true;
   return leadDealTypeText(lead).split('+').includes('课程');
+}
+function leadTrialCourseConverted(lead){
+  if(Object.prototype.hasOwnProperty.call(lead||{},'hasTrialToCourseConversion'))return lead?.hasTrialToCourseConversion===true;
+  return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadRateText(value,total){
   if(!total)return '0%';
@@ -733,7 +740,9 @@ function leadStatsData(list){
   const trialBookedRows=base.filter(leadTrialBooked);
   const trialDoneRows=base.filter(leadTrialDone);
   const convertedRows=base.filter(leadConverted);
-  const trialCourseConvertedRows=trialDoneRows.filter(leadCourseConverted);
+  const courseConvertedRows=base.filter(leadCourseConverted);
+  const trialCourseConvertedRows=base.filter(leadTrialCourseConverted);
+  const directCourseConvertedRows=courseConvertedRows.filter(row=>!leadTrialCourseConverted(row));
   const trialPendingConversion=trialDoneRows.length-trialCourseConvertedRows.length;
   return {
     total:base.length,
@@ -741,8 +750,11 @@ function leadStatsData(list){
     trialBookedRate:leadRateText(trialBookedRows.length,base.length),
     trialDone:trialDoneRows.length,
     trialAttendanceRate:leadRateText(trialDoneRows.length,trialBookedRows.length),
+    courseConverted:courseConvertedRows.length,
+    courseConversionRate:leadRateText(courseConvertedRows.length,base.length),
     trialCourseConverted:trialCourseConvertedRows.length,
     trialCourseConversionRate:leadRateText(trialCourseConvertedRows.length,trialDoneRows.length),
+    directCourseConverted:directCourseConvertedRows.length,
     converted:convertedRows.length,
     leadConversionRate:leadRateText(convertedRows.length,base.length),
     trialPendingConversion,
@@ -756,7 +768,7 @@ function renderLeadStats(list){
     {label:'全盘最终成交',valueHtml:stats.converted,percent:stats.leadConversionRate,sub:'总成交人数 / 有效线索数'},
     {label:'预约体验客户',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'预约体验客户 / 有效线索数'},
     {label:'体验课实到人数',valueHtml:stats.trialDone,percent:stats.trialAttendanceRate,sub:'已体验人数 / 预约体验客户'},
-    {label:'体验后课程成交',valueHtml:stats.trialCourseConverted,percent:stats.trialCourseConversionRate,sub:'课程成交人数 / 已体验人数'},
+    {label:'课包成交客户',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:`正式课包成交；体验后 ${stats.trialCourseConverted} / 直接 ${stats.directCourseConverted}`},
     {label:'高意向蓄水池',valueHtml:`${stats.trialPendingConversion}<span>人 / ${stats.trialPendingConversionRate}</span>`,sub:'已体验待成交 / 已体验人数'}
   ];
   const host=document.getElementById('leadStatsRow');

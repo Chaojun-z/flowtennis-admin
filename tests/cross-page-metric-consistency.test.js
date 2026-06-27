@@ -120,4 +120,62 @@ assert.strictEqual(
   'searchable customer pool should still include synthetic direct-conversion customers for线索池/客户中心搜索'
 );
 
+const teachingSample = {
+  leads: [
+    { id: 'lead-direct-course', displayName: '直接成交', leadDate: '2026-06-01' },
+    { id: 'lead-booked-only', displayName: '已约未上', leadDate: '2026-06-02' },
+    { id: 'lead-attended-only', displayName: '已体验待成交', leadDate: '2026-06-03' },
+    { id: 'lead-trial-course', displayName: '体验后成交', leadDate: '2026-06-04' },
+    { id: 'lead-booking-only', displayName: '只订场', leadDate: '2026-06-05' }
+  ],
+  students: [
+    { id: 'stu-direct-course', name: '直接成交', sourceLeadId: 'lead-direct-course' },
+    { id: 'stu-booked-only', name: '已约未上', sourceLeadId: 'lead-booked-only' },
+    { id: 'stu-attended-only', name: '已体验待成交', sourceLeadId: 'lead-attended-only' },
+    { id: 'stu-trial-course', name: '体验后成交', sourceLeadId: 'lead-trial-course' }
+  ],
+  purchases: [
+    { id: 'purchase-direct-course', studentId: 'stu-direct-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' },
+    { id: 'purchase-trial-course', studentId: 'stu-trial-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-07' }
+  ],
+  schedule: [
+    { id: 'schedule-booked-only', studentId: 'stu-booked-only', courseType: '体验课', startTime: '2026-06-08T10:00:00+08:00', endTime: '2026-06-08T11:00:00+08:00', status: '待上课' },
+    { id: 'schedule-attended-only', studentId: 'stu-attended-only', courseType: '体验课', startTime: '2026-06-09T10:00:00+08:00', endTime: '2026-06-09T11:00:00+08:00', status: '已完成' },
+    { id: 'schedule-trial-course', studentId: 'stu-trial-course', courseType: '体验课', startTime: '2026-06-10T10:00:00+08:00', endTime: '2026-06-10T11:00:00+08:00', status: '已完成' }
+  ],
+  courts: [
+    { id: 'court-booking-only', name: '只订场', sourceLeadId: 'lead-booking-only', history: JSON.stringify([{ date: '2026-06-06', startTime: '09:00', endTime: '10:00', amount: 100, type: '消费' }]) }
+  ],
+  membershipAccounts: [],
+  membershipOrders: []
+};
+const teachingLifecycleRows = buildCustomerLifecycleRows(teachingSample);
+const teachingPlatform = buildPlatformMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows });
+const teachingOperations = buildOperationsMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows }, { now: new Date('2026-06-18T00:00:00+08:00') });
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.trialStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only', 'stu-booked-only'],
+  '普通学员视图只能包含仍停留在体验阶段且未买正式课包的人，不能包含体验后成交或直接成交'
+);
+assert.deepStrictEqual(
+  teachingPlatform.teachingStudentViews.formalStudents.map(row => row.studentId).sort(),
+  ['stu-direct-course', 'stu-trial-course'],
+  '正式学员视图必须包含直接课程成交和体验后课程成交'
+);
+assert.strictEqual(
+  teachingPlatform.teachingStudentViews.trialStudents.some(row => teachingPlatform.teachingStudentViews.formalStudents.some(item => item.customerKey === row.customerKey)),
+  false,
+  '普通学员和正式学员必须互斥'
+);
+assert.strictEqual(
+  teachingOperations.conversion.cards.courseDealCustomers.value,
+  teachingPlatform.teachingStudentViews.formalStudents.length,
+  '转化与留存课包成交客户数必须等于正式学员视图人数'
+);
+assert.strictEqual(
+  teachingOperations.conversion.cards.trialToCourseCustomers.value,
+  1,
+  '体验后成交人数只统计体验后买正式课包，不能把直接成交算进去'
+);
+
 console.log('cross page metric consistency tests passed');

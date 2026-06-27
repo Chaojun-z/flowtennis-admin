@@ -8,7 +8,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
-const { buildLeadPoolRows, buildRawLeadConversionMetrics } = require('../read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews } = require('../read-models/platform-metrics.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -674,6 +674,7 @@ function courseConversionRows(data = {}, options = {}) {
       dealEventDate,
       hasAppointment,
       hasAttendance,
+      hasCourse,
       hasTrialDeal,
       hasRenewal,
       personas: profilePersonas(lead, linkedStudent || {}, now)
@@ -2439,6 +2440,10 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...rangedData, customerLifecycleRows }, { now });
   const courseFunnel = buildCourseFunnel(courseRows);
+  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const courseDealCustomers = courseRows.filter(row => row.hasCourse).length;
+  const trialToCourseCustomers = courseRows.filter(row => row.hasTrialDeal).length;
+  const directCourseCustomers = Math.max(0, courseDealCustomers - trialToCourseCustomers);
   const sourceRows = rawLeadConversion.sourceRows;
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
@@ -2625,9 +2630,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
       cards: {
         totalLeads: { title: '线索数', value: totalLeads, unit: '条' },
         convertedLeads: { title: '已转化线索', value: convertedLeads, unit: '条' },
+        courseDealCustomers: { title: '课包成交客户', value: courseDealCustomers, unit: '人' },
+        trialToCourseCustomers: { title: '体验后课程成交', value: trialToCourseCustomers, unit: '人' },
+        directCourseCustomers: { title: '直接课程成交', value: directCourseCustomers, unit: '人' },
         leadConversionRate: { title: '线索转化率', value: rawLeadConversion.leadConversionRate, unit: '%' },
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }
       },
+      teachingStudentViews,
       stageRows,
       sourceRows,
       courseRows,

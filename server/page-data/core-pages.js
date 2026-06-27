@@ -1,4 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
+const { buildTeachingStudentViews } = require('../read-models/platform-metrics.js');
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -11,7 +12,7 @@ function createCorePageDataRoutes(deps={}){
     tables={}
   }=deps;
   const {
-    T_COACHES,T_CAMPUSES,T_STUDENTS,T_CLASSES,T_PLANS,T_PRODUCTS,T_SCHEDULE,T_COURTS,
+    T_COACHES,T_CAMPUSES,T_STUDENTS,T_CLASSES,T_PLANS,T_PRODUCTS,T_SCHEDULE,T_COURTS,T_LEADS,
     T_ENTITLEMENTS,T_PURCHASES,T_PACKAGES,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_ACCOUNTS,
     T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,
     T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS
@@ -27,20 +28,24 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [purchases,packages,students,entitlements,entitlementLedger]=await Promise.all([
+      const [purchases,packages,students,entitlements,entitlementLedger,leads,schedule]=await Promise.all([
         cappedScan(T_PURCHASES),
         cappedScan(T_PACKAGES),
         cappedScan(T_STUDENTS),
         cappedScan(T_ENTITLEMENTS),
-        cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger)
+        cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
+        T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([])
       ]);
-      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger},user);
+      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger,leads,schedule},user);
       const customerLifecycleRows=buildCustomerLifecycleRows({
+        leads:scoped.leads,
         students:scoped.students,
         purchases:scoped.purchases,
-        entitlements:scoped.entitlements
+        entitlements:scoped.entitlements,
+        schedule:scoped.schedule
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows});
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows)});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

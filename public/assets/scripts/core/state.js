@@ -8,6 +8,7 @@ function syncViewportMode(){
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let customerLifecycleRows=[];
+let teachingStudentViews={trialStudents:[],formalStudents:[],summary:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
 let operationsPageData=null;
@@ -33,6 +34,10 @@ function customerLifecycleParseArray(value){
 }
 function customerLifecycleAllRows(){
   return Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
+}
+function teachingStudentViewRows(mode){
+  const key=mode==='trial'?'trialStudents':'formalStudents';
+  return Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
 }
 function customerLifecycleHasValue(record={},fields=[]){
   return fields.some(field=>customerLifecycleText(record[field]));
@@ -591,6 +596,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||{trialStudents:[],formalStudents:[],summary:{}};
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');

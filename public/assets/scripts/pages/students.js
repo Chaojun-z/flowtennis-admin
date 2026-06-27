@@ -42,6 +42,25 @@ function studentMatchesListPage(stu){
   const hasPackage=studentHasNonTrialPackage(stu);
   return studentListViewMode()==='trial'?studentHasTrialPath(stu)&&!hasPackage:hasPackage;
 }
+function studentUnifiedViewRows(){
+  const rows=typeof teachingStudentViewRows==='function'?teachingStudentViewRows(studentListViewMode()):[];
+  if(!Array.isArray(rows)||!rows.length)return [];
+  return rows.map(row=>{
+    const student=students.find(item=>String(item.id||'')===String(row.studentId||row.id||''))||{};
+    return {
+      ...student,
+      ...row,
+      id:String(row.studentId||row.id||student.id||''),
+      name:row.name||row.displayName||student.name||'',
+      phone:row.phone||student.phone||'',
+      type:row.type||student.type||'',
+      source:row.source||student.source||'',
+      campus:row.campus||student.campus||'',
+      primaryCoach:row.primaryCoach||student.primaryCoach||'',
+      __unifiedTeachingView:true
+    };
+  }).filter(row=>String(row.id||'').trim());
+}
 function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
@@ -282,6 +301,8 @@ function studentMatchesCampusForList(stu){
   return studentCampusValuesForList(stu).some(value=>sameCampusValue(value,campus)||sameCampusValue(cn(value),cn(campus))||value===cn(campus));
 }
 function getStudentBaseList(){
+  const viewRows=studentUnifiedViewRows();
+  if(viewRows.length)return viewRows.filter(s=>studentMatchesCampusForList(s));
   return students.filter(s=>studentMatchesCampusForList(s)&&studentMatchesListPage(s));
 }
 function studentGlobalDateValue(s){
@@ -449,6 +470,8 @@ function studentStatsMatchesPackageCampus(purchase,entitlement={}){
 function studentPageStats(base){
   const lifecycleStats=studentLifecycleStats(base);
   const financeStats=studentFinanceStatsForBase(base);
+  const trialBookedOnlyCount=base.filter(s=>studentTrialPathStatusText(s)==='已约体验').length;
+  const trialAttendedPendingCount=base.filter(s=>studentTrialPathStatusText(s)==='已体验待成交').length;
   const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
   const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
   const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
@@ -483,6 +506,8 @@ function studentPageStats(base){
     directCourseIncome:Math.round((financeStats?financeStats.directCourseIncome:directCourseIncome)*100)/100,
     courseIncome:Math.round((financeStats?financeStats.courseIncome:(totalIncome+directCourseIncome))*100)/100,
     courseRecognized:Math.round((financeStats?financeStats.courseRecognized:(recognized+directCourseIncome))*100)/100,
+    trialBookedOnlyCount,
+    trialAttendedPendingCount,
     ...(lifecycleStats?{
       trialStudentCount:lifecycleStats.trialStudentCount,
       trialConvertedCount:lifecycleStats.trialConvertedCount
@@ -496,9 +521,9 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'当前列表人数',valueHtml:stats.total},
-    {label:'当前列表体验学员',valueHtml:stats.trialStudentCount,percent:studentPercentText(stats.trialStudentCount,stats.total),sub:'当前筛选学员范围'},
-    {label:'当前列表课程成交',valueHtml:`${stats.trialStudentCount}<span class="student-stat-divider">|</span>${stats.trialConvertedCount}`,percent:studentPercentText(stats.trialConvertedCount,stats.trialStudentCount),sub:'当前列表体验学员 vs 课程成交'},
+    {label:'普通学员数',valueHtml:stats.total,sub:'已预约或已体验，未买正式课包'},
+    {label:'已预约未体验',valueHtml:stats.trialBookedOnlyCount||0,percent:studentPercentText(stats.trialBookedOnlyCount||0,stats.total),sub:'当前普通学员范围'},
+    {label:'已体验待成交',valueHtml:stats.trialAttendedPendingCount||0,percent:studentPercentText(stats.trialAttendedPendingCount||0,stats.total),sub:'当前普通学员范围'},
     {label:'体验课收入',valueHtml:`¥${fmt(stats.trialIncome)}`}
   ];
   return [

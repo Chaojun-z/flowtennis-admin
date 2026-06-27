@@ -52,7 +52,8 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*当前列表人数[\s\S]*当前列表体验学员[\s\S]*当前筛选学员范围[\s\S]*当前列表课程成交[\s\S]*体验课收入/, 'trial student top stats should show explicit list-scope cards instead of global funnel labels');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员数[\s\S]*已预约或已体验，未买正式课包[\s\S]*已预约未体验[\s\S]*已体验待成交[\s\S]*体验课收入/, 'trial student top stats should show current-stage cards instead of global funnel labels');
+assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show course deals because converted students leave the normal-student view');
 assert.match(source, /function studentFinanceStatsForBase\(/, 'student finance cards should read the unified finance row model');
 assert.match(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)/, 'student top finance stats should use the unified finance model for income and recognized amount');
 assert.match(fnBody('studentPageStats'), /trialIncome:Math\.round\(\(financeStats\?financeStats\.trialIncome:trialIncome\)\*100\)\/100/, 'trial student stats should expose trial-only income from the finance read model');
