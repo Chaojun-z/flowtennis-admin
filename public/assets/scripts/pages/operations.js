@@ -1014,7 +1014,22 @@ function operationsFunnelStep(funnel = [], index) {
   return (funnel || [])[index] || {};
 }
 
-function operationsConversionKpiCards(funnel = [], standardRates = {}) {
+function operationsConversionKpiCards(conversionOrFunnel = [], standardRates = {}) {
+  if (!Array.isArray(conversionOrFunnel)) {
+    const conversion = conversionOrFunnel || {};
+    const metricCard = (key, label, unit, trendKey, tone) => {
+      const metric = operationsStandardMetric(conversion, key) || {};
+      return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
+    };
+    return [
+      metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
+      metricCard('courseChainStudents', '普通学员', '人', 'courseChainStudents', 'conversion'),
+      metricCard('formalStudents', '正式学员', '人', 'formalStudents', 'conversion'),
+      metricCard('trialPathStudents', '体验路径学员', '人', 'trialPathStudents', 'conversion'),
+      metricCard('trialPathDeals', '体验路径成交', '人', 'trialPathDeals', 'retention')
+    ];
+  }
+  const funnel = conversionOrFunnel;
   const total = operationsFunnelStep(funnel, 0);
   const appointment = operationsFunnelStep(funnel, 1);
   const attendance = operationsFunnelStep(funnel, 2);
@@ -1195,6 +1210,18 @@ function operationsCardValue(cards = {}, key = '') {
   return Number(cards?.[key]?.value) || 0;
 }
 
+function operationsStandardMetric(conversion = {}, key = '') {
+  return conversion.standardLifecycleMetrics?.metrics?.[key] || null;
+}
+
+function operationsStandardMetricValue(conversion = {}, key = '') {
+  return Number(operationsStandardMetric(conversion, key)?.value) || 0;
+}
+
+function operationsStandardMetricRate(conversion = {}, key = '') {
+  return operationsStandardMetric(conversion, key)?.rateText || '';
+}
+
 function operationsRateText(part, total) {
   if (!total) return '0%';
   const value = (Number(part) || 0) * 100 / (Number(total) || 0);
@@ -1209,28 +1236,29 @@ function operationsTextFunnel(title, rows = []) {
 }
 
 function operationsStandardFunnelRows(conversion = {}) {
-  const cards = conversion.cards || {};
+  const standard = conversion.standardLifecycleMetrics || {};
   const courtChain = conversion.courtChain || {};
-  const leads = operationsCardValue(cards, 'totalLeads');
-  const courseStudents = operationsCardValue(cards, 'courseStudents');
-  const formalStudents = operationsCardValue(cards, 'courseDealCustomers');
-  const trialPathStudents = operationsCardValue(cards, 'trialPathStudents');
-  const trialPathDeals = operationsCardValue(cards, 'trialPathDealCustomers');
-  const trialPathPending = operationsCardValue(cards, 'trialPathPendingCustomers');
+  const leads = operationsStandardMetricValue(conversion, 'validLeads');
+  const courseStudents = operationsStandardMetricValue(conversion, 'courseChainStudents');
+  const formalStudents = operationsStandardMetricValue(conversion, 'formalStudents');
+  const trialPathStudents = operationsStandardMetricValue(conversion, 'trialPathStudents');
+  const trialPathDeals = operationsStandardMetricValue(conversion, 'trialPathDeals');
+  const trialPathPending = operationsStandardMetricValue(conversion, 'trialPathPending');
   const courtUsers = Number(courtChain.courtUsers) || 0;
   const courtMembers = Number(courtChain.courtMembers) || 0;
   const memberRepeat = Number(courtChain.memberRepeatCustomers) || 0;
   const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
+  if (!standard.metrics && !leads && !courseStudents && !formalStudents) return [operationsTextFunnel('标准漏斗', [{ label: '暂无标准指标', value: 0, unit: '' }])];
   return [
     operationsTextFunnel('课程总漏斗', [
       { label: '线索数', value: leads, unit: '条' },
-      { label: '普通学员', value: courseStudents, rate: operationsRateText(courseStudents, leads) },
-      { label: '正式学员', value: formalStudents, rate: operationsRateText(formalStudents, courseStudents) }
+      { label: '普通学员', value: courseStudents, rate: operationsStandardMetricRate(conversion, 'courseChainStudents') },
+      { label: '正式学员', value: formalStudents, rate: operationsStandardMetric(conversion, 'formalStudents')?.transitionRateText || operationsStandardMetricRate(conversion, 'formalStudents') }
     ]),
     operationsTextFunnel('体验路径漏斗', [
       { label: '体验路径学员', value: trialPathStudents },
-      { label: '体验路径成交', value: trialPathDeals, rate: operationsRateText(trialPathDeals, trialPathStudents) },
-      { label: '体验路径未成交', value: trialPathPending, rate: operationsRateText(trialPathPending, trialPathStudents) }
+      { label: '体验路径成交', value: trialPathDeals, rate: operationsStandardMetricRate(conversion, 'trialPathDeals') },
+      { label: '体验路径未成交', value: trialPathPending, rate: operationsStandardMetricRate(conversion, 'trialPathPending') }
     ]),
     operationsTextFunnel('订场链漏斗', [
       { label: '订场用户', value: courtUsers },
@@ -1259,7 +1287,7 @@ function renderConversionFunnelModule(data, conversion) {
 function renderConversionCommandCenter(data, conversion) {
   const comparisons = data.conversion?.trendComparisons || {};
   return `<div class="operations-kpi-row operations-court-kpi-row operations-conversion-kpi-row">
-      ${operationsConversionKpiCards(conversion.courseFunnel || [], conversion.standardRates || {}).map(card => renderOperationsConversionKpi({
+      ${operationsConversionKpiCards(conversion).map(card => renderOperationsConversionKpi({
         ...card,
         trendValue: card.trendValue,
         trendPoints: operationsTrendPointsWithFallback(conversion.trendRows || [], card.trendKey),
@@ -1270,6 +1298,14 @@ function renderConversionCommandCenter(data, conversion) {
 
 function renderConversionInsightModule(conversion) {
   const summary = operationsFunnelSummary(conversion.courseFunnel || []);
+  if (!operationsStandardMetricValue(conversion, 'validLeads') || !(conversion.courseFunnel || []).length) {
+    return `<section class="operations-section operations-insight-panel">
+      <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
+      <div class="operations-insight-list">
+        ${operationsInsightCard('neutral', '暂无洞察', '标准漏斗暂无数据', '当前标准指标为空，暂不使用旧漏斗兜底')}
+      </div>
+    </section>`;
+  }
   return `<section class="operations-section operations-insight-panel">
     <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
     <div class="operations-insight-list">

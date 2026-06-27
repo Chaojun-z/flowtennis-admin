@@ -12,7 +12,7 @@ function studentListViewMode(){
 }
 function studentPackageRecordIsTrial(row={}){
   const type=normalizeCourseType(row.courseType||row.packageCourseType||row.type||row.productType||'');
-  const text=[row.courseType,row.packageCourseType,row.type,row.productType,row.experienceType,row.courseTypeLevel2,row.packageName,row.productName,row.name,row.notes].filter(Boolean).join(' ');
+  const text=[row.courseType,row.packageCourseType,row.type,row.productType,row.experienceType,row.courseTypeLevel2,row.packageName,row.productName,row.name].filter(Boolean).join(' ');
   return type==='体验课'||/体验/.test(text);
 }
 function studentHasNonTrialPackage(stu){

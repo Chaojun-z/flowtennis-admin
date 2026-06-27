@@ -703,6 +703,22 @@ function renderLeadToolbarFilters(){
 function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
 }
+function leadRateText(value,total){
+  return FlowTennisPlatformDataStandards.rateText(Number(value)||0,Number(total)||0);
+}
+function leadStandardMetrics(){
+  return typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{metrics:{}};
+}
+function leadStandardMetric(key){
+  return leadStandardMetrics().metrics?.[key]||null;
+}
+function leadStandardMetricValue(key){
+  return Number(leadStandardMetric(key)?.value)||0;
+}
+function leadStandardMetricRate(key,fallbackValue,fallbackTotal){
+  const metric=leadStandardMetric(key);
+  return metric?.rateText||leadRateText(fallbackValue,fallbackTotal);
+}
 function leadTrialDoneByStatus(lead){
   return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
 }
@@ -735,6 +751,27 @@ function leadTrialCourseConverted(lead){
 }
 function leadStatsData(list){
   const base=Array.isArray(list)?list:[];
+  if(leadStandardMetric('validLeads')){
+    const total=leadStandardMetricValue('validLeads')||base.length;
+    const courseStudents=leadStandardMetricValue('courseChainStudents');
+    const courseConverted=leadStandardMetricValue('formalStudents');
+    const trialPath=leadStandardMetricValue('trialPathStudents');
+    const trialPathDeal=leadStandardMetricValue('trialPathDeals');
+    const trialPathPending=leadStandardMetricValue('trialPathPending');
+    return {
+      total,
+      courseStudents,
+      courseStudentRate:leadStandardMetricRate('courseChainStudents',courseStudents,total),
+      courseConverted,
+      courseConversionRate:leadStandardMetricRate('formalStudents',courseConverted,total),
+      trialBooked:trialPath,
+      trialBookedRate:leadStandardMetricRate('trialPathStudents',trialPath,total),
+      trialPathDeal,
+      trialPathDealRate:leadStandardMetricRate('trialPathDeals',trialPathDeal,trialPath),
+      trialPendingConversion:trialPathPending,
+      trialPendingConversionRate:leadStandardMetricRate('trialPathPending',trialPathPending,trialPath)
+    };
+  }
   const teachingSummary=typeof teachingStudentViews==='object'&&teachingStudentViews?teachingStudentViews.summary||{}:{};
   if(Number(teachingSummary.courseStudentCount)||Number(teachingSummary.courseDealCustomers)||Number(teachingSummary.trialPathStudents)){
     const courseStudents=Number(teachingSummary.courseStudentCount)||0;

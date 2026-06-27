@@ -1,5 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews } = require('../read-models/platform-metrics.js');
+const { buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -45,7 +45,7 @@ function createCorePageDataRoutes(deps={}){
         entitlements:scoped.entitlements,
         schedule:scoped.schedule
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows)});
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})});
     }
     if(path==='/page-data/courts'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

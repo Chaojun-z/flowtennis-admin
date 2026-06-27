@@ -61,12 +61,12 @@ assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '已�
 assert.strictEqual(metrics.conversion.cards.sameProjectRenewalRate.value, 100, 'same package renewal should count as same-project renewal');
 assert.deepStrictEqual(
   metrics.conversion.courseFunnel.map(row => row.stage),
-  ['线索量', '预约体验客户', '体验课实到人数', '体验后成交人数', '成交后续费人数'],
-  'course conversion funnel should use the requested Gemini-style stage order'
+  ['有效线索', '普通学员', '正式学员'],
+  'course conversion funnel should use the standard course-chain stage order'
 );
-assert.strictEqual(metrics.conversion.courseFunnel[0].count, 5, 'course funnel should keep all leads as the first stage');
-assert.strictEqual(metrics.conversion.courseFunnel[3].count, 2, 'course funnel should count only course deals, not booking or membership deals');
-assert.strictEqual(metrics.conversion.courseFunnel[4].count, 1, 'course funnel should count course renewals after deal');
+assert.strictEqual(metrics.conversion.courseFunnel[0].count, 5, 'course funnel should keep valid leads as the first stage');
+assert.strictEqual(metrics.conversion.courseFunnel[1].count, 2, 'course funnel should count standard course-chain students');
+assert.strictEqual(metrics.conversion.courseFunnel[2].count, 2, 'course funnel should count standard formal students');
 assert.strictEqual(metrics.conversion.sourceRanking.find(row => row.source === '抖音/美团'), undefined, 'booking-only converted channels should not enter course deal ranking');
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '转介绍'), 'channel deal ranking should include course deal channels');
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书'), 'channel deal ranking should include all course deal channels');
@@ -795,7 +795,7 @@ const mergedLeadMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[0].count, 1, 'merged duplicate leads should count as one lead');
-assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[3].count, 1, 'merged duplicate lead ids should still link to course conversion');
+assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[2].count, 1, 'merged duplicate lead ids should still link to formal course conversion');
 assert.ok(mergedLeadMetrics.conversion.filterOptions.coaches.includes('王教练'), 'conversion coach filters should include formalCoach fallback');
 
 const unifiedRateMetrics = buildOperationsMetrics({
@@ -836,11 +836,11 @@ const adultAttribute = unifiedRateMetrics.conversion.studentAttributeRows.find(r
 assert.strictEqual(adultAttribute?.trialConversionRate, 60, 'student attribute trial conversion should use trial attendance over attribute leads');
 assert.strictEqual(adultAttribute?.dealConversionRate, 20, 'student attribute deal conversion should use first paid deals over attribute leads');
 assert.strictEqual(adultAttribute?.renewalRate, 0, 'student attribute renewal rate should use renewals over first paid deals');
-assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[1].count, 4, 'trial attendance should also count as having entered the appointment funnel step');
-assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 3, 'course funnel attendance should include completed trial dates and experience deals');
-assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 60, 'course funnel should expose cumulative rate over total leads');
-assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate, 75, 'course funnel should expose transition rate from previous step');
-assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 25, 'course funnel should expose loss rate from previous step');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[1].count, 4, 'standard course funnel should count course-chain students');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 1, 'standard course funnel should count formal students');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 20, 'course funnel should expose formal students over total valid leads');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].transitionRate, 25, 'course funnel should expose formal students over course-chain students');
+assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].lossRate, 75, 'course funnel should expose loss from course-chain students to formal students');
 
 const lifecycleBackedMetrics = buildOperationsMetrics({
   campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
@@ -925,7 +925,7 @@ assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion shou
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
 assert.strictEqual(coachDashboardMetrics.coach.metricSource, 'standard-course-lifecycle', 'coach dashboard should expose the unified standard metric source');
 assert.strictEqual(coachDashboardMetrics.conversion.metricSource, 'standard-course-lifecycle', 'conversion dashboard should expose the same unified standard metric source');
-assert.strictEqual(coachDashboardMetrics.conversion.standardRates.trialConversionRate, coachDashboardMetrics.conversion.courseFunnel[3].transitionRate, 'conversion top deal rate should share the same backend value as the visible funnel deal step');
+assert.strictEqual(coachDashboardMetrics.conversion.standardRates.trialConversionRate, coachDashboardMetrics.conversion.standardLifecycleMetrics.metrics.trialPathDeals.rate, 'conversion top trial-path deal rate should share the standard lifecycle metric');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalRate, 0, 'conversion renewal should use selected-period repurchases instead of coach old-customer renewal');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalNumerator, 0, 'conversion renewal should expose selected-period repurchase numerator');
 assert.strictEqual(coachDashboardMetrics.conversion.standardRates.renewalDenominator, 2, 'conversion renewal should expose selected-period paid-student denominator');
@@ -1097,7 +1097,7 @@ const periodRepurchaseMetrics = buildOperationsMetrics({
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 const june10RepurchasePoint = periodRepurchaseMetrics.conversion.trends.find(row => row.date === '2026-06-10');
-assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalRate, periodRepurchaseMetrics.conversion.courseFunnel[4].transitionRate, 'conversion top renewal rate should share the same backend value as the visible funnel renewal step');
+assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalRate, 18.2, 'conversion top renewal rate should use selected-period repurchases');
 assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalNumerator, 2, 'conversion renewal numerator should be repurchased students in the selected period');
 assert.strictEqual(periodRepurchaseMetrics.conversion.standardRates.renewalDenominator, 11, 'conversion renewal denominator should be unique paid students in the selected period');
 assert.strictEqual(june10RepurchasePoint?.renewalRate, 18.2, 'conversion renewal trend should use cumulative selected-period repurchase rate, never same-day renewals over same-day deals');
@@ -1376,9 +1376,9 @@ const closedFunnelMetrics = buildOperationsMetrics({
   now: new Date('2026-06-03 12:00:00'),
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-03' }
 });
-const closedFunnelDealStep = closedFunnelMetrics.conversion.courseFunnel[3];
+const closedFunnelDealStep = closedFunnelMetrics.conversion.courseFunnel[2];
 const closedFunnelTrendPoint = closedFunnelMetrics.conversion.trends.find(row => row.date === '2026-06-02');
-assert.ok(closedFunnelDealStep.count <= closedFunnelMetrics.conversion.courseFunnel[2].count, 'closed funnel deal count must be a subset of attended leads');
+assert.ok(closedFunnelDealStep.count <= closedFunnelMetrics.conversion.courseFunnel[1].count, 'formal students must be a subset of course-chain students');
 assert.ok(closedFunnelDealStep.transitionRate <= 100, 'closed funnel deal rate must never exceed 100%');
 assert.ok((closedFunnelTrendPoint?.dealRateNumerator || 0) <= (closedFunnelTrendPoint?.dealRateDenominator || 0), 'conversion trend deal numerator must be inside its attendance denominator');
 assert.ok((closedFunnelTrendPoint?.dealRate || 0) <= 100, 'conversion trend deal rate must never exceed 100%');
@@ -1404,13 +1404,13 @@ const conversionDashboardConsistencyMetrics = buildOperationsMetrics({
 });
 assert.strictEqual(
   conversionDashboardConsistencyMetrics.conversion.standardRates.trialConversionRate,
-  conversionDashboardConsistencyMetrics.conversion.courseFunnel[3].transitionRate,
-  'conversion top deal rate should use the same rate as the visible funnel deal step'
+  conversionDashboardConsistencyMetrics.conversion.standardLifecycleMetrics.metrics.trialPathDeals.rate,
+  'conversion top deal rate should use the standard trial-path deal metric'
 );
 assert.strictEqual(
   conversionDashboardConsistencyMetrics.conversion.standardRates.renewalRate,
-  conversionDashboardConsistencyMetrics.conversion.courseFunnel[4].transitionRate,
-  'conversion top renewal rate should use the same rate as the visible funnel renewal step'
+  0,
+  'conversion top renewal rate should not be derived from the standard course-chain display funnel'
 );
 assert.ok(conversionDashboardConsistencyMetrics.conversion.filteredViews, 'conversion dashboard should expose backend-precomputed filtered views');
 const conversionFilteredView = conversionDashboardConsistencyMetrics.conversion.filteredViews['source:小红书|campus:顺义马坡|coach:'];

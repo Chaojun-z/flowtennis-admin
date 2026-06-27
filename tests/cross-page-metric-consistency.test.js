@@ -71,13 +71,11 @@ assert.strictEqual(
 assert.deepStrictEqual(
   operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
   [
-    ['线索量', 6],
-    ['预约体验客户', 2],
-    ['体验课实到人数', 1],
-    ['体验后成交人数', 0],
-    ['成交后续费人数', 0]
+    ['有效线索', 6],
+    ['普通学员', 4],
+    ['正式学员', 3]
   ],
-  'course funnel must count strict trial appointments only; direct course/booking/member deals must not be backfilled into预约体验客户'
+  'course funnel must use the standard course-chain funnel, not the legacy trial appointment funnel'
 );
 
 assert.deepStrictEqual(

@@ -377,6 +377,120 @@ function buildRawLeadConversionMetrics({ leads = [], customerLifecycleRows = [] 
   };
 }
 
+function rate(part, total) {
+  return total ? round(Number(part) * 100 / Number(total), 1) : 0;
+}
+
+function rateText(part, total) {
+  const value = rate(part, total);
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+}
+
+function standardMetric(id, label, value, denominator, sourceMetric, unit = '人') {
+  const safeValue = Number(value) || 0;
+  const safeDenominator = Number(denominator) || 0;
+  return {
+    id,
+    label,
+    value: safeValue,
+    numerator: safeValue,
+    denominator: safeDenominator,
+    rate: rate(safeValue, safeDenominator),
+    rateText: rateText(safeValue, safeDenominator),
+    unit,
+    sourceMetric
+  };
+}
+
+function standardFunnelRows(rows = []) {
+  const total = Number(rows[0]?.value) || 0;
+  return rows.map((row, index) => {
+    const count = Number(row.value) || 0;
+    const previous = index > 0 ? Number(rows[index - 1]?.value) || 0 : total;
+    return {
+      id: row.id,
+      stage: row.label,
+      label: row.label,
+      count,
+      value: count,
+      unit: row.unit || '人',
+      percentOfTotal: rate(count, total),
+      transitionRate: index === 0 ? 100 : rate(count, previous),
+      lossRate: index === 0 ? 0 : Math.max(0, round(100 - rate(count, previous), 1)),
+      numerator: count,
+      denominator: index === 0 ? total : previous,
+      rateText: index === 0 ? '100%' : rateText(count, previous)
+    };
+  });
+}
+
+function buildStandardLifecycleMetrics(data = {}) {
+  const customerLifecycleRows = Array.isArray(data.customerLifecycleRows) && data.customerLifecycleRows.length
+    ? data.customerLifecycleRows
+    : buildCustomerLifecycleRows(data);
+  const leadConversionMetrics = buildRawLeadConversionMetrics({
+    leads: data.leads || [],
+    customerLifecycleRows
+  });
+  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const summary = teachingStudentViews.summary || {};
+  const validLeads = Number(leadConversionMetrics.totalLeads) || 0;
+  const courseChainStudents = Number(summary.courseStudentCount) || 0;
+  const formalStudents = Number(summary.courseDealCustomers || summary.formalStudentCount) || 0;
+  const trialPathStudents = Number(summary.trialPathStudents) || 0;
+  const trialPathDeals = Number(summary.trialPathDealCustomers || summary.trialToCourseCustomers) || 0;
+  const trialPathPending = Number(summary.trialPathPendingCustomers) || Math.max(0, trialPathStudents - trialPathDeals);
+  const directCourseDeals = Number(summary.directCourseCustomers) || 0;
+  const totalDeals = Number(leadConversionMetrics.convertedLeads) || 0;
+  const metrics = {
+    validLeads: standardMetric('VALID_LEADS', '有效线索', validLeads, validLeads, 'RAW_LEAD_POOL_ROWS', '条'),
+    courseChainStudents: standardMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseChainStudents, validLeads, 'COURSE_CHAIN_STUDENTS / VALID_LEADS'),
+    formalStudents: standardMetric('FORMAL_STUDENTS', '正式学员', formalStudents, validLeads, 'FORMAL_STUDENTS / VALID_LEADS'),
+    trialPathStudents: standardMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathStudents, validLeads, 'TRIAL_PATH_STUDENTS / VALID_LEADS'),
+    trialPathDeals: standardMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDeals, trialPathStudents, 'TRIAL_PATH_DEALS / TRIAL_PATH_STUDENTS'),
+    trialPathPending: standardMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPending, trialPathStudents, 'TRIAL_PATH_PENDING / TRIAL_PATH_STUDENTS'),
+    directCourseDeals: standardMetric('DIRECT_COURSE_DEALS', '直接课程成交', directCourseDeals, formalStudents || validLeads, 'DIRECT_COURSE_DEALS / FORMAL_STUDENTS'),
+    totalDeals: standardMetric('TOTAL_DEALS', '总成交', totalDeals, validLeads, 'TOTAL_DEALS / VALID_LEADS', '条')
+  };
+  metrics.formalStudents.transitionRate = rate(formalStudents, courseChainStudents);
+  metrics.formalStudents.transitionRateText = rateText(formalStudents, courseChainStudents);
+  metrics.directCourseDeals.rate = rate(directCourseDeals, formalStudents);
+  metrics.directCourseDeals.rateText = rateText(directCourseDeals, formalStudents);
+  return {
+    metrics,
+    courseRates: {
+      courseChainEntryRate: metrics.courseChainStudents.rate,
+      formalStudentRate: metrics.formalStudents.rate,
+      formalStudentTransitionRate: metrics.formalStudents.transitionRate,
+      trialPathEntryRate: metrics.trialPathStudents.rate,
+      trialPathDealRate: metrics.trialPathDeals.rate,
+      trialPathPendingRate: metrics.trialPathPending.rate,
+      totalDealRate: metrics.totalDeals.rate
+    },
+    funnels: {
+      courseChain: standardFunnelRows([
+        { id: 'VALID_LEADS', label: '有效线索', value: validLeads, unit: '条' },
+        { id: 'COURSE_CHAIN_STUDENTS', label: '普通学员', value: courseChainStudents },
+        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalStudents }
+      ]),
+      trialPath: standardFunnelRows([
+        { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathStudents },
+        { id: 'TRIAL_PATH_DEALS', label: '体验路径成交', value: trialPathDeals },
+        { id: 'TRIAL_PATH_PENDING', label: '体验路径未成交', value: trialPathPending }
+      ])
+    },
+    views: {
+      leadPoolRows: leadConversionMetrics.rawLeadPoolRows,
+      courseChainStudents: teachingStudentViews.courseStudents,
+      formalStudents: teachingStudentViews.formalStudents,
+      trialPathStudents: teachingStudentViews.trialPathStudents,
+      trialPathDeals: teachingStudentViews.trialPathDealStudents,
+      trialPathPending: teachingStudentViews.trialPathPendingStudents,
+      directCourseDeals: teachingStudentViews.directCourseDealStudents
+    }
+  };
+}
+
 function countBy(rows = [], field, allowed = []) {
   const counts = new Map(allowed.map(key => [key, 0]));
   (rows || []).forEach(row => {
@@ -396,10 +510,12 @@ function buildPlatformMetrics(data = {}) {
   });
   const { leadPoolRows, stageRows, sourceRows: sourceChannelStats, totalLeads, convertedLeads, leadConversionRate } = leadConversionMetrics;
   const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const standardLifecycleMetrics = buildStandardLifecycleMetrics({ ...data, customerLifecycleRows });
 
   return {
     customerLifecycleRows,
     teachingStudentViews,
+    standardLifecycleMetrics,
     leadPoolRows,
     rawLeadPoolRows: leadConversionMetrics.rawLeadPoolRows,
     conversionMetrics: {
@@ -418,6 +534,7 @@ function buildPlatformMetrics(data = {}) {
 
 module.exports = {
   buildPlatformMetrics,
+  buildStandardLifecycleMetrics,
   buildLeadPoolRows,
   buildTeachingStudentViews,
   buildRawLeadConversionMetrics,

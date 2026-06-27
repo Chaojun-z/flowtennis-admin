@@ -8,7 +8,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
-const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews } = require('../read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -678,6 +678,8 @@ function courseConversionRows(data = {}, options = {}) {
       hasCourse,
       hasTrialDeal,
       hasRenewal,
+      studentStage: normalizeText(lifecycle.studentStage),
+      courseDealPath: normalizeText(lifecycle.courseDealPath || dealPath),
       personas: profilePersonas({ ...lead, consultType: normalizedConsultType, studentType: normalizedStudentType }, linkedStudent || {}, now)
     };
   });
@@ -706,6 +708,32 @@ function buildCourseFunnel(rows = []) {
     transitionRate: index === 0 ? 100 : rate(row.count, steps[index - 1].count),
     lossRate: index === 0 ? 0 : round(100 - rate(row.count, steps[index - 1].count), 1)
   }));
+}
+
+function buildStandardCourseFunnelFromConversionRows(rows = []) {
+  const total = rows.length;
+  const courseRows = rows.filter(row => {
+    const stage = normalizeText(row.studentStage);
+    return ['trial', 'formal'].includes(stage) || (!!row.studentId && row.hasCourse);
+  });
+  const formalRows = rows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
+  return [
+    { id: 'VALID_LEADS', stage: '有效线索', label: '有效线索', count: total, value: total, unit: '条' },
+    { id: 'COURSE_CHAIN_STUDENTS', stage: '普通学员', label: '普通学员', count: courseRows.length, value: courseRows.length, unit: '人' },
+    { id: 'FORMAL_STUDENTS', stage: '正式学员', label: '正式学员', count: formalRows.length, value: formalRows.length, unit: '人' }
+  ].map((row, index, all) => {
+    const previous = index > 0 ? Number(all[index - 1].count) || 0 : total;
+    const transitionRate = index === 0 ? 100 : rate(row.count, previous);
+    return {
+      ...row,
+      percentOfTotal: rate(row.count, total),
+      transitionRate,
+      lossRate: index === 0 ? 0 : Math.max(0, round(100 - transitionRate, 1)),
+      numerator: row.count,
+      denominator: index === 0 ? total : previous,
+      rateText: `${Number.isInteger(transitionRate) ? transitionRate : transitionRate.toFixed(1)}%`
+    };
+  });
 }
 
 function groupRows(rows = [], key) {
@@ -777,7 +805,7 @@ function conversionFilterViewKey({ source = '', campus = '', coach = '' } = {}) 
 }
 
 function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
-  const courseFunnel = buildCourseFunnel(rows);
+  const courseFunnel = buildStandardCourseFunnelFromConversionRows(rows);
   return {
     courseFunnel,
     sourceRanking: buildCourseSourceRanking(rows),
@@ -785,8 +813,8 @@ function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
     studentAttributeRows: buildStudentAttributeRows(rows),
     courseRows: includeRows ? rows : [],
     standardRates: {
-      trialConversionRate: Number(courseFunnel[3]?.transitionRate) || 0,
-      renewalRate: Number(courseFunnel[4]?.transitionRate) || 0
+      trialConversionRate: Number(courseFunnel[2]?.transitionRate) || 0,
+      renewalRate: 0
     }
   };
 }
@@ -2493,7 +2521,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
   const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...rangedData, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
-  const courseFunnel = buildCourseFunnel(courseRows);
+  const legacyCourseFunnel = buildCourseFunnel(courseRows);
+  const standardLifecycleMetrics = buildStandardLifecycleMetrics({
+    ...rangedData,
+    customerLifecycleRows
+  });
+  const courseFunnel = standardLifecycleMetrics.funnels.courseChain || [];
   const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
   const teachingSummary = teachingStudentViews.summary || {};
   const courseDealCustomers = Number(teachingSummary.courseDealCustomers) || 0;
@@ -2611,7 +2644,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     customerLifecycleRows
   }) : null;
   const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, leads: previousRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now }) : [];
-  const previousCourseFunnel = buildCourseFunnel(previousCourseRows);
+  const previousStandardLifecycleMetrics = previousRangedData ? buildStandardLifecycleMetrics({
+    ...previousRangedData,
+    customerLifecycleRows
+  }) : null;
+  const previousCourseFunnel = previousStandardLifecycleMetrics?.funnels?.courseChain || [];
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
@@ -2640,17 +2677,17 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const previousCourtValues = cardValueMap(previousCourt.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const conversionValues = {
-    leads: Number(courseFunnel[0]?.count) || 0,
-    appointmentRate: Number(courseFunnel[1]?.percentOfTotal) || 0,
-    attendanceRate: Number(courseFunnel[2]?.transitionRate) || 0,
-    dealRate: Number(courseFunnel[3]?.transitionRate) || 0,
+    leads: Number(standardLifecycleMetrics.metrics.validLeads?.value) || 0,
+    appointmentRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
+    attendanceRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
+    dealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
     renewalRate: periodRepurchase.rate
   };
   const previousConversionValues = {
-    leads: Number(previousCourseFunnel[0]?.count) || 0,
-    appointmentRate: Number(previousCourseFunnel[1]?.percentOfTotal) || 0,
-    attendanceRate: Number(previousCourseFunnel[2]?.transitionRate) || 0,
-    dealRate: Number(previousCourseFunnel[3]?.transitionRate) || 0,
+    leads: Number(previousStandardLifecycleMetrics?.metrics?.validLeads?.value) || 0,
+    appointmentRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathStudents?.rate) || 0,
+    attendanceRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathStudents?.rate) || 0,
+    dealRate: Number(previousStandardLifecycleMetrics?.metrics?.formalStudents?.transitionRate) || 0,
     renewalRate: previousPeriodRepurchase.rate
   };
   const coachValues = {
@@ -2693,8 +2730,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
     conversion: {
       metricSource: 'standard-course-lifecycle',
       standardRates: {
-        trialConversionRate: Number(courseFunnel[3]?.transitionRate) || 0,
-        renewalRate: Number(courseFunnel[4]?.transitionRate) || 0,
+        trialConversionRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
+        courseDealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
+        renewalRate: periodRepurchase.rate,
         renewalNumerator: periodRepurchase.numerator,
         renewalDenominator: periodRepurchase.denominator
       },
@@ -2712,6 +2750,18 @@ function buildOperationsMetrics(data = {}, options = {}) {
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }
       },
       courtChain,
+      standardLifecycleMetrics: {
+        ...standardLifecycleMetrics,
+        funnels: {
+          ...(standardLifecycleMetrics.funnels || {}),
+          courtChain: [
+            { id: 'COURT_USERS', stage: '订场用户', label: '订场用户', count: Number(courtChain.courtUsers) || 0, value: Number(courtChain.courtUsers) || 0, unit: '人', percentOfTotal: 100, transitionRate: 100, lossRate: 0 },
+            { id: 'COURT_MEMBER_CUSTOMERS', stage: '订场会员', label: '订场会员', count: Number(courtChain.courtMembers) || 0, value: Number(courtChain.courtMembers) || 0, unit: '人', percentOfTotal: rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), transitionRate: rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), lossRate: Math.max(0, round(100 - rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), 1)) },
+            { id: 'MEMBER_REPEAT_CUSTOMERS', stage: '会员复购', label: '会员复购', count: Number(courtChain.memberRepeatCustomers) || 0, value: Number(courtChain.memberRepeatCustomers) || 0, unit: '人', percentOfTotal: rate(Number(courtChain.memberRepeatCustomers) || 0, Number(courtChain.courtUsers) || 0), transitionRate: rate(Number(courtChain.memberRepeatCustomers) || 0, Number(courtChain.courtMembers) || 0), lossRate: Math.max(0, round(100 - rate(Number(courtChain.memberRepeatCustomers) || 0, Number(courtChain.courtMembers) || 0), 1)) },
+            { id: 'COURT_REBOOK_CUSTOMERS', stage: '订场复订', label: '订场复订', count: Number(courtChain.courtRepeatCustomers) || 0, value: Number(courtChain.courtRepeatCustomers) || 0, unit: '人', percentOfTotal: rate(Number(courtChain.courtRepeatCustomers) || 0, Number(courtChain.courtUsers) || 0), transitionRate: rate(Number(courtChain.courtRepeatCustomers) || 0, Number(courtChain.courtUsers) || 0), lossRate: Math.max(0, round(100 - rate(Number(courtChain.courtRepeatCustomers) || 0, Number(courtChain.courtUsers) || 0), 1)) }
+          ]
+        }
+      },
       teachingStudentViews,
       stageRows,
       sourceRows,
@@ -2721,6 +2771,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       trendDiagnostics: buildTrendDiagnostics(conversionTrendSet.rows, ['leads', 'leadFollowups', 'students', 'purchases']),
       trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
       courseFunnel,
+      legacyCourseFunnel,
       sourceRanking,
       channelEfficiencyRows,
       studentAttributeRows,

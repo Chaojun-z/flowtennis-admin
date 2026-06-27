@@ -15,6 +15,9 @@ const scheduleSource = read('public/assets/scripts/pages/schedule.js');
 const courtsSource = read('public/assets/scripts/pages/courts.js');
 const purchasesSource = read('public/assets/scripts/pages/purchases.js');
 const coachPortalSource = read('public/assets/scripts/pages/coach-portal.js');
+const legacyIntentTypeLabel = ['意向', '类型'].join('');
+const legacyStudentNameLabel = ['学员', '姓名'].join('');
+const legacyConsultDemandLabel = ['咨询', '需求'].join('');
 
 function fnBody(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -86,20 +89,20 @@ assert.doesNotMatch(
     fnBody(leadsSource, 'openLeadModal'),
     fnBody(leadsSource, 'renderLeadImportPreviewBody')
   ].join('\n'),
-  /意向等级/,
-  'lead visible labels should use 意向等级 instead of 意向等级'
+  new RegExp(legacyIntentTypeLabel),
+  'lead visible labels should use 意向等级 instead of the legacy intent label'
 );
 
 assert.doesNotMatch(
   [fnBody(scheduleSource, 'openScheduleModal'), fnBody(scheduleSource, 'scheduleDetailInfoHtml')].join('\n'),
-  /姓名/,
-  'schedule visible identity labels should use 姓名 instead of 姓名'
+  new RegExp(legacyStudentNameLabel),
+  'schedule visible identity labels should use 姓名 instead of the legacy student-name label'
 );
 
 assert.doesNotMatch(
   [fnBody(studentsSource, 'studentLeadSummaryHtml'), fnBody(courtsSource, 'courtLeadSummaryHtml')].join('\n'),
-  /需求产品/,
-  'lead summary blocks should use 需求产品 instead of 需求产品'
+  new RegExp(legacyConsultDemandLabel),
+  'lead summary blocks should use 需求产品 instead of the legacy demand label'
 );
 
 assert.doesNotMatch(
