@@ -7,7 +7,6 @@ function readOperationsActiveTab(){
   return 'overview';
 }
 let operationsActiveTab = readOperationsActiveTab();
-let operationsConversionFilters = { source: '', campus: '', coach: '' };
 let operationsActiveCourtHeatCampus = '顺义马坡';
 let operationsSparklineUid = 0;
 const operationsCourtHeatCampusTabs = ['顺义马坡', '朝阳十里堡', '蓝色港湾', '国网', '朝珺私教'];
@@ -280,15 +279,6 @@ function setOperationsTab(tab) {
   }
 }
 
-function setOperationsConversionFilter() {
-  operationsConversionFilters = {
-    source: document.getElementById('operationsConversionSource')?.value || '',
-    campus: document.getElementById('operationsConversionCampus')?.value || '',
-    coach: document.getElementById('operationsConversionCoach')?.value || ''
-  };
-  renderOperations();
-}
-
 function renderOperationsLoading() {
   const host = document.getElementById('page-operations');
   if (!host) return;
@@ -334,9 +324,8 @@ function renderOperationsLoading() {
     className: 'operations-page',
     sections: [
       { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 4 },
-      { type: 'grid', className: 'operations-conversion-monitor-grid', panels: [{}, {}] },
-      { type: 'grid', className: 'operations-channel-quality-layout', panels: [{}, { variant: 'table' }] },
-      { type: 'grid', className: 'operations-attribute-layout', panels: [{}, {}] }
+      { type: 'grid', className: 'operations-conversion-funnel-grid', panels: [{}, {}, {}] },
+      { type: 'grid', className: 'operations-channel-diagnostics-grid', panels: [{}, { variant: 'table' }] }
     ]
   });
 }
@@ -698,12 +687,10 @@ function renderOperationsConversion(data) {
   const conversion = operationsConversionView(data);
   return `${renderConversionCommandCenter(data, conversion)}
   ${renderConversionFunnelModule(data, conversion)}
-  ${renderConversionRetentionModule(conversion)}
   <div class="operations-channel-diagnostics-grid">
     ${renderConversionChannelQualityModule(conversion)}
     ${renderConversionChannelActionModule(conversion)}
-  </div>
-  ${renderConversionAttributeModule(conversion)}`;
+  </div>`;
 }
 
 function renderOperationsCoach(data) {
@@ -1123,76 +1110,16 @@ function operationsRiskRows(rows = []) {
     .slice(0, 5);
 }
 
-function operationsConversionFilterViewKey() {
-  return [
-    `source:${String(operationsConversionFilters.source || '').trim()}`,
-    `campus:${String(operationsConversionFilters.campus || '').trim()}`,
-    `coach:${String(operationsConversionFilters.coach || '').trim()}`
-  ].join('|');
-}
-
 function operationsConversionView(data) {
-  const hasFilters = !!(operationsConversionFilters.source || operationsConversionFilters.campus || operationsConversionFilters.coach);
-  if (!hasFilters) {
-    return {
-      standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
-      courtChain: data.conversion?.courtChain || {},
-      retention: data.conversion?.retention || {},
-      sourceRanking: data.conversion?.sourceRanking || [],
-      channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
-      studentAttributeRows: data.conversion?.studentAttributeRows || [],
-      courseRows: data.conversion?.courseRows || [],
-      standardRates: data.conversion?.standardRates || {},
-      trendRows: data.conversion?.trends || []
-    };
-  }
-  const view = data.conversion?.filteredViews?.[operationsConversionFilterViewKey()];
-  if (!view) {
-    return {
-      courseFunnel: [],
-      standardLifecycleMetrics: {},
-      courtChain: data.conversion?.courtChain || {},
-      retention: data.conversion?.retention || {},
-      sourceRanking: [],
-      channelEfficiencyRows: [],
-      studentAttributeRows: [],
-      courseRows: [],
-      standardRates: {},
-      trendRows: data.conversion?.trends || []
-    };
-  }
   return {
-    standardLifecycleMetrics: view.standardLifecycleMetrics || {},
-    courtChain: view.courtChain || data.conversion?.courtChain || {},
-    retention: view.retention || data.conversion?.retention || {},
-    sourceRanking: view.sourceRanking || [],
-    channelEfficiencyRows: view.channelEfficiencyRows || [],
-    studentAttributeRows: view.studentAttributeRows || [],
-    courseRows: view.courseRows || [],
-    standardRates: view.standardRates || {},
+    standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
+    courtChain: data.conversion?.courtChain || {},
+    retention: data.conversion?.retention || {},
+    sourceRanking: data.conversion?.sourceRanking || [],
+    channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
+    courseRows: data.conversion?.courseRows || [],
+    standardRates: data.conversion?.standardRates || {},
     trendRows: data.conversion?.trends || []
-  };
-}
-
-function operationsFilterDropdown(id, label, values, value) {
-  return renderStandardDropdownHtml(id, label, [{ value: '', label }, ...(values || []).map(item => ({ value: item, label: item }))], value, false, 'setOperationsConversionFilter');
-}
-
-function operationsSourceFilterValues(values = []) {
-  const available = new Set((values || []).map(item => String(item || '').trim()).filter(Boolean));
-  const ordered = ((typeof FlowTennisBusinessTaxonomy === 'object' && FlowTennisBusinessTaxonomy.SOURCES) || []).filter(source => available.has(source));
-  const extra = [...available].filter(source => !ordered.includes(source)).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  return [...ordered, ...extra];
-}
-
-function operationsConversionFilterOptions(data) {
-  const rows = data.conversion?.courseRows || [];
-  const values = key => [...new Set(rows.map(row => String(row[key] || '').trim()).filter(Boolean).filter(item => item !== '未记录'))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  const apiOptions = data.conversion?.filterOptions || {};
-  return {
-    sources: (apiOptions.sources || []).length ? apiOptions.sources : operationsSourceFilterValues(values('source')),
-    campuses: (apiOptions.campuses || []).length ? apiOptions.campuses : values('campus'),
-    coaches: (apiOptions.coaches || []).length ? apiOptions.coaches : values('coach')
   };
 }
 
@@ -1239,7 +1166,6 @@ function renderConversionFunnelCard(title, hostId, auxiliary = '') {
 }
 
 function renderConversionFunnelModule(data, conversion) {
-  const options = operationsConversionFilterOptions(data);
   const trialPathPending = operationsStandardMetricValue(conversion, 'trialPathPending');
   const courtChain = conversion.courtChain || {};
   const courtUsers = Number(courtChain.courtUsers) || 0;
@@ -1251,11 +1177,6 @@ function renderConversionFunnelModule(data, conversion) {
   return `<div class="operations-dashboard-block operations-funnel-block">
     <div class="operations-module-head">
       <div><h3>${moduleTitle}</h3></div>
-      <div class="operations-funnel-filter-row">
-        ${operationsFilterDropdown('operationsConversionSource', '全部渠道', options.sources || [], operationsConversionFilters.source)}
-        ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
-        ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
-      </div>
     </div>
     <div class="operations-conversion-funnel-grid">
       ${courseCard}
@@ -1277,42 +1198,6 @@ function renderConversionCommandCenter(data, conversion) {
     </div>`;
 }
 
-function operationsRetentionMetricHtml(metric = {}) {
-  if (!metric || metric.status !== 'ready') return `<div class="operations-retention-metric pending"><span>${esc(metric?.label || '待接入口径')}</span><strong>待接入</strong></div>`;
-  return `<div class="operations-retention-metric"><span>${esc(metric.label || '')}</span><strong>${fmt(metric.value || 0)}%</strong><em>${fmt(metric.numerator || 0)} / ${fmt(metric.denominator || 0)}</em></div>`;
-}
-
-function operationsRetentionLine(points = [], key = '') {
-  return operationsKpiSparklineSvg(points, key, 'operations-retention-sparkline');
-}
-
-function renderRetentionCard(title, mainMetric, secondaryMetric, trendRows, trendKey) {
-  return `<section class="operations-section operations-retention-card">
-    <div class="operations-module-head"><div><h3>${esc(title)}</h3></div></div>
-    ${operationsRetentionLine(operationsTrendPointsWithFallback(trendRows || [], trendKey), trendKey)}
-    <div class="operations-retention-metrics">
-      ${operationsRetentionMetricHtml(mainMetric)}
-      ${operationsRetentionMetricHtml(secondaryMetric)}
-    </div>
-  </section>`;
-}
-
-function renderConversionRetentionModule(conversion) {
-  const retention = conversion.retention || {};
-  const moduleTitle = '留存趋势';
-  const teachingCard = renderRetentionCard('课包留存趋势', retention.teaching?.packageRepeatRate, retention.teaching?.packageRenewalRate, conversion.trendRows, 'courseRepeatRate');
-  const courtCard = renderRetentionCard('订场留存趋势', retention.court?.courtRebookRate, retention.court?.ndRetention, conversion.trendRows, 'courtRepeatRate');
-  const memberCard = renderRetentionCard('订场会员留存趋势', retention.member?.memberRechargeRepeatRate, retention.member?.ndRetention, conversion.trendRows, 'memberRechargeRepeatRate');
-  return `<div class="operations-dashboard-block">
-    <div class="operations-module-head"><div><h3>${moduleTitle}</h3></div></div>
-    <div class="operations-retention-grid">
-      ${teachingCard}
-      ${courtCard}
-      ${memberCard}
-    </div>
-  </div>`;
-}
-
 function renderConversionChannelQualityModule(conversion) {
   const rows = operationsChannelQualityRows(conversion.channelEfficiencyRows || []);
   return `<section class="operations-section">
@@ -1327,46 +1212,6 @@ function renderConversionChannelActionModule(conversion) {
     <div class="operations-module-head"><div><h3>渠道动作表</h3></div></div>
     ${operationsChannelRankingTable(rows)}
   </section>`;
-}
-
-function operationsPersonaBars(rows = [], mode = 'deal') {
-  const key = mode === 'retention' ? 'renewalRate' : 'dealConversionRate';
-  const countKey = mode === 'retention' ? 'renewals' : 'deals';
-  const source = [...(rows || [])]
-    .filter(row => Number(row.base) > 0)
-    .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0) || (Number(b[countKey]) || 0) - (Number(a[countKey]) || 0))
-    .slice(0, 6);
-  if (!source.length) return '<div class="operations-channel-empty">暂无人群数据</div>';
-  const max = Math.max(1, ...source.map(row => Number(row[key]) || 0));
-  return `<div class="operations-persona-bars">${source.map(row => {
-    const value = Number(row[key]) || 0;
-    const smallSample = mode === 'retention' && Number(row.deals) < 5;
-    return `<div class="operations-persona-bar ${smallSample ? 'small-sample' : ''}">
-      <div class="operations-persona-row">
-        <strong>${esc(row.attribute || '未标注人群')}</strong>
-        <span>${fmt(value)}% · ${fmt(row[countKey] || 0)}人</span>
-      </div>
-      <div class="operations-persona-track"><i style="width:${Math.min(100, Math.max(2, value * 100 / max))}%"></i></div>
-      ${smallSample ? '<em>样本偏小</em>' : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-
-function renderConversionAttributeModule(conversion) {
-  const rows = conversion.studentAttributeRows || [];
-  return `<div class="operations-dashboard-block">
-    <div class="operations-module-head"><div><h3>人群画像</h3></div></div>
-    <div class="operations-persona-grid">
-      <section class="operations-section">
-        <div class="operations-module-head"><div><h3>成交画像图</h3></div></div>
-        ${operationsPersonaBars(rows, 'deal')}
-      </section>
-      <section class="operations-section">
-        <div class="operations-module-head"><div><h3>留存画像图</h3></div></div>
-        ${operationsPersonaBars(rows, 'retention')}
-      </section>
-    </div>
-  </div>`;
 }
 
 function renderOperationsCharts(data) {

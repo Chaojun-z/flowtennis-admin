@@ -67,6 +67,21 @@ assert.match(
   /accountByCourtId[\s\S]*row\.courtId/,
   '订场会员复储必须支持会员页同样的 courtId 归属口径'
 );
+assert.doesNotMatch(
+  operationsMetricsSource,
+  /function buildConversionFilteredViews|filteredViews:\s*buildConversionFilteredViews|filterOptions:\s*buildConversionFilterOptions|studentAttributeRows:/,
+  '转化与留存不得再输出局部筛选或人群画像自算读模型'
+);
+assert.match(
+  functionBody(operationsMetricsSource, 'buildOperationsMetrics'),
+  /teachingStandardLifecycleMetrics[\s\S]*buildStandardLifecycleMetrics\(\{[\s\S]*customerLifecycleRows:\s*teachingCustomerLifecycleRows/,
+  '转化与留存课程漏斗必须从客户中心教学读模型生成'
+);
+assert.doesNotMatch(
+  functionBody(operationsMetricsSource, 'buildOperationsMetrics'),
+  /standardLifecycleMetrics:\s*\{[\s\S]*\.\.\.standardLifecycleMetrics/,
+  '转化与留存不能把 operations 自己的生命周期指标作为课程漏斗输出'
+);
 
 const packageJson = JSON.parse(read('package.json'));
 assert.ok(

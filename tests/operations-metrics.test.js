@@ -77,16 +77,8 @@ assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '转介绍
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书'), 'channel deal ranking should include all course deal channels');
 assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.trialConversionRate, 50, 'channel trial conversion rate should use trial attendance count over leads');
 assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.dealConversionRate, 50, 'channel deal conversion rate should use deals over leads');
-assert.ok(metrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年女性'), 'student attributes should combine youth and gender when available');
-assert.strictEqual(metrics.conversion.studentAttributeRows.find(row => row.attribute === '零基础')?.renewalRate, 100, 'student attribute renewal rate should use paid deal count as denominator');
-assert.ok(metrics.conversion.filterOptions.sources.includes('小红书'), 'conversion filters should include source options');
-assert.ok(metrics.conversion.filterOptions.sources.includes('转介绍'), 'conversion filters should normalize referral source values');
-assert.strictEqual(metrics.conversion.filterOptions.sources.includes('朋友转介绍'), false, 'conversion filters should not expose legacy referral source values');
-assert.ok(metrics.conversion.filterOptions.sources.includes('抖音'), 'conversion filters should normalize mixed douyin source values');
-assert.strictEqual(metrics.conversion.filterOptions.sources.includes('抖音/美团'), false, 'conversion filters should not expose mixed legacy douyin source values');
-assert.deepStrictEqual(metrics.conversion.filterOptions.sources, ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'], 'conversion source filters should use the same order as the lead pool');
-assert.ok(metrics.conversion.filterOptions.campuses.includes('顺义马坡'), 'conversion filters should display campus names instead of campus codes');
-assert.ok(metrics.conversion.filterOptions.coaches.includes('Siren 教练'), 'conversion filters should include coach options');
+assert.strictEqual(metrics.conversion.studentAttributeRows, undefined, 'conversion page should not output local people profile rows');
+assert.strictEqual(metrics.conversion.filterOptions, undefined, 'conversion page should not output local source/campus/coach filters');
 assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 75.4, 'coach module should use the current data span when all-time is selected');
 assert.strictEqual(metrics.coach.period.label, '全部时间（按数据跨度 11 天）', 'coach module should expose the period behind all-time capacity');
 assert.strictEqual(metrics.coach.rows[0].usedHours, 2, 'coach workload should sum completed lesson hours');
@@ -772,11 +764,7 @@ const noGenderMetrics = buildOperationsMetrics({
   financeOverviewData: {}
 }, { now: new Date('2026-06-18 00:00:00') });
 
-assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '成人'), 'student attributes should classify adult demand even without gender');
-assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '青少年'), 'student attributes should classify youth demand even without gender');
-assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '私教课'), 'student attributes should classify private lesson demand');
-assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '小班课'), 'student attributes should classify group lesson demand');
-assert.ok(noGenderMetrics.conversion.studentAttributeRows.find(row => row.attribute === '未标注人群'), 'student attributes should keep an untagged fallback group instead of going empty');
+assert.strictEqual(noGenderMetrics.conversion.studentAttributeRows, undefined, 'conversion page should not build people profile rows from operations metrics');
 
 const mergedLeadMetrics = buildOperationsMetrics({
   leads: [
@@ -801,7 +789,7 @@ const mergedLeadMetrics = buildOperationsMetrics({
 
 assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[0].count, 1, 'merged duplicate leads should count as one lead');
 assert.strictEqual(mergedLeadMetrics.conversion.courseFunnel[2].count, 1, 'merged duplicate lead ids should still link to formal course conversion');
-assert.ok(mergedLeadMetrics.conversion.filterOptions.coaches.includes('王教练'), 'conversion coach filters should include formalCoach fallback');
+assert.strictEqual(mergedLeadMetrics.conversion.filterOptions, undefined, 'conversion page should not expose coach filters');
 
 const unifiedRateMetrics = buildOperationsMetrics({
   leads: [
@@ -837,10 +825,7 @@ const unifiedRateMetrics = buildOperationsMetrics({
 const videoChannel = unifiedRateMetrics.conversion.channelEfficiencyRows.find(row => row.source === '视频号');
 assert.strictEqual(videoChannel?.trialConversionRate, 60, 'channel trial conversion rate should use trial attendance over leads');
 assert.strictEqual(videoChannel?.dealConversionRate, 20, 'channel deal conversion rate should use first paid deals over leads');
-const adultAttribute = unifiedRateMetrics.conversion.studentAttributeRows.find(row => row.attribute === '成人');
-assert.strictEqual(adultAttribute?.trialConversionRate, 60, 'student attribute trial conversion should use trial attendance over attribute leads');
-assert.strictEqual(adultAttribute?.dealConversionRate, 20, 'student attribute deal conversion should use first paid deals over attribute leads');
-assert.strictEqual(adultAttribute?.renewalRate, 0, 'student attribute renewal rate should use renewals over first paid deals');
+assert.strictEqual(unifiedRateMetrics.conversion.studentAttributeRows, undefined, 'conversion page should not output local people profile metrics');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[1].count, 4, 'standard course funnel should count course-chain students');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 1, 'standard course funnel should count formal students');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 20, 'course funnel should expose formal students over total valid leads');
@@ -879,7 +864,7 @@ const lifecycleBackedMetrics = buildOperationsMetrics({
 
 assert.strictEqual(lifecycleBackedMetrics.conversion.stageRows.find(row => row.stage === '已成交')?.count, 1, 'conversion stage should reuse the unified converted stage from lifecycle data');
 assert.strictEqual(lifecycleBackedMetrics.conversion.sourceRows.find(row => row.source === '转介绍')?.converted, 1, 'conversion source rows should use lifecycle standard source');
-assert.ok(lifecycleBackedMetrics.conversion.filterOptions.coaches.includes('统一教练'), 'conversion coach filters should use lifecycle owner');
+assert.strictEqual(lifecycleBackedMetrics.conversion.filterOptions, undefined, 'conversion page should not expose lifecycle owner as a local coach filter');
 
 const coachDashboardMetrics = buildOperationsMetrics({
   campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
@@ -1428,31 +1413,9 @@ assert.strictEqual(
   0,
   'conversion top renewal rate should not be derived from the standard course-chain display funnel'
 );
-assert.ok(conversionDashboardConsistencyMetrics.conversion.filteredViews, 'conversion dashboard should expose backend-precomputed filtered views');
-const conversionFilteredView = conversionDashboardConsistencyMetrics.conversion.filteredViews['source:小红书|campus:顺义马坡|coach:'];
-assert.ok(conversionFilteredView, 'conversion source/campus filter should read one backend view key');
-assert.deepStrictEqual(
-  conversionFilteredView.courseFunnel,
-  conversionDashboardConsistencyMetrics.conversion.courseFunnel,
-  'filtered conversion funnel should be generated by the same backend standard metric builder'
-);
-assert.deepStrictEqual(
-  conversionFilteredView.standardLifecycleMetrics.funnels.courseChain,
-  conversionDashboardConsistencyMetrics.conversion.standardLifecycleMetrics.funnels.courseChain,
-  'filtered conversion view should expose the same standard lifecycle metric object for top cards'
-);
-const conversionCoachFilteredView = conversionDashboardConsistencyMetrics.conversion.filteredViews['source:小红书|campus:顺义马坡|coach:张教练'];
-assert.strictEqual(conversionCoachFilteredView.courseFunnel[0].count, 1, 'conversion coach filter should only include leads attributed to that coach');
-assert.strictEqual(
-  conversionCoachFilteredView.standardLifecycleMetrics.metrics.validLeads.value,
-  1,
-  'conversion coach filter should expose filtered valid leads through standardLifecycleMetrics'
-);
-assert.strictEqual(
-  conversionFilteredView.studentAttributeRows.find(row => row.attribute === '未标注人群')?.dealConversionRate,
-  conversionDashboardConsistencyMetrics.conversion.studentAttributeRows.find(row => row.attribute === '未标注人群')?.dealConversionRate,
-  'filtered attribute rows should be generated by the backend, not recalculated in the browser'
-);
+assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.filteredViews, undefined, 'conversion dashboard should not expose backend-precomputed filtered views');
+assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.filterOptions, undefined, 'conversion dashboard should not expose local filter options');
+assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.studentAttributeRows, undefined, 'conversion dashboard should not expose local attribute rows');
 
 const financeBackedTrendMetrics = buildOperationsMetrics({
   campuses: [

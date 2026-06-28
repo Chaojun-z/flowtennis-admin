@@ -729,74 +729,6 @@ function buildChannelEfficiencyRows(rows = []) {
     .sort((a, b) => b.finalConversionRate - a.finalConversionRate || b.deals - a.deals || b.leads - a.leads);
 }
 
-function buildStudentAttributeRows(rows = []) {
-  const grouped = new Map();
-  rows.forEach(row => {
-    (row.personas || []).forEach(attribute => {
-      const current = grouped.get(attribute) || { attribute, base: 0, attendance: 0, deals: 0, renewals: 0 };
-      current.base += 1;
-      if (row.hasAttendance) current.attendance += 1;
-      if (row.hasTrialDeal) current.deals += 1;
-      if (row.hasRenewal) current.renewals += 1;
-      grouped.set(attribute, current);
-    });
-  });
-  return [...grouped.values()]
-    .map(row => ({
-      ...row,
-      trialConversionRate: rate(row.attendance, row.base),
-      dealConversionRate: rate(row.deals, row.base),
-      renewalRate: rate(row.renewals, row.deals)
-    }))
-    .sort((a, b) => b.trialConversionRate - a.trialConversionRate || b.renewalRate - a.renewalRate || b.base - a.base);
-}
-
-function conversionFilterViewKey({ source = '', campus = '', coach = '' } = {}) {
-  return `source:${normalizeText(source, '')}|campus:${normalizeText(campus, '')}|coach:${normalizeText(coach, '')}`;
-}
-
-function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
-  const standardLifecycleMetrics = buildStandardLifecycleMetrics({ leads: rows, customerLifecycleRows: rows });
-  const courseFunnel = standardLifecycleMetrics.funnels.courseChain;
-  return {
-    courseFunnel,
-    standardLifecycleMetrics,
-    sourceRanking: buildCourseSourceRanking(rows),
-    channelEfficiencyRows: buildChannelEfficiencyRows(rows),
-    studentAttributeRows: buildStudentAttributeRows(rows),
-    courseRows: includeRows ? rows : [],
-    standardRates: {
-      trialConversionRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
-      renewalRate: 0
-    }
-  };
-}
-
-function buildConversionFilteredViews(rows = []) {
-  const grouped = new Map();
-  (rows || []).forEach(row => {
-    const dimensions = {
-      source: normalizeText(row.source, ''),
-      campus: normalizeText(row.campus, ''),
-      coach: normalizeText(row.coach, '')
-    };
-    const sourceValues = ['', dimensions.source].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
-    const campusValues = ['', dimensions.campus].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
-    const coachValues = ['', dimensions.coach].filter((value, index, all) => index === 0 || (value && all.indexOf(value) === index));
-    sourceValues.forEach(source => {
-      campusValues.forEach(campus => {
-        coachValues.forEach(coach => {
-          if (!source && !campus && !coach) return;
-          const key = conversionFilterViewKey({ source, campus, coach });
-          if (!grouped.has(key)) grouped.set(key, []);
-          grouped.get(key).push(row);
-        });
-      });
-    });
-  });
-  return Object.fromEntries([...grouped.entries()].map(([key, items]) => [key, buildConversionMetricView(items, { includeRows: false })]));
-}
-
 function buildCampusConversionRateMap(rows = []) {
   const grouped = new Map();
   (rows || []).forEach(row => {
@@ -816,19 +748,6 @@ function buildCampusConversionRateMap(rows = []) {
     });
   });
   return result;
-}
-
-function buildConversionFilterOptions(rows = [], campuses = []) {
-  const values = key => [...new Set(rows.map(row => normalizeText(row[key], '')).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  const campusValues = [...new Set([
-    ...values('campus'),
-    ...(campuses || []).map(row => normalizeText(row.name || row.displayName || row.code || row.id, '')).filter(Boolean)
-  ])].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  return {
-    sources: businessTaxonomy.SOURCES,
-    campuses: campusValues,
-    coaches: values('coach')
-  };
 }
 
 function purchaseAmount(row = {}) {
@@ -2571,12 +2490,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
   const stageRows = rawLeadConversion.stageRows;
   const courseRows = courseConversionRows({ ...rangedData, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
-  const standardLifecycleMetrics = buildStandardLifecycleMetrics({
+  const teachingCustomerLifecycleRows = customerLifecycleRows;
+  const teachingStandardLifecycleMetrics = buildStandardLifecycleMetrics({
     ...rangedData,
-    customerLifecycleRows
+    customerLifecycleRows: teachingCustomerLifecycleRows
   });
-  const courseFunnel = standardLifecycleMetrics.funnels.courseChain || [];
-  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const courseFunnel = teachingStandardLifecycleMetrics.funnels.courseChain || [];
+  const teachingStudentViews = buildTeachingStudentViews(teachingCustomerLifecycleRows);
   const teachingSummary = teachingStudentViews.summary || {};
   const courseDealCustomers = Number(teachingSummary.courseDealCustomers) || 0;
   const courseStudentCount = Number(teachingSummary.courseStudentCount) || 0;
@@ -2588,7 +2508,6 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
   const channelEfficiencyRows = buildChannelEfficiencyRows(courseRows);
-  const studentAttributeRows = buildStudentAttributeRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
   const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
@@ -2739,17 +2658,17 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const previousCourtValues = cardValueMap(previousCourt.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const conversionValues = {
-    totalDealRate: Number(standardLifecycleMetrics.metrics.totalDeals?.rate) || 0,
-    courseDealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.rate) || 0,
-    trialPathDealRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
-    trialPathPending: Number(standardLifecycleMetrics.metrics.trialPathPending?.value) || 0,
-    courseRepeatRate: periodRepurchase.rate,
+    totalDealRate: Number(teachingStandardLifecycleMetrics.metrics.totalDeals?.rate) || 0,
+    courseDealRate: Number(teachingStandardLifecycleMetrics.metrics.formalStudents?.rate) || 0,
+    trialPathDealRate: Number(teachingStandardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
+    trialPathPending: Number(teachingStandardLifecycleMetrics.metrics.trialPathPending?.value) || 0,
+    courseRepeatRate: Number(teachingStandardLifecycleMetrics.metrics.courseRepeatBuyers?.rate) || 0,
     courtRepeatRate: courtChain.courtRepeatRate,
-    leads: Number(standardLifecycleMetrics.metrics.validLeads?.value) || 0,
-    appointmentRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
-    attendanceRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
-    dealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
-    renewalRate: periodRepurchase.rate
+    leads: Number(teachingStandardLifecycleMetrics.metrics.validLeads?.value) || 0,
+    appointmentRate: Number(teachingStandardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
+    attendanceRate: Number(teachingStandardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
+    dealRate: Number(teachingStandardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
+    renewalRate: Number(teachingStandardLifecycleMetrics.metrics.courseRepeatBuyers?.rate) || 0
   };
   const previousConversionValues = {
     totalDealRate: Number(previousStandardLifecycleMetrics?.metrics?.totalDeals?.rate) || 0,
@@ -2808,8 +2727,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
     conversion: {
       metricSource: 'standard-course-lifecycle',
       standardRates: {
-        trialConversionRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
-        courseDealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
+        trialConversionRate: Number(teachingStandardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
+        courseDealRate: Number(teachingStandardLifecycleMetrics.metrics.formalStudents?.transitionRate) || 0,
         renewalRate: periodRepurchase.rate,
         renewalNumerator: periodRepurchase.numerator,
         renewalDenominator: periodRepurchase.denominator
@@ -2830,9 +2749,9 @@ function buildOperationsMetrics(data = {}, options = {}) {
       courtChain,
       retention: conversionRetention,
       standardLifecycleMetrics: {
-        ...standardLifecycleMetrics,
+        ...teachingStandardLifecycleMetrics,
         funnels: {
-          ...(standardLifecycleMetrics.funnels || {}),
+          ...(teachingStandardLifecycleMetrics.funnels || {}),
           courtChain: [
             { id: 'COURT_USERS', stage: '订场用户', label: '订场用户', count: Number(courtChain.courtUsers) || 0, value: Number(courtChain.courtUsers) || 0, unit: '人', percentOfTotal: 100, transitionRate: 100, lossRate: 0 },
             { id: 'COURT_MEMBER_CUSTOMERS', stage: '订场会员', label: '订场会员', count: Number(courtChain.courtMembers) || 0, value: Number(courtChain.courtMembers) || 0, unit: '人', percentOfTotal: rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), transitionRate: rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), lossRate: Math.max(0, round(100 - rate(Number(courtChain.courtMembers) || 0, Number(courtChain.courtUsers) || 0), 1)) },
@@ -2852,9 +2771,6 @@ function buildOperationsMetrics(data = {}, options = {}) {
       courseFunnel,
       sourceRanking,
       channelEfficiencyRows,
-      studentAttributeRows,
-      filteredViews: buildConversionFilteredViews(courseRows),
-      filterOptions: buildConversionFilterOptions(courseRows, data.campuses || []),
       renewal
     },
     coach: {
