@@ -10,6 +10,10 @@ const {
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
 const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const {
+  buildFinanceOverviewSummaryFromRows,
+  buildFinanceOverviewSummaryFromData
+} = require('../read-models/finance-summary.js');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
 
 function round(value, digits = 1) {
@@ -289,19 +293,6 @@ function hoursBetween(start, end) {
   const endMinutes = parseTimeToMinutes(end);
   if (startMinutes == null || endMinutes == null) return 0;
   return Math.max(0, round((endMinutes - startMinutes) / 60, 1));
-}
-
-function financeAll(overview = {}) {
-  return overview && typeof overview.all === 'object' ? overview.all : overview || {};
-}
-
-function financeNumber(overview, keys = []) {
-  const all = financeAll(overview);
-  for (const key of keys) {
-    const value = Number(all[key] ?? overview?.[key]);
-    if (Number.isFinite(value)) return money(value);
-  }
-  return 0;
 }
 
 function sourceLeadId(row) {
@@ -693,91 +684,7 @@ function rate(part, total) {
 }
 
 function buildStandardCourseFunnelFromConversionRows(rows = []) {
-  return buildStandardLifecycleMetricsFromConversionRows(rows).funnels.courseChain;
-}
-
-function standardConversionMetric(id, label, value, denominator, sourceMetric, unit = '人') {
-  const safeValue = Number(value) || 0;
-  const safeDenominator = Number(denominator) || 0;
-  return {
-    id,
-    label,
-    value: safeValue,
-    numerator: safeValue,
-    denominator: safeDenominator,
-    rate: rate(safeValue, safeDenominator),
-    rateText: `${Number.isInteger(rate(safeValue, safeDenominator)) ? rate(safeValue, safeDenominator) : rate(safeValue, safeDenominator).toFixed(1)}%`,
-    unit,
-    sourceMetric
-  };
-}
-
-function standardConversionFunnelRows(rows = []) {
-  const total = Number(rows[0]?.value) || 0;
-  return rows.map((row, index) => {
-    const count = Number(row.value) || 0;
-    const previous = index > 0 ? Number(rows[index - 1]?.value) || 0 : total;
-    const transitionRate = index === 0 ? 100 : rate(count, previous);
-    return {
-      id: row.id,
-      stage: row.label,
-      label: row.label,
-      count,
-      value: count,
-      unit: row.unit || '人',
-      percentOfTotal: rate(count, total),
-      transitionRate,
-      lossRate: index === 0 ? 0 : Math.max(0, round(100 - transitionRate, 1)),
-      numerator: count,
-      denominator: index === 0 ? total : previous,
-      rateText: index === 0 ? '100%' : `${Number.isInteger(transitionRate) ? transitionRate : transitionRate.toFixed(1)}%`
-    };
-  });
-}
-
-function buildStandardLifecycleMetricsFromConversionRows(rows = []) {
-  const total = rows.length;
-  const courseRows = rows.filter(row => {
-    const stage = normalizeText(row.studentStage);
-    return ['trial', 'formal'].includes(stage) || (!!row.studentId && row.hasCourse);
-  });
-  const formalRows = rows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
-  const trialPathRows = rows.filter(row => row.hasTrialExperience);
-  const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
-  const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
-  const directCourseRows = formalRows.filter(row => !trialPathDealRows.includes(row));
-  const courseRepeatRows = formalRows.filter(row => row.hasRenewal);
-  const metrics = {
-    validLeads: standardConversionMetric('VALID_LEADS', '有效线索', total, total, 'FILTERED_RAW_LEADS', '条'),
-    courseChainStudents: standardConversionMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseRows.length, total, 'FILTERED_COURSE_CHAIN_STUDENTS / FILTERED_VALID_LEADS'),
-    formalStudents: standardConversionMetric('FORMAL_STUDENTS', '正式学员', formalRows.length, total, 'FILTERED_FORMAL_STUDENTS / FILTERED_VALID_LEADS'),
-    courseRepeatBuyers: standardConversionMetric('COURSE_REPEAT_BUYERS', '课包复购', courseRepeatRows.length, formalRows.length, 'FILTERED_COURSE_REPEAT_BUYERS / FILTERED_FORMAL_STUDENTS'),
-    trialPathStudents: standardConversionMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathRows.length, total, 'FILTERED_TRIAL_PATH_STUDENTS / FILTERED_VALID_LEADS'),
-    trialPathDeals: standardConversionMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDealRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_DEALS / FILTERED_TRIAL_PATH_STUDENTS'),
-    trialPathPending: standardConversionMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPendingRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_PENDING / FILTERED_TRIAL_PATH_STUDENTS'),
-    directCourseDeals: standardConversionMetric('DIRECT_COURSE_DEALS', '直接课程成交', directCourseRows.length, formalRows.length || total, 'FILTERED_DIRECT_COURSE_DEALS / FILTERED_FORMAL_STUDENTS'),
-    totalDeals: standardConversionMetric('TOTAL_DEALS', '总成交', formalRows.length, total, 'FILTERED_TOTAL_DEALS / FILTERED_VALID_LEADS', '条')
-  };
-  metrics.formalStudents.transitionRate = rate(formalRows.length, courseRows.length);
-  metrics.formalStudents.transitionRateText = `${Number.isInteger(metrics.formalStudents.transitionRate) ? metrics.formalStudents.transitionRate : metrics.formalStudents.transitionRate.toFixed(1)}%`;
-  metrics.directCourseDeals.rate = rate(directCourseRows.length, formalRows.length);
-  metrics.directCourseDeals.rateText = `${Number.isInteger(metrics.directCourseDeals.rate) ? metrics.directCourseDeals.rate : metrics.directCourseDeals.rate.toFixed(1)}%`;
-  return {
-    metrics,
-    funnels: {
-      courseChain: standardConversionFunnelRows([
-        { id: 'VALID_LEADS', label: '有效线索', value: total, unit: '条' },
-        { id: 'COURSE_CHAIN_STUDENTS', label: '普通学员', value: courseRows.length },
-        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalRows.length },
-        { id: 'COURSE_REPEAT_BUYERS', label: '课包复购', value: courseRepeatRows.length }
-      ]),
-      trialPath: standardConversionFunnelRows([
-        { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathRows.length },
-        { id: 'TRIAL_PATH_DEALS', label: '体验路径成交', value: trialPathDealRows.length },
-        { id: 'TRIAL_PATH_PENDING', label: '体验路径未成交', value: trialPathPendingRows.length }
-      ])
-    }
-  };
+  return buildStandardLifecycleMetrics({ leads: rows, customerLifecycleRows: rows }).funnels.courseChain;
 }
 
 function groupRows(rows = [], key) {
@@ -849,7 +756,7 @@ function conversionFilterViewKey({ source = '', campus = '', coach = '' } = {}) 
 }
 
 function buildConversionMetricView(rows = [], { includeRows = true } = {}) {
-  const standardLifecycleMetrics = buildStandardLifecycleMetricsFromConversionRows(rows);
+  const standardLifecycleMetrics = buildStandardLifecycleMetrics({ leads: rows, customerLifecycleRows: rows });
   const courseFunnel = standardLifecycleMetrics.funnels.courseChain;
   return {
     courseFunnel,
@@ -1231,10 +1138,25 @@ function isPurchaseBeforeRange(row = {}, dateRange = {}) {
   return !!(startDate && day && day < startDate);
 }
 
-function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
+function lifecycleCoachName(row = {}) {
+  return canonicalCoachName(row.formalCoach || row.ownerCoach || row.coach || row.coachName || row.owner || '');
+}
+
+function lifecycleHasTrialPath(row = {}) {
+  return row.hasTrialExperience === true
+    || String(row.trialStatus || '').trim() === 'trial'
+    || !!String(row.trialBookedAt || row.trialAttendedAt || row.trialAtRaw || '').trim();
+}
+
+function lifecycleHasTrialDeal(row = {}) {
+  return row.hasTrialToCourseConversion === true
+    || String(row.courseDealPath || '').trim() === 'trial_to_course';
+}
+
+function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], periodPurchases = purchases, customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const activeCoaches = (coaches || []).filter(row => String(row.status || 'active') !== 'inactive');
   const campusLabels = buildCampusLabelMap(campuses || []);
-  const period = coachPeriodInfo({ schedule, purchases, dateRange, now });
+  const period = coachPeriodInfo({ schedule, purchases: periodPurchases, dateRange, now });
   const availableHours = period.days ? coachAvailableHours({ days: period.days, now }) : selectedCoachAvailableHours(dateRange, now);
   const grouped = new Map(activeCoaches
     .map(row => ({
@@ -1309,25 +1231,13 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
     });
     grouped.get(coach).revenue = money(grouped.get(coach).revenue + purchaseAmount(row));
   });
-  const validAllPurchases = (allPurchases || []).filter(isValidCoursePurchase);
   grouped.forEach(row => {
     const coach = row.coach;
-    const completedTrials = (schedule || [])
-      .filter(item => scheduleCoachName(item) === coach && normalizeCoachCourseType(item) === '体验课' && isCompletedScheduleForOperations(item, now));
-    const trialStudents = new Map();
-    completedTrials.forEach(item => {
-      const trialDate = dateKey(item.endTime || item.startTime);
-      scheduleStudentKeys(item).forEach(key => {
-        if (key && !trialStudents.has(key)) trialStudents.set(key, trialDate);
-      });
-    });
-    row.trialBase = trialStudents.size;
-    row.trialConverted = [...trialStudents.entries()].filter(([key, trialDate]) => validAllPurchases.some(purchase => {
-      if (purchaseCoachName(purchase) !== coach) return false;
-      if (purchaseStudentKey(purchase) !== key) return false;
-      const day = purchaseDate(purchase);
-      return !trialDate || !day || day >= trialDate;
-    })).length;
+    const coachLifecycleRows = (customerLifecycleRows || []).filter(item => lifecycleCoachName(item) === coach);
+    const trialRows = coachLifecycleRows.filter(lifecycleHasTrialPath);
+    row.trialBase = trialRows.length;
+    row.trialConverted = trialRows.filter(lifecycleHasTrialDeal).length;
+    const validAllPurchases = (allPurchases || []).filter(isValidCoursePurchase);
     let priorOldStudents = new Set(validAllPurchases
       .filter(purchase => purchaseCoachName(purchase) === coach && isPurchaseBeforeRange(purchase, dateRange))
       .map(purchaseStudentKey)
@@ -1408,7 +1318,23 @@ function coachTrendDays({ schedule = [], purchases = [], dateRange = {}, now = n
   return operationsTrendDays({ dateRange, now, sourceDays: [...days] });
 }
 
-function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
+function lifecycleRowsAsOfDay(rows = [], day = '') {
+  return (rows || []).map(row => {
+    const trialDay = dateKey(row.trialAttendedAt || row.trialBookedAt || row.trialAtRaw || row.firstTouchAt);
+    if (!trialDay || !day || trialDay !== day) return null;
+    const conversionDay = dateKey(row.courseFirstPurchaseAt || row.conversionAt);
+    if (conversionDay && day && conversionDay > day) {
+      return {
+        ...row,
+        hasTrialToCourseConversion: false,
+        courseDealPath: row.courseDealPath === 'trial_to_course' ? '' : row.courseDealPath
+      };
+    }
+    return row;
+  }).filter(Boolean);
+}
+
+function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const days = coachTrendDays({ schedule, purchases, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
@@ -1423,6 +1349,8 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
       schedule: daySchedule,
       purchases: dayPurchases,
       allPurchases: asOfPurchases,
+      periodPurchases: dayPurchases,
+      customerLifecycleRows: lifecycleRowsAsOfDay(customerLifecycleRows, day),
       dateRange: dayRange,
       campuses,
       now
@@ -2156,43 +2084,9 @@ function financeStoredValueRows(rows = []) {
   return (rows || []).filter(row => String(row.businessType || row.displayBusinessType || '').trim() === '会员储值');
 }
 
-function sumFinanceRows(rows = [], field) {
-  return money((rows || []).reduce((sum, row) => sum + (Number(row?.[field]) || 0), 0));
-}
-
-function buildFinanceOverviewFromNormalizedRows(rows = []) {
-  const businessRows = (rows || []).filter(row => !row?.differenceReason);
-  const courseRows = financeCourseRows(businessRows);
-  const bookingRows = businessRows.filter(row => ['散客订场', '约球局', '课程订场'].includes(String(row.businessType || row.displayBusinessType || '').trim()));
-  const storedValueRows = financeStoredValueRows(businessRows);
-  return {
-    hasRows: businessRows.length > 0,
-    totalIncome: sumFinanceRows(businessRows, 'cashDelta'),
-    recognizedRevenue: sumFinanceRows(businessRows, 'recognizedRevenueDelta'),
-    pendingRevenue: sumFinanceRows(businessRows, 'deferredRevenueDelta'),
-    courseIncome: sumFinanceRows(courseRows, 'cashDelta'),
-    bookingIncome: sumFinanceRows(bookingRows, 'cashDelta'),
-    storedValueIncome: sumFinanceRows(storedValueRows, 'cashDelta'),
-    tradeCount: businessRows.filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0).length
-  };
-}
-
-function buildFinanceOverviewFromOverviewData(financeOverviewData = {}) {
-  return {
-    hasRows: Object.keys(financeAll(financeOverviewData)).length > 0,
-    totalIncome: financeNumber(financeOverviewData, ['totalIncome', 'cash']),
-    recognizedRevenue: financeNumber(financeOverviewData, ['recognizedRevenue', 'recognized']),
-    pendingRevenue: financeNumber(financeOverviewData, ['pendingRevenue', 'deferred']),
-    courseIncome: financeNumber(financeOverviewData, ['courseIncome']),
-    bookingIncome: financeNumber(financeOverviewData, ['bookingIncome', 'courtIncome']),
-    storedValueIncome: financeNumber(financeOverviewData, ['storedValueIncome']),
-    tradeCount: financeNumber(financeOverviewData, ['tradeCount'])
-  };
-}
-
 function selectFinanceOverviewValues({ financeRowsOverview = {}, financeOverviewData = {}, selectedDateRangeActive = false } = {}) {
   if (selectedDateRangeActive) return financeRowsOverview;
-  const financeSnapshotOverview = buildFinanceOverviewFromOverviewData(financeOverviewData);
+  const financeSnapshotOverview = buildFinanceOverviewSummaryFromData(financeOverviewData);
   if (financeSnapshotOverview.hasRows && !financeOverviewData.__partial) return financeSnapshotOverview;
   if (financeRowsOverview.hasRows) return financeRowsOverview;
   return financeSnapshotOverview;
@@ -2312,12 +2206,12 @@ function applyFinanceCourtRowsToCampusRows(court = {}, financeRows = [], campuse
 }
 
 function buildRevenueMix(financeOverviewData = {}) {
-  const all = financeAll(financeOverviewData);
+  const summary = buildFinanceOverviewSummaryFromData(financeOverviewData);
   return [
-    { name: '课程收入', value: financeNumber(financeOverviewData, ['courseIncome']) },
-    { name: '订场收入', value: financeNumber(financeOverviewData, ['bookingIncome', 'courtIncome']) },
-    { name: '会员储值', value: financeNumber(financeOverviewData, ['storedValueIncome']) }
-  ].filter(row => row.value > 0 || Object.keys(all).length);
+    { name: '课程收入', value: summary.courseIncome },
+    { name: '订场收入', value: summary.bookingIncome },
+    { name: '会员储值', value: summary.storedValueIncome }
+  ].filter(row => row.value > 0 || summary.hasRows);
 }
 
 function membershipOrderDate(row = {}) {
@@ -2371,25 +2265,17 @@ function buildOverviewTrendDailyRows({ purchases = [], membershipOrders = [], co
   const useFinanceRows = (financeNormalizedRows || []).length > 0;
   return overviewTrendDays({ purchases, membershipOrders, courtTrends, financeNormalizedRows, dateRange, now }).map(day => {
     const dayFinanceRows = (financeNormalizedRows || []).filter(row => financeBusinessDate(row) === day);
-    const dayFinanceCourseRows = financeCourseRows(dayFinanceRows);
-    const dayFinanceStoredValueRows = financeStoredValueRows(dayFinanceRows);
-    const courseIncome = money(useFinanceRows ? dayFinanceCourseRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
-    const storedValueIncome = money(useFinanceRows ? dayFinanceStoredValueRows.reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
-    const bookingIncome = money(useFinanceRows ? financeCourtBookingRows(dayFinanceRows).reduce((sum, row) => sum + (Number(row.cashDelta) || 0), 0) : 0);
+    const dayFinanceSummary = useFinanceRows ? buildFinanceOverviewSummaryFromRows(dayFinanceRows) : {};
     const court = courtByDate.get(day) || {};
-    const pendingRevenue = money(courseIncome + storedValueIncome);
-    const financeRecognizedRevenue = money(dayFinanceRows.reduce((sum, row) => sum + (Number(row.recognizedRevenueDelta) || 0), 0));
     return {
       date: day,
-      totalIncome: money(courseIncome + storedValueIncome + bookingIncome),
-      courseIncome,
-      storedValueIncome,
-      bookingIncome,
-      recognizedRevenue: useFinanceRows ? financeRecognizedRevenue : bookingIncome,
-      pendingRevenue,
-      tradeCount: useFinanceRows
-        ? dayFinanceRows.filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0).length
-        : 0,
+      totalIncome: Number(dayFinanceSummary.totalIncome) || 0,
+      courseIncome: Number(dayFinanceSummary.courseIncome) || 0,
+      storedValueIncome: Number(dayFinanceSummary.storedValueIncome) || 0,
+      bookingIncome: Number(dayFinanceSummary.bookingIncome) || 0,
+      recognizedRevenue: Number(dayFinanceSummary.recognizedRevenue) || 0,
+      pendingRevenue: Number(dayFinanceSummary.pendingRevenue) || 0,
+      tradeCount: Number(dayFinanceSummary.tradeCount) || 0,
       utilizationRate: Number(court.utilizationRate) || 0
     };
   });
@@ -2671,10 +2557,6 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const trendDateRange = operationsTrendDateRange(reportingDateRange, now);
   const selectedDateRangeActive = isDateRangeActive(reportingDateRange);
   const previousRange = previousDateRange(reportingDateRange, now);
-  const realAllPurchases = (data.purchases || []).filter(row => {
-    const day = purchaseDate(row);
-    return !day || day <= beijingDateKey(now);
-  });
   const rangedData = buildRangedOperationsData(data, reportingDateRange);
   const trendRangedData = isDateRangeActive(trendDateRange) ? buildRangedOperationsData(data, trendDateRange) : rangedData;
   const previousRangedData = previousRange ? buildRangedOperationsData(data, previousRange) : null;
@@ -2709,11 +2591,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const studentAttributeRows = buildStudentAttributeRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
+  const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
+  const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
   const coachRows = buildCoachRows({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
-    purchases: rangedData.purchases || [],
-    allPurchases: realAllPurchases,
+    purchases: coachFinancePurchases,
+    allPurchases: allCoachFinancePurchases,
+    periodPurchases: rangedData.purchases || [],
+    customerLifecycleRows,
     dateRange: reportingDateRange,
     campuses: data.campuses || [],
     now
@@ -2735,7 +2621,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       ...(campusConversionRates.get(row.campusName) || { trialConversionRate: 0, repeatCustomerConversionRate: 0 })
     }));
   }
-  const financeRowsOverview = buildFinanceOverviewFromNormalizedRows(rangedData.financeNormalizedRows || []);
+  const financeRowsOverview = buildFinanceOverviewSummaryFromRows(rangedData.financeNormalizedRows || []);
   const financeOverviewValues = selectFinanceOverviewValues({
     financeRowsOverview,
     financeOverviewData,
@@ -2754,7 +2640,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachOldCustomerBase = coachRows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
   const coachRenewalCount = coachRows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
   const coachPeriod = coachRows.find(row => row.period)?.period || coachPeriodInfo({ schedule: rangedData.schedule || [], purchases: rangedData.purchases || [], dateRange: reportingDateRange, now });
-  const financeSnapshotOverview = buildFinanceOverviewFromOverviewData(financeOverviewData);
+  const financeSnapshotOverview = buildFinanceOverviewSummaryFromData(financeOverviewData);
   const useRowsRevenueMix = selectedDateRangeActive || (financeRowsOverview.hasRows && (financeOverviewData.__partial || !financeSnapshotOverview.hasRows));
   const revenueMix = (useRowsRevenueMix ? [
     { name: '课程收入', value: financeOverviewValues.courseIncome },
@@ -2796,20 +2682,18 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   conversionTrendSet.rows = mergeTrendRowsByDate(conversionTrendSet.rows, courtRetentionTrendSet.rows);
-  const financeCoachPurchases = financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []);
-  const coachTrendPurchases = (trendRangedData.purchases || []).length ? (trendRangedData.purchases || []) : financeCoachPurchases;
-  const allCoachTrendPurchases = realAllPurchases.length ? realAllPurchases : financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
     schedule: trendRangedData.schedule || [],
-    purchases: coachTrendPurchases,
-    allPurchases: allCoachTrendPurchases,
+    purchases: financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []),
+    allPurchases: allCoachFinancePurchases,
+    customerLifecycleRows,
     dateRange: trendDateRange,
     campuses: data.campuses || [],
     now
   });
   const previousCourt = previousRangedData ? buildCourtMetricsForRange(data, previousRangedData, previousRange, now) : {};
-  const previousFinanceRowsOverview = previousRangedData ? buildFinanceOverviewFromNormalizedRows(previousRangedData.financeNormalizedRows || []) : {};
+  const previousFinanceRowsOverview = previousRangedData ? buildFinanceOverviewSummaryFromRows(previousRangedData.financeNormalizedRows || []) : {};
   const previousFinanceOverviewValues = previousRangedData ? selectFinanceOverviewValues({
     financeRowsOverview: previousFinanceRowsOverview,
     financeOverviewData: previousRangedData.financeOverviewData || {},
@@ -2829,8 +2713,10 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
     schedule: previousRangedData.schedule || [],
-    purchases: previousRangedData.purchases || [],
-    allPurchases: realAllPurchases,
+    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || []),
+    allPurchases: allCoachFinancePurchases,
+    periodPurchases: previousRangedData.purchases || [],
+    customerLifecycleRows,
     dateRange: previousRange,
     campuses: data.campuses || [],
     now

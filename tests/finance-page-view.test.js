@@ -117,8 +117,8 @@ assert.doesNotMatch(source,/散客单次课程|课包专项/,'ledger summary sho
 assert.match(source,/课程实收 vs 课程已核销/,'merged course summary card should explain course income and recognized revenue');
 assert.match(source,/class="tms-stat-sub"/,'finance summary card captions should use the visible shared caption style');
 assert.doesNotMatch(source,/总核销确收[\s\S]{0,260}financePercent\(metrics\.totalRecognized,metrics\.totalCash\)/,'overview total recognized card should not show a recognized-vs-cash percentage under date filters');
-assert.doesNotMatch(source,/storedValueRecognized,metrics\.totalRecognized/,'overview membership recognized amount should not show a percentage');
-assert.doesNotMatch(source,/courseRecognized,metrics\.totalRecognized/,'overview course recognized amount should not show a percentage');
+assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/storedValueRecognized,metrics\.totalRecognized/,'overview membership recognized amount should not show a percentage');
+assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/courseRecognized,metrics\.totalRecognized/,'overview course recognized amount should not show a percentage');
 assert.doesNotMatch(pagesCss,/#page-finance \.finance-ledger-stats \.tms-stat-value\{[^}]*overflow:hidden/,'finance overview stat values should not clip long currency text');
 assert.match(source,/Math\.round\(\(Number\(numerator\|\|0\)\/base\)\*100\)/,'finance card percentages should drop decimal places');
 assert.match(source,/function financeFitOverviewStatValues\(\)/,'finance overview should shrink oversized stat values instead of clipping them');
@@ -128,44 +128,49 @@ assert.match(source,/row\.differenceReason[\s\S]*return false/,'finance ledger s
 assert.doesNotMatch(source,/全部交易类型[\s\S]{0,3000}差异/,'finance transaction type filter should not expose difference as a business type');
 assert.doesNotMatch(source,/总流水笔数/,'ledger summary should not keep total flow count card');
 assert.doesNotMatch(source,/实收 \/ 已入账|课包收入 \/ 已核销|会员收入 \/ 已入账|总收入（实收）|总已入账|总未入账|课程总收入 \/ 已入账|订场收入 \/ 已入账|全部动作|来源单据|未入账/,'ledger summary should not keep the old mixed top-card labels or old ledger columns');
-assert.match(source,/function financeCoursePackageMetrics\(/,'finance page should centralize course/package metric splitting');
-assert.match(source,/courseIncome=Number\(overview\?\.courseIncome\|\|overview\?\.packageIncome\|\|0\)/,'finance page should prefer backend course total income when available');
-assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome/,'finance page should read direct course income separately from package income');
-assert.match(source,/directCourseIncome=Number\(overview\?\.directCourseIncome\)\|\|Math\.max\(0,courseIncome-packageIncome\)/,'finance page should fall back to course minus package when backend direct course field is stale zero');
-assert.match(source,/packageReceiptRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|row\.relatedDocument\|\|''\)\.startsWith\('购买记录'\)\)/,'finance page package income should be purchase-only when deriving from rows');
-assert.match(source,/const metrics=financeCurrentMetrics\(financeLedgerRows\(\)\)/,'overview cards should calculate from the currently filtered ledger rows');
-assert.match(source,/const courseIncome=financeRowsSum\(courseRows,'cashDelta'\)/,'current overview metrics should sum course cash from standardized rows instead of stitching categories');
+assert.match(source,/function financeStandardOverviewMetrics\(/,'finance page should centralize standard backend finance summary usage');
+assert.match(functionSource(source,'renderFinanceOverview'),/const metrics=financeStandardOverviewMetrics\(\)/,'overview cards should read the backend standard finance summary');
+assert.doesNotMatch(functionSource(source,'renderFinanceOverview'),/financeCurrentMetrics\(financeLedgerRows\(\)\)|reduce\(/,'overview cards must not calculate from currently filtered frontend ledger rows');
 {
-  const rows = [
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'购买记录 p1', normalizedPaymentMethod:'微信', cashDelta:1000, recognizedRevenueDelta:0 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'消耗', action:'消耗', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:400 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'回退', action:'回退', sourceDocument:'排课 s1', normalizedPaymentMethod:'课包划扣', paymentChannel:'课包划扣', cashDelta:0, recognizedRevenueDelta:-50 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'已入账', action:'已入账', sourceDocument:'排课 s3', normalizedPaymentMethod:'储值卡', paymentChannel:'储值卡', cashDelta:0, recognizedRevenueDelta:150 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'排课 s2', normalizedPaymentMethod:'微信', cashDelta:100, recognizedRevenueDelta:100 },
-    { businessTypeLevel1:'课程', businessType:'课程', transactionType:'收款', action:'收款', sourceDocument:'课程补录 x1', normalizedPaymentMethod:'微信', cashDelta:25, recognizedRevenueDelta:25 }
-  ];
-  const sandbox = { rows, result:null, Math, Number, String };
-  vm.runInNewContext(`${functionSource(source,'financeRowsSum')}\n${functionSource(source,'financeCurrentMetrics')}\nresult=financeCurrentMetrics(rows);`, sandbox);
-  assert.strictEqual(sandbox.result.packageRecognized, 350, 'course package consume and return should be counted once as package recognized');
-  assert.strictEqual(sandbox.result.directCourseRecognized, 100, 'direct course recognized should only include direct course receipts');
-  assert.strictEqual(sandbox.result.courseIncome, 1125, 'course income should include every course cash row exactly once');
-  assert.strictEqual(sandbox.result.totalCash, 1125, 'total cash should include every business cash row exactly once');
-  assert.strictEqual(sandbox.result.courseRecognized, 625, 'course recognized should include every course recognized row exactly once');
-  assert.strictEqual(sandbox.result.totalRecognized, 625, 'total recognized should include every recognized row exactly once');
+  const sandbox = {
+    financeOverviewData: { all: { cash: 1125, recognized: 625, deferred: 500, courseIncome: 1125, courseRecognized: 625, packageIncome: 1000, packageRecognized: 350, directCourseIncome: 125, directCourseRecognized: 100, storedValueIncome: 5000, storedValueConsumed: 240, bookingIncome: 300, bookingRecognized: 300, tradeCount: 4 } },
+    result:null,
+    Math,
+    Number
+  };
+  vm.runInNewContext(`${functionSource(source,'financeStandardOverviewAll')}\n${functionSource(source,'financeStandardNumber')}\n${functionSource(source,'financeStandardOverviewMetrics')}\nresult=financeStandardOverviewMetrics();`, sandbox);
+  assert.strictEqual(sandbox.result.packageRecognized, 350, 'package recognized should come from backend standard summary');
+  assert.strictEqual(sandbox.result.directCourseRecognized, 100, 'direct course recognized should come from backend standard summary');
+  assert.strictEqual(sandbox.result.courseIncome, 1125, 'course income should come from backend standard summary');
+  assert.strictEqual(sandbox.result.totalCash, 1125, 'total cash should come from backend standard summary');
+  assert.strictEqual(sandbox.result.courseRecognized, 625, 'course recognized should come from backend standard summary');
+  assert.strictEqual(sandbox.result.totalRecognized, 625, 'total recognized should come from backend standard summary');
 }
-assert.match(source,/directCourseIncome=businessRows\.filter\(row=>row\.sourceBusinessCategory==='课程'&&String\(row\.relatedDocument\|\|''\)\.startsWith\('排课'\)\)/,'revenue stats should derive direct course income from filtered schedule receipts');
-assert.match(source,/const courseIncome=directCourseIncome\+packageIncome[\s\S]*课程流水/,'revenue stats should merge direct course and package income into course flow');
+{
+  const sandbox = {
+    financeOverviewData: { all: { cash: 0, totalIncome: 999, bookingIncome: 0, courtIncome: 888 } },
+    result:null,
+    Math,
+    Number,
+    Object
+  };
+  vm.runInNewContext(`${functionSource(source,'financeStandardOverviewAll')}\n${functionSource(source,'financeStandardNumber')}\n${functionSource(source,'financeStandardOverviewMetrics')}\nresult=financeStandardOverviewMetrics();`, sandbox);
+  assert.strictEqual(sandbox.result.totalCash, 0, 'standard zero cash should not fall back to legacy totalIncome');
+  assert.strictEqual(sandbox.result.bookingIncome, 0, 'standard zero booking income should not fall back to legacy courtIncome');
+}
+assert.match(functionSource(source,'renderFinanceRevenueReport'),/financeStandardRevenueMetrics\(\)/,'revenue stats should read standard finance summary');
+assert.doesNotMatch(functionSource(source,'renderFinanceRevenueReport'),/directCourseIncome=businessRows|reduce\(/,'revenue stats must not derive income from filtered frontend receipts');
 assert.match(source,/成交笔数[\s\S]*实收合计[\s\S]*会员储值[\s\S]*散客订场[\s\S]*课程流水/,'revenue stats should show requested income card labels');
 assert.doesNotMatch(source,/散客课程|课包收入/,'revenue stats should not show direct course or package as separate cards');
-assert.match(source,/const courseRecognized=courseRows\.reduce\(\(sum,row\)=>sum\+\(Number\(row\.recognizedRevenueDelta\)\|\|0\),0\)[\s\S]*课程已入账/,'recognized stats should include every course recognized row exactly once');
-assert.match(source,/const directCourseRows=courseRows\.filter\(row=>row\.action==='收款'&&String\(row\.sourceDocument\|\|''\)\.startsWith\('排课'\)\)/,'recognized stats should not count package consume rows as direct course recognized revenue');
+assert.match(functionSource(source,'renderFinanceConsumeReport'),/financeStandardRecognizedMetrics\(\)/,'recognized stats should read standard finance summary');
+assert.doesNotMatch(functionSource(source,'renderFinanceConsumeReport'),/courseRows=rows\.filter|recognizedRevenueDelta[\s\S]{0,160}reduce\(/,'recognized stats must not derive recognized revenue from frontend rows');
 assert.match(source,/流水条数[\s\S]*确收合计[\s\S]*散客订场核销[\s\S]*会员耗卡核销[\s\S]*课程已入账/,'recognized stats should show requested recognized card labels');
 assert.doesNotMatch(source,/课包消课核销|散客课程核销/,'recognized stats should not show direct course or package recognized cards separately');
 assert.doesNotMatch(source,/\['课程总收入'/,'revenue stats should not label package-inclusive course income as course revenue');
 assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'revenue report should read from the unified finance snapshot');
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
-assert.match(source,/bookingIncome=businessRows\.filter\(row=>\['会员订场','散客订场','约球局','课程订场'\]\.includes\(row\.sourceBusinessCategory\)\)/,'revenue stats should count booking income by original business category');
-assert.match(source,/storedValueConsumedRows=businessRows\.filter\(row=>[\s\S]*row\.businessTypeLevel2==='会员订场'[\s\S]*row\.businessType==='会员订场'/,'stored value recognized amount should use standardized member booking consumption rows');
+assert.match(source,/bookingIncome:financeStandardNumber\('bookingIncome','courtIncome'\)/,'revenue stats should read booking income from backend standard summary');
+assert.match(source,/storedValueRecognized:financeStandardNumber\('storedValueConsumed'\)/,'stored value recognized amount should use backend standard summary');
 assert.match(financeSnapshotSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
 assert.match(revenueShell,/infoId:'financeRevenuePagerInfo'/,'revenue should expose pager info');
 assert.match(revenueShell,/pageSizeId:'financeRevenuePageSize'/,'revenue should expose page size selector');

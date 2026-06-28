@@ -1,5 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 const businessTaxonomy = require('../../public/assets/scripts/core/business-taxonomy.js');
+const {
+  buildFinanceOverviewDataFromRows,
+  mergeFinanceOverviewDataWithRows
+} = require('../read-models/finance-summary.js');
 
 function createFinanceSnapshotHelpers(deps = {}) {
   const {
@@ -447,42 +451,6 @@ function buildFinanceSettlementRows({campuses=[],schedule=[]}={}){
     .filter(row=>row.lessonUnits>0||row.lateCount>0||row.lateFeeAmount>0)
     .sort((a,b)=>String(b.month||'').localeCompare(String(a.month||''))||String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN'));
 }
-function sumFinanceRows(rows=[],field){
-  return Math.round((rows||[]).reduce((sum,row)=>sum+(Number(row?.[field])||0),0)*100)/100;
-}
-function buildFinanceOverviewDataFromRows(rows=[]){
-  const businessRows=(rows||[]).filter(row=>!row?.differenceReason);
-  const courseRows=businessRows.filter(row=>row.businessType==='课程');
-  const packageReceiptRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('购买记录'));
-  const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(String(row.action||''))&&String(row.paymentChannel||'')==='课包划扣');
-  const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
-  const storedValueRows=businessRows.filter(row=>row.businessType==='会员储值');
-  const storedValueConsumedRows=businessRows.filter(row=>row.businessType==='会员订场');
-  const bookingRows=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType));
-  const bookingIncome=sumFinanceRows(bookingRows,'cashDelta');
-  const bookingRecognized=sumFinanceRows(bookingRows,'recognizedRevenueDelta');
-  return {
-    all:{
-      cash:sumFinanceRows(businessRows,'cashDelta'),
-      recognized:sumFinanceRows(businessRows,'recognizedRevenueDelta'),
-      deferred:sumFinanceRows(businessRows,'deferredRevenueDelta'),
-      courseIncome:sumFinanceRows(courseRows,'cashDelta'),
-      courseRecognized:sumFinanceRows(courseRows,'recognizedRevenueDelta'),
-      directCourseIncome:sumFinanceRows(directCourseRows,'cashDelta'),
-      directCourseRecognized:sumFinanceRows(directCourseRows,'recognizedRevenueDelta'),
-      packageIncome:sumFinanceRows(packageReceiptRows,'cashDelta'),
-      packageRecognized:sumFinanceRows(packageRecognizedRows,'recognizedRevenueDelta'),
-      storedValueIncome:sumFinanceRows(storedValueRows,'cashDelta'),
-      storedValueConsumed:sumFinanceRows(storedValueConsumedRows,'recognizedRevenueDelta'),
-      bookingIncome,
-      bookingRecognized,
-      courtIncome:bookingIncome,
-      courtRecognized:bookingRecognized,
-      tradeCount:businessRows.filter(row=>row.action==='收款'&&Number(row.cashDelta)>0).length
-    },
-    campuses:[]
-  };
-}
 function buildFinancePageSnapshot(source={}){
   const financeNormalizedRows=buildFinanceUnifiedRows(source);
   return {
@@ -551,45 +519,13 @@ function buildVerifiedFinanceWithImportIncrements(verifiedFinance={},source={}){
     overviewData:null,
     normalizedRows:[...(verifiedFinance?.normalizedRows||[]),...incrementRows]
   };
-  const businessRows=incrementRows.filter(row=>!row.differenceReason);
-  const cashDelta=businessRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const recognizedDelta=businessRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const deferredDelta=businessRows.reduce((sum,row)=>sum+(Number(row.deferredRevenueDelta)||0),0);
-  const courseRows=businessRows.filter(row=>row.businessType==='课程');
-  const packageReceiptRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('购买记录'));
-  const packageRecognizedRows=courseRows.filter(row=>['消耗','回退','已入账'].includes(String(row.action||''))&&String(row.paymentChannel||'')==='课包划扣');
-  const directCourseRows=courseRows.filter(row=>row.action==='收款'&&String(row.sourceDocument||'').startsWith('排课'));
-  const courseCashDelta=courseRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const courseRecognizedDelta=courseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const directCourseCashDelta=directCourseRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const directCourseRecognizedDelta=directCourseRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const packageCashDelta=packageReceiptRows.reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const packageRecognizedDelta=packageRecognizedRows.reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const storedValueCashDelta=businessRows.filter(row=>row.businessType==='会员储值').reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const storedValueRecognizedDelta=businessRows.filter(row=>row.businessType==='会员订场').reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const bookingCashDelta=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.cashDelta)||0),0);
-  const bookingRecognizedDelta=businessRows.filter(row=>['散客订场','约球局','课程订场'].includes(row.businessType)).reduce((sum,row)=>sum+(Number(row.recognizedRevenueDelta)||0),0);
-  const tradeCountDelta=businessRows.filter(row=>['课程','会员储值'].includes(row.businessType)&&row.action==='收款'&&Number(row.cashDelta)>0).length;
-  const all={...(baseOverview.all||{})};
-  all.cash=roundMoney((Number(all.cash)||0)+cashDelta);
-  all.recognized=roundMoney((Number(all.recognized)||0)+recognizedDelta);
-  all.deferred=roundMoney((Number(all.deferred)||0)+deferredDelta);
-  all.courseIncome=roundMoney((Number(all.courseIncome??all.packageIncome)||0)+courseCashDelta);
-  all.courseRecognized=roundMoney((Number(all.courseRecognized??all.packageRecognized)||0)+courseRecognizedDelta);
-  all.directCourseIncome=roundMoney((Number(all.directCourseIncome)||0)+directCourseCashDelta);
-  all.directCourseRecognized=roundMoney((Number(all.directCourseRecognized)||0)+directCourseRecognizedDelta);
-  all.packageIncome=roundMoney((Number(all.packageIncome)||0)+packageCashDelta);
-  all.packageRecognized=roundMoney((Number(all.packageRecognized)||0)+packageRecognizedDelta);
-  all.storedValueIncome=roundMoney((Number(all.storedValueIncome)||0)+storedValueCashDelta);
-  all.storedValueConsumed=roundMoney((Number(all.storedValueConsumed)||0)+storedValueRecognizedDelta);
-  all.bookingIncome=roundMoney((Number(all.bookingIncome)||0)+bookingCashDelta);
-  all.bookingRecognized=roundMoney((Number(all.bookingRecognized)||0)+bookingRecognizedDelta);
-  all.tradeCount=(Number(all.tradeCount)||0)+tradeCountDelta;
+  const overviewData=mergeFinanceOverviewDataWithRows(baseOverview,incrementRows);
+  const all={...(overviewData.all||{})};
   if(Array.isArray(source.membershipAccounts)){
     Object.assign(all,membershipStoredValueOverview({courts:source.courts||[],membershipAccounts:source.membershipAccounts||[]}));
   }
   return {
-    overviewData:{...baseOverview,all},
+    overviewData:{...overviewData,all},
     normalizedRows:[...(verifiedFinance.normalizedRows||[]),...incrementRows]
   };
 }

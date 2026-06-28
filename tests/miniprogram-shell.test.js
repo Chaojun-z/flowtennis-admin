@@ -250,12 +250,13 @@ assert.match(scheduleJs, /openAgreement\(\)/, 'schedule page should expose the u
 assert.match(scheduleJs, /openPrivacy\(\)/, 'schedule page should expose the privacy policy menu action');
 assert.match(scheduleJs, /coachWorkbenchStats/, 'mini program workbench should keep the backend stats payload separately');
 assert.match(scheduleJs, /workbenchState/, 'mini program workbench should use the backend workbenchState enum');
-assert.match(scheduleJs, /function buildLocalWorkbenchStats/, 'mini program workbench should have a local stats fallback from the loaded schedule rows');
-assert.match(scheduleJs, /mergeWorkbenchStats\(coachWorkbenchStats,\s*buildLocalWorkbenchStats\(schedule,\s*this\.data\.feedbacks,\s*now\)\)/, 'mini program workbench should fall back to local schedule stats when backend stats are still zero');
+assert.doesNotMatch(scheduleJs, /function buildLocalWorkbenchStats/, 'mini program workbench should not calculate core stats from local schedule rows');
+assert.doesNotMatch(scheduleJs, /buildLocalWorkbenchStats\(schedule,\s*this\.data\.feedbacks,\s*now\)/, 'mini program workbench should not fall back to local schedule stats when backend stats are zero');
+assert.match(scheduleJs, /const mergedStats = standardWorkbenchStats\(coachWorkbenchStats\)/, 'mini program workbench should render standard backend stats directly');
 assert.match(scheduleJs, /overallTrialConversionRate/, 'mini program workbench should read the overall coach trial conversion fields');
 assert.match(scheduleJs, /conversionText:[\s\S]*showOverallTrialStats[\s\S]*mergedStats\.overallTrialConversionRate[\s\S]*: \(hasOverallTrialStats \? '-' : '-'\)/, 'mini program workbench should fall back to - instead of the old month trial percent when overall stats are unavailable');
 assert.match(scheduleJs, /relatedClassIds/, 'student detail should match lesson history through linked class ids as well as direct student ids');
-assert.match(scheduleJs, /feedback:\s*mergedStats\.monthFeedbackCount \|\| 0/, 'mini program workbench should render backend or locally derived month feedback count');
+assert.match(scheduleJs, /feedback:\s*mergedStats\.monthFeedbackCount \|\| 0/, 'mini program workbench should render backend month feedback count');
 assert.doesNotMatch(scheduleJs, /feedback:\s*'-'/, 'mini program workbench should not show a placeholder for month feedback count');
 assert.doesNotMatch(scheduleJs, /item\.courseContent \|\| item\.productName \|\| item\.type/, 'shift cards should no longer guess course content from mixed front-end fields');
 assert.doesNotMatch(scheduleJs, /item\.scheduleTime \|\| item\.classTime/, 'shift cards should no longer guess schedule time from mixed front-end fields');

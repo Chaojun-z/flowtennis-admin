@@ -912,7 +912,12 @@ const coachDashboardMetrics = buildOperationsMetrics({
   courts: [],
   membershipAccounts: [],
   membershipOrders: [],
-  financeNormalizedRows: [],
+  financeNormalizedRows: [
+    { id: 'finance-old-a-before', businessDate: '2026-05-20', businessType: '课程', action: '收款', cashDelta: 3000, ownerCoach: 'A教练', studentId: 'old-a' },
+    { id: 'finance-old-a-renewal', businessDate: '2026-06-03', businessType: '课程', action: '收款', cashDelta: 5000, ownerCoach: 'A教练', studentId: 'old-a' },
+    { id: 'finance-trial-a-deal', businessDate: '2026-06-04', businessType: '课程', action: '收款', cashDelta: 1200, ownerCoach: 'A教练', studentId: 'trial-a' },
+    { id: 'finance-trial-b-future', businessDate: '2026-06-06', businessType: '课程', action: '收款', cashDelta: 700, ownerCoach: 'B教练', studentId: 'trial-b' }
+  ],
   financeOverviewData: {}
 }, {
   now: new Date('2026-06-04 12:00:00'),
@@ -925,8 +930,8 @@ assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C
 assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
 assert.strictEqual(coachA.usedHours, 4.5, 'coach utilization should include scheduled and completed non-cancelled lessons in the selected period');
 assert.strictEqual(coachA.utilizationRate, 16.4, 'coach utilization should divide used hours by the real selected-period available hours');
-assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use ownerCoach course receipts inside the selected purchase period');
-assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should count later course purchases for completed trial students');
+assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use standard finance course receipts inside the selected period');
+assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should read the unified lifecycle rows');
 assert.strictEqual(coachA.renewalRate, 100, 'coach renewal should use old students with prior ownerCoach purchases as denominator');
 assert.strictEqual(coachDashboardMetrics.coach.metricSource, 'standard-course-lifecycle', 'coach dashboard should expose the unified standard metric source');
 assert.strictEqual(coachDashboardMetrics.conversion.metricSource, 'standard-course-lifecycle', 'conversion dashboard should expose the same unified standard metric source');
@@ -938,11 +943,11 @@ assert.strictEqual(coachA.courseMix.find(row => row.type === '体验课')?.hours
 assert.strictEqual(coachA.courseMix.find(row => row.type === '私教课')?.hours, 2, 'coach course mix should include private lesson hours');
 assert.strictEqual(coachA.courseMix.find(row => row.type === '小班课')?.hours, 1.5, 'coach course mix should include group lesson hours');
 assert.strictEqual(coachB.revenue, 0, 'coach revenue should exclude receipts after today');
-assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6200, 'coach top cards should sum real ownerCoach course receipts up to today only');
+assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6200, 'coach top cards should sum standard finance course receipts up to today only');
 assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
 assert.strictEqual(coachDashboardMetrics.coach.trends.length, 4, 'coach KPI trends should cover each real selected day up to today');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the real day bucket utilization');
-assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket ownerCoach course receipts');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket finance course receipts');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-01')?.activeCoaches, 0, 'coach active trend should count coaches with real daily work or receipts, not all roster coaches');
 const allTimeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
@@ -980,7 +985,10 @@ const futureSafeCoachTrendMetrics = buildOperationsMetrics({
   courts: [],
   membershipAccounts: [],
   membershipOrders: [],
-  financeNormalizedRows: [],
+  financeNormalizedRows: [
+    { id: 'coach-real-today-finance', ownerCoach: 'A教练', studentId: 'stu-a', businessType: '课程', action: '收款', cashDelta: 500, businessDate: '2026-06-02' },
+    { id: 'coach-future-receipt-finance', ownerCoach: 'B教练', studentId: 'stu-b', businessType: '课程', action: '收款', cashDelta: 9999, businessDate: '2026-06-03' }
+  ],
   financeOverviewData: {}
 }, {
   now: new Date('2026-06-02 12:00:00'),
@@ -1142,6 +1150,7 @@ assert.strictEqual(june3ConversionPoint?.dealRateNumerator, 0, 'closed conversio
 const asOfCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],
+  students: [{ id: 'trial-asof', primaryCoach: 'A教练' }],
   schedule: [
     { id: 'coach-trial-asof', coach: 'A教练', studentId: 'trial-asof', startTime: '2026-06-01 09:00:00', endTime: '2026-06-01 10:00:00', status: '已结束', courseType: '体验课' }
   ],
@@ -1152,7 +1161,9 @@ const asOfCoachTrendMetrics = buildOperationsMetrics({
   courts: [],
   membershipAccounts: [],
   membershipOrders: [],
-  financeNormalizedRows: [],
+  financeNormalizedRows: [
+    { id: 'coach-deal-after-trial-finance', ownerCoach: 'A教练', studentId: 'trial-asof', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-06-03' }
+  ],
   financeOverviewData: {}
 }, {
   now: new Date('2026-06-04 12:00:00'),
@@ -1193,7 +1204,7 @@ const coachFallbackMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-04 12:00:00'), dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' } });
 const sirenRow = coachFallbackMetrics.coach.rows.find(row => row.coach === 'Siren 教练');
 assert.strictEqual(coachFallbackMetrics.coach.rows.some(row => row.coach === '没有固定教练'), false, 'coach dashboard should exclude unassigned ownership from person efficiency');
-assert.strictEqual(sirenRow?.revenue, 1800, 'coach dashboard should merge coach aliases and use real receipt fallback fields');
+assert.strictEqual(sirenRow?.revenue, 0, 'coach dashboard should not fall back to purchase receipt fields when standard finance rows are missing');
 assert.strictEqual(sirenRow?.usedHours, 2, 'coach dashboard should merge schedule aliases into the same coach row');
 
 const rangedSnapshotGuardMetrics = buildOperationsMetrics({

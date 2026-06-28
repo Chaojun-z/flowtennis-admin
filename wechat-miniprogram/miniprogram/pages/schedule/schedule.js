@@ -360,16 +360,6 @@ function localDateKey(value) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function weekRangeKeys(now = new Date()) {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const day = start.getDay() || 7;
-  start.setDate(start.getDate() - day + 1);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  return { startKey: localDateKey(start), endKey: localDateKey(end) };
-}
-
 function scheduleEnded(item = {}, now = new Date()) {
   const status = String(item.status || item.statusText || '').trim();
   if (status === '已取消') return false;
@@ -378,39 +368,8 @@ function scheduleEnded(item = {}, now = new Date()) {
   return !!(end && end < now);
 }
 
-function scheduleHasFeedback(item = {}, feedbacks = []) {
-  if (item.hasFeedback || item.feedbackId || item.feedbackStatus === '已反馈') return true;
-  const scheduleId = String(item.id || '').trim();
-  return !!(scheduleId && (feedbacks || []).some(feedback => String(feedback.scheduleId || '').trim() === scheduleId));
-}
-
-function buildLocalWorkbenchStats(schedule = [], feedbacks = [], now = new Date()) {
-  const monthKey = localDateKey(now).slice(0, 7);
-  const dayKey = localDateKey(now);
-  const { startKey, endKey } = weekRangeKeys(now);
-  const endedRows = (schedule || []).filter(item => scheduleEnded(item, now));
-  const monthRows = endedRows.filter(item => localDateKey(item.startTime).slice(0, 7) === monthKey);
-  const weekRows = endedRows.filter(item => {
-    const key = localDateKey(item.startTime);
-    return key >= startKey && key <= endKey;
-  });
-  const todayRows = endedRows.filter(item => localDateKey(item.startTime) === dayKey);
-  const monthTrialRows = monthRows.filter(item => item.isTrial || /体验/.test(String(item.type || item.title || item.courseType || '')));
-  return {
-    monthFinishedLessonUnits: monthRows.reduce((sum, item) => sum + scheduleLessonUnits(item), 0),
-    weekFinishedLessonUnits: weekRows.reduce((sum, item) => sum + scheduleLessonUnits(item), 0),
-    todayFinishedLessonUnits: todayRows.reduce((sum, item) => sum + scheduleLessonUnits(item), 0),
-    monthFeedbackCount: monthRows.filter(item => scheduleHasFeedback(item, feedbacks)).length,
-    pendingFeedbackCount: endedRows.filter(item => !scheduleHasFeedback(item, feedbacks)).length,
-    monthTrialLessonCount: monthTrialRows.length
-  };
-}
-
-function mergeWorkbenchStats(backendStats = {}, localStats = {}) {
-  const backendHasValue = ['monthFinishedLessonUnits', 'weekFinishedLessonUnits', 'todayFinishedLessonUnits', 'monthFeedbackCount', 'pendingFeedbackCount', 'monthTrialLessonCount', 'overallTrialStudentCount', 'overallTrialConvertedStudentCount']
-    .some(key => Number(backendStats[key]) > 0);
-  if (backendHasValue) return backendStats;
-  return { ...backendStats, ...localStats };
+function standardWorkbenchStats(backendStats = {}) {
+  return backendStats && typeof backendStats === 'object' ? backendStats : {};
 }
 
 function currentCoachName() {
@@ -1981,7 +1940,7 @@ Page({
   renderWeek() {
     const { weekOffset, schedule, coachWorkbenchStats } = this.data;
     const now = new Date();
-    const mergedStats = mergeWorkbenchStats(coachWorkbenchStats, buildLocalWorkbenchStats(schedule, this.data.feedbacks, now));
+    const mergedStats = standardWorkbenchStats(coachWorkbenchStats);
     const hasOverallTrialStats = Object.prototype.hasOwnProperty.call(mergedStats, 'overallTrialStudentCount');
     const showOverallTrialStats = hasOverallTrialStats && Number(mergedStats.overallTrialStudentCount) > 0;
     const days = buildWeekDays(schedule, weekOffset);

@@ -204,12 +204,12 @@ assert.deepStrictEqual(
       { id: 't3', coach: '朝珺', startTime: '2026-04-10 09:00', endTime: '2026-04-10 10:00', status: '已结束', courseType: '私教体验课', studentIds: ['stu-2'], studentName: '学员B' },
       { id: 't4', coach: '朝珺', startTime: '2026-04-15 09:00', endTime: '2026-04-15 10:00', status: '已结束', courseType: '私教课', studentIds: ['stu-3'], studentName: '学员C' }
     ],
-    purchases: [
-      { id: 'p1', studentId: 'stu-1', studentName: '学员A', ownerCoach: '朝珺', purchaseDate: '2026-04-09', status: 'active' },
-      { id: 'p2', studentId: 'stu-2', studentName: '学员B', ownerCoach: '其他教练', purchaseDate: '2026-04-12', status: 'active' },
-      { id: 'p3', studentId: 'stu-2', studentName: '学员B', ownerCoach: '朝珺', purchaseDate: '2026-04-09', status: 'active' },
-      { id: 'p4', studentId: 'stu-2', studentName: '学员B', ownerCoach: '朝珺', purchaseDate: '2026-04-12', status: 'voided' }
-    ],
+    standardLifecycleMetrics: {
+      metrics: {
+        trialPathStudents: { value: 2 },
+        trialPathDeals: { value: 1, rate: 50 }
+      }
+    },
     feedbacks: []
   }),
   {
@@ -218,13 +218,13 @@ assert.deepStrictEqual(
     todayFinishedLessonUnits: 0,
     monthFeedbackCount: 0,
     pendingFeedbackCount: 4,
-    monthTrialLessonCount: 3,
-    trialConversionRate: 100,
+    monthTrialLessonCount: 2,
+    trialConversionRate: 50,
     overallTrialStudentCount: 2,
     overallTrialConvertedStudentCount: 1,
     overallTrialConversionRate: 50
   },
-  'workbench stats helper should calculate overall trial conversion by coach-owned unique students'
+  'workbench stats helper should read trial conversion from the unified lifecycle metrics'
 );
 
 {

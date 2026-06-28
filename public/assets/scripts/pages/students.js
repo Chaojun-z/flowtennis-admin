@@ -11,22 +11,17 @@ function studentListViewMode(){
   return currentPage==='trial-students'?'trial':'package';
 }
 function studentPackageRecordIsTrial(row={}){
-  const type=normalizeCourseType(row.courseType||row.packageCourseType||row.type||row.productType||'');
-  const text=[row.courseType,row.packageCourseType,row.type,row.productType,row.experienceType,row.courseTypeLevel2,row.packageName,row.productName,row.name].filter(Boolean).join(' ');
-  return type==='体验课'||/体验/.test(text);
+  const lifecycle=studentLifecycleRow(row)||{};
+  if(customerLifecycleText(lifecycle.hasTrialExperience)==='true'||lifecycle.hasTrialExperience===true)return true;
+  const type=normalizeCourseType(row.standardCourseType||row.courseType||row.packageCourseType||'');
+  return type==='体验课';
 }
 function studentHasNonTrialPackage(stu){
-  const sid=String(stu?.id||'');
-  if(!sid)return false;
-  if(studentActiveEntitlementRows(stu).some(e=>!studentPackageRecordIsTrial(e)))return true;
-  return purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&!studentPackageRecordIsTrial(p));
+  return customerLifecycleText(studentLifecycleStage(stu))==='formal';
 }
 function studentHasTrialPath(stu){
-  const sid=String(stu?.id||'');
-  if(!sid)return false;
-  if(studentActiveEntitlementRows(stu).some(studentPackageRecordIsTrial))return true;
-  if(purchases.some(p=>String(p.studentId||'')===sid&&purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p)))return true;
-  return schedules.some(s=>scheduleHasStudent(s,stu)&&scheduleCourseType(s)==='体验课'&&effectiveScheduleStatus(s)!=='已取消');
+  const lifecycle=studentLifecycleRow(stu)||{};
+  return !!(lifecycle.hasTrialExperience||customerLifecycleText(lifecycle.trialStatus));
 }
 function studentLifecycleRow(stu){
   const sid=String(stu?.id||stu?.studentId||'');
@@ -386,47 +381,28 @@ function studentFinanceRowIsTrial(row={}){
 function studentFinanceSum(rows,field){
   return studentRoundMoney((rows||[]).reduce((sum,row)=>sum+(Number(row?.[field])||0),0));
 }
-function studentFinanceStatsForBase(base=[]){
-  const rows=studentFinanceRowsForBase(base);
-  if(!rows.length)return null;
-  const courseRows=rows.filter(studentFinanceRowIsCourse);
-  const receiptRows=courseRows.filter(studentFinanceRowIsReceipt);
-  const packageReceiptRows=receiptRows.filter(row=>String(row.sourceDocument||'').startsWith('购买记录'));
-  const directReceiptRows=receiptRows.filter(row=>String(row.sourceDocument||'').startsWith('排课'));
-  const formalPackageRows=packageReceiptRows.filter(row=>!studentFinanceRowIsTrial(row));
-  const trialPackageRows=packageReceiptRows.filter(studentFinanceRowIsTrial);
-  const formalRecognizedRows=courseRows.filter(row=>{
-    if(studentFinanceRowIsTrial(row))return false;
-    const method=String(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'').trim();
-    return method==='课包划扣'&&studentRoundMoney(row.recognizedRevenueDelta)!==0;
-  });
-  const totalIncome=studentFinanceSum(formalPackageRows,'cashDelta');
-  const recognized=studentFinanceSum(formalRecognizedRows,'recognizedRevenueDelta');
-  const trialIncome=studentFinanceSum(trialPackageRows,'cashDelta');
-  const directCourseIncome=studentFinanceSum(directReceiptRows,'cashDelta');
-  return {
-    totalIncome,
-    recognized,
-    packageBalance:studentRoundMoney(totalIncome-recognized),
-    trialIncome,
-    directCourseIncome,
-    courseIncome:studentRoundMoney(totalIncome+directCourseIncome),
-    courseRecognized:studentRoundMoney(recognized+directCourseIncome)
-  };
-}
-function studentLifecycleStats(base=[]){
-  const rows=(base||[]).map(s=>({student:s,lifecycle:studentLifecycleRow(s)})).filter(item=>item.lifecycle);
-  if(!rows.length)return null;
-  return {
-    purchaseCount:rows.reduce((sum,{student})=>sum+(typeof customerLifecycleStudentCoursePurchaseCount==='function'?customerLifecycleStudentCoursePurchaseCount(student):0),0),
-    courseRepeatCount:rows.filter(({student})=>typeof customerLifecycleStudentHasCourseRepeat==='function'&&customerLifecycleStudentHasCourseRepeat(student)).length,
-    trialStudentCount:studentListViewMode()==='trial'?base.length:rows.filter(({lifecycle})=>!!(lifecycle.hasTrialExperience||lifecycle.trialStatus||lifecycle.trialBookedAt||lifecycle.trialAttendedAt)).length,
-    trialConvertedCount:rows.filter(({student})=>typeof customerLifecycleStudentHasTrialToCourseConversion==='function'&&customerLifecycleStudentHasTrialToCourseConversion(student)).length
-  };
-}
 function studentStandardMetricValue(key){
   const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{metrics:{}};
   return Number(standard.metrics?.[key]?.value)||0;
+}
+function studentStandardSummaryForMode(){
+  const summary=teachingStudentViews?.summary||{};
+  if(studentListViewMode()==='trial')return {
+    total:studentStandardMetricValue('courseChainStudents')||Number(summary.courseStudentCount)||0,
+    trialPathCount:studentStandardMetricValue('trialPathStudents')||Number(summary.trialPathStudents)||0,
+    trialPathDealCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0,
+    trialPathPendingCount:studentStandardMetricValue('trialPathPending')||Number(summary.trialPathPendingCustomers)||0,
+    directCourseDealCount:studentStandardMetricValue('directCourseDeals')||Number(summary.directCourseCustomers)||0,
+    trialStudentCount:Number(summary.trialStudentCount)||0,
+    trialConvertedCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0
+  };
+  return {
+    total:studentStandardMetricValue('formalStudents')||Number(summary.formalStudentCount)||0,
+    packageStudentCount:Number(summary.formalStudentCount)||studentStandardMetricValue('formalStudents')||0,
+    activePackageStudentCount:studentStandardMetricValue('formalStudents')||Number(summary.formalStudentCount)||0,
+    purchaseCount:studentStandardMetricValue('totalDeals')||Number(summary.courseDealCustomers)||0,
+    courseRepeatCount:studentStandardMetricValue('courseRepeatBuyers')||0
+  };
 }
 function studentStatsCampusNameForPurchase(purchase,entitlement={}){
   const student=students.find(s=>String(s.id||'')===String(purchase?.studentId||entitlement?.studentId||''));
@@ -437,53 +413,12 @@ function studentStatsMatchesPackageCampus(purchase,entitlement={}){
   return sameCampusValue(studentStatsCampusNameForPurchase(purchase,entitlement),cn(campus));
 }
 function studentPageStats(base){
-  const lifecycleStats=studentLifecycleStats(base);
-  const financeStats=studentFinanceStatsForBase(base);
-  const trialPathCount=studentStandardMetricValue('trialPathStudents');
-  const trialPathDealCount=studentStandardMetricValue('trialPathDeals');
-  const trialPathPendingCount=studentStandardMetricValue('trialPathPending');
-  const directCourseDealCount=studentStandardMetricValue('directCourseDeals');
-  const studentIds=new Set(base.map(s=>String(s.id||'')).filter(Boolean));
-  const studentNames=new Set(base.map(s=>String(s.name||'').trim()).filter(Boolean));
-  const purchaseMapById=new Map(purchases.map(p=>[String(p.id||''),p]));
-  const includePackageRow=row=>studentListViewMode()==='trial'?studentPackageRecordIsTrial(row):!studentPackageRecordIsTrial(row);
-  const rowMatchesBase=row=>studentIds.has(String(row.studentId||''))||studentNames.has(String(row.studentName||'').trim());
-  const validEntitlements=entitlements.filter(e=>{
-    const purchase=purchaseMapById.get(String(e.purchaseId||''))||{};
-    return rowMatchesBase(e)&&includePackageRow(e)&&entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchase)!=='已作废';
-  });
-  const validEntitlementPurchaseIds=new Set(validEntitlements.map(e=>String(e.purchaseId||'')).filter(Boolean));
-  const validPurchases=purchases.filter(p=>{
-    if(purchaseStatusText(p)==='已作废')return false;
-    if(!includePackageRow(p))return false;
-    return rowMatchesBase(p)||validEntitlementPurchaseIds.has(String(p.id||''));
-  });
-  const totalIncome=validPurchases.reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
-  const trialIncome=purchases.filter(p=>purchaseStatusText(p)!=='已作废'&&studentPackageRecordIsTrial(p))
-    .filter(p=>studentIds.has(String(p.studentId||''))||studentNames.has(String(p.studentName||'').trim()))
-    .reduce((sum,p)=>sum+(Number(p.amountPaid??p.finalAmount??0)||0),0);
-  const recognized=0;
+  const standardSummary=studentStandardSummaryForMode();
   return {
-    total:base.length,
-    packageStudentCount:base.filter(s=>studentActiveEntitlementRows(s).length).length,
-    activePackageStudentCount:base.filter(s=>studentHasRemainingPackage(s)).length,
-    purchaseCount:lifecycleStats?lifecycleStats.purchaseCount:validPurchases.length,
-    courseRepeatCount:lifecycleStats?lifecycleStats.courseRepeatCount:0,
-    totalIncome:Math.round((financeStats?financeStats.totalIncome:totalIncome)*100)/100,
-    recognized:Math.round((financeStats?financeStats.recognized:recognized)*100)/100,
-    packageBalance:Math.round((financeStats?financeStats.packageBalance:(totalIncome-recognized))*100)/100,
-    trialIncome:Math.round((financeStats?financeStats.trialIncome:trialIncome)*100)/100,
-    directCourseIncome:Math.round((financeStats?financeStats.directCourseIncome:0)*100)/100,
-    courseIncome:Math.round((financeStats?financeStats.courseIncome:totalIncome)*100)/100,
-    courseRecognized:Math.round((financeStats?financeStats.courseRecognized:recognized)*100)/100,
+    ...standardSummary,
+    total:studentListViewMode()==='trial'?(standardSummary.total||base.length):(standardSummary.total||base.length),
     trialBookedOnlyCount:0,
-    trialAttendedPendingCount:0,
-    trialPathCount,
-    trialPathDealCount,
-    trialPathPendingCount,
-    directCourseDealCount,
-    trialStudentCount:lifecycleStats?lifecycleStats.trialStudentCount:0,
-    trialConvertedCount:lifecycleStats?lifecycleStats.trialConvertedCount:0
+    trialAttendedPendingCount:0
   };
 }
 function studentPercentText(value,total){
@@ -500,10 +435,7 @@ function studentTopStatsCards(stats){
   ];
   return [
     {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span><span class="student-stat-divider">｜</span><span>${stats.courseRepeatCount}</span>`,sub:'正式学员数 vs 购买次数 vs 课包复购人数'},
-    {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'},
-    {label:'课包实收金额',valueHtml:`¥${fmt(stats.totalIncome)}`},
-    {label:'已履约金额',valueHtml:`¥${fmt(stats.recognized)}`,percent:studentPercentText(stats.recognized,stats.totalIncome),sub:'已履约金额 / 课包实收金额占比'},
-    {label:'待履约金额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'待履约金额 / 课包实收金额占比'}
+    {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'}
   ];
 }
 function studentStatSplitCard(title,primary,secondary,caption){

@@ -18,7 +18,9 @@ assert.match(source, /function studentCampusValuesForList\(/, 'student list shou
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the same business-campus sources as top stats');
 assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)&&studentMatchesListPage\(s\)/, 'student list base rows should use the shared student campus matcher');
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
-assert.match(fnBody('studentPageStats'), /const rowMatchesBase=row=>studentIds\.has\(String\(row\.studentId\|\|''\)\)\|\|studentNames\.has\(String\(row\.studentName\|\|''\)\.trim\(\)\)/, 'student package stats should count rows linked to the visible student list');
+assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should read the unified standard summary');
+assert.doesNotMatch(source, /function studentFinanceStatsForBase\(/, 'student page should not keep a local finance stats calculator for top cards');
+assert.doesNotMatch(source, /function studentLifecycleStats\(/, 'student page should not keep a second local lifecycle stats calculator');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student package stats should not apply a second purchase-campus filter after the list is already filtered');
 
 const root = path.join(__dirname, '..');
@@ -31,6 +33,11 @@ const context = {
   campus: 'chaojun',
   campuses: [{ id: 'chaojun', code: 'chaojun', name: '朝珺私教' }, { id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
   CAMPUS: { chaojun: '朝珺私教', shunyi_mapo: '顺义马坡' },
+  customerLifecycleText: value => String(value || '').trim(),
+  customerLifecycleByStudentId: () => ({ studentStage: 'formal' }),
+  customerLifecycleStudentStage: () => 'formal',
+  teachingStudentViews: { summary: {} },
+  standardLifecycleMetrics: { metrics: {} },
   FlowTennisBusinessTaxonomy: {
     EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
     PRODUCT_TYPES: ['私教课', '体验课', '小班课', '大师课', '陪打']
@@ -69,9 +76,9 @@ vm.createContext(context);
 const base = vm.runInContext('getStudentBaseList()', context);
 assert.deepStrictEqual(base.map(s => s.name), ['一七&zzxxyy', '铣大象', 'misha', '黄总', '葡萄'], 'campus-filtered student list should include all five linked students');
 assert.strictEqual(
-  vm.runInContext('studentPageStats(getStudentBaseList()).totalIncome', context),
-  29000,
-  'student top package income should sum all purchases for the visible student list'
+  vm.runInContext('studentPageStats(getStudentBaseList()).total', context),
+  5,
+  'student top count may fall back to the visible list when the standard summary is unavailable in isolated tests'
 );
 
 console.log('student campus filter linkage tests passed');

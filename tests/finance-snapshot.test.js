@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { _test } = require('../api/index.js');
+const { buildFinanceOverviewSummaryFromData } = require('../server/read-models/finance-summary.js');
 
 const snapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
@@ -596,5 +597,16 @@ assert.strictEqual(courtMerged.overviewData.all.recognized, 380, 'MaPo court imp
 assert.strictEqual(courtMerged.overviewData.all.bookingIncome, 180, 'MaPo court import should update booking income bucket');
 assert.strictEqual(courtMerged.overviewData.all.bookingRecognized, 180, 'MaPo court import should update booking recognized bucket');
 assert.strictEqual(courtMerged.normalizedRows.some(row=>String(row.sourceDocument||'').includes('old-court-history-should-not-count')), false, 'old court history should not be appended as verified finance increment');
+
+const zeroStandardSummary = buildFinanceOverviewSummaryFromData({
+  all: {
+    cash: 0,
+    totalIncome: 999,
+    bookingIncome: 0,
+    courtIncome: 888
+  }
+});
+assert.strictEqual(zeroStandardSummary.totalIncome, 0, 'standard zero cash should not fall back to legacy totalIncome');
+assert.strictEqual(zeroStandardSummary.bookingIncome, 0, 'standard zero booking income should not fall back to legacy courtIncome');
 
 console.log('finance snapshot tests passed');

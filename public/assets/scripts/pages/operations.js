@@ -1135,7 +1135,6 @@ function operationsConversionView(data) {
   const hasFilters = !!(operationsConversionFilters.source || operationsConversionFilters.campus || operationsConversionFilters.coach);
   if (!hasFilters) {
     return {
-      courseFunnel: data.conversion?.courseFunnel || [],
       standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
       courtChain: data.conversion?.courtChain || {},
       retention: data.conversion?.retention || {},
@@ -1163,7 +1162,6 @@ function operationsConversionView(data) {
     };
   }
   return {
-    courseFunnel: view.courseFunnel || [],
     standardLifecycleMetrics: view.standardLifecycleMetrics || {},
     courtChain: view.courtChain || data.conversion?.courtChain || {},
     retention: view.retention || data.conversion?.retention || {},
@@ -1222,7 +1220,7 @@ function operationsRateText(part, total) {
 
 function operationsFunnelRows(conversion = {}, key = '') {
   const standard = conversion.standardLifecycleMetrics || {};
-  if (key === 'course') return standard.funnels?.courseChain || conversion.courseFunnel || [];
+  if (key === 'course') return standard.funnels?.courseChain || [];
   if (key === 'trial') return (standard.funnels?.trialPath || []).filter(row => row.id !== 'TRIAL_PATH_PENDING');
   if (key === 'court') return (standard.funnels?.courtChain || []).filter(row => row.id !== 'COURT_REBOOK_CUSTOMERS');
   return [];

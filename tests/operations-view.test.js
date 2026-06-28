@@ -268,9 +268,10 @@ assert.doesNotMatch(operationsSource, /历史未匹配场地/, 'court heatmap UI
 assert.doesNotMatch(operationsSource, /场地使用排行/, 'court page should remove the old venue ranking card');
 assert.doesNotMatch(operationsSource, /场地时段热力/, 'court page should remove the old single heatmap chart card');
 assert.doesNotMatch(operationsSource, /operationsFallbackCourseRows/, 'conversion page must not fabricate course rows from summary data');
-assert.match(operationsSource, /if \(!hasFilters\) \{[\s\S]*courseFunnel: data\.conversion\?\.courseFunnel/, 'conversion page should display backend standard metrics when no local filter is active');
+assert.doesNotMatch(operationsSource, /courseFunnel: data\.conversion\?\.courseFunnel/, 'conversion page must not keep the legacy courseFunnel fallback when no local filter is active');
 assert.match(operationsSource, /if \(!hasFilters\) \{[\s\S]*standardLifecycleMetrics:\s*data\.conversion\?\.standardLifecycleMetrics/, 'conversion page should pass backend standard metrics into the unfiltered view');
 assert.match(operationsSource, /standardLifecycleMetrics:\s*view\.standardLifecycleMetrics \|\| \{\}/, 'conversion page should pass backend standard metrics into filtered views');
+assert.doesNotMatch(operationsSource, /standard\.funnels\?\.courseChain \|\| conversion\.courseFunnel/, 'conversion funnels must not fall back to the legacy courseFunnel');
 assert.doesNotMatch(operationsSource, /echarts\.init/, 'operations page should not initialize ECharts directly');
 assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/, 'operations page should not reuse schedule detail tabs as its top navigation');
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');

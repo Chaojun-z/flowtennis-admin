@@ -727,70 +727,19 @@ function scheduleHasFeedbackRecord(schedule,feedbacks=[]){
   if(!scheduleId)return false;
   return (feedbacks||[]).some(item=>String(item?.scheduleId||'').trim()===scheduleId);
 }
-function scheduleIsTrialLesson(schedule){
-  if(schedule?.isTrial===true)return true;
-  return /体验/.test(String(schedule?.courseType||''));
-}
-function workbenchTrialConvertedByPurchaseRecord(schedule,purchases=[]){
-  const studentIds=parseArr(schedule?.studentIds).filter(Boolean);
-  const studentId=studentIds[0]||String(schedule?.studentId||'').trim();
-  const studentName=String(schedule?.studentName||'').trim();
-  const trialDate=dateKey(schedule?.endTime||schedule?.startTime);
-  if(!trialDate)return false;
-  return (purchases||[]).some(item=>{
-    if(String(item?.status||'').trim()==='voided')return false;
-    const purchaseDate=dateKey(item?.purchaseDate||item?.createdAt);
-    if(!purchaseDate||purchaseDate<trialDate)return false;
-    if(studentId)return String(item?.studentId||'').trim()===studentId;
-    return !!studentName&&String(item?.studentName||'').trim()===studentName;
-  });
-}
-function workbenchTrialStudentKeys(schedule){
-  const ids=[...parseArr(schedule?.studentIds),schedule?.studentId]
-    .map(value=>String(value||'').trim())
-    .filter(Boolean);
-  if(ids.length)return ids.map(id=>`id:${id}`);
-  return String(schedule?.studentName||'')
-    .split(/[、,，\s/]+/)
-    .map(value=>value.trim())
-    .filter(Boolean)
-    .map(name=>`name:${name}`);
-}
-function workbenchPurchaseMatchesTrialStudent(purchase,key){
-  if(String(key||'').startsWith('id:'))return String(purchase?.studentId||'').trim()===String(key).slice(3);
-  return String(purchase?.studentName||'').trim()===String(key).slice(5);
-}
-function buildWorkbenchOverallTrialStats(scheduleRows=[],purchases=[]){
-  const trialMap=new Map();
-  (Array.isArray(scheduleRows)?scheduleRows:[])
-    .filter(item=>scheduleIsTrialLesson(item)&&effectiveScheduleStatus(item)==='已结束')
-    .forEach(item=>{
-      const coachKey=String(item?.coach||'').trim();
-      const trialDate=dateKey(item?.endTime||item?.startTime);
-      workbenchTrialStudentKeys(item).forEach(studentKey=>{
-        if(!studentKey)return;
-        const mapKey=`${coachKey}__${studentKey}`;
-        const existing=trialMap.get(mapKey);
-        if(!existing||(!existing.trialDate&&trialDate)||(trialDate&&trialDate<existing.trialDate)){
-          trialMap.set(mapKey,{studentKey,coachKey,trialDate});
-        }
-      });
-    });
-  const total=trialMap.size;
-  const converted=[...trialMap.values()].filter(({ studentKey, coachKey, trialDate })=>{
-    return (Array.isArray(purchases)?purchases:[]).some(item=>{
-      if(!workbenchPurchaseMatchesTrialStudent(item,studentKey))return false;
-      if(['voided','refunded'].includes(String(item?.status||'').trim()))return false;
-      if(coachKey&&String(item?.ownerCoach||'').trim()!==coachKey)return false;
-      const purchaseDate=dateKey(item?.purchaseDate||item?.createdAt);
-      return !trialDate||!purchaseDate||purchaseDate>=trialDate;
-    });
-  }).length;
-  const rate=total?Math.round(converted/total*1000)/10:0;
+function workbenchStandardTrialStats(standardLifecycleMetrics={}){
+  const metrics=standardLifecycleMetrics&&standardLifecycleMetrics.metrics||{};
+  const trialStudents=metrics.trialPathStudents||{};
+  const trialDeals=metrics.trialPathDeals||{};
+  const total=parseInt(trialStudents.value,10)||0;
+  const converted=parseInt(trialDeals.value,10)||0;
+  const conversionRate=Number.isFinite(Number(trialDeals.rate))?Number(trialDeals.rate):0;
   return {
+    monthTrialLessonCount:total,
+    trialConversionRate:conversionRate,
     overallTrialStudentCount:total,
     overallTrialConvertedStudentCount:converted,
-    overallTrialConversionRate:Number.isInteger(rate)?rate:rate
+    overallTrialConversionRate:conversionRate
   };
 }
 function resolveWorkbenchState(schedule,prevSchedule,now=new Date(),feedbacks=[]){
@@ -854,7 +803,7 @@ function buildWorkbenchStats(input={}){
   const now=input.now instanceof Date?input.now:new Date();
   const scheduleRows=Array.isArray(input.schedule)?input.schedule:[];
   const feedbacks=Array.isArray(input.feedbacks)?input.feedbacks:[];
-  const purchases=Array.isArray(input.purchases)?input.purchases:[];
+  const standardTrialStats=workbenchStandardTrialStats(input.standardLifecycleMetrics||{});
   const monthKey=dateKey(now.toISOString()).slice(0,7);
   const dayKey=dateKey(now.toISOString());
   const weekStart=new Date(now);
@@ -869,20 +818,13 @@ function buildWorkbenchStats(input={}){
   const monthEndedRows=endedRows.filter(item=>dateKey(item.startTime).slice(0,7)===monthKey);
   const weekEndedRows=endedRows.filter(item=>{const key=dateKey(item.startTime);return key>=weekStartKey&&key<=weekEndKey;});
   const todayEndedRows=endedRows.filter(item=>dateKey(item.startTime)===dayKey);
-  const monthTrialRows=monthEndedRows.filter(scheduleIsTrialLesson);
-  const monthTrialConverted=monthTrialRows.filter(item=>workbenchTrialConvertedByPurchaseRecord(item,purchases)).length;
-  const overallTrialStats=buildWorkbenchOverallTrialStats(scheduleRows,purchases);
   return {
     monthFinishedLessonUnits:monthEndedRows.reduce((sum,item)=>sum+parseLessonValue(item.lessonCount,1),0),
     weekFinishedLessonUnits:weekEndedRows.reduce((sum,item)=>sum+parseLessonValue(item.lessonCount,1),0),
     todayFinishedLessonUnits:todayEndedRows.reduce((sum,item)=>sum+parseLessonValue(item.lessonCount,1),0),
     monthFeedbackCount:monthEndedRows.filter(item=>scheduleHasFeedbackRecord(item,feedbacks)).length,
     pendingFeedbackCount:endedRows.filter(item=>!scheduleHasFeedbackRecord(item,feedbacks)).length,
-    monthTrialLessonCount:monthTrialRows.length,
-    trialConversionRate:monthTrialRows.length?Math.round(monthTrialConverted/monthTrialRows.length*100):0,
-    overallTrialStudentCount:overallTrialStats.overallTrialStudentCount,
-    overallTrialConvertedStudentCount:overallTrialStats.overallTrialConvertedStudentCount,
-    overallTrialConversionRate:overallTrialStats.overallTrialConversionRate
+    ...standardTrialStats
   };
 }
 function decorateWorkbenchScheduleRows(schedule=[],feedbacks=[],purchases=[],now=new Date()){

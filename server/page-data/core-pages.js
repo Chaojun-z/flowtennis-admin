@@ -171,13 +171,14 @@ function createCorePageDataRoutes(deps={}){
           ? decorateWorkbenchScheduleRows([...(scoped.schedule||[]),...extraStudentSchedule],decoratedFeedbacks,scoped.purchases||[],now)
           : decoratedSchedule;
         const decoratedClasses=decorateWorkbenchClasses(scoped.classes||[],scoped.schedule||[]);
-        const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,purchases:scoped.purchases||[],now});
         const customerLifecycleRows=buildCustomerLifecycleRows({
           students:scoped.students,
           purchases:scoped.purchases,
           entitlements:scoped.entitlements,
           schedule:scoped.schedule
         });
+        const standardLifecycleMetrics=buildStandardLifecycleMetrics({...scoped,customerLifecycleRows});
+        const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,standardLifecycleMetrics,now});
         return sendJson(res,{
           campuses:scoped.campuses||[],
           students:decoratedStudents,
@@ -189,6 +190,7 @@ function createCorePageDataRoutes(deps={}){
           entitlements:scoped.entitlements||[],
           entitlementLedger:scoped.entitlementLedger||[],
           customerLifecycleRows,
+          standardLifecycleMetrics,
           stats
         });
       },{role:user.role||''});

@@ -6,8 +6,9 @@ const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/pa
 const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '../server/page-data/finance-snapshot.js'), 'utf8');
 
-assert.match(source, /function financeLegacyUnifiedRows\(\)/, 'finance page should keep the legacy stitched rows as a guarded fallback');
-assert.match(source, /function financeUnifiedRows\(\)\{\s*const snapshotRows=financeNormalizedRows\(\);[\s\S]*snapshotRows\.filter\(row=>financeMatchesCampusName\(row\.campusName\)\)[\s\S]*return financeLegacyUnifiedRows\(\);\s*\}/, 'finance page should prefer backend finance snapshot rows, apply campus filter, then fall back to local stitching');
+assert.doesNotMatch(source, /function financeLegacyUnifiedRows\(\)/, 'finance page must not keep frontend legacy stitching as an alternate ledger source');
+assert.match(source, /function financeUnifiedRows\(\)\{\s*const snapshotRows=financeNormalizedRows\(\);[\s\S]*snapshotRows\.filter\(row=>financeMatchesCampusName\(row\.campusName\)\)[\s\S]*return \[\];\s*\}/, 'finance page must not fall back to frontend local stitching when backend finance snapshot rows are unavailable');
+assert.doesNotMatch(source, /function financeUnifiedRows\(\)\{[\s\S]*return financeLegacyUnifiedRows\(\);[\s\S]*\}/, 'finance page standard rows must not use legacy local stitched rows');
 assert.match(source, /function financeLegacySettlementRows\(\)/, 'finance settlement should keep the legacy schedule aggregation as a guarded fallback');
 assert.match(source, /function financeSettlementRows\(\)\{[\s\S]*financeSettlementRowsFromSnapshot\(\)\.filter\(row=>String\(row\.month\|\|'\'\)===monthValue&&financeMatchesCampusName\(row\.campusName\)\)/, 'finance settlement should prefer backend snapshot rows and filter them by month and campus');
 assert.match(source, /return financeLegacySettlementRows\(\);/, 'finance settlement should only fall back to raw schedules when snapshot rows are unavailable');
