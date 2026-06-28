@@ -138,6 +138,40 @@ assert.strictEqual(memberTraceRow.batchId, 'batch-member-only', 'membership fina
 assert.strictEqual(memberTraceRow.cashDelta, 1200, 'membership trace passthrough must not change cash amount');
 assert.strictEqual(memberTraceRow.deferredRevenueDelta, 1200, 'membership trace passthrough must not change deferred amount');
 
+const duplicatedMembershipRechargeSnapshot = _test.buildFinancePageSnapshot({
+  courts:[{
+    id:'court-dup-member',
+    name:'重复会员',
+    history:[{
+      id:'court-recharge-dup',
+      type:'充值',
+      date:'2026-05-30',
+      occurredDate:'2026-05-30 07:02:04',
+      amount:5000,
+      payMethod:'微信',
+      operator:'admin'
+    }]
+  }],
+  membershipOrders:[{
+    id:'member-order-dup',
+    courtId:'court-dup-member',
+    courtName:'重复会员',
+    rechargeAmount:5000,
+    finalAmount:5000,
+    purchaseDate:'2026-05-30',
+    payMethod:'微信',
+    status:'active',
+    operator:'系统导入',
+    notes:'马坡订场会员开卡/续充'
+  }]
+});
+const duplicatedMembershipRechargeRows = duplicatedMembershipRechargeSnapshot.financeNormalizedRows
+  .filter(row => row.businessType === '会员储值' && row.action === '收款');
+assert.strictEqual(duplicatedMembershipRechargeRows.length, 1, 'membership recharge should not appear twice when order and court history describe the same payment');
+assert.strictEqual(duplicatedMembershipRechargeSnapshot.financeOverviewData.all.storedValueIncome, 5000, 'membership recharge income should keep the order amount once');
+assert.strictEqual(duplicatedMembershipRechargeSnapshot.financeOverviewData.all.tradeCount, 1, 'duplicated membership recharge should count as one trade');
+assert.strictEqual(duplicatedMembershipRechargeRows[0].sourceDocument, '会员订单 member-order-dup', 'membership recharge duplicate should keep the membership order as the standard finance row');
+
 const directScheduleSnapshot = _test.buildFinancePageSnapshot({
   campuses:[{ id:'shunyi_mapo', code:'shunyi_mapo', name:'顺义马坡' }],
   schedule:[{

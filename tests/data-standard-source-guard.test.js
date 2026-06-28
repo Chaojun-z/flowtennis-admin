@@ -70,8 +70,14 @@ assertFunctionGuard({
   forbidden: [/aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/]
 });
 
+assertFunctionGuard({
+  file: 'public/assets/scripts/pages/courts.js',
+  name: 'renderMembershipStats',
+  required: [/membershipFinanceSummary/],
+  forbidden: [/courtFinanceLocal\(/, /normalizeCourtHistoryLocal\(/, /history\.reduce\(/, /membershipOrders\.filter/, /totalDeposit/]
+});
+
 [
-  'renderMembershipStats',
   'membershipSortMetric',
   'renderMemberships',
   'courtMembershipPanelHtml'

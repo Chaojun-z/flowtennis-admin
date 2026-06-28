@@ -61,6 +61,23 @@ function financeCourtHistoryBusinessDate(historyRow){
   if(!primary&&!occurredAt&&dateOnly)return String(dateOnly).slice(0,10);
   return financeBusinessDateTime(primary,occurredAt,dateOnly);
 }
+function financeDateKey(value){
+  return String(value||'').slice(0,10);
+}
+function membershipRechargeAmount(order){
+  return roundMoney(order?.finalAmount ?? order?.rechargeAmount ?? order?.amount ?? 0);
+}
+function membershipRechargeDedupeKey({courtId='',date='',amount=0}={}){
+  const id=String(courtId||'').trim();
+  const day=financeDateKey(date);
+  const money=roundMoney(amount);
+  return id&&day&&money>0?`${id}|${day}|${money}`:'';
+}
+function cleanMembershipFinanceNote(value=''){
+  const note=String(value||'').trim();
+  if(/马坡订场会员开卡\/续充|会员储值补足|系统导入|马坡补账/.test(note))return '';
+  return note;
+}
 function financeRecognizedAmountForConsumeRow(row,entitlement,purchase){
   const lessonDelta=Math.abs(Number(row?.lessonDelta)||0);
   const totalLessons=Math.max(1,Number(entitlement?.totalLessons)||Number(purchase?.packageLessons)||lessonDelta||1);
@@ -119,6 +136,15 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const scheduleMap=new Map((schedule||[]).map(item=>[String(item.id||''),item]));
   const courtMap=new Map((courts||[]).map(item=>[String(item.id||''),item]));
   const courtMembershipOrderIds=new Set();
+  const membershipRechargeKeys=new Set();
+  (membershipOrders||[]).forEach(order=>{
+    const key=membershipRechargeDedupeKey({
+      courtId:order?.courtId,
+      date:order?.purchaseDate||order?.paidAt||order?.paymentTime||order?.createdAt,
+      amount:membershipRechargeAmount(order)
+    });
+    if(key)membershipRechargeKeys.add(key);
+  });
   (courts||[]).forEach(court=>normalizeCourtHistory(court.history).forEach(historyRow=>{
     const membershipOrderRef=String(historyRow.membershipOrderRef||'').trim();
     if(membershipOrderRef)courtMembershipOrderIds.add(membershipOrderRef);
@@ -168,7 +194,6 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   });
   const membershipReceiptRows=(membershipOrders||[])
     .filter(order=>String(order?.status||'active')!=='voided')
-    .filter(order=>!courtMembershipOrderIds.has(String(order?.id||'')))
     .map(order=>{
       const court=courtMap.get(String(order.courtId||''))||{};
       const rowCampusName=campusName.fromHints(court.campus,court.campusName,order.courtName,order.notes,order.membershipPlanName)||'—';
@@ -190,7 +215,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
         deferredRevenueDelta:differenceReason?0:amount,
         paymentChannel:order.payMethod||'会员充值',
         sourceDocument:`会员订单 ${order.id}`,
-        notes:differenceReason?`${differenceReason}；${order.notes||''}`:(order.notes||''),
+        notes:differenceReason?`${differenceReason}；${cleanMembershipFinanceNote(order.notes)}`:cleanMembershipFinanceNote(order.notes),
         incomeType:'会员储值',
         packageName:'',
         collector:operator,
@@ -310,7 +335,18 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   });
   const courtRows=(courts||[]).flatMap(court=>{
     const baseCampusName=campusName.fromHints(court.campus,court.campusName,court.name,court.notes);
-    return normalizeCourtHistory(court.history).map(historyRow=>{
+    return normalizeCourtHistory(court.history).filter(historyRow=>{
+      const businessType=financeCourtHistoryBusinessType(historyRow);
+      if(businessType!=='会员储值'||historyRow.type!=='充值')return true;
+      const membershipOrderRef=String(historyRow.membershipOrderRef||'').trim();
+      if(membershipOrderRef&&courtMembershipOrderIds.has(membershipOrderRef))return false;
+      const key=membershipRechargeDedupeKey({
+        courtId:court?.id,
+        date:historyRow.occurredDate||historyRow.date||historyRow.createdAt||historyRow.recordedAt,
+        amount:historyRow.amount
+      });
+      return !membershipRechargeKeys.has(key);
+    }).map(historyRow=>{
       const noteText=`${historyRow.note||''} ${historyRow.category||''} ${historyRow.sourceCategory||''} ${historyRow.payMethod||''}`;
       const rowCampusName=campusName.fromHints(baseCampusName,historyRow.campus,historyRow.note,historyRow.category,historyRow.source,historyRow.importSource,historyRow.sourceCategory)||'—';
       const differenceReason=financeDifferenceReason(noteText);

@@ -398,19 +398,16 @@ function membershipReadModelRechargeCountForRow(row){
 }
 function renderMembershipStats(rows=[]){
   const host=document.getElementById('membershipStatsRow');if(!host)return;
-  const visibleCourtIds=new Set(rows.map(row=>row.court?.id||row.courtId));
-  const visibleAccountIds=new Set(rows.map(row=>row.account?.id).filter(Boolean));
-  const validOrders=membershipOrders.filter(o=>(visibleCourtIds.has(o.courtId)||visibleAccountIds.has(o.membershipAccountId))&&o.status!=='voided'&&o.status!=='refunded');
-  const totalRechargeCount=rows.reduce((sum,row)=>sum+membershipReadModelRechargeCountForRow(row),0);
-  const totalBonus=validOrders.reduce((sum,o)=>sum+(parseFloat(o.bonusAmount)||0),0);
-  const activeRows=rows.filter(row=>!['voided','cleared'].includes(String(row.account?.status||'')));
-  const activeFinances=activeRows.map(row=>membershipReadModelFinanceForCourt(row.court||membershipVisibleCourt(row)||{history:[]}));
-  const totalIncome=activeFinances.reduce((sum,finance)=>sum+(Number(finance.totalDeposit)||0),0);
-  const totalRecognized=activeFinances.reduce((sum,finance)=>sum+(Number(finance.storedValueSpent)||0),0);
-  const poolTotal=totalIncome+totalBonus;
-  const pendingTotal=Math.max(0,poolTotal-totalRecognized);
+  if(!membershipFinanceSummary){
+    host.innerHTML='';
+    return;
+  }
+  const totalIncome=Number(membershipFinanceSummary.paidAmount)||0;
+  const poolTotal=Number(membershipFinanceSummary.consumableAmount)||0;
+  const totalRecognized=Number(membershipFinanceSummary.consumedAmount)||0;
+  const pendingTotal=Number(membershipFinanceSummary.pendingAmount)||0;
   host.innerHTML=renderStandardDataCards([
-    {title:'会员储值',valueHtml:`<span>${rows.length}</span><span class="tms-stat-divider">｜</span><span>${totalRechargeCount}</span>`,sub:'会员人数 vs 储值次数'},
+    {title:'会员储值',valueHtml:`<span>${Number(membershipFinanceSummary.memberCount)||0}</span><span class="tms-stat-divider">｜</span><span>${Number(membershipFinanceSummary.rechargeCount)||0}</span>`,sub:'会员人数 vs 储值次数'},
     {title:'充值金额',value:`¥${fmt(totalIncome)}`,sub:''},
     {title:'需履约总金额',value:`¥${fmt(poolTotal)}`,sub:'充值金额 + 赠送金额'},
     {title:'已核销金额',value:`¥${fmt(totalRecognized)}`,percent:statPercentText(totalRecognized,poolTotal),sub:'已核销金额 / 累计实收+累计赠送占比'},

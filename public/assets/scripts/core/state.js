@@ -12,6 +12,7 @@ let teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],t
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
+let membershipFinanceSummary=null;
 let operationsPageData=null;
 let studentLessonRecordExpandedState={};
 function financeNormalizedRows(){
@@ -666,6 +667,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('membershipPlans',data.membershipPlans||[]);
       setDatasetValue('coaches',data.coaches||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      membershipFinanceSummary=data.membershipFinanceSummary||null;
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('courts');
@@ -752,7 +754,7 @@ function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
-  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];operationsPageData=null;
+  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];membershipFinanceSummary=null;operationsPageData=null;
   customerLifecycleRows=[];teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
@@ -800,6 +802,7 @@ function applyLoadedData(data){
   financeOverviewData=data?.financeOverviewData||null;
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
+  membershipFinanceSummary=data?.membershipFinanceSummary||null;
   operationsPageData=data?.operations||null;
   customerLifecycleRows=Array.isArray(data?.customerLifecycleRows)?data.customerLifecycleRows:[];
   teachingStudentViews=data?.teachingStudentViews||teachingStudentViews;

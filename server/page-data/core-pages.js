@@ -1,5 +1,6 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -120,6 +121,11 @@ function createCorePageDataRoutes(deps={}){
         membershipAccounts:scoped.membershipAccounts,
         membershipOrders:scoped.membershipOrders
       });
+      const membershipFinanceSummary=buildMembershipFinanceSummary({
+        courts:scoped.courts,
+        membershipAccounts:scoped.membershipAccounts,
+        membershipOrders:scoped.membershipOrders
+      });
       return sendJson(res,{
         campuses:scoped.campuses,
         students:scoped.students,
@@ -130,7 +136,8 @@ function createCorePageDataRoutes(deps={}){
         membershipAccountEvents:scoped.membershipAccountEvents,
         membershipPlans:scoped.membershipPlans,
         coaches:scoped.coaches,
-        customerLifecycleRows
+        customerLifecycleRows,
+        membershipFinanceSummary
       });
     }
     if(path==='/page-data/workbench'&&method==='GET'){

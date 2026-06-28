@@ -44,8 +44,11 @@ assert.match(html, /会员储值[\s\S]*充值金额[\s\S]*需履约总金额[\s\
 assert.match(fnBody('renderMembershipStats'), /会员人数 vs 储值次数[\s\S]*充值金额 \+ 赠送金额[\s\S]*已核销金额 \/ 累计实收\+累计赠送占比[\s\S]*待履约金额 \/ 累计实收\+累计赠送占比/, 'membership summary should use requested captions and percentage ratios');
 assert.match(fnBody('renderMembershipStats'), /renderStandardDataCards\(/, 'membership summary should use the global data card renderer');
 assert.match(fnBody('renderMembershipStats'), /percent:statPercentText\(totalRecognized,poolTotal\)[\s\S]*percent:statPercentText\(pendingTotal,poolTotal\)/, 'membership recognized and pending cards should use global percentage formatting');
+assert.match(stateSource, /let membershipFinanceSummary=null/, 'frontend state should keep the backend membership finance summary');
+assert.match(stateSource, /membershipFinanceSummary=data\.membershipFinanceSummary\|\|null/, 'memberships page should load membership finance summary from page-data');
+assert.match(fnBody('renderMembershipStats'), /membershipFinanceSummary\.paidAmount[\s\S]*membershipFinanceSummary\.consumableAmount[\s\S]*membershipFinanceSummary\.consumedAmount[\s\S]*membershipFinanceSummary\.pendingAmount/, 'membership summary should display the backend standard membership finance summary');
+assert.doesNotMatch(fnBody('renderMembershipStats'), /totalDeposit|membershipReadModelFinanceForCourt|validOrders|membershipOrders\.filter/, 'membership summary should not locally recalculate paid amount from courts, orders, or read-model balances');
 assert.match(html, /function membershipReadModelItemForCourt\(/, 'membership management should resolve account facts from the court account read model');
-assert.match(fnBody('renderMembershipStats'), /membershipReadModelFinanceForCourt\(/, 'membership summary should read balances and booking facts from the court account read model');
 assert.match(fnBody('membershipSortMetric'), /membershipReadModelFinanceForCourt\([\s\S]*membershipReadModelBookingForCourt\(/, 'membership sorting should read balance and booking facts from the court account read model');
 assert.match(fnBody('renderMemberships'), /membershipReadModelItemForCourt\(/, 'membership list rows should read balances and booking facts from the court account read model');
 assert.match(fnBody('courtMembershipPanelHtml'), /membershipReadModelItemForCourt\(/, 'membership account detail should read account overview facts from the court account read model');

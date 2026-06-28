@@ -9,6 +9,7 @@ const path = require('path');
 const shunyi_mapoFinanceSeed = require('../server/seeds/shunyi_mapo-finance-seed.json');
 const { recordPerfMetric } = require('../server/lib/perf-metrics');
 const { createCorePageDataRoutes } = require('../server/page-data/core-pages.js');
+const { buildMembershipFinanceSummary } = require('../server/read-models/membership-finance-summary.js');
 const { createResidualPageDataRoutes } = require('../server/page-data/residual-pages.js');
 const { invalidateOperationsPageDataCache } = require('../server/page-data/operations-page.js'), { invalidateOperationsSourceCache } = require('../server/read-models/operations-source.js');
 const { buildCustomerLifecycleRows } = require('../server/read-models/customer-lifecycle.js'), { createFinanceSnapshotHelpers } = require('../server/page-data/finance-snapshot.js');
@@ -7361,6 +7362,7 @@ module.exports._test={
   buildFinanceSettlementRows,
   buildFinancePageSnapshot,
   buildVerifiedFinanceWithImportIncrements,
+  buildMembershipFinanceSummary,
   buildBootstrapSafetyFlags,
   getRuntimeEnsuredTables,
   getTestDataResetTables,
