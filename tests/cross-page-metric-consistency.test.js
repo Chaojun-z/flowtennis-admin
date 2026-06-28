@@ -73,7 +73,8 @@ assert.deepStrictEqual(
   [
     ['有效线索', 6],
     ['普通学员', 4],
-    ['正式学员', 3]
+    ['正式学员', 3],
+    ['课包复购', 0]
   ],
   'course funnel must use the standard course-chain funnel, not the legacy trial appointment funnel'
 );

@@ -651,7 +651,7 @@ function courseConversionRows(data = {}, options = {}) {
     const hasAttendance = !!trialAttendedAt || trialDone || !!attendanceEventDate;
     const hasAppointment = !!trialBookedAt || !!appointmentEventDate || hasExplicitTrialAppointmentText(stageText) || hasAttendance;
     const hasTrialDeal = !!lifecycle.hasTrialToCourseConversion;
-    const hasRenewal = hasTrialDeal && sid && (purchaseCounts.get(sid) || 0) > 1;
+    const hasRenewal = hasCourse && sid && (purchaseCounts.get(sid) || 0) > 1;
     const normalizedConsultType = normalizeText(lead.consultType || lead.demandProduct || linkedStudent?.consultType || linkedStudent?.demandProduct, '');
     const normalizedStudentType = normalizeText(lead.studentType || lead.type || lead.customerType || linkedStudent?.studentType || linkedStudent?.type || linkedStudent?.customerType, '');
     return {
@@ -744,10 +744,12 @@ function buildStandardLifecycleMetricsFromConversionRows(rows = []) {
   const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
   const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
   const directCourseRows = formalRows.filter(row => !trialPathDealRows.includes(row));
+  const courseRepeatRows = formalRows.filter(row => row.hasRenewal);
   const metrics = {
     validLeads: standardConversionMetric('VALID_LEADS', '有效线索', total, total, 'FILTERED_RAW_LEADS', '条'),
     courseChainStudents: standardConversionMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseRows.length, total, 'FILTERED_COURSE_CHAIN_STUDENTS / FILTERED_VALID_LEADS'),
     formalStudents: standardConversionMetric('FORMAL_STUDENTS', '正式学员', formalRows.length, total, 'FILTERED_FORMAL_STUDENTS / FILTERED_VALID_LEADS'),
+    courseRepeatBuyers: standardConversionMetric('COURSE_REPEAT_BUYERS', '课包复购', courseRepeatRows.length, formalRows.length, 'FILTERED_COURSE_REPEAT_BUYERS / FILTERED_FORMAL_STUDENTS'),
     trialPathStudents: standardConversionMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathRows.length, total, 'FILTERED_TRIAL_PATH_STUDENTS / FILTERED_VALID_LEADS'),
     trialPathDeals: standardConversionMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDealRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_DEALS / FILTERED_TRIAL_PATH_STUDENTS'),
     trialPathPending: standardConversionMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPendingRows.length, trialPathRows.length, 'FILTERED_TRIAL_PATH_PENDING / FILTERED_TRIAL_PATH_STUDENTS'),
@@ -764,7 +766,8 @@ function buildStandardLifecycleMetricsFromConversionRows(rows = []) {
       courseChain: standardConversionFunnelRows([
         { id: 'VALID_LEADS', label: '有效线索', value: total, unit: '条' },
         { id: 'COURSE_CHAIN_STUDENTS', label: '普通学员', value: courseRows.length },
-        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalRows.length }
+        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalRows.length },
+        { id: 'COURSE_REPEAT_BUYERS', label: '课包复购', value: courseRepeatRows.length }
       ]),
       trialPath: standardConversionFunnelRows([
         { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathRows.length },
@@ -1175,6 +1178,43 @@ function buildPeriodRepurchaseMetrics(purchases = []) {
     rate: rate(repurchaseStudents, paidStudents),
     numerator: repurchaseStudents,
     denominator: paidStudents
+  };
+}
+
+function readyRateMetric(label, value = 0, numerator = 0, denominator = 0) {
+  return {
+    label,
+    value: Number(value) || 0,
+    numerator: Number(numerator) || 0,
+    denominator: Number(denominator) || 0,
+    status: 'ready'
+  };
+}
+
+function pendingRateMetric(label) {
+  return {
+    label,
+    value: null,
+    numerator: null,
+    denominator: null,
+    status: 'pending'
+  };
+}
+
+function buildConversionRetentionMetrics({ periodRepurchase = {}, courtChain = {} } = {}) {
+  return {
+    teaching: {
+      packageRepeatRate: readyRateMetric('课包复购率', periodRepurchase.rate, periodRepurchase.numerator, periodRepurchase.denominator),
+      packageRenewalRate: pendingRateMetric('课包续购率')
+    },
+    court: {
+      courtRebookRate: readyRateMetric('订场复订率', courtChain.courtRepeatRate, courtChain.courtRepeatCustomers, courtChain.courtUsers),
+      ndRetention: pendingRateMetric('N日订场持续消费率')
+    },
+    member: {
+      memberRechargeRepeatRate: readyRateMetric('订场会员再次储值率', courtChain.memberRepeatRate, courtChain.memberRepeatCustomers, courtChain.courtMembers),
+      ndRetention: pendingRateMetric('N日订场会员留存率')
+    }
   };
 }
 
@@ -2408,12 +2448,26 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
       return !!(dealDate && dealDate <= day);
     });
     const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
+    const formalRows = cumulativeRows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
+    const trialPathRows = cumulativeRows.filter(row => row.hasTrialExperience);
+    const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
+    const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
     const appointmentCount = appointmentRows.length;
     const attendanceCount = attendanceRows.length;
     const dealCount = dealRows.length;
     return {
       date: day,
       leads: leadCount,
+      totalDealRate: rate(formalRows.length, cumulativeRows.length),
+      totalDealRateNumerator: formalRows.length,
+      totalDealRateDenominator: cumulativeRows.length,
+      courseDealRate: rate(formalRows.length, cumulativeRows.length),
+      courseDealRateNumerator: formalRows.length,
+      courseDealRateDenominator: cumulativeRows.length,
+      trialPathDealRate: rate(trialPathDealRows.length, trialPathRows.length),
+      trialPathDealRateNumerator: trialPathDealRows.length,
+      trialPathDealRateDenominator: trialPathRows.length,
+      trialPathPending: trialPathPendingRows.length,
       appointmentRate: rate(appointmentCount, cumulativeRows.length),
       appointmentRateNumerator: appointmentCount,
       appointmentRateDenominator: cumulativeRows.length,
@@ -2425,21 +2479,86 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
       dealRateDenominator: attendanceCount,
       renewalRate: repurchase.rate,
       renewalRateNumerator: repurchase.numerator,
-      renewalRateDenominator: repurchase.denominator
+      renewalRateDenominator: repurchase.denominator,
+      courseRepeatRate: repurchase.rate,
+      courseRepeatRateNumerator: repurchase.numerator,
+      courseRepeatRateDenominator: repurchase.denominator
     };
   });
 }
 
 function buildConversionTrendSet(options = {}) {
   return compactTrendRows(buildConversionTrendDailyRows(options), {
-    sumKeys: ['leads'],
+    sumKeys: ['leads', 'trialPathPending'],
     rateFields: [
+      { key: 'totalDealRate', numeratorKey: 'totalDealRateNumerator', denominatorKey: 'totalDealRateDenominator', aggregate: 'last' },
+      { key: 'courseDealRate', numeratorKey: 'courseDealRateNumerator', denominatorKey: 'courseDealRateDenominator', aggregate: 'last' },
+      { key: 'trialPathDealRate', numeratorKey: 'trialPathDealRateNumerator', denominatorKey: 'trialPathDealRateDenominator', aggregate: 'last' },
       { key: 'appointmentRate', numeratorKey: 'appointmentRateNumerator', denominatorKey: 'appointmentRateDenominator', aggregate: 'last' },
       { key: 'attendanceRate', numeratorKey: 'attendanceRateNumerator', denominatorKey: 'attendanceRateDenominator', aggregate: 'last' },
       { key: 'dealRate', numeratorKey: 'dealRateNumerator', denominatorKey: 'dealRateDenominator', aggregate: 'last' },
-      { key: 'renewalRate', numeratorKey: 'renewalRateNumerator', denominatorKey: 'renewalRateDenominator', aggregate: 'last' }
+      { key: 'renewalRate', numeratorKey: 'renewalRateNumerator', denominatorKey: 'renewalRateDenominator', aggregate: 'last' },
+      { key: 'courseRepeatRate', numeratorKey: 'courseRepeatRateNumerator', denominatorKey: 'courseRepeatRateDenominator', aggregate: 'last' }
     ]
   });
+}
+
+function courtHistoryRowsThroughDay(history, day = '') {
+  return normalizeCourtHistory(history)
+    .filter(row => {
+      const rowDay = dateKey(courtHistoryBusinessDate(row) || row.date || row.createdAt);
+      return rowDay && rowDay <= day;
+    });
+}
+
+function courtRowsThroughDay(courts = [], day = '') {
+  return (courts || []).map(row => {
+    const history = courtHistoryRowsThroughDay(row.history, day);
+    return { ...row, history: JSON.stringify(history) };
+  });
+}
+
+function buildCourtRetentionTrendDailyRows({ courts = [], membershipAccounts = [], membershipOrders = [], dateRange = {}, now = new Date() } = {}) {
+  const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
+  const sourceDays = [...new Set([
+    ...(courts || []).flatMap(row => normalizeCourtHistory(row.history).map(item => dateKey(courtHistoryBusinessDate(item) || item.date || item.createdAt))),
+    ...(membershipOrders || []).map(purchaseDate)
+  ].filter(Boolean))];
+  const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
+  return days.map(day => {
+    const chain = buildCourtChainMetrics({
+      courts: courtRowsThroughDay(courts, day),
+      membershipAccounts,
+      membershipOrders: (membershipOrders || []).filter(row => {
+        const rowDay = purchaseDate(row);
+        return rowDay && rowDay <= day;
+      })
+    });
+    return {
+      date: day,
+      courtRepeatRate: chain.courtRepeatRate,
+      courtRepeatRateNumerator: chain.courtRepeatCustomers,
+      courtRepeatRateDenominator: chain.courtUsers
+    };
+  });
+}
+
+function buildCourtRetentionTrendSet(options = {}) {
+  return compactTrendRows(buildCourtRetentionTrendDailyRows(options), {
+    rateFields: [
+      { key: 'courtRepeatRate', numeratorKey: 'courtRepeatRateNumerator', denominatorKey: 'courtRepeatRateDenominator', aggregate: 'last' }
+    ]
+  });
+}
+
+function mergeTrendRowsByDate(primary = [], extra = []) {
+  const rowsByDate = new Map();
+  (primary || []).forEach(row => rowsByDate.set(row.date, { ...row }));
+  (extra || []).forEach(row => {
+    const current = rowsByDate.get(row.date) || { date: row.date };
+    rowsByDate.set(row.date, { ...current, ...row });
+  });
+  return [...rowsByDate.values()].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 }
 
 function firstRowDate(row = {}, keys = []) {
@@ -2601,6 +2720,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     membershipAccounts: rangedData.membershipAccounts || data.membershipAccounts || [],
     membershipOrders: rangedData.membershipOrders || data.membershipOrders || []
   });
+  const conversionRetention = buildConversionRetentionMetrics({ periodRepurchase, courtChain });
   if (Array.isArray(court.campusRows)) {
     court.campusRows = court.campusRows.map(row => ({
       ...row,
@@ -2660,6 +2780,14 @@ function buildOperationsMetrics(data = {}, options = {}) {
   });
   const trendCourseRows = courseConversionRows({ ...trendRangedData, leads: trendRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
   const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
+  const courtRetentionTrendSet = buildCourtRetentionTrendSet({
+    courts: trendRangedData.courts || data.courts || [],
+    membershipAccounts: trendRangedData.membershipAccounts || data.membershipAccounts || [],
+    membershipOrders: trendRangedData.membershipOrders || data.membershipOrders || [],
+    dateRange: trendDateRange,
+    now
+  });
+  conversionTrendSet.rows = mergeTrendRowsByDate(conversionTrendSet.rows, courtRetentionTrendSet.rows);
   const financeCoachPurchases = financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []);
   const coachTrendPurchases = (trendRangedData.purchases || []).length ? (trendRangedData.purchases || []) : financeCoachPurchases;
   const allCoachTrendPurchases = realAllPurchases.length ? realAllPurchases : financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
@@ -2717,6 +2845,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const previousCourtValues = cardValueMap(previousCourt.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const conversionValues = {
+    totalDealRate: Number(standardLifecycleMetrics.metrics.totalDeals?.rate) || 0,
+    courseDealRate: Number(standardLifecycleMetrics.metrics.formalStudents?.rate) || 0,
+    trialPathDealRate: Number(standardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
+    trialPathPending: Number(standardLifecycleMetrics.metrics.trialPathPending?.value) || 0,
+    courseRepeatRate: periodRepurchase.rate,
+    courtRepeatRate: courtChain.courtRepeatRate,
     leads: Number(standardLifecycleMetrics.metrics.validLeads?.value) || 0,
     appointmentRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
     attendanceRate: Number(standardLifecycleMetrics.metrics.trialPathStudents?.rate) || 0,
@@ -2724,6 +2858,16 @@ function buildOperationsMetrics(data = {}, options = {}) {
     renewalRate: periodRepurchase.rate
   };
   const previousConversionValues = {
+    totalDealRate: Number(previousStandardLifecycleMetrics?.metrics?.totalDeals?.rate) || 0,
+    courseDealRate: Number(previousStandardLifecycleMetrics?.metrics?.formalStudents?.rate) || 0,
+    trialPathDealRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathDeals?.rate) || 0,
+    trialPathPending: Number(previousStandardLifecycleMetrics?.metrics?.trialPathPending?.value) || 0,
+    courseRepeatRate: previousPeriodRepurchase.rate,
+    courtRepeatRate: previousRangedData ? buildCourtChainMetrics({
+      courts: previousRangedData.courts || data.courts || [],
+      membershipAccounts: previousRangedData.membershipAccounts || data.membershipAccounts || [],
+      membershipOrders: previousRangedData.membershipOrders || data.membershipOrders || []
+    }).courtRepeatRate : 0,
     leads: Number(previousStandardLifecycleMetrics?.metrics?.validLeads?.value) || 0,
     appointmentRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathStudents?.rate) || 0,
     attendanceRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathStudents?.rate) || 0,
@@ -2790,6 +2934,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }
       },
       courtChain,
+      retention: conversionRetention,
       standardLifecycleMetrics: {
         ...standardLifecycleMetrics,
         funnels: {
@@ -2809,7 +2954,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       trends: conversionTrendSet.rows,
       trendMeta: conversionTrendSet.meta,
       trendDiagnostics: buildTrendDiagnostics(conversionTrendSet.rows, ['leads', 'leadFollowups', 'students', 'purchases']),
-      trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
+      trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['totalDealRate', 'courseDealRate', 'trialPathDealRate', 'trialPathPending', 'courseRepeatRate', 'courtRepeatRate', 'leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
       courseFunnel,
       sourceRanking,
       channelEfficiencyRows,

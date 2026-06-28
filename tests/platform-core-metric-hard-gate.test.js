@@ -41,9 +41,9 @@ assertNoLocalCoreMetric('public/assets/scripts/pages/students.js', 'studentPageS
   [/studentTrialStats\(\)/, '普通/正式学员顶部不得使用本地体验课统计兜底']
 ]);
 
-assertNoLocalCoreMetric('public/assets/scripts/pages/operations.js', 'renderConversionInsightModule', [
-  [/operationsFunnelSummary\(conversion\.courseFunnel\s*\|\|\s*\[\]\)/, '转化与留存右侧洞察不得继续读取旧 courseFunnel 重新算百分比'],
-  [/\(conversion\.courseFunnel\s*\|\|\s*\[\]\)\.length/, '转化与留存右侧洞察不得用旧 courseFunnel 判断是否有数据']
+assertNoLocalCoreMetric('public/assets/scripts/pages/operations.js', 'renderConversionFunnelModule', [
+  [/operationsFunnelSummary\(conversion\.courseFunnel\s*\|\|\s*\[\]\)/, '转化与留存漏斗不得继续读取旧 courseFunnel 重新算百分比'],
+  [/\(conversion\.courseFunnel\s*\|\|\s*\[\]\)\.length/, '转化与留存漏斗不得用旧 courseFunnel 判断是否有数据']
 ]);
 
 const packageJson = JSON.parse(read('package.json'));

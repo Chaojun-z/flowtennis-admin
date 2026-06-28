@@ -16,8 +16,8 @@ const operationsTrendWarningColor = '#D89135';
 const operationsTrendRiskColor = '#E05252';
 const operationsTrendPositiveColor = '#1F8A68';
 const operationsTrendWarningKeys = new Set(['pendingRevenue']);
-const operationsTrendNegativeKeys = new Set([]);
-const operationsTrendPositiveKeys = new Set(['totalIncome', 'recognizedRevenue', 'revenue', 'bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate', 'tradeCount', 'leads', 'activeCoaches', 'appointmentRate', 'attendanceRate', 'dealRate', 'trialConversionRate', 'renewalRate']);
+const operationsTrendNegativeKeys = new Set(['trialPathPending']);
+const operationsTrendPositiveKeys = new Set(['totalIncome', 'recognizedRevenue', 'revenue', 'bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate', 'tradeCount', 'leads', 'activeCoaches', 'appointmentRate', 'attendanceRate', 'dealRate', 'trialConversionRate', 'renewalRate', 'totalDealRate', 'courseDealRate', 'trialPathDealRate', 'courseRepeatRate', 'courtRepeatRate']);
 
 function operationsMetricCards(cards = {}) {
   return Object.values(cards || {}).map(item => ({
@@ -697,11 +697,12 @@ function renderOperationsCourt(data) {
 function renderOperationsConversion(data) {
   const conversion = operationsConversionView(data);
   return `${renderConversionCommandCenter(data, conversion)}
-  <div class="operations-conversion-monitor-grid">
-    ${renderConversionFunnelModule(data, conversion)}
-    ${renderConversionInsightModule(conversion)}
+  ${renderConversionFunnelModule(data, conversion)}
+  ${renderConversionRetentionModule(conversion)}
+  <div class="operations-channel-diagnostics-grid">
+    ${renderConversionChannelQualityModule(conversion)}
+    ${renderConversionChannelActionModule(conversion)}
   </div>
-  ${renderConversionChannelEfficiencyModule(conversion)}
   ${renderConversionAttributeModule(conversion)}`;
 }
 
@@ -878,7 +879,7 @@ function operationsKpiValueText(value = 0, key = '') {
   if (key === 'revenue' || key === 'bookingAmount') return `¥${fmt(number)}`;
   if (key === 'bookingHours') return `${fmt(number)}小时`;
   if (key === 'activeCoaches') return `${fmt(number)}人`;
-  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${fmt(number)}%`;
+  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate', 'totalDealRate', 'courseDealRate', 'trialPathDealRate', 'courseRepeatRate', 'courtRepeatRate'].includes(key)) return `${fmt(number)}%`;
   return fmt(number);
 }
 
@@ -890,7 +891,7 @@ function operationsKpiSignedValueText(value = 0, key = '') {
   if (key === 'revenue' || key === 'bookingAmount' || key === 'totalIncome' || key === 'recognizedRevenue' || key === 'pendingRevenue') return `${sign}¥${operationsCompactNumber(abs)}`;
   if (key === 'bookingHours') return `${sign}${fmt(abs)}小时`;
   if (key === 'activeCoaches') return `${sign}${fmt(abs)}人`;
-  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate'].includes(key)) return `${sign}${fmt(abs)}%`;
+  if (['appointmentRate', 'attendanceRate', 'dealRate', 'utilizationRate', 'trialConversionRate', 'renewalRate', 'goldenUtilizationRate', 'offPeakUtilizationRate', 'totalDealRate', 'courseDealRate', 'trialPathDealRate', 'courseRepeatRate', 'courtRepeatRate'].includes(key)) return `${sign}${fmt(abs)}%`;
   return `${sign}${operationsCompactNumber(abs)}`;
 }
 
@@ -909,6 +910,11 @@ function operationsKpiRatioText(point = {}, key = '') {
   if (key === 'attendanceRate') return `到课 ${fmt(numerator)} / 预约 ${fmt(denominator)}`;
   if (key === 'dealRate') return `成交 ${fmt(numerator)} / 到课 ${fmt(denominator)}`;
   if (key === 'renewalRate') return `复购 ${fmt(numerator)} / 付费 ${fmt(denominator)}`;
+  if (key === 'totalDealRate') return `总成交 ${fmt(numerator)} / 线索 ${fmt(denominator)}`;
+  if (key === 'courseDealRate') return `正式课包 ${fmt(numerator)} / 线索 ${fmt(denominator)}`;
+  if (key === 'trialPathDealRate') return `体验成交 ${fmt(numerator)} / 体验路径 ${fmt(denominator)}`;
+  if (key === 'courseRepeatRate') return `课包复购 ${fmt(numerator)} / 首购 ${fmt(denominator)}`;
+  if (key === 'courtRepeatRate') return `复订 ${fmt(numerator)} / 首次订场 ${fmt(denominator)}`;
   return `${fmt(numerator)} / ${fmt(denominator)}`;
 }
 
@@ -994,16 +1000,19 @@ function operationsCoachSparklineSvg(points = [], key = '') {
 }
 
 function operationsConversionKpiCards(conversion = {}) {
+  const metricRate = key => Number(operationsStandardMetric(conversion, key)?.rate) || 0;
   const metricCard = (key, label, unit, trendKey, tone) => {
     const metric = operationsStandardMetric(conversion, key) || {};
     return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
   };
+  const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
-    metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
-    metricCard('courseChainStudents', '普通学员', '人', 'courseChainStudents', 'conversion'),
-    metricCard('formalStudents', '正式学员', '人', 'formalStudents', 'conversion'),
-    metricCard('trialPathStudents', '体验路径学员', '人', 'trialPathStudents', 'conversion'),
-    metricCard('trialPathDeals', '体验路径成交', '人', 'trialPathDeals', 'retention')
+    rateCard('总成交转化率', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
+    rateCard('课程成交率', metricRate('formalStudents'), 'courseDealRate', 'conversion'),
+    rateCard('体验路径成交率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
+    metricCard('trialPathPending', '待转化体验学员', '人', 'trialPathPending', 'warn'),
+    rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
+    rateCard('订场复订率', Number(conversion.courtChain?.courtRepeatRate) || 0, 'courtRepeatRate', 'retention')
   ];
 }
 
@@ -1042,21 +1051,34 @@ function operationsInsightCard(tone, label, title, caption) {
 }
 
 function operationsChannelQualityRows(rows = []) {
-  const labels = { good: '高价值', warn: '待优化', danger: '低效' };
   return (rows || []).map(row => {
     const leads = Number(row.leads) || 0;
     const deals = Number(row.deals) || 0;
     const trialConversionRate = Number(row.trialConversionRate) || 0;
     const dealConversionRate = Number(row.dealConversionRate) || 0;
     const trialCount = Number(row.trialCount ?? row.attendanceCount ?? row.trials) || Math.round(leads * trialConversionRate / 100);
-    let statusLabel = labels.danger;
+    const sampleReliable = leads >= 20;
+    let statusLabel = '';
     let statusTone = 'danger';
-    if (deals > 0 && dealConversionRate >= 15) {
-      statusLabel = labels.good;
+    let actionLabel = '暂停';
+    let actionTone = 'danger';
+    if (sampleReliable && deals > 0 && dealConversionRate >= 15) {
+      statusLabel = '高价值';
       statusTone = 'good';
-    } else if (deals > 0) {
-      statusLabel = labels.warn;
+      actionLabel = '加投';
+      actionTone = 'good';
+    } else if (sampleReliable && deals > 0) {
+      statusLabel = '待优化';
       statusTone = 'warn';
+      actionLabel = '优化';
+      actionTone = 'warn';
+    } else if (deals > 0) {
+      statusLabel = '待优化';
+      statusTone = 'warn';
+      actionLabel = '观察';
+      actionTone = 'neutral';
+    } else {
+      statusLabel = '低效';
     }
     return {
       source: row.source || '未记录',
@@ -1065,30 +1087,32 @@ function operationsChannelQualityRows(rows = []) {
       deals,
       trialConversionRate,
       dealConversionRate,
+      sampleLabel: sampleReliable ? '可信' : '样本偏小',
       statusLabel,
-      statusTone
+      statusTone,
+      actionLabel,
+      actionTone
     };
   }).filter(row => row.leads > 0)
     .sort((a, b) => b.leads - a.leads || b.dealConversionRate - a.dealConversionRate || b.deals - a.deals);
 }
 
 function operationsChannelStatusTag(row = {}) {
-  return `<span class="operations-channel-status ${esc(row.statusTone || 'danger')}">${esc(row.statusLabel || '低效')}</span>`;
+  return `<span class="operations-channel-status ${esc(row.actionTone || 'danger')}">${esc(row.actionLabel || '暂停')}</span>`;
 }
 
 function operationsChannelRankingTable(rows = []) {
   if (!rows.length) return '<div class="operations-channel-empty">暂无渠道数据</div>';
   return `<div class="operations-channel-ranking-table">
     <div class="operations-channel-ranking-head">
-      <span>渠道</span><span>线索</span><span>体验</span><span>成交</span><span>体验转化</span><span>成交转化</span><span>判断</span>
+      <span>渠道</span><span>线索</span><span>成交</span><span>成交转化率</span><span>样本可信度</span><span>建议动作</span>
     </div>
     ${rows.map(row => `<div class="operations-channel-ranking-row">
       <strong>${esc(row.source)}</strong>
       <span>${fmt(row.leads)}</span>
-      <span>${fmt(row.trialCount)}</span>
       <span>${fmt(row.deals)}</span>
-      <span>${fmt(row.trialConversionRate)}%</span>
       <span>${fmt(row.dealConversionRate)}%</span>
+      <span>${esc(row.sampleLabel)}</span>
       ${operationsChannelStatusTag(row)}
     </div>`).join('')}
   </div>`;
@@ -1115,6 +1139,8 @@ function operationsConversionView(data) {
     return {
       courseFunnel: data.conversion?.courseFunnel || [],
       standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
+      courtChain: data.conversion?.courtChain || {},
+      retention: data.conversion?.retention || {},
       sourceRanking: data.conversion?.sourceRanking || [],
       channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
       studentAttributeRows: data.conversion?.studentAttributeRows || [],
@@ -1127,6 +1153,9 @@ function operationsConversionView(data) {
   if (!view) {
     return {
       courseFunnel: [],
+      standardLifecycleMetrics: {},
+      courtChain: data.conversion?.courtChain || {},
+      retention: data.conversion?.retention || {},
       sourceRanking: [],
       channelEfficiencyRows: [],
       studentAttributeRows: [],
@@ -1138,6 +1167,8 @@ function operationsConversionView(data) {
   return {
     courseFunnel: view.courseFunnel || [],
     standardLifecycleMetrics: view.standardLifecycleMetrics || {},
+    courtChain: view.courtChain || data.conversion?.courtChain || {},
+    retention: view.retention || data.conversion?.retention || {},
     sourceRanking: view.sourceRanking || [],
     channelEfficiencyRows: view.channelEfficiencyRows || [],
     studentAttributeRows: view.studentAttributeRows || [],
@@ -1191,60 +1222,51 @@ function operationsRateText(part, total) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
 }
 
-function operationsTextFunnel(title, rows = []) {
-  return `<div class="operations-insight-card">
-    <span>${esc(title)}</span>
-    ${rows.map(row => `<p><strong>${esc(row.label)}</strong> ${fmt(row.value || 0)}${row.unit || '人'}${row.rate ? ` · ${esc(row.rate)}` : ''}</p>`).join('')}
-  </div>`;
+function operationsFunnelRows(conversion = {}, key = '') {
+  const standard = conversion.standardLifecycleMetrics || {};
+  if (key === 'course') return standard.funnels?.courseChain || conversion.courseFunnel || [];
+  if (key === 'trial') return (standard.funnels?.trialPath || []).filter(row => row.id !== 'TRIAL_PATH_PENDING');
+  if (key === 'court') return (standard.funnels?.courtChain || []).filter(row => row.id !== 'COURT_REBOOK_CUSTOMERS');
+  return [];
 }
 
-function operationsStandardFunnelRows(conversion = {}) {
-  const standard = conversion.standardLifecycleMetrics || {};
-  const courtChain = conversion.courtChain || {};
-  const leads = operationsStandardMetricValue(conversion, 'validLeads');
-  const courseStudents = operationsStandardMetricValue(conversion, 'courseChainStudents');
-  const formalStudents = operationsStandardMetricValue(conversion, 'formalStudents');
-  const trialPathStudents = operationsStandardMetricValue(conversion, 'trialPathStudents');
-  const trialPathDeals = operationsStandardMetricValue(conversion, 'trialPathDeals');
-  const trialPathPending = operationsStandardMetricValue(conversion, 'trialPathPending');
-  const courtUsers = Number(courtChain.courtUsers) || 0;
-  const courtMembers = Number(courtChain.courtMembers) || 0;
-  const memberRepeat = Number(courtChain.memberRepeatCustomers) || 0;
-  const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
-  if (!standard.metrics && !leads && !courseStudents && !formalStudents) return [operationsTextFunnel('标准漏斗', [{ label: '暂无标准指标', value: 0, unit: '' }])];
-  return [
-    operationsTextFunnel('课程总漏斗', [
-      { label: '线索数', value: leads, unit: '条' },
-      { label: '普通学员', value: courseStudents, rate: operationsStandardMetricRate(conversion, 'courseChainStudents') },
-      { label: '正式学员', value: formalStudents, rate: operationsStandardMetric(conversion, 'formalStudents')?.transitionRateText || operationsStandardMetricRate(conversion, 'formalStudents') }
-    ]),
-    operationsTextFunnel('体验路径漏斗', [
-      { label: '体验路径学员', value: trialPathStudents },
-      { label: '体验路径成交', value: trialPathDeals, rate: operationsStandardMetricRate(conversion, 'trialPathDeals') },
-      { label: '体验路径未成交', value: trialPathPending, rate: operationsStandardMetricRate(conversion, 'trialPathPending') }
-    ]),
-    operationsTextFunnel('订场链漏斗', [
-      { label: '订场用户', value: courtUsers },
-      { label: '订场会员', value: courtMembers, rate: operationsRateText(courtMembers, courtUsers) },
-      { label: '会员复购', value: memberRepeat, rate: operationsRateText(memberRepeat, courtMembers) },
-      { label: '订场复订', value: courtRepeat, rate: operationsRateText(courtRepeat, courtUsers) }
-    ])
-  ];
+function operationsAuxMetric(label, value, rate) {
+  return `<div class="operations-funnel-aux"><span>${esc(label)}</span><strong>${fmt(value || 0)}人${rate ? ` · ${esc(rate)}` : ''}</strong></div>`;
+}
+
+function renderConversionFunnelCard(title, hostId, auxiliary = '') {
+  return `<section class="operations-section operations-funnel-card">
+    <div class="operations-module-head"><div><h3>${esc(title)}</h3></div></div>
+    <div class="operations-funnel-host" id="${esc(hostId)}"></div>
+    ${auxiliary || ''}
+  </section>`;
 }
 
 function renderConversionFunnelModule(data, conversion) {
   const options = operationsConversionFilterOptions(data);
-  return `<section class="operations-section operations-funnel-card">
+  const trialPathPending = operationsStandardMetricValue(conversion, 'trialPathPending');
+  const courtChain = conversion.courtChain || {};
+  const courtUsers = Number(courtChain.courtUsers) || 0;
+  const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
+  const moduleTitle = '转化漏斗';
+  const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel');
+  const trialCard = renderConversionFunnelCard('体验路径漏斗', 'operationsTrialFunnel', operationsAuxMetric('体验路径未成交', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
+  const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
+  return `<div class="operations-dashboard-block operations-funnel-block">
     <div class="operations-module-head">
-      <div><h3>标准转化漏斗</h3><span>课程总漏斗、体验路径漏斗、订场链漏斗</span></div>
+      <div><h3>${moduleTitle}</h3></div>
       <div class="operations-funnel-filter-row">
         ${operationsFilterDropdown('operationsConversionSource', '全部渠道', options.sources || [], operationsConversionFilters.source)}
         ${operationsFilterDropdown('operationsConversionCampus', '全部校区', options.campuses || [], operationsConversionFilters.campus)}
         ${operationsFilterDropdown('operationsConversionCoach', '全部教练', options.coaches || [], operationsConversionFilters.coach)}
       </div>
     </div>
-    <div class="operations-insight-list">${operationsStandardFunnelRows(conversion).join('')}</div>
-  </section>`;
+    <div class="operations-conversion-funnel-grid">
+      ${courseCard}
+      ${trialCard}
+      ${courtCard}
+    </div>
+  </div>`;
 }
 
 function renderConversionCommandCenter(data, conversion) {
@@ -1259,62 +1281,96 @@ function renderConversionCommandCenter(data, conversion) {
     </div>`;
 }
 
-function renderConversionInsightModule(conversion) {
-  const validLeads = operationsStandardMetricValue(conversion, 'validLeads');
-  if (!validLeads) {
-    return `<section class="operations-section operations-insight-panel">
-      <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
-      <div class="operations-insight-list">
-        ${operationsInsightCard('neutral', '暂无洞察', '标准漏斗暂无数据', '当前标准指标为空，暂不使用旧漏斗兜底')}
-      </div>
-    </section>`;
-  }
-  const courseEntry = operationsStandardMetric(conversion, 'courseChainStudents') || {};
-  const formal = operationsStandardMetric(conversion, 'formalStudents') || {};
-  const trialDeal = operationsStandardMetric(conversion, 'trialPathDeals') || {};
-  return `<section class="operations-section operations-insight-panel">
-    <div class="operations-module-head"><div><h3>关键洞察</h3><span>把数据翻译成经营动作</span></div></div>
-    <div class="operations-insight-list">
-      ${operationsInsightCard('neutral', '课程链入口', '有效线索 → 普通学员', `转化 ${courseEntry.rateText || '0%'}`)}
-      ${operationsInsightCard('good', '正式成交', '普通学员 → 正式学员', `转化 ${formal.transitionRateText || formal.rateText || '0%'}`)}
-      ${operationsInsightCard('warn', '体验路径成交', '体验路径学员 → 体验路径成交', `转化 ${trialDeal.rateText || '0%'}`)}
+function operationsRetentionMetricHtml(metric = {}) {
+  if (!metric || metric.status !== 'ready') return `<div class="operations-retention-metric pending"><span>${esc(metric?.label || '待接入口径')}</span><strong>待接入</strong></div>`;
+  return `<div class="operations-retention-metric"><span>${esc(metric.label || '')}</span><strong>${fmt(metric.value || 0)}%</strong><em>${fmt(metric.numerator || 0)} / ${fmt(metric.denominator || 0)}</em></div>`;
+}
+
+function operationsRetentionLine(points = [], key = '') {
+  return operationsKpiSparklineSvg(points, key, 'operations-retention-sparkline');
+}
+
+function renderRetentionCard(title, mainMetric, secondaryMetric, trendRows, trendKey) {
+  return `<section class="operations-section operations-retention-card">
+    <div class="operations-module-head"><div><h3>${esc(title)}</h3></div></div>
+    ${operationsRetentionLine(operationsTrendPointsWithFallback(trendRows || [], trendKey), trendKey)}
+    <div class="operations-retention-metrics">
+      ${operationsRetentionMetricHtml(mainMetric)}
+      ${operationsRetentionMetricHtml(secondaryMetric)}
     </div>
   </section>`;
 }
 
-function renderConversionChannelEfficiencyModule(conversion) {
+function renderConversionRetentionModule(conversion) {
+  const retention = conversion.retention || {};
+  const moduleTitle = '留存趋势';
+  const teachingCard = renderRetentionCard('课包留存趋势', retention.teaching?.packageRepeatRate, retention.teaching?.packageRenewalRate, conversion.trendRows, 'courseRepeatRate');
+  const courtCard = renderRetentionCard('订场留存趋势', retention.court?.courtRebookRate, retention.court?.ndRetention, conversion.trendRows, 'courtRepeatRate');
+  const memberCard = renderRetentionCard('订场会员留存趋势', retention.member?.memberRechargeRepeatRate, retention.member?.ndRetention, conversion.trendRows, 'memberRechargeRepeatRate');
+  return `<div class="operations-dashboard-block">
+    <div class="operations-module-head"><div><h3>${moduleTitle}</h3></div></div>
+    <div class="operations-retention-grid">
+      ${teachingCard}
+      ${courtCard}
+      ${memberCard}
+    </div>
+  </div>`;
+}
+
+function renderConversionChannelQualityModule(conversion) {
   const rows = operationsChannelQualityRows(conversion.channelEfficiencyRows || []);
   return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>渠道效率监控</h3><span>用象限图先判断渠道质量，再看排行明细</span></div>${operationsMatrixTitleLegend('成交转化率', '线索量', '成交人数')}</div>
-    <div class="operations-channel-quality-layout">
-      <div class="operations-channel-quality-chart" id="operationsChannelQualityChart"></div>
-      ${operationsChannelRankingTable(rows)}
-    </div>
+    <div class="operations-module-head"><div><h3>渠道质量象限图</h3></div>${operationsMatrixTitleLegend('成交转化率', '线索量', '成交人数')}</div>
+    <div class="operations-channel-quality-chart" id="operationsChannelQualityChart"></div>
   </section>`;
+}
+
+function renderConversionChannelActionModule(conversion) {
+  const rows = operationsChannelQualityRows(conversion.channelEfficiencyRows || []);
+  return `<section class="operations-section">
+    <div class="operations-module-head"><div><h3>渠道动作表</h3></div></div>
+    ${operationsChannelRankingTable(rows)}
+  </section>`;
+}
+
+function operationsPersonaBars(rows = [], mode = 'deal') {
+  const key = mode === 'retention' ? 'renewalRate' : 'dealConversionRate';
+  const countKey = mode === 'retention' ? 'renewals' : 'deals';
+  const source = [...(rows || [])]
+    .filter(row => Number(row.base) > 0)
+    .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0) || (Number(b[countKey]) || 0) - (Number(a[countKey]) || 0))
+    .slice(0, 6);
+  if (!source.length) return '<div class="operations-channel-empty">暂无人群数据</div>';
+  const max = Math.max(1, ...source.map(row => Number(row[key]) || 0));
+  return `<div class="operations-persona-bars">${source.map(row => {
+    const value = Number(row[key]) || 0;
+    const smallSample = mode === 'retention' && Number(row.deals) < 5;
+    return `<div class="operations-persona-bar ${smallSample ? 'small-sample' : ''}">
+      <div class="operations-persona-row">
+        <strong>${esc(row.attribute || '未标注人群')}</strong>
+        <span>${fmt(value)}% · ${fmt(row[countKey] || 0)}人</span>
+      </div>
+      <div class="operations-persona-track"><i style="width:${Math.min(100, Math.max(2, value * 100 / max))}%"></i></div>
+      ${smallSample ? '<em>样本偏小</em>' : ''}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function renderConversionAttributeModule(conversion) {
   const rows = conversion.studentAttributeRows || [];
-  const risks = operationsRiskRows(rows);
-  const body = rows.length ? `<div class="operations-attribute-layout">
-  <div class="operations-attribute-grid">${rows.map(row => `<div class="operations-attribute-card">
-    <div class="operations-attribute-head"><strong>${esc(row.attribute)}</strong><span>基数: ${fmt(row.base)}</span></div>
-    ${operationsAttributeMetric('体验转化', row.trialConversionRate)}
-    ${operationsAttributeMetric(`首购后续费率`, row.renewalRate)}
-    <div class="operations-attribute-note">首购 ${fmt(row.deals)} 人 / 续费 ${fmt(row.renewals)} 人</div>
-  </div>`).join('')}</div>
-  <aside class="operations-retention-risk">
-    <div class="operations-risk-head"><strong>留存/续费风险榜</strong><span>续费偏低的人群</span></div>
-    ${risks.length ? risks.map(row => `<div class="operations-risk-row">
-      <span>${esc(row.attribute)}</span>
-      <strong>${fmt(row.renewalRate)}%</strong>
-    </div>`).join('') : '<div class="operations-channel-empty">暂无续费风险数据</div>'}
-  </aside>
-  </div>` : `<div class="tms-empty-state"><div class="tms-empty-title">暂无学员属性数据</div></div>`;
-  return `<section class="operations-section">
-    <div class="operations-module-head"><div><h3>学员属性与转化</h3><span>不同人群的商业表现</span></div></div>
-    ${body}
-  </section>`;
+  return `<div class="operations-dashboard-block">
+    <div class="operations-module-head"><div><h3>人群画像</h3></div></div>
+    <div class="operations-persona-grid">
+      <section class="operations-section">
+        <div class="operations-module-head"><div><h3>成交画像图</h3></div></div>
+        ${operationsPersonaBars(rows, 'deal')}
+      </section>
+      <section class="operations-section">
+        <div class="operations-module-head"><div><h3>留存画像图</h3></div></div>
+        ${operationsPersonaBars(rows, 'retention')}
+      </section>
+    </div>
+  </div>`;
 }
 
 function renderOperationsCharts(data) {
@@ -1334,7 +1390,9 @@ function renderOperationsCharts(data) {
   renderStandardChart('operationsCourtComparisonChart', buildOperationsCourtQuadrantChartOption({
     rows: (data.court?.campusRows || []).length ? data.court.campusRows : (data.court?.campusComparison || [])
   }), { height: 296 });
-  renderProgressFunnel('operationsCourseFunnel', conversion.courseFunnel || []);
+  renderProgressFunnel('operationsCourseFunnel', operationsFunnelRows(conversion, 'course'));
+  renderProgressFunnel('operationsTrialFunnel', operationsFunnelRows(conversion, 'trial'));
+  renderProgressFunnel('operationsCourtChainFunnel', operationsFunnelRows(conversion, 'court'));
   renderStandardChart('operationsChannelQualityChart', buildOperationsChannelQualityChartOption({
     rows: operationsChannelQualityRows(conversion.channelEfficiencyRows || [])
   }), { height: 360, emptyText: '暂无渠道数据' });

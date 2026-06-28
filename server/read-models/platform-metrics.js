@@ -386,6 +386,38 @@ function rateText(part, total) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
 }
 
+function purchaseAmount(row = {}) {
+  return Number(
+    row.actualAmount
+    ?? row.amountPaid
+    ?? row.finalAmount
+    ?? row.paidAmount
+    ?? row.receivedAmount
+    ?? row.amount
+    ?? row.packagePrice
+    ?? row.price
+    ?? 0
+  ) || 0;
+}
+
+function isValidCoursePurchase(row = {}) {
+  const status = text(row.status || row.systemStatus || 'active');
+  if (['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status)) return false;
+  const courseText = text(`${row.courseType || ''} ${row.standardCourseType || ''} ${row.packageName || ''} ${row.productName || ''}`);
+  if (/体验|赠课|赠送|测试/.test(courseText)) return false;
+  return purchaseAmount(row) > 0;
+}
+
+function courseRepeatBuyerCount(purchases = []) {
+  const byStudent = new Map();
+  (purchases || []).filter(isValidCoursePurchase).forEach(row => {
+    const key = text(row.studentId || row.studentName);
+    if (!key) return;
+    byStudent.set(key, (byStudent.get(key) || 0) + 1);
+  });
+  return [...byStudent.values()].filter(count => count > 1).length;
+}
+
 function standardMetric(id, label, value, denominator, sourceMetric, unit = '人') {
   const safeValue = Number(value) || 0;
   const safeDenominator = Number(denominator) || 0;
@@ -442,10 +474,12 @@ function buildStandardLifecycleMetrics(data = {}) {
   const trialPathPending = Number(summary.trialPathPendingCustomers) || Math.max(0, trialPathStudents - trialPathDeals);
   const directCourseDeals = Number(summary.directCourseCustomers) || 0;
   const totalDeals = Number(leadConversionMetrics.convertedLeads) || 0;
+  const courseRepeatBuyers = courseRepeatBuyerCount(data.purchases || []);
   const metrics = {
     validLeads: standardMetric('VALID_LEADS', '有效线索', validLeads, validLeads, 'RAW_LEAD_POOL_ROWS', '条'),
     courseChainStudents: standardMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseChainStudents, validLeads, 'COURSE_CHAIN_STUDENTS / VALID_LEADS'),
     formalStudents: standardMetric('FORMAL_STUDENTS', '正式学员', formalStudents, validLeads, 'FORMAL_STUDENTS / VALID_LEADS'),
+    courseRepeatBuyers: standardMetric('COURSE_REPEAT_BUYERS', '课包复购', courseRepeatBuyers, formalStudents, 'COURSE_REPEAT_BUYERS / FORMAL_STUDENTS'),
     trialPathStudents: standardMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathStudents, validLeads, 'TRIAL_PATH_STUDENTS / VALID_LEADS'),
     trialPathDeals: standardMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDeals, trialPathStudents, 'TRIAL_PATH_DEALS / TRIAL_PATH_STUDENTS'),
     trialPathPending: standardMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPending, trialPathStudents, 'TRIAL_PATH_PENDING / TRIAL_PATH_STUDENTS'),
@@ -471,7 +505,8 @@ function buildStandardLifecycleMetrics(data = {}) {
       courseChain: standardFunnelRows([
         { id: 'VALID_LEADS', label: '有效线索', value: validLeads, unit: '条' },
         { id: 'COURSE_CHAIN_STUDENTS', label: '普通学员', value: courseChainStudents },
-        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalStudents }
+        { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalStudents },
+        { id: 'COURSE_REPEAT_BUYERS', label: '课包复购', value: courseRepeatBuyers }
       ]),
       trialPath: standardFunnelRows([
         { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathStudents },

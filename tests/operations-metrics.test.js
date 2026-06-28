@@ -61,12 +61,17 @@ assert.strictEqual(metrics.conversion.stageRows.find(row => row.stage === '已�
 assert.strictEqual(metrics.conversion.cards.sameProjectRenewalRate.value, 100, 'same package renewal should count as same-project renewal');
 assert.deepStrictEqual(
   metrics.conversion.courseFunnel.map(row => row.stage),
-  ['有效线索', '普通学员', '正式学员'],
-  'course conversion funnel should use the standard course-chain stage order'
+  ['有效线索', '普通学员', '正式学员', '课包复购'],
+  'course conversion funnel should use the documented course-chain stage order'
 );
 assert.strictEqual(metrics.conversion.courseFunnel[0].count, 5, 'course funnel should keep valid leads as the first stage');
 assert.strictEqual(metrics.conversion.courseFunnel[1].count, 2, 'course funnel should count standard course-chain students');
 assert.strictEqual(metrics.conversion.courseFunnel[2].count, 2, 'course funnel should count standard formal students');
+assert.strictEqual(metrics.conversion.courseFunnel[3].count, 1, 'course funnel should include package repeat buyers from the unified course retention metric');
+assert.strictEqual(metrics.conversion.retention.teaching.packageRepeatRate.status, 'ready', 'teaching retention should expose existing package repeat rate as ready');
+assert.strictEqual(metrics.conversion.retention.teaching.packageRenewalRate.status, 'pending', 'teaching retention must not fabricate package renewal rate before the renewal-window read model exists');
+assert.strictEqual(metrics.conversion.retention.court.ndRetention.status, 'pending', 'court N-day retention must stay pending until a unified retention read model exists');
+assert.strictEqual(metrics.conversion.retention.member.ndRetention.status, 'pending', 'member N-day retention must stay pending until a unified retention read model exists');
 assert.strictEqual(metrics.conversion.sourceRanking.find(row => row.source === '抖音/美团'), undefined, 'booking-only converted channels should not enter course deal ranking');
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '转介绍'), 'channel deal ranking should include course deal channels');
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书'), 'channel deal ranking should include all course deal channels');
