@@ -58,7 +58,9 @@ assert.match(source, /function studentStandardSummaryForMode\(/, 'student top ca
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should use the standard summary instead of local purchase or finance formulas');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)|purchases\.filter|entitlements\.filter|amountPaid|finalAmount|recognizedRevenueDelta/, 'student top cards must not recalculate core metrics from frontend raw rows');
 assert.match(source, /正式学员[\s\S]*正式学员数 vs 购买次数 vs 课包复购人数[\s\S]*有效课包学员/, 'package student top stats should show official students, repeat facts, and active package students');
-assert.doesNotMatch(fnBody('studentTopStatsCards'), /课包实收金额|已履约金额|待履约金额/, 'package student top stats should not show placeholder money cards before a standard student finance summary exists');
+assert.match(fnBody('studentStandardSummaryForMode'), /purchaseCount:Number\(summary\.coursePurchaseCount\)/, 'official student purchase count should read the standard course purchase count, not total deal customers');
+assert.match(fnBody('studentStandardSummaryForMode'), /activePackageStudentCount:Number\(summary\.activePackageStudentCount\)/, 'active package students should read the standard active package summary, not formal student count');
+assert.match(fnBody('studentTopStatsCards'), /课包实收金额[\s\S]*已履约金额[\s\S]*待履约金额/, 'package student top stats should restore revenue, recognized, and pending cards from the standard summary');
 assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /有效课包学员 \/ 总学员数占比/, 'student active package card should explain the requested formula');
 assert.match(source, /function studentPageStats\(/, 'student page should centralize top stat calculation');

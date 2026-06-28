@@ -205,7 +205,9 @@ assert.deepStrictEqual(
     trialPathDealCustomers: 1,
     trialPathPendingCustomers: 2,
     trialToCourseCustomers: 1,
-    directCourseCustomers: 2
+    directCourseCustomers: 2,
+    coursePurchaseCount: 3,
+    courseRepeatCount: 0
   },
   '教学链汇总必须同时提供课程总漏斗和体验路径漏斗，并保持恒等关系'
 );

@@ -71,7 +71,7 @@ assert.match(studentsSource, /customerLifecycleByStudentId/, 'student pages shou
 assert.match(studentsSource, /studentDealPathText[\s\S]*customerLifecycleStudentDealPath\(stu\)/, 'student deal path should prefer the unified lifecycle accessor');
 assert.match(studentsSource, /studentTrialPathStatusText[\s\S]*customerLifecycleStudentTrialStatus\(stu\)/, 'student trial status should prefer the unified lifecycle accessor');
 assert.match(studentsSource, /studentStandardSummaryForMode\(\)/, 'student top conversion stats should start from unified lifecycle facts');
-assert.match(studentsSource, /studentStandardMetricValue\('totalDeals'\)/, 'student purchase count should read the standard lifecycle metric');
+assert.match(studentsSource, /purchaseCount:Number\(summary\.coursePurchaseCount\)/, 'student purchase count should read the standard course purchase count');
 assert.match(studentsSource, /studentStandardMetricValue\('trialPathDeals'\)/, 'student trial conversion count should read the standard lifecycle metric');
 assert.match(courtsSource, /customerLifecycleByCourtId|customerLifecycleByMembershipAccountId/, 'court and membership pages should read courtStage/membershipStatus from the shared lifecycle accessor');
 assert.match(purchasesSource, /customerLifecycleCampus/, 'purchase pages should resolve customer campus through the shared lifecycle accessor');

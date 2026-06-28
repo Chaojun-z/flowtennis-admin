@@ -386,7 +386,8 @@ function studentStandardMetricValue(key){
   return Number(standard.metrics?.[key]?.value)||0;
 }
 function studentStandardSummaryForMode(){
-  const summary=teachingStudentViews?.summary||{};
+  const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{};
+  const summary=standard.teachingSummary||teachingStudentViews?.summary||{};
   if(studentListViewMode()==='trial')return {
     total:studentStandardMetricValue('courseChainStudents')||Number(summary.courseStudentCount)||0,
     trialPathCount:studentStandardMetricValue('trialPathStudents')||Number(summary.trialPathStudents)||0,
@@ -399,9 +400,12 @@ function studentStandardSummaryForMode(){
   return {
     total:studentStandardMetricValue('formalStudents')||Number(summary.formalStudentCount)||0,
     packageStudentCount:Number(summary.formalStudentCount)||studentStandardMetricValue('formalStudents')||0,
-    activePackageStudentCount:studentStandardMetricValue('formalStudents')||Number(summary.formalStudentCount)||0,
-    purchaseCount:studentStandardMetricValue('totalDeals')||Number(summary.courseDealCustomers)||0,
-    courseRepeatCount:studentStandardMetricValue('courseRepeatBuyers')||0
+    activePackageStudentCount:Number(summary.activePackageStudentCount)||0,
+    purchaseCount:Number(summary.coursePurchaseCount)||0,
+    courseRepeatCount:studentStandardMetricValue('courseRepeatBuyers')||Number(summary.courseRepeatCount)||0,
+    totalIncome:Number(summary.totalIncome)||0,
+    recognized:Number(summary.recognized)||0,
+    packageBalance:Number(summary.packageBalance)||0
   };
 }
 function studentStatsCampusNameForPurchase(purchase,entitlement={}){
@@ -435,7 +439,10 @@ function studentTopStatsCards(stats){
   ];
   return [
     {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span><span class="student-stat-divider">｜</span><span>${stats.courseRepeatCount}</span>`,sub:'正式学员数 vs 购买次数 vs 课包复购人数'},
-    {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'}
+    {label:'有效课包学员',valueHtml:stats.activePackageStudentCount,percent:studentPercentText(stats.activePackageStudentCount,stats.total),sub:'有效课包学员 / 总学员数占比'},
+    {label:'课包实收金额',valueHtml:`¥${fmt(stats.totalIncome)}`},
+    {label:'已履约金额',valueHtml:`¥${fmt(stats.recognized)}`,percent:studentPercentText(stats.recognized,stats.totalIncome),sub:'已履约金额 / 课包实收金额占比'},
+    {label:'待履约金额',valueHtml:`¥${fmt(stats.packageBalance)}`,percent:studentPercentText(stats.packageBalance,stats.totalIncome),sub:'待履约金额 / 课包实收金额占比'}
   ];
 }
 function studentStatSplitCard(title,primary,secondary,caption){
