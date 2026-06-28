@@ -215,9 +215,9 @@ function shouldBypassDatasetCache(name){
 }
 const PAGE_DATA_REQUIREMENTS={
   students:['campuses','students'],
-  'package-students':['campuses','students','purchasesPage'],
-  'trial-students':['campuses','students','purchasesPage'],
-  leads:['campuses','leads','purchasesPage'],
+  'package-students':['campuses','students','lifecycleMetricsPage'],
+  'trial-students':['campuses','students','lifecycleMetricsPage'],
+  leads:['campuses','leads'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
   coachschedule:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages'],
@@ -246,7 +246,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   students:['classes','schedule','courts'],
   'package-students':['classes','schedule','courts','financePage'],
   'trial-students':['classes','schedule','courts','financePage'],
-  leads:['leadFollowups','purchases'],
+  leads:['leadFollowups','lifecycleMetricsPage'],
   packages:[],
   purchases:['purchasesPage'],
   schedule:['classes','feedbacks','entitlements','entitlementLedger'],
@@ -346,6 +346,7 @@ const DATASET_LOADERS={
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
+  ,lifecycleMetricsPage:()=>apiCall('GET','/page-data/lifecycle-metrics')
   ,financePage:()=>apiCall('GET','/page-data/finance')
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
   ,courtAccountListViewPage:()=>apiCall('GET','/page-data/court-account-list-view')
@@ -608,6 +609,14 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       loadedDatasets.add('purchasesPage');
       return;
     }
+    if(name==='lifecycleMetricsPage'){
+      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
+      staleCachedDatasets.delete('customerLifecycleRows');
+      loadedDatasets.add('lifecycleMetricsPage');
+      return;
+    }
     if(name==='financePage'){
       setDatasetValue('campuses',data.campuses||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
@@ -744,6 +753,7 @@ function clearLoadedData(){
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];operationsPageData=null;
+  customerLifecycleRows=[];teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
   loadedDatasets=new Set();
@@ -792,6 +802,8 @@ function applyLoadedData(data){
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
   operationsPageData=data?.operations||null;
   customerLifecycleRows=Array.isArray(data?.customerLifecycleRows)?data.customerLifecycleRows:[];
+  teachingStudentViews=data?.teachingStudentViews||teachingStudentViews;
+  standardLifecycleMetrics=data?.standardLifecycleMetrics||standardLifecycleMetrics;
   loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches','customerLifecycleRows']);
   if(data?.user){
     currentUser=data.user;
@@ -807,10 +819,6 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   const loading=document.getElementById('pageLoading');
   if(!quiet&&loading)loading.classList.add('show');
   try{
-    if(quiet&&loadedDatasets.size){
-      buildCampusTabs();
-      renderAll();
-    }
     await ensurePageDatasets(pg,{force});
     if(pg==='courts'||pg==='memberships'){
       try{
@@ -860,6 +868,11 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');
   }
+}
+function deferPageDataLoad(pg,options={}){
+  const run=()=>loadPageDataAndRender(pg,options);
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(run);
+  else setTimeout(run,0);
 }
 async function reloadOperationsPageDataWithInlineLoading(){
   const requestSeq=++operationsPageRequestSeq;

@@ -39,7 +39,7 @@ function showApp(){
   renderRoleShell();
   buildCampusTabs();
   renderAll();
-  loadPageDataAndRender(currentPage,{quiet:true});
+  deferPageDataLoad(currentPage,{quiet:true});
 }
 document.addEventListener('DOMContentLoaded',()=>{
   captureWechatLoginCode();

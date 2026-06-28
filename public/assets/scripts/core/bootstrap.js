@@ -85,7 +85,10 @@ function goPage(pg,el,skipRender=false){
     const topTitle=document.getElementById('topTitle');
     if(topTitle)topTitle.innerHTML=renderTopTitleHtml(pg);
     scrollActiveSidebarItemIntoView();
-    if(!skipRender)loadPageDataAndRender(pg,{quiet:true});
+    if(!skipRender){
+      renderPageLoading(pg);
+      deferPageDataLoad(pg,{quiet:true});
+    }
   };
   if(document.startViewTransition) {
     document.startViewTransition(() => updateDOM());

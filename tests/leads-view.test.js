@@ -182,7 +182,8 @@ assert.match(stateSource, /function renderLeadTableLoading\([\s\S]*renderTableSk
 assert.match(stateSource, /function renderLeadTableError\(message\)[\s\S]*colspan="14"/, 'leads error state should span all visible columns');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableLoading\(\);/, 'leads page should use the dedicated loading renderer');
 assert.match(stateSource, /if\(pg==='leads'\)renderLeadTableError\(String\(e\.message\|\|e\)\);/, 'leads page load failure should render the dedicated error state');
-assert.match(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should require the unified teaching read model for standard course-chain stats');
+assert.doesNotMatch(stateSource, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should not block on the full purchases aggregate for standard course-chain stats');
+assert.match(stateSource, /leads:\['leadFollowups','lifecycleMetricsPage'\]/, 'leads page should load standard course-chain stats from the lightweight lifecycle metrics endpoint');
 assert.match(fnBody('renderLeads'), /leadDateDisplayText\(lead\)[\s\S]*renderStandardCellText\(leadSourceText\(lead\),false\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*leadLevelText\(lead\)[\s\S]*leadProfileText\(lead\)[\s\S]*renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)/, 'lead list rows should show formatted lead date, source as plain text, and keep type, demand, level, basic info, and stage in table order');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)/, 'lead list source should not render as a tag');
 assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should keep scrolling inside the table region');

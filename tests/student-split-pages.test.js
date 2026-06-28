@@ -14,7 +14,7 @@ assert.match(source, /const viewRows=studentUnifiedViewRows\(\);[\s\S]*if\(viewR
 assert.match(source, /if\(lifecycleStage\)return studentListViewMode\(\)==='trial'\?\['trial','formal'\]\.includes\(lifecycleStage\):lifecycleStage==='formal';/, 'normal student page should include all course-chain students, including official students');
 assert.match(source, /function studentDealPathText\(/, 'official student page should expose a deal path helper');
 assert.match(source, /体验转化[\s\S]*直接成交[\s\S]*老客续费/, 'official student deal path should cover trial conversion, direct deal, and renewal');
-assert.match(source, /'package-students':\['campuses','students','purchasesPage'\][\s\S]*'trial-students':\['campuses','students','purchasesPage'\]/, 'student split pages should load package data before first render');
+assert.match(source, /'package-students':\['campuses','students','lifecycleMetricsPage'\][\s\S]*'trial-students':\['campuses','students','lifecycleMetricsPage'\]/, 'student split pages should load lifecycle metrics before first render without pulling the full purchases aggregate');
 assert.doesNotMatch(source, /当前列表课程成交/, 'normal student page must use course-chain funnel cards instead of the old local course-deal card');
 
 console.log('student split pages tests passed');
