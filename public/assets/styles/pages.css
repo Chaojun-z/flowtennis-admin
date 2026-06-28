@@ -1307,7 +1307,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-command-head h2{margin:0;color:#111827;font-size:22px;line-height:30px;font-weight:800}
 #page-operations .operations-command-head p{margin:4px 0 0;color:#718096;font-size:13px;line-height:20px}
 #page-operations .operations-kpi-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-#page-operations .operations-conversion-kpi-row{grid-template-columns:repeat(6,minmax(0,1fr))}
+#page-operations .operations-conversion-kpi-row{grid-template-columns:repeat(4,minmax(0,1fr))}
 #page-operations .operations-kpi-card{min-height:86px;background:#FBF7F4;border:1px solid #E5ECF6;border-radius:8px;padding:18px;box-sizing:border-box;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background-color .16s ease}
 #page-operations .operations-kpi-card:hover{transform:translateY(-2px);border-color:#BFD5FF;box-shadow:0 10px 22px rgba(47,107,255,.10);background:#FBF7F4}
 #page-operations .operations-kpi-card span{display:block;color:#887565;font-size:15px;line-height:20px;font-weight:700}

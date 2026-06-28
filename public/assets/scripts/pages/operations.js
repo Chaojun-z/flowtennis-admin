@@ -333,7 +333,7 @@ function renderOperationsLoading() {
   host.innerHTML = renderStandardPageSkeleton({
     className: 'operations-page',
     sections: [
-      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 5 },
+      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 4 },
       { type: 'grid', className: 'operations-conversion-monitor-grid', panels: [{}, {}] },
       { type: 'grid', className: 'operations-channel-quality-layout', panels: [{}, { variant: 'table' }] },
       { type: 'grid', className: 'operations-attribute-layout', panels: [{}, {}] }
@@ -1008,9 +1008,7 @@ function operationsConversionKpiCards(conversion = {}) {
   const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
     rateCard('总成交转化率', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
-    rateCard('课程成交率', metricRate('formalStudents'), 'courseDealRate', 'conversion'),
     rateCard('体验路径成交率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
-    metricCard('trialPathPending', '待转化体验学员', '人', 'trialPathPending', 'warn'),
     rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
     rateCard('订场复订率', Number(conversion.courtChain?.courtRepeatRate) || 0, 'courtRepeatRate', 'retention')
   ];

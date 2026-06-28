@@ -46,10 +46,36 @@ assertNoLocalCoreMetric('public/assets/scripts/pages/operations.js', 'renderConv
   [/\(conversion\.courseFunnel\s*\|\|\s*\[\]\)\.length/, '转化与留存漏斗不得用旧 courseFunnel 判断是否有数据']
 ]);
 
+const operationsMetricsSource = read('server/metrics/operations-metrics.js');
+assert.match(
+  functionBody(operationsMetricsSource, 'isValidCoursePurchase'),
+  /体验\|赠课\|赠送\|测试/,
+  '经营分析课包复购必须排除体验、赠课、测试类购买'
+);
+assert.match(
+  functionBody(operationsMetricsSource, 'buildPeriodRepurchaseMetrics'),
+  /\.filter\(isValidCoursePurchase\)/,
+  '经营分析课包复购必须复用正式课包有效购买过滤器'
+);
+assert.doesNotMatch(
+  functionBody(operationsMetricsSource, 'buildConversionTrendDailyRows'),
+  /totalDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)[\s\S]*courseDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)/,
+  '总成交转化率趋势不得和课程成交率趋势共用同一个正式学员/线索公式'
+);
+assert.match(
+  functionBody(operationsMetricsSource, 'buildCourtChainMetrics'),
+  /accountByCourtId[\s\S]*row\.courtId/,
+  '订场会员复储必须支持会员页同样的 courtId 归属口径'
+);
+
 const packageJson = JSON.parse(read('package.json'));
 assert.ok(
   packageJson.scripts.test.includes('node tests/platform-core-metric-hard-gate.test.js'),
   'npm test must include platform-core-metric-hard-gate.test.js'
+);
+assert.ok(
+  packageJson.scripts.test.includes('node tests/conversion-retention-cross-page-hard-gate.test.js'),
+  'npm test must include conversion-retention-cross-page-hard-gate.test.js'
 );
 assert.ok(
   packageJson.scripts['guard:release'].includes('npm test'),

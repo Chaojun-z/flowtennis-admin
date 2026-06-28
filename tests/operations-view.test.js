@@ -109,7 +109,7 @@ assert.match(stylesSource, /operations-funnel-track\{[^}]*overflow:hidden/, 'fun
 assert.match(stylesSource, /operations-funnel-transition-label\.inside[\s\S]*right:8px[\s\S]*color:#FFF7EC/, 'wide funnel labels should sit inside the highlighted fill with a warm readable color');
 assert.match(stylesSource, /operations-funnel-transition-label\.outside[\s\S]*color:#8B5E3C/, 'short funnel labels should sit inside the pale track without using red');
 assert.doesNotMatch(stylesSource, /operations-funnel-transition-label[^}]*color:#E05252/, 'funnel conversion rate labels should not use red because loss badges already own risk color');
-assert.match(stylesSource, /operations-conversion-kpi-row\{[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/, 'conversion top KPI row should show six cards in one row');
+assert.match(stylesSource, /operations-conversion-kpi-row\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'conversion top KPI row should show four non-duplicated cards in one row');
 assert.match(stylesSource, /operations-conversion-funnel-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'conversion funnels should show three peer cards in one row');
 assert.match(stylesSource, /operations-retention-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'retention dashboard should show three peer cards in one row');
 assert.match(stylesSource, /operations-channel-diagnostics-grid\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, 'channel diagnostics should show chart and table as two peer cards');
@@ -276,7 +276,9 @@ assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交转化率[\s\S]*课程成交率[\s\S]*体验路径成交率[\s\S]*待转化体验学员[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render six CRM-owner top KPI cards');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交转化率[\s\S]*体验路径成交率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
+assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
+assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
 assert.match(operationsSource, /function renderOperationsConversionKpi[\s\S]*operations-court-kpi[\s\S]*operationsConversionSparklineSvg/, 'conversion top KPI cards should reuse the court dashboard trend-card standard');
 assert.match(operationsSource, /function operationsTrendToday[\s\S]*activeGlobalDateRange[\s\S]*new Date/, 'operations trend helpers should resolve a real today boundary for all dashboards');

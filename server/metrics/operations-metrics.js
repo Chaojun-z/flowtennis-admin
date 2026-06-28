@@ -2,6 +2,7 @@ const { effectiveScheduleStatus } = require('../schedule.js');
 const {
   bookingDurationHours,
   courtHistoryBusinessDate,
+  isCourtBookingHistoryRow,
   normalizeCourtHistory
 } = require('../page-data/court-account-read-model.js');
 const {
@@ -676,6 +677,7 @@ function courseConversionRows(data = {}, options = {}) {
       hasAppointment,
       hasAttendance,
       hasCourse,
+      hasDeal: stage === '已成交',
       hasTrialDeal,
       hasRenewal,
       studentStage: normalizeText(lifecycle.studentStage),
@@ -931,6 +933,7 @@ function purchaseAmount(row = {}) {
     ?? row.paidAmount
     ?? row.receivedAmount
     ?? row.cashDelta
+    ?? row.rechargeAmount
     ?? snapshot.amountPaid
     ?? row.amount
     ?? row.packagePrice
@@ -945,13 +948,13 @@ function activeBusinessRow(row = {}) {
 }
 
 function courtHasBooking(court = {}) {
-  const history = normalizeCourtHistory(court.history).filter(activeBusinessRow);
+  const history = normalizeCourtHistory(court.history).filter(row => activeBusinessRow(row) && isCourtBookingHistoryRow(row));
   if (history.length) return true;
   return !!String(court.firstBookingAt || court.bookingAt || court.lastBookingAt || court.createdAt || '').trim();
 }
 
 function courtBookingCount(court = {}) {
-  const history = normalizeCourtHistory(court.history).filter(activeBusinessRow);
+  const history = normalizeCourtHistory(court.history).filter(row => activeBusinessRow(row) && isCourtBookingHistoryRow(row));
   if (history.length) return history.length;
   const cached = Number(court.bookingCount || court.totalBookings || court.bookingsCount);
   if (Number.isFinite(cached) && cached > 0) return cached;
@@ -963,9 +966,10 @@ function buildCourtChainMetrics({ courts = [], membershipAccounts = [], membersh
   const memberAccounts = (membershipAccounts || []).filter(row => activeBusinessRow(row) && String(row.status || '').trim() !== 'cleared');
   const memberCourtIds = new Set(memberAccounts.map(row => String(row.courtId || '').trim()).filter(Boolean));
   const validOrders = (membershipOrders || []).filter(row => activeBusinessRow(row) && purchaseAmount(row) > 0);
+  const accountByCourtId = new Map(memberAccounts.map(row => [String(row.courtId || '').trim(), String(row.id || row.membershipAccountId || '').trim()]).filter(([courtId, accountId]) => courtId && accountId));
   const ordersByAccount = new Map();
   validOrders.forEach(row => {
-    const accountId = String(row.membershipAccountId || row.accountId || '').trim();
+    const accountId = String(row.membershipAccountId || row.accountId || '').trim() || accountByCourtId.get(String(row.courtId || '').trim()) || '';
     if (!accountId) return;
     ordersByAccount.set(accountId, (ordersByAccount.get(accountId) || 0) + 1);
   });
@@ -1081,7 +1085,10 @@ function isActiveScheduleForOperations(row = {}) {
 }
 
 function isValidCoursePurchase(row = {}) {
-  return !['voided', 'refunded', 'deleted', 'inactive'].includes(String(row.status || 'active').trim());
+  if (!activeBusinessRow(row)) return false;
+  const courseText = String(`${row.courseType || ''} ${row.standardCourseType || ''} ${row.packageCourseType || ''} ${row.packageName || ''} ${row.productName || ''} ${row.name || ''}`).trim();
+  if (/体验|赠课|赠送|测试/.test(courseText)) return false;
+  return purchaseAmount(row) > 0;
 }
 
 function scheduleStudentKeys(row = {}) {
@@ -2449,6 +2456,7 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
     });
     const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
     const formalRows = cumulativeRows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
+    const totalDealRows = cumulativeRows.filter(row => row.hasDeal);
     const trialPathRows = cumulativeRows.filter(row => row.hasTrialExperience);
     const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
     const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
@@ -2458,8 +2466,8 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
     return {
       date: day,
       leads: leadCount,
-      totalDealRate: rate(formalRows.length, cumulativeRows.length),
-      totalDealRateNumerator: formalRows.length,
+      totalDealRate: rate(totalDealRows.length, cumulativeRows.length),
+      totalDealRateNumerator: totalDealRows.length,
       totalDealRateDenominator: cumulativeRows.length,
       courseDealRate: rate(formalRows.length, cumulativeRows.length),
       courseDealRateNumerator: formalRows.length,
