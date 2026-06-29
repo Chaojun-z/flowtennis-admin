@@ -46,8 +46,8 @@ assert.match(componentsSource, /<div class="sb-sec">财务中心<\/div>[\s\S]*<d
 assert.match(bootstrapSource, /operations:'经营分析'/, 'page title map should include operations');
 assert.match(bootstrapSource, /OPERATIONS_TITLE_MAP=\{overview:'经营总览',court:'场地运转',conversion:'转化与留存',coach:'教练人效'\}/, 'operations page title should expose all four dashboards');
 assert.match(bootstrapSource, /n\.dataset\.operationsTab===tab/, 'operations sidebar should only highlight the selected sub menu item');
-assert.match(bootstrapSource, /function scrollActiveSidebarItemIntoView\(/, 'sidebar should expose a helper that keeps the active menu visible');
-assert.match(bootstrapSource, /scrollActiveSidebarItemIntoView\(\)/, 'page navigation should scroll the active sidebar item into view after refresh or tab restore');
+assert.doesNotMatch(bootstrapSource, /function scrollActiveSidebarItemIntoView\(/, 'sidebar should not auto-scroll the active menu item on page navigation');
+assert.doesNotMatch(bootstrapSource, /scrollActiveSidebarItemIntoView\(\)/, 'page navigation should keep the current sidebar scroll position');
 assert.match(bootstrapSource, /adminPages=\[[^\]]*'operations'/, 'operations should be admin-only');
 assert.match(stateSource, /if\(pg==='operations'\)renderOperations\(\)/, 'renderPageData should render operations');
 assert.match(operationsSource, /const OPERATIONS_TAB_KEY='ft_operations_active_tab'/, 'operations should persist the selected dashboard tab');
