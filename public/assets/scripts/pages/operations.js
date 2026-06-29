@@ -1159,9 +1159,10 @@ function operationsAuxMetric(label, value, rate) {
   return `<div class="operations-funnel-aux"><span>${esc(label)}</span><strong>${fmt(value || 0)}人${rate ? ` · ${esc(rate)}` : ''}</strong></div>`;
 }
 
-function renderConversionFunnelCard(title, hostId, auxiliary = '') {
+function renderConversionFunnelCard(title, hostId, rows = [], auxiliary = '') {
+  const baseCount = Number((rows || [])[0]?.count) || 0;
   return `<section class="operations-section operations-funnel-card">
-    <div class="operations-module-head"><div><h3>${esc(title)}</h3></div></div>
+    <div class="operations-module-head operations-funnel-title"><div><h3>${esc(title)}</h3></div><strong>基数 ${fmt(baseCount)}</strong></div>
     <div class="operations-funnel-host" id="${esc(hostId)}"></div>
     ${auxiliary || ''}
   </section>`;
@@ -1172,9 +1173,12 @@ function renderConversionFunnelModule(data, conversion) {
   const courtChain = conversion.courtChain || {};
   const courtUsers = Number(courtChain.courtUsers) || 0;
   const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
-  const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel');
-  const trialCard = renderConversionFunnelCard('体验路径漏斗', 'operationsTrialFunnel', operationsAuxMetric('体验路径未成交', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
-  const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
+  const courseRows = operationsFunnelRows(conversion, 'course');
+  const trialRows = operationsFunnelRows(conversion, 'trial');
+  const courtRows = operationsFunnelRows(conversion, 'court');
+  const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel', courseRows);
+  const trialCard = renderConversionFunnelCard('体验路径漏斗', 'operationsTrialFunnel', trialRows, operationsAuxMetric('体验路径未成交', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
+  const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', courtRows, operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
   return `<div class="operations-dashboard-block operations-funnel-block">
     <div class="operations-conversion-funnel-grid">
       ${courseCard}

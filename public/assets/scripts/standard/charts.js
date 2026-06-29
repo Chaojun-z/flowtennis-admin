@@ -20,35 +20,30 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
   }
   const max = Math.max(1, Number(list[0]?.count) || 0, ...list.map(row => Number(row.count) || 0));
   host.innerHTML = `<div class="operations-progress-funnel">
-    <div class="operations-funnel-scale"><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
     <div class="operations-funnel-body">
     ${list.map((row, index) => {
       const count = Number(row.count) || 0;
       const percent = Math.max(0, Math.min(100, Number(row.percentOfTotal ?? (count * 100 / max)) || 0));
-      const transition = Number(row.transitionRate ?? 0) || 0;
-      const loss = Math.max(0, Number(row.lossRate ?? (index > 0 ? 100 - transition : 0)) || 0);
-      const stepRate = index > 0 ? transition : percent;
-      const previousCount = index > 0 ? (Number(list[index - 1]?.count) || 0) : count;
-      const lossCount = Math.max(0, previousCount - count);
-      const labelClass = percent <= 0 ? 'zero' : percent >= 18 ? 'inside' : 'outside';
-      const labelPosition = labelClass === 'outside'
-        ? `left:${Math.max(8, Math.min(92, percent + 6))}%`
-        : labelClass === 'zero' ? 'left:10px' : '';
-      const labelHtml = index > 0 ? `<span class="operations-funnel-transition-label ${labelClass}" style="${labelPosition}">${fmt(stepRate)}%</span>` : '';
-      return `<div class="operations-funnel-row" title="${esc(row.stage)}：${fmt(count)} 人，上一步转化 ${fmt(stepRate)}%，流失 ${fmt(lossCount)} 人">
-        <div class="operations-funnel-step">
-          <div class="operations-funnel-head">
-            <strong>${esc(row.stage)}</strong>
-            <span>${fmt(count)} 人</span>
-          </div>
-          <div class="operations-funnel-track">
-            <div class="operations-funnel-fill" style="width:${percent}%">${labelClass === 'inside' ? labelHtml : ''}</div>
-            ${labelClass !== 'inside' ? labelHtml : ''}
-          </div>
+      const next = list[index + 1];
+      const transition = next ? (Number(next.transitionRate ?? 0) || 0) : 0;
+      const loss = next ? Math.max(0, Number(next.lossRate ?? (100 - transition)) || 0) : 0;
+      const nextCount = next ? (Number(next.count) || 0) : count;
+      const lossCount = Math.max(0, count - nextCount);
+      const transitionHtml = next ? `<div class="operations-funnel-transition" title="${esc(row.stage)} → ${esc(next.stage)}：转化 ${fmt(transition)}%，流失 ${fmt(lossCount)} 人">
+        <div class="operations-funnel-conversion">
+          <span class="operations-funnel-arrow">↓</span>
+          <strong>${fmt(transition)}%</strong>
+          <span>转化</span>
         </div>
-        <div class="operations-funnel-loss">
-          ${index > 0 ? `<strong class="operations-funnel-loss-badge">流失 ${fmt(loss)}%</strong><span class="operations-funnel-loss-count">流失 ${fmt(lossCount)} 人</span>` : `<strong class="operations-funnel-base-badge">基准流量</strong>`}
+        <div class="operations-funnel-drop">流失 ${fmt(loss)}% · ${fmt(lossCount)} 人</div>
+      </div>` : '';
+      return `<div class="operations-funnel-row">
+        <div class="operations-funnel-node" title="${esc(row.stage)}：${fmt(count)} 人">
+          <div class="operations-funnel-volume" style="width:${Math.max(1, percent)}%"></div>
+          <strong>${esc(row.stage)}</strong>
+          <span class="operations-funnel-value"><b>${fmt(count)}</b><em>人</em></span>
         </div>
+        ${transitionHtml}
       </div>`;
     }).join('')}
     </div>

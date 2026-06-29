@@ -1383,41 +1383,35 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-secondary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 #page-operations .operations-coach-secondary-grid .operations-section{min-height:340px;overflow:hidden}
 #page-operations .operations-coach-chart{height:280px;min-height:280px}
-#page-operations .operations-funnel-card{min-height:0}
+#page-operations .operations-funnel-card{min-height:0;padding:24px 26px 22px;background:#FFFEFC;border-color:rgba(91,63,42,.10)}
 #page-operations .operations-funnel-host{min-height:0}
 #page-operations .operations-dashboard-block{display:flex;flex-direction:column;gap:12px}
 #page-operations .operations-conversion-funnel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 #page-operations .operations-retention-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 #page-operations .operations-channel-diagnostics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 #page-operations .operations-persona-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-#page-operations .operations-progress-funnel{display:flex;flex-direction:column;gap:8px}
-#page-operations .operations-funnel-scale{display:grid;grid-template-columns:repeat(4,1fr);padding:0 176px 0 0;color:#B7AA9E;font-size:11px;line-height:16px;text-align:right}
-#page-operations .operations-funnel-body{display:flex;flex-direction:column;gap:8px;position:relative}
-#page-operations .operations-funnel-body::before{content:"";position:absolute;left:0;right:176px;top:0;bottom:0;background:linear-gradient(90deg,transparent calc(25% - 1px),#E9DDD2 calc(25% - 1px),#E9DDD2 25%,transparent 25%,transparent calc(50% - 1px),#E9DDD2 calc(50% - 1px),#E9DDD2 50%,transparent 50%,transparent calc(75% - 1px),#E9DDD2 calc(75% - 1px),#E9DDD2 75%,transparent 75%,transparent calc(100% - 1px),#E9DDD2 calc(100% - 1px),#E9DDD2 100%);pointer-events:none}
-#page-operations .operations-funnel-row{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:18px;align-items:end;position:relative;z-index:1;transition:transform .16s ease}
-#page-operations .operations-funnel-row:hover{transform:translateY(-2px)}
-#page-operations .operations-funnel-row:hover .operations-funnel-track{border-color:#D1BCA8;box-shadow:0 10px 24px rgba(91,67,49,.10)}
-#page-operations .operations-funnel-row:hover .operations-funnel-fill{filter:saturate(1.04)}
-#page-operations .operations-funnel-step{display:flex;flex-direction:column;gap:6px}
-#page-operations .operations-funnel-head{display:flex;align-items:baseline;gap:10px;color:#172033}
-#page-operations .operations-funnel-head strong{font-size:13px;line-height:20px;font-weight:400}
-#page-operations .operations-funnel-head span{font-size:20px;line-height:26px;font-weight:800;color:#111827}
-#page-operations .operations-funnel-track{height:28px;background:#F2E9E1;border:1px solid #E5D8CC;border-radius:7px;overflow:hidden;position:relative;transition:border-color .16s ease,box-shadow .16s ease}
-#page-operations .operations-funnel-fill{height:100%;background:linear-gradient(90deg,#8B5E3C,#C58A5A);border-radius:7px;min-width:6px;box-shadow:none;transition:filter .16s ease;position:relative;overflow:hidden}
-#page-operations .operations-funnel-transition-label{position:absolute;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;height:18px;padding:0 6px;border-radius:999px;font-size:12px;line-height:18px;font-weight:700;white-space:nowrap;z-index:2}
-#page-operations .operations-funnel-transition-label.inside{right:8px;color:#FFF7EC;background:rgba(91,67,49,.18)}
-#page-operations .operations-funnel-transition-label.outside{color:#8B5E3C;background:rgba(255,247,236,.82)}
-#page-operations .operations-funnel-transition-label.zero{color:#9A8777;background:rgba(255,247,236,.82)}
-#page-operations .operations-funnel-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;color:#7A6B5F;font-size:11px;line-height:16px}
-#page-operations .operations-funnel-stats span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#page-operations .operations-funnel-loss{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;min-height:28px}
-#page-operations .operations-funnel-loss span{color:#8A9AB0;font-size:12px;line-height:18px}
-#page-operations .operations-funnel-loss-badge{display:inline-flex;align-items:center;justify-content:center;min-width:92px;height:28px;padding:0 9px;border-radius:7px;background:#FFF5F5;border:1px solid #FED7D7;color:#E03131;font-size:13px;line-height:18px;box-shadow:0 8px 18px rgba(224,49,49,.08)}
-#page-operations .operations-funnel-loss-count{display:block;color:#B85B5B!important;font-size:11px!important;line-height:15px!important;font-weight:600}
-#page-operations .operations-funnel-base-badge{display:inline-flex;align-items:center;justify-content:center;min-width:92px;height:28px;padding:0 9px;border-radius:7px;background:#F8EFE7;border:1px solid #E4D2C1;color:#8B5E3C;font-size:13px;line-height:18px}
-#page-operations .operations-funnel-aux{margin-top:12px;padding:10px 12px;border-radius:8px;background:#FBF7F4;border:1px solid #E6DAD0;display:flex;align-items:center;justify-content:space-between;gap:10px}
-#page-operations .operations-funnel-aux span{color:#8A7B70;font-size:12px;line-height:18px}
-#page-operations .operations-funnel-aux strong{color:#172033;font-size:13px;line-height:20px}
+#page-operations .operations-funnel-title{align-items:baseline;margin-bottom:24px}
+#page-operations .operations-funnel-title h3{color:#2F251D;font-size:17px;line-height:24px;font-weight:800}
+#page-operations .operations-funnel-title strong{color:#7F8DA3;font-size:13px;line-height:18px;font-weight:800;white-space:nowrap}
+#page-operations .operations-progress-funnel{display:flex;flex-direction:column}
+#page-operations .operations-funnel-body{display:flex;flex-direction:column;gap:0}
+#page-operations .operations-funnel-row{display:flex;flex-direction:column;gap:0}
+#page-operations .operations-funnel-node{min-height:44px;position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 12px;border-radius:7px;background:rgba(47,114,184,.026);overflow:hidden;color:var(--ops-text)}
+#page-operations .operations-funnel-row:hover .operations-funnel-node{background:rgba(47,114,184,.045)}
+#page-operations .operations-funnel-volume{position:absolute;left:0;top:0;bottom:0;min-width:5px;border-radius:7px;background:color-mix(in srgb,var(--ops-blue) 10%,transparent);pointer-events:none}
+#page-operations .operations-funnel-node strong,#page-operations .operations-funnel-value{position:relative;z-index:1}
+#page-operations .operations-funnel-node strong{min-width:0;color:#3C4654;font-size:14px;line-height:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-operations .operations-funnel-value{display:inline-flex;align-items:baseline;gap:5px;color:var(--ops-text);white-space:nowrap}
+#page-operations .operations-funnel-value b{font-size:25px;line-height:28px;font-weight:850;letter-spacing:0}
+#page-operations .operations-funnel-value em{color:#8FA0B6;font-size:12px;line-height:16px;font-style:normal;font-weight:800}
+#page-operations .operations-funnel-transition{min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px}
+#page-operations .operations-funnel-conversion{display:flex;align-items:center;gap:7px;min-width:0;color:var(--ops-blue);font-size:13px;line-height:18px;font-weight:800;white-space:nowrap}
+#page-operations .operations-funnel-arrow{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:color-mix(in srgb,var(--ops-blue) 12%,transparent);color:var(--ops-blue);font-size:15px;line-height:18px;font-weight:900}
+#page-operations .operations-funnel-conversion strong{font-size:14px;line-height:18px;font-weight:900}
+#page-operations .operations-funnel-drop{color:#87909D;font-size:13px;line-height:18px;font-weight:800;text-align:right;white-space:nowrap}
+#page-operations .operations-funnel-aux{margin-top:20px;padding:16px 0 0;border-top:1px solid rgba(143,160,182,.20);display:flex;align-items:center;justify-content:space-between;gap:10px}
+#page-operations .operations-funnel-aux span{color:#8A7B70;font-size:13px;line-height:18px;font-weight:800}
+#page-operations .operations-funnel-aux strong{color:#172033;font-size:14px;line-height:20px;font-weight:850}
 #page-operations .operations-retention-card{min-height:230px}
 #page-operations .operations-retention-sparkline{height:88px;margin:4px -8px 8px;position:relative}
 #page-operations .operations-retention-sparkline svg{width:100%;height:100%}
