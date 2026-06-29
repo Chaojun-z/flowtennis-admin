@@ -50,7 +50,7 @@ assert.match(html, /function membershipReadModelItemForCourt\(/, 'membership man
 assert.match(fnBody('membershipSortMetric'), /membershipReadModelFinanceForCourt\([\s\S]*membershipReadModelBookingForCourt\(/, 'membership sorting should read balance and booking facts from the court account read model');
 assert.match(fnBody('renderMemberships'), /slice\.map\(item=>[\s\S]*membershipReadModelFinanceForCourt\(item\)[\s\S]*membershipReadModelBookingForCourt\(item\)/, 'membership list rows should render unified read-model items');
 assert.match(fnBody('courtMembershipPanelHtml'), /membershipReadModelItemForCourt\(/, 'membership account detail should read account overview facts from the court account read model');
-assert.match(stateSource, /if\(pg==='courts'\|\|pg==='memberships'\)\{[\s\S]*await loadCourtReadModelGuardData\(\{force\}\);/, 'memberships page should load the court account read model before rendering membership metrics');
+assert.match(stateSource, /if\(pg==='courts'\|\|pg==='memberships'\|\|pg==='membership-orders'\|\|pg==='membership-ledger'\)\{[\s\S]*await loadCourtReadModelGuardData\(\{force\}\);/, 'membership pages should load the court account read model before rendering membership metrics and audit rows');
 assert.match(html, /id="page-memberships" data-standard-list-shell="memberships"/, 'membership management page should mount the standard list shell');
 assert.match(membershipShell, /search:\{id:'membershipSearch'/, 'membership management page should use the court-style toolbar');
 assert.match(membershipShell, /bodyId:'membershipTbody'/, 'membership management page should use the standard table shell');
@@ -245,7 +245,8 @@ assert.match(html, /function renderMembershipOrdersAuditPage/, 'membership page 
 assert.match(html, /function renderMembershipLedgerAuditPage/, 'membership page should render ledger audit as a standalone page');
 assert.match(membershipShell, /onclick="goPage\(\\'membership-orders\\'\)"/, 'membership management purchase audit entry should navigate to standalone page');
 assert.match(membershipShell, /onclick="goPage\(\\'membership-ledger\\'\)"/, 'membership management ledger audit entry should navigate to standalone page');
-assert.match(html, /membershipBenefitLedger\.filter\(l=>l\.action!=='grant'&&searchHit/, 'global benefit audit should hide grant rows');
+assert.match(fnBody('membershipLedgerAuditRows'), /courtAccountListViewData\?\.membershipLedgerAuditRows\|\|\[\][\s\S]*l\.action!=='grant'/, 'global benefit audit should hide grant rows from the unified read model');
+assert.doesNotMatch(fnBody('membershipLedgerAuditRows'), /membershipBenefitLedger|courts\.find\(/, 'global benefit audit must not scan frontend raw benefit ledger or court rows');
 assert.match(html, /支付日期[\s\S]*订场用户[\s\S]*会员方案[\s\S]*系统价[\s\S]*成交价[\s\S]*赠送金额[\s\S]*折扣[\s\S]*是否重置有效期[\s\S]*当次权益摘要[\s\S]*状态/, 'membership purchase audit should keep reduced audit fields');
 assert.match(html, /时间[\s\S]*订场用户[\s\S]*购买批次[\s\S]*权益[\s\S]*变动[\s\S]*动作[\s\S]*原因/, 'membership ledger audit should keep audit columns only');
 assert.match(html, /此页面仅用于审计与追溯，不用于日常操作/, 'audit page should explain read-only positioning');
@@ -353,7 +354,8 @@ assert.match(html, /操作账号/, 'membership ledger audit should show operator
 assert.match(html, /已消耗/, 'membership account rights should show consumed count');
 assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废原因/, 'membership account panel should show voiding audit information');
 assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
-assert.match(fnBody('membershipBenefitSummaryForOrder'), /const positiveDelta=.*?delta\)\|\|0\)>0[\s\S]*const negativeDelta=.*?delta\)\|\|0\)<0[\s\S]*const total=\(item\.total\|\|0\)\+positiveDelta[\s\S]*remaining:expired\?0:Math\.max\(0,total\+negativeDelta\)/, 'frontend benefit summary should add supplements to both total and remaining');
+assert.match(fnBody('membershipBenefitRowsForAccount'), /courtAccountListViewData\?\.items[\s\S]*item\?\.benefitRows\|\|\[\]/, 'frontend benefit summary should read totals and remaining counts from the unified read model');
+assert.doesNotMatch(fnBody('membershipBenefitSummaryForOrder'), /membershipBenefitLedger\.filter|positiveDelta|negativeDelta/, 'frontend benefit summary must not recalculate supplements and consumption from raw ledger rows');
 assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='desc'/, 'membership management should default to first-open date descending');
 assert.match(fnBody('membershipDefaultSortDir'), /return 'desc'/, 'first-open date sort should start with newest member first');
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');

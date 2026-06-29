@@ -34,6 +34,7 @@ const revenuePanel = source.slice(revenuePanelStart, revenuePanelEnd === -1 ? so
 const recognizedPanel = sliceBetween(source, 'id="financeRecognizedPanel"', 'id="financeSettlementPanel"') + recognizedShell;
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const financeSnapshotSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'finance-snapshot.js'), 'utf8');
+const financeUnifiedRowsSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'read-models', 'finance-unified-rows.js'), 'utf8');
 
 assert.match(source,/data-finance-panel="ledger"[\s\S]*?财务总览[\s\S]*data-finance-panel="revenue"[\s\S]*?收入流水/,'sidebar should expose the visible finance menu entries');
 assert.doesNotMatch(source,/data-finance-panel="settlement"[\s\S]*?教练结算/,'sidebar should hide coach settlement entry');
@@ -171,7 +172,8 @@ assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeU
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/bookingIncome:financeStandardNumber\('bookingIncome','courtIncome'\)/,'revenue stats should read booking income from backend standard summary');
 assert.match(source,/storedValueRecognized:financeStandardNumber\('storedValueConsumed'\)/,'stored value recognized amount should use backend standard summary');
-assert.match(financeSnapshotSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
+assert.match(financeUnifiedRowsSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
+assert.doesNotMatch(financeSnapshotSource,/function buildFinanceUnifiedRows\(/,'finance snapshot should not own finance unified row generation');
 assert.match(revenueShell,/infoId:'financeRevenuePagerInfo'/,'revenue should expose pager info');
 assert.match(revenueShell,/pageSizeId:'financeRevenuePageSize'/,'revenue should expose page size selector');
 assert.match(revenueShell,/buttonsId:'financeRevenuePagerBtns'/,'revenue should expose pager buttons');

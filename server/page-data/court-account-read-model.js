@@ -1,5 +1,6 @@
 const MATCH_COURT_FINANCE_ACCOUNT_ID = 'match-court-finance';
 const DEFAULT_SAMPLE_SIZE = 10;
+const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 
 function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
@@ -310,22 +311,27 @@ function benefitRowsForAccount(account, membershipOrders = [], membershipPlans =
   return Object.values(rows).sort((a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'zh-CN'));
 }
 
-function rechargeRowsForAccount(account, membershipOrders = []) {
+function rechargeRowsForAccount(account, membershipOrders = [], membershipPlans = []) {
   return validMembershipOrders(account, membershipOrders).map((order) => ({
     id: order.id,
+    courtId: order.courtId || account?.courtId || '',
     purchaseDate: order.purchaseDate || order.effectiveDate || order.cycleStartDate || order.createdAt || '',
     createdAt: order.createdAt || '',
     membershipPlanName: order.membershipPlanName || order.planName || '-',
     membershipPlanId: order.membershipPlanId || '',
     tierCode: order.tierCode || '',
+    systemAmount: money(order.systemAmount ?? order.rechargeAmount ?? order.finalAmount ?? order.amount),
+    finalAmount: money(order.finalAmount ?? order.rechargeAmount ?? order.amount),
     paidAmount: money(order.finalAmount ?? order.rechargeAmount ?? order.amount),
     rechargeAmount: money(order.rechargeAmount ?? order.finalAmount ?? order.amount),
     bonusAmount: money(order.bonusAmount),
     discountRate: Number(order.discountRate) || 0,
+    qualifiesRenewalReset: order.qualifiesRenewalReset,
+    overrideReason: order.overrideReason || '',
     status: order.status || '',
     notes: courtText(order.notes),
     customAdjustment: !!order.customAdjustment,
-    benefitSummary: benefitTemplateItems(order).map((item) => `${item.label} ${item.total}${item.unit}`).join('；') || '-'
+    benefitSummary: benefitTemplateItems(order, membershipPlans).map((item) => `${item.label} ${item.total}${item.unit}`).join('；') || '-'
   }));
 }
 
@@ -348,48 +354,6 @@ function ledgerRowsForAccount(account, membershipBenefitLedger = []) {
       operator: row.operator || '',
       createdAt: row.createdAt || row.relatedDate || ''
     }));
-}
-
-function membershipOrderAmount(order) {
-  return money(order?.finalAmount ?? order?.rechargeAmount ?? order?.amount ?? 0);
-}
-
-function buildUnifiedMembershipFinanceSummary({ courts = [], membershipAccounts = [], membershipOrders = [] } = {}) {
-  const activeAccounts = (membershipAccounts || []).filter((account) => !isInactiveMembershipStatus(account?.status));
-  const activeAccountIds = new Set(activeAccounts.map((account) => courtText(account?.id)).filter(Boolean));
-  const activeCourtIds = new Set(activeAccounts.map((account) => courtText(account?.courtId)).filter(Boolean));
-  const validOrders = (membershipOrders || [])
-    .filter((order) => !isInactiveMembershipStatus(order?.status))
-    .filter((order) => membershipOrderAmount(order) > 0)
-    .filter((order) => {
-      const accountId = courtText(order?.membershipAccountId);
-      const courtId = courtText(order?.courtId);
-      return (!activeAccountIds.size && !activeCourtIds.size) || activeAccountIds.has(accountId) || activeCourtIds.has(courtId);
-    });
-  const paidAmount = money(validOrders.reduce((sum, order) => sum + membershipOrderAmount(order), 0));
-  const bonusAmount = money(validOrders.reduce((sum, order) => sum + money(order?.bonusAmount), 0));
-  const courtMap = new Map((courts || []).map((court) => [courtText(court?.id), court]));
-  const consumedAmount = money([...activeCourtIds].reduce((sum, courtId) => {
-    const court = courtMap.get(courtId);
-    if (!court || String(court?.status || 'active') === 'inactive' || court?.mergedIntoCourtId || court?.deletedAt) return sum;
-    return sum + normalizeCourtHistory(court.history).reduce((rowSum, row) => {
-      const category = String(row?.category || '');
-      if (category.includes('内部占用')) return rowSum;
-      if (row.type === '消费' && isStoredValuePayMethod(row.payMethod)) return rowSum + money(row?.amount);
-      if (row.type === '冲正' && isStoredValuePayMethod(row.payMethod)) return rowSum - money(row?.amount);
-      return rowSum;
-    }, 0);
-  }, 0));
-  const consumableAmount = money(paidAmount + bonusAmount);
-  return {
-    memberCount: activeAccounts.length,
-    rechargeCount: validOrders.length,
-    paidAmount,
-    bonusAmount,
-    consumableAmount,
-    consumedAmount,
-    pendingAmount: money(Math.max(0, consumableAmount - consumedAmount))
-  };
 }
 
 function bookingRowsForCourt(court) {
@@ -480,7 +444,7 @@ function buildLegacyItem(court, ctx) {
 function buildReadModelItem(court, ctx) {
   const legacy = buildLegacyItem(court, ctx);
   const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
-  const rechargeRows = rechargeRowsForAccount(account, ctx.membershipOrders);
+  const rechargeRows = rechargeRowsForAccount(account, ctx.membershipOrders, ctx.membershipPlans);
   const benefitRows = benefitRowsForAccount(account, ctx.membershipOrders, ctx.membershipPlans, ctx.membershipBenefitLedger);
   const ledgerRows = ledgerRowsForAccount(account, ctx.membershipBenefitLedger);
   const bookingRows = bookingRowsForCourt(court);
@@ -518,6 +482,28 @@ function buildReadModelItem(court, ctx) {
     notesSummary: item.notesSummary
   };
   return item;
+}
+
+function buildMembershipOrderAuditRows(items = []) {
+  return (items || []).flatMap((item) => (item?.rechargeRows || []).map((row) => ({
+    ...row,
+    courtId: item.id || row.courtId || '',
+    courtName: item.displayName || '-',
+    orderDisplayText: [row.purchaseDate, row.membershipPlanName].filter(Boolean).join(' · ') || '-'
+  }))).sort((a, b) => String(b.purchaseDate || b.createdAt || '').localeCompare(String(a.purchaseDate || a.createdAt || '')));
+}
+
+function buildMembershipLedgerAuditRows(items = []) {
+  const orderRows = buildMembershipOrderAuditRows(items);
+  const orderMap = new Map(orderRows.map((row) => [String(row.id || ''), row]));
+  return (items || []).flatMap((item) => (item?.ledgerRows || []).map((row) => {
+    const order = orderMap.get(String(row.membershipOrderRef || '')) || {};
+    return {
+      ...row,
+      courtName: item.displayName || row.courtId || '-',
+      orderDisplayText: order.orderDisplayText || '-'
+    };
+  })).sort((a, b) => String(b.createdAt || b.relatedDate || '').localeCompare(String(a.createdAt || a.relatedDate || '')));
 }
 
 function buildSummary(items = []) {
@@ -561,6 +547,67 @@ function resolveSampleIds({ sampleIds = [], sample = '', fixedSampleAccounts = [
   return [];
 }
 
+function rate(part, total) {
+  return total ? Math.round((Number(part) || 0) * 1000 / (Number(total) || 1)) / 10 : 0;
+}
+
+function buildCourtChainMetricsFromItems(items = []) {
+  const activeItems = (items || []).filter((item) => item && String(item.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID);
+  const courtUsers = activeItems.filter((item) => (Number(item.bookingCount) || 0) > 0);
+  const memberItems = activeItems.filter((item) => item.accountType === '会员账户' || (item.membershipStatusCode && !['voided', 'cleared', 'inactive'].includes(item.membershipStatusCode)));
+  const repeatBookingCount = courtUsers.filter((item) => (Number(item.bookingCount) || 0) >= 2).length;
+  const memberRepeatCount = memberItems.filter((item) => (Number(item.membershipRechargeCount) || 0) >= 2).length;
+  return {
+    courtUsers: courtUsers.length,
+    courtMembers: memberItems.length,
+    memberRepeatCustomers: memberRepeatCount,
+    courtRepeatCustomers: repeatBookingCount,
+    memberConversionRate: rate(memberItems.length, courtUsers.length),
+    memberRepeatRate: rate(memberRepeatCount, memberItems.length),
+    courtRepeatRate: rate(repeatBookingCount, courtUsers.length)
+  };
+}
+
+function buildCourtAccountListViewFromData(source = {}, options = {}) {
+  const {
+    campuses = [],
+    students = [],
+    courts = [],
+    leads = [],
+    membershipAccounts = [],
+    membershipOrders = [],
+    membershipPlans = [],
+    membershipBenefitLedger = [],
+    membershipAccountEvents = []
+  } = source;
+  const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts: options.fixedSampleAccounts || [] });
+  const useLegacy = options.useLegacy === true;
+  const campusMap = new Map((campuses || []).map((row) => [String(row?.code || row?.id || '').trim(), row?.name || row?.code || row?.id || '']));
+  const activeCourts = (courts || [])
+    .filter((row) => String(row?.status || 'active') !== 'inactive')
+    .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)
+    .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
+  const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents };
+  const items = activeCourts
+    .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
+    .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
+  const summary = buildSummary(items);
+  summary.membershipFinanceSummary = buildMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders });
+  return {
+    summary,
+    filters: buildFilters({ items, campuses }),
+    items,
+    membershipOrderAuditRows: buildMembershipOrderAuditRows(items),
+    membershipLedgerAuditRows: buildMembershipLedgerAuditRows(items),
+    meta: {
+      generatedAt: new Date().toISOString(),
+      source: useLegacy ? 'legacy' : 'unified-court-membership-read-model',
+      sampleIds,
+      sample: options.sample || ''
+    }
+  };
+}
+
 function createCourtAccountListViewLoader(deps) {
   const {
     listCampusesWithDefaults,
@@ -583,28 +630,17 @@ function createCourtAccountListViewLoader(deps) {
       getCachedScan(tables.membershipBenefitLedger).catch(() => []),
       getCachedScan(tables.membershipAccountEvents).catch(() => [])
     ]);
-    const campusMap = new Map((campuses || []).map((row) => [String(row?.code || row?.id || '').trim(), row?.name || row?.code || row?.id || '']));
-    const activeCourts = (courts || [])
-      .filter((row) => String(row?.status || 'active') !== 'inactive')
-      .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)
-      .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
-    const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents };
-    const items = activeCourts
-      .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
-      .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
-    const summary = buildSummary(items);
-    summary.membershipFinanceSummary = buildUnifiedMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders });
-    return {
-      summary,
-      filters: buildFilters({ items, campuses }),
-      items,
-      meta: {
-        generatedAt: new Date().toISOString(),
-        source: useLegacy ? 'legacy' : 'unified-court-membership-read-model',
-        sampleIds,
-        sample: options.sample || ''
-      }
-    };
+    return buildCourtAccountListViewFromData({
+      campuses,
+      students,
+      courts,
+      leads,
+      membershipAccounts,
+      membershipOrders,
+      membershipPlans,
+      membershipBenefitLedger,
+      membershipAccountEvents
+    }, { sampleIds, sample: options.sample, useLegacy });
   };
 }
 
@@ -689,6 +725,8 @@ function createCourtAccountListCompareLoader(deps) {
 module.exports = {
   bookingDurationHours,
   computeBookingSummary,
+  buildCourtAccountListViewFromData,
+  buildCourtChainMetricsFromItems,
   createCourtAccountListCompareLoader,
   createCourtAccountListViewLoader,
   courtHistoryBusinessDate,

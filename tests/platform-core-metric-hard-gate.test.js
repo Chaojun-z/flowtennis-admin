@@ -62,10 +62,15 @@ assert.doesNotMatch(
   /totalDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)[\s\S]*courseDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)/,
   '总成交转化率趋势不得和课程成交率趋势共用同一个正式学员/线索公式'
 );
+assert.doesNotMatch(
+  operationsMetricsSource,
+  /function buildCourtChainMetrics\(/,
+  '经营分析订场链不得保留自己扫描 courts/membershipAccounts/membershipOrders 的第二套公式'
+);
 assert.match(
-  functionBody(operationsMetricsSource, 'buildCourtChainMetrics'),
-  /accountByCourtId[\s\S]*row\.courtId/,
-  '订场会员复储必须支持会员页同样的 courtId 归属口径'
+  functionBody(operationsMetricsSource, 'buildCourtChainFromSource'),
+  /buildCourtChainMetricsFromItems\(buildCourtAccountListViewFromData\(source\)\.items/,
+  '经营分析订场链必须从统一订场/会员读模型派生'
 );
 assert.doesNotMatch(
   operationsMetricsSource,

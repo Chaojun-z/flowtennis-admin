@@ -46,11 +46,11 @@ async function main() {
     }]],
     ['membershipPlans', []],
     ['membershipBenefitLedger', [
-      { id: 'grant-1', membershipAccountId: 'acc-1', courtId: 'court-1', membershipOrderRef: 'order-1', benefitCode: 'ballMachine', benefitLabel: '发球机免费', action: 'grant', delta: 3, unit: '次', createdAt: '2026-06-01T00:00:00Z' },
-      { id: 'consume-1', membershipAccountId: 'acc-1', courtId: 'court-1', membershipOrderRef: 'order-1', benefitCode: 'ballMachine', benefitLabel: '发球机免费', action: 'consume', delta: -1, unit: '次', createdAt: '2026-06-02T00:00:00Z', reason: '使用发球机' }
+      { id: 'grant-1', membershipAccountId: 'acc-1', courtId: 'court-1', membershipOrderRef: 'order-1', benefitCode: 'ballMachine', benefitLabel: '发球机免费', action: 'grant', delta: 3, unit: '次', createdAt: '2026-06-01 00:00', displayCreatedAt: '2026-06-01 00:00' },
+      { id: 'consume-1', membershipAccountId: 'acc-1', courtId: 'court-1', membershipOrderRef: 'order-1', benefitCode: 'ballMachine', benefitLabel: '发球机免费', action: 'consume', delta: -1, unit: '次', createdAt: '2026-06-02 00:00', displayCreatedAt: '2026-06-02 00:00', reason: '使用发球机' }
     ]],
     ['membershipAccountEvents', [
-      { id: 'evt-1', membershipAccountId: 'acc-1', courtId: 'court-1', eventType: 'created', createdAt: '2026-06-01T00:00:00Z', operator: 'admin' }
+      { id: 'evt-1', membershipAccountId: 'acc-1', courtId: 'court-1', eventType: 'created', createdAt: '2026-06-01 00:00', displayCreatedAt: '2026-06-01 00:00', operator: 'admin' }
     ]]
   ]);
   const loader = createCourtAccountListViewLoader({

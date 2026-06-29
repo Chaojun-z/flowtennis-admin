@@ -1,7 +1,28 @@
-const { normalizeCourtHistory } = require('../page-data/court-account-read-model.js');
-
 function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function parseArr(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function normalizeCourtHistory(history) {
+  return parseArr(history).map((row) => ({
+    ...row,
+    amount: Math.abs(Number(row?.amount) || 0),
+    bonusAmount: Number(row?.bonusAmount) || 0,
+    type: row?.type || '消费',
+    payMethod: row?.payMethod || '',
+    category: row?.category || '其他'
+  }));
 }
 
 function isInactiveStatus(value) {

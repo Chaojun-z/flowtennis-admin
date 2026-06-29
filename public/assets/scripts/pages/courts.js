@@ -490,17 +490,6 @@ function jumpMembershipPage(value){
   membershipPage=Math.min(pages,Math.max(1,parseInt(value,10)||1));
   renderMemberships();
 }
-function membershipFirstOpenDate(row){
-  const account=row?.account||{};
-  const accountId=String(account.id||'');
-  const courtId=String(account.courtId||row?.court?.id||'');
-  const dates=membershipOrders.filter(order=>{
-    if(['voided','refunded'].includes(String(order.status||'')))return false;
-    if(accountId&&String(order.membershipAccountId||'')===accountId)return true;
-    return courtId&&String(order.courtId||'')===courtId;
-  }).map(order=>String(order.purchaseDate||order.effectiveDate||order.cycleStartDate||order.createdAt||'').slice(0,10)).filter(Boolean).sort();
-  return dates[0]||String(account.cycleStartDate||account.createdAt||'').slice(0,10)||'';
-}
 function membershipSortMetric(row,key){
   if(key==='balance')return {empty:false,value:membershipReadModelFinanceForCourt(row).balance};
   if(key==='memberBookingCount')return {empty:false,value:membershipReadModelBookingForCourt(row).memberCount};
@@ -563,7 +552,7 @@ function openMembershipLedgerAuditModal(){
 }
 function membershipOrderAuditRows(){
   const q=(document.getElementById('membershipOrderAuditSearch')?.value||'').toLowerCase();
-  return membershipOrders.filter(o=>searchHit(q,o.courtName,o.membershipPlanName,o.notes,o.purchaseDate,o.overrideReason)).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
+  return (courtAccountListViewData?.membershipOrderAuditRows||[]).filter(o=>searchHit(q,o.courtName,o.membershipPlanName,o.notes,o.purchaseDate,o.overrideReason)).sort((a,b)=>String(b.purchaseDate||b.createdAt||'').localeCompare(String(a.purchaseDate||a.createdAt||'')));
 }
 function renderMembershipOrderAuditPagerControls(total,pages){
   const pageSizeHost=document.getElementById('membershipOrdersAuditPageSize');
@@ -611,13 +600,13 @@ function membershipLedgerOperatorText(operator){
   return renderStandardEmptyText(operator);
 }
 function membershipOrderDisplayText(orderId){
-  const order=membershipOrders.find(o=>String(o?.id||'')===String(orderId||''));
+  const order=(courtAccountListViewData?.membershipOrderAuditRows||[]).find(o=>String(o?.id||'')===String(orderId||''));
   if(!order)return '-';
-  return [order.purchaseDate,order.membershipPlanName].filter(Boolean).join(' · ')||'-';
+  return order.orderDisplayText||[order.purchaseDate,order.membershipPlanName].filter(Boolean).join(' · ')||'-';
 }
 function membershipLedgerAuditRows(){
   const q=(document.getElementById('membershipLedgerAuditSearch')?.value||'').toLowerCase();
-  return membershipBenefitLedger.filter(l=>l.action!=='grant'&&searchHit(q,courts.find(c=>c.id===l.courtId)?.name,l.benefitLabel,l.reason,l.operator,l.membershipOrderRef)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
+  return (courtAccountListViewData?.membershipLedgerAuditRows||[]).filter(l=>l.action!=='grant'&&searchHit(q,l.courtName,l.benefitLabel,l.reason,l.operator,l.membershipOrderRef,l.orderDisplayText)).sort((a,b)=>String(b.createdAt||b.relatedDate||'').localeCompare(String(a.createdAt||a.relatedDate||'')));
 }
 function renderMembershipLedgerAuditPagerControls(total,pages){
   const pageSizeHost=document.getElementById('membershipLedgerAuditPageSize');
@@ -650,7 +639,7 @@ function renderMembershipLedgerAuditPage(){
   const info=document.getElementById('membershipLedgerAuditPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderMembershipLedgerAuditPagerControls(total,pages);
-  host.innerHTML=slice.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(courts.find(c=>c.id===l.courtId)?.name||l.courtId)}</td><td>${renderStandardCellText(membershipOrderDisplayText(l.membershipOrderRef))}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无权益流水</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
+  host.innerHTML=slice.map(l=>{const delta=parseInt(l.delta)||0;return `<tr><td style="padding-left:20px">${renderStandardCellText(formatMembershipLedgerTime(l.createdAt||l.relatedDate),false)}</td><td>${renderStandardCellText(l.courtName||l.courtId)}</td><td>${renderStandardCellText(l.orderDisplayText||membershipOrderDisplayText(l.membershipOrderRef))}</td><td>${renderStandardCellText(l.benefitLabel||l.benefitCode,false)}</td><td>${renderStandardCellText(`${delta>0?'+':''}${delta}`,false)}</td><td>${renderStandardCellText(membershipLedgerActionText(l.action),false)}</td><td>${renderStandardCellText(membershipLedgerOperatorText(l.operator))}</td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:260px">${esc(renderStandardEmptyText(l.reason))}</div></td></tr>`;}).join('')||'<tr><td colspan="8"><div class="tms-empty-state"><div class="tms-empty-title">暂无权益流水</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
 }
 function openMembershipPlanModal(id){
   editId=id;const p=id?membershipPlans.find(x=>x.id===id):null;
@@ -794,7 +783,7 @@ function openCourtMembershipBenefitsModal(courtId){
   openCourtMembershipPanel(courtId,{tab:'rights'});
 }
 async function saveMembershipBenefit(courtId,mode,benefitCode=''){
-  const account=courtMembershipAccount(courtId);if(!account)return;
+  const account=membershipReadModelAccountForCourt(courtId);if(!account)return;
   const count=Math.abs(parseInt(document.getElementById('mb_count').value)||1);
   const label=membershipReadModelBenefitRowsForCourt(courtId).find(row=>row.code===benefitCode)?.label||membershipBenefitLabelForCode(benefitCode,account);
   const data={membershipAccountId:account.id,courtId,benefitCode,benefitLabel:label,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('mb_reason').value.trim(),relatedDate:today()};
@@ -816,12 +805,12 @@ function membershipBenefitInlineInputId(benefitCode){
   return `mb_inline_count_${String(benefitCode||'').replace(/[^a-zA-Z0-9_-]/g,'_')}`;
 }
 async function saveMembershipBenefitInline(button,courtId,mode,benefitCode=''){
-  const account=courtMembershipAccount(courtId);if(!account)return;
+  const account=membershipReadModelAccountForCourt(courtId);if(!account)return;
   const count=Math.abs(parseInt(document.getElementById(membershipBenefitInlineInputId(benefitCode))?.value)||1);
   const label=membershipReadModelBenefitRowsForCourt(courtId).find(row=>row.code===benefitCode)?.label||membershipBenefitLabelForCode(benefitCode,account);
   const data={membershipAccountId:account.id,courtId,benefitCode,benefitLabel:label,delta:mode==='consume'?-count:count,action:mode,reason:mode==='consume'?'会员权益使用':'会员权益补发',relatedDate:today()};
   if(mode==='supplement'){
-    const latestOrder=membershipOrdersForAccount(account.id)[0];
+    const latestOrder=membershipReadModelRechargeRowsForCourt(courtId)[0];
     if(!latestOrder){toast('暂无可归属的购买批次','warn');return;}
     data.membershipOrderRef=latestOrder.id;
   }

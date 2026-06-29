@@ -94,6 +94,17 @@ assertFunctionGuard({
 });
 
 [
+  'membershipOrderAuditRows',
+  'membershipLedgerAuditRows',
+  'membershipOrderDisplayText'
+].forEach(name => assertFunctionGuard({
+  file: 'public/assets/scripts/pages/courts.js',
+  name,
+  required: [/courtAccountListViewData/],
+  forbidden: [/membershipOrders\b/, /membershipBenefitLedger\b/, /courts\.find\(/]
+}));
+
+[
   'membershipSortMetric',
   'renderMemberships',
   'courtMembershipPanelHtml'
@@ -170,6 +181,16 @@ assertFunctionGuard({
 const operationsMetricsSource = read('server/metrics/operations-metrics.js');
 assert.doesNotMatch(
   operationsMetricsSource,
+  /function buildCourtChainMetrics\(/,
+  'operations metrics must not keep a second court/member chain formula from raw tables'
+);
+assert.match(
+  operationsMetricsSource,
+  /buildCourtChainMetricsFromItems/,
+  'operations metrics should use the court account read-model court chain helper'
+);
+assert.doesNotMatch(
+  operationsMetricsSource,
   /function buildStandardLifecycleMetricsFromConversionRows\(/,
   'operations metrics must not define a second standard lifecycle algorithm'
 );
@@ -197,6 +218,16 @@ assert.match(
 const financeSnapshotSource = read('server/page-data/finance-snapshot.js');
 assert.doesNotMatch(
   financeSnapshotSource,
+  /function buildFinanceUnifiedRows\(/,
+  'finance snapshot must not own finance detail row generation; it should call the finance unified rows read model'
+);
+assert.match(
+  financeSnapshotSource,
+  /createFinanceUnifiedRowsBuilder/,
+  'finance snapshot should import the finance unified rows read-model builder'
+);
+assert.doesNotMatch(
+  financeSnapshotSource,
   /function buildFinanceOverviewDataFromRows\(/,
   'finance snapshot should import the shared finance summary read model instead of owning another finance formula'
 );
@@ -209,6 +240,17 @@ assert.doesNotMatch(
   read('server/read-models/finance-summary.js'),
   /value\s*!==\s*0/,
   'backend finance summary must treat 0 as a valid standard value instead of falling back'
+);
+const courtAccountReadModelSource = read('server/page-data/court-account-read-model.js');
+assert.doesNotMatch(
+  courtAccountReadModelSource,
+  /function buildUnifiedMembershipFinanceSummary\(/,
+  'court account read model must not keep a second membership finance summary formula'
+);
+assert.match(
+  courtAccountReadModelSource,
+  /buildMembershipFinanceSummary/,
+  'court account read model should call the shared membership finance summary helper'
 );
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/coachops.js',

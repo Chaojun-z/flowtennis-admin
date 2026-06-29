@@ -217,8 +217,8 @@ const PAGE_DATA_REQUIREMENTS={
   courts:[],
   matches:['matchesPage'],
   memberships:[],
-  'membership-orders':['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
-  'membership-ledger':['campuses','students','courts','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','coaches'],
+  'membership-orders':[],
+  'membership-ledger':[],
   'membership-plans':['membershipPlans','membershipOrders','campuses','coaches'],
   prices:['campuses','pricePlans'],
   campusmgr:['campuses'],
@@ -238,7 +238,7 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   finance:['financePage'],
   courts:['courtsPage'],
   matches:['matchesPage'],
-  memberships:['membershipsPage'],
+  memberships:[],
   workbench:['workbenchPage'],
   postfeedback:['workbenchPage'],
   mystudents:['campuses','students','classes','schedule','feedbacks','entitlements'],
@@ -338,7 +338,6 @@ const DATASET_LOADERS={
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
-  ,membershipsPage:()=>apiCall('GET','/page-data/memberships')
   ,workbenchPage:()=>apiCall('GET','/page-data/workbench')
 };
 const GLOBAL_DATASET_NAMES=Object.keys(DATASET_LOADERS);
@@ -478,13 +477,12 @@ function initialBackgroundDatasetsForPage(pg){
     leadFollowups:['leadFollowups'],
     purchasesPage:['purchases'],
     courtsPage:['courts'],
-    membershipsPage:['courts','membershipAccounts'],
     workbenchPage:['schedule']
   };
   return backgroundDatasetsForPage(pg).flatMap(name=>fallback[name]||[name]);
 }
 function missingInitialDatasetsForPage(pg){
-  if((pg==='courts'||pg==='memberships')&&shouldUseCourtReadModelByDefault()){
+  if((pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger')&&shouldUseCourtReadModelByDefault()){
     return courtAccountListViewData?[]:['courtAccountListViewPage'];
   }
   const requiredMissing=missingRequiredDatasetsForPage(pg);
@@ -640,31 +638,6 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       loadedDatasets.add('matchesPage');
       return;
     }
-    if(name==='membershipsPage'){
-      setDatasetValue('campuses',data.campuses||[]);
-      setDatasetValue('students',data.students||[]);
-      setDatasetValue('courts',data.courts||[]);
-      setDatasetValue('membershipAccounts',data.membershipAccounts||[]);
-      setDatasetValue('membershipOrders',data.membershipOrders||[]);
-      setDatasetValue('membershipBenefitLedger',data.membershipBenefitLedger||[]);
-      setDatasetValue('membershipAccountEvents',data.membershipAccountEvents||[]);
-      setDatasetValue('membershipPlans',data.membershipPlans||[]);
-      setDatasetValue('coaches',data.coaches||[]);
-      setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      membershipFinanceSummary=data.membershipFinanceSummary||null;
-      staleCachedDatasets.delete('campuses');
-      staleCachedDatasets.delete('students');
-      staleCachedDatasets.delete('courts');
-      staleCachedDatasets.delete('membershipAccounts');
-      staleCachedDatasets.delete('membershipOrders');
-      staleCachedDatasets.delete('membershipBenefitLedger');
-      staleCachedDatasets.delete('membershipAccountEvents');
-      staleCachedDatasets.delete('membershipPlans');
-      staleCachedDatasets.delete('coaches');
-      staleCachedDatasets.delete('customerLifecycleRows');
-      loadedDatasets.add('membershipsPage');
-      return;
-    }
     if(name==='workbenchPage'){
       setDatasetValue('campuses',data.campuses||[]);
       setDatasetValue('students',data.students||[]);
@@ -807,7 +780,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   if(!quiet&&loading)loading.classList.add('show');
   try{
     await ensurePageDatasets(pg,{force});
-    if(pg==='courts'||pg==='memberships'){
+    if(pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger'){
       const needsCompare=shouldLoadCourtReadModelCompare();
       await loadCourtReadModelGuardData({force});
       if(force){

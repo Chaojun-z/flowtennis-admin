@@ -608,7 +608,8 @@ function courtMembershipAccount(courtId){
   return rows.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')))[0]||null;
 }
 function membershipOrdersForAccount(accountId){
-  return membershipOrders.filter(o=>o.membershipAccountId===accountId).sort((a,b)=>String(b.purchaseDate||'').localeCompare(String(a.purchaseDate||'')));
+  const item=(courtAccountListViewData?.items||[]).find(row=>String(row?.membershipAccount?.id||'')===String(accountId||''));
+  return item?.rechargeRows||[];
 }
 function normalizeMembershipBenefitSource(source){
   if(!source||typeof source!=='object')return {};
@@ -652,35 +653,26 @@ function membershipOrderEffectiveBenefitSource(order,plan={}){
   return effectiveMembershipBenefitSource(order,order?.planBenefitTemplateSnapshot,plan);
 }
 function membershipBenefitSummaryForOrder(order){
+  if(order?.benefitSummary&&order.benefitSummary!=='-'){
+    return String(order.benefitSummary).split('；').map((text,index)=>({code:`summary_${index+1}`,label:text,unit:'',total:0,remaining:0,membershipOrderRef:order.id,benefitValidUntil:order.benefitValidUntil||''}));
+  }
   const plan=membershipPlans.find(p=>p.id===order?.membershipPlanId)||{};
   const snap=membershipOrderEffectiveBenefitSource(order,plan);
   const items=[];
   Object.entries(snap).forEach(([code,v])=>{if(code!=='customBenefits'&&(parseInt(v?.count)||0)>0)items.push({code,label:v.label||code,unit:v.unit||'次',total:parseInt(v.count)||0});});
   parseArr(snap.customBenefits).forEach((v,i)=>{if((parseInt(v?.count)||0)>0)items.push({code:`custom_${i+1}`,label:v.label||`自定义权益${i+1}`,unit:v.unit||'次',total:parseInt(v.count)||0});});
   return items.map(item=>{
-    const rows=membershipBenefitLedger.filter(l=>l.membershipOrderRef===order.id&&l.benefitCode===item.code&&l.action!=='grant');
-    const positiveDelta=rows.filter(l=>(parseInt(l.delta)||0)>0).reduce((n,l)=>n+(parseInt(l.delta)||0),0);
-    const negativeDelta=rows.filter(l=>(parseInt(l.delta)||0)<0).reduce((n,l)=>n+(parseInt(l.delta)||0),0);
-    const total=(item.total||0)+positiveDelta;
+    const total=item.total||0;
     const benefitValidUntil=order?.benefitValidUntil||'';
     const expired=benefitValidUntil&&benefitValidUntil<today();
-    return {...item,total,membershipOrderRef:order.id,benefitValidUntil,remaining:expired?0:Math.max(0,total+negativeDelta),expired,designatedCoachIds:parseArr(snap?.[item.code]?.designatedCoachIds)};
+    return {...item,total,membershipOrderRef:order.id,benefitValidUntil,remaining:expired?0:total,expired,designatedCoachIds:parseArr(snap?.[item.code]?.designatedCoachIds)};
   });
 }
 function membershipBenefitRowsForAccount(account){
   if(['voided','cleared'].includes(account?.status))return [];
   if(!account)return [];
-  const rows={};
-  membershipOrdersForAccount(account.id).forEach(order=>{
-    membershipBenefitSummaryForOrder(order).forEach(item=>{
-      if(!rows[item.code])rows[item.code]={code:item.code,label:item.label,unit:item.unit,total:0,remaining:0,batches:[],designatedCoachIds:[]};
-      rows[item.code].total+=item.total||0;
-      rows[item.code].remaining+=item.remaining||0;
-      rows[item.code].batches.push({membershipOrderRef:item.membershipOrderRef,total:item.total,remaining:item.remaining,benefitValidUntil:item.benefitValidUntil,expired:item.expired});
-      rows[item.code].designatedCoachIds=[...new Set([...rows[item.code].designatedCoachIds,...parseArr(item.designatedCoachIds)])];
-    });
-  });
-  return Object.values(rows).sort((a,b)=>String(a.label||'').localeCompare(String(b.label||''),'zh-CN'));
+  const item=(courtAccountListViewData?.items||[]).find(row=>String(row?.membershipAccount?.id||'')===String(account.id||''));
+  return item?.benefitRows||[];
 }
 function membershipBenefitUsedCount(row){
   return Math.max(0,(parseInt(row?.total)||0)-(parseInt(row?.remaining)||0));
@@ -688,34 +680,20 @@ function membershipBenefitUsedCount(row){
 function membershipBenefitBatchCardsHtml(account){
   if(!account)return '<div style="font-size:12px;color:var(--td)">暂无权益批次</div>';
   const orders=membershipOrdersForAccount(account.id);
-  if(!orders.length)return '<div style="font-size:12px;color:var(--td)">暂无权益批次</div>';
-  return orders.map(order=>{
-    const items=membershipBenefitSummaryForOrder(order);
-    const lines=items.length?items.map(item=>{
-      const supplementCount=membershipBenefitLedger
-        .filter(l=>l.membershipOrderRef===order.id&&l.benefitCode===item.code&&parseInt(l.delta)>0&&l.action!=='grant')
-        .reduce((sum,l)=>sum+(parseInt(l.delta)||0),0);
-      return `<div style="font-size:12px;color:var(--tb);margin-top:4px">${esc(item.label)}：${item.remaining}/${item.total}${esc(item.unit)}${supplementCount>0?` · 含补发 +${supplementCount}`:''}</div>`;
-    }).join(''):'<div style="font-size:12px;color:var(--td);margin-top:4px">本批次无权益</div>';
-    return `<div style="border:0.5px solid rgba(180,83,9,0.12);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,0.4)"><div style="font-size:12px;color:var(--ts)">购买日期：${esc(order.purchaseDate)||'—'} · 方案名：${esc(order.membershipPlanName)||'—'} · 批次到期：${esc(order.benefitValidUntil)||'—'}</div>${lines}</div>`;
+  const orderMap=new Map(orders.map(order=>[String(order.id||''),order]));
+  const batches=membershipBenefitBatchRows(account);
+  if(!batches.length)return '<div style="font-size:12px;color:var(--td)">暂无权益批次</div>';
+  const grouped=new Map();
+  batches.forEach(row=>{const key=String(row.membershipOrderRef||'');if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(row);});
+  return [...grouped.entries()].map(([orderId,items])=>{
+    const order=orderMap.get(orderId)||{};
+    const lines=items.map(item=>`<div style="font-size:12px;color:var(--tb);margin-top:4px">${esc(item.benefitLabel)}：${item.remaining}/${item.total}${esc(item.unit)}</div>`).join('')||'<div style="font-size:12px;color:var(--td);margin-top:4px">本批次无权益</div>';
+    return `<div style="border:0.5px solid rgba(180,83,9,0.12);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,0.4)"><div style="font-size:12px;color:var(--ts)">购买日期：${esc(order.purchaseDate)||'—'} · 方案名：${esc(order.membershipPlanName)||'—'} · 批次到期：${esc(items[0]?.benefitValidUntil)||'—'}</div>${lines}</div>`;
   }).join('');
 }
 function membershipBenefitBatchRows(account){
   if(!account)return [];
-  return membershipOrdersForAccount(account.id).flatMap(order=>membershipBenefitSummaryForOrder(order).map(item=>({
-    membershipOrderRef:order.id,
-    courtId:order.courtId||account.courtId,
-    courtName:order.courtName||'—',
-    purchaseDate:order.purchaseDate||'—',
-    membershipPlanName:order.membershipPlanName||'—',
-    benefitCode:item.code,
-    benefitLabel:item.label,
-    unit:item.unit,
-    total:item.total,
-    remaining:item.remaining,
-    benefitValidUntil:item.benefitValidUntil,
-    expired:item.expired
-  })));
+  return membershipBenefitRowsForAccount(account).flatMap(row=>(row.batches||[]).map(batch=>({membershipOrderRef:batch.membershipOrderRef,courtId:account.courtId,courtName:'—',purchaseDate:'—',membershipPlanName:'—',benefitCode:row.code,benefitLabel:row.label,unit:row.unit,total:batch.total,remaining:batch.remaining,benefitValidUntil:batch.benefitValidUntil,expired:batch.expired})));
 }
 function membershipBenefitLabelForCode(code,account){
   return membershipBenefitRowsForAccount(account).find(x=>x.code===code)?.label||code;
@@ -851,6 +829,7 @@ function applyMembershipOrderDraft(planId){
   toggleMembershipCoachSelector('mo_designatedCoachPartner','mo_designatedCoachSection');
 }
 function membershipOrderBenefitSummaryHtml(order){
+  if(order?.benefitSummary&&order.benefitSummary!=='-')return order.benefitSummary;
   const plan=membershipPlans.find(p=>p.id===order?.membershipPlanId)||{};
   const planSnap=effectiveMembershipBenefitSource(order?.planBenefitTemplateSnapshot,plan);
   const items=membershipBenefitSummaryForOrder(order);
@@ -870,6 +849,7 @@ function membershipOrderBenefitSummaryHtml(order){
   return lines.join('；');
 }
 function membershipOrderHasCustomAdjustment(order){
+  if(order&&order.customAdjustment!==undefined)return !!order.customAdjustment;
   const plan=membershipPlans.find(p=>p.id===order?.membershipPlanId)||{};
   const planSnap=effectiveMembershipBenefitSource(order?.planBenefitTemplateSnapshot,plan);
   const items=membershipBenefitSummaryForOrder(order);
@@ -883,7 +863,7 @@ function membershipOrderAdjustmentText(order){
   return membershipOrderHasCustomAdjustment(order)?'个性化调整':'标准权益';
 }
 function courtMembershipBenefitRowsHtml(court){
-  const account=courtMembershipAccount(court?.id);
+  const account=typeof membershipReadModelAccountForCourt==='function'?membershipReadModelAccountForCourt(court?.id):null;
   const rows=membershipBenefitRowsForAccount(account);
   if(!rows.length)return '<div style="font-size:12px;color:var(--td)">暂无赠送权益</div>';
   return rows.map(row=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:0.5px solid rgba(180,83,9,0.12)"><div style="min-width:0"><div style="font-size:13px;color:var(--th);font-weight:600">${esc(row.label)}${esc(membershipBenefitNote(row))}</div><div style="font-size:12px;color:var(--ts)">剩余 ${row.remaining}/${row.total}${esc(row.unit)}${row.batches.some(x=>x.benefitValidUntil)?` · 最早到期 ${esc(row.batches.filter(x=>x.remaining>0&&x.benefitValidUntil).sort((a,b)=>String(a.benefitValidUntil).localeCompare(String(b.benefitValidUntil)))[0]?.benefitValidUntil||'—')}`:''}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn-sec" onclick="openMembershipBenefitActionModal('${court.id}','${row.code}','consume')">消耗</button><button class="btn-sec" onclick="openMembershipBenefitActionModal('${court.id}','${row.code}','supplement')">补发</button><button class="btn-sec" onclick="openMembershipBenefitHistoryModal('${court.id}','${row.code}')">查看明细</button></div></div>`).join('');
@@ -910,16 +890,19 @@ function membershipBenefitConsumePreview(account,benefitCode,count){
   return {totalRemaining:batches.reduce((sum,row)=>sum+(parseInt(row.remaining)||0),0),allocations};
 }
 function courtMembershipSummary(court){
-  const account=courtMembershipAccount(court?.id);
-  const finance=courtFinanceLocal(court||{history:[]});
+  const item=typeof membershipReadModelItemForCourt==='function'?membershipReadModelItemForCourt(court):null;
+  const account=item?.membershipAccount||courtMembershipAccount(court?.id);
+  const finance=typeof membershipReadModelFinanceForCourt==='function'?membershipReadModelFinanceForCourt(court):courtFinanceLocal(court||{history:[]});
   if(!account)return {account:null,accountType:'普通',memberLabel:'—',tierLabel:'-',status:'未开卡',discount:'—',validUntil:'—'};
   if(['voided','cleared'].includes(account.status)){
     return {account,accountType:'普通',memberLabel:'-',tierLabel:'-',status:membershipDisplayStatus(account),discount:'-',validUntil:'-'};
   }
-  return {account,accountType:['active','extended'].includes(account.status)?'会员':'普通',memberLabel:account.memberLabel||'—',tierLabel:courtMembershipTierLabel(account),status:membershipDisplayStatus(account),discount:account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—',validUntil:account.validUntil||'—'};
+  return {account,accountType:item?.accountType||(['active','extended'].includes(account.status)?'会员':'普通'),memberLabel:account.memberLabel||'—',tierLabel:item?.membershipTierLabel||courtMembershipTierLabel(account),status:item?.membershipStatus||membershipDisplayStatus(account),discount:item?.membershipDiscountText||(account.discountRate?`${Math.round((parseFloat(account.discountRate)||1)*100)/10} 折`:'—'),validUntil:item?.membershipValidUntil||account.validUntil||'—'};
 }
 function courtMembershipTierLabel(account){
   if(!account)return '-';
+  const item=(courtAccountListViewData?.items||[]).find(row=>String(row?.membershipAccount?.id||'')===String(account.id||''));
+  if(item?.membershipTierLabel)return item.membershipTierLabel;
   const latestOrder=membershipOrdersForAccount(account.id)[0]||null;
   const plan=membershipPlans.find(p=>p.id===(latestOrder?.membershipPlanId||account.membershipPlanId))||{};
   return account.tierCode||latestOrder?.tierCode||plan.tierCode||'-';

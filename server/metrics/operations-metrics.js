@@ -1,6 +1,8 @@
 const { effectiveScheduleStatus } = require('../schedule.js');
 const {
   bookingDurationHours,
+  buildCourtAccountListViewFromData,
+  buildCourtChainMetricsFromItems,
   courtHistoryBusinessDate,
   isCourtBookingHistoryRow,
   normalizeCourtHistory
@@ -790,58 +792,8 @@ function purchaseAmount(row = {}) {
   );
 }
 
-function activeBusinessRow(row = {}) {
-  const status = String(row.status || row.systemStatus || 'active').trim();
-  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
-}
-
-function courtHasBooking(court = {}) {
-  const history = normalizeCourtHistory(court.history).filter(row => activeBusinessRow(row) && isCourtBookingHistoryRow(row));
-  if (history.length) return true;
-  return !!String(court.firstBookingAt || court.bookingAt || court.lastBookingAt || court.createdAt || '').trim();
-}
-
-function courtBookingCount(court = {}) {
-  const history = normalizeCourtHistory(court.history).filter(row => activeBusinessRow(row) && isCourtBookingHistoryRow(row));
-  if (history.length) return history.length;
-  const cached = Number(court.bookingCount || court.totalBookings || court.bookingsCount);
-  if (Number.isFinite(cached) && cached > 0) return cached;
-  return courtHasBooking(court) ? 1 : 0;
-}
-
-function buildCourtChainMetrics({ courts = [], membershipAccounts = [], membershipOrders = [] } = {}) {
-  const courtUsers = (courts || []).filter(row => activeBusinessRow(row) && courtHasBooking(row));
-  const memberAccounts = (membershipAccounts || []).filter(row => activeBusinessRow(row) && String(row.status || '').trim() !== 'cleared');
-  const memberCourtIds = new Set(memberAccounts.map(row => String(row.courtId || '').trim()).filter(Boolean));
-  const validOrders = (membershipOrders || []).filter(row => activeBusinessRow(row) && purchaseAmount(row) > 0);
-  const accountByCourtId = new Map(memberAccounts.map(row => [String(row.courtId || '').trim(), String(row.id || row.membershipAccountId || '').trim()]).filter(([courtId, accountId]) => courtId && accountId));
-  const ordersByAccount = new Map();
-  validOrders.forEach(row => {
-    const accountId = String(row.membershipAccountId || row.accountId || '').trim() || accountByCourtId.get(String(row.courtId || '').trim()) || '';
-    if (!accountId) return;
-    ordersByAccount.set(accountId, (ordersByAccount.get(accountId) || 0) + 1);
-  });
-  const accountById = new Map(memberAccounts.map(row => [String(row.id || row.membershipAccountId || '').trim(), row]).filter(([id]) => id));
-  const repeatMemberCourtIds = new Set();
-  ordersByAccount.forEach((count, accountId) => {
-    if (count < 2) return;
-    const account = accountById.get(accountId);
-    const courtId = String(account?.courtId || '').trim();
-    if (courtId) repeatMemberCourtIds.add(courtId);
-  });
-  const courtUserCount = courtUsers.length;
-  const memberCount = memberCourtIds.size;
-  const repeatBookingCount = courtUsers.filter(row => courtBookingCount(row) >= 2).length;
-  const memberRepeatCount = repeatMemberCourtIds.size;
-  return {
-    courtUsers: courtUserCount,
-    courtMembers: memberCount,
-    memberRepeatCustomers: memberRepeatCount,
-    courtRepeatCustomers: repeatBookingCount,
-    memberConversionRate: rate(memberCount, courtUserCount),
-    memberRepeatRate: rate(memberRepeatCount, memberCount),
-    courtRepeatRate: rate(repeatBookingCount, courtUserCount)
-  };
+function buildCourtChainFromSource(source = {}) {
+  return buildCourtChainMetricsFromItems(buildCourtAccountListViewFromData(source).items || []);
 }
 
 function buildRenewalMetrics(purchases = []) {
@@ -930,6 +882,11 @@ function isCompletedScheduleForOperations(row = {}, now = new Date()) {
 
 function isActiveScheduleForOperations(row = {}) {
   return !/取消|cancel|void|delete/i.test(String(row.status || row.systemStatus || row.state || ''));
+}
+
+function activeBusinessRow(row = {}) {
+  const status = String(row.status || row.systemStatus || 'active').trim();
+  return !['voided', 'refunded', 'deleted', 'inactive', 'cancelled', 'canceled', '已作废', '已删除', '已取消'].includes(status);
 }
 
 function isValidCoursePurchase(row = {}) {
@@ -2361,7 +2318,7 @@ function buildCourtRetentionTrendDailyRows({ courts = [], membershipAccounts = [
   ].filter(Boolean))];
   const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
   return days.map(day => {
-    const chain = buildCourtChainMetrics({
+    const chain = buildCourtChainFromSource({
       courts: courtRowsThroughDay(courts, day),
       membershipAccounts,
       membershipOrders: (membershipOrders || []).filter(row => {
@@ -2551,10 +2508,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
     rangedData.financeNormalizedRows || [],
     data.campuses || []
   );
-  const courtChain = buildCourtChainMetrics({
+  const courtChain = buildCourtChainFromSource({
+    campuses: data.campuses || [],
+    students: data.students || [],
+    leads: data.leads || [],
     courts: rangedData.courts || data.courts || [],
     membershipAccounts: rangedData.membershipAccounts || data.membershipAccounts || [],
-    membershipOrders: rangedData.membershipOrders || data.membershipOrders || []
+    membershipOrders: rangedData.membershipOrders || data.membershipOrders || [],
+    membershipPlans: data.membershipPlans || [],
+    membershipBenefitLedger: data.membershipBenefitLedger || []
   });
   const conversionRetention = buildConversionRetentionMetrics({ periodRepurchase, courtChain });
   if (Array.isArray(court.campusRows)) {
@@ -2699,10 +2661,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
     trialPathDealRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathDeals?.rate) || 0,
     trialPathPending: Number(previousStandardLifecycleMetrics?.metrics?.trialPathPending?.value) || 0,
     courseRepeatRate: previousPeriodRepurchase.rate,
-    courtRepeatRate: previousRangedData ? buildCourtChainMetrics({
+    courtRepeatRate: previousRangedData ? buildCourtChainFromSource({
+      campuses: data.campuses || [],
+      students: data.students || [],
+      leads: data.leads || [],
       courts: previousRangedData.courts || data.courts || [],
       membershipAccounts: previousRangedData.membershipAccounts || data.membershipAccounts || [],
-      membershipOrders: previousRangedData.membershipOrders || data.membershipOrders || []
+      membershipOrders: previousRangedData.membershipOrders || data.membershipOrders || [],
+      membershipPlans: data.membershipPlans || [],
+      membershipBenefitLedger: data.membershipBenefitLedger || []
     }).courtRepeatRate : 0,
     leads: Number(previousStandardLifecycleMetrics?.metrics?.validLeads?.value) || 0,
     appointmentRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathStudents?.rate) || 0,
