@@ -300,7 +300,7 @@ assert.match(pagesCss, /package-card-shell\.is-inactive\{[^}]*opacity:\.9[^}]*bo
 assert.match(pagesCss, /package-sales-card-body\{[^}]*gap:0[^}]*padding:0/, 'package card upper content should rely on the 12px card padding');
 assert.match(pagesCss, /package-sales-subtitle\{[^}]*color:#6B7280[^}]*font-size:13px[^}]*margin-top:4px[^}]*margin-bottom:16px/, 'package audience and lesson text should use 13px gray spacing');
 assert.match(pagesCss, /package-rule-line\{[^}]*font-size:11px[^}]*color:#9CA3AF[^}]*line-height:1\.2/, 'package campus and coach text should use compact gray text');
-assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*padding:4px 10px[^}]*background:#FFFFFF[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*font-size:12px/, 'package edit and deactivate buttons should use compact 12px styling');
+assert.match(pagesCss, /package-sales-footer \.showcase-action-btn\{[^}]*padding:4px 8px[^}]*background:#FFFFFF[^}]*color:#4B5563[^}]*border:1px solid #E5E7EB[^}]*font-size:12px/, 'package edit and deactivate buttons should use compact 12px styling');
 assert.match(pagesCss, /package-card-meta\{[^}]*color:#9CA3AF[^}]*font-size:10px/, 'package created date and order count should use compact gray text');
 assert.match(pagesCss, /package-time-band-badge\{[^}]*border-radius:6px[^}]*font-size:10px[^}]*font-weight:500/, 'package time band tag should use 10px medium rounded style');
 assert.match(pagesCss, /package-time-band-badge\.is-prime\{[^}]*background:#FEF9E7[^}]*color:#D4AF37[^}]*border-color:#FBEBA7/, 'package prime tag should use the gold design');

@@ -75,7 +75,10 @@ assert.match(cssRule('.package-card-meta button'), /font-size:10px/, 'package or
 assert.match(packageBoardCardHtml, /packageAvailableDate\(p\)/, 'package card footer should show available date instead of created date');
 assert.match(fnBody('packageAvailableDate'), /packageSingleDateText\(p\.usageStartDate,p\.usageEndDate\)/, 'package card footer should show one available date instead of a range');
 assert.doesNotMatch(packageBoardCardHtml, /packageCreatedDate\(p\)/, 'package card footer should not show created date');
-assert.match(cssRule('.package-meta-token'), /overflow:hidden/, 'package available date should not overlap the order count');
-assert.match(cssRule('.package-sales-footer .showcase-action-btn'), /padding:4px 10px/, 'package view button padding should shrink by 2px horizontally');
+assert.match(cssRule('.package-meta-token'), /flex:0 0 auto/, 'package available date should keep its full width');
+assert.doesNotMatch(cssRule('.package-meta-token'), /text-overflow:ellipsis/, 'package available date should not be ellipsized');
+assert.match(cssRule('.package-order-link'), /min-width:0/, 'package order count should be allowed to fit compactly in one line');
+assert.match(cssRule('.package-order-link'), /max-width:100%/, 'package order count should stay inside the footer instead of pushing buttons');
+assert.match(cssRule('.package-sales-footer .showcase-action-btn'), /padding:4px 8px/, 'package view button padding should stay compact so footer text fits');
 
 console.log('package board view tests passed');
