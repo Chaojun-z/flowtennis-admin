@@ -120,7 +120,7 @@ function studentTrialPackagePurchaseDate(stu){
   return dates.sort().pop()||'';
 }
 function studentListPackagePurchaseDate(stu){
-  return studentListViewMode()==='trial'?studentTrialPackagePurchaseDate(stu):studentPackagePurchaseDate(stu);
+  return String(stu?.packagePurchaseDate||'').slice(0,10);
 }
 function studentPackageNameText(stu){
   const sid=String(stu?.id||'');
@@ -180,6 +180,31 @@ function studentHumanText(value){
   ['历史导入','马坡私教 CSV 导入自动创建','CSV 导入自动创建'].forEach(label=>{text=text.split(label).join('');});
   return text.replace(/[；;，,。\/｜|·\s]+$/g,'').replace(/^[；;，,。\/｜|·\s]+/g,'').trim();
 }
+function studentUnifiedPackageListRows(stu){
+  return Array.isArray(stu?.packageListRows)?stu.packageListRows:[];
+}
+function studentUnifiedPackageLineText(row){
+  const name=String(row?.packageName||'课包').trim();
+  return `${name} ${lessonQty(row?.remainingLessons)}/${lessonQty(row?.totalLessons)}`;
+}
+function studentUnifiedPackageListHtml(stu){
+  const rows=studentUnifiedPackageListRows(stu);
+  if(!rows.length)return esc('-');
+  return rows.map(row=>`<div>${esc(studentUnifiedPackageLineText(row))}</div>`).join('');
+}
+function studentUnifiedPackageListTooltip(stu){
+  const rows=studentUnifiedPackageListRows(stu);
+  return rows.length?rows.map(row=>studentUnifiedPackageLineText(row)).join('\n'):'-';
+}
+function studentUnifiedPackageBalanceHtml(stu){
+  const text=String(stu?.packageBalanceText||'').trim();
+  if(!text||text==='-')return renderStandardCellText('-',false);
+  const percent=Number(stu?.packageBalancePercent)||0;
+  return `<div class="tms-mini-bar"><div class="tms-mini-bar-fill" style="width:${Math.max(0,Math.min(100,percent))}%"></div><span class="tms-mini-bar-text">${esc(text)}</span></div>`;
+}
+function studentUnifiedCompletedLessonCount(stu){
+  return lessonUnitsText(stu?.completedLessons);
+}
 function studentCompletedLessonUnits(stu){
   const lessonMap=new Map();
   const ledgerItems=studentConcreteLessonLedgerItems(stu);
@@ -200,8 +225,8 @@ function studentCompletedLessonUnits(stu){
 function studentSortValue(stu,key){
   if(key==='packagePurchaseDate')return studentListPackagePurchaseDate(stu);
   if(key==='lastLesson')return studentLastLessonDate(stu);
-  if(key==='completedLessons')return studentCompletedLessonUnits(stu);
-  if(key==='packageLessons')return studentPackageLessonMeta(stu).remaining||0;
+  if(key==='completedLessons')return Number(stu?.completedLessons)||0;
+  if(key==='packageLessons')return Number(stu?.packageBalanceRemaining)||0;
   return '';
 }
 function ensureStudentDefaultSort(){
@@ -749,12 +774,12 @@ function renderStudents(){
     const purchaseDate=studentListPackagePurchaseDate(s);
     const lastLesson=studentLastLessonDate(s);
     const coachText=studentPrimaryCoachText(s);
-    const packageText=studentPackageLessonSummary(s);
-    const packageListHtml=studentPackageListHtml(s);
-    const packageListTooltip=studentPackageListTooltip(s);
+    const packageText=String(s?.packageBalanceText||'').trim()||'-';
+    const packageListHtml=studentUnifiedPackageListHtml(s);
+    const packageListTooltip=studentUnifiedPackageListTooltip(s);
     const noteText=studentHumanText(studentNoteSummary(s));
     if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentUnifiedCompletedLessonCount(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){

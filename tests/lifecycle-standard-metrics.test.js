@@ -18,10 +18,12 @@ const sample = {
   ],
   purchases: [
     { id: 'purchase-direct-course', studentId: 'student-direct-course', courseType: '私教课', actualAmount: 6000, status: 'active', purchaseDate: '2026-06-04' },
+    { id: 'purchase-real-trial-pending', studentId: 'student-real-trial-pending', courseType: '体验课', packageName: '体验课', amountPaid: 100, actualAmount: 100, status: 'active', purchaseDate: '2026-06-05' },
     { id: 'purchase-real-trial-deal', studentId: 'student-real-trial-deal', courseType: '私教课', amountPaid: 6000, actualAmount: 6000, status: 'active', purchaseDate: '2026-06-08', notes: '体验后购买，备注不是体验证据' },
     { id: 'purchase-real-trial-renewal', studentId: 'student-real-trial-deal', courseType: '小班课', amountPaid: 3000, actualAmount: 3000, status: 'active', purchaseDate: '2026-06-09' }
   ],
   entitlements: [
+    { id: 'ent-real-trial-pending', studentId: 'student-real-trial-pending', purchaseId: 'purchase-real-trial-pending', courseType: '体验课', packageName: '体验课', totalLessons: 1, remainingLessons: 0, status: 'depleted' },
     { id: 'ent-real-trial-deal', studentId: 'student-real-trial-deal', purchaseId: 'purchase-real-trial-deal', courseType: '私教课', totalLessons: 10, remainingLessons: 7, status: 'active' },
     { id: 'ent-real-trial-renewal', studentId: 'student-real-trial-deal', purchaseId: 'purchase-real-trial-renewal', courseType: '小班课', totalLessons: 6, remainingLessons: 0, status: 'depleted' }
   ],
@@ -60,6 +62,24 @@ assert.strictEqual(standard.teachingSummary.activePackageStudentCount, 1, '有�
 assert.strictEqual(standard.teachingSummary.totalIncome, 15000, '课包实收金额必须来自正式课包实收');
 assert.strictEqual(standard.teachingSummary.recognized, 4200, '已履约金额必须来自正式课包核销金额');
 assert.strictEqual(standard.teachingSummary.packageBalance, 10800, '待履约金额必须等于课包实收减已履约');
+const courseViewRow = standard.views.courseChainStudents.find(row => row.studentId === 'student-real-trial-pending');
+assert.ok(courseViewRow, '普通学员列表行必须来自统一教学链视图');
+assert.deepStrictEqual(
+  courseViewRow.packageListRows.map(row => [row.packageName, row.remainingLessons, row.totalLessons]),
+  [['体验课', 0, 1]],
+  '普通学员课包列表必须由后端统一读模型整理体验课包'
+);
+assert.strictEqual(courseViewRow.packagePurchaseDate, '2026-06-05', '普通学员课包购买时间必须由后端统一读模型给出');
+const formalViewRow = standard.views.formalStudents.find(row => row.studentId === 'student-real-trial-deal');
+assert.ok(formalViewRow, '正式学员列表行必须来自统一教学链视图');
+assert.deepStrictEqual(
+  formalViewRow.packageListRows.map(row => [row.packageName, row.remainingLessons, row.totalLessons]),
+  [['小班课', 0, 6], ['私教课', 7, 10]],
+  '正式学员课包列表必须由后端统一读模型整理，前端不能再现场拼课包名字'
+);
+assert.strictEqual(formalViewRow.packageBalanceText, '7/16', '正式学员课包余额必须由后端统一读模型汇总');
+assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课必须由后端统一读模型汇总，且包含已完成体验课');
+assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.funnels.courseChain.map(row => [row.stage, row.count]),
   [

@@ -93,7 +93,7 @@ assert.doesNotMatch(trialStudentColumns, /最近上课|累计上课|课包\/课�
 const officialStudentColumns = fnBody('studentTableColumns').match(/return \[\s*\n    \{label:'姓名'[\s\S]*?\n  \];\n\}/)?.[0] || '';
 assert.doesNotMatch(officialStudentColumns, /最近上课/, 'official student table should remove recent lesson column');
 assert.doesNotMatch(officialStudentColumns, /label:'电话'|课时\/课包/, 'official student table should not show phone or the old lesson/package label');
-assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='packagePurchaseDate';stuSortDir='desc'/, 'normal and official student lists should default to latest purchase descending');
+assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'[\s\S]*function ensureStudentDefaultSort\(\)[\s\S]*mode==='trial'[\s\S]*stuSortKey='packagePurchaseDate';stuSortDir='desc'/, 'normal and official student lists should default to package purchase date descending');
 assert.match(source, /return studentListViewMode\(\)==='trial'\?studentHasTrialPath\(stu\)\|\|hasPackage:hasPackage;/, 'normal student list should include all course-chain students, including direct formal deals');
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
@@ -192,9 +192,9 @@ assert.match(source, /if\(pg==='students'\)renderStudentTableLoading\(\);/, 'stu
 assert.match(source, /if\(pg==='students'\)renderStudentTableError\(String\(e\.message\|\|e\)\);/, 'student page load failure should render the dedicated error state');
 assert.match(css, /#page-students \.tms-empty-state\{[\s\S]*#page-students \.tms-state-action/, 'student empty, loading, and error states should have scoped standard styles');
 assert.match(source, /function studentCompletedLessonCount\(/, 'student page should expose a cumulative completed lesson helper');
-assert.match(source, /studentCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons');
+assert.match(source, /studentUnifiedCompletedLessonCount\(s\)/, 'student list should render cumulative completed lessons from the backend unified teaching view');
 assert.match(source, /function scheduleLessonUnits\(/, 'lesson stats should use schedule lesson units instead of row counts');
-assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'/, 'package student list should default to latest package purchase descending');
+assert.match(source, /stuSortKey='packagePurchaseDate',stuSortDir='desc'/, 'package student list should default to package purchase date descending');
 assert.match(source, /function studentLastLessonDate[\s\S]*effectiveScheduleStatus\(x\)==='已结束'/, 'student latest lesson date should use completed lessons');
 assert.match(source, /function scheduleDurationLessonUnits[\s\S]*Math\.round\(\(mins\/60\)\*10\)\/10/, 'web lesson units should derive a precise duration fallback from start and end time');
 assert.match(source, /function scheduleLessonUnits[\s\S]*Math\.max\(count,durationUnits\)/, 'web lesson units should not let a stale lower lessonCount override a longer real lesson duration');
@@ -218,9 +218,15 @@ assert.match(source, /function studentActiveEntitlementRows\([\s\S]*includes\(en
 assert.match(source, /function studentPackageLessonSummary\([\s\S]*`\$\{lessonQty\(e\.remainingLessons\)\}\/\$\{lessonQty\(e\.totalLessons\)\}`[\s\S]*\|\|meta\.text/, 'student lesson/package summary should show only balance numbers, not package names');
 assert.match(source, /function studentPackageListHtml\(/, 'student list should render each package on its own line');
 assert.match(fnBody('studentPackageListHtml'), /studentActiveEntitlementRows\(stu\)[\s\S]*map\(e=>`<div>\$\{esc\(studentPackageLineText\(e\)\)\}<\/div>`\)[\s\S]*join\(''\)/, 'student package list should keep one package per line');
-assert.match(fnBody('renderStudents'), /studentPackageListHtml\(s\)[\s\S]*studentPackageListTooltip\(s\)[\s\S]*class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text"/, 'normal student list should render the full package list instead of a mini bar');
+assert.match(source, /function studentUnifiedPackageListHtml\(/, 'student list should render package names from the backend unified teaching view');
+assert.match(source, /function studentUnifiedPackageBalanceHtml\(/, 'student list should render package balance from the backend unified teaching view');
+assert.match(source, /function studentUnifiedCompletedLessonCount\(/, 'student list should render completed lessons from the backend unified teaching view');
+assert.doesNotMatch(fnBody('studentListPackagePurchaseDate'), /studentTrialPackagePurchaseDate|studentPackagePurchaseDate/, 'student table purchase date should not recalculate package dates in the frontend');
+assert.doesNotMatch(fnBody('studentSortValue'), /studentCompletedLessonUnits\(stu\)|studentPackageLessonMeta\(stu\)/, 'student table sorting should use backend unified package and lesson fields');
+assert.match(fnBody('renderStudents'), /studentUnifiedPackageListHtml\(s\)[\s\S]*studentUnifiedPackageListTooltip\(s\)[\s\S]*class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text"/, 'normal student list should render backend package list instead of a mini bar');
 assert.match(fnBody('renderStudents'), /renderStandardTooltipText\(noteText,'tms-text-remark tms-text-remark-1 student-note-cell'\)/, 'normal student notes should clamp to one line');
-assert.match(fnBody('renderStudents'), /studentPackageListHtml\(s\)[\s\S]*studentPackageListTooltip\(s\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text"[\s\S]*studentPackageLessonMiniBar\(s\)[\s\S]*studentCompletedLessonCount\(s\)[\s\S]*renderStandardTooltipText\(noteText,'tms-text-remark tms-text-remark-1 student-note-cell'\)/, 'official student list should render package names, package balance, cumulative lessons, and one-line notes');
+assert.match(fnBody('renderStudents'), /studentUnifiedPackageListHtml\(s\)[\s\S]*studentUnifiedPackageListTooltip\(s\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text"[\s\S]*studentUnifiedPackageBalanceHtml\(s\)[\s\S]*studentUnifiedCompletedLessonCount\(s\)[\s\S]*renderStandardTooltipText\(noteText,'tms-text-remark tms-text-remark-1 student-note-cell'\)/, 'official student list should render backend package names, package balance, cumulative lessons, and one-line notes');
+assert.doesNotMatch(fnBody('renderStudents'), /studentPackageListHtml\(s\)|studentPackageListTooltip\(s\)|studentPackageLessonMiniBar\(s\)|studentCompletedLessonCount\(s\)/, 'student table rows should not calculate package fields locally while rendering');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(fnBody('renderStudents'), /openStudentDetail\('\$\{s\.id\}'\)[\s\S]*openPurchaseModal\('\$\{s\.id\}'\)/, 'student list should keep only view and package actions');
 assert.doesNotMatch(fnBody('renderStudents'), /openStudentModal\('\$\{s\.id\}'\)/, 'student list should not expose inline edit action');

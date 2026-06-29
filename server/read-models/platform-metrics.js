@@ -125,6 +125,12 @@ function courseRowIsTrial(row = {}) {
   return normalized.level1 === '体验课' || /体验/.test(value);
 }
 
+function courseRowIsCompanion(row = {}) {
+  const normalized = businessTaxonomy.normalizeCourseType(row);
+  const value = [row.courseType, row.packageCourseType, row.type, row.productType, row.courseTypeLevel2, row.packageName, row.productName, row.name, row.scheduleSource].filter(Boolean).join(' ');
+  return normalized.level1 === '陪打' || /陪打/.test(value);
+}
+
 function coursePaymentAmount(row = {}) {
   const fields = ['amountPaid', 'finalAmount', 'actualAmount', 'paidAmount', 'payAmount', 'amount', 'cashDelta'];
   const hit = fields.find(field => row[field] !== undefined && row[field] !== null && text(row[field]) !== '');
@@ -177,6 +183,133 @@ function formalPackageRecognizedAmount(data = {}) {
     if (!amount) return sum;
     return sum + money(amount / totalLessons * Math.abs(delta) * (delta > 0 ? -1 : 1));
   }, 0));
+}
+
+function lessonQty(value) {
+  const num = Number(value) || 0;
+  return Number.isInteger(num) ? String(num) : String(round(num, 1));
+}
+
+function scheduleDurationLessonUnits(row = {}) {
+  const start = Date.parse(text(row.startTime).replace(' ', 'T'));
+  const end = Date.parse(text(row.endTime).replace(' ', 'T'));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return Math.max(0, round((end - start) / 3600000, 1));
+}
+
+function scheduleLessonUnits(row = {}) {
+  const count = Number(row.lessonCount);
+  const durationUnits = scheduleDurationLessonUnits(row);
+  if (Number.isFinite(count) && count > 0) return Math.max(count, durationUnits);
+  return durationUnits || 1;
+}
+
+function teachingPackageDate(row = {}, purchase = {}) {
+  return text(row.purchaseDate || row.businessDate || row.createdAt || purchase.purchaseDate || purchase.createdAt).slice(0, 10);
+}
+
+function teachingPackageName(row = {}, purchase = {}) {
+  return text(row.packageName || row.productName || row.name || purchase.packageName || purchase.productName || purchase.name || row.courseType || purchase.courseType || '课包');
+}
+
+function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false } = {}) {
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
+  const entitlementsByStudent = new Map();
+  const linkedPurchaseIds = new Set();
+  (data.entitlements || [])
+    .filter(row => activeStatus(row) && courseRowIsTrial(row) === includeTrial && (Number(row.totalLessons) || 0) > 0)
+    .forEach(row => {
+      const studentId = text(row.studentId);
+      if (!studentId) return;
+      linkedPurchaseIds.add(text(row.purchaseId));
+      const purchase = purchasesById.get(text(row.purchaseId)) || {};
+      const list = entitlementsByStudent.get(studentId) || [];
+      list.push({
+        packageName: teachingPackageName(row, purchase),
+        remainingLessons: Number(row.remainingLessons) || 0,
+        totalLessons: Number(row.totalLessons) || 0,
+        purchaseDate: teachingPackageDate(row, purchase)
+      });
+      entitlementsByStudent.set(studentId, list);
+    });
+  (data.purchases || [])
+    .filter(row => activeStatus(row) && courseRowIsTrial(row) === includeTrial && !linkedPurchaseIds.has(text(row.id)))
+    .forEach(row => {
+      const studentId = text(row.studentId);
+      const totalLessons = Number(row.totalLessons || row.packageLessons);
+      if (!studentId || !Number.isFinite(totalLessons) || totalLessons <= 0) return;
+      const list = entitlementsByStudent.get(studentId) || [];
+      list.push({
+        packageName: teachingPackageName(row, row),
+        remainingLessons: Number(row.remainingLessons) || totalLessons,
+        totalLessons,
+        purchaseDate: teachingPackageDate(row, row)
+      });
+      entitlementsByStudent.set(studentId, list);
+    });
+  const details = new Map();
+  entitlementsByStudent.forEach((rows, studentId) => {
+    const packageListRows = rows.sort((a, b) => text(b.purchaseDate).localeCompare(text(a.purchaseDate)));
+    const remaining = packageListRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+    const total = packageListRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+    const packageDates = packageListRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
+    details.set(studentId, {
+      packageListRows,
+      packageListText: packageListRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
+      packageBalanceRemaining: remaining,
+      packageBalanceTotal: total,
+      packageBalanceText: total > 0 ? `${lessonQty(remaining)}/${lessonQty(total)}` : '-',
+      packageBalancePercent: total > 0 ? Math.max(0, Math.min(100, Math.round(remaining / total * 100))) : 0,
+      packagePurchaseDate: packageDates[0] || ''
+    });
+  });
+  return details;
+}
+
+function buildTeachingStudentCompletedLessonMap(data = {}) {
+  const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
+  const completedByStudent = new Map();
+  const ledgerScheduleIds = new Set();
+  (data.entitlementLedger || []).forEach(row => {
+    const delta = Number(row.lessonDelta) || 0;
+    if (delta >= 0 || !activeStatus(row)) return;
+    const studentId = text(row.studentId);
+    if (!studentId) return;
+    const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+    const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+    if (courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase)) return;
+    if (text(row.scheduleId)) ledgerScheduleIds.add(text(row.scheduleId));
+    completedByStudent.set(studentId, (completedByStudent.get(studentId) || 0) + Math.abs(delta));
+  });
+  (data.schedule || [])
+    .filter(row => activeStatus(row) && !courseRowIsCompanion(row) && ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus)))
+    .filter(row => !ledgerScheduleIds.has(text(row.id)))
+    .forEach(row => parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
+      completedByStudent.set(studentId, (completedByStudent.get(studentId) || 0) + scheduleLessonUnits(row));
+    }));
+  return completedByStudent;
+}
+
+function buildTeachingStudentListFieldMap(data = {}, options = {}) {
+  const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
+  const completedByStudent = buildTeachingStudentCompletedLessonMap(data);
+  const details = new Map();
+  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys()])].forEach(studentId => {
+    const packageFields = packageFieldMap.get(studentId) || {};
+    details.set(studentId, {
+      packageListRows: [],
+      packageListText: '-',
+      packageBalanceRemaining: 0,
+      packageBalanceTotal: 0,
+      packageBalanceText: '-',
+      packageBalancePercent: 0,
+      packagePurchaseDate: '',
+      ...packageFields,
+      completedLessons: round(completedByStudent.get(studentId) || 0, 1)
+    });
+  });
+  return details;
 }
 
 function leadBusinessDate(row = {}, lead = {}) {
@@ -386,9 +519,10 @@ function rawLeadPoolRowsForLeads(leadPoolRows = [], leads = []) {
   return mergeDuplicateLeadPoolRows(rawRows);
 }
 
-function teachingStudentViewRow(row = {}) {
+function teachingStudentViewRow(row = {}, listFields = {}) {
   return {
     ...row,
+    ...listFields,
     id: text(row.studentId || row.customerKey || row.sourceLeadId),
     name: text(row.displayName),
     displayName: text(row.displayName),
@@ -401,27 +535,32 @@ function teachingStudentViewRow(row = {}) {
     studentId: text(row.studentId),
     studentStage: text(row.studentStage),
     trialStatus: text(row.trialStatus),
-    courseDealPath: text(row.courseDealPath)
+    courseDealPath: text(row.courseDealPath),
+    packageListRows: Array.isArray(listFields.packageListRows) ? listFields.packageListRows : []
   };
 }
 
-function buildTeachingStudentViews(customerLifecycleRows = []) {
+function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const studentRows = (customerLifecycleRows || []).filter(row => text(row.studentId));
+  const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
+  const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
+  const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
+  const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
   const hasTrialPath = row => !!row.hasTrialExperience;
   const courseStudents = studentRows
     .filter(row => ['trial', 'formal'].includes(text(row.studentStage)))
-    .map(teachingStudentViewRow);
+    .map(courseViewRow);
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')
-    .map(teachingStudentViewRow);
+    .map(formalViewRow);
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
-    .map(teachingStudentViewRow);
+    .map(courseViewRow);
   const courseStudentIds = new Set(courseStudents.map(row => text(row.studentId)).filter(Boolean));
   const trialPathStudents = studentRows
     .filter(hasTrialPath)
     .filter(row => courseStudentIds.has(text(row.studentId)))
-    .map(teachingStudentViewRow);
+    .map(courseViewRow);
   const trialPathDealStudents = formalStudents.filter(hasTrialPath);
   const trialPathDealIds = new Set(trialPathDealStudents.map(row => text(row.studentId)).filter(Boolean));
   const trialPathPendingStudents = trialPathStudents.filter(row => !trialPathDealIds.has(text(row.studentId)));
@@ -557,7 +696,7 @@ function buildStandardLifecycleMetrics(data = {}) {
     leads: data.leads || [],
     customerLifecycleRows
   });
-  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows, data);
   const summary = teachingStudentViews.summary || {};
   const totalIncome = money(formalPurchaseRows({ ...data, customerLifecycleRows }).reduce((sum, row) => sum + coursePaymentAmount(row), 0));
   const recognized = formalPackageRecognizedAmount({ ...data, customerLifecycleRows });
@@ -649,7 +788,7 @@ function buildPlatformMetrics(data = {}) {
     customerLifecycleRows
   });
   const { leadPoolRows, stageRows, sourceRows: sourceChannelStats, totalLeads, convertedLeads, leadConversionRate } = leadConversionMetrics;
-  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows);
+  const teachingStudentViews = buildTeachingStudentViews(customerLifecycleRows, data);
   const standardLifecycleMetrics = buildStandardLifecycleMetrics({ ...data, customerLifecycleRows });
 
   return {
