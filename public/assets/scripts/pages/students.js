@@ -60,6 +60,9 @@ function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents(
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
 }
+function studentTrialStatusOptions(){
+  return ['-','已约体验','已体验待成交','已成交'].map(value=>({value,label:value}));
+}
 function studentSourceText(s){
   if(typeof customerLifecycleSource==='function')return customerLifecycleSource(s,s?.source);
   return FlowTennisBusinessTaxonomy.normalizeLeadSource(s?.source);
@@ -67,16 +70,19 @@ function studentSourceText(s){
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
+  const trialStatusValue=document.getElementById('stuTrialStatusFilter')?.value||'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
   const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
   const linked=withLinkedFilterCounts([
     {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:(s,value)=>s.type===value},
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...studentSourceOptions()],match:(s,value)=>studentSourceText(s)===value},
+    {key:'trialStatus',value:trialStatusValue,options:[{value:'',label:'全部',emptyDisplay:'体验状态'},...studentTrialStatusOptions()],match:(s,value)=>studentTrialPathStatusText(s)===value},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],match:(s,value)=>value==='__unassigned__'?!s.primaryCoach:coachName(s.primaryCoach)===value}
   ],baseRows);
   const wrapMap=[
     ['stuTypeFilterHost','stuTypeFilter','类型',linked.type.options,linked.type.value],
     ['stuSourceFilterHost','stuSourceFilter','来源',linked.source.options,linked.source.value],
+    ['stuTrialStatusFilterHost','stuTrialStatusFilter','体验状态',linked.trialStatus.options,linked.trialStatus.value],
     ['stuCoachFilterHost','stuCoachFilter','负责教练',linked.coach.options,linked.coach.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
@@ -142,7 +148,9 @@ function studentDealPathText(stu){
 function studentTrialPathStatusText(stu){
   const lifecycleTrialStatus=typeof customerLifecycleStudentTrialStatus==='function'?customerLifecycleStudentTrialStatus(stu):'';
   if(lifecycleTrialStatus)return lifecycleTrialStatus;
-  if(studentHasNonTrialPackage(stu))return '已成交';
+  const hasTrialPathEvidence=studentHasTrialPathEvidence(stu);
+  if(studentHasNonTrialPackage(stu))return hasTrialPathEvidence?'已成交':'-';
+  if(!hasTrialPathEvidence)return '-';
   if(studentLastLessonDate(stu))return '已体验待成交';
   return '已约体验';
 }
@@ -233,9 +241,9 @@ function studentTableColumns(){
     {label:'校区',style:'width:105px'},
     {label:'体验状态',style:'width:100px'},
     {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
-    {label:'课包',style:'width:180px'},
+    {label:'课包',style:'width:260px'},
     {label:'负责教练',style:'width:110px'},
-    {label:'备注',style:'width:180px'},
+    {label:'备注',style:'width:280px'},
     {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
   ];
   return [
@@ -315,6 +323,7 @@ function getFilteredStudents(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('stuTypeFilter')?.value||'';
   const sf=document.getElementById('stuSourceFilter')?.value||'';
+  const trialStatusFilter=document.getElementById('stuTrialStatusFilter')?.value||'';
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
   return getStudentBaseList().filter(s=>{
     const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
@@ -322,6 +331,7 @@ function getFilteredStudents(){
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&studentSourceText(s)!==sf)return false;
+    if(trialStatusFilter&&studentTrialPathStatusText(s)!==trialStatusFilter)return false;
     if(coachFilter==='__unassigned__'&&String(s.primaryCoach||'').trim())return false;
     if(coachFilter&&coachFilter!=='__unassigned__'&&coachName(s.primaryCoach)!==coachFilter)return false;
     return true;
@@ -434,6 +444,7 @@ function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
     {label:'普通学员',valueHtml:stats.total,sub:'进入课程链学员'},
     {label:'体验路径学员',valueHtml:stats.trialPathCount||0,percent:studentPercentText(stats.trialPathCount||0,stats.total),sub:'体验路径学员 / 普通学员'},
+    {label:'体验路径未成交',valueHtml:stats.trialPathPendingCount||0,percent:studentPercentText(stats.trialPathPendingCount||0,stats.trialPathCount||0),sub:'体验路径未成交 / 体验路径学员'},
     {label:'体验路径成交',valueHtml:stats.trialPathDealCount||0,percent:studentPercentText(stats.trialPathDealCount||0,stats.trialPathCount||0),sub:'体验路径成交 / 体验路径学员'},
     {label:'直接成交学员',valueHtml:stats.directCourseDealCount||0,percent:studentPercentText(stats.directCourseDealCount||0,stats.total),sub:'直接成交学员 / 普通学员'}
   ];
@@ -699,7 +710,7 @@ function studentLessonRecordMetaItem(kind,text){
   return `<span class="student-lesson-meta-item">${studentLessonRecordMetaIcon(kind)}<span>${esc(renderStandardEmptyText(text))}</span></span>`;
 }
 function studentHasActiveSearchOrFilter(){
-  return !!((document.getElementById('stuSearch')?.value||'').trim()||document.getElementById('stuTypeFilter')?.value||document.getElementById('stuSourceFilter')?.value||document.getElementById('stuCoachFilter')?.value);
+  return !!((document.getElementById('stuSearch')?.value||'').trim()||document.getElementById('stuTypeFilter')?.value||document.getElementById('stuSourceFilter')?.value||document.getElementById('stuTrialStatusFilter')?.value||document.getElementById('stuCoachFilter')?.value);
 }
 function studentEmptyStateHtml(){
   const filtered=studentHasActiveSearchOrFilter();
@@ -728,9 +739,10 @@ function renderStudents(){
     const lastLesson=studentLastLessonDate(s);
     const coachText=studentPrimaryCoachText(s);
     const packageText=studentPackageLessonSummary(s);
-    const packageNameText=studentPackageNameText(s);
+    const packageListHtml=studentPackageListHtml(s);
+    const packageListTooltip=studentPackageListTooltip(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardBusinessTag(studentTrialPathStatusText(s),'stage')}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardTooltipText(packageNameText,'tms-text-remark')}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(s.phone)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentPackageLessonMiniBar(s)}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }

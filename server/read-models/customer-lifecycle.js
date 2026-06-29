@@ -200,8 +200,10 @@ function studentCourseDealPath(student = {}, { purchases = [], entitlements = []
 }
 
 function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  if (studentCoursePurchaseCount(student, { purchases, entitlements, schedule })) return '已成交';
   const facts = studentTrialFacts(student, { purchases, entitlements, schedule });
+  if (studentCoursePurchaseCount(student, { purchases, entitlements, schedule })) {
+    return facts.hasTrialBooked ? '已成交' : '';
+  }
   if (facts.hasTrialAttended) return '已体验待成交';
   if (facts.hasTrialBooked) return '已约体验';
   return '';

@@ -226,7 +226,7 @@ assert.strictEqual(directPrivate.conversionAt, '2026-04-02');
 assert.strictEqual(directPrivate.demandProduct, '私教课');
 assert.strictEqual(directPrivate.hasCourseConversion, true, 'paid private purchase should count as course conversion');
 assert.strictEqual(directPrivate.courseDealPath, '直接成交');
-assert.strictEqual(directPrivate.trialStatus, '已成交');
+assert.strictEqual(directPrivate.trialStatus, '', 'direct formal deals should not be mixed into trial-path closed status');
 assert.strictEqual(directPrivate.coursePurchaseCount, 1);
 assert.strictEqual(directPrivate.hasCourseRepeatPurchase, false);
 assert.strictEqual(directPrivate.hasTrialToCourseConversion, false);

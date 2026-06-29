@@ -969,7 +969,8 @@ function studentCoachSummary(stu){
   return `${coachSet[0]} 等${coachSet.length}位`;
 }
 function studentPrimaryCoachText(stu){
-  return coachName(stu?.primaryCoach)||'未分配';
+  const coach=(Array.isArray(coaches)?coaches:[]).find(item=>item?.status==='active'&&coachName(item?.name)===coachName(stu?.primaryCoach));
+  return coach?coachName(coach.name):'-';
 }
 function studentPackageLessonMeta(stu){
   const rows=studentActiveEntitlementRows(stu);
@@ -987,6 +988,20 @@ function studentPackageLessonSummary(stu){
   if(!meta.hasPackage)return '-';
   const rows=studentActiveEntitlementRows(stu);
   return rows.map(e=>`${lessonQty(e.remainingLessons)}/${lessonQty(e.totalLessons)}`).join('；')||meta.text;
+}
+function studentPackageLineText(e){
+  const name=String(e?.packageName||e?.productName||e?.name||'课包').trim();
+  return `${name} ${lessonQty(e?.remainingLessons)}/${lessonQty(e?.totalLessons)}`;
+}
+function studentPackageListHtml(stu){
+  const rows=studentActiveEntitlementRows(stu);
+  if(!rows.length)return esc('-');
+  return rows.map(e=>`<div>${esc(studentPackageLineText(e))}</div>`).join('');
+}
+function studentPackageListTooltip(stu){
+  const rows=studentActiveEntitlementRows(stu);
+  if(!rows.length)return '-';
+  return rows.map(e=>studentPackageLineText(e)).join('\n');
 }
 function studentPackageLessonMiniBar(stu){
   const meta=studentPackageLessonMeta(stu);

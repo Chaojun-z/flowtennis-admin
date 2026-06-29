@@ -698,7 +698,8 @@ function renderLeadToolbarFilters(){
     if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onLeadFilterChange');
   });
   const ownerHost=document.getElementById('leadOwnerFilterHost');
-  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(Array.from(new Set(rows.map(item=>String(item?.owner||'').trim()).filter(Boolean))).map(value=>({value,label:value})),ownerValues);
+  const fixedOwners=['Mira','吴敌','陈丹丹','岳克舟'];
+  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(fixedOwners.map(value=>({value,label:value})),ownerValues);
 }
 function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
@@ -777,7 +778,7 @@ function renderLeadStats(list){
     {label:'普通学员',valueHtml:stats.courseStudents,percent:stats.courseStudentRate,sub:'进入课程链学员 / 线索数'},
     {label:'正式学员',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:'正式课包成交 / 线索数'},
     {label:'体验路径学员',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'体验路径学员 / 线索数'},
-    {label:'体验路径未成交',valueHtml:stats.trialPendingConversion,percent:stats.trialPendingConversionRate,sub:'体验路径未成交 / 体验路径学员'}
+    {label:'体验路径成交',valueHtml:stats.trialPathDeal,percent:stats.trialPathDealRate,sub:'体验路径成交 / 体验路径学员'}
   ];
   const host=document.getElementById('leadStatsRow');
   if(host)host.innerHTML=renderStandardDataCards(cardData);
@@ -1306,7 +1307,7 @@ function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的线索':'暂无线索';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
-  return `<tr><td colspan="14"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
@@ -1340,7 +1341,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(leadWechatText(lead),false)}</td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);

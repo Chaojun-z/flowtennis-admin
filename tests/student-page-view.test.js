@@ -43,6 +43,7 @@ assert.match(source, /stuTypeFilterHost[\s\S]*onStudentFilterChange/, 'student t
 assert.match(source, /stuSourceFilterHost[\s\S]*onStudentFilterChange/, 'student source filter should reset pagination before rendering');
 assert.match(source, /function studentSourceOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadSources'\)/, 'student source options should reuse the same source dictionary as leads');
 assert.match(source, /function studentSourceText\(s\)[\s\S]*customerLifecycleSource\(s,s\?\.source\)/, 'student source display should use the shared lifecycle source accessor before legacy source values');
+assert.match(source, /stuTrialStatusFilterHost[\s\S]*onStudentFilterChange/, 'student trial status filter should reset pagination before rendering');
 assert.match(source, /stuCoachFilterHost[\s\S]*onStudentFilterChange/, 'student primary coach filter should reset pagination before rendering');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
 assert.match(source, /发现可能重复的学员：/, 'student save flow should warn operators about possible duplicates');
@@ -52,7 +53,7 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员[\s\S]*进入课程链学员[\s\S]*体验路径学员[\s\S]*体验路径成交[\s\S]*直接成交学员/, 'trial student top stats should show course-chain funnel cards');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员[\s\S]*进入课程链学员[\s\S]*体验路径学员[\s\S]*体验路径未成交[\s\S]*体验路径成交[\s\S]*直接成交学员/, 'trial student top stats should show course-chain funnel cards');
 assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
 assert.match(source, /function studentStandardSummaryForMode\(/, 'student top cards should read the backend standard teaching summary');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should use the standard summary instead of local purchase or finance formulas');
@@ -78,6 +79,8 @@ assert.doesNotMatch(source, /<th[^>]*>当前班次<\/th>/, 'student table should
 assert.doesNotMatch(source, /<th[^>]*>订场\/会员<\/th>/, 'student table should hide the booking membership column');
 assert.match(source, /function studentPackageNameText\(/, 'student list should expose package-name display text for normal students');
 assert.match(source, /function studentTableColumns\(\)[\s\S]*studentListViewMode\(\)==='trial'[\s\S]*label:'姓名'[\s\S]*label:'类型'[\s\S]*label:'来源'[\s\S]*label:'校区'[\s\S]*label:'体验状态'[\s\S]*studentSortHeader\('packagePurchaseDate','课包购买时间'\)[\s\S]*label:'课包'[\s\S]*label:'负责教练'[\s\S]*label:'备注'/, 'normal student table should use the requested column order');
+assert.match(fnBody('studentTableColumns'), /label:'课包',style:'width:260px'/, 'normal student package column should be wide enough to show package rows');
+assert.match(fnBody('studentTableColumns'), /label:'备注',style:'width:280px'/, 'normal student note column should use the wider lead-note width');
 assert.match(source, /label:'成交路径'/, 'official student table should show the deal path');
 const trialStudentColumns = fnBody('studentTableColumns').match(/if\(studentListViewMode\(\)==='trial'\)return \[([\s\S]*?)\];/)?.[1] || '';
 assert.doesNotMatch(trialStudentColumns, /label:'电话'/, 'trial student table should not show phone column');
@@ -194,9 +197,10 @@ assert.match(source, /studentCompletedLessonUnits[\s\S]*studentLedgerLessonUnits
 assert.match(source, /function studentLedgerConsumedText\([\s\S]*packageBalanceUnitLabel[\s\S]*studentLessonDurationText[\s\S]*join\(' · '\)/, 'student lesson records should show count-based package consumption as count plus real lesson duration');
 assert.match(source, /function studentLessonRecordKey\(/, 'student cumulative lessons should share one lesson identity key');
 assert.match(source, /function studentCompletedLessonUnits[\s\S]*const lessonMap=new Map\(\)[\s\S]*studentConcreteLessonLedgerItems\(stu\)[\s\S]*studentLessonRecordShouldIncludeSchedule[\s\S]*return \[\.\.\.lessonMap\.values\(\)\]\.reduce/, 'student cumulative lessons should merge schedule and package consume records by lesson identity');
-assert.match(source, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the profile field');
+assert.match(source, /function studentPrimaryCoachText\(/, 'student list should render primary coach from the platform coach list only');
 assert.match(source, /studentPrimaryCoachText\(s\)/, 'student list coach column should use the profile primary coach');
-assert.match(source, /未分配/, 'empty primary coach should display 未分配');
+assert.match(fnBody('studentPrimaryCoachText'), /const coach=\(Array\.isArray\(coaches\)\?coaches:\[\]\)\.find\(item=>item\?\.status==='active'&&coachName\(item\?\.name\)===coachName\(stu\?\.primaryCoach\)\)/, 'student primary coach should be accepted only when it exists in the active coach list');
+assert.match(fnBody('studentPrimaryCoachText'), /return coach\?coachName\(coach\.name\):'-'/, 'missing or non-coach primary coach should display the short dash');
 assert.match(source, /const SOURCES=BUSINESS_TAXONOMY\.SOURCES/, 'student source options should use the global source dictionary');
 assert.match(source, /function renderStandardCellText[\s\S]*const muted=!raw\|\|raw==='-'\|\|raw==='—'\|\|raw==='未开卡'/, 'empty list values should always render with the muted dash style');
 assert.match(source, /function renderStandardEmptyText[\s\S]*return raw&&raw!=='—'\?raw:'-'/, 'empty values should render with the short dash');
@@ -206,9 +210,10 @@ assert.match(source, /style:'width:110px',html:'<button class="tms-sort-header" 
 assert.match(source, /function studentPackageLessonMeta\(/, 'student package lesson summary should expose remaining and total lessons');
 assert.match(source, /function studentActiveEntitlementRows\([\s\S]*includes\(entitlementStatusText\(e\)\)[\s\S]*lessonValue\(e\.totalLessons\)>0/, 'student lesson/package summary should keep normal packages even when balance is 0');
 assert.match(source, /function studentPackageLessonSummary\([\s\S]*`\$\{lessonQty\(e\.remainingLessons\)\}\/\$\{lessonQty\(e\.totalLessons\)\}`[\s\S]*\|\|meta\.text/, 'student lesson/package summary should show only balance numbers, not package names');
-assert.match(source, /function studentPackageLessonMiniBar\(/, 'student package lesson column should render the same mini balance bar as booking accounts');
-assert.match(source, /studentPackageLessonMiniBar\(s\)/, 'student list should render package lessons through the mini balance bar');
-assert.match(source, /\$\{lessonQty\(remaining\)\}\/\$\{lessonQty\(total\)\}/, 'student package lesson text should use remaining over total lesson count without truncating half lessons');
+assert.match(source, /function studentPackageListHtml\(/, 'student list should render each package on its own line');
+assert.match(fnBody('studentPackageListHtml'), /studentActiveEntitlementRows\(stu\)[\s\S]*map\(e=>`<div>\$\{esc\(studentPackageLineText\(e\)\)\}<\/div>`\)[\s\S]*join\(''\)/, 'student package list should keep one package per line');
+assert.match(fnBody('renderStudents'), /studentPackageListHtml\(s\)[\s\S]*studentPackageListTooltip\(s\)[\s\S]*class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text"/, 'normal student list should render the full package list instead of a mini bar');
+assert.match(fnBody('renderStudents'), /renderStandardTooltipText\(noteText,'tms-text-remark tms-text-remark-1 student-note-cell'\)/, 'normal student notes should clamp to one line');
 assert.match(source, /function openStudentDetail\(/, 'student list should provide a dedicated view action');
 assert.match(fnBody('renderStudents'), /openStudentDetail\('\$\{s\.id\}'\)[\s\S]*openPurchaseModal\('\$\{s\.id\}'\)/, 'student list should keep only view and package actions');
 assert.doesNotMatch(fnBody('renderStudents'), /openStudentModal\('\$\{s\.id\}'\)/, 'student list should not expose inline edit action');
@@ -356,9 +361,13 @@ assert.doesNotMatch(css, /\.tms-page-jump input/, 'purchase pager should not kee
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');
 assert.match(source, /function withLinkedFilterCounts\(/, 'standard dropdown filters should support linked count labels for all pages');
 assert.match(source, /function renderStandardOptionLabel\(/, 'shared dropdown renderer should format option counts centrally');
-assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'coach'/, 'student toolbar filters should use linked count labels');
+assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTrialStatusFilterHost','stuCoachFilterHost'\]/, 'student trial status filter should sit after source in the toolbar');
+assert.match(source, /renderStudentToolbarFilters[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'type'[\s\S]*key:'source'[\s\S]*key:'trialStatus'[\s\S]*key:'coach'/, 'student toolbar filters should use linked count labels');
 assert.match(source, /renderStudentToolbarFilters[\s\S]*options:\[\{value:'',label:'全部',emptyDisplay:'来源'\},\.\.\.studentSourceOptions\(\)\][\s\S]*match:\(s,value\)=>studentSourceText\(s\)===value/, 'student source filter should use normalized source options and matching');
-assert.match(fnBody('renderStudents'), /studentListViewMode\(\)==='trial'[\s\S]*renderStandardCellText\(studentSourceText\(s\),false\)[\s\S]*renderStandardBusinessTag\(studentTrialPathStatusText\(s\),'stage'\)/, 'trial student list should render source as plain text');
+assert.match(source, /options:\[\{value:'',label:'全部',emptyDisplay:'体验状态'\},\.\.\.studentTrialStatusOptions\(\)\][\s\S]*match:\(s,value\)=>studentTrialPathStatusText\(s\)===value/, 'student trial status filter should use normalized trial status text');
+assert.match(fnBody('getFilteredStudents'), /const trialStatusFilter=document\.getElementById\('stuTrialStatusFilter'\)\?\.value\|\|''[\s\S]*if\(trialStatusFilter&&studentTrialPathStatusText\(s\)!==trialStatusFilter\)return false/, 'student trial status filter should apply to the student list');
+assert.match(fnBody('renderStudents'), /studentListViewMode\(\)==='trial'[\s\S]*renderStandardCellText\(studentSourceText\(s\),false\)[\s\S]*renderStandardCellText\(studentTrialPathStatusText\(s\),false\)/, 'trial student list should render source and trial status as plain text');
+assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studentTrialPathStatusText\(s\),'stage'\)/, 'trial status should not render as a tag');
 assert.match(fnBody('renderStudents'), /renderStandardCellText\(studentDealPathText\(s\),false\)[\s\S]*renderStandardCellText\(studentSourceText\(s\),false\)[\s\S]*renderStandardTooltipText\(noteText,'tms-text-remark'\)/, 'package student list should render source as plain text');
 assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studentSourceText\(s\),'source'\)/, 'student source should not render as a tag in any student list');
 assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');

@@ -277,6 +277,8 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-students .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-students .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-students .tms-text-primary,#page-students .tms-cell-text,#page-students .tms-text-remark{font-size:12px}
+#page-students .student-package-list{max-width:none;line-height:1.45}
+#page-students .student-note-cell{max-width:none}
 #page-students .tms-action-link{font-size:12px}
 #page-students .tms-pagination,#page-leads .tms-pagination,#page-finance #financeRevenuePanel .tms-pagination,#page-finance #financeLedgerPanel .tms-pagination,#page-schedule .tms-pagination,#page-purchases .tms-pagination,#page-courts .tms-pagination,#page-memberships .tms-pagination{min-height:32px}
 #page-finance #financeLedgerPanel .tms-table-wrapper,#page-finance #financeRevenuePanel .tms-table-wrapper,#page-finance #financeRecognizedPanel .tms-table-wrapper{max-height:calc(100vh - 210px)}

@@ -215,9 +215,9 @@ function shouldBypassDatasetCache(name){
   return isNonProductionRuntime()&&SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION.has(name);
 }
 const PAGE_DATA_REQUIREMENTS={
-  students:['campuses','students'],
-  'package-students':['campuses','students','lifecycleMetricsPage'],
-  'trial-students':['campuses','students','lifecycleMetricsPage'],
+  students:['campuses','students','coaches'],
+  'package-students':['campuses','students','coaches','lifecycleMetricsPage'],
+  'trial-students':['campuses','students','coaches','lifecycleMetricsPage'],
   leads:['campuses','leads'],
   operations:['operationsPage'],
   schedule:['campuses','students','courts','schedule','coaches','coachProposals'],
@@ -531,11 +531,11 @@ function renderStudentTableError(message){
   if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
-  renderTableSkeletonLoading('leadTbody',14,'线索数据加载中...');
+  renderTableSkeletonLoading('leadTbody',15,'线索数据加载中...');
 }
 function renderLeadTableError(message){
   const el=document.getElementById('leadTbody');
-  if(el)el.innerHTML=`<tr><td colspan="14"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
+  if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender('leads',{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderScheduleTableLoading(){
   renderTableSkeletonLoading('schTbody',12,'排课数据加载中...');
