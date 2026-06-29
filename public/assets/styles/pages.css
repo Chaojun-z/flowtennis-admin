@@ -114,7 +114,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-finance .coach-ops-tabs{margin-bottom:0}
 #page-finance .tms-stats-row{margin-bottom:18px}
 #page-finance .finance-ledger-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;overflow:visible}
-#page-finance .finance-ledger-stats .tms-stat-card{min-width:0}
+#page-finance .finance-ledger-stats .tms-stat-card{min-width:0;height:104px}
 #page-finance .finance-ledger-stats .tms-stat-label{white-space:normal;line-height:1.4}
 #page-finance .finance-ledger-stats .tms-stat-value{font-size:21px;min-width:0;overflow:visible}
 #page-finance .finance-ledger-stats .tms-stat-value.finance-split-value{gap:5px;font-size:16px}
