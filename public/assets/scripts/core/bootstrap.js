@@ -266,7 +266,7 @@ async function backupToObsidian(){
   let md='# FlowTennis 备份\n\n时间：'+ds+' '+ts+'\n\n---\n\n## 学员（'+students.length+'人）\n\n| 姓名 | 类型 | 手机 | 来源 | 校区 |\n|------|------|------|------|------|\n';
   students.forEach(s=>{md+='| '+esc(s.name)+' | '+(s.type||'')+' | '+(s.phone||'')+' | '+(s.source||'')+' | '+cn(s.campus)+' |\n';});
   md+='\n## 订场（'+courts.length+'人）\n\n| 姓名 | 手机号 | 关联学员 | 校区 | 余额 | 储值 | 消费金额 | 跟进人 | 储值态度 | 备注 |\n|------|------|------|------|------|------|------|------|------|------|\n';
-  courts.forEach(c=>{const f=courtFinanceLocal(c);md+='| '+esc(c.name)+' | '+(c.phone||'')+' | '+esc(courtStudentNames(c))+' | '+cn(c.campus)+' | ¥'+fmt(f.balance)+' | ¥'+fmt(f.totalDeposit)+' | ¥'+fmt(f.spentAmount||0)+' | '+esc(c.owner||'')+' | '+esc(c.depositAttitude||'')+' | '+esc(c.familiarity||'')+' | '+esc(c.notes||'')+' |\n';});
+  courts.forEach(c=>{const f=courtFinanceLocal(c);md+='| '+esc(c.name)+' | '+(c.phone||'')+' | '+esc(courtStudentNames(c))+' | '+cn(c.campus)+' | ¥'+fmt(f.balance)+' | ¥'+fmt(f.totalDeposit)+' | ¥'+fmt(f.spentAmount||0)+' | '+esc(courtFollowOwnerText(c))+' | '+esc(c.depositAttitude||'')+' | '+esc(c.notes||'')+' |\n';});
   md+='\n---\n\n- 学员：'+students.length+'\n- 订场：'+courts.length+'\n- 排课：'+schedules.length+'\n';
   const blob=new Blob([md],{type:'text/markdown;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis备份-'+ds+'.md';a.click();toast('备份已下载','success');
   }catch(e){toast('备份失败：'+e.message,'error');}
