@@ -690,7 +690,8 @@ function renderOperationsConversion(data) {
   <div class="operations-channel-diagnostics-grid">
     ${renderConversionChannelQualityModule(conversion)}
     ${renderConversionChannelActionModule(conversion)}
-  </div>`;
+  </div>
+  ${renderConversionAttributeModule(conversion)}`;
 }
 
 function renderOperationsCoach(data) {
@@ -1117,6 +1118,7 @@ function operationsConversionView(data) {
     retention: data.conversion?.retention || {},
     sourceRanking: data.conversion?.sourceRanking || [],
     channelEfficiencyRows: data.conversion?.channelEfficiencyRows || [],
+    profileRows: data.conversion?.profileRows || [],
     courseRows: data.conversion?.courseRows || [],
     standardRates: data.conversion?.standardRates || {},
     trendRows: data.conversion?.trends || []
@@ -1170,14 +1172,10 @@ function renderConversionFunnelModule(data, conversion) {
   const courtChain = conversion.courtChain || {};
   const courtUsers = Number(courtChain.courtUsers) || 0;
   const courtRepeat = Number(courtChain.courtRepeatCustomers) || 0;
-  const moduleTitle = '转化漏斗';
   const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel');
   const trialCard = renderConversionFunnelCard('体验路径漏斗', 'operationsTrialFunnel', operationsAuxMetric('体验路径未成交', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
   const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
   return `<div class="operations-dashboard-block operations-funnel-block">
-    <div class="operations-module-head">
-      <div><h3>${moduleTitle}</h3></div>
-    </div>
     <div class="operations-conversion-funnel-grid">
       ${courseCard}
       ${trialCard}
@@ -1212,6 +1210,43 @@ function renderConversionChannelActionModule(conversion) {
     <div class="operations-module-head"><div><h3>渠道动作表</h3></div></div>
     ${operationsChannelRankingTable(rows)}
   </section>`;
+}
+
+function operationsPersonaBars(rows = [], mode = 'deal') {
+  const key = mode === 'retention' ? 'renewalRate' : 'dealConversionRate';
+  const countKey = mode === 'retention' ? 'renewals' : 'deals';
+  const source = [...(rows || [])]
+    .filter(row => Number(row.base) > 0)
+    .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0) || (Number(b[countKey]) || 0) - (Number(a[countKey]) || 0))
+    .slice(0, 6);
+  if (!source.length) return '<div class="operations-channel-empty">暂无画像数据</div>';
+  const max = Math.max(1, ...source.map(row => Number(row[key]) || 0));
+  return `<div class="operations-persona-bars">${source.map(row => {
+    const value = Number(row[key]) || 0;
+    const smallSample = mode === 'retention' && Number(row.deals) < 5;
+    return `<div class="operations-persona-bar ${smallSample ? 'small-sample' : ''}">
+      <div class="operations-persona-row">
+        <strong>${esc(row.attribute || '未标注')}</strong>
+        <span>${fmt(value)}% · ${fmt(row[countKey] || 0)}人</span>
+      </div>
+      <div class="operations-persona-track"><i style="width:${Math.min(100, Math.max(2, value * 100 / max))}%"></i></div>
+      ${smallSample ? '<em>样本偏小</em>' : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderConversionAttributeModule(conversion) {
+  const rows = conversion.profileRows || [];
+  return `<div class="operations-persona-grid">
+    <section class="operations-section">
+      <div class="operations-module-head"><div><h3>转化画像图</h3></div></div>
+      ${operationsPersonaBars(rows, 'deal')}
+    </section>
+    <section class="operations-section">
+      <div class="operations-module-head"><div><h3>留存画像图</h3></div></div>
+      ${operationsPersonaBars(rows, 'retention')}
+    </section>
+  </div>`;
 }
 
 function renderOperationsCharts(data) {

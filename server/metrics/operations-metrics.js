@@ -729,6 +729,28 @@ function buildChannelEfficiencyRows(rows = []) {
     .sort((a, b) => b.finalConversionRate - a.finalConversionRate || b.deals - a.deals || b.leads - a.leads);
 }
 
+function buildCustomerProfileRows(rows = []) {
+  const grouped = new Map();
+  rows.forEach(row => {
+    (row.personas || []).forEach(attribute => {
+      const current = grouped.get(attribute) || { attribute, base: 0, attendance: 0, deals: 0, renewals: 0 };
+      current.base += 1;
+      if (row.hasAttendance) current.attendance += 1;
+      if (row.hasTrialDeal) current.deals += 1;
+      if (row.hasRenewal) current.renewals += 1;
+      grouped.set(attribute, current);
+    });
+  });
+  return [...grouped.values()]
+    .map(row => ({
+      ...row,
+      trialConversionRate: rate(row.attendance, row.base),
+      dealConversionRate: rate(row.deals, row.base),
+      renewalRate: rate(row.renewals, row.deals)
+    }))
+    .sort((a, b) => b.trialConversionRate - a.trialConversionRate || b.renewalRate - a.renewalRate || b.base - a.base);
+}
+
 function buildCampusConversionRateMap(rows = []) {
   const grouped = new Map();
   (rows || []).forEach(row => {
@@ -2508,6 +2530,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
   const sourceRanking = buildCourseSourceRanking(courseRows);
   const channelEfficiencyRows = buildChannelEfficiencyRows(courseRows);
+  const profileRows = buildCustomerProfileRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
   const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
@@ -2771,6 +2794,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       courseFunnel,
       sourceRanking,
       channelEfficiencyRows,
+      profileRows,
       renewal
     },
     coach: {

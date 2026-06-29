@@ -78,6 +78,8 @@ assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书
 assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.trialConversionRate, 50, 'channel trial conversion rate should use trial attendance count over leads');
 assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.dealConversionRate, 50, 'channel deal conversion rate should use deals over leads');
 assert.strictEqual(metrics.conversion.studentAttributeRows, undefined, 'conversion page should not output local people profile rows');
+assert.ok(metrics.conversion.profileRows.find(row => row.attribute === '青少年女性'), 'conversion profile rows should restore youth/gender profile data');
+assert.strictEqual(metrics.conversion.profileRows.find(row => row.attribute === '零基础')?.renewalRate, 100, 'conversion profile rows should expose retention profile rate');
 assert.strictEqual(metrics.conversion.filterOptions, undefined, 'conversion page should not output local source/campus/coach filters');
 assert.strictEqual(metrics.coach.cards.availableHoursThisWeek.value, 75.4, 'coach module should use the current data span when all-time is selected');
 assert.strictEqual(metrics.coach.period.label, '全部时间（按数据跨度 11 天）', 'coach module should expose the period behind all-time capacity');
@@ -765,6 +767,7 @@ const noGenderMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-18 00:00:00') });
 
 assert.strictEqual(noGenderMetrics.conversion.studentAttributeRows, undefined, 'conversion page should not build people profile rows from operations metrics');
+assert.ok(noGenderMetrics.conversion.profileRows.find(row => row.attribute === '成人'), 'conversion profile rows should classify adult demand');
 
 const mergedLeadMetrics = buildOperationsMetrics({
   leads: [
@@ -826,6 +829,10 @@ const videoChannel = unifiedRateMetrics.conversion.channelEfficiencyRows.find(ro
 assert.strictEqual(videoChannel?.trialConversionRate, 60, 'channel trial conversion rate should use trial attendance over leads');
 assert.strictEqual(videoChannel?.dealConversionRate, 20, 'channel deal conversion rate should use first paid deals over leads');
 assert.strictEqual(unifiedRateMetrics.conversion.studentAttributeRows, undefined, 'conversion page should not output local people profile metrics');
+const adultProfile = unifiedRateMetrics.conversion.profileRows.find(row => row.attribute === '成人');
+assert.strictEqual(adultProfile?.trialConversionRate, 60, 'conversion profile trial conversion should use trial attendance over profile base');
+assert.strictEqual(adultProfile?.dealConversionRate, 20, 'conversion profile deal conversion should use first paid deals over profile base');
+assert.strictEqual(adultProfile?.renewalRate, 0, 'conversion profile retention rate should use renewals over first paid deals');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[1].count, 4, 'standard course funnel should count course-chain students');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].count, 1, 'standard course funnel should count formal students');
 assert.strictEqual(unifiedRateMetrics.conversion.courseFunnel[2].percentOfTotal, 20, 'course funnel should expose formal students over total valid leads');
@@ -1416,6 +1423,7 @@ assert.strictEqual(
 assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.filteredViews, undefined, 'conversion dashboard should not expose backend-precomputed filtered views');
 assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.filterOptions, undefined, 'conversion dashboard should not expose local filter options');
 assert.strictEqual(conversionDashboardConsistencyMetrics.conversion.studentAttributeRows, undefined, 'conversion dashboard should not expose local attribute rows');
+assert.ok(Array.isArray(conversionDashboardConsistencyMetrics.conversion.profileRows), 'conversion dashboard should expose restored profile rows');
 
 const financeBackedTrendMetrics = buildOperationsMetrics({
   campuses: [

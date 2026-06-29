@@ -302,12 +302,12 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(chartsSource, /operations-funnel-transition-label[\s\S]*\$\{fmt\(stepRate\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
 assert.doesNotMatch(operationsSource, /function renderConversionInsightModule/, 'conversion page should move insight copy out of the conversion dashboard');
-assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*转化漏斗[\s\S]*课程总漏斗[\s\S]*体验路径漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
+assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*课程总漏斗[\s\S]*体验路径漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
+assert.doesNotMatch(operationsSource, /const moduleTitle = '转化漏斗'|<h3>\$\{moduleTitle\}<\/h3>|<h3>转化漏斗<\/h3>/, 'conversion page should not render the extra conversion funnel section title');
 assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]*renderConversionRetentionModule/, 'conversion page should remove the retention trend module from the page');
-assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]*renderConversionAttributeModule/, 'conversion page should remove the people profile module from the page');
 assert.doesNotMatch(operationsSource, /operations-funnel-filter-row|operationsFilterDropdown\('operationsConversionSource'|operationsFilterDropdown\('operationsConversionCampus'|operationsFilterDropdown\('operationsConversionCoach'/, 'conversion funnel should not keep local source/campus/coach filters');
 assert.doesNotMatch(operationsSource, /filteredViews|operationsConversionFilterViewKey|buildConversionFilteredViews/, 'conversion page should not expose locally filtered conversion read models');
-assert.doesNotMatch(operationsSource, /留存趋势|人群画像|成交画像图|留存画像图/, 'conversion page should not render removed retention trend or people profile sections');
+assert.doesNotMatch(operationsSource, /留存趋势|人群画像|成交画像图/, 'conversion page should not render removed retention trend, people profile wrapper, or old deal profile title');
 assert.match(operationsSource, /renderConversionChannelQualityModule[\s\S]*渠道质量象限图/, 'conversion page should render the channel quality chart as its own card');
 assert.match(operationsSource, /renderConversionChannelActionModule[\s\S]*渠道动作表/, 'conversion page should render the channel action table as its own card');
 assert.match(operationsSource, /operationsChannelQualityRows[\s\S]*高价值[\s\S]*待优化[\s\S]*低效[\s\S]*statusLabel/, 'channel efficiency should classify every channel with a compact business status tag');
@@ -325,7 +325,7 @@ assert.match(stylesSource, /operations-channel-quality-chart\{height:360px;min-h
 assert.match(stylesSource, /operations-channel-ranking-table\{[^}]*height:360px[^}]*overflow-y:auto/, 'channel ranking should match matrix height and scroll internally');
 assert.match(operationsSource, /renderStandardChart\('operationsChannelQualityChart'[\s\S]*buildOperationsChannelQualityChartOption/, 'conversion charts should render the channel quality quadrant through the standard wrapper');
 assert.match(operationsSource, /operationsRateTone[\s\S]*<\s*40[\s\S]*danger/, 'conversion progress bars should show low rates in red');
-assert.doesNotMatch(operationsSource, /function operationsPersonaBars|operations-persona-bar/, 'conversion page should remove local people profile calculations and bars');
+assert.match(operationsSource, /renderConversionAttributeModule[\s\S]*转化画像图[\s\S]*留存画像图[\s\S]*operationsPersonaBars/, 'conversion page should render conversion and retention profile charts without a wrapper title');
 assert.doesNotMatch(operationsSource, /留存\/续费风险榜[\s\S]*续费偏低/, 'conversion page should not render a text-heavy retention risk list');
 assert.match(operationsMetricsSource, /profilePersonas[\s\S]*私教课[\s\S]*小班课/, 'student attributes should derive lesson demand tags in the backend metric model');
 assert.match(operationsMetricsSource, /profilePersonas[\s\S]*未标注人群/, 'student attributes should keep the untagged fallback in the backend metric model');
