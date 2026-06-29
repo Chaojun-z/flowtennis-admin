@@ -269,9 +269,9 @@ function studentSortHeader(key,label){
 }
 function studentTableColumns(){
   if(studentListViewMode()==='trial')return [
-    {label:'姓名',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
-    {label:'类型',style:'width:72px'},
-    {label:'来源',style:'width:90px'},
+    {label:'姓名',className:'tms-sticky-l',style:'width:130px;padding-left:20px'},
+    {label:'来源',style:'width:110px'},
+    {label:'类型',style:'width:90px'},
     {label:'校区',style:'width:105px'},
     {label:'体验状态',style:'width:100px'},
     {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
@@ -281,9 +281,9 @@ function studentTableColumns(){
     {label:'操作',className:'tms-sticky-r',style:'width:150px;padding-right:20px;text-align:right'}
   ];
   return [
-    {label:'姓名',className:'tms-sticky-l',style:'width:150px;padding-left:20px'},
-    {label:'类型',style:'width:72px'},
-    {label:'来源',style:'width:90px'},
+    {label:'姓名',className:'tms-sticky-l',style:'width:130px;padding-left:20px'},
+    {label:'来源',style:'width:110px'},
+    {label:'类型',style:'width:90px'},
     {label:'校区',style:'width:105px'},
     {label:'成交路径',style:'width:100px'},
     {style:'width:110px',html:studentSortHeader('packagePurchaseDate','课包购买时间')},
@@ -778,8 +778,8 @@ function renderStudents(){
     const packageListHtml=studentUnifiedPackageListHtml(s);
     const packageListTooltip=studentUnifiedPackageListTooltip(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentUnifiedCompletedLessonCount(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentUnifiedCompletedLessonCount(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
 }
 function studentFeedbackHistoryHtml(s){

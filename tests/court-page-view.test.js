@@ -25,7 +25,8 @@ assert.match(pagesCss, /\.tms-toolbar\s*\{/, 'court page should define scoped to
 assert.match(pagesCss, /\.tms-pagination\s*\{/, 'court page should define scoped pagination styles');
 assert.match(fnBody('renderCourtStatsCards'), /document\.getElementById\('courtStatsRow'\)/, 'court page should use the standard stats row host');
 assert.match(html, /<div class="tms-table-card">[\s\S]*<div class="tms-table-wrapper">[\s\S]*<table class="tms-table">/, 'court page should use the upgraded tms table wrapper');
-assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户状态[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*对接人[\s\S]*熟悉程序[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.match(html, /姓名[\s\S]*手机号[\s\S]*校区[\s\S]*账户类型[\s\S]*会员类型[\s\S]*会员余额[\s\S]*最近订场[\s\S]*会员订场[\s\S]*累计订场[\s\S]*累计消费[\s\S]*跟进人[\s\S]*储值态度[\s\S]*备注[\s\S]*操作/, 'court table should use the standardized booking account columns in the expected order');
+assert.doesNotMatch(html, /账户状态|熟悉程序/, 'court table should remove old account status and familiarity columns');
 assert.doesNotMatch(html, /label:'处置态度'/, 'court table should not keep the old disposition attitude label');
 assert.match(html, /courtAccountTypeFilter/, 'court toolbar should provide account type filter');
 assert.match(html, /courtOwnerFilter/, 'court toolbar should provide owner filter');
@@ -42,7 +43,7 @@ assert.match(fnBody('setCourtSort'), /courtSortKey='';courtSortDir='desc'/, 'cou
 assert.match(tablesCss, /\.tms-sort-header\{[^}]*display:inline-flex[^}]*cursor:pointer/, 'court sort header should reuse the shared sort button style');
 assert.match(tablesCss, /\.tms-sort-icon\{[^}]*width:14px[^}]*height:14px/, 'court sort icon should reuse the shared svg icon');
 assert.match(html, /<th class="tms-sticky-r"[\s\S]*操作/, 'court table should freeze the action header');
-assert.match(html, /会员账户[\s\S]*编辑[\s\S]*订场/, 'court row actions should use shorter copy');
+assert.match(html, /会员账户[\s\S]*查看[\s\S]*订场/, 'court row actions should use shorter copy');
 assert.doesNotMatch(html, /courtCampusFilterBtn|courtCampusFilterMenu/, 'court table should no longer expose campus header filter');
 assert.match(html, /courtPageSize/, 'court table should support page size selection');
 assert.match(html, /renderPageSizeSelectorHtml\('courtPageSizeValue',courtPageSize,'setCourtPageSize'\)/, 'court page size selector should reuse the shared numeric page-size dropdown');
@@ -53,7 +54,7 @@ assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
 assert.doesNotMatch(fnBody('renderCourts'), /openCourtHist\('\$\{u\.id\}'\)/, 'court rows should not open finance history from a separate list column');
-assert.match(html, /function openCourtModal[\s\S]*末次跟进日期[\s\S]*下次跟进日期/, 'court edit modal should keep follow-up fields');
+assert.doesNotMatch(fnBody('courtProfileFormHtml'), /加入日期|末次跟进日期|下次跟进日期|熟悉程度|f_joinDate|f_recentFollowUpDate|f_nextFollowUpDate|f_familiarity/, 'court edit drawer should remove deprecated profile fields');
 assert.doesNotMatch(html, /function openCourtModal[\s\S]*充值\/消费记录[\s\S]*add-rec-row/, 'court edit modal should no longer contain the inline finance entry area');
 assert.match(html, /function renderCourtMiniBar\(/, 'court page should expose a dedicated mini bar renderer');
 assert.match(html, /class="tms-sticky-l"/, 'court page should freeze the left name column');
@@ -75,18 +76,15 @@ assert.doesNotMatch(fnBody('courtProfileFormHtml'), /tms-panel-tip|累计充值|
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /tms-panel-tip[\s\S]*tms-form-readonly/, 'court readonly finance summary should not look like input fields');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要|线索来源/, 'court profile edit form should not include readonly lead summary');
 assert.doesNotMatch(fnBody('courtProfileFormHtml'), /来源线索摘要[\s\S]*finput tms-form-control tms-readonly-text/, 'court lead source should not look like an input');
-assert.match(fnBody('courtProfileFormHtml'), /姓名 \*[\s\S]*手机号[\s\S]*关联学员[\s\S]*f_campus[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate[\s\S]*f_nextFollowUpDate[\s\S]*f_owner[\s\S]*f_familiarity[\s\S]*f_attitude[\s\S]*备注/, 'court profile edit form should keep the same field order as readonly profile');
+assert.match(fnBody('courtProfileFormHtml'), /姓名 \*[\s\S]*手机号[\s\S]*关联学员[\s\S]*f_campus[\s\S]*f_owner[\s\S]*f_attitude[\s\S]*备注/, 'court profile edit form should keep the simplified field order as readonly profile');
 assert.match(fnBody('courtProfileFormHtml'), /关联学员[\s\S]*linkedStudentPicker[\s\S]*校区/, 'court profile edit form should place linked students beside campus like readonly profile');
-assert.match(fnBody('courtProfileFormHtml'), /下次跟进日期[\s\S]*f_nextFollowUpDate[\s\S]*对接人[\s\S]*f_owner/, 'court profile edit form should place next follow-up beside owner like readonly profile');
-assert.match(fnBody('courtProfileFormHtml'), /熟悉程度[\s\S]*f_familiarity[\s\S]*对储值态度[\s\S]*f_attitude/, 'court profile edit form should place familiarity beside deposit attitude like readonly profile');
+assert.match(fnBody('courtProfileFormHtml'), /跟进人[\s\S]*f_owner[\s\S]*储值态度[\s\S]*f_attitude/, 'court profile edit form should use standard follower and deposit attitude fields');
 assert.match(fnBody('renderCourtRecentBookingCell'), /daysAgoText\(raw\)/, 'court recent booking cell should show date plus days-ago text');
 assert.doesNotMatch(fnBody('renderCourtRecentBookingCell'), /raw\?`\$\{raw\} · \$\{daysAgoText\(raw\)\}`/, 'court recent booking cell should not prepend the date twice');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-control[^}]*height:38px[^}]*font-size:13px[^}]*font-weight:400/s, 'court modal inputs should use 38px height with normal 13px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-form-label[^}]*font-size:11px[^}]*font-weight:400/s, 'court modal labels should use normal 11px text');
 assert.match(pagesCss, /\.modal\.modal-court \.tms-checkbox-matrix[^}]*font-size:10px/s, 'court linked student selector should use 10px student text');
-assert.match(html, /tms-form-row court-date-row[\s\S]*f_joinDate[\s\S]*f_recentFollowUpDate/, 'court modal should place join date and recent follow-up date in one row');
 assert.match(fnBody('courtProfileFormHtml'), /renderStandardDropdownHtml\('f_campus','校区',\[\{value:'',label:'-'\},\.\.\.campusList\],rv\(r,'campus'\),true\)/, 'court modal should allow blank campus');
-assert.match(fnBody('courtProfileFormHtml'), /courtDateButtonHtml\('f_joinDate',rv\(r,'joinDate'\)\)/, 'court modal should allow blank join date');
 assert.match(html, /function openCourtFinanceModal[\s\S]*tms-record-add-box/, 'court finance modal should use the upgraded local record card layout');
 assert.match(html, /function openCourtFinanceModal[\s\S]*历史记录[\s\S]*tms-history-list/, 'court finance modal should keep the Gemini-style history list under the entry form');
 assert.match(fnBody('renderCourtHistoryItems'), /const meta=\[h\.category,h\.payMethod,recordedText\]/, 'court history rows should show concise category, payment, and recorded time only');
@@ -98,7 +96,7 @@ assert.match(html, /function openCourtFinanceModal[\s\S]*flex:0 0 110px[\s\S]*re
 assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow should detect duplicates');
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
-assert.match(html, /search.*nextFollowUp|nextFollowUp.*search|courtSearch[\s\S]*followUp/, 'court search should cover follow-up fields');
+assert.match(fnBody('renderCourts'), /searchHit[\s\S]*courtFollowOwnerText\(c\)[\s\S]*c\.depositAttitude[\s\S]*c\.notes/, 'court search should cover standard follow-up fields');
 assert.match(html, /search:\{id:'courtSearch',oninput:'onCourtFilterChange\(\)'/, 'court search should reset to the first page before rendering');
 assert.match(html, /courtPageSize=\d+/, 'court page should keep its own page size state');
 assert.match(html, /function setCourtPageSize\(/, 'court page should expose page size switching');

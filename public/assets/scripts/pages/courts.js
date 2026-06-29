@@ -6,11 +6,11 @@ function renderCourtHeaderFilters(base,filterSource=null){
   const pageSizeHost=document.getElementById('courtPageSize');
   const owners=Array.isArray(filterSource?.owners)&&filterSource.owners.length
     ? filterSource.owners.map(v=>String(v||'').trim()).filter(Boolean)
-    : [...new Set(base.map(c=>String(c.owner||'').trim()).filter(Boolean))];
-  const accountTypes=['会员','普通'];
-  const ownerOpts=[{value:'',label:'全部',emptyDisplay:'对接人'},...owners.map(v=>({value:v,label:v}))];
+    : [...new Set(base.map(c=>String(courtFollowOwnerText(c)||'').trim()).filter(Boolean))];
+  const accountTypes=['会员账户','普通账户'];
+  const ownerOpts=[{value:'',label:'全部',emptyDisplay:'跟进人'},...owners.map(v=>({value:v,label:v}))];
   const accountOpts=[{value:'',label:'全部',emptyDisplay:'账户类型'},...accountTypes.map(v=>({value:v,label:v}))];
-  if(ownerHost)ownerHost.innerHTML=renderStandardDropdownHtml('courtOwnerValue','对接人',ownerOpts,courtOwnerFilterValue,false,'onCourtToolbarFilterChange');
+  if(ownerHost)ownerHost.innerHTML=renderStandardDropdownHtml('courtOwnerValue','跟进人',ownerOpts,courtOwnerFilterValue,false,'onCourtToolbarFilterChange');
   if(accountHost)accountHost.innerHTML=renderStandardDropdownHtml('courtAccountTypeValue','账户类型',accountOpts,courtAccountTypeFilterValue,false,'onCourtToolbarFilterChange');
   if(moreHost)moreHost.innerHTML=renderStandardDropdownHtml('courtMoreActionValue','更多操作',[
     {value:courtBatchMode?'batch-exit':'batch-select',label:courtBatchMode?'退出批量':'批量选择'},
@@ -933,9 +933,9 @@ function courtAccountStateLabel(value){
   if(value&&typeof value==='object'){
     const status=String(value.membershipStatusCode||value.account?.status||'').trim();
     const type=String(value.accountType||'').trim();
-    return type==='会员'||['active','extended'].includes(status)?'会员':'普通';
+    return type==='会员账户'||['active','extended'].includes(status)?'会员账户':'普通账户';
   }
-  return String(value||'').trim()==='会员'?'会员':'普通';
+  return String(value||'').trim()==='会员账户'?'会员账户':'普通账户';
 }
 function courtCleanUserNotes(value){
   const systemPattern=/(合并重复订场账户|合并自|系统|导入|私教课CSV.*导入|马坡补账|网球兄弟.*csv|修数|修正|补账|补录|历史迁移|数据修复)/;
@@ -1097,7 +1097,7 @@ function renderCourtAccountListView(){
   const filters=courtAccountListViewData?.filters||{};
   const scopedFilters={
     owners:campus==='all'?filters.owners:[...new Set(base.map(item=>String(item.owner||'').trim()).filter(Boolean))],
-    accountTypes:['会员','普通']
+    accountTypes:['会员账户','普通账户']
   };
   renderCourtHeaderFilters(base,scopedFilters);
   const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
@@ -1105,7 +1105,7 @@ function renderCourtAccountListView(){
     if(campus!=='all'&&item.campusCode!==campus)return false;
     if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
     if(courtAccountTypeFilterValue&&courtAccountStateLabel(item)!==courtAccountTypeFilterValue)return false;
-    return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.familiarity,item.recentFollowUpDate,item.nextFollowUpDate,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
+    return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
   });
   const sortedList=[...list];
   if(courtSortKey){
@@ -1135,12 +1135,12 @@ function renderCourtAccountListView(){
   document.getElementById('courtTbody').innerHTML=slice.length?slice.map(item=>{
     const w=!!item.lowBalance;
     const accountState=courtAccountStateLabel(item);
-    const accountTagClass=accountState==='会员'?'tms-tag-green':'';
+    const accountTagClass=accountState==='会员账户'?'tms-tag-green':'';
     const memberTagClass=courtMembershipTierTagClass(item.membershipTierLabel);
     const memberCell=item.membershipTierLabel&&item.membershipTierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderStandardEmptyText(item.membershipTierLabel))}</span>`:renderStandardCellText('-');
     const cleanNotes=courtCleanUserNotes(item.notesSummary);
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderStandardCellText(item.phone)}</td><td>${renderStandardCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.memberBookingCount)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td>${renderStandardCellText(item.owner)}</td><td>${renderStandardCellText(item.familiarity)}</td><td>${renderStandardCellText(item.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
-  }).join(''):'<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${item.id}" ${selectedCourtIds.has(item.id)?'checked':''} onchange="toggleCourtSelection('${item.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(item.displayName)}</span></div></td><td>${renderStandardCellText(item.phone)}</td><td>${renderStandardCellText(item.campusName)}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(item.balance,item.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(item.lastBookingDate)}</td><td>${renderCourtBookingCountCell(item.memberBookingCount)}</td><td>${renderCourtBookingCountCell(item.bookingCount)}</td><td>${renderCourtMoneyCell(item.bookingAmount)}</td><td>${renderStandardCellText(item.owner)}</td><td>${renderStandardCellText(item.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;
+  }).join(''):'<tr><td colspan="14"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
@@ -1161,11 +1161,11 @@ function renderCourts(){
   const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
   let list=dateScopedBase.filter(c=>{
     if(campus!=='all'&&c.campus!==campus)return false;
-    if(courtOwnerFilterValue&&String(c.owner||'').trim()!==courtOwnerFilterValue)return false;
+    if(courtOwnerFilterValue&&String(courtFollowOwnerText(c)||'').trim()!==courtOwnerFilterValue)return false;
     const linked=findStudentForCourt(c);
     const membershipSummary=courtMembershipSummary(c);
     if(courtAccountTypeFilterValue&&courtAccountStateLabel(membershipSummary)!==courtAccountTypeFilterValue)return false;
-    return searchHit(q,c.name,courtDisplayName(c),c.phone,cn(c.campus),c.owner,c.depositAttitude,c.familiarity,c.recentFollowUpDate,c.nextFollowUpDate,c.notes,c.balance,c.totalDeposit,c.spentAmount,c.receivedAmount,courtStudentNames(c),linked?.name,linked?.phone);
+    return searchHit(q,c.name,courtDisplayName(c),c.phone,cn(c.campus),courtFollowOwnerText(c),c.depositAttitude,c.notes,c.balance,c.totalDeposit,c.spentAmount,c.receivedAmount,courtStudentNames(c),linked?.name,linked?.phone);
   });
   const sortedList=[...list];
   if(courtSortKey){
@@ -1215,12 +1215,12 @@ function renderCourts(){
     const memberBookingCount=membershipBookingCount(u);
     const w=f.balance>0&&f.balance<=500;
     const accountState=courtAccountStateLabel(m);
-    const accountTagClass=accountState==='会员'?'tms-tag-green':'';
+    const accountTagClass=accountState==='会员账户'?'tms-tag-green':'';
     const memberTagClass=courtMembershipTierTagClass(m.tierLabel);
     const memberCell=m.tierLabel&&m.tierLabel!=='-'?`<span class="tms-tag ${memberTagClass}">${esc(renderStandardEmptyText(m.tierLabel))}</span>`:renderStandardCellText('-');
     const cleanNotes=courtCleanUserNotes(u.notes);
-    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderStandardCellText(u.phone)}</td><td>${renderStandardCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(memberBookingCount)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td>${renderStandardCellText(u.owner)}</td><td>${renderStandardCellText(u.familiarity)}</td><td>${renderStandardCellText(u.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
-  }).join(''):'<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
+    return `<tr class="${w?'warn-row':''}"><td class="tms-sticky-l" data-court-name-cell="1" style="padding-left:20px"><div class="tms-court-row-main"><input type="checkbox" class="tms-checkbox court-row-cb" value="${u.id}" ${selectedCourtIds.has(u.id)?'checked':''} onchange="toggleCourtSelection('${u.id}',this.checked)"><span class="tms-text-primary tms-court-name-cell">${esc(courtDisplayName(u))}</span></div></td><td>${renderStandardCellText(u.phone)}</td><td>${renderStandardCellText(cn(u.campus))}</td><td><span class="tms-tag ${accountTagClass}">${esc(accountState)}</span></td><td>${memberCell}</td><td>${renderCourtMiniBar(f.balance,f.totalDeposit,w)}</td><td>${renderCourtRecentBookingCell(b.lastDate)}</td><td>${renderCourtBookingCountCell(memberBookingCount)}</td><td>${renderCourtBookingCountCell(b.count)}</td><td>${renderCourtMoneyCell(b.amount)}</td><td>${renderStandardCellText(courtFollowOwnerText(u))}</td><td>${renderStandardCellText(u.depositAttitude)}</td><td><div class="tms-text-remark" title="${esc(cleanNotes)}">${esc(renderStandardEmptyText(cleanNotes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:128px;padding-right:20px;justify-content:flex-end"><span class="tms-action-link" onclick="openCourtMembershipPanel('${u.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${u.id}')">订场</span></td></tr>`;
+  }).join(''):'<tr><td colspan="14"><div class="tms-empty-state"><div class="tms-empty-title">暂无订场用户</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>';
   updateCourtBatchButton();
   document.querySelectorAll('#page-courts [data-court-sort]').forEach(el=>el.classList.remove('asc','desc'));
   if(courtSortKey){
@@ -1312,7 +1312,7 @@ function courtMembershipPanelHtml(court){
   const editAction=`<button type="button" class="schedule-detail-action" onclick="editCourtProfileInline('${court.id}')">编辑资料</button>`;
   const profile=renderDetailDrawerCard('基本信息',courtProfileReadonlyHtml(court),{actionsHtml:editAction});
   const overview=renderDetailDrawerCard('会员账户',[
-    renderDetailDrawerField('账户类型',account?'会员':'普通用户'),
+    renderDetailDrawerField('账户类型',account?'会员账户':'普通账户'),
     renderDetailDrawerField('累计充值',`¥${fmt(finance.totalDeposit)}`),
     renderDetailDrawerField('累计消费',`¥${fmt(finance.spentAmount)}`),
     renderDetailDrawerField('当前余额',`¥${fmt(finance.balance)}`),
@@ -1581,6 +1581,9 @@ function leadRowsForCourtSummary(){
 function leadForCourtSummary(courtId){
   return leadRowsForCourtSummary().find(item=>String(item?.courtId||'')===String(courtId))||null;
 }
+function courtFollowOwnerText(court){
+  return String(leadForCourtSummary(court?.id)?.owner||'').trim();
+}
 function courtLeadSummaryHtml(court){
   const lead=leadForCourtSummary(court?.id);
   if(!lead)return '<div class="tms-text-secondary">未关联线索</div>';
@@ -1677,11 +1680,7 @@ function courtProfileReadonlyHtml(court){
     renderDetailDrawerField('手机号',court?.phone||''),
     renderDetailDrawerField('关联学员',courtSelectedStudentSearchText(selectedIds)||courtStudentNames(court)),
     renderDetailDrawerField('校区',cn(court?.campus)),
-    renderDetailDrawerField('加入日期',court?.joinDate),
-    renderDetailDrawerField('末次跟进日期',court?.recentFollowUpDate),
-    renderDetailDrawerField('下次跟进日期',court?.nextFollowUpDate),
-    renderDetailDrawerField('对接人',court?.owner),
-    renderDetailDrawerField('熟悉程度',court?.familiarity),
+    renderDetailDrawerField('跟进人',courtFollowOwnerText(court)),
     renderDetailDrawerField('储值态度',court?.depositAttitude),
     renderDetailDrawerField('备注',courtCleanUserNotes(court?.notes),{full:true})
   ].join('');
@@ -1692,7 +1691,7 @@ function courtProfileFormHtml(court){
   const campusList=campuses.map(c=>({value:c.code||c.id,label:esc(c.name)}));
   const selectedStudentValue=esc(JSON.stringify(selectedIds));
   const linkedStudentPicker=`<input type="hidden" id="f_studentIds" value="${selectedStudentValue}"><input class="finput tms-form-control" id="f_studentSearch" placeholder="搜索姓名、手机号" value="${esc(courtSelectedStudentSearchText(selectedIds))}" oninput="updateCourtStudentSearch()" autocomplete="off"><div id="f_studentSuggest" class="schedule-student-suggest"></div><div id="f_selectedStudentTags" class="schedule-student-tags">${renderCourtStudentTags(selectedIds)}</div>`;
-  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">关联学员</label>${linkedStudentPicker}</div><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div></div><div class="tms-form-row court-date-row"><div class="tms-form-item"><label class="tms-form-label">加入日期</label>${courtDateButtonHtml('f_joinDate',rv(r,'joinDate'))}</div><div class="tms-form-item"><label class="tms-form-label">末次跟进日期</label>${courtDateButtonHtml('f_recentFollowUpDate',rv(r,'recentFollowUpDate'))}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">下次跟进日期</label>${courtDateButtonHtml('f_nextFollowUpDate',rv(r,'nextFollowUpDate'))}</div><div class="tms-form-item"><label class="tms-form-label">对接人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${rv(r,'owner')}"></div></div><div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">熟悉程度</label><input type="text" class="finput tms-form-control" id="f_familiarity" value="${rv(r,'familiarity')}"></div><div class="tms-form-item"><label class="tms-form-label">对储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="f_name" placeholder="请输入" value="${rv(r,'name')}"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="f_phone" placeholder="请输入手机号" value="${rv(r,'phone')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">关联学员</label>${linkedStudentPicker}</div><div class="tms-form-item"><label class="tms-form-label">校区</label>${renderStandardDropdownHtml('f_campus','校区',[{value:'',label:'-'},...campusList],rv(r,'campus'),true)}</div></div><div class="tms-form-row court-profile-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label><input type="text" class="finput tms-form-control" id="f_owner" value="${esc(courtFollowOwnerText(r))}" readonly></div><div class="tms-form-item"><label class="tms-form-label">储值态度</label><input type="text" class="finput tms-form-control" id="f_attitude" value="${rv(r,'depositAttitude')}"></div></div><div class="tms-form-row" style="margin-bottom:0;"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="f_notes">${esc(rv(r,'notes'))}</textarea></div></div>`;
 }
 function courtProfileEditPanelHtml(court){
   const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="cancelCourtProfileInlineEdit('${court.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="courtSaveBtn" onclick="saveCourtProfileInline('${court.id}')">保存</button></div>`;
@@ -1736,7 +1735,7 @@ async function saveCourt(options={}){
   const rawH=editId?courtBaseHistoryForSave(courts.find(u=>u.id===editId)):[];
   const studentIds=parseArr(document.getElementById('f_studentIds')?.value||'[]');
   const campusValue=document.getElementById('f_campus').value;
-  const rec={name,phone,studentId:studentIds[0]||'',studentIds,campus:campusValue,joinDate:document.getElementById('f_joinDate').value,recentFollowUpDate:document.getElementById('f_recentFollowUpDate').value,nextFollowUpDate:document.getElementById('f_nextFollowUpDate').value,owner:document.getElementById('f_owner').value.trim(),depositAttitude:document.getElementById('f_attitude').value.trim(),familiarity:document.getElementById('f_familiarity').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:'active',history:[...rawH,..._pending]};
+  const rec={name,phone,studentId:studentIds[0]||'',studentIds,campus:campusValue,depositAttitude:document.getElementById('f_attitude').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:'active',history:[...rawH,..._pending]};
   const duplicates=getCourtDuplicateCandidates({name,phone,campus:campusValue},editId);
   if(duplicates.length){
     const summary=duplicates.map(c=>`${c.name}${c.phone?`（${c.phone}）`:''}${c.campus?` · ${cn(c.campus)}`:''}`).join('、');
@@ -2026,8 +2025,8 @@ function openCourtHist(id){
 }
 function exportCourtCSV(){
   const d=campus==='all'?courts:courts.filter(u=>u.campus===campus);
-  let csv='姓名,手机号,关联学员,校区,余额,储值,消费金额,实收金额,对接人,对储值态度,熟悉程度,加入日期,末次跟进日期,下次跟进日期,备注\n';
-  csv+=d.map(u=>{const f=courtFinanceLocal(u);return [csvEscapeCell(u.name),csvEscapeCell(u.phone||''),csvEscapeCell(courtStudentNames(u)),csvEscapeCell(cn(u.campus)),csvEscapeCell(f.balance||0),csvEscapeCell(f.totalDeposit||0),csvEscapeCell(f.spentAmount||0),csvEscapeCell(f.receivedAmount||0),csvEscapeCell(u.owner||''),csvEscapeCell(u.depositAttitude||''),csvEscapeCell(u.familiarity||''),csvEscapeCell(u.joinDate||''),csvEscapeCell(u.recentFollowUpDate||''),csvEscapeCell(u.nextFollowUpDate||''),csvEscapeCell(u.notes||'')].join(',')}).join('\n');
+  let csv='姓名,手机号,关联学员,校区,余额,储值,消费金额,实收金额,跟进人,储值态度,备注\n';
+  csv+=d.map(u=>{const f=courtFinanceLocal(u);return [csvEscapeCell(u.name),csvEscapeCell(u.phone||''),csvEscapeCell(courtStudentNames(u)),csvEscapeCell(cn(u.campus)),csvEscapeCell(f.balance||0),csvEscapeCell(f.totalDeposit||0),csvEscapeCell(f.spentAmount||0),csvEscapeCell(f.receivedAmount||0),csvEscapeCell(courtFollowOwnerText(u)),csvEscapeCell(u.depositAttitude||''),csvEscapeCell(u.notes||'')].join(',')}).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_订场用户_'+today()+'.csv';a.click();toast('导出成功','success');
 }
@@ -2059,7 +2058,7 @@ let courtImportState={fileName:'',rows:[],summary:null};
 function openCourtImport(){
   courtImportState={fileName:'',rows:[],summary:null};
   document.getElementById('importTitle').textContent='导入订场用户';
-  document.getElementById('importBody').innerHTML=`<div class="import-grid"><div class="import-box"><label class="import-drop" for="courtImportFile"><strong>点击选择 CSV 文件</strong><div class="import-drop-sub">支持 UTF-8（fatal）/ GB18030 / GBK 编码，额外列会自动忽略</div></label><input class="import-file" id="courtImportFile" type="file" accept=".csv,text/csv" onchange="handleCourtImportFile(this)"><div class="import-meta" id="courtImportMeta"><span class="import-pill">未选择文件</span></div><div class="import-note" style="margin-top:10px">导入规则：<br>1. 必填字段：姓名。<br>2. 校区可留空。<br>3. 余额/储值默认 0。<br>4. 序号不会入库。<br>5. 已存在的用户会按手机号优先、否则按“姓名+校区”去重。<br>6. 末次跟进日期、下次跟进日期会一并导入。</div></div><div class="import-box"><div class="import-note"><strong>建议列名</strong><br>姓名、手机号、关联学员、校区、余额、储值、消费金额、对接人、对储值态度、熟悉程度、加入日期、末次跟进日期、下次跟进日期、备注<br><br><strong>特殊字段</strong><br>基本情况、沟通情况等，会自动保留到备注中。</div></div></div><div style="margin-top:14px" id="courtImportPreview"><div class="import-empty">请选择 CSV 文件后预览数据</div></div><div class="import-actions"><button class="btn-cancel" onclick="closeCourtImport()">取消</button><button class="btn-save" id="courtImportBtn" onclick="runCourtImport()" disabled>导入</button></div>`;
+  document.getElementById('importBody').innerHTML=`<div class="import-grid"><div class="import-box"><label class="import-drop" for="courtImportFile"><strong>点击选择 CSV 文件</strong><div class="import-drop-sub">支持 UTF-8（fatal）/ GB18030 / GBK 编码，额外列会自动忽略</div></label><input class="import-file" id="courtImportFile" type="file" accept=".csv,text/csv" onchange="handleCourtImportFile(this)"><div class="import-meta" id="courtImportMeta"><span class="import-pill">未选择文件</span></div><div class="import-note" style="margin-top:10px">导入规则：<br>1. 必填字段：姓名。<br>2. 校区可留空。<br>3. 余额/储值默认 0。<br>4. 序号不会入库。<br>5. 已存在的用户会按手机号优先、否则按“姓名+校区”去重。<br>6. 跟进人只作为导入预览字段，最终以关联线索的跟进人为准。</div></div><div class="import-box"><div class="import-note"><strong>建议列名</strong><br>姓名、手机号、关联学员、校区、余额、储值、消费金额、跟进人、储值态度、备注<br><br><strong>特殊字段</strong><br>基本情况、沟通情况等，会自动保留到备注中。</div></div></div><div style="margin-top:14px" id="courtImportPreview"><div class="import-empty">请选择 CSV 文件后预览数据</div></div><div class="import-actions"><button class="btn-cancel" onclick="closeCourtImport()">取消</button><button class="btn-save" id="courtImportBtn" onclick="runCourtImport()" disabled>导入</button></div>`;
   document.getElementById('importOv').classList.add('open');
 }
 function closeCourtImport(){
@@ -2122,7 +2121,7 @@ function collectUnknownNotes(row,knownKeys){
 }
 const COURT_IMPORT_NAME_FIELDS=['姓名',...FlowTennisBusinessTaxonomy.legacyAliases('courtName'),'用户','订场用户','名称','客户'];
 const COURT_IMPORT_STUDENT_LINK_FIELDS=['关联学员','学员',...FlowTennisBusinessTaxonomy.legacyAliases('courtStudentLink')];
-const COURT_IMPORT_KNOWN_FIELDS=['序号',...COURT_IMPORT_NAME_FIELDS,'手机号','电话','手机','联系方式',...COURT_IMPORT_STUDENT_LINK_FIELDS,'校区','门店','区域','余额','储值','历史储值','总储值','累计储值','加入日期','加入时间','日期','末次跟进日期','末次跟进','最近跟进日期','最近跟进','跟进日期','下次跟进日期','下次跟进','跟进提醒日期','备注','说明','基本情况','沟通情况','消费金额','消费','消费金额（仅自己订场部分）','对接人','负责人','对储值态度','对储值的态度','熟悉程度'];
+const COURT_IMPORT_KNOWN_FIELDS=['序号',...COURT_IMPORT_NAME_FIELDS,'手机号','电话','手机','联系方式',...COURT_IMPORT_STUDENT_LINK_FIELDS,'校区','门店','区域','余额','储值','历史储值','总储值','累计储值','备注','说明','基本情况','沟通情况','消费金额','消费','消费金额（仅自己订场部分）','跟进人','负责人','储值态度','对储值态度','对储值的态度'];
 function defaultCourtCampusCode(){
   return campuses[0]?.code||campuses[0]?.id||Object.keys(CAMPUS)[0]||'';
 }
@@ -2154,20 +2153,16 @@ function normalizeCourtImportRows(rawRows){
     const campus=normalizeCampusCode(campusRaw);
     const balanceRaw=readRowValue(row,['余额']);
     const depositRaw=readRowValue(row,['储值','历史储值','总储值','累计储值']);
-    const joinDate=readRowValue(row,['加入日期','加入时间','日期']);
-    const recentFollowUpDate=readRowValue(row,['末次跟进日期','末次跟进','最近跟进日期','最近跟进','跟进日期']);
-    const nextFollowUpDate=readRowValue(row,['下次跟进日期','下次跟进','跟进提醒日期']);
     const spentAmount=readRowValue(row,['消费金额','消费','消费金额（仅自己订场部分）']);
-    const owner=readRowValue(row,['对接人','负责人']);
-    const depositAttitude=readRowValue(row,['对储值态度','对储值的态度']);
-    const familiarity=readRowValue(row,['熟悉程度']);
+    const owner=readRowValue(row,['跟进人','负责人']);
+    const depositAttitude=readRowValue(row,['储值态度','对储值态度','对储值的态度']);
     const baseNotes=[readRowValue(row,['备注','说明']),readRowValue(row,['基本情况']),readRowValue(row,['沟通情况'])].filter(Boolean).join('；');
     const extras=collectUnknownNotes(row,COURT_IMPORT_KNOWN_FIELDS);
     const notes=[baseNotes,...extras].filter(Boolean).join('；');
     const parsedSpent=importMoney(spentAmount);
     const parsedDeposit=importMoney(depositRaw)||extractDepositAmountFromText(depositAttitude);
     const inferredBalance=!hasImportValue(balanceRaw)&&parsedDeposit>0&&parsedSpent>0?Math.max(0,parsedDeposit-parsedSpent):importMoney(balanceRaw);
-    const item={name,phone,studentId,campus,balance:inferredBalance,totalDeposit:parsedDeposit||0,spentAmount:parsedSpent,owner,depositAttitude,familiarity,joinDate,recentFollowUpDate,nextFollowUpDate,notes,status:'active',history:[]};
+    const item={name,phone,studentId,campus,balance:inferredBalance,totalDeposit:parsedDeposit||0,spentAmount:parsedSpent,owner,depositAttitude,notes,status:'active',history:[]};
     const keys=getCourtDedupKeys(item);
     let status='待导入';
     let reason='';
@@ -2205,9 +2200,9 @@ function renderCourtImportPreview(){
     const cls=r._status==='待导入'?'ok':r._status==='重复'?'warn':'err';
     const statusText=r._status==='待导入'?'可导入':r._status==='重复'?`已跳过：${r._reason}`:`无效：${r._reason}`;
     const st=r.studentId?students.find(s=>s.id===r.studentId):null;
-    return `<tr class="import-row ${cls}"><td>${esc(r.name||'')}</td><td>${esc(r.phone||'')}</td><td>${esc(st?.name||'')}</td><td>${cn(r.campus)||esc(r.campus||'')}</td><td>${fmt(r.balance)||0}</td><td>${fmt(r.totalDeposit)||0}</td><td>${fmt(r.spentAmount)||0}</td><td>${esc(r.owner||'')}</td><td>${esc(r.depositAttitude||'')}</td><td>${esc(r.familiarity||'')}</td><td>${esc(r.joinDate||'')}</td><td>${esc(r.recentFollowUpDate||'')}</td><td>${esc(r.nextFollowUpDate||'')}</td><td style="max-width:240px;white-space:normal;word-break:break-word">${esc(r.notes||'')}</td><td><span class="import-status ${cls}">${statusText}</span></td></tr>`;
+    return `<tr class="import-row ${cls}"><td>${esc(r.name||'')}</td><td>${esc(r.phone||'')}</td><td>${esc(st?.name||'')}</td><td>${cn(r.campus)||esc(r.campus||'')}</td><td>${fmt(r.balance)||0}</td><td>${fmt(r.totalDeposit)||0}</td><td>${fmt(r.spentAmount)||0}</td><td>${esc(r.owner||'')}</td><td>${esc(r.depositAttitude||'')}</td><td style="max-width:240px;white-space:normal;word-break:break-word">${esc(r.notes||'')}</td><td><span class="import-status ${cls}">${statusText}</span></td></tr>`;
   }).join('');
-  host.innerHTML=`<div class="import-table-wrap"><table class="import-table"><thead><tr><th>姓名</th><th>手机号</th><th>关联学员</th><th>校区</th><th>余额</th><th>储值</th><th>消费金额</th><th>对接人</th><th>对储值态度</th><th>熟悉程度</th><th>加入日期</th><th>末次跟进日期</th><th>下次跟进日期</th><th>备注</th><th>结果</th></tr></thead><tbody>${previewRows}</tbody></table></div>${rows.length>50?`<div class="import-note" style="margin-top:8px">仅预览前 50 行，实际会按全部可导入数据执行。</div>`:''}`;
+  host.innerHTML=`<div class="import-table-wrap"><table class="import-table"><thead><tr><th>姓名</th><th>手机号</th><th>关联学员</th><th>校区</th><th>余额</th><th>储值</th><th>消费金额</th><th>跟进人</th><th>储值态度</th><th>备注</th><th>结果</th></tr></thead><tbody>${previewRows}</tbody></table></div>${rows.length>50?`<div class="import-note" style="margin-top:8px">仅预览前 50 行，实际会按全部可导入数据执行。</div>`:''}`;
 }
 async function handleCourtImportFile(input){
   const file=input.files&&input.files[0];

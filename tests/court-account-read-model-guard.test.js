@@ -32,6 +32,7 @@ async function main() {
   const tables = {
     campuses: 'campuses',
     students: 'students',
+    leads: 'leads',
     courts: 'courts',
     membershipAccounts: 'membershipAccounts',
     membershipOrders: 'membershipOrders',
@@ -40,12 +41,13 @@ async function main() {
   const datasets = {
     campuses: [{ code: 'shunyi_mapo', name: '马坡' }],
     students: [{ id: 'stu-1', name: '学员甲' }],
+    leads: [{ id: 'lead-1', courtId: 'court-1', owner: '线索跟进人' }],
     courts: [{
       id: 'court-1',
       name: '客户A',
       phone: '13800000000',
       campus: 'shunyi_mapo',
-      owner: '顾问A',
+      owner: '订场旧对接人',
       familiarity: '熟',
       depositAttitude: '高',
       recentFollowUpDate: '2026-05-01',
@@ -106,8 +108,9 @@ async function main() {
   assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'meta'], '读模型应返回 summary/filters/items/meta');
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
-  assert.strictEqual(view.items[0].accountType, '会员');
-  assert.ok(view.filters.accountTypes.every((value) => ['会员', '普通'].includes(value)), '账户类型筛选只应返回会员/普通');
+  assert.strictEqual(view.items[0].owner, '线索跟进人', '订场用户跟进人应读取线索池 owner 统一事实源');
+  assert.strictEqual(view.items[0].accountType, '会员账户');
+  assert.ok(view.filters.accountTypes.every((value) => ['会员账户', '普通账户'].includes(value)), '账户类型筛选只应返回会员账户/普通账户');
   assert.strictEqual(view.items[0].membershipStatus, '正常');
   assert.strictEqual(view.items[0].membershipDiscountText, '9 折');
   assert.strictEqual(view.items[0].linkedStudentSummary, '学员甲');

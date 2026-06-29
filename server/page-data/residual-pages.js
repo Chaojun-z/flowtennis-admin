@@ -22,6 +22,7 @@ function createResidualPageDataRoutes(deps={}){
     tables:{
       students:T_STUDENTS,
       courts:T_COURTS,
+      leads:T_LEADS,
       membershipAccounts:T_MEMBERSHIP_ACCOUNTS,
       membershipOrders:T_MEMBERSHIP_ORDERS,
       membershipPlans:T_MEMBERSHIP_PLANS

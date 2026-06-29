@@ -5,6 +5,10 @@ function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function courtText(value) {
+  return String(value || '').trim();
+}
+
 function parseArr(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value) {
@@ -233,9 +237,16 @@ function displayName(court, studentSummary) {
 }
 
 function buildCourtAccountType(account, finance) {
-  if (!account) return '普通';
-  if (['voided', 'cleared'].includes(account.status)) return '普通';
-  return ['active', 'extended'].includes(account.status) ? '会员' : '普通';
+  if (!account) return '普通账户';
+  if (['voided', 'cleared'].includes(account.status)) return '普通账户';
+  return ['active', 'extended'].includes(account.status) ? '会员账户' : '普通账户';
+}
+
+function leadOwnerForCourt(court, leads = []) {
+  const courtId = courtText(court?.id);
+  if (!courtId) return '';
+  const lead = (leads || []).find((row) => courtText(row?.courtId) === courtId);
+  return courtText(lead?.owner);
 }
 
 function buildLegacyItem(court, ctx) {
@@ -252,8 +263,7 @@ function buildLegacyItem(court, ctx) {
     phone: String(court?.phone || '').trim(),
     campusCode: String(court?.campus || '').trim(),
     campusName: ctx.campusMap.get(String(court?.campus || '').trim()) || String(court?.campus || '').trim() || '-',
-    owner: String(court?.owner || '').trim(),
-    familiarity: String(court?.familiarity || '').trim(),
+    owner: leadOwnerForCourt(court, ctx.leads),
     depositAttitude: String(court?.depositAttitude || '').trim(),
     recentFollowUpDate: String(court?.recentFollowUpDate || '').trim(),
     nextFollowUpDate: String(court?.nextFollowUpDate || '').trim(),
@@ -355,10 +365,11 @@ function createCourtAccountListViewLoader(deps) {
   return async function loadCourtAccountListView(options = {}) {
     const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts });
     const useLegacy = options.useLegacy === true;
-    const [campuses, students, courts, membershipAccounts, membershipOrders, membershipPlans] = await Promise.all([
+    const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans] = await Promise.all([
       listCampusesWithDefaults(),
       getCachedScan(tables.students).catch(() => []),
       getCachedScan(tables.courts).catch(() => []),
+      getCachedScan(tables.leads).catch(() => []),
       getCachedScan(tables.membershipAccounts).catch(() => []),
       getCachedScan(tables.membershipOrders).catch(() => []),
       getCachedScan(tables.membershipPlans).catch(() => [])
@@ -368,7 +379,7 @@ function createCourtAccountListViewLoader(deps) {
       .filter((row) => String(row?.status || 'active') !== 'inactive')
       .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)
       .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
-    const ctx = { campuses, campusMap, students, membershipAccounts, membershipOrders, membershipPlans };
+    const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans };
     const items = activeCourts
       .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
       .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));

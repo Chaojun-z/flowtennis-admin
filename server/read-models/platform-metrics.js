@@ -250,12 +250,14 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
   const details = new Map();
   entitlementsByStudent.forEach((rows, studentId) => {
     const packageListRows = rows.sort((a, b) => text(b.purchaseDate).localeCompare(text(a.purchaseDate)));
-    const remaining = packageListRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
-    const total = packageListRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
-    const packageDates = packageListRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
+    const activeRows = includeTrial ? packageListRows : packageListRows.filter(row => (Number(row.remainingLessons) || 0) > 0);
+    const displayRows = includeTrial || activeRows.length ? activeRows : packageListRows.slice(0, 1);
+    const remaining = displayRows.reduce((sum, row) => sum + (Number(row.remainingLessons) || 0), 0);
+    const total = displayRows.reduce((sum, row) => sum + (Number(row.totalLessons) || 0), 0);
+    const packageDates = displayRows.map(row => text(row.purchaseDate)).filter(Boolean).sort();
     details.set(studentId, {
-      packageListRows,
-      packageListText: packageListRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
+      packageListRows: displayRows,
+      packageListText: displayRows.map(row => `${row.packageName} ${lessonQty(row.remainingLessons)}/${lessonQty(row.totalLessons)}`).join('\n') || '-',
       packageBalanceRemaining: remaining,
       packageBalanceTotal: total,
       packageBalanceText: total > 0 ? `${lessonQty(remaining)}/${lessonQty(total)}` : '-',

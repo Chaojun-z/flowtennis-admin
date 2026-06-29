@@ -74,10 +74,10 @@ const formalViewRow = standard.views.formalStudents.find(row => row.studentId ==
 assert.ok(formalViewRow, '正式学员列表行必须来自统一教学链视图');
 assert.deepStrictEqual(
   formalViewRow.packageListRows.map(row => [row.packageName, row.remainingLessons, row.totalLessons]),
-  [['小班课', 0, 6], ['私教课', 7, 10]],
-  '正式学员课包列表必须由后端统一读模型整理，前端不能再现场拼课包名字'
+  [['私教课', 7, 10]],
+  '正式学员课包列表必须由后端统一读模型只展示仍有余额的正式课包'
 );
-assert.strictEqual(formalViewRow.packageBalanceText, '7/16', '正式学员课包余额必须由后端统一读模型汇总');
+assert.strictEqual(formalViewRow.packageBalanceText, '7/10', '正式学员课包余额必须由后端统一读模型按展示课包汇总');
 assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课必须由后端统一读模型汇总，且包含已完成体验课');
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
