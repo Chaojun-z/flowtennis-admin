@@ -430,13 +430,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr{transition:background .1s}tbo
 .student-package-icon{width:auto;height:auto;background:transparent;border:0;flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding-top:1px}
 .student-package-icon-svg{width:18px;height:18px;color:#B97244;flex:0 0 auto}
 .student-package-main{min-width:0;flex:1}
+.student-package-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:5px}
 .student-package-title{font-size:13px;line-height:1.45;font-weight:400;color:#1F2937;margin-bottom:5px}
+.student-package-head .student-package-title{margin-bottom:0}
+.student-package-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:0 0 auto}
+.student-package-action-link{border:0;background:transparent;color:#805435;font-size:12px;font-weight:400;line-height:18px;padding:0;cursor:pointer}
+.student-package-action-link:hover{text-decoration:underline}
 .student-package-meta{display:flex;align-items:center;gap:0;flex-wrap:wrap;color:#667085;font-size:12px;line-height:1.5}
 .student-package-meta>*{display:inline-flex;align-items:center}
 .student-package-meta>*+*::before{content:"";width:1px;height:10px;background:#E5E7EB;margin:0 8px}
 .student-package-meta strong{color:#B45309;font-weight:400}
 .student-package-status{color:#16A34A;font-weight:400}
 .student-package-card.is-depleted .student-package-status{color:#6B7280}
+.student-lead-section .tms-readonly-text,.student-lead-summary-readonly .tms-readonly-text{min-height:0;padding:0!important;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.student-lead-summary-readonly{font-size:13px;color:#333333;line-height:22px;margin-bottom:12px}
 .student-lesson-timeline{display:flex;flex-direction:column;gap:18px}
 .student-lesson-timeline-item{display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;position:relative;align-items:flex-start}
 .student-lesson-timeline-item::before{content:"";position:absolute;left:6px;top:12px;bottom:-18px;width:1px;background:#ECE7E1}

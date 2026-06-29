@@ -1111,12 +1111,12 @@ function studentManualEntitlementActionsHtml(entitlement={}){
   const canManualAdjust=currentUser?.role==='admin'&&entitlementStatusText(entitlement)!=='已作废'&&purchaseStatusText(purchase)!=='已作废';
   if(!canManualAdjust)return '';
   const consumeAction=entitlement.status==='active'&&Number(entitlement.remainingLessons||0)>0
-    ?`<button type="button" class="schedule-detail-action primary" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_consume',{source:'student',studentId:${jsArg(entitlement.studentId)}})">手动消课</button>`
+    ?`<button type="button" class="student-package-action-link" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_consume',{source:'student',studentId:${jsArg(entitlement.studentId)}})">手动消课</button>`
     :'';
   const returnAction=Number(entitlement.usedLessons||0)>0
-    ?`<button type="button" class="schedule-detail-action primary" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_return',{source:'student',studentId:${jsArg(entitlement.studentId)}})">退回课时</button>`
+    ?`<button type="button" class="student-package-action-link" onclick="openManualEntitlementAdjustModal(${jsArg(entitlement.id)},'manual_return',{source:'student',studentId:${jsArg(entitlement.studentId)}})">退回课时</button>`
     :'';
-  return consumeAction||returnAction?`<div class="schedule-detail-card-actions">${consumeAction}${returnAction}</div>`:'';
+  return consumeAction||returnAction?`<div class="student-package-actions">${consumeAction}${returnAction}</div>`:'';
 }
 function studentEntitlementSummaryHtml(stu){
   const rows=entitlements.filter(e=>e.studentId===stu?.id).sort((a,b)=>String(studentEntitlementPurchaseDate(a,purchases.find(p=>p.id===a.purchaseId)||{})).localeCompare(String(studentEntitlementPurchaseDate(b,purchases.find(p=>p.id===b.purchaseId)||{})))).filter(e=>entitlementStatusText(e)!=='已作废'&&purchaseStatusText(purchases.find(p=>p.id===e.purchaseId)||{})!=='已作废');
@@ -1134,7 +1134,7 @@ function studentEntitlementSummaryHtml(stu){
     const statusText=entitlementStatusText(e);
     const depleted=remaining<=0||statusText==='已用完';
     const unit=packageBalanceUnitLabel(e);
-    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-title">[${esc(renderStandardEmptyText(packageText))}]</div><div class="student-package-meta"><span>${esc(renderStandardEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>${esc(renderStandardEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div>${studentManualEntitlementActionsHtml(e)}</div></div>`;
+    return `<div class="student-package-card${depleted?' is-depleted':''}"><div class="student-package-icon"><svg class="student-package-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.8c0-.77.63-1.4 1.4-1.4h4.3l1.9 2h8.4c.77 0 1.4.63 1.4 1.4v8.7c0 .77-.63 1.4-1.4 1.4H4.9c-.77 0-1.4-.63-1.4-1.4z"/><path d="M3.5 10h17"/><path d="M7.2 5.4h3.1"/></svg></div><div class="student-package-main"><div class="student-package-head"><div class="student-package-title">[${esc(renderStandardEmptyText(packageText))}]</div>${studentManualEntitlementActionsHtml(e)}</div><div class="student-package-meta"><span>${esc(renderStandardEmptyText(purchaseDate))} 报名</span><span>应付${fmt(systemAmount)} · 实付${fmt(paidAmount)}</span><span>${esc(renderStandardEmptyText(ownerCoach))}</span><strong>已扣 ${lessonQty(used)}${unit}（${lessonQty(remaining)}/${lessonQty(total)}${unit}）</strong><span class="student-package-status">${esc(statusText)}</span></div></div></div>`;
   }).join('');
 }
 function studentEntitlementPurchaseDate(entitlement,purchase={}){

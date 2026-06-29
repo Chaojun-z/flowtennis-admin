@@ -497,7 +497,7 @@ function studentBasicInfoFormHtml(s){
   const sourceOptions=[{value:'',label:'-'},...studentSourceOptions()];
   const campusOptions=studentCampusOptions();
   const coachOptions=[{value:'',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))];
-  const leadSummary=s?`<div class="tms-section-header">来源线索摘要</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索来源</label><div class="finput tms-form-control tms-readonly-text">${studentLeadSummaryHtml(s)}</div></div></div>`:'';
+  const leadSummary=s&&!studentDetailIsEmptyHtml(studentLeadSummaryHtml(s))?`<div class="tms-section-header">来源线索摘要</div><div class="student-lead-summary-readonly">${studentLeadSummaryHtml(s)}</div>`:'';
   return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名 *</label><input type="text" class="finput tms-form-control" id="s_name" value="${rv(s,'name')}" placeholder="姓名"></div><div class="tms-form-item"><label class="tms-form-label">手机号</label><input type="text" class="finput tms-form-control" id="s_phone" value="${rv(s,'phone')}" placeholder="请输入手机号"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">负责教练</label>${renderStandardDropdownHtml('s_primaryCoach','负责教练',coachOptions,coachName(rv(s,'primaryCoach')),true)}</div><div class="tms-form-item"><label class="tms-form-label">学员类型</label>${renderStandardDropdownHtml('s_type','学员类型',typeOptions,rv(s,'type','成人'),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('s_source','来源',sourceOptions,studentSourceText(s)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">活动范围</label><input type="text" class="finput tms-form-control" id="s_range" value="${rv(s,'activityRange')}" placeholder="例：朝阳"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">所在校区</label>${renderStandardDropdownHtml('s_campus','校区',campusOptions,rv(s,'campus'),true)}</div></div>${leadSummary}<div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="s_notes">${esc(rv(s,'notes'))}</textarea></div></div>`;
 }
 function openStudentDrawer({titleHtml='',bodyHtml='',actionsHtml='',studentId=''}) {
@@ -531,15 +531,16 @@ function studentDeleteCardHtml(s){
   return studentDrawerCardHtml('删除学员','<div class="tms-field-help">删除前需要二次确认。</div>','student-delete-section',action,{useGrid:false});
 }
 function studentDetailBasicTabHtml(s){
-  const leadHtml=studentDetailBlockHtml('线索摘要',studentLeadSummaryHtml(s),{hideEmpty:true});
+  const leadHtml=studentDetailIsEmptyHtml(studentLeadSummaryHtml(s))?'':studentLeadSummaryHtml(s);
+  const leadAction=studentLeadJumpActionHtml(s);
   const linkedHtml=studentConsumptionInfoHtml(s);
   const editing=studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===s.id;
   const editAction=`<button type="button" class="schedule-detail-action" onclick="openStudentModal('${s.id}')">编辑</button>`;
-  const saveActions=`<button type="button" class="schedule-detail-action muted" onclick="cancelStudentDetailEdit('${s.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button>`;
+  const saveActions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="cancelStudentDetailEdit('${s.id}')">取消</button><button type="button" class="schedule-detail-action primary" id="studentSaveBtn" onclick="saveStudent()">保存</button></div>`;
   const basicCard=editing
     ? renderDetailDrawerFormCard('基本信息',studentBasicInfoFormHtml(s),saveActions)
     : studentDrawerCardHtml('基本信息',studentBasicInfoReadonlyHtml(s),'',editAction);
-  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDeleteCardHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
+  return `<div class="schedule-detail-content">${basicCard}${studentReminderInfoHtml(s)}${studentDeleteCardHtml(s)}${studentDrawerCardHtml('最近课后反馈',studentRecentFeedbackSummaryHtml(s))}${leadHtml?studentDrawerCardHtml('关联线索',leadHtml,'student-lead-section',leadAction,{useGrid:false}):''}${linkedHtml?studentDrawerCardHtml('消费与关联',linkedHtml):''}</div>`;
 }
 function studentDetailOrdersTabHtml(s){
   const canBuyPackage=currentUser?.role==='admin';
@@ -924,10 +925,13 @@ function studentLeadSummaryHtml(s){
     `下次跟进：${lead.nextFollowupAt||'-'}`,
     `转化结果：${leadConversionText(lead)}`
   ];
-  const jumpBtn=lead.id&&typeof jumpToLeadDetail==='function'
-    ?`<div style="margin-top:8px"><button class="btn-sec" onclick="jumpToLeadDetail('${lead.id}')">查看线索</button></div>`
+  return `<div class="tms-readonly-text">${esc(lines.join('；'))}</div>`;
+}
+function studentLeadJumpActionHtml(s){
+  const lead=leadForStudentSummary(s?.id);
+  return lead?.id&&typeof jumpToLeadDetail==='function'
+    ?`<button type="button" class="schedule-detail-action" onclick="jumpToLeadDetail('${lead.id}')">查看线索</button>`
     :'';
-  return `<div class="tms-readonly-text">${esc(lines.join('；'))}</div>${jumpBtn}`;
 }
 function openStudentDetail(id){
   const s=students.find(x=>x.id===id);if(!s)return;

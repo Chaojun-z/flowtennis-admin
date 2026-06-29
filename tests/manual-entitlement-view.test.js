@@ -38,6 +38,24 @@ assert.match(
 );
 
 assert.match(
+  fnBody('studentEntitlementSummaryHtml'),
+  /<div class="student-package-head"><div class="student-package-title">[\s\S]*studentManualEntitlementActionsHtml\(e\)[\s\S]*<\/div><div class="student-package-meta">/,
+  'student package card manual actions should sit on the right side of the package title'
+);
+
+assert.match(
+  fnBody('studentManualEntitlementActionsHtml'),
+  /student-package-action-link[\s\S]*手动消课[\s\S]*student-package-action-link[\s\S]*退回课时[\s\S]*student-package-actions/,
+  'student manual package actions should render as small text links'
+);
+
+assert.doesNotMatch(
+  fnBody('studentManualEntitlementActionsHtml'),
+  /schedule-detail-action primary/,
+  'student manual package actions should not render as large primary buttons'
+);
+
+assert.match(
   source,
   /function openManualEntitlementAdjustModal\(/,
   'manual lesson adjustment modal should exist'
