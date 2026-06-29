@@ -69,6 +69,7 @@ async function main() {
       id: 'court-non-member',
       name: '散客负余额',
       campus: 'shunyi_mapo',
+      owner: '旧对接人乙',
       cachedBalance: -60,
       history: [],
       status: 'active'
@@ -109,6 +110,7 @@ async function main() {
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
   assert.strictEqual(view.items[0].owner, '线索跟进人', '订场用户跟进人应读取线索池 owner 统一事实源');
+  assert.strictEqual(view.items[1].owner, '旧对接人乙', '没有关联线索跟进人时应把订场旧对接人映射为跟进人');
   assert.strictEqual(view.items[0].accountType, '会员账户');
   assert.ok(view.filters.accountTypes.every((value) => ['会员账户', '普通账户'].includes(value)), '账户类型筛选只应返回会员账户/普通账户');
   assert.strictEqual(view.items[0].membershipStatus, '正常');

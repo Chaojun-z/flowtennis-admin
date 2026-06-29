@@ -50,6 +50,8 @@ assert.match(html, /renderPageSizeSelectorHtml\('courtPageSizeValue',courtPageSi
 assert.match(html, /function renderCourtPagerControls\(/, 'court page should use the standard pager renderer');
 assert.match(fnBody('renderCourtPagerControls'), /renderStandardPaginationButtonsHtml\(courtPage,pages,'setCourtPage'\)/, 'court pager should render page buttons through the global standard pager');
 assert.doesNotMatch(fnBody('renderCourtPagerControls'), /jumpCourtPage|跳至/, 'court pager should not keep jump-to-page controls');
+assert.match(fnBody('renderCourtAccountListView'), /renderStandardTooltipText\(cleanNotes,'tms-text-remark tms-text-remark-1 court-note-cell'\)/, 'court read-model notes should clamp to one line like lead notes');
+assert.match(fnBody('renderCourts'), /renderStandardTooltipText\(cleanNotes,'tms-text-remark tms-text-remark-1 court-note-cell'\)/, 'court legacy notes should clamp to one line like lead notes');
 assert.match(html, /function openCourtFinanceModal\(/, 'court page should expose a dedicated finance modal');
 assert.match(html, /记一笔流水/, 'court page should expose the standalone finance entry label');
 assert.doesNotMatch(html, /<th[^>]*>充值\/消费记录<\/th>/, 'court table should not keep a separate finance history column');
@@ -97,6 +99,7 @@ assert.match(html, /function getCourtDuplicateCandidates\(/, 'court save flow sh
 assert.match(html, /发现可能重复的订场用户：/, 'court save flow should warn about possible duplicates');
 assert.match(html, /手机号优先，若无手机号则按姓名\+校区/, 'court duplicate reminder should prioritize phone and then name plus campus');
 assert.match(fnBody('renderCourts'), /searchHit[\s\S]*courtFollowOwnerText\(c\)[\s\S]*c\.depositAttitude[\s\S]*c\.notes/, 'court search should cover standard follow-up fields');
+assert.match(fnBody('courtFollowOwnerText'), /leadForCourtSummary\(court\?\.id\)\?\.owner[\s\S]*court\?\.owner/, 'court follow owner should fall back from lead owner to the old court owner field');
 assert.match(html, /search:\{id:'courtSearch',oninput:'onCourtFilterChange\(\)'/, 'court search should reset to the first page before rendering');
 assert.match(html, /courtPageSize=\d+/, 'court page should keep its own page size state');
 assert.match(html, /function setCourtPageSize\(/, 'court page should expose page size switching');

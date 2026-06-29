@@ -244,9 +244,9 @@ function buildCourtAccountType(account, finance) {
 
 function leadOwnerForCourt(court, leads = []) {
   const courtId = courtText(court?.id);
-  if (!courtId) return '';
+  if (!courtId) return courtText(court?.owner);
   const lead = (leads || []).find((row) => courtText(row?.courtId) === courtId);
-  return courtText(lead?.owner);
+  return courtText(lead?.owner) || courtText(court?.owner);
 }
 
 function buildLegacyItem(court, ctx) {
