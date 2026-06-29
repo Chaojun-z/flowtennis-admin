@@ -33,6 +33,16 @@ assert.match(agentsSource, /tests\/cross-page-metric-consistency\.test\.js/, 'AG
 assert.match(packageJson.scripts.test, /node tests\/cross-page-metric-consistency\.test\.js/, 'npm test should run cross-page metric consistency guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standards-governance\.test\.js/, 'npm test should run data-standard governance guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.test\.js/, 'npm test should run source-level data-standard guard');
+assert.match(
+  metricDocSource,
+  /线索池顶部转化 \| 线索数、普通学员、正式学员、体验路径学员、体验路径成交/,
+  'metric standard should match the current lead-pool top card requirement'
+);
+assert.match(
+  metricDocSource,
+  /\| 体验路径成交 \| TRIAL_PATH_DEAL_CUSTOMERS \| 体验路径成交 \/ 体验路径学员 \|/,
+  'lead-pool top metric table should document trial-path deals instead of the retired pending card'
+);
 
 [
   { key: 'leads', label: '姓名' },

@@ -29,16 +29,18 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/purchases'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [purchases,packages,students,entitlements,entitlementLedger,leads,schedule]=await Promise.all([
+      const [purchases,packages,students,entitlements,entitlementLedger,leads,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
         cappedScan(T_PURCHASES),
         cappedScan(T_PACKAGES),
         cappedScan(T_STUDENTS),
         cappedScan(T_ENTITLEMENTS),
         cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
         T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([])
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([]),
+        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
+        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);
-      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger,leads,schedule},user);
+      const scoped=filterLoadAllForUser({purchases,packages,students,entitlements,entitlementLedger,leads,schedule,membershipBenefitLedger,feedbacks},user);
       const customerLifecycleRows=buildCustomerLifecycleRows({
         leads:scoped.leads,
         students:scoped.students,
@@ -51,15 +53,17 @@ function createCorePageDataRoutes(deps={}){
     if(path==='/page-data/lifecycle-metrics'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
-      const [leads,students,purchases,entitlements,entitlementLedger,schedule]=await Promise.all([
+      const [leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks]=await Promise.all([
         T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
         cappedScan(T_STUDENTS),
         cappedScan(T_PURCHASES),
         cappedScan(T_ENTITLEMENTS),
         cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([])
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([]),
+        T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
+        T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);
-      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule},user);
+      const scoped=filterLoadAllForUser({leads,students,purchases,entitlements,entitlementLedger,schedule,membershipBenefitLedger,feedbacks},user);
       const customerLifecycleRows=buildCustomerLifecycleRows({
         leads:scoped.leads,
         students:scoped.students,

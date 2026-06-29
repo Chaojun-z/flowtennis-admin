@@ -14,8 +14,8 @@ function fnBody(name){
   return source.slice(start, next === -1 ? source.length : next);
 }
 
-assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from profile, purchases, entitlements, packages, and schedules');
-assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the same business-campus sources as top stats');
+assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from the unified student view row');
+assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the unified student campus source for filtering');
 assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)&&studentMatchesListPage\(s\)/, 'student list base rows should use the shared student campus matcher');
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should read the unified standard summary');
@@ -36,7 +36,23 @@ const context = {
   customerLifecycleText: value => String(value || '').trim(),
   customerLifecycleByStudentId: () => ({ studentStage: 'formal' }),
   customerLifecycleStudentStage: () => 'formal',
-  teachingStudentViews: { summary: {} },
+  teachingStudentViews: {
+    summary: {},
+    formalStudents: [
+      { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal' },
+      { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal' },
+      { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal' },
+      { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal' },
+      { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal' }
+    ]
+  },
+  teachingStudentViewRows: () => [
+    { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal' },
+    { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal' },
+    { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal' },
+    { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal' },
+    { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal' }
+  ],
   standardLifecycleMetrics: { metrics: {} },
   FlowTennisBusinessTaxonomy: {
     EXPERIENCE_TYPES: ['私教体验课', '小班体验课'],
@@ -77,8 +93,8 @@ const base = vm.runInContext('getStudentBaseList()', context);
 assert.deepStrictEqual(base.map(s => s.name), ['一七&zzxxyy', '铣大象', 'misha', '黄总', '葡萄'], 'campus-filtered student list should include all five linked students');
 assert.strictEqual(
   vm.runInContext('studentPageStats(getStudentBaseList()).total', context),
-  5,
-  'student top count may fall back to the visible list when the standard summary is unavailable in isolated tests'
+  0,
+  'student top count should preserve the unified zero value instead of falling back to the visible list'
 );
 
 console.log('student campus filter linkage tests passed');

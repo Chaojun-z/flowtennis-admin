@@ -204,6 +204,44 @@ function scheduleLessonUnits(row = {}) {
   return durationUnits || 1;
 }
 
+function dateOnly(value) {
+  return text(value).slice(0, 10);
+}
+
+function dateTimeText(row = {}, fallback = '') {
+  const start = text(row.startTime || fallback || row.relatedDate || row.createdAt || row.scheduleTime);
+  const end = text(row.endTime);
+  const date = start.slice(0, 10);
+  const startTime = start.slice(11, 16);
+  const endTime = end.slice(11, 16);
+  if (!date) return '';
+  if (startTime && endTime) return `${date} ${startTime}-${endTime}`;
+  if (startTime) return `${date} ${startTime}`;
+  return date;
+}
+
+function courseTypeText(row = {}) {
+  return text(row.courseType || row.standardCourseType || row.packageCourseType || row.type || row.courseTypeLevel2 || '课程');
+}
+
+function packageUnitLabel(row = {}) {
+  const unit = text(row.unit || row.balanceUnit || row.lessonUnit);
+  return unit || '节';
+}
+
+function packageStatusText(row = {}, purchase = {}) {
+  const status = text(row.status || row.systemStatus || purchase.status || purchase.systemStatus);
+  if (['voided', 'cancelled', 'canceled', 'deleted', 'inactive', '已作废', '作废'].includes(status)) return '已作废';
+  if ((Number(row.remainingLessons) || 0) <= 0) return '已用完';
+  return '正常';
+}
+
+function packageAmount(row = {}, purchase = {}, fieldNames = []) {
+  const source = { ...purchase, ...row };
+  const hit = fieldNames.find(field => source[field] !== undefined && source[field] !== null && text(source[field]) !== '');
+  return hit ? money(source[hit]) : 0;
+}
+
 function teachingPackageDate(row = {}, purchase = {}) {
   return text(row.purchaseDate || row.businessDate || row.createdAt || purchase.purchaseDate || purchase.createdAt).slice(0, 10);
 }
@@ -225,10 +263,19 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       const purchase = purchasesById.get(text(row.purchaseId)) || {};
       const list = entitlementsByStudent.get(studentId) || [];
       list.push({
+        entitlementId: text(row.id),
+        purchaseId: text(row.purchaseId),
+        packageId: text(row.packageId || row.originalPackageId || purchase.packageId || purchase.originalPackageId),
         packageName: teachingPackageName(row, purchase),
         remainingLessons: Number(row.remainingLessons) || 0,
         totalLessons: Number(row.totalLessons) || 0,
-        purchaseDate: teachingPackageDate(row, purchase)
+        usedLessons: Math.max(0, Number(row.usedLessons) || ((Number(row.totalLessons) || 0) - (Number(row.remainingLessons) || 0))),
+        purchaseDate: teachingPackageDate(row, purchase),
+        statusText: packageStatusText(row, purchase),
+        unit: packageUnitLabel(row),
+        systemAmount: packageAmount(row, purchase, ['systemAmount', 'packagePrice', 'originalAmount', 'amount']),
+        paidAmount: packageAmount(row, purchase, ['finalAmount', 'amountPaid', 'actualAmount', 'paidAmount', 'amount']),
+        ownerCoach: text(row.ownerCoach || purchase.ownerCoach)
       });
       entitlementsByStudent.set(studentId, list);
     });
@@ -240,10 +287,19 @@ function buildTeachingStudentPackageFieldMap(data = {}, { includeTrial = false }
       if (!studentId || !Number.isFinite(totalLessons) || totalLessons <= 0) return;
       const list = entitlementsByStudent.get(studentId) || [];
       list.push({
+        entitlementId: '',
+        purchaseId: text(row.id),
+        packageId: text(row.packageId || row.originalPackageId),
         packageName: teachingPackageName(row, row),
         remainingLessons: Number(row.remainingLessons) || totalLessons,
         totalLessons,
-        purchaseDate: teachingPackageDate(row, row)
+        usedLessons: Math.max(0, totalLessons - (Number(row.remainingLessons) || totalLessons)),
+        purchaseDate: teachingPackageDate(row, row),
+        statusText: packageStatusText(row, row),
+        unit: packageUnitLabel(row),
+        systemAmount: packageAmount(row, row, ['systemAmount', 'packagePrice', 'originalAmount', 'amount']),
+        paidAmount: packageAmount(row, row, ['finalAmount', 'amountPaid', 'actualAmount', 'paidAmount', 'amount']),
+        ownerCoach: text(row.ownerCoach)
       });
       entitlementsByStudent.set(studentId, list);
     });
@@ -293,12 +349,168 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
   return completedByStudent;
 }
 
+function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false } = {}) {
+  const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
+  const schedulesById = new Map((data.schedule || []).map(row => [text(row.id), row]));
+  const rowsByStudent = new Map();
+  const ledgerScheduleIds = new Set();
+  const push = (studentId, row) => {
+    const id = text(studentId);
+    if (!id) return;
+    const rows = rowsByStudent.get(id) || [];
+    rows.push(row);
+    rowsByStudent.set(id, rows);
+  };
+
+  (data.entitlementLedger || [])
+    .filter(row => activeStatus(row) && (Number(row.lessonDelta) || 0) < 0)
+    .forEach(row => {
+      const studentId = text(row.studentId);
+      const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+      const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+      const schedule = schedulesById.get(text(row.scheduleId)) || {};
+      const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
+      if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
+      if (text(row.scheduleId)) ledgerScheduleIds.add(text(row.scheduleId));
+      const sortTime = text(schedule.startTime || row.relatedDate || row.scheduleTime || row.createdAt);
+      push(studentId, {
+        kind: 'ledger',
+        sortTime,
+        time: dateTimeText(schedule, row.relatedDate || row.scheduleTime || row.createdAt),
+        packageName: teachingPackageName(entitlement, purchase),
+        courseType: courseTypeText(schedule.courseType ? schedule : entitlement),
+        campus: text(schedule.campus || row.campus || entitlement.campus),
+        venue: text(schedule.venue || row.venue),
+        coach: text(schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach),
+        lessonDelta: Number(row.lessonDelta) || 0,
+        unit: packageUnitLabel(entitlement),
+        reason: text(row.reason || row.notes)
+      });
+    });
+
+  (data.schedule || [])
+    .filter(row => activeStatus(row) && !courseRowIsCompanion(row))
+    .filter(row => ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus)))
+    .filter(row => !ledgerScheduleIds.has(text(row.id)) && courseRowIsTrial(row) === includeTrial)
+    .forEach(row => {
+      const sortTime = text(row.startTime || row.endTime || row.createdAt);
+      parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
+        push(studentId, {
+          kind: 'schedule',
+          sortTime,
+          time: dateTimeText(row),
+          packageName: '',
+          courseType: courseTypeText(row),
+          className: text(row.className || row.courseName),
+          campus: text(row.campus || row.campusName),
+          venue: text(row.venue || row.court),
+          coach: text(row.coach || row.coachName),
+          lessonDelta: -Math.abs(scheduleLessonUnits(row)),
+          unit: '节',
+          reason: text(row.notes)
+        });
+      });
+    });
+
+  rowsByStudent.forEach((rows, studentId) => {
+    rowsByStudent.set(studentId, rows.sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime))));
+  });
+  return rowsByStudent;
+}
+
+function buildTeachingStudentBenefitDetailMap(data = {}) {
+  const byStudent = new Map();
+  const push = (studentId, row) => {
+    const id = text(studentId);
+    if (!id) return;
+    const rows = byStudent.get(id) || [];
+    rows.push(row);
+    byStudent.set(id, rows);
+  };
+  (data.membershipBenefitLedger || [])
+    .filter(activeStatus)
+    .forEach(row => {
+      const delta = Number(row.delta) || 0;
+      if (!delta) return;
+      push(row.studentId, {
+        benefitCode: text(row.benefitCode),
+        label: text(row.benefitLabel || row.benefitCode || '权益'),
+        unit: text(row.unit || '次'),
+        delta,
+        time: dateOnly(row.relatedDate || row.createdAt) || '--',
+        reason: text(row.reason || row.notes) || '--',
+        operator: text(row.operator || row.createdBy || row.updatedBy) || '--',
+        sortTime: text(row.relatedDate || row.createdAt)
+      });
+    });
+
+  const result = new Map();
+  byStudent.forEach((rows, studentId) => {
+    const summary = new Map();
+    rows.forEach(row => {
+      const item = summary.get(row.benefitCode) || { benefitCode: row.benefitCode, label: row.label, unit: row.unit, total: 0, used: 0, remaining: 0, lastAt: '' };
+      if (row.delta > 0) item.total += row.delta;
+      if (row.delta < 0) item.used += Math.abs(row.delta);
+      if (row.sortTime && row.sortTime >= text(item.lastAt)) item.lastAt = row.time;
+      summary.set(row.benefitCode, item);
+    });
+    const summaryRows = [...summary.values()]
+      .map(row => ({ ...row, remaining: Math.max(0, row.total - row.used) }))
+      .filter(row => row.total > 0 || row.remaining > 0);
+    const ledgerRows = rows
+      .sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime)))
+      .map(row => ({
+        delta: row.delta,
+        time: row.time,
+        label: row.label,
+        count: `${lessonQty(Math.abs(row.delta))}${row.unit}`,
+        reason: row.reason,
+        operator: row.operator
+      }));
+    result.set(studentId, {
+      detailBenefitRows: summaryRows,
+      detailBenefitGrantRows: ledgerRows.filter(row => row.delta > 0).map(({ delta, ...row }) => row),
+      detailBenefitConsumeRows: ledgerRows.filter(row => row.delta < 0).map(({ delta, ...row }) => row)
+    });
+  });
+  return result;
+}
+
+function buildTeachingStudentRecentFeedbackMap(data = {}) {
+  const byStudent = new Map();
+  const push = (studentId, row) => {
+    const id = text(studentId);
+    if (!id) return;
+    const rows = byStudent.get(id) || [];
+    rows.push(row);
+    byStudent.set(id, rows);
+  };
+  (data.feedbacks || []).forEach(row => {
+    const ids = [text(row.studentId), ...parseArr(row.studentIds).map(text)].filter(Boolean);
+    ids.forEach(studentId => push(studentId, {
+      date: dateOnly(row.startTime || row.createdAt),
+      summary: text(row.practicedToday || row.knowledgePoint || row.nextTraining || '已填写反馈'),
+      sortTime: text(row.startTime || row.createdAt)
+    }));
+  });
+  byStudent.forEach((rows, studentId) => {
+    byStudent.set(studentId, rows.sort((a, b) => text(b.sortTime).localeCompare(text(a.sortTime))).slice(0, 2));
+  });
+  return byStudent;
+}
+
 function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
   const completedByStudent = buildTeachingStudentCompletedLessonMap(data);
+  const lessonDetailMap = buildTeachingStudentLessonDetailMap(data, options);
+  const benefitDetailMap = buildTeachingStudentBenefitDetailMap(data);
+  const feedbackMap = buildTeachingStudentRecentFeedbackMap(data);
   const details = new Map();
-  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys()])].forEach(studentId => {
+  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const packageFields = packageFieldMap.get(studentId) || {};
+    const lessonRows = lessonDetailMap.get(studentId) || [];
+    const benefitFields = benefitDetailMap.get(studentId) || {};
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -307,7 +519,16 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       packageBalanceText: '-',
       packageBalancePercent: 0,
       packagePurchaseDate: '',
+      detailPackageOrderRows: [],
+      detailLessonRecordRows: lessonRows,
+      detailRecentLessonDate: lessonRows[0]?.time ? lessonRows[0].time.slice(0, 10) : '',
+      detailBenefitRows: [],
+      detailBenefitGrantRows: [],
+      detailBenefitConsumeRows: [],
+      detailRecentFeedbackRows: feedbackMap.get(studentId) || [],
       ...packageFields,
+      detailPackageOrderRows: Array.isArray(packageFields.packageListRows) ? packageFields.packageListRows : [],
+      ...benefitFields,
       completedLessons: round(completedByStudent.get(studentId) || 0, 1)
     });
   });

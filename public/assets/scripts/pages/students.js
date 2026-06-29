@@ -56,6 +56,13 @@ function studentUnifiedViewRows(){
     };
   }).filter(row=>String(row.id||'').trim());
 }
+function studentUnifiedRecordForId(id){
+  const sid=String(id||'');
+  if(!sid)return null;
+  return studentUnifiedViewRows().find(row=>String(row.id||row.studentId||'')===sid)
+    || students.find(row=>String(row.id||'')===sid)
+    || null;
+}
 function onStudentFilterChange(){stuPage=standardListFirstPage();renderStudents();}
 function studentSourceOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadSources');
@@ -100,6 +107,7 @@ function renderStudentToolbarFilters(){
   });
 }
 function studentLastLessonDate(stu){
+  if(stu?.detailRecentLessonDate)return String(stu.detailRecentLessonDate||'').slice(0,10);
   const row=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime&&effectiveScheduleStatus(x)==='已结束').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
   return row?.startTime?.slice(0,10)||'';
 }
@@ -322,23 +330,7 @@ function jumpStudentPage(value){
   renderStudents();
 }
 function studentCampusValuesForList(stu){
-  const sid=String(stu?.id||'');
-  const values=[stu?.campus];
-  const mode=studentListViewMode();
-  const includePackageRow=row=>mode==='trial'?studentPackageRecordIsTrial(row):!studentPackageRecordIsTrial(row);
-  const entitlementRows=entitlements.filter(e=>String(e.studentId||'')===sid&&includePackageRow(e));
-  const entitlementPurchaseIds=new Set(entitlementRows.map(e=>String(e.purchaseId||'')).filter(Boolean));
-  const purchaseRows=purchases.filter(p=>(String(p.studentId||'')===sid||entitlementPurchaseIds.has(String(p.id||'')))&&includePackageRow(p));
-  const packageIds=new Set([
-    ...entitlementRows.flatMap(e=>[e.packageId,e.originalPackageId]),
-    ...purchaseRows.flatMap(p=>[p.packageId,p.originalPackageId])
-  ].map(v=>String(v||'')).filter(Boolean));
-  const packageRows=packages.filter(p=>packageIds.has(String(p.id||'')));
-  const scheduleRows=schedules.filter(s=>scheduleHasStudent(s,stu)&&(mode==='trial'?scheduleCourseType(s)==='体验课':scheduleCourseType(s)!=='体验课'));
-  entitlementRows.forEach(e=>values.push(...parseArr(e.campusIds),e.campus,e.campusId,e.campusName));
-  purchaseRows.forEach(p=>values.push(...parseArr(p.campusIds),p.campusId,p.campus,p.campusName));
-  packageRows.forEach(p=>values.push(...parseArr(p.campusIds),p.campusId,p.campus,p.campusName));
-  scheduleRows.forEach(s=>values.push(s.campus,s.campusId,s.campusName));
+  const values=[stu?.campus,stu?.campusId,stu?.campusName,...parseArr(stu?.campusIds)];
   return [...new Set(values.map(v=>String(v||'').trim()).filter(Boolean))];
 }
 function studentMatchesCampusForList(stu){
@@ -392,41 +384,6 @@ function studentPageTrialConvertedByPurchase(schedule){
 function studentRoundMoney(value){
   return Math.round((Number(value)||0)*100)/100;
 }
-function studentFinanceRowDocumentId(row,prefix){
-  const match=String(row?.sourceDocument||'').match(new RegExp(`^${prefix}\\s+(.+)$`));
-  return match?String(match[1]||'').trim():'';
-}
-function studentFinanceRowsForBase(base=[]){
-  const rows=typeof financeNormalizedRows==='function'?financeNormalizedRows():[];
-  if(!rows.length)return [];
-  const studentIds=new Set((base||[]).map(s=>String(s.id||'')).filter(Boolean));
-  const studentNames=new Set((base||[]).map(s=>String(s.name||'').trim()).filter(Boolean));
-  return rows.filter(row=>{
-    const rowStudentId=String(row.studentId||row.customerId||'').trim();
-    if(rowStudentId&&studentIds.has(rowStudentId))return true;
-    const customer=String(row.customer||row.studentName||row.customerName||'').trim();
-    if(customer&&studentNames.has(customer))return true;
-    const purchaseId=studentFinanceRowDocumentId(row,'购买记录');
-    if(purchaseId){
-      const purchase=purchases.find(p=>String(p.id||'')===purchaseId);
-      if(purchase&&(studentIds.has(String(purchase.studentId||''))||studentNames.has(String(purchase.studentName||'').trim())))return true;
-    }
-    return false;
-  });
-}
-function studentFinanceRowIsCourse(row={}){
-  return [row.businessType,row.displayBusinessType,row.businessTypeLevel1].some(v=>String(v||'').trim()==='课程');
-}
-function studentFinanceRowIsReceipt(row={}){
-  return [row.action,row.transactionType].some(v=>String(v||'').trim()==='收款')&&studentRoundMoney(row.cashDelta)>0;
-}
-function studentFinanceRowIsTrial(row={}){
-  const text=[row.packageName,row.incomeType,row.sourceProject,row.debitTarget,row.notes].map(v=>String(v||'')).join(' ');
-  return /体验/.test(text);
-}
-function studentFinanceSum(rows,field){
-  return studentRoundMoney((rows||[]).reduce((sum,row)=>sum+(Number(row?.[field])||0),0));
-}
 function studentStandardMetricValue(key){
   const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{metrics:{}};
   return Number(standard.metrics?.[key]?.value)||0;
@@ -454,19 +411,12 @@ function studentStandardSummaryForMode(){
     packageBalance:Number(summary.packageBalance)||0
   };
 }
-function studentStatsCampusNameForPurchase(purchase,entitlement={}){
-  const student=students.find(s=>String(s.id||'')===String(purchase?.studentId||entitlement?.studentId||''));
-  return cn(parseArr(entitlement?.campusIds)[0]||entitlement?.campus||purchase?.campus||student?.campus||'');
-}
-function studentStatsMatchesPackageCampus(purchase,entitlement={}){
-  if(!campus||campus==='all')return true;
-  return sameCampusValue(studentStatsCampusNameForPurchase(purchase,entitlement),cn(campus));
-}
 function studentPageStats(base){
   const standardSummary=studentStandardSummaryForMode();
+  const unifiedTotal=Number(standardSummary.total);
   return {
     ...standardSummary,
-    total:studentListViewMode()==='trial'?(standardSummary.total||base.length):(standardSummary.total||base.length),
+    total:Number.isFinite(unifiedTotal)?unifiedTotal:base.length,
     trialBookedOnlyCount:0,
     trialAttendedPendingCount:0
   };
@@ -611,24 +561,12 @@ function studentBenefitListTableHtml(s){
   });
 }
 function studentBenefitLastActionDate(stu,benefitCode){
-  const row=membershipBenefitLedger
-    .filter(item=>String(item?.studentId||'')===String(stu?.id||'')&&item?.benefitCode===benefitCode&&item?.action!=='grant')
-    .sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')))[0];
-  return String(row?.relatedDate||row?.createdAt||'').slice(0,10);
+  const row=studentBenefitRows(stu).find(item=>item.benefitCode===benefitCode);
+  return row?.lastAt||'';
 }
 function studentBenefitLedgerRows(stu,mode){
-  const sign=mode==='grant'?1:-1;
-  return membershipBenefitLedger
-    .filter(row=>String(row?.studentId||'')===String(stu?.id||'')&&row?.action!=='grant')
-    .filter(row=>sign>0?(Number(row.delta)||0)>0:(Number(row.delta)||0)<0)
-    .sort((a,b)=>String(b.relatedDate||b.createdAt||'').localeCompare(String(a.relatedDate||a.createdAt||'')))
-    .map(row=>({
-      time:String(row.relatedDate||row.createdAt||'').slice(0,16).replace('T',' ')||'--',
-      label:row.benefitLabel||studentBenefitTypeMeta(row.benefitCode)?.label||row.benefitCode||'--',
-      count:`${Math.abs(Number(row.delta)||0)}${row.unit||studentBenefitTypeMeta(row.benefitCode)?.unit||'次'}`,
-      reason:row.reason||'--',
-      operator:row.operator||row.createdBy||row.updatedBy||'--'
-    }));
+  const rows=mode==='grant'?stu?.detailBenefitGrantRows:stu?.detailBenefitConsumeRows;
+  return Array.isArray(rows)?rows:[];
 }
 function studentBenefitGrantTableHtml(s){
   return renderDetailDrawerTable({
@@ -683,14 +621,7 @@ function studentBenefitTypeMeta(benefitCode){
   return STUDENT_BENEFIT_TYPES.find(item=>item.benefitCode===benefitCode)||null;
 }
 function studentBenefitRows(stu){
-  const studentId=String(stu?.id||'');
-  if(!studentId)return [];
-  return STUDENT_BENEFIT_TYPES.map(type=>{
-    const rows=membershipBenefitLedger.filter(row=>String(row?.studentId||'')===studentId&&row?.benefitCode===type.benefitCode&&row?.action!=='grant');
-    const total=rows.filter(row=>(parseInt(row.delta)||0)>0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0);
-    const used=Math.abs(rows.filter(row=>(parseInt(row.delta)||0)<0).reduce((sum,row)=>sum+(parseInt(row.delta)||0),0));
-    return {...type,total,used,remaining:Math.max(0,total-used)};
-  }).filter(row=>row.total>0||row.remaining>0);
+  return Array.isArray(stu?.detailBenefitRows)?stu.detailBenefitRows:[];
 }
 function studentBenefitSummaryHtml(stu){
   const rows=studentBenefitRows(stu);
@@ -698,7 +629,7 @@ function studentBenefitSummaryHtml(stu){
   return rows.map(row=>`<div class="membership-rights-row"><div style="font-size:13px;color:#332A24;font-weight:600;white-space:nowrap">${esc(row.label)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">共 ${row.total}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">已消耗 ${row.used}${esc(row.unit)}</div><div style="font-size:13px;color:#5C4D43;text-align:right">剩余 ${row.remaining}${esc(row.unit)}</div><div style="font-size:12px;color:#8C7B6E;text-align:right;white-space:nowrap">学员权益</div></div>`).join('');
 }
 function openStudentBenefitPickerModal(studentId,mode){
-  const stu=students.find(x=>x.id===studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
+  const stu=studentUnifiedRecordForId(studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
   const currentRows=studentBenefitRows(stu);
   const rows=mode==='consume'?currentRows:STUDENT_BENEFIT_TYPES.map(type=>{const current=currentRows.find(row=>row.benefitCode===type.benefitCode);return {...type,total:current?.total||0,remaining:current?.remaining||0};});
   if(mode==='consume'&&!rows.length){toast('该学员当前没有可消耗权益','warn');return;}
@@ -707,7 +638,7 @@ function openStudentBenefitPickerModal(studentId,mode){
   openStandardModal({title:`${actionText}权益`,bodyHtml:body,actionsHtml:`<button class="tms-btn tms-btn-default" onclick="openStudentDetail('${studentId}')">返回学员详情</button>`,extraClass:'modal-wide'});
 }
 function openStudentBenefitActionModal(studentId,benefitCode,mode){
-  const stu=students.find(x=>x.id===studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
+  const stu=studentUnifiedRecordForId(studentId);if(!stu){toast('学员数据未加载，请刷新后重试','warn');return;}
   const meta=studentBenefitTypeMeta(benefitCode);if(!meta){toast('学员权益仅支持订场和发球机','warn');return;}
   const row=studentBenefitRows(stu).find(item=>item.benefitCode===benefitCode)||{remaining:0,total:0,unit:meta.unit};
   const actionText=mode==='consume'?'消耗':'赠送';
@@ -717,7 +648,7 @@ function openStudentBenefitActionModal(studentId,benefitCode,mode){
   document.getElementById('overlay').classList.add('open');
 }
 async function saveStudentBenefit(studentId,mode,benefitCode){
-  const stu=students.find(x=>x.id===studentId);if(!stu)return;
+  const stu=studentUnifiedRecordForId(studentId);if(!stu)return;
   const meta=studentBenefitTypeMeta(benefitCode);if(!meta)return;
   const count=Math.abs(parseInt(document.getElementById('sb_count')?.value)||1);
   const data={studentId,studentName:stu.name||'',benefitCode:meta.benefitCode,benefitLabel:meta.label,unit:meta.unit,delta:mode==='consume'?-count:count,action:mode,reason:document.getElementById('sb_reason')?.value.trim()||'',relatedDate:today()};
@@ -727,15 +658,17 @@ async function saveStudentBenefit(studentId,mode,benefitCode){
     rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     successText:'学员权益已保存',
-    refresh:()=>{
-    openStudentDetail(studentId);
+    refresh:async()=>{
+      await ensureDatasetsByName(['lifecycleMetricsPage'],{force:true});
+      renderStudents();
+      openStudentDetail(studentId);
     }
   });
 }
 function studentRecentFeedbackSummaryHtml(stu){
-  const recentFeedbacks=studentRecentFeedbacks(stu,2);
+  const recentFeedbacks=Array.isArray(stu?.detailRecentFeedbackRows)?stu.detailRecentFeedbackRows:studentRecentFeedbacks(stu,2);
   if(!recentFeedbacks.length)return '';
-  return recentFeedbacks.map(f=>`<div class="student-feedback-card"><strong>${esc(String(f.startTime||f.createdAt||'').slice(0,10)||'-')}</strong><span>${esc(f.practicedToday||f.knowledgePoint||f.nextTraining||'已填写反馈')}</span></div>`).join('');
+  return recentFeedbacks.map(f=>`<div class="student-feedback-card"><strong>${esc(String(f.date||f.startTime||f.createdAt||'').slice(0,10)||'-')}</strong><span>${esc(f.summary||f.practicedToday||f.knowledgePoint||f.nextTraining||'已填写反馈')}</span></div>`).join('');
 }
 function studentLessonRecordMetaIcon(kind){
   if(kind==='time')return '<svg class="student-lesson-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="4"/><path d="M3 10h18"/></svg>';
@@ -815,6 +748,10 @@ function studentLessonRecordHtml(stu){
   const limit=studentLessonRecordExpanded(stu)?rows.length:10;
   const expanded=studentLessonRecordExpanded(stu);
   const items=rows.slice(0,limit).map(item=>{
+    if(item.kind){
+      const title=[item.time,item.courseType,item.className||item.packageName].filter(Boolean).join(' · ');
+      return `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(title||'上课记录')}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',item.time)}${studentLessonRecordMetaItem('site',[cn(item.campus)||'-',item.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.coach||'-')}</div></div></div>`;
+    }
     const line=item.type==='ledger'
       ? studentLessonRecordPackageHtml(item.row,item.ent)
       : `<div class="student-lesson-row"><div class="student-lesson-main"><div class="student-lesson-title">${esc(`[${studentLessonRecordTimeText(item.schedule)}] · ${scheduleCourseTypeLabel(item.schedule)} · ${scheduleClassName(item.schedule)}`)}</div><div class="student-lesson-meta">${studentLessonRecordMetaItem('time',studentLessonRecordTimeText(item.schedule))}${studentLessonRecordMetaItem('site',[cn(item.schedule.campus)||'-',item.schedule.venue||''].filter(Boolean).join(' '))}${studentLessonRecordMetaItem('coach',item.schedule.coach||'-')}</div></div></div>`;
@@ -824,6 +761,7 @@ function studentLessonRecordHtml(stu){
   return `${renderDetailDrawerTimeline(items,{emptyText:'暂无上课记录'})}${more}`;
 }
 function studentLessonRecordRows(stu){
+  if(Array.isArray(stu?.detailLessonRecordRows))return stu.detailLessonRecordRows;
   const entMap=new Map(entitlements.filter(e=>e.studentId===stu?.id).map(e=>[e.id,e]));
   const map=new Map();
   const ledgerItems=studentConcreteLessonLedgerItems(stu);
@@ -982,7 +920,7 @@ function studentLeadJumpActionHtml(s){
     :'';
 }
 function openStudentDetail(id){
-  const s=students.find(x=>x.id===id);if(!s)return;
+  const s=studentUnifiedRecordForId(id);if(!s)return;
   if(!(studentDetailEditingSection==='basic'&&studentDetailEditingStudentId===id))editId=null;
   const body=studentDetailActiveTab==='basic'?studentDetailBasicTabHtml(s):studentDetailActiveTab==='orders'?studentDetailOrdersTabHtml(s):studentDetailBenefitsTabHtml(s);
   openStudentDrawer({titleHtml:`${studentDetailHeroHtml(s)}${studentDetailTabsHtml(studentDetailActiveTab)}`,bodyHtml:body,actionsHtml:'',studentId:s.id});
@@ -1067,7 +1005,7 @@ async function unbindStudentReminder(studentId){
   }catch(e){toast('解绑失败：'+e.message,'error');}
 }
 function openStudentModal(id='',mode='edit'){
-  const s=id?students.find(x=>x.id===id):null;
+  const s=id?studentUnifiedRecordForId(id):null;
   if(id&&s){
     editId=id;
     studentDetailActiveTab='basic';
@@ -1104,7 +1042,8 @@ async function saveStudent(){
     else{const r=await apiCall('POST','/students',data);students.unshift(r);}
   },{
     successText:savedEditId?'修改成功 ✓':'添加成功 ✓',
-    refresh:()=>{
+    refresh:async()=>{
+      await ensureDatasetsByName(['lifecycleMetricsPage'],{force:true});
       renderStudents();renderSchedule();renderPurchases();renderEntitlements();renderMySchedule();
       if(savedEditId){editId=null;studentDetailEditingSection='';studentDetailEditingStudentId='';openStudentDetail(savedEditId);}
       else closeModal();

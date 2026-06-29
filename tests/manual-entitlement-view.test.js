@@ -33,13 +33,13 @@ assert.match(
 
 assert.match(
   fnBody('studentEntitlementSummaryHtml'),
-  /studentManualEntitlementActionsHtml\(e\)/,
+  /studentManualEntitlementActionsHtml\(entitlement\)/,
   'student package cards should render manual consume and return actions per entitlement'
 );
 
 assert.match(
   fnBody('studentEntitlementSummaryHtml'),
-  /<div class="student-package-head"><div class="student-package-title">[\s\S]*studentManualEntitlementActionsHtml\(e\)[\s\S]*<\/div><div class="student-package-meta">/,
+  /<div class="student-package-head"><div class="student-package-title">[\s\S]*studentManualEntitlementActionsHtml\(entitlement\)[\s\S]*<\/div><div class="student-package-meta">/,
   'student package card manual actions should sit on the right side of the package title'
 );
 
