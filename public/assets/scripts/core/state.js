@@ -173,21 +173,12 @@ function resolveClientRuntimeStage(){
 const CLIENT_RUNTIME_STAGE=resolveClientRuntimeStage();
 const CLIENT_DATA_CACHE_SCOPE=CLIENT_RUNTIME_STAGE+'_'+String(window.location.hostname||'').trim().toLowerCase();
 const COURT_READ_MODEL_STORAGE_KEY='ft_court_read_model_mode';
-const COURT_READ_MODEL_FORCE_LEGACY_KEY='ft_court_read_model_force_legacy';
 const COURT_READ_MODEL_COMPARE_STORAGE_KEY='ft_court_read_model_compare';
 const COURT_GUARD_QUERY=new URLSearchParams(window.location.search);
 function isNonProductionRuntime(){
   return CLIENT_RUNTIME_STAGE!=='production';
 }
-function isCourtReadModelRollbackForced(){
-  return COURT_GUARD_QUERY.get('courtRollback')==='force-legacy'||localStorage.getItem(COURT_READ_MODEL_FORCE_LEGACY_KEY)==='1';
-}
 function shouldUseCourtReadModelByDefault(){
-  if(isCourtReadModelRollbackForced())return false;
-  const queryMode=String(COURT_GUARD_QUERY.get('courtView')||'').trim().toLowerCase();
-  if(queryMode==='legacy')return false;
-  if(queryMode==='read-model')return true;
-  if(COURT_GUARD_QUERY.get('courtCompare')==='1')return true;
   return true;
 }
 function isCourtReadModelPreviewEnabled(){
@@ -199,16 +190,9 @@ function shouldLoadCourtReadModelCompare(){
 }
 window.enableCourtReadModelPreview=function(){
   localStorage.setItem(COURT_READ_MODEL_STORAGE_KEY,'read-model');
-  localStorage.removeItem(COURT_READ_MODEL_FORCE_LEGACY_KEY);
 };
 window.disableCourtReadModelPreview=function(){
   localStorage.removeItem(COURT_READ_MODEL_STORAGE_KEY);
-};
-window.forceCourtReadModelRollback=function(){
-  localStorage.setItem(COURT_READ_MODEL_FORCE_LEGACY_KEY,'1');
-};
-window.clearCourtReadModelRollback=function(){
-  localStorage.removeItem(COURT_READ_MODEL_FORCE_LEGACY_KEY);
 };
 function shouldBypassDatasetCache(name){
   if(DATASETS_EXCLUDED_FROM_CACHE.has(name))return true;
@@ -500,7 +484,7 @@ function initialBackgroundDatasetsForPage(pg){
   return backgroundDatasetsForPage(pg).flatMap(name=>fallback[name]||[name]);
 }
 function missingInitialDatasetsForPage(pg){
-  if(pg==='courts'&&shouldUseCourtReadModelByDefault()){
+  if((pg==='courts'||pg==='memberships')&&shouldUseCourtReadModelByDefault()){
     return courtAccountListViewData?[]:['courtAccountListViewPage'];
   }
   const requiredMissing=missingRequiredDatasetsForPage(pg);
@@ -824,34 +808,26 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
   try{
     await ensurePageDatasets(pg,{force});
     if(pg==='courts'||pg==='memberships'){
-      try{
-        const needsCompare=shouldLoadCourtReadModelCompare();
-        await loadCourtReadModelGuardData({force});
-        if(force){
-          loadCourtReadModelCompareData({force:true}).then(()=>{
-            if(requestVersion!==dataRequestVersion)return;
-            if(currentPage!=='courts')return;
-            renderCourts();
-          }).catch(e=>{
-            if(requestVersion!==dataRequestVersion)return;
-            console.warn('court read model compare refresh failed',e);
-          });
-        }else if(needsCompare&&window.__courtAccountListViewCompare==null){
-          loadCourtReadModelCompareData({force:false}).then(()=>{
-            if(requestVersion!==dataRequestVersion)return;
-            if(currentPage!=='courts')return;
-            renderCourts();
-          }).catch(e=>{
-            if(requestVersion!==dataRequestVersion)return;
-            console.warn('court read model compare load failed',e);
-          });
-        }
-      }catch(e){
-        courtAccountListViewData=null;
-        courtAccountListViewCompareData=null;
-        window.__courtAccountListViewData=null;
-        window.__courtAccountListViewCompare=null;
-        console.warn('court read model guard load failed',e);
+      const needsCompare=shouldLoadCourtReadModelCompare();
+      await loadCourtReadModelGuardData({force});
+      if(force){
+        loadCourtReadModelCompareData({force:true}).then(()=>{
+          if(requestVersion!==dataRequestVersion)return;
+          if(currentPage!=='courts')return;
+          renderCourts();
+        }).catch(e=>{
+          if(requestVersion!==dataRequestVersion)return;
+          console.warn('court read model compare refresh failed',e);
+        });
+      }else if(needsCompare&&window.__courtAccountListViewCompare==null){
+        loadCourtReadModelCompareData({force:false}).then(()=>{
+          if(requestVersion!==dataRequestVersion)return;
+          if(currentPage!=='courts')return;
+          renderCourts();
+        }).catch(e=>{
+          if(requestVersion!==dataRequestVersion)return;
+          console.warn('court read model compare load failed',e);
+        });
       }
     }
     if(requestVersion!==dataRequestVersion)return;
@@ -867,6 +843,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
     if(pg==='leads')renderLeadTableError(String(e.message||e));
     if(pg==='schedule')renderScheduleTableError(String(e.message||e));
     if(pg==='courts')renderCourtTableError(String(e.message||e));
+    if(pg==='memberships')renderBlockLoading('membershipTabBody','会员统一读模型加载失败，请稍后重试');
     toast('加载失败：'+e.message,'error');
   }finally{
     if(!quiet&&loading)loading.classList.remove('show');

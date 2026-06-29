@@ -52,6 +52,10 @@ context.dateMs = (value) => {
   return Number.isNaN(date.getTime()) ? NaN : date.getTime();
 };
 context.today = () => '2026-06-02';
+context.isStoredValuePayMethod = (value) => {
+  const method = String(value || '').trim();
+  return method === '储值扣款' || method === '储值卡' || method.includes('储值');
+};
 vm.runInContext(snippet, context);
 
 assert.strictEqual(typeof context.applyCourtDateRangeFilter, 'function', 'applyCourtDateRangeFilter should be defined');

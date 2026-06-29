@@ -26,8 +26,8 @@ assert.match(
 );
 assert.match(
   stateSource,
-  /if\(pg==='courts'&&shouldUseCourtReadModelByDefault\(\)\)\{\s*return courtAccountListViewData\?\[\]:\['courtAccountListViewPage'\];\s*\}/,
-  '隐藏模式下订场用户页首屏门禁应改为读模型数据，不应继续等旧 courts 聚合数据'
+  /if\(\(pg==='courts'\|\|pg==='memberships'\)&&shouldUseCourtReadModelByDefault\(\)\)\{\s*return courtAccountListViewData\?\[\]:\['courtAccountListViewPage'\];\s*\}/,
+  '订场用户页和会员管理页首屏门禁应改为统一读模型数据，不应继续等旧 courts/memberships 聚合数据'
 );
 
 console.log('court account hidden mode performance guard tests passed');

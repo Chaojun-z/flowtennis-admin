@@ -12,7 +12,7 @@ function createResidualPageDataRoutes(deps={}){
   }=deps;
   const {
     T_STUDENTS,T_PURCHASES,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_COURTS,
-    T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_USERS,
+    T_MEMBERSHIP_ORDERS,T_MEMBERSHIP_ACCOUNTS,T_MEMBERSHIP_PLANS,T_MEMBERSHIP_BENEFIT_LEDGER,T_MEMBERSHIP_ACCOUNT_EVENTS,T_USERS,
     T_LEADS,T_LEAD_FOLLOWUPS,T_COACHES,T_SCHEDULE
   }=tables;
   const loadCourtAccountListView=createCourtAccountListViewLoader({
@@ -25,7 +25,9 @@ function createResidualPageDataRoutes(deps={}){
       leads:T_LEADS,
       membershipAccounts:T_MEMBERSHIP_ACCOUNTS,
       membershipOrders:T_MEMBERSHIP_ORDERS,
-      membershipPlans:T_MEMBERSHIP_PLANS
+      membershipPlans:T_MEMBERSHIP_PLANS,
+      membershipBenefitLedger:T_MEMBERSHIP_BENEFIT_LEDGER,
+      membershipAccountEvents:T_MEMBERSHIP_ACCOUNT_EVENTS
     }
   });
   const loadCourtAccountListViewCompare=createCourtAccountListCompareLoader({

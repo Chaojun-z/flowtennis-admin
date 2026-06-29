@@ -244,9 +244,190 @@ function buildCourtAccountType(account, finance) {
 
 function leadOwnerForCourt(court, leads = []) {
   const courtId = courtText(court?.id);
-  if (!courtId) return courtText(court?.owner);
+  if (!courtId) return '';
   const lead = (leads || []).find((row) => courtText(row?.courtId) === courtId);
-  return courtText(lead?.owner) || courtText(court?.owner);
+  return courtText(lead?.owner);
+}
+
+function isInactiveMembershipStatus(value) {
+  return ['voided', 'refunded', 'cancelled', 'canceled', 'deleted', 'cleared', 'inactive'].includes(String(value || '').toLowerCase());
+}
+
+function validMembershipOrders(account, membershipOrders = []) {
+  return validMembershipOrdersForAccount(account, membershipOrders)
+    .filter((row) => money(row?.rechargeAmount ?? row?.finalAmount ?? row?.amount) > 0)
+    .sort((a, b) => String(b?.purchaseDate || b?.createdAt || '').localeCompare(String(a?.purchaseDate || a?.createdAt || '')));
+}
+
+function parseBenefitSnapshot(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function benefitTemplateItems(order = {}, membershipPlans = []) {
+  const plan = membershipPlans.find((row) => row?.id === order?.membershipPlanId) || {};
+  const snapshot = parseBenefitSnapshot(order?.benefitSnapshot || order?.benefitTemplateSnapshot || order?.planBenefitTemplateSnapshot || plan?.benefitTemplateSnapshot || plan?.benefitTemplate);
+  return Object.entries(snapshot)
+    .filter(([code]) => code !== 'customBenefits')
+    .map(([code, value]) => ({
+      code,
+      label: value?.label || order?.benefitLabel || code,
+      unit: value?.unit || '次',
+      total: parseInt(value?.count ?? value?.total ?? value, 10) || 0,
+      designatedCoachIds: parseArr(value?.designatedCoachIds)
+    }))
+    .filter((item) => item.total > 0);
+}
+
+function benefitRowsForAccount(account, membershipOrders = [], membershipPlans = [], membershipBenefitLedger = []) {
+  if (!account || ['voided', 'cleared'].includes(account.status)) return [];
+  const rows = {};
+  validMembershipOrders(account, membershipOrders).forEach((order) => {
+    benefitTemplateItems(order, membershipPlans).forEach((item) => {
+      const ledgerRows = (membershipBenefitLedger || []).filter((row) => row?.membershipOrderRef === order.id && row?.benefitCode === item.code && row?.action !== 'grant');
+      const positiveDelta = ledgerRows.filter((row) => (parseInt(row?.delta, 10) || 0) > 0).reduce((sum, row) => sum + (parseInt(row?.delta, 10) || 0), 0);
+      const negativeDelta = ledgerRows.filter((row) => (parseInt(row?.delta, 10) || 0) < 0).reduce((sum, row) => sum + (parseInt(row?.delta, 10) || 0), 0);
+      const total = item.total + positiveDelta;
+      const benefitValidUntil = order?.benefitValidUntil || '';
+      const expired = !!(benefitValidUntil && benefitValidUntil < new Date().toISOString().slice(0, 10));
+      const remaining = expired ? 0 : Math.max(0, total + negativeDelta);
+      if (!rows[item.code]) rows[item.code] = { code: item.code, label: item.label, unit: item.unit, total: 0, remaining: 0, batches: [], designatedCoachIds: [] };
+      rows[item.code].total += total;
+      rows[item.code].remaining += remaining;
+      rows[item.code].batches.push({ membershipOrderRef: order.id, total, remaining, benefitValidUntil, expired });
+      rows[item.code].designatedCoachIds = [...new Set([...rows[item.code].designatedCoachIds, ...item.designatedCoachIds])];
+    });
+  });
+  return Object.values(rows).sort((a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'zh-CN'));
+}
+
+function rechargeRowsForAccount(account, membershipOrders = []) {
+  return validMembershipOrders(account, membershipOrders).map((order) => ({
+    id: order.id,
+    purchaseDate: order.purchaseDate || order.effectiveDate || order.cycleStartDate || order.createdAt || '',
+    createdAt: order.createdAt || '',
+    membershipPlanName: order.membershipPlanName || order.planName || '-',
+    membershipPlanId: order.membershipPlanId || '',
+    tierCode: order.tierCode || '',
+    paidAmount: money(order.finalAmount ?? order.rechargeAmount ?? order.amount),
+    rechargeAmount: money(order.rechargeAmount ?? order.finalAmount ?? order.amount),
+    bonusAmount: money(order.bonusAmount),
+    discountRate: Number(order.discountRate) || 0,
+    status: order.status || '',
+    notes: courtText(order.notes),
+    customAdjustment: !!order.customAdjustment,
+    benefitSummary: benefitTemplateItems(order).map((item) => `${item.label} ${item.total}${item.unit}`).join('；') || '-'
+  }));
+}
+
+function ledgerRowsForAccount(account, membershipBenefitLedger = []) {
+  if (!account) return [];
+  return (membershipBenefitLedger || [])
+    .filter((row) => row?.membershipAccountId === account.id && row?.action !== 'grant')
+    .sort((a, b) => String(b?.createdAt || b?.relatedDate || '').localeCompare(String(a?.createdAt || a?.relatedDate || '')))
+    .map((row) => ({
+      id: row.id,
+      membershipAccountId: row.membershipAccountId,
+      courtId: row.courtId,
+      membershipOrderRef: row.membershipOrderRef || '',
+      benefitCode: row.benefitCode || '',
+      benefitLabel: row.benefitLabel || row.benefitCode || '',
+      action: row.action || '',
+      delta: parseInt(row.delta, 10) || 0,
+      unit: row.unit || '次',
+      reason: row.reason || '',
+      operator: row.operator || '',
+      createdAt: row.createdAt || row.relatedDate || ''
+    }));
+}
+
+function membershipOrderAmount(order) {
+  return money(order?.finalAmount ?? order?.rechargeAmount ?? order?.amount ?? 0);
+}
+
+function buildUnifiedMembershipFinanceSummary({ courts = [], membershipAccounts = [], membershipOrders = [] } = {}) {
+  const activeAccounts = (membershipAccounts || []).filter((account) => !isInactiveMembershipStatus(account?.status));
+  const activeAccountIds = new Set(activeAccounts.map((account) => courtText(account?.id)).filter(Boolean));
+  const activeCourtIds = new Set(activeAccounts.map((account) => courtText(account?.courtId)).filter(Boolean));
+  const validOrders = (membershipOrders || [])
+    .filter((order) => !isInactiveMembershipStatus(order?.status))
+    .filter((order) => membershipOrderAmount(order) > 0)
+    .filter((order) => {
+      const accountId = courtText(order?.membershipAccountId);
+      const courtId = courtText(order?.courtId);
+      return (!activeAccountIds.size && !activeCourtIds.size) || activeAccountIds.has(accountId) || activeCourtIds.has(courtId);
+    });
+  const paidAmount = money(validOrders.reduce((sum, order) => sum + membershipOrderAmount(order), 0));
+  const bonusAmount = money(validOrders.reduce((sum, order) => sum + money(order?.bonusAmount), 0));
+  const courtMap = new Map((courts || []).map((court) => [courtText(court?.id), court]));
+  const consumedAmount = money([...activeCourtIds].reduce((sum, courtId) => {
+    const court = courtMap.get(courtId);
+    if (!court || String(court?.status || 'active') === 'inactive' || court?.mergedIntoCourtId || court?.deletedAt) return sum;
+    return sum + normalizeCourtHistory(court.history).reduce((rowSum, row) => {
+      const category = String(row?.category || '');
+      if (category.includes('内部占用')) return rowSum;
+      if (row.type === '消费' && isStoredValuePayMethod(row.payMethod)) return rowSum + money(row?.amount);
+      if (row.type === '冲正' && isStoredValuePayMethod(row.payMethod)) return rowSum - money(row?.amount);
+      return rowSum;
+    }, 0);
+  }, 0));
+  const consumableAmount = money(paidAmount + bonusAmount);
+  return {
+    memberCount: activeAccounts.length,
+    rechargeCount: validOrders.length,
+    paidAmount,
+    bonusAmount,
+    consumableAmount,
+    consumedAmount,
+    pendingAmount: money(Math.max(0, consumableAmount - consumedAmount))
+  };
+}
+
+function bookingRowsForCourt(court) {
+  return normalizeCourtHistory(court?.history)
+    .filter(isCourtBookingHistoryRow)
+    .sort((a, b) => String(courtHistoryBusinessDate(b) || b?.createdAt || '').localeCompare(String(courtHistoryBusinessDate(a) || a?.createdAt || '')))
+    .map((row) => ({
+      id: row.id || '',
+      bookingDate: courtHistoryBusinessDate(row),
+      startTime: row.startTime || '',
+      endTime: row.endTime || '',
+      venue: row.venue || '',
+      type: row.type || '',
+      category: row.category || '',
+      payMethod: row.payMethod || '',
+      amount: money(row.amount),
+      note: row.note || '',
+      studentId: row.studentId || ''
+    }));
+}
+
+function membershipAccountPayload(account) {
+  if (!account) return null;
+  return {
+    id: account.id || '',
+    courtId: account.courtId || '',
+    status: account.status || '',
+    tierCode: account.tierCode || '',
+    memberLabel: account.memberLabel || '',
+    discountRate: Number(account.discountRate) || 0,
+    validUntil: account.validUntil || '',
+    hardExpireAt: account.hardExpireAt || '',
+    cycleStartDate: account.cycleStartDate || '',
+    createdAt: account.createdAt || '',
+    voidedAt: account.voidedAt || '',
+    voidedBy: account.voidedBy || '',
+    voidReason: account.voidReason || ''
+  };
 }
 
 function buildLegacyItem(court, ctx) {
@@ -298,19 +479,45 @@ function buildLegacyItem(court, ctx) {
 
 function buildReadModelItem(court, ctx) {
   const legacy = buildLegacyItem(court, ctx);
+  const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
+  const rechargeRows = rechargeRowsForAccount(account, ctx.membershipOrders);
+  const benefitRows = benefitRowsForAccount(account, ctx.membershipOrders, ctx.membershipPlans, ctx.membershipBenefitLedger);
+  const ledgerRows = ledgerRowsForAccount(account, ctx.membershipBenefitLedger);
+  const bookingRows = bookingRowsForCourt(court);
+  const firstOpenDate = rechargeRows.map((row) => String(row.purchaseDate || '').slice(0, 10)).filter(Boolean).sort()[0] || account?.cycleStartDate || account?.createdAt || '';
   const balance = court?.cachedBalance === '' || court?.cachedBalance == null ? legacy.balance : money(court?.cachedBalance);
   const totalDeposit = court?.cachedTotalDeposit === '' || court?.cachedTotalDeposit == null ? legacy.totalDeposit : money(court?.cachedTotalDeposit);
   const totalSpent = court?.cachedTotalSpent === '' || court?.cachedTotalSpent == null ? legacy.totalSpent : money(court?.cachedTotalSpent);
   const totalReceived = court?.cachedTotalReceived === '' || court?.cachedTotalReceived == null ? legacy.totalReceived : money(court?.cachedTotalReceived);
-  return {
+  const item = {
     ...legacy,
-    history: normalizeCourtHistory(court?.history),
+    membershipAccount: membershipAccountPayload(account),
+    firstOpenDate,
+    rechargeRows,
+    benefitRows,
+    ledgerRows,
+    bookingRows,
     balance,
     totalDeposit,
     totalSpent,
     totalReceived,
     lowBalance: balance > 0 && balance <= 500
   };
+  item.exportRow = {
+    id: item.id,
+    displayName: item.displayName,
+    phone: item.phone,
+    linkedStudentSummary: item.linkedStudentSummary,
+    campusName: item.campusName,
+    balance: item.balance,
+    totalDeposit: item.totalDeposit,
+    totalSpent: item.totalSpent,
+    totalReceived: item.totalReceived,
+    owner: item.owner,
+    depositAttitude: item.depositAttitude,
+    notesSummary: item.notesSummary
+  };
+  return item;
 }
 
 function buildSummary(items = []) {
@@ -365,31 +572,35 @@ function createCourtAccountListViewLoader(deps) {
   return async function loadCourtAccountListView(options = {}) {
     const sampleIds = resolveSampleIds({ sampleIds: options.sampleIds, sample: options.sample, fixedSampleAccounts });
     const useLegacy = options.useLegacy === true;
-    const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans] = await Promise.all([
+    const [campuses, students, courts, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents] = await Promise.all([
       listCampusesWithDefaults(),
       getCachedScan(tables.students).catch(() => []),
       getCachedScan(tables.courts).catch(() => []),
       getCachedScan(tables.leads).catch(() => []),
       getCachedScan(tables.membershipAccounts).catch(() => []),
       getCachedScan(tables.membershipOrders).catch(() => []),
-      getCachedScan(tables.membershipPlans).catch(() => [])
+      getCachedScan(tables.membershipPlans).catch(() => []),
+      getCachedScan(tables.membershipBenefitLedger).catch(() => []),
+      getCachedScan(tables.membershipAccountEvents).catch(() => [])
     ]);
     const campusMap = new Map((campuses || []).map((row) => [String(row?.code || row?.id || '').trim(), row?.name || row?.code || row?.id || '']));
     const activeCourts = (courts || [])
       .filter((row) => String(row?.status || 'active') !== 'inactive')
       .filter((row) => String(row?.id || '') !== MATCH_COURT_FINANCE_ACCOUNT_ID)
       .filter((row) => !sampleIds.length || sampleIds.includes(String(row?.id || '').trim()));
-    const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans };
+    const ctx = { campuses, campusMap, students, leads, membershipAccounts, membershipOrders, membershipPlans, membershipBenefitLedger, membershipAccountEvents };
     const items = activeCourts
       .map((court) => (useLegacy ? buildLegacyItem(court, ctx) : buildReadModelItem(court, ctx)))
       .sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')));
+    const summary = buildSummary(items);
+    summary.membershipFinanceSummary = buildUnifiedMembershipFinanceSummary({ courts: activeCourts, membershipAccounts, membershipOrders });
     return {
-      summary: buildSummary(items),
+      summary,
       filters: buildFilters({ items, campuses }),
       items,
       meta: {
         generatedAt: new Date().toISOString(),
-        source: useLegacy ? 'legacy' : 'read-model',
+        source: useLegacy ? 'legacy' : 'unified-court-membership-read-model',
         sampleIds,
         sample: options.sample || ''
       }
