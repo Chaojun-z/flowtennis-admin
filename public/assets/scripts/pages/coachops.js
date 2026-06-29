@@ -736,18 +736,32 @@ function financeRevenueRowsByFilters(rows){
     return searchHit(q,row.studentName,row.businessType,row.payMethod,row.notes,row.collector,row.campusName,row.revenueCategory);
   });
 }
+function financeOrderedFilterOptions(rows,valueOf,standardOptions=[]){
+  const values=new Set((rows||[]).map(valueOf).map(value=>String(value||'').trim()).filter(Boolean));
+  const standardValues=(standardOptions||[]).map(opt=>String((typeof opt==='string'?opt:opt.value)||'').trim()).filter(Boolean);
+  const ordered=standardValues.filter(value=>values.has(value));
+  const extras=[...values].filter(value=>!standardValues.includes(value)).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
+  return [...ordered,...extras].map(value=>({value,label:value}));
+}
+function financeBusinessTypeFilterOptions(rows,valueOf){
+  return financeOrderedFilterOptions(rows,valueOf,FlowTennisBusinessTaxonomy.STANDARD_BUSINESS_TYPE_OPTIONS);
+}
+function financePaymentMethodFilterOptions(rows,valueOf){
+  const standard=(FlowTennisBusinessTaxonomy.PAYMENT_METHODS||[]).map(value=>normalizePaymentMethod(value)||value);
+  return financeOrderedFilterOptions(rows,valueOf,standard);
+}
 function renderFinanceRevenueFilterDropdowns(baseRows){
   const typeHost=document.getElementById('financeRevenueTypeFilterHost');
   const payMethodHost=document.getElementById('financeRevenuePayMethodFilterHost');
   if(!typeHost||!payMethodHost)return;
   const currentType=String(document.getElementById('financeRevenueTypeFilter')?.value||'').trim();
   const currentPayMethod=String(document.getElementById('financeRevenuePayMethodFilter')?.value||'').trim();
-  const typeOptions=[{ value:'', label:'全部业务类型' },...Array.from(new Set((baseRows||[]).map(row=>row.businessType).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN')).map(item=>({ value:item, label:item }))];
-  const payMethodOptions=[{ value:'', label:'全部支付方式' },...Array.from(new Set((baseRows||[]).map(row=>row.payMethod||'—').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN')).map(item=>({ value:item, label:item }))];
-  const selectedType=typeOptions.some(item=>item.value===currentType)?currentType:'';
-  const selectedPayMethod=payMethodOptions.some(item=>item.value===currentPayMethod)?currentPayMethod:'';
-  typeHost.innerHTML=renderStandardDropdownHtml('financeRevenueTypeFilter','全部业务类型',typeOptions,selectedType,false,'renderFinanceRevenueFilterChange');
-  payMethodHost.innerHTML=renderStandardDropdownHtml('financeRevenuePayMethodFilter','全部支付方式',payMethodOptions,selectedPayMethod,false,'renderFinanceRevenueFilterChange');
+  const linked=withLinkedFilterCounts([
+    {key:'business',value:currentType,options:[{ value:'', label:'全部', emptyDisplay:'业务类型' },...financeBusinessTypeFilterOptions(baseRows,row=>row.businessType)],match:(row,value)=>row.businessType===value},
+    {key:'payMethod',value:currentPayMethod,options:[{ value:'', label:'全部', emptyDisplay:'支付方式' },...financePaymentMethodFilterOptions(baseRows,row=>row.payMethod||'—')],match:(row,value)=>String(row.payMethod||'—')===String(value)}
+  ],baseRows||[]);
+  typeHost.innerHTML=renderStandardDropdownHtml('financeRevenueTypeFilter','业务类型',linked.business.options,linked.business.value,false,'renderFinanceRevenueFilterChange');
+  payMethodHost.innerHTML=renderStandardDropdownHtml('financeRevenuePayMethodFilter','支付方式',linked.payMethod.options,linked.payMethod.value,false,'renderFinanceRevenueFilterChange');
 }
 function renderFinanceRevenueFilterChange(){
   resetFinanceRevenuePage();
@@ -1266,14 +1280,12 @@ function renderFinanceLedgerFilterDropdowns(baseRows){
   const currentTransaction=String(document.getElementById('financeLedgerTransactionTypeFilter')?.value||'').trim();
   const currentPayMethod=String(document.getElementById('financeLedgerPayMethodFilter')?.value||'').trim();
   const visibleRows=(baseRows||[]).filter(row=>!row.differenceReason);
-  const businessValues=Array.from(new Set(visibleRows.map(row=>row.displayBusinessType).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
   const transactionOrder=FlowTennisBusinessTaxonomy.TRANSACTION_TYPES;
   const transactionValues=Array.from(new Set(visibleRows.map(row=>row.transactionType).filter(Boolean))).filter(item=>transactionOrder.includes(item)).sort((a,b)=>transactionOrder.indexOf(a)-transactionOrder.indexOf(b));
-  const payMethodValues=Array.from(new Set(visibleRows.map(row=>row.normalizedPaymentMethod||'其他').filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hans-CN'));
   const linked=withLinkedFilterCounts([
-    {key:'business',value:currentBusiness,options:[{ value:'', label:'全部', emptyDisplay:'业务类型' },...businessValues.map(item=>({ value:item, label:item }))],match:(row,value)=>row.displayBusinessType===value},
+    {key:'business',value:currentBusiness,options:[{ value:'', label:'全部', emptyDisplay:'业务类型' },...financeBusinessTypeFilterOptions(visibleRows,row=>row.displayBusinessType)],match:(row,value)=>row.displayBusinessType===value},
     {key:'transaction',value:currentTransaction,options:[{ value:'', label:'全部', emptyDisplay:'交易类型' },...transactionValues.map(item=>({ value:item, label:item }))],match:(row,value)=>row.transactionType===value},
-    {key:'payMethod',value:currentPayMethod,options:[{ value:'', label:'全部', emptyDisplay:'支付方式' },...payMethodValues.map(item=>({ value:item, label:item }))],match:(row,value)=>String(row.normalizedPaymentMethod||'其他')===String(value)}
+    {key:'payMethod',value:currentPayMethod,options:[{ value:'', label:'全部', emptyDisplay:'支付方式' },...financePaymentMethodFilterOptions(visibleRows,row=>row.normalizedPaymentMethod||'其他')],match:(row,value)=>String(row.normalizedPaymentMethod||'其他')===String(value)}
   ],visibleRows);
   businessHost.innerHTML=renderStandardDropdownHtml('financeLedgerBusinessTypeFilter','业务类型',linked.business.options,linked.business.value,false,'renderFinanceLedgerFilterChange');
   transactionHost.innerHTML=renderStandardDropdownHtml('financeLedgerTransactionTypeFilter','交易类型',linked.transaction.options,linked.transaction.value,false,'renderFinanceLedgerFilterChange');

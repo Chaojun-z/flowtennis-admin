@@ -7,6 +7,23 @@
   const TRANSACTION_TYPES = ['收款', '消耗', '退款', '废弃'];
   const PAYMENT_METHODS = ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他'];
   const PAYMENT_METHOD_OPTIONS = PAYMENT_METHODS.map(value => ({ value, label: value }));
+  const STANDARD_BUSINESS_TYPE_OPTIONS = [
+    '储值',
+    '课程 / 私教课',
+    '课程 / 小班课 / 单次',
+    '课程 / 小班课 / 训练营',
+    '课程 / 小班课 / 随到随学',
+    '课程 / 体验课 / 私教体验课',
+    '课程 / 体验课 / 小班体验课',
+    '课程 / 大师课',
+    '课程 / 陪打',
+    '场地 / 会员订场',
+    '场地 / 散客订场',
+    '场地 / 课程订场',
+    '场地 / 领导订场',
+    '场地 / 内部使用',
+    '场地 / 约球局'
+  ].map(value => ({ value, label: value }));
   const SOURCES = ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'];
   const PRODUCT_TYPES = ['私教课', '体验课', '小班课', '大师课', '陪打'];
   const STANDARD_COURSE_TYPE_OPTIONS = [
@@ -360,6 +377,7 @@
     TRANSACTION_TYPES,
     PAYMENT_METHODS,
     PAYMENT_METHOD_OPTIONS,
+    STANDARD_BUSINESS_TYPE_OPTIONS,
     SOURCES,
     PRODUCT_TYPES,
     STANDARD_COURSE_TYPE_OPTIONS,

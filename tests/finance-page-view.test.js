@@ -67,6 +67,8 @@ assert.doesNotMatch(revenuePanel,/星期|时间段|客户|收款人|状态/,'rev
 assert.doesNotMatch(source,/coachOpsRevenueSearch"[^>]*placeholder="[^"]*收入类型|<th[^>]*>收入类型<\/th>|全部收入类型/,'revenue table should no longer label business type as income type');
 assert.match(source,/businessType:row\.displayBusinessType\|\|financeUnifiedRevenueType\(row\)/,'revenue rows should display standardized business type');
 assert.match(source,/normalizedPaymentMethod:row\.normalizedPaymentMethod\|\|normalizePaymentMethod\(row\.paymentChannel\|\|row\.payMethod\)/,'revenue rows should use standardized payment method');
+assert.match(source,/function financeBusinessTypeFilterOptions\([\s\S]*STANDARD_BUSINESS_TYPE_OPTIONS/,'finance business filters should use the global business type dictionary order');
+assert.match(source,/function financePaymentMethodFilterOptions\([\s\S]*PAYMENT_METHODS/,'finance payment filters should use the global payment method dictionary order');
 assert.doesNotMatch(revenuePanel,/关联单据/,'revenue table should not expose internal related document column');
 assert.doesNotMatch(revenuePanel,/class="tms-sticky-r"/,'revenue rows should not keep a sticky right internal document column');
 assert.match(revenueShell,/toolbarClass:'tms-toolbar finance-table-toolbar finance-revenue-toolbar'/,'revenue toolbar should use the standardized compact finance toolbar class');
@@ -82,6 +84,10 @@ assert.match(source,/withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'支付方式
 assert.match(source,/renderStandardDropdownHtml\('financeLedgerBusinessTypeFilter','业务类型'/,'ledger business type dropdown should show the standardized default label');
 assert.match(source,/renderStandardDropdownHtml\('financeLedgerTransactionTypeFilter','交易类型'/,'ledger transaction type dropdown should show the standardized default label');
 assert.match(source,/renderStandardDropdownHtml\('financeLedgerPayMethodFilter','支付方式'/,'ledger pay method dropdown should show the standardized default label');
+assert.match(functionSource(source,'renderFinanceRevenueFilterDropdowns'), /withLinkedFilterCounts\(\[[\s\S]*emptyDisplay:'业务类型'[\s\S]*emptyDisplay:'支付方式'/, 'revenue filters should use linked standardized count labels');
+assert.match(source,/renderStandardDropdownHtml\('financeRevenueTypeFilter','业务类型'/,'revenue business type dropdown should show the standardized default label');
+assert.match(source,/renderStandardDropdownHtml\('financeRevenuePayMethodFilter','支付方式'/,'revenue pay method dropdown should show the standardized default label');
+assert.doesNotMatch(functionSource(source,'renderFinanceRevenueFilterDropdowns'), /全部业务类型|全部支付方式|localeCompare\(String\(b\),'zh-Hans-CN'\)/, 'revenue filters should not keep local labels or local alphabetical ordering');
 assert.match(source,/financeOperatorDisplayText/,'ledger should normalize operator display text in the frontend');
 assert.match(source,/financeDateTimeDisplayText/,'ledger should render full Beijing datetime text');
 assert.match(source,/const businessDate=String\(row\?\.businessDate\|\|row\?\.purchaseDate\|\|''\)/,'revenue transaction time should read purchaseDate when businessDate is not present');

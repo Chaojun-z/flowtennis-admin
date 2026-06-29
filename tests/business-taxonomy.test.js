@@ -29,6 +29,23 @@ assert.strictEqual(taxonomy.normalizeLeadConsultType('合作等'), '合作');
 assert.strictEqual(taxonomy.normalizeLeadConsultType('未说明需求'), '其他');
 
 assert.deepStrictEqual(taxonomy.PAYMENT_METHODS, ['储值卡', '微信', '支付宝', '现金', '转账', '大众点评券码', '抖音券码', '其他']);
+assert.deepStrictEqual(taxonomy.STANDARD_BUSINESS_TYPE_OPTIONS.map(item => item.value), [
+  '储值',
+  '课程 / 私教课',
+  '课程 / 小班课 / 单次',
+  '课程 / 小班课 / 训练营',
+  '课程 / 小班课 / 随到随学',
+  '课程 / 体验课 / 私教体验课',
+  '课程 / 体验课 / 小班体验课',
+  '课程 / 大师课',
+  '课程 / 陪打',
+  '场地 / 会员订场',
+  '场地 / 散客订场',
+  '场地 / 课程订场',
+  '场地 / 领导订场',
+  '场地 / 内部使用',
+  '场地 / 约球局'
+]);
 assert.strictEqual(taxonomy.normalizePaymentMethod('储值卡'), '储值扣款');
 assert.strictEqual(taxonomy.normalizePaymentMethod('大众点评支付'), '大众点评券码');
 assert.strictEqual(taxonomy.normalizePaymentMethod('微信转账支付'), '微信');
