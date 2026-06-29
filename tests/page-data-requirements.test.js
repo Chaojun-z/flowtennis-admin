@@ -4,10 +4,10 @@ const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
-assert.match(source, /students:\['campuses','students'\]/, 'students page should only block on the datasets needed to paint the list immediately');
+assert.match(source, /students:\['campuses','students','coaches'\]/, 'students page should only block on the datasets needed to paint the list and coach filter immediately');
 assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
-assert.match(source, /'package-students':\['campuses','students','lifecycleMetricsPage'\]/, 'formal student page should use the lightweight lifecycle metrics endpoint before first render');
-assert.match(source, /'trial-students':\['campuses','students','lifecycleMetricsPage'\]/, 'normal student page should use the lightweight lifecycle metrics endpoint before first render');
+assert.match(source, /'package-students':\['campuses','students','coaches','lifecycleMetricsPage'\]/, 'formal student page should use coaches and the lightweight lifecycle metrics endpoint before first render');
+assert.match(source, /'trial-students':\['campuses','students','coaches','lifecycleMetricsPage'\]/, 'normal student page should use coaches and the lightweight lifecycle metrics endpoint before first render');
 assert.doesNotMatch(source, /leads:\['campuses','leads','purchasesPage'\]/, 'leads page should not block on the full purchases aggregate for lifecycle stats');
 assert.doesNotMatch(source, /'package-students':\['campuses','students','purchasesPage'\]/, 'formal student page should not block on the full purchases aggregate for lifecycle stats');
 assert.doesNotMatch(source, /'trial-students':\['campuses','students','purchasesPage'\]/, 'normal student page should not block on the full purchases aggregate for lifecycle stats');
