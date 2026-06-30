@@ -470,8 +470,7 @@ function coachOpsSummaryForRange(row,range){
 }
 function coachOpsRows(){
   const range=rangeBounds(coachOpsMode);
-  const sourceRows=(coachOpsUnifiedView?.rows||[]).length?(coachOpsUnifiedView?.rows||[]):activeCoachNames().map(name=>({name,rows:[]}));
-  return sourceRows
+  return (coachOpsUnifiedView?.rows||[])
     .filter(row=>!coachOpsSelectedCoach||coachName(row.name)===coachName(coachOpsSelectedCoach))
     .map(row=>{
       const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&inRange(s.startTime,range.start,range.end));

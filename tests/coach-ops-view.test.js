@@ -20,6 +20,18 @@ assert.match(
 
 assert.match(
   source,
+  /coachschedule:\['workbenchPage'\]/,
+  'coach schedule calendar should block on the backend unified coach schedule view'
+);
+
+assert.match(
+  source,
+  /coachops:\['workbenchPage','operationsPage'\]/,
+  'coach workload should block on backend unified coach schedule view before rendering rows'
+);
+
+assert.match(
+  source,
   /function coachOpsStoredOrderIndex\(/,
   'coach ops should expose a stored-order lookup helper'
 );

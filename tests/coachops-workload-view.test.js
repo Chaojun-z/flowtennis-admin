@@ -34,7 +34,7 @@ assert.match(styles, /#page-coachops \.tms-table/, 'coach operations should have
 assert.match(source, /function coachSortValue\(/, 'coach list ordering should use a persisted sort value');
 assert.match(fnBody('activeCoachNames'), /coachSortValue/, 'active coach names should follow persisted coach order');
 assert.match(fnBody('coachOpsRows'), /coachSortValue/, 'coach operation rows should follow persisted coach order');
-assert.match(fnBody('coachOpsRows'), /activeCoachNames\(\)\.map\(name=>\(\{name,rows:\[\]\}\)\)/, 'coach workload should still render active coach rows when backend unified rows are temporarily empty');
+assert.doesNotMatch(fnBody('coachOpsRows'), /activeCoachNames\(\)\.map\(name=>\(\{name,rows:\[\]\}\)\)/, 'coach workload must not fake empty schedule rows when backend unified rows are missing');
 assert.match(source, /function saveCoachOpsOrder\(/, 'coach schedule order should be saveable');
 assert.match(fnBody('saveCoachOpsOrder'), /apiCall\('PUT','\/coaches\/'\+coach\.id/, 'coach schedule order should persist through the backend coach record');
 assert.match(fnBody('renderCoachOps'), /draggable="true"[\s\S]*ondragstart="coachOpsDragStart/, 'coach schedule rows should support drag sorting');
