@@ -73,7 +73,8 @@ async function buildOperationsPagePayload({
     membershipOrders: baseRows.membershipOrders,
     membershipAccounts: baseRows.membershipAccounts,
     coaches: baseRows.coaches,
-    schedule: baseRows.schedule
+    schedule: baseRows.schedule,
+    feedbacks: baseRows.feedbacks
   }, user);
   const customerLifecycleRows=buildCustomerLifecycleRows(scoped);
 

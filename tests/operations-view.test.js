@@ -343,6 +343,12 @@ assert.match(coachDashboardSource, /const kpis = \[[\s\S]*归属课程实收[\s\
 assert.doesNotMatch(coachDashboardSource, /help:/, 'coach KPI cards should not define question-mark help text');
 assert.match(coachDashboardSource, /operationsCoachChartHeader\('产值 × 工时利用率矩阵'[\s\S]*operationsCoachChartHeader\('转化 × 续费能力矩阵'/, 'coach chart headers should use compact title-only headers');
 assert.doesNotMatch(coachDashboardSource, /横轴越右越饱和|只在有体验\/续费基数时展示|柱子是归属实收|看团队整体是闲置|体验课、私教课、小班课按课时拆分/, 'coach chart cards should not render subtitles under titles');
+assert.match(coachDashboardSource, /renderOperationsCoachDetailTable\(rows\)/, 'coach page should render the coach workload detail table at the bottom');
+assert.match(coachDashboardSource, /教练课时详细统计[\s\S]*课时数[\s\S]*体验课[\s\S]*体验课转化率[\s\S]*课程类型分布[\s\S]*学员反馈[\s\S]*校区分布/, 'coach detail table should use the approved columns');
+assert.doesNotMatch(coachDashboardSource, /已反馈|未反馈|时间段/, 'coach detail table should merge feedback columns and remove time-band distribution');
+assert.match(operationsSource, /function operationsCoachUsedHoursCell[\s\S]*operationsCoachDetailChangeText\(row\.usedHoursComparison\)/, 'coach detail table should show lesson-hour change beside the main value');
+assert.match(operationsSource, /function operationsCoachFeedbackText[\s\S]*feedbackCompleted[\s\S]*feedbackRequired[\s\S]*\/\$\{fmt\(required\)\}/, 'coach detail table should render feedback as completed over required');
+assert.match(operationsSource, /function operationsCoachTrialRateCell[\s\S]*trialBase[\s\S]*no-data[\s\S]*has-data/, 'coach detail table should render trial conversion with only no-data and has-data styles');
 assert.match(operationsSource, /function renderOperationsCoachKpi[\s\S]*operations-coach-kpi-change[\s\S]*operationsCoachSparklineSvg/, 'coach KPI cards should render title, value, sparkline and change value only');
 assert.doesNotMatch(operationsSource, /operations-coach-kpi-help|\?<\/button>/, 'KPI cards should not render question marks');
 assert.doesNotMatch(operationsSource, /function renderOperationsCourtKpi[\s\S]*<p>[\s\S]*function renderOperationsCourtKpis/, 'court KPI cards should not render subtitle explanations');
@@ -390,6 +396,11 @@ const trendChangeSource = operationsSource.slice(
 assert.match(trendChangeSource, /comparison[\s\S]*changeValue/, 'KPI cards should show backend-generated previous-period comparison values');
 assert.doesNotMatch(trendChangeSource, /first[\s\S]*last[\s\S]*change/, 'KPI comparison values should not be calculated from the first and last sparkline points');
 assert.match(stylesSource, /operations-coach-kpi-strip\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'coach dashboard KPI strip should be a dense five-column monitor row');
+assert.match(stylesSource, /operations-coach-detail-table \.tms-table\{[^}]*min-width:980px/, 'coach detail table should use a compact Gemini-style table width');
+assert.match(stylesSource, /operations-coach-detail-change\.up\{color:#D64545\}/, 'coach detail table should show rising lesson hours in red');
+assert.match(stylesSource, /operations-coach-detail-change\.down\{color:#087A35\}/, 'coach detail table should show falling lesson hours in green');
+assert.match(stylesSource, /operations-coach-trial-rate\.no-data/, 'coach detail trial rate should have a no-data style');
+assert.match(stylesSource, /operations-coach-trial-rate\.has-data/, 'coach detail trial rate should have a has-data style');
 assert.match(stylesSource, /#page-operations\{[^}]*--ops-card-bg:#FFFDFC[^}]*--ops-card-border:rgba\(91,63,42,\.12\)[^}]*--ops-card-shadow:0 1px 2px rgba\(37,24,15,\.018\),0 8px 20px rgba\(37,24,15,\.03\)/, 'operations cards should use a lighter warm-white surface with a softer border and shadow');
 assert.match(stylesSource, /operations-coach-kpi\{[^}]*min-height:142px[^}]*padding:14px 18px 11px 20px/, 'coach KPI cards should use the refined Apple-like spacing and lower chart area');
 assert.match(operationsSource, /operationsMoneyCompactText|operationsCompactNumber/, 'top KPI cards should shorten large values before placing change values beside them');

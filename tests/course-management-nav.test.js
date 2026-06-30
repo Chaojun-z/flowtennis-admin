@@ -34,7 +34,8 @@ const openPackageModalBody = fnBody('openPackageModal');
 
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
 assert.match(html, /<div class="sb-sec">客户中心<\/div>[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池[\s\S]*?goPage\('trial-students',this\)[\s\S]*?普通学员[\s\S]*?goPage\('package-students',this\)[\s\S]*?正式学员[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('matches',this\)[\s\S]*?约球活动/, 'customer center should order leads, normal students, official students, courts, memberships, then matches');
-assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课管理[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?排课日历[\s\S]*?goPage\('coachops',this\)[\s\S]*?教练课时统计/, 'teaching center should order schedule management, schedule calendar, then coach workload stats');
+assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课管理[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?排课日历[\s\S]*?<div class="sb-sec">产品与定价<\/div>/, 'teaching center should only keep schedule management and schedule calendar');
+assert.doesNotMatch(html, /goPage\('coachops',this\)[\s\S]*?教练课时统计/, 'coach workload stats should no longer be a standalone left-menu page');
 assert.match(html, /<div class="sb-sec">产品与定价<\/div>[\s\S]*?goPage\('packages',this\)[\s\S]*?课包产品[\s\S]*?goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'product pricing should order package products then membership plans');
 assert.match(html, /<div class="sb-sec">基础设置<\/div>[\s\S]*?goPage\('coaches',this\)[\s\S]*?教练管理[\s\S]*?goPage\('campusmgr',this\)[\s\S]*?校区管理[\s\S]*?goPage\('admin-users',this\)[\s\S]*?账号管理/, 'basic settings should order coaches, campus, then accounts');
 assert.match(html, /const SHELL_THEME=\{[\s\S]*brandName:'网球兄弟'[\s\S]*brandSubline:'TENNISFLOW'[\s\S]*appShellBg:'#875C3C'[\s\S]*topbarDivider:'#805435'[\s\S]*liveClockColor:'#E0D3C9'[\s\S]*liveDotColor:'#78DB89'/, 'shell theme should centralize brand and topbar styles');
@@ -59,8 +60,7 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
   ['packages', '课包产品'],
   ['admin-users', '账号管理'],
   ['campusmgr', '校区管理'],
-  ['coaches', '教练管理'],
-  ['coachops', '教练课时统计']
+  ['coaches', '教练管理']
 ].forEach(([page, label, iconKey]) => {
   const icon = iconKey || page;
   assert.match(html, new RegExp(`goPage\\('${page}',this\\)[\\s\\S]*?sidebarIcon\\('${icon}'\\)[\\s\\S]*?${label}`), `${label} should render through sidebarIcon`);

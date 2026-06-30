@@ -898,7 +898,13 @@ const coachDashboardMetrics = buildOperationsMetrics({
     { id: 'a-trial', coach: 'A教练', studentId: 'trial-a', startTime: '2026-06-03 09:00:00', endTime: '2026-06-03 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课', experienceType: '私教体验课' },
     { id: 'a-small', coach: 'A教练', studentIds: ['old-a', 'trial-a'], startTime: '2026-06-04 09:00:00', endTime: '2026-06-04 10:30:00', status: '待上课', campus: 'shunyi_mapo', courseType: '小班课' },
     { id: 'a-cancel', coach: 'A教练', startTime: '2026-06-05 09:00:00', endTime: '2026-06-05 12:00:00', status: '已取消', campus: 'shunyi_mapo', courseType: '私教课' },
-    { id: 'b-trial', coach: 'B教练', studentId: 'trial-b', startTime: '2026-06-03 11:00:00', endTime: '2026-06-03 12:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课' }
+    { id: 'b-trial', coach: 'B教练', studentId: 'trial-b', startTime: '2026-06-03 11:00:00', endTime: '2026-06-03 12:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '体验课' },
+    { id: 'a-previous', coach: 'A教练', studentId: 'old-a', startTime: '2026-05-29 09:00:00', endTime: '2026-05-29 10:00:00', status: '已结束', campus: 'shunyi_mapo', courseType: '私教课' }
+  ],
+  feedbacks: [
+    { id: 'fb-a-private', scheduleId: 'a-private' },
+    { id: 'fb-a-previous', scheduleId: 'a-previous' },
+    { id: 'fb-cancel', scheduleId: 'a-cancel' }
   ],
   leads: [],
   courts: [],
@@ -921,6 +927,13 @@ const coachB = coachDashboardMetrics.coach.rows.find(row => row.coach === 'B教�
 assert.strictEqual(coachDashboardMetrics.coach.rows.some(row => row.coach === 'C教练'), false, 'coach dashboard should exclude inactive coaches');
 assert.strictEqual(coachA.availableHours, 27.4, 'coach available hours should use the real selected period up to today');
 assert.strictEqual(coachA.usedHours, 4.5, 'coach utilization should include scheduled and completed non-cancelled lessons in the selected period');
+assert.strictEqual(coachA.feedbackCompleted, 1, 'coach detail rows should count completed feedback by schedule record');
+assert.strictEqual(coachA.feedbackRequired, 3, 'coach detail rows should count one required feedback per valid schedule record');
+assert.deepStrictEqual(
+  coachA.usedHoursComparison,
+  { mode: 'previous_period', currentValue: 4.5, previousValue: 1, changeValue: 3.5, changeRate: 350 },
+  'coach detail rows should expose previous-period lesson-hour comparison for the table'
+);
 assert.strictEqual(coachA.utilizationRate, 16.4, 'coach utilization should divide used hours by the real selected-period available hours');
 assert.strictEqual(coachA.revenue, 6200, 'coach revenue should use standard finance course receipts inside the selected period');
 assert.strictEqual(coachA.trialConversionRate, 100, 'coach trial conversion should read the unified lifecycle rows');

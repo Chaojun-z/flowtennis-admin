@@ -342,7 +342,6 @@ function renderSidebarShell(){
   <div class="sb-sec">教学中心</div>
   <div class="sb-item" onclick="goPage('schedule',this)">${sidebarIcon('schedule')}排课管理</div>
   <div class="sb-item" onclick="goPage('coachschedule',this)">${sidebarIcon('coachschedule')}排课日历</div>
-  <div class="sb-item" onclick="goPage('coachops',this)">${sidebarIcon('coachops')}教练课时统计</div>
   <div class="sb-item" style="display:none" onclick="goPage('products',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>课程产品</div>
   <div class="sb-sec">产品与定价</div>
   <div class="sb-item" onclick="goPage('packages',this)">${sidebarIcon('packages')}课包产品</div>

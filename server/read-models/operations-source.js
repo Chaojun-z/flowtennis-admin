@@ -46,6 +46,7 @@ const OPERATIONS_FOLLOWUP_FIELDS = [
 const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt'];
 const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
 const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus'];
+const OPERATIONS_FEEDBACK_FIELDS = ['id', 'scheduleId', 'studentId', 'studentIds', 'coach', 'coachName', 'createdAt', 'updatedAt'];
 const OPERATIONS_SCHEDULE_FIELDS = [
   'id', 'studentId', 'studentIds', 'studentName', 'studentNames',
   'coach', 'coachName', 'primaryCoach', 'teacher', 'startTime', 'endTime', 'date', 'createdAt',
@@ -103,7 +104,8 @@ async function getOperationsBaseRows({
     T_MEMBERSHIP_ORDERS,
     T_MEMBERSHIP_ACCOUNTS,
     T_COACHES,
-    T_SCHEDULE
+    T_SCHEDULE,
+    T_FEEDBACKS
   } = tables;
   const [
     campuses,
@@ -118,6 +120,7 @@ async function getOperationsBaseRows({
     membershipOrders,
     coaches,
     schedule,
+    feedbacks,
     cachedFinanceSnapshot
   ] = await Promise.all([
     listCampusesWithDefaults(),
@@ -132,6 +135,7 @@ async function getOperationsBaseRows({
     readOperationsRows({ table: T_MEMBERSHIP_ORDERS, getCachedScan, scanFirstRows, columns: OPERATIONS_MEMBERSHIP_ORDER_FIELDS, limit: 2000 }),
     getCachedScan(T_COACHES, { columns: OPERATIONS_COACH_FIELDS }).catch(() => []),
     readOperationsRows({ table: T_SCHEDULE, getCachedScan, scanFirstRows, columns: OPERATIONS_SCHEDULE_FIELDS, limit: 2000 }),
+    T_FEEDBACKS ? readOperationsRows({ table: T_FEEDBACKS, getCachedScan, scanFirstRows, columns: OPERATIONS_FEEDBACK_FIELDS, limit: 2000 }) : Promise.resolve([]),
     useGlobalFinanceSnapshot && typeof getFinancePageSnapshotIfCached === 'function'
       ? Promise.resolve(getFinancePageSnapshotIfCached()).catch(() => null)
       : Promise.resolve(null)
@@ -149,6 +153,7 @@ async function getOperationsBaseRows({
     membershipOrders,
     coaches,
     schedule,
+    feedbacks,
     cachedFinanceSnapshot
   };
   operationsRowsCache.set(cacheKey, { createdAt: Date.now(), rows });

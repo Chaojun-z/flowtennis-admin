@@ -27,6 +27,11 @@ function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function metricText(value) {
+  const number = Number(value) || 0;
+  return Number.isInteger(number) ? String(number) : String(round(number, 1));
+}
+
 function parseArr(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value) {
@@ -905,6 +910,19 @@ function scheduleStudentKeys(row = {}) {
   ].map(value => String(value || '').trim()).filter(Boolean))];
 }
 
+function scheduleHasFeedbackRecord(row = {}, feedbacks = []) {
+  const scheduleId = String(row.id || row.scheduleId || '').trim();
+  if (!scheduleId) return false;
+  return (feedbacks || []).some(item => String(item?.scheduleId || '').trim() === scheduleId);
+}
+
+function isCoachFeedbackRequiredSchedule(row = {}) {
+  if (!isActiveScheduleForOperations(row)) return false;
+  const text = `${row.courseType || ''} ${row.standardCourseType || ''} ${row.experienceType || ''} ${row.packageName || ''} ${row.productName || ''}`.trim();
+  if (/陪打/.test(text)) return false;
+  return !!scheduleCoachName(row);
+}
+
 function purchaseStudentKey(row = {}) {
   return String(row.studentId || row.studentName || '').trim();
 }
@@ -1051,7 +1069,7 @@ function lifecycleHasTrialDeal(row = {}) {
     || String(row.courseDealPath || '').trim() === 'trial_to_course';
 }
 
-function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], periodPurchases = purchases, customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
+function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases = [], allPurchases = [], periodPurchases = purchases, customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const activeCoaches = (coaches || []).filter(row => String(row.status || 'active') !== 'inactive');
   const campusLabels = buildCampusLabelMap(campuses || []);
   const period = coachPeriodInfo({ schedule, purchases: periodPurchases, dateRange, now });
@@ -1071,6 +1089,9 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
       revenue: 0,
       trialBase: 0,
       trialConverted: 0,
+      feedbackCompleted: 0,
+      feedbackRequired: 0,
+      campusHours: new Map(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1091,6 +1112,9 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
       revenue: 0,
       trialBase: 0,
       trialConverted: 0,
+      feedbackCompleted: 0,
+      feedbackRequired: 0,
+      campusHours: new Map(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1106,6 +1130,12 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
     const mixType = normalizeCoachCourseType(row);
     const mix = current.courseMix.find(item => item.type === mixType);
     if (mix) mix.hours = round(mix.hours + hours, 1);
+    if (isCoachFeedbackRequiredSchedule(row)) {
+      current.feedbackRequired += 1;
+      if (scheduleHasFeedbackRecord(row, feedbacks)) current.feedbackCompleted += 1;
+    }
+    const scheduleCampus = campusLabel(row.campus || row.campusName, campusLabels);
+    if (scheduleCampus) current.campusHours.set(scheduleCampus, round((current.campusHours.get(scheduleCampus) || 0) + hours, 1));
   });
   (purchases || []).filter(isValidCoursePurchase).forEach(row => {
     const coach = purchaseCoachName(row);
@@ -1119,6 +1149,9 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
       revenue: 0,
       trialBase: 0,
       trialConverted: 0,
+      feedbackCompleted: 0,
+      feedbackRequired: 0,
+      campusHours: new Map(),
       oldCustomerBase: 0,
       renewalCount: 0,
       courseMix: [
@@ -1161,15 +1194,25 @@ function buildCoachRows({ coaches = [], schedule = [], purchases = [], allPurcha
     row.oldCustomerBase = priorOldStudents.size;
     row.renewalCount = renewedStudents.size;
   });
-  return [...grouped.values()].map(row => ({
-    ...row,
-    utilizationRate: row.availableHours ? round(row.usedHours * 100 / row.availableHours, 1) : 0,
-    trialConversionRate: rate(row.trialConverted, row.trialBase),
-    renewalRate: rate(row.renewalCount, row.oldCustomerBase),
-    period,
-    courseMix: row.courseMix.map(item => ({ ...item, share: rate(item.hours, row.usedHours) })),
-    utilizationBand: coachUtilizationBand(row.availableHours ? row.usedHours * 100 / row.availableHours : 0)
-  })).sort((a, b) => b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+  return [...grouped.values()].map(row => {
+    const campusDistribution = [...(row.campusHours || new Map()).entries()]
+      .map(([campusName, hours]) => ({ campusName, hours }))
+      .filter(item => item.campusName && item.hours > 0)
+      .sort((a, b) => b.hours - a.hours || a.campusName.localeCompare(b.campusName, 'zh-Hans-CN'));
+    return {
+      ...row,
+      campusHours: undefined,
+      campusDistribution,
+      campusDistributionText: campusDistribution.length ? campusDistribution.map(item => `${item.campusName} ${metricText(item.hours)}`).join(' | ') : '-',
+      feedbackCompletionRate: rate(row.feedbackCompleted, row.feedbackRequired),
+      utilizationRate: row.availableHours ? round(row.usedHours * 100 / row.availableHours, 1) : 0,
+      trialConversionRate: rate(row.trialConverted, row.trialBase),
+      renewalRate: rate(row.renewalCount, row.oldCustomerBase),
+      period,
+      courseMix: row.courseMix.map(item => ({ ...item, share: rate(item.hours, row.usedHours) })),
+      utilizationBand: coachUtilizationBand(row.availableHours ? row.usedHours * 100 / row.availableHours : 0)
+    };
+  }).sort((a, b) => b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
 }
 
 function buildCoachUtilizationBands(rows = []) {
@@ -2581,6 +2624,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachRows = buildCoachRows({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
+    feedbacks: data.feedbacks || [],
     purchases: coachFinancePurchases,
     allPurchases: allCoachFinancePurchases,
     periodPurchases: rangedData.purchases || [],
@@ -2703,6 +2747,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
     schedule: previousRangedData.schedule || [],
+    feedbacks: data.feedbacks || [],
     purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || [], coachFinanceAttributionContext),
     allPurchases: allCoachFinancePurchases,
     periodPurchases: previousRangedData.purchases || [],
@@ -2711,6 +2756,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
     campuses: data.campuses || [],
     now
   }) : [];
+  const previousCoachHours = new Map(previousCoachRows.map(row => [row.coach, Number(row.usedHours) || 0]));
+  coachRows.forEach(row => {
+    row.usedHoursComparison = canComparePrevious
+      ? trendComparison(row.usedHours, previousCoachHours.get(row.coach) || 0, true)
+      : { mode: 'none' };
+  });
   const previousCoachAvailable = round(previousCoachRows.reduce((sum, row) => sum + row.availableHours, 0), 1);
   const previousCoachUsed = round(previousCoachRows.reduce((sum, row) => sum + row.usedHours, 0), 1);
   const previousCoachTrialBase = previousCoachRows.reduce((sum, row) => sum + (Number(row.trialBase) || 0), 0);

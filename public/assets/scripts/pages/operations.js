@@ -742,7 +742,67 @@ function renderOperationsCoach(data) {
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
     </section>
-  </div>`;
+  </div>
+  ${renderOperationsCoachDetailTable(rows)}`;
+}
+
+function operationsCoachDetailChangeText(comparison = {}) {
+  if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">-</span>';
+  const change = Number(comparison.changeValue) || 0;
+  if (!change) return '<span class="operations-coach-detail-change muted">0</span>';
+  const direction = change > 0 ? 'up' : 'down';
+  const icon = change > 0 ? '↑' : '↓';
+  return `<span class="operations-coach-detail-change ${direction}">${icon} ${fmt(Math.abs(change))}</span>`;
+}
+
+function operationsCoachUsedHoursCell(row = {}) {
+  return `<div class="operations-coach-detail-hours"><span>${fmt(Number(row.usedHours) || 0)}</span>${operationsCoachDetailChangeText(row.usedHoursComparison)}</div>`;
+}
+
+function operationsCoachTrialText(row = {}) {
+  const converted = Number(row.trialConverted) || 0;
+  const total = Number(row.trialBase) || 0;
+  return total ? `${fmt(converted)} / ${fmt(total)}` : '-';
+}
+
+function operationsCoachTrialRateCell(row = {}) {
+  const total = Number(row.trialBase) || 0;
+  const value = Number(row.trialConversionRate) || 0;
+  const className = !total || value <= 0 ? 'no-data' : 'has-data';
+  const text = total ? `${fmt(value)}%` : '-%';
+  return `<span class="operations-coach-trial-rate ${className}">${esc(text)}</span>`;
+}
+
+function operationsCoachCourseMixText(row = {}) {
+  const parts = (row.courseMix || [])
+    .filter(item => (Number(item.hours) || 0) > 0)
+    .map(item => `${item.type} ${fmt(Number(item.hours) || 0)}`);
+  return parts.length ? parts.join(' | ') : '-';
+}
+
+function operationsCoachFeedbackText(row = {}) {
+  const completed = Number(row.feedbackCompleted) || 0;
+  const required = Number(row.feedbackRequired) || 0;
+  return required ? `${fmt(completed)}/${fmt(required)}` : '0/0';
+}
+
+function renderOperationsCoachDetailTable(rows = []) {
+  const body = rows.length ? rows.map(row => `<tr>
+    <td><div class="operations-coach-name-cell">${esc(row.coach || '-')}</div></td>
+    <td>${operationsCoachUsedHoursCell(row)}</td>
+    <td><span class="operations-coach-muted">${esc(operationsCoachTrialText(row))}</span></td>
+    <td>${operationsCoachTrialRateCell(row)}</td>
+    <td><div class="operations-coach-detail-wrap" title="${esc(operationsCoachCourseMixText(row))}">${esc(operationsCoachCourseMixText(row))}</div></td>
+    <td><span class="operations-coach-feedback">${esc(operationsCoachFeedbackText(row))}</span></td>
+    <td><div class="operations-coach-detail-wrap" title="${esc(row.campusDistributionText || row.campus || '-')}">${esc(row.campusDistributionText || row.campus || '-')}</div></td>
+  </tr>`).join('') : '<tr><td colspan="7"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
+  return `<section class="operations-section operations-coach-detail-table">
+    ${operationsCoachChartHeader('教练课时详细统计')}
+    <div class="tms-table-card"><div class="tms-table-wrapper"><table class="tms-table">
+      <thead><tr><th>教练</th><th>课时数</th><th>体验课</th><th>体验课转化率</th><th>课程类型分布</th><th>学员反馈</th><th>校区分布</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div></div>
+  </section>`;
 }
 
 function operationsCoachChartHeader(title, extra = '') {
