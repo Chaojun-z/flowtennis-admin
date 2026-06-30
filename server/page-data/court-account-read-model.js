@@ -400,7 +400,8 @@ function buildLegacyItem(court, ctx) {
   const account = selectMembershipAccount(court?.id, ctx.membershipAccounts);
   const studentSummary = linkedStudentSummary(court, ctx.students);
   const tierLabel = membershipTierLabel(account, ctx.membershipOrders, ctx.membershipPlans);
-  const membershipRechargeCount = validMembershipOrdersForAccount(account, ctx.membershipOrders).length;
+  const membershipRechargeCount = validMembershipOrders(account, ctx.membershipOrders).length;
+  const membershipRenewalCount = Math.max(0, membershipRechargeCount - 1);
   return {
     id: court.id,
     history: normalizeCourtHistory(court?.history),
@@ -423,7 +424,9 @@ function buildLegacyItem(court, ctx) {
     lowBalance: finance.balance > 0 && finance.balance <= 500,
     memberBookingCount: bookingSummary.memberBookingCount,
     membershipRechargeCount,
+    membershipRenewalCount,
     hasMembershipRepeatRecharge: membershipRechargeCount > 1,
+    hasMembershipRenewal: membershipRenewalCount > 0,
     hasMembershipBookingRetention: bookingSummary.memberBookingCount > 0,
     bookingCount: bookingSummary.bookingCount,
     bookingHours: bookingSummary.bookingHours,
@@ -520,6 +523,7 @@ function buildSummary(items = []) {
     totalMemberBookingCount: items.reduce((sum, item) => sum + (Number(item?.memberBookingCount) || 0), 0),
     totalMemberBookingAmount: money(items.reduce((sum, item) => sum + money(item?.memberBookingAmount), 0)),
     totalMembershipRechargeCount: items.reduce((sum, item) => sum + (Number(item?.membershipRechargeCount) || 0), 0),
+    totalMembershipRenewalCount: items.reduce((sum, item) => sum + (Number(item?.membershipRenewalCount) || 0), 0),
     totalMembershipRepeatRechargeCount: items.filter((item) => item?.hasMembershipRepeatRecharge).length,
     totalMembershipRetainedCount: memberItems.filter((item) => item?.hasMembershipBookingRetention).length,
     totalGuestBookingCount: items.reduce((sum, item) => sum + (Number(item?.guestBookingCount) || 0), 0),
@@ -662,7 +666,9 @@ function createCourtAccountListCompareLoader(deps) {
     'membershipValidUntil',
     'linkedStudentSummary',
     'membershipRechargeCount',
+    'membershipRenewalCount',
     'hasMembershipRepeatRecharge',
+    'hasMembershipRenewal',
     'hasMembershipBookingRetention',
     'balance',
     'totalDeposit',

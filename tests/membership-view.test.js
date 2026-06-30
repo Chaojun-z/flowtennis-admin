@@ -368,9 +368,13 @@ assert.match(html, /let membershipTierFilterValue=''/, 'membership management sh
 assert.match(membershipShell, /filterHostIds:\['membershipTierFilter'\]/, 'membership management should expose a member type filter');
 assert.match(html, /function onMembershipToolbarFilterChange\(\)/, 'membership member type filter should rerender from page one');
 assert.match(membershipShell, /会员类型[\s\S]*会员余额[\s\S]*会员订场[\s\S]*累计订场/, 'membership management should use the requested column labels and booking columns');
+assert.match(membershipShell, /首次开卡时间[\s\S]*续费次数[\s\S]*会员余额/, 'membership management should show renewal count after first open date');
+assert.match(membershipShell, /label:'操作'[\s\S]*style:'width:96px;padding-right:12px;text-align:right'/, 'membership management action column should use the compact action width');
 assert.doesNotMatch(fnBody('renderMemberships'), /当前会员|当前余额|订场次数/, 'membership management should remove old column labels');
 assert.match(fnBody('renderMemberships'), /renderCourtMiniBar\(finance\.balance,finance\.totalDeposit/, 'membership balance should use the same mini bar as court users');
 assert.match(fnBody('renderMemberships'), /membershipReadModelBookingForCourt\(item\)[\s\S]*memberBookingCount[\s\S]*bookingCount/, 'membership management should show member bookings and total bookings from the unified read model');
+assert.match(fnBody('renderMemberships'), /const renewalCount=Math\.max\(0,Number\(item\.membershipRenewalCount\)\|\|0\)/, 'membership management should render renewal count from the unified read model');
+assert.match(fnBody('renderMemberships'), /\$\{renewalCount\}次/, 'membership management should display renewal count as times');
 assert.match(fnBody('renderMemberships'), /查看<\/span><span class="tms-action-link" onclick="openCourtFinanceModal\('\$\{item\.id\}'\)">订场/, 'membership management should provide view and booking actions');
 assert.match(membershipShell, /data-membership-sort="firstOpenDate"[\s\S]*首次开卡时间[\s\S]*data-membership-sort="balance"[\s\S]*data-membership-sort="bookingCount"/, 'membership management should expose sortable first-open date, balance and booking count columns');
 assert.doesNotMatch(membershipShell, /data-membership-sort="validUntil"/, 'membership management should not expose validity sorting after hiding the validity column');
