@@ -11,19 +11,30 @@ async function loadMatches(force=false){
 function matchStatusOptions(){
   return FlowTennisBusinessTaxonomy.optionList('matchStatuses');
 }
+function renderMatchTopFilters(){
+  if(typeof renderStandardTopDropdown!=='function'||typeof standardTopLocationIcon!=='function')return '';
+  const campusOpts=globalCampusOptions();
+  const campusMenu=campusOpts.map(opt=>`<div class="tms-dropdown-item ${campus===opt.value?'active':''}" data-value="${esc(opt.value)}" onclick="selectMatchTopCampus(${jsArg(opt.value)},event)">${esc(opt.label)}</div>`).join('');
+  return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('matchTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',standardTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div></div>`;
+}
+function refreshMatchTopFilters(){
+  const host=document.getElementById('campusTabs');
+  if(host&&currentPage==='matches')host.innerHTML=renderMatchTopFilters();
+}
+function selectMatchTopCampus(value,event){
+  if(event)event.stopPropagation();
+  campus=value||'all';
+  localStorage.setItem(CAMPUS_KEY,campus);
+  refreshMatchTopFilters();
+  renderMatches();
+  closeStandardTopDropdowns();
+}
 function syncMatchFilters(){
-  const campusHost=document.getElementById('matchCampusFilterHost');
   const statusHost=document.getElementById('matchStatusFilterHost');
-  if(campusHost)campusHost.innerHTML=renderStandardDropdownHtml('matchCampusFilter','全部校区',globalCampusOptions(),campus,false,'onMatchCampusFilterChange');
   if(statusHost){
     const value=document.getElementById('matchStatusFilter')?.value||'';
     statusHost.innerHTML=renderStandardDropdownHtml('matchStatusFilter','全部状态',matchStatusOptions(),value,false,'renderMatches');
   }
-}
-function onMatchCampusFilterChange(){
-  campus=document.getElementById('matchCampusFilter')?.value||'all';
-  localStorage.setItem(CAMPUS_KEY,campus);
-  renderMatches();
 }
 function matchCampusCode(row){
   const direct=String(row?.campus||row?.booking?.campus||'').trim();

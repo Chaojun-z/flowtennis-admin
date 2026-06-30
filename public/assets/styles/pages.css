@@ -238,7 +238,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-admin-users .tms-table td:nth-child(9) .tms-cell-text{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #page-coaches .tms-table{min-width:1000px}
 #page-coaches .tms-table-wrapper{max-height:calc(100vh - 190px)}
-#page-memberships .tms-table{min-width:1500px}
+#page-memberships .tms-table{min-width:1548px;table-layout:fixed}
 #page-memberships .tms-table-wrapper{max-height:calc(100vh - 230px)}
 #page-memberships .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-memberships .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}

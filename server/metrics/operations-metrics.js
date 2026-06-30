@@ -2367,7 +2367,7 @@ function filterRowsByDateRange(rows = [], range = {}, keys = []) {
 }
 
 function financeCoachName(row = {}) {
-  return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || row.collector || row.operator || '');
+  return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || '');
 }
 
 function financeRowsAsCoachPurchases(rows = []) {

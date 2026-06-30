@@ -1450,7 +1450,8 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
   membershipAccounts: [],
   membershipOrders: [],
   financeNormalizedRows: [
-    { id: 'finance-course-real', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, collector: '张教练', operator: '张教练' },
+    { id: 'finance-course-real', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, ownerCoach: '张教练', collector: '张教练', operator: '张教练' },
+    { id: 'finance-course-import-operator', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 48000, recognizedRevenueDelta: 0, collector: 'Codex第一批导入-LIVE_FIX', operator: '管理员' },
     { id: 'finance-member-real', businessDate: '2026-06-02', businessType: '会员储值', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0 },
     { id: 'finance-court-real', businessDate: '2026-06-03', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '08:00-09:00', sourceProject: '1号场' },
     { id: 'finance-member-court-real', businessDate: '2026-06-04', businessType: '会员订场', action: '已入账', cashDelta: 0, recognizedRevenueDelta: 180, timeText: '10:00-11:00', sourceProject: '1号场' }
@@ -1459,11 +1460,13 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
 }, { now: new Date('2026-06-05 12:00:00') });
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.length, 30, 'all-time overview KPI trends should return a visible continuous 30-day window when finance rows are available');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.at(-1)?.date, '2026-06-04', 'all-time overview KPI trends should end at the latest real finance row date');
-assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-01')?.courseIncome, 1000, 'overview course income trend should come from real finance rows');
+assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-01')?.courseIncome, 49000, 'overview course income trend should include real finance course rows');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-06-02')?.storedValueIncome, 500, 'overview stored value trend should come from real finance rows');
 assert.strictEqual(financeBackedTrendMetrics.overview.trends.find(row => row.date === '2026-05-31')?.totalIncome, 0, 'all-time overview KPI trends should fill empty finance days with zero buckets');
 assert.strictEqual(financeBackedTrendMetrics.court.trends.find(row => row.date === '2026-06-04')?.bookingAmount, 180, 'court trends should include real member booking finance rows without court history');
 assert.strictEqual(financeBackedTrendMetrics.conversion.trends.find(row => row.date === '2026-06-03')?.dealRateNumerator, 0, 'conversion trends should not treat follow-up status text as a paid course conversion without a course purchase fact');
 assert.strictEqual(financeBackedTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.revenue, 1000, 'coach trends should use real course finance rows when purchase detail rows are unavailable');
+assert.strictEqual(financeBackedTrendMetrics.coach.rows.some(row => /Codex|管理员|导入/.test(row.coach)), false, 'coach dashboard should not treat import operators as coaches');
+assert.strictEqual(financeBackedTrendMetrics.coach.revenueParetoRows.some(row => /Codex|管理员|导入/.test(row.coach)), false, 'coach contribution ranking should only show real coaches');
 
 console.log('operations metrics tests passed');

@@ -988,6 +988,14 @@ function buildCampusTabs(){
     }
     return;
   }
+  if(currentPage==='matches'){
+    if(typeof renderMatchTopFilters==='function'){
+      el.innerHTML=renderMatchTopFilters();
+    }else{
+      el.innerHTML='';
+    }
+    return;
+  }
   const visibleCampuses=typeof accessibleCampusRows==='function'?accessibleCampusRows():campuses;
   el.innerHTML='<button class="ctab'+(campus==='all'?' active':'')+'" onclick="setCampus(this,\'all\')">全部</button>'+visibleCampuses.map(c=>`<button class="ctab${campus===(c.code||c.id)?' active':''}" onclick="setCampus(this,'${c.code||c.id}')">${esc(c.name)}</button>`).join('');
 }

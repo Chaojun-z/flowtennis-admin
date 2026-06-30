@@ -532,7 +532,7 @@ function renderMemberships(){
   const total=sortedRows.length,pages=Math.max(1,Math.ceil(total/membershipPageSize));
   if(membershipPage>pages)membershipPage=pages;
   const slice=sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
-  body.innerHTML=slice.map(item=>{const finance=membershipReadModelFinanceForCourt(item);const booking=membershipReadModelBookingForCourt(item);const account=item.membershipAccount||{};const benefitRows=membershipReadModelBenefitRowsForCourt(item);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const statusMeta=membershipStatusTagMeta(account);const tierLabel=item.membershipTierLabel||'-';const firstOpenDate=String(item.firstOpenDate||'').slice(0,10);const memberBookingCount=Number(item.memberBookingCount??booking.memberCount)||0;const bookingCount=Number(item.bookingCount??booking.count)||0;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(item.displayName,false)}</td><td>${renderStandardCellText(item.phone)}</td><td>${tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td><span class="tms-tag ${statusMeta.tagClass}">${statusMeta.text}</span></td><td>${renderStandardCellText(firstOpenDate,false)}</td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(item.membershipDiscountText,false)}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td>${renderStandardCellText(item.membershipValidUntil,false)}</td><td>${renderStandardCellText(account.hardExpireAt,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:168px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="13"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
+  body.innerHTML=slice.map(item=>{const finance=membershipReadModelFinanceForCourt(item);const booking=membershipReadModelBookingForCourt(item);const benefitRows=membershipReadModelBenefitRowsForCourt(item);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const tierLabel=item.membershipTierLabel||'-';const firstOpenDate=String(item.firstOpenDate||'').slice(0,10);const memberBookingCount=Number(item.memberBookingCount??booking.memberCount)||0;const bookingCount=Number(item.bookingCount??booking.count)||0;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(item.displayName)}</div></td><td>${renderStandardCellText(item.phone)}</td><td>${tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td>${renderStandardCellText(firstOpenDate,false)}</td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(item.membershipDiscountText,false)}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:188px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="10"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
   const pagerInfo=document.getElementById('membershipPagerInfo');
   if(pagerInfo)pagerInfo.innerHTML=renderPagerInfoHtml(total);
   const pager=document.querySelector('#page-memberships .tms-pagination');
@@ -1202,7 +1202,7 @@ function membershipAccountActionButtons(court){
     visible.renew?`<button type="button" class="schedule-detail-action" onclick="openMembershipOrderModal('${court.id}','renew')">续充会员</button>`:'',
     visible.void?`<button type="button" class="schedule-detail-action danger" onclick="openCourtMembershipPanel('${court.id}',{mode:'void'})">作废会员</button>`:''
   ].filter(Boolean).join('');
-  return buttons?`<div class="schedule-detail-card-actions">${buttons}</div>`:'<div class="student-detail-empty">暂无可用操作</div>';
+  return buttons;
 }
 function membershipDangerActionHtml(court){
   const account=courtMembershipAccount(court?.id);
@@ -1248,9 +1248,8 @@ function courtMembershipPanelHtml(court){
     renderDetailDrawerField('累计订场',`${Number(model?.bookingCount??bookingSummary.count)||0} 次`),
     ...memberFields,
     renderDetailDrawerField('充值备注',latestOrder?.notes||'-',{full:true})
-  ].join(''));
-  const actions=renderDetailDrawerCard('会员操作',membershipAccountActionButtons(court),{useGrid:false});
-  return `${profile}${overview}${voidInfoHtml}${actions}`;
+  ].join(''),{actionsHtml:membershipAccountActionButtons(court)});
+  return `${profile}${overview}${voidInfoHtml}`;
 }
 function membershipOrdersDrawerHtml(court){
   const orders=membershipReadModelRechargeRowsForCourt(court);
