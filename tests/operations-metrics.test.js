@@ -1450,7 +1450,7 @@ const financeBackedTrendMetrics = buildOperationsMetrics({
   membershipAccounts: [],
   membershipOrders: [],
   financeNormalizedRows: [
-    { id: 'finance-course-real', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, ownerCoach: '张教练', collector: '张教练', operator: '张教练' },
+    { id: 'finance-course-real', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 1000, recognizedRevenueDelta: 0, collector: '张教练', operator: '管理员' },
     { id: 'finance-course-import-operator', businessDate: '2026-06-01', businessType: '课程', action: '收款', cashDelta: 48000, recognizedRevenueDelta: 0, collector: 'Codex第一批导入-LIVE_FIX', operator: '管理员' },
     { id: 'finance-member-real', businessDate: '2026-06-02', businessType: '会员储值', action: '收款', cashDelta: 500, recognizedRevenueDelta: 0 },
     { id: 'finance-court-real', businessDate: '2026-06-03', businessType: '散客订场', action: '收款', cashDelta: 200, recognizedRevenueDelta: 200, timeText: '08:00-09:00', sourceProject: '1号场' },

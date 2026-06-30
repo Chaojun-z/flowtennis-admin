@@ -2366,22 +2366,35 @@ function filterRowsByDateRange(rows = [], range = {}, keys = []) {
   return (rows || []).filter(row => dateWithinRange(firstRowDate(row, keys), range));
 }
 
+function knownCoachNameSet(coaches = []) {
+  return new Set((coaches || [])
+    .filter(row => String(row?.status || 'active') !== 'inactive')
+    .map(row => canonicalCoachName(row?.name || row?.coachName || ''))
+    .filter(isBusinessCoachName));
+}
+
 function financeCoachName(row = {}) {
   return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || '');
 }
 
-function financeRowsAsCoachPurchases(rows = []) {
+function financeRowsAsCoachPurchases(rows = [], { coaches = [] } = {}) {
+  const knownCoaches = knownCoachNameSet(coaches);
   return financeCourseRows(rows || [])
     .filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0)
-    .map(row => ({
-      id: row.id,
-      studentId: row.studentId || row.customer || row.customerName || row.sourceDocument || row.id,
-      ownerCoach: financeCoachName(row),
-      actualAmount: money(row.cashDelta),
-      purchaseDate: financeBusinessDate(row),
-      status: 'active',
-      courseType: row.courseType || row.packageName || row.incomeType || '课程'
-    }));
+    .map(row => {
+      const directCoach = financeCoachName(row);
+      const fallbackCoach = canonicalCoachName(row.collector || row.operator || '');
+      const ownerCoach = directCoach || (knownCoaches.has(fallbackCoach) ? fallbackCoach : '');
+      return {
+        id: row.id,
+        studentId: row.studentId || row.customer || row.customerName || row.sourceDocument || row.id,
+        ownerCoach,
+        actualAmount: money(row.cashDelta),
+        purchaseDate: financeBusinessDate(row),
+        status: 'active',
+        courseType: row.courseType || row.packageName || row.incomeType || '课程'
+      };
+    });
 }
 
 function buildRangedOperationsData(data = {}, range = {}) {
@@ -2490,8 +2503,8 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const profileRows = buildCustomerProfileRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
-  const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || []);
-  const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || []);
+  const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || [], { coaches: data.coaches || [] });
+  const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || [], { coaches: data.coaches || [] });
   const coachRows = buildCoachRows({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
@@ -2589,7 +2602,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
     schedule: trendRangedData.schedule || [],
-    purchases: financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || []),
+    purchases: financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || [], { coaches: data.coaches || [] }),
     allPurchases: allCoachFinancePurchases,
     customerLifecycleRows,
     dateRange: trendDateRange,
@@ -2617,7 +2630,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
     schedule: previousRangedData.schedule || [],
-    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || []),
+    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || [], { coaches: data.coaches || [] }),
     allPurchases: allCoachFinancePurchases,
     periodPurchases: previousRangedData.purchases || [],
     customerLifecycleRows,

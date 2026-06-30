@@ -34,6 +34,7 @@ assert.match(styles, /#page-coachops \.tms-table/, 'coach operations should have
 assert.match(source, /function coachSortValue\(/, 'coach list ordering should use a persisted sort value');
 assert.match(fnBody('activeCoachNames'), /coachSortValue/, 'active coach names should follow persisted coach order');
 assert.match(fnBody('coachOpsRows'), /coachSortValue/, 'coach operation rows should follow persisted coach order');
+assert.match(fnBody('coachOpsRows'), /activeCoachNames\(\)\.map\(name=>\(\{name,rows:\[\]\}\)\)/, 'coach workload should still render active coach rows when backend unified rows are temporarily empty');
 assert.match(source, /function saveCoachOpsOrder\(/, 'coach schedule order should be saveable');
 assert.match(fnBody('saveCoachOpsOrder'), /apiCall\('PUT','\/coaches\/'\+coach\.id/, 'coach schedule order should persist through the backend coach record');
 assert.match(fnBody('renderCoachOps'), /draggable="true"[\s\S]*ondragstart="coachOpsDragStart/, 'coach schedule rows should support drag sorting');
@@ -51,7 +52,7 @@ assert.match(source, /function coachOpsComparisonText\(/, 'coach workload should
 assert.match(fnBody('operationsCoachTrialConversionText'), /return '-%'/, 'trial conversion should show -% when no trial data exists');
 assert.doesNotMatch(fnBody('operationsCoachTrialConversionText'), /coach-workload-rate down/, 'empty trial conversion should not render red');
 assert.match(fnBody('coachCourseTypeDistributionText'), /\|\|'-'/, 'empty course type distribution should show short hyphen');
-assert.match(fnBody('coachOpsComparisonText'), /if\(!previous\)return current\?'<span class="coach-workload-compare up">新增<\/span>':'<span class="coach-workload-compare">-%<\/span>'/, 'zero comparison should show -% without red');
+assert.match(fnBody('coachOpsComparisonText'), /row\?\.comparisonText\|\|''/, 'workload comparison should read backend unified comparison text without local recalculation');
 assert.match(fnBody('renderCoachOps'), /coach-workload-course-types[\s\S]*coach-workload-campus[\s\S]*coach-workload-timeband/, 'workload should render course, campus and time distribution cells');
 assert.match(styles, /#page-coachops \.tms-table-card\{[\s\S]*min-height:calc\(100vh - 180px\)/, 'coach workload table card should fill more vertical space');
 assert.match(styles, /#page-coachops \.coach-workload-wrap\{white-space:nowrap/, 'workload distribution cells should stay on one line');

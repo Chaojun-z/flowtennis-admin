@@ -446,7 +446,7 @@ function operationsCoachTrialConversionText(coach){
   if(!total)return '-%';
   const converted=Number(standardRow.trialConverted)||0;
   const percent=Number(standardRow.trialConversionRate);
-  if(!Number.isFinite(percent))return `${converted}/${total} <span class="coach-workload-rate down">-%</span>`;
+  if(!Number.isFinite(percent))return `${converted}/${total} <span class="coach-workload-rate">-%</span>`;
   const rate=Number.isInteger(percent)?percent:percent.toFixed(1);
   return `${converted}/${total} <span class="coach-workload-rate ${converted>=total?'up':converted>0?'up':'down'}">${rate}%</span>`;
 }
@@ -470,7 +470,8 @@ function coachOpsSummaryForRange(row,range){
 }
 function coachOpsRows(){
   const range=rangeBounds(coachOpsMode);
-  return (coachOpsUnifiedView?.rows||[])
+  const sourceRows=(coachOpsUnifiedView?.rows||[]).length?(coachOpsUnifiedView?.rows||[]):activeCoachNames().map(name=>({name,rows:[]}));
+  return sourceRows
     .filter(row=>!coachOpsSelectedCoach||coachName(row.name)===coachName(coachOpsSelectedCoach))
     .map(row=>{
       const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&inRange(s.startTime,range.start,range.end));

@@ -206,13 +206,13 @@ assert.match(
 );
 assert.match(
   operationsMetricsSource,
-  /const coachFinancePurchases = financeRowsAsCoachPurchases\(rangedData\.financeNormalizedRows \|\| \[\]\);[\s\S]{0,360}const coachRows = buildCoachRows\(\{[\s\S]{0,180}purchases: coachFinancePurchases/,
-  'coach dashboard revenue should pass standard finance rows into coach metrics'
+  /const coachFinancePurchases = financeRowsAsCoachPurchases\(rangedData\.financeNormalizedRows \|\| \[\], \{ coaches: data\.coaches \|\| \[\] \}\);[\s\S]{0,360}const coachRows = buildCoachRows\(\{[\s\S]{0,180}purchases: coachFinancePurchases/,
+  'coach dashboard revenue should pass standard finance rows and real coach names into coach metrics'
 );
 assert.match(
   operationsMetricsSource,
-  /const previousCoachRows = previousRangedData \? buildCoachRows\(\{[\s\S]{0,220}purchases: financeRowsAsCoachPurchases\(previousRangedData\.financeNormalizedRows \|\| \[\]\)/,
-  'previous-period coach revenue should pass standard finance rows into coach metrics'
+  /const previousCoachRows = previousRangedData \? buildCoachRows\(\{[\s\S]{0,220}purchases: financeRowsAsCoachPurchases\(previousRangedData\.financeNormalizedRows \|\| \[\], \{ coaches: data\.coaches \|\| \[\] \}\)/,
+  'previous-period coach revenue should pass standard finance rows and real coach names into coach metrics'
 );
 
 const financeSnapshotSource = read('server/page-data/finance-snapshot.js');
