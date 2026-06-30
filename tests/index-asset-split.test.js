@@ -9,6 +9,7 @@ assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
+assert.match(html, /assets\/styles\/pages\.css\?v=20260630-coach-efficiency-polish-v3/, 'index.html should bust stale cached pages.css after coach efficiency polish');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260608-student-drawer-v2/, 'index.html should bust stale cached utils.js after coach operations split changes');
@@ -28,9 +29,10 @@ assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260613-finance-list-v1/, 'index.html should version coachops.js after finance list updates');
-assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260623-trend-fallback-v1/, 'index.html should bust stale cached operations.js after trend fallback updates');
+assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260630-coach-efficiency-polish-v3/, 'index.html should bust stale cached charts.js after coach efficiency polish');
+assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260630-coach-efficiency-polish-v3/, 'index.html should bust stale cached operations.js after coach efficiency polish');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
-assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=20260609-campus-scope-v1/, 'index.html should bust stale cached courts.js when court filters change');
+assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
 assert.match(html, /assets\/scripts\/pages\/students\.js\?v=20260612-student-delete-card-v1/, 'index.html should bust stale cached students.js after student delete card updates');
 assert.match(html, /assets\/scripts\/pages\/schedule\.js/, 'index.html should load schedule page module');

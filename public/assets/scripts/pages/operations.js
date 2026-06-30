@@ -729,16 +729,16 @@ function renderOperationsCoach(data) {
   <div class="operations-coach-secondary-grid">
     <section class="operations-section">
       ${operationsCoachChartHeader('教练产值贡献排行', operationsCoachTitleLegend([
-        { label: '归属实收', color: '#8B5E3C' },
-        { label: '归属实收占比', color: '#3B6EA8', line: true }
+        { label: '归属实收', color: '#A67B5B' },
+        { label: '归属实收占比', color: '#0F766E', line: true }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachParetoChart"></div>
     </section>
     <section class="operations-section">
       ${operationsCoachChartHeader('课程结构占比', operationsCoachTitleLegend([
-        { label: '体验课', color: '#F59E0B' },
-        { label: '私教课', color: '#4F81FF' },
-        { label: '小班课', color: '#10B981' }
+        { label: '体验课', color: '#D97706' },
+        { label: '私教课', color: '#0F766E' },
+        { label: '小班课', color: '#E7E5E4' }
       ]))}
       <div class="operations-chart-host operations-coach-chart" id="operationsCoachCourseMixChart"></div>
     </section>

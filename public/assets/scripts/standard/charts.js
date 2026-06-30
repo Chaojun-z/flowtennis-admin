@@ -147,7 +147,7 @@ function buildStandardBarLineChartOption({ labels = [], barValues = [], lineValu
         itemStyle: { color: '#3B82F6' },
         lineStyle: { width: 3, color: '#3B82F6' },
         emphasis: { focus: 'series', scale: true }
-      }
+      },
     ]
   };
 }
@@ -632,20 +632,40 @@ function operationsCoachRevenueAxisLabel(value) {
   return `¥${fmt(amount / 10000)}万`;
 }
 
+function operationsCoachRevenueZeroAxisLabel(value) {
+  return Number(value) === 0 ? '¥0' : '';
+}
+
 function operationsCoachCourseColor(type = '') {
-  if (type === '体验课') return '#F59E0B';
-  if (type === '私教课') return '#4F81FF';
-  if (type === '小班课') return '#10B981';
+  if (type === '体验课') return '#D97706';
+  if (type === '私教课') return '#0F766E';
+  if (type === '小班课') return '#E7E5E4';
   return '#8EA0B8';
+}
+
+const operationsCoachQuadrantColors = {
+  q1: '#B58B4C',
+  q2: '#6B8E9B',
+  q3: '#A75D5D',
+  q4: '#7C8B6F'
+};
+
+function operationsCoachQuadrantColor(x = 0, y = 0, xMid = 50, yMid = 50) {
+  const right = (Number(x) || 0) >= xMid;
+  const top = (Number(y) || 0) >= yMid;
+  if (right && top) return operationsCoachQuadrantColors.q1;
+  if (!right && top) return operationsCoachQuadrantColors.q2;
+  if (!right && !top) return operationsCoachQuadrantColors.q3;
+  return operationsCoachQuadrantColors.q4;
 }
 
 function operationsCoachCapabilityColor(row = {}) {
   const trial = Number(row.trialConversionRate) || 0;
   const renewal = Number(row.renewalRate) || 0;
-  if (trial >= 30 && renewal >= 50) return { label: '双高', color: '#2E8B6D' };
-  if (trial >= 30) return { label: '转化高续费低', color: '#D89135' };
-  if (renewal >= 50) return { label: '转化低续费高', color: '#3B6EA8' };
-  return { label: '双低', color: '#E05252' };
+  if (trial >= 50 && renewal >= 50) return { label: '双高', color: operationsCoachQuadrantColors.q1 };
+  if (trial < 50 && renewal >= 50) return { label: '转化低续费高', color: operationsCoachQuadrantColors.q2 };
+  if (trial < 50 && renewal < 50) return { label: '双低', color: operationsCoachQuadrantColors.q3 };
+  return { label: '转化高续费低', color: operationsCoachQuadrantColors.q4 };
 }
 
 function operationsCoachMatrixSymbolSize(value = [], maxLessons = 1) {
@@ -666,6 +686,10 @@ function operationsCoachBubbleLabel(item = {}) {
   return { text: operationsCoachShortName(item.name), fontSize: 10 };
 }
 
+const operationsCoachChartTextStyle = { color: '#57534E', fontFamily: 'var(--ops-number-font)' };
+const operationsCoachAxisLabel = { color: '#78716C', fontFamily: 'var(--ops-number-font)', fontSize: 11, fontWeight: 500 };
+const operationsCoachSplitLine = { lineStyle: { color: 'rgba(87,83,78,.10)', type: 'solid' } };
+
 function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const source = (rows || []).filter(row => row && row.coach);
   if (!source.length) return { series: [] };
@@ -674,8 +698,9 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
   const avgRevenue = source.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0) / source.length;
   const utilizationAxis = operationsPercentAxisRange(source.map(row => row.utilizationRate), { defaultMax: 75, max: 100 });
   const revenueAxis = operationsMoneyAxisRange(source.map(row => row.revenue), { defaultMax: 500000 });
+  const hasRevenue = source.some(row => (Number(row.revenue) || 0) > 0);
   const utilizationLabel = value => `${fmt(value)}%`;
-  const revenueLabel = value => operationsCoachRevenueAxisLabel(value);
+  const revenueLabel = value => hasRevenue || Number(value) >= 0 ? operationsCoachRevenueAxisLabel(value) : '';
   return buildStandardBusinessBubbleMatrixChartOption({
     grid: operationsMatrixGrid({
       xLabels: operationsAxisTickLabels(utilizationAxis, utilizationLabel),
@@ -693,29 +718,29 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
           <div>圆点大小：当前筛选课数 ${fmt(row.lessonCount || 0)} 节</div>
         </div>`;
       },
-      textStyle: { fontSize: 12, fontWeight: 400 }
+      textStyle: { ...operationsCoachChartTextStyle, fontSize: 12, fontWeight: 400 }
     },
     xAxis: {
       type: 'value',
-      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
+      nameTextStyle: { ...operationsCoachAxisLabel, fontWeight: 600 },
       min: 0,
       max: utilizationAxis.max,
       interval: utilizationAxis.interval,
-      axisLabel: { formatter: utilizationLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
-      axisLine: { lineStyle: { color: '#D7DEE8' } },
-      axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
-      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+      axisLabel: { ...operationsCoachAxisLabel, formatter: utilizationLabel, margin: 6, showMinLabel: true, showMaxLabel: true },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
-      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
-      min: 0,
+      nameTextStyle: { ...operationsCoachAxisLabel, fontWeight: 600 },
+      min: hasRevenue ? 0 : -1,
       max: revenueAxis.max,
       interval: revenueAxis.interval,
-      axisLabel: { formatter: revenueLabel, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true },
-      axisLine: { lineStyle: { color: '#D7DEE8' } },
+      axisLabel: { ...operationsCoachAxisLabel, formatter: revenueLabel, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true },
+      axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+      splitLine: { show: false }
     },
     seriesName: '教练经营位置',
     data: source.map(row => {
@@ -729,53 +754,49 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
         symbolSize: bubbleSize,
         label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
         itemStyle: {
-          color: operationsCoachBandColor(row.utilizationRate, utilizationAxis),
-          opacity: 0.86,
+          color: operationsCoachQuadrantColor(row.utilizationRate, row.revenue, avgUtilization, avgRevenue),
+          opacity: 0.95,
           borderColor: '#FFFFFF',
-          borderWidth: 2,
-          shadowBlur: 14,
-          shadowColor: 'rgba(128,84,53,.18)'
+          borderWidth: 1
         }
       };
     }),
     symbolSize: value => operationsCoachMatrixSymbolSize(value, maxLessons),
     label: {
       show: true,
-      position: 'inside',
+      position: 'top',
       formatter: item => operationsCoachBubbleLabel(item).text,
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontWeight: 700
+      color: '#57534E',
+      fontSize: 11,
+      fontWeight: 600,
+      distance: 4
     },
+    labelLayout: { hideOverlap: true },
     markLine: {
       silent: true,
       symbol: 'none',
-      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-      label: { color: '#64748B', fontSize: 11 },
+      lineStyle: { color: '#D6D3D1', type: 'dashed', width: 1 },
+      label: { ...operationsCoachAxisLabel, color: '#9CA3AF' },
       data: [
-        { name: '平均利用率', xAxis: avgUtilization, label: { formatter: '平均利用率', position: 'insideEndTop' } },
-        { name: '平均产值', yAxis: avgRevenue, label: { formatter: '平均产值', position: 'insideEndTop' } }
+        { name: '均值', xAxis: avgUtilization, label: { formatter: '均值', position: 'insideEndTop' } },
+        { name: '均值', yAxis: avgRevenue, label: { formatter: '均值', position: 'insideEndTop' } }
       ]
-    },
-    markArea: {
-      silent: true,
-      itemStyle: { opacity: 0.42 },
-      label: { show: false },
-      data: operationsAxisBandMarkAreas(utilizationAxis, operationsCoachBandFills)
     }
   });
 }
 
 function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
   const source = (rows || [])
-    .filter(row => row && row.coach && ((Number(row.revenue) || 0) > 0 || (Number(row.revenueShare) || 0) > 0))
+    .filter(row => row && row.coach)
     .slice(0, 10);
   if (!source.length) return { series: [] };
+  const hasRevenue = source.some(row => (Number(row.revenue) || 0) > 0);
   return {
     ...standardChartBaseOption(),
-    color: ['#8B5E3C', '#3B6EA8'],
+    color: ['#A67B5B', '#0F766E'],
     tooltip: {
       trigger: 'axis',
+      axisPointer: { type: 'none' },
       formatter: params => {
         const rows = Array.isArray(params) ? params : [params];
         const name = esc(rows[0]?.axisValue || '');
@@ -787,18 +808,18 @@ function buildOperationsCoachParetoChartOption({ rows = [] } = {}) {
           <div>归属实收占比：${fmt(share)}%</div>
         </div>`;
       },
-      textStyle: { fontSize: 12, fontWeight: 400 }
+      textStyle: { ...operationsCoachChartTextStyle, fontSize: 12, fontWeight: 400 }
     },
     legend: { show: false },
-    grid: { left: 44, right: 44, top: 12, bottom: 38, containLabel: false },
-    xAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 10, interval: 0, rotate: 28, margin: 8 } },
+    grid: { top: 10, right: 35, bottom: 45, left: 35, containLabel: false },
+    xAxis: { type: 'category', data: source.map(row => operationsCoachShortName(row.coach)), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...operationsCoachAxisLabel, color: '#78716C', fontSize: 10, interval: 0, rotate: 30, margin: 12 } },
     yAxis: [
-      { type: 'value', axisLabel: { formatter: value => `¥${fmt(value / 10000)}万`, color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
-      { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#A19080', fontSize: 11 }, splitLine: { show: false } }
+      { type: 'value', ...(hasRevenue ? {} : { max: 1 }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...operationsCoachAxisLabel, formatter: hasRevenue ? (value => `¥${fmt(value / 10000)}万`) : operationsCoachRevenueZeroAxisLabel }, splitLine: operationsCoachSplitLine },
+      { type: 'value', min: 0, max: 100, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...operationsCoachAxisLabel, formatter: '{value}%' }, splitLine: { show: false } }
     ],
     series: [
-      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barMaxWidth: 30, itemStyle: { color: '#8B5E3C', borderRadius: [6, 6, 0, 0] }, emphasis: { focus: 'series' } },
-      { name: '归属实收占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: true, symbolSize: 7, lineStyle: { width: 3, color: '#3B6EA8' }, itemStyle: { color: '#3B6EA8' }, emphasis: { focus: 'series' } }
+      { name: '归属实收', type: 'bar', data: source.map(row => row.revenue), barWidth: 12, itemStyle: { color: '#A67B5B', borderRadius: [2, 2, 0, 0] }, emphasis: { focus: 'series' } },
+      { name: '归属实收占比', type: 'line', yAxisIndex: 1, data: source.map(row => row.revenueShare), smooth: false, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2, color: '#0F766E' }, itemStyle: { color: '#0F766E', borderColor: '#FFFFFF', borderWidth: 1.5 }, emphasis: { focus: 'series' } }
     ]
   };
 }
@@ -883,15 +904,15 @@ function buildOperationsCoachCourseMixChartOption({ rows = [] } = {}) {
     .slice(0, 10);
   return {
     color: [operationsCoachCourseColor('体验课'), operationsCoachCourseColor('私教课'), operationsCoachCourseColor('小班课')],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, textStyle: { fontSize: 12, fontWeight: 400 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'none' }, textStyle: { ...operationsCoachChartTextStyle, fontSize: 12, fontWeight: 400 } },
     legend: { show: false },
-    grid: { left: 72, right: 14, top: 10, bottom: 20, containLabel: false },
-    xAxis: { type: 'value', axisLabel: { formatter: '{value}h', color: '#A19080', fontSize: 11 }, splitLine: { lineStyle: { color: '#EEF2F7' } } },
-    yAxis: { type: 'category', data: displayRows.map(row => operationsCoachShortName(row.coach)), axisTick: { show: false }, axisLabel: { color: '#A19080', fontSize: 11, margin: 10 } },
+    grid: { top: 0, right: 20, bottom: 20, left: 55, containLabel: false },
+    xAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...operationsCoachAxisLabel, formatter: '{value}h' }, splitLine: { show: false } },
+    yAxis: { type: 'category', data: displayRows.map(row => operationsCoachShortName(row.coach)), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...operationsCoachAxisLabel, margin: 10 } },
     series: [
-      { name: '体验课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.trialHours), itemStyle: { color: operationsCoachCourseColor('体验课') }, emphasis: { focus: 'series' } },
-      { name: '私教课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.privateHours), itemStyle: { color: operationsCoachCourseColor('私教课') }, emphasis: { focus: 'series' } },
-      { name: '小班课', type: 'bar', stack: 'hours', data: displayRows.map(row => row.smallGroupHours), itemStyle: { color: operationsCoachCourseColor('小班课') }, emphasis: { focus: 'series' } }
+      { name: '体验课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.trialHours), itemStyle: { color: operationsCoachCourseColor('体验课'), borderRadius: [2, 0, 0, 2] }, emphasis: { focus: 'series' } },
+      { name: '私教课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.privateHours), itemStyle: { color: operationsCoachCourseColor('私教课') }, emphasis: { focus: 'series' } },
+      { name: '小班课', type: 'bar', stack: 'hours', barWidth: 6, data: displayRows.map(row => row.smallGroupHours), itemStyle: { color: operationsCoachCourseColor('小班课'), borderRadius: [0, 2, 2, 0] }, emphasis: { focus: 'series' } }
     ]
   };
 }
@@ -899,8 +920,6 @@ function buildOperationsCoachCourseMixChartOption({ rows = [] } = {}) {
 function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
   const source = (rows || []).filter(row => row && row.coach);
   if (!source.length) return { series: [] };
-  const hasRenewalBase = source.some(row => (Number(row.oldCustomerBase) || 0) > 0);
-  if (!hasRenewalBase) return { series: [] };
   const maxSample = Math.max(1, ...source.map(row => (Number(row.trialBase) || 0) + (Number(row.oldCustomerBase) || 0)));
   const percentAxis = { max: 100, interval: 20 };
   const percentLabel = value => `${fmt(value)}%`;
@@ -923,10 +942,11 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
           <div>样本量：体验课 ${fmt(trialBase)} 人 / 老客 ${fmt(oldCustomerBase)} 人 / 合计 ${fmt(sample)} 人</div>
           ${sample > 0 && sample < 10 ? '<div style="color:#A16207">样本较小，仅作参考</div>' : ''}
         </div>`;
-      }
+      },
+      textStyle: { ...operationsCoachChartTextStyle, fontSize: 12, fontWeight: 400 }
     },
-    xAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: percentLabel, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: true, lineStyle: { color: '#D7DEE8' } }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
-    yAxis: { type: 'value', nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { formatter: percentLabel, color: '#A19080', fontSize: 11, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true }, axisLine: { lineStyle: { color: '#D7DEE8' } }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } } },
+    xAxis: { type: 'value', nameTextStyle: { ...operationsCoachAxisLabel, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { ...operationsCoachAxisLabel, formatter: percentLabel, margin: 6, showMinLabel: true, showMaxLabel: true }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } },
+    yAxis: { type: 'value', nameTextStyle: { ...operationsCoachAxisLabel, fontWeight: 600 }, min: 0, max: 100, interval: 20, axisLabel: { ...operationsCoachAxisLabel, formatter: percentLabel, margin: 6, verticalAlign: 'top', showMinLabel: true, showMaxLabel: true }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } },
     seriesName: '转化续费能力',
     data: source.map(row => {
       const ability = operationsCoachCapabilityColor(row);
@@ -940,37 +960,28 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
         value,
         symbolSize: bubbleSize,
         label: { show: !!bubbleLabel.text, fontSize: bubbleLabel.fontSize },
-        itemStyle: { color: ability.color, opacity: 0.84, borderColor: '#fff', borderWidth: 2, shadowBlur: 12, shadowColor: `${ability.color}2E` }
+        itemStyle: { color: ability.color, opacity: 0.95, borderColor: '#fff', borderWidth: 1 }
       };
     }),
     symbolSize: value => operationsCoachCapabilitySymbolSize(value, maxSample),
     label: {
       show: true,
-      position: 'inside',
+      position: 'top',
       formatter: item => operationsCoachBubbleLabel(item).text,
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontWeight: 700
+      color: '#57534E',
+      fontSize: 11,
+      fontWeight: 600,
+      distance: 4
     },
+    labelLayout: { hideOverlap: true },
     markLine: {
       silent: true,
       symbol: 'none',
-      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-      label: { color: '#64748B', fontSize: 11 },
+      lineStyle: { color: '#D6D3D1', type: 'dashed', width: 1 },
+      label: { ...operationsCoachAxisLabel, color: '#9CA3AF' },
       data: [
-        { name: '转化均线', xAxis: 50, label: { formatter: '转化 50%', position: 'insideEndTop' } },
-        { name: '续费均线', yAxis: 50, label: { formatter: '续费 50%', position: 'insideEndTop' } }
-      ]
-    },
-    markArea: {
-      silent: true,
-      itemStyle: { opacity: 0.42 },
-      label: { show: false },
-      data: [
-        [{ name: '双低', xAxis: 0, yAxis: 0, itemStyle: { color: '#FFF1F2' } }, { xAxis: 50, yAxis: 50 }],
-        [{ name: '转化高续费低', xAxis: 50, yAxis: 0, itemStyle: { color: '#FFFBEB' } }, { xAxis: 100, yAxis: 50 }],
-        [{ name: '转化低续费高', xAxis: 0, yAxis: 50, itemStyle: { color: '#EFF6FF' } }, { xAxis: 50, yAxis: 100 }],
-        [{ name: '双高', xAxis: 50, yAxis: 50, itemStyle: { color: '#ECFDF5' } }, { xAxis: 100, yAxis: 100 }]
+        { name: '50%', xAxis: 50, label: { formatter: '50%', position: 'insideEndTop' } },
+        { name: '50%', yAxis: 50, label: { formatter: '50%', position: 'insideEndTop' } }
       ]
     }
   });
