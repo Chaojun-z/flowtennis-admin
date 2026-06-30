@@ -12,14 +12,37 @@ let teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],t
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
+let financePrepaidView={rows:[],summary:{}};
 let membershipFinanceSummary=null;
 let operationsPageData=null;
+let coachOpsUnifiedView={rows:[]};
+let purchaseUnifiedView={rows:[]};
+let packageUnifiedView={rows:[]};
+let entitlementUnifiedView={rows:[]};
 let studentLessonRecordExpandedState={};
 function financeNormalizedRows(){
   return Array.isArray(financeNormalizedLedgerRows)?financeNormalizedLedgerRows:[];
 }
 function financeSettlementRowsFromSnapshot(){
   return Array.isArray(financeSettlementSummaryRows)?financeSettlementSummaryRows:[];
+}
+function financePrepaidUnifiedRows(){
+  return Array.isArray(financePrepaidView?.rows)?financePrepaidView.rows:[];
+}
+function financePrepaidUnifiedSummary(){
+  return financePrepaidView?.summary||{};
+}
+function coachOpsUnifiedRows(){
+  return Array.isArray(coachOpsUnifiedView?.rows)?coachOpsUnifiedView.rows:[];
+}
+function purchaseUnifiedRows(){
+  return Array.isArray(purchaseUnifiedView?.rows)?purchaseUnifiedView.rows:[];
+}
+function packageUnifiedRows(){
+  return Array.isArray(packageUnifiedView?.rows)?packageUnifiedView.rows:[];
+}
+function entitlementUnifiedRows(){
+  return Array.isArray(entitlementUnifiedView?.rows)?entitlementUnifiedView.rows:[];
 }
 function customerLifecycleText(value){
   return String(value||'').trim();
@@ -209,9 +232,9 @@ const PAGE_DATA_REQUIREMENTS={
   coachops:['campuses','students','classes','schedule','feedbacks','coachProposals','entitlements','entitlementLedger','coaches','products','purchases','packages','operationsPage'],
   finance:[],
   products:['products'],
-  packages:['packages','products','purchases','entitlements','packageBoardPreferences'],
-  purchases:[],
-  entitlements:['entitlements','students'],
+  packages:['purchasesPage','products','packageBoardPreferences'],
+  purchases:['purchasesPage'],
+  entitlements:['purchasesPage'],
   coaches:['campuses','coaches'],
   'admin-users':['campuses','coaches'],
   courts:[],
@@ -233,8 +256,8 @@ const PAGE_DATA_BACKGROUND_REQUIREMENTS={
   'trial-students':['classes','schedule','courts','financePage'],
   leads:['leadFollowups','lifecycleMetricsPage'],
   packages:[],
-  purchases:['purchasesPage'],
-  schedule:['classes','feedbacks','entitlements','entitlementLedger'],
+  purchases:[],
+  schedule:['classes','feedbacks','entitlements','entitlementLedger','financePage'],
   finance:['financePage'],
   courts:['courtsPage'],
   matches:['matchesPage'],
@@ -583,6 +606,9 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
+      purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
+      packageUnifiedView=data.packageUnifiedView||{rows:[]};
+      entitlementUnifiedView=data.entitlementUnifiedView||{rows:[]};
       staleCachedDatasets.delete('purchases');
       staleCachedDatasets.delete('packages');
       staleCachedDatasets.delete('students');
@@ -608,6 +634,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       financeOverviewData=data.financeOverviewData||null;
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
+      financePrepaidView=data.financePrepaidView||{rows:[],summary:{}};
       loadedDatasets.add('financePage');
       return;
     }
@@ -649,6 +676,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
+      coachOpsUnifiedView=data.coachOpsUnifiedView||{rows:[]};
       staleCachedDatasets.delete('campuses');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('classes');
@@ -711,7 +739,8 @@ function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
   membershipPlans=[];membershipAccounts=[];membershipOrders=[];membershipBenefitLedger=[];membershipAccountEvents=[];pricePlans=[];
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
-  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];membershipFinanceSummary=null;operationsPageData=null;
+  financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
+  coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
   customerLifecycleRows=[];teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   packageBoardColumnOrder=[];
@@ -759,8 +788,13 @@ function applyLoadedData(data){
   financeOverviewData=data?.financeOverviewData||null;
   financeNormalizedLedgerRows=Array.isArray(data?.financeNormalizedRows)?data.financeNormalizedRows:[];
   financeSettlementSummaryRows=Array.isArray(data?.financeSettlementRows)?data.financeSettlementRows:[];
+  financePrepaidView=data?.financePrepaidView||{rows:[],summary:{}};
   membershipFinanceSummary=data?.membershipFinanceSummary||null;
   operationsPageData=data?.operations||null;
+  coachOpsUnifiedView=data?.coachOpsUnifiedView||{rows:[]};
+  purchaseUnifiedView=data?.purchaseUnifiedView||{rows:[]};
+  packageUnifiedView=data?.packageUnifiedView||{rows:[]};
+  entitlementUnifiedView=data?.entitlementUnifiedView||{rows:[]};
   customerLifecycleRows=Array.isArray(data?.customerLifecycleRows)?data.customerLifecycleRows:[];
   teachingStudentViews=data?.teachingStudentViews||teachingStudentViews;
   standardLifecycleMetrics=data?.standardLifecycleMetrics||standardLifecycleMetrics;

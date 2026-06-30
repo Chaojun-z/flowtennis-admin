@@ -3,6 +3,7 @@ const {
   buildFinanceOverviewDataFromRows,
   mergeFinanceOverviewDataWithRows
 } = require('../read-models/finance-summary.js');
+const { buildFinancePrepaidView } = require('../read-models/unified-page-views.js');
 
 function createFinanceSnapshotHelpers(deps = {}) {
   const {
@@ -74,7 +75,8 @@ function createFinanceSnapshotHelpers(deps = {}) {
       generatedAt: new Date().toISOString(),
       financeOverviewData: buildFinanceOverviewDataFromRows(financeNormalizedRows),
       financeNormalizedRows,
-      financeSettlementRows: buildFinanceSettlementRows(source)
+      financeSettlementRows: buildFinanceSettlementRows(source),
+      financePrepaidView: buildFinancePrepaidView(financeNormalizedRows)
     };
   }
 

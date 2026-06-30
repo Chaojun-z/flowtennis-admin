@@ -33,6 +33,7 @@ assert.match(agentsSource, /tests\/cross-page-metric-consistency\.test\.js/, 'AG
 assert.match(packageJson.scripts.test, /node tests\/cross-page-metric-consistency\.test\.js/, 'npm test should run cross-page metric consistency guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standards-governance\.test\.js/, 'npm test should run data-standard governance guard');
 assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.test\.js/, 'npm test should run source-level data-standard guard');
+assert.match(packageJson.scripts.test, /node tests\/unified-page-source-hard-guard\.test\.js/, 'npm test should run unified page source hard guard');
 assert.match(
   metricDocSource,
   /线索池顶部转化 \| 线索数、普通学员、正式学员、体验路径学员、体验路径成交/,

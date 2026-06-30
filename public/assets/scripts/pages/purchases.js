@@ -113,7 +113,7 @@ function getFilteredPurchases(){
   const packageId=purchaseSelectedPackageFilter();
   const ownerCoachFilter=purOwnerCoachFilterValue||'';
   const dateRange=activePurchaseDateRange();
-  return purchases.filter(p=>{
+  return purchaseUnifiedRows().filter(p=>{
     if(!isMeaningfulPurchaseRecord(p))return false;
     if(!searchHit(q,p.studentName,purchasePackageListLabel(p),p.amountPaid,p.payMethod,p.purchaseDate,p.productName,p.courseType,p.packageTimeBand,p.ownerCoach))return false;
     if(packageId&&!purchaseMatchesPackage(p,packageId))return false;

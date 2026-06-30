@@ -1,6 +1,12 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
 const { buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
+const {
+  buildCoachOpsUnifiedView,
+  buildPurchaseUnifiedView,
+  buildPackageUnifiedView,
+  buildEntitlementUnifiedView
+} = require('../read-models/unified-page-views.js');
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -48,7 +54,7 @@ function createCorePageDataRoutes(deps={}){
         entitlements:scoped.entitlements,
         schedule:scoped.schedule
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})});
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
     }
     if(path==='/page-data/lifecycle-metrics'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
@@ -196,6 +202,12 @@ function createCorePageDataRoutes(deps={}){
           entitlementLedger:scoped.entitlementLedger||[],
           customerLifecycleRows,
           standardLifecycleMetrics,
+          coachOpsUnifiedView:buildCoachOpsUnifiedView({
+            coaches:scoped.coaches||[],
+            schedule:decoratedSchedule,
+            feedbacks:decoratedFeedbacks,
+            campuses:scoped.campuses||[]
+          }),
           stats
         });
       },{role:user.role||''});

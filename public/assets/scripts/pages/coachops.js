@@ -450,53 +450,46 @@ function operationsCoachTrialConversionText(coach){
   const rate=Number.isInteger(percent)?percent:percent.toFixed(1);
   return `${converted}/${total} <span class="coach-workload-rate ${converted>=total?'up':converted>0?'up':'down'}">${rate}%</span>`;
 }
-function coachCourseTypeDistributionText(rows){
-  const map=new Map();
-  rows.forEach(s=>{
-    const type=scheduleCourseType(s)||'未分类';
-    map.set(type,(map.get(type)||0)+scheduleLessonUnits(s));
-  });
-  return [...map.entries()].sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${type} ${lessonUnitsText(count)}`).join('｜')||'-';
+function coachCourseTypeDistributionText(row){
+  return row?.courseTypeDistributionText||'-';
 }
 function coachOpsHomeCampusCoachNames(){
   if(campus==='all')return activeCoachNames();
   return [...new Set(coaches.filter(c=>c.status==='active'&&String(c.campus||'').trim()===campus).map(c=>coachName(c.name)).filter(Boolean))];
 }
-function coachOpsComparisonText(coach,currentRows,range){
-  const current=sumScheduleLessonUnits(currentRows);
-  const span=range.end.getTime()-range.start.getTime();
-  const prevStart=new Date(range.start.getTime()-span);
-  const prevRows=billableSchedules().filter(s=>coachOpsCampusMatchesSchedule(s)&&coachName(s.coach)===coachName(coach)&&inRange(s.startTime,prevStart,range.start));
-  const previous=sumScheduleLessonUnits(prevRows);
-  if(!previous)return current?'<span class="coach-workload-compare up">新增</span>':'<span class="coach-workload-compare">-%</span>';
-  const pct=(current-previous)/previous*100;
-  const cls=pct>0?'up':pct<0?'down':'';
-  return `<span class="coach-workload-compare ${cls}">${pct>0?'+':''}${pct.toFixed(2)}%</span>`;
+function coachOpsComparisonText(row){
+  return row?.comparisonText||'';
+}
+function coachOpsSummaryForRange(row,range){
+  const scope=campus==='all'?'all':'byCampus';
+  const campusName=campus==='all'?'':cn(campus);
+  const source=scope==='all'?row?.summaries?.all:row?.summaries?.byCampus?.[campusName];
+  const bucket=coachOpsMode==='day'?'day':coachOpsMode==='month'?'month':'week';
+  const key=coachOpsMode==='day'?dateKey(range.start):coachOpsMode==='month'?String(range.label||'').slice(0,7):dateKey(range.start);
+  return source?.[bucket]?.[key]||{};
 }
 function coachOpsRows(){
-  const now=new Date(),todayStr=today();
-  const ws=weekStart(now),we=new Date(ws);we.setDate(ws.getDate()+7);
-  const ms=monthStart(now),me=new Date(now.getFullYear(),now.getMonth()+1,1);
   const range=rangeBounds(coachOpsMode);
-  const all=billableSchedules().filter(coachOpsCampusMatchesSchedule);
-  const currentRangeRows=all.filter(s=>inRange(s.startTime,range.start,range.end));
-  const rangeScheduleCoachNames=currentRangeRows.map(s=>coachName(s.coach)).filter(Boolean);
-  const nameSource=campus==='all'?[...activeCoachNames(),...all.map(s=>coachName(s.coach)).filter(Boolean)]:[...coachOpsHomeCampusCoachNames(),...rangeScheduleCoachNames];
-  const names=[...new Set(nameSource)]
-    .filter(name=>!coachOpsSelectedCoach||coachName(name)===coachName(coachOpsSelectedCoach))
-    .sort((a,b)=>coachSortValue(a)-coachSortValue(b)||String(a).localeCompare(String(b),'zh-Hans-CN'));
-  return names.map(name=>{
-    const mine=all.filter(s=>coachName(s.coach)===name);
-    const todayRows=mine.filter(s=>s.startTime.slice(0,10)===todayStr);
-    const weekRows=mine.filter(s=>inRange(s.startTime,ws,we));
-    const monthRows=mine.filter(s=>inRange(s.startTime,ms,me));
-    const rangeRows=mine.filter(s=>inRange(s.startTime,range.start,range.end));
-    const campusMap={};
-    rangeRows.forEach(s=>{if(s.campus)campusMap[s.campus]=(campusMap[s.campus]||0)+1});
-    const mainCampus=Object.entries(campusMap).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-    const completedRows=rangeRows.filter(s=>effectiveScheduleStatus(s)==='已结束');
-    return {name,todayRows,weekRows,monthRows,rangeRows,mainCampus,pending:pendingFeedbackCount(rangeRows),feedback:completedRows.filter(hasScheduleFeedback).length,conflicts:coachOverlapCount(rangeRows),sortOrder:coachSortValue(name)};
-  });
+  return (coachOpsUnifiedView?.rows||[])
+    .filter(row=>!coachOpsSelectedCoach||coachName(row.name)===coachName(coachOpsSelectedCoach))
+    .map(row=>{
+      const rangeRows=(row.rows||[]).filter(s=>coachOpsCampusMatchesSchedule(s)&&inRange(s.startTime,range.start,range.end));
+      const summary=coachOpsSummaryForRange(row,range);
+      return {
+        ...row,
+        rangeRows,
+        mainCampus:summary.mainCampus||row.mainCampus||'',
+        totalLessonUnits:Number(summary.totalLessonUnits)||0,
+        feedback:Number(summary.feedbackCount)||0,
+        pending:Number(summary.pending)||0,
+        conflicts:Number(summary.conflictCount)||0,
+        courseTypeDistributionText:summary.courseTypeDistributionText||'-',
+        campusDistributionText:summary.campusDistributionText||'-',
+        timeBandDistributionText:summary.timeBandDistributionText||'-'
+      };
+    })
+    .filter(row=>campus==='all'||row.rangeRows.length||coachOpsHomeCampusCoachNames().includes(row.name))
+    .sort((a,b)=>(Number(a.sortOrder)||coachSortValue(a.name))-(Number(b.sortOrder)||coachSortValue(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hans-CN'));
 }
 function renderCoachOpsRangeFilter(){
   const host=document.getElementById(isCoachWorkloadPage()?'coachOpsWorkloadRangeHost':'coachOpsRangeHost');
@@ -629,7 +622,7 @@ function renderCoachOps(){
     coachOpsAutoScrollDayView=false;
   }
   const workloadBody=document.getElementById('coachOpsTbody');
-  if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(sumScheduleLessonUnits(r.rangeRows))}<span>节</span>${coachOpsComparisonText(r.name,r.rangeRows,range)}</div></td><td>${operationsCoachTrialConversionText(r.name)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r.rangeRows))}">${esc(coachCourseTypeDistributionText(r.rangeRows))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${distText(r.rangeRows,s=>isExternalSchedule(s)?(s.externalVenueName||'外部场馆'):cn(s.campus))}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${distText(r.rangeRows,timeBand)}</div></td></tr>`).join('');
+  if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(r.totalLessonUnits)}<span>节</span>${coachOpsComparisonText(r)}</div></td><td>${operationsCoachTrialConversionText(r.name)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r))}">${esc(coachCourseTypeDistributionText(r))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${esc(r.campusDistributionText)}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${esc(r.timeBandDistributionText)}</div></td></tr>`).join('');
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }
@@ -1176,41 +1169,8 @@ function exportCoachOpsConsumeCsv(){
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FlowTennis_消耗表_'+today()+'.csv';a.click();toast('导出成功','success');
 }
-function financeDeferredTypeForLedgerRow(row={}){
-  if(row.businessTypeLevel1==='课程'||row.businessType==='课程')return '课包待确认';
-  if(row.businessTypeLevel1==='储值'||['会员储值','会员订场'].includes(row.businessType))return '会员储值待确认';
-  return '';
-}
-function financeDeferredSourceForLedgerRow(row={}){
-  const type=financeDeferredTypeForLedgerRow(row);
-  if(type==='会员储值待确认')return '订场会员储值';
-  return row.debitTarget||row.packageName||row.incomeType||row.sourceProject||'课包';
-}
-function financeDeferredRowsFromUnifiedLedger(){
-  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
-  const endDate=String(range?.endDate||'').slice(0,10);
-  const grouped=new Map();
-  financeUnifiedRows().forEach(row=>{
-    if(row?.differenceReason)return;
-    const amount=Number(row?.deferredRevenueDelta)||0;
-    if(!amount)return;
-    const businessDate=String(row.businessDate||row.purchaseDate||row.createdAt||'').slice(0,10);
-    if(endDate&&businessDate&&businessDate>endDate)return;
-    const deferredType=financeDeferredTypeForLedgerRow(row);
-    if(!deferredType)return;
-    const customer=row.customer||row.studentName||'—';
-    const campusName=row.campusName||'—';
-    const source=financeDeferredSourceForLedgerRow(row);
-    const key=[deferredType,customer,campusName,source].join('|');
-    const current=grouped.get(key)||{id:key,customer,campusName,deferredType,deferredAmount:0,source,notes:''};
-    current.deferredAmount=financeRowsSum([{deferredRevenueDelta:current.deferredAmount},{deferredRevenueDelta:amount}],'deferredRevenueDelta');
-    current.notes=current.notes||row.sourceDocument||row.notes||'';
-    grouped.set(key,current);
-  });
-  return [...grouped.values()].filter(row=>Number(row.deferredAmount)>0.009);
-}
 function financePrepaidRows(){
-  const rows=financeDeferredRowsFromUnifiedLedger();
+  const rows=financePrepaidUnifiedRows().filter(row=>financeMatchesCampusName(row.campusName));
   const filteredRows=rows.filter(row=>{
     if(financePrepaidFilter==='lesson')return row.deferredType==='课包待确认';
     if(financePrepaidFilter==='stored')return row.deferredType==='会员储值待确认';
@@ -1323,64 +1283,28 @@ function renderFinancePrepaidBalance(){
   const body=document.getElementById('financePrepaidTbody');
   const stats=document.getElementById('financePrepaidStats');
   if(!body||!stats)return;
-  const allRows=financeDeferredRowsFromUnifiedLedger();
   const rows=financePrepaidRows();
-  const lessonDeferred=allRows.filter(row=>row.deferredType==='课包待确认');
-  const storedDeferred=allRows.filter(row=>row.deferredType==='会员储值待确认');
+  const summary=campus==='all'
+    ? financePrepaidUnifiedSummary()
+    : (financePrepaidView?.summaryByCampus?.[financeCampusNameFromValue(campus)]||{});
   stats.innerHTML=[
-    ['待确认总额',allRows.reduce((sum,row)=>sum+(Number(row.deferredAmount)||0),0),financeMoney],
-    ['课包待确认',lessonDeferred.reduce((sum,row)=>sum+(Number(row.deferredAmount)||0),0),financeMoney],
-    ['会员储值待确认',storedDeferred.reduce((sum,row)=>sum+(Number(row.deferredAmount)||0),0),financeMoney],
-    ['待确认客户数',allRows.length,val=>String(val)]
+    ['待确认总额',Number(summary.totalDeferredAmount)||0,financeMoney],
+    ['课包待确认',Number(summary.coursePrepaidAmount)||0,financeMoney],
+    ['会员储值待确认',Number(summary.memberPrepaidAmount)||0,financeMoney],
+    ['待确认客户数',Number(summary.customerCount)||0,val=>String(val)]
   ].map(([label,val,formatter])=>`<div class="tms-stat-card"><div class="tms-stat-label">${label}</div><div class="tms-stat-value">${formatter(val)}</div></div>`).join('');
   body.innerHTML=rows.length?rows.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(row.deferredType==='课包待确认'?'课包':'会员储值',false)}</td><td>${financeAmountText(row.deferredAmount)}</td><td>${renderStandardCellText(row.source,false)}</td><td><div class="tms-text-remark">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>暂无待确认收入</p></div></td></tr>`;
-}
-function financeLegacySettlementRows(){
-  const monthInput=document.getElementById('financeSettlementMonth');
-  const monthValue=(monthInput?.value||today().slice(0,7)).slice(0,7);
-  if(monthInput&&!monthInput.value)monthInput.value=monthValue;
-  const coachMap=new Map();
-  (schedules||[]).forEach(schedule=>{
-    if(String(schedule.startTime||'').slice(0,7)!==monthValue)return;
-    const campusName=financeCampusNameFromValue(schedule.campus);
-    if(!financeMatchesCampusName(campusName))return;
-    const coach=coachName(schedule.coach)||schedule.coach||'未分配';
-    const key=`${coach}__${campusName||'未分配校区'}`;
-    const current=coachMap.get(key)||{
-      coach,
-      campusName:campusName||'—',
-      lessonUnits:0,
-      lateCount:0,
-      lateFeeAmount:0
-    };
-    if(effectiveScheduleStatus(schedule)==='已结束'){
-      current.lessonUnits+=scheduleLessonUnits(schedule);
-    }
-    if(schedule.coachLateFree){
-      current.lateCount+=1;
-      current.lateFeeAmount+=Number(schedule.coachLateFieldFeeAmount)||0;
-    }
-    coachMap.set(key,current);
-  });
-  return Array.from(coachMap.values())
-    .filter(row=>row.lessonUnits>0||row.lateCount>0||row.lateFeeAmount>0)
-    .sort((a,b)=>{
-      if((Number(b.lateFeeAmount)||0)!==(Number(a.lateFeeAmount)||0))return (Number(b.lateFeeAmount)||0)-(Number(a.lateFeeAmount)||0);
-      return String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN');
-    });
 }
 function financeSettlementRows(){
   const monthInput=document.getElementById('financeSettlementMonth');
   const monthValue=(monthInput?.value||today().slice(0,7)).slice(0,7);
   if(monthInput&&!monthInput.value)monthInput.value=monthValue;
-  if(loadedDatasets.has('financePage')){
-    return financeSettlementRowsFromSnapshot().filter(row=>String(row.month||'')===monthValue&&financeMatchesCampusName(row.campusName))
-      .sort((a,b)=>{
-        if((Number(b.lateFeeAmount)||0)!==(Number(a.lateFeeAmount)||0))return (Number(b.lateFeeAmount)||0)-(Number(a.lateFeeAmount)||0);
-        return String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN');
-      });
-  }
-  return financeLegacySettlementRows();
+  if(!loadedDatasets.has('financePage'))return [];
+  return financeSettlementRowsFromSnapshot().filter(row=>String(row.month||'')===monthValue&&financeMatchesCampusName(row.campusName))
+    .sort((a,b)=>{
+      if((Number(b.lateFeeAmount)||0)!==(Number(a.lateFeeAmount)||0))return (Number(b.lateFeeAmount)||0)-(Number(a.lateFeeAmount)||0);
+      return String(a.coach||'').localeCompare(String(b.coach||''),'zh-Hans-CN');
+    });
 }
 function renderFinanceSettlementSummary(){
   const host=document.getElementById('financeSettlementStats');

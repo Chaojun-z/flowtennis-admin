@@ -56,6 +56,7 @@ async function handleFinancePageData({
     financeOverviewData:financeSnapshot.financeOverviewData,
     financeNormalizedRows:financeSnapshot.financeNormalizedRows,
     financeSettlementRows:financeSnapshot.financeSettlementRows,
+    financePrepaidView:financeSnapshot.financePrepaidView,
     customerLifecycleRows,
     generatedAt:''
   });

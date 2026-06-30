@@ -440,11 +440,9 @@ async function savePackageOrder(orderedIds){
 }
 function packagePurchaseCount(packageId,ownerCoach=''){
   const ownerCoachFilter=coachName(ownerCoach||'');
-  return purchases.filter(p=>{
-    if(!(p.status!=='voided'&&isMeaningfulPurchaseRecord(p)&&purchaseMatchesPackage(p,packageId)))return false;
-    if(ownerCoachFilter&&coachName(p.ownerCoach)!==ownerCoachFilter)return false;
-    return true;
-  }).length;
+  const row=packageUnifiedRows().find(item=>String(item.id||'')===String(packageId||'')&&(!ownerCoachFilter||coachName(item.ownerCoach)===ownerCoachFilter));
+  if(ownerCoachFilter)return Number(row?.purchaseCountByOwnerCoach?.[ownerCoachFilter])||0;
+  return Number(row?.purchaseCount)||0;
 }
 function purchaseMatchesPackage(p,packageId){
   if(!packageId)return true;

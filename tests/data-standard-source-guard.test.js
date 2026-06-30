@@ -118,8 +118,8 @@ assertFunctionGuard({
 [
   ['financeRevenueBaseRows', /financeUnifiedRows\(\)/],
   ['financeRecognizedRows', /financeUnifiedRows\(\)/],
-  ['financePrepaidRows', /financeDeferredRowsFromUnifiedLedger\(\)/],
-  ['renderFinancePrepaidBalance', /financeDeferredRowsFromUnifiedLedger\(\)/]
+  ['financePrepaidRows', /financePrepaidUnifiedRows\(\)/],
+  ['renderFinancePrepaidBalance', /financePrepaidUnifiedSummary\(\)/]
 ].forEach(([name, sourcePattern]) => assertFunctionGuard({
   file: 'public/assets/scripts/pages/coachops.js',
   name,

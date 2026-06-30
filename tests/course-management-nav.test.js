@@ -10,6 +10,7 @@ const standardSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'ass
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'api', 'index.js'), 'utf8');
 const packageRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'packages-routes.js'), 'utf8');
 const packageBoardRoutesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'package-board-routes.js'), 'utf8');
+const readModelSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'read-models', 'unified-page-views.js'), 'utf8');
 const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const buttonsCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'buttons.css'), 'utf8');
 const filtersCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'components', 'filters.css'), 'utf8');
@@ -249,7 +250,7 @@ assert.match(html, /function getFilteredPurchases[\s\S]*String\(b\.purchaseDate\
 assert.match(html, /function isMeaningfulPurchaseRecord/, 'purchase list should filter worthless empty purchase rows');
 assert.match(fnBody('getFilteredPurchases'), /isMeaningfulPurchaseRecord\(p\)/, 'purchase filters should skip worthless empty rows before rendering');
 assert.match(html, /function packagePurchaseCount/, 'package card should calculate purchase order count');
-assert.match(fnBody('packagePurchaseCount'), /p\.status!=='voided'/, 'package card order count should exclude voided purchases');
+assert.match(readModelSource, /filter\(rowActive\)/, 'package unified view should exclude voided purchases from order count');
 assert.match(fnBody('purchaseMatchesPackage'), /purchaseIdsByEntitlement[\s\S]*String\(p\.packageId\|\|''\)===String\(packageId\)/, 'package order count should use exact package id and entitlement-linked purchases');
 assert.doesNotMatch(fnBody('packagePurchaseCount'), /packageName|productName|originalPackageName/, 'package order count should not count by package or product names');
 assert.match(html, /function purchaseMatchesPackage\(/, 'purchase filtering should share the package matching rule used by package order counts');
@@ -266,7 +267,7 @@ assert.match(fnBody('getFilteredPurchases'), /purchaseSelectedPackageFilter\(\)/
 assert.match(fnBody('focusPurchaseByPackage'), /purPackageFilterValue=String\(packageId\|\|''\)[\s\S]*clearPurchasePageFiltersForPackageFocus\(\)[\s\S]*goPage\('purchases'/, 'package order drilldown should set the package filter before navigating');
 assert.match(fnBody('focusPurchaseByPackage'), /purOwnerCoachFilterValue=coachName\(ownerCoach\|\|''\)/, 'package order drilldown should keep the package owner coach filter');
 assert.match(fnBody('getFilteredPurchases'), /purOwnerCoachFilterValue[\s\S]*coachName\(p\.ownerCoach\)!==ownerCoachFilter/, 'purchase drilldown should filter by order owner coach when provided');
-assert.match(fnBody('packagePurchaseCount'), /ownerCoachFilter[\s\S]*coachName\(p\.ownerCoach\)!==ownerCoachFilter/, 'package card order count should match the owner coach drilldown filter');
+assert.match(fnBody('packagePurchaseCount'), /purchaseCountByOwnerCoach/, 'package card order count should read owner-coach count from unified package view');
 assert.match(fnBody('packageBoardCardHtml'), /packagePurchaseCount\(p\.id,p\.ownerCoach\)/, 'package card order count should include the package owner coach');
 assert.match(fnBody('packageBoardCardHtml'), /focusPurchaseByPackage\('\$\{p\.id\}',\$\{jsArg\(p\.ownerCoach\|\|''\)\}\)/, 'package card order drilldown should pass the package owner coach');
 assert.match(fnBody('getFilteredPackages'), /const courseType=standardCourseTypeFilterValue\(p\)/, 'package card should normalize legacy course type labels to standard filter values');

@@ -334,7 +334,8 @@ assert.doesNotMatch(source, /id="page-schedule"[\s\S]*?openCoachLateSettlementMo
 assert.match(source, /id="page-coachops"[\s\S]*?openCoachLateSettlementModal\(\)/, 'late monthly settlement entry should live in coach operations');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-summary/, 'late settlement modal should show a compact summary');
 assert.match(fnBody('openCoachLateSettlementModal'), /迟到次数/, 'late settlement summary should include late count');
-assert.match(fnBody('openCoachLateSettlementModal'), /迟到分钟/, 'late settlement summary should include late minutes');
+assert.match(fnBody('coachLateSettlementRows'), /financeSettlementRowsFromSnapshot/, 'late settlement rows should come from backend finance settlement snapshot');
+assert.match(fnBody('openCoachLateSettlementModal'), /来自财务统一结算快照/, 'late settlement summary should explain it uses the unified finance snapshot');
 assert.match(fnBody('openCoachLateSettlementModal'), /承担合计/, 'late settlement summary should include payable total');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-table/, 'late settlement modal should use a scoped compact table');
 assert.match(fnBody('openCoachLateSettlementModal'), /late-settlement-empty/, 'late settlement modal should use a compact empty state');

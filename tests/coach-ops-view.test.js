@@ -230,8 +230,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const all=billableSchedules\(\)\.filter\(coachOpsCampusMatchesSchedule\);/,
-  'coach ops rows should only use schedules from the selected campus'
+  /\(coachOpsUnifiedView\?\.rows\|\|\[\]\)/,
+  'coach ops rows should read backend unified coach rows'
 );
 
 assert.match(
@@ -242,14 +242,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const rangeScheduleCoachNames=currentRangeRows\.map\(s=>coachName\(s\.coach\)\)\.filter\(Boolean\);/,
-  'selected campus should only add visiting coaches from schedules in the current date range'
+  /const summary=coachOpsSummaryForRange\(row,range\);/,
+  'selected campus workload metrics should come from backend unified range summaries'
 );
 
 assert.match(
   coachOpsSource,
-  /const nameSource=campus==='all'\?\[[\s\S]*\]:\[\.\.\.coachOpsHomeCampusCoachNames\(\),\.\.\.rangeScheduleCoachNames\];/,
-  'selected campus coach list should combine home-campus coaches and current-range visiting coaches'
+  /row\.rangeRows\.length\|\|coachOpsHomeCampusCoachNames\(\)\.includes\(row\.name\)/,
+  'selected campus coach list should keep home-campus coaches and unified rows with current-range lessons'
 );
 
 assert.doesNotMatch(
