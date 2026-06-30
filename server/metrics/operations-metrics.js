@@ -2377,22 +2377,88 @@ function financeCoachName(row = {}) {
   return canonicalCoachName(row.ownerCoach || row.primaryCoach || row.coach || row.coachName || '');
 }
 
-function financeRowsAsCoachPurchases(rows = [], { coaches = [] } = {}) {
+function rowsById(rows = []) {
+  return new Map((rows || [])
+    .map(row => [String(row?.id || '').trim(), row])
+    .filter(([id]) => id));
+}
+
+function sourceDocumentId(row = {}, label = '') {
+  const match = String(row.sourceDocument || '').trim().match(new RegExp(`^${label}\\s+(.+)$`));
+  return match ? String(match[1] || '').trim() : '';
+}
+
+function buildStudentCoachLookups(students = [], customerLifecycleRows = []) {
+  const byId = new Map();
+  const byName = new Map();
+  const lifecycleByStudentId = new Map();
+  (students || []).forEach(row => {
+    const id = String(row?.id || row?.studentId || '').trim();
+    const name = String(row?.name || row?.studentName || '').trim();
+    if (id) byId.set(id, row);
+    if (name && !byName.has(name)) byName.set(name, row);
+  });
+  (customerLifecycleRows || []).forEach(row => {
+    const id = String(row?.studentId || '').trim();
+    if (id && !lifecycleByStudentId.has(id)) lifecycleByStudentId.set(id, row);
+  });
+  return { byId, byName, lifecycleByStudentId };
+}
+
+function studentCoachName(row = {}) {
+  return canonicalCoachName(row.primaryCoach || row.formalCoach || row.ownerCoach || row.coach || row.coachName || row.owner || '');
+}
+
+function financeRowAttribution(row = {}, context = {}) {
+  const purchase = context.purchaseById.get(sourceDocumentId(row, '购买记录')) || {};
+  const schedule = context.scheduleById.get(sourceDocumentId(row, '排课')) || {};
+  const directCoach = financeCoachName(row);
+  const purchaseCoach = purchaseCoachName(purchase);
+  const scheduleCoach = scheduleCoachName(schedule);
+  const sourceStudentId = String(
+    row.studentId
+    || purchase.studentId
+    || schedule.studentId
+    || scheduleStudentKeys(schedule)[0]
+    || ''
+  ).trim();
+  const sourceStudentName = String(row.customer || row.studentName || purchase.studentName || schedule.studentName || '').trim();
+  const student = context.students.byId.get(sourceStudentId) || context.students.byName.get(sourceStudentName) || {};
+  const lifecycleRow = context.students.lifecycleByStudentId.get(sourceStudentId) || {};
+  const studentCoach = studentCoachName(lifecycleRow) || studentCoachName(student);
+  const fallbackCoach = canonicalCoachName(row.collector || row.operator || '');
+  const ownerCoach = directCoach
+    || purchaseCoach
+    || scheduleCoach
+    || studentCoach
+    || (context.knownCoaches.has(fallbackCoach) ? fallbackCoach : '');
+  return {
+    ownerCoach,
+    studentId: sourceStudentId || sourceStudentName || row.sourceDocument || row.id,
+    courseType: purchase.courseType || purchase.standardCourseType || purchase.packageName || purchase.productName || schedule.courseType || row.courseType || row.packageName || row.incomeType || '课程'
+  };
+}
+
+function financeRowsAsCoachPurchases(rows = [], { coaches = [], purchases = [], schedule = [], students = [], customerLifecycleRows = [] } = {}) {
   const knownCoaches = knownCoachNameSet(coaches);
+  const context = {
+    knownCoaches,
+    purchaseById: rowsById(purchases),
+    scheduleById: rowsById(schedule),
+    students: buildStudentCoachLookups(students, customerLifecycleRows)
+  };
   return financeCourseRows(rows || [])
     .filter(row => String(row.action || '') === '收款' && Number(row.cashDelta) > 0)
     .map(row => {
-      const directCoach = financeCoachName(row);
-      const fallbackCoach = canonicalCoachName(row.collector || row.operator || '');
-      const ownerCoach = directCoach || (knownCoaches.has(fallbackCoach) ? fallbackCoach : '');
+      const attribution = financeRowAttribution(row, context);
       return {
         id: row.id,
-        studentId: row.studentId || row.customer || row.customerName || row.sourceDocument || row.id,
-        ownerCoach,
+        studentId: attribution.studentId,
+        ownerCoach: attribution.ownerCoach,
         actualAmount: money(row.cashDelta),
         purchaseDate: financeBusinessDate(row),
         status: 'active',
-        courseType: row.courseType || row.packageName || row.incomeType || '课程'
+        courseType: attribution.courseType
       };
     });
 }
@@ -2503,8 +2569,15 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const profileRows = buildCustomerProfileRows(courseRows);
   const campusConversionRates = buildCampusConversionRateMap(courseRows);
   const renewal = buildRenewalMetrics(rangedData.purchases || []);
-  const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || [], { coaches: data.coaches || [] });
-  const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || [], { coaches: data.coaches || [] });
+  const coachFinanceAttributionContext = {
+    coaches: data.coaches || [],
+    purchases: data.purchases || [],
+    schedule: data.schedule || [],
+    students: data.students || [],
+    customerLifecycleRows
+  };
+  const coachFinancePurchases = financeRowsAsCoachPurchases(rangedData.financeNormalizedRows || [], coachFinanceAttributionContext);
+  const allCoachFinancePurchases = financeRowsAsCoachPurchases(data.financeNormalizedRows || [], coachFinanceAttributionContext);
   const coachRows = buildCoachRows({
     coaches: data.coaches || [],
     schedule: rangedData.schedule || [],
@@ -2602,7 +2675,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
     schedule: trendRangedData.schedule || [],
-    purchases: financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || [], { coaches: data.coaches || [] }),
+    purchases: financeRowsAsCoachPurchases(trendRangedData.financeNormalizedRows || [], coachFinanceAttributionContext),
     allPurchases: allCoachFinancePurchases,
     customerLifecycleRows,
     dateRange: trendDateRange,
@@ -2630,7 +2703,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const previousCoachRows = previousRangedData ? buildCoachRows({
     coaches: data.coaches || [],
     schedule: previousRangedData.schedule || [],
-    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || [], { coaches: data.coaches || [] }),
+    purchases: financeRowsAsCoachPurchases(previousRangedData.financeNormalizedRows || [], coachFinanceAttributionContext),
     allPurchases: allCoachFinancePurchases,
     periodPurchases: previousRangedData.purchases || [],
     customerLifecycleRows,

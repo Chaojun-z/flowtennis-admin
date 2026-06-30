@@ -1469,4 +1469,43 @@ assert.strictEqual(financeBackedTrendMetrics.coach.trends.find(row => row.date =
 assert.strictEqual(financeBackedTrendMetrics.coach.rows.some(row => /Codex|管理员|导入/.test(row.coach)), false, 'coach dashboard should not treat import operators as coaches');
 assert.strictEqual(financeBackedTrendMetrics.coach.revenueParetoRows.some(row => /Codex|管理员|导入/.test(row.coach)), false, 'coach contribution ranking should only show real coaches');
 
+const financeSourceDocumentAttributionMetrics = buildOperationsMetrics({
+  campuses: [],
+  leads: [],
+  leadFollowups: [],
+  students: [
+    { id: 'stu-source-doc', name: '来源购买学员', primaryCoach: '张教练' },
+    { id: 'stu-direct-schedule', name: '直接收款学员', primaryCoach: '李教练' }
+  ],
+  purchases: [
+    { id: 'purchase-before-source-doc', studentId: 'stu-source-doc', studentName: '来源购买学员', packageName: '成人私教课包', amountPaid: 1000, purchaseDate: '2026-05-20', ownerCoach: '张教练', status: 'active' },
+    { id: 'purchase-source-doc', studentId: 'stu-source-doc', studentName: '来源购买学员', packageName: '成人私教课包', amountPaid: 2000, purchaseDate: '2026-06-08', ownerCoach: '张教练', status: 'active' }
+  ],
+  coaches: [
+    { id: 'coach-zhang', name: '张教练', status: 'active' },
+    { id: 'coach-li', name: '李教练', status: 'active' }
+  ],
+  schedule: [
+    { id: 'schedule-direct-paid', studentId: 'stu-direct-schedule', studentName: '直接收款学员', coach: '李教练', startTime: '2026-06-09 10:00:00', endTime: '2026-06-09 11:00:00', status: '已结束', courseType: '私教课' }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'finance-before-source-doc', businessDate: '2026-05-20', businessType: '课程', action: '收款', cashDelta: 1000, sourceDocument: '购买记录 purchase-before-source-doc', collector: '系统导入', operator: '管理员', incomeType: '成人私教课包' },
+    { id: 'finance-source-doc', businessDate: '2026-06-08', businessType: '课程', action: '收款', cashDelta: 2000, sourceDocument: '购买记录 purchase-source-doc', collector: '系统导入', operator: '管理员', incomeType: '成人私教课包' },
+    { id: 'finance-direct-schedule', businessDate: '2026-06-09', businessType: '课程', action: '收款', cashDelta: 300, sourceDocument: '排课 schedule-direct-paid', collector: '管理员', operator: '管理员', incomeType: '私教课' }
+  ],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-10 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
+});
+assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row => row.coach === '张教练')?.revenue, 2000, 'coach revenue should trace finance purchase rows back to source purchase ownerCoach');
+assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row => row.coach === '张教练')?.oldCustomerBase, 1, 'coach renewal base should include prior finance purchase rows traced through source purchase ids');
+assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row => row.coach === '张教练')?.renewalCount, 1, 'coach renewal count should use current finance purchase rows traced through source purchase ids');
+assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row => row.coach === '李教练')?.revenue, 300, 'coach revenue should trace direct schedule finance rows back to source schedule coach');
+assert.ok(financeSourceDocumentAttributionMetrics.coach.revenueParetoRows.some(row => row.coach === '张教练' && row.revenue === 2000), 'coach contribution ranking should render traced finance revenue');
+assert.ok(financeSourceDocumentAttributionMetrics.coach.capabilityRows.some(row => row.coach === '张教练' && row.oldCustomerBase === 1), 'coach capability matrix should render when traced finance rows provide renewal base');
+
 console.log('operations metrics tests passed');
