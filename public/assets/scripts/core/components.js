@@ -418,7 +418,11 @@ function openAdminMobileModule(moduleKey=ADMIN_MOBILE_DEFAULT_MODULE){
     panel.setAttribute('aria-hidden','false');
   }
   document.body.classList.add('admin-mobile-panel-open');
-  syncAdminMobileNavState();
+  document.querySelectorAll('.admin-mobile-module-btn').forEach(btn=>{
+    const active=btn.dataset.adminMobileModule===adminMobileActiveModule;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-expanded',active?'true':'false');
+  });
 }
 function closeAdminMobileModule(){
   const panel=document.getElementById('adminMobileModulePanel');
@@ -428,6 +432,7 @@ function closeAdminMobileModule(){
   }
   document.body.classList.remove('admin-mobile-panel-open');
   document.querySelectorAll('.admin-mobile-module-btn').forEach(btn=>btn.setAttribute('aria-expanded','false'));
+  syncAdminMobileNavState();
 }
 function goAdminMobilePage(page,financeTarget='',operationsTarget='',moduleKey=''){
   if(moduleKey)adminMobileActiveModule=moduleKey;

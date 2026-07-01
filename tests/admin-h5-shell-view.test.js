@@ -25,6 +25,11 @@ assert.match(appSource, /currentPage='schedule'[\s\S]*localStorage\.setItem\(PAG
   assert.match(appSource, new RegExp(`key:'${key}'[\\s\\S]*?label:'${label}'`), `admin H5 config should expose first-level module ${label}`);
 });
 assert.match(appSource, /data-admin-mobile-module="\$\{esc\(item\.key\)\}"/, 'admin H5 shell should render first-level modules from shared config');
+assert.doesNotMatch(
+  appSource,
+  /function openAdminMobileModule\([\s\S]*?syncAdminMobileNavState\(\);[\s\S]*?function closeAdminMobileModule\(/,
+  'opening an admin H5 module should not immediately reset to the current page module'
+);
 
 assert.match(appSource, /key:'teaching'[\s\S]*?label:'教学中心'[\s\S]*?defaultPage:'schedule'[\s\S]*?排课管理[\s\S]*?goPage:'schedule'[\s\S]*?排课日历[\s\S]*?goPage:'coachschedule'/, 'teaching center should default to schedule and expose schedule sub pages');
 assert.match(appSource, /key:'finance'[\s\S]*?财务总览[\s\S]*?financePanel:'ledger'[\s\S]*?收款流水[\s\S]*?financePanel:'revenue'[\s\S]*?入账流水[\s\S]*?financePanel:'recognized'/, 'finance center should expose all finance second-level pages');
@@ -32,7 +37,10 @@ assert.match(appSource, /key:'operations'[\s\S]*?经营总览[\s\S]*?operationsT
 
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-shell\{/, 'admin mobile shell should have mobile-only layout rules');
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-bar\{/, 'admin mobile shell should render the first-level module bar');
+assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-bar\{[^}]*display:grid[^}]*grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/, 'admin mobile should show all first-level modules without horizontal hiding');
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-panel\.open\{/, 'admin mobile shell should render an open state for the second-level panel');
 assert.doesNotMatch(pagesCss, /body\.admin-mobile #sbAdminView\{display:flex;align-items:stretch;width:max-content/, 'admin mobile should not expose every sidebar item as one long bottom nav');
+assert.match(pagesCss, /body\.admin-mobile \.tb-title\{[^}]*flex:0 0 100%[^}]*white-space:nowrap[^}]*text-overflow:ellipsis/, 'admin mobile topbar should reserve a full title row');
+assert.match(pagesCss, /body\.admin-mobile \.tms-sticky-l,body\.admin-mobile \.tms-sticky-r[\s\S]*position:static!important/, 'admin mobile tables should not keep left and right fixed columns');
 
 console.log('admin h5 shell view tests passed');
