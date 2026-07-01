@@ -439,6 +439,13 @@ function normalizeText(value, fallback = '未记录') {
   return text || fallback;
 }
 
+function normalizedCampusDisplayName(value) {
+  const text = normalizeText(value, '');
+  if (!text) return '';
+  if (/^_+external_+$/i.test(text) || /^external$/i.test(text) || text === '校区外') return '校区外';
+  return text;
+}
+
 function buildCampusLabelMap(campuses = []) {
   const map = new Map();
   (campuses || []).forEach(row => {
@@ -453,7 +460,8 @@ function buildCampusLabelMap(campuses = []) {
 
 function campusLabel(value, labelMap = new Map()) {
   const text = normalizeText(value, '');
-  return text ? (labelMap.get(text) || text) : '未记录';
+  if (!text) return '未记录';
+  return normalizedCampusDisplayName(labelMap.get(text) || text) || '未记录';
 }
 
 function leadId(row = {}) {

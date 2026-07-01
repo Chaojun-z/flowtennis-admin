@@ -1388,7 +1388,7 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-detail-table .tms-table-wrapper{max-height:none;background:#FFFDFC;overflow-x:auto}
 #page-operations .operations-coach-detail-table .tms-table{min-width:980px;table-layout:fixed;font-size:13px}
 #page-operations .operations-coach-detail-table .tms-table th{height:44px;background:#FFFDFC;color:#887565;font-size:12px;font-weight:700;padding:0 16px;border-bottom:0.5px solid #E7DFD6}
-#page-operations .operations-coach-detail-table .tms-table td{height:56px;background:#FFFDFC;color:#332A24;font-size:13px;padding:0 16px;border-bottom:0.5px solid #F0E7DF;vertical-align:middle}
+#page-operations .operations-coach-detail-table .tms-table td{height:56px;background:#FFFDFC;color:#332A24;font-size:13px;font-weight:400;padding:0 16px;border-bottom:0.5px solid #F0E7DF;vertical-align:middle}
 #page-operations .operations-coach-detail-table .tms-table tbody tr:hover td{background:#FAF5F0}
 #page-operations .operations-coach-detail-table .tms-table th:nth-child(1){width:150px}
 #page-operations .operations-coach-detail-table .tms-table th:nth-child(2){width:130px}
@@ -1397,13 +1397,15 @@ body.is-packages-page .content{overflow:hidden}
 #page-operations .operations-coach-detail-table .tms-table th:nth-child(6){width:110px}
 #page-operations .operations-coach-name-cell{font-weight:800;color:#2F241E;white-space:normal;line-height:1.25}
 #page-operations .operations-coach-detail-hours{display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
-#page-operations .operations-coach-detail-hours>span:first-child{font-size:14px;font-weight:700;color:#1F2937}
-#page-operations .operations-coach-detail-change{font-size:12px;font-weight:700;line-height:16px}
+#page-operations .operations-coach-detail-hours>span:first-child{font-size:14px;font-weight:400;color:#1F2937}
+#page-operations .operations-coach-detail-change{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:400;line-height:16px}
+#page-operations .operations-coach-detail-icon{width:12px;height:12px;flex:0 0 12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #page-operations .operations-coach-detail-change.up{color:#D64545}
 #page-operations .operations-coach-detail-change.down{color:#087A35}
-#page-operations .operations-coach-detail-change.muted{color:#A19080;font-weight:500}
-#page-operations .operations-coach-muted,#page-operations .operations-coach-feedback{color:#5A4C41;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
-#page-operations .operations-coach-trial-rate{display:inline-flex;align-items:center;height:24px;border-radius:6px;padding:0 8px;font-family:var(--ops-number-font);font-size:12px;font-weight:700}
+#page-operations .operations-coach-detail-change.muted{color:#A19080;font-weight:400}
+#page-operations .operations-coach-muted{color:#5A4C41;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
+#page-operations .operations-coach-feedback{color:#887565;font-family:var(--ops-number-font);font-variant-numeric:tabular-nums lining-nums}
+#page-operations .operations-coach-trial-rate{display:inline-flex;align-items:center;height:24px;border-radius:6px;padding:0 8px;font-family:var(--ops-number-font);font-size:12px;font-weight:400}
 #page-operations .operations-coach-trial-rate.no-data{background:#F3EEE8;color:#A19080}
 #page-operations .operations-coach-trial-rate.has-data{background:#EEF7F2;color:#087A35}
 #page-operations .operations-coach-detail-wrap{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#887565;line-height:1.35}

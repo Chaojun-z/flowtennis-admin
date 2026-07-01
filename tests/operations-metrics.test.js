@@ -954,6 +954,28 @@ assert.strictEqual(coachDashboardMetrics.coach.trends.length, 4, 'coach KPI tren
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the real day bucket utilization');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket finance course receipts');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-01')?.activeCoaches, 0, 'coach active trend should count coaches with real daily work or receipts, not all roster coaches');
+const externalCampusCoachMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'external-coach', name: '外场教练', status: 'active' }],
+  packages: [],
+  purchases: [],
+  schedule: [
+    { id: 'external-lesson', coach: '外场教练', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', campus: '__external__', courseType: '私教课' }
+  ],
+  feedbacks: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' }
+});
+const externalCoach = externalCampusCoachMetrics.coach.rows.find(row => row.coach === '外场教练');
+assert.match(externalCoach.campusDistributionText, /校区外 1/, 'coach detail campus distribution should display external campus as 校区外');
+assert.doesNotMatch(externalCoach.campusDistributionText, /__external__/, 'coach detail campus distribution should not leak raw external campus code');
 const allTimeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],

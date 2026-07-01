@@ -347,6 +347,8 @@ assert.match(coachDashboardSource, /renderOperationsCoachDetailTable\(rows\)/, '
 assert.match(coachDashboardSource, /教练课时详细统计[\s\S]*课时数[\s\S]*体验课[\s\S]*体验课转化率[\s\S]*课程类型分布[\s\S]*学员反馈[\s\S]*校区分布/, 'coach detail table should use the approved columns');
 assert.doesNotMatch(coachDashboardSource, /已反馈|未反馈|时间段/, 'coach detail table should merge feedback columns and remove time-band distribution');
 assert.match(operationsSource, /function operationsCoachUsedHoursCell[\s\S]*operationsCoachDetailChangeText\(row\.usedHoursComparison\)/, 'coach detail table should show lesson-hour change beside the main value');
+assert.doesNotMatch(operationsSource, /const icon = change > 0 \? '↑' : '↓'/, 'coach detail lesson-hour change should not use raw text arrows');
+assert.match(operationsSource, /function operationsCoachDetailTrendIcon[\s\S]*operations-coach-detail-icon/, 'coach detail lesson-hour change should render a standard inline icon');
 assert.match(operationsSource, /function operationsCoachFeedbackText[\s\S]*feedbackCompleted[\s\S]*feedbackRequired[\s\S]*\/\$\{fmt\(required\)\}/, 'coach detail table should render feedback as completed over required');
 assert.match(operationsSource, /function operationsCoachTrialRateCell[\s\S]*trialBase[\s\S]*no-data[\s\S]*has-data/, 'coach detail table should render trial conversion with only no-data and has-data styles');
 assert.match(operationsSource, /function renderOperationsCoachKpi[\s\S]*operations-coach-kpi-change[\s\S]*operationsCoachSparklineSvg/, 'coach KPI cards should render title, value, sparkline and change value only');
@@ -397,8 +399,14 @@ assert.match(trendChangeSource, /comparison[\s\S]*changeValue/, 'KPI cards shoul
 assert.doesNotMatch(trendChangeSource, /first[\s\S]*last[\s\S]*change/, 'KPI comparison values should not be calculated from the first and last sparkline points');
 assert.match(stylesSource, /operations-coach-kpi-strip\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'coach dashboard KPI strip should be a dense five-column monitor row');
 assert.match(stylesSource, /operations-coach-detail-table \.tms-table\{[^}]*min-width:980px/, 'coach detail table should use a compact Gemini-style table width');
+assert.match(stylesSource, /operations-coach-detail-table \.tms-table td\{[^}]*font-weight:400/, 'coach detail table body cells should use normal font weight by default');
+assert.match(stylesSource, /operations-coach-detail-hours>span:first-child\{[^}]*font-weight:400/, 'coach detail lesson-hour value should not be bold');
+assert.match(stylesSource, /operations-coach-detail-change\{[^}]*display:inline-flex[^}]*align-items:center[^}]*font-weight:400/, 'coach detail lesson-hour change should be vertically centered and normal weight');
+assert.match(stylesSource, /operations-coach-detail-icon\{[^}]*width:12px[^}]*height:12px/, 'coach detail lesson-hour change should use a fixed-size icon');
 assert.match(stylesSource, /operations-coach-detail-change\.up\{color:#D64545\}/, 'coach detail table should show rising lesson hours in red');
 assert.match(stylesSource, /operations-coach-detail-change\.down\{color:#087A35\}/, 'coach detail table should show falling lesson hours in green');
+assert.match(stylesSource, /operations-coach-feedback\{[^}]*color:#887565/, 'coach detail feedback text should use the same color as course mix text');
+assert.match(stylesSource, /operations-coach-trial-rate\{[^}]*font-weight:400/, 'coach detail trial rate should not be bold');
 assert.match(stylesSource, /operations-coach-trial-rate\.no-data/, 'coach detail trial rate should have a no-data style');
 assert.match(stylesSource, /operations-coach-trial-rate\.has-data/, 'coach detail trial rate should have a has-data style');
 assert.match(stylesSource, /#page-operations\{[^}]*--ops-card-bg:#FFFDFC[^}]*--ops-card-border:rgba\(91,63,42,\.12\)[^}]*--ops-card-shadow:0 1px 2px rgba\(37,24,15,\.018\),0 8px 20px rgba\(37,24,15,\.03\)/, 'operations cards should use a lighter warm-white surface with a softer border and shadow');

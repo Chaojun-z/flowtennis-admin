@@ -746,13 +746,17 @@ function renderOperationsCoach(data) {
   ${renderOperationsCoachDetailTable(rows)}`;
 }
 
+function operationsCoachDetailTrendIcon(direction) {
+  const path = direction === 'up' ? 'M12 19V5m0 0-5 5m5-5 5 5' : 'M12 5v14m0 0-5-5m5 5 5-5';
+  return `<svg class="operations-coach-detail-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"></path></svg>`;
+}
+
 function operationsCoachDetailChangeText(comparison = {}) {
   if (!comparison || comparison.mode !== 'previous_period') return '<span class="operations-coach-detail-change muted">-</span>';
   const change = Number(comparison.changeValue) || 0;
   if (!change) return '<span class="operations-coach-detail-change muted">0</span>';
   const direction = change > 0 ? 'up' : 'down';
-  const icon = change > 0 ? '↑' : '↓';
-  return `<span class="operations-coach-detail-change ${direction}">${icon} ${fmt(Math.abs(change))}</span>`;
+  return `<span class="operations-coach-detail-change ${direction}">${operationsCoachDetailTrendIcon(direction)}<span>${fmt(Math.abs(change))}</span></span>`;
 }
 
 function operationsCoachUsedHoursCell(row = {}) {
