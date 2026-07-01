@@ -784,6 +784,15 @@ function operationsCoachCourseMixText(row = {}) {
   return parts.length ? parts.join(' | ') : '-';
 }
 
+function operationsCoachCampusDistributionText(row = {}) {
+  return row.campusDistributionText || row.campus || '-';
+}
+
+function operationsCoachDetailTooltipText(value) {
+  const text = String(value || '-');
+  return `<div class="operations-coach-detail-wrap tms-tooltip-text" data-tooltip="${esc(text)}">${esc(text)}</div>`;
+}
+
 function operationsCoachFeedbackText(row = {}) {
   const completed = Number(row.feedbackCompleted) || 0;
   const required = Number(row.feedbackRequired) || 0;
@@ -796,9 +805,9 @@ function renderOperationsCoachDetailTable(rows = []) {
     <td>${operationsCoachUsedHoursCell(row)}</td>
     <td><span class="operations-coach-muted">${esc(operationsCoachTrialText(row))}</span></td>
     <td>${operationsCoachTrialRateCell(row)}</td>
-    <td><div class="operations-coach-detail-wrap" title="${esc(operationsCoachCourseMixText(row))}">${esc(operationsCoachCourseMixText(row))}</div></td>
+    <td>${operationsCoachDetailTooltipText(operationsCoachCourseMixText(row))}</td>
     <td><span class="operations-coach-feedback">${esc(operationsCoachFeedbackText(row))}</span></td>
-    <td><div class="operations-coach-detail-wrap" title="${esc(row.campusDistributionText || row.campus || '-')}">${esc(row.campusDistributionText || row.campus || '-')}</div></td>
+    <td>${operationsCoachDetailTooltipText(operationsCoachCampusDistributionText(row))}</td>
   </tr>`).join('') : '<tr><td colspan="7"><div class="tms-empty-state"><div class="tms-empty-title">暂无教练课时数据</div></div></td></tr>';
   return `<section class="operations-section operations-coach-detail-table">
     ${operationsCoachChartHeader('教练课时详细统计')}

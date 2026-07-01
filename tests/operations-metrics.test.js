@@ -976,6 +976,52 @@ const externalCampusCoachMetrics = buildOperationsMetrics({
 const externalCoach = externalCampusCoachMetrics.coach.rows.find(row => row.coach === '外场教练');
 assert.match(externalCoach.campusDistributionText, /校区外 1/, 'coach detail campus distribution should display external campus as 校区外');
 assert.doesNotMatch(externalCoach.campusDistributionText, /__external__/, 'coach detail campus distribution should not leak raw external campus code');
+const feedbackFlagCoachMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'coach-chaojun', name: '朝珺教练', status: 'active', sortOrder: 10 }],
+  packages: [],
+  purchases: [],
+  schedule: [
+    { id: 'chaojun-feedback-lesson', coach: '朝珺教练', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', feedbackStatus: '已反馈', courseType: '私教课' }
+  ],
+  feedbacks: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' }
+});
+const feedbackFlagCoach = feedbackFlagCoachMetrics.coach.rows.find(row => row.coach === '朝珺教练');
+assert.strictEqual(feedbackFlagCoach.feedbackCompleted, 1, 'coach detail feedback should count schedule-level feedback flags from coach calendar records');
+assert.strictEqual(feedbackFlagCoach.feedbackRequired, 1, 'coach detail feedback denominator should keep the selected valid lesson count');
+const coachSortOrderMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [
+    { id: 'coach-a', name: 'A教练', status: 'active', sortOrder: 30 },
+    { id: 'coach-b', name: 'B教练', status: 'active', sortOrder: 10 }
+  ],
+  packages: [],
+  purchases: [],
+  schedule: [
+    { id: 'sort-a', coach: 'A教练', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', courseType: '私教课' },
+    { id: 'sort-b', coach: 'B教练', startTime: '2026-06-02 09:00:00', endTime: '2026-06-02 10:00:00', status: '已结束', courseType: '私教课' }
+  ],
+  feedbacks: [],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-06-04 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-07' }
+});
+assert.deepStrictEqual(coachSortOrderMetrics.coach.rows.slice(0, 2).map(row => row.coach), ['B教练', 'A教练'], 'coach detail rows should follow the coach calendar custom sort order');
 const allTimeCoachTrendMetrics = buildOperationsMetrics({
   campuses: [],
   coaches: [{ id: 'A', name: 'A教练', status: 'active' }],

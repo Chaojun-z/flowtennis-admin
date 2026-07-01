@@ -45,12 +45,13 @@ const OPERATIONS_FOLLOWUP_FIELDS = [
 ];
 const OPERATIONS_MEMBERSHIP_ACCOUNT_FIELDS = ['courtId', 'sourceLeadId', 'leadId', 'fromLeadId', 'status', 'createdAt'];
 const OPERATIONS_MEMBERSHIP_ORDER_FIELDS = ['courtId', 'rechargeAmount', 'amount', 'status', 'purchaseDate', 'createdAt'];
-const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus'];
+const OPERATIONS_COACH_FIELDS = ['name', 'coachName', 'status', 'campus', 'sortOrder'];
 const OPERATIONS_FEEDBACK_FIELDS = ['id', 'scheduleId', 'studentId', 'studentIds', 'coach', 'coachName', 'createdAt', 'updatedAt'];
 const OPERATIONS_SCHEDULE_FIELDS = [
   'id', 'studentId', 'studentIds', 'studentName', 'studentNames',
   'coach', 'coachName', 'primaryCoach', 'teacher', 'startTime', 'endTime', 'date', 'createdAt',
   'status', 'systemStatus', 'state', 'lessonCount', 'durationHours', 'hours',
+  'feedbackId', 'feedbackAt', 'feedbackStatus', 'hasFeedback',
   'courseType', 'standardCourseType', 'experienceType', 'packageName', 'productName',
   'campus', 'campusName', 'venue', 'venueId', 'venueSpaceType',
   'locationType', 'externalVenueName', 'externalCourtName'

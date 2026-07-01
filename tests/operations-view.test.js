@@ -11,16 +11,19 @@ const stateSource = fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/c
 const chartsPath = path.join(repoRoot, 'public/assets/scripts/standard/charts.js');
 const operationsPath = path.join(repoRoot, 'public/assets/scripts/pages/operations.js');
 const operationsMetricsPath = path.join(repoRoot, 'server/metrics/operations-metrics.js');
+const operationsSourcePath = path.join(repoRoot, 'server/read-models/operations-source.js');
 const stylesPath = path.join(repoRoot, 'public/assets/styles/pages.css');
 
 assert.ok(fs.existsSync(chartsPath), 'global chart wrapper should live in public/assets/scripts/standard/charts.js');
 assert.ok(fs.existsSync(operationsPath), 'operations page should live in public/assets/scripts/pages/operations.js');
 assert.ok(fs.existsSync(operationsMetricsPath), 'operations standard metrics should live in server/metrics/operations-metrics.js');
+assert.ok(fs.existsSync(operationsSourcePath), 'operations page source projection should live in server/read-models/operations-source.js');
 assert.ok(fs.existsSync(stylesPath), 'operations page styles should live in public/assets/styles/pages.css');
 
 const chartsSource = fs.readFileSync(chartsPath, 'utf8');
 const operationsSource = fs.readFileSync(operationsPath, 'utf8');
 const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
+const operationsSourceReadModel = fs.readFileSync(operationsSourcePath, 'utf8');
 const stylesSource = fs.readFileSync(stylesPath, 'utf8');
 const courtOverviewSource = operationsSource.slice(
   operationsSource.indexOf('function renderOperationsCourtCampusOverview'),
@@ -326,6 +329,8 @@ assert.match(operationsSource, /renderConversionAttributeModule[\s\S]*转化画�
 assert.doesNotMatch(operationsSource, /留存\/续费风险榜[\s\S]*续费偏低/, 'conversion page should not render a text-heavy retention risk list');
 assert.match(operationsMetricsSource, /profilePersonas[\s\S]*私教课[\s\S]*小班课/, 'student attributes should derive lesson demand tags in the backend metric model');
 assert.match(operationsMetricsSource, /profilePersonas[\s\S]*未标注人群/, 'student attributes should keep the untagged fallback in the backend metric model');
+assert.match(operationsSourceReadModel, /OPERATIONS_COACH_FIELDS = \[[^\]]*'sortOrder'/, 'operations page should fetch coach sortOrder so coach detail rows follow calendar order');
+assert.match(operationsSourceReadModel, /OPERATIONS_SCHEDULE_FIELDS = \[[\s\S]*'feedbackId'[\s\S]*'feedbackAt'[\s\S]*'feedbackStatus'[\s\S]*'hasFeedback'/, 'operations page should fetch schedule feedback flags for coach detail feedback counts');
 assert.doesNotMatch(operationsSource, /转化指标/, 'conversion page should remove the old conversion metrics header');
 assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]{0,240}renderStandardDataCards/, 'conversion page should not render the old top four metric cards');
 const coachDashboardSource = operationsSource.slice(
@@ -351,6 +356,8 @@ assert.doesNotMatch(operationsSource, /const icon = change > 0 \? '↑' : '↓'/
 assert.match(operationsSource, /function operationsCoachDetailTrendIcon[\s\S]*operations-coach-detail-icon/, 'coach detail lesson-hour change should render a standard inline icon');
 assert.match(operationsSource, /function operationsCoachFeedbackText[\s\S]*feedbackCompleted[\s\S]*feedbackRequired[\s\S]*\/\$\{fmt\(required\)\}/, 'coach detail table should render feedback as completed over required');
 assert.match(operationsSource, /function operationsCoachTrialRateCell[\s\S]*trialBase[\s\S]*no-data[\s\S]*has-data/, 'coach detail table should render trial conversion with only no-data and has-data styles');
+assert.match(operationsSource, /function operationsCoachDetailTooltipText[\s\S]*tms-tooltip-text[\s\S]*data-tooltip/, 'coach detail long text should reuse the standard lead-style hover tooltip');
+assert.match(coachDashboardSource, /operationsCoachDetailTooltipText\(operationsCoachCourseMixText\(row\)\)[\s\S]*operationsCoachDetailTooltipText\(operationsCoachCampusDistributionText\(row\)\)/, 'coach detail course and campus distribution columns should show full text on hover');
 assert.match(operationsSource, /function renderOperationsCoachKpi[\s\S]*operations-coach-kpi-change[\s\S]*operationsCoachSparklineSvg/, 'coach KPI cards should render title, value, sparkline and change value only');
 assert.doesNotMatch(operationsSource, /operations-coach-kpi-help|\?<\/button>/, 'KPI cards should not render question marks');
 assert.doesNotMatch(operationsSource, /function renderOperationsCourtKpi[\s\S]*<p>[\s\S]*function renderOperationsCourtKpis/, 'court KPI cards should not render subtitle explanations');

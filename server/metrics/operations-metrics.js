@@ -918,8 +918,14 @@ function scheduleStudentKeys(row = {}) {
   ].map(value => String(value || '').trim()).filter(Boolean))];
 }
 
+function scheduleFeedbackFlag(value) {
+  const text = String(value || '').trim();
+  return value === true || text === '1' || /^true$/i.test(text) || text === '已反馈';
+}
+
 function scheduleHasFeedbackRecord(row = {}, feedbacks = []) {
   const scheduleId = String(row.id || row.scheduleId || '').trim();
+  if (row.feedbackId || row.feedbackAt || row.feedbackStatus === '已反馈' || scheduleFeedbackFlag(row.hasFeedback)) return true;
   if (!scheduleId) return false;
   return (feedbacks || []).some(item => String(item?.scheduleId || '').trim() === scheduleId);
 }
@@ -1085,12 +1091,14 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
   const grouped = new Map(activeCoaches
     .map(row => ({
       coach: canonicalCoachName(row.name || row.coachName || ''),
-      campus: campusLabel(row.campus || row.campusName, campusLabels)
+      campus: campusLabel(row.campus || row.campusName, campusLabels),
+      sortOrder: Number(row.sortOrder) || 9999
     }))
     .filter(row => isBusinessCoachName(row.coach))
     .map(row => [row.coach, {
       coach: row.coach,
       campus: row.campus,
+      sortOrder: row.sortOrder,
       usedHours: 0,
       lessonCount: 0,
       availableHours,
@@ -1114,6 +1122,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     if (!grouped.has(coach)) grouped.set(coach, {
       coach,
       campus: campusLabel(row.campus || row.campusName, campusLabels),
+      sortOrder: 9999,
       usedHours: 0,
       lessonCount: 0,
       availableHours,
@@ -1151,6 +1160,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
     if (!grouped.has(coach)) grouped.set(coach, {
       coach,
       campus: '未记录',
+      sortOrder: 9999,
       usedHours: 0,
       lessonCount: 0,
       availableHours,
@@ -1220,7 +1230,7 @@ function buildCoachRows({ coaches = [], schedule = [], feedbacks = [], purchases
       courseMix: row.courseMix.map(item => ({ ...item, share: rate(item.hours, row.usedHours) })),
       utilizationBand: coachUtilizationBand(row.availableHours ? row.usedHours * 100 / row.availableHours : 0)
     };
-  }).sort((a, b) => b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
+  }).sort((a, b) => (Number(a.sortOrder) || 9999) - (Number(b.sortOrder) || 9999) || b.revenue - a.revenue || b.usedHours - a.usedHours || a.coach.localeCompare(b.coach, 'zh-Hans-CN'));
 }
 
 function buildCoachUtilizationBands(rows = []) {
