@@ -257,12 +257,23 @@ function standardListSlice(list,page,pageSize){
   const state=standardListPagination(rows.length,page,pageSize);
   return {...state,slice:rows.slice(state.start,state.end)};
 }
-function renderStandardSkeletonKpiCard(){
-  return '<div class="tms-skeleton-card"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i><b class="tms-skeleton-spark"><span></span><span></span><span></span><span></span></b></div>';
+function renderStandardSkeletonKpiCard(section={}){
+  const variant=String(section.cardVariant||section.variant||'simple');
+  const withTrend=variant==='trend';
+  const trend=withTrend?'<b class="tms-skeleton-spark"><span></span><span></span><span></span><span></span></b>':'';
+  return `<div class="tms-skeleton-card ${withTrend?'is-trend-kpi':''}"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i>${trend}</div>`;
 }
 function renderStandardSkeletonChartPanel(panel={}){
   const cls=String(panel.className||'').trim();
   const variant=String(panel.variant||'chart').trim();
+  if(variant==='card'){
+    return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="card"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-card-body"><span></span><strong></strong><i></i><i></i></div></div>`;
+  }
+  if(variant==='table'){
+    const cells=Array.from({length:4},(_,index)=>`<span class="tms-skeleton-line ${index===0?'is-strong':''}"></span>`).join('');
+    const rows=Array.from({length:5},()=>`<div class="tms-skeleton-table-row">${cells}</div>`).join('');
+    return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="table"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-table">${rows}</div></div>`;
+  }
   return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="${esc(variant)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-chart-body"><i></i><i></i><i></i><i></i><i></i></div><div class="tms-skeleton-legend"><span></span><span></span><span></span></div></div>`;
 }
 function renderStandardSkeletonTablePanel(panel={}){
@@ -277,7 +288,7 @@ function renderStandardSkeletonSection(section={}){
   const cls=String(section.className||'').trim();
   if(type==='kpis'){
     const count=Math.max(1,Math.min(8,Number(section.count)||4));
-    return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${Array.from({length:count},renderStandardSkeletonKpiCard).join('')}</div>`;
+    return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${Array.from({length:count},()=>renderStandardSkeletonKpiCard(section)).join('')}</div>`;
   }
   if(type==='table')return renderStandardSkeletonTablePanel(section);
   const panels=Array.isArray(section.panels)&&section.panels.length?section.panels:[{}];

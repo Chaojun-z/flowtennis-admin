@@ -290,7 +290,7 @@ function renderOperationsLoading() {
     host.innerHTML = renderStandardPageSkeleton({
       className: 'operations-page',
       sections: [
-        { type: 'kpis', className: 'operations-kpi-row operations-overview-kpi-row operations-court-kpi-row', count: 5 },
+        { type: 'kpis', className: 'operations-kpi-row operations-overview-kpi-row operations-court-kpi-row', count: 5, cardVariant: 'trend' },
         { type: 'grid', className: 'operations-overview-grid', panels: [{ className: 'operations-overview-chart' }, { className: 'operations-overview-chart' }] },
         { type: 'grid', className: 'operations-overview-grid operations-overview-visual-grid', panels: [{ className: 'operations-overview-matrix-chart' }, { className: 'operations-overview-matrix-chart' }] },
         { type: 'grid', className: 'operations-overview-grid', panels: [{}, {}] }
@@ -302,7 +302,7 @@ function renderOperationsLoading() {
     host.innerHTML = renderStandardPageSkeleton({
       className: 'operations-page',
       sections: [
-        { type: 'kpis', className: 'operations-coach-kpi-strip', count: 5 },
+        { type: 'kpis', className: 'operations-coach-kpi-strip', count: 5, cardVariant: 'trend' },
         { type: 'grid', className: 'operations-coach-hero-grid', panels: [{ className: 'operations-coach-matrix-skeleton' }, { className: 'operations-coach-matrix-skeleton' }] },
         { type: 'grid', className: 'operations-coach-secondary-grid', panels: [{}, {}] }
       ]
@@ -313,7 +313,7 @@ function renderOperationsLoading() {
     host.innerHTML = renderStandardPageSkeleton({
       className: 'operations-page',
       sections: [
-        { type: 'kpis', className: 'operations-kpi-row operations-court-kpi-row', count: 5 },
+        { type: 'kpis', className: 'operations-kpi-row operations-court-kpi-row', count: 5, cardVariant: 'trend' },
         { type: 'grid', className: 'operations-court-skeleton-grid', panels: [{}, {}] },
         { type: 'grid', className: 'operations-court-heatmap-card', panels: [{ className: 'operations-court-skeleton-heat', variant: 'heatmap' }] }
       ]
@@ -323,7 +323,7 @@ function renderOperationsLoading() {
   host.innerHTML = renderStandardPageSkeleton({
     className: 'operations-page',
     sections: [
-      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 4 },
+      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 4, cardVariant: 'trend' },
       { type: 'grid', className: 'operations-conversion-funnel-grid', panels: [{}, {}, {}] },
       { type: 'grid', className: 'operations-channel-diagnostics-grid', panels: [{}, { variant: 'table' }] }
     ]
