@@ -480,7 +480,14 @@ assert.match(chartsSource, /function operationsMatrixGrid\(\{ xLabels = \[\], yL
 assert.match(chartsSource, /operationsTextWidth[\s\S]*yLabels[\s\S]*xLabels/, 'matrix grid should measure labels to avoid clipping without manual oversized gutters');
 assert.match(stylesSource, /operations-coach-primary-card\{padding:14px 16px 12px\}/, 'coach matrix cards should reduce inner padding');
 assert.match(stylesSource, /operations-coach-matrix-chart\{height:360px;min-height:360px/, 'coach matrix charts should get enough height after tighter padding');
-assert.match(operationsSource, /renderStandardChart\('operationsCoachMatrixChart'[\s\S]*\{ height: 360 \}/, 'coach matrix render height should match the tighter chart container');
-assert.match(operationsSource, /renderStandardChart\('operationsCoachCapabilityChart'[\s\S]*\{ height: 360, emptyText:/, 'coach capability render height should match the tighter chart container');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachMatrixChart'[\s\S]*\{ height: 360, renderer: 'svg' \}/, 'coach matrix render height should match the tighter chart container');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachCapabilityChart'[\s\S]*\{ height: 360, renderer: 'svg', emptyText:/, 'coach capability render height should match the tighter chart container');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachMatrixChart'[\s\S]*renderer: 'svg'/, 'coach matrix should render with SVG so axis labels and bubbles stay crisp');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachParetoChart'[\s\S]*renderer: 'svg'/, 'coach contribution chart should render with SVG so bars, line and labels stay crisp');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachCourseMixChart'[\s\S]*renderer: 'svg'/, 'coach course mix chart should render with SVG so bars and labels stay crisp');
+assert.match(operationsSource, /renderStandardChart\('operationsCoachCapabilityChart'[\s\S]*renderer: 'svg'/, 'coach capability matrix should render with SVG so axis labels and bubbles stay crisp');
+assert.match(chartsSource, /hoverStyle = 'default'[\s\S]*hoverStyle === 'subtle'[\s\S]*scaleSize: 3/, 'bubble matrix base should expose a subtle hover mode for premium coach charts');
+assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*hoverStyle: 'subtle'/, 'coach revenue-utilization matrix should use subtle hover without heavy border or shadow');
+assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*hoverStyle: 'subtle'/, 'coach conversion-renewal matrix should use subtle hover without fading peer points');
 
 console.log('operations view tests passed');

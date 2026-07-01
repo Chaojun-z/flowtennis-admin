@@ -50,7 +50,7 @@ function renderProgressFunnel(id, rows = [], { emptyText = '暂无漏斗数据' 
   </div>`;
 }
 
-function renderStandardChart(id, option = {}, { height = 260, emptyText = '暂无图表数据' } = {}) {
+function renderStandardChart(id, option = {}, { height = 260, emptyText = '暂无图表数据', renderer = 'canvas' } = {}) {
   const host = document.getElementById(id);
   if (!host) return null;
   host.style.height = `${Number(height) || 260}px`;
@@ -62,15 +62,16 @@ function renderStandardChart(id, option = {}, { height = 260, emptyText = '暂�
     standardChartEmpty(host, emptyText);
     return null;
   }
-  let chart = standardChartInstances.get(id);
-  if (chart && chart.getDom && chart.getDom() !== host) {
+  const cachedChart = standardChartInstances.get(id);
+  let chart = cachedChart?.chart || cachedChart;
+  if (chart && ((chart.getDom && chart.getDom() !== host) || cachedChart?.renderer !== renderer)) {
     chart.dispose();
     standardChartInstances.delete(id);
     chart = null;
   }
   if (!chart) {
-    chart = echarts.init(host);
-    standardChartInstances.set(id, chart);
+    chart = echarts.init(host, null, { renderer });
+    standardChartInstances.set(id, { chart, renderer });
   }
   chart.setOption(option, true);
   chart.resize();
@@ -164,10 +165,12 @@ function buildStandardBubbleMatrixChartOption({
   label = {},
   labelLayout = { hideOverlap: true },
   markLine,
-  markArea
+  markArea,
+  hoverStyle = 'default'
 } = {}) {
   if (!data.length) return { series: [] };
   const sortedData = operationsBubbleSortData(data);
+  const subtleHover = hoverStyle === 'subtle';
   return {
     ...(color ? { color } : {}),
     grid,
@@ -180,8 +183,10 @@ function buildStandardBubbleMatrixChartOption({
       data: sortedData,
       ...(symbolSize ? { symbolSize } : {}),
       label,
-      emphasis: { focus: 'self', scale: false, label: { show: true, formatter: label.formatter }, itemStyle: { borderWidth: 3, shadowBlur: 18 } },
-      blur: { itemStyle: { opacity: 0.22 } },
+      emphasis: subtleHover
+        ? { focus: 'self', scale: true, scaleSize: 3, label: { show: true, formatter: label.formatter }, itemStyle: {} }
+        : { focus: 'self', scale: false, label: { show: true, formatter: label.formatter }, itemStyle: { borderWidth: 3, shadowBlur: 18 } },
+      ...(!subtleHover ? { blur: { itemStyle: { opacity: 0.22 } } } : {}),
       ...(labelLayout ? { labelLayout } : {}),
       ...(markLine ? { markLine } : {}),
       ...(markArea ? { markArea } : {})
@@ -772,6 +777,7 @@ function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {
       distance: 4
     },
     labelLayout: { hideOverlap: true },
+    hoverStyle: 'subtle',
     markLine: {
       silent: true,
       symbol: 'none',
@@ -974,6 +980,7 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
       distance: 4
     },
     labelLayout: { hideOverlap: true },
+    hoverStyle: 'subtle',
     markLine: {
       silent: true,
       symbol: 'none',
@@ -988,5 +995,5 @@ function buildOperationsCoachCapabilityChartOption({ rows = [] } = {}) {
 }
 
 window.addEventListener('resize', () => {
-  standardChartInstances.forEach(chart => chart.resize());
+  standardChartInstances.forEach(item => (item?.chart || item)?.resize());
 });

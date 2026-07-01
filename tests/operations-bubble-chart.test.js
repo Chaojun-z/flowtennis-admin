@@ -40,7 +40,11 @@ assert.ok(smallPoint.symbolSize >= 12, 'small samples should remain tappable');
 assert.ok(bigPoint.symbolSize - smallPoint.symbolSize < 18, 'bubble size should use area-style sqrt scaling instead of exaggerated linear diameter scaling');
 assert.strictEqual(coachSeries.data[0].name, 'Big', 'large bubbles should be drawn first so smaller bubbles stay clickable above them');
 assert.strictEqual(coachSeries.data[1].name, 'Small', 'small bubbles should be drawn after large bubbles');
-assert.strictEqual(coachSeries.emphasis.scale, false, 'bubble hover should not enlarge points and block nearby small bubbles');
+assert.strictEqual(coachSeries.emphasis.scale, true, 'coach matrix hover should only use a subtle ECharts scale feedback');
+assert.strictEqual(coachSeries.emphasis.scaleSize, 3, 'coach matrix hover scale should stay restrained');
+assert.ok(!coachSeries.emphasis.itemStyle?.shadowBlur, 'coach matrix hover should not add dark glow or shadow');
+assert.ok(!coachSeries.emphasis.itemStyle?.borderWidth, 'coach matrix hover should not thicken the white border');
+assert.ok(!coachSeries.blur, 'coach matrix hover should not fade out other points');
 assert.strictEqual(nonZeroTickCount(coachOption.xAxis), 5, 'coach capability x axis should show five non-zero ticks');
 assert.strictEqual(nonZeroTickCount(coachOption.yAxis), 5, 'coach capability y axis should show five non-zero ticks');
 assert.strictEqual(coachOption.xAxis.splitLine.show, false, 'coach capability matrix should not show vertical grid lines');
@@ -94,6 +98,9 @@ assert.ok(!coachMatrixOption.xAxis.name, 'coach matrix should not reserve space 
 assert.strictEqual(coachMatrixOption.xAxis.splitLine.show, false, 'coach matrix should not show vertical grid lines');
 assert.strictEqual(coachMatrixOption.yAxis.splitLine.show, false, 'coach matrix should not show horizontal grid lines');
 assert.ok(!coachMatrixOption.series[0].markArea, 'coach matrix should not paint background bands');
+assert.strictEqual(coachMatrixOption.series[0].emphasis.scale, true, 'coach revenue-utilization matrix should use subtle hover scale');
+assert.ok(!coachMatrixOption.series[0].emphasis.itemStyle?.shadowBlur, 'coach revenue-utilization matrix hover should not add black shadow');
+assert.ok(!coachMatrixOption.series[0].blur, 'coach revenue-utilization matrix hover should not hide other points');
 assert.strictEqual(
   coachMatrixOption.series[0].data.find(row => row.name === 'Siren教练').itemStyle.color,
   '#B58B4C',

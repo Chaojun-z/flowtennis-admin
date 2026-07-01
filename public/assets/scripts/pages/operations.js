@@ -1346,10 +1346,10 @@ function renderOperationsCharts(data) {
     values: (data.coach?.rows || []).map(row => row.utilizationRate),
     name: '利用率'
   }));
-  renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 360 });
-  renderStandardChart('operationsCoachParetoChart', buildOperationsCoachParetoChartOption({ rows: data.coach?.revenueParetoRows || [] }), { height: 280 });
-  renderStandardChart('operationsCoachCourseMixChart', buildOperationsCoachCourseMixChartOption({ rows: data.coach?.courseMixRows || [] }), { height: 280 });
-  renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 360, emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
+  renderStandardChart('operationsCoachMatrixChart', buildOperationsCoachMatrixChartOption({ rows: data.coach?.rows || [] }), { height: 360, renderer: 'svg' });
+  renderStandardChart('operationsCoachParetoChart', buildOperationsCoachParetoChartOption({ rows: data.coach?.revenueParetoRows || [] }), { height: 280, renderer: 'svg' });
+  renderStandardChart('operationsCoachCourseMixChart', buildOperationsCoachCourseMixChartOption({ rows: data.coach?.courseMixRows || [] }), { height: 280, renderer: 'svg' });
+  renderStandardChart('operationsCoachCapabilityChart', buildOperationsCoachCapabilityChartOption({ rows: data.coach?.capabilityRows || [] }), { height: 360, renderer: 'svg', emptyText: '暂无老客续费基数，暂不生成能力矩阵' });
 }
 
 function renderOperations() {
