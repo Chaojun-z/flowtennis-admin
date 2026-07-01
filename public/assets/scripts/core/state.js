@@ -757,6 +757,11 @@ function normalizeCurrentPageForRole(){
     localStorage.setItem(CAMPUS_KEY,campus);
     return;
   }
+  if(typeof adminMobileShouldUseDefaultPage==='function'&&adminMobileShouldUseDefaultPage()){
+    currentPage='schedule';
+    localStorage.setItem(PAGE_KEY,currentPage);
+    return;
+  }
   if(currentUser?.role==='admin'&&['workbench','postfeedback','mystudents','myclasses'].includes(currentPage)){
     currentPage='students';
     localStorage.setItem(PAGE_KEY,currentPage);

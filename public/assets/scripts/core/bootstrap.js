@@ -76,6 +76,7 @@ function goPage(pg,el,skipRender=false){
     if(typeof buildCampusTabs==='function')buildCampusTabs();
     const topTitle=document.getElementById('topTitle');
     if(topTitle)topTitle.innerHTML=renderTopTitleHtml(pg);
+    if(typeof syncAdminMobileNavState==='function')syncAdminMobileNavState();
     if(!skipRender){
       renderPageLoading(pg);
       deferPageDataLoad(pg,{quiet:true});

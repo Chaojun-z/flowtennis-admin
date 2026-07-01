@@ -318,6 +318,139 @@ function withLinkedFilterCounts(filters,rows){
     return acc;
   },{});
 }
+const ADMIN_MOBILE_DEFAULT_MODULE='teaching';
+let adminMobileActiveModule=ADMIN_MOBILE_DEFAULT_MODULE;
+function adminMobileShouldUseDefaultPage(){
+  return currentUser?.role==='admin'&&!localStorage.getItem(PAGE_KEY)&&window.innerWidth<=900;
+}
+function adminMobileNavConfig(){
+  return [
+    {key:'customer',label:'客户中心',defaultPage:'leads',items:[
+      {label:'线索池',goPage:'leads',icon:'leads'},
+      {label:'普通学员',goPage:'trial-students',icon:'trial-students'},
+      {label:'正式学员',goPage:'package-students',icon:'students'}
+    ]},
+    {key:'teaching',label:'教学中心',defaultPage:'schedule',items:[
+      {label:'排课管理',goPage:'schedule',icon:'schedule'},
+      {label:'排课日历',goPage:'coachschedule',icon:'coachschedule'},
+      {label:'教练管理',goPage:'coaches',icon:'coaches'}
+    ]},
+    {key:'court',label:'场地会员',defaultPage:'courts',items:[
+      {label:'订场用户',goPage:'courts',icon:'courts'},
+      {label:'会员管理',goPage:'memberships',icon:'memberships'},
+      {label:'约球活动',goPage:'matches',icon:'matches'}
+    ]},
+    {key:'pricing',label:'产品定价',defaultPage:'packages',items:[
+      {label:'课包产品',goPage:'packages',icon:'packages'},
+      {label:'会员方案',goPage:'membership-plans',icon:'membership-plans'}
+    ]},
+    {key:'finance',label:'财务中心',defaultPage:'finance',items:[
+      {label:'财务总览',goPage:'finance',icon:'finance-ledger',financePanel:'ledger'},
+      {label:'收款流水',goPage:'finance',icon:'finance-revenue',financePanel:'revenue'},
+      {label:'入账流水',goPage:'finance',icon:'finance-recognized',financePanel:'recognized'}
+    ]},
+    {key:'operations',label:'经营分析',defaultPage:'operations',items:[
+      {label:'经营总览',goPage:'operations',icon:'coachops',operationsTab:'overview'},
+      {label:'场地运转',goPage:'operations',icon:'courts',operationsTab:'court'},
+      {label:'转化与留存',goPage:'operations',icon:'leads',operationsTab:'conversion'},
+      {label:'教练人效',goPage:'operations',icon:'coachops',operationsTab:'coach'}
+    ]},
+    {key:'system',label:'系统设置',defaultPage:'admin-users',items:[
+      {label:'校区管理',goPage:'campusmgr',icon:'campusmgr'},
+      {label:'账号管理',goPage:'admin-users',icon:'admin-users'}
+    ]}
+  ];
+}
+function adminMobileModuleForPage(pg){
+  const page=normalizeStudentListPage(pg);
+  for(const group of adminMobileNavConfig()){
+    if((group.items||[]).some(item=>item.goPage===page))return group.key;
+  }
+  return ADMIN_MOBILE_DEFAULT_MODULE;
+}
+function adminMobileNavItemIsActive(item){
+  const page=normalizeStudentListPage(currentPage);
+  if(item.goPage!==page)return false;
+  if(item.financePanel)return item.financePanel===financePanel;
+  if(item.operationsTab){
+    const tab=typeof operationsActiveTab==='undefined'?'overview':operationsActiveTab;
+    return item.operationsTab===tab;
+  }
+  return true;
+}
+function adminMobileNavItemAction(item){
+  if(item.financePanel)return `goAdminMobilePage('${item.goPage}','${item.financePanel}','','${adminMobileActiveModule}')`;
+  if(item.operationsTab)return `goAdminMobilePage('${item.goPage}','','${item.operationsTab}','${adminMobileActiveModule}')`;
+  return `goAdminMobilePage('${item.goPage}','','','${adminMobileActiveModule}')`;
+}
+function renderAdminMobileModuleItems(moduleKey=adminMobileActiveModule){
+  const group=adminMobileNavConfig().find(item=>item.key===moduleKey)||adminMobileNavConfig().find(item=>item.key===ADMIN_MOBILE_DEFAULT_MODULE);
+  if(!group)return '';
+  return (group.items||[]).map(item=>{
+    const active=adminMobileNavItemIsActive(item)?' active':'';
+    return `<button type="button" class="admin-mobile-sub-item${active}" onclick="${adminMobileNavItemAction(item)}">${sidebarIcon(item.icon)}<span>${esc(item.label)}</span></button>`;
+  }).join('');
+}
+function renderAdminMobileNavShell(){
+  const config=adminMobileNavConfig();
+  const modules=config.map(item=>`<button type="button" class="admin-mobile-module-btn${item.key===ADMIN_MOBILE_DEFAULT_MODULE?' active':''}" data-admin-mobile-module="${esc(item.key)}" onclick="openAdminMobileModule('${esc(item.key)}')" aria-expanded="false"><span>${esc(item.label)}</span></button>`).join('');
+  const current=config.find(item=>item.key===ADMIN_MOBILE_DEFAULT_MODULE);
+  return `<div class="admin-mobile-shell" aria-label="管理端 H5 导航">
+    <div class="admin-mobile-module-bar" role="tablist">${modules}</div>
+    <div class="admin-mobile-module-scrim" onclick="closeAdminMobileModule()"></div>
+    <section class="admin-mobile-module-panel" id="adminMobileModulePanel" aria-hidden="true">
+      <div class="admin-mobile-module-panel-head"><div><span class="admin-mobile-panel-eyebrow">当前模块</span><strong id="adminMobileModuleTitle">${esc(current?.label||'教学中心')}</strong></div><button type="button" onclick="closeAdminMobileModule()" aria-label="关闭">关闭</button></div>
+      <div class="admin-mobile-sub-list" id="adminMobileModuleItems">${renderAdminMobileModuleItems(ADMIN_MOBILE_DEFAULT_MODULE)}</div>
+    </section>
+  </div>`;
+}
+function openAdminMobileModule(moduleKey=ADMIN_MOBILE_DEFAULT_MODULE){
+  const group=adminMobileNavConfig().find(item=>item.key===moduleKey)||adminMobileNavConfig().find(item=>item.key===ADMIN_MOBILE_DEFAULT_MODULE);
+  if(!group)return;
+  adminMobileActiveModule=group.key;
+  const panel=document.getElementById('adminMobileModulePanel');
+  const title=document.getElementById('adminMobileModuleTitle');
+  const items=document.getElementById('adminMobileModuleItems');
+  if(title)title.textContent=group.label;
+  if(items)items.innerHTML=renderAdminMobileModuleItems(group.key);
+  if(panel){
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden','false');
+  }
+  document.body.classList.add('admin-mobile-panel-open');
+  syncAdminMobileNavState();
+}
+function closeAdminMobileModule(){
+  const panel=document.getElementById('adminMobileModulePanel');
+  if(panel){
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden','true');
+  }
+  document.body.classList.remove('admin-mobile-panel-open');
+  document.querySelectorAll('.admin-mobile-module-btn').forEach(btn=>btn.setAttribute('aria-expanded','false'));
+}
+function goAdminMobilePage(page,financeTarget='',operationsTarget='',moduleKey=''){
+  if(moduleKey)adminMobileActiveModule=moduleKey;
+  if(financeTarget&&typeof setFinancePanel==='function')setFinancePanel(financeTarget);
+  if(operationsTarget&&typeof setOperationsTab==='function')setOperationsTab(operationsTarget);
+  closeAdminMobileModule();
+  goPage(page);
+}
+function syncAdminMobileNavState(){
+  if(currentUser?.role!=='admin')return;
+  const moduleKey=adminMobileModuleForPage(currentPage);
+  adminMobileActiveModule=moduleKey||ADMIN_MOBILE_DEFAULT_MODULE;
+  document.querySelectorAll('.admin-mobile-module-btn').forEach(btn=>{
+    const active=btn.dataset.adminMobileModule===adminMobileActiveModule;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-expanded',active&&document.body.classList.contains('admin-mobile-panel-open')?'true':'false');
+  });
+  const group=adminMobileNavConfig().find(item=>item.key===adminMobileActiveModule);
+  const title=document.getElementById('adminMobileModuleTitle');
+  const items=document.getElementById('adminMobileModuleItems');
+  if(title&&group)title.textContent=group.label;
+  if(items&&group)items.innerHTML=renderAdminMobileModuleItems(group.key);
+}
 function renderSidebarShell(){
   return `<aside class="sidebar">
   <div class="sb-logo"><div class="sb-brand">${SHELL_THEME.brandName}</div><div class="sb-tagline">${SHELL_THEME.brandSubline}</div><button type="button" class="sidebar-toggle" onclick="toggleSidebarCollapsed()" aria-label="折叠菜单">${sidebarCollapseIcon(false)}${sidebarCollapseIcon(true)}</button></div>
@@ -364,7 +497,7 @@ function renderSidebarShell(){
   <div class="sb-bottom">
     <div class="user-pill"><span id="userNamePill">👤 管理员</span><button class="logout-btn" onclick="doLogout()">退出</button></div>
   </div>
-</aside>`;
+</aside>${renderAdminMobileNavShell()}`;
 }
 function sidebarCollapseIcon(expand=false){
   if(expand)return `<svg class="sidebar-toggle-icon sidebar-toggle-icon-expand" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.61516 16.9233C4.20713 16.9233 3.81582 16.7612 3.5273 16.4727C3.23878 16.1842 3.0767 15.7929 3.0767 15.3848V4.61561C3.0767 4.20758 3.23878 3.81627 3.5273 3.52775C3.81582 3.23924 4.20713 3.07715 4.61516 3.07715L15.3844 3.07715C15.7924 3.07715 16.1837 3.23924 16.4722 3.52775C16.7608 3.81627 16.9229 4.20758 16.9229 4.61561V15.3848C16.9229 15.7929 16.7608 16.1842 16.4722 16.4727C16.1837 16.7612 15.7924 16.9233 15.3844 16.9233H4.61516ZM11.6159 16.3079V3.69176L4.61516 3.69253C4.38668 3.69247 4.1663 3.77715 3.99664 3.93018C3.82699 4.08321 3.72012 4.29372 3.6967 4.52099L3.69208 4.61561V15.3848C3.69202 15.6133 3.77669 15.8337 3.92973 16.0034C4.08276 16.173 4.29327 16.2799 4.52054 16.3033L4.61516 16.3079H11.6159ZM16.3075 15.3848V4.61561C16.3075 4.38713 16.2229 4.16675 16.0698 3.9971C15.9168 3.82744 15.7063 3.72057 15.479 3.69715L15.3844 3.69253L12.2313 3.69176V16.3079H15.3844C15.6129 16.308 15.8332 16.2233 16.0029 16.0703C16.1726 15.9172 16.2794 15.7067 16.3029 15.4795L16.3075 15.3848ZM15.259 13.2048L15.2205 13.2533L13.6821 14.8302C13.6291 14.8855 13.5573 14.9191 13.4809 14.9243C13.4044 14.9295 13.3288 14.906 13.2687 14.8584C13.2087 14.8107 13.1686 14.7424 13.1563 14.6668C13.144 14.5912 13.1603 14.5137 13.2021 14.4495L13.2405 14.401L14.5644 13.0441L13.2467 11.7595C13.1958 11.71 13.1635 11.6445 13.1554 11.574C13.1472 11.5034 13.1637 11.4323 13.2021 11.3725L13.2405 11.3241C13.29 11.2731 13.3555 11.2409 13.426 11.2328C13.4966 11.2246 13.5677 11.2411 13.6275 11.2795L13.6759 11.3179L15.2144 12.8179C15.2653 12.8674 15.2976 12.9329 15.3057 13.0034C15.3138 13.0739 15.2973 13.1451 15.259 13.2048Z" fill="#C5B0A2"/></svg>`;
@@ -387,6 +520,7 @@ function mountSidebarShell(){
   if(!host)return;
   if(!host.querySelector('.sidebar'))host.innerHTML=renderSidebarShell();
   syncSidebarItemTitles();
+  syncAdminMobileNavState();
 }
 function renderTopbarShell(){
   return `<div class="topbar">
