@@ -74,6 +74,21 @@ function dateWithinRange(value, range = {}) {
   return true;
 }
 
+function dateRangeThroughDay(range = {}, day = '') {
+  const normalized = normalizeDateRange(range);
+  const endDate = day || normalized.endDate || '';
+  return {
+    startDate: normalized.startDate || '',
+    endDate
+  };
+}
+
+function eventInTrendWindow(value, day = '', range = {}) {
+  const eventDay = dateKey(value);
+  if (!eventDay || (day && eventDay > day)) return false;
+  return !isDateRangeActive(range) || dateWithinRange(eventDay, range);
+}
+
 function dateKeyUtcMs(day) {
   const match = String(day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return null;
@@ -654,7 +669,8 @@ function courseConversionRows(data = {}, options = {}) {
     const trialDone = leadTrialDone({ trialAttendedAt, trialAtRaw: trialBookedAt, trialLessonAt: lead.trialLessonAt, trialAt: lead.trialAt }, now);
     const appointmentEventDate = trialBookedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAppointmentText);
     const attendanceEventDate = trialAttendedAt || leadFollowupEvidenceDate(leadFollowups, hasExplicitTrialAttendanceText);
-    const dealEventDate = firstPurchaseDateByStudent.get(sid) || leadFollowupEvidenceDate(leadFollowups, text => /已成交|课程转化|直接成交|成交|报名|购买/.test(text));
+    const lifecycleDealDate = dateKey(lifecycle.courseFirstPurchaseAt || lifecycle.firstCoursePurchaseAt || lifecycle.conversionAt || lifecycle.convertedAt);
+    const dealEventDate = firstPurchaseDateByStudent.get(sid) || lifecycleDealDate || leadFollowupEvidenceDate(leadFollowups, text => /已成交|课程转化|直接成交|成交|报名|购买/.test(text));
     const hasAttendance = !!trialAttendedAt || trialDone || !!attendanceEventDate;
     const hasAppointment = !!trialBookedAt || !!appointmentEventDate || hasExplicitTrialAppointmentText(stageText) || hasAttendance;
     const hasTrialDeal = !!lifecycle.hasTrialToCourseConversion;
@@ -680,6 +696,8 @@ function courseConversionRows(data = {}, options = {}) {
       appointmentEventDate,
       attendanceEventDate,
       dealEventDate,
+      courseFirstPurchaseAt: lifecycle.courseFirstPurchaseAt || lifecycle.firstCoursePurchaseAt || '',
+      conversionAt: lifecycle.conversionAt || lifecycle.convertedAt || '',
       hasAppointment,
       hasAttendance,
       hasCourse,
@@ -1025,6 +1043,29 @@ function buildPeriodRepurchaseMetrics(purchases = []) {
   };
 }
 
+function buildFixedCohortRepurchaseMetrics(purchases = [], day = '', dateRange = {}) {
+  const byStudent = new Map();
+  (purchases || [])
+    .filter(isValidCoursePurchase)
+    .filter(row => purchaseAmount(row) > 0)
+    .forEach(row => {
+      const key = purchaseStudentKey(row);
+      if (!key) return;
+      if (!byStudent.has(key)) byStudent.set(key, []);
+      byStudent.get(key).push(row);
+    });
+  const paidStudents = byStudent.size;
+  const repurchaseStudents = [...byStudent.values()].filter(rows => {
+    const sorted = [...rows].sort((a, b) => String(purchaseDate(a) || '').localeCompare(String(purchaseDate(b) || '')));
+    return sorted.slice(1).some(row => eventInTrendWindow(purchaseDate(row), day, dateRange));
+  }).length;
+  return {
+    rate: rate(repurchaseStudents, paidStudents),
+    numerator: repurchaseStudents,
+    denominator: paidStudents
+  };
+}
+
 function readyRateMetric(label, value = 0, numerator = 0, denominator = 0) {
   return {
     label,
@@ -1293,24 +1334,90 @@ function lifecycleRowsAsOfDay(rows = [], day = '') {
   }).filter(Boolean);
 }
 
+function lifecycleConversionDay(row = {}) {
+  return dateKey(row.courseFirstPurchaseAt || row.firstCoursePurchaseAt || row.conversionAt || row.convertedAt);
+}
+
+function lifecycleRowsForFixedCoachCohortAsOfDay(rows = [], day = '', dateRange = {}) {
+  const activeRange = isDateRangeActive(dateRange);
+  return (rows || []).map(row => {
+    const trialDay = dateKey(row.trialAttendedAt || row.trialBookedAt || row.trialAtRaw || row.firstTouchAt);
+    if (!lifecycleHasTrialPath(row)) return null;
+    if (activeRange && !dateWithinRange(trialDay, dateRange)) return null;
+    if (!activeRange && !trialDay) return row;
+    const conversionDay = lifecycleConversionDay(row);
+    if (lifecycleHasTrialDeal(row) && !eventInTrendWindow(conversionDay, day, dateRange)) {
+      return {
+        ...row,
+        hasTrialToCourseConversion: false,
+        courseDealPath: row.courseDealPath === 'trial_to_course' ? '' : row.courseDealPath
+      };
+    }
+    return row;
+  }).filter(Boolean);
+}
+
+function buildCoachRenewalTrendMetrics({ purchases = [], allPurchases = [], dateRange = {}, day = '' } = {}) {
+  const activeRange = isDateRangeActive(dateRange);
+  const validAllPurchases = (allPurchases || []).filter(isValidCoursePurchase);
+  const validPeriodPurchases = (purchases || []).filter(isValidCoursePurchase);
+  if (activeRange) {
+    const startDate = normalizeDateRange(dateRange).startDate;
+    const priorOldStudents = new Set(validAllPurchases
+      .filter(purchase => {
+        const purchaseDay = purchaseDate(purchase);
+        return purchaseDay && startDate && purchaseDay < startDate;
+      })
+      .map(purchaseStudentKey)
+      .filter(Boolean));
+    const renewedStudents = new Set(validPeriodPurchases
+      .filter(purchase => eventInTrendWindow(purchaseDate(purchase), day, dateRange))
+      .map(purchaseStudentKey)
+      .filter(key => key && priorOldStudents.has(key)));
+    return {
+      numerator: renewedStudents.size,
+      denominator: priorOldStudents.size,
+      rate: rate(renewedStudents.size, priorOldStudents.size)
+    };
+  }
+  const byStudent = new Map();
+  validAllPurchases.forEach(purchase => {
+    const key = purchaseStudentKey(purchase);
+    if (!key) return;
+    if (!byStudent.has(key)) byStudent.set(key, []);
+    byStudent.get(key).push(purchase);
+  });
+  const renewedStudents = [...byStudent.entries()].filter(([, rows]) => {
+    const sorted = [...rows].sort((a, b) => String(purchaseDate(a) || '').localeCompare(String(purchaseDate(b) || '')));
+    return sorted.slice(1).some(row => eventInTrendWindow(purchaseDate(row), day, dateRange));
+  }).map(([key]) => key);
+  return {
+    numerator: renewedStudents.length,
+    denominator: byStudent.size,
+    rate: rate(renewedStudents.length, byStudent.size)
+  };
+}
+
 function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [], allPurchases = [], customerLifecycleRows = [], dateRange = {}, campuses = [], now = new Date() } = {}) {
   const days = coachTrendDays({ schedule, purchases, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
+    const periodRange = dateRangeThroughDay(dateRange, day);
     const daySchedule = (schedule || []).filter(row => dateWithinRange(dateKey(row.startTime || row.date || row.createdAt), dayRange));
     const dayPurchases = (purchases || []).filter(row => dateWithinRange(purchaseDate(row), dayRange));
+    const periodSchedule = (schedule || []).filter(row => dateWithinRange(dateKey(row.startTime || row.date || row.createdAt), periodRange));
     const asOfPurchases = (allPurchases || []).filter(row => {
       const purchaseDay = purchaseDate(row);
       return !purchaseDay || purchaseDay <= day;
     });
     const rows = buildCoachRows({
       coaches,
-      schedule: daySchedule,
+      schedule: periodSchedule,
       purchases: dayPurchases,
       allPurchases: asOfPurchases,
       periodPurchases: dayPurchases,
-      customerLifecycleRows: lifecycleRowsAsOfDay(customerLifecycleRows, day),
-      dateRange: dayRange,
+      customerLifecycleRows: lifecycleRowsForFixedCoachCohortAsOfDay(customerLifecycleRows, day, dateRange),
+      dateRange: periodRange,
       campuses,
       now
     });
@@ -1321,13 +1428,18 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
     const trialConverted = rows.reduce((sum, row) => sum + (Number(row.trialConverted) || 0), 0);
     const oldCustomerBase = rows.reduce((sum, row) => sum + (Number(row.oldCustomerBase) || 0), 0);
     const renewalCount = rows.reduce((sum, row) => sum + (Number(row.renewalCount) || 0), 0);
+    const renewal = buildCoachRenewalTrendMetrics({ purchases, allPurchases, dateRange, day });
     return {
       date: day,
       activeCoaches: rows.filter(row => (Number(row.usedHours) || 0) > 0 || (Number(row.revenue) || 0) > 0).length,
       utilizationRate: availableHours ? round(usedHours * 100 / availableHours, 1) : 0,
       revenue,
       trialConversionRate: trialBase ? rate(trialConverted, trialBase) : null,
-      renewalRate: oldCustomerBase ? rate(renewalCount, oldCustomerBase) : null
+      trialConversionRateNumerator: trialConverted,
+      trialConversionRateDenominator: trialBase,
+      renewalRate: renewal.denominator ? renewal.rate : (oldCustomerBase ? rate(renewalCount, oldCustomerBase) : null),
+      renewalRateNumerator: renewal.denominator ? renewal.numerator : renewalCount,
+      renewalRateDenominator: renewal.denominator || oldCustomerBase
     };
   });
 }
@@ -1335,7 +1447,11 @@ function buildCoachTrendDailyRows({ coaches = [], schedule = [], purchases = [],
 function buildCoachTrendSet(options = {}) {
   return compactTrendRows(buildCoachTrendDailyRows(options), {
     sumKeys: ['revenue'],
-    averageKeys: ['activeCoaches', 'utilizationRate', 'trialConversionRate', 'renewalRate']
+    averageKeys: ['activeCoaches', 'utilizationRate'],
+    rateFields: [
+      { key: 'trialConversionRate', numeratorKey: 'trialConversionRateNumerator', denominatorKey: 'trialConversionRateDenominator', aggregate: 'last' },
+      { key: 'renewalRate', numeratorKey: 'renewalRateNumerator', denominatorKey: 'renewalRateDenominator', aggregate: 'last' }
+    ]
   });
 }
 
@@ -1938,7 +2054,8 @@ function buildCourtTrendDailyRows({ campuses = [], courts = [], schedule = [], e
   const days = courtTrendDays({ courts, schedule, financeNormalizedRows, dateRange, now });
   return days.map(day => {
     const dayRange = { startDate: day, endDate: day };
-    const configuredMetrics = buildConfiguredCourtMetrics({
+    const periodRange = dateRangeThroughDay(dateRange, day);
+    const dailyConfiguredMetrics = buildConfiguredCourtMetrics({
       campuses,
       courts,
       schedule,
@@ -1947,17 +2064,27 @@ function buildCourtTrendDailyRows({ campuses = [], courts = [], schedule = [], e
       dateRange: dayRange,
       now
     });
+    const periodConfiguredMetrics = buildConfiguredCourtMetrics({
+      campuses,
+      courts,
+      schedule,
+      entitlements,
+      entitlementLedger,
+      dateRange: periodRange,
+      now
+    });
     const financeMetrics = buildCourtMetricsFromFinanceRows(filterRowsByDateRange(financeNormalizedRows || [], dayRange, ['businessDate', 'date', 'createdAt']));
-    const metrics = mergeConfiguredCourtMetricsWithFinance(configuredMetrics, financeMetrics) || mergeCourtMetrics(buildCourtMetrics(courts), financeMetrics);
-    const cards = metrics.cards || {};
+    const dailyMetrics = mergeConfiguredCourtMetricsWithFinance(dailyConfiguredMetrics, financeMetrics) || mergeCourtMetrics(buildCourtMetrics(courts), financeMetrics) || {};
+    const dailyCards = dailyMetrics.cards || {};
+    const periodCards = periodConfiguredMetrics?.cards || {};
     return {
       date: day,
-      bookingAmount: Number(cards.bookingAmount?.value) || 0,
-      bookingHours: Number(cards.bookingHours?.value) || 0,
-      bookingCount: Number(cards.bookingCount?.value) || 0,
-      utilizationRate: Number(cards.utilizationRate?.value) || 0,
-      goldenUtilizationRate: Number(cards.goldenUtilizationRate?.value) || 0,
-      offPeakUtilizationRate: Number(cards.offPeakUtilizationRate?.value) || 0
+      bookingAmount: Number(dailyCards.bookingAmount?.value) || 0,
+      bookingHours: Number(dailyCards.bookingHours?.value) || 0,
+      bookingCount: Number(dailyCards.bookingCount?.value) || 0,
+      utilizationRate: Number(periodCards.utilizationRate?.value) || 0,
+      goldenUtilizationRate: Number(periodCards.goldenUtilizationRate?.value) || 0,
+      offPeakUtilizationRate: Number(periodCards.offPeakUtilizationRate?.value) || 0
     };
   });
 }
@@ -2275,61 +2402,65 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
     ...(purchases || []).map(purchaseDate)
   ].filter(Boolean))];
   const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
+  const cohortRows = rows || [];
+  const trialPathCohortRows = cohortRows.filter(row => row.hasTrialExperience);
+  const appointmentCohortRows = cohortRows.filter(row => row.hasAppointment || row.hasAttendance || row.hasTrialDeal);
+  const attendanceCohortRows = cohortRows.filter(row => row.hasAttendance);
   return days.map(day => {
     const dayRows = (rows || []).filter(row => courseRowDate(row) === day);
-    const cumulativeRows = (rows || []).filter(row => {
-      const firstDate = conversionTrendFirstSourceDate(row);
-      return firstDate && firstDate <= day;
-    });
-    const cumulativePurchases = (purchases || []).filter(row => {
-      const rowDate = purchaseDate(row);
-      return rowDate && rowDate <= day;
-    });
     const leadCount = dayRows.length;
-    const appointmentRows = cumulativeRows.filter(row => {
+    const appointmentRows = cohortRows.filter(row => {
       const appointmentDate = dateKey(row.appointmentEventDate);
-      return appointmentDate && appointmentDate <= day && (row.hasAppointment || row.hasAttendance || row.hasTrialDeal);
+      return eventInTrendWindow(appointmentDate, day, dateRange) && (row.hasAppointment || row.hasAttendance || row.hasTrialDeal);
     });
-    const attendanceRows = appointmentRows.filter(row => {
+    const attendanceRows = cohortRows.filter(row => {
       const attendanceDate = dateKey(row.attendanceEventDate);
-      return attendanceDate && attendanceDate <= day && row.hasAttendance;
+      return eventInTrendWindow(attendanceDate, day, dateRange) && row.hasAttendance;
     });
-    const dealRows = attendanceRows.filter(row => {
-      if (!row.hasTrialDeal) return false;
+    const dealRows = cohortRows.filter(row => {
       const dealDate = dateKey(row.dealEventDate);
-      return !!(dealDate && dealDate <= day);
+      return row.hasDeal && eventInTrendWindow(dealDate, day, dateRange);
     });
-    const repurchase = buildPeriodRepurchaseMetrics(cumulativePurchases);
-    const formalRows = cumulativeRows.filter(row => normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse));
-    const totalDealRows = cumulativeRows.filter(row => row.hasDeal);
-    const trialPathRows = cumulativeRows.filter(row => row.hasTrialExperience);
-    const trialPathDealRows = trialPathRows.filter(row => row.hasTrialDeal || normalizeText(row.studentStage) === 'formal');
-    const trialPathPendingRows = trialPathRows.filter(row => !trialPathDealRows.includes(row));
+    const attendedDealRows = attendanceRows.filter(row => {
+      const dealDate = dateKey(row.dealEventDate);
+      return row.hasTrialDeal && eventInTrendWindow(dealDate, day, dateRange);
+    });
+    const repurchase = buildFixedCohortRepurchaseMetrics(purchases, day, dateRange);
+    const formalRows = cohortRows.filter(row => {
+      const dealDate = dateKey(row.dealEventDate);
+      return (normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse)) && eventInTrendWindow(dealDate, day, dateRange);
+    });
+    const totalDealRows = dealRows;
+    const trialPathDealRows = trialPathCohortRows.filter(row => {
+      const dealDate = dateKey(row.dealEventDate);
+      return row.hasTrialDeal && eventInTrendWindow(dealDate, day, dateRange);
+    });
+    const trialPathPendingRows = trialPathCohortRows.filter(row => !trialPathDealRows.includes(row));
     const appointmentCount = appointmentRows.length;
     const attendanceCount = attendanceRows.length;
-    const dealCount = dealRows.length;
+    const dealCount = attendedDealRows.length;
     return {
       date: day,
       leads: leadCount,
-      totalDealRate: rate(totalDealRows.length, cumulativeRows.length),
+      totalDealRate: rate(totalDealRows.length, cohortRows.length),
       totalDealRateNumerator: totalDealRows.length,
-      totalDealRateDenominator: cumulativeRows.length,
-      courseDealRate: rate(formalRows.length, cumulativeRows.length),
+      totalDealRateDenominator: cohortRows.length,
+      courseDealRate: rate(formalRows.length, cohortRows.length),
       courseDealRateNumerator: formalRows.length,
-      courseDealRateDenominator: cumulativeRows.length,
-      trialPathDealRate: rate(trialPathDealRows.length, trialPathRows.length),
+      courseDealRateDenominator: cohortRows.length,
+      trialPathDealRate: rate(trialPathDealRows.length, trialPathCohortRows.length),
       trialPathDealRateNumerator: trialPathDealRows.length,
-      trialPathDealRateDenominator: trialPathRows.length,
+      trialPathDealRateDenominator: trialPathCohortRows.length,
       trialPathPending: trialPathPendingRows.length,
-      appointmentRate: rate(appointmentCount, cumulativeRows.length),
+      appointmentRate: rate(appointmentCount, cohortRows.length),
       appointmentRateNumerator: appointmentCount,
-      appointmentRateDenominator: cumulativeRows.length,
-      attendanceRate: rate(attendanceCount, appointmentCount),
+      appointmentRateDenominator: cohortRows.length,
+      attendanceRate: rate(attendanceCount, appointmentCohortRows.length),
       attendanceRateNumerator: attendanceCount,
-      attendanceRateDenominator: appointmentCount,
-      dealRate: rate(dealCount, attendanceCount),
+      attendanceRateDenominator: appointmentCohortRows.length,
+      dealRate: rate(dealCount, attendanceCohortRows.length),
       dealRateNumerator: dealCount,
-      dealRateDenominator: attendanceCount,
+      dealRateDenominator: attendanceCohortRows.length,
       renewalRate: repurchase.rate,
       renewalRateNumerator: repurchase.numerator,
       renewalRateDenominator: repurchase.denominator,
@@ -2364,9 +2495,21 @@ function courtHistoryRowsThroughDay(history, day = '') {
     });
 }
 
+function courtHistoryRowsWithinRange(history, range = {}) {
+  return normalizeCourtHistory(history)
+    .filter(row => dateWithinRange(dateKey(courtHistoryBusinessDate(row) || row.date || row.createdAt), range));
+}
+
 function courtRowsThroughDay(courts = [], day = '') {
   return (courts || []).map(row => {
     const history = courtHistoryRowsThroughDay(row.history, day);
+    return { ...row, history: JSON.stringify(history) };
+  });
+}
+
+function courtRowsWithinRange(courts = [], range = {}) {
+  return (courts || []).map(row => {
+    const history = courtHistoryRowsWithinRange(row.history, range);
     return { ...row, history: JSON.stringify(history) };
   });
 }
@@ -2378,20 +2521,27 @@ function buildCourtRetentionTrendDailyRows({ courts = [], membershipAccounts = [
     ...(membershipOrders || []).map(purchaseDate)
   ].filter(Boolean))];
   const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
+  const fullRangeChain = buildCourtChainFromSource({
+    courts: courtRowsWithinRange(courts, dateRange),
+    membershipAccounts,
+    membershipOrders: filterRowsByDateRange(membershipOrders || [], dateRange, ['purchaseDate', 'createdAt'])
+  });
   return days.map(day => {
+    const periodRange = dateRangeThroughDay(dateRange, day);
     const chain = buildCourtChainFromSource({
-      courts: courtRowsThroughDay(courts, day),
+      courts: courtRowsWithinRange(courts, periodRange),
       membershipAccounts,
       membershipOrders: (membershipOrders || []).filter(row => {
         const rowDay = purchaseDate(row);
-        return rowDay && rowDay <= day;
+        return eventInTrendWindow(rowDay, day, dateRange);
       })
     });
+    const denominator = fullRangeChain.courtUsers || chain.courtUsers || 0;
     return {
       date: day,
-      courtRepeatRate: chain.courtRepeatRate,
+      courtRepeatRate: rate(chain.courtRepeatCustomers, denominator),
       courtRepeatRateNumerator: chain.courtRepeatCustomers,
-      courtRepeatRateDenominator: chain.courtUsers
+      courtRepeatRateDenominator: denominator
     };
   });
 }

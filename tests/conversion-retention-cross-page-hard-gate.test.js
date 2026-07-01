@@ -92,10 +92,15 @@ async function membershipSummaryFromRows(rows = {}) {
   );
 
   const latestTrend = operations.conversion.trends.at(-1) || {};
-  assert.notStrictEqual(
-    latestTrend.totalDealRate,
-    latestTrend.courseDealRate,
-    '同一趋势点中，总成交转化率和课程成交率不能共用同一个正式学员/线索公式'
+  assert.strictEqual(
+    latestTrend.totalDealRateDenominator,
+    teachingSample.leads.length,
+    '总成交转化率趋势分母必须固定为所选线索样本池'
+  );
+  assert.strictEqual(
+    latestTrend.courseDealRateDenominator,
+    teachingSample.leads.length,
+    '课程成交率趋势分母必须固定为所选线索样本池'
   );
   assert.strictEqual(
     latestTrend.courseRepeatRateNumerator,

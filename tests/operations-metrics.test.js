@@ -951,7 +951,7 @@ assert.strictEqual(coachB.revenue, 0, 'coach revenue should exclude receipts aft
 assert.strictEqual(coachDashboardMetrics.coach.cards.revenue.value, 6200, 'coach top cards should sum standard finance course receipts up to today only');
 assert.ok(Array.isArray(coachDashboardMetrics.coach.trends), 'coach dashboard should expose selected-period KPI trends');
 assert.strictEqual(coachDashboardMetrics.coach.trends.length, 4, 'coach KPI trends should cover each real selected day up to today');
-assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 14.5, 'coach utilization trend should use the real day bucket utilization');
+assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-03')?.utilizationRate, 9.7, 'coach utilization trend should use cumulative selected-period utilization through the trend day');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-04')?.revenue, 1200, 'coach revenue trend should use the real day bucket finance course receipts');
 assert.strictEqual(coachDashboardMetrics.coach.trends.find(row => row.date === '2026-06-01')?.activeCoaches, 0, 'coach active trend should count coaches with real daily work or receipts, not all roster coaches');
 const externalCampusCoachMetrics = buildOperationsMetrics({
@@ -1243,7 +1243,7 @@ const asOfCoachTrendMetrics = buildOperationsMetrics({
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-04' }
 });
 assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-01')?.trialConversionRate, 0, 'coach trial conversion trend must not count purchases after the trend day');
-assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, null, 'coach trial conversion trend should not invent a same-day trial denominator when there was no trial that day');
+assert.strictEqual(asOfCoachTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, 100, 'coach trial conversion trend should keep the selected trial cohort denominator across trend days');
 assert.strictEqual(asOfCoachTrendMetrics.coach.cards.trialConversionRate.value, 100, 'coach cards should still show selected-period conversion after the purchase has happened');
 
 assert.deepStrictEqual(
@@ -1588,5 +1588,82 @@ assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row =
 assert.strictEqual(financeSourceDocumentAttributionMetrics.coach.rows.find(row => row.coach === '李教练')?.revenue, 300, 'coach revenue should trace direct schedule finance rows back to source schedule coach');
 assert.ok(financeSourceDocumentAttributionMetrics.coach.revenueParetoRows.some(row => row.coach === '张教练' && row.revenue === 2000), 'coach contribution ranking should render traced finance revenue');
 assert.ok(financeSourceDocumentAttributionMetrics.coach.capabilityRows.some(row => row.coach === '张教练' && row.oldCustomerBase === 1), 'coach capability matrix should render when traced finance rows provide renewal base');
+
+const fixedCohortTrendMetrics = buildOperationsMetrics({
+  campuses: [],
+  leads: Array.from({ length: 5 }, (_, index) => ({
+    id: `fixed-cohort-lead-${index + 1}`,
+    leadDate: `2026-06-0${index + 1}`,
+    source: '测试渠道'
+  })),
+  customerLifecycleRows: [
+    { sourceLeadId: 'fixed-cohort-lead-1', firstTouchAt: '2026-06-01', studentStage: 'formal', hasDeal: true, hasCourse: true, courseFirstPurchaseAt: '2026-06-02' },
+    { sourceLeadId: 'fixed-cohort-lead-2', firstTouchAt: '2026-06-02', studentStage: 'formal', hasDeal: true, hasCourse: true, courseFirstPurchaseAt: '2026-06-04' },
+    { sourceLeadId: 'fixed-cohort-lead-3', firstTouchAt: '2026-06-03', studentStage: 'lead', hasDeal: false },
+    { sourceLeadId: 'fixed-cohort-lead-4', firstTouchAt: '2026-06-04', studentStage: 'lead', hasDeal: false },
+    { sourceLeadId: 'fixed-cohort-lead-5', firstTouchAt: '2026-06-05', studentStage: 'formal', hasDeal: true, hasCourse: true, courseFirstPurchaseAt: '2026-07-02' }
+  ],
+  purchases: [
+    { id: 'fixed-cohort-purchase-1', studentId: 'fixed-cohort-student-1', sourceLeadId: 'fixed-cohort-lead-1', actualAmount: 1000, purchaseDate: '2026-06-02', status: 'active' },
+    { id: 'fixed-cohort-purchase-2', studentId: 'fixed-cohort-student-2', sourceLeadId: 'fixed-cohort-lead-2', actualAmount: 1000, purchaseDate: '2026-06-04', status: 'active' },
+    { id: 'fixed-cohort-purchase-late', studentId: 'fixed-cohort-student-5', sourceLeadId: 'fixed-cohort-lead-5', actualAmount: 1000, purchaseDate: '2026-07-02', status: 'active' }
+  ],
+  students: [],
+  coaches: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-07-03 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
+});
+assert.strictEqual(fixedCohortTrendMetrics.conversion.trends.find(row => row.date === '2026-06-02')?.totalDealRateDenominator, 5, 'conversion trend denominator should stay fixed to the selected lead cohort');
+assert.strictEqual(fixedCohortTrendMetrics.conversion.trends.find(row => row.date === '2026-06-02')?.totalDealRateNumerator, 1, 'conversion trend numerator should count selected-cohort deals up to the trend day');
+assert.strictEqual(fixedCohortTrendMetrics.conversion.trends.find(row => row.date === '2026-06-02')?.totalDealRate, 20, 'conversion trend should not divide by only leads created up to the trend day');
+assert.strictEqual(fixedCohortTrendMetrics.conversion.trends.find(row => row.date === '2026-06-04')?.totalDealRate, 40, 'conversion trend should accumulate selected-cohort conversions through the trend day');
+assert.strictEqual(fixedCohortTrendMetrics.conversion.trends.find(row => row.date === '2026-06-30')?.totalDealRate, 40, 'conversion trend should exclude conversions after the selected range');
+
+const fixedCoachCohortTrendMetrics = buildOperationsMetrics({
+  campuses: [],
+  coaches: [{ id: 'coach-a', name: 'A教练', status: 'active' }],
+  students: [
+    { id: 'fixed-trial-a', primaryCoach: 'A教练' },
+    { id: 'fixed-trial-b', primaryCoach: 'A教练' },
+    { id: 'fixed-trial-c', primaryCoach: 'A教练' }
+  ],
+  customerLifecycleRows: [
+    { studentId: 'fixed-trial-a', formalCoach: 'A教练', trialAttendedAt: '2026-06-01', hasTrialExperience: true, hasTrialToCourseConversion: true, courseDealPath: 'trial_to_course', courseFirstPurchaseAt: '2026-06-03' },
+    { studentId: 'fixed-trial-b', formalCoach: 'A教练', trialAttendedAt: '2026-06-04', hasTrialExperience: true, hasTrialToCourseConversion: true, courseDealPath: 'trial_to_course', courseFirstPurchaseAt: '2026-07-02' },
+    { studentId: 'fixed-trial-c', formalCoach: 'A教练', trialAttendedAt: '2026-06-05', hasTrialExperience: true, hasTrialToCourseConversion: false }
+  ],
+  schedule: [
+    { id: 'fixed-trial-schedule-a', coach: 'A教练', studentId: 'fixed-trial-a', startTime: '2026-06-01 09:00:00', endTime: '2026-06-01 10:00:00', status: '已结束', courseType: '体验课' },
+    { id: 'fixed-trial-schedule-b', coach: 'A教练', studentId: 'fixed-trial-b', startTime: '2026-06-04 09:00:00', endTime: '2026-06-04 10:00:00', status: '已结束', courseType: '体验课' },
+    { id: 'fixed-trial-schedule-c', coach: 'A教练', studentId: 'fixed-trial-c', startTime: '2026-06-05 09:00:00', endTime: '2026-06-05 10:00:00', status: '已结束', courseType: '体验课' }
+  ],
+  purchases: [
+    { id: 'fixed-trial-deal-a', studentId: 'fixed-trial-a', ownerCoach: 'A教练', actualAmount: 1000, purchaseDate: '2026-06-03', status: 'active' },
+    { id: 'fixed-trial-deal-b-late', studentId: 'fixed-trial-b', ownerCoach: 'A教练', actualAmount: 1000, purchaseDate: '2026-07-02', status: 'active' }
+  ],
+  leads: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  financeNormalizedRows: [
+    { id: 'fixed-trial-deal-a-finance', studentId: 'fixed-trial-a', ownerCoach: 'A教练', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-06-03' },
+    { id: 'fixed-trial-deal-b-late-finance', studentId: 'fixed-trial-b', ownerCoach: 'A教练', businessType: '课程', action: '收款', cashDelta: 1000, businessDate: '2026-07-02' }
+  ],
+  financeOverviewData: {}
+}, {
+  now: new Date('2026-07-03 12:00:00'),
+  dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
+});
+assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRateDenominator, 3, 'coach trial conversion trend denominator should stay fixed to the selected trial cohort');
+assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRateNumerator, 1, 'coach trial conversion trend numerator should count selected-cohort conversions up to the trend day');
+assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-03')?.trialConversionRate, 33.3, 'coach trial conversion trend should not use same-day trial denominator');
+assert.strictEqual(fixedCoachCohortTrendMetrics.coach.trends.find(row => row.date === '2026-06-30')?.trialConversionRate, 33.3, 'coach trial conversion trend should exclude conversions after the selected range');
 
 console.log('operations metrics tests passed');

@@ -62,6 +62,26 @@ assert.doesNotMatch(
   /totalDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)[\s\S]*courseDealRate:\s*rate\(formalRows\.length,\s*cumulativeRows\.length\)/,
   '总成交转化率趋势不得和课程成交率趋势共用同一个正式学员/线索公式'
 );
+assert.match(
+  functionBody(operationsMetricsSource, 'buildConversionTrendDailyRows'),
+  /const cohortRows = rows \|\| \[\];[\s\S]*totalDealRateDenominator:\s*cohortRows\.length/,
+  '转化趋势必须使用固定线索样本池作为分母'
+);
+assert.doesNotMatch(
+  functionBody(operationsMetricsSource, 'buildConversionTrendDailyRows'),
+  /totalDealRateDenominator:\s*cumulativeRows\.length|courseDealRateDenominator:\s*cumulativeRows\.length/,
+  '转化趋势不得退回“截至当天出现过的线索数”作为分母'
+);
+assert.match(
+  functionBody(operationsMetricsSource, 'buildCoachTrendSet'),
+  /rateFields:\s*\[[\s\S]*trialConversionRateNumerator[\s\S]*trialConversionRateDenominator[\s\S]*renewalRateNumerator[\s\S]*renewalRateDenominator/,
+  '教练人效率类趋势必须用分子分母重算，不能平均每日百分比'
+);
+assert.doesNotMatch(
+  functionBody(operationsMetricsSource, 'buildCoachTrendSet'),
+  /averageKeys:\s*\[[^\]]*trialConversionRate|averageKeys:\s*\[[^\]]*renewalRate/,
+  '教练人效体验转化率和续费率不得退回日百分比平均'
+);
 assert.doesNotMatch(
   operationsMetricsSource,
   /function buildCourtChainMetrics\(/,
