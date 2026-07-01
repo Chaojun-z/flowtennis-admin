@@ -160,6 +160,14 @@ const channelSmall = channelSeries.data.find(row => row.name === 'SmallSource');
 assert.ok(channelBig.symbolSize <= 36, 'channel bubbles should cap large deal counts to avoid crowding');
 assert.ok(channelBig.symbolSize - channelSmall.symbolSize < 20, 'channel bubble diameter should not scale linearly with deal count');
 assert.strictEqual(channelSeries.data[0].name, 'BigSource', 'channel large bubbles should be drawn first');
+assert.strictEqual(channelOption.xAxis.splitLine.show, false, 'channel quality matrix should use the shared clean quadrant standard without vertical grid lines');
+assert.strictEqual(channelOption.yAxis.splitLine.show, false, 'channel quality matrix should use the shared clean quadrant standard without horizontal grid lines');
+assert.ok(!channelSeries.markArea, 'channel quality matrix should not paint background bands');
+assert.strictEqual(channelSeries.emphasis.scale, true, 'channel quality matrix should use the shared subtle hover scale');
+assert.ok(!channelSeries.emphasis.itemStyle?.shadowBlur, 'channel quality matrix hover should not add dark shadow');
+assert.ok(!channelSeries.blur, 'channel quality matrix hover should not fade other channels');
+assert.strictEqual(channelBig.itemStyle.color, '#6B8E9B', 'channel upper-left point should use the shared morandi-blue quadrant color');
+assert.strictEqual(channelSmall.itemStyle.color, '#7C8B6F', 'channel lower-right point should use the shared sage-green quadrant color');
 assert.match(
   channelOption.tooltip.formatter({ data: channelBig, name: channelBig.name }),
   /圆点大小：成交人数/,

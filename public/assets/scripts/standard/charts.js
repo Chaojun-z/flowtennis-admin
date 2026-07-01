@@ -282,12 +282,6 @@ function operationsBubbleSortData(data = []) {
   return [...data].sort((a, b) => operationsBubblePointSize(b) - operationsBubblePointSize(a));
 }
 
-function operationsChannelQualityColor(row = {}) {
-  if (row.statusTone === 'good') return '#2E8B6D';
-  if (row.statusTone === 'warn') return '#D89135';
-  return '#E05252';
-}
-
 function operationsChannelQualityTooltip(item = {}) {
   const row = item.data?.raw || {};
   const leads = Number(row.leads) || 0;
@@ -322,66 +316,66 @@ function buildOperationsChannelQualityChartOption({ rows = [] } = {}) {
     tooltip: { trigger: 'item', formatter: operationsChannelQualityTooltip, textStyle: { fontSize: 12, fontWeight: 400 } },
     xAxis: {
       type: 'value',
-      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
+      nameTextStyle: { ...operationsPremiumMatrixAxisLabel, fontWeight: 600 },
       min: 0,
       max: axisMaxRate,
       interval: axisMaxRate / 5,
-      axisLabel: { formatter: value => `${fmt(value)}%`, color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
-      axisLine: { lineStyle: { color: '#D7DEE8' } },
-      axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
-      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+      axisLabel: { ...operationsPremiumMatrixAxisLabel, formatter: value => `${fmt(value)}%`, margin: 6, showMinLabel: true, showMaxLabel: true },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
-      nameTextStyle: { color: '#A19080', fontSize: 11, fontWeight: 600 },
+      nameTextStyle: { ...operationsPremiumMatrixAxisLabel, fontWeight: 600 },
       min: 0,
       max: axisMaxLeads,
       interval: axisMaxLeads / 5,
-      axisLabel: { formatter: value => fmt(value), color: '#A19080', fontSize: 11, margin: 6, showMinLabel: true, showMaxLabel: true },
-      axisLine: { lineStyle: { color: '#D7DEE8' } },
-      axisTick: { show: true, lineStyle: { color: '#D7DEE8' } },
-      splitLine: { lineStyle: { color: '#EEF2F7', type: 'dashed' } }
+      axisLabel: { ...operationsPremiumMatrixAxisLabel, formatter: value => fmt(value), margin: 6, showMinLabel: true, showMaxLabel: true },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false }
     },
     seriesName: '成交人数',
     data: source.map(row => {
       const deals = Number(row.deals) || 0;
-      const bubbleSize = operationsBubbleSize(deals, maxDeals, { min: 16, max: 36 });
-      const bubbleColor = operationsChannelQualityColor(row);
+      const bubbleSize = operationsBubbleSize(deals, maxDeals, { min: 14, max: 33 });
       return {
         name: row.source,
         raw: row,
         value: [Number(row.dealConversionRate) || 0, Number(row.leads) || 0, deals],
         symbolSize: bubbleSize,
         itemStyle: {
-          color: bubbleColor,
-          opacity: 0.86,
+          color: operationsPremiumMatrixQuadrantColor(row.dealConversionRate, row.leads, avgRate, avgLeads),
+          opacity: 0.95,
           borderColor: '#FFFFFF',
-          borderWidth: 2,
-          shadowBlur: 14,
-          shadowColor: `${bubbleColor}33`
+          borderWidth: 1
         }
       };
     }),
     symbolSize: value => {
       const deals = Number(value?.[2]) || 0;
-      return operationsBubbleSize(deals, maxDeals, { min: 16, max: 36 });
+      return operationsBubbleSize(deals, maxDeals, { min: 14, max: 33 });
     },
     label: {
       show: true,
-      position: 'right',
+      position: 'top',
       formatter: item => item.name,
-      color: '#172033',
-      fontSize: 10,
-      fontWeight: 700
+      color: '#57534E',
+      fontSize: 11,
+      fontWeight: 600,
+      distance: 4
     },
+    labelLayout: { hideOverlap: true },
+    hoverStyle: 'subtle',
     markLine: {
       silent: true,
       symbol: 'none',
-      lineStyle: { color: '#CBD5E1', type: 'dashed', width: 1 },
-      label: { color: '#64748B', fontSize: 11 },
+      lineStyle: { color: '#D6D3D1', type: 'dashed', width: 1 },
+      label: { ...operationsPremiumMatrixAxisLabel, color: '#9CA3AF' },
       data: [
-        { name: '平均转化', xAxis: avgRate, label: { formatter: '平均转化', position: 'insideEndTop' } },
-        { name: '平均线索', yAxis: avgLeads, label: { formatter: '平均线索', position: 'insideEndTop' } }
+        { name: '均值', xAxis: avgRate, label: { formatter: '均值', position: 'insideEndTop' } },
+        { name: '均值', yAxis: avgLeads, label: { formatter: '均值', position: 'insideEndTop' } }
       ]
     }
   });
@@ -648,20 +642,26 @@ function operationsCoachCourseColor(type = '') {
   return '#8EA0B8';
 }
 
-const operationsCoachQuadrantColors = {
+const operationsPremiumMatrixQuadrantColors = {
   q1: '#B58B4C',
   q2: '#6B8E9B',
   q3: '#A75D5D',
   q4: '#7C8B6F'
 };
 
-function operationsCoachQuadrantColor(x = 0, y = 0, xMid = 50, yMid = 50) {
+function operationsPremiumMatrixQuadrantColor(x = 0, y = 0, xMid = 50, yMid = 50) {
   const right = (Number(x) || 0) >= xMid;
   const top = (Number(y) || 0) >= yMid;
-  if (right && top) return operationsCoachQuadrantColors.q1;
-  if (!right && top) return operationsCoachQuadrantColors.q2;
-  if (!right && !top) return operationsCoachQuadrantColors.q3;
-  return operationsCoachQuadrantColors.q4;
+  if (right && top) return operationsPremiumMatrixQuadrantColors.q1;
+  if (!right && top) return operationsPremiumMatrixQuadrantColors.q2;
+  if (!right && !top) return operationsPremiumMatrixQuadrantColors.q3;
+  return operationsPremiumMatrixQuadrantColors.q4;
+}
+
+const operationsCoachQuadrantColors = operationsPremiumMatrixQuadrantColors;
+
+function operationsCoachQuadrantColor(x = 0, y = 0, xMid = 50, yMid = 50) {
+  return operationsPremiumMatrixQuadrantColor(x, y, xMid, yMid);
 }
 
 function operationsCoachCapabilityColor(row = {}) {
@@ -692,7 +692,8 @@ function operationsCoachBubbleLabel(item = {}) {
 }
 
 const operationsCoachChartTextStyle = { color: '#57534E', fontFamily: 'var(--ops-number-font)' };
-const operationsCoachAxisLabel = { color: '#78716C', fontFamily: 'var(--ops-number-font)', fontSize: 11, fontWeight: 500 };
+const operationsPremiumMatrixAxisLabel = { color: '#78716C', fontFamily: 'var(--ops-number-font)', fontSize: 11, fontWeight: 500 };
+const operationsCoachAxisLabel = operationsPremiumMatrixAxisLabel;
 const operationsCoachSplitLine = { lineStyle: { color: 'rgba(87,83,78,.10)', type: 'solid' } };
 
 function buildOperationsCoachMatrixChartOption({ rows = [] } = {}) {

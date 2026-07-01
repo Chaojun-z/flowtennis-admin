@@ -29,8 +29,8 @@ assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html shoul
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260613-finance-list-v1/, 'index.html should version coachops.js after finance list updates');
-assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-coach-chart-render-v1/, 'index.html should bust stale cached charts.js after coach chart rendering changes');
-assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-coach-chart-render-v1/, 'index.html should bust stale cached operations.js after coach chart rendering changes');
+assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached charts.js after channel quality matrix changes');
+assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached operations.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');
 assert.match(html, /assets\/scripts\/pages\/courts\.js\?v=/, 'index.html should bust stale cached courts.js when court filters change');
 assert.match(html, /assets\/scripts\/pages\/students\.js/, 'index.html should load students page module');
