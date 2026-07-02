@@ -2468,17 +2468,20 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .global-live-clock{display:none}
   body.admin-mobile .content{padding:14px 16px 18px;background:#F5F2F0;box-sizing:border-box}
   body.admin-mobile .stats-row,body.admin-mobile .tms-stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow:visible}
-  body.admin-mobile #page-leads .tms-stats-row,body.admin-mobile #page-students .tms-stats-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;margin:0 0 10px;padding:0 0 2px;max-height:94px;scrollbar-width:none}
+  body.admin-mobile #page-leads .tms-stats-row,body.admin-mobile #page-students .tms-stats-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;margin:0 -16px 10px;padding:0;max-height:94px;scrollbar-width:none}
   body.admin-mobile #page-leads .tms-stats-row::-webkit-scrollbar,body.admin-mobile #page-students .tms-stats-row::-webkit-scrollbar{display:none}
   body.admin-mobile .tms-stat-card{min-height:86px;padding:10px;border-radius:10px;box-shadow:none}
-  body.admin-mobile #page-leads .tms-stat-card,body.admin-mobile #page-students .tms-stat-card{flex:0 0 116px;width:116px;min-height:82px;height:82px;scroll-snap-align:start;overflow:hidden}
+  body.admin-mobile #page-leads .tms-stats-row .tms-stat-card:first-child,body.admin-mobile #page-students .tms-stats-row .tms-stat-card:first-child{margin-left:16px}
+  body.admin-mobile #page-leads .tms-stats-row .tms-stat-card:last-child,body.admin-mobile #page-students .tms-stats-row .tms-stat-card:last-child{margin-right:16px}
+  body.admin-mobile #page-leads .tms-stat-card,body.admin-mobile #page-students .tms-stat-card{flex:0 0 136px;width:136px;min-height:82px;height:82px;scroll-snap-align:start;overflow:hidden}
   body.admin-mobile .tms-stat-label{font-size:11px;line-height:16px;white-space:normal}
   body.admin-mobile .tms-stat-value{font-size:18px;line-height:24px;white-space:normal}
-  body.admin-mobile #page-leads .tms-stat-value,body.admin-mobile #page-students .tms-stat-value{white-space:nowrap;overflow:hidden;text-overflow:clip}
+  body.admin-mobile #page-leads .tms-stat-value,body.admin-mobile #page-students .tms-stat-value{white-space:nowrap;overflow:hidden;text-overflow:clip;display:flex;align-items:baseline;gap:4px}
   body.admin-mobile .tms-stat-value-compact{font-size:15px;letter-spacing:0}
-  body.admin-mobile #page-students .student-stat-pair span:not(.student-stat-divider){font-size:15px}
-  body.admin-mobile #page-students .student-stat-divider{margin:0 3px!important}
-  body.admin-mobile .tms-stat-value span,body.admin-mobile .tms-stat-percent{font-size:10px}
+  body.admin-mobile #page-students .student-stat-pair{gap:5px}
+  body.admin-mobile #page-students .student-stat-pair span:not(.student-stat-divider){font-size:17px}
+  body.admin-mobile #page-students .student-stat-divider{margin:0!important;font-size:13px!important}
+  body.admin-mobile .tms-stat-value span,body.admin-mobile .tms-stat-percent{font-size:12px;flex:0 0 auto}
   body.admin-mobile .tms-stat-sub{position:static;margin-top:6px;font-size:10px;line-height:14px;white-space:normal}
   body.admin-mobile #page-leads .tms-stat-sub,body.admin-mobile #page-students .tms-stat-sub{display:none}
   body.admin-mobile .admin-mobile-kpi-hint{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:260;background:rgba(51,42,36,.94);color:#FFF7EF;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.45;text-align:center;box-shadow:0 12px 32px rgba(30,16,6,.26);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
@@ -2494,7 +2497,7 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .coach-ops-select,body.admin-mobile .coach-date-btn{width:100%;min-width:0}
   body.admin-mobile .coach-ops-legend{gap:10px;flex-wrap:wrap}
   body.admin-mobile .toolbar,body.admin-mobile .tms-toolbar{align-items:stretch;gap:10px}
-  body.admin-mobile .tms-toolbar-left{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;width:100%;flex:none;align-items:center}
+  body.admin-mobile .tms-toolbar-left{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;width:100%;flex:none;align-items:center;position:relative}
   body.admin-mobile .tms-mobile-filter-trigger{display:none}
   body.admin-mobile #page-leads .tms-mobile-filter-trigger,body.admin-mobile #page-students .tms-mobile-filter-trigger{display:inline-flex;width:42px;height:42px;border:1px solid #E0D4C9;border-radius:10px;background:#FFFCF8;color:#805435;font-size:0;font-family:inherit;align-items:center;justify-content:center;padding:0}
   body.admin-mobile .tms-mobile-filter-icon{width:18px;height:18px;display:block;position:relative;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) left 3px top 4px/12px 2px no-repeat,linear-gradient(currentColor,currentColor) left 3px top 12px/12px 2px no-repeat}
@@ -2503,12 +2506,12 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .tms-mobile-filter-icon::after{right:3px;top:10px}
   body.admin-mobile .tms-mobile-filter-head{display:none}
   body.admin-mobile .tms-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
-  body.admin-mobile #page-leads .tms-filters,body.admin-mobile #page-students .tms-filters{position:fixed;left:0;right:0;bottom:0;z-index:240;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px calc(16px + env(safe-area-inset-bottom));background:#FFFCF8;border-radius:18px 18px 0 0;box-shadow:0 -16px 42px rgba(30,16,6,.2);transform:translateY(105%);transition:transform .2s cubic-bezier(.2,0,0,1);box-sizing:border-box}
-  body.admin-mobile #page-leads .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-students .tms-toolbar.mobile-filter-open .tms-filters{transform:translateY(0)}
-  body.admin-mobile #page-leads .tms-mobile-filter-head,body.admin-mobile #page-students .tms-mobile-filter-head{display:flex;grid-column:1/-1;align-items:center;justify-content:space-between;margin-bottom:2px}
+  body.admin-mobile #page-leads .tms-filters,body.admin-mobile #page-students .tms-filters{position:absolute;right:0;top:calc(100% + 8px);z-index:240;display:grid;grid-template-columns:1fr;gap:8px;width:min(270px,calc(100vw - 32px));padding:10px;background:#FFFCF8;border:1px solid #E0D4C9;border-radius:12px;box-shadow:0 14px 34px rgba(30,16,6,.18);transform:translateY(-4px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .16s ease;box-sizing:border-box}
+  body.admin-mobile #page-leads .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-students .tms-toolbar.mobile-filter-open .tms-filters{transform:translateY(0);opacity:1;pointer-events:auto}
+  body.admin-mobile #page-leads .tms-mobile-filter-head,body.admin-mobile #page-students .tms-mobile-filter-head{display:none}
   body.admin-mobile .tms-mobile-filter-head strong{font-size:16px;color:#332A24}
   body.admin-mobile .tms-mobile-filter-head button{border:0;background:transparent;color:#805435;font-size:14px;font-weight:800;font-family:inherit;padding:8px}
-  body.admin-mobile.admin-mobile-filter-open::after{content:"";position:fixed;left:0;right:0;top:0;bottom:0;z-index:230;background:rgba(35,28,23,.28)}
+  body.admin-mobile.admin-mobile-filter-open::after{display:none}
   body.admin-mobile .tms-toolbar-right{width:100%;justify-content:flex-end;margin-left:0}
   body.admin-mobile .search-box,body.admin-mobile .fsel,body.admin-mobile .btn-sec,body.admin-mobile .btn-add,body.admin-mobile .tms-search-wrapper,body.admin-mobile .tms-dropdown,body.admin-mobile .tms-btn{max-width:none;min-width:0}
   body.admin-mobile .search-box,body.admin-mobile .tms-search-wrapper{grid-column:1/-1;width:100%}
@@ -2518,7 +2521,8 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #page-leads .tms-search-input::placeholder,body.admin-mobile #page-students .tms-search-input::placeholder{font-size:14px}
   body.admin-mobile #page-leads .tms-toolbar-right .tms-import-action,body.admin-mobile #page-students .tms-toolbar-right .tms-export-action{display:none}
   body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:120;width:54px;height:54px;border-radius:50%;padding:0;min-width:0;font-size:0;box-shadow:0 12px 26px rgba(128,84,53,.28);display:flex;align-items:center;justify-content:center}
-  body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary::before,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary::before{content:"+";display:block;width:54px;height:54px;background:none;color:#fff;font-size:30px;line-height:50px;font-weight:300;text-align:center}
+  body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary::before,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary::before{content:"";position:absolute;left:50%;top:50%;width:24px;height:2px;border-radius:999px;background:#fff;transform:translate(-50%,-50%)}
+  body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary::after,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary::after{content:"";position:absolute;left:50%;top:50%;width:2px;height:24px;border-radius:999px;background:#fff;transform:translate(-50%,-50%)}
   body.admin-mobile .btn-add{margin-left:0;justify-content:center}
   body.admin-mobile #campusTabs{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-bottom:2px}
   body.admin-mobile .ctab{white-space:nowrap;flex:0 0 auto}
@@ -2526,7 +2530,8 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .tms-table-wrapper{max-height:none;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   body.admin-mobile .tms-table-wrapper::-webkit-scrollbar{display:none}
   body.admin-mobile .tms-sticky-l,body.admin-mobile .tms-sticky-r,body.admin-mobile .tms-table th.tms-sticky-l,body.admin-mobile .tms-table th.tms-sticky-r,body.admin-mobile .tms-table td.tms-sticky-l,body.admin-mobile .tms-table td.tms-sticky-r{position:static!important;left:auto!important;right:auto!important;z-index:auto!important;text-align:left}
-  body.admin-mobile .tms-action-cell{min-width:112px;text-align:left!important;justify-content:flex-start!important}
+  body.admin-mobile .tms-action-cell{min-width:96px;text-align:left!important;justify-content:flex-start!important}
+  body.admin-mobile #page-leads .tms-table th.tms-sticky-r,body.admin-mobile #page-students .tms-table th.tms-sticky-r,body.admin-mobile #page-leads .tms-action-cell,body.admin-mobile #page-students .tms-action-cell{width:104px!important;min-width:104px!important;padding-left:8px!important;padding-right:12px!important;text-align:left!important}
   body.admin-mobile table{min-width:760px}
   body.admin-mobile #page-leads .tms-pagination,body.admin-mobile #page-students .tms-pagination{padding:10px 12px;justify-content:center;gap:8px}
   body.admin-mobile #page-leads .tms-pagination-left,body.admin-mobile #page-students .tms-pagination-left{width:100%;justify-content:center}
@@ -2537,10 +2542,12 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #page-leads .tms-pagination,body.admin-mobile #page-students .tms-pagination{display:none!important}
   body.admin-mobile .pager{gap:10px;align-items:flex-start;flex-direction:column}
   body.admin-mobile .product-grid{grid-template-columns:1fr}
-  body.admin-mobile .overlay{align-items:stretch;justify-content:center;padding:0;background:rgba(35,20,10,.54)}
-  body.admin-mobile .overlay.open .modal.modal-court{width:100% !important;max-width:100% !important;height:100dvh;max-height:100dvh;border-radius:0 !important;margin:0;box-shadow:none;transform:none;overflow:hidden}
+  body.admin-mobile .overlay{align-items:flex-end;justify-content:center;padding:0;background:rgba(35,20,10,.54)}
+  body.admin-mobile .overlay.open .modal.modal-court{width:100% !important;max-width:100% !important;height:calc(100dvh - 72px);max-height:calc(100dvh - 72px);border-radius:18px 18px 0 0 !important;margin:0;box-shadow:none;transform:none;overflow:hidden}
+  body.admin-mobile .overlay.student-drawer-overlay.open .modal.modal-court.modal-student-drawer,body.admin-mobile .overlay.schedule-drawer-overlay.open .modal.modal-court.modal-schedule-drawer,body.admin-mobile .overlay.schedule-drawer-overlay.open .modal.modal-court.modal-lead-drawer{transform:none}
   body.admin-mobile .modal.modal-court .mhead{position:sticky;top:0;z-index:6;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:#F5F2F0;border-bottom:1px solid #E6E1DC;flex-shrink:0}
-  body.admin-mobile .modal.modal-court .mbody{padding:14px 16px 18px;overflow:auto;min-height:0}
+  body.admin-mobile .modal.modal-court .mbody{padding:14px 16px 18px;overflow:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
+  body.admin-mobile .modal.modal-court .mbody::-webkit-scrollbar{display:none}
   body.admin-mobile .modal.modal-court .mactions{position:sticky;bottom:0;z-index:6;padding:12px 16px;padding-bottom:calc(14px + env(safe-area-inset-bottom));border-radius:0;background:#F5F2F0;border-top:1px solid #E6E1DC;gap:10px;justify-content:stretch}
   body.admin-mobile .modal.modal-court .mactions>div{width:100%;display:flex;gap:10px}
   body.admin-mobile .modal.modal-court .mactions .tms-btn{flex:1;min-width:0;height:42px}
@@ -2548,6 +2555,7 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .modal.modal-court .tms-detail-grid{grid-template-columns:1fr;gap:12px}
   body.admin-mobile .modal.modal-court .tms-form-item,body.admin-mobile .modal.modal-court .tms-form-item.full-width{width:100%;max-width:100%;min-width:0}
   body.admin-mobile .modal.modal-court .tms-form-control,body.admin-mobile .modal.modal-court .finput,body.admin-mobile .modal.modal-court .tms-dropdown,body.admin-mobile .modal.modal-court .coach-date-btn{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  body.admin-mobile .modal.modal-court .schedule-detail-content,body.admin-mobile .modal.modal-court .student-detail-shell,body.admin-mobile .modal.modal-court .student-detail-card{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court .lead-form-row-4{display:grid;grid-template-columns:1fr!important;gap:12px;margin-bottom:12px}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item.full-width,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item.full-width{width:100%!important;max-width:100%!important}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-dropdown,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-dropdown{width:100%!important;max-width:100%!important}

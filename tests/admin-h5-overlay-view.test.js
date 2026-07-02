@@ -6,18 +6,28 @@ const pagesCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 
 
 assert.match(
   pagesCss,
-  /body\.admin-mobile \.overlay\{[^}]*align-items:stretch[^}]*justify-content:center[^}]*padding:0/,
-  'admin H5 overlays should use one full-screen mobile surface rule'
+  /body\.admin-mobile \.overlay\{[^}]*align-items:flex-end[^}]*justify-content:center[^}]*padding:0/,
+  'admin H5 overlays should leave top space and dock the surface to the bottom'
 );
 assert.match(
   pagesCss,
-  /body\.admin-mobile \.overlay\.open \.modal\.modal-court\{[^}]*width:100% !important[^}]*max-width:100% !important[^}]*height:100dvh[^}]*max-height:100dvh[^}]*border-radius:0 !important/,
-  'admin H5 modals and drawers should become full-screen surfaces'
+  /body\.admin-mobile \.overlay\.open \.modal\.modal-court\{[^}]*width:100% !important[^}]*max-width:100% !important[^}]*height:calc\(100dvh - 72px\)[^}]*max-height:calc\(100dvh - 72px\)[^}]*border-radius:18px 18px 0 0 !important/,
+  'admin H5 modals and drawers should keep a visible top gap'
+);
+assert.match(
+  pagesCss,
+  /body\.admin-mobile \.overlay\.student-drawer-overlay\.open \.modal\.modal-court\.modal-student-drawer[\s\S]*transform:none/,
+  'admin H5 detail drawers should not keep desktop side-slide transforms'
 );
 assert.match(
   pagesCss,
   /body\.admin-mobile \.modal\.modal-court \.mhead\{[^}]*position:sticky[^}]*top:0[^}]*z-index:6/,
   'admin H5 modal header should stay visible at the top'
+);
+assert.match(
+  pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.mbody\{[^}]*overflow:auto[^}]*overflow-x:hidden[^}]*scrollbar-width:none/,
+  'admin H5 drawer bodies should scroll vertically without horizontal blank space or visible scrollbars'
 );
 assert.match(
   pagesCss,

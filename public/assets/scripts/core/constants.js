@@ -133,6 +133,6 @@ const STUDENT_STATUS_LABELS=BUSINESS_TAXONOMY.STUDENT_STATUS_LABELS;
 let globalDatePickerState={targetInputId:'',targetButtonId:'',label:'',viewDate:today()};
 let purchaseImportState={fileName:'',rows:[],summary:null};
 
-function fmt(n){return(n||0).toLocaleString('zh-CN')}
+function fmt(n){return Math.round(Number(n)||0).toLocaleString('zh-CN')}
 function localDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function today(){return localDateKey(new Date())}
