@@ -1761,7 +1761,7 @@ body.is-packages-page .content{overflow:hidden}
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:80px 40px;text-align:center;color:#FFF;font-size:16px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border-radius:20px;border:1px solid rgba(255,255,255,0.15);margin:10px 0}
 .coach-mobile-empty::before{content:'';display:block;width:60px;height:60px;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>');background-size:contain;opacity:0.8}
-.admin-mobile-shell,.admin-mobile-menu-trigger{display:none}
+.admin-mobile-shell,.admin-mobile-menu-trigger,.tms-mobile-filter-trigger,.tms-mobile-filter-head{display:none}
 .workbench-empty{padding:40px 20px;text-align:center;color:rgba(255,255,255,0.85);font-size:14px;background:rgba(180,83,9,0.1);border-radius:18px;border:1px dashed rgba(255,255,255,0.3);font-weight:500}
 .coach-mobile-stack{display:flex;flex-direction:column;gap:12px}
 .coach-mobile-info-card{background:var(--card-f);border:var(--borf);border-radius:16px;padding:14px;box-shadow:var(--shm)}
@@ -2425,24 +2425,25 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile{overflow:auto;padding-bottom:env(safe-area-inset-bottom);background:#F5F2F0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;overscroll-behavior-y:none}
   body.admin-mobile .sidebar{display:none}
   body.admin-mobile .admin-mobile-shell{display:block;position:fixed;inset:0;z-index:160;pointer-events:none}
-  body.admin-mobile .admin-mobile-module-scrim{display:none;position:fixed;inset:0;background:rgba(35,28,23,.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:auto}
+  body.admin-mobile .admin-mobile-module-scrim{display:none;position:fixed;left:0;right:0;top:calc(58px + env(safe-area-inset-top));bottom:0;background:rgba(35,28,23,.34);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:auto}
   body.admin-mobile.admin-mobile-panel-open .admin-mobile-module-scrim{display:block}
-  body.admin-mobile .admin-mobile-module-panel{position:fixed;left:0;top:0;bottom:0;width:min(82vw,320px);background:#FFFCF8;border-right:1px solid #E7DFD6;border-radius:0 22px 22px 0;box-shadow:18px 0 48px rgba(30,16,6,.24);transform:translateX(-102%);opacity:1;pointer-events:none;transition:transform .22s cubic-bezier(.2,0,0,1);overflow:hidden;display:flex;flex-direction:column}
+  body.admin-mobile .admin-mobile-module-panel{position:fixed;left:0;top:calc(58px + env(safe-area-inset-top));bottom:0;width:min(82vw,320px);background:#FFFCF8;border-right:1px solid #E7DFD6;border-radius:0 18px 0 0;box-shadow:18px 0 48px rgba(30,16,6,.2);transform:translateX(-102%);opacity:1;pointer-events:none;transition:transform .22s cubic-bezier(.2,0,0,1);overflow:hidden;display:flex;flex-direction:column}
   body.admin-mobile .admin-mobile-module-panel.open{transform:translateX(0);pointer-events:auto}
-  body.admin-mobile .admin-mobile-module-panel-head{min-height:88px;padding:calc(18px + env(safe-area-inset-top)) 18px 14px;border-bottom:1px solid #EFE7DF;display:flex;align-items:flex-start;justify-content:space-between;box-sizing:border-box}
-  body.admin-mobile .admin-mobile-panel-eyebrow{display:block;font-size:12px;color:#A19080;line-height:1.2;margin-bottom:6px}
-  body.admin-mobile .admin-mobile-module-panel-head strong{font-size:22px;color:#332A24;line-height:1.2}
+  body.admin-mobile .admin-mobile-module-panel-head{min-height:62px;padding:14px 16px 10px;border-bottom:1px solid #EFE7DF;display:flex;align-items:flex-start;justify-content:space-between;box-sizing:border-box}
+  body.admin-mobile .admin-mobile-panel-eyebrow{display:block;font-size:11px;color:#A19080;line-height:1.2;margin-bottom:4px}
+  body.admin-mobile .admin-mobile-module-panel-head strong{font-size:18px;color:#332A24;line-height:1.2}
   body.admin-mobile .admin-mobile-module-panel-head button{border:0;background:transparent;color:#805435;font-size:13px;font-weight:700;font-family:inherit;padding:8px}
   body.admin-mobile .admin-mobile-drawer-list{flex:1;overflow:auto;padding:10px 12px 14px;box-sizing:border-box}
   body.admin-mobile .admin-mobile-drawer-section{border-radius:14px;margin-bottom:4px}
-  body.admin-mobile .admin-mobile-module-btn{width:100%;height:48px;border:0;border-radius:14px;background:transparent;color:#4D4037;font-size:15px;font-weight:800;font-family:inherit;display:flex;align-items:center;justify-content:space-between;padding:0 14px;text-align:left}
-  body.admin-mobile .admin-mobile-module-btn.active{background:#F1E9E2;color:#805435}
+  body.admin-mobile .admin-mobile-module-btn{width:100%;height:44px;border:0;border-radius:10px;background:transparent;color:#4D4037;font-size:15px;font-weight:800;font-family:inherit;display:flex;align-items:center;justify-content:space-between;padding:0 12px;text-align:left}
+  body.admin-mobile .admin-mobile-module-btn.active{background:#F5EEE7;color:#805435}
   body.admin-mobile .admin-mobile-module-chevron{font-size:16px;line-height:1;transform:rotate(-90deg);transition:transform .16s ease}
   body.admin-mobile .admin-mobile-drawer-section.open .admin-mobile-module-chevron{transform:rotate(0deg)}
-  body.admin-mobile .admin-mobile-sub-list{display:none;grid-template-columns:1fr;gap:4px;padding:4px 0 8px 8px;box-sizing:border-box}
+  body.admin-mobile .admin-mobile-sub-list{display:none;grid-template-columns:1fr;gap:2px;padding:3px 0 8px 8px;box-sizing:border-box}
   body.admin-mobile .admin-mobile-drawer-section.open .admin-mobile-sub-list{display:grid}
-  body.admin-mobile .admin-mobile-sub-item{height:40px;border:0;border-radius:12px;background:transparent;color:#6A5A4D;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:0 12px;text-align:left}
-  body.admin-mobile .admin-mobile-sub-item.active{background:#805435;color:#FFF7EF}
+  body.admin-mobile .admin-mobile-sub-item{height:38px;border:0;border-radius:10px;background:transparent;color:#6A5A4D;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:0 12px;text-align:left;position:relative}
+  body.admin-mobile .admin-mobile-sub-item.active{background:#F1E9E2;color:#805435}
+  body.admin-mobile .admin-mobile-sub-item.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:999px;background:#805435}
   body.admin-mobile .admin-mobile-sub-item .sb-icon{width:18px;height:18px;margin:0;color:currentColor}
   body.admin-mobile .admin-mobile-drawer-footer{padding:10px 18px calc(16px + env(safe-area-inset-bottom));border-top:1px solid #EFE7DF}
   body.admin-mobile .admin-mobile-drawer-footer button{width:100%;height:40px;border:1px solid #E3D7CC;border-radius:12px;background:#FFFDFC;color:#805435;font-size:13px;font-weight:800;font-family:inherit}
@@ -2465,11 +2466,21 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .global-live-clock{display:none}
   body.admin-mobile .content{padding:12px;background:#F5F2F0}
   body.admin-mobile .stats-row,body.admin-mobile .tms-stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow:visible}
+  body.admin-mobile #page-leads .tms-stats-row,body.admin-mobile #page-students .tms-stats-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;margin:0 -12px 10px;padding:0 12px 2px;max-height:94px}
+  body.admin-mobile #page-leads .tms-stats-row::-webkit-scrollbar,body.admin-mobile #page-students .tms-stats-row::-webkit-scrollbar{display:none}
   body.admin-mobile .tms-stat-card{min-height:86px;padding:10px;border-radius:10px;box-shadow:none}
+  body.admin-mobile #page-leads .tms-stat-card,body.admin-mobile #page-students .tms-stat-card{flex:0 0 116px;width:116px;min-height:82px;height:82px;scroll-snap-align:start;overflow:hidden}
   body.admin-mobile .tms-stat-label{font-size:11px;line-height:16px;white-space:normal}
   body.admin-mobile .tms-stat-value{font-size:18px;line-height:24px;white-space:normal}
+  body.admin-mobile #page-leads .tms-stat-value,body.admin-mobile #page-students .tms-stat-value{white-space:nowrap;overflow:hidden;text-overflow:clip}
+  body.admin-mobile .tms-stat-value-compact{font-size:15px;letter-spacing:0}
+  body.admin-mobile #page-students .student-stat-pair span:not(.student-stat-divider){font-size:15px}
+  body.admin-mobile #page-students .student-stat-divider{margin:0 3px!important}
   body.admin-mobile .tms-stat-value span,body.admin-mobile .tms-stat-percent{font-size:10px}
   body.admin-mobile .tms-stat-sub{position:static;margin-top:6px;font-size:10px;line-height:14px;white-space:normal}
+  body.admin-mobile #page-leads .tms-stat-sub,body.admin-mobile #page-students .tms-stat-sub{display:none}
+  body.admin-mobile .admin-mobile-kpi-hint{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:260;background:rgba(51,42,36,.94);color:#FFF7EF;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.45;text-align:center;box-shadow:0 12px 32px rgba(30,16,6,.26);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
+  body.admin-mobile .admin-mobile-kpi-hint.show{opacity:1;transform:translateY(0)}
   body.admin-mobile #page-operations .operations-kpi-row,body.admin-mobile #page-operations .operations-coach-kpi-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   body.admin-mobile #page-operations .operations-court-kpi,body.admin-mobile #page-operations .operations-coach-kpi{min-height:92px;padding:10px;border-radius:10px}
   body.admin-mobile #page-operations .operations-court-kpi span,body.admin-mobile #page-operations .operations-coach-kpi span{font-size:11px;line-height:15px}
@@ -2481,10 +2492,24 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .coach-ops-select,body.admin-mobile .coach-date-btn{width:100%;min-width:0}
   body.admin-mobile .coach-ops-legend{gap:10px;flex-wrap:wrap}
   body.admin-mobile .toolbar,body.admin-mobile .tms-toolbar{align-items:stretch;gap:10px}
-  body.admin-mobile .tms-filters,body.admin-mobile .tms-toolbar-left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;flex:none}
+  body.admin-mobile .tms-toolbar-left{display:grid;grid-template-columns:minmax(0,1fr) 86px;gap:8px;width:100%;flex:none}
+  body.admin-mobile .tms-mobile-filter-trigger{display:none}
+  body.admin-mobile #page-leads .tms-mobile-filter-trigger,body.admin-mobile #page-students .tms-mobile-filter-trigger{display:inline-flex;height:40px;border:1px solid #E0D4C9;border-radius:10px;background:#FFFCF8;color:#805435;font-size:13px;font-weight:800;font-family:inherit;align-items:center;justify-content:center}
+  body.admin-mobile .tms-mobile-filter-head{display:none}
+  body.admin-mobile .tms-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
+  body.admin-mobile #page-leads .tms-filters,body.admin-mobile #page-students .tms-filters{position:fixed;left:0;right:0;bottom:0;z-index:240;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px calc(16px + env(safe-area-inset-bottom));background:#FFFCF8;border-radius:18px 18px 0 0;box-shadow:0 -16px 42px rgba(30,16,6,.2);transform:translateY(105%);transition:transform .2s cubic-bezier(.2,0,0,1);box-sizing:border-box}
+  body.admin-mobile #page-leads .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-students .tms-toolbar.mobile-filter-open .tms-filters{transform:translateY(0)}
+  body.admin-mobile #page-leads .tms-mobile-filter-head,body.admin-mobile #page-students .tms-mobile-filter-head{display:flex;grid-column:1/-1;align-items:center;justify-content:space-between;margin-bottom:2px}
+  body.admin-mobile .tms-mobile-filter-head strong{font-size:16px;color:#332A24}
+  body.admin-mobile .tms-mobile-filter-head button{border:0;background:transparent;color:#805435;font-size:14px;font-weight:800;font-family:inherit;padding:8px}
+  body.admin-mobile.admin-mobile-filter-open::after{content:"";position:fixed;left:0;right:0;top:0;bottom:0;z-index:230;background:rgba(35,28,23,.28)}
   body.admin-mobile .tms-toolbar-right{width:100%;justify-content:flex-end;margin-left:0}
   body.admin-mobile .search-box,body.admin-mobile .fsel,body.admin-mobile .btn-sec,body.admin-mobile .btn-add,body.admin-mobile .tms-search-wrapper,body.admin-mobile .tms-dropdown,body.admin-mobile .tms-btn{max-width:none;min-width:0}
   body.admin-mobile .search-box,body.admin-mobile .tms-search-wrapper{grid-column:1/-1;width:100%}
+  body.admin-mobile #page-leads .tms-search-wrapper,body.admin-mobile #page-students .tms-search-wrapper{grid-column:auto;height:40px}
+  body.admin-mobile #page-leads .tms-toolbar-right .tms-import-action,body.admin-mobile #page-students .tms-toolbar-right .tms-export-action{display:none}
+  body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:120;width:54px;height:54px;border-radius:50%;padding:0;min-width:0;font-size:0;box-shadow:0 12px 26px rgba(128,84,53,.28)}
+  body.admin-mobile #page-leads .tms-toolbar-right .tms-btn-primary::before,body.admin-mobile #page-students .tms-toolbar-right .tms-btn-primary::before{content:"+";width:auto;height:auto;background:none;color:#fff;font-size:28px;line-height:1;font-weight:300}
   body.admin-mobile .btn-add{margin-left:0;justify-content:center}
   body.admin-mobile #campusTabs{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-bottom:2px}
   body.admin-mobile .ctab{white-space:nowrap;flex:0 0 auto}
@@ -2493,6 +2518,12 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .tms-sticky-l,body.admin-mobile .tms-sticky-r,body.admin-mobile .tms-table th.tms-sticky-l,body.admin-mobile .tms-table th.tms-sticky-r,body.admin-mobile .tms-table td.tms-sticky-l,body.admin-mobile .tms-table td.tms-sticky-r{position:static!important;left:auto!important;right:auto!important;z-index:auto!important;text-align:left}
   body.admin-mobile .tms-action-cell{min-width:112px;text-align:left!important;justify-content:flex-start!important}
   body.admin-mobile table{min-width:760px}
+  body.admin-mobile #page-leads .tms-pagination,body.admin-mobile #page-students .tms-pagination{padding:10px 12px;justify-content:center;gap:8px}
+  body.admin-mobile #page-leads .tms-pagination-left,body.admin-mobile #page-students .tms-pagination-left{width:100%;justify-content:center}
+  body.admin-mobile #page-leads .pager-divider,body.admin-mobile #page-students .pager-divider,body.admin-mobile #page-leads [id$="PageSize"],body.admin-mobile #page-students [id$="PageSize"],body.admin-mobile #page-leads .tms-page-ellipsis,body.admin-mobile #page-students .tms-page-ellipsis{display:none!important}
+  body.admin-mobile #page-leads .tms-page-numbers,body.admin-mobile #page-students .tms-page-numbers{gap:10px}
+  body.admin-mobile #page-leads .tms-page-btn,body.admin-mobile #page-students .tms-page-btn{min-width:36px;height:36px;border-radius:10px;font-size:14px}
+  body.admin-mobile #page-leads .tms-page-btn:not(:first-child):not(:last-child):not(.active),body.admin-mobile #page-students .tms-page-btn:not(:first-child):not(:last-child):not(.active){display:none}
   body.admin-mobile .pager{gap:10px;align-items:flex-start;flex-direction:column}
   body.admin-mobile .product-grid{grid-template-columns:1fr}
   body.admin-mobile .overlay{align-items:stretch;justify-content:center;padding:0;background:rgba(35,20,10,.54)}
@@ -2506,6 +2537,9 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .modal.modal-court .tms-detail-grid{grid-template-columns:1fr;gap:12px}
   body.admin-mobile .modal.modal-court .tms-form-item,body.admin-mobile .modal.modal-court .tms-form-item.full-width{width:100%;max-width:100%;min-width:0}
   body.admin-mobile .modal.modal-court .tms-form-control,body.admin-mobile .modal.modal-court .finput,body.admin-mobile .modal.modal-court .tms-dropdown,body.admin-mobile .modal.modal-court .coach-date-btn{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court .lead-form-row-4{display:grid;grid-template-columns:1fr!important;gap:12px;margin-bottom:12px}
+  body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item.full-width,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item.full-width{width:100%!important;max-width:100%!important}
+  body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-dropdown,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-dropdown{width:100%!important;max-width:100%!important}
   body.admin-mobile .conf-ov{align-items:flex-end;justify-content:center;padding:0;background:rgba(35,20,10,.54)}
   body.admin-mobile .conf-box{width:100%;max-width:100%;border-radius:18px 18px 0 0;margin:0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));box-sizing:border-box;transform:translateY(100%)}
   body.admin-mobile .conf-ov.open .conf-box{transform:translateY(0)}

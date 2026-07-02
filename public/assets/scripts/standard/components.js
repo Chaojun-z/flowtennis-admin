@@ -344,10 +344,26 @@ function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',
   return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` oninput="${esc(oninput)}"`:''}></div>`;
 }
 function renderStandardToolbarHtml({search=null,filterHostIds=[],filterHtmls=[],actionsHtml='',leftHtml='',toolbarClass='tms-toolbar',filterClass='tms-filters',actionsClass='tms-toolbar-right'}={}){
-  const filters=[search?renderStandardSearchHtml(search):'',...(filterHostIds||[]).map(id=>`<div id="${esc(id)}"></div>`),...(filterHtmls||[])].join('');
-  const filterHtml=`<div class="${esc(filterClass)}">${filters}</div>`;
-  const main=leftHtml?`<div class="tms-toolbar-left">${leftHtml}${filterHtml}</div>`:filterHtml;
+  const filterItems=[...(filterHostIds||[]).map(id=>`<div id="${esc(id)}"></div>`),...(filterHtmls||[])].join('');
+  const filterHead='<div class="tms-mobile-filter-head"><strong>筛选</strong><button type="button" onclick="closeAdminMobileFilters(this)">完成</button></div>';
+  const filterHtml=`<div class="${esc(filterClass)}">${filterHead}${filterItems}</div>`;
+  const searchHtml=search?renderStandardSearchHtml(search):'';
+  const mobileFilterButton=filterItems?'<button type="button" class="tms-mobile-filter-trigger" onclick="toggleAdminMobileFilters(this)">筛选</button>':'';
+  const main=`<div class="tms-toolbar-left">${leftHtml||''}${searchHtml}${mobileFilterButton}${filterHtml}</div>`;
   return `<div class="${esc(toolbarClass)}">${main}${actionsHtml?`<div class="${esc(actionsClass)}">${actionsHtml}</div>`:''}</div>`;
+}
+function toggleAdminMobileFilters(trigger){
+  const toolbar=trigger?.closest?.('.tms-toolbar');
+  if(!toolbar)return;
+  const open=!toolbar.classList.contains('mobile-filter-open');
+  document.querySelectorAll('.tms-toolbar.mobile-filter-open').forEach(item=>item.classList.remove('mobile-filter-open'));
+  toolbar.classList.toggle('mobile-filter-open',open);
+  document.body.classList.toggle('admin-mobile-filter-open',open);
+}
+function closeAdminMobileFilters(target){
+  const toolbar=target?.closest?.('.tms-toolbar');
+  if(toolbar)toolbar.classList.remove('mobile-filter-open');
+  document.body.classList.toggle('admin-mobile-filter-open',!!document.querySelector('.tms-toolbar.mobile-filter-open'));
 }
 function renderStandardStatsShellHtml(id,className='tms-stats-row'){
   return id?`<div class="${esc(className)}" id="${esc(id)}"></div>`:'';
@@ -444,6 +460,8 @@ Object.assign(window,{
   standardListSlice,
   renderStandardSearchHtml,
   renderStandardToolbarHtml,
+  toggleAdminMobileFilters,
+  closeAdminMobileFilters,
   renderStandardStatsShellHtml,
   renderStandardStatsShellsHtml,
   renderStandardTableShellHtml,

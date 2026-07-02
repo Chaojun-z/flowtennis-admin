@@ -53,12 +53,32 @@ function renderStandardDataCard(item={}){
   const className=String(item.className||'').replace(/[^\w -]/g,'').trim();
   const title=esc(item.title||item.label||'');
   const value=item.valueHtml!=null?String(item.valueHtml):esc(item.value??'');
+  const valueText=String(value).replace(/<[^>]*>/g,'').replace(/\s+/g,'').trim();
+  const valueClass=valueText.length>7?' tms-stat-value-compact':'';
   const percent=item.percent?`<span class="tms-stat-percent">${esc(item.percent)}</span>`:'';
   const sub=esc(item.sub||item.caption||'');
-  return `<div class="tms-stat-card${className?' '+className:''}"><div class="tms-stat-label">${title}</div><div class="tms-stat-value">${value}${percent}</div>${sub?`<div class="tms-stat-sub">${sub}</div>`:''}</div>`;
+  const help=sub?` role="button" tabindex="0" data-mobile-help="${sub}" onclick="showAdminMobileKpiHint(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAdminMobileKpiHint(this)}"`:'';
+  return `<div class="tms-stat-card${className?' '+className:''}"${help}><div class="tms-stat-label">${title}</div><div class="tms-stat-value${valueClass}">${value}${percent}</div>${sub?`<div class="tms-stat-sub">${sub}</div>`:''}</div>`;
 }
 function renderStandardDataCards(items=[]){
   return (Array.isArray(items)?items:[]).map(renderStandardDataCard).join('');
+}
+let adminMobileKpiHintTimer=null;
+function showAdminMobileKpiHint(target){
+  if(typeof document==='undefined'||!document.body.classList.contains('admin-mobile'))return;
+  const text=String(target?.dataset?.mobileHelp||'').trim();
+  if(!text)return;
+  let el=document.getElementById('adminMobileKpiHint');
+  if(!el){
+    el=document.createElement('div');
+    el.id='adminMobileKpiHint';
+    el.className='admin-mobile-kpi-hint';
+    document.body.appendChild(el);
+  }
+  el.textContent=text;
+  el.classList.add('show');
+  clearTimeout(adminMobileKpiHintTimer);
+  adminMobileKpiHintTimer=setTimeout(()=>el.classList.remove('show'),2200);
 }
 function statPercentText(part,total,digits=0){
   const safeTotal=Number(total)||0;
