@@ -57,8 +57,8 @@ assert.doesNotMatch(standardConfigBlock('purchases'), /课包售卖/, 'purchase 
   assert.ok(shell.includes(pagerInfoId) && shell.includes(pageSizeId) && shell.includes(pagerBtnsId), `${page} should use standard pagination hosts`);
 });
 
-assert.match(fnBody('renderMembershipOrdersAuditPage'), /standardListSlice\(rows,membershipOrderAuditPage,membershipOrderAuditPageSize\)/, 'membership purchase audit should paginate through the standard list helper');
-assert.match(fnBody('renderMembershipLedgerAuditPage'), /standardListSlice\(rows,membershipLedgerAuditPage,membershipLedgerAuditPageSize\)/, 'membership ledger audit should paginate through the standard list helper');
+assert.match(fnBody('renderMembershipOrdersAuditPage'), /const isMobileList=document\.body\.classList\.contains\('admin-mobile'\),pageState=isMobileList\?[\s\S]*standardListSlice\(rows,membershipOrderAuditPage,membershipOrderAuditPageSize\)/, 'membership purchase audit should use full H5 rows and keep desktop pagination through the standard list helper');
+assert.match(fnBody('renderMembershipLedgerAuditPage'), /const isMobileList=document\.body\.classList\.contains\('admin-mobile'\),pageState=isMobileList\?[\s\S]*standardListSlice\(rows,membershipLedgerAuditPage,membershipLedgerAuditPageSize\)/, 'membership ledger audit should use full H5 rows and keep desktop pagination through the standard list helper');
 assert.doesNotMatch(html, /membershipOrdersAuditBody|membershipLedgerAuditBody/, 'membership audit pages should not keep custom table body hosts');
 
 console.log('top title breadcrumb view tests passed');

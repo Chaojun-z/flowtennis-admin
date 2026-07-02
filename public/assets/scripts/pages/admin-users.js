@@ -116,11 +116,12 @@ function getFilteredAdminUsers(){
 function renderAdminUsers(){
   const tbody=document.getElementById('adminUserTbody');if(!tbody)return;
   const list=getFilteredAdminUsers();
-  const pageState=standardListSlice(list,adminUserPage,adminUserPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const pageState=isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,adminUserPage,adminUserPageSize);
   adminUserPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-admin-users .tms-pagination');
-  if(pager)pager.style.display=total?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total?'flex':'none');
   const info=document.getElementById('adminUserPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderAdminUserPagerControls(total,pages);

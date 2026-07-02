@@ -197,11 +197,12 @@ function purchaseEmptyStateHtml(){
 function renderPurchases(){
   refreshPurchaseFilters();
   const list=getFilteredPurchases();
-  const pageState=standardListSlice(list,purPage,purPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const pageState=isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,purPage,purPageSize);
   purPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-purchases .tms-pagination');
-  if(pager)pager.style.display=total>purPageSize?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total>purPageSize?'flex':'none');
   const info=document.getElementById('purPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderPurchasePagerControls(total,pages);

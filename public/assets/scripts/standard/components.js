@@ -344,13 +344,14 @@ function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',
   return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` oninput="${esc(oninput)}"`:''}></div>`;
 }
 function renderStandardToolbarHtml({search=null,filterHostIds=[],filterHtmls=[],actionsHtml='',leftHtml='',toolbarClass='tms-toolbar',filterClass='tms-filters',actionsClass='tms-toolbar-right'}={}){
+  const joinClasses=(base,custom)=>[base,...String(custom||'').split(/\s+/).filter(Boolean).filter(cls=>cls!==base)].join(' ');
   const filterItems=[...(filterHostIds||[]).map(id=>`<div id="${esc(id)}"></div>`),...(filterHtmls||[])].join('');
   const filterHead='<div class="tms-mobile-filter-head"><strong>筛选</strong><button type="button" onclick="closeAdminMobileFilters(this)">完成</button></div>';
-  const filterHtml=`<div class="${esc(filterClass)}">${filterHead}${filterItems}<div class="tms-mobile-cascade" data-mobile-cascade></div></div>`;
+  const filterHtml=`<div class="${esc(joinClasses('tms-filters',filterClass))}">${filterHead}${filterItems}<div class="tms-mobile-cascade" data-mobile-cascade></div></div>`;
   const searchHtml=search?renderStandardSearchHtml(search):'';
   const mobileFilterButton=filterItems?'<button type="button" class="tms-mobile-filter-trigger" aria-label="筛选" onclick="toggleAdminMobileFilters(this)"><span class="tms-mobile-filter-icon" aria-hidden="true"></span></button>':'';
   const main=`<div class="tms-toolbar-left">${leftHtml||''}${searchHtml}${mobileFilterButton}${filterHtml}</div>`;
-  return `<div class="${esc(toolbarClass)}">${main}${actionsHtml?`<div class="${esc(actionsClass)}">${actionsHtml}</div>`:''}</div>`;
+  return `<div class="${esc(joinClasses('tms-toolbar',toolbarClass))}">${main}${actionsHtml?`<div class="${esc(joinClasses('tms-toolbar-right',actionsClass))}">${actionsHtml}</div>`:''}</div>`;
 }
 function adminMobileFilterDropdowns(toolbar){
   const filters=toolbar?.querySelector?.('.tms-filters');

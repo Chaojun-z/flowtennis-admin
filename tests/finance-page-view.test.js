@@ -192,6 +192,12 @@ assert.match(ledgerShell,/buttonsId:'financeLedgerPagerBtns'/,'ledger should exp
 assert.match(source,/function setFinanceLedgerPageSize\(/,'ledger should support switching page size');
 assert.match(source,/function setFinanceLedgerPage\(/,'ledger should support switching pages');
 assert.match(source,/renderPageSizeSelectorHtml\('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize'\)/,'ledger page size selector should reuse shared numeric page-size dropdown');
+assert.match(functionSource(source,'renderFinanceLedger'),/const isMobileList=document\.body\.classList\.contains\('admin-mobile'\),pageState=isMobileList\?[\s\S]*slice:rows/, 'ledger H5 should render the full filtered list instead of a desktop page slice');
+assert.match(functionSource(source,'renderFinanceRevenueReport'),/const isMobileList=document\.body\.classList\.contains\('admin-mobile'\),pageState=isMobileList\?[\s\S]*slice:rows/, 'revenue H5 should render the full filtered list instead of a desktop page slice');
+assert.match(functionSource(source,'renderFinanceConsumeReport'),/const isMobileList=document\.body\.classList\.contains\('admin-mobile'\),pageState=isMobileList\?[\s\S]*slice:rows/, 'recognized H5 should render the full filtered list instead of a desktop page slice');
+assert.match(pagesCss,/body\.admin-mobile #page-finance \.finance-ledger-stats\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'finance H5 stats should fit three cards per row');
+assert.match(pagesCss,/body\.admin-mobile #page-finance #financeLedgerPanel \.tms-mobile-filter-trigger,body\.admin-mobile #page-finance #financeRevenuePanel \.tms-mobile-filter-trigger\{[^}]*width:42px[^}]*height:42px/,'finance H5 filtered tables should use icon-only filter triggers');
+assert.match(pagesCss,/body\.admin-mobile #page-finance #financeLedgerPanel \.tms-pagination,body\.admin-mobile #page-finance #financeRevenuePanel \.tms-pagination,body\.admin-mobile #page-finance #financeRecognizedPanel \.tms-pagination\{display:none!important\}/,'finance H5 tables should hide desktop pagination');
 assert.match(source,/查看迟到月结/,'finance center should expose late settlement entry');
 assert.match(source,/data-sidebar-icon="finance-ledger" width="15" height="15"/,'finance overview sidebar icon should use the 15px custom icon');
 assert.match(source,/data-sidebar-icon="finance-revenue" width="14" height="14"/,'revenue sidebar icon should use the 14px custom icon');

@@ -378,7 +378,7 @@ assert.match(source, /pager:\{infoId:'purPagerInfo',pageSizeId:'purPageSize',but
 assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilterValue=document\.getElementById\('purPackageFilter'\)\?\.value\|\|''[\s\S]*purPage=standardListFirstPage\(\)[\s\S]*renderPurchases\(\)/, 'purchase filters should store the selected package and reset pagination through the standard list flow');
 assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');
 assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
-assert.match(source, /pager\.style\.display=total>purPageSize\?'flex':'none'/, 'purchase pager should hide when the filtered result fits on one page');
+assert.match(source, /pager\.style\.display=isMobileList\?'none':\(total>purPageSize\?'flex':'none'\)/, 'purchase pager should hide on H5 and still hide on desktop when the filtered result fits on one page');
 assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'purchase table height should match the student standard table height');
 assert.match(css, /\.tms-page-btn\{[^}]*min-width:24px[^}]*height:24px[^}]*font-weight:500[^}]*border-radius:6px/, 'purchase pager buttons should inherit the shared compact page button style');
 assert.doesNotMatch(css, /\.tms-page-jump input/, 'purchase pager should not keep jump input styles');

@@ -578,11 +578,11 @@ function onMembershipOrderAuditSearchChange(){
 function renderMembershipOrdersAuditPage(){
   const host=document.getElementById('membershipOrdersAuditTbody');if(!host)return;
   const rows=membershipOrderAuditRows();
-  const pageState=standardListSlice(rows,membershipOrderAuditPage,membershipOrderAuditPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:rows.length,pages:1,page:1,slice:rows}:standardListSlice(rows,membershipOrderAuditPage,membershipOrderAuditPageSize);
   membershipOrderAuditPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-membership-orders .tms-pagination');
-  if(pager)pager.style.display=total>membershipOrderAuditPageSize?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total>membershipOrderAuditPageSize?'flex':'none');
   const info=document.getElementById('membershipOrdersAuditPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderMembershipOrderAuditPagerControls(total,pages);
@@ -632,11 +632,11 @@ function onMembershipLedgerAuditSearchChange(){
 function renderMembershipLedgerAuditPage(){
   const host=document.getElementById('membershipLedgerAuditTbody');if(!host)return;
   const rows=membershipLedgerAuditRows();
-  const pageState=standardListSlice(rows,membershipLedgerAuditPage,membershipLedgerAuditPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:rows.length,pages:1,page:1,slice:rows}:standardListSlice(rows,membershipLedgerAuditPage,membershipLedgerAuditPageSize);
   membershipLedgerAuditPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-membership-ledger .tms-pagination');
-  if(pager)pager.style.display=total>membershipLedgerAuditPageSize?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total>membershipLedgerAuditPageSize?'flex':'none');
   const info=document.getElementById('membershipLedgerAuditPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderMembershipLedgerAuditPagerControls(total,pages);

@@ -109,11 +109,12 @@ function syncPriceExperienceType(){
 function renderPrices(){
   syncPriceFilterOptions();
   const rows=filteredPricePlans();
-  const pageState=standardListSlice(rows,pricePage,pricePageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const pageState=isMobileList?{total:rows.length,pages:1,page:1,slice:rows}:standardListSlice(rows,pricePage,pricePageSize);
   pricePage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-prices .tms-pagination');
-  if(pager)pager.style.display=total?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total?'flex':'none');
   const info=document.getElementById('pricePagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderPricePagerControls(total,pages);

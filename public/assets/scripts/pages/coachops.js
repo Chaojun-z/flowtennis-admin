@@ -1047,7 +1047,7 @@ function renderFinanceRevenueReport(){
   const baseRows=financeRevenueBaseRows().filter(row=>globalDateWithinRange(row.purchaseDate));
   renderFinanceRevenueFilterDropdowns(baseRows);
   const rows=financeRevenueRows();
-  const pageState=standardListSlice(rows,financeRevenuePage,financeRevenuePageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:rows.length,pages:1,page:1,pageSize:financeRevenuePageSize,slice:rows}:standardListSlice(rows,financeRevenuePage,financeRevenuePageSize);
   financeRevenuePage=pageState.page;
   financeRevenuePageSize=pageState.pageSize;
   const slice=pageState.slice;
@@ -1137,7 +1137,7 @@ function renderFinanceConsumeReport(){
   const stats=document.getElementById('coachOpsConsumeStats');
   if(!body||!stats)return;
   const rows=financeRecognizedRows();
-  const pageState=standardListSlice(rows,financeRecognizedPage,financeRecognizedPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:rows.length,pages:1,page:1,pageSize:financeRecognizedPageSize,slice:rows}:standardListSlice(rows,financeRecognizedPage,financeRecognizedPageSize);
   financeRecognizedPage=pageState.page;
   financeRecognizedPageSize=pageState.pageSize;
   renderFinanceRecognizedPager(pageState.total,pageState.pages);
@@ -1272,7 +1272,7 @@ function renderFinanceLedger(){
   renderFinanceLedgerFilterDropdowns(baseRows);
   renderFinanceLedgerPageSizeFilter();
   const rows=financeLedgerRows();
-  const pageState=standardListSlice(rows,financeLedgerPage,financeLedgerPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:rows.length,pages:1,page:1,pageSize:financeLedgerPageSize,slice:rows}:standardListSlice(rows,financeLedgerPage,financeLedgerPageSize);
   financeLedgerPage=pageState.page;
   financeLedgerPageSize=pageState.pageSize;
   const slice=pageState.slice;

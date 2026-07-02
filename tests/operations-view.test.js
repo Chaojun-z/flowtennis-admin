@@ -508,5 +508,9 @@ assert.match(operationsSource, /renderStandardChart\('operationsCoachCapabilityC
 assert.match(chartsSource, /hoverStyle = 'default'[\s\S]*hoverStyle === 'subtle'[\s\S]*scaleSize: 3/, 'bubble matrix base should expose a subtle hover mode for premium coach charts');
 assert.match(chartsSource, /buildOperationsCoachMatrixChartOption[\s\S]*hoverStyle: 'subtle'/, 'coach revenue-utilization matrix should use subtle hover without heavy border or shadow');
 assert.match(chartsSource, /buildOperationsCoachCapabilityChartOption[\s\S]*hoverStyle: 'subtle'/, 'coach conversion-renewal matrix should use subtle hover without fading peer points');
+assert.match(stylesSource, /body\.admin-mobile #page-operations \.operations-kpi-row,body\.admin-mobile #page-operations \.operations-coach-kpi-strip\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'operations H5 KPI rows should keep three compact cards per row');
+assert.match(stylesSource, /body\.admin-mobile #page-operations \.operations-court-kpi,body\.admin-mobile #page-operations \.operations-coach-kpi\{height:92px;min-height:92px[^}]*overflow:hidden/, 'operations H5 KPI cards should stay compact instead of taking the full screen');
+assert.match(stylesSource, /body\.admin-mobile #page-operations \.operations-court-kpi-sparkline,body\.admin-mobile #page-operations \.operations-conversion-kpi-sparkline,body\.admin-mobile #page-operations \.operations-coach-kpi-sparkline\{height:28px;min-height:28px/, 'operations H5 sparklines should be compressed inside compact KPI cards');
+assert.match(stylesSource, /body\.admin-mobile #page-operations \.operations-chart-host\{min-width:0;overflow:hidden\}/, 'operations H5 charts should not force horizontal page overflow');
 
 console.log('operations view tests passed');

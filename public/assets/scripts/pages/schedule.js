@@ -108,11 +108,11 @@ function scheduleEmptyStateHtml(){
 function renderSchedule(){
   syncScheduleFilterOptions();
   let list=getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
-  const pageState=standardListSlice(list,schPage,schPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile'),pageState=isMobileList?{total:list.length,pages:1,page:1,slice:list}:standardListSlice(list,schPage,schPageSize);
   schPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-schedule .tms-pagination');
-  if(pager)pager.style.display=total?'flex':'none';
+  if(pager)pager.style.display=isMobileList?'none':(total?'flex':'none');
   document.getElementById('schPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderSchedulePagerControls(total,pages);
   document.getElementById('schTbody').innerHTML=slice.length?slice.map((s,index)=>{
