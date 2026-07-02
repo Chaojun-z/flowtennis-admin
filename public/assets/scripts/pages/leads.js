@@ -1311,6 +1311,10 @@ function leadEmptyStateHtml(){
 }
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
+  if(document.body.classList.contains('admin-mobile')){
+    if(pager)pager.style.display='none';
+    return;
+  }
   if(pager)pager.style.display=total>leadPageSize?'flex':'none';
   const pageSizeHost=document.getElementById('leadPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('leadPageSizeValue',leadPageSize,'setLeadPageSize');
@@ -1334,7 +1338,8 @@ function renderLeads(){
   updateLeadSortHeaders();
   const list=getSortedLeads(getFilteredLeads());
   renderLeadStats(list);
-  const pageState=standardListSlice(list,leadPage,leadPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,leadPage,leadPageSize);
   leadPage=pageState.page;
   const {total,pages,slice}=pageState;
   const tbody=document.getElementById('leadTbody');

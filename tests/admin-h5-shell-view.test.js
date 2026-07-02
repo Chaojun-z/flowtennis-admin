@@ -42,8 +42,11 @@ assert.match(appSource, /key:'operations'[\s\S]*?经营总览[\s\S]*?operationsT
 
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-shell\{/, 'admin mobile shell should have mobile-only layout rules');
 assert.doesNotMatch(pagesCss, /body\.admin-mobile \.admin-mobile-module-bar\{/, 'admin mobile should not render a crowded bottom module bar');
-assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-panel\{[^}]*left:0[^}]*top:calc\(58px \+ env\(safe-area-inset-top\)\)[^}]*width:min\(82vw,320px\)[^}]*transform:translateX\(-102%\)/, 'admin mobile menu should slide in below the top bar as a left navigation drawer');
+assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-scrim\{[^}]*inset:0/, 'admin mobile menu mask should cover the full page');
+assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-panel\{[^}]*left:0[^}]*top:0[^}]*bottom:0[^}]*width:min\(84vw,340px\)[^}]*transform:translateX\(-102%\)/, 'admin mobile menu should slide in as a full-height left navigation drawer');
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-panel\.open\{/, 'admin mobile shell should render an open state for the second-level panel');
+assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-module-btn\.active\{background:transparent;color:#4D4037\}/, 'admin mobile first-level modules should expand without a strong selected block');
+assert.match(appSource, /class="admin-mobile-module-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"\/><\/svg>/, 'admin mobile first-level expand icon should use a proper chevron svg');
 assert.match(pagesCss, /body\.admin-mobile \.admin-mobile-sub-item\.active::before/, 'admin mobile second-level active item should use a mobile-grade marker instead of a desktop full-row block');
 assert.doesNotMatch(pagesCss, /body\.admin-mobile #sbAdminView\{display:flex;align-items:stretch;width:max-content/, 'admin mobile should not expose every sidebar item as one long bottom nav');
 assert.match(pagesCss, /body\.admin-mobile \.topbar\{[^}]*grid-template-columns:42px minmax\(0,1fr\) auto/, 'admin mobile topbar should use left menu, centered title, and right filter icons');
@@ -53,9 +56,14 @@ assert.match(pagesCss, /body\.admin-mobile #campusTabs \.court-top-display-text,
 assert.match(pagesCss, /body\.admin-mobile \.stats-row,body\.admin-mobile \.tms-stats-row\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'admin mobile data blocks should show three per row');
 assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-stats-row,body\.admin-mobile #page-students \.tms-stats-row\{[^}]*display:flex[^}]*overflow-x:auto[^}]*max-height:94px/, 'lead and student H5 sample pages should use one-row horizontal KPI cards');
 assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-stat-sub,body\.admin-mobile #page-students \.tms-stat-sub\{display:none\}/, 'lead and student H5 sample pages should hide KPI formula text from the card body');
+assert.match(appSource, /class="tms-mobile-filter-trigger" aria-label="筛选"[\s\S]*class="tms-mobile-filter-icon"/, 'lead and student H5 sample pages should use an icon-only filter trigger');
+assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-mobile-filter-trigger,body\.admin-mobile #page-students \.tms-mobile-filter-trigger\{[^}]*width:42px[^}]*height:42px/, 'mobile filter trigger should align to the search field height');
 assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-filters,body\.admin-mobile #page-students \.tms-filters\{[^}]*position:fixed[^}]*bottom:0[^}]*transform:translateY\(105%\)/, 'lead and student H5 sample pages should put filters into a bottom sheet');
 assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-toolbar-right \.tms-btn-primary,body\.admin-mobile #page-students \.tms-toolbar-right \.tms-btn-primary\{[^}]*position:fixed[^}]*border-radius:50%/, 'lead and student H5 sample pages should use a floating create action');
-assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-page-btn:not\(:first-child\):not\(:last-child\):not\(\.active\),body\.admin-mobile #page-students \.tms-page-btn:not\(:first-child\):not\(:last-child\):not\(\.active\)\{display:none\}/, 'lead and student H5 sample pages should hide desktop page-number pagination');
+assert.match(pagesCss, /body\.admin-mobile \.tms-table-wrapper\{[^}]*scrollbar-width:none/, 'admin mobile lists should hide native scrollbars');
+assert.match(appSource, /function renderLeads\([\s\S]*const isMobileList=document\.body\.classList\.contains\('admin-mobile'\)[\s\S]*slice:list/, 'lead H5 sample page should render the full filtered list instead of a 20-row desktop page');
+assert.match(appSource, /function renderStudents\([\s\S]*const isMobileList=document\.body\.classList\.contains\('admin-mobile'\)[\s\S]*slice:list/, 'student H5 sample page should render the full filtered list instead of a 20-row desktop page');
+assert.match(pagesCss, /body\.admin-mobile #page-leads \.tms-pagination,body\.admin-mobile #page-students \.tms-pagination\{display:none!important\}/, 'lead and student H5 sample pages should hide desktop pagination');
 assert.match(pagesCss, /body\.admin-mobile \.modal\.modal-court\.modal-student-drawer \.schedule-detail-form \.tms-form-row[\s\S]*grid-template-columns:1fr!important/, 'student H5 drawer edit forms should be single-column and stay inside the viewport');
 assert.match(pagesCss, /body\.admin-mobile \.tms-sticky-l,body\.admin-mobile \.tms-sticky-r[\s\S]*position:static!important/, 'admin mobile tables should not keep left and right fixed columns');
 

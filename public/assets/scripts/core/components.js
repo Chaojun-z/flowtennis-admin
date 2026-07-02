@@ -411,7 +411,7 @@ function renderAdminMobileDrawerSections(){
       return `<button type="button" class="admin-mobile-sub-item${active}" onclick="${adminMobileNavItemAction(item)}">${sidebarIcon(item.icon)}<span>${esc(item.label)}</span></button>`;
     }).join('');
     return `<div class="admin-mobile-drawer-section${expanded?' open':''}" data-admin-mobile-section="${esc(group.key)}">
-      <button type="button" class="admin-mobile-module-btn${expanded?' active':''}" data-admin-mobile-module="${esc(group.key)}" onclick="toggleAdminMobileModule('${esc(group.key)}')" aria-expanded="${expanded?'true':'false'}"><span>${esc(group.label)}</span><span class="admin-mobile-module-chevron">⌄</span></button>
+      <button type="button" class="admin-mobile-module-btn${expanded?' active':''}" data-admin-mobile-module="${esc(group.key)}" onclick="toggleAdminMobileModule('${esc(group.key)}')" aria-expanded="${expanded?'true':'false'}"><span>${esc(group.label)}</span><span class="admin-mobile-module-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
       <div class="admin-mobile-sub-list">${rows}</div>
     </div>`;
   }).join('');

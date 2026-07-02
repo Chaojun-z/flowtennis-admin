@@ -308,6 +308,11 @@ function renderStudentTableHeaders(){
   if(head)head.innerHTML=studentTableColumns().map(renderStandardTableHeadCellHtml).join('');
 }
 function renderStudentPagerControls(total,pages){
+  const pager=document.querySelector('#page-students .tms-pagination');
+  if(document.body.classList.contains('admin-mobile')){
+    if(pager)pager.style.display='none';
+    return;
+  }
   const pageSizeHost=document.getElementById('stuPageSize');
   if(pageSizeHost)pageSizeHost.innerHTML=renderPageSizeSelectorHtml('stuPageSizeValue',stuPageSize,'setStudentPageSize');
   const btns=document.getElementById('stuPagerBtns');
@@ -696,7 +701,8 @@ function renderStudents(){
   let list=getSortedStudents(filteredStudents);
   const stats=studentPageStats(filteredStudents);
   document.getElementById('studentStatsRow').innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
-  const pageState=standardListSlice(list,stuPage,stuPageSize);
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize);
   stuPage=pageState.page;
   const {total,pages,slice}=pageState;
   const pager=document.querySelector('#page-students .tms-pagination');

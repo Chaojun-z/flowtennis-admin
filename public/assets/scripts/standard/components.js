@@ -348,7 +348,7 @@ function renderStandardToolbarHtml({search=null,filterHostIds=[],filterHtmls=[],
   const filterHead='<div class="tms-mobile-filter-head"><strong>筛选</strong><button type="button" onclick="closeAdminMobileFilters(this)">完成</button></div>';
   const filterHtml=`<div class="${esc(filterClass)}">${filterHead}${filterItems}</div>`;
   const searchHtml=search?renderStandardSearchHtml(search):'';
-  const mobileFilterButton=filterItems?'<button type="button" class="tms-mobile-filter-trigger" onclick="toggleAdminMobileFilters(this)">筛选</button>':'';
+  const mobileFilterButton=filterItems?'<button type="button" class="tms-mobile-filter-trigger" aria-label="筛选" onclick="toggleAdminMobileFilters(this)"><span class="tms-mobile-filter-icon" aria-hidden="true"></span></button>':'';
   const main=`<div class="tms-toolbar-left">${leftHtml||''}${searchHtml}${mobileFilterButton}${filterHtml}</div>`;
   return `<div class="${esc(toolbarClass)}">${main}${actionsHtml?`<div class="${esc(actionsClass)}">${actionsHtml}</div>`:''}</div>`;
 }
