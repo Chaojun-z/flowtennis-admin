@@ -1761,7 +1761,7 @@ body.is-packages-page .content{overflow:hidden}
 .coach-mobile-meta{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ts)}
 .coach-mobile-empty{padding:80px 40px;text-align:center;color:#FFF;font-size:16px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border-radius:20px;border:1px solid rgba(255,255,255,0.15);margin:10px 0}
 .coach-mobile-empty::before{content:'';display:block;width:60px;height:60px;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="%23FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>');background-size:contain;opacity:0.8}
-.admin-mobile-shell,.admin-mobile-menu-trigger,.tms-mobile-filter-trigger,.tms-mobile-filter-head{display:none}
+.admin-mobile-shell,.admin-mobile-menu-trigger,.tms-mobile-filter-trigger,.tms-mobile-filter-head,.tms-mobile-cascade{display:none}
 .workbench-empty{padding:40px 20px;text-align:center;color:rgba(255,255,255,0.85);font-size:14px;background:rgba(180,83,9,0.1);border-radius:18px;border:1px dashed rgba(255,255,255,0.3);font-weight:500}
 .coach-mobile-stack{display:flex;flex-direction:column;gap:12px}
 .coach-mobile-info-card{background:var(--card-f);border:var(--borf);border-radius:16px;padding:14px;box-shadow:var(--shm)}
@@ -2499,16 +2499,28 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .toolbar,body.admin-mobile .tms-toolbar{align-items:stretch;gap:10px}
   body.admin-mobile .tms-toolbar-left{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;width:100%;flex:none;align-items:center;position:relative}
   body.admin-mobile .tms-mobile-filter-trigger{display:none}
-  body.admin-mobile #page-leads .tms-mobile-filter-trigger,body.admin-mobile #page-students .tms-mobile-filter-trigger{display:inline-flex;width:42px;height:42px;border:1px solid #E0D4C9;border-radius:10px;background:#FFFCF8;color:#805435;font-size:0;font-family:inherit;align-items:center;justify-content:center;padding:0}
+  body.admin-mobile #page-leads .tms-mobile-filter-trigger,body.admin-mobile #page-students .tms-mobile-filter-trigger,body.admin-mobile #page-courts .tms-mobile-filter-trigger,body.admin-mobile #page-memberships .tms-mobile-filter-trigger,body.admin-mobile #page-matches .tms-mobile-filter-trigger{display:inline-flex;width:42px;height:42px;border:1px solid #E0D4C9;border-radius:10px;background:#FFFCF8;color:#805435;font-size:0;font-family:inherit;align-items:center;justify-content:center;padding:0}
   body.admin-mobile .tms-mobile-filter-icon{width:18px;height:18px;display:block;position:relative;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) left 3px top 4px/12px 2px no-repeat,linear-gradient(currentColor,currentColor) left 3px top 12px/12px 2px no-repeat}
   body.admin-mobile .tms-mobile-filter-icon::before,body.admin-mobile .tms-mobile-filter-icon::after{content:"";position:absolute;width:5px;height:5px;border:2px solid currentColor;border-radius:50%;background:#FFFCF8;box-sizing:border-box}
   body.admin-mobile .tms-mobile-filter-icon::before{left:3px;top:2px}
   body.admin-mobile .tms-mobile-filter-icon::after{right:3px;top:10px}
   body.admin-mobile .tms-mobile-filter-head{display:none}
   body.admin-mobile .tms-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
-  body.admin-mobile #page-leads .tms-filters,body.admin-mobile #page-students .tms-filters{position:absolute;right:0;top:calc(100% + 8px);z-index:240;display:grid;grid-template-columns:1fr;gap:8px;width:min(270px,calc(100vw - 32px));padding:10px;background:#FFFCF8;border:1px solid #E0D4C9;border-radius:12px;box-shadow:0 14px 34px rgba(30,16,6,.18);transform:translateY(-4px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .16s ease;box-sizing:border-box}
-  body.admin-mobile #page-leads .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-students .tms-toolbar.mobile-filter-open .tms-filters{transform:translateY(0);opacity:1;pointer-events:auto}
-  body.admin-mobile #page-leads .tms-mobile-filter-head,body.admin-mobile #page-students .tms-mobile-filter-head{display:none}
+  body.admin-mobile #page-leads .tms-filters,body.admin-mobile #page-students .tms-filters,body.admin-mobile #page-courts .tms-filters,body.admin-mobile #page-memberships .tms-filters,body.admin-mobile #page-matches .tms-filters{position:absolute;right:0;top:calc(100% + 8px);z-index:240;display:grid;grid-template-columns:1fr;width:min(330px,calc(100vw - 32px));height:min(340px,calc(100dvh - 180px));padding:0;background:#FFFCF8;border:1px solid #E0D4C9;border-radius:12px;box-shadow:0 14px 34px rgba(30,16,6,.18);transform:translateY(-4px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .16s ease;box-sizing:border-box;overflow:hidden}
+  body.admin-mobile #page-leads .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-students .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-courts .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-memberships .tms-toolbar.mobile-filter-open .tms-filters,body.admin-mobile #page-matches .tms-toolbar.mobile-filter-open .tms-filters{transform:translateY(0);opacity:1;pointer-events:auto}
+  body.admin-mobile #page-leads .tms-mobile-filter-head,body.admin-mobile #page-students .tms-mobile-filter-head,body.admin-mobile #page-courts .tms-mobile-filter-head,body.admin-mobile #page-memberships .tms-mobile-filter-head,body.admin-mobile #page-matches .tms-mobile-filter-head{display:none}
+  body.admin-mobile #page-leads .tms-filters>div:not(.tms-mobile-filter-head):not(.tms-mobile-cascade),body.admin-mobile #page-students .tms-filters>div:not(.tms-mobile-filter-head):not(.tms-mobile-cascade),body.admin-mobile #page-courts .tms-filters>div:not(.tms-mobile-filter-head):not(.tms-mobile-cascade),body.admin-mobile #page-memberships .tms-filters>div:not(.tms-mobile-filter-head):not(.tms-mobile-cascade),body.admin-mobile #page-matches .tms-filters>div:not(.tms-mobile-filter-head):not(.tms-mobile-cascade){display:none}
+  body.admin-mobile .tms-mobile-cascade{display:none;height:100%;min-height:0}
+  body.admin-mobile .tms-toolbar.mobile-filter-open .tms-mobile-cascade{display:grid;grid-template-columns:104px minmax(0,1fr)}
+  body.admin-mobile .tms-mobile-cascade-tabs{min-width:0;background:#F8F1EA;border-right:1px solid #E8DCD0;overflow:auto;scrollbar-width:none}
+  body.admin-mobile .tms-mobile-cascade-tabs::-webkit-scrollbar,body.admin-mobile .tms-mobile-cascade-options::-webkit-scrollbar{display:none}
+  body.admin-mobile .tms-mobile-cascade-tab{width:100%;min-height:46px;padding:0 12px;border:0;background:transparent;color:#8C7B6E;text-align:left;font-family:inherit;font-size:13px;font-weight:500;line-height:18px}
+  body.admin-mobile .tms-mobile-cascade-tab.active{background:#FFFCF8;color:#4D4037}
+  body.admin-mobile .tms-mobile-cascade-tab.has-value::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:#C06031;vertical-align:middle}
+  body.admin-mobile .tms-mobile-cascade-options{min-width:0;padding:6px;overflow:auto;scrollbar-width:none}
+  body.admin-mobile .tms-mobile-cascade-option{width:100%;min-height:42px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#5C4D43;text-align:left;font-family:inherit;font-size:13px;line-height:18px}
+  body.admin-mobile .tms-mobile-cascade-option span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.admin-mobile .tms-mobile-cascade-option.active{background:#F3E8DD;color:#805435;font-weight:700}
   body.admin-mobile .tms-mobile-filter-head strong{font-size:16px;color:#332A24}
   body.admin-mobile .tms-mobile-filter-head button{border:0;background:transparent;color:#805435;font-size:14px;font-weight:800;font-family:inherit;padding:8px}
   body.admin-mobile.admin-mobile-filter-open::after{display:none}
@@ -2527,8 +2539,10 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #campusTabs{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-bottom:2px}
   body.admin-mobile .ctab{white-space:nowrap;flex:0 0 auto}
   body.admin-mobile .tcard,body.admin-mobile .tms-table-card{overflow:hidden;border-radius:10px;box-shadow:none}
-  body.admin-mobile .tms-table-wrapper{max-height:none;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  body.admin-mobile .tms-table-card{margin-left:-16px;margin-right:-16px}
+  body.admin-mobile .tms-table-wrapper{max-height:none;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0}
   body.admin-mobile .tms-table-wrapper::-webkit-scrollbar{display:none}
+  body.admin-mobile .tms-table{margin-left:16px;margin-right:16px}
   body.admin-mobile .tms-sticky-l,body.admin-mobile .tms-sticky-r,body.admin-mobile .tms-table th.tms-sticky-l,body.admin-mobile .tms-table th.tms-sticky-r,body.admin-mobile .tms-table td.tms-sticky-l,body.admin-mobile .tms-table td.tms-sticky-r{position:static!important;left:auto!important;right:auto!important;z-index:auto!important;text-align:left}
   body.admin-mobile .tms-action-cell{min-width:96px;text-align:left!important;justify-content:flex-start!important}
   body.admin-mobile #page-leads .tms-table th.tms-sticky-r,body.admin-mobile #page-students .tms-table th.tms-sticky-r,body.admin-mobile #page-leads .tms-action-cell,body.admin-mobile #page-students .tms-action-cell{width:104px!important;min-width:104px!important;padding-left:8px!important;padding-right:12px!important;text-align:left!important}
@@ -2539,7 +2553,7 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #page-leads .tms-page-numbers,body.admin-mobile #page-students .tms-page-numbers{gap:10px}
   body.admin-mobile #page-leads .tms-page-btn,body.admin-mobile #page-students .tms-page-btn{min-width:36px;height:36px;border-radius:10px;font-size:14px}
   body.admin-mobile #page-leads .tms-page-btn:not(:first-child):not(:last-child):not(.active),body.admin-mobile #page-students .tms-page-btn:not(:first-child):not(:last-child):not(.active){display:none}
-  body.admin-mobile #page-leads .tms-pagination,body.admin-mobile #page-students .tms-pagination{display:none!important}
+  body.admin-mobile #page-leads .tms-pagination,body.admin-mobile #page-students .tms-pagination,body.admin-mobile #page-courts .tms-pagination,body.admin-mobile #page-memberships .tms-pagination{display:none!important}
   body.admin-mobile .pager{gap:10px;align-items:flex-start;flex-direction:column}
   body.admin-mobile .product-grid{grid-template-columns:1fr}
   body.admin-mobile .overlay{align-items:flex-end;justify-content:center;padding:0;background:rgba(35,20,10,.54)}

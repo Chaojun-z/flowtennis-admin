@@ -346,11 +346,53 @@ function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',
 function renderStandardToolbarHtml({search=null,filterHostIds=[],filterHtmls=[],actionsHtml='',leftHtml='',toolbarClass='tms-toolbar',filterClass='tms-filters',actionsClass='tms-toolbar-right'}={}){
   const filterItems=[...(filterHostIds||[]).map(id=>`<div id="${esc(id)}"></div>`),...(filterHtmls||[])].join('');
   const filterHead='<div class="tms-mobile-filter-head"><strong>筛选</strong><button type="button" onclick="closeAdminMobileFilters(this)">完成</button></div>';
-  const filterHtml=`<div class="${esc(filterClass)}">${filterHead}${filterItems}</div>`;
+  const filterHtml=`<div class="${esc(filterClass)}">${filterHead}${filterItems}<div class="tms-mobile-cascade" data-mobile-cascade></div></div>`;
   const searchHtml=search?renderStandardSearchHtml(search):'';
   const mobileFilterButton=filterItems?'<button type="button" class="tms-mobile-filter-trigger" aria-label="筛选" onclick="toggleAdminMobileFilters(this)"><span class="tms-mobile-filter-icon" aria-hidden="true"></span></button>':'';
   const main=`<div class="tms-toolbar-left">${leftHtml||''}${searchHtml}${mobileFilterButton}${filterHtml}</div>`;
   return `<div class="${esc(toolbarClass)}">${main}${actionsHtml?`<div class="${esc(actionsClass)}">${actionsHtml}</div>`:''}</div>`;
+}
+function adminMobileFilterDropdowns(toolbar){
+  const filters=toolbar?.querySelector?.('.tms-filters');
+  if(!filters)return [];
+  return [...filters.querySelectorAll(':scope > div > .tms-dropdown')].filter(item=>!item.classList.contains('tms-page-size-dropdown'));
+}
+function renderAdminMobileCascadeFilters(toolbar){
+  if(typeof document==='undefined'||!document.body.classList.contains('admin-mobile'))return;
+  const filters=toolbar?.querySelector?.('.tms-filters');
+  const host=toolbar?.querySelector?.('[data-mobile-cascade]');
+  if(!filters||!host)return;
+  const groups=adminMobileFilterDropdowns(toolbar);
+  if(!groups.length){host.innerHTML='';return;}
+  let active=toolbar.dataset.mobileCascadeGroup||groups[0].dataset.target||'';
+  if(!groups.some(item=>item.dataset.target===active))active=groups[0].dataset.target||'';
+  toolbar.dataset.mobileCascadeGroup=active;
+  const tabs=groups.map(item=>{
+    const id=item.dataset.target||'';
+    const label=item.dataset.label||item.querySelector('.tms-dropdown-display')?.textContent||'筛选';
+    const value=item.querySelector('input')?.value||'';
+    return `<button type="button" class="tms-mobile-cascade-tab${id===active?' active':''}${value?' has-value':''}" onclick="setAdminMobileCascadeGroup(this,'${esc(id)}')">${esc(label)}</button>`;
+  }).join('');
+  const current=groups.find(item=>item.dataset.target===active)||groups[0];
+  const currentId=current.dataset.target||'';
+  const options=[...current.querySelectorAll('.tms-dropdown-item')].map(item=>{
+    const value=item.dataset.value||'';
+    const label=String(item.textContent||'').trim();
+    return `<button type="button" class="tms-mobile-cascade-option${item.classList.contains('active')?' active':''}" onclick="selectAdminMobileCascadeFilter('${esc(currentId)}',${jsArg(value)},${jsArg(label)},this)"><span>${esc(label)}</span></button>`;
+  }).join('');
+  host.innerHTML=`<div class="tms-mobile-cascade-tabs">${tabs}</div><div class="tms-mobile-cascade-options">${options}</div>`;
+}
+function setAdminMobileCascadeGroup(button,id){
+  const toolbar=button?.closest?.('.tms-toolbar');
+  if(!toolbar)return;
+  toolbar.dataset.mobileCascadeGroup=id||'';
+  renderAdminMobileCascadeFilters(toolbar);
+}
+function selectAdminMobileCascadeFilter(id,value,label,button){
+  const event={stopPropagation(){}};
+  selectStandardDropdownItem(id,value,label,event);
+  const toolbar=button?.closest?.('.tms-toolbar');
+  if(toolbar)setTimeout(()=>renderAdminMobileCascadeFilters(toolbar),0);
 }
 function toggleAdminMobileFilters(trigger){
   const toolbar=trigger?.closest?.('.tms-toolbar');
@@ -359,6 +401,7 @@ function toggleAdminMobileFilters(trigger){
   document.querySelectorAll('.tms-toolbar.mobile-filter-open').forEach(item=>item.classList.remove('mobile-filter-open'));
   toolbar.classList.toggle('mobile-filter-open',open);
   document.body.classList.toggle('admin-mobile-filter-open',open);
+  if(open)renderAdminMobileCascadeFilters(toolbar);
 }
 function closeAdminMobileFilters(target){
   const toolbar=target?.closest?.('.tms-toolbar');
@@ -460,6 +503,9 @@ Object.assign(window,{
   standardListSlice,
   renderStandardSearchHtml,
   renderStandardToolbarHtml,
+  renderAdminMobileCascadeFilters,
+  setAdminMobileCascadeGroup,
+  selectAdminMobileCascadeFilter,
   toggleAdminMobileFilters,
   closeAdminMobileFilters,
   renderStandardStatsShellHtml,

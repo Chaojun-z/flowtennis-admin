@@ -529,14 +529,15 @@ function renderMemberships(){
       return membershipSortDir==='desc'?bv.value-av.value:av.value-bv.value;
     });
   }
-  const total=sortedRows.length,pages=Math.max(1,Math.ceil(total/membershipPageSize));
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const total=sortedRows.length,pages=isMobileList?1:Math.max(1,Math.ceil(total/membershipPageSize));
   if(membershipPage>pages)membershipPage=pages;
-  const slice=sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
+  const slice=isMobileList?sortedRows:sortedRows.slice((membershipPage-1)*membershipPageSize,membershipPage*membershipPageSize);
   body.innerHTML=slice.map(item=>{const finance=membershipReadModelFinanceForCourt(item);const booking=membershipReadModelBookingForCourt(item);const benefitRows=membershipReadModelBenefitRowsForCourt(item);const benefits=benefitRows.length?benefitRows.map(b=>`${b.label} ${b.remaining}/${b.total}`).join('；'):'-';const tierLabel=item.membershipTierLabel||'-';const firstOpenDate=String(item.firstOpenDate||'').slice(0,10);const renewalCount=Math.max(0,Number(item.membershipRenewalCount)||0);const memberBookingCount=Number(item.memberBookingCount??booking.memberCount)||0;const bookingCount=Number(item.bookingCount??booking.count)||0;const lowBalance=finance.balance>0&&finance.balance<=500;return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(item.displayName)}</div></td><td>${renderStandardCellText(item.phone)}</td><td>${tierLabel==='-'?'-':`<span class="tms-tag ${courtMembershipTierTagClass(tierLabel)}">${esc(tierLabel)}</span>`}</td><td>${renderStandardCellText(firstOpenDate,false)}</td><td><div class="tms-cell-text">${renewalCount}次</div></td><td>${renderCourtMiniBar(finance.balance,finance.totalDeposit,lowBalance)}</td><td>${renderStandardCellText(item.membershipDiscountText,false)}</td><td><div class="tms-cell-text">${memberBookingCount}次</div></td><td><div class="tms-cell-text">${bookingCount}次</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:320px;color:#A3968F">${esc(renderStandardEmptyText(benefits))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:96px;padding-right:12px;text-align:right"><span class="tms-action-link" onclick="openCourtMembershipPanel('${item.id}')">查看</span><span class="tms-action-link" onclick="openCourtFinanceModal('${item.id}')">订场</span></td></tr>`;}).join('')||'<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无会员账户</div><div class="tms-empty-desc">调整搜索后再看</div></div></td></tr>';
   const pagerInfo=document.getElementById('membershipPagerInfo');
   if(pagerInfo)pagerInfo.innerHTML=renderPagerInfoHtml(total);
   const pager=document.querySelector('#page-memberships .tms-pagination');
-  if(pager)pager.style.display=pages>1?'flex':'none';
+  if(pager)pager.style.display=!isMobileList&&pages>1?'flex':'none';
   renderMembershipPagerControls(total,pages);
   document.querySelectorAll('#page-memberships [data-membership-sort]').forEach(btn=>{
     const active=btn.dataset.membershipSort===membershipSortKey;
@@ -1122,11 +1123,12 @@ function renderCourtAccountListView(){
   }
   const summary=courtAccountListViewData?.summary||{};
   renderCourtStatsCards(summary);
-  const total=sortedList.length,pages=Math.max(1,Math.ceil(total/courtPageSize));
+  const isMobileList=document.body.classList.contains('admin-mobile');
+  const total=sortedList.length,pages=isMobileList?1:Math.max(1,Math.ceil(total/courtPageSize));
   if(courtPage>pages)courtPage=pages;
-  const slice=sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
+  const slice=isMobileList?sortedList:sortedList.slice((courtPage-1)*courtPageSize,courtPage*courtPageSize);
   const pager=document.querySelector('#page-courts .tms-pagination');
-  if(pager)pager.style.display=pages>1?'flex':'none';
+  if(pager)pager.style.display=!isMobileList&&pages>1?'flex':'none';
   document.getElementById('courtPagerInfo').innerHTML=renderPagerInfoHtml(total);
   renderCourtPagerControls(total,pages);
   const selectAll=document.getElementById('courtSelectAll');
