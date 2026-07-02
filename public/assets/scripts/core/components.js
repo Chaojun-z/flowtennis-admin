@@ -383,24 +383,26 @@ function adminMobileNavItemAction(item){
   if(item.operationsTab)return `goAdminMobilePage('${item.goPage}','','${item.operationsTab}','${adminMobileActiveModule}')`;
   return `goAdminMobilePage('${item.goPage}','','','${adminMobileActiveModule}')`;
 }
-function renderAdminMobileModuleItems(moduleKey=adminMobileActiveModule){
-  const group=adminMobileNavConfig().find(item=>item.key===moduleKey)||adminMobileNavConfig().find(item=>item.key===ADMIN_MOBILE_DEFAULT_MODULE);
-  if(!group)return '';
-  return (group.items||[]).map(item=>{
-    const active=adminMobileNavItemIsActive(item)?' active':'';
-    return `<button type="button" class="admin-mobile-sub-item${active}" onclick="${adminMobileNavItemAction(item)}">${sidebarIcon(item.icon)}<span>${esc(item.label)}</span></button>`;
+function renderAdminMobileDrawerSections(){
+  return adminMobileNavConfig().map(group=>{
+    const expanded=group.key===adminMobileActiveModule;
+    const rows=(group.items||[]).map(item=>{
+      const active=adminMobileNavItemIsActive(item)?' active':'';
+      return `<button type="button" class="admin-mobile-sub-item${active}" onclick="${adminMobileNavItemAction(item)}">${sidebarIcon(item.icon)}<span>${esc(item.label)}</span></button>`;
+    }).join('');
+    return `<div class="admin-mobile-drawer-section${expanded?' open':''}" data-admin-mobile-section="${esc(group.key)}">
+      <button type="button" class="admin-mobile-module-btn${expanded?' active':''}" data-admin-mobile-module="${esc(group.key)}" onclick="toggleAdminMobileModule('${esc(group.key)}')" aria-expanded="${expanded?'true':'false'}"><span>${esc(group.label)}</span><span class="admin-mobile-module-chevron">⌄</span></button>
+      <div class="admin-mobile-sub-list">${rows}</div>
+    </div>`;
   }).join('');
 }
 function renderAdminMobileNavShell(){
-  const config=adminMobileNavConfig();
-  const modules=config.map(item=>`<button type="button" class="admin-mobile-module-btn${item.key===ADMIN_MOBILE_DEFAULT_MODULE?' active':''}" data-admin-mobile-module="${esc(item.key)}" onclick="openAdminMobileModule('${esc(item.key)}')" aria-expanded="false"><span>${esc(item.label)}</span></button>`).join('');
-  const current=config.find(item=>item.key===ADMIN_MOBILE_DEFAULT_MODULE);
   return `<div class="admin-mobile-shell" aria-label="管理端 H5 导航">
-    <div class="admin-mobile-module-bar" role="tablist">${modules}</div>
     <div class="admin-mobile-module-scrim" onclick="closeAdminMobileModule()"></div>
-    <section class="admin-mobile-module-panel" id="adminMobileModulePanel" aria-hidden="true">
-      <div class="admin-mobile-module-panel-head"><div><span class="admin-mobile-panel-eyebrow">当前模块</span><strong id="adminMobileModuleTitle">${esc(current?.label||'教学中心')}</strong></div><button type="button" onclick="closeAdminMobileModule()" aria-label="关闭">关闭</button></div>
-      <div class="admin-mobile-sub-list" id="adminMobileModuleItems">${renderAdminMobileModuleItems(ADMIN_MOBILE_DEFAULT_MODULE)}</div>
+    <section class="admin-mobile-module-panel" id="adminMobileModulePanel" aria-hidden="true" aria-label="管理端菜单">
+      <div class="admin-mobile-module-panel-head"><div><span class="admin-mobile-panel-eyebrow">FlowTennis</span><strong id="adminMobileModuleTitle">管理菜单</strong></div><button type="button" onclick="closeAdminMobileModule()" aria-label="关闭">关闭</button></div>
+      <div class="admin-mobile-drawer-list" id="adminMobileModuleItems">${renderAdminMobileDrawerSections()}</div>
+      <div class="admin-mobile-drawer-footer"><button type="button" onclick="doLogout()">退出登录</button></div>
     </section>
   </div>`;
 }
@@ -409,20 +411,20 @@ function openAdminMobileModule(moduleKey=ADMIN_MOBILE_DEFAULT_MODULE){
   if(!group)return;
   adminMobileActiveModule=group.key;
   const panel=document.getElementById('adminMobileModulePanel');
-  const title=document.getElementById('adminMobileModuleTitle');
   const items=document.getElementById('adminMobileModuleItems');
-  if(title)title.textContent=group.label;
-  if(items)items.innerHTML=renderAdminMobileModuleItems(group.key);
+  if(items)items.innerHTML=renderAdminMobileDrawerSections();
   if(panel){
     panel.classList.add('open');
     panel.setAttribute('aria-hidden','false');
   }
   document.body.classList.add('admin-mobile-panel-open');
-  document.querySelectorAll('.admin-mobile-module-btn').forEach(btn=>{
-    const active=btn.dataset.adminMobileModule===adminMobileActiveModule;
-    btn.classList.toggle('active',active);
-    btn.setAttribute('aria-expanded',active?'true':'false');
-  });
+}
+function toggleAdminMobileModule(moduleKey=ADMIN_MOBILE_DEFAULT_MODULE){
+  const group=adminMobileNavConfig().find(item=>item.key===moduleKey);
+  if(!group)return;
+  adminMobileActiveModule=group.key;
+  const items=document.getElementById('adminMobileModuleItems');
+  if(items)items.innerHTML=renderAdminMobileDrawerSections();
 }
 function closeAdminMobileModule(){
   const panel=document.getElementById('adminMobileModulePanel');
@@ -450,11 +452,8 @@ function syncAdminMobileNavState(){
     btn.classList.toggle('active',active);
     btn.setAttribute('aria-expanded',active&&document.body.classList.contains('admin-mobile-panel-open')?'true':'false');
   });
-  const group=adminMobileNavConfig().find(item=>item.key===adminMobileActiveModule);
-  const title=document.getElementById('adminMobileModuleTitle');
   const items=document.getElementById('adminMobileModuleItems');
-  if(title&&group)title.textContent=group.label;
-  if(items&&group)items.innerHTML=renderAdminMobileModuleItems(group.key);
+  if(items)items.innerHTML=renderAdminMobileDrawerSections();
 }
 function renderSidebarShell(){
   return `<aside class="sidebar">
@@ -529,6 +528,7 @@ function mountSidebarShell(){
 }
 function renderTopbarShell(){
   return `<div class="topbar">
+    <button type="button" class="admin-mobile-menu-trigger" onclick="openAdminMobileModule(adminMobileActiveModule)" aria-label="打开菜单"><span></span><span></span><span></span></button>
     <div class="tb-title" id="topTitle">学员信息</div>
     <div class="topbar-filter-host" id="campusTabs"></div>
     <div class="global-live-clock" id="globalLiveClock" aria-live="polite"></div>
@@ -646,9 +646,6 @@ function renderGlobalTopFilters(){
   const dateMenu=showCustomPanel
     ? `<div class="court-date-range-shell"><div class="court-date-range-left">${timeMenu}</div><div class="court-date-range-right">${renderCourtDateRangePanel()}</div></div>`
     : timeMenu;
-  if(currentPage==='operations'){
-    return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('globalTopDate',currentGlobalDateRangeLabel(),standardTopTimeIcon(),dateMenu,dateMenuClass)}</div></div>`;
-  }
   return `<div class="court-top-filterbar"><div class="court-top-filter-item">${renderStandardTopDropdown('globalTopCampus',campusOpts.find(opt=>opt.value===campus)?.label||'全部校区',standardTopLocationIcon(),campusMenu,'court-top-campus-menu')}</div><div class="court-top-filter-item">${renderStandardTopDropdown('globalTopDate',currentGlobalDateRangeLabel(),standardTopTimeIcon(),dateMenu,dateMenuClass)}</div></div>`;
 }
 function refreshGlobalTopFilters(){

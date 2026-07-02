@@ -59,8 +59,8 @@ assert.match(operationsSource, /let operationsActiveTab = readOperationsActiveTa
 assert.match(operationsSource, /localStorage\.setItem\(OPERATIONS_TAB_KEY,operationsActiveTab\)/, 'operations should save tab changes so refresh stays on the same dashboard');
 assert.match(operationsSource, /\['overview', 'court', 'conversion', 'coach'\]\.includes\(tab\)/, 'operations should allow overview, court, conversion and coach dashboards');
 assert.match(componentsSource, /globalTopFilterPages\(\)\{[\s\S]*'operations'/, 'operations page should reuse the global top date filter');
-assert.match(componentsSource, /if\(currentPage==='operations'\)\{\s*return `[^`]*renderStandardTopDropdown\('globalTopDate'/, 'operations top filter should only render the date filter');
-assert.doesNotMatch(componentsSource, /if\(currentPage==='operations'\)\{\s*return `[^`]*globalTopCampus/, 'operations top filter should not render campus filter');
+assert.match(componentsSource, /renderStandardTopDropdown\('globalTopCampus'/, 'operations H5 top filter should keep the shared campus icon entry');
+assert.match(componentsSource, /renderStandardTopDropdown\('globalTopDate'/, 'operations H5 top filter should keep the shared date icon entry');
 assert.match(componentsSource, /if\(currentPage==='operations'\)reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should reload aggregate data through inline skeletons when the global date filter changes');
 assert.match(stateSource, /async function reloadOperationsPageDataWithInlineLoading\(\)/, 'operations page should have a dedicated inline refresh path');
 assert.match(stateSource, /reloadOperationsPageDataWithInlineLoading[\s\S]*renderOperationsLoading\(\)[\s\S]*ensureDatasetsByName\(\['operationsPage'\],\{force:true\}\)/, 'operations inline refresh should show local skeleton and refresh only operations data');
