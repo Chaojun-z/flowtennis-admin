@@ -1843,6 +1843,21 @@ body.is-packages-page .content{overflow:hidden}
 #page-coachops .coach-workload-wrap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal;overflow-wrap:normal;line-height:1.35}
 #page-coachops .coach-workload-course-types{font-size:12px}
 #page-coachops .coach-workload-campus,#page-coachops .coach-workload-timeband{font-size:12px;color:#2F241E}
+.admin-h5-card-list{display:none}
+.coach-ops-mobile-cards{display:none}
+.coach-ops-workload-card{background:#FFFCF8;border:1px solid #E6E1DC;border-radius:10px;padding:12px;box-sizing:border-box}
+.coach-ops-workload-card-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.coach-ops-workload-card-head span{color:#8C7B6E;font-size:11px;line-height:15px;font-weight:800}
+.coach-ops-workload-card-head strong{color:#2F241E;font-size:15px;line-height:20px;font-weight:900}
+.coach-ops-workload-card-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.coach-ops-workload-card-main>div,.coach-ops-workload-card-grid span{min-width:0;border:1px solid #E9DED2;border-radius:8px;background:#fff;padding:9px 10px}
+.coach-ops-workload-card-main span,.coach-ops-workload-card-grid b,.coach-ops-workload-card-line b{display:block;color:#8C7B6E;font-size:11px;line-height:15px;font-weight:700}
+.coach-ops-workload-card-main strong{display:block;margin-top:3px;color:#111827;font-size:19px;line-height:24px;font-weight:900}
+.coach-ops-workload-card-main em{margin-left:2px;color:#8C7B6E;font-size:12px;font-style:normal;font-weight:700}
+.coach-ops-workload-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.coach-ops-workload-card-grid strong{display:block;margin-top:3px;color:#111827;font-size:16px;line-height:21px;font-weight:900}
+.coach-ops-workload-card-line{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid #F0E6DA}
+.coach-ops-workload-card-line span{min-width:0;color:#2F241E;font-size:12px;line-height:18px;white-space:normal;word-break:break-word}
 .late-settlement-modal .mbody{padding-bottom:18px}
 .late-settlement-head{max-width:260px;margin-bottom:14px}
 .late-settlement-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;margin-bottom:12px}
@@ -2488,6 +2503,17 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #page-finance .finance-ledger-stats .tms-stat-card{height:86px;min-height:86px;padding:10px;border-radius:10px;overflow:hidden}
   body.admin-mobile #page-finance .finance-ledger-stats .tms-stat-label{font-size:11px;line-height:16px}
   body.admin-mobile #page-finance .finance-ledger-stats .tms-stat-value{font-size:18px;line-height:24px}
+  body.admin-mobile #page-finance{margin:0;padding:0;background:#F5F2F0;min-width:0}
+  body.admin-mobile #page-finance #financeLedgerPanel,body.admin-mobile #page-finance #financeRevenuePanel,body.admin-mobile #page-finance #financeRecognizedPanel,body.admin-mobile #page-finance #financeSettlementPanel{min-width:0;max-width:100%}
+  body.admin-mobile #page-finance .section-stack{gap:12px}
+  body.admin-mobile #page-finance .finance-loading-card{margin:0;border-radius:10px;padding:16px}
+  body.admin-mobile #page-finance .finance-table-toolbar{margin-bottom:10px}
+  body.admin-mobile #page-finance #financeSettlementPanel .tms-audit-note{margin-bottom:10px;border-radius:10px;padding:10px 12px;font-size:12px;line-height:18px}
+  body.admin-mobile #page-finance #financeSettlementPanel .finance-settlement-toolbar{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:10px}
+  body.admin-mobile #page-finance #financeSettlementPanel .finance-settlement-toolbar .tms-filters{position:static!important;display:block!important;width:100%!important;height:auto!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;opacity:1!important;transform:none!important;pointer-events:auto!important}
+  body.admin-mobile #page-finance #financeSettlementPanel .finance-settlement-month-field{width:100%;max-width:100%}
+  body.admin-mobile #page-finance #financeSettlementPanel .finance-settlement-month-field .tms-form-control{width:100%;height:42px;border-radius:10px}
+  body.admin-mobile #page-finance #financeSettlementPanel .tms-toolbar-right{display:none!important}
   body.admin-mobile .admin-mobile-kpi-hint{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:260;background:rgba(51,42,36,.94);color:#FFF7EF;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.45;text-align:center;box-shadow:0 12px 32px rgba(30,16,6,.26);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
   body.admin-mobile .admin-mobile-kpi-hint.show{opacity:1;transform:translateY(0)}
   body.admin-mobile #page-operations .operations-kpi-row,body.admin-mobile #page-operations .operations-coach-kpi-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -2499,6 +2525,50 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile #page-operations .operations-court-kpi-sparkline,body.admin-mobile #page-operations .operations-conversion-kpi-sparkline,body.admin-mobile #page-operations .operations-coach-kpi-sparkline{height:28px;min-height:28px;margin:4px -10px -8px;width:calc(100% + 20px)}
   body.admin-mobile #page-operations .operations-court-kpi svg,body.admin-mobile #page-operations .operations-conversion-kpi-sparkline svg,body.admin-mobile #page-operations .operations-coach-kpi svg{max-height:28px}
   body.admin-mobile #page-operations .operations-chart-host{min-width:0;overflow:hidden}
+  body.admin-mobile #page-operations{margin:0;padding:0;background:#F5F2F0;min-height:0}
+  body.admin-mobile #page-operations .operations-page{gap:12px}
+  body.admin-mobile #page-operations .operations-overview-grid,body.admin-mobile #page-operations .operations-overview-visual-grid,body.admin-mobile #page-operations .operations-chart-grid,body.admin-mobile #page-operations .operations-court-top-grid,body.admin-mobile #page-operations .operations-conversion-monitor-grid,body.admin-mobile #page-operations .operations-conversion-funnel-grid,body.admin-mobile #page-operations .operations-retention-grid,body.admin-mobile #page-operations .operations-channel-diagnostics-grid,body.admin-mobile #page-operations .operations-persona-grid,body.admin-mobile #page-operations .operations-coach-hero-grid,body.admin-mobile #page-operations .operations-coach-secondary-grid,body.admin-mobile #page-operations .operations-channel-quality-layout,body.admin-mobile #page-operations .operations-attribute-layout{display:flex!important;flex-direction:column;gap:12px}
+  body.admin-mobile #page-operations .operations-section,body.admin-mobile #page-operations .operations-chart-card,body.admin-mobile #page-operations .operations-command-center,body.admin-mobile #page-operations .operations-coach-command{min-height:0;padding:14px;border-radius:10px;box-shadow:none;overflow:hidden}
+  body.admin-mobile #page-operations .operations-module-head,body.admin-mobile #page-operations .operations-command-head{flex-direction:column;gap:8px;margin-bottom:10px}
+  body.admin-mobile #page-operations .operations-module-head h3,body.admin-mobile #page-operations .operations-card-title{font-size:14px;line-height:19px}
+  body.admin-mobile #page-operations .operations-chart-host,body.admin-mobile #page-operations .operations-overview-chart,body.admin-mobile #page-operations .operations-court-comparison-chart,body.admin-mobile #page-operations .operations-coach-chart,body.admin-mobile #page-operations .operations-channel-quality-chart{height:180px!important;min-height:180px!important}
+  body.admin-mobile #page-operations .operations-overview-matrix-chart,body.admin-mobile #page-operations .operations-coach-matrix-chart{height:220px!important;min-height:220px!important}
+  body.admin-mobile #page-operations .operations-overview-risk-board,body.admin-mobile #page-operations .operations-overview-metric-grid,body.admin-mobile #page-operations .operations-retention-metrics,body.admin-mobile #page-operations .operations-court-heat-kpis{grid-template-columns:1fr}
+  body.admin-mobile #page-operations .operations-filter-row,body.admin-mobile #page-operations .operations-funnel-filter-row{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;margin:0 -14px;padding:0 14px;scrollbar-width:none}
+  body.admin-mobile #page-operations .operations-filter-row::-webkit-scrollbar,body.admin-mobile #page-operations .operations-funnel-filter-row::-webkit-scrollbar{display:none}
+  body.admin-mobile #page-operations .operations-filter-row .tms-dropdown,body.admin-mobile #page-operations .operations-funnel-filter-row .tms-dropdown{flex:0 0 118px}
+  body.admin-mobile #page-operations .operations-court-heat-scroll{margin:0 -14px;padding:0 14px;overflow-x:auto}
+  body.admin-mobile #page-operations .operations-court-heat-grid{min-width:720px}
+  body.admin-mobile #page-operations .operations-channel-ranking-table{height:auto;max-height:320px;overflow:auto;scrollbar-width:none}
+  body.admin-mobile #page-operations .operations-channel-ranking-table::-webkit-scrollbar{display:none}
+  body.admin-mobile #page-coachschedule .coach-ops-grid-card{height:auto;min-height:0;overflow:visible;border-radius:10px;background:transparent}
+  body.admin-mobile #page-coachschedule .coach-ops-grid-titlebar{display:grid;grid-template-columns:1fr;gap:6px;padding:0 0 10px;background:transparent;border-bottom:0}
+  body.admin-mobile #page-coachschedule #coachOpsViewTitle{font-size:15px;line-height:20px;margin:0;color:#2F241E}
+  body.admin-mobile #page-coachschedule .coach-ops-grid-hint,body.admin-mobile #page-coachschedule .coach-ops-grid-clock,body.admin-mobile #page-coachschedule .coach-ops-head{display:none}
+  body.admin-mobile #page-coachschedule .coach-ops-scroll{overflow:visible;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;scrollbar-width:none}
+  body.admin-mobile #page-coachschedule .coach-ops-scroll::-webkit-scrollbar{display:none}
+  body.admin-mobile #page-coachschedule #coachOpsTimeline{display:flex;flex-direction:column;gap:10px;min-height:0;background:transparent}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-row{display:grid;grid-template-columns:1fr;gap:0;min-width:0;margin:0;border:1px solid #E6E1DC;border-radius:10px;background:#FFFCF8;overflow:hidden}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-row .coach-ops-name{position:static;width:100%;min-height:0;padding:10px 12px;border:0;border-bottom:1px solid #E6E1DC;background:#F7F1EA;box-shadow:none;color:#2F241E;font-size:13px;font-weight:800;cursor:default}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-list{display:flex;flex-direction:column;gap:8px;padding:10px}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card,body.admin-mobile #page-coachschedule .coach-ops-mobile-empty-card{width:100%;border:1px solid #E9DED2;border-left:4px solid #4F81FF;border-radius:8px;background:#fff;padding:10px 11px;text-align:left;font-family:inherit;color:#2F241E;box-shadow:none}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-trial{border-left-color:#F59E0B}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-camp,body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-small{border-left-color:#10B981}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-master{border-left-color:#EF4444}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card.type-partner{border-left-color:#8B5CF6}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card-time{display:block;color:#6E6259;font-size:12px;line-height:16px;font-weight:700}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card strong{display:block;margin-top:4px;color:#111827;font-size:14px;line-height:20px;font-weight:800;white-space:normal}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-card small{display:block;margin-top:3px;color:#6E6259;font-size:12px;line-height:17px}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-empty-card{border-left-color:#E9DED2;color:#8C7B6E;text-align:center}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-skeleton-card{height:58px;border-radius:8px;background:linear-gradient(90deg,#F3F4F6 25%,#E5E7EB 37%,#F3F4F6 63%);background-size:400% 100%;animation:coachOpsSkeleton 1.2s ease-in-out infinite}
+  body.admin-mobile #page-coachschedule .coach-ops-mobile-skeleton-card.short{height:42px}
+  body.admin-mobile #page-coachops .tms-table-card{display:none}
+  body.admin-mobile #page-coachops .coach-ops-mobile-cards{display:flex;flex-direction:column;gap:10px}
+  body.admin-mobile #page-coachops .coach-ops-toolbar{padding:0;margin-bottom:10px}
+  body.admin-mobile #page-coachops .coach-ops-toolbar-main{display:grid;grid-template-columns:auto 42px minmax(0,1fr) 42px auto;gap:8px;width:100%;align-items:center}
+  body.admin-mobile #page-coachops .coach-ops-toolbar-main .coach-date-wrap{min-width:0}
+  body.admin-mobile #page-coachops .coach-date-btn,body.admin-mobile #page-coachops .coach-ops-nav{height:42px;border-radius:10px}
+  body.admin-mobile #page-coachops .coach-ops-nav:not(.coach-ops-arrow){padding:0 12px}
   body.admin-mobile .coach-ops-toolbar{padding:12px}
   body.admin-mobile .coach-ops-toolbar-main,body.admin-mobile .coach-ops-toolbar-right{width:100%}
   body.admin-mobile .coach-ops-toolbar-right{justify-content:space-between}
@@ -2628,6 +2698,24 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .tms-table th:first-child,body.admin-mobile .tms-table td:first-child{padding-left:16px!important}
   body.admin-mobile .tms-sticky-l,body.admin-mobile .tms-sticky-r,body.admin-mobile .tms-table th.tms-sticky-l,body.admin-mobile .tms-table th.tms-sticky-r,body.admin-mobile .tms-table td.tms-sticky-l,body.admin-mobile .tms-table td.tms-sticky-r{position:static!important;left:auto!important;right:auto!important;top:auto!important;z-index:auto!important;text-align:left!important;box-shadow:none!important}
   body.admin-mobile .tms-table tbody tr:hover td.tms-sticky-l,body.admin-mobile .tms-table tbody tr:hover td.tms-sticky-r{background:transparent}
+  body.admin-mobile #page-leads .tms-table-card,body.admin-mobile #page-students .tms-table-card,body.admin-mobile #page-schedule .tms-table-card,body.admin-mobile #page-courts .tms-table-card,body.admin-mobile #page-memberships .tms-table-card,body.admin-mobile #page-purchases .tms-table-card,body.admin-mobile #page-prices .tms-table-card,body.admin-mobile #page-admin-users .tms-table-card,body.admin-mobile #page-coaches .tms-table-card,body.admin-mobile #page-campusmgr .tms-table-card,body.admin-mobile #page-entitlements .tms-table-card,body.admin-mobile #page-matches .tms-table-card,body.admin-mobile #page-membership-plans .tms-table-card,body.admin-mobile #page-membership-orders .tms-table-card,body.admin-mobile #page-membership-ledger .tms-table-card,body.admin-mobile #page-finance #financeLedgerPanel .tms-table-card,body.admin-mobile #page-finance #financeRevenuePanel .tms-table-card,body.admin-mobile #page-finance #financeRecognizedPanel .tms-table-card{display:none}
+  body.admin-mobile #page-leads .admin-h5-card-list,body.admin-mobile #page-students .admin-h5-card-list,body.admin-mobile #page-schedule .admin-h5-card-list,body.admin-mobile #page-courts .admin-h5-card-list,body.admin-mobile #page-memberships .admin-h5-card-list,body.admin-mobile #page-purchases .admin-h5-card-list,body.admin-mobile #page-prices .admin-h5-card-list,body.admin-mobile #page-admin-users .admin-h5-card-list,body.admin-mobile #page-coaches .admin-h5-card-list,body.admin-mobile #page-campusmgr .admin-h5-card-list,body.admin-mobile #page-entitlements .admin-h5-card-list,body.admin-mobile #page-matches .admin-h5-card-list,body.admin-mobile #page-membership-plans .admin-h5-card-list,body.admin-mobile #page-membership-orders .admin-h5-card-list,body.admin-mobile #page-membership-ledger .admin-h5-card-list,body.admin-mobile #page-finance .admin-h5-card-list{display:flex;flex-direction:column;gap:10px;padding-bottom:78px}
+  body.admin-mobile .admin-h5-list-card{background:#FFFCF8;border:1px solid #E6E1DC;border-radius:10px;padding:12px;box-sizing:border-box;box-shadow:none;color:#2F241E}
+  body.admin-mobile .admin-h5-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  body.admin-mobile .admin-h5-card-head>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+  body.admin-mobile .admin-h5-card-head strong{font-size:15px;line-height:20px;font-weight:900;color:#2F241E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.admin-mobile .admin-h5-card-head span{font-size:12px;line-height:16px;color:#8C7B6E}
+  body.admin-mobile .admin-h5-card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  body.admin-mobile .admin-h5-card-tags .tms-tag,body.admin-mobile .admin-h5-card-head>.tms-tag{height:24px;max-width:100%;display:inline-flex;align-items:center;border-radius:999px;font-size:11px;line-height:16px;white-space:nowrap}
+  body.admin-mobile .admin-h5-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+  body.admin-mobile .admin-h5-card-grid span{min-width:0;border:1px solid #EFE6DD;border-radius:8px;background:#fff;padding:8px 9px;color:#2F241E;font-size:13px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.admin-mobile .admin-h5-card-grid b{display:block;margin-bottom:2px;color:#8C7B6E;font-size:11px;line-height:15px;font-weight:700}
+  body.admin-mobile .admin-h5-list-card p{margin:0 0 10px;color:#6F6258;font-size:12px;line-height:18px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  body.admin-mobile .admin-h5-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body.admin-mobile .admin-h5-card-actions-dense{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.admin-mobile .admin-h5-card-actions button{height:40px;border:1px solid #E0D4C9;border-radius:10px;background:#FFFDFC;color:#805435;font-family:inherit;font-size:13px;font-weight:800}
+  body.admin-mobile .admin-h5-card-actions-dense button{font-size:12px}
+  body.admin-mobile .admin-h5-card-actions button:first-child{background:#805435;border-color:#805435;color:#fff}
   body.admin-mobile .tms-skeleton-card-grid,body.admin-mobile .tms-skeleton-board-grid{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;margin:0 -16px 10px;padding:0;scrollbar-width:none}
   body.admin-mobile .tms-skeleton-card-grid::-webkit-scrollbar,body.admin-mobile .tms-skeleton-board-grid::-webkit-scrollbar{display:none}
   body.admin-mobile .tms-skeleton-card,body.admin-mobile .tms-skeleton-card-grid .tms-skeleton-panel,body.admin-mobile .tms-skeleton-board-grid .tms-skeleton-panel{flex:0 0 calc((100vw - 48px)/3);width:calc((100vw - 48px)/3);height:82px;min-height:82px;padding:10px;border-radius:10px}
@@ -2637,23 +2725,32 @@ body.is-packages-page .content{overflow:hidden}
   body.admin-mobile .tms-skeleton-card .is-value,body.admin-mobile .tms-skeleton-card-body strong{width:72px;height:20px}
   body.admin-mobile .tms-skeleton-card .is-meta,body.admin-mobile .tms-skeleton-card-body i,body.admin-mobile .tms-skeleton-card-body i:last-child,body.admin-mobile .tms-skeleton-table{display:none}
   body.admin-mobile #page-packages .course-package-showcase{height:auto;min-height:0}
+  body.admin-mobile #page-products .course-showcase-grid{grid-template-columns:1fr;gap:12px}
+  body.admin-mobile #page-products .product-card-shell:hover{transform:none;box-shadow:0 2px 8px rgba(0,0,0,.03)}
   body.admin-mobile #page-packages .course-package-showcase-grid{margin:0 -16px;padding:0 16px;min-height:0;overflow-x:auto;overflow-y:visible}
   body.admin-mobile #page-packages .package-board-column{flex:0 0 min(82vw,320px);min-width:min(82vw,320px);max-height:none}
   body.admin-mobile #page-packages .package-board-stack{padding-bottom:82px}
   body.admin-mobile .overlay{align-items:flex-end;justify-content:center;padding:0;background:rgba(35,20,10,.54)}
   body.admin-mobile .overlay.open .modal.modal-court{width:100% !important;max-width:100% !important;height:calc(100dvh - 72px);max-height:calc(100dvh - 72px);border-radius:18px 18px 0 0 !important;margin:0;box-shadow:none;transform:none;overflow:hidden}
   body.admin-mobile .overlay.student-drawer-overlay.open .modal.modal-court.modal-student-drawer,body.admin-mobile .overlay.schedule-drawer-overlay.open .modal.modal-court.modal-schedule-drawer,body.admin-mobile .overlay.schedule-drawer-overlay.open .modal.modal-court.modal-lead-drawer{transform:none}
+  body.admin-mobile .modal.modal-court,body.admin-mobile .modal.modal-court *{box-sizing:border-box}
   body.admin-mobile .modal.modal-court .mhead{position:sticky;top:0;z-index:6;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:#F5F2F0;border-bottom:1px solid #E6E1DC;flex-shrink:0}
   body.admin-mobile .modal.modal-court .mbody{padding:14px 16px 18px;overflow:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
   body.admin-mobile .modal.modal-court .mbody::-webkit-scrollbar{display:none}
   body.admin-mobile .modal.modal-court .mactions{position:sticky;bottom:0;z-index:6;padding:12px 16px;padding-bottom:calc(14px + env(safe-area-inset-bottom));border-radius:0;background:#F5F2F0;border-top:1px solid #E6E1DC;gap:10px;justify-content:stretch}
   body.admin-mobile .modal.modal-court .mactions>div{width:100%;display:flex;gap:10px}
-  body.admin-mobile .modal.modal-court .mactions .tms-btn{flex:1;min-width:0;height:42px}
+  body.admin-mobile .modal.modal-court .mactions .tms-btn,body.admin-mobile .modal.modal-court .mactions .btn-save,body.admin-mobile .modal.modal-court .mactions .btn-cancel,body.admin-mobile .modal.modal-court .mactions .schedule-detail-action.primary,body.admin-mobile .modal.modal-court .mactions>button{flex:1;min-width:0;height:42px;display:flex;align-items:center;justify-content:center;text-align:center}
   body.admin-mobile .modal.modal-court .tms-form-row{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px}
+  body.admin-mobile .modal.modal-court .court-date-row,body.admin-mobile .modal.modal-court .schedule-location-fields,body.admin-mobile .modal.modal-court .schedule-field-fee-main-row,body.admin-mobile .modal.modal-court .purchase-compact-row{display:grid!important;grid-template-columns:1fr!important;gap:12px}
   body.admin-mobile .modal.modal-court .tms-detail-grid{grid-template-columns:1fr;gap:12px}
-  body.admin-mobile .modal.modal-court .tms-form-item,body.admin-mobile .modal.modal-court .tms-form-item.full-width{width:100%;max-width:100%;min-width:0}
+  body.admin-mobile .modal.modal-court .tms-form-item,body.admin-mobile .modal.modal-court .tms-form-item.full-width,body.admin-mobile .modal.modal-court .tms-form-row>*,body.admin-mobile .modal.modal-court .court-date-row>*,body.admin-mobile .modal.modal-court .schedule-time-range>*,body.admin-mobile .modal.modal-court .schedule-location-fields,body.admin-mobile .modal.modal-court .schedule-location-fields>*,body.admin-mobile .modal.modal-court .schedule-field-fee-main-row>*,body.admin-mobile .modal.modal-court .purchase-compact-row>*{width:100%!important;max-width:100%!important;min-width:0!important;flex:1 1 auto!important}
+  body.admin-mobile .modal.modal-court .schedule-time-range>[style*="align-self:center"],body.admin-mobile .modal.modal-court .tms-form-row>[style*="align-self:center"]{width:auto!important;max-width:none!important;flex:0 0 auto!important;justify-self:center}
   body.admin-mobile .modal.modal-court .tms-form-control,body.admin-mobile .modal.modal-court .finput,body.admin-mobile .modal.modal-court .tms-dropdown,body.admin-mobile .modal.modal-court .coach-date-btn{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
-  body.admin-mobile .modal.modal-court .schedule-detail-content,body.admin-mobile .modal.modal-court .student-detail-shell,body.admin-mobile .modal.modal-court .student-detail-card{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden}
+  body.admin-mobile .modal.modal-court .choice-tag{width:100%!important;max-width:100%;white-space:normal}
+  body.admin-mobile .modal.modal-court .schedule-detail-content,body.admin-mobile .modal.modal-court .student-detail-shell,body.admin-mobile .modal.modal-court .student-detail-card,body.admin-mobile .modal.modal-court .standard-modal-section,body.admin-mobile .modal.modal-court .tms-record-add-box,body.admin-mobile .modal.modal-court .tms-history-list{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden}
+  body.admin-mobile .modal.modal-court .tms-table-card,body.admin-mobile .modal.modal-court .detail-drawer-table-card{margin-left:0;margin-right:0;border-radius:10px;background:#FDF7F2;overflow:hidden}
+  body.admin-mobile .modal.modal-court .tms-table-wrapper,body.admin-mobile .modal.modal-court .detail-drawer-table-wrapper{padding:0;max-height:none;overflow-x:auto;overflow-y:visible;scrollbar-width:none}
+  body.admin-mobile .modal.modal-court .tms-table-wrapper::-webkit-scrollbar,body.admin-mobile .modal.modal-court .detail-drawer-table-wrapper::-webkit-scrollbar{display:none}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-row,body.admin-mobile .modal.modal-court .lead-form-row-4{display:grid;grid-template-columns:1fr!important;gap:12px;margin-bottom:12px}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-item.full-width,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-item.full-width{width:100%!important;max-width:100%!important}
   body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-student-drawer .schedule-detail-form .tms-dropdown,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-form-control,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .finput,body.admin-mobile .modal.modal-court.modal-lead-drawer .schedule-detail-form .tms-dropdown{width:100%!important;max-width:100%!important}

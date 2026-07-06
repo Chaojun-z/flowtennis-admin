@@ -1309,6 +1309,33 @@ function leadEmptyStateHtml(){
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
   return `<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
+function renderLeadMobileCards(list){
+  const host=document.getElementById('leadMobileCards');
+  if(!host)return;
+  if(!list.length){
+    const filtered=leadHasActiveSearchOrFilter();
+    host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的线索':'暂无线索'}</div><div class="tms-empty-desc">${filtered?'调整搜索或筛选后再试':'点击右下角新增线索开始录入'}</div></div>`;
+    return;
+  }
+  host.innerHTML=list.map(lead=>{
+    const trialDate=leadTrialDateText(lead);
+    return `<article class="admin-h5-list-card admin-h5-lead-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(leadWechatText(lead))}</strong><span>${esc(leadDateDisplayText(lead))}</span></div>
+        ${renderLeadTag(leadStageDisplayText(lead),'stage')}
+      </div>
+      <div class="admin-h5-card-tags">${renderLeadTag(leadCustomerTypeText(lead),'customerType')}${renderLeadTag(leadDemandProductText(lead),'demandProduct')}${renderLeadTag(leadPriorityText(lead),'priority')}</div>
+      <div class="admin-h5-card-grid">
+        <span><b>来源</b>${esc(leadSourceText(lead)||'-')}</span>
+        <span><b>跟进人</b>${esc(lead?.owner||'-')}</span>
+        <span><b>体验课</b>${esc(trialDate||'-')}</span>
+        <span><b>成交教练</b>${esc(lead?.formalCoach||'-')}</span>
+      </div>
+      <p>${esc(leadProfileText(lead)||'暂无基本信息')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="openLeadDetailFromList('${lead.id}')">查看</button><button type="button" onclick="openLeadFollowupFromList('${lead.id}')">跟进</button></div>
+    </article>`;
+  }).join('');
+}
 function renderLeadPagerControls(total,pages){
   const pager=document.querySelector('#page-leads .tms-pagination');
   if(document.body.classList.contains('admin-mobile')){
@@ -1348,6 +1375,7 @@ function renderLeads(){
     const trialDate=leadTrialDateText(lead);
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(leadWechatText(lead))}</div></td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
+  renderLeadMobileCards(slice);
   const info=document.getElementById('leadPagerInfo');
   if(info)info.innerHTML=renderPagerInfoHtml(total);
   renderLeadPagerControls(total,pages);

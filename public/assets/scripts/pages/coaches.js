@@ -5,6 +5,30 @@ function getFilteredCoaches(){
   const q=(document.getElementById('coachSearch')?.value||'').toLowerCase();
   return coaches.filter(c=>searchHit(q,c.name,c.phone,cn(c.campus),c.status,c.notes));
 }
+function renderCoachMobileCards(list){
+  const host=document.getElementById('coachMobileCards');
+  if(!host)return;
+  if(!list.length){
+    host.innerHTML='<div class="tms-empty-state"><div class="tms-empty-title">暂无教练</div><div class="tms-empty-desc">调整搜索后再看</div></div>';
+    return;
+  }
+  host.innerHTML=list.map(c=>{
+    const statusText=c.status==='inactive'?'离职':'在职';
+    const statusClass=c.status==='inactive'?'':'tms-tag-green';
+    return `<article class="admin-h5-list-card admin-h5-coach-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(c.name||'-')}</strong><span>${esc(c.phone||'-')}</span></div>
+        <span class="tms-tag ${statusClass}">${esc(statusText)}</span>
+      </div>
+      <div class="admin-h5-card-grid">
+        <span><b>校区</b>${esc(cn(c.campus)||'-')}</span>
+        <span><b>入职时间</b>${esc(c.hireDate||'-')}</span>
+      </div>
+      <p>${esc(c.notes||'暂无备注')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="openCoachModal('${c.id}')">编辑</button><button type="button" onclick="confirmDel('${c.id}','${esc(c.name)}','coach')">删除</button></div>
+    </article>`;
+  }).join('');
+}
 function renderCoaches(){
   const d=getFilteredCoaches();
   const tbody=document.getElementById('coachTbody');if(!tbody)return;
@@ -13,6 +37,7 @@ function renderCoaches(){
     const statusClass=c.status==='inactive'?'':'tms-tag-green';
     return `<tr><td style="padding-left:20px">${renderStandardCellText(c.name,false)}</td><td>${renderStandardCellText(c.phone)}</td><td>${renderStandardCellText(cn(c.campus))}</td><td>${renderStandardCellText(c.hireDate)}</td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td><div class="tms-text-remark" title="${esc(c.notes||'')}">${esc(renderStandardEmptyText(c.notes))}</div></td><td class="tms-sticky-r tms-action-cell" style="width:180px;padding-right:20px"><span class="tms-action-link" onclick="openCoachModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','coach')">删除</span></td></tr>`;
   }).join(''):'<tr><td colspan="7"><div class="empty"><p>暂无教练</p></div></td></tr>';
+  renderCoachMobileCards(d);
 }
 
 function openCoachModal(id){

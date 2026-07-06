@@ -515,6 +515,58 @@ function renderCoachOpsWorkloadHeader(){
   if(!thead)return;
   thead.innerHTML='<tr><th class="tms-sticky-l" style="width:120px;padding-left:20px">教练</th><th style="width:150px">当前筛选课数</th><th style="width:130px">体验课转化率</th><th style="width:220px">课程类型分布</th><th style="width:90px">已反馈</th><th style="width:90px">未反馈</th><th style="width:180px">校区分布</th><th style="width:140px">时间段</th></tr>';
 }
+function renderCoachOpsWorkloadMobileCards(rows){
+  const host=document.getElementById('coachOpsMobileCards');
+  if(!host)return;
+  if(!rows.length){
+    host.innerHTML='<div class="tms-empty-state"><div class="tms-empty-title">当前筛选无教练数据</div></div>';
+    return;
+  }
+  host.innerHTML=rows.map((r,index)=>`<div class="coach-ops-workload-card">
+    <div class="coach-ops-workload-card-head"><span>NO.${index+1}</span><strong>${esc(r.name)}</strong></div>
+    <div class="coach-ops-workload-card-main">
+      <div><span>当前课数</span><strong>${lessonUnitsText(r.totalLessonUnits)}<em>节</em></strong>${coachOpsComparisonText(r)}</div>
+      <div><span>体验转化</span>${operationsCoachTrialConversionText(r.name)}</div>
+    </div>
+    <div class="coach-ops-workload-card-grid">
+      <span><b>已反馈</b><strong>${fmt(r.feedback)}</strong></span>
+      <span><b>未反馈</b><strong>${fmt(r.pending)}</strong></span>
+    </div>
+    <div class="coach-ops-workload-card-line"><b>课程类型</b><span>${esc(r.courseTypeDistributionText)}</span></div>
+    <div class="coach-ops-workload-card-line"><b>校区分布</b><span>${esc(r.campusDistributionText)}</span></div>
+    <div class="coach-ops-workload-card-line"><b>时间段</b><span>${esc(r.timeBandDistributionText)}</span></div>
+  </div>`).join('');
+}
+function isCoachOpsMobileSchedule(){
+  return currentPage==='coachschedule'&&document.body&&document.body.classList.contains('admin-mobile');
+}
+function coachOpsMobileDateText(value,mode){
+  const day=String(value||'').slice(0,10);
+  if(!day||mode==='day')return '';
+  const d=new Date(`${day}T00:00:00`);
+  if(Number.isNaN(d.getTime()))return day;
+  const weekday=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]||'';
+  return `${d.getMonth()+1}/${d.getDate()} ${weekday}`;
+}
+function renderCoachOpsMobileTimeline(rows,mode,range){
+  const createDate=dateKey(range.start);
+  return (rows||[]).map(r=>{
+    if(r.skeleton){
+      return `<div class="coach-ops-row coach-ops-mobile-row coach-ops-skeleton-row"><div class="coach-ops-name"><span class="coach-ops-skeleton-dot"></span><span></span></div><div class="coach-ops-mobile-list"><div class="coach-ops-mobile-skeleton-card"></div><div class="coach-ops-mobile-skeleton-card short"></div></div></div>`;
+    }
+    const schedules=[...(r.rangeRows||[])].sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+    const list=schedules.length?schedules.map(s=>{
+      const dateText=coachOpsMobileDateText(s.startTime,mode);
+      const timeText=`${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''}`;
+      return `<button type="button" class="coach-ops-mobile-card ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" onclick="openScheduleDetail('${s.id}')">
+        <span class="coach-ops-mobile-card-time">${dateText?`${esc(dateText)} · `:''}${esc(timeText)}</span>
+        <strong>${esc(coachOpsScheduleStudentTitle(s))}</strong>
+        <small>${esc(scheduleCourseTypeLabel(s))} · ${esc(scheduleLocationText(s))}</small>
+      </button>`;
+    }).join(''):`<button type="button" class="coach-ops-mobile-empty-card" onclick="openCoachOpsCreateSchedule(${jsArg(r.name)},'${createDate}')">暂无课程，点击新排课</button>`;
+    return `<div class="coach-ops-row coach-ops-mobile-row"><div class="coach-ops-name"><span>${esc(r.name)}</span></div><div class="coach-ops-mobile-list">${list}</div></div>`;
+  }).join('');
+}
 function renderCoachOps(){
   const previousScrollLeft=preserveCoachOpsScrollLeft();
   ensureCoachOpsReportDateControls();
@@ -576,6 +628,8 @@ function renderCoachOps(){
     if(!renderRows.length){
       const emptyText=campus==='all'?'当前日期暂无教练排课':'当前筛选无教练排课';
       host.innerHTML=`<div class="coach-ops-empty-state"><strong>${emptyText}</strong><span>不是加载中，可切换校区或日期查看</span></div>`;
+    }else if(isCoachOpsMobileSchedule()){
+      host.innerHTML=renderCoachOpsMobileTimeline(renderRows,mode,range);
     }else{
       host.innerHTML=renderRows.map(r=>{
       const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
@@ -623,6 +677,7 @@ function renderCoachOps(){
   }
   const workloadBody=document.getElementById('coachOpsTbody');
   if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(r.totalLessonUnits)}<span>节</span>${coachOpsComparisonText(r)}</div></td><td>${operationsCoachTrialConversionText(r.name)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r))}">${esc(coachCourseTypeDistributionText(r))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${esc(r.campusDistributionText)}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${esc(r.timeBandDistributionText)}</div></td></tr>`).join('');
+  renderCoachOpsWorkloadMobileCards(rows);
   renderFinanceRevenueReport();
   renderFinanceConsumeReport();
 }
@@ -1026,6 +1081,10 @@ function financeRevenueRows(){
   return financeRevenueRowsByFilters(financeRevenueBaseRows().filter(row=>globalDateWithinRange(row.purchaseDate)))
     .sort((a,b)=>String(b.purchaseDate||'').localeCompare(String(a.purchaseDate||'')));
 }
+function renderFinanceRevenueMobileCards(rows){
+  const host=document.getElementById('financeRevenueMobileCards');if(!host)return;
+  host.innerHTML=rows.length?rows.map(row=>`<article class="admin-h5-list-card admin-h5-finance-card"><div class="admin-h5-card-head"><div><strong>${esc(row.studentName||'-')}</strong><span>${esc(financeDateTimeDisplayText(row))}</span></div><span class="tms-tag">${esc(row.businessType||'-')}</span></div><div class="admin-h5-card-tags"><span class="tms-tag">${esc(row.payMethod||'-')}</span><span class="tms-tag">${esc(row.campusName||'-')}</span></div><div class="admin-h5-card-grid"><span><b>应收</b>${financeAmountText(row.receivableAmount)}</span><span><b>实收</b>${financeAmountText(row.actualAmount)}</span><span><b>差价</b>${financeSignedAmountText(row.priceDiff)}</span><span><b>操作人</b>${esc(financeOperatorDisplayText(row))}</span></div><p>${esc(financeHumanNote(row.notes)||row.priceDiffReason||'暂无备注')}</p></article>`).join(''):'<div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>';
+}
 function jumpFinanceRevenuePage(value){
   financeRevenuePage=standardListPagination(financeRevenueRows().length,value,financeRevenuePageSize).page;
   renderFinanceRevenueReport();
@@ -1061,6 +1120,7 @@ function renderFinanceRevenueReport(){
     {label:'课程流水',value:financeInlineMoneyWithPercent(metrics.courseIncome,metrics.totalCash)}
   ].map(financeStatCardHtml).join('');
   body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.studentName,false)}</td><td>${renderStandardCellText(row.businessType,false)}</td><td>${renderStandardCellText(row.payMethod,false)}</td><td>${financeAmountText(row.receivableAmount)}</td><td>${financeAmountText(row.actualAmount)}</td><td>${financeSignedAmountText(row.priceDiff)}</td><td>${renderStandardCellText(row.priceDiffReason,false)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-revenue-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="11"><div class="tms-empty-state"><div class="tms-empty-title">暂无收入流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  renderFinanceRevenueMobileCards(slice);
 }
 function financeConsumeBaseRows(sourceRows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger))){
   return sourceRows.filter(row=>{
@@ -1151,6 +1211,11 @@ function renderFinanceConsumeReport(){
     {label:'课程已入账',value:financeInlineMoneyWithPercent(metrics.courseRecognized,metrics.totalRecognized)}
   ].map(financeStatCardHtml).join('');
   body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td>${renderStandardCellText(row.displayBusinessType||row.businessType,false)}</td><td>${renderStandardCellText(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod,false)}</td><td>${renderStandardCellText(row.debitTarget,false)}</td><td>${financeSignedAmountText(row.recognizedRevenueDelta)}</td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">暂无已入账流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div></td></tr>`;
+  renderFinanceRecognizedMobileCards(slice);
+}
+function renderFinanceRecognizedMobileCards(rows){
+  const host=document.getElementById('financeRecognizedMobileCards');if(!host)return;
+  host.innerHTML=rows.length?rows.map(row=>`<article class="admin-h5-list-card admin-h5-finance-card"><div class="admin-h5-card-head"><div><strong>${esc(row.customer||'-')}</strong><span>${esc(financeDateTimeDisplayText(row))}</span></div><span class="tms-tag">${esc(row.displayBusinessType||row.businessType||'-')}</span></div><div class="admin-h5-card-tags"><span class="tms-tag">${esc(row.normalizedPaymentMethod||row.paymentChannel||row.payMethod||'-')}</span><span class="tms-tag">${esc(row.campusName||'-')}</span></div><div class="admin-h5-card-grid"><span><b>扣减标的</b>${esc(row.debitTarget||'-')}</span><span><b>确认收入</b>${financeSignedAmountText(row.recognizedRevenueDelta)}</span><span><b>操作人</b>${esc(financeOperatorDisplayText(row))}</span><span><b>状态</b>${esc(row.confirmType||'-')}</span></div><p>${esc(financeHumanNote(row.notes)||'暂无备注')}</p></article>`).join(''):'<div class="tms-empty-state"><div class="tms-empty-title">暂无已入账流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>';
 }
 function renderCoachOpsConsumeReport(){
   return renderFinanceConsumeReport();
@@ -1264,6 +1329,10 @@ function renderFinanceLedgerPager(total,pages){
   if(!pagerBtns)return;
   pagerBtns.innerHTML=(!total||pages<=1)?'':renderStandardPaginationButtonsHtml(financeLedgerPage,pages,'setFinanceLedgerPage');
 }
+function renderFinanceLedgerMobileCards(rows){
+  const host=document.getElementById('financeLedgerMobileCards');if(!host)return;
+  host.innerHTML=rows.length?rows.map(row=>`<article class="admin-h5-list-card admin-h5-finance-card"><div class="admin-h5-card-head"><div><strong>${esc(row.customer||'-')}</strong><span>${esc(financeDateTimeDisplayText(row))}</span></div><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType||'-')}</span></div><div class="admin-h5-card-tags"><span class="tms-tag">${esc(row.displayBusinessType||'-')}</span><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></div><div class="admin-h5-card-grid"><span><b>交易金额</b>${financeTransactionAmountHtml(row)}</span><span><b>校区</b>${esc(row.campusName||'-')}</span><span><b>操作人</b>${esc(financeOperatorDisplayText(row))}</span><span><b>业务类型</b>${esc(row.displayBusinessType||'-')}</span></div><p>${esc(financeHumanNote(row.notes)||'暂无备注')}</p></article>`).join(''):'<div class="tms-empty-state"><div class="tms-empty-title">暂无交易流水</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>';
+}
 function renderFinanceLedger(){
   const body=document.getElementById('financeLedgerTbody');
   if(!body)return;
@@ -1278,6 +1347,7 @@ function renderFinanceLedger(){
   const slice=pageState.slice;
   renderFinanceLedgerPager(pageState.total,pageState.pages);
   body.innerHTML=slice.length?slice.map(row=>`<tr><td style="padding-left:20px">${renderStandardCellText(financeDateTimeDisplayText(row),false)}</td><td>${renderStandardCellText(row.customer,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.transactionType,'action')}">${esc(row.transactionType)}</span></td><td>${financeTransactionAmountHtml(row)}</td><td>${renderStandardCellText(row.displayBusinessType,false)}</td><td><span class="tms-tag ${financeTagClassByText(row.normalizedPaymentMethod,'payment')}">${esc(row.normalizedPaymentMethod||'其他')}</span></td><td>${renderStandardCellText(row.campusName,false)}</td><td>${renderStandardCellText(financeOperatorDisplayText(row),false)}</td><td><div class="tms-text-remark finance-ledger-remark" title="${esc(financeHumanNote(row.notes))}">${esc(renderStandardEmptyText(financeHumanNote(row.notes)))}</div></td></tr>`).join(''):`<tr><td colspan="9"><div class="empty"><p>暂无交易流水</p></div></td></tr>`;
+  renderFinanceLedgerMobileCards(slice);
 }
 function renderFinancePrepaidBalance(){
   const body=document.getElementById('financePrepaidTbody');

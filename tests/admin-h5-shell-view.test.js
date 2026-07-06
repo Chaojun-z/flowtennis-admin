@@ -110,5 +110,6 @@ assert.match(pagesCss, /body\.admin-mobile \.tms-sticky-l,body\.admin-mobile \.t
 assert.match(pagesCss, /body\.admin-mobile \.tms-sticky-l,body\.admin-mobile \.tms-sticky-r[\s\S]*top:auto!important[\s\S]*box-shadow:none!important/, 'admin mobile tables should remove sticky top/side shadows that cover content');
 assert.match(pagesCss, /body\.admin-mobile \.tms-skeleton-card-grid,body\.admin-mobile \.tms-skeleton-board-grid\{[^}]*display:flex[^}]*overflow-x:auto/, 'admin H5 loading skeletons should use the same compact horizontal pattern');
 assert.match(pagesCss, /body\.admin-mobile #page-packages \.package-board-column\{flex:0 0 min\(82vw,320px\)/, 'package board H5 columns should show one usable column with only a small next-column hint');
+assert.match(pagesCss, /body\.admin-mobile #page-products \.course-showcase-grid\{grid-template-columns:1fr/, 'product H5 cards should use one column instead of a 360px desktop grid');
 
 console.log('admin h5 shell view tests passed');

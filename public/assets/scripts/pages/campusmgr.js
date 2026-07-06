@@ -7,6 +7,28 @@ function renderCampuses(){
     const activeCount=activeCampusVenueCount(c);
     return `<tr><td style="padding-left:20px">${renderStandardCellText(c.name,false)}</td><td><span class="tms-tag tms-tag-tier-gold">${esc(code)}</span></td><td>${renderStandardCellText(activeCount?`${activeCount} 片`:'未配置',false)}</td><td>${renderStandardCellText(c.createdAt?c.createdAt.slice(0,10):'')}</td><td class="tms-sticky-r tms-action-cell" style="width:132px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="openCampusModal('${c.id}')">编辑</span><span class="tms-action-link" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</span></td></tr>`;
   }).join(''):'<tr><td colspan="5"><div class="empty"><p>暂无校区</p></div></td></tr>';
+  renderCampusMobileCards(list);
+}
+function renderCampusMobileCards(list){
+  const host=document.getElementById('campusMobileCards');
+  if(!host)return;
+  if(!list.length){
+    host.innerHTML='<div class="tms-empty-state"><div class="tms-empty-title">暂无校区</div><div class="tms-empty-desc">调整搜索后再看</div></div>';
+    return;
+  }
+  host.innerHTML=list.map(c=>{
+    const code=renderStandardEmptyText(c.code||c.id);
+    const activeCount=activeCampusVenueCount(c);
+    return `<article class="admin-h5-list-card admin-h5-campus-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(c.name||'-')}</strong><span>${esc(c.createdAt?c.createdAt.slice(0,10):'-')}</span></div>
+        <span class="tms-tag tms-tag-tier-gold">${esc(code)}</span>
+      </div>
+      <div class="admin-h5-card-grid"><span><b>启用场地</b>${esc(activeCount?`${activeCount} 片`:'未配置')}</span><span><b>校区代码</b>${esc(code)}</span></div>
+      <p>${esc((Array.isArray(c.venues)?c.venues:[]).map(v=>v.name).filter(Boolean).join('、')||'暂无场地配置')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="openCampusModal('${c.id}')">编辑</button><button type="button" onclick="confirmDel('${c.id}','${esc(c.name)}','campus')">删除</button></div>
+    </article>`;
+  }).join('');
 }
 function campusVenueRowHtml(venue={},index=0){
   const id=esc(venue.id||`venue-${Date.now()}-${index}`);

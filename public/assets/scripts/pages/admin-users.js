@@ -102,6 +102,35 @@ function adminUserEmptyStateHtml(){
   const desc=filtered?'调整搜索后再试':'点击右上角新增账号';
   return `<tr><td colspan="10"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
+function renderAdminUserMobileCards(list){
+  const host=document.getElementById('adminUserMobileCards');
+  if(!host)return;
+  if(!list.length){
+    const filtered=adminUserHasActiveSearch();
+    host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的账号':'暂无账号'}</div><div class="tms-empty-desc">${filtered?'调整搜索后再试':'点击右下角新增账号'}</div></div>`;
+    return;
+  }
+  host.innerHTML=list.map(u=>{
+    const statusText=adminUserStatusText(u.status);
+    const statusClass=u.status==='inactive'?'':'tms-tag-green';
+    const toggleText=u.status==='inactive'?'启用':'停用';
+    const wechatClass=u.wechatBound?'tms-tag-green':'tms-tag-tier-slate';
+    const officialClass=u.officialAccountBound?'tms-tag-green':'tms-tag-tier-slate';
+    return `<article class="admin-h5-list-card admin-h5-admin-user-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(u.name||u.id)}</strong><span>${esc(u.id||'-')}</span></div>
+        <span class="tms-tag ${statusClass}">${esc(statusText)}</span>
+      </div>
+      <div class="admin-h5-card-tags"><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${esc(adminUserRoleText(u.role))}</span><span class="tms-tag ${wechatClass}">${esc(adminUserWechatText(u))}</span><span class="tms-tag ${officialClass}">${esc(adminUserOfficialAccountText(u))}</span></div>
+      <div class="admin-h5-card-grid">
+        <span><b>手机号</b>${esc(adminUserPhoneText(u))}</span>
+        <span><b>绑定教练</b>${esc(adminUserCoachText(u))}</span>
+      </div>
+      <p>${esc(adminUserNoteText(u)||'暂无权限说明')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="adminUserDetailActiveTab='account';openAdminUserDetailDrawer('${u.id}')">查看</button><button type="button" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</button></div>
+    </article>`;
+  }).join('');
+}
 function renderAdminUserTableLoading(){
   renderTableSkeletonLoading('adminUserTbody',10,'账号数据加载中...');
 }
@@ -133,6 +162,7 @@ function renderAdminUsers(){
     const officialClass=u.officialAccountBound?'tms-tag-green':'tms-tag-tier-slate';
     return `<tr><td class="tms-sticky-l" style="padding-left:20px">${renderStandardCellText(u.id,false)}</td><td>${renderStandardCellText(u.name,false)}</td><td><span title="手机号">${renderStandardCellText(adminUserPhoneText(u))}</span></td><td><span class="tms-tag ${u.role==='admin'?'':'tms-tag-green'}">${adminUserRoleText(u.role)}</span></td><td><span title="绑定教练">${renderStandardCellText(adminUserCoachText(u))}</span></td><td><span title="微信绑定"><span class="tms-tag ${wechatClass}">${adminUserWechatText(u)}</span></span></td><td><span title="服务号绑定"><span class="tms-tag ${officialClass}">${adminUserOfficialAccountText(u)}</span></span></td><td><span class="tms-tag ${statusClass}">${statusText}</span></td><td title="${esc(adminUserNoteText(u))}">${renderStandardCellText(adminUserNoteText(u))}</td><td class="tms-sticky-r tms-action-cell" style="width:170px;padding-right:20px;text-align:right"><span class="tms-action-link" onclick="adminUserDetailActiveTab='account';openAdminUserDetailDrawer('${u.id}')">查看</span><span class="tms-action-link" onclick="toggleAdminUserStatus('${u.id}')">${toggleText}</span></td></tr>`;
   }).join(''):adminUserEmptyStateHtml();
+  renderAdminUserMobileCards(slice);
 }
 function adminUserDrawerHeaderHtml(user){
   const statusText=adminUserStatusText(user?.status);

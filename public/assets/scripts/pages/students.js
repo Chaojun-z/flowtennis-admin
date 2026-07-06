@@ -692,6 +692,38 @@ function studentEmptyStateHtml(){
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加学员开始录入';
   return `<tr><td colspan="${studentTableColumns().length}"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
+function renderStudentMobileCards(list){
+  const host=document.getElementById('studentMobileCards');
+  if(!host)return;
+  if(!list.length){
+    const filtered=studentHasActiveSearchOrFilter();
+    host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的学员':'暂无学员'}</div><div class="tms-empty-desc">${filtered?'调整搜索或筛选后再试':'点击右下角添加学员开始录入'}</div></div>`;
+    return;
+  }
+  const trialView=studentListViewMode()==='trial';
+  host.innerHTML=list.map(s=>{
+    const purchaseDate=studentListPackagePurchaseDate(s);
+    const coachText=studentPrimaryCoachText(s);
+    const packageText=String(s?.packageBalanceText||'').trim()||'-';
+    const packageListText=studentUnifiedPackageListTooltip(s)||'-';
+    const pathText=trialView?studentTrialPathStatusText(s):studentDealPathText(s);
+    const noteText=studentHumanText(studentNoteSummary(s));
+    return `<article class="admin-h5-list-card admin-h5-student-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(s.name)}</strong><span>${esc(cn(s.campus)||'-')}</span></div>
+        ${renderStandardBusinessTag(s.type,'customerType')}
+      </div>
+      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(studentSourceText(s)||'-')}</span><span class="tms-tag">${esc(pathText||'-')}</span></div>
+      <div class="admin-h5-card-grid">
+        <span><b>购买时间</b>${esc(purchaseDate||'-')}</span>
+        <span><b>负责教练</b>${esc(coachText||'-')}</span>
+        ${trialView?`<span><b>课包</b>${esc(packageListText)}</span>`:`<span><b>课包余额</b>${esc(packageText)}</span><span><b>累计上课</b>${esc(studentUnifiedCompletedLessonCount(s)||0)} 次</span>`}
+      </div>
+      <p>${esc(noteText||'暂无备注')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="openStudentDetail('${s.id}')">查看</button><button type="button" onclick="openPurchaseModal('${s.id}')">课包</button></div>
+    </article>`;
+  }).join('');
+}
 function renderStudents(){
   renderStudentToolbarFilters();
   ensureStudentDefaultSort();
@@ -720,6 +752,7 @@ function renderStudents(){
     if(studentListViewMode()==='trial')return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentTrialPathStatusText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
     return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentDealPathText(s),false)}</td><td>${renderStandardCellText(purchaseDate,false)}</td><td><div class="tms-text-remark tms-text-remark-3 student-package-list tms-tooltip-text" data-tooltip="${esc(packageListTooltip)}">${packageListHtml}</div></td><td>${renderStandardCellText(coachText)}</td><td class="tms-tooltip-text" data-tooltip="${esc(packageText)}">${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentUnifiedCompletedLessonCount(s),false)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
+  renderStudentMobileCards(slice);
 }
 function studentFeedbackHistoryHtml(s){
   const rows=feedbacks.filter(f=>{

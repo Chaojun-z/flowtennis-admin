@@ -96,15 +96,14 @@ function jumpSchedulePage(value){
   schPage=standardListPagination(total,value,schPageSize).page;
   renderSchedule();
 }
-function scheduleHasActiveSearchOrFilter(){
-  return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value||document.getElementById('schProposalFilter')?.value||document.getElementById('schFeedbackFilter')?.value);
-}
+function scheduleHasActiveSearchOrFilter(){return !!((document.getElementById('schSearch')?.value||'').trim()||document.getElementById('schStatusFilter')?.value||document.getElementById('schCoachFilter')?.value||document.getElementById('schCourseTypeFilter')?.value||document.getElementById('schProposalFilter')?.value||document.getElementById('schFeedbackFilter')?.value);}
 function scheduleEmptyStateHtml(){
   const filtered=scheduleHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的排课':'暂无排课';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角添加排课开始安排课程';
   return `<tr><td colspan="12"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
+function renderScheduleMobileCards(list){const host=document.getElementById('scheduleMobileCards');if(!host)return;if(!list.length){const filtered=scheduleHasActiveSearchOrFilter();host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的排课':'暂无排课'}</div><div class="tms-empty-desc">${filtered?'调整搜索或筛选后再试':'点击右下角添加排课开始安排课程'}</div></div>`;return;}host.innerHTML=list.map(s=>{const status=s._effectiveStatus||effectiveScheduleStatus(s),isCancelled=status==='已取消',dateText=String(s.startTime||'').slice(0,10)||'—',timeText=s.startTime?`${s.startTime.slice(11,16)}-${(s.endTime||'').slice(11,16)}`:'—';return `<article class="admin-h5-list-card admin-h5-schedule-card"><div class="admin-h5-card-head"><div><strong>${esc(scheduleListStudentSummary(s))}</strong><span>${esc(`${dateText} ${timeText}`)}</span></div><span class="tms-tag ${scheduleStatusTagClass(status)}">${esc(scheduleStatusLabel(status))}</span></div><div class="admin-h5-card-tags"><span class="tms-tag schedule-course-type-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseTypeLabel(s))}</span><span class="tms-tag">${esc(coachName(s.coach)||'-')}</span></div><div class="admin-h5-card-grid"><span><b>校区/场地</b>${esc(scheduleLocationText(s))}</span><span><b>时长</b>${esc(scheduleDurationText(s))}</span><span><b>课前教案</b>${esc(scheduleProposalStatusText(s))}</span><span><b>课后反馈</b>${esc(scheduleFeedbackStatusText(s))}</span><span><b>重复</b>${esc(scheduleRepeatDisplayText(s))}</span><span><b>状态</b>${esc(scheduleStatusLabel(status))}</span></div><p>${esc(isCancelled&&s.cancelReason?s.cancelReason:(s.notes||'暂无备注'))}</p><div class="admin-h5-card-actions"><button type="button" onclick="openScheduleDetail('${s.id}')">查看</button>${isCancelled?`<button type="button" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</button>`:`<button type="button" onclick="openCancelScheduleModal('${s.id}')">取消</button>`}</div></article>`;}).join('');}
 function renderSchedule(){
   syncScheduleFilterOptions();
   let list=getFilteredSchedules().sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0));
@@ -122,6 +121,7 @@ function renderSchedule(){
     const timeText=s.startTime?`${s.startTime.slice(11,16)}-${(s.endTime||'').slice(11,16)}`:'—';
     return `<tr><td class="tms-sticky-l" style="padding-left:14px">${renderStandardCellText(dateText,false)}</td><td>${renderStandardCellText(timeText,false)}</td><td>${renderStandardCellText(scheduleDurationText(s),false)}</td><td><div class="tms-cell-text" title="${esc(s.externalNotes||scheduleLocationText(s))}">${esc(scheduleLocationText(s))}</div></td><td>${renderStandardCellText(coachName(s.coach),false)}</td><td><div class="tms-text-primary">${esc(scheduleListStudentSummary(s))}</div></td><td><span class="tms-tag schedule-course-type-tag ${productTypeTagClass(scheduleCourseType(s))}">${esc(scheduleCourseTypeLabel(s))}</span></td><td>${scheduleProposalStatusHtml(s)}</td><td>${scheduleFeedbackStatusHtml(s)}</td><td>${renderStandardCellText(scheduleRepeatDisplayText(s),false)}</td><td><span class="tms-tag ${scheduleStatusTagClass(status)}">${scheduleStatusLabel(status)}</span>${status==='已取消'&&s.cancelReason?`<div class="tms-text-secondary" style="margin-top:6px">${esc(s.cancelReason)}</div>`:''}</td><td class="tms-sticky-r tms-action-cell schedule-action-cell"><span class="tms-action-link" onclick="openScheduleDetail('${s.id}')">查看</span>${isCancelled?`<span class="tms-action-link" onclick="confirmDel('${s.id}','误建排课','schedule')">删除</span>`:`<span class="tms-action-link" onclick="openCancelScheduleModal('${s.id}')">取消</span>`}</td></tr>`;
   }).join(''):scheduleEmptyStateHtml();
+  renderScheduleMobileCards(slice);
 }
 function scheduleStudentTextByIds(ids){
   return parseArr(ids).map(id=>{

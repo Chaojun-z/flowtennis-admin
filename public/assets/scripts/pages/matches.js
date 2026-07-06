@@ -57,6 +57,45 @@ function matchRowText(row){
   const regs=Array.isArray(row.registrations)?row.registrations:[];
   return [row.title,row.venueName,row.venueAddress,row.booking?.venueNameFinal,row.booking?.venueAddressFinal,cn(matchCampusCode(row)),...regs.map(r=>r.nickName||r.phone||r.userId)].join(' ').toLowerCase();
 }
+function matchActionButtonsHtml(row){
+  return [
+    `<button type="button" onclick="openMatchBookingModal('${row.id}')">订场</button>`,
+    `<button type="button" onclick="openMatchWithdrawalModal('${row.id}')">退赛</button>`,
+    `<button type="button" onclick="openMatchAttendanceModal('${row.id}')">到场</button>`,
+    `<button type="button" onclick="confirmMatchFees('${row.id}')">生成AA</button>`,
+    `<button type="button" onclick="openMatchFeeModal('${row.id}')">收款</button>`,
+    (['group_ready','group_locked'].includes(String(row.formationStatus||''))?`<button type="button" onclick="openMatchReplacementModal('${row.id}')">替补</button>`:''),
+    `<button type="button" onclick="cancelMatchByAdmin('${row.id}')">下架</button>`,
+    `<button type="button" onclick="openMatchLogModal('${row.id}')">日志</button>`
+  ].filter(Boolean).join('');
+}
+function renderMatchMobileCards(rows){
+  const host=document.getElementById('matchMobileCards');
+  if(!host)return;
+  if(!rows.length){
+    host.innerHTML='<div class="tms-empty-state"><div class="tms-empty-title">暂无约球数据</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>';
+    return;
+  }
+  host.innerHTML=rows.map(row=>{
+    const regs=Array.isArray(row.registrations)?row.registrations:[];
+    const campusText=cn(matchCampusCode(row));
+    return `<article class="admin-h5-list-card admin-h5-match-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(row.title||'-')}</strong><span>${esc(matchTimeText(row)||'-')}</span></div>
+        <span class="tms-tag">${esc(row.statusText||row.status||'-')}</span>
+      </div>
+      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(row.matchType||'-')}</span><span class="tms-tag">${esc(campusText||'-')}</span></div>
+      <div class="admin-h5-card-grid">
+        <span><b>场地</b>${esc(row.booking?.venueNameFinal||row.venueName||'待定')}</span>
+        <span><b>人数</b>${esc(`${row.currentHeadcount||0}/${row.targetHeadcount||0}`)}</span>
+        <span><b>预计费用</b>¥${esc(fmt(row.estimatedCourtFee||0))}</span>
+        <span><b>最终费用</b>¥${esc(fmt(row.booking?.finalcourtfee||row.booking?.finalCourtFee||row.finalCourtFee||0))}</span>
+      </div>
+      <p>${esc(regs.map(r=>r.nickName||r.phone||r.userId).join('；')||'暂无报名人')}</p>
+      <div class="admin-h5-card-actions admin-h5-card-actions-dense">${matchActionButtonsHtml(row)}</div>
+    </article>`;
+  }).join('');
+}
 function renderMatches(){
   const host=document.getElementById('matchTbody');if(!host)return;
   syncMatchFilters();
@@ -83,6 +122,7 @@ function renderMatches(){
     ].filter(Boolean).join('');
     return `<tr><td style="padding-left:20px"><div class="tms-cell-main">${esc(row.title||'-')}</div><div class="tms-cell-sub">${esc(row.matchType||'')}${campusText&&campusText!=='-'?` · ${esc(campusText)}`:''}</div></td><td>${renderStandardCellText(matchTimeText(row),false)}</td><td>${renderStandardCellText(row.booking?.venueNameFinal||row.venueName||'待定')}</td><td><div class="tms-cell-text">${row.currentHeadcount||0}/${row.targetHeadcount||0}</div></td><td><span class="tms-tag">${esc(row.statusText||row.status||'-')}</span></td><td><div class="tms-cell-text">¥${fmt(row.estimatedCourtFee||0)}</div></td><td><div class="tms-cell-text">¥${fmt(row.booking?.finalcourtfee||row.booking?.finalCourtFee||row.finalCourtFee||0)}</div></td><td><div class="tms-cell-text" style="white-space:normal;line-height:1.55;min-width:220px">${esc(regs.map(r=>r.nickName||r.phone||r.userId).join('；')||'-')}</div></td><td class="tms-sticky-r tms-action-cell" style="width:220px;padding-right:20px;text-align:right">${actions}</td></tr>`;
   }).join('')||'<tr><td colspan="9"><div class="empty"><p>暂无约球数据</p></div></td></tr>';
+  renderMatchMobileCards(rows);
 }
 function matchTimeText(row){
   const start=String(row.startTime||'').replace('T',' ').slice(0,16);

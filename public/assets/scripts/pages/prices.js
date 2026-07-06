@@ -106,6 +106,32 @@ function syncPriceExperienceType(){
   const item=document.getElementById('priceExperienceTypeItem');
   if(item)item.style.display=type==='体验课'?'':'none';
 }
+function renderPriceMobileCards(list){
+  const host=document.getElementById('priceMobileCards');
+  if(!host)return;
+  if(!list.length){
+    const type=document.getElementById('priceTypeFilter')?.value||'';
+    host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${type?('暂无'+priceTypeLabel(type)):'暂无价格'}</div><div class="tms-empty-desc">调整搜索或筛选后再看</div></div>`;
+    return;
+  }
+  host.innerHTML=list.map(row=>`<article class="admin-h5-list-card admin-h5-price-card">
+    <div class="admin-h5-card-head">
+      <div><strong>${esc(priceNameText(row))}</strong><span>${esc(priceChannelText(row))}</span></div>
+      <span class="tms-tag ${priceStatusTag(row.status)}">${esc(priceStatusLabel(row.status))}</span>
+    </div>
+    <div class="admin-h5-card-tags"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${esc(priceTypeLabel(row.type))}</span><span class="tms-tag">${esc(priceAmountText(row))}</span></div>
+    <div class="admin-h5-card-grid">
+      <span><b>场地类型</b>${esc(priceVenueSpaceTypeText(row))}</span>
+      <span><b>日期类型</b>${esc(priceDateTypeText(row))}</span>
+      <span><b>商品类型</b>${esc(priceProductTypeText(row))}</span>
+      <span><b>关联业务</b>${esc(priceBusinessText(row))}</span>
+      <span><b>时间段</b>${esc(priceTimeBandText(row))}</span>
+      <span><b>时长</b>${esc(priceDurationText(row))}</span>
+    </div>
+    <p>${esc(row.notes||'暂无备注')}</p>
+    <div class="admin-h5-card-actions"><button type="button" onclick="openPriceModal('${row.type}','${row.id}')">编辑</button><button type="button" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</button></div>
+  </article>`).join('');
+}
 function renderPrices(){
   syncPriceFilterOptions();
   const rows=filteredPricePlans();
@@ -121,6 +147,7 @@ function renderPrices(){
   const body=document.getElementById('priceTbody');
   if(!body)return;
   body.innerHTML=slice.map(row=>`<tr><td style="padding-left:12px"><span class="tms-tag ${row.type==='venue_rate'?'tms-tag-tier-blue':'tms-tag-green'}">${priceTypeLabel(row.type)}</span></td><td>${renderStandardCellText(priceChannelText(row),false)}</td><td>${renderStandardCellText(priceNameText(row),false)}</td><td>${renderStandardCellText(priceVenueSpaceTypeText(row),false)}</td><td>${renderStandardCellText(priceDateTypeText(row),false)}</td><td>${renderStandardCellText(priceProductTypeText(row),false)}</td><td>${renderStandardCellText(priceBusinessText(row),false)}</td><td>${renderStandardCellText(priceTimeBandText(row),false)}</td><td>${renderStandardCellText(priceDurationText(row),false)}</td><td>${esc(priceAmountText(row))}</td><td><span class="tms-tag ${priceStatusTag(row.status)}">${priceStatusLabel(row.status)}</span></td><td class="tms-sticky-r tms-action-cell" style="width:88px;padding-right:12px"><span class="tms-action-link" onclick="openPriceModal('${row.type}','${row.id}')">编辑</span><span class="tms-action-link" onclick="togglePricePlanStatus('${row.id}')">${row.status==='inactive'?'启用':'停用'}</span></td></tr>`).join('')||`<tr><td colspan="12"><div class="empty"><p>${document.getElementById('priceTypeFilter')?.value?('暂无'+priceTypeLabel(document.getElementById('priceTypeFilter')?.value)):'暂无价格'}</p></div></td></tr>`;
+  renderPriceMobileCards(slice);
 }
 function openPriceModal(type='',id=''){
   const row=pricePlans.find(x=>x.id===id)||{type:type||'venue_rate',status:'active'};

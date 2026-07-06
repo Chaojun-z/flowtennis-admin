@@ -41,13 +41,38 @@ assert.match(
 );
 assert.match(
   pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.mactions \.tms-btn,body\.admin-mobile \.modal\.modal-court \.mactions \.btn-save,body\.admin-mobile \.modal\.modal-court \.mactions \.btn-cancel[\s\S]*height:42px/,
+  'admin H5 legacy save and cancel buttons should use the same bottom action sizing'
+);
+assert.match(
+  pagesCss,
   /body\.admin-mobile \.modal\.modal-court \.tms-form-row\{[^}]*display:grid[^}]*grid-template-columns:1fr/,
   'admin H5 modal form rows should collapse to one column'
 );
 assert.match(
   pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.court-date-row,body\.admin-mobile \.modal\.modal-court \.schedule-location-fields[\s\S]*display:grid!important[\s\S]*grid-template-columns:1fr!important/,
+  'admin H5 modal date and location rows should not keep desktop flex rows'
+);
+assert.match(
+  pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.tms-form-item,body\.admin-mobile \.modal\.modal-court \.tms-form-item\.full-width,body\.admin-mobile \.modal\.modal-court \.tms-form-row>\*[\s\S]*width:100%!important[\s\S]*flex:1 1 auto!important/,
+  'admin H5 modal form items should override old inline fixed widths'
+);
+assert.match(
+  pagesCss,
   /body\.admin-mobile \.modal\.modal-court \.tms-detail-grid\{[^}]*grid-template-columns:1fr/,
   'admin H5 readonly detail grids should collapse to one column'
+);
+assert.match(
+  pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.tms-table-card,body\.admin-mobile \.modal\.modal-court \.detail-drawer-table-card\{[^}]*margin-left:0[^}]*margin-right:0/,
+  'admin H5 modal tables should not inherit page-level negative table margins'
+);
+assert.match(
+  pagesCss,
+  /body\.admin-mobile \.modal\.modal-court \.choice-tag\{[^}]*width:100%!important[^}]*white-space:normal/,
+  'admin H5 modal choice tags should not keep desktop max-content widths'
 );
 assert.match(
   pagesCss,

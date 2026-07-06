@@ -194,6 +194,39 @@ function purchaseEmptyStateHtml(){
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角课包购买开始录入';
   return `<tr><td colspan="9"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
+function renderPurchaseMobileCards(list){
+  const host=document.getElementById('purchaseMobileCards');
+  if(!host)return;
+  if(!list.length){
+    const filtered=purchaseHasActiveSearchOrFilter();
+    host.innerHTML=`<div class="tms-empty-state"><div class="tms-empty-title">${filtered?'没有匹配的购买记录':'暂无购买记录'}</div><div class="tms-empty-desc">${filtered?'调整搜索或筛选后再试':'点击右下角课包购买开始录入'}</div></div>`;
+    return;
+  }
+  host.innerHTML=list.map(p=>{
+    const ent=entitlements.find(e=>e.purchaseId===p.id);
+    const balanceStatus=ent?entitlementStatusText(ent):(p.status==='voided'?'已作废':'未生成');
+    const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
+    const total=Number(ent?.totalLessons)||0;
+    const remaining=Number(ent?.remainingLessons)||0;
+    const balanceText=ent?`${lessonQty(remaining)}/${lessonQty(total)}`:'-';
+    const voidAction=p.status==='voided'?'':`<button type="button" onclick="openPurchaseVoidModal('${p.id}')">作废</button>`;
+    return `<article class="admin-h5-list-card admin-h5-purchase-card">
+      <div class="admin-h5-card-head">
+        <div><strong>${esc(renderStandardEmptyText(p.studentName))}</strong><span>${esc(p.purchaseDate||'-')}</span></div>
+        <span class="tms-tag ${balanceTagClass}">${esc(balanceStatus)}</span>
+      </div>
+      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(p.payMethod||'-')}</span><span class="tms-tag">${esc(coachName(p.ownerCoach)||'-')}</span></div>
+      <div class="admin-h5-card-grid">
+        <span><b>课包</b>${esc(purchasePackageListLabel(p))}</span>
+        <span><b>实收</b>¥${esc(fmt(p.amountPaid))}</span>
+        <span><b>余额</b>${esc(balanceText)}</span>
+        <span><b>状态</b>${esc(balanceStatus)}</span>
+      </div>
+      <p>${esc(p.notes||'暂无备注')}</p>
+      <div class="admin-h5-card-actions"><button type="button" onclick="openPurchaseDetailModal('${p.id}')">查看</button>${voidAction}</div>
+    </article>`;
+  }).join('');
+}
 function renderPurchases(){
   refreshPurchaseFilters();
   const list=getFilteredPurchases();
@@ -212,6 +245,7 @@ function renderPurchases(){
     const balanceTagClass=!ent&&p.status!=='voided'?'tms-tag-tier-slate':ent?.status==='voided'||p.status==='voided'?'tms-tag-tier-slate':ent?.status==='depleted'?'tms-tag-tier-gold':'tms-tag-green';
     return `<tr><td style="padding-left:20px">${renderStandardCellText(p.purchaseDate,false)}</td><td><div class="tms-text-primary">${esc(renderStandardEmptyText(p.studentName))}</div></td><td><div class="tms-text-primary">${esc(purchasePackageListLabel(p))}</div></td><td><div class="tms-cell-text">¥${fmt(p.amountPaid)}</div></td><td>${purchaseEntitlementMiniBar(ent)}</td><td><span class="tms-tag ${balanceTagClass}">${balanceStatus}</span></td><td>${renderStandardCellText(coachName(p.ownerCoach))}</td><td>${renderStandardCellText(p.payMethod,false)}</td><td class="tms-sticky-r tms-action-cell" style="width:120px;padding-right:20px"><span class="tms-action-link" onclick="openPurchaseDetailModal('${p.id}')">查看</span>${p.status==='voided'?'':`<span class="tms-action-link" onclick="openPurchaseVoidModal('${p.id}')">作废</span>`}</td></tr>`;
   }).join(''):purchaseEmptyStateHtml();
+  renderPurchaseMobileCards(slice);
 }
 
 function purchaseEntitlement(purchaseId){
