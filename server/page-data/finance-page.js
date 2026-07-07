@@ -19,7 +19,8 @@ async function handleFinancePageData({
   isProductionRuntime,
   scanFirstRows,
   tables,
-  FINANCE_PAGE_COURT_PROJECTION_FIELDS
+  FINANCE_PAGE_COURT_PROJECTION_FIELDS,
+  query
 }){
   if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
   await init();
@@ -40,7 +41,17 @@ async function handleFinancePageData({
   const scoped=filterLoadAllForUser({campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule},user);
   const scopedLeads=filterLoadAllForUser({campuses:scoped.campuses,students:scoped.students,courts:scoped.courts,membershipAccounts:scoped.membershipAccounts,leads},user).leads;
   scoped.users=users;
-  const financeSnapshot=buildFinancePageSnapshot(scoped);
+  const financeScope={
+    campus:String(query?.get('campus')||'').trim(),
+    campusName:String(query?.get('campusName')||'').trim(),
+    startDate:String(query?.get('startDate')||'').trim(),
+    endDate:String(query?.get('endDate')||'').trim()
+  };
+  if(financeScope.campus&&financeScope.campus!=='all'){
+    const campusRow=(scoped.campuses||[]).find(row=>String(row?.code||row?.id||'').trim()===financeScope.campus);
+    if(campusRow)financeScope.campusName=String(campusRow.name||campusRow.code||campusRow.id||financeScope.campusName).trim();
+  }
+  const financeSnapshot=buildFinancePageSnapshot(scoped,financeScope);
   const customerLifecycleRows=buildCustomerLifecycleRows({
     leads:scopedLeads,
     students:scoped.students,

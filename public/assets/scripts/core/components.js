@@ -675,10 +675,12 @@ function refreshGlobalTopFilters(){
 function selectGlobalTopCampus(value,event){
   if(event)event.stopPropagation();
   setCampus(null,value||'all');
+  if(typeof refreshScopedTopSummaryForCurrentPage==='function')refreshScopedTopSummaryForCurrentPage();
   closeStandardTopDropdowns();
 }
 function renderCurrentGlobalFilterPage(){
   stuPage=standardListFirstPage();leadPage=standardListFirstPage();schPage=standardListFirstPage();financeLedgerPage=standardListFirstPage();financeRevenuePage=standardListFirstPage();financeRecognizedPage=standardListFirstPage();adminUserPage=standardListFirstPage();
+  if(typeof refreshScopedTopSummaryForCurrentPage==='function'&&refreshScopedTopSummaryForCurrentPage())return;
   if(currentPage==='students')renderStudents();
   else if(typeof isStudentListPage==='function'&&isStudentListPage(currentPage))renderStudents();
   if(currentPage==='leads')renderLeads();

@@ -532,6 +532,64 @@ function buildSummary(items = []) {
   };
 }
 
+function scopeDateKey(value) {
+  return String(value || '').trim().replace(/\//g, '-').replace(/\./g, '-').slice(0, 10);
+}
+
+function courtItemMatchesScope(item = {}, scope = {}) {
+  const campus = String(scope.campus || scope.campusCode || '').trim();
+  if (campus && campus !== 'all' && String(item.campusCode || '').trim() !== campus) return false;
+  return true;
+}
+
+function bookingRowMatchesScope(row = {}, scope = {}) {
+  const day = scopeDateKey(row.bookingDate || row.date || row.businessDate || row.createdAt);
+  const start = scopeDateKey(scope.startDate);
+  const end = scopeDateKey(scope.endDate);
+  if (start && day && day < start) return false;
+  if (end && day && day > end) return false;
+  return true;
+}
+
+function scopedCourtItem(item = {}, scope = {}) {
+  const start = scopeDateKey(scope.startDate);
+  const end = scopeDateKey(scope.endDate);
+  if (!start && !end) return item;
+  const bookingRows = (item.bookingRows || []).filter(row => bookingRowMatchesScope(row, scope));
+  const bookingCount = bookingRows.filter(row => row.type === '消费').length;
+  const bookingAmount = money(bookingRows.reduce((sum, row) => {
+    const sign = row.type === '退款' || row.type === '冲正' ? -1 : 1;
+    return sum + sign * money(row.amount);
+  }, 0));
+  const memberBookingRows = bookingRows.filter(row => row.type === '消费' && String(row.payMethod || '').includes('储值'));
+  const memberBookingAmount = money(memberBookingRows.reduce((sum, row) => sum + money(row.amount), 0));
+  return {
+    ...item,
+    bookingRows,
+    bookingCount,
+    bookingAmount,
+    bookingHours: money(bookingRows.filter(row => row.type === '消费').reduce((sum, row) => sum + bookingDurationHours(row), 0)),
+    memberBookingCount: memberBookingRows.length,
+    memberBookingAmount,
+    guestBookingCount: Math.max(0, bookingCount - memberBookingRows.length),
+    guestBookingAmount: Math.max(0, money(bookingAmount - memberBookingAmount)),
+    totalReceived: bookingAmount,
+    lastBookingDate: bookingRows.map(row => scopeDateKey(row.bookingDate || row.date || row.businessDate || row.createdAt)).filter(Boolean).sort().at(-1) || ''
+  };
+}
+
+function buildScopedCourtAccountListSummary(view = {}, scope = {}) {
+  const items = (view.items || [])
+    .filter(item => courtItemMatchesScope(item, scope))
+    .map(item => scopedCourtItem(item, scope))
+    .filter(item => {
+      const start = scopeDateKey(scope.startDate);
+      const end = scopeDateKey(scope.endDate);
+      return !start && !end ? true : (Number(item.bookingCount) || 0) > 0;
+    });
+  return buildSummary(items);
+}
+
 function buildFilters({ items = [], campuses = [] }) {
   const owners = [...new Set(items.map((item) => String(item?.owner || '').trim()).filter(Boolean))].sort();
   const accountTypes = [...new Set(items.map((item) => String(item?.accountType || '').trim()).filter(Boolean))].sort();
@@ -732,6 +790,7 @@ module.exports = {
   bookingDurationHours,
   computeBookingSummary,
   buildCourtAccountListViewFromData,
+  buildScopedCourtAccountListSummary,
   buildCourtChainMetricsFromItems,
   createCourtAccountListCompareLoader,
   createCourtAccountListViewLoader,

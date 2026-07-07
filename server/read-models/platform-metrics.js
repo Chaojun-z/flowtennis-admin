@@ -208,6 +208,74 @@ function dateOnly(value) {
   return text(value).slice(0, 10);
 }
 
+function scopeDate(value) {
+  return text(value).replace(/\//g, '-').replace(/\./g, '-').slice(0, 10);
+}
+
+function scopeMatchesDate(value, scope = {}) {
+  const day = scopeDate(value);
+  const start = scopeDate(scope.startDate);
+  const end = scopeDate(scope.endDate);
+  if (start && day && day < start) return false;
+  if (end && day && day > end) return false;
+  return true;
+}
+
+function scopeCampusValues(row = {}) {
+  return [
+    row.campus,
+    row.campusId,
+    row.campusName,
+    ...parseArr(row.campusIds)
+  ].map(text).filter(Boolean);
+}
+
+function scopeMatchesCampus(row = {}, scope = {}) {
+  const expectedValues = [scope.campus, scope.campusCode, scope.campusName].map(text).filter(value => value && value !== 'all');
+  if (!expectedValues.length) return true;
+  const actualValues = scopeCampusValues(row);
+  return expectedValues.some(value => actualValues.includes(value));
+}
+
+function lifecycleScopeDate(row = {}) {
+  return row.leadDate || row.createdAt || row.updatedAt || row.convertedAt || row.formalConvertedAt || row.packagePurchaseDate || row.lastLessonDate;
+}
+
+function rowScopeDate(row = {}) {
+  return row.leadDate || row.purchaseDate || row.relatedDate || row.startTime || row.createdAt || row.updatedAt || row.enrollDate || row.registerDate || row.joinDate;
+}
+
+function rowInMetricScope(row = {}, scope = {}) {
+  return scopeMatchesCampus(row, scope) && scopeMatchesDate(rowScopeDate(row), scope);
+}
+
+function buildScopedLifecycleSource(data = {}, scope = {}) {
+  const customerLifecycleRows = Array.isArray(data.customerLifecycleRows) && data.customerLifecycleRows.length
+    ? data.customerLifecycleRows
+    : buildCustomerLifecycleRows(data);
+  const scopedLifecycleRows = customerLifecycleRows.filter(row => (
+    scopeMatchesCampus(row, scope) && scopeMatchesDate(lifecycleScopeDate(row), scope)
+  ));
+  const studentIds = new Set(scopedLifecycleRows.map(row => text(row.studentId)).filter(Boolean));
+  const leadIds = new Set(scopedLifecycleRows.map(row => text(row.sourceLeadId || row.leadId)).filter(Boolean));
+  const scopedPurchaseIds = new Set((data.purchases || [])
+    .filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope))
+    .map(row => text(row.id)).filter(Boolean));
+  return {
+    ...data,
+    leads: (data.leads || []).filter(row => leadIds.has(text(row.id || row.leadId)) || rowInMetricScope(row, scope)),
+    students: (data.students || []).filter(row => studentIds.has(text(row.id || row.studentId))),
+    purchases: (data.purchases || []).filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope)),
+    entitlements: (data.entitlements || []).filter(row => studentIds.has(text(row.studentId)) && (!text(row.purchaseId) || scopedPurchaseIds.has(text(row.purchaseId)))),
+    entitlementLedger: (data.entitlementLedger || []).filter(row => studentIds.has(text(row.studentId)) && scopeMatchesDate(rowScopeDate(row), scope)),
+    schedule: (data.schedule || []).filter(row => {
+      const ids = parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean);
+      return ids.some(id => studentIds.has(id)) && scopeMatchesDate(rowScopeDate(row), scope);
+    }),
+    customerLifecycleRows: scopedLifecycleRows
+  };
+}
+
 function dateTimeText(row = {}, fallback = '') {
   const start = text(row.startTime || fallback || row.relatedDate || row.createdAt || row.scheduleTime);
   const end = text(row.endTime);
@@ -993,6 +1061,10 @@ function buildStandardLifecycleMetrics(data = {}) {
   };
 }
 
+function buildScopedStandardLifecycleMetrics(data = {}, scope = {}) {
+  return buildStandardLifecycleMetrics(buildScopedLifecycleSource(data, scope));
+}
+
 function countBy(rows = [], field, allowed = []) {
   const counts = new Map(allowed.map(key => [key, 0]));
   (rows || []).forEach(row => {
@@ -1037,6 +1109,7 @@ function buildPlatformMetrics(data = {}) {
 module.exports = {
   buildPlatformMetrics,
   buildStandardLifecycleMetrics,
+  buildScopedStandardLifecycleMetrics,
   buildLeadPoolRows,
   buildTeachingStudentViews,
   buildRawLeadConversionMetrics,

@@ -175,6 +175,7 @@ let lastDataSyncAt=0,isSyncingAll=false,dataRequestVersion=0;
 let scheduleLocalMutationAt=0;
 let courtAccountListViewData=null,courtAccountListViewCompareData=null;
 let loadedDatasets=new Set();
+let loadedDatasetRequestKeys=new Map();
 let staleCachedDatasets=new Set();
 const DATA_CACHE_PREFIX='ft_dataset_cache_';
 const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
@@ -185,8 +186,10 @@ const OPERATIONS_PAGE_CACHE_VERSION='2026-06-24-source-order-v1';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
+const DATASETS_WITH_REQUEST_KEYS=new Set(['operationsPage','lifecycleMetricsPage','financePage','courtAccountListViewPage']);
 let operationsPageRequestSeq=0;
 let operationsPageBackgroundRefreshSeq=0;
+let courtAccountListViewRequestKey='';
 function resolveClientRuntimeStage(){
   const host=String(window.location.hostname||'').trim().toLowerCase();
   if(!host||host==='localhost'||host==='127.0.0.1')return 'local';
@@ -293,6 +296,41 @@ function operationsPageDataUrl(){
   const query=params.toString();
   return query?`/page-data/operations?${query}`:'/page-data/operations';
 }
+function currentScopeCampusName(){
+  const code=String(campus||'').trim();
+  if(!code||code==='all')return '';
+  const row=(Array.isArray(campuses)?campuses:[]).find(item=>String(item?.code||item?.id||'').trim()===code);
+  const raw=String(row?.name||CAMPUS?.[code]||code).trim();
+  return typeof campusDisplayName==='function'?campusDisplayName(raw):raw;
+}
+function pageDataScopeQuery({dateRange='global'}={}){
+  const params=new URLSearchParams();
+  const range=dateRange==='court'&&typeof activeCourtDateRange==='function'
+    ? activeCourtDateRange()
+    : (typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{});
+  const campusValue=String(campus||'').trim();
+  if(campusValue&&campusValue!=='all'){
+    params.set('campus',campusValue);
+    const campusName=currentScopeCampusName();
+    if(campusName)params.set('campusName',campusName);
+  }
+  if(range?.startDate)params.set('startDate',range.startDate);
+  if(range?.endDate)params.set('endDate',range.endDate);
+  return params.toString();
+}
+function scopedPageDataUrl(path,options={}){
+  const query=pageDataScopeQuery(options);
+  return query?`${path}?${query}`:path;
+}
+function lifecycleMetricsPageDataUrl(){
+  return scopedPageDataUrl('/page-data/lifecycle-metrics');
+}
+function financePageDataUrl(){
+  return scopedPageDataUrl('/page-data/finance');
+}
+function courtAccountListViewPageDataUrl(){
+  return scopedPageDataUrl('/page-data/court-account-list-view',{dateRange:'court'});
+}
 function operationsPageDatasetRequestKey(){
   return 'operationsPage:'+operationsPageDataUrl();
 }
@@ -323,7 +361,18 @@ function hydrateOperationsPageFromClientCache(){
   return true;
 }
 function datasetRequestKey(name){
-  return name==='operationsPage'?operationsPageDatasetRequestKey():name;
+  if(name==='operationsPage')return operationsPageDatasetRequestKey();
+  if(name==='lifecycleMetricsPage')return 'lifecycleMetricsPage:'+lifecycleMetricsPageDataUrl();
+  if(name==='financePage')return 'financePage:'+financePageDataUrl();
+  if(name==='courtAccountListViewPage')return 'courtAccountListViewPage:'+courtAccountListViewPageDataUrl();
+  return name;
+}
+function datasetHasCurrentRequestKey(name){
+  return !DATASETS_WITH_REQUEST_KEYS.has(name)||loadedDatasetRequestKeys.get(name)===datasetRequestKey(name);
+}
+function markDatasetLoaded(name,requestKey=datasetRequestKey(name)){
+  loadedDatasets.add(name);
+  if(DATASETS_WITH_REQUEST_KEYS.has(name))loadedDatasetRequestKeys.set(name,requestKey);
 }
 function loadOperationsPageDataset(){
   const url=operationsPageDataUrl();
@@ -354,10 +403,10 @@ const DATASET_LOADERS={
   feedbacks:()=>apiCall('GET','/feedbacks')
   ,coachProposals:()=>apiCall('GET','/coach-proposals')
   ,purchasesPage:()=>apiCall('GET','/page-data/purchases')
-  ,lifecycleMetricsPage:()=>apiCall('GET','/page-data/lifecycle-metrics')
-  ,financePage:()=>apiCall('GET','/page-data/finance')
+  ,lifecycleMetricsPage:()=>apiCall('GET',lifecycleMetricsPageDataUrl())
+  ,financePage:()=>apiCall('GET',financePageDataUrl())
   ,courtsPage:()=>apiCall('GET','/page-data/courts')
-  ,courtAccountListViewPage:()=>apiCall('GET','/page-data/court-account-list-view')
+  ,courtAccountListViewPage:()=>apiCall('GET',courtAccountListViewPageDataUrl())
   ,courtAccountListViewComparePage:()=>apiCall('GET','/page-data/court-account-list-view-compare?sample=fixed')
   ,operationsPage:()=>loadOperationsPageDataset()
   ,matchesPage:()=>apiCall('GET','/admin/matches')
@@ -445,7 +494,7 @@ function setDatasetValue(name,data,{persist=true}={}){
   if(name==='coachProposals')coachProposals=rows;
   if(name==='matches')matches=rows;
   if(name==='customerLifecycleRows')customerLifecycleRows=rows;
-  loadedDatasets.add(name);
+  markDatasetLoaded(name);
   if(persist)persistDatasetCache(name,rows);
 }
 function noteScheduleLocalMutation(){
@@ -506,7 +555,7 @@ function initialBackgroundDatasetsForPage(pg){
 }
 function missingInitialDatasetsForPage(pg){
   if((pg==='courts'||pg==='memberships'||pg==='membership-orders'||pg==='membership-ledger')&&shouldUseCourtReadModelByDefault()){
-    return courtAccountListViewData?[]:['courtAccountListViewPage'];
+    return courtAccountListViewData&&courtAccountListViewDataIsCurrent()?[]:['courtAccountListViewPage'];
   }
   const requiredMissing=missingRequiredDatasetsForPage(pg);
   if(requiredMissing.length)return requiredMissing;
@@ -587,16 +636,16 @@ function renderPageLoading(pg){
   if(pg==='myclasses')renderBlockLoading('myClassesBody','班次数据加载中...');
 }
 async function ensureDatasetsByName(names=[],{force=false}={}){
-  const pending=(names||[]).filter(name=>force||staleCachedDatasets.has(name)||!loadedDatasets.has(name));
+  const pending=(names||[]).filter(name=>force||staleCachedDatasets.has(name)||!loadedDatasets.has(name)||!datasetHasCurrentRequestKey(name));
   if(!pending.length)return;
   const results=await Promise.all(pending.map(name=>{
     const requestKey=datasetRequestKey(name);
     if(datasetLoadPromises.has(requestKey))return datasetLoadPromises.get(requestKey);
-    const promise=DATASET_LOADERS[name]().then(data=>[name,data]).finally(()=>datasetLoadPromises.delete(requestKey));
+    const promise=DATASET_LOADERS[name]().then(data=>[name,data,requestKey]).finally(()=>datasetLoadPromises.delete(requestKey));
     datasetLoadPromises.set(requestKey,promise);
     return promise;
   }));
-  results.forEach(([name,data])=>{
+  results.forEach(([name,data,requestKey])=>{
   if(name==='purchasesPage'){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
@@ -615,7 +664,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('entitlementLedger');
       staleCachedDatasets.delete('customerLifecycleRows');
-      loadedDatasets.add('purchasesPage');
+      markDatasetLoaded('purchasesPage',requestKey);
       return;
     }
     if(name==='lifecycleMetricsPage'){
@@ -623,7 +672,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
-      loadedDatasets.add('lifecycleMetricsPage');
+      markDatasetLoaded('lifecycleMetricsPage',requestKey);
       return;
     }
     if(name==='financePage'){
@@ -635,7 +684,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       financeNormalizedLedgerRows=Array.isArray(data.financeNormalizedRows)?data.financeNormalizedRows:[];
       financeSettlementSummaryRows=Array.isArray(data.financeSettlementRows)?data.financeSettlementRows:[];
       financePrepaidView=data.financePrepaidView||{rows:[],summary:{}};
-      loadedDatasets.add('financePage');
+      markDatasetLoaded('financePage',requestKey);
       return;
     }
     if(name==='operationsPage'){
@@ -644,7 +693,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('campuses');
       operationsPageData=data.operations||null;
       persistOperationsPageClientCache(data);
-      loadedDatasets.add('operationsPage');
+      markDatasetLoaded('operationsPage',requestKey);
       return;
     }
     if(name==='courtsPage'){
@@ -656,13 +705,13 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('courts');
       staleCachedDatasets.delete('customerLifecycleRows');
-      loadedDatasets.add('courtsPage');
+      markDatasetLoaded('courtsPage',requestKey);
       return;
     }
     if(name==='matchesPage'){
       setDatasetValue('matches',data.items||[]);
       staleCachedDatasets.delete('matches');
-      loadedDatasets.add('matchesPage');
+      markDatasetLoaded('matchesPage',requestKey);
       return;
     }
     if(name==='workbenchPage'){
@@ -688,7 +737,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('entitlementLedger');
       staleCachedDatasets.delete('customerLifecycleRows');
       window.coachWorkbenchStats=data.stats||{};
-      loadedDatasets.add('workbenchPage');
+      markDatasetLoaded('workbenchPage',requestKey);
       return;
     }
     setDatasetValue(name,data);
@@ -743,8 +792,10 @@ function clearLoadedData(){
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
   customerLifecycleRows=[];teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
+  courtAccountListViewRequestKey='';
   packageBoardColumnOrder=[];
   loadedDatasets=new Set();
+  loadedDatasetRequestKeys=new Map();
   staleCachedDatasets=new Set();
 }
 function normalizeCurrentPageForRole(){
@@ -804,6 +855,8 @@ function applyLoadedData(data){
   teachingStudentViews=data?.teachingStudentViews||teachingStudentViews;
   standardLifecycleMetrics=data?.standardLifecycleMetrics||standardLifecycleMetrics;
   loadedDatasets=new Set(['courts','students','products','packages','purchases','entitlements','entitlementLedger','financialLedger','membershipPlans','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents','pricePlans','plans','schedule','coaches','classes','campuses','feedbacks','coachProposals','matches','customerLifecycleRows']);
+  loadedDatasetRequestKeys=new Map();
+  courtAccountListViewRequestKey='';
   if(data?.user){
     currentUser=data.user;
     localStorage.setItem('ft_user',JSON.stringify(currentUser));
@@ -866,6 +919,36 @@ function deferPageDataLoad(pg,options={}){
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(run);
   else setTimeout(run,0);
 }
+function renderScopedSummaryPage(pg){
+  if(pg==='leads')renderLeads();
+  else if(isStudentListPage(pg))renderStudents();
+  else if(pg==='finance')renderFinanceCenter();
+  else if(pg==='courts')renderCourts();
+}
+function refreshScopedTopSummaryForCurrentPage(){
+  const pg=currentPage;
+  const names=pg==='leads'||isStudentListPage(pg)?['lifecycleMetricsPage']:(pg==='finance'?['financePage']:[]);
+  if(names.length){
+    ensureDatasetsByName(names,{force:true}).then(()=>{
+      if(currentPage!==pg)return;
+      renderScopedSummaryPage(pg);
+    }).catch(e=>{
+      if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+      console.warn('scoped summary refresh failed',pg,e);
+    });
+    return true;
+  }
+  if(pg==='courts'){
+    loadCourtReadModelGuardData({force:true}).then(()=>{
+      if(currentPage==='courts')renderCourts();
+    }).catch(e=>{
+      if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+      console.warn('court scoped summary refresh failed',e);
+    });
+    return true;
+  }
+  return false;
+}
 async function reloadOperationsPageDataWithInlineLoading(){
   const requestSeq=++operationsPageRequestSeq;
   if(typeof renderOperationsLoading==='function')renderOperationsLoading();
@@ -897,10 +980,15 @@ async function loadCourtReadModelGuardData({force=false}={}){
     window.__courtAccountListViewCompare=null;
     return;
   }
-  if(courtAccountListViewData&&!force)return;
+  const requestKey=datasetRequestKey('courtAccountListViewPage');
+  if(courtAccountListViewData&&!force&&courtAccountListViewRequestKey===requestKey)return;
   const view=await DATASET_LOADERS.courtAccountListViewPage();
   courtAccountListViewData=view||null;
+  courtAccountListViewRequestKey=requestKey;
   window.__courtAccountListViewData=courtAccountListViewData;
+}
+function courtAccountListViewDataIsCurrent(){
+  return !!courtAccountListViewData&&courtAccountListViewRequestKey===datasetRequestKey('courtAccountListViewPage');
 }
 async function loadCourtReadModelCompareData({force=false}={}){
   if(!shouldLoadCourtReadModelCompare()){

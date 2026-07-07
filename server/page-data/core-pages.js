@@ -1,5 +1,5 @@
 const { buildCustomerLifecycleRows } = require('../read-models/customer-lifecycle.js');
-const { buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
 const { buildMembershipFinanceSummary } = require('../read-models/membership-finance-summary.js');
 const {
   buildCoachOpsUnifiedView,
@@ -7,6 +7,19 @@ const {
   buildPackageUnifiedView,
   buildEntitlementUnifiedView
 } = require('../read-models/unified-page-views.js');
+
+function pageDataScopeFromQuery(query){
+  return {
+    campus:String(query?.get('campus')||'').trim(),
+    campusName:String(query?.get('campusName')||'').trim(),
+    startDate:String(query?.get('startDate')||'').trim(),
+    endDate:String(query?.get('endDate')||'').trim()
+  };
+}
+
+function hasPageDataScope(scope={}){
+  return !!(scope.campus&&scope.campus!=='all'||scope.campusName&&scope.campusName!=='all'||scope.startDate||scope.endDate);
+}
 
 function createCorePageDataRoutes(deps={}){
   const {
@@ -25,7 +38,7 @@ function createCorePageDataRoutes(deps={}){
     T_MEMBERSHIP_PLANS,T_USERS,T_FEEDBACKS
   }=tables;
 
-  return async function handleCorePageDataRoutes({path,method,user,res}){
+  return async function handleCorePageDataRoutes({path,method,user,res,query}){
     if(path==='/page-data/coaches'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
       await init();
@@ -77,10 +90,13 @@ function createCorePageDataRoutes(deps={}){
         entitlements:scoped.entitlements,
         schedule:scoped.schedule
       });
+      const metricScope=pageDataScopeFromQuery(query);
       return sendJson(res,{
         customerLifecycleRows,
         teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),
-        standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
+        standardLifecycleMetrics:hasPageDataScope(metricScope)
+          ? buildScopedStandardLifecycleMetrics({...scoped,customerLifecycleRows},metricScope)
+          : buildStandardLifecycleMetrics({...scoped,customerLifecycleRows})
       });
     }
     if(path==='/page-data/courts'&&method==='GET'){

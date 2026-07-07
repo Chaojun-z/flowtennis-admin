@@ -1187,7 +1187,17 @@ function renderCourtAccountListView(){
   }
 }
 function renderCourts(){
-  if(!courtAccountListViewData){
+  if(!courtAccountListViewData||(typeof courtAccountListViewDataIsCurrent==='function'&&!courtAccountListViewDataIsCurrent())){
+    renderCourtTableLoading();
+    if(typeof loadCourtReadModelGuardData==='function'){
+      loadCourtReadModelGuardData({force:true}).then(()=>{
+        if(currentPage==='courts')renderCourts();
+      }).catch(e=>{
+        if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
+        renderCourtTableError(String(e.message||e));
+      });
+      return;
+    }
     renderCourtTableError('统一订场会员读模型未加载');
     return;
   }

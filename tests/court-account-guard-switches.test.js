@@ -21,7 +21,9 @@ assert.match(stateSource, /\/page-data\/court-account-list-view-compare/, '前�
 assert.doesNotMatch(stateSource, /catch\(e\)\{\s*courtAccountListViewData=null;[\s\S]*console\.warn\('court read model guard load failed'/, '统一读模型加载失败时不得清空后继续渲染旧链');
 
 assert.match(courtsSource, /function renderCourtAccountListView\(/, '订场用户页应增加隐藏读模型渲染入口');
-assert.match(courtsSource, /if\(!courtAccountListViewData\)\{[\s\S]*renderCourtTableError\('统一订场会员读模型未加载'/, '订场用户页缺少统一读模型时应报错，不得回旧链');
+assert.match(courtsSource, /!courtAccountListViewData\|\|\(typeof courtAccountListViewDataIsCurrent==='function'&&!courtAccountListViewDataIsCurrent\(\)\)/, '订场用户页应识别当前筛选范围的统一读模型是否已加载');
+assert.match(courtsSource, /loadCourtReadModelGuardData\(\{force:true\}\)/, '订场用户页缺少当前筛选范围的统一读模型时应自动重拉');
+assert.match(courtsSource, /catch\(e=>\{[\s\S]*renderCourtTableError\(String\(e\.message\|\|e\)\);/, '订场用户页统一读模型重拉失败时应报错，不得回旧链');
 assert.doesNotMatch(courtsSource, /if\(shouldUseCourtReadModelByDefault\(\)&&courtAccountListViewData\)/, '订场用户页不得再用读模型存在与否决定是否回旧链');
 assert.match(courtsSource, /window\.__courtAccountListViewCompare=/, '前端应暴露最新 compare 输出供内部验证');
 assert.match(courtsSource, /const filters=courtAccountListViewData\?\.filters\|\|\{\};/, '隐藏读模型路径应直接消费后端 filters');

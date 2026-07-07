@@ -69,11 +69,11 @@ function createFinanceSnapshotHelpers(deps = {}) {
       .sort((a, b) => String(b.month || '').localeCompare(String(a.month || '')) || String(a.coach || '').localeCompare(String(b.coach || ''), 'zh-Hans-CN'));
   }
 
-  function buildFinancePageSnapshot(source = {}) {
+  function buildFinancePageSnapshot(source = {}, scope = {}) {
     const financeNormalizedRows = buildFinanceUnifiedRows(source);
     return {
       generatedAt: new Date().toISOString(),
-      financeOverviewData: buildFinanceOverviewDataFromRows(financeNormalizedRows),
+      financeOverviewData: buildFinanceOverviewDataFromRows(financeNormalizedRows, scope),
       financeNormalizedRows,
       financeSettlementRows: buildFinanceSettlementRows(source),
       financePrepaidView: buildFinancePrepaidView(financeNormalizedRows)

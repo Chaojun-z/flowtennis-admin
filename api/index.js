@@ -7065,7 +7065,7 @@ module.exports = async (req, res) => {
     if(await handleFeedbackRoutes({path,method,body,user,res}))return;
     if(await handleScheduleRoutes({path,method,body,user,res}))return;
     if(await handleCoachRoutes({path,method,body,user,res}))return;
-    if(await handleCorePageDataRoutes({path,method,user,res}))return;
+    if(await handleCorePageDataRoutes({path,method,user,res,query}))return;
     if(await handleResidualPageDataRoutes({path,method,user,res,query}))return;
     if(await handleLeadsRoutes({path,method,body,user,res,query}))return;
     if(await handleCampusRoutes({path,method,body,user,res}))return;

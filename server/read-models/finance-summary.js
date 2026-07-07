@@ -45,8 +45,38 @@ function financeReceiptRows(rows = []) {
   return (rows || []).filter(row => String(row.action || row.transactionType || '') === '收款' && Number(row.cashDelta) > 0);
 }
 
-function buildFinanceOverviewAllFromRows(rows = []) {
-  const businessRows = financeBusinessRows(rows);
+function financeDateKey(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const normalized = text.replace(/\//g, '-').replace(/\./g, '-');
+  return normalized.slice(0, 10);
+}
+
+function financeRowMatchesScope(row = {}, scope = {}) {
+  const campusValues = [scope.campusName, scope.campus, scope.campusCode]
+    .map(value => String(value || '').trim())
+    .filter(value => value && value !== 'all');
+  if (campusValues.length) {
+    const rowCampusValues = [row.campusName, row.campus, row.campusCode]
+      .map(value => String(value || '').trim())
+      .filter(Boolean);
+    if (!campusValues.some(value => rowCampusValues.includes(value))) return false;
+  }
+  const day = financeDateKey(row.businessDate || row.purchaseDate || row.relatedDate || row.createdAt);
+  const start = financeDateKey(scope.startDate);
+  const end = financeDateKey(scope.endDate);
+  if (start && day && day < start) return false;
+  if (end && day && day > end) return false;
+  return true;
+}
+
+function financeRowsInScope(rows = [], scope = {}) {
+  if (!scope || (!scope.campusName && !scope.campus && !scope.startDate && !scope.endDate)) return rows || [];
+  return (rows || []).filter(row => financeRowMatchesScope(row, scope));
+}
+
+function buildFinanceOverviewAllFromRows(rows = [], scope = {}) {
+  const businessRows = financeBusinessRows(financeRowsInScope(rows, scope));
   const courseRows = financeCourseRows(businessRows);
   const bookingRows = financeBookingRows(businessRows);
   return {
@@ -69,9 +99,9 @@ function buildFinanceOverviewAllFromRows(rows = []) {
   };
 }
 
-function buildFinanceOverviewDataFromRows(rows = []) {
+function buildFinanceOverviewDataFromRows(rows = [], scope = {}) {
   return {
-    all: buildFinanceOverviewAllFromRows(rows),
+    all: buildFinanceOverviewAllFromRows(rows, scope),
     campuses: []
   };
 }
@@ -151,5 +181,6 @@ module.exports = {
   buildFinanceOverviewDataFromRows,
   buildFinanceOverviewSummaryFromRows,
   buildFinanceOverviewSummaryFromData,
-  mergeFinanceOverviewDataWithRows
+  mergeFinanceOverviewDataWithRows,
+  financeRowsInScope
 };
