@@ -15,7 +15,7 @@ assert.strictEqual(taxonomy.normalizeLeadSource('播客'), '播客');
 assert.strictEqual(taxonomy.normalizeLeadSource('其他'), '未知');
 
 assert.deepStrictEqual(taxonomy.LEAD_STAGE_OPTIONS.map(item => item.value), ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失']);
-assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), ['课程', '订场', '会员', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员']);
+assert.deepStrictEqual(taxonomy.LEAD_DEAL_TYPE_OPTIONS.map(item => item.value), ['课程', '订场', '订场会员', '课程+订场', '课程+订场会员', '订场+订场会员', '课程+订场+订场会员']);
 assert.deepStrictEqual(taxonomy.LEAD_CUSTOMER_TYPE_OPTIONS.map(item => item.value), ['成人', '青少年']);
 assert.deepStrictEqual(taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value), ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他']);
 assert.deepStrictEqual(taxonomy.LEAD_CONSULT_OPTIONS.map(item => item.value), taxonomy.LEAD_DEMAND_PRODUCT_OPTIONS.map(item => item.value));

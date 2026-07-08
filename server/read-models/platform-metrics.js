@@ -665,7 +665,7 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 
 function lifecycleDealType(row = {}, lead = {}) {
   const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row);
-  const stored = ignoreLegacyOutcome ? '' : text(lead.dealType || lead.conversionType || row.dealType);
+  const stored = ignoreLegacyOutcome ? '' : text(lead.dealType || lead.conversionType || row.dealType).replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员');
   if (stored) return stored;
   const legacyText = ignoreLegacyOutcome ? '' : text([
     lead.leadStage,
@@ -682,7 +682,7 @@ function lifecycleDealType(row = {}, lead = {}) {
   return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',
-    hasMembership ? '会员' : ''
+    hasMembership ? '订场会员' : ''
   ].filter(Boolean).join('+');
 }
 

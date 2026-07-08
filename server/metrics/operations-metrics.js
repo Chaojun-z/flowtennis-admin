@@ -375,7 +375,7 @@ function buildLeadConversionSets(data = {}) {
 function normalizeLeadDealType(lead = {}, leadPoolByLeadId = new Map(), sets = {}) {
   const pooled = leadPoolForLead(lead, leadPoolByLeadId);
   const explicit = String(pooled.dealType || pooled.conversionType || lead.dealType || lead.conversionType || '').trim();
-  if (explicit) return explicit.split('+').map(value => String(value || '').trim()).filter(Boolean);
+  if (explicit) return explicit.replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员').split('+').map(value => String(value || '').trim()).filter(Boolean);
 
   const ids = leadIds(lead);
   const hasCourse = !!(lead.studentId || lead.formalStudentId || lead.courseStudentId || ids.some(id => sets.course?.has(id)));
@@ -384,7 +384,7 @@ function normalizeLeadDealType(lead = {}, leadPoolByLeadId = new Map(), sets = {
   return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',
-    hasMembership ? '会员' : ''
+    hasMembership ? '订场会员' : ''
   ].filter(Boolean);
 }
 

@@ -159,6 +159,8 @@ const LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS=[
   'concern',
   'conclusion',
   'statusAfter',
+  'dealType',
+  'conversionType',
   'nextFollowupAt',
   'nextAction'
 ];
@@ -5642,18 +5644,18 @@ function deriveLeadSystemStatus(input={}){
   if(['体验课完成','已体验待转化','已体验待成交'].includes(rawStatus))return '已体验待成交';
   return rawStatus==='新线索'?'新线索':'跟进中';
 }
-const LEAD_DEAL_TYPE_VALUES=['课程','订场','会员','课程+订场','课程+会员','订场+会员','课程+订场+会员'];
+const LEAD_DEAL_TYPE_VALUES=['课程','订场','订场会员','课程+订场','课程+订场会员','订场+订场会员','课程+订场+订场会员'];
 function normalizeLeadDealType(value){
   const raw=cleanLeadText(value);
   if(!raw||raw==='未转化')return '';
-  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'');
+  const normalized=raw.replace(/已转/g,'').replace(/转化/g,'').replace(/成交/g,'').replace(/\s/g,'').replace(/会员/g,'订场会员').replace(/订场订场会员/g,'订场会员');
   return LEAD_DEAL_TYPE_VALUES.includes(raw)?raw:LEAD_DEAL_TYPE_VALUES.includes(normalized)?normalized:'';
 }
 function deriveLeadDealType(input={}){
   const stored=normalizeLeadDealType(input.dealType||input.conversionType);
   if(stored)return stored;
   const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.systemStatus||input.leadStage);
-  const parts=[['课程',input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
+  const parts=[['课程',input.isCourseConverted===true||/已报名|已转课程|课程/.test(rawStatus)],['订场',cleanLeadText(input.courtId)||input.isCourtConverted===true||/已定场|已订场|订场|定场/.test(rawStatus)],['订场会员',cleanLeadText(input.membershipAccountId)||input.isMembershipConverted===true||/已转会员|会员|储值/.test(rawStatus)]].filter(([,ok])=>!!ok).map(([label])=>label);
   return parts.length?parts.join('+'):(input.convertedFlag===true?'课程':'');
 }
 function deriveLeadConversionType(input={}){return deriveLeadDealType(input);}
@@ -5706,6 +5708,9 @@ function normalizeLeadRecord(input={},opts={}){
 }
 function normalizeLeadFollowupRecord(input={},opts={}){
   const now=opts.now||new Date().toISOString();
+  const dealType=normalizeLeadDealType(input.dealType||input.conversionType);
+  const statusAfter=cleanLeadText(input.statusAfter);
+  if(opts.requireDealType!==false&&statusAfter==='已成交'&&!dealType)throw new Error('已成交必须选择成交类型');
   return {
     id:input.id||opts.id||uuidv4(),
     leadId:cleanLeadText(input.leadId),
@@ -5714,7 +5719,9 @@ function normalizeLeadFollowupRecord(input={},opts={}){
     followupType:cleanLeadText(input.followupType)||'manual',
     concern:cleanLeadText(input.concern),
     communicationNote:cleanLeadText(input.communicationNote),
-    statusAfter:cleanLeadText(input.statusAfter),
+    statusAfter,
+    dealType,
+    conversionType:dealType,
     conclusion:cleanLeadText(input.conclusion||input.communicationNote),
     nextFollowupAt:cleanLeadText(input.nextFollowupAt),
     nextAction:cleanLeadText(input.nextAction),
@@ -5730,6 +5737,8 @@ function applyLeadFollowupSnapshot(lead,followup){
     latestConclusion:cleanLeadText(followup.conclusion)||lead.latestConclusion||'',
     nextFollowupAt:cleanLeadText(followup.nextFollowupAt)||'',
     nextAction:cleanLeadText(followup.nextAction)||'',
+    dealType:cleanLeadText(followup.dealType)||lead.dealType||'',
+    conversionType:cleanLeadText(followup.dealType||followup.conversionType)||lead.conversionType||'',
     rawStatus:cleanLeadText(followup.statusAfter)||lead.rawStatus||'',
     updatedAt:followup.updatedAt||new Date().toISOString()
   };
@@ -5814,11 +5823,12 @@ function buildLeadInitialFollowup(lead){
     followupType:'import',
     concern:lead.latestConcern,
     communicationNote:lead.latestConclusion,
+    dealType:lead.dealType,
     statusAfter:lead.rawStatus,
     conclusion:lead.latestConclusion,
     nextFollowupAt:lead.nextFollowupAt,
     nextAction:lead.nextAction
-  });
+  },{requireDealType:false});
 }
 function buildLeadDedupKey(input={}){
   const phone=normalizeLeadDedupPhone(input);

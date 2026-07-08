@@ -89,7 +89,7 @@
   ];
   const LEAD_SOURCE_OPTIONS = SOURCES.map(value => ({ value, label: value }));
   const LEAD_STAGE_OPTIONS = ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失'].map(value => ({ value, label: value }));
-  const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '会员', '课程+订场', '课程+会员', '订场+会员', '课程+订场+会员'].map(value => ({ value, label: value }));
+  const LEAD_DEAL_TYPE_OPTIONS = ['课程', '订场', '订场会员', '课程+订场', '课程+订场会员', '订场+订场会员', '课程+订场+订场会员'].map(value => ({ value, label: value }));
   const LEAD_CUSTOMER_TYPE_OPTIONS = ['成人', '青少年'].map(value => ({ value, label: value }));
   const LEAD_DEMAND_PRODUCT_OPTIONS = ['私教课', '小班课', '订场', '会员', '陪打', '约球', '穿线', '合作', '其他'].map(value => ({ value, label: value }));
   const LEAD_CONSULT_OPTIONS = LEAD_DEMAND_PRODUCT_OPTIONS;

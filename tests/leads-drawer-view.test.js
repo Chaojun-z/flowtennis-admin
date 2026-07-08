@@ -34,7 +34,8 @@ assert.match(fnBody('leadFollowupDrawerFormHtml'), /full-width[\s\S]*用户顾�
 assert.match(source, /function renderDetailDrawerTimeline\(/, 'lead follow-up timeline should use the shared drawer timeline component');
 assert.match(fnBody('leadTimelineHtml'), /renderDetailDrawerTimeline\(rows\.map\(item=>leadFollowupTimelineItemHtml\(lead,item\)\),\{emptyText:'暂无跟进时间线',className:'lead-followup-timeline'\}\)/, 'lead follow-up timeline should call the shared timeline directly');
 assert.match(source, /function leadConversionActionPanelHtml\(/, 'lead conversion actions should render inside the drawer');
-assert.match(fnBody('leadConversionActionPanelHtml'), /schedule-detail-action primary[\s\S]*转为学员[\s\S]*schedule-detail-action primary[\s\S]*转为订场用户[\s\S]*schedule-detail-action primary[\s\S]*关联已有学员[\s\S]*schedule-detail-action primary[\s\S]*关联已有订场用户/, 'conversion tab should render four button-style actions');
+assert.doesNotMatch(fnBody('leadConversionActionPanelHtml'), /转为学员|转为订场用户/, 'conversion tab should hide create-conversion buttons');
+assert.match(fnBody('leadConversionActionPanelHtml'), /schedule-detail-action primary[\s\S]*关联已有学员[\s\S]*schedule-detail-action primary[\s\S]*关联已有订场用户/, 'conversion tab should keep existing-record link actions');
 assert.match(source, /function ensureLeadConversionLookups\(/, 'conversion tab should lazy-load linked student/court/coach names');
 assert.match(fnBody('leadConversionSummaryHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)[\s\S]*linkedCoachName\(lead\?\.formalCoach\)/, 'conversion summary should render names instead of raw ids');
 assert.match(fnBody('openLeadLinkStudentModal'), /startLeadConversionDrawerMode\(leadId,'link-student'\)/, 'link student should stay in the lead drawer');

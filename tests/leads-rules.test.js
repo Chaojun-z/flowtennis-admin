@@ -16,17 +16,18 @@ assert.strictEqual(rules.deriveLeadDealType({}), '');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1' }), '');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true }), '课程');
 assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1' }), '订场');
-assert.strictEqual(rules.deriveLeadDealType({ membershipAccountId: 'member-1' }), '会员');
+assert.strictEqual(rules.deriveLeadDealType({ membershipAccountId: 'member-1' }), '订场会员');
+assert.strictEqual(rules.deriveLeadDealType({ dealType: '会员' }), '订场会员');
 assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1' }), '课程+订场');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+会员');
-assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+会员');
-assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+订场会员');
+assert.strictEqual(rules.deriveLeadDealType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+订场会员');
+assert.strictEqual(rules.deriveLeadDealType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+订场会员');
 assert.strictEqual(rules.deriveLeadConversionType({}), '');
 assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', courtId: 'court-1' }), '订场');
 assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1' }), '课程+订场');
-assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+会员');
-assert.strictEqual(rules.deriveLeadConversionType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+会员');
-assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+会员');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, membershipAccountId: 'member-1' }), '课程+订场会员');
+assert.strictEqual(rules.deriveLeadConversionType({ courtId: 'court-1', membershipAccountId: 'member-1' }), '订场+订场会员');
+assert.strictEqual(rules.deriveLeadConversionType({ studentId: 'stu-1', isCourseConverted: true, courtId: 'court-1', membershipAccountId: 'member-1' }), '课程+订场+订场会员');
 
 const lead = rules.normalizeLeadRecord({
   '线索时间': '2026-04-10',
@@ -72,6 +73,21 @@ assert.strictEqual(updated.lastFollowupAt, '2026-05-09 10:00');
 assert.strictEqual(updated.latestConcern, '时间');
 assert.strictEqual(updated.systemStatus, '已约体验');
 assert.strictEqual(updated.conversionType, '');
+
+const convertedFollowup = rules.normalizeLeadFollowupRecord({
+  leadId: 'lead-1',
+  followupAt: '2026-05-10',
+  statusAfter: '已成交',
+  dealType: '课程+会员'
+}, { id: 'fu-deal', now: '2026-05-10 00:00:00' });
+assert.strictEqual(convertedFollowup.dealType, '课程+订场会员');
+const convertedLead = rules.applyLeadFollowupSnapshot(lead, convertedFollowup);
+assert.strictEqual(convertedLead.systemStatus, '已成交');
+assert.strictEqual(convertedLead.dealType, '课程+订场会员');
+assert.throws(() => rules.normalizeLeadFollowupRecord({
+  leadId: 'lead-1',
+  statusAfter: '已成交'
+}), /成交类型/, '已成交跟进必须选择成交类型');
 
 assert.strictEqual(
   rules.buildLeadDedupKey({ displayName: 'Leah 13800138000', leadDate: '2026/4/7', source: '大众点评', consultType: '成人私教' }),

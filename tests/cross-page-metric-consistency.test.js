@@ -93,7 +93,7 @@ assert.deepStrictEqual(
     ['lead-booking', '已成交', '订场'],
     ['lead-course', '已成交', '课程'],
     ['lead-followup', '跟进中', ''],
-    ['lead-hybrid', '已成交', '课程+订场+会员']
+    ['lead-hybrid', '已成交', '课程+订场+订场会员']
   ],
   'raw lead pool should keep one standard lead stage and one independent deal type per lead'
 );

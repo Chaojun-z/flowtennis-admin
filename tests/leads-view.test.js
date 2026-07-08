@@ -148,6 +148,10 @@ assert.match(leadsSource, /openLeadFollowupModal\(leadId,followupId=''\)/, 'foll
 assert.match(leadsSource, /apiCall\('PUT',`\/lead-followups\/\$\{followupId\}`/, 'follow-up save should update an existing record when editing');
 assert.match(leadsSource, /function saveLeadFollowupFromDrawer\(/, 'follow-up save should also work inside the lead drawer');
 assert.match(leadsSource, /跟进时间[\s\S]*跟进人[\s\S]*跟进方式[\s\S]*沟通内容[\s\S]*用户顾虑[\s\S]*本次结论[\s\S]*当前状态[\s\S]*下次跟进时间[\s\S]*下次动作/, 'follow-up modal should expose the required fields');
+assert.match(fnBody('leadFollowupDrawerFormHtml'), /成交类型[\s\S]*lead_dealType[\s\S]*leadDealTypeOptions\(\)/, 'follow-up drawer should show the existing dealType options for converted leads');
+assert.match(fnBody('leadFollowupPayloadFromForm'), /const dealType=leadNormalizeDealType\(document\.getElementById\('lead_dealType'\)\?\.value\|\|''\)/, 'follow-up save should normalize the existing dealType field');
+assert.match(fnBody('leadFollowupPayloadFromForm'), /statusAfter,[\s\S]*dealType,[\s\S]*conversionType:dealType/, 'follow-up save payload should send dealType and compatible conversionType');
+assert.match(fnBody('leadFollowupPayloadFromForm'), /statusAfter==='已成交'&&!dealType[\s\S]*成交类型/, 'follow-up save should block converted status without a deal type');
 assert.doesNotMatch(leadsSource, /type="datetime-local"/, 'follow-up date should not use native datetime-local');
 assert.match(leadsSource, /courtDateButtonHtml\('lead_followupAt'[\s\S]*leadFollowupDateInputValue/, 'follow-up date should use the shared date picker');
 assert.match(leadsSource, /function openLeadImportPreviewModal\(/, 'leads page should expose the import preview modal');
@@ -159,7 +163,8 @@ assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'�
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
 assert.match(leadsSource, /const campusValue=lead\?\.campus\|\|leadDefaultCampusValue\(\)/, 'new leads should default to the current campus or the first configured campus');
 assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit modal should remove the current status field');
-assert.match(leadsSource, /function leadConversionActionPanelHtml\(lead\)[\s\S]*转为学员[\s\S]*转为订场用户[\s\S]*关联已有学员[\s\S]*关联已有订场用户/, 'lead conversion tab should expose conversion actions inside the drawer');
+assert.doesNotMatch(fnBody('leadConversionActionPanelHtml'), /转为学员|转为订场用户/, 'lead conversion tab should hide create-conversion buttons that can be mistaken for business records');
+assert.match(fnBody('leadConversionActionPanelHtml'), /关联已有学员[\s\S]*关联已有订场用户/, 'lead conversion tab should keep explicit existing-record links');
 assert.match(leadsSource, /查看[\s\S]*跟进/, 'lead rows should expose view and follow-up actions');
 assert.doesNotMatch(fnBody('renderLeads'), /转化/, 'lead rows should not expose conversion action');
 assert.match(leadsSource, /function leadSourceOptions\(\)[\s\S]*FlowTennisBusinessTaxonomy\.optionList\('leadSources'\)/, 'lead source options should use the global business dictionary');

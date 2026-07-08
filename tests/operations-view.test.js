@@ -275,7 +275,7 @@ assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交率（课程\/订场\/会员）[\s\S]*体验路径成交率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验路径成交率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
