@@ -46,7 +46,7 @@ assert.strictEqual(platform.conversionMetrics.totalLeads, 1, 'standard conversio
 assert.strictEqual(platform.conversionMetrics.convertedLeads, 0, 'synthetic searchable customers should not enter raw lead conversion metrics');
 assert.strictEqual(platform.rawLeadPoolRows.length, 1, 'platform metrics should expose the raw lead cohort separately from the searchable lead pool');
 assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '转介绍')?.leads, 1, 'source stats should use raw lead cohort and one normalized source definition');
-assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '小红书'), undefined, 'student-only searchable customers should not enter raw lead source conversion stats');
+assert.strictEqual(platform.sourceChannelStats.find(row => row.source === '网球兄弟小红书'), undefined, 'student-only searchable customers should not enter raw lead source conversion stats');
 assert.strictEqual(platform.studentStageStats.find(row => row.stage === 'formal')?.count, 1, 'formal student count should use the lifecycle studentStage');
 const formalStudentView = platform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-2');
 assert.ok(formalStudentView, 'formal student unified view should expose student-2');
@@ -77,6 +77,6 @@ const operations = buildOperationsMetrics(source, { now: new Date('2026-06-18 00
 
 assert.strictEqual(operations.conversion.cards.totalLeads.value, source.leads.length, 'operations conversion must count raw course leads, not the full searchable customer pool');
 assert.strictEqual(operations.conversion.cards.convertedLeads.value, 0, 'operations converted leads must not treat a student link without formal purchase as course成交');
-assert.strictEqual(operations.conversion.sourceRows.find(row => row.source === '小红书'), undefined, 'operations source rows must not include student-only searchable rows when there is no raw lead');
+assert.strictEqual(operations.conversion.sourceRows.find(row => row.source === '网球兄弟小红书'), undefined, 'operations source rows must not include student-only searchable rows when there is no raw lead');
 
 console.log('platform metrics tests passed');

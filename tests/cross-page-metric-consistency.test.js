@@ -106,7 +106,7 @@ assert.strictEqual(
 assert.deepStrictEqual(
   operations.conversion.sourceRows.map(row => [row.source, row.leads, row.converted, row.conversionRate]),
   [
-    ['小红书', 2, 1, 50],
+    ['网球兄弟小红书', 2, 1, 50],
     ['转介绍', 2, 1, 50],
     ['抖音', 1, 1, 100],
     ['大众点评', 1, 0, 0]

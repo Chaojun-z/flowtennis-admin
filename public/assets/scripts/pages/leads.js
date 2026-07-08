@@ -339,7 +339,7 @@ function leadStorageToInputValue(value){
 function leadTagClass(kind,value=''){
   const text=String(value||'').trim();
   if(typeof standardBusinessTagClass==='function'&&['source','customerType','demandProduct','consult','stage','priority'].includes(kind))return standardBusinessTagClass(kind,text);
-  if(kind==='source')return text==='大众点评'?'tms-tag-tier-blue':text==='小红书'?'tms-tag-red':text==='线下到店'?'tms-tag-tier-gold':text==='转介绍'?'tms-tag-tier-teal':'tms-tag-tier-slate';
+  if(kind==='source')return text==='大众点评'?'tms-tag-tier-blue':/小红书/.test(text)?'tms-tag-red':text==='线下到店'?'tms-tag-tier-gold':text==='转介绍'?'tms-tag-tier-teal':'tms-tag-tier-slate';
   if(kind==='customerType')return text==='青少年'?'tms-tag-tier-blue':text==='成人'?'tms-tag-tier-teal':'tms-tag-tier-slate';
   if(kind==='demandProduct'||kind==='consult')return /私教/.test(text)?'tms-tag-green':/小班/.test(text)?'tms-tag-tier-blue':/订场|场地/.test(text)?'tms-tag-tier-teal':/会员/.test(text)?'tms-tag-tier-gold':/陪打|约球|穿线|合作/.test(text)?'tms-tag-red':'tms-tag-tier-slate';
   if(kind==='intent')return /^高/.test(text)?'tms-tag-green':/^中/.test(text)?'tms-tag-tier-blue':/^低/.test(text)?'tms-tag-tier-gold':/沉默/.test(text)?'tms-tag-tier-slate':'tms-tag-tier-slate';

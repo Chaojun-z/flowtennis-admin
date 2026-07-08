@@ -1,14 +1,17 @@
 const assert = require('assert');
 const taxonomy = require('../public/assets/scripts/core/business-taxonomy.js');
 
-assert.deepStrictEqual(taxonomy.SOURCES, ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知']);
+assert.deepStrictEqual(taxonomy.SOURCES, ['转介绍', '线下到店', '大众点评', '朝珺小红书', '网球兄弟小红书', '播客', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知']);
 assert.deepStrictEqual(taxonomy.LEAD_SOURCE_OPTIONS.map(item => item.value), taxonomy.SOURCES);
 assert.strictEqual(taxonomy.normalizeLeadSource('朋友转介绍'), '转介绍');
 assert.strictEqual(taxonomy.normalizeLeadSource('直接线下到电'), '线下到店');
 assert.strictEqual(taxonomy.normalizeLeadSource('直接线下到店'), '线下到店');
 assert.strictEqual(taxonomy.normalizeLeadSource('孙老师介绍'), '孙老师');
 assert.strictEqual(taxonomy.normalizeLeadSource('抖音/美团'), '抖音');
-assert.strictEqual(taxonomy.normalizeLeadSource('播客'), '未知');
+assert.strictEqual(taxonomy.normalizeLeadSource('小红书'), '网球兄弟小红书');
+assert.strictEqual(taxonomy.normalizeLeadSource('朝珺小红书'), '朝珺小红书');
+assert.strictEqual(taxonomy.normalizeLeadSource('网球兄弟小红书'), '网球兄弟小红书');
+assert.strictEqual(taxonomy.normalizeLeadSource('播客'), '播客');
 assert.strictEqual(taxonomy.normalizeLeadSource('其他'), '未知');
 
 assert.deepStrictEqual(taxonomy.LEAD_STAGE_OPTIONS.map(item => item.value), ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失']);

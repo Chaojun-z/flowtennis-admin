@@ -25,7 +25,7 @@ const normalizedRows = rules.normalizeLeadImportRows({
     { source: '播客', consultType: '合作等' }
   ]
 });
-assert.deepStrictEqual(normalizedRows.map(row => row.source), ['转介绍', '线下到店', '未知']);
+assert.deepStrictEqual(normalizedRows.map(row => row.source), ['转介绍', '线下到店', '播客']);
 assert.deepStrictEqual(normalizedRows.map(row => row.customerType), ['成人', '青少年', '成人']);
 assert.deepStrictEqual(normalizedRows.map(row => row.demandProduct), ['小班课', '小班课', '合作']);
 assert.deepStrictEqual(normalizedRows.map(row => row.consultType), ['小班课', '小班课', '合作']);

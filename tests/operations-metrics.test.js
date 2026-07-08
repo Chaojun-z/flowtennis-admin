@@ -74,9 +74,9 @@ assert.strictEqual(metrics.conversion.retention.court.ndRetention.status, 'pendi
 assert.strictEqual(metrics.conversion.retention.member.ndRetention.status, 'pending', 'member N-day retention must stay pending until a unified retention read model exists');
 assert.strictEqual(metrics.conversion.sourceRanking.find(row => row.source === '抖音/美团'), undefined, 'booking-only converted channels should not enter course deal ranking');
 assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '转介绍'), 'channel deal ranking should include course deal channels');
-assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '小红书'), 'channel deal ranking should include all course deal channels');
-assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.trialConversionRate, 50, 'channel trial conversion rate should use trial attendance count over leads');
-assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '小红书')?.dealConversionRate, 50, 'channel deal conversion rate should use deals over leads');
+assert.ok(metrics.conversion.sourceRanking.find(row => row.source === '网球兄弟小红书'), 'channel deal ranking should include all course deal channels');
+assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '网球兄弟小红书')?.trialConversionRate, 50, 'channel trial conversion rate should use trial attendance count over leads');
+assert.strictEqual(metrics.conversion.channelEfficiencyRows.find(row => row.source === '网球兄弟小红书')?.dealConversionRate, 50, 'channel deal conversion rate should use deals over leads');
 assert.strictEqual(metrics.conversion.studentAttributeRows, undefined, 'conversion page should not output local people profile rows');
 assert.ok(metrics.conversion.profileRows.find(row => row.attribute === '青少年女性'), 'conversion profile rows should restore youth/gender profile data');
 assert.strictEqual(metrics.conversion.profileRows.find(row => row.attribute === '零基础')?.renewalRate, 100, 'conversion profile rows should expose retention profile rate');

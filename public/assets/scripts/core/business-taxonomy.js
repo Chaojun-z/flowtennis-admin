@@ -24,7 +24,7 @@
     '场地 / 内部使用',
     '场地 / 约球局'
   ].map(value => ({ value, label: value }));
-  const SOURCES = ['转介绍', '线下到店', '大众点评', '小红书', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'];
+  const SOURCES = ['转介绍', '线下到店', '大众点评', '朝珺小红书', '网球兄弟小红书', '播客', '视频号', '抖音', '群友', '小班课转化', '孙老师', '未知'];
   const PRODUCT_TYPES = ['私教课', '体验课', '小班课', '大师课', '陪打'];
   const STANDARD_COURSE_TYPE_OPTIONS = [
     { value: '私教课', label: '私教课' },
@@ -249,16 +249,19 @@
   function normalizeLeadSource(value) {
     const raw = text(value);
     if (!raw) return '未知';
+    if (SOURCES.includes(raw)) return raw;
     if (includesAny(raw, ['转介绍', '朋友介绍', '朋友转介'])) return '转介绍';
     if (includesAny(raw, ['线下到店', '线下到电', '到店'])) return '线下到店';
-    if (includesAny(raw, ['小红书'])) return '小红书';
+    if (raw.includes('朝珺') && raw.includes('小红书')) return '朝珺小红书';
+    if (raw.includes('网球兄弟') && raw.includes('小红书')) return '网球兄弟小红书';
+    if (includesAny(raw, ['小红书'])) return '网球兄弟小红书';
+    if (includesAny(raw, ['播客'])) return '播客';
     if (includesAny(raw, ['视频号'])) return '视频号';
     if (includesAny(raw, ['抖音'])) return '抖音';
     if (includesAny(raw, ['大众点评', '美团'])) return '大众点评';
     if (includesAny(raw, ['群友', '微信群'])) return '群友';
     if (includesAny(raw, ['小班课转化'])) return '小班课转化';
     if (includesAny(raw, ['孙老师'])) return '孙老师';
-    if (SOURCES.includes(raw)) return raw;
     return '未知';
   }
 
