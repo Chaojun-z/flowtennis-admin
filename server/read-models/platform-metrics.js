@@ -839,7 +839,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
   const hasTrialPath = row => !!row.hasTrialExperience;
   const courseStudents = studentRows
-    .filter(row => ['trial', 'formal'].includes(text(row.studentStage)))
+    .filter(hasTrialPath)
     .map(courseViewRow);
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')
@@ -847,10 +847,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
-  const courseStudentIds = new Set(courseStudents.map(row => text(row.studentId)).filter(Boolean));
   const trialPathStudents = studentRows
     .filter(hasTrialPath)
-    .filter(row => courseStudentIds.has(text(row.studentId)))
     .map(courseViewRow);
   const trialPathDealStudents = formalStudents.filter(hasTrialPath);
   const trialPathDealIds = new Set(trialPathDealStudents.map(row => text(row.studentId)).filter(Boolean));
@@ -1020,8 +1018,8 @@ function buildStandardLifecycleMetrics(data = {}) {
     directCourseDeals: standardMetric('DIRECT_COURSE_DEALS', '直接课程成交', directCourseDeals, formalStudents || validLeads, 'DIRECT_COURSE_DEALS / FORMAL_STUDENTS'),
     totalDeals: standardMetric('TOTAL_DEALS', '总成交', totalDeals, validLeads, 'TOTAL_DEALS / VALID_LEADS', '条')
   };
-  metrics.formalStudents.transitionRate = rate(formalStudents, courseChainStudents);
-  metrics.formalStudents.transitionRateText = rateText(formalStudents, courseChainStudents);
+  metrics.formalStudents.transitionRate = rate(trialPathDeals, courseChainStudents);
+  metrics.formalStudents.transitionRateText = rateText(trialPathDeals, courseChainStudents);
   metrics.directCourseDeals.rate = rate(directCourseDeals, formalStudents);
   metrics.directCourseDeals.rateText = rateText(directCourseDeals, formalStudents);
   return {

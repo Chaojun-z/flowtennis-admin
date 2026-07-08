@@ -137,6 +137,30 @@ const freePrivateLeadRows = buildLeadPoolRows({ customerLifecycleRows: freePriva
 assert.strictEqual(freePrivateLeadRows[0].leadStage, '跟进中', 'free class follow-up should not become 已约体验 or 已成交');
 assert.strictEqual(freePrivateLeadRows[0].demandProduct, '私教课');
 
+const trialFeedbackRows = buildCustomerLifecycleRows({
+  students: [
+    {
+      id: 'student-trial-feedback',
+      name: '体验反馈学员',
+      sourceLeadId: 'lead-trial-feedback'
+    }
+  ],
+  feedbacks: [
+    {
+      id: 'feedback-trial',
+      studentId: 'student-trial-feedback',
+      courseType: '体验课',
+      status: '已完成',
+      createdAt: '2026-06-10 10:00:00'
+    }
+  ]
+});
+const trialFeedback = trialFeedbackRows[0];
+assert.strictEqual(trialFeedback.studentStage, 'trial', '有体验课反馈记录的人必须进入普通学员');
+assert.strictEqual(trialFeedback.hasTrialExperience, true, '体验课反馈记录必须算体验行为');
+assert.strictEqual(trialFeedback.trialBookedAt, '2026-06-10 10:00:00');
+assert.strictEqual(trialFeedback.trialStatus, '已体验待成交');
+
 const staleMaterializedFreeRows = buildCustomerLifecycleRows({
   leads: [
     {

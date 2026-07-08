@@ -108,6 +108,50 @@ async function membershipSummaryFromRows(rows = {}) {
     '课包复购趋势分子必须使用正式课包复购人数'
   );
 
+  const manualCourseOnlySample = {
+    leads: [
+      {
+        id: 'lead-manual-course-only',
+        displayName: '只标课程成交',
+        leadDate: '2026-06-01',
+        conversionAt: '2026-06-03',
+        leadStage: '已成交',
+        dealType: '课程',
+        conversionType: '课程',
+        studentId: 'stu-manual-course-only'
+      }
+    ],
+    students: [
+      { id: 'stu-manual-course-only', name: '只标课程成交', sourceLeadId: 'lead-manual-course-only' }
+    ],
+    purchases: [],
+    schedule: [],
+    courts: [],
+    membershipAccounts: [],
+    membershipOrders: []
+  };
+  const manualLifecycleRows = buildCustomerLifecycleRows(manualCourseOnlySample);
+  const manualPlatform = buildPlatformMetrics({ ...manualCourseOnlySample, customerLifecycleRows: manualLifecycleRows });
+  const manualOperations = buildOperationsMetrics({ ...manualCourseOnlySample, customerLifecycleRows: manualLifecycleRows }, {
+    now: new Date('2026-06-12 12:00:00'),
+    dateRange: { startDate: '2026-06-01', endDate: '2026-06-12' }
+  });
+  assert.strictEqual(
+    manualPlatform.teachingStudentViews.formalStudents.length,
+    0,
+    '只在线索池标记课程成交、没有正式课包购买，不能进入正式学员'
+  );
+  assert.strictEqual(
+    manualOperations.conversion.trends.at(-1)?.courseDealRateNumerator,
+    0,
+    '经营分析课程成交趋势不能被线索池手工课程成交标记带高'
+  );
+  assert.strictEqual(
+    manualOperations.conversion.standardLifecycleMetrics.metrics.formalStudents.value,
+    0,
+    '经营分析课程成交标准指标必须继续等于正式学员统一视图'
+  );
+
   const membershipSample = {
     campuses: [{ id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' }],
     students: [],

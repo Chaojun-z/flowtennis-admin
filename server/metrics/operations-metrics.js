@@ -660,7 +660,7 @@ function courseConversionRows(data = {}, options = {}) {
     const stage = normalizeLeadStage(lead, sets, leadPoolByLeadId);
     const dealType = normalizeLeadDealType(lead, leadPoolByLeadId, sets).join('+');
     const linkedStudentFormal = sid && firstPurchaseDateByStudent.has(sid);
-    const hasCourse = dealType.includes('课程') || linkedStudentFormal || ids.some(lid => sets.course?.has(lid));
+    const hasCourse = linkedStudentFormal || ids.some(lid => sets.course?.has(lid));
     const dealPath = String(linkedStudent?.dealPath || lead.dealPath || '').trim();
     const stageText = `${stage} ${dealType} ${lead.rawStatus || ''} ${lead.status || ''} ${lead.statusAfter || ''} ${lead.trialStatus || ''}`;
     const leadFollowups = ids.flatMap(lid => followupsByLeadId.get(lid) || []);
@@ -2428,7 +2428,7 @@ function buildConversionTrendDailyRows({ rows = [], purchases = [], dateRange = 
     const repurchase = buildFixedCohortRepurchaseMetrics(purchases, day, dateRange);
     const formalRows = cohortRows.filter(row => {
       const dealDate = dateKey(row.dealEventDate);
-      return (normalizeText(row.studentStage) === 'formal' || (!!row.studentId && row.hasCourse)) && eventInTrendWindow(dealDate, day, dateRange);
+      return normalizeText(row.studentStage) === 'formal' && eventInTrendWindow(dealDate, day, dateRange);
     });
     const totalDealRows = dealRows;
     const trialPathDealRows = trialPathCohortRows.filter(row => {

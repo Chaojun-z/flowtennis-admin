@@ -123,35 +123,40 @@ function ownerForCampus(campus = '', owner = '') {
   return normalized === 'shunyi_mapo' || normalized.includes('马坡') ? 'Mira' : '';
 }
 
-function studentRows(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+function studentRows(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
   const sid = text(student.id || student.studentId);
   const studentPurchases = (purchases || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
   const entitlementRows = (entitlements || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
   const scheduleRows = (schedule || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
+  const feedbackRows = (feedbacks || []).filter(row => rowHasStudent(row, sid) && activeStatus(row));
   const formalPurchases = [...studentPurchases, ...entitlementRows]
     .filter(row => !purchaseIsTrial(row) && paidBusinessRow(row))
     .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
-  const trialRows = [...studentPurchases, ...entitlementRows, ...scheduleRows]
+  const trialRows = [...studentPurchases, ...entitlementRows, ...scheduleRows, ...feedbackRows]
     .filter(row => (purchaseIsTrial(row) || scheduleIsTrial(row)) && activeStatus(row))
     .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
   const courseRows = scheduleRows
     .filter(row => !scheduleIsTrial(row))
     .sort((a, b) => dateValue(businessDate(a)) - dateValue(businessDate(b)));
-  return { studentPurchases, entitlementRows, scheduleRows, formalPurchases, trialRows, courseRows };
+  return { studentPurchases, entitlementRows, scheduleRows, feedbackRows, formalPurchases, trialRows, courseRows };
 }
 
-function studentTrialFacts(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  const { studentPurchases, entitlementRows, scheduleRows } = studentRows(student, { purchases, entitlements, schedule });
+function studentTrialFacts(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
+  const { studentPurchases, entitlementRows, scheduleRows, feedbackRows } = studentRows(student, { purchases, entitlements, schedule, feedbacks });
   const trialPurchaseRows = [...studentPurchases, ...entitlementRows]
     .filter(row => purchaseIsTrial(row) && activeStatus(row));
   const trialScheduleRows = scheduleRows
     .filter(row => scheduleIsTrial(row) && activeStatus(row));
+  const trialFeedbackRows = feedbackRows
+    .filter(row => scheduleIsTrial(row) && activeStatus(row));
   const bookedAt = firstDate(
     trialScheduleRows.map(businessDate),
-    trialPurchaseRows.map(businessDate)
+    trialPurchaseRows.map(businessDate),
+    trialFeedbackRows.map(businessDate)
   );
   const attendedAt = firstDate(
-    trialScheduleRows.filter(scheduleCompleted).map(businessDate)
+    trialScheduleRows.filter(scheduleCompleted).map(businessDate),
+    trialFeedbackRows.map(businessDate)
   );
   return {
     bookedAt,
@@ -161,19 +166,19 @@ function studentTrialFacts(student = {}, { purchases = [], entitlements = [], sc
   };
 }
 
-function studentHasTrialExperience(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+function studentHasTrialExperience(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return false;
-  const facts = studentTrialFacts(student, { purchases, entitlements, schedule });
+  const facts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
   return facts.hasTrialBooked;
 }
 
-function studentStage(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
+function studentStage(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
   const sid = text(student.id || student.studentId);
   if (!sid) return 'none';
-  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
+  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule, feedbacks });
   if (studentCoursePurchaseCountFromRows(formalPurchases)) return 'formal';
-  const hasTrial = studentHasTrialExperience(student, { purchases, entitlements, schedule });
+  const hasTrial = studentHasTrialExperience(student, { purchases, entitlements, schedule, feedbacks });
   if (hasTrial) return 'trial';
   return 'student';
 }
@@ -187,21 +192,21 @@ function studentCoursePurchaseCountFromRows(rows = []) {
   return new Set((rows || []).map(coursePurchaseIdentity).filter(Boolean)).size;
 }
 
-function studentCoursePurchaseCount(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule });
+function studentCoursePurchaseCount(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
+  const { formalPurchases } = studentRows(student, { purchases, entitlements, schedule, feedbacks });
   return studentCoursePurchaseCountFromRows(formalPurchases);
 }
 
-function studentCourseDealPath(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  const coursePurchaseCount = studentCoursePurchaseCount(student, { purchases, entitlements, schedule });
+function studentCourseDealPath(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
+  const coursePurchaseCount = studentCoursePurchaseCount(student, { purchases, entitlements, schedule, feedbacks });
   if (!coursePurchaseCount) return '';
   if (coursePurchaseCount > 1) return '老客续费';
-  return studentHasTrialExperience(student, { purchases, entitlements, schedule }) ? '体验转化' : '直接成交';
+  return studentHasTrialExperience(student, { purchases, entitlements, schedule, feedbacks }) ? '体验转化' : '直接成交';
 }
 
-function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [] } = {}) {
-  const facts = studentTrialFacts(student, { purchases, entitlements, schedule });
-  if (studentCoursePurchaseCount(student, { purchases, entitlements, schedule })) {
+function studentTrialStatus(student = {}, { purchases = [], entitlements = [], schedule = [], feedbacks = [] } = {}) {
+  const facts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
+  if (studentCoursePurchaseCount(student, { purchases, entitlements, schedule, feedbacks })) {
     return facts.hasTrialBooked ? '已成交' : '';
   }
   if (facts.hasTrialAttended) return '已体验待成交';
@@ -283,6 +288,7 @@ function buildCustomerLifecycleRows({
   purchases = [],
   entitlements = [],
   schedule = [],
+  feedbacks = [],
   courts = [],
   membershipAccounts = [],
   membershipOrders = []
@@ -360,12 +366,12 @@ function buildCustomerLifecycleRows({
     studentsById.set(sid, student);
     const sourceId = resolveLeadSourceId(sourceLeadId(student) || leadByStudentId.get(sid) || '');
     const row = rowFor(sourceId, `student:${sid}`);
-    const stage = studentStage(student, { purchases, entitlements, schedule });
-    const courseDealPath = studentCourseDealPath(student, { purchases, entitlements, schedule });
-    const trialStatus = studentTrialStatus(student, { purchases, entitlements, schedule });
-    const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule });
+    const stage = studentStage(student, { purchases, entitlements, schedule, feedbacks });
+    const courseDealPath = studentCourseDealPath(student, { purchases, entitlements, schedule, feedbacks });
+    const trialStatus = studentTrialStatus(student, { purchases, entitlements, schedule, feedbacks });
+    const trialFacts = studentTrialFacts(student, { purchases, entitlements, schedule, feedbacks });
     const hasTrialExperience = trialFacts.hasTrialBooked;
-    const { formalPurchases, trialRows, courseRows } = studentRows(student, { purchases, entitlements, schedule });
+    const { formalPurchases, trialRows, courseRows } = studentRows(student, { purchases, entitlements, schedule, feedbacks });
     const coursePurchaseCount = studentCoursePurchaseCountFromRows(formalPurchases);
     const hasCourseRepeatPurchase = coursePurchaseCount > 1;
     const hasTrialToCourseConversion = coursePurchaseCount > 0 && hasTrialExperience;

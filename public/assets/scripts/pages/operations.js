@@ -1068,7 +1068,7 @@ function operationsConversionKpiCards(conversion = {}) {
   };
   const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
-    rateCard('总成交转化率', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
+    rateCard('总成交率（课程/订场/会员）', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
     rateCard('体验路径成交率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
     rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
     rateCard('订场复订率', Number(conversion.courtChain?.courtRepeatRate) || 0, 'courtRepeatRate', 'retention')

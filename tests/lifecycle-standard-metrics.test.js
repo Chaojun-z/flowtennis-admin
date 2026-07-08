@@ -51,7 +51,7 @@ const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows }, 
 });
 
 assert.strictEqual(standard.metrics.validLeads.value, 4, '有效线索必须按统一自然人线索池统计');
-assert.strictEqual(standard.metrics.courseChainStudents.value, 3, '普通学员必须来自统一教学链视图');
+assert.strictEqual(standard.metrics.courseChainStudents.value, 2, '普通学员必须来自有体验课事实的统一教学链视图');
 assert.strictEqual(standard.metrics.formalStudents.value, 2, '正式学员必须来自统一教学链视图');
 assert.strictEqual(standard.metrics.trialPathStudents.value, 2, '体验路径不能把只有手工体验时间的线索算进去');
 assert.strictEqual(standard.metrics.trialPathDeals.value, 1, '体验路径成交只统计真实体验路径中的正式成交');
@@ -84,7 +84,7 @@ assert.deepStrictEqual(
   standard.funnels.courseChain.map(row => [row.stage, row.count]),
   [
     ['有效线索', 4],
-    ['普通学员', 3],
+    ['普通学员', 2],
     ['正式学员', 2],
     ['课包复购', 1]
   ],

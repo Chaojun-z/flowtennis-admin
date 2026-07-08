@@ -65,7 +65,8 @@ function createCorePageDataRoutes(deps={}){
         students:scoped.students,
         purchases:scoped.purchases,
         entitlements:scoped.entitlements,
-        schedule:scoped.schedule
+        schedule:scoped.schedule,
+        feedbacks:scoped.feedbacks
       });
       return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
     }
@@ -88,7 +89,8 @@ function createCorePageDataRoutes(deps={}){
         students:scoped.students,
         purchases:scoped.purchases,
         entitlements:scoped.entitlements,
-        schedule:scoped.schedule
+        schedule:scoped.schedule,
+        feedbacks:scoped.feedbacks
       });
       const metricScope=pageDataScopeFromQuery(query);
       return sendJson(res,{

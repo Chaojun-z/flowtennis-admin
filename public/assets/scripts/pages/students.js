@@ -433,11 +433,11 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'普通学员',valueHtml:stats.total,sub:'进入课程链学员'},
+    {label:'普通学员',valueHtml:stats.total,sub:'体验课阶段学员'},
     {label:'体验路径学员',valueHtml:stats.trialPathCount||0,percent:studentPercentText(stats.trialPathCount||0,stats.total),sub:'体验路径学员 / 普通学员'},
     {label:'体验路径未成交',valueHtml:stats.trialPathPendingCount||0,percent:studentPercentText(stats.trialPathPendingCount||0,stats.trialPathCount||0),sub:'体验路径未成交 / 体验路径学员'},
     {label:'体验路径成交',valueHtml:stats.trialPathDealCount||0,percent:studentPercentText(stats.trialPathDealCount||0,stats.trialPathCount||0),sub:'体验路径成交 / 体验路径学员'},
-    {label:'直接成交学员',valueHtml:stats.directCourseDealCount||0,percent:studentPercentText(stats.directCourseDealCount||0,stats.total),sub:'直接成交学员 / 普通学员'}
+    {label:'直接成交学员',valueHtml:stats.directCourseDealCount||0,percent:studentPercentText(stats.directCourseDealCount||0,studentStandardMetricValue('formalStudents')||0),sub:'直接成交学员 / 正式学员'}
   ];
   return [
     {label:'正式学员',valueHtml:`<span>${stats.total}</span><span class="student-stat-divider">｜</span><span>${stats.purchaseCount}</span><span class="student-stat-divider">｜</span><span>${stats.courseRepeatCount}</span>`,sub:'正式学员数 vs 购买次数 vs 课包复购人数'},

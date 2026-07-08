@@ -72,11 +72,11 @@ assert.deepStrictEqual(
   operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
   [
     ['有效线索', 6],
-    ['普通学员', 4],
+    ['普通学员', 1],
     ['正式学员', 3],
     ['课包复购', 0]
   ],
-  'course funnel must use the standard course-chain funnel, not the legacy trial appointment funnel'
+  'course funnel must use the standard trial-fact student funnel, not manual lead labels or direct formal deals'
 );
 
 assert.deepStrictEqual(
@@ -161,8 +161,8 @@ assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathPendingSt
 assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.directCourseDealStudents), '教学链读模型必须提供直接成交 directCourseDealStudents');
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.courseStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-booked-only', 'stu-direct-course', 'stu-direct-course-manual-trial', 'stu-trial-course'],
-  '普通学员视图必须表示进入课程链的人，包含体验路径学员和直接正式成交学员'
+  ['stu-attended-only', 'stu-booked-only', 'stu-trial-course'],
+  '普通学员视图必须只包含有预约体验课、体验课包、体验课上课记录等体验路径事实的人'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.formalStudents.map(row => row.studentId).sort(),
@@ -170,9 +170,9 @@ assert.deepStrictEqual(
   '正式学员视图必须包含直接课程成交和体验后课程成交'
 );
 assert.strictEqual(
-  teachingPlatform.teachingStudentViews.formalStudents.every(row => teachingPlatform.teachingStudentViews.courseStudents.some(item => item.customerKey === row.customerKey)),
-  true,
-  '正式学员必须是普通学员的下级漏斗，不能从普通学员中剔除'
+  teachingPlatform.teachingStudentViews.courseStudents.some(row => row.studentId === 'stu-direct-course'),
+  false,
+  '直接购买正式课包但没有体验路径事实的人，不能进入普通学员'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialPathStudents.map(row => row.studentId).sort(),
@@ -197,7 +197,7 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.summary,
   {
-    courseStudentCount: 5,
+    courseStudentCount: 3,
     trialStudentCount: 2,
     formalStudentCount: 3,
     courseDealCustomers: 3,

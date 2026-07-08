@@ -57,7 +57,7 @@ assert.match(source, /const d=getFilteredStudents\(\);[\s\S]*a\.download='FlowTe
 assert.match(source, /stuCoachFilterHost/, 'student page should include primary coach filter host');
 assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配/, 'student filters should expose responsible coach options with all as the reset item');
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
-assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员[\s\S]*进入课程链学员[\s\S]*体验路径学员[\s\S]*体验路径未成交[\s\S]*体验路径成交[\s\S]*直接成交学员/, 'trial student top stats should show course-chain funnel cards');
+assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*普通学员[\s\S]*体验课阶段学员[\s\S]*体验路径学员[\s\S]*体验路径未成交[\s\S]*体验路径成交[\s\S]*直接成交学员/, 'trial student top stats should show course-chain funnel cards');
 assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
 assert.match(source, /function studentStandardSummaryForMode\(/, 'student top cards should read the backend standard teaching summary');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should use the standard summary instead of local purchase or finance formulas');
