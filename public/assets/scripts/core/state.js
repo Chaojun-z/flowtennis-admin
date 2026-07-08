@@ -765,16 +765,14 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
     }));
   }
   if(requestVersion!==dataRequestVersion)return;
-  buildCampusTabs();
-  renderAll();
+  renderLoadedCurrentPage(pg);
   if(isStudentListPage(pg)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS.length){
     setTimeout(()=>{
       if(requestVersion!==dataRequestVersion)return;
       ensureDatasetsByName(STUDENT_PAGE_DEFERRED_REQUIREMENTS,{force})
         .then(()=>{
           if(requestVersion!==dataRequestVersion)return;
-          buildCampusTabs();
-          renderAll();
+          renderLoadedCurrentPage(pg);
         })
         .catch(e=>{
           if(requestVersion!==dataRequestVersion)return;
@@ -783,6 +781,12 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
     },1200);
     return;
   }
+}
+function renderLoadedCurrentPage(pg){
+  if(normalizeStudentListPage(pg)!==normalizeStudentListPage(currentPage))return false;
+  buildCampusTabs();
+  renderPageData(currentPage);
+  return true;
 }
 function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
@@ -896,8 +900,7 @@ async function loadPageDataAndRender(pg,{quiet=false,force=false}={}){
       }
     }
     if(requestVersion!==dataRequestVersion)return;
-    buildCampusTabs();
-    renderAll();
+    renderLoadedCurrentPage(pg);
     openPendingScheduleDeepLink();
     loadPageBackgroundDatasets(pg,requestVersion,{force});
   }catch(e){

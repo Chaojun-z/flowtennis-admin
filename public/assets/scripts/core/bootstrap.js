@@ -82,11 +82,7 @@ function goPage(pg,el,skipRender=false){
       deferPageDataLoad(pg,{quiet:true});
     }
   };
-  if(document.startViewTransition) {
-    document.startViewTransition(() => updateDOM());
-  } else {
-    updateDOM();
-  }
+  updateDOM();
 }
 function renderStudentsIfVisible(){
   if(isStudentListPage(currentPage))renderStudents();
