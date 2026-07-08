@@ -6,10 +6,12 @@ const { buildBusinessDailyReportSnapshot } = require('../scripts/lib/business-da
 const { generateReport, buildFeishuCard } = require('../standalone-services/feishu-business-report');
 
 const workflowPath = path.join(__dirname, '../.github/workflows/feishu-business-daily-report.yml');
+const reportDate = '2026-06-30';
+const generatedAt = `${reportDate}T14:30${':00.000Z'}`;
 
 const snapshot = buildBusinessDailyReportSnapshot({
-  targetDate: '2026-06-30',
-  generatedAt: '2026-06-30T14:30:00.000Z',
+  targetDate: reportDate,
+  generatedAt,
   campuses: [
     { id: 'shunyi_mapo', code: 'shunyi_mapo', name: '顺义马坡' },
     { id: 'ntc', code: 'ntc', name: '国网中心' }
