@@ -480,7 +480,8 @@ function leadOwnerOptions(){
   return Array.from(new Set([...leadRows().map(item=>String(item?.owner||'').trim()).filter(Boolean),...activeCoachNames()])).map(value=>({value,label:value}));
 }
 function leadCampusText(lead){
-  return campusDisplayName(lead?.campus||'')||'-';
+  const value=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(lead,lead?.campus):lead?.campus;
+  return (typeof cn==='function'?cn(value):campusDisplayName(value))||'-';
 }
 function leadCampusOptions(){
   return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:campusDisplayName(c.name||c.code||c.id)}))];
