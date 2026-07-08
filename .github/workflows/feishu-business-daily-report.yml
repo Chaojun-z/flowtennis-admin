@@ -1,0 +1,60 @@
+name: Feishu Business Daily Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 14 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  send-business-daily-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: production
+      ALLOW_PRODUCTION_BOOTSTRAP_WRITES: 'false'
+      TS_ENDPOINT: ${{ secrets.TABLESTORE_READONLY_ENDPOINT }}
+      TS_INSTANCE: ${{ secrets.TABLESTORE_READONLY_INSTANCE }}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.TABLESTORE_READONLY_ACCESS_KEY_ID }}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.TABLESTORE_READONLY_ACCESS_KEY_SECRET }}
+      FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_BUSINESS_DAILY_REPORT_WEBHOOK }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            standalone-services/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install standalone service dependencies
+        run: npm ci
+        working-directory: standalone-services
+
+      - name: Prepare production env file
+        run: |
+          cat > .env.production <<EOF
+          APP_ENV=production
+          TS_ENDPOINT=${TS_ENDPOINT}
+          TS_INSTANCE=${TS_INSTANCE}
+          ALIBABA_CLOUD_ACCESS_KEY_ID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
+          ALLOW_PRODUCTION_BOOTSTRAP_WRITES=false
+          EOF
+
+      - name: Export business daily report snapshot
+        run: node scripts/export-business-daily-report-json.js
+
+      - name: Send Feishu business daily report
+        run: node feishu-business-report.js
+        working-directory: standalone-services
