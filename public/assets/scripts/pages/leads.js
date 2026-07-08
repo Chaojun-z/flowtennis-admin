@@ -775,7 +775,7 @@ function renderLeadStats(list){
   const stats=leadStatsData(list);
   const cardData=[
     {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
-    {label:'普通学员',valueHtml:stats.courseStudents,percent:stats.courseStudentRate,sub:'体验课阶段学员 / 线索数'},
+    {label:'普通学员',valueHtml:stats.courseStudents,percent:stats.courseStudentRate,sub:'课程服务学员 / 线索数'},
     {label:'正式学员',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:'正式课包成交 / 线索数'},
     {label:'体验路径学员',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'体验路径学员 / 线索数'},
     {label:'体验路径成交',valueHtml:stats.trialPathDeal,percent:stats.trialPathDealRate,sub:'体验路径成交 / 体验路径学员'}

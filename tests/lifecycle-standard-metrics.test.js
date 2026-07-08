@@ -8,11 +8,15 @@ const sample = {
   leads: [
     { id: 'manual-trial-only', displayName: '只有手工体验时间', leadDate: '2026-06-01', trialAtRaw: '2026-06-05 10:00' },
     { id: 'direct-course', displayName: '直接成交', leadDate: '2026-06-01' },
+    { id: 'manual-course-converted', displayName: '手工课程成交', leadDate: '2026-06-01', leadStage: '已成交', dealType: '课程' },
+    { id: 'formal-schedule-only', displayName: '正式课排课', leadDate: '2026-06-01' },
     { id: 'real-trial-pending', displayName: '真实体验未成交', leadDate: '2026-06-02' },
     { id: 'real-trial-deal', displayName: '真实体验成交', leadDate: '2026-06-03' }
   ],
   students: [
     { id: 'student-direct-course', name: '直接成交', sourceLeadId: 'direct-course' },
+    { id: 'student-manual-course-converted', name: '手工课程成交', sourceLeadId: 'manual-course-converted' },
+    { id: 'student-formal-schedule-only', name: '正式课排课', sourceLeadId: 'formal-schedule-only' },
     { id: 'student-real-trial-pending', name: '真实体验未成交', sourceLeadId: 'real-trial-pending' },
     { id: 'student-real-trial-deal', name: '真实体验成交', sourceLeadId: 'real-trial-deal' }
   ],
@@ -32,6 +36,7 @@ const sample = {
     { id: 'ledger-real-trial-renewal-1', studentId: 'student-real-trial-deal', entitlementId: 'ent-real-trial-renewal', purchaseId: 'purchase-real-trial-renewal', lessonDelta: -6, relatedDate: '2026-06-12' }
   ],
   schedule: [
+    { id: 'schedule-formal-only', studentId: 'student-formal-schedule-only', courseType: '私教课', startTime: '2026-06-06 09:00:00', status: '已排课' },
     { id: 'schedule-real-trial-pending', studentId: 'student-real-trial-pending', courseType: '体验课', startTime: '2026-06-06 10:00:00', status: '待上课' },
     { id: 'schedule-real-trial-deal', studentId: 'student-real-trial-deal', courseType: '体验课', startTime: '2026-06-07 10:00:00', status: '已完成' }
   ],
@@ -50,8 +55,8 @@ const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows }, 
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 
-assert.strictEqual(standard.metrics.validLeads.value, 4, '有效线索必须按统一自然人线索池统计');
-assert.strictEqual(standard.metrics.courseChainStudents.value, 2, '普通学员必须来自有体验课事实的统一教学链视图');
+assert.strictEqual(standard.metrics.validLeads.value, 6, '有效线索必须按统一自然人线索池统计');
+assert.strictEqual(standard.metrics.courseChainStudents.value, 5, '普通学员必须包含已转化学员和有排课记录学员');
 assert.strictEqual(standard.metrics.formalStudents.value, 2, '正式学员必须来自统一教学链视图');
 assert.strictEqual(standard.metrics.trialPathStudents.value, 2, '体验路径不能把只有手工体验时间的线索算进去');
 assert.strictEqual(standard.metrics.trialPathDeals.value, 1, '体验路径成交只统计真实体验路径中的正式成交');
@@ -83,8 +88,8 @@ assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学�
 assert.deepStrictEqual(
   standard.funnels.courseChain.map(row => [row.stage, row.count]),
   [
-    ['有效线索', 4],
-    ['普通学员', 2],
+    ['有效线索', 6],
+    ['普通学员', 5],
     ['正式学员', 2],
     ['课包复购', 1]
   ],

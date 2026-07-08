@@ -838,8 +838,13 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
   const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
   const hasTrialPath = row => !!row.hasTrialExperience;
+  const hasCourseStudentEntry = row => !!row.hasTrialExperience
+    || text(row.studentStage) === 'formal'
+    || !!row.hasCourseStudentEntry
+    || !!row.hasScheduleRecord
+    || !!row.hasFreeCourseFollowup;
   const courseStudents = studentRows
-    .filter(hasTrialPath)
+    .filter(hasCourseStudentEntry)
     .map(courseViewRow);
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')

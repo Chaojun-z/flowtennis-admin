@@ -72,11 +72,11 @@ assert.deepStrictEqual(
   operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
   [
     ['有效线索', 6],
-    ['普通学员', 1],
+    ['普通学员', 4],
     ['正式学员', 3],
     ['课包复购', 0]
   ],
-  'course funnel must use the standard trial-fact student funnel, not manual lead labels or direct formal deals'
+  'course funnel must use the restored ordinary-student funnel, including converted students and scheduled students'
 );
 
 assert.deepStrictEqual(
@@ -126,6 +126,8 @@ const teachingSample = {
     { id: 'lead-booked-only', displayName: '已约未上', leadDate: '2026-06-02' },
     { id: 'lead-attended-only', displayName: '已体验待成交', leadDate: '2026-06-03' },
     { id: 'lead-trial-course', displayName: '体验后成交', leadDate: '2026-06-04' },
+    { id: 'lead-manual-course', displayName: '手工课程成交', leadDate: '2026-06-04', leadStage: '已成交', dealType: '课程' },
+    { id: 'lead-scheduled-course', displayName: '正式课排课', leadDate: '2026-06-04' },
     { id: 'lead-booking-only', displayName: '只订场', leadDate: '2026-06-05' }
   ],
   students: [
@@ -133,7 +135,9 @@ const teachingSample = {
     { id: 'stu-direct-course-manual-trial', name: '线索手工邀约后直接成交', sourceLeadId: 'lead-direct-course-manual-trial' },
     { id: 'stu-booked-only', name: '已约未上', sourceLeadId: 'lead-booked-only' },
     { id: 'stu-attended-only', name: '已体验待成交', sourceLeadId: 'lead-attended-only' },
-    { id: 'stu-trial-course', name: '体验后成交', sourceLeadId: 'lead-trial-course' }
+    { id: 'stu-trial-course', name: '体验后成交', sourceLeadId: 'lead-trial-course' },
+    { id: 'stu-manual-course', name: '手工课程成交', sourceLeadId: 'lead-manual-course' },
+    { id: 'stu-scheduled-course', name: '正式课排课', sourceLeadId: 'lead-scheduled-course' }
   ],
   purchases: [
     { id: 'purchase-direct-course', studentId: 'stu-direct-course', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' },
@@ -143,7 +147,8 @@ const teachingSample = {
   schedule: [
     { id: 'schedule-booked-only', studentId: 'stu-booked-only', courseType: '体验课', startTime: '2026-06-08 10:00:00', endTime: '2026-06-08 11:00:00', status: '待上课' },
     { id: 'schedule-attended-only', studentId: 'stu-attended-only', courseType: '体验课', startTime: '2026-06-09 10:00:00', endTime: '2026-06-09 11:00:00', status: '已完成' },
-    { id: 'schedule-trial-course', studentId: 'stu-trial-course', courseType: '体验课', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已完成' }
+    { id: 'schedule-trial-course', studentId: 'stu-trial-course', courseType: '体验课', startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已完成' },
+    { id: 'schedule-formal-course', studentId: 'stu-scheduled-course', courseType: '私教课', startTime: '2026-06-11 10:00:00', endTime: '2026-06-11 11:00:00', status: '已排课' }
   ],
   courts: [
     { id: 'court-booking-only', name: '只订场', sourceLeadId: 'lead-booking-only', history: JSON.stringify([{ date: '2026-06-06', startTime: '09:00', endTime: '10:00', amount: 100, type: '消费' }]) }
@@ -161,8 +166,8 @@ assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathPendingSt
 assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.directCourseDealStudents), '教学链读模型必须提供直接成交 directCourseDealStudents');
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.courseStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-booked-only', 'stu-trial-course'],
-  '普通学员视图必须只包含有预约体验课、体验课包、体验课上课记录等体验路径事实的人'
+  ['stu-attended-only', 'stu-booked-only', 'stu-direct-course', 'stu-direct-course-manual-trial', 'stu-manual-course', 'stu-scheduled-course', 'stu-trial-course'],
+  '普通学员视图必须包含体验路径、已转化学员、正式课包学员和有排课记录学员'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.formalStudents.map(row => row.studentId).sort(),
@@ -171,8 +176,8 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   teachingPlatform.teachingStudentViews.courseStudents.some(row => row.studentId === 'stu-direct-course'),
-  false,
-  '直接购买正式课包但没有体验路径事实的人，不能进入普通学员'
+  true,
+  '直接购买正式课包但没有体验路径事实的人，也必须进入普通学员'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.trialPathStudents.map(row => row.studentId).sort(),
@@ -197,7 +202,7 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.summary,
   {
-    courseStudentCount: 3,
+    courseStudentCount: 7,
     trialStudentCount: 2,
     formalStudentCount: 3,
     courseDealCustomers: 3,

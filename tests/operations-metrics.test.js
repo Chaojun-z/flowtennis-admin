@@ -1467,7 +1467,7 @@ const closedFunnelMetrics = buildOperationsMetrics({
 });
 const closedFunnelDealStep = closedFunnelMetrics.conversion.courseFunnel[2];
 const closedFunnelTrendPoint = closedFunnelMetrics.conversion.trends.find(row => row.date === '2026-06-02');
-assert.strictEqual(closedFunnelMetrics.conversion.courseFunnel[1].count, 0, 'direct formal deals without trial facts must not enter ordinary students');
+assert.strictEqual(closedFunnelMetrics.conversion.courseFunnel[1].count, 1, 'direct formal deals should enter ordinary students after course conversion');
 assert.strictEqual(closedFunnelDealStep.count, 1, 'direct formal deals must still enter formal students');
 assert.ok(closedFunnelDealStep.transitionRate <= 100, 'closed funnel deal rate must never exceed 100%');
 assert.ok((closedFunnelTrendPoint?.dealRateNumerator || 0) <= (closedFunnelTrendPoint?.dealRateDenominator || 0), 'conversion trend deal numerator must be inside its attendance denominator');

@@ -433,7 +433,7 @@ function studentPercentText(value,total){
 }
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
-    {label:'普通学员',valueHtml:stats.total,sub:'体验课阶段学员'},
+    {label:'普通学员',valueHtml:stats.total,sub:'课程服务学员'},
     {label:'体验路径学员',valueHtml:stats.trialPathCount||0,percent:studentPercentText(stats.trialPathCount||0,stats.total),sub:'体验路径学员 / 普通学员'},
     {label:'体验路径未成交',valueHtml:stats.trialPathPendingCount||0,percent:studentPercentText(stats.trialPathPendingCount||0,stats.trialPathCount||0),sub:'体验路径未成交 / 体验路径学员'},
     {label:'体验路径成交',valueHtml:stats.trialPathDealCount||0,percent:studentPercentText(stats.trialPathDealCount||0,stats.trialPathCount||0),sub:'体验路径成交 / 体验路径学员'},

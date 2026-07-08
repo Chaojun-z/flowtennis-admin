@@ -74,7 +74,7 @@ assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should exp
 assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
 assert.match(leadsSource, /线索数[\s\S]*普通学员[\s\S]*正式学员[\s\S]*体验路径学员[\s\S]*体验路径成交/, 'lead stats should expose the standard course-chain funnel metrics');
-assert.match(leadsSource, /体验课阶段学员 \/ 线索数[\s\S]*正式课包成交 \/ 线索数[\s\S]*体验路径学员 \/ 线索数[\s\S]*体验路径成交 \/ 体验路径学员/, 'lead stats should explain the standard course-chain formulas');
+assert.match(leadsSource, /课程服务学员 \/ 线索数[\s\S]*正式课包成交 \/ 线索数[\s\S]*体验路径学员 \/ 线索数[\s\S]*体验路径成交 \/ 体验路径学员/, 'lead stats should explain the standard course-chain formulas');
 assert.match(leadsSource, /function leadDateRangeForPreset\(/, 'leads page should expose date preset range helper');
 assert.match(leadsSource, /function setLeadDatePreset\(/, 'leads page should expose lead date preset switching');
 assert.match(leadsSource, /function setLeadCustomDateRange\(/, 'leads page should expose custom lead date range switching');
