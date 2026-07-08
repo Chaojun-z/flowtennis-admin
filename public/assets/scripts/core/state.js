@@ -572,10 +572,10 @@ function renderTableSkeletonLoading(id,colspan,text){
   const el=document.getElementById(id);
   if(!el)return;
   const safeText=esc(text);
-  const cellCount=Math.max(4,Math.min(8,Number(colspan)||6));
+  const cellCount=Math.max(4,Number(colspan)||6);
   const headerCells=Array.from({length:cellCount},(_,idx)=>`<span class="tms-table-skeleton-line ${idx===0?'is-strong':''}"></span>`).join('');
   const rows=Array.from({length:6},()=>`<div class="tms-table-skeleton-row">${headerCells}</div>`).join('');
-  el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
+  el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
   renderTableSkeletonLoading('stuTbody',12,'学员数据加载中...');

@@ -195,7 +195,7 @@ assert.match(source, /function cycleStudentSort\([\s\S]*stuSortDir='asc'[\s\S]*s
 assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学员[\s\S]*暂无学员[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加学员开始录入/, 'student empty state should distinguish filtered empty results from no data');
 assert.match(source, /function renderTableSkeletonLoading\(/, 'table loading should render through the shared full-table skeleton helper');
 assert.match(source, /function renderStudentTableLoading\([\s\S]*renderTableSkeletonLoading\('stuTbody',12,'学员数据加载中\.\.\.'\)/, 'student loading state should use the shared full-table skeleton');
-assert.match(css, /\.tms-table-skeleton-state\{[^}]*position:absolute[^}]*inset:0[^}]*background:#FBF7F4/, 'shared table skeleton should cover the whole table area');
+assert.match(css, /\.tms-table-skeleton-state\{[^}]*position:relative[^}]*width:100%[^}]*background:#FBF7F4/, 'shared table skeleton should follow the full horizontal table width');
 assert.match(css, /\.tms-table-skeleton-head\{[^}]*height:42px[^}]*background:#F1E9E2/, 'shared table skeleton should include a header skeleton instead of leaving the real header exposed');
 assert.match(css, /\.tms-table-skeleton-row\{[^}]*height:42px[^}]*background:#FBF7F4/, 'shared table skeleton rows should match the standard row height');
 assert.match(source, /function renderStudentTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'student load failure should render an inline retry state');

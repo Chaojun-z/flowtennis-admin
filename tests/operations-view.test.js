@@ -442,10 +442,10 @@ assert.match(stylesSource, /operations-court-ranking-mainbar\{[^}]*height:12px/,
 assert.match(stylesSource, /operations-court-ranking-capacity\{[^}]*font-size:12px/, 'court ranking should show the utilization denominator as readable text');
 assert.match(stylesSource, /operations-skeleton-line\{[^}]*#E6D8CD[\s\S]*#F4EAE3[\s\S]*#E6D8CD/, 'operations skeleton shimmer should use the warm page palette instead of cold silver');
 assert.doesNotMatch(stylesSource, /operations-skeleton-line\{[^}]*#E8EEF7[\s\S]*#F8FAFE/, 'operations skeleton shimmer should not use the old silver-blue gradient');
-assert.match(stylesSource, /\.tms-skeleton-spark::before\{[^}]*height:1px[^}]*background:linear-gradient\(90deg,transparent,#D7C9BE,transparent\)/, 'KPI skeleton sparklines should use one refined baseline instead of uneven bar dots');
-assert.match(stylesSource, /\.tms-skeleton-spark span\{width:5px;height:5px/, 'KPI skeleton sparkline nodes should be small and consistent');
-assert.match(stylesSource, /\.tms-skeleton-chart-body\{[^}]*linear-gradient\(180deg,rgba\(160,143,128,\.12\) 1px,transparent 1px\)/, 'chart skeleton should use a subtle grid background');
-assert.match(stylesSource, /\.tms-skeleton-chart-body i\{width:14px;border-radius:4px 4px 2px 2px;box-shadow:none\}/, 'chart skeleton bars should be fine and flat instead of chunky 3D columns');
+assert.doesNotMatch(standardComponentsSource, /tms-skeleton-spark/, 'KPI skeletons should not draw fake trend charts');
+assert.match(standardComponentsSource, /is-label[\s\S]*is-value[\s\S]*is-meta/, 'KPI skeletons should keep title, number and support-line hierarchy');
+assert.match(stylesSource, /\.tms-skeleton-chart-surface\{[^}]*linear-gradient\(180deg,rgba\(160,143,128,\.08\) 1px,transparent 1px\)/, 'chart skeleton should use a subtle structural surface');
+assert.doesNotMatch(stylesSource, /\.tms-skeleton-chart-body i\{/, 'chart skeleton should not style fake bar charts');
 assert.match(stylesSource, /operations-coach-hero-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:14px/, 'coach dashboard should place the two matrix charts side by side');
 assert.doesNotMatch(stylesSource, /operations-coach-alert-card/, 'coach dashboard should remove diagnostic alert card styles from the target surface');
 assert.doesNotMatch(coachDashboardSource, /operations-coach-band-legend/, 'coach dashboard should not render the removed utilization band legend');

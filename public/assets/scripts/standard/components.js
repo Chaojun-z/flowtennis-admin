@@ -258,10 +258,7 @@ function standardListSlice(list,page,pageSize){
   return {...state,slice:rows.slice(state.start,state.end)};
 }
 function renderStandardSkeletonKpiCard(section={}){
-  const variant=String(section.cardVariant||section.variant||'simple');
-  const withTrend=variant==='trend';
-  const trend=withTrend?'<b class="tms-skeleton-spark"><span></span><span></span><span></span><span></span></b>':'';
-  return `<div class="tms-skeleton-card ${withTrend?'is-trend-kpi':''}"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i>${trend}</div>`;
+  return `<div class="tms-skeleton-card"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i></div>`;
 }
 function renderStandardSkeletonChartPanel(panel={}){
   const cls=String(panel.className||'').trim();
@@ -274,7 +271,7 @@ function renderStandardSkeletonChartPanel(panel={}){
     const rows=Array.from({length:5},()=>`<div class="tms-skeleton-table-row">${cells}</div>`).join('');
     return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="table"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-table">${rows}</div></div>`;
   }
-  return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="${esc(variant)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-chart-body"><i></i><i></i><i></i><i></i><i></i></div><div class="tms-skeleton-legend"><span></span><span></span><span></span></div></div>`;
+  return `<div class="tms-skeleton-panel ${esc(cls)}" data-skeleton-variant="${esc(variant)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-chart-body"><div class="tms-skeleton-chart-surface"><span class="tms-skeleton-chart-line"></span><span class="tms-skeleton-chart-line is-short"></span><span class="tms-skeleton-chart-line is-soft"></span></div></div><div class="tms-skeleton-legend"><span></span><span></span><span></span></div></div>`;
 }
 function renderStandardSkeletonTablePanel(panel={}){
   const cls=String(panel.className||'').trim();
