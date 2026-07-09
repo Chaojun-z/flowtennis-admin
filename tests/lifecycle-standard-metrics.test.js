@@ -11,6 +11,7 @@ const sample = {
     { id: 'manual-course-converted', displayName: '手工课程成交', leadDate: '2026-06-01', leadStage: '已成交', dealType: '课程' },
     { id: 'formal-schedule-only', displayName: '正式课排课', leadDate: '2026-06-01' },
     { id: 'single-pay-active', displayName: '单次付费活跃', leadDate: '2026-06-01' },
+    { id: 'single-pay-31days', displayName: '单次付费31天', leadDate: '2026-06-01' },
     { id: 'single-pay-sleeping', displayName: '单次付费沉睡', leadDate: '2026-06-01' },
     { id: 'real-trial-pending', displayName: '真实体验未成交', leadDate: '2026-06-02' },
     { id: 'real-trial-deal', displayName: '真实体验成交', leadDate: '2026-06-03' }
@@ -21,6 +22,7 @@ const sample = {
     { id: 'student-formal-schedule-only', name: '正式课排课', sourceLeadId: 'formal-schedule-only' },
     { id: 'student-single-pay-active', name: '单次付费活跃', sourceLeadId: 'single-pay-active' },
     { id: 'student-single-pay-sleeping', name: '单次付费沉睡', sourceLeadId: 'single-pay-sleeping' },
+    { id: 'student-single-pay-31days', name: '单次付费31天', sourceLeadId: 'single-pay-31days' },
     { id: 'student-real-trial-pending', name: '真实体验未成交', sourceLeadId: 'real-trial-pending' },
     { id: 'student-real-trial-deal', name: '真实体验成交', sourceLeadId: 'real-trial-deal' }
   ],
@@ -43,6 +45,8 @@ const sample = {
     { id: 'schedule-formal-only', studentId: 'student-formal-schedule-only', courseType: '私教课', startTime: '2026-06-06 09:00:00', status: '已排课' },
     { id: 'schedule-single-pay-active', studentId: 'student-single-pay-active', courseType: '私教课', startTime: '2026-06-20 09:00:00', endTime: '2026-06-20 10:00:00', status: '已结束', settlementType: 'single' },
     { id: 'schedule-single-pay-sleeping', studentId: 'student-single-pay-sleeping', courseType: '私教课', startTime: '2025-12-01 09:00:00', endTime: '2025-12-01 10:00:00', status: '已结束', settlementType: 'single' },
+    { id: 'schedule-single-pay-31days', studentId: 'student-single-pay-31days', courseType: '私教课', startTime: '2026-06-08 09:00:00', endTime: '2026-06-08 10:00:00', status: '已结束', settlementType: 'single' },
+    { id: 'schedule-orphan-formal', studentId: 'student-orphan-schedule', studentName: '排课无档案', courseType: '私教课', startTime: '2026-06-18 09:00:00', endTime: '2026-06-18 10:00:00', status: '已结束', settlementType: 'single' },
     { id: 'schedule-real-trial-pending', studentId: 'student-real-trial-pending', courseType: '体验课', startTime: '2026-06-06 10:00:00', status: '待上课' },
     { id: 'schedule-real-trial-deal', studentId: 'student-real-trial-deal', courseType: '体验课', startTime: '2026-06-07 10:00:00', status: '已完成' }
   ],
@@ -61,8 +65,8 @@ const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows }, 
   dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' }
 });
 
-assert.strictEqual(standard.metrics.validLeads.value, 8, '有效线索必须按统一自然人线索池统计');
-assert.strictEqual(standard.metrics.courseChainStudents.value, 7, '普通学员必须包含已转化学员和有排课记录学员');
+assert.strictEqual(standard.metrics.validLeads.value, 9, '有效线索必须按统一自然人线索池统计');
+assert.strictEqual(standard.metrics.courseChainStudents.value, 9, '普通学员必须包含已转化学员和有排课记录学员');
 assert.strictEqual(standard.metrics.formalStudents.value, 2, '正式学员必须来自统一教学链视图');
 assert.strictEqual(standard.metrics.trialPathStudents.value, 2, '体验路径不能把只有手工体验时间的线索算进去');
 assert.strictEqual(standard.metrics.trialPathDeals.value, 1, '体验路径成交只统计真实体验路径中的正式成交');
@@ -93,22 +97,22 @@ assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课�
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.views.historicalStudents.map(row => row.studentId).sort(),
-  ['student-real-trial-deal', 'student-single-pay-active', 'student-single-pay-sleeping'],
-  '历史学员必须按历史上课事实返回，包含体验课、正式课包课和单次付费正式课，不包含只预约未上课的人'
+  ['student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-active', 'student-single-pay-sleeping'],
+  '历史学员必须按有效排课事实返回，包含已排课、无档案排课、体验课、正式课包课和单次付费正式课'
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
-  ['student-real-trial-deal', 'student-single-pay-active'],
-  '在期学员必须按新口径返回课包有余额或近90天正式课活跃的人，不能只等于旧正式学员'
+  ['student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-active'],
+  '在期学员必须按新口径返回课包有余额或近30天正式课活跃的人，不能包含31-90天无课包余额的人'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
-  3,
+  6,
   '历史学员顶部总数必须来自历史学员新视图'
 );
 assert.strictEqual(
   standard.teachingSummary.activeStudentCount,
-  2,
+  3,
   '在期学员顶部总数必须来自在期学员新视图'
 );
 assert.ok(
@@ -118,8 +122,8 @@ assert.ok(
 assert.deepStrictEqual(
   standard.funnels.courseChain.map(row => [row.stage, row.count]),
   [
-    ['有效线索', 8],
-    ['普通学员', 7],
+    ['有效线索', 9],
+    ['普通学员', 9],
     ['正式学员', 2],
     ['课包复购', 1]
   ],

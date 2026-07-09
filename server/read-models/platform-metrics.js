@@ -839,6 +839,27 @@ function teachingScheduleFormal(row = {}) {
   return !courseRowIsTrial(row) && !courseRowIsCompanion(row);
 }
 
+function teachingScheduleLessonFact(row = {}, now = new Date()) {
+  if (!activeStatus(row) || courseRowIsCompanion(row)) return false;
+  if (teachingScheduleCompleted(row)) return true;
+  const status = text(row.status || row.systemStatus);
+  if (['待上课', '待确认', '预约', '已预约'].includes(status)) return false;
+  const day = dateOnly(row.startTime || row.endTime || row.createdAt);
+  const base = now instanceof Date
+    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    : dateOnly(now);
+  return !!day && !!base && day <= base;
+}
+
+function teachingScheduleStudentIds(row = {}) {
+  return [...new Set(parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean))];
+}
+
+function teachingScheduleStudentName(row = {}, index = 0) {
+  const names = parseArr(row.studentNames).map(text).filter(Boolean);
+  return names[index] || text(row.studentName || row.displayName || row.name);
+}
+
 function teachingStudentScheduleRows(data = {}, studentId = '', predicate = () => true) {
   return (data.schedule || [])
     .filter(row => activeStatus(row) && rowHasStudent(row, studentId) && predicate(row));
@@ -853,27 +874,81 @@ function teachingDaysSince(dateText = '', now = new Date()) {
   const raw = dateOnly(dateText);
   if (!raw) return null;
   const target = Date.parse(`${raw}T00:00:00`);
-  const baseRaw = dateOnly(now instanceof Date ? now.toISOString() : now);
+  const baseRaw = now instanceof Date
+    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    : dateOnly(now);
   const base = Date.parse(`${baseRaw}T00:00:00`);
   if (!Number.isFinite(target) || !Number.isFinite(base)) return null;
   return Math.floor((base - target) / 86400000);
 }
 
-function teachingStudentHasCompletedLesson(data = {}, row = {}) {
+function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()) {
   const studentId = text(row.studentId);
   if (!studentId) return false;
   if (Number(row.completedLessons) > 0) return true;
-  return teachingStudentScheduleRows(data, studentId, teachingScheduleCompleted).length > 0;
+  return teachingStudentScheduleRows(data, studentId, schedule => teachingScheduleLessonFact(schedule, now)).length > 0;
 }
 
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
   const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
-  return days !== null && days <= 90;
+  return days !== null && days <= 30;
+}
+
+function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
+  const byStudentId = new Map();
+  (customerLifecycleRows || [])
+    .filter(row => text(row.studentId))
+    .forEach(row => byStudentId.set(text(row.studentId), row));
+  (data.schedule || [])
+    .filter(row => teachingScheduleLessonFact(row, data.now || new Date()))
+    .forEach(row => {
+      teachingScheduleStudentIds(row).forEach((studentId, index) => {
+        if (byStudentId.has(studentId)) return;
+        byStudentId.set(studentId, {
+          customerKey: `schedule:${studentId}`,
+          sourceLeadId: '',
+          leadId: '',
+          studentId,
+          displayName: teachingScheduleStudentName(row, index) || studentId,
+          phone: '',
+          source: '',
+          campus: text(row.campus || row.campusName),
+          owner: text(row.owner || row.coach || row.coachName),
+          customerType: text(row.customerType || row.type),
+          demandProduct: '',
+          trialAtRaw: courseRowIsTrial(row) ? dateOnly(row.startTime || row.createdAt) : '',
+          trialBookedAt: courseRowIsTrial(row) ? dateOnly(row.startTime || row.createdAt) : '',
+          trialAttendedAt: courseRowIsTrial(row) && teachingScheduleCompleted(row) ? dateOnly(row.startTime || row.createdAt) : '',
+          courseFirstPurchaseAt: '',
+          conversionAt: '',
+          formalCoach: text(row.coach || row.coachName),
+          profileNote: '',
+          studentStage: courseRowIsTrial(row) ? 'trial' : 'student',
+          courseDealPath: '',
+          trialStatus: courseRowIsTrial(row) ? (teachingScheduleCompleted(row) ? '已体验待成交' : '已约体验') : '',
+          coursePurchaseCount: 0,
+          hasCourseRepeatPurchase: false,
+          hasTrialToCourseConversion: false,
+          courtStage: 'none',
+          membershipStatus: '',
+          hasTrialExperience: courseRowIsTrial(row),
+          hasScheduleRecord: true,
+          hasCourseStudentEntry: !courseRowIsTrial(row),
+          hasFreeCourseFollowup: !courseRowIsTrial(row),
+          leadDate: dateOnly(row.startTime || row.createdAt),
+          createdAt: text(row.createdAt || row.startTime),
+          hasCourseConversion: false,
+          hasBookingConversion: false,
+          hasMembershipConversion: false
+        });
+      });
+    });
+  return [...byStudentId.values()];
 }
 
 function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
-  const studentRows = (customerLifecycleRows || []).filter(row => text(row.studentId));
+  const studentRows = buildTeachingStudentSourceRows(customerLifecycleRows, data);
   const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
@@ -893,7 +968,7 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     .map(formalViewRow);
   const historicalStudents = studentRows
     .map(courseViewRow)
-    .filter(row => teachingStudentHasCompletedLesson(data, row));
+    .filter(row => teachingStudentHasCompletedLesson(data, row, now));
   const activeStudents = studentRows
     .map(formalViewRow)
     .filter(row => teachingStudentInActiveRoster(data, row, now));

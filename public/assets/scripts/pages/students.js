@@ -90,6 +90,7 @@ const STUDENT_TAG_FILTER_GROUPS=[
   {key:'lifecycleStatus',label:'学员状态',options:STUDENT_LIFECYCLE_STATUS_OPTIONS,getter:studentLifecycleStatusText}
 ];
 let studentTagFilterState={packageStatus:[],paymentMode:[],activityStatus:[],lessonVolume:[],lifecycleStatus:[]};
+let studentTagCascaderActiveGroupKey='packageStatus';
 function studentOptionList(values){
   return values.map(value=>({value,label:value}));
 }
@@ -122,31 +123,73 @@ function clearStudentTagFilters(){
 function studentTagOptionCount(baseRows,group,value){
   return baseRows.filter(s=>group.getter(s)===value).length;
 }
+function studentTagCascaderActiveGroup(){
+  return STUDENT_TAG_FILTER_GROUPS.find(group=>group.key===studentTagCascaderActiveGroupKey)||STUDENT_TAG_FILTER_GROUPS[0];
+}
+function setStudentTagCascaderActiveGroup(key,event){
+  if(event)event.stopPropagation();
+  if(!STUDENT_TAG_FILTER_GROUPS.some(group=>group.key===key))return;
+  studentTagCascaderActiveGroupKey=key;
+  const menu=document.getElementById('stuTagCascader');
+  if(!menu){renderStudentToolbarFilters();return;}
+  const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
+  const activeGroup=studentTagCascaderActiveGroup();
+  const parentHost=menu.querySelector('.student-tag-cascader-parent-list');
+  const childHost=menu.querySelector('.student-tag-cascader-child-list');
+  if(parentHost)parentHost.innerHTML=renderStudentTagCascaderParentHtml(activeGroup);
+  if(childHost)childHost.innerHTML=renderStudentTagCascaderChildHtml(baseRows,activeGroup);
+}
+function renderStudentTagCascaderParentHtml(activeGroup){
+  return STUDENT_TAG_FILTER_GROUPS.map(group=>{
+    const selectedCount=(studentTagFilterState[group.key]||[]).length;
+    return `<button type="button" class="student-tag-cascader-parent ${group.key===activeGroup.key?'active':''}" onmouseenter="setStudentTagCascaderActiveGroup(${jsArg(group.key)},event)" onclick="setStudentTagCascaderActiveGroup(${jsArg(group.key)},event)"><span>${esc(group.label)}</span><em>${selectedCount||''}</em></button>`;
+  }).join('');
+}
+function renderStudentTagCascaderChildHtml(baseRows,activeGroup){
+  return activeGroup.options.map(value=>{
+    const checked=(studentTagFilterState[activeGroup.key]||[]).includes(value);
+    const count=studentTagOptionCount(baseRows,activeGroup,value);
+    return `<label class="student-tag-cascader-option"><input type="checkbox" ${checked?'checked':''} onchange="toggleStudentTagFilter(${jsArg(activeGroup.key)},${jsArg(value)})"><span>${esc(value)}</span><em>${count}</em></label>`;
+  }).join('');
+}
 function renderStudentTagCascader(baseRows){
   const selected=studentSelectedTagValues();
   const label=selected.length?`标签筛选 ${selected.length}`:'标签筛选';
   const selectedHtml=selected.length?`<div class="student-tag-cascader-selected">${selected.slice(0,3).map(item=>`<button type="button" class="student-tag-chip" onclick="event.stopPropagation();removeStudentTagFilter(${jsArg(item.group.key)},${jsArg(item.value)})">${esc(item.label)} ×</button>`).join('')}${selected.length>3?`<span class="student-tag-more">+${selected.length-3}</span>`:''}</div>`:'';
-  const groupsHtml=STUDENT_TAG_FILTER_GROUPS.map(group=>`<div class="student-tag-cascader-group"><div class="student-tag-cascader-group-title">${esc(group.label)}<span>${(studentTagFilterState[group.key]||[]).length||''}</span></div><div class="student-tag-cascader-options">${group.options.map(value=>{
-    const checked=(studentTagFilterState[group.key]||[]).includes(value);
-    const count=studentTagOptionCount(baseRows,group,value);
-    return `<label class="student-tag-cascader-option"><input type="checkbox" ${checked?'checked':''} onchange="toggleStudentTagFilter(${jsArg(group.key)},${jsArg(value)})"><span>${esc(value)}</span><em>${count}</em></label>`;
-  }).join('')}</div></div>`).join('');
-  return `<div class="student-tag-cascader tms-dropdown ${selected.length?'has-value':''}" id="stuTagCascader_dropdown" data-target="stuTagCascader"><button type="button" class="tms-dropdown-display" onclick="toggleStandardDropdown('stuTagCascader',event)">${esc(label)}</button><div class="tms-dropdown-menu student-tag-cascader-menu" id="stuTagCascader" onclick="event.stopPropagation()">${selectedHtml}<div class="student-tag-cascader-columns">${groupsHtml}</div><div class="student-tag-cascader-footer"><button type="button" onclick="clearStudentTagFilters()">清空</button></div></div></div>`;
+  const activeGroup=studentTagCascaderActiveGroup();
+  const parentHtml=`<div class="student-tag-cascader-parent-list">${renderStudentTagCascaderParentHtml(activeGroup)}</div>`;
+  const childHtml=`<div class="student-tag-cascader-child-list">${renderStudentTagCascaderChildHtml(baseRows,activeGroup)}</div>`;
+  return `<div class="student-tag-cascader tms-dropdown ${selected.length?'has-value':''}" id="stuTagCascader_dropdown" data-target="stuTagCascader"><button type="button" class="tms-dropdown-display" onclick="toggleStandardDropdown('stuTagCascader',event)">${esc(label)}</button><div class="tms-dropdown-menu student-tag-cascader-menu" id="stuTagCascader" onclick="event.stopPropagation()">${selectedHtml}<div class="student-tag-cascader-columns">${parentHtml}${childHtml}</div><div class="student-tag-cascader-footer"><button type="button" onclick="clearStudentTagFilters()">清空</button></div></div></div>`;
+}
+function studentScheduleMatches(row,stu){
+  const id=String(stu?.id||stu?.studentId||'').trim();
+  if(id&&String(row?.studentId||'').trim()===id)return true;
+  const ids=parseArr(row?.studentIds).map(item=>String(item||'').trim()).filter(Boolean);
+  if(id&&ids.includes(id))return true;
+  return scheduleHasStudent(row,stu);
 }
 function studentScheduleIsFormal(row={}){
   const type=normalizeCourseType(row.standardCourseType||row.courseType||row.packageCourseType||row.productType||'');
   return type&&type!=='体验课';
 }
+function studentScheduleIsLessonFact(row={}){
+  const status=effectiveScheduleStatus(row);
+  if(status==='已取消')return false;
+  if(status==='已结束')return true;
+  if(['待上课','待确认','预约','已预约'].includes(String(row.status||row.systemStatus||'').trim()))return false;
+  const day=String(row.startTime||row.endTime||row.createdAt||'').slice(0,10);
+  return !!day&&day<=today();
+}
 function studentFormalLessonRows(stu){
   return schedules
-    .filter(row=>scheduleHasStudent(row,stu))
+    .filter(row=>studentScheduleMatches(row,stu))
     .filter(row=>effectiveScheduleStatus(row)==='已结束')
     .filter(studentScheduleIsFormal);
 }
 function studentAnyLessonRows(stu){
   return schedules
-    .filter(row=>scheduleHasStudent(row,stu))
-    .filter(row=>effectiveScheduleStatus(row)==='已结束');
+    .filter(row=>studentScheduleMatches(row,stu))
+    .filter(studentScheduleIsLessonFact);
 }
 function studentDirectFormalLessonRows(stu){
   return studentFormalLessonRows(stu).filter(row=>{
@@ -252,8 +295,7 @@ function studentIsHistoricalRosterRow(stu){
 function studentIsActiveRosterRow(stu){
   if(studentPackageRemainingLessons(stu)>0)return true;
   const days=studentDaysSince(studentFormalLastLessonDate(stu));
-  if(days!==null&&days<=90)return true;
-  return studentRecentDirectFormalLessonCount(stu,90)>0;
+  return days!==null&&days<=30;
 }
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
@@ -587,7 +629,7 @@ function studentPageStats(base){
   const rows=Array.isArray(base)?base:[];
   return {
     ...standardSummary,
-    total:Number.isFinite(unifiedTotal)&&unifiedTotal>0?unifiedTotal:rows.length,
+    total:Number.isFinite(unifiedTotal)?unifiedTotal:rows.length,
     near30ActiveCount:rows.filter(s=>studentActivityStatusText(s)==='近30天活跃').length,
     packageActiveCount:rows.filter(s=>studentPackageStatusText(s)==='课包有余额'||studentPackageStatusText(s)==='课包即将耗尽').length,
     packageLowCount:rows.filter(s=>studentPackageStatusText(s)==='课包即将耗尽').length,

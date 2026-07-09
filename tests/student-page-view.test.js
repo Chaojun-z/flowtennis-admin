@@ -52,6 +52,8 @@ assert.match(source, /function toggleStudentTagFilter\(/, 'student tag cascader 
 assert.match(source, /function clearStudentTagFilters\(/, 'student tag cascader should support clearing all selected tags');
 assert.match(source, /function removeStudentTagFilter\(/, 'student tag cascader should support removing one selected tag');
 assert.match(source, /function studentTagFilterMatches\([\s\S]*STUDENT_TAG_FILTER_GROUPS\.every[\s\S]*!selected\.length\|\|selected\.includes\(group\.getter\(s\)\)/, 'student tag filters should use OR within one group and AND across groups');
+assert.match(source, /let studentTagCascaderActiveGroupKey='packageStatus'/, 'student tag cascader should keep one active parent group');
+assert.match(source, /function setStudentTagCascaderActiveGroup\(/, 'student tag cascader should switch second-level options from the first-level group');
 assert.match(source, /filterHostIds:\['stuTypeFilterHost','stuSourceFilterHost','stuTagFilterHost','stuCoachFilterHost'\]/, 'student toolbar should expose type, source, tag cascader, and coach filters in order');
 assert.match(fnBody('renderStudentToolbarFilters'), /match:\(s,value\)=>value==='__unassigned__'\?studentPrimaryCoachText\(s\)==='-':studentPrimaryCoachText\(s\)===value/, 'student coach filter should use the same visible responsible-coach口径 as the list');
 assert.match(source, /function getStudentDuplicateCandidates\(/, 'student save flow should detect possible duplicates before submit');
@@ -406,7 +408,9 @@ assert.match(source, /renderStudentToolbarFilters[\s\S]*options:\[\{value:'',lab
 assert.doesNotMatch(source, /stuTrialStatusFilterHost|stuDealPathFilterHost|thirdFilterIsTrial/, 'student toolbar should not keep old trial-status or deal-path filter hosts');
 assert.match(fnBody('getFilteredStudents'), /if\(!studentTagFilterMatches\(s\)\)return false/, 'student tag cascader selections should apply to the student list');
 assert.match(css, /#page-students \.student-tag-cascader-menu\{[^}]*width:680px[^}]*max-width:calc\(100vw - 40px\)/, 'student tag cascader menu should use a bounded wide panel');
-assert.match(css, /#page-students \.student-tag-cascader-columns\{[^}]*grid-template-columns:repeat\(5,minmax\(120px,1fr\)\)/, 'student tag cascader should show five tag groups as columns');
+assert.match(css, /#page-students \.student-tag-cascader-columns\{[^}]*grid-template-columns:160px minmax\(260px,1fr\)/, 'student tag cascader should use a two-level cascader layout');
+assert.match(css, /#page-students \.student-tag-cascader-parent\{[^}]*display:flex[^}]*justify-content:space-between/, 'student tag cascader first level should render parent field names');
+assert.match(css, /#page-students \.student-tag-cascader-child-list\{[^}]*display:flex[^}]*flex-direction:column/, 'student tag cascader second level should render options for the active parent field');
 assert.match(css, /#page-students \.student-tag-cascader-option\{[^}]*grid-template-columns:16px minmax\(0,1fr\) auto/, 'student tag cascader options should align checkbox, label, and count');
 assert.match(fnBody('studentHasActiveSearchOrFilter'), /studentTagFilterCount\(\)/, 'student empty state should treat the student tag cascader selections as active filters');
 assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studentTrialPathStatusText\(s\),'stage'\)|studentDealPathText\(s\)/, 'student rows should not render old trial-status or deal-path fields');

@@ -99,12 +99,12 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-students .student-tag-cascader-selected{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #EAE0D6;background:#FFFCF8}
 #page-students .student-tag-chip{height:24px;border:1px solid #E8DFD5;border-radius:6px;background:#FDF7F2;color:#805435;font-size:12px;font-family:inherit;padding:0 7px;cursor:pointer}
 #page-students .student-tag-more{display:inline-flex;align-items:center;height:24px;color:#8C7B6E;font-size:12px}
-#page-students .student-tag-cascader-columns{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:0}
-#page-students .student-tag-cascader-group{min-width:0;border-right:1px solid #EAE0D6;padding:10px 8px}
-#page-students .student-tag-cascader-group:last-child{border-right:0}
-#page-students .student-tag-cascader-group-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px 8px;color:#332A24;font-size:12px;font-weight:700}
-#page-students .student-tag-cascader-group-title span{color:#C06031;font-weight:700}
-#page-students .student-tag-cascader-options{display:flex;flex-direction:column;gap:2px}
+#page-students .student-tag-cascader-columns{display:grid;grid-template-columns:160px minmax(260px,1fr);gap:0}
+#page-students .student-tag-cascader-parent-list{display:flex;flex-direction:column;padding:8px;border-right:1px solid #EAE0D6;background:#FFFCF8}
+#page-students .student-tag-cascader-parent{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;border:0;border-radius:5px;background:transparent;color:#5C4D43;font-size:12px;font-weight:600;font-family:inherit;padding:0 8px;cursor:pointer;text-align:left}
+#page-students .student-tag-cascader-parent:hover,#page-students .student-tag-cascader-parent.active{background:#F1EAE2;color:#332A24}
+#page-students .student-tag-cascader-parent em{font-style:normal;color:#C06031;font-size:11px;font-weight:700}
+#page-students .student-tag-cascader-child-list{display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px 8px}
 #page-students .student-tag-cascader-option{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:30px;padding:4px;border-radius:5px;color:#5C4D43;font-size:12px;cursor:pointer}
 #page-students .student-tag-cascader-option:hover{background:#F1EAE2}
 #page-students .student-tag-cascader-option input{width:14px;height:14px;margin:0;accent-color:#C06031}
