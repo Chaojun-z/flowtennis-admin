@@ -756,17 +756,17 @@ function leadTrialCourseConverted(lead){
 }
 function leadStatsData(list){
   const total=leadStandardMetricValue('validLeads');
-  const courseStudents=leadStandardMetricValue('courseChainStudents');
-  const courseConverted=leadStandardMetricValue('formalStudents');
+  const historicalStudents=leadStandardMetricValue('historicalStudents');
+  const activeStudents=leadStandardMetricValue('activeStudents');
   const trialPath=leadStandardMetricValue('trialPathStudents');
   const trialPathDeal=leadStandardMetricValue('trialPathDeals');
   const trialPathPending=leadStandardMetricValue('trialPathPending');
   return {
     total,
-    courseStudents,
-    courseStudentRate:leadStandardMetricRate('courseChainStudents',courseStudents,total),
-    courseConverted,
-    courseConversionRate:leadStandardMetricRate('formalStudents',courseConverted,total),
+    historicalStudents,
+    historicalStudentRate:leadStandardMetricRate('historicalStudents',historicalStudents,total),
+    activeStudents,
+    activeStudentRate:leadStandardMetricRate('activeStudents',activeStudents,historicalStudents),
     trialBooked:trialPath,
     trialBookedRate:leadStandardMetricRate('trialPathStudents',trialPath,total),
     trialPathDeal,
@@ -779,8 +779,8 @@ function renderLeadStats(list){
   const stats=leadStatsData(list);
   const cardData=[
     {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
-    {label:'普通学员',valueHtml:stats.courseStudents,percent:stats.courseStudentRate,sub:'课程服务学员 / 线索数'},
-    {label:'正式学员',valueHtml:stats.courseConverted,percent:stats.courseConversionRate,sub:'正式课包成交 / 线索数'},
+    {label:'历史学员',valueHtml:stats.historicalStudents,percent:stats.historicalStudentRate,sub:'历史学员 / 线索数'},
+    {label:'在期学员',valueHtml:stats.activeStudents,percent:stats.activeStudentRate,sub:'在期学员 / 历史学员'},
     {label:'体验路径学员',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'体验路径学员 / 线索数'},
     {label:'体验路径成交',valueHtml:stats.trialPathDeal,percent:stats.trialPathDealRate,sub:'体验路径成交 / 体验路径学员'}
   ];

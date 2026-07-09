@@ -27,6 +27,8 @@ context.standardLifecycleMetrics = {
     validLeads: { value: 4 },
     courseChainStudents: { value: 3, rateText: '75%' },
     formalStudents: { value: 2, rateText: '50%' },
+    historicalStudents: { value: 5, rateText: '125%' },
+    activeStudents: { value: 3, rateText: '60%' },
     trialPathStudents: { value: 2, rateText: '50%' },
     trialPathDeals: { value: 1, rateText: '50%' },
     trialPathPending: { value: 1, rateText: '50%' }
@@ -44,21 +46,23 @@ const stats = context.leadStatsData([
 assert.deepStrictEqual(
   {
     total: stats.total,
-    courseStudents: stats.courseStudents,
-    courseStudentRate: stats.courseStudentRate,
-    courseConverted: stats.courseConverted,
+    historicalStudents: stats.historicalStudents,
+    historicalStudentRate: stats.historicalStudentRate,
+    activeStudents: stats.activeStudents,
+    activeStudentRate: stats.activeStudentRate,
     trialBooked: stats.trialBooked,
     trialPendingConversion: stats.trialPendingConversion
   },
   {
     total: 4,
-    courseStudents: 3,
-    courseStudentRate: '75%',
-    courseConverted: 2,
+    historicalStudents: 5,
+    historicalStudentRate: '125%',
+    activeStudents: 3,
+    activeStudentRate: '60%',
     trialBooked: 2,
     trialPendingConversion: 1
   },
-  '线索池顶部统计必须真实执行，并优先读取统一标准指标'
+  '线索池顶部统计必须真实执行，并优先读取统一后端历史学员和在期学员指标'
 );
 
 console.log('leads runtime standard metrics tests passed');

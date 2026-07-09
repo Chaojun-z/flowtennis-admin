@@ -131,7 +131,7 @@ assert.doesNotMatch(
 
 assert.match(
   fnBody(leadsSource, 'leadStatsData'),
-  /leadStandardMetricValue\('validLeads'\)[\s\S]*leadStandardMetricValue\('courseChainStudents'\)[\s\S]*leadStandardMetricValue\('formalStudents'\)/,
+  /leadStandardMetricValue\('validLeads'\)[\s\S]*leadStandardMetricValue\('historicalStudents'\)[\s\S]*leadStandardMetricValue\('activeStudents'\)/,
   'lead stats should use the backend standard lifecycle metric object'
 );
 

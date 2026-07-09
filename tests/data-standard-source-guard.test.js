@@ -262,8 +262,8 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/leadStandardMetricValue\('validLeads'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/],
-  forbidden: [/FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
+  required: [/leadStandardMetricValue\('validLeads'\)/, /leadStandardMetricValue\('historicalStudents'\)/, /leadStandardMetricValue\('activeStudents'\)/],
+  forbidden: [/leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/, /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
 });
 
 [

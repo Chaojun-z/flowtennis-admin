@@ -216,6 +216,16 @@ assert.deepStrictEqual(
 ].forEach(([key, value]) => {
   assert.strictEqual(teachingPlatform.teachingStudentViews.summary[key], value, `教学链汇总 ${key} 必须保持统一口径`);
 });
+assert.strictEqual(
+  teachingPlatform.standardLifecycleMetrics.metrics.historicalStudents.value,
+  teachingPlatform.teachingStudentViews.summary.historicalStudentCount,
+  '线索池历史学员指标必须等于历史学员页统一后端总数'
+);
+assert.strictEqual(
+  teachingPlatform.standardLifecycleMetrics.metrics.activeStudents.value,
+  teachingPlatform.teachingStudentViews.summary.activeStudentCount,
+  '线索池在期学员指标必须等于在期学员页统一后端总数'
+);
 assert.ok(
   teachingPlatform.teachingStudentViews.activeStudents.every(row => teachingPlatform.teachingStudentViews.historicalStudents.some(item => item.studentId === row.studentId)),
   '在期学员必须是历史学员的子集'

@@ -1305,6 +1305,8 @@ function buildStandardLifecycleMetrics(data = {}) {
   const validLeads = Number(leadConversionMetrics.totalLeads) || 0;
   const courseChainStudents = Number(summary.courseStudentCount) || 0;
   const formalStudents = Number(summary.courseDealCustomers || summary.formalStudentCount) || 0;
+  const historicalStudents = Number(summary.historicalStudentCount) || 0;
+  const activeStudents = Number(summary.activeStudentCount) || 0;
   const trialPathStudents = Number(summary.trialPathStudents) || 0;
   const trialPathDeals = Number(summary.trialPathDealCustomers || summary.trialToCourseCustomers) || 0;
   const trialPathPending = Number(summary.trialPathPendingCustomers) || Math.max(0, trialPathStudents - trialPathDeals);
@@ -1315,6 +1317,8 @@ function buildStandardLifecycleMetrics(data = {}) {
     validLeads: standardMetric('VALID_LEADS', '有效线索', validLeads, validLeads, 'RAW_LEAD_POOL_ROWS', '条'),
     courseChainStudents: standardMetric('COURSE_CHAIN_STUDENTS', '普通学员', courseChainStudents, validLeads, 'COURSE_CHAIN_STUDENTS / VALID_LEADS'),
     formalStudents: standardMetric('FORMAL_STUDENTS', '正式学员', formalStudents, validLeads, 'FORMAL_STUDENTS / VALID_LEADS'),
+    historicalStudents: standardMetric('HISTORICAL_STUDENTS', '历史学员', historicalStudents, validLeads, 'HISTORICAL_STUDENTS / VALID_LEADS'),
+    activeStudents: standardMetric('ACTIVE_STUDENTS', '在期学员', activeStudents, historicalStudents, 'ACTIVE_STUDENTS / HISTORICAL_STUDENTS'),
     courseRepeatBuyers: standardMetric('COURSE_REPEAT_BUYERS', '课包复购', courseRepeatBuyers, formalStudents, 'COURSE_REPEAT_BUYERS / FORMAL_STUDENTS'),
     trialPathStudents: standardMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathStudents, validLeads, 'TRIAL_PATH_STUDENTS / VALID_LEADS'),
     trialPathDeals: standardMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDeals, trialPathStudents, 'TRIAL_PATH_DEALS / TRIAL_PATH_STUDENTS'),

@@ -576,12 +576,14 @@ function studentStandardMetricValue(key){
 function studentStandardSummaryForMode(){
   const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{};
   const summary=standard.teachingSummary||teachingStudentViews?.summary||{};
+  const tagCounts=studentListViewMode()==='trial'?summary.historicalTagCounts:summary.activeTagCounts;
   const historicalSummaryCount=Number(summary.historicalStudentCount);
   const activeSummaryCount=Number(summary.activeStudentCount);
   const historicalStudentCount=Number.isFinite(historicalSummaryCount)?historicalSummaryCount:Number(teachingStudentViews?.historicalStudents?.length)||0;
   const activeStudentCount=Number.isFinite(activeSummaryCount)?activeSummaryCount:Number(teachingStudentViews?.activeStudents?.length)||0;
   if(studentListViewMode()==='trial')return {
     total:historicalStudentCount,
+    tagCounts:tagCounts||{},
     trialPathCount:studentStandardMetricValue('trialPathStudents')||Number(summary.trialPathStudents)||0,
     trialPathDealCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0,
     trialPathPendingCount:studentStandardMetricValue('trialPathPending')||Number(summary.trialPathPendingCustomers)||0,
@@ -591,6 +593,7 @@ function studentStandardSummaryForMode(){
   };
   return {
     total:activeStudentCount,
+    tagCounts:tagCounts||{},
     packageStudentCount:Number(summary.formalStudentCount)||0,
     activePackageStudentCount:Number(summary.activePackageStudentCount)||0,
     purchaseCount:Number(summary.coursePurchaseCount)||0,
@@ -603,16 +606,19 @@ function studentStandardSummaryForMode(){
 function studentPageStats(base){
   const standardSummary=studentStandardSummaryForMode();
   const unifiedTotal=Number(standardSummary.total);
-  const rows=Array.isArray(base)?base:[];
+  const tags=standardSummary.tagCounts||{};
+  const activity=tags.activityStatus||{};
+  const packageStatus=tags.packageStatus||{};
+  const lifecycle=tags.lifecycleStatus||{};
   return {
     ...standardSummary,
-    total:Number.isFinite(unifiedTotal)?unifiedTotal:rows.length,
-    near30ActiveCount:rows.filter(s=>studentActivityStatusText(s)==='近30天活跃').length,
-    packageActiveCount:rows.filter(s=>studentPackageStatusText(s)==='课包有余额'||studentPackageStatusText(s)==='课包即将耗尽').length,
-    packageLowCount:rows.filter(s=>studentPackageStatusText(s)==='课包即将耗尽').length,
-    stableSinglePayCount:rows.filter(s=>studentLifecycleStatusText(s)==='稳定单次付费').length,
-    neverFormalCount:rows.filter(s=>studentActivityStatusText(s)==='从未正式上课').length,
-    renewalDueCount:rows.filter(s=>studentLifecycleStatusText(s)==='课包待续费').length,
+    total:Number.isFinite(unifiedTotal)?unifiedTotal:0,
+    near30ActiveCount:Number(activity['近30天活跃'])||0,
+    packageActiveCount:(Number(packageStatus['课包有余额'])||0)+(Number(packageStatus['课包即将耗尽'])||0),
+    packageLowCount:Number(packageStatus['课包即将耗尽'])||0,
+    stableSinglePayCount:Number(lifecycle['稳定单次付费'])||0,
+    neverFormalCount:Number(activity['从未正式上课'])||0,
+    renewalDueCount:Number(lifecycle['课包待续费'])||0,
     trialBookedOnlyCount:0,
     trialAttendedPendingCount:0
   };

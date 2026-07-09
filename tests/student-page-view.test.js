@@ -70,10 +70,12 @@ assert.match(source, /function studentStandardSummaryForMode\(/, 'student top ca
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should use the standard summary instead of local purchase or finance formulas');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)|purchases\.filter|entitlements\.filter|amountPaid|finalAmount|recognizedRevenueDelta/, 'student top cards must not recalculate core metrics from frontend raw rows');
 assert.match(fnBody('studentStandardSummaryForMode'), /historicalStudentCount[\s\S]*activeStudentCount/, 'student top stats should use historical and active student backend counts');
+assert.match(fnBody('studentStandardSummaryForMode'), /historicalTagCounts[\s\S]*activeTagCounts/, 'student top stats should use backend tag counts for historical and active student cards');
 assert.match(fnBody('studentStandardSummaryForMode'), /Number\.isFinite\(historicalSummaryCount\)\?historicalSummaryCount[\s\S]*Number\.isFinite\(activeSummaryCount\)\?activeSummaryCount/, 'student top stats should preserve explicit zero counts from the backend summary');
 assert.doesNotMatch(fnBody('studentStandardSummaryForMode'), /studentStandardMetricValue\('courseChainStudents'\)|studentStandardMetricValue\('formalStudents'\)/, 'student top stats should not use old normal/formal metric counts as page totals');
 assert.match(source, /在期学员[\s\S]*当前仍有运营价值[\s\S]*近30天活跃[\s\S]*课包即将耗尽[\s\S]*课包待续费/, 'active student top stats should show active roster and status cards');
 assert.match(fnBody('studentPageStats'), /near30ActiveCount[\s\S]*packageActiveCount[\s\S]*packageLowCount[\s\S]*stableSinglePayCount[\s\S]*renewalDueCount/, 'student top stats should summarize the new active tags');
+assert.doesNotMatch(fnBody('studentPageStats'), /rows\.filter\(s=>student(ActivityStatusText|PackageStatusText|LifecycleStatusText)\(s\)===/, 'student top tag cards must not count labels by filtering frontend rows');
 assert.match(fnBody('studentTopStatsCards'), /在期学员[\s\S]*近30天活跃[\s\S]*课包有余额[\s\S]*课包即将耗尽[\s\S]*课包待续费/, 'active student top stats should show active roster cards');
 assert.match(fnBody('renderStudents'), /renderStandardDataCards\(studentTopStatsCards\(stats\)\)/, 'student renderer should choose top cards by current student page mode');
 assert.match(source, /近30天活跃 \/ 在期学员/, 'student active card should explain the active roster formula');

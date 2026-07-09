@@ -36,7 +36,7 @@ assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.
 assert.match(packageJson.scripts.test, /node tests\/unified-page-source-hard-guard\.test\.js/, 'npm test should run unified page source hard guard');
 assert.match(
   metricDocSource,
-  /线索池顶部转化 \| 线索数、普通学员、正式学员、体验路径学员、体验路径成交/,
+  /线索池顶部转化 \| 线索数、历史学员、在期学员、体验路径学员、体验路径成交/,
   'metric standard should match the current lead-pool top card requirement'
 );
 assert.match(
