@@ -82,8 +82,56 @@ const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
 const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
+const STUDENT_TAG_FILTER_GROUPS=[
+  {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
+  {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
+  {key:'activityStatus',label:'活跃状态',options:STUDENT_ACTIVITY_STATUS_OPTIONS,getter:studentActivityStatusText},
+  {key:'lessonVolume',label:'历史课时',options:STUDENT_LESSON_VOLUME_OPTIONS,getter:studentLessonVolumeText},
+  {key:'lifecycleStatus',label:'学员状态',options:STUDENT_LIFECYCLE_STATUS_OPTIONS,getter:studentLifecycleStatusText}
+];
+let studentTagFilterState={packageStatus:[],paymentMode:[],activityStatus:[],lessonVolume:[],lifecycleStatus:[]};
 function studentOptionList(values){
   return values.map(value=>({value,label:value}));
+}
+function studentSelectedTagValues(){
+  return STUDENT_TAG_FILTER_GROUPS.flatMap(group=>(studentTagFilterState[group.key]||[]).map(value=>({group,value,label:value})));
+}
+function studentTagFilterCount(){
+  return studentSelectedTagValues().length;
+}
+function studentTagFilterMatches(s){
+  return STUDENT_TAG_FILTER_GROUPS.every(group=>{
+    const selected=studentTagFilterState[group.key]||[];
+    return !selected.length||selected.includes(group.getter(s));
+  });
+}
+function toggleStudentTagFilter(key,value){
+  const list=studentTagFilterState[key]||[];
+  studentTagFilterState={...studentTagFilterState,[key]:list.includes(value)?list.filter(item=>item!==value):[...list,value]};
+  onStudentFilterChange();
+}
+function removeStudentTagFilter(key,value){
+  const list=studentTagFilterState[key]||[];
+  studentTagFilterState={...studentTagFilterState,[key]:list.filter(item=>item!==value)};
+  onStudentFilterChange();
+}
+function clearStudentTagFilters(){
+  studentTagFilterState={packageStatus:[],paymentMode:[],activityStatus:[],lessonVolume:[],lifecycleStatus:[]};
+  onStudentFilterChange();
+}
+function studentTagOptionCount(baseRows,group,value){
+  return baseRows.filter(s=>group.getter(s)===value).length;
+}
+function renderStudentTagCascader(baseRows){
+  const selected=studentSelectedTagValues();
+  const label=selected.length?`标签筛选 ${selected.length}`:'标签筛选';
+  const selectedHtml=selected.length?`<div class="student-tag-cascader-selected">${selected.slice(0,3).map(item=>`<button type="button" class="student-tag-chip" onclick="event.stopPropagation();removeStudentTagFilter(${jsArg(item.group.key)},${jsArg(item.value)})">${esc(item.label)} ×</button>`).join('')}${selected.length>3?`<span class="student-tag-more">+${selected.length-3}</span>`:''}</div>`:'';
+  const groupsHtml=STUDENT_TAG_FILTER_GROUPS.map(group=>`<div class="student-tag-cascader-group"><div class="student-tag-cascader-group-title">${esc(group.label)}<span>${(studentTagFilterState[group.key]||[]).length||''}</span></div><div class="student-tag-cascader-options">${group.options.map(value=>{
+    const checked=(studentTagFilterState[group.key]||[]).includes(value);
+    const count=studentTagOptionCount(baseRows,group,value);
+    return `<label class="student-tag-cascader-option"><input type="checkbox" ${checked?'checked':''} onchange="toggleStudentTagFilter(${jsArg(group.key)},${jsArg(value)})"><span>${esc(value)}</span><em>${count}</em></label>`;
+  }).join('')}</div></div>`).join('');
+  return `<div class="student-tag-cascader tms-dropdown ${selected.length?'has-value':''}" id="stuTagCascader_dropdown" data-target="stuTagCascader"><button type="button" class="tms-dropdown-display" onclick="toggleStandardDropdown('stuTagCascader',event)">${esc(label)}</button><div class="tms-dropdown-menu student-tag-cascader-menu" id="stuTagCascader" onclick="event.stopPropagation()">${selectedHtml}<div class="student-tag-cascader-columns">${groupsHtml}</div><div class="student-tag-cascader-footer"><button type="button" onclick="clearStudentTagFilters()">清空</button></div></div></div>`;
 }
 function studentScheduleIsFormal(row={}){
   const type=normalizeCourseType(row.standardCourseType||row.courseType||row.packageCourseType||row.productType||'');
@@ -210,31 +258,16 @@ function studentIsActiveRosterRow(stu){
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
   const sourceValue=document.getElementById('stuSourceFilter')?.value||'';
-  const packageStatusValue=document.getElementById('stuPackageStatusFilter')?.value||'';
-  const paymentModeValue=document.getElementById('stuPaymentModeFilter')?.value||'';
-  const activityStatusValue=document.getElementById('stuActivityStatusFilter')?.value||'';
-  const lessonVolumeValue=document.getElementById('stuLessonVolumeFilter')?.value||'';
-  const lifecycleStatusValue=document.getElementById('stuLifecycleStatusFilter')?.value||'';
   const coachValue=document.getElementById('stuCoachFilter')?.value||'';
   const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
   const linked=withLinkedFilterCounts([
     {key:'type',value:typeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},{value:'成人',label:'成人'},{value:'青少年',label:'青少年'}],match:(s,value)=>s.type===value},
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...studentSourceOptions()],match:(s,value)=>studentSourceText(s)===value},
-    {key:'packageStatus',value:packageStatusValue,options:[{value:'',label:'全部',emptyDisplay:'课包状态'},...studentOptionList(STUDENT_PACKAGE_STATUS_OPTIONS)],match:(s,value)=>studentPackageStatusText(s)===value},
-    {key:'paymentMode',value:paymentModeValue,options:[{value:'',label:'全部',emptyDisplay:'付费方式'},...studentOptionList(STUDENT_PAYMENT_MODE_OPTIONS)],match:(s,value)=>studentPaymentModeText(s)===value},
-    {key:'activityStatus',value:activityStatusValue,options:[{value:'',label:'全部',emptyDisplay:'活跃状态'},...studentOptionList(STUDENT_ACTIVITY_STATUS_OPTIONS)],match:(s,value)=>studentActivityStatusText(s)===value},
-    {key:'lessonVolume',value:lessonVolumeValue,options:[{value:'',label:'全部',emptyDisplay:'历史课时'},...studentOptionList(STUDENT_LESSON_VOLUME_OPTIONS)],match:(s,value)=>studentLessonVolumeText(s)===value},
-    {key:'lifecycleStatus',value:lifecycleStatusValue,options:[{value:'',label:'全部',emptyDisplay:'学员状态'},...studentOptionList(STUDENT_LIFECYCLE_STATUS_OPTIONS)],match:(s,value)=>studentLifecycleStatusText(s)===value},
     {key:'coach',value:coachValue,options:[{value:'',label:'全部',emptyDisplay:'负责教练'},{value:'__unassigned__',label:'未分配'},...activeCoachNames().map(name=>({value:name,label:name}))],match:(s,value)=>value==='__unassigned__'?studentPrimaryCoachText(s)==='-':studentPrimaryCoachText(s)===value}
   ],baseRows);
   const wrapMap=[
     ['stuTypeFilterHost','stuTypeFilter','类型',linked.type.options,linked.type.value],
     ['stuSourceFilterHost','stuSourceFilter','来源',linked.source.options,linked.source.value],
-    ['stuPackageStatusFilterHost','stuPackageStatusFilter','课包状态',linked.packageStatus.options,linked.packageStatus.value],
-    ['stuPaymentModeFilterHost','stuPaymentModeFilter','付费方式',linked.paymentMode.options,linked.paymentMode.value],
-    ['stuActivityStatusFilterHost','stuActivityStatusFilter','活跃状态',linked.activityStatus.options,linked.activityStatus.value],
-    ['stuLessonVolumeFilterHost','stuLessonVolumeFilter','历史课时',linked.lessonVolume.options,linked.lessonVolume.value],
-    ['stuLifecycleStatusFilterHost','stuLifecycleStatusFilter','学员状态',linked.lifecycleStatus.options,linked.lifecycleStatus.value],
     ['stuCoachFilterHost','stuCoachFilter','负责教练',linked.coach.options,linked.coach.value]
   ];
   wrapMap.forEach(([hostId,id,label,options,value])=>{
@@ -243,6 +276,8 @@ function renderStudentToolbarFilters(){
     host.style.display='';
     host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onStudentFilterChange');
   });
+  const tagHost=document.getElementById('stuTagFilterHost');
+  if(tagHost)tagHost.innerHTML=renderStudentTagCascader(baseRows);
 }
 function studentLastLessonDate(stu){
   if(stu?.detailRecentLessonDate)return String(stu.detailRecentLessonDate||'').slice(0,10);
@@ -421,6 +456,7 @@ function studentTableColumns(){
     {label:'活跃状态',style:'width:120px'},
     {label:'付费方式',style:'width:120px'},
     {label:'课包状态',style:'width:120px'},
+    {label:'课包余额',style:'width:110px'},
     {label:'历史课时',style:'width:110px'},
     {label:'学员状态',style:'width:120px'},
     {label:'负责教练',style:'width:110px'},
@@ -482,11 +518,6 @@ function getFilteredStudents(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('stuTypeFilter')?.value||'';
   const sf=document.getElementById('stuSourceFilter')?.value||'';
-  const packageStatusFilter=document.getElementById('stuPackageStatusFilter')?.value||'';
-  const paymentModeFilter=document.getElementById('stuPaymentModeFilter')?.value||'';
-  const activityStatusFilter=document.getElementById('stuActivityStatusFilter')?.value||'';
-  const lessonVolumeFilter=document.getElementById('stuLessonVolumeFilter')?.value||'';
-  const lifecycleStatusFilter=document.getElementById('stuLifecycleStatusFilter')?.value||'';
   const coachFilter=document.getElementById('stuCoachFilter')?.value||'';
   return getStudentBaseList().filter(s=>{
     const accountText=courtsForStudent(s).map(c=>`${c.name} ${c.phone||''}`).join(' ');
@@ -494,11 +525,7 @@ function getFilteredStudents(){
     if(!globalDateWithinRange(studentGlobalDateValue(s)))return false;
     if(tf&&s.type!==tf)return false;
     if(sf&&studentSourceText(s)!==sf)return false;
-    if(packageStatusFilter&&studentPackageStatusText(s)!==packageStatusFilter)return false;
-    if(paymentModeFilter&&studentPaymentModeText(s)!==paymentModeFilter)return false;
-    if(activityStatusFilter&&studentActivityStatusText(s)!==activityStatusFilter)return false;
-    if(lessonVolumeFilter&&studentLessonVolumeText(s)!==lessonVolumeFilter)return false;
-    if(lifecycleStatusFilter&&studentLifecycleStatusText(s)!==lifecycleStatusFilter)return false;
+    if(!studentTagFilterMatches(s))return false;
     if(coachFilter==='__unassigned__'&&studentPrimaryCoachText(s)!=='-')return false;
     if(coachFilter&&coachFilter!=='__unassigned__'&&studentPrimaryCoachText(s)!==coachFilter)return false;
     return true;
@@ -530,8 +557,12 @@ function studentStandardMetricValue(key){
 function studentStandardSummaryForMode(){
   const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{};
   const summary=standard.teachingSummary||teachingStudentViews?.summary||{};
+  const historicalSummaryCount=Number(summary.historicalStudentCount);
+  const activeSummaryCount=Number(summary.activeStudentCount);
+  const historicalStudentCount=Number.isFinite(historicalSummaryCount)?historicalSummaryCount:Number(teachingStudentViews?.historicalStudents?.length)||0;
+  const activeStudentCount=Number.isFinite(activeSummaryCount)?activeSummaryCount:Number(teachingStudentViews?.activeStudents?.length)||0;
   if(studentListViewMode()==='trial')return {
-    total:studentStandardMetricValue('courseChainStudents')||Number(summary.courseStudentCount)||0,
+    total:historicalStudentCount,
     trialPathCount:studentStandardMetricValue('trialPathStudents')||Number(summary.trialPathStudents)||0,
     trialPathDealCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0,
     trialPathPendingCount:studentStandardMetricValue('trialPathPending')||Number(summary.trialPathPendingCustomers)||0,
@@ -540,8 +571,8 @@ function studentStandardSummaryForMode(){
     trialConvertedCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0
   };
   return {
-    total:studentStandardMetricValue('formalStudents')||Number(summary.formalStudentCount)||0,
-    packageStudentCount:Number(summary.formalStudentCount)||studentStandardMetricValue('formalStudents')||0,
+    total:activeStudentCount,
+    packageStudentCount:Number(summary.formalStudentCount)||0,
     activePackageStudentCount:Number(summary.activePackageStudentCount)||0,
     purchaseCount:Number(summary.coursePurchaseCount)||0,
     courseRepeatCount:studentStandardMetricValue('courseRepeatBuyers')||Number(summary.courseRepeatCount)||0,
@@ -828,11 +859,7 @@ function studentHasActiveSearchOrFilter(){
   return !!((document.getElementById('stuSearch')?.value||'').trim()
     ||document.getElementById('stuTypeFilter')?.value
     ||document.getElementById('stuSourceFilter')?.value
-    ||document.getElementById('stuPackageStatusFilter')?.value
-    ||document.getElementById('stuPaymentModeFilter')?.value
-    ||document.getElementById('stuActivityStatusFilter')?.value
-    ||document.getElementById('stuLessonVolumeFilter')?.value
-    ||document.getElementById('stuLifecycleStatusFilter')?.value
+    ||studentTagFilterCount()
     ||document.getElementById('stuCoachFilter')?.value);
 }
 function studentEmptyStateHtml(){
@@ -860,6 +887,7 @@ function renderStudentMobileCards(list){
       <div class="admin-h5-card-tags"><span class="tms-tag">${esc(studentSourceText(s)||'-')}</span><span class="tms-tag">${esc(studentActivityStatusText(s)||'-')}</span><span class="tms-tag">${esc(studentPaymentModeText(s)||'-')}</span></div>
       <div class="admin-h5-card-grid">
         <span><b>课包状态</b>${esc(studentPackageStatusText(s)||'-')}</span>
+        <span><b>课包余额</b>${esc(renderStandardEmptyText(s?.packageBalanceText))}</span>
         <span><b>历史课时</b>${esc(studentLessonVolumeText(s)||'-')}</span>
         <span><b>学员状态</b>${esc(studentLifecycleStatusText(s)||'-')}</span>
         <span><b>负责教练</b>${esc(coachText||'-')}</span>
@@ -889,7 +917,7 @@ function renderStudents(){
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const coachText=studentPrimaryCoachText(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentActivityStatusText(s),false)}</td><td>${renderStandardCellText(studentPaymentModeText(s),false)}</td><td>${renderStandardCellText(studentPackageStatusText(s),false)}</td><td>${renderStandardCellText(studentLessonVolumeText(s),false)}</td><td>${renderStandardCellText(studentLifecycleStatusText(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentActivityStatusText(s),false)}</td><td>${renderStandardCellText(studentPaymentModeText(s),false)}</td><td>${renderStandardCellText(studentPackageStatusText(s),false)}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentLessonVolumeText(s),false)}</td><td>${renderStandardCellText(studentLifecycleStatusText(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
   renderStudentMobileCards(slice);
 }

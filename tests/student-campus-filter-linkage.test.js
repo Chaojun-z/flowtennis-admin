@@ -16,7 +16,7 @@ function fnBody(name){
 
 assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from the unified student view row');
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the unified student campus source for filtering');
-assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)&&studentMatchesListPage\(s\)/, 'student list base rows should use the shared student campus matcher');
+assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student list base rows should use the shared student campus matcher and the new historical/active roster rules');
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
 assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should read the unified standard summary');
 assert.doesNotMatch(source, /function studentFinanceStatsForBase\(/, 'student page should not keep a local finance stats calculator for top cards');
@@ -38,20 +38,27 @@ const context = {
   customerLifecycleStudentStage: () => 'formal',
   teachingStudentViews: {
     summary: {},
+    activeStudents: [
+      { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 }
+    ],
     formalStudents: [
-      { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal' },
-      { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal' },
-      { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal' },
-      { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal' },
-      { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal' }
+      { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+      { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 }
     ]
   },
   teachingStudentViewRows: () => [
-    { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal' },
-    { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal' },
-    { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal' },
-    { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal' },
-    { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal' }
+    { studentId: 'stu-17', id: 'stu-17', name: '一七&zzxxyy', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+    { studentId: 'stu-xd', id: 'stu-xd', name: '铣大象', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+    { studentId: 'stu-misha', id: 'stu-misha', name: 'misha', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+    { studentId: 'stu-huang', id: 'stu-huang', name: '黄总', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 },
+    { studentId: 'stu-putao', id: 'stu-putao', name: '葡萄', campus: 'chaojun', studentStage: 'formal', packageBalanceRemaining: 1 }
   ],
   standardLifecycleMetrics: { metrics: {} },
   FlowTennisBusinessTaxonomy: {
@@ -93,8 +100,8 @@ const base = vm.runInContext('getStudentBaseList()', context);
 assert.deepStrictEqual(base.map(s => s.name), ['一七&zzxxyy', '铣大象', 'misha', '黄总', '葡萄'], 'campus-filtered student list should include all five linked students');
 assert.strictEqual(
   vm.runInContext('studentPageStats(getStudentBaseList()).total', context),
-  0,
-  'student top count should preserve the unified zero value instead of falling back to the visible list'
+  5,
+  'student top count should use the new active student roster count'
 );
 
 console.log('student campus filter linkage tests passed');

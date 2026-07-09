@@ -8,7 +8,7 @@ function syncViewportMode(){
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let customerLifecycleRows=[];
-let teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
@@ -61,8 +61,11 @@ function customerLifecycleAllRows(){
   return Array.isArray(customerLifecycleRows)?customerLifecycleRows:[];
 }
 function teachingStudentViewRows(mode){
-  const key=mode==='trial'?'courseStudents':'formalStudents';
-  return Array.isArray(teachingStudentViews?.[key])?teachingStudentViews[key]:[];
+  const key=mode==='trial'?'historicalStudents':'activeStudents';
+  const fallbackKey=mode==='trial'?'courseStudents':'formalStudents';
+  const rows=teachingStudentViews?.[key];
+  if(Array.isArray(rows))return rows;
+  return Array.isArray(teachingStudentViews?.[fallbackKey])?teachingStudentViews[fallbackKey]:[];
 }
 function customerLifecycleHasValue(record={},fields=[]){
   return fields.some(field=>customerLifecycleText(record[field]));
@@ -578,7 +581,7 @@ function renderTableSkeletonLoading(id,colspan,text){
   el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
-  renderTableSkeletonLoading('stuTbody',12,'学员数据加载中...');
+  renderTableSkeletonLoading('stuTbody',13,'学员数据加载中...');
 }
 function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
@@ -653,7 +656,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
       packageUnifiedView=data.packageUnifiedView||{rows:[]};
@@ -669,7 +672,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     }
     if(name==='lifecycleMetricsPage'){
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      teachingStudentViews=data.teachingStudentViews||{courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('lifecycleMetricsPage',requestKey);
@@ -794,7 +797,7 @@ function clearLoadedData(){
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
-  customerLifecycleRows=[];teachingStudentViews={courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
+  customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   courtAccountListViewRequestKey='';
   packageBoardColumnOrder=[];

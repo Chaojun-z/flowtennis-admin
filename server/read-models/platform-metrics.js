@@ -831,8 +831,50 @@ function teachingStudentViewRow(row = {}, listFields = {}) {
   };
 }
 
+function teachingScheduleCompleted(row = {}) {
+  return ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus));
+}
+
+function teachingScheduleFormal(row = {}) {
+  return !courseRowIsTrial(row) && !courseRowIsCompanion(row);
+}
+
+function teachingStudentScheduleRows(data = {}, studentId = '', predicate = () => true) {
+  return (data.schedule || [])
+    .filter(row => activeStatus(row) && rowHasStudent(row, studentId) && predicate(row));
+}
+
+function teachingStudentLatestFormalLessonDate(data = {}, studentId = '') {
+  const rows = teachingStudentScheduleRows(data, studentId, row => teachingScheduleCompleted(row) && teachingScheduleFormal(row));
+  return rows.map(row => dateOnly(row.startTime || row.endTime || row.createdAt)).filter(Boolean).sort().pop() || '';
+}
+
+function teachingDaysSince(dateText = '', now = new Date()) {
+  const raw = dateOnly(dateText);
+  if (!raw) return null;
+  const target = Date.parse(`${raw}T00:00:00`);
+  const baseRaw = dateOnly(now instanceof Date ? now.toISOString() : now);
+  const base = Date.parse(`${baseRaw}T00:00:00`);
+  if (!Number.isFinite(target) || !Number.isFinite(base)) return null;
+  return Math.floor((base - target) / 86400000);
+}
+
+function teachingStudentHasCompletedLesson(data = {}, row = {}) {
+  const studentId = text(row.studentId);
+  if (!studentId) return false;
+  if (Number(row.completedLessons) > 0) return true;
+  return teachingStudentScheduleRows(data, studentId, teachingScheduleCompleted).length > 0;
+}
+
+function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
+  if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
+  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+  return days !== null && days <= 90;
+}
+
 function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const studentRows = (customerLifecycleRows || []).filter(row => text(row.studentId));
+  const now = data.now || new Date();
   const courseListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: true });
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
   const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
@@ -849,6 +891,12 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')
     .map(formalViewRow);
+  const historicalStudents = studentRows
+    .map(courseViewRow)
+    .filter(row => teachingStudentHasCompletedLesson(data, row));
+  const activeStudents = studentRows
+    .map(formalViewRow)
+    .filter(row => teachingStudentInActiveRoster(data, row, now));
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
@@ -865,6 +913,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     courseStudents,
     trialStudents,
     formalStudents,
+    historicalStudents,
+    activeStudents,
     trialPathStudents,
     trialPathDealStudents,
     trialPathPendingStudents,
@@ -873,6 +923,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
       courseStudentCount: courseStudents.length,
       trialStudentCount: trialStudents.length,
       formalStudentCount: formalStudents.length,
+      historicalStudentCount: historicalStudents.length,
+      activeStudentCount: activeStudents.length,
       courseDealCustomers: formalStudents.length,
       trialPathStudents: trialPathStudents.length,
       trialPathDealCustomers: trialPathDealStudents.length,
@@ -1056,6 +1108,8 @@ function buildStandardLifecycleMetrics(data = {}) {
       leadPoolRows: leadConversionMetrics.rawLeadPoolRows,
       courseChainStudents: teachingStudentViews.courseStudents,
       formalStudents: teachingStudentViews.formalStudents,
+      historicalStudents: teachingStudentViews.historicalStudents,
+      activeStudents: teachingStudentViews.activeStudents,
       trialPathStudents: teachingStudentViews.trialPathStudents,
       trialPathDeals: teachingStudentViews.trialPathDealStudents,
       trialPathPending: teachingStudentViews.trialPathPendingStudents,

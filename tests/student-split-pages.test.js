@@ -10,6 +10,7 @@ assert.match(source, /customerLifecycleRows=\[\]/, 'student split pages should r
 assert.match(source, /function studentLifecycleRow\(stu\)/, 'student split pages should lookup the unified lifecycle row for a student');
 assert.match(source, /function studentLifecycleStage\(stu\)/, 'student split pages should read the standard studentStage field');
 assert.match(source, /function studentUnifiedViewRows\(/, 'student split pages should read backend unified teaching student views');
+assert.match(source, /function teachingStudentViewRows\(mode\)[\s\S]*const key=mode==='trial'\?'historicalStudents':'activeStudents'[\s\S]*if\(Array\.isArray\(rows\)\)return rows/, 'student split pages should read new historical and active backend teaching student views, including legitimate empty arrays');
 assert.match(source, /const base=viewRows\.length\?viewRows:students;[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student base list should use historical and active roster scopes');
 assert.match(source, /function studentIsHistoricalRosterRow\(/, 'historical student page should use the historical roster helper');
 assert.match(source, /function studentIsActiveRosterRow\(/, 'active student page should use the active roster helper');

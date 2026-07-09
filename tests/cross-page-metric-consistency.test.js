@@ -205,6 +205,8 @@ assert.deepStrictEqual(
     courseStudentCount: 7,
     trialStudentCount: 2,
     formalStudentCount: 3,
+    historicalStudentCount: 2,
+    activeStudentCount: 0,
     courseDealCustomers: 3,
     trialPathStudents: 3,
     trialPathDealCustomers: 1,
