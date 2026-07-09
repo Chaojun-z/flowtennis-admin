@@ -892,7 +892,7 @@ function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
   const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
-  return days !== null && days <= 30;
+  return days !== null && days <= 90;
 }
 
 function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {

@@ -295,7 +295,7 @@ function studentIsHistoricalRosterRow(stu){
 function studentIsActiveRosterRow(stu){
   if(studentPackageRemainingLessons(stu)>0)return true;
   const days=studentDaysSince(studentFormalLastLessonDate(stu));
-  return days!==null&&days<=30;
+  return days!==null&&days<=90;
 }
 function renderStudentToolbarFilters(){
   const typeValue=document.getElementById('stuTypeFilter')?.value||'';
