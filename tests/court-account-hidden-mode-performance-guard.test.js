@@ -26,7 +26,7 @@ assert.match(
 );
 assert.match(
   stateSource,
-  /if\(\(pg==='courts'\|\|pg==='memberships'\)&&shouldUseCourtReadModelByDefault\(\)\)\{\s*return courtAccountListViewData\?\[\]:\['courtAccountListViewPage'\];\s*\}/,
+  /if\(\(pg==='courts'\|\|pg==='memberships'\|\|pg==='membership-orders'\|\|pg==='membership-ledger'\)&&shouldUseCourtReadModelByDefault\(\)\)\{\s*return courtAccountListViewData&&courtAccountListViewDataIsCurrent\(\)\?\[\]:\['courtAccountListViewPage'\];\s*\}/,
   '订场用户页和会员管理页首屏门禁应改为统一读模型数据，不应继续等旧 courts/memberships 聚合数据'
 );
 

@@ -106,11 +106,11 @@ async function main() {
   });
 
   const view = await loadView();
-  assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'meta'], '读模型应返回 summary/filters/items/meta');
+  assert.deepStrictEqual(Object.keys(view), ['summary', 'filters', 'items', 'membershipOrderAuditRows', 'membershipLedgerAuditRows', 'meta'], '读模型应返回 summary/filters/items/audit/meta');
   assert.strictEqual(view.items.length, 2, '读模型应返回可渲染列表项');
   assert.strictEqual(view.items[0].displayName, '客户A');
   assert.strictEqual(view.items[0].owner, '线索跟进人', '订场用户跟进人应读取线索池 owner 统一事实源');
-  assert.strictEqual(view.items[1].owner, '旧对接人乙', '没有关联线索跟进人时应把订场旧对接人映射为跟进人');
+  assert.strictEqual(view.items[1].owner, '', '没有关联线索跟进人时不应回退订场旧对接人');
   assert.strictEqual(view.items[0].accountType, '会员账户');
   assert.ok(view.filters.accountTypes.every((value) => ['会员账户', '普通账户'].includes(value)), '账户类型筛选只应返回会员账户/普通账户');
   assert.strictEqual(view.items[0].membershipStatus, '正常');

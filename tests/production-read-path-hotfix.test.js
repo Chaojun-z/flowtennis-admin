@@ -65,7 +65,7 @@ assert.match(
 
 assert.match(
   leadsRoutesSource,
-  /const rows=await readLeadSourceRows\(\{isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS\}\);/,
+  /readLeadSourceRows\(\{isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS\}\)/,
   '线索池列表和经营分析应共用同一个线索读取模型'
 );
 
@@ -77,14 +77,14 @@ assert.match(
 );
 assert.match(
   financePageSource,
-  /const scoped=filterLoadAllForUser\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\},user\);[\s\S]*const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
+  /const scoped=filterLoadAllForUser\(\{campuses,students,purchases,entitlements,entitlementLedger,courts,membershipOrders,membershipAccounts,schedule\},user\);[\s\S]*const financeSnapshot=buildFinancePageSnapshot\(scoped(?:,financeScope)?\);[\s\S]*financeOverviewData:financeSnapshot\.financeOverviewData,[\s\S]*financeNormalizedRows:financeSnapshot\.financeNormalizedRows/,
   '财务总览应读取生产业务表完整事实账，避免旧基线加白名单增量造成多口径'
 );
 assert.doesNotMatch(financePageSource, /const verifiedFinance=loadVerifiedFinanceArtifacts\(campuses\);[\s\S]*buildVerifiedFinanceWithImportIncrements/, '财务页不应继续使用旧基线加白名单增量作为主口径');
 assert.doesNotMatch(financePageSource, /financeSettlementRows:\[\]/, '教练结算不应固定返回空数组');
 assert.match(
   financePageSource,
-  /const financeSnapshot=buildFinancePageSnapshot\(scoped\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
+  /const financeSnapshot=buildFinancePageSnapshot\(scoped(?:,financeScope)?\);[\s\S]*financeSettlementRows:financeSnapshot\.financeSettlementRows/,
   '财务接口应返回基于排课轻投影聚合的教练结算数据'
 );
 

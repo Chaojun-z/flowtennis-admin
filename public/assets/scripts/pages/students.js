@@ -109,16 +109,16 @@ function studentTagFilterMatches(s){
 function toggleStudentTagFilter(key,value){
   const list=studentTagFilterState[key]||[];
   studentTagFilterState={...studentTagFilterState,[key]:list.includes(value)?list.filter(item=>item!==value):[...list,value]};
-  onStudentFilterChange();
+  onStudentTagFilterChange();
 }
 function removeStudentTagFilter(key,value){
   const list=studentTagFilterState[key]||[];
   studentTagFilterState={...studentTagFilterState,[key]:list.filter(item=>item!==value)};
-  onStudentFilterChange();
+  onStudentTagFilterChange();
 }
 function clearStudentTagFilters(){
   studentTagFilterState={packageStatus:[],paymentMode:[],activityStatus:[],lessonVolume:[],lifecycleStatus:[]};
-  onStudentFilterChange();
+  onStudentTagFilterChange();
 }
 function studentTagOptionCount(baseRows,group,value){
   return baseRows.filter(s=>group.getter(s)===value).length;
@@ -127,39 +127,39 @@ function studentTagCascaderActiveGroup(){
   return STUDENT_TAG_FILTER_GROUPS.find(group=>group.key===studentTagCascaderActiveGroupKey)||STUDENT_TAG_FILTER_GROUPS[0];
 }
 function setStudentTagCascaderActiveGroup(key,event){
-  if(event)event.stopPropagation();
   if(!STUDENT_TAG_FILTER_GROUPS.some(group=>group.key===key))return;
   studentTagCascaderActiveGroupKey=key;
-  const menu=document.getElementById('stuTagCascader');
-  if(!menu){renderStudentToolbarFilters();return;}
   const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
-  const activeGroup=studentTagCascaderActiveGroup();
-  const parentHost=menu.querySelector('.student-tag-cascader-parent-list');
-  const childHost=menu.querySelector('.student-tag-cascader-child-list');
-  if(parentHost)parentHost.innerHTML=renderStudentTagCascaderParentHtml(activeGroup);
-  if(childHost)childHost.innerHTML=renderStudentTagCascaderChildHtml(baseRows,activeGroup);
+  refreshStandardGroupedFilterPanel(studentTagGroupedFilterConfig(baseRows));
 }
-function renderStudentTagCascaderParentHtml(activeGroup){
-  return STUDENT_TAG_FILTER_GROUPS.map(group=>{
-    const selectedCount=(studentTagFilterState[group.key]||[]).length;
-    return `<button type="button" class="student-tag-cascader-parent ${group.key===activeGroup.key?'active':''}" onmouseenter="setStudentTagCascaderActiveGroup(${jsArg(group.key)},event)" onclick="setStudentTagCascaderActiveGroup(${jsArg(group.key)},event)"><span>${esc(group.label)}</span><em>${selectedCount||''}</em></button>`;
-  }).join('');
-}
-function renderStudentTagCascaderChildHtml(baseRows,activeGroup){
-  return activeGroup.options.map(value=>{
-    const checked=(studentTagFilterState[activeGroup.key]||[]).includes(value);
-    const count=studentTagOptionCount(baseRows,activeGroup,value);
-    return `<label class="student-tag-cascader-option"><input type="checkbox" ${checked?'checked':''} onchange="toggleStudentTagFilter(${jsArg(activeGroup.key)},${jsArg(value)})"><span>${esc(value)}</span><em>${count}</em></label>`;
-  }).join('');
+function studentTagGroupedFilterConfig(baseRows){
+  return {
+    id:'stuTagFilter',
+    label:'标签筛选',
+    activeGroupKey:studentTagCascaderActiveGroup().key,
+    selectedValuesByGroup:studentTagFilterState,
+    onGroupChange:'setStudentTagCascaderActiveGroup',
+    onToggle:'toggleStudentTagFilter',
+    onRemove:'removeStudentTagFilter',
+    onClear:'clearStudentTagFilters',
+    groups:STUDENT_TAG_FILTER_GROUPS.map(group=>({
+      key:group.key,
+      label:group.label,
+      options:group.options.map(value=>({value,label:value,count:studentTagOptionCount(baseRows,group,value)}))
+    }))
+  };
 }
 function renderStudentTagCascader(baseRows){
-  const selected=studentSelectedTagValues();
-  const label=selected.length?`标签筛选 ${selected.length}`:'标签筛选';
-  const selectedHtml=selected.length?`<div class="student-tag-cascader-selected">${selected.slice(0,3).map(item=>`<button type="button" class="student-tag-chip" onclick="event.stopPropagation();removeStudentTagFilter(${jsArg(item.group.key)},${jsArg(item.value)})">${esc(item.label)} ×</button>`).join('')}${selected.length>3?`<span class="student-tag-more">+${selected.length-3}</span>`:''}</div>`:'';
-  const activeGroup=studentTagCascaderActiveGroup();
-  const parentHtml=`<div class="student-tag-cascader-parent-list">${renderStudentTagCascaderParentHtml(activeGroup)}</div>`;
-  const childHtml=`<div class="student-tag-cascader-child-list">${renderStudentTagCascaderChildHtml(baseRows,activeGroup)}</div>`;
-  return `<div class="student-tag-cascader tms-dropdown ${selected.length?'has-value':''}" id="stuTagCascader_dropdown" data-target="stuTagCascader"><button type="button" class="tms-dropdown-display" onclick="toggleStandardDropdown('stuTagCascader',event)">${esc(label)}</button><div class="tms-dropdown-menu student-tag-cascader-menu" id="stuTagCascader" onclick="event.stopPropagation()">${selectedHtml}<div class="student-tag-cascader-columns">${parentHtml}${childHtml}</div><div class="student-tag-cascader-footer"><button type="button" onclick="clearStudentTagFilters()">清空</button></div></div></div>`;
+  return renderStandardGroupedFilterHtml(studentTagGroupedFilterConfig(baseRows));
+}
+function refreshStudentTagGroupedFilter(){
+  const baseRows=getStudentBaseList().filter(s=>globalDateWithinRange(studentGlobalDateValue(s)));
+  refreshStandardGroupedFilterPanel(studentTagGroupedFilterConfig(baseRows));
+}
+function onStudentTagFilterChange(){
+  stuPage=standardListFirstPage();
+  renderStudents({skipToolbar:true});
+  refreshStudentTagGroupedFilter();
 }
 function studentScheduleMatches(row,stu){
   const id=String(stu?.id||stu?.studentId||'').trim();
@@ -922,8 +922,8 @@ function renderStudentMobileCards(list){
     </article>`;
   }).join('');
 }
-function renderStudents(){
-  renderStudentToolbarFilters();
+function renderStudents(options={}){
+  if(!options.skipToolbar)renderStudentToolbarFilters();
   ensureStudentDefaultSort();
   renderStudentTableHeaders();
   updateStudentSortHeaders();

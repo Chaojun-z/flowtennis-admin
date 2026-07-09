@@ -13,3 +13,20 @@
 .tms-dropdown-item.active::before{content:"✓";margin-right:6px;font-weight:400;color:#C06031}
 .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 .course-package-showcase-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
+.tms-grouped-filter .tms-dropdown-display{min-width:108px}
+.tms-grouped-filter-menu{width:340px;max-width:calc(100vw - 40px);max-height:none;padding:0;overflow:hidden}
+.tms-grouped-filter-selected{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid #EAE0D6;background:#FAF6F2}
+.tms-grouped-filter-chip{height:24px;border:1px solid #E8DFD5;border-radius:6px;background:#FBF7F4;color:#805435;font-size:12px;font-family:inherit;padding:0 7px;cursor:pointer}
+.tms-grouped-filter-more{display:inline-flex;align-items:center;height:24px;color:#8C7B6E;font-size:12px}
+.tms-grouped-filter-columns{display:grid;grid-template-columns:132px minmax(0,1fr);gap:0}
+.tms-grouped-filter-groups{display:flex;flex-direction:column;padding:4px;border-right:1px solid #EAE0D6;background:#FAF6F2}
+.tms-grouped-filter-group{display:flex;align-items:center;justify-content:space-between;min-height:38px;border:0;border-radius:4px;background:transparent;color:#5C4D43;font-size:13px;font-weight:600;font-family:inherit;padding:0 10px;cursor:pointer;text-align:left}
+.tms-grouped-filter-group:hover,.tms-grouped-filter-group.active{background:#F1EAE2;color:#332A24}
+.tms-grouped-filter-group.has-value{color:#C06031}
+.tms-grouped-filter-options{display:flex;flex-direction:column;min-width:0;padding:4px;background:#FAF6F2}
+.tms-grouped-filter-option{display:grid;grid-template-columns:16px minmax(0,1fr);align-items:center;gap:8px;min-height:38px;padding:0 10px;border-radius:4px;color:#5C4D43;font-size:13px;cursor:pointer}
+.tms-grouped-filter-option:hover,.tms-grouped-filter-option.active{background:#F1EAE2}
+.tms-grouped-filter-option input{width:14px;height:14px;margin:0;accent-color:#C06031}
+.tms-grouped-filter-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tms-grouped-filter-footer{display:flex;justify-content:flex-end;padding:8px 10px;border-top:1px solid #EAE0D6;background:#FAF6F2}
+.tms-grouped-filter-clear{border:0;background:transparent;color:#805435;font-size:12px;font-family:inherit;cursor:pointer;padding:4px 0}

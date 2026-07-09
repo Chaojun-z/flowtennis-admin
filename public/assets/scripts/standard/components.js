@@ -147,6 +147,97 @@ function renderStandardDropdownHtml(id,label,options,value,isForm=false,onchange
   const checkIcon='<span class="tms-dropdown-check" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.2L5.7 10.2L11.5 3.8"/></svg></span>';
   return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''}" data-value="${esc(opt.value??'')}" onclick="selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
 }
+function standardGroupedFilterState(config={}){
+  const groups=(config.groups||[]).map(group=>({
+    ...group,
+    options:(group.options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt)
+  }));
+  const selectedValuesByGroup=config.selectedValuesByGroup||{};
+  const firstGroup=groups[0]||{key:'',label:'',options:[]};
+  const activeGroup=groups.find(group=>group.key===config.activeGroupKey)||firstGroup;
+  const selected=groups.flatMap(group=>{
+    const values=selectedValuesByGroup[group.key]||[];
+    return values.map(value=>{
+      const option=(group.options||[]).find(opt=>String(opt.value)===String(value))||{value,label:value};
+      return {group,value,label:option.label||value};
+    });
+  });
+  return {groups,selectedValuesByGroup,activeGroup,selected,selectedCount:selected.length};
+}
+function standardGroupedFilterDisplayHtml(config,state=standardGroupedFilterState(config)){
+  const label=String(config.label||'筛选');
+  const selectedCount=state.selectedCount;
+  return selectedCount?`${esc(label)} ${selectedCount}`:esc(label);
+}
+function renderStandardGroupedFilterSelectedHtml(config,state=standardGroupedFilterState(config)){
+  if(!state.selected.length)return '';
+  return `<div class="tms-grouped-filter-selected">${state.selected.slice(0,3).map(item=>`<button type="button" class="tms-grouped-filter-chip" onclick="removeStandardGroupedFilterOption(${jsArg(config.id)},${jsArg(item.group.key)},${jsArg(item.value)},event)">${esc(item.label)} ×</button>`).join('')}${state.selected.length>3?`<span class="tms-grouped-filter-more">+${state.selected.length-3}</span>`:''}</div>`;
+}
+function renderStandardGroupedFilterGroupsHtml(config,state=standardGroupedFilterState(config)){
+  return `<div class="tms-grouped-filter-groups">${state.groups.map(group=>{
+    const count=(state.selectedValuesByGroup[group.key]||[]).length;
+    const label=count?`${group.label} ${count}`:group.label;
+    return `<button type="button" class="tms-grouped-filter-group ${group.key===state.activeGroup.key?'active':''} ${count?'has-value':''}" onmouseenter="setStandardGroupedFilterGroup(${jsArg(config.id)},${jsArg(group.key)},event)" onclick="setStandardGroupedFilterGroup(${jsArg(config.id)},${jsArg(group.key)},event)"><span>${esc(label)}</span></button>`;
+  }).join('')}</div>`;
+}
+function renderStandardGroupedFilterOptionsHtml(config,state=standardGroupedFilterState(config)){
+  const values=state.selectedValuesByGroup[state.activeGroup.key]||[];
+  return `<div class="tms-grouped-filter-options">${(state.activeGroup.options||[]).map(opt=>{
+    const value=opt.value;
+    const checked=values.some(item=>String(item)===String(value));
+    const optionLabel=renderStandardOptionLabel(opt);
+    return `<label class="tms-grouped-filter-option ${checked?'active':''}" data-keep-open="true"><input type="checkbox" ${checked?'checked':''} aria-checked="${checked?'true':'false'}" onchange="toggleStandardGroupedFilterOption(${jsArg(config.id)},${jsArg(state.activeGroup.key)},${jsArg(value)},event)"><span>${esc(optionLabel)}</span></label>`;
+  }).join('')}</div>`;
+}
+function renderStandardGroupedFilterPanelHtml(config,state=standardGroupedFilterState(config)){
+  const selectedHtml=renderStandardGroupedFilterSelectedHtml(config,state);
+  return `${selectedHtml}<div class="tms-grouped-filter-columns">${renderStandardGroupedFilterGroupsHtml(config,state)}${renderStandardGroupedFilterOptionsHtml(config,state)}</div><div class="tms-grouped-filter-footer"><button type="button" class="tms-grouped-filter-clear" onclick="clearStandardGroupedFilter(${jsArg(config.id)},event)">清空</button></div>`;
+}
+function renderStandardGroupedFilterHtml(config={}){
+  const id=String(config.id||'');
+  if(!id)return '';
+  const state=standardGroupedFilterState(config);
+  return `<div class="tms-dropdown tms-grouped-filter ${state.selectedCount?'has-value':''}" id="${esc(id)}_dropdown" data-target="${esc(id)}" data-label="${esc(config.label||'筛选')}" data-on-group-change="${esc(config.onGroupChange||'')}" data-on-toggle="${esc(config.onToggle||'')}" data-on-remove="${esc(config.onRemove||'')}" data-on-clear="${esc(config.onClear||'')}" onclick="toggleStandardDropdown('${esc(id)}',event)"><input type="hidden" id="${esc(id)}" value="${esc(state.activeGroup.key||'')}"><div class="tms-dropdown-display">${standardGroupedFilterDisplayHtml(config,state)}</div><div class="tms-dropdown-menu tms-grouped-filter-menu" onclick="event.stopPropagation()" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${renderStandardGroupedFilterPanelHtml(config,state)}</div></div>`;
+}
+function refreshStandardGroupedFilterPanel(config={}){
+  const id=String(config.id||'');
+  const dropdown=document.getElementById(id+'_dropdown');
+  if(!dropdown)return;
+  const state=standardGroupedFilterState(config);
+  const input=document.getElementById(id);
+  const display=dropdown.querySelector('.tms-dropdown-display');
+  const menu=dropdown.querySelector('.tms-grouped-filter-menu');
+  if(input)input.value=state.activeGroup.key||'';
+  if(display)display.innerHTML=standardGroupedFilterDisplayHtml(config,state);
+  if(menu)menu.innerHTML=renderStandardGroupedFilterPanelHtml(config,state);
+  dropdown.classList.toggle('has-value',state.selectedCount>0);
+}
+function setStandardGroupedFilterGroup(id,key,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  const input=document.getElementById(id);
+  if(input)input.value=key||'';
+  const cb=dropdown?.dataset?.onGroupChange;
+  if(cb&&typeof window[cb]==='function')window[cb](key,id);
+}
+function toggleStandardGroupedFilterOption(id,groupKey,value,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  const cb=dropdown?.dataset?.onToggle;
+  if(cb&&typeof window[cb]==='function')window[cb](groupKey,value,id);
+}
+function removeStandardGroupedFilterOption(id,groupKey,value,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  const cb=dropdown?.dataset?.onRemove;
+  if(cb&&typeof window[cb]==='function')window[cb](groupKey,value,id);
+}
+function clearStandardGroupedFilter(id,event){
+  if(event)event.stopPropagation();
+  const dropdown=document.getElementById(id+'_dropdown');
+  const cb=dropdown?.dataset?.onClear;
+  if(cb&&typeof window[cb]==='function')window[cb](id);
+}
 function closeStandardDropdowns(){
   document.querySelectorAll('.tms-dropdown.open').forEach(el=>{
     el.classList.remove('open');
@@ -490,6 +581,12 @@ Object.assign(window,{
   renderStandardTooltipText,
   renderStandardCellText,
   renderStandardDropdownHtml,
+  renderStandardGroupedFilterHtml,
+  refreshStandardGroupedFilterPanel,
+  setStandardGroupedFilterGroup,
+  toggleStandardGroupedFilterOption,
+  removeStandardGroupedFilterOption,
+  clearStandardGroupedFilter,
   closeStandardDropdowns,
   toggleStandardDropdown,
   selectStandardDropdownItem,

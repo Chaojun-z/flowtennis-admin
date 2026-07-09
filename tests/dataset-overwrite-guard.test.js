@@ -5,7 +5,7 @@ const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
 
 function blockFor(name){
-  const pattern = new RegExp(`if\\(name==='${name}'\\)\\{([\\s\\S]*?)loadedDatasets\\.add\\('${name}'\\);[\\s\\S]*?return;[\\s\\S]*?\\n    \\}`, 'm');
+  const pattern = new RegExp(`if\\(name==='${name}'\\)\\{([\\s\\S]*?)(?:loadedDatasets\\.add\\('${name}'\\)|markDatasetLoaded\\('${name}',requestKey\\));[\\s\\S]*?return;[\\s\\S]*?\\n    \\}`, 'm');
   const match = source.match(pattern);
   assert(match, `${name} handler should exist`);
   return match[0];
