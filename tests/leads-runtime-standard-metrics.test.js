@@ -24,12 +24,12 @@ vm.runInContext(fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages
 
 context.standardLifecycleMetrics = {
   metrics: {
-    validLeads: { value: 4 },
+    validLeads: { value: 5 },
     courseChainStudents: { value: 3, rateText: '75%' },
     formalStudents: { value: 2, rateText: '50%' },
-    historicalStudents: { value: 5, rateText: '125%' },
+    historicalStudents: { value: 5, rateText: '100%' },
     activeStudents: { value: 3, rateText: '60%' },
-    trialPathStudents: { value: 2, rateText: '50%' },
+    trialPathStudents: { value: 2, rateText: '40%' },
     trialPathDeals: { value: 1, rateText: '50%' },
     trialPathPending: { value: 1, rateText: '50%' }
   }
@@ -62,7 +62,7 @@ assert.deepStrictEqual(
     trialBooked: 2,
     trialPendingConversion: 1
   },
-  '线索池顶部统计必须真实执行，并优先读取统一后端历史学员和在期学员指标'
+  '线索池顶部线索数必须和当前后端线索列表一致，不能被生命周期 validLeads 覆盖'
 );
 
 console.log('leads runtime standard metrics tests passed');

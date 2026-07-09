@@ -131,8 +131,8 @@ assert.doesNotMatch(
 
 assert.match(
   fnBody(leadsSource, 'leadStatsData'),
-  /leadStandardMetricValue\('validLeads'\)[\s\S]*leadStandardMetricValue\('historicalStudents'\)[\s\S]*leadStandardMetricValue\('activeStudents'\)/,
-  'lead stats should use the backend standard lifecycle metric object'
+  /const total=Array\.isArray\(list\)\?list\.length:0[\s\S]*leadStandardMetricValue\('historicalStudents'\)[\s\S]*leadStandardMetricValue\('activeStudents'\)/,
+  'lead stats should use current backend lead rows for lead count and backend lifecycle metrics for student stats'
 );
 
 assert.match(

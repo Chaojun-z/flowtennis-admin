@@ -724,6 +724,9 @@ function leadStandardMetricRate(key,fallbackValue,fallbackTotal){
   const metric=leadStandardMetric(key);
   return metric?.rateText||leadRateText(fallbackValue,fallbackTotal);
 }
+function leadCurrentListRateText(value,total){
+  return FlowTennisPlatformDataStandards.rateText(Number(value)||0,Number(total)||0);
+}
 function leadTrialDoneByStatus(lead){
   return [lead?.rawStatus,lead?.systemStatus,lead?.leadStage].some(value=>['体验课完成','已体验待转化','已体验待成交'].includes(String(value||'').trim()));
 }
@@ -755,7 +758,7 @@ function leadTrialCourseConverted(lead){
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadStatsData(list){
-  const total=leadStandardMetricValue('validLeads');
+  const total=Array.isArray(list)?list.length:0;
   const historicalStudents=leadStandardMetricValue('historicalStudents');
   const activeStudents=leadStandardMetricValue('activeStudents');
   const trialPath=leadStandardMetricValue('trialPathStudents');
@@ -764,11 +767,11 @@ function leadStatsData(list){
   return {
     total,
     historicalStudents,
-    historicalStudentRate:leadStandardMetricRate('historicalStudents',historicalStudents,total),
+    historicalStudentRate:leadCurrentListRateText(historicalStudents,total),
     activeStudents,
     activeStudentRate:leadStandardMetricRate('activeStudents',activeStudents,historicalStudents),
     trialBooked:trialPath,
-    trialBookedRate:leadStandardMetricRate('trialPathStudents',trialPath,total),
+    trialBookedRate:leadCurrentListRateText(trialPath,total),
     trialPathDeal,
     trialPathDealRate:leadStandardMetricRate('trialPathDeals',trialPathDeal,trialPath),
     trialPendingConversion:trialPathPending,
