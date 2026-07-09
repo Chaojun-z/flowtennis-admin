@@ -409,7 +409,7 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
     completedByStudent.set(studentId, (completedByStudent.get(studentId) || 0) + Math.abs(delta));
   });
   (data.schedule || [])
-    .filter(row => activeStatus(row) && !courseRowIsCompanion(row) && ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus)))
+    .filter(row => teachingScheduleLessonFact(row, data.now || new Date()))
     .filter(row => !ledgerScheduleIds.has(text(row.id)))
     .forEach(row => parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
       completedByStudent.set(studentId, (completedByStudent.get(studentId) || 0) + scheduleLessonUnits(row));
@@ -827,12 +827,20 @@ function teachingStudentViewRow(row = {}, listFields = {}) {
     studentStage: text(row.studentStage),
     trialStatus: text(row.trialStatus),
     courseDealPath: text(row.courseDealPath),
+    lastFormalLessonAt: text(listFields.lastFormalLessonAt),
+    packageStatusLabel: text(listFields.packageStatusLabel),
+    paymentModeLabel: text(listFields.paymentModeLabel),
+    activityStatusLabel: text(listFields.activityStatusLabel),
+    lessonVolumeLabel: text(listFields.lessonVolumeLabel),
+    studentStatusLabel: text(listFields.studentStatusLabel),
+    isHistoricalStudentRoster: !!listFields.isHistoricalStudentRoster,
+    isActiveStudentRoster: !!listFields.isActiveStudentRoster,
     packageListRows: Array.isArray(listFields.packageListRows) ? listFields.packageListRows : []
   };
 }
 
 function teachingScheduleCompleted(row = {}) {
-  return ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus));
+  return ['已完成', '已到课', '已下课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus));
 }
 
 function teachingScheduleFormal(row = {}) {
@@ -865,9 +873,30 @@ function teachingStudentScheduleRows(data = {}, studentId = '', predicate = () =
     .filter(row => activeStatus(row) && rowHasStudent(row, studentId) && predicate(row));
 }
 
+function teachingStudentFormalLessonFactRows(data = {}, studentId = '', now = new Date()) {
+  return teachingStudentScheduleRows(data, studentId, row => teachingScheduleLessonFact(row, now) && teachingScheduleFormal(row));
+}
+
+function teachingStudentFormalLedgerRows(data = {}, studentId = '') {
+  const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
+  return (data.entitlementLedger || [])
+    .filter(row => activeStatus(row) && text(row.studentId) === text(studentId) && (Number(row.lessonDelta) || 0) < 0)
+    .filter(row => {
+      const entitlement = entitlementsById.get(text(row.entitlementId)) || {};
+      const purchase = purchasesById.get(text(row.purchaseId || entitlement.purchaseId)) || {};
+      return !courseRowIsTrial(row) && !courseRowIsTrial(entitlement) && !courseRowIsTrial(purchase)
+        && !courseRowIsCompanion(row) && !courseRowIsCompanion(entitlement) && !courseRowIsCompanion(purchase);
+    });
+}
+
 function teachingStudentLatestFormalLessonDate(data = {}, studentId = '') {
-  const rows = teachingStudentScheduleRows(data, studentId, row => teachingScheduleCompleted(row) && teachingScheduleFormal(row));
-  return rows.map(row => dateOnly(row.startTime || row.endTime || row.createdAt)).filter(Boolean).sort().pop() || '';
+  const now = data.now || new Date();
+  const scheduleDates = teachingStudentFormalLessonFactRows(data, studentId, now)
+    .map(row => dateOnly(row.startTime || row.endTime || row.createdAt));
+  const ledgerDates = teachingStudentFormalLedgerRows(data, studentId)
+    .map(row => dateOnly(row.relatedDate || row.sourceDate || row.scheduleTime || row.createdAt));
+  return [...scheduleDates, ...ledgerDates].filter(Boolean).sort().pop() || '';
 }
 
 function teachingDaysSince(dateText = '', now = new Date()) {
@@ -893,6 +922,144 @@ function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
   const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
   return days !== null && days <= 90;
+}
+
+function teachingStudentHasFormalPackage(row = {}) {
+  return Array.isArray(row.packageListRows) && row.packageListRows.length > 0
+    || (Number(row.coursePurchaseCount) || 0) > 0
+    || (Number(row.packageBalanceTotal) || 0) > 0;
+}
+
+function teachingPaymentIsPackage(row = {}) {
+  const value = text([
+    row.settlementType,
+    row.paymentType,
+    row.payType,
+    row.payMethod,
+    row.paymentMethod,
+    row.paymentChannel
+  ].filter(Boolean).join(' ')).toLowerCase();
+  return /package|课包|扣课|划扣|核销/.test(value);
+}
+
+function teachingPaymentIsDirect(row = {}) {
+  const value = text([
+    row.settlementType,
+    row.paymentType,
+    row.payType,
+    row.payMethod,
+    row.paymentMethod,
+    row.paymentChannel
+  ].filter(Boolean).join(' ')).toLowerCase();
+  if (teachingPaymentIsPackage(row)) return false;
+  if (/single|direct|单次|按次|线下|现金|微信|支付宝|转账|收款/.test(value)) return true;
+  return (Number(row.paidAmount || row.paymentAmount || row.actualAmount || row.amountPaid || row.amount) || 0) > 0;
+}
+
+function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = new Date()) {
+  return teachingStudentFormalLessonFactRows(data, studentId, now).filter(teachingPaymentIsDirect);
+}
+
+function teachingStudentPackageStatusLabel(row = {}) {
+  const remaining = Number(row.packageBalanceRemaining) || 0;
+  if (!teachingStudentHasFormalPackage(row)) return '未买过课包';
+  if (remaining > 0 && remaining <= 2) return '课包即将耗尽';
+  if (remaining > 0) return '课包有余额';
+  return '课包已用完';
+}
+
+function teachingStudentActivityStatusLabel(data = {}, row = {}, now = new Date()) {
+  const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+  if (days === null) return '从未正式上课';
+  if (days <= 30) return '近30天活跃';
+  if (days <= 90) return '31-90天活跃';
+  if (days <= 180) return '91-180天沉默';
+  return '180天以上沉睡';
+}
+
+function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) {
+  const hasPackage = teachingStudentHasFormalPackage(row) || teachingStudentFormalLessonFactRows(data, text(row.studentId), now).some(teachingPaymentIsPackage);
+  const hasDirect = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).length > 0;
+  if (hasPackage && hasDirect) return '课包+单次付费';
+  if (hasDirect) return '单次付费学员';
+  if (hasPackage) return '课包学员';
+  return '-';
+}
+
+function teachingStudentLessonVolumeLabel(row = {}) {
+  const count = Number(row.completedLessons) || 0;
+  if (count >= 100) return '历史课时100+';
+  if (count >= 50) return '历史课时50+';
+  if (count >= 30) return '历史课时30+';
+  return '-';
+}
+
+function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now = new Date()) {
+  if (teachingStudentPackageStatusLabel(row) !== '课包已用完') return [];
+  const lastPackageDate = (Array.isArray(row.packageListRows) ? row.packageListRows : [])
+    .map(item => text(item.purchaseDate))
+    .filter(Boolean)
+    .sort()
+    .pop() || '';
+  return teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+    const date = dateOnly(item.startTime || item.endTime || item.createdAt);
+    return date && (!lastPackageDate || date >= lastPackageDate);
+  });
+}
+
+function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
+  const packageStatus = teachingStudentPackageStatusLabel(row);
+  const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
+  const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
+    return days !== null && days <= 30;
+  }).length;
+  if (packageStatus === '课包有余额' && activityStatus !== '近30天活跃') return '有余额未活跃';
+  if (teachingStudentDirectLessonsAfterLastPackage(data, row, now).length > 0) return '已转单次付费';
+  if (teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
+    return days !== null && days <= 90;
+  }).length >= 2) return '稳定单次付费';
+  if (packageStatus === '课包已用完' && activityStatus === '近30天活跃' && !recentDirect30) return '课包待续费';
+  return '-';
+}
+
+function teachingStudentApplyStandardLabels(data = {}, row = {}, now = new Date()) {
+  const isHistoricalStudentRoster = teachingStudentHasCompletedLesson(data, row, now);
+  const isActiveStudentRoster = teachingStudentInActiveRoster(data, row, now);
+  return {
+    ...row,
+    lastFormalLessonAt: teachingStudentLatestFormalLessonDate(data, text(row.studentId)),
+    packageStatusLabel: teachingStudentPackageStatusLabel(row),
+    paymentModeLabel: teachingStudentPaymentModeLabel(data, row, now),
+    activityStatusLabel: teachingStudentActivityStatusLabel(data, row, now),
+    lessonVolumeLabel: teachingStudentLessonVolumeLabel(row),
+    studentStatusLabel: teachingStudentStudentStatusLabel(data, row, now),
+    isHistoricalStudentRoster,
+    isActiveStudentRoster
+  };
+}
+
+function teachingStudentTagCounts(rows = []) {
+  const groups = {
+    packageStatus: {},
+    paymentMode: {},
+    activityStatus: {},
+    lessonVolume: {},
+    studentStatus: {}
+  };
+  const add = (group, value) => {
+    const label = text(value) || '-';
+    groups[group][label] = (groups[group][label] || 0) + 1;
+  };
+  (rows || []).forEach(row => {
+    add('packageStatus', row.packageStatusLabel);
+    add('paymentMode', row.paymentModeLabel);
+    add('activityStatus', row.activityStatusLabel);
+    add('lessonVolume', row.lessonVolumeLabel);
+    add('studentStatus', row.studentStatusLabel);
+  });
+  return groups;
 }
 
 function buildTeachingStudentSourceRows(customerLifecycleRows = [], data = {}) {
@@ -962,16 +1129,19 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
     || !!row.hasFreeCourseFollowup;
   const courseStudents = studentRows
     .filter(hasCourseStudentEntry)
-    .map(courseViewRow);
+    .map(courseViewRow)
+    .map(row => teachingStudentApplyStandardLabels(data, row, now));
   const formalStudents = studentRows
     .filter(row => text(row.studentStage) === 'formal')
-    .map(formalViewRow);
-  const historicalStudents = studentRows
-    .map(courseViewRow)
-    .filter(row => teachingStudentHasCompletedLesson(data, row, now));
-  const activeStudents = studentRows
     .map(formalViewRow)
-    .filter(row => teachingStudentInActiveRoster(data, row, now));
+    .map(row => teachingStudentApplyStandardLabels(data, row, now));
+  const allLabeledStudents = studentRows
+    .map(formalViewRow)
+    .map(row => teachingStudentApplyStandardLabels(data, row, now));
+  const historicalStudents = allLabeledStudents
+    .filter(row => row.isHistoricalStudentRoster);
+  const activeStudents = allLabeledStudents
+    .filter(row => row.isActiveStudentRoster);
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
@@ -1000,6 +1170,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
       formalStudentCount: formalStudents.length,
       historicalStudentCount: historicalStudents.length,
       activeStudentCount: activeStudents.length,
+      historicalTagCounts: teachingStudentTagCounts(historicalStudents),
+      activeTagCounts: teachingStudentTagCounts(activeStudents),
       courseDealCustomers: formalStudents.length,
       trialPathStudents: trialPathStudents.length,
       trialPathDealCustomers: trialPathDealStudents.length,

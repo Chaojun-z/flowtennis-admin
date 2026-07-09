@@ -199,24 +199,30 @@ assert.deepStrictEqual(
   ['stu-attended-only', 'stu-booked-only'],
   '体验路径未成交只统计有体验路径但未买正式课包的人'
 );
-assert.deepStrictEqual(
-  teachingPlatform.teachingStudentViews.summary,
-  {
-    courseStudentCount: 7,
-    trialStudentCount: 2,
-    formalStudentCount: 3,
-    historicalStudentCount: 3,
-    activeStudentCount: 0,
-    courseDealCustomers: 3,
-    trialPathStudents: 3,
-    trialPathDealCustomers: 1,
-    trialPathPendingCustomers: 2,
-    trialToCourseCustomers: 1,
-    directCourseCustomers: 2,
-    coursePurchaseCount: 3,
-    courseRepeatCount: 0
-  },
-  '教学链汇总必须同时提供课程总漏斗和体验路径漏斗，并保持恒等关系'
+[
+  ['courseStudentCount', 7],
+  ['trialStudentCount', 2],
+  ['formalStudentCount', 3],
+  ['historicalStudentCount', 3],
+  ['activeStudentCount', 1],
+  ['courseDealCustomers', 3],
+  ['trialPathStudents', 3],
+  ['trialPathDealCustomers', 1],
+  ['trialPathPendingCustomers', 2],
+  ['trialToCourseCustomers', 1],
+  ['directCourseCustomers', 2],
+  ['coursePurchaseCount', 3],
+  ['courseRepeatCount', 0]
+].forEach(([key, value]) => {
+  assert.strictEqual(teachingPlatform.teachingStudentViews.summary[key], value, `教学链汇总 ${key} 必须保持统一口径`);
+});
+assert.ok(
+  teachingPlatform.teachingStudentViews.activeStudents.every(row => teachingPlatform.teachingStudentViews.historicalStudents.some(item => item.studentId === row.studentId)),
+  '在期学员必须是历史学员的子集'
+);
+assert.ok(
+  teachingPlatform.teachingStudentViews.summary.historicalTagCounts && teachingPlatform.teachingStudentViews.summary.activeTagCounts,
+  '教学链汇总必须提供历史学员和在期学员的后端标签计数'
 );
 assert.strictEqual(
   teachingOperations.conversion.cards.courseDealCustomers.value,

@@ -216,19 +216,10 @@ function studentHasFormalPackage(stu){
   return studentFormalPurchaseRows(stu).length>0||studentFormalEntitlementRows(stu).length>0||studentUnifiedPackageListRows(stu).length>0||Number(stu?.coursePurchaseCount)>0;
 }
 function studentPackageStatusText(stu){
-  const remaining=studentPackageRemainingLessons(stu);
-  if(!studentHasFormalPackage(stu))return '未买过课包';
-  if(remaining>0&&remaining<=2)return '课包即将耗尽';
-  if(remaining>0)return '课包有余额';
-  return '课包已用完';
+  return String(stu?.packageStatusLabel||'-').trim()||'-';
 }
 function studentPaymentModeText(stu){
-  const hasPackage=studentHasFormalPackage(stu)||studentFormalLessonRows(stu).some(row=>String(row.settlementType||'').trim()==='package');
-  const hasDirect=studentDirectFormalLessonRows(stu).length>0;
-  if(hasPackage&&hasDirect)return '课包+单次付费';
-  if(hasDirect)return '单次付费学员';
-  if(hasPackage)return '课包学员';
-  return '-';
+  return String(stu?.paymentModeLabel||'-').trim()||'-';
 }
 function studentFormalLastLessonDate(stu){
   const explicit=String(stu?.lastFormalLessonAt||'').slice(0,10);
@@ -245,12 +236,7 @@ function studentDaysSince(dateText){
   return Math.floor((todayTime-time)/86400000);
 }
 function studentActivityStatusText(stu){
-  const days=studentDaysSince(studentFormalLastLessonDate(stu));
-  if(days===null)return '从未正式上课';
-  if(days<=30)return '近30天活跃';
-  if(days<=90)return '31-90天活跃';
-  if(days<=180)return '91-180天沉默';
-  return '180天以上沉睡';
+  return String(stu?.activityStatusLabel||'-').trim()||'-';
 }
 function studentFormalLessonCountValue(stu){
   const explicit=Number(stu?.formalLessonCount);
@@ -258,11 +244,7 @@ function studentFormalLessonCountValue(stu){
   return studentFormalLessonRows(stu).length;
 }
 function studentLessonVolumeText(stu){
-  const count=studentFormalLessonCountValue(stu);
-  if(count>=100)return '历史课时100+';
-  if(count>=50)return '历史课时50+';
-  if(count>=30)return '历史课时30+';
-  return '-';
+  return String(stu?.lessonVolumeLabel||'-').trim()||'-';
 }
 function studentRecentDirectFormalLessonCount(stu,daysLimit=90){
   return studentDirectFormalLessonRows(stu).filter(row=>{
@@ -280,19 +262,14 @@ function studentHasDirectAfterPackageUsedUp(stu){
   });
 }
 function studentLifecycleStatusText(stu){
-  const status=studentPackageStatusText(stu);
-  const activity=studentActivityStatusText(stu);
-  const recentDirect30=studentRecentDirectFormalLessonCount(stu,30);
-  if(status==='课包有余额'&&activity!=='近30天活跃')return '有余额未活跃';
-  if(studentHasDirectAfterPackageUsedUp(stu))return '已转单次付费';
-  if(studentRecentDirectFormalLessonCount(stu,90)>=2)return '稳定单次付费';
-  if(status==='课包已用完'&&activity==='近30天活跃'&&!recentDirect30)return '课包待续费';
-  return '-';
+  return String(stu?.studentStatusLabel||'-').trim()||'-';
 }
 function studentIsHistoricalRosterRow(stu){
+  if(stu?.__unifiedTeachingView&&typeof stu.isHistoricalStudentRoster==='boolean')return !!stu.isHistoricalStudentRoster;
   return studentAnyLessonRows(stu).length>0||studentFormalLessonCountValue(stu)>0||Number(stu?.completedLessons)>0||studentHasTrialPath(stu);
 }
 function studentIsActiveRosterRow(stu){
+  if(stu?.__unifiedTeachingView&&typeof stu.isActiveStudentRoster==='boolean')return !!stu.isActiveStudentRoster;
   if(studentPackageRemainingLessons(stu)>0)return true;
   const days=studentDaysSince(studentFormalLastLessonDate(stu));
   return days!==null&&days<=90;

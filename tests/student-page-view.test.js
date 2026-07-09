@@ -242,6 +242,16 @@ assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单�
 assert.match(source, /const STUDENT_ACTIVITY_STATUS_OPTIONS=\['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'\]/, 'student activity status options should match the agreed labels');
 assert.match(source, /const STUDENT_LESSON_VOLUME_OPTIONS=\['历史课时30\+','历史课时50\+','历史课时100\+'\]/, 'student lesson volume options should match the agreed labels');
 assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'\]/, 'student lifecycle status options should match the agreed labels');
+assert.match(fnBody('studentPackageStatusText'), /packageStatusLabel/, 'package status label must come from backend unified teaching view');
+assert.doesNotMatch(fnBody('studentPackageStatusText'), /studentFormalPurchaseRows|studentFormalEntitlementRows|studentUnifiedPackageListRows|studentPackageRemainingLessons|purchases|entitlements/, 'frontend must not recalculate package status from raw package rows');
+assert.match(fnBody('studentPaymentModeText'), /paymentModeLabel/, 'payment mode label must come from backend unified teaching view');
+assert.doesNotMatch(fnBody('studentPaymentModeText'), /studentFormalLessonRows|studentDirectFormalLessonRows|settlementType|paymentType|payType|schedules/, 'frontend must not infer payment mode from schedule payment fields');
+assert.match(fnBody('studentActivityStatusText'), /activityStatusLabel/, 'activity status label must come from backend unified teaching view');
+assert.doesNotMatch(fnBody('studentActivityStatusText'), /studentFormalLastLessonDate|studentDaysSince|studentFormalLessonRows|schedules/, 'frontend must not recalculate activity status from schedules');
+assert.match(fnBody('studentLessonVolumeText'), /lessonVolumeLabel/, 'lesson volume label must come from backend unified teaching view');
+assert.doesNotMatch(fnBody('studentLessonVolumeText'), /studentFormalLessonCountValue|studentFormalLessonRows|schedules/, 'frontend must not recalculate lesson volume from schedules');
+assert.match(fnBody('studentLifecycleStatusText'), /studentStatusLabel/, 'student status label must come from backend unified teaching view');
+assert.doesNotMatch(fnBody('studentLifecycleStatusText'), /studentRecentDirectFormalLessonCount|studentHasDirectAfterPackageUsedUp|studentPackageStatusText|studentActivityStatusText/, 'frontend must not recalculate student status from local labels');
 assert.match(source, /function studentPackageLessonMeta\(/, 'student package lesson summary should expose remaining and total lessons');
 assert.match(source, /function studentActiveEntitlementRows\([\s\S]*includes\(entitlementStatusText\(e\)\)[\s\S]*lessonValue\(e\.totalLessons\)>0/, 'student lesson/package summary should keep normal packages even when balance is 0');
 assert.match(source, /function studentPackageLessonSummary\([\s\S]*`\$\{lessonQty\(e\.remainingLessons\)\}\/\$\{lessonQty\(e\.totalLessons\)\}`[\s\S]*\|\|meta\.text/, 'student lesson/package summary should show only balance numbers, not package names');

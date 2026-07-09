@@ -105,8 +105,8 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
-  ['student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-active'],
-  '在期学员必须按课包有余额或近90天正式课活跃返回，必须包含31-90天无课包余额的人，不能包含91天无课包余额的人'
+  ['student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-active'],
+  '在期学员必须按课包有余额或近90天正式课活跃返回，必须包含未取消且时间已过去的已排课记录'
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
@@ -115,7 +115,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.activeStudentCount,
-  4,
+  5,
   '在期学员顶部总数必须来自在期学员新视图'
 );
 assert.ok(
@@ -142,6 +142,72 @@ assert.deepStrictEqual(
   operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
   standard.funnels.courseChain.map(row => [row.stage, row.count]),
   '经营分析标准漏斗不得继续使用旧 courseFunnel 预约体验口径'
+);
+
+const hardCase = {
+  leads: [],
+  students: [
+    { id: 'hard-past-scheduled', name: '已排课已上课单次' },
+    { id: 'hard-package-cn', name: '中文课包划扣' },
+    { id: 'hard-single-recent', name: '近期单次付费' },
+    { id: 'hard-single-old', name: '超90天单次付费' }
+  ],
+  purchases: [
+    { id: 'hard-purchase-package-cn', studentId: 'hard-package-cn', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-01' }
+  ],
+  entitlements: [
+    { id: 'hard-ent-package-cn', studentId: 'hard-package-cn', purchaseId: 'hard-purchase-package-cn', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' }
+  ],
+  entitlementLedger: [
+    { id: 'hard-ledger-package-cn-1', studentId: 'hard-package-cn', entitlementId: 'hard-ent-package-cn', purchaseId: 'hard-purchase-package-cn', lessonDelta: -1, relatedDate: '2026-07-03', courseType: '私教课' }
+  ],
+  schedule: [
+    { id: 'hard-schedule-past', studentId: 'hard-past-scheduled', studentName: '已排课已上课单次', courseType: '私教课', startTime: '2026-07-01 10:00:00', endTime: '2026-07-01 11:00:00', status: '已排课', settlementType: 'single' },
+    { id: 'hard-schedule-package-cn', studentId: 'hard-package-cn', studentName: '中文课包划扣', courseType: '私教课', startTime: '2026-07-03 10:00:00', endTime: '2026-07-03 11:00:00', status: '已下课', settlementType: '课包划扣' },
+    { id: 'hard-schedule-single-recent', studentId: 'hard-single-recent', studentName: '近期单次付费', courseType: '私教课', startTime: '2026-07-04 10:00:00', endTime: '2026-07-04 11:00:00', status: '已下课', settlementType: 'single' },
+    { id: 'hard-schedule-single-old', studentId: 'hard-single-old', studentName: '超90天单次付费', courseType: '私教课', startTime: '2026-03-01 10:00:00', endTime: '2026-03-01 11:00:00', status: '已下课', settlementType: 'single' }
+  ],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: [],
+  coaches: [],
+  financeNormalizedRows: [],
+  financeOverviewData: {}
+};
+const hardLifecycleRows = buildCustomerLifecycleRows(hardCase);
+const hardStandard = buildStandardLifecycleMetrics({ ...hardCase, customerLifecycleRows: hardLifecycleRows, now: new Date('2026-07-09 00:00:00') });
+const hardHistoricalIds = hardStandard.views.historicalStudents.map(row => row.studentId).sort();
+const hardActiveIds = hardStandard.views.activeStudents.map(row => row.studentId).sort();
+assert.deepStrictEqual(
+  hardHistoricalIds,
+  ['hard-package-cn', 'hard-past-scheduled', 'hard-single-old', 'hard-single-recent'],
+  '历史学员必须把未取消且时间已过去的已排课记录视为上课事实'
+);
+assert.deepStrictEqual(
+  hardActiveIds,
+  ['hard-package-cn', 'hard-past-scheduled', 'hard-single-recent'],
+  '在期学员必须是历史学员的子集，并包含课包有余额或90天内上过正式课的人'
+);
+assert.ok(
+  hardActiveIds.every(id => hardHistoricalIds.includes(id)),
+  '在期学员必须完全包含在历史学员中，两个列表必须是漏斗关系'
+);
+const cnPackageRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-package-cn');
+assert.ok(cnPackageRow, '中文课包划扣学员必须进入在期学员');
+assert.strictEqual(cnPackageRow.packageStatusLabel, '课包有余额', '课包状态必须由后端统一输出');
+assert.strictEqual(cnPackageRow.paymentModeLabel, '课包学员', '中文“课包划扣”不能被误判为单次付费');
+assert.strictEqual(cnPackageRow.activityStatusLabel, '近30天活跃', '活跃状态必须由后端统一输出并识别课包核销上课事实');
+assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成稳定单次付费');
+assert.strictEqual(cnPackageRow.lessonVolumeLabel, '-', '历史课时标签必须由后端统一输出');
+assert.strictEqual(
+  hardStandard.teachingSummary.historicalTagCounts.packageStatus['课包有余额'],
+  hardStandard.teachingSummary.activeTagCounts.packageStatus['课包有余额'],
+  '课包有余额是包含关系内的统一口径，历史页和在期页顶部数字必须一致'
+);
+assert.strictEqual(
+  hardStandard.teachingSummary.historicalTagCounts.activityStatus['近30天活跃'],
+  hardStandard.teachingSummary.activeTagCounts.activityStatus['近30天活跃'],
+  '近30天活跃是包含关系内的统一口径，历史页和在期页顶部数字必须一致'
 );
 
 console.log('lifecycle standard metrics tests passed');
