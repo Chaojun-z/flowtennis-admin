@@ -1026,7 +1026,7 @@ function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()
 
 function teachingStudentApplyStandardLabels(data = {}, row = {}, now = new Date()) {
   const isHistoricalStudentRoster = teachingStudentHasCompletedLesson(data, row, now);
-  const isActiveStudentRoster = teachingStudentInActiveRoster(data, row, now);
+  const isActiveStudentRoster = isHistoricalStudentRoster && teachingStudentInActiveRoster(data, row, now);
   return {
     ...row,
     lastFormalLessonAt: teachingStudentLatestFormalLessonDate(data, text(row.studentId)),
