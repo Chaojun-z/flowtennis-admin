@@ -51,6 +51,16 @@ const legacyTerms = [
   ['data', '-minutes']
 ].map(parts => parts.join(''));
 
+const legacyTermContentAllowlist = new Map([
+  [['ma', 'bao'].join(''), new Set([
+    'public/assets/scripts/core/constants.js',
+    'tests/campus-display-hard-guard.test.js'
+  ])]
+]);
+const legacyRuntimeAllowlist = new Set([
+  'public/assets/scripts/core/constants.js'
+]);
+
 const rawDateTimePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 const allTrackedFiles = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, encoding: 'utf8' })
   .split('\0')
@@ -60,7 +70,8 @@ const allTrackedFiles = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot,
 allTrackedFiles.forEach(rel => {
   legacyTerms.forEach(term => {
     assert.ok(!rel.includes(term), `${rel}: 文件路径不得残留 ${term}`);
-    assert.ok(!read(rel).includes(term), `${rel}: 文件内容不得残留 ${term}`);
+    const allowedFiles = legacyTermContentAllowlist.get(term);
+    assert.ok(allowedFiles?.has(rel) || !read(rel).includes(term), `${rel}: 文件内容不得残留 ${term}`);
   });
   assert.doesNotMatch(rel, rawDateTimePattern, `${rel}: 文件路径不得残留原始时间`);
   assertNoMatch(rel, rawDateTimePattern, '文件内容不得残留原始时间');
@@ -77,7 +88,7 @@ const legacyRuntimeFiles = [
   ...walk(path.join(repoRoot, 'public/assets/scripts'), rel => rel.endsWith('.js')),
   'api/index.js',
   ...walk(path.join(repoRoot, 'server'), rel => rel.endsWith('.js'))
-].filter(rel => legacyTerms.some(term => read(rel).includes(term)));
+].filter(rel => !legacyRuntimeAllowlist.has(rel) && legacyTerms.some(term => read(rel).includes(term)));
 
 assert.deepStrictEqual(
   legacyRuntimeFiles,

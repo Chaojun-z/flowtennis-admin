@@ -1,14 +1,14 @@
 const API='';
 let CAMPUS={};
 const CAMPUS_DISPLAY_NAME_MAP={
-  shunyi_mapo:'顺义马坡','顺义马坡':'顺义马坡','马坡':'顺义马坡',
+  shunyi_mapo:'顺义马坡',mabao:'顺义马坡','顺义马坡':'顺义马坡','马坡':'顺义马坡','马宝':'顺义马坡',
   shilipu:'朝阳十里堡','朝阳十里堡':'朝阳十里堡','十里堡':'朝阳十里堡',
   guowang:'国家网球中心','国家网球中心':'国家网球中心','国网':'国家网球中心','朝阳国网':'国家网球中心',
   langang:'蓝色港湾','蓝色港湾':'蓝色港湾','朝阳蓝色港湾':'蓝色港湾','蓝港':'蓝色港湾',
   chaojun:'朝珺私教','朝珺私教':'朝珺私教','朝珺':'朝珺私教'
 };
 const CAMPUS_KEY_MAP={
-  shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo',
+  shunyi_mapo:'shunyi_mapo',mabao:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo','马宝':'shunyi_mapo',
   shilipu:'shilipu','朝阳十里堡':'shilipu','十里堡':'shilipu',
   guowang:'guowang','国家网球中心':'guowang','国网':'guowang','朝阳国网':'guowang',
   langang:'langang','蓝色港湾':'langang','朝阳蓝色港湾':'langang','蓝港':'langang',

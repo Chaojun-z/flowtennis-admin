@@ -21,7 +21,7 @@ const context = {
   console
 };
 vm.createContext(context);
-vm.runInContext(`${constantsSource}\nthis.__campusDisplayName=campusDisplayName;this.__cn=cn;`, context);
+vm.runInContext(`${constantsSource}\nthis.__campusDisplayName=campusDisplayName;this.__campusKey=campusKey;this.__cn=cn;`, context);
 
 assert.deepStrictEqual(
   ['shunyi_mapo', 'shilipu', 'guowang', 'langang', 'chaojun'].map(value => context.__campusDisplayName(value)),
@@ -33,6 +33,24 @@ assert.deepStrictEqual(
   ['shunyi_mapo', 'shilipu', 'guowang', 'langang', 'chaojun'].map(value => context.__cn(value)),
   ['顺义马坡', '朝阳十里堡', '国家网球中心', '蓝色港湾', '朝珺私教'],
   'the shared campus display accessor must not leak stored campus codes'
+);
+
+assert.deepStrictEqual(
+  ['mabao', '马宝'].map(value => context.__campusDisplayName(value)),
+  ['顺义马坡', '顺义马坡'],
+  'legacy mabao campus aliases must resolve to the front-end Chinese display name'
+);
+
+assert.deepStrictEqual(
+  ['mabao', '马宝'].map(value => context.__cn(value)),
+  ['顺义马坡', '顺义马坡'],
+  'legacy mabao campus values from historical/active student read models must resolve to the front-end Chinese display name'
+);
+
+assert.deepStrictEqual(
+  ['mabao', '马宝'].map(value => context.__campusKey(value)),
+  ['shunyi_mapo', 'shunyi_mapo'],
+  'legacy mabao campus aliases must normalize to the canonical shunyi_mapo campus key'
 );
 
 assert.doesNotMatch(
