@@ -1,7 +1,7 @@
 let currentPage=normalizeStudentListPage(localStorage.getItem(PAGE_KEY)||'package-students'),campus=localStorage.getItem(CAMPUS_KEY)||'all',globalDateRangeFilterValue=localStorage.getItem(GLOBAL_DATE_RANGE_KEY)||'全部',globalDateRangeStart=localStorage.getItem(GLOBAL_DATE_RANGE_START_KEY)||'',globalDateRangeEnd=localStorage.getItem(GLOBAL_DATE_RANGE_END_KEY)||'',editId=null,delId=null,delType=null,_pending=[];
 let batchDeleteCourtIds=[];
 let stuPage=1,leadPage=1,schPage=1,courtPage=1,purPage=1,pkgPage=1,pricePage=1,financeLedgerPage=1,financeRevenuePage=1,financeRecognizedPage=1,adminUserPage=1;
-let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='packagePurchaseDate',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,financeRecognizedPageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
+let courtSortKey='lastBookingDate',courtSortDir='desc',stuSortKey='lastLesson',stuSortDir='desc',leadSortKey='',leadSortDir='',courtOwnerFilterValue='',courtAccountTypeFilterValue='',courtCampusFilterValue='',courtDateRangeFilterValue=globalDateRangeFilterValue,courtDateRangeStart=globalDateRangeStart,courtDateRangeEnd=globalDateRangeEnd,leadPageSize=20,stuPageSize=20,schPageSize=20,courtPageSize=20,purPageSize=20,pkgPageSize=20,pricePageSize=20,financeLedgerPageSize=20,financeRevenuePageSize=20,financeRecognizedPageSize=20,adminUserPageSize=20,selectedCourtIds=new Set(),courtBatchMode=false;
 let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='desc';
 let membershipOrderAuditPage=1,membershipOrderAuditPageSize=20,membershipLedgerAuditPage=1,membershipLedgerAuditPageSize=20;
 let membershipTierFilterValue='';
@@ -9,7 +9,7 @@ let purPackageFilterValue='',purOwnerCoachFilterValue='';
 let purDateRangeFilterValue='全部',purDateRangeStart='',purDateRangeEnd='';
 let coachOpsMode='week',coachOpsPickerMonth=null,financePanel='ledger';
 
-const PAGE_TITLE_MAP={students:'正式学员','package-students':'正式学员','trial-students':'普通学员',leads:'线索池',operations:'经营分析',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
+const PAGE_TITLE_MAP={students:'在期学员','package-students':'在期学员','trial-students':'历史学员',leads:'线索池',operations:'经营分析',schedule:'排课管理',coachschedule:'排课日历',coachops:'教练课时统计',products:'课程产品',packages:'课包产品',purchases:'购买记录',finance:'财务总览',coaches:'教练管理','admin-users':'账号管理',courts:'订场用户',memberships:'会员管理','membership-orders':'会员购买记录','membership-ledger':'会员权益流水','membership-plans':'会员方案',prices:'价格方案',campusmgr:'校区管理',matches:'约球活动',workbench:'工作台',postfeedback:'课后评价',mystudents:'我的学员',myclasses:'我的班次'};
 const FINANCE_TITLE_MAP={ledger:'财务总览',revenue:'收款流水',recognized:'入账流水',settlement:'教练结算'};
 const OPERATIONS_TITLE_MAP={overview:'经营总览',court:'场地运转',conversion:'转化与留存',coach:'教练人效'};
 const TOP_TITLE_BREADCRUMBS={

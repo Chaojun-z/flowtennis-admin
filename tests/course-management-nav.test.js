@@ -33,7 +33,7 @@ function fnBody(name){
 const openPackageModalBody = fnBody('openPackageModal');
 
 assert.match(html, /<div class="sb-sec">教学中心<\/div>/, 'sidebar should group teaching pages');
-assert.match(html, /<div class="sb-sec">客户中心<\/div>[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池[\s\S]*?goPage\('trial-students',this\)[\s\S]*?普通学员[\s\S]*?goPage\('package-students',this\)[\s\S]*?正式学员[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('matches',this\)[\s\S]*?约球活动/, 'customer center should order leads, normal students, official students, courts, memberships, then matches');
+assert.match(html, /<div class="sb-sec">客户中心<\/div>[\s\S]*?goPage\('leads',this\)[\s\S]*?线索池[\s\S]*?goPage\('trial-students',this\)[\s\S]*?历史学员[\s\S]*?goPage\('package-students',this\)[\s\S]*?在期学员[\s\S]*?goPage\('courts',this\)[\s\S]*?订场用户[\s\S]*?goPage\('memberships',this\)[\s\S]*?会员管理[\s\S]*?goPage\('matches',this\)[\s\S]*?约球活动/, 'customer center should order leads, historical students, active students, courts, memberships, then matches');
 assert.match(html, /<div class="sb-sec">教学中心<\/div>[\s\S]*?goPage\('schedule',this\)[\s\S]*?排课管理[\s\S]*?goPage\('coachschedule',this\)[\s\S]*?排课日历[\s\S]*?<div class="sb-sec">产品与定价<\/div>/, 'teaching center should only keep schedule management and schedule calendar');
 assert.doesNotMatch(html, /goPage\('coachops',this\)[\s\S]*?教练课时统计/, 'coach workload stats should no longer be a standalone left-menu page');
 assert.match(html, /<div class="sb-sec">产品与定价<\/div>[\s\S]*?goPage\('packages',this\)[\s\S]*?课包产品[\s\S]*?goPage\('membership-plans',this\)[\s\S]*?会员方案/, 'product pricing should order package products then membership plans');
@@ -50,8 +50,8 @@ assert.doesNotMatch(html, /goPage\('entitlements',this\)[\s\S]*?权益账户/, '
 
 [
   ['leads', '线索池'],
-  ['package-students', '正式学员', 'students'],
-  ['trial-students', '普通学员', 'trial-students'],
+  ['package-students', '在期学员', 'students'],
+  ['trial-students', '历史学员', 'trial-students'],
   ['courts', '订场用户'],
   ['memberships', '会员管理'],
   ['matches', '约球活动'],

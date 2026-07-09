@@ -347,8 +347,8 @@ function adminMobileNavConfig(){
   return [
     {key:'customer',label:'客户中心',defaultPage:'leads',items:[
       {label:'线索池',goPage:'leads',icon:'leads'},
-      {label:'普通学员',goPage:'trial-students',icon:'trial-students'},
-      {label:'正式学员',goPage:'package-students',icon:'students'}
+      {label:'历史学员',goPage:'trial-students',icon:'trial-students'},
+      {label:'在期学员',goPage:'package-students',icon:'students'}
     ]},
     {key:'teaching',label:'教学中心',defaultPage:'schedule',items:[
       {label:'排课管理',goPage:'schedule',icon:'schedule'},
@@ -491,8 +491,8 @@ function renderSidebarShell(){
   <div id="sbAdminView">
   <div class="sb-sec">客户中心</div>
   <div class="sb-item" onclick="goPage('leads',this)">${sidebarIcon('leads')}线索池</div>
-  <div class="sb-item" onclick="goPage('trial-students',this)">${sidebarIcon('trial-students')}普通学员</div>
-  <div class="sb-item active" onclick="goPage('package-students',this)">${sidebarIcon('students')}正式学员</div>
+  <div class="sb-item" onclick="goPage('trial-students',this)">${sidebarIcon('trial-students')}历史学员</div>
+  <div class="sb-item active" onclick="goPage('package-students',this)">${sidebarIcon('students')}在期学员</div>
   <div class="sb-item" onclick="goPage('courts',this)">${sidebarIcon('courts')}订场用户</div>
   <div class="sb-item" onclick="goPage('memberships',this)">${sidebarIcon('memberships')}会员管理</div>
   <div class="sb-item" onclick="goPage('matches',this)">${sidebarIcon('matches')}约球活动</div>
