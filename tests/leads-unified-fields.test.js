@@ -19,7 +19,8 @@ const context = {
   console,
   leads: [
     { id: 'lead-at-mira', displayName: 'A', owner: '@Mira', dealType: '课程', leadDate: '2026-07-01', createdAt: '2026-07-01' },
-    { id: 'lead-coach', displayName: 'B', owner: '张教练', conversionType: '订场会员', leadDate: '2026-07-02', createdAt: '2026-07-02' }
+    { id: 'lead-coach', displayName: 'B', owner: '张教练', conversionType: '订场会员', leadDate: '2026-07-02', createdAt: '2026-07-02' },
+    { id: 'lead-text-only', displayName: 'C', owner: '吴敌', rawStatus: '已报名-私教', leadDate: '2026-07-03', createdAt: '2026-07-03' }
   ],
   leadFollowups: [],
   campus: 'all',
@@ -70,6 +71,17 @@ context.checkedOwnerBoxes = [];
 elements.leadDealTypeFilter.value = '订场会员';
 const dealFiltered = Array.from(vm.runInContext('getFilteredLeads().map(lead => lead.id)', context));
 assert.deepStrictEqual(dealFiltered, ['lead-coach'], 'deal type filter should use the same dealType/conversionType reader as the drawer');
+
+assert.strictEqual(
+  vm.runInContext("leadDealTypeText(leads.find(lead => lead.id === 'lead-text-only'))", context),
+  '',
+  'deal type should not be inferred locally from status text without dealType/conversionType'
+);
+assert.strictEqual(
+  vm.runInContext("leadStageDisplayText(leads.find(lead => lead.id === 'lead-coach'))", context),
+  '已成交 · 订场会员',
+  'lead stage display should show the stored deal type without a duplicate deal type column'
+);
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);
 assert.strictEqual(priorityEmpty, '<cell muted="true">-</cell>', 'empty priority should render as a plain dash cell');

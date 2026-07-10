@@ -46,7 +46,8 @@ assert.doesNotMatch(html, /id="leadDateScopeBar"[\s\S]*lead-date-scope-label">�
 assert.doesNotMatch(html, /id="leadDateFrom_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateFrom','leadDateFrom_btn','开始日期'\)[\s\S]*id="leadDateTo_btn"[\s\S]*toggleGlobalDatePicker\(event,'leadDateTo','leadDateTo_btn','结束日期'\)/, 'leads page should not render custom lead date controls');
 assert.doesNotMatch(html, /<input class="lead-date-input" id="leadDateFrom" type="date"/, 'custom lead date controls should not expose native date inputs');
 assert.match(standardSource, /statsId:'leadStatsRow'/, 'leads page should expose the top stats row');
-assert.match(standardSource, /姓名[\s\S]*线索时间[\s\S]*来源[\s\S]*类型[\s\S]*需求产品[\s\S]*水平[\s\S]*基本信息[\s\S]*线索阶段[\s\S]*转化类型[\s\S]*意向等级[\s\S]*跟进优先级[\s\S]*跟进人[\s\S]*体验课时间[\s\S]*成交教练[\s\S]*流失原因[\s\S]*操作/, 'leads table should expose deal type immediately after lead stage');
+assert.match(standardSource, /姓名[\s\S]*线索时间[\s\S]*来源[\s\S]*类型[\s\S]*需求产品[\s\S]*水平[\s\S]*基本信息[\s\S]*线索阶段[\s\S]*意向等级[\s\S]*跟进优先级[\s\S]*跟进人[\s\S]*体验课时间[\s\S]*成交教练[\s\S]*流失原因[\s\S]*操作/, 'leads table should keep deal type inside the lead stage column instead of a duplicate column');
+assert.doesNotMatch(standardSource, /label:'转化类型'/, 'leads table should not expose a duplicate deal type column');
 assert.doesNotMatch(standardSource, /label:'跟进状态'/, 'leads table should not keep duplicate status columns');
 assert.doesNotMatch(standardSource, /label:'是否转化'/, 'leads table should not keep the ambiguous converted yes/no column');
 assert.match(standardSource, /bodyId:'leadTbody'/, 'leads page should provide the list tbody mount');
@@ -93,6 +94,7 @@ assert.match(leadsSource, /function leadDealTypeText\(/, 'leads page should expo
 assert.match(leadsSource, /function leadStageText\(/, 'leads page should expose a single lead stage helper');
 assert.match(leadsSource, /function leadStandardField\(/, 'leads page should read lifecycle-standard fields before legacy page fields');
 assert.match(fnBody('leadDealTypeText'), /leadStandardDealTypeText\(lead\)/, 'lead deal type should prefer unified lifecycle dealType');
+assert.doesNotMatch(fnBody('leadDealTypeText'), /rawStatus|systemStatus|hasCourseConversion|isCourseConverted|isCourtConverted|isMembershipConverted|convertedFlag/, 'lead deal type should not be inferred locally from status text or conversion flags');
 assert.match(fnBody('leadStageText'), /leadStandardField\(lead,'leadStage'\)/, 'lead stage should prefer unified lifecycle leadStage');
 assert.match(fnBody('leadTrialDoneByTime'), /trialAttendedAt/, 'lead stats should use actual attended time instead of treating booked trial time as completed');
 assert.match(leadsSource, /leadStageText\(lead\)/, 'leads list and detail should render the lead stage');
@@ -129,7 +131,9 @@ assert.match(leadsSource, /function leadPriorityOptions\(\)[\s\S]*\['P0','P1','P
 assert.match(leadsSource, /function leadPriorityText\(lead\)[\s\S]*lead\?\.followupPriority/, 'lead page should read follow-up priority from the lead record');
 assert.match(leadsSource, /function renderLeadPriorityCell\(/, 'lead list should centralize priority cell rendering');
 assert.match(fnBody('renderLeadPriorityCell'), /priority==='-'\?renderStandardCellText\('-',true\):renderLeadTag\(priority,'priority'\)/, 'empty lead priority should render as a plain dash instead of a tag');
-assert.match(fnBody('renderLeads'), /renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)[\s\S]*renderLeadTag\(leadDealTypeText\(lead\)\|\|'-','dealType'\)[\s\S]*renderStandardCellText\(lead\?\.intentLevel,false\)[\s\S]*renderLeadPriorityCell\(lead\)/, 'lead list should show deal type between lead stage and plain-text intent level');
+assert.match(fnBody('renderLeads'), /renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)[\s\S]*renderStandardCellText\(lead\?\.intentLevel,false\)[\s\S]*renderLeadPriorityCell\(lead\)/, 'lead list should show deal type through lead stage before plain-text intent level');
+assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadDealTypeText\(lead\)\|\|'-','dealType'\)/, 'lead list rows should not render a separate deal type tag');
+assert.doesNotMatch(fnBody('renderLeadMobileCards'), /leadDealTypeText\(lead\)\|\|'-'/, 'lead mobile cards should not render a separate deal type tag');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(lead\?\.owner,'owner'\)/, 'lead list rows should render owner as plain text');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
