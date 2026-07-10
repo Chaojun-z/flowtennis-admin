@@ -187,7 +187,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #campusTabs .court-date-range-confirm{height:28px;padding:0 12px;border:0;border-radius:7px;background:#E7D7C9;color:#FFFFFF;font-size:11px;font-weight:400;cursor:not-allowed;transition:background-color .14s ease,color .14s ease,opacity .14s ease;opacity:.72}
 #campusTabs .court-date-range-confirm.is-enabled{background:#C47A3A;cursor:pointer;opacity:1}
 .tms-table-card{background-color:#FDF7F2;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden;margin-bottom:20px}
-.tms-table-wrapper{overflow:auto;max-height:calc(100vh - 292px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate}
+.tms-table-wrapper{overflow:auto;max-height:calc(100vh - 170px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate}
 .tms-table-wrapper::-webkit-scrollbar{height:8px;width:8px;display:none}
 .tms-table{width:100%;min-width:1600px;border-collapse:separate;border-spacing:0;text-align:left;font-size:12px}
 .tms-table th,.tms-table td{white-space:nowrap;padding:8px 16px;border-bottom:1px solid #EAE0D6;vertical-align:middle;line-height:1.2}
@@ -208,8 +208,6 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-schedule .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#F1E9E2}
 #page-schedule .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-schedule .tms-table tbody tr:hover td.tms-sticky-l,#page-schedule .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
-#page-schedule .tms-table-wrapper{max-height:calc(100vh - 190px)}
-#page-purchases .tms-table-wrapper{max-height:calc(100vh - 210px);overflow-x:auto;overflow-y:auto}
 #page-schedule .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-schedule .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-schedule .tms-text-primary,#page-schedule .tms-cell-text,#page-schedule .tms-text-remark{font-size:12px}
@@ -219,7 +217,6 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-courts .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FBF7F4}
 #page-courts .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-courts .tms-table tbody tr:hover td.tms-sticky-l,#page-courts .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
-#page-courts .tms-table-wrapper{max-height:calc(100vh - 210px);overflow-x:auto;overflow-y:auto}
 #page-courts .tms-table{min-width:1992px;table-layout:fixed}
 #page-courts .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-courts .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
@@ -231,15 +228,12 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-campusmgr .tms-table td.tms-action-cell{display:table-cell}
 #page-campusmgr .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
 #page-admin-users .tms-table{min-width:1040px}
-#page-admin-users .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-admin-users .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#F1E9E2}
 #page-admin-users .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-admin-users .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
 #page-admin-users .tms-table td:nth-child(9) .tms-cell-text{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #page-coaches .tms-table{min-width:1000px}
-#page-coaches .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-memberships .tms-table{min-width:1548px;table-layout:fixed}
-#page-memberships .tms-table-wrapper{max-height:calc(100vh - 230px)}
 #page-memberships .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-memberships .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-memberships .tms-text-primary,#page-memberships .tms-cell-text,#page-memberships .tms-text-remark{font-size:12px}
@@ -251,14 +245,12 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-memberships .tms-table tbody tr:hover td.tms-sticky-l,#page-memberships .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
 #page-membership-orders .tms-table{min-width:1300px}
 #page-membership-ledger .tms-table{min-width:1100px}
-#page-membership-orders .tms-table-wrapper,#page-membership-ledger .tms-table-wrapper{max-height:calc(100vh - 190px)}
 #page-membership-plans .tms-table{min-width:1660px}
 #page-purchases .tms-table{min-width:1100px;table-layout:fixed}
 #page-purchases .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-purchases .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-purchases .tms-text-primary,#page-purchases .tms-cell-text,#page-purchases .tms-text-remark{font-size:12px}
 #page-purchases .tms-action-link{font-size:12px}
-#page-membership-plans .tms-table-wrapper{max-height:calc(100vh - 250px)}
 #page-membership-plans .tms-table th.tms-sticky-l{position:sticky;top:0;left:0;z-index:140;background-color:#F1E9E2}
 #page-membership-plans .tms-table td.tms-sticky-l{position:sticky;left:0;z-index:40;background-color:#FBF7F4}
 #page-membership-plans .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#F1E9E2}
@@ -272,7 +264,6 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-students .tms-table th.tms-sticky-r{position:sticky;top:0;right:0;z-index:140;background-color:#F1E9E2}
 #page-students .tms-table td.tms-sticky-r{position:sticky;right:0;z-index:40;background-color:#FBF7F4}
 #page-students .tms-table tbody tr:hover td.tms-sticky-l,#page-students .tms-table tbody tr:hover td.tms-sticky-r{background-color:#F6EFE8}
-#page-students .tms-table-wrapper{max-height:calc(100vh - 210px)}
 #page-students .tms-table{min-width:1225px;table-layout:fixed}
 #page-students .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
 #page-students .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
@@ -281,7 +272,6 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 #page-students .student-note-cell{max-width:none}
 #page-students .tms-action-link{font-size:12px}
 #page-students .tms-pagination,#page-leads .tms-pagination,#page-finance #financeRevenuePanel .tms-pagination,#page-finance #financeLedgerPanel .tms-pagination,#page-schedule .tms-pagination,#page-purchases .tms-pagination,#page-courts .tms-pagination,#page-memberships .tms-pagination{min-height:32px}
-#page-finance #financeLedgerPanel .tms-table-wrapper,#page-finance #financeRevenuePanel .tms-table-wrapper,#page-finance #financeRecognizedPanel .tms-table-wrapper{max-height:calc(100vh - 210px)}
 #page-finance #financeLedgerPanel .tms-table td,#page-finance #financeRevenuePanel .tms-table td,#page-finance #financeRecognizedPanel .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15}
 #page-finance #financeLedgerPanel .tms-table th,#page-finance #financeRevenuePanel .tms-table th,#page-finance #financeRecognizedPanel .tms-table th{font-size:12px}
 #page-finance #financeLedgerPanel .tms-text-primary,#page-finance #financeLedgerPanel .tms-cell-text,#page-finance #financeLedgerPanel .tms-text-remark,#page-finance #financeRevenuePanel .tms-text-primary,#page-finance #financeRevenuePanel .tms-cell-text,#page-finance #financeRevenuePanel .tms-text-remark,#page-finance #financeRecognizedPanel .tms-text-primary,#page-finance #financeRecognizedPanel .tms-cell-text,#page-finance #financeRecognizedPanel .tms-text-remark{font-size:12px}
@@ -293,6 +283,7 @@ body.sidebar-collapsed{--sw:64px}body.sidebar-collapsed .sidebar{overflow:visibl
 .tms-th-checkbox span{font-size:11px;color:#8C7B6E;font-weight:400}
 .court-name-cell,[data-court-name-cell]{min-width:156px;max-width:156px;width:156px;white-space:normal}
 .tms-pagination{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#FDF7F2;border-top:1px solid #EAE0D6;font-size:12px;line-height:16px;color:#78716C;gap:12px;flex-wrap:wrap}
+.tms-pagination,.tms-pagination *{font-weight:400}
 .tms-pagination-left,.tms-pagination-right{display:flex;align-items:center;gap:0}
 .pager-info{font-size:12px;line-height:16px;color:#78716C}
 .pager-divider{display:inline-block;width:1px;height:12px;background:#E7E5E4;margin:0 12px;flex:none}
@@ -899,7 +890,6 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court .tms-form-control{height:38px;padding:0 12px;font-size:13px;font-weight:400}
 .modal.modal-court div.tms-form-control:not(.tms-readonly-text){display:flex;align-items:center}
 .modal.modal-court .tms-readonly-text{height:auto;min-height:72px;white-space:normal;line-height:1.7;padding:12px 14px}
-#page-leads .tms-table-wrapper{max-height:calc(100vh - 170px);overflow-x:auto;overflow-y:auto}
 #page-leads .tms-table{table-layout:fixed}
 #page-leads .tms-table td{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1.15;vertical-align:middle}
 #page-leads .tms-table th{padding-top:8px;padding-bottom:8px;font-size:12px}
@@ -924,7 +914,6 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-lead-drawer .lead-inline-actions{display:inline-flex;align-items:center;gap:8px}
 .modal.modal-court.modal-lead-drawer .lead-inline-link-action{color:#805435;cursor:pointer;font-size:13px;font-weight:400;line-height:22px}
 .modal.modal-court.modal-lead-drawer .lead-inline-link-action.danger{color:#C06031}
-#page-leads .tms-pagination,#page-leads .tms-pagination *{font-weight:400}
 .modal.modal-court.modal-membership-drawer .mbody{background:#F5F2F0}
 .modal.modal-court.modal-membership-drawer .membership-danger-action{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .modal.modal-court.modal-membership-drawer .membership-danger-action .tms-field-help{margin:0;color:#8C7B6E}

@@ -1,5 +1,5 @@
 .tms-table-card{background-color:#E7DFD6;border:1px solid #E8DFD5;border-radius:8px;box-shadow:none;display:flex;flex-direction:column;overflow:hidden;margin-bottom:20px}
-.tms-table-wrapper{overflow:auto;max-height:calc(100vh - 292px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate;background:#FBF7F4}
+.tms-table-wrapper{overflow:auto;max-height:calc(100vh - 170px);scrollbar-width:thin;scrollbar-color:#D9D0C7 transparent;position:relative;isolation:isolate;background:#FBF7F4}
 .tms-table-wrapper::-webkit-scrollbar{height:8px;width:8px;display:none}
 .tms-table{width:100%;min-width:1600px;border-collapse:separate;border-spacing:0;text-align:left;font-size:12px}
 .tms-table thead{position:sticky;top:0;z-index:130;background:#F1E9E2}

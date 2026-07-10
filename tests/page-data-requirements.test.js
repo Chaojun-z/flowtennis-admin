@@ -62,9 +62,10 @@ assert.match(source, /datasetLoadPromises\.has\(requestKey\)/, 'dataset loading 
 assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['operationsPage','lifecycleMetricsPage','financePage','courtAccountListViewPage'\]\);/, 'scoped page-data datasets should be keyed by their current request url');
 assert.match(source, /function pageDataScopeQuery\(\{dateRange='global'\}=\{\}\)/, 'scoped page-data requests should share the global campus and date filter query builder');
 assert.match(source, /function datasetHasCurrentRequestKey\(name\)/, 'loaded scoped datasets should be invalidated when the top filter query changes');
+assert.match(source, /if\(DATASETS_WITH_REQUEST_KEYS\.has\(name\)&&requestKey!==datasetRequestKey\(name\)\)return;/, 'stale scoped summary responses must not overwrite the latest top-filter metrics');
 assert.match(source, /function refreshScopedTopSummaryForCurrentPage\(\)/, 'top-filter changes should refresh backend scoped summaries');
 assert.match(source, /ensureDatasetsByName\(names,\{force:true\}\)\.then\(\(\)=>\{[\s\S]*renderScopedSummaryPage\(pg\)/, 'top filter changes should still refresh the backend scoped summary');
-assert.match(source, /return !\(pg==='leads'\|\|isStudentListPage\(pg\)\);/, 'lead and student top filters should repaint current rows immediately instead of blocking on scoped summary refresh');
+assert.match(source, /return false;/, 'top filters should repaint the current page immediately and refresh backend scoped summaries asynchronously');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force\}\);/, 'page background loading should revalidate cached data without blocking first paint');
 
 console.log('page data requirements tests passed');

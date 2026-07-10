@@ -122,7 +122,7 @@ assert.match(fnBody('getStudentBaseList'), /studentListViewMode\(\)==='trial'\?s
 assert.match(source, /pager:\{infoId:'stuPagerInfo',pageSizeId:'stuPageSize',buttonsId:'stuPagerBtns'\}/, 'student pager should expose a page size selector host');
 assert.match(source, /function setStudentPageSize\(/, 'student page should support 20, 50, and 100 row page sizes');
 assert.match(source, /function renderStudentPagerControls\(/, 'student page should render compact pager controls');
-assert.match(css, /#page-students \.tms-table-wrapper\{max-height:calc\(100vh - 210px\)\}/, 'student table should be taller on screen');
+assert.doesNotMatch(css, /#page-students \.tms-table-wrapper\{max-height:/, 'student table should inherit the global standard table height');
 assert.match(source, /function renderStandardDataCards\(/, 'top data cards should have a shared render helper');
 assert.match(source, /assets\/styles\/components\/data-cards\.css/, 'index should load shared data card styles');
 assert.match(source, /assets\/styles\/components\/search\.css/, 'index should load shared search styles');
@@ -417,7 +417,7 @@ assert.match(source, /function onPurchaseFilterChange\(\)[\s\S]*purPackageFilter
 assert.match(source, /function purchaseSelectedPackageFilter\(\)[\s\S]*purPackageFilterValue\|\|document\.getElementById\('purPackageFilter'\)\?\.value\|\|''/, 'purchase package filter should survive navigation before the dropdown is rendered');
 assert.match(source, /function renderPurchasePagerControls\(/, 'purchase page should render compact pager controls');
 assert.match(source, /pager\.style\.display=isMobileList\?'none':\(total>purPageSize\?'flex':'none'\)/, 'purchase pager should hide on H5 and still hide on desktop when the filtered result fits on one page');
-assert.match(css, /#page-purchases \.tms-table-wrapper\{max-height:calc\(100vh - 210px\);overflow-x:auto;overflow-y:auto\}/, 'purchase table height should match the student standard table height');
+assert.doesNotMatch(css, /#page-purchases \.tms-table-wrapper\{max-height:/, 'purchase table should inherit the global standard table height');
 assert.match(css, /\.tms-page-btn\{[^}]*min-width:24px[^}]*height:24px[^}]*font-weight:500[^}]*border-radius:6px/, 'purchase pager buttons should inherit the shared compact page button style');
 assert.doesNotMatch(css, /\.tms-page-jump input/, 'purchase pager should not keep jump input styles');
 assert.match(source, /function withStandardFilterCounts\(/, 'standard dropdown filters should support count labels for all pages');

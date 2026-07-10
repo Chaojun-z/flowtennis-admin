@@ -44,12 +44,18 @@ assert.strictEqual(
 );
 
 context.standardLifecycleMetrics = {
+  teachingSummary: {
+    historicalStudentCount: 3,
+    activeStudentCount: 2,
+    trialAttendedStudentCount: 4,
+    trialAttendedToFormalPurchaseCount: 1
+  },
   metrics: {
     historicalStudents: { value: 3, rateText: '60%' },
     activeStudents: { value: 2, rateText: '67%' },
-    trialPathStudents: { value: 4, rateText: '80%' },
-    trialPathDeals: { value: 1, rateText: '25%' },
-    trialPathPending: { value: 1, rateText: '25%' }
+    trialAttendedToFormalPurchase: { value: 1, rateText: '25%' },
+    trialPathStudents: { value: 99, rateText: '99%' },
+    trialPathDeals: { value: 88, rateText: '88%' }
   }
 };
 assert.deepStrictEqual(
@@ -66,12 +72,10 @@ assert.deepStrictEqual(
     historicalStudentRate: '60%',
     activeStudents: 2,
     activeStudentRate: '67%',
-    trialBooked: 4,
-    trialBookedRate: '80%',
-    trialPathDeal: 1,
-    trialPathDealRate: '25%',
-    trialPendingConversion: 1,
-    trialPendingConversionRate: '25%'
+    trialAttended: 4,
+    trialAttendedRate: '80%',
+    trialAttendedToFormalPurchase: 1,
+    trialAttendedToFormalPurchaseRate: '25%'
   }
 );
 

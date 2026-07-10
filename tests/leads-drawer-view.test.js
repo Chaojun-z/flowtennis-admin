@@ -18,6 +18,7 @@ function fnBody(name){
 assert.match(source, /let leadDetailActiveTab='basic'/, 'lead drawer should keep active tab state');
 assert.match(source, /function leadDetailTabsHtml\(/, 'lead detail should expose drawer tabs');
 assert.match(fnBody('leadDetailTabsHtml'), /基础信息[\s\S]*跟进记录[\s\S]*成交信息/, 'lead drawer should have the agreed three tabs');
+assert.match(fnBody('leadDetailTabsHtml'), /createMode[\s\S]*\[\['basic','基础信息'\]\]/, 'new lead drawer should only show the basic information tab');
 assert.match(fnBody('openLeadDetail'), /openStandardDetailDrawer\(/, 'lead detail should use the standard right drawer');
 assert.match(fnBody('openLeadDetail'), /leadDetailActiveTab==='basic'[\s\S]*leadDetailBasicTabHtml\(lead\)[\s\S]*leadDetailActiveTab==='followups'[\s\S]*leadDetailFollowupsTabHtml\(lead\)[\s\S]*leadDetailConversionTabHtml\(lead\)/, 'lead detail should route each tab to its own content');
 assert.match(source, /function leadFollowupDrawerFormHtml\(/, 'lead follow-up editing should render inside the drawer');
@@ -39,6 +40,7 @@ assert.match(source, /function leadLinkedAccountFieldHtml\(/, 'lead conversion s
 assert.match(fnBody('leadInlineActionHtml'), /lead-inline-link-action/, 'linked account actions should use inline text link styling');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*删除/, 'linked student and court actions should expose link, edit, and delete text actions');
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="schedule-detail-action primary"/, 'linked account row should not use framed primary buttons');
+assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /未关联/, 'unlinked accounts should only show the inline link text');
 assert.match(source, /function ensureLeadConversionLookups\(/, 'conversion tab should lazy-load linked student/court/coach names');
 assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(lead,'student'\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*linkedCoachName\(lead\?\.formalCoach\)/, 'conversion summary should render linked account helpers and coach names instead of raw ids');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)/, 'linked account helper should render names instead of raw ids');

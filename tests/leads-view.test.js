@@ -14,6 +14,7 @@ const css = [
   'assets/styles/components/tables.css',
   'assets/styles/components/modals.css'
 ].map(file=>fs.readFileSync(path.join(publicDir, file), 'utf8')).join('\n');
+const tableCss = fs.readFileSync(path.join(publicDir, 'assets/styles/components/tables.css'), 'utf8');
 const leadsSourcePath = path.join(publicDir, 'assets/scripts/pages/leads.js');
 const leadsSource = fs.existsSync(leadsSourcePath) ? fs.readFileSync(leadsSourcePath, 'utf8') : '';
 
@@ -152,6 +153,8 @@ assert.doesNotMatch(fnBody('leadBasicInfoReadonlyHtml'), /leadDetailFieldHtml\('
 assert.match(leadsSource, /function leadDateInputValue\(lead\)/, 'lead forms should expose a standard lead date input helper');
 assert.match(fnBody('leadBasicInfoFormHtml'), /courtDateButtonHtml\('lead_leadDate',leadDateInputValue\(lead\),'线索时间'\)/, 'lead drawer edit form should pass a normalized date value to the date picker');
 assert.match(fnBody('openLeadCreateDrawer'), /leadBasicInfoFormHtml\(lead\)/, 'lead create drawer should reuse the same basic-info drawer form');
+assert.match(fnBody('openLeadCreateDrawer'), /const lead=\{id:'',displayName:'',wechatName:'',leadDate:today\(\)\}/, 'new lead drawer should only prefill today as lead date');
+assert.doesNotMatch(fnBody('openLeadCreateDrawer'), /leadDefaultCampusValue\(\)|currentUser\?\.name/, 'new lead drawer should not prefill campus or owner');
 assert.match(leadsSource, /function leadTimelineLineText\(item\)[\s\S]*return `\$\{date\} · \$\{by\} 跟进 · （\$\{status\}）\\n\$\{note\}`/, 'lead timeline should render date, follower, conversion result, then note on the second line');
 assert.match(componentsSource, /function renderDetailDrawerTimeline\(/, 'detail drawer timeline should be shared');
 assert.match(leadsSource, /function leadTimelineHtml\(lead\)[\s\S]*renderDetailDrawerTimeline\(rows\.map\(item=>leadFollowupTimelineItemHtml\(lead,item\)\),\{emptyText:'暂无跟进时间线',className:'lead-followup-timeline'\}\)/, 'lead timeline should render through the shared drawer timeline component');
@@ -173,12 +176,12 @@ assert.match(fnBody('leadBasicInfoFormHtml'), /姓名[\s\S]*电话[\s\S]*水平[
 assert.doesNotMatch(fnBody('openLeadCreateDrawer'), /lead-form-row-4|openStandardModal/, 'lead create drawer should not keep the old four-column modal body');
 assert.match(leadsSource, /function openLeadCreateDrawer\(/, 'lead create should use the drawer entry');
 assert.match(fnBody('openLeadCreateDrawer'), /openStandardDetailDrawer\(/, 'lead create should open the standard right drawer');
-assert.match(fnBody('openLeadCreateDrawer'), /leadDetailHeroHtml\(\{\.\.\.lead,displayName:'新增线索'\}\)[\s\S]*leadDetailTabsHtml\('basic'\)/, 'lead create drawer should reuse the same detail drawer header and tab style');
+assert.match(fnBody('openLeadCreateDrawer'), /leadDetailHeroHtml\(\{\.\.\.lead,displayName:'新增线索'\},\{createMode:true\}\)[\s\S]*leadDetailTabsHtml\('basic',\{createMode:true\}\)/, 'lead create drawer should reuse drawer style but render the create-only empty header and single tab');
 assert.match(fnBody('openLeadModal'), /openLeadCreateDrawer\(\)/, 'legacy create entry should forward to the drawer');
 assert.doesNotMatch(leadsSource, /openStandardModal\(\{title:leadId\?'编辑线索':'新增线索'/, 'lead create should not keep the old centered modal shell');
 assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索'/, 'lead create and edit modal should not keep the old shell');
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
-assert.match(fnBody('openLeadCreateDrawer'), /campus:leadDefaultCampusValue\(\)/, 'new leads should default to the current campus or the first configured campus');
+assert.doesNotMatch(fnBody('leadBasicInfoFormHtml'), /lead\?\.campus\|\|leadDefaultCampusValue\(\)|currentUser\?\.name/, 'empty create fields should not fall back to current campus or current user');
 assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit modal should remove the current status field');
 assert.doesNotMatch(leadsSource, /function leadConversionActionPanelHtml\(/, 'lead conversion tab should remove the separate conversion action panel');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*删除/, 'lead conversion tab should keep linked account actions inline in the summary rows');
@@ -212,7 +215,9 @@ assert.match(stateSource, /leads:\['leadFollowups','lifecycleMetricsPage'\]/, 'l
 assert.match(fnBody('renderLeads'), /leadDateDisplayText\(lead\)[\s\S]*renderStandardCellText\(leadSourceText\(lead\),false\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*leadLevelText\(lead\)[\s\S]*leadProfileText\(lead\)[\s\S]*renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)[\s\S]*renderStandardCellText\(lead\?\.intentLevel,false\)/, 'lead list rows should show formatted lead date, source as plain text, and keep type, demand, level, basic info, stage, and intent in table order');
 assert.match(fnBody('renderLeads'), /<td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">\$\{esc\(leadWechatText\(lead\)\)\}<\/div><\/td>/, 'lead list first name column should use the same bold primary text as student lists');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadSourceText\(lead\),'source'\)/, 'lead list source should not render as a tag');
-assert.match(css, /#page-leads \.tms-table-wrapper\{max-height:calc\(100vh - 170px\);overflow-x:auto;overflow-y:auto\}/, 'leads table should show one more default row while keeping internal scrolling');
+assert.match(css, /\.tms-table-wrapper\{overflow:auto;max-height:calc\(100vh - 170px\)/, 'standard table wrapper should globally show one more default row while keeping internal scrolling');
+assert.match(tableCss, /\.tms-table-wrapper\{overflow:auto;max-height:calc\(100vh - 170px\)/, 'shared table component css should use the same global table height');
+assert.doesNotMatch(css, /#page-leads \.tms-table-wrapper\{max-height:/, 'lead table should not own a page-only height override');
 assert.match(css, /#page-leads \.tms-table th\{padding-top:8px;padding-bottom:8px;font-size:12px\}/, 'leads table header should match the standard table font size');
 assert.match(css, /#page-leads \.tms-table td\{padding-top:6px;padding-bottom:6px;font-size:12px;line-height:1\.15;vertical-align:middle\}/, 'leads table rows should match the standard row height and font size');
 assert.match(standardSource, /style:'width:220px'[\s\S]*data-lead-sort="trialLessonAt"/, 'lead trial lesson column should be wide enough for the full date/time text');
@@ -229,7 +234,8 @@ assert.match(standardSource, /if\(\/私教\/\.test\(text\)\)return 'tms-tag-cour
 assert.match(css, /\.tms-tag-course-private\{background:#EFF4FF;color:#305CC8\}[\s\S]*\.tms-tag-course-small\{background:#F0FDF4;color:#047857\}[\s\S]*\.tms-tag-course-partner\{background:#F5F3FF;color:#6D28D9\}/, 'demand product course classes should reuse schedule course type colors');
 assert.match(css, /\.modal\.modal-court\.modal-leads-form \.mbody\{overflow:visible\}/, 'lead form modal should keep dropdowns from being clipped');
 assert.match(css, /\.modal\.modal-court \.lead-form-row-4\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);gap:14px\}/, 'lead form should use four equal columns');
-assert.match(css, /#page-leads \.tms-pagination,#page-leads \.tms-pagination \*\{font-weight:400/, 'lead table footer should use normal font weight');
+assert.match(css, /\.tms-pagination,\.tms-pagination \*\{font-weight:400/, 'all standard table footers should use normal font weight');
+assert.doesNotMatch(css, /#page-leads \.tms-pagination,#page-leads \.tms-pagination \*\{font-weight:400/, 'pagination font weight should not be a lead-only rule');
 assert.match(css, /\.modal\.modal-court \.tms-readonly-card\{[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*border:1px solid #E6E1DC[^}]*box-shadow:0 1px 2px rgba\(0,0,0,\.05\)[^}]*padding:24px[^}]*margin-bottom:32px/, 'readonly detail sections should sit on the shared white card');
 assert.match(css, /\.modal\.modal-court \.tms-readonly-card \.tms-detail-grid\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)[^}]*row-gap:24px[^}]*column-gap:32px/, 'readonly detail cards should use the wider data grid');
 assert.match(css, /\.modal\.modal-court \.tms-readonly-card\.lead-readonly-card\{grid-column:1\/-1\}/, 'lead detail readonly card should span the full modal width');

@@ -39,7 +39,7 @@ assert.match(fnBody('workbenchScheduleShell'), /看本周课程时间、类型�
 assert.match(fnBody('renderMySchedule'), /slice\(11,16\)\}\$\{s\.endTime\?' - '\+s\.endTime\.slice\(11,16\)/, 'my schedule week cards should render the time range');
 assert.match(fnBody('renderMySchedule'), /scheduleCourseType\(s\).*scheduleLocationText\(s\).*scheduleFeedbackLabel\(s\)/s, 'my schedule week cards should show course type, location, and feedback');
 assert.match(pagesCss, /#page-coaches \.tms-table\s*\{[^}]*min-width:1000px/s, 'coach table should not inherit the wide court table min width');
-assert.match(pagesCss, /#page-coaches \.tms-table-wrapper\s*\{[^}]*max-height:calc\(100vh - 190px\)/s, 'coach table should use more vertical space before scrolling');
+assert.doesNotMatch(pagesCss, /#page-coaches \.tms-table-wrapper\s*\{[^}]*max-height:/s, 'coach table should inherit the global standard table height');
 assert.match(pagesCss, /\.tms-dropdown-menu[^}]*overscroll-behavior:contain/s, 'dropdown scrolling should not drag the modal or page behind it');
 assert.match(coachShell, /label:'操作'[\s\S]*className:'tms-sticky-r'/, 'coach action header should stay visible on the right');
 assert.match(coachShell, /label:'入职时间'/, 'coach table should show hire date');

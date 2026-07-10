@@ -659,7 +659,8 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     return promise;
   }));
   results.forEach(([name,data,requestKey])=>{
-  if(name==='purchasesPage'){
+    if(DATASETS_WITH_REQUEST_KEYS.has(name)&&requestKey!==datasetRequestKey(name))return;
+    if(name==='purchasesPage'){
       setDatasetValue('purchases',data.purchases||[]);
       setDatasetValue('packages',data.packages||[]);
       setDatasetValue('students',data.students||[]);
@@ -952,7 +953,7 @@ function refreshScopedTopSummaryForCurrentPage(){
       if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
       console.warn('scoped summary refresh failed',pg,e);
     });
-    return !(pg==='leads'||isStudentListPage(pg));
+    return false;
   }
   if(pg==='courts'){
     loadCourtReadModelGuardData({force:true}).then(()=>{
@@ -961,7 +962,7 @@ function refreshScopedTopSummaryForCurrentPage(){
       if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
       console.warn('court scoped summary refresh failed',e);
     });
-    return true;
+    return false;
   }
   return false;
 }
