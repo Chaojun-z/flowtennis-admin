@@ -351,6 +351,10 @@ function standardListSlice(list,page,pageSize){
 function renderStandardSkeletonKpiCard(section={}){
   return `<div class="tms-skeleton-card"><span class="tms-skeleton-line is-label"></span><strong class="tms-skeleton-line is-value"></strong><i class="tms-skeleton-line is-meta"></i></div>`;
 }
+function renderStandardSkeletonKpiCards(count=4){
+  const safeCount=Math.max(1,Math.min(8,Number(count)||4));
+  return Array.from({length:safeCount},()=>renderStandardSkeletonKpiCard()).join('');
+}
 function renderStandardSkeletonChartPanel(panel={}){
   const cls=String(panel.className||'').trim();
   const variant=String(panel.variant||'chart').trim();
@@ -376,7 +380,7 @@ function renderStandardSkeletonSection(section={}){
   const cls=String(section.className||'').trim();
   if(type==='kpis'){
     const count=Math.max(1,Math.min(8,Number(section.count)||4));
-    return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${Array.from({length:count},()=>renderStandardSkeletonKpiCard(section)).join('')}</div>`;
+    return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${renderStandardSkeletonKpiCards(count)}</div>`;
   }
   if(type==='table')return renderStandardSkeletonTablePanel(section);
   const panels=Array.isArray(section.panels)&&section.panels.length?section.panels:[{}];

@@ -1188,7 +1188,7 @@ function renderCourtAccountListView(){
 }
 function renderCourts(){
   if(!courtAccountListViewData||(typeof courtAccountListViewDataIsCurrent==='function'&&!courtAccountListViewDataIsCurrent())){
-    renderCourtTableLoading();
+    renderCourtPageLoading();
     if(typeof loadCourtReadModelGuardData==='function'){
       loadCourtReadModelGuardData({force:true}).then(()=>{
         if(currentPage==='courts')renderCourts();

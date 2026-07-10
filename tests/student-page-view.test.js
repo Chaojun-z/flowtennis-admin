@@ -210,7 +210,7 @@ assert.match(source, /function studentEmptyStateHtml\([\s\S]*没有匹配的学�
 assert.match(source, /function renderTableSkeletonLoading\(/, 'table loading should render through the shared full-table skeleton helper');
 assert.match(source, /function renderStudentTableLoading\([\s\S]*renderTableSkeletonLoading\('stuTbody',13,'学员数据加载中\.\.\.'\)/, 'student loading state should use the shared full-table skeleton');
 assert.match(css, /\.tms-table-skeleton-state\{[^}]*position:relative[^}]*width:100%[^}]*background:#FBF7F4/, 'shared table skeleton should follow the full horizontal table width');
-assert.match(css, /\.tms-table-skeleton-head\{[^}]*height:42px[^}]*background:#F1E9E2/, 'shared table skeleton should include a header skeleton instead of leaving the real header exposed');
+assert.doesNotMatch(css, /\.tms-table-skeleton-head\{/, 'shared table skeleton should not render a second header below the real table header');
 assert.match(css, /\.tms-table-skeleton-row\{[^}]*height:42px[^}]*background:#FBF7F4/, 'shared table skeleton rows should match the standard row height');
 assert.match(source, /function renderStudentTableError\([\s\S]*tms-table-error-state[\s\S]*加载失败[\s\S]*重新加载/, 'student load failure should render an inline retry state');
 assert.match(source, /if\(pg==='students'\)renderStudentTableLoading\(\);/, 'student page should use the dedicated loading renderer');

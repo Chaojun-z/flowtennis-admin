@@ -576,9 +576,9 @@ function renderTableSkeletonLoading(id,colspan,text){
   if(!el)return;
   const safeText=esc(text);
   const cellCount=Math.max(4,Number(colspan)||6);
-  const headerCells=Array.from({length:cellCount},(_,idx)=>`<span class="tms-table-skeleton-line ${idx===0?'is-strong':''}"></span>`).join('');
-  const rows=Array.from({length:6},()=>`<div class="tms-table-skeleton-row">${headerCells}</div>`).join('');
-  el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-head">${headerCells}</div><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
+  const rowCells=Array.from({length:cellCount},(_,idx)=>`<span class="tms-table-skeleton-line ${idx===0?'is-strong':''}"></span>`).join('');
+  const rows=Array.from({length:6},()=>`<div class="tms-table-skeleton-row">${rowCells}</div>`).join('');
+  el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
   renderTableSkeletonLoading('stuTbody',13,'学员数据加载中...');
@@ -603,6 +603,16 @@ function renderScheduleTableError(message){
 }
 function renderCourtTableLoading(){
   renderTableSkeletonLoading('courtTbody',16,'订场用户加载中...');
+}
+function renderCourtStatsLoading(){
+  const el=document.getElementById('courtStatsRow');
+  if(!el||typeof renderStandardSkeletonKpiCards!=='function')return;
+  el.classList.add('court-dashboard-stats');
+  el.innerHTML=renderStandardSkeletonKpiCards(5);
+}
+function renderCourtPageLoading(){
+  renderCourtStatsLoading();
+  renderCourtTableLoading();
 }
 function renderCourtTableError(message){
   const el=document.getElementById('courtTbody');
@@ -632,7 +642,7 @@ function renderPageLoading(pg){
     renderTableBodyLoading('financeAnomalyTbody',4,'异常检查加载中...');
   }
   if(pg==='coaches')renderTableBodyLoading('coachTbody',7,'教练数据加载中...');
-  if(pg==='courts')renderCourtTableLoading();
+  if(pg==='courts')renderCourtPageLoading();
   if(pg==='matches')renderTableBodyLoading('matchTbody',9,'约球数据加载中...');
   if(pg==='memberships')renderBlockLoading('membershipTabBody','会员数据加载中...');
   if(pg==='mystudents')renderBlockLoading('myStudentsBody','学员数据加载中...');

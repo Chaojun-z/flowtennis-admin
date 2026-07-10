@@ -22,9 +22,15 @@ const tableSkeletonBody = fnBody(stateSource, 'renderTableSkeletonLoading');
 assert.match(tableSkeletonBody, /const cellCount=Math\.max\(4,Number\(colspan\)\|\|6\)/, 'table skeleton should render the full column count instead of clamping wide tables to the visible columns');
 assert.doesNotMatch(tableSkeletonBody, /Math\.min\(8,Number\(colspan\)\|\|6\)/, 'wide table skeletons must not stop at eight columns');
 assert.match(tableSkeletonBody, /--tms-table-skeleton-columns:\$\{cellCount\}/, 'table skeleton should expose its full column count to CSS');
+assert.doesNotMatch(tableSkeletonBody, /tms-table-skeleton-head/, 'table skeleton should not render a fake header when the real table header is visible');
 assert.match(tableCss, /\.tms-table-skeleton-state\{[^}]*position:relative[^}]*width:100%/, 'table skeleton state should live inside the scrolling table width instead of being absolutely pinned to the viewport');
-assert.match(tableCss, /\.tms-table-skeleton-head\{[^}]*grid-template-columns:repeat\(var\(--tms-table-skeleton-columns\),minmax\(72px,1fr\)\)/, 'table skeleton header should generate all columns across the full scroll width');
+assert.doesNotMatch(tableCss, /\.tms-table-skeleton-head\{/, 'table skeleton CSS should not keep a second header layer');
 assert.match(tableCss, /\.tms-table-skeleton-row\{[^}]*grid-template-columns:repeat\(var\(--tms-table-skeleton-columns\),minmax\(72px,1fr\)\)/, 'table skeleton rows should generate all columns across the full scroll width');
+assert.match(standardComponentsSource, /function renderStandardSkeletonKpiCards\(/, 'standard components should expose one shared KPI skeleton card helper for all data-card loading states');
+assert.match(stateSource, /function renderCourtStatsLoading\([\s\S]*renderStandardSkeletonKpiCards\(5\)/, 'court loading should render top stats through the shared KPI skeleton helper');
+assert.match(stateSource, /function renderCourtPageLoading\([\s\S]*renderCourtStatsLoading\(\)[\s\S]*renderCourtTableLoading\(\)/, 'court loading should cover both stats cards and the table in one page-level loading entry');
+assert.match(stateSource, /if\(pg==='courts'\)renderCourtPageLoading\(\);/, 'court page loading should not only skeletonize the table body');
+assert.match(fnBody(stateSource, 'renderCourtTableLoading'), /renderTableSkeletonLoading\('courtTbody',16,'订场用户加载中\.\.\.'\)/, 'court table loading should keep using the shared table row skeleton');
 
 const kpiSkeletonBody = fnBody(standardComponentsSource, 'renderStandardSkeletonKpiCard');
 const chartSkeletonBody = fnBody(standardComponentsSource, 'renderStandardSkeletonChartPanel');
