@@ -963,10 +963,12 @@ function teachingPaymentIsDirect(row = {}) {
     row.payType,
     row.payMethod,
     row.paymentMethod,
-    row.paymentChannel
+    row.paymentChannel,
+    row.settlementLabel,
+    row.paymentLabel
   ].filter(Boolean).join(' ')).toLowerCase();
   if (teachingPaymentIsPackage(row)) return false;
-  if (/single|direct|单次|按次|线下|现金|微信|支付宝|转账|收款/.test(value)) return true;
+  if (/single|direct|gift|free|单次|按次|线下|现金|微信|支付宝|转账|收款|赠送|赠课|免费|补偿|活动|资源置换|互换|合作/.test(value)) return true;
   return (Number(row.paidAmount || row.paymentAmount || row.actualAmount || row.amountPaid || row.amount) || 0) > 0;
 }
 
