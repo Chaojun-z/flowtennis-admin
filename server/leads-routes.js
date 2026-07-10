@@ -378,6 +378,32 @@ function createLeadsRoutes(deps={}){
       await put(T_LEADS,lead.id,nextLead);
       return sendJson(res,{lead:nextLead,court:linkedCourt,membershipAccount});
     }
+    const leadUnlinkStudentM=path.match(/^\/leads\/([^/]+)\/unlink-student$/);
+    if(leadUnlinkStudentM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const lead=await get(T_LEADS,leadUnlinkStudentM[1]).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      const student=lead.studentId?await get(T_STUDENTS,lead.studentId).catch(()=>null):null;
+      const now=new Date().toISOString();
+      const nextLead=normalizeLeadRecord({...lead,studentId:'',isCourseConverted:false,dealType:'',conversionType:'',createdAt:lead.createdAt},{id:lead.id,now});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,student});
+    }
+    const leadUnlinkCourtM=path.match(/^\/leads\/([^/]+)\/unlink-court$/);
+    if(leadUnlinkCourtM&&method==='POST'){
+      if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);
+      await init();
+      await ensureLeadTables();
+      const lead=await get(T_LEADS,leadUnlinkCourtM[1]).catch(()=>null);
+      if(!lead)return sendJson(res,{error:'线索不存在'},404);
+      const court=lead.courtId?await get(T_COURTS,lead.courtId).catch(()=>null):null;
+      const now=new Date().toISOString();
+      const nextLead=normalizeLeadRecord({...lead,courtId:'',membershipAccountId:'',isCourtConverted:false,isMembershipConverted:false,dealType:'',conversionType:'',createdAt:lead.createdAt},{id:lead.id,now});
+      await put(T_LEADS,lead.id,nextLead);
+      return sendJson(res,{lead:nextLead,court});
+    }
     return false;
   };
 }

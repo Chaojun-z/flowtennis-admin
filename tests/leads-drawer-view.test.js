@@ -33,11 +33,15 @@ assert.doesNotMatch(fnBody('leadDetailFollowupsTabHtml'), /schedule-detail-actio
 assert.match(fnBody('leadFollowupDrawerFormHtml'), /full-width[\s\S]*用户顾虑[\s\S]*full-width[\s\S]*本次结论/, 'concern and conclusion should each span the full drawer row');
 assert.match(source, /function renderDetailDrawerTimeline\(/, 'lead follow-up timeline should use the shared drawer timeline component');
 assert.match(fnBody('leadTimelineHtml'), /renderDetailDrawerTimeline\(rows\.map\(item=>leadFollowupTimelineItemHtml\(lead,item\)\),\{emptyText:'暂无跟进时间线',className:'lead-followup-timeline'\}\)/, 'lead follow-up timeline should call the shared timeline directly');
-assert.match(source, /function leadConversionActionPanelHtml\(/, 'lead conversion actions should render inside the drawer');
-assert.doesNotMatch(fnBody('leadConversionActionPanelHtml'), /转为学员|转为订场用户/, 'conversion tab should hide create-conversion buttons');
-assert.match(fnBody('leadConversionActionPanelHtml'), /schedule-detail-action primary[\s\S]*关联已有学员[\s\S]*schedule-detail-action primary[\s\S]*关联已有订场用户/, 'conversion tab should keep existing-record link actions');
+assert.doesNotMatch(source, /function leadConversionActionPanelHtml\(/, 'lead conversion tab should not keep a separate conversion action panel');
+assert.doesNotMatch(fnBody('leadDetailConversionTabHtml'), /成交操作|关联操作|leadConversionActionPanelHtml/, 'conversion tab should remove the separate conversion action card');
+assert.match(source, /function leadLinkedAccountFieldHtml\(/, 'lead conversion summary should render linked account rows with inline text actions');
+assert.match(fnBody('leadInlineActionHtml'), /lead-inline-link-action/, 'linked account actions should use inline text link styling');
+assert.match(fnBody('leadLinkedAccountFieldHtml'), /关联[\s\S]*修改[\s\S]*删除/, 'linked student and court actions should expose link, edit, and delete text actions');
+assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="schedule-detail-action primary"/, 'linked account row should not use framed primary buttons');
 assert.match(source, /function ensureLeadConversionLookups\(/, 'conversion tab should lazy-load linked student/court/coach names');
-assert.match(fnBody('leadConversionSummaryHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)[\s\S]*linkedCoachName\(lead\?\.formalCoach\)/, 'conversion summary should render names instead of raw ids');
+assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(lead,'student'\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*linkedCoachName\(lead\?\.formalCoach\)/, 'conversion summary should render linked account helpers and coach names instead of raw ids');
+assert.match(fnBody('leadLinkedAccountFieldHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)/, 'linked account helper should render names instead of raw ids');
 assert.match(fnBody('openLeadLinkStudentModal'), /startLeadConversionDrawerMode\(leadId,'link-student'\)/, 'link student should stay in the lead drawer');
 assert.match(fnBody('openLeadLinkCourtModal'), /startLeadConversionDrawerMode\(leadId,'link-court'\)/, 'link court should stay in the lead drawer');
 assert.match(source, /function openLeadDetailFromList\(/, 'lead list view action should reset to basic tab');
@@ -46,6 +50,8 @@ assert.match(fnBody('renderLeads'), /openLeadDetailFromList\('\$\{lead\.id\}'\)[
 assert.doesNotMatch(fnBody('renderLeads'), /openLeadConvertModal\('\$\{lead\.id\}'\)/, 'lead list should not show conversion action');
 assert.match(fnBody('renderLeads'), /renderStandardCellText\(leadSourceText\(lead\),false\)[\s\S]*renderLeadTag\(leadCustomerTypeText\(lead\),'customerType'\)[\s\S]*renderLeadTag\(leadDemandProductText\(lead\),'demandProduct'\)[\s\S]*renderStandardCellText\(leadLevelText\(lead\)/, 'lead list should place plain source, customer type, and demand product before level');
 assert.match(css, /\.modal\.modal-court\.modal-lead-drawer/, 'lead drawer should have scoped drawer styles');
+assert.match(css, /\.modal\.modal-court\.modal-lead-drawer \.schedule-detail-title-row \.tms-tag\{[^}]*display:inline-flex[^}]*align-items:center[^}]*justify-content:center/, 'lead drawer top status tag should center its text');
+assert.match(css, /\.modal\.modal-court\.modal-lead-drawer \.schedule-detail-block\{[^}]*background:transparent[^}]*border:0[^}]*padding:0/, 'lead basic detail block should be plain text without a framed background');
 assert.doesNotMatch(css, /lead-followup-item::before\{display:none\}/, 'lead follow-up timeline should keep the shared vertical line');
 
 console.log('leads drawer view tests passed');

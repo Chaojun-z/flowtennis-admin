@@ -1030,12 +1030,24 @@ function leadConversionSummaryHtml(lead){
   return [
     leadDetailFieldHtml('线索阶段',leadStageText(lead)),
     leadDetailFieldHtml('成交类型',leadDealTypeText(lead)||'-'),
-    leadDetailFieldHtml('关联学员',lead?.studentId?linkedStudentName(lead):'-'),
-    leadDetailFieldHtml('关联订场用户',lead?.courtId?linkedCourtName(lead):'-'),
+    leadLinkedAccountFieldHtml(lead,'student'),
+    leadLinkedAccountFieldHtml(lead,'court'),
     leadDetailFieldHtml('成交教练',linkedCoachName(lead?.formalCoach)),
     leadDetailFieldHtml('成交时间',leadFormalSignupDateText(lead)),
     leadDetailBlockHtml('流失原因',esc(lead?.lostReason||'-'),{hideEmpty:false})
   ].join('');
+}
+function leadInlineActionHtml(text,onclick,tone=''){
+  return `<span class="lead-inline-link-action ${tone}" onclick="${onclick}">${esc(text)}</span>`;
+}
+function leadLinkedAccountFieldHtml(lead,type){
+  const isStudent=type==='student';
+  const linked=isStudent?!!lead?.studentId:!!lead?.courtId;
+  const label=isStudent?'关联学员':'关联订场用户';
+  const value=linked?(isStudent?linkedStudentName(lead):linkedCourtName(lead)):'未关联';
+  const linkAction=leadInlineActionHtml(linked?'修改':'关联',isStudent?`openLeadLinkStudentModal('${lead.id}')`:`openLeadLinkCourtModal('${lead.id}')`);
+  const deleteAction=linked?leadInlineActionHtml('删除',isStudent?`unlinkLeadStudent('${lead.id}')`:`unlinkLeadCourt('${lead.id}')`,'danger'):'';
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value lead-linked-account-value"><span>${esc(value)}</span><span class="lead-inline-actions">${linkAction}${deleteAction}</span></div></div>`;
 }
 function startLeadConversionDrawerMode(leadId,mode){
   leadDetailActiveTab='conversion';
@@ -1053,13 +1065,13 @@ function leadConversionLinkFormHtml(lead,mode){
   const btnId=isStudent?'leadLinkStudentBtn':'leadLinkCourtBtn';
   return `<div class="schedule-detail-form"><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">${isStudent?'选择学员':'选择订场用户'}</label>${renderStandardDropdownHtml(id,isStudent?'选择学员':'选择订场用户',options,isStudent?(lead.studentId||''):(lead.courtId||''),true)}</div></div><div class="schedule-detail-card-actions lead-conversion-form-actions"><button type="button" class="schedule-detail-action muted" onclick="startLeadConversionDrawerMode('${lead.id}','')">取消</button><button type="button" class="schedule-detail-action primary" id="${btnId}" onclick="${save}">确认关联</button></div></div>`;
 }
-function leadConversionActionPanelHtml(lead){
-  if(leadDetailConversionMode==='link-student')return leadConversionLinkFormHtml(lead,'link-student');
-  if(leadDetailConversionMode==='link-court')return leadConversionLinkFormHtml(lead,'link-court');
-  return `<div class="lead-conversion-actions"><button type="button" class="schedule-detail-action primary" onclick="openLeadLinkStudentModal('${lead.id}')">关联已有学员</button><button type="button" class="schedule-detail-action primary" onclick="openLeadLinkCourtModal('${lead.id}')">关联已有订场用户</button></div>`;
-}
 function leadDetailConversionTabHtml(lead){
-  return renderDetailDrawerContent(`${leadDrawerCardHtml('成交状态',leadConversionSummaryHtml(lead),'lead-conversion-card')}${leadDrawerCardHtml(leadDetailConversionMode?'关联操作':'成交操作',leadConversionActionPanelHtml(lead),'lead-conversion-card', '',{useGrid:false})}`);
+  const form=leadDetailConversionMode==='link-student'
+    ? leadDrawerCardHtml('关联学员',leadConversionLinkFormHtml(lead,'link-student'),'lead-conversion-card','',{useGrid:false})
+    : leadDetailConversionMode==='link-court'
+      ? leadDrawerCardHtml('关联订场用户',leadConversionLinkFormHtml(lead,'link-court'),'lead-conversion-card','',{useGrid:false})
+      : '';
+  return renderDetailDrawerContent(`${leadDrawerCardHtml('成交状态',leadConversionSummaryHtml(lead),'lead-conversion-card')}${form}`);
 }
 function leadDetailIsEmptyHtml(html){
   const text=String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
@@ -1097,12 +1109,30 @@ function openLeadDetailFromList(leadId){
 function openLeadFollowupFromList(leadId){
   startLeadFollowupDrawerEdit(leadId,'');
 }
+function openLeadCreateDrawer(){
+  leadDetailActiveTab='basic';
+  leadDetailEditingSection='create';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  const lead={id:'',displayName:'',wechatName:'',leadDate:today(),campus:leadDefaultCampusValue(),owner:currentUser?.name||''};
+  const actions=`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="closeModal()">取消</button><button type="button" class="schedule-detail-action primary" id="leadSaveBtn" onclick="saveLead('')">保存</button></div>`;
+  const body=renderDetailDrawerContent(renderDetailDrawerFormCard('基础信息',leadBasicInfoFormHtml(lead),actions));
+  openStandardDetailDrawer({
+    titleHtml:`${leadDetailHeroHtml({...lead,displayName:'新增线索'})}${leadDetailTabsHtml('basic')}`,
+    bodyHtml:body,
+    actionsHtml:'',
+    data:{leadDetailId:''},
+    overlayClasses:['schedule-drawer-overlay'],
+    modalClass:'modal modal-court modal-schedule-drawer modal-lead-drawer'
+  });
+}
 function openLeadModal(leadId){
-  const lead=leadById(leadId)||null;
-  const campusValue=lead?.campus||leadDefaultCampusValue();
-  const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],leadNormalizeOwnerName(lead?.owner)||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadSaveBtn" onclick="saveLead('${leadId||''}')">保存</button>`;
-  openStandardModal({title:leadId?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'});
+  if(!leadId)return openLeadCreateDrawer();
+  leadDetailActiveTab='basic';
+  leadDetailEditingSection='basic';
+  leadDetailEditingFollowupId='';
+  leadDetailConversionMode='';
+  openLeadDetail(leadId);
 }
 async function refreshLeadRuntime({withStudents=false,withCourts=false}={}){
   const base=['leads','leadFollowups'];
@@ -1129,8 +1159,38 @@ async function saveLead(leadId=''){
     successText:leadId?'线索已更新 ✓':'线索已创建 ✓',
     closeOnSuccess:true,
     refresh:async()=>{
-    await refreshLeadRuntime();
-    renderLeads();
+      await refreshLeadRuntime();
+      renderLeads();
+    }
+  });
+}
+async function unlinkLeadStudent(leadId){
+  if(!await appConfirm('确认解除关联学员？学员档案不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
+  await runStandardMutation('',async()=>{
+    await apiCall('POST',`/leads/${leadId}/unlink-student`,{});
+  },{
+    loadingText:'解除中…',
+    errorPrefix:'解除失败',
+    successText:'关联学员已解除 ✓',
+    refresh:async()=>{
+      await refreshLeadRuntime({withStudents:true});
+      renderLeads();
+      openLeadDetail(leadId);
+    }
+  });
+}
+async function unlinkLeadCourt(leadId){
+  if(!await appConfirm('确认解除关联订场用户？订场用户不会删除。',{title:'解除关联',confirmText:'解除关联'}))return;
+  await runStandardMutation('',async()=>{
+    await apiCall('POST',`/leads/${leadId}/unlink-court`,{});
+  },{
+    loadingText:'解除中…',
+    errorPrefix:'解除失败',
+    successText:'关联订场用户已解除 ✓',
+    refresh:async()=>{
+      await refreshLeadRuntime({withCourts:true});
+      renderLeads();
+      openLeadDetail(leadId);
     }
   });
 }

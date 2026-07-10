@@ -942,7 +942,7 @@ function refreshScopedTopSummaryForCurrentPage(){
       if(String(e.message||'').includes('Token')||String(e.message||'').includes('登录')){doLogout();return;}
       console.warn('scoped summary refresh failed',pg,e);
     });
-    return true;
+    return !(pg==='leads'||isStudentListPage(pg));
   }
   if(pg==='courts'){
     loadCourtReadModelGuardData({force:true}).then(()=>{

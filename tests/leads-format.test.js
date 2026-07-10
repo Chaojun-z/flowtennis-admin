@@ -43,6 +43,15 @@ assert.strictEqual(
   '2026-05-10'
 );
 
+context.standardLifecycleMetrics = {
+  metrics: {
+    historicalStudents: { value: 3, rateText: '60%' },
+    activeStudents: { value: 2, rateText: '67%' },
+    trialPathStudents: { value: 4, rateText: '80%' },
+    trialPathDeals: { value: 1, rateText: '25%' },
+    trialPathPending: { value: 1, rateText: '25%' }
+  }
+};
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(context.leadStatsData([
     { rawStatus: '体验课完成' },
@@ -53,19 +62,16 @@ assert.deepStrictEqual(
   ]))),
   {
     total: 5,
+    historicalStudents: 3,
+    historicalStudentRate: '60%',
+    activeStudents: 2,
+    activeStudentRate: '67%',
     trialBooked: 4,
     trialBookedRate: '80%',
-    trialDone: 1,
-    trialAttendanceRate: '25%',
-    courseConverted: 1,
-    courseConversionRate: '20%',
-    trialCourseConverted: 0,
-    trialCourseConversionRate: '0%',
-    directCourseConverted: 1,
-    converted: 2,
-    leadConversionRate: '40%',
+    trialPathDeal: 1,
+    trialPathDealRate: '25%',
     trialPendingConversion: 1,
-    trialPendingConversionRate: '100%'
+    trialPendingConversionRate: '25%'
   }
 );
 

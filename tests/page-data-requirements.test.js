@@ -63,6 +63,8 @@ assert.match(source, /const DATASETS_WITH_REQUEST_KEYS=new Set\(\['operationsPag
 assert.match(source, /function pageDataScopeQuery\(\{dateRange='global'\}=\{\}\)/, 'scoped page-data requests should share the global campus and date filter query builder');
 assert.match(source, /function datasetHasCurrentRequestKey\(name\)/, 'loaded scoped datasets should be invalidated when the top filter query changes');
 assert.match(source, /function refreshScopedTopSummaryForCurrentPage\(\)/, 'top-filter changes should refresh backend scoped summaries');
+assert.match(source, /ensureDatasetsByName\(names,\{force:true\}\)\.then\(\(\)=>\{[\s\S]*renderScopedSummaryPage\(pg\)/, 'top filter changes should still refresh the backend scoped summary');
+assert.match(source, /return !\(pg==='leads'\|\|isStudentListPage\(pg\)\);/, 'lead and student top filters should repaint current rows immediately instead of blocking on scoped summary refresh');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force\}\);/, 'page background loading should revalidate cached data without blocking first paint');
 
 console.log('page data requirements tests passed');
