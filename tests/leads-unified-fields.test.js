@@ -1,0 +1,75 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const root = path.join(__dirname, '..');
+const leadsSource = fs.readFileSync(path.join(root, 'public/assets/scripts/pages/leads.js'), 'utf8');
+
+const elements = {
+  leadSearch: { value: '' },
+  leadSourceFilter: { value: '' },
+  leadCustomerTypeFilter: { value: '' },
+  leadConsultFilter: { value: '' },
+  leadStageFilter: { value: '' },
+  leadDealTypeFilter: { value: '' }
+};
+
+const context = {
+  console,
+  leads: [
+    { id: 'lead-at-mira', displayName: 'A', owner: '@Mira', dealType: '课程', leadDate: '2026-07-01', createdAt: '2026-07-01' },
+    { id: 'lead-coach', displayName: 'B', owner: '张教练', conversionType: '订场会员', leadDate: '2026-07-02', createdAt: '2026-07-02' }
+  ],
+  leadFollowups: [],
+  campus: 'all',
+  campuses: [],
+  currentUser: { name: 'Mira' },
+  document: {
+    getElementById: id => elements[id] || null,
+    querySelectorAll: selector => selector === '.lead-owner-filter-cb:checked' ? context.checkedOwnerBoxes : []
+  },
+  checkedOwnerBoxes: [],
+  FlowTennisBusinessTaxonomy: {
+    normalizeLeadSource: value => String(value || '').trim(),
+    normalizeLeadCustomerType: value => String(value || '').trim(),
+    normalizeLeadDemandProduct: value => String(value || '').trim(),
+    optionList: key => key === 'leadDealTypes'
+      ? ['课程', '订场', '订场会员'].map(value => ({ value, label: value }))
+      : [],
+    values: key => key === 'leadStages'
+      ? ['新线索', '跟进中', '已约体验', '已体验待成交', '已成交', '已流失']
+      : []
+  },
+  activeCoachNames: () => ['Mira', '张教练'],
+  customerLifecycleForRecord: () => null,
+  leadDateOnly: value => String(value || '').slice(0, 10),
+  today: () => '2026-07-10',
+  globalDateWithinRange: () => true,
+  searchHit: () => true,
+  sameCampusValue: () => true,
+  renderStandardCellText: (value, mutedWhenEmpty = true) => `<cell muted="${mutedWhenEmpty}">${value}</cell>`,
+  esc: value => String(value ?? '')
+};
+
+vm.createContext(context);
+vm.runInContext(leadsSource, context, { filename: 'public/assets/scripts/pages/leads.js' });
+
+const ownerOptions = Array.from(vm.runInContext('leadOwnerOptions().map(option => option.value)', context));
+assert.deepStrictEqual(
+  ownerOptions,
+  ['Mira', '吴敌', '陈丹丹', '岳克舟', '张教练'],
+  'lead owner options should be fixed owners plus active coaches, de-duplicated in order'
+);
+
+context.checkedOwnerBoxes = [{ value: 'Mira' }];
+const miraFiltered = Array.from(vm.runInContext('getFilteredLeads().map(lead => lead.id)', context));
+assert.deepStrictEqual(miraFiltered, ['lead-at-mira'], 'Mira filter should match historical @Mira rows');
+
+context.checkedOwnerBoxes = [];
+elements.leadDealTypeFilter.value = '订场会员';
+const dealFiltered = Array.from(vm.runInContext('getFilteredLeads().map(lead => lead.id)', context));
+assert.deepStrictEqual(dealFiltered, ['lead-coach'], 'deal type filter should use the same dealType/conversionType reader as the drawer');
+
+const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);
+assert.strictEqual(priorityEmpty, '<cell muted="true">-</cell>', 'empty priority should render as a plain dash cell');

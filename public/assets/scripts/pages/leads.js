@@ -1,8 +1,15 @@
+const LEAD_FIXED_OWNER_NAMES=['Mira','吴敌','陈丹丹','岳克舟'];
 let leadImportState={fileName:'',fileSize:0,fileModified:0,csvText:'',previewRows:[],summary:null,error:''};
 let leadDatePreset='all',leadDateCustomStart='',leadDateCustomEnd='';
 let leadDetailActiveTab='basic',leadDetailEditingSection='',leadDetailEditingFollowupId='',leadDetailConversionMode='';
 function leadRawRows(){
   return Array.isArray(leads)?leads:[];
+}
+function leadNormalizeOwnerName(value){
+  return String(value||'').trim().replace(/^@+/,'').trim();
+}
+function leadOwnerText(lead){
+  return leadNormalizeOwnerName(lead?.owner)||'-';
 }
 function leadIdentityName(value){
   return String(value||'').trim().replace(/1[3-9]\d{9}/g,'').toLowerCase().replace(/\s+/g,'').replace(/[·.。_\-\/|｜，,;；]/g,'');
@@ -23,7 +30,7 @@ function leadFollowupDateText(item){
   return leadDateOnly(item?.followupAt||item?.createdAt)||String(item?.followupAt||item?.createdAt||'').slice(0,10)||'-';
 }
 function leadFollowupPersonText(item){
-  return String(item?.followupBy||'未填写').replace(/^@+/,'').trim()||'未填写';
+  return leadNormalizeOwnerName(item?.followupBy)||'未填写';
 }
 function leadFollowupNoteText(item){
   const note=String(item?._mergedFollowupNote||item?.communicationNote||'').trim();
@@ -436,6 +443,10 @@ function leadPriorityText(lead){
   const value=String(lead?.followupPriority||'').trim().toUpperCase();
   return /^P[0-4]$/.test(value)?value:'-';
 }
+function renderLeadPriorityCell(lead){
+  const priority=leadPriorityText(lead);
+  return priority==='-'?renderStandardCellText('-',true):renderLeadTag(priority,'priority');
+}
 function leadLevelOptions(){
   return FlowTennisBusinessTaxonomy.optionList('leadLevels');
 }
@@ -477,7 +488,10 @@ function toggleLeadLevelCustomInput(value){
   if(levelValue!=='自定义')input.value='';
 }
 function leadOwnerOptions(){
-  return Array.from(new Set([...leadRows().map(item=>String(item?.owner||'').trim()).filter(Boolean),...activeCoachNames()])).map(value=>({value,label:value}));
+  return leadOwnerOptionNames().map(value=>({value,label:value}));
+}
+function leadOwnerOptionNames(){
+  return Array.from(new Set([...LEAD_FIXED_OWNER_NAMES,...activeCoachNames()].map(leadNormalizeOwnerName).filter(Boolean)));
 }
 function leadCampusText(lead){
   const value=typeof customerLifecycleCampus==='function'?customerLifecycleCampus(lead,lead?.campus):lead?.campus;
@@ -639,7 +653,7 @@ function leadCourtMatchText(row){
   return '未匹配';
 }
 function leadOwnerFilterValues(){
-  return [...document.querySelectorAll('.lead-owner-filter-cb:checked')].map(cb=>cb.value).filter(Boolean);
+  return [...document.querySelectorAll('.lead-owner-filter-cb:checked')].map(cb=>leadNormalizeOwnerName(cb.value)).filter(Boolean);
 }
 function leadOwnerFilterHtml(options=[],selectedValues=[]){
   const selected=new Set(selectedValues);
@@ -657,6 +671,7 @@ function getFilteredLeads(){
   const customerTypeValue=document.getElementById('leadCustomerTypeFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const stageValue=document.getElementById('leadStageFilter')?.value||'';
+  const dealTypeValue=document.getElementById('leadDealTypeFilter')?.value||'';
   const ownerValues=leadOwnerFilterValues();
   const campusValue=campus;
   return leadRows().filter(lead=>{
@@ -667,7 +682,8 @@ function getFilteredLeads(){
     if(customerTypeValue&&leadCustomerTypeText(lead)!==customerTypeValue)return false;
     if(consultValue&&leadConsultText(lead)!==consultValue)return false;
     if(stageValue&&leadStageText(lead)!==stageValue)return false;
-    if(ownerValues.length&&!ownerValues.includes(String(lead?.owner||'')))return false;
+    if(dealTypeValue&&leadDealTypeText(lead)!==dealTypeValue)return false;
+    if(ownerValues.length&&!ownerValues.includes(leadOwnerText(lead)))return false;
     if(campusValue!=='all'&&!sameCampusValue(lead?.campus,campusValue))return false;
     return true;
   }).sort((a,b)=>{
@@ -684,26 +700,28 @@ function renderLeadToolbarFilters(){
   const customerTypeValue=document.getElementById('leadCustomerTypeFilter')?.value||'';
   const consultValue=document.getElementById('leadConsultFilter')?.value||'';
   const stageValue=document.getElementById('leadStageFilter')?.value||'';
+  const dealTypeValue=document.getElementById('leadDealTypeFilter')?.value||'';
   const ownerValues=leadOwnerFilterValues();
   const linked=withLinkedFilterCounts([
     {key:'source',value:sourceValue,options:[{value:'',label:'全部',emptyDisplay:'来源'},...leadSourceOptions()],match:(lead,value)=>leadSourceText(lead)===String(value)},
     {key:'customerType',value:customerTypeValue,options:[{value:'',label:'全部',emptyDisplay:'类型'},...leadCustomerTypeOptions()],match:(lead,value)=>leadCustomerTypeText(lead)===String(value)},
     {key:'consult',value:consultValue,options:[{value:'',label:'全部',emptyDisplay:'需求'},...leadDemandProductOptions()],match:(lead,value)=>leadDemandProductText(lead)===String(value)},
-    {key:'stage',value:stageValue,options:[{value:'',label:'全部',emptyDisplay:'线索阶段'},...leadStageOptions()],match:(lead,value)=>leadStageText(lead)===String(value)}
+    {key:'stage',value:stageValue,options:[{value:'',label:'全部',emptyDisplay:'线索阶段'},...leadStageOptions()],match:(lead,value)=>leadStageText(lead)===String(value)},
+    {key:'dealType',value:dealTypeValue,options:[{value:'',label:'全部',emptyDisplay:'转化类型'},...leadDealTypeOptions().filter(option=>String(option.value||''))],match:(lead,value)=>leadDealTypeText(lead)===String(value)}
   ],rows);
   const configs=[
     ['leadSourceFilterHost','leadSourceFilter','来源',linked.source.options,linked.source.value],
     ['leadCustomerTypeFilterHost','leadCustomerTypeFilter','类型',linked.customerType.options,linked.customerType.value],
     ['leadConsultFilterHost','leadConsultFilter','需求',linked.consult.options,linked.consult.value],
-    ['leadStageFilterHost','leadStageFilter','线索阶段',linked.stage.options,linked.stage.value]
+    ['leadStageFilterHost','leadStageFilter','线索阶段',linked.stage.options,linked.stage.value],
+    ['leadDealTypeFilterHost','leadDealTypeFilter','转化类型',linked.dealType.options,linked.dealType.value]
   ];
   configs.forEach(([hostId,id,label,options,value])=>{
     const host=document.getElementById(hostId);
     if(host)host.innerHTML=renderStandardDropdownHtml(id,label,options,value,false,'onLeadFilterChange');
   });
   const ownerHost=document.getElementById('leadOwnerFilterHost');
-  const fixedOwners=['Mira','吴敌','陈丹丹','岳克舟'];
-  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(fixedOwners.map(value=>({value,label:value})),ownerValues);
+  if(ownerHost)ownerHost.innerHTML=leadOwnerFilterHtml(leadOwnerOptions(),ownerValues);
 }
 function leadConverted(lead){
   return leadConvertedYesNo(lead)==='是';
@@ -877,12 +895,12 @@ function leadBasicInfoReadonlyHtml(lead){
     leadDetailFieldHtml('需求产品',leadDemandProductText(lead)||'-'),
     leadDetailFieldHtml('意向等级',lead?.intentLevel||'-'),
     leadDetailFieldHtml('跟进优先级',leadPriorityText(lead)),
-    leadDetailFieldHtml('跟进人',lead?.owner||'-'),
+    leadDetailFieldHtml('跟进人',leadOwnerText(lead)),
     leadDetailBlockHtml('基本信息',esc(leadProfileText(lead)),{hideEmpty:true})
   ].join('');
 }
 function leadBasicInfoFormHtml(lead){
-  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),lead?.campus||leadDefaultCampusValue(),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),lead?.campus||leadDefaultCampusValue(),true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],leadNormalizeOwnerName(lead?.owner)||currentUser?.name||'',true)}</div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
 }
 function leadPayloadFromForm(){
   const displayName=document.getElementById('lead_wechatName')?.value?.trim?.()||'';
@@ -902,7 +920,7 @@ function leadPayloadFromForm(){
     consultType:FlowTennisBusinessTaxonomy.normalizeLeadDemandProduct(document.getElementById('lead_demandProduct')?.value||''),
     intentLevel:document.getElementById('lead_intentLevel')?.value||'',
     followupPriority:document.getElementById('lead_followupPriority')?.value||'',
-    owner:document.getElementById('lead_owner')?.value||'',
+    owner:leadNormalizeOwnerName(document.getElementById('lead_owner')?.value||''),
     profileNote:document.getElementById('lead_profileNote')?.value?.trim?.()||''
   };
 }
@@ -952,7 +970,7 @@ function leadFollowupDrawerFormHtml(lead,followup=null){
   const followupTypeOptions=leadFollowupTypeOptions();
   const statusOptions=leadStatusAfterOptions();
   const dealTypeValue=leadNormalizeDealType(followup?.dealType||followup?.conversionType||leadDealTypeText(lead));
-  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],followup?.followupBy||currentUser?.name||lead?.owner||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true,'toggleLeadDealTypeField')}</div><div class="tms-form-item" id="lead_dealType_host" style="${(followup?.statusAfter||leadSystemStatusText(lead))==='已成交'?'':'display:none'}"><label class="tms-form-label">成交类型</label>${renderStandardDropdownHtml('lead_dealType','成交类型',leadDealTypeOptions(),dealTypeValue,true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
+  return `<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],leadNormalizeOwnerName(followup?.followupBy)||currentUser?.name||leadNormalizeOwnerName(lead?.owner)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true,'toggleLeadDealTypeField')}</div><div class="tms-form-item" id="lead_dealType_host" style="${(followup?.statusAfter||leadSystemStatusText(lead))==='已成交'?'':'display:none'}"><label class="tms-form-label">成交类型</label>${renderStandardDropdownHtml('lead_dealType','成交类型',leadDealTypeOptions(),dealTypeValue,true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
 }
 function toggleLeadDealTypeField(){
   const host=document.getElementById('lead_dealType_host');
@@ -971,7 +989,7 @@ function leadFollowupPayloadFromForm(){
   if(statusAfter==='已成交'&&!dealType)throw new Error('已成交必须选择成交类型');
   return {
     followupAt:document.getElementById('lead_followupAt')?.value||today(),
-    followupBy:document.getElementById('lead_followupBy')?.value?.trim?.()||currentUser?.name||'',
+    followupBy:leadNormalizeOwnerName(document.getElementById('lead_followupBy')?.value||'')||currentUser?.name||'',
     followupType:document.getElementById('lead_followupType')?.value||'其他',
     communicationNote:document.getElementById('lead_communicationNote')?.value?.trim?.()||'',
     concern:document.getElementById('lead_concern')?.value?.trim?.()||'',
@@ -1082,7 +1100,7 @@ function openLeadFollowupFromList(leadId){
 function openLeadModal(leadId){
   const lead=leadById(leadId)||null;
   const campusValue=lead?.campus||leadDefaultCampusValue();
-  const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],lead?.owner||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
+  const body=`<div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">姓名</label><input class="finput tms-form-control" id="lead_wechatName" value="${esc(lead?.wechatName||lead?.displayName||'')}"></div><div class="tms-form-item"><label class="tms-form-label">电话</label><input class="finput tms-form-control" id="lead_phone" value="${esc(lead?.phone||'')}"></div><div class="tms-form-item"><label class="tms-form-label">水平</label>${leadLevelControlHtml(lead)}</div><div class="tms-form-item"><label class="tms-form-label">线索时间</label>${courtDateButtonHtml('lead_leadDate',leadDateInputValue(lead),'线索时间')}</div></div><div class="tms-form-row lead-form-row-4"><div class="tms-form-item"><label class="tms-form-label">来源</label>${renderStandardDropdownHtml('lead_source','来源',[{value:'',label:'-'},...leadSourceOptions()],leadSourceText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">所属校区</label>${renderStandardDropdownHtml('lead_campus','所属校区',leadCampusOptions(),campusValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">类型</label>${renderStandardDropdownHtml('lead_customerType','类型',[{value:'',label:'-'},...leadCustomerTypeOptions()],leadCustomerTypeText(lead)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">需求产品</label>${renderStandardDropdownHtml('lead_demandProduct','需求产品',[{value:'',label:'-'},...leadDemandProductOptions()],leadDemandProductText(lead)||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">意向等级</label>${renderStandardDropdownHtml('lead_intentLevel','意向等级',[{value:'',label:'-'},...leadIntentOptions()],lead?.intentLevel||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进优先级</label>${renderStandardDropdownHtml('lead_followupPriority','跟进优先级',[{value:'',label:'-'},...leadPriorityOptions()],lead?.followupPriority||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_owner','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],leadNormalizeOwnerName(lead?.owner)||currentUser?.name||'',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">基本信息</label><textarea class="finput tms-form-control" id="lead_profileNote">${esc(lead?.profileNote||'')}</textarea></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadSaveBtn" onclick="saveLead('${leadId||''}')">保存</button>`;
   openStandardModal({title:leadId?'编辑线索':'新增线索',bodyHtml:body,actionsHtml:actions,extraClass:'modal-complex modal-leads-form'});
 }
@@ -1122,7 +1140,7 @@ function openLeadFollowupModal(leadId,followupId=''){
   const followupTypeOptions=leadFollowupTypeOptions();
   const statusOptions=leadStatusAfterOptions();
   const dealTypeValue=leadNormalizeDealType(followup?.dealType||followup?.conversionType||leadDealTypeText(lead));
-  const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],followup?.followupBy||currentUser?.name||lead?.owner||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true,'toggleLeadDealTypeField')}</div><div class="tms-form-item" id="lead_dealType_host" style="${(followup?.statusAfter||leadSystemStatusText(lead))==='已成交'?'':'display:none'}"><label class="tms-form-label">成交类型</label>${renderStandardDropdownHtml('lead_dealType','成交类型',leadDealTypeOptions(),dealTypeValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">${followup?'编辑跟进':'新增跟进'}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">跟进时间</label>${courtDateButtonHtml('lead_followupAt',followup?leadFollowupDateInputValue(followup.followupAt||followup.createdAt,lead):today(),'跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">跟进人</label>${renderStandardDropdownHtml('lead_followupBy','跟进人',[{value:'',label:'-'},...leadOwnerOptions()],leadNormalizeOwnerName(followup?.followupBy)||currentUser?.name||leadNormalizeOwnerName(lead?.owner)||'',true)}</div><div class="tms-form-item"><label class="tms-form-label">跟进方式</label>${renderStandardDropdownHtml('lead_followupType','跟进方式',followupTypeOptions,followup?.followupType||'电话',true)}</div></div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">沟通内容</label><textarea class="finput tms-form-control" id="lead_communicationNote">${esc(followup?.communicationNote||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">用户顾虑</label><textarea class="finput tms-form-control" id="lead_concern">${esc(followup?.concern||'')}</textarea></div><div class="tms-form-item"><label class="tms-form-label">本次结论</label><textarea class="finput tms-form-control" id="lead_conclusion">${esc(followup?.conclusion||'')}</textarea></div></div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">当前状态</label>${renderStandardDropdownHtml('lead_statusAfter','当前状态',statusOptions,followup?.statusAfter||leadSystemStatusText(lead),true,'toggleLeadDealTypeField')}</div><div class="tms-form-item" id="lead_dealType_host" style="${(followup?.statusAfter||leadSystemStatusText(lead))==='已成交'?'':'display:none'}"><label class="tms-form-label">成交类型</label>${renderStandardDropdownHtml('lead_dealType','成交类型',leadDealTypeOptions(),dealTypeValue,true)}</div><div class="tms-form-item"><label class="tms-form-label">下次跟进时间</label>${courtDateButtonHtml('lead_nextFollowupAt',followup?.nextFollowupAt||lead?.nextFollowupAt||'','下次跟进时间')}</div><div class="tms-form-item"><label class="tms-form-label">下次动作</label><input class="finput tms-form-control" id="lead_nextAction" value="${esc(followup?.nextAction||lead?.nextAction||'')}"></div></div>`;
   const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadFollowupSaveBtn" onclick="saveLeadFollowup('${leadId}','${followupId||''}')">保存跟进</button>`;
   openStandardModal({title:followup?'编辑跟进':'新增跟进',bodyHtml:body,actionsHtml:actions,extraClass:'modal-wide'});
 }
@@ -1319,13 +1337,13 @@ function jumpToLeadDetail(leadId){
   setTimeout(()=>openLeadDetail(leadId),120);
 }
 function leadHasActiveSearchOrFilter(){
-  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadCustomerTypeFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStageFilter')?.value||document.getElementById('leadOwnerFilter')?.value||campus!=='all');
+  return !!((document.getElementById('leadSearch')?.value||'').trim()||document.getElementById('leadSourceFilter')?.value||document.getElementById('leadCustomerTypeFilter')?.value||document.getElementById('leadConsultFilter')?.value||document.getElementById('leadStageFilter')?.value||document.getElementById('leadDealTypeFilter')?.value||document.getElementById('leadOwnerFilter')?.value||campus!=='all');
 }
 function leadEmptyStateHtml(){
   const filtered=leadHasActiveSearchOrFilter();
   const title=filtered?'没有匹配的线索':'暂无线索';
   const desc=filtered?'调整搜索或筛选后再试':'点击右上角新增线索开始录入';
-  return `<tr><td colspan="15"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
+  return `<tr><td colspan="16"><div class="tms-empty-state"><div class="tms-empty-title">${title}</div><div class="tms-empty-desc">${desc}</div></div></td></tr>`;
 }
 function renderLeadMobileCards(list){
   const host=document.getElementById('leadMobileCards');
@@ -1342,10 +1360,10 @@ function renderLeadMobileCards(list){
         <div><strong>${esc(leadWechatText(lead))}</strong><span>${esc(leadDateDisplayText(lead))}</span></div>
         ${renderLeadTag(leadStageDisplayText(lead),'stage')}
       </div>
-      <div class="admin-h5-card-tags">${renderLeadTag(leadCustomerTypeText(lead),'customerType')}${renderLeadTag(leadDemandProductText(lead),'demandProduct')}${renderLeadTag(leadPriorityText(lead),'priority')}</div>
+      <div class="admin-h5-card-tags">${renderLeadTag(leadCustomerTypeText(lead),'customerType')}${renderLeadTag(leadDemandProductText(lead),'demandProduct')}${renderLeadTag(leadDealTypeText(lead)||'-','dealType')}${renderLeadPriorityCell(lead)}</div>
       <div class="admin-h5-card-grid">
         <span><b>来源</b>${esc(leadSourceText(lead)||'-')}</span>
-        <span><b>跟进人</b>${esc(lead?.owner||'-')}</span>
+        <span><b>跟进人</b>${esc(leadOwnerText(lead))}</span>
         <span><b>体验课</b>${esc(trialDate||'-')}</span>
         <span><b>成交教练</b>${esc(lead?.formalCoach||'-')}</span>
       </div>
@@ -1391,7 +1409,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(leadWechatText(lead))}</div></td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadTag(leadPriorityText(lead),'priority')}</td><td>${renderStandardCellText(lead?.owner||'-',!lead?.owner)}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(leadWechatText(lead))}</div></td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderLeadTag(leadDealTypeText(lead)||'-','dealType')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadPriorityCell(lead)}</td><td>${renderStandardCellText(leadOwnerText(lead),leadOwnerText(lead)==='-')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   renderLeadMobileCards(slice);
   const info=document.getElementById('leadPagerInfo');
