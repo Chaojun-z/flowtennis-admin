@@ -423,6 +423,12 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
   const schedulesById = new Map((data.schedule || []).map(row => [text(row.id), row]));
   const rowsByStudent = new Map();
   const ledgerScheduleIds = new Set();
+  const ledgerScheduleFactKeys = new Set();
+  const lessonFactKey = (studentId, row = {}) => [
+    text(studentId),
+    dateOnly(row.startTime || row.relatedDate || row.scheduleTime || row.createdAt),
+    text(row.coach || row.coachName)
+  ].join('|');
   const push = (studentId, row) => {
     const id = text(studentId);
     if (!id) return;
@@ -441,6 +447,13 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
       const trial = courseRowIsTrial(row) || courseRowIsTrial(entitlement) || courseRowIsTrial(purchase) || courseRowIsTrial(schedule);
       if (trial !== includeTrial || courseRowIsCompanion(row) || courseRowIsCompanion(entitlement) || courseRowIsCompanion(purchase) || courseRowIsCompanion(schedule)) return;
       if (text(row.scheduleId)) ledgerScheduleIds.add(text(row.scheduleId));
+      ledgerScheduleFactKeys.add(lessonFactKey(studentId, {
+        startTime: schedule.startTime,
+        relatedDate: row.relatedDate,
+        scheduleTime: row.scheduleTime,
+        createdAt: row.createdAt,
+        coach: schedule.coach || row.coach || entitlement.ownerCoach || purchase.ownerCoach
+      }));
       const sortTime = text(schedule.startTime || row.relatedDate || row.scheduleTime || row.createdAt);
       push(studentId, {
         kind: 'ledger',
@@ -458,12 +471,12 @@ function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false }
     });
 
   (data.schedule || [])
-    .filter(row => activeStatus(row) && !courseRowIsCompanion(row))
-    .filter(row => ['已完成', '已到课', '已消课', '已结束', 'completed', 'done'].includes(text(row.status || row.systemStatus)))
+    .filter(row => teachingScheduleLessonFact(row, data.now || new Date()))
     .filter(row => !ledgerScheduleIds.has(text(row.id)) && courseRowIsTrial(row) === includeTrial)
     .forEach(row => {
       const sortTime = text(row.startTime || row.endTime || row.createdAt);
       parseArr(row.studentIds).concat(text(row.studentId)).map(text).filter(Boolean).forEach(studentId => {
+        if (ledgerScheduleFactKeys.has(lessonFactKey(studentId, row))) return;
         push(studentId, {
           kind: 'schedule',
           sortTime,

@@ -338,9 +338,10 @@ function renderStudentToolbarFilters(){
   if(tagHost)tagHost.innerHTML=renderStudentTagCascader(baseRows);
 }
 function studentLastLessonDate(stu){
-  if(stu?.detailRecentLessonDate)return String(stu.detailRecentLessonDate||'').slice(0,10);
-  const row=schedules.filter(x=>scheduleHasStudent(x,stu)&&x.startTime&&effectiveScheduleStatus(x)==='已结束').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime))[0];
-  return row?.startTime?.slice(0,10)||'';
+  const explicit=String(stu?.detailRecentLessonDate||'').slice(0,10);
+  if(explicit)return explicit;
+  const row=Array.isArray(stu?.detailLessonRecordRows)?stu.detailLessonRecordRows[0]:null;
+  return String(row?.time||row?.sortTime||'').slice(0,10);
 }
 function studentPackagePurchaseDate(stu){
   const sid=String(stu?.id||'');
@@ -590,7 +591,7 @@ function getFilteredStudents(){
   });
 }
 function studentCompletedLessonCount(stu){
-  return lessonUnitsText(studentCompletedLessonUnits(stu));
+  return studentUnifiedCompletedLessonCount(stu);
 }
 function studentPageTrialConvertedByPurchase(schedule){
   const studentId=parseArr(schedule?.studentIds)[0]||scheduleFeedback(schedule)?.studentId||schedule?.studentId||'';

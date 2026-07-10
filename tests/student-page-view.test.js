@@ -88,6 +88,8 @@ assert.doesNotMatch(fnBody('studentPageStats'), /standardSummary\.total\|\|base\
 assert.match(source, /function studentUnifiedRecordForId\(/, 'student detail and edit flows should resolve the same unified student view row used by the list');
 assert.match(fnBody('openStudentDetail'), /studentUnifiedRecordForId\(id\)/, 'student detail should use the unified student view row instead of raw students as the display source');
 assert.match(fnBody('openStudentModal'), /studentUnifiedRecordForId\(id\)/, 'student edit default values should use the unified student view row instead of raw students');
+assert.doesNotMatch(fnBody('studentLastLessonDate'), /schedules\.filter/, 'student recent lesson must come from backend unified detail rows, not frontend schedule scanning');
+assert.doesNotMatch(fnBody('studentCompletedLessonCount'), /studentCompletedLessonUnits/, 'student cumulative lesson count must come from backend unified completedLessons, not frontend schedule or ledger scanning');
 assert.doesNotMatch(fnBody('studentCampusValuesForList'), /entitlements\.filter|purchases\.filter|packages\.filter|schedules\.filter/, 'student campus filter should read the unified student row campus fields instead of scanning raw business tables');
 assert.doesNotMatch(source, /function studentFinanceRowsForBase\(|function studentFinanceRowIsCourse\(|function studentFinanceRowIsReceipt\(|function studentFinanceSum\(/, 'student page should not keep unused frontend finance summary calculators');
 assert.match(fnBody('studentEntitlementSummaryHtml'), /detailPackageOrderRows/, 'student package detail should render from backend unified student detail rows');

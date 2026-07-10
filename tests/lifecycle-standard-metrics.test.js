@@ -258,6 +258,21 @@ assert.strictEqual(cnPackageRow.paymentModeLabel, '课包学员', '中文“课�
 assert.strictEqual(cnPackageRow.activityStatusLabel, '近30天活跃', '活跃状态必须由后端统一输出并识别课包核销上课事实');
 assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成旧的稳定单次付费');
 assert.strictEqual(cnPackageRow.lessonVolumeLabel, '-', '历史课时标签必须由后端统一输出');
+const pastScheduledDetailRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-past-scheduled');
+assert.deepStrictEqual(
+  pastScheduledDetailRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
+  [['schedule', '2026-07-01 10:00-11:00', '私教课', -1]],
+  '已过时间且未取消的排课既然计入累计上课，也必须由后端统一明细输出'
+);
+const stableSingleDetailRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-stable-single');
+assert.deepStrictEqual(
+  stableSingleDetailRow?.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.lessonDelta]),
+  [
+    ['schedule', '2026-07-02 10:00-11:00', '私教课', -1],
+    ['schedule', '2026-06-20 10:00-11:00', '私教课', -1]
+  ],
+  '状态为已下课的单次课必须进入后端统一上课明细'
+);
 assert.strictEqual(
   hardStandard.views.activeStudents.find(row => row.studentId === 'hard-renewal-due')?.studentStatusLabel,
   '课包待续费',
