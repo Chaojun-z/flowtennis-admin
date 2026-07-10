@@ -23,15 +23,21 @@ vm.runInContext(fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/
 vm.runInContext(fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/leads.js'), 'utf8'), context);
 
 context.standardLifecycleMetrics = {
+  teachingSummary: {
+    historicalStudentCount: 5,
+    activeStudentCount: 3,
+    trialAttendedStudentCount: 2,
+    trialAttendedToFormalPurchaseCount: 1
+  },
   metrics: {
     validLeads: { value: 5 },
     courseChainStudents: { value: 3, rateText: '75%' },
     formalStudents: { value: 2, rateText: '50%' },
     historicalStudents: { value: 5, rateText: '100%' },
     activeStudents: { value: 3, rateText: '60%' },
-    trialPathStudents: { value: 2, rateText: '40%' },
-    trialPathDeals: { value: 1, rateText: '50%' },
-    trialPathPending: { value: 1, rateText: '50%' }
+    trialPathStudents: { value: 99, rateText: '99%' },
+    trialPathDeals: { value: 88, rateText: '88%' },
+    trialPathPending: { value: 77, rateText: '77%' }
   }
 };
 context.teachingStudentViews = { summary: {} };
@@ -50,8 +56,8 @@ assert.deepStrictEqual(
     historicalStudentRate: stats.historicalStudentRate,
     activeStudents: stats.activeStudents,
     activeStudentRate: stats.activeStudentRate,
-    trialBooked: stats.trialBooked,
-    trialPendingConversion: stats.trialPendingConversion
+    trialAttended: stats.trialAttended,
+    trialAttendedToFormalPurchase: stats.trialAttendedToFormalPurchase
   },
   {
     total: 4,
@@ -59,10 +65,10 @@ assert.deepStrictEqual(
     historicalStudentRate: '125%',
     activeStudents: 3,
     activeStudentRate: '60%',
-    trialBooked: 2,
-    trialPendingConversion: 1
+    trialAttended: 2,
+    trialAttendedToFormalPurchase: 1
   },
-  '线索池顶部线索数必须和当前后端线索列表一致，不能被生命周期 validLeads 覆盖'
+  '线索池顶部必须读后端显式教学汇总字段，不能被旧 validLeads 或 trialPath 指标覆盖'
 );
 
 console.log('leads runtime standard metrics tests passed');

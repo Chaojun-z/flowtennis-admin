@@ -2765,13 +2765,13 @@ function buildOperationsMetrics(data = {}, options = {}) {
     customerLifecycleRows: teachingCustomerLifecycleRows
   });
   const courseFunnel = teachingStandardLifecycleMetrics.funnels.courseChain || [];
-  const teachingStudentViews = buildTeachingStudentViews(teachingCustomerLifecycleRows);
-  const teachingSummary = teachingStudentViews.summary || {};
+  const teachingSummary = teachingStandardLifecycleMetrics.teachingSummary || {};
+  const teachingStudentViews = teachingStandardLifecycleMetrics.views || {};
   const courseDealCustomers = Number(teachingSummary.courseDealCustomers) || 0;
   const courseStudentCount = Number(teachingSummary.courseStudentCount) || 0;
-  const trialPathStudents = Number(teachingSummary.trialPathStudents) || 0;
-  const trialPathDealCustomers = Number(teachingSummary.trialPathDealCustomers) || 0;
-  const trialPathPendingCustomers = Number(teachingSummary.trialPathPendingCustomers) || 0;
+  const trialPathStudents = Number(teachingSummary.trialAttendedStudentCount || teachingSummary.trialPathStudents) || 0;
+  const trialPathDealCustomers = Number(teachingSummary.trialAttendedToFormalPurchaseCount || teachingSummary.trialPathDealCustomers) || 0;
+  const trialPathPendingCustomers = Number(teachingSummary.trialAttendedWithoutFormalCount || teachingSummary.trialPathPendingCustomers) || 0;
   const directCourseCustomers = Number(teachingSummary.directCourseCustomers) || 0;
   const sourceRows = rawLeadConversion.sourceRows;
   const periodRepurchase = buildPeriodRepurchaseMetrics(rangedData.purchases || []);
@@ -3033,10 +3033,10 @@ function buildOperationsMetrics(data = {}, options = {}) {
         convertedLeads: { title: '已转化线索', value: convertedLeads, unit: '条' },
         courseStudents: { title: '普通学员', value: courseStudentCount, unit: '人' },
         courseDealCustomers: { title: '课包成交客户', value: courseDealCustomers, unit: '人' },
-        trialPathStudents: { title: '体验路径学员', value: trialPathStudents, unit: '人' },
-        trialPathDealCustomers: { title: '体验路径成交', value: trialPathDealCustomers, unit: '人' },
-        trialPathPendingCustomers: { title: '体验路径未成交', value: trialPathPendingCustomers, unit: '人' },
-        trialToCourseCustomers: { title: '体验路径成交', value: trialPathDealCustomers, unit: '人' },
+        trialPathStudents: { title: '上过体验课', value: trialPathStudents, unit: '人' },
+        trialPathDealCustomers: { title: '体验后买正式课', value: trialPathDealCustomers, unit: '人' },
+        trialPathPendingCustomers: { title: '上过体验未买正式课', value: trialPathPendingCustomers, unit: '人' },
+        trialToCourseCustomers: { title: '体验后买正式课', value: trialPathDealCustomers, unit: '人' },
         directCourseCustomers: { title: '直接课程成交', value: directCourseCustomers, unit: '人' },
         leadConversionRate: { title: '线索转化率', value: rawLeadConversion.leadConversionRate, unit: '%' },
         sameProjectRenewalRate: { title: '同项目续费率', value: renewal.sameProjectRenewalRate, unit: '%' }

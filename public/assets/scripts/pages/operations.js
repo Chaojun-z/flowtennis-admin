@@ -435,7 +435,7 @@ function operationsOverviewConversionRisk(conversion = {}) {
     <div class="operations-overview-risk-board">
       ${operationsInsightCard('neutral', '课程链入口', '有效线索 → 普通学员', `转化 ${courseEntry.rateText || '0%'}`)}
       ${operationsInsightCard('good', '正式成交', '普通学员 → 正式学员', `转化 ${formal.transitionRateText || formal.rateText || '0%'}`)}
-      ${operationsInsightCard('warn', '体验路径成交', '体验路径学员 → 体验路径成交', `转化 ${trialDeal.rateText || '0%'}`)}
+      ${operationsInsightCard('warn', '体验后买正式课', '上过体验课 → 体验后买正式课', `转化 ${trialDeal.rateText || '0%'}`)}
     </div>
   </section>`;
 }
@@ -973,7 +973,7 @@ function operationsKpiRatioText(point = {}, key = '') {
   if (key === 'renewalRate') return `复购 ${fmt(numerator)} / 付费 ${fmt(denominator)}`;
   if (key === 'totalDealRate') return `总成交 ${fmt(numerator)} / 线索 ${fmt(denominator)}`;
   if (key === 'courseDealRate') return `正式课包 ${fmt(numerator)} / 线索 ${fmt(denominator)}`;
-  if (key === 'trialPathDealRate') return `体验成交 ${fmt(numerator)} / 体验路径 ${fmt(denominator)}`;
+  if (key === 'trialPathDealRate') return `体验后买正式课 ${fmt(numerator)} / 上过体验课 ${fmt(denominator)}`;
   if (key === 'courseRepeatRate') return `课包复购 ${fmt(numerator)} / 首购 ${fmt(denominator)}`;
   if (key === 'courtRepeatRate') return `复订 ${fmt(numerator)} / 首次订场 ${fmt(denominator)}`;
   return `${fmt(numerator)} / ${fmt(denominator)}`;
@@ -1069,7 +1069,7 @@ function operationsConversionKpiCards(conversion = {}) {
   const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
     rateCard('总成交率（课程/订场/订场会员）', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
-    rateCard('体验路径成交率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
+    rateCard('体验后买正式课率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
     rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
     rateCard('订场复订率', Number(conversion.courtChain?.courtRepeatRate) || 0, 'courtRepeatRate', 'retention')
   ];
@@ -1250,7 +1250,7 @@ function renderConversionFunnelModule(data, conversion) {
   const trialRows = operationsFunnelRows(conversion, 'trial');
   const courtRows = operationsFunnelRows(conversion, 'court');
   const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel', courseRows);
-  const trialCard = renderConversionFunnelCard('体验路径漏斗', 'operationsTrialFunnel', trialRows, operationsAuxMetric('体验路径未成交', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
+  const trialCard = renderConversionFunnelCard('体验课上课漏斗', 'operationsTrialFunnel', trialRows, operationsAuxMetric('上过体验未买正式课', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
   const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', courtRows, operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
   return `<div class="operations-dashboard-block operations-funnel-block">
     <div class="operations-conversion-funnel-grid">

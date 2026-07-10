@@ -8,7 +8,7 @@ function syncViewportMode(){
 let leads=[],leadFollowups=[];
 let courts=[],students=[],products=[],packages=[],purchases=[],entitlements=[],entitlementLedger=[],financialLedger=[],membershipPlans=[],membershipAccounts=[],membershipOrders=[],membershipBenefitLedger=[],membershipAccountEvents=[],pricePlans=[],plans=[],schedules=[],coaches=[],classes=[],campuses=[],feedbacks=[],coachProposals=[],adminUsers=[],matches=[];
 let customerLifecycleRows=[];
-let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+let teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
 let standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
 let packageBoardColumnOrder=[];
 let financeOverviewData=null,financeNormalizedLedgerRows=[],financeSettlementSummaryRows=[];
@@ -656,7 +656,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       purchaseUnifiedView=data.purchaseUnifiedView||{rows:[]};
       packageUnifiedView=data.packageUnifiedView||{rows:[]};
@@ -672,7 +672,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     }
     if(name==='lifecycleMetricsPage'){
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
-      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
+      teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('lifecycleMetricsPage',requestKey);
@@ -797,7 +797,7 @@ function clearLoadedData(){
   plans=[];schedules=[];coaches=[];classes=[];campuses=[];feedbacks=[];coachProposals=[];adminUsers=[];matches=[];adminUsersLoaded=false;
   financeOverviewData=null;financeNormalizedLedgerRows=[];financeSettlementSummaryRows=[];financePrepaidView={rows:[],summary:{}};membershipFinanceSummary=null;operationsPageData=null;
   coachOpsUnifiedView={rows:[]};purchaseUnifiedView={rows:[]};packageUnifiedView={rows:[]};entitlementUnifiedView={rows:[]};
-  customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
+  customerLifecycleRows=[];teachingStudentViews={historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};standardLifecycleMetrics={metrics:{},funnels:{},views:{}};
   courtAccountListViewData=null;courtAccountListViewCompareData=null;
   courtAccountListViewRequestKey='';
   packageBoardColumnOrder=[];

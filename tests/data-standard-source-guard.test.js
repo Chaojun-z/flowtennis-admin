@@ -67,13 +67,19 @@ assertFunctionGuard({
   file: 'public/assets/scripts/pages/students.js',
   name: 'studentPageStats',
   required: [/studentStandardSummaryForMode\(\)/],
-  forbidden: [/studentFinanceStatsForBase\(base\)/, /purchases\.filter/, /entitlements\.filter/, /aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/, /amountPaid/, /finalAmount/]
+  forbidden: [/studentFinanceStatsForBase\(base\)/, /purchases\.filter/, /entitlements\.filter/, /aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/, /amountPaid/, /finalAmount/, /tagCounts/, /historicalTagCounts/, /activeTagCounts/]
 });
 assert.doesNotMatch(
   read('public/assets/scripts/pages/students.js'),
   /function studentFinanceStatsForBase\(|function studentLifecycleStats\(/,
   'student page must not keep alternate local calculators for top card metrics'
 );
+assertFunctionGuard({
+  file: 'public/assets/scripts/pages/leads.js',
+  name: 'leadStatsData',
+  required: [/leadTeachingSummaryValue\('historicalStudentCount'\)/, /leadTeachingSummaryValue\('activeStudentCount'\)/, /leadTeachingSummaryValue\('trialAttendedStudentCount'\)/, /leadTeachingSummaryValue\('trialAttendedToFormalPurchaseCount'\)/],
+  forbidden: [/leadStandardMetricValue\('trialPathStudents'\)/, /leadStandardMetricValue\('trialPathDeals'\)/, /leadStandardMetricValue\('trialPathPending'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/]
+});
 
 [
   'studentPackageRecordIsTrial',
@@ -262,8 +268,8 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/const total=Array\.isArray\(list\)\?list\.length:0/, /leadStandardMetricValue\('historicalStudents'\)/, /leadStandardMetricValue\('activeStudents'\)/],
-  forbidden: [/leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/, /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
+  required: [/const total=Array\.isArray\(list\)\?list\.length:0/, /leadTeachingSummaryValue\('historicalStudentCount'\)/, /leadTeachingSummaryValue\('activeStudentCount'\)/],
+  forbidden: [/leadStandardMetricValue\('historicalStudents'\)/, /leadStandardMetricValue\('activeStudents'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/, /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
 });
 
 [

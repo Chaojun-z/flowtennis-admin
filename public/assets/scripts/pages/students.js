@@ -81,7 +81,7 @@ const STUDENT_PACKAGE_STATUS_OPTIONS=['未买过课包','课包有余额','课�
 const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+单次付费'];
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
-const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
+const STUDENT_LIFECYCLE_STATUS_OPTIONS=['已转单次付费','有余额未活跃'];
 const STUDENT_TAG_FILTER_GROUPS=[
   {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
   {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
@@ -576,51 +576,39 @@ function studentStandardMetricValue(key){
 function studentStandardSummaryForMode(){
   const standard=typeof standardLifecycleMetrics==='object'&&standardLifecycleMetrics?standardLifecycleMetrics:{};
   const summary=standard.teachingSummary||teachingStudentViews?.summary||{};
-  const tagCounts=studentListViewMode()==='trial'?summary.historicalTagCounts:summary.activeTagCounts;
   const historicalSummaryCount=Number(summary.historicalStudentCount);
   const activeSummaryCount=Number(summary.activeStudentCount);
   const historicalStudentCount=Number.isFinite(historicalSummaryCount)?historicalSummaryCount:Number(teachingStudentViews?.historicalStudents?.length)||0;
   const activeStudentCount=Number.isFinite(activeSummaryCount)?activeSummaryCount:Number(teachingStudentViews?.activeStudents?.length)||0;
   if(studentListViewMode()==='trial')return {
     total:historicalStudentCount,
-    tagCounts:tagCounts||{},
-    trialPathCount:studentStandardMetricValue('trialPathStudents')||Number(summary.trialPathStudents)||0,
-    trialPathDealCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0,
-    trialPathPendingCount:studentStandardMetricValue('trialPathPending')||Number(summary.trialPathPendingCustomers)||0,
-    directCourseDealCount:studentStandardMetricValue('directCourseDeals')||Number(summary.directCourseCustomers)||0,
-    trialStudentCount:Number(summary.trialStudentCount)||0,
-    trialConvertedCount:studentStandardMetricValue('trialPathDeals')||Number(summary.trialPathDealCustomers)||0
+    historicalTrialAttendedCount:Number(summary.historicalTrialAttendedCount)||0,
+    historicalFormalAttendedCount:Number(summary.historicalFormalAttendedCount)||0,
+    historicalTrialWithoutFormalCount:Number(summary.historicalTrialWithoutFormalCount)||0,
+    historicalFormalLesson30Count:Number(summary.historicalFormalLesson30Count)||0
   };
   return {
     total:activeStudentCount,
-    tagCounts:tagCounts||{},
-    packageStudentCount:Number(summary.formalStudentCount)||0,
-    activePackageStudentCount:Number(summary.activePackageStudentCount)||0,
-    purchaseCount:Number(summary.coursePurchaseCount)||0,
-    courseRepeatCount:studentStandardMetricValue('courseRepeatBuyers')||Number(summary.courseRepeatCount)||0,
-    totalIncome:Number(summary.totalIncome)||0,
-    recognized:Number(summary.recognized)||0,
-    packageBalance:Number(summary.packageBalance)||0
+    activeFormalLesson30Count:Number(summary.activeFormalLesson30Count)||0,
+    activeFormalLesson90Count:Number(summary.activeFormalLesson90Count)||0,
+    activePackageBalanceCount:Number(summary.activePackageBalanceCount)||0,
+    activePackageLowCount:Number(summary.activePackageLowCount)||0
   };
 }
 function studentPageStats(base){
   const standardSummary=studentStandardSummaryForMode();
   const unifiedTotal=Number(standardSummary.total);
-  const tags=standardSummary.tagCounts||{};
-  const activity=tags.activityStatus||{};
-  const packageStatus=tags.packageStatus||{};
-  const lifecycle=tags.lifecycleStatus||{};
   return {
     ...standardSummary,
     total:Number.isFinite(unifiedTotal)?unifiedTotal:0,
-    near30ActiveCount:Number(activity['近30天活跃'])||0,
-    packageActiveCount:(Number(packageStatus['课包有余额'])||0)+(Number(packageStatus['课包即将耗尽'])||0),
-    packageLowCount:Number(packageStatus['课包即将耗尽'])||0,
-    stableSinglePayCount:Number(lifecycle['稳定单次付费'])||0,
-    neverFormalCount:Number(activity['从未正式上课'])||0,
-    renewalDueCount:Number(lifecycle['课包待续费'])||0,
-    trialBookedOnlyCount:0,
-    trialAttendedPendingCount:0
+    historicalTrialAttendedCount:Number(standardSummary.historicalTrialAttendedCount)||0,
+    historicalFormalAttendedCount:Number(standardSummary.historicalFormalAttendedCount)||0,
+    historicalTrialWithoutFormalCount:Number(standardSummary.historicalTrialWithoutFormalCount)||0,
+    historicalFormalLesson30Count:Number(standardSummary.historicalFormalLesson30Count)||0,
+    activeFormalLesson30Count:Number(standardSummary.activeFormalLesson30Count)||0,
+    activeFormalLesson90Count:Number(standardSummary.activeFormalLesson90Count)||0,
+    activePackageBalanceCount:Number(standardSummary.activePackageBalanceCount)||0,
+    activePackageLowCount:Number(standardSummary.activePackageLowCount)||0
   };
 }
 function studentPercentText(value,total){
@@ -631,17 +619,17 @@ function studentPercentText(value,total){
 function studentTopStatsCards(stats){
   if(studentListViewMode()==='trial')return [
     {label:'历史学员',valueHtml:stats.total,sub:'累计来上过课'},
-    {label:'近30天活跃',valueHtml:stats.near30ActiveCount||0,percent:studentPercentText(stats.near30ActiveCount||0,stats.total),sub:'近30天活跃 / 历史学员'},
-    {label:'课包有余额',valueHtml:stats.packageActiveCount||0,percent:studentPercentText(stats.packageActiveCount||0,stats.total),sub:'有余额 / 历史学员'},
-    {label:'稳定单次付费',valueHtml:stats.stableSinglePayCount||0,percent:studentPercentText(stats.stableSinglePayCount||0,stats.total),sub:'稳定单次付费 / 历史学员'},
-    {label:'从未正式上课',valueHtml:stats.neverFormalCount||0,percent:studentPercentText(stats.neverFormalCount||0,stats.total),sub:'无正式课 / 历史学员'}
+    {label:'上过体验课',valueHtml:stats.historicalTrialAttendedCount||0,percent:studentPercentText(stats.historicalTrialAttendedCount||0,stats.total),sub:'上过体验课 / 历史学员'},
+    {label:'上过正式课',valueHtml:stats.historicalFormalAttendedCount||0,percent:studentPercentText(stats.historicalFormalAttendedCount||0,stats.total),sub:'上过正式课 / 历史学员'},
+    {label:'上过体验未上正式课',valueHtml:stats.historicalTrialWithoutFormalCount||0,percent:studentPercentText(stats.historicalTrialWithoutFormalCount||0,stats.total),sub:'体验未上正式课 / 历史学员'},
+    {label:'近30天正式课活跃',valueHtml:stats.historicalFormalLesson30Count||0,percent:studentPercentText(stats.historicalFormalLesson30Count||0,stats.total),sub:'近30天正式课 / 历史学员'}
   ];
   return [
     {label:'在期学员',valueHtml:stats.total,sub:'当前仍有运营价值'},
-    {label:'近30天活跃',valueHtml:stats.near30ActiveCount||0,percent:studentPercentText(stats.near30ActiveCount||0,stats.total),sub:'近30天活跃 / 在期学员'},
-    {label:'课包有余额',valueHtml:stats.packageActiveCount||0,percent:studentPercentText(stats.packageActiveCount||0,stats.total),sub:'有余额 / 在期学员'},
-    {label:'课包即将耗尽',valueHtml:stats.packageLowCount||0,percent:studentPercentText(stats.packageLowCount||0,stats.total),sub:'剩余 1-2 节'},
-    {label:'课包待续费',valueHtml:stats.renewalDueCount||0,percent:studentPercentText(stats.renewalDueCount||0,stats.total),sub:'待续费 / 在期学员'}
+    {label:'近30天正式课活跃',valueHtml:stats.activeFormalLesson30Count||0,percent:studentPercentText(stats.activeFormalLesson30Count||0,stats.total),sub:'近30天正式课 / 在期学员'},
+    {label:'近90天正式课活跃',valueHtml:stats.activeFormalLesson90Count||0,percent:studentPercentText(stats.activeFormalLesson90Count||0,stats.total),sub:'近90天正式课 / 在期学员'},
+    {label:'课包有余额',valueHtml:stats.activePackageBalanceCount||0,percent:studentPercentText(stats.activePackageBalanceCount||0,stats.total),sub:'有余额 / 在期学员'},
+    {label:'课包即将耗尽',valueHtml:stats.activePackageLowCount||0,percent:studentPercentText(stats.activePackageLowCount||0,stats.total),sub:'剩余 1-2 节 / 在期学员'}
   ];
 }
 function studentStatSplitCard(title,primary,secondary,caption){

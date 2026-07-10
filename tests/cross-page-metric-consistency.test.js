@@ -160,14 +160,14 @@ const teachingLifecycleRows = buildCustomerLifecycleRows(teachingSample);
 const teachingPlatform = buildPlatformMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows });
 const teachingOperations = buildOperationsMetrics({ ...teachingSample, customerLifecycleRows: teachingLifecycleRows }, { now: new Date('2026-06-18 00:00:00') });
 assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.courseStudents), '教学链读模型必须提供普通学员 courseStudents');
-assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathStudents), '教学链读模型必须提供体验路径学员 trialPathStudents');
-assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathDealStudents), '教学链读模型必须提供体验路径成交 trialPathDealStudents');
-assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialPathPendingStudents), '教学链读模型必须提供体验路径未成交 trialPathPendingStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialAttendedStudents), '教学链读模型必须提供上过体验课 trialAttendedStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialAttendedToFormalPurchaseStudents), '教学链读模型必须提供体验后买正式课 trialAttendedToFormalPurchaseStudents');
+assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.trialAttendedWithoutFormalStudents), '教学链读模型必须提供上过体验未买正式课 trialAttendedWithoutFormalStudents');
 assert.ok(Array.isArray(teachingPlatform.teachingStudentViews.directCourseDealStudents), '教学链读模型必须提供直接成交 directCourseDealStudents');
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.courseStudents.map(row => row.studentId).sort(),
   ['stu-attended-only', 'stu-booked-only', 'stu-direct-course', 'stu-direct-course-manual-trial', 'stu-manual-course', 'stu-scheduled-course', 'stu-trial-course'],
-  '普通学员视图必须包含体验路径、已转化学员、正式课包学员和有排课记录学员'
+  '普通学员视图必须包含上过体验课、已转化学员、正式课包学员和有排课记录学员'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.formalStudents.map(row => row.studentId).sort(),
@@ -177,27 +177,27 @@ assert.deepStrictEqual(
 assert.strictEqual(
   teachingPlatform.teachingStudentViews.courseStudents.some(row => row.studentId === 'stu-direct-course'),
   true,
-  '直接购买正式课包但没有体验路径事实的人，也必须进入普通学员'
+  '直接购买正式课包但没有上过体验课事实的人，也必须进入普通学员'
 );
 assert.deepStrictEqual(
-  teachingPlatform.teachingStudentViews.trialPathStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-booked-only', 'stu-trial-course'],
-  '体验路径学员只包含有体验课排课/体验课包证据的人，不包含只有线索手工邀约时间的直接正式成交'
+  teachingPlatform.teachingStudentViews.trialAttendedStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only', 'stu-trial-course'],
+  '上过体验课只包含排课表里有效已发生体验课的人，不包含待上课、体验购买或手工邀约'
 );
 assert.deepStrictEqual(
-  teachingPlatform.teachingStudentViews.trialPathDealStudents.map(row => row.studentId).sort(),
+  teachingPlatform.teachingStudentViews.trialAttendedToFormalPurchaseStudents.map(row => row.studentId).sort(),
   ['stu-trial-course'],
-  '体验路径成交只统计体验路径学员中买正式课包的人'
+  '体验后买正式课只统计上过体验课且买正式课包的人'
 );
 assert.deepStrictEqual(
   teachingPlatform.teachingStudentViews.directCourseDealStudents.map(row => row.studentId).sort(),
   ['stu-direct-course', 'stu-direct-course-manual-trial'],
-  '直接成交学员只统计没有体验路径但买正式课包的人'
+  '直接成交学员只统计没有上过体验课但买正式课包的人'
 );
 assert.deepStrictEqual(
-  teachingPlatform.teachingStudentViews.trialPathPendingStudents.map(row => row.studentId).sort(),
-  ['stu-attended-only', 'stu-booked-only'],
-  '体验路径未成交只统计有体验路径但未买正式课包的人'
+  teachingPlatform.teachingStudentViews.trialAttendedWithoutFormalStudents.map(row => row.studentId).sort(),
+  ['stu-attended-only'],
+  '上过体验未买正式课只统计有体验课排课事实但未买正式课包的人'
 );
 [
   ['courseStudentCount', 7],
@@ -206,9 +206,9 @@ assert.deepStrictEqual(
   ['historicalStudentCount', 3],
   ['activeStudentCount', 1],
   ['courseDealCustomers', 3],
-  ['trialPathStudents', 3],
-  ['trialPathDealCustomers', 1],
-  ['trialPathPendingCustomers', 2],
+  ['trialAttendedStudentCount', 2],
+  ['trialAttendedToFormalPurchaseCount', 1],
+  ['trialAttendedWithoutFormalCount', 1],
   ['trialToCourseCustomers', 1],
   ['directCourseCustomers', 2],
   ['coursePurchaseCount', 3],
@@ -235,6 +235,26 @@ assert.ok(
   '教学链汇总必须提供历史学员和在期学员的后端标签计数'
 );
 assert.strictEqual(
+  teachingPlatform.teachingStudentViews.summary.historicalStudentCount,
+  teachingPlatform.standardLifecycleMetrics.teachingSummary.historicalStudentCount,
+  '历史学员页和线索池必须读取同一个后端历史学员总数'
+);
+assert.strictEqual(
+  teachingPlatform.teachingStudentViews.summary.activeStudentCount,
+  teachingPlatform.standardLifecycleMetrics.teachingSummary.activeStudentCount,
+  '在期学员页和线索池必须读取同一个后端在期学员总数'
+);
+assert.strictEqual(
+  teachingPlatform.standardLifecycleMetrics.teachingSummary.trialAttendedStudentCount,
+  teachingPlatform.teachingStudentViews.trialAttendedStudents.length,
+  '线索池上过体验课必须读取后端排课事实集合'
+);
+assert.strictEqual(
+  teachingPlatform.standardLifecycleMetrics.teachingSummary.trialAttendedToFormalPurchaseCount,
+  teachingPlatform.teachingStudentViews.trialAttendedToFormalPurchaseStudents.length,
+  '线索池体验后买正式课必须读取后端排课事实集合'
+);
+assert.strictEqual(
   teachingOperations.conversion.cards.courseDealCustomers.value,
   teachingPlatform.teachingStudentViews.formalStudents.length,
   '转化与留存课包成交客户数必须等于正式学员视图人数'
@@ -242,12 +262,12 @@ assert.strictEqual(
 assert.strictEqual(
   teachingOperations.conversion.cards.trialPathDealCustomers.value,
   1,
-  '体验路径成交人数只统计体验路径学员中买正式课包，不能把直接成交算进去'
+  '经营分析体验成交口径必须和教学链统一，不能把直接成交算进去'
 );
 assert.strictEqual(
   teachingOperations.conversion.cards.directCourseCustomers.value,
   2,
-  '直接成交人数必须统计没有体验路径但买正式课包的人'
+  '直接成交人数必须统计没有上过体验课但买正式课包的人'
 );
 
 console.log('cross page metric consistency tests passed');

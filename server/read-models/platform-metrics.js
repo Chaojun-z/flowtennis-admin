@@ -877,6 +877,10 @@ function teachingStudentFormalLessonFactRows(data = {}, studentId = '', now = ne
   return teachingStudentScheduleRows(data, studentId, row => teachingScheduleLessonFact(row, now) && teachingScheduleFormal(row));
 }
 
+function teachingStudentTrialLessonFactRows(data = {}, studentId = '', now = new Date()) {
+  return teachingStudentScheduleRows(data, studentId, row => teachingScheduleLessonFact(row, now) && courseRowIsTrial(row));
+}
+
 function teachingStudentFormalLedgerRows(data = {}, studentId = '') {
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
@@ -894,9 +898,7 @@ function teachingStudentLatestFormalLessonDate(data = {}, studentId = '') {
   const now = data.now || new Date();
   const scheduleDates = teachingStudentFormalLessonFactRows(data, studentId, now)
     .map(row => dateOnly(row.startTime || row.endTime || row.createdAt));
-  const ledgerDates = teachingStudentFormalLedgerRows(data, studentId)
-    .map(row => dateOnly(row.relatedDate || row.sourceDate || row.scheduleTime || row.createdAt));
-  return [...scheduleDates, ...ledgerDates].filter(Boolean).sort().pop() || '';
+  return scheduleDates.filter(Boolean).sort().pop() || '';
 }
 
 function teachingDaysSince(dateText = '', now = new Date()) {
@@ -914,7 +916,6 @@ function teachingDaysSince(dateText = '', now = new Date()) {
 function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()) {
   const studentId = text(row.studentId);
   if (!studentId) return false;
-  if (Number(row.completedLessons) > 0) return true;
   return teachingStudentScheduleRows(data, studentId, schedule => teachingScheduleLessonFact(schedule, now)).length > 0;
 }
 
@@ -1010,17 +1011,8 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
-  const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
-    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
-    return days !== null && days <= 30;
-  }).length;
   if (packageStatus === '课包有余额' && activityStatus !== '近30天活跃') return '有余额未活跃';
   if (teachingStudentDirectLessonsAfterLastPackage(data, row, now).length > 0) return '已转单次付费';
-  if (teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
-    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
-    return days !== null && days <= 90;
-  }).length >= 2) return '稳定单次付费';
-  if (packageStatus === '课包已用完' && activityStatus === '近30天活跃' && !recentDirect30) return '课包待续费';
   return '-';
 }
 
@@ -1121,7 +1113,8 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const formalListFieldMap = buildTeachingStudentListFieldMap(data, { includeTrial: false });
   const courseViewRow = row => teachingStudentViewRow(row, courseListFieldMap.get(text(row.studentId)) || {});
   const formalViewRow = row => teachingStudentViewRow(row, formalListFieldMap.get(text(row.studentId)) || {});
-  const hasTrialPath = row => !!row.hasTrialExperience;
+  const hasTrialAttended = row => teachingStudentTrialLessonFactRows(data, text(row.studentId), now).length > 0;
+  const hasFormalAttended = row => teachingStudentFormalLessonFactRows(data, text(row.studentId), now).length > 0;
   const hasCourseStudentEntry = row => !!row.hasTrialExperience
     || text(row.studentStage) === 'formal'
     || !!row.hasCourseStudentEntry
@@ -1145,24 +1138,37 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
   const trialStudents = studentRows
     .filter(row => text(row.studentStage) === 'trial')
     .map(courseViewRow);
-  const trialPathStudents = studentRows
-    .filter(hasTrialPath)
+  const trialAttendedStudents = studentRows
+    .filter(hasTrialAttended)
     .map(courseViewRow);
-  const trialPathDealStudents = formalStudents.filter(hasTrialPath);
-  const trialPathDealIds = new Set(trialPathDealStudents.map(row => text(row.studentId)).filter(Boolean));
-  const trialPathPendingStudents = trialPathStudents.filter(row => !trialPathDealIds.has(text(row.studentId)));
-  const directCourseStudents = formalStudents.filter(row => !trialPathDealIds.has(text(row.studentId)));
+  const trialAttendedIds = new Set(trialAttendedStudents.map(row => text(row.studentId)).filter(Boolean));
+  const trialAttendedToFormalPurchaseStudents = formalStudents.filter(row => trialAttendedIds.has(text(row.studentId)));
+  const trialAttendedToFormalPurchaseIds = new Set(trialAttendedToFormalPurchaseStudents.map(row => text(row.studentId)).filter(Boolean));
+  const trialAttendedWithoutFormalStudents = trialAttendedStudents.filter(row => !trialAttendedToFormalPurchaseIds.has(text(row.studentId)));
+  const directCourseStudents = formalStudents.filter(row => !trialAttendedIds.has(text(row.studentId)));
   const coursePurchaseCount = formalStudents.reduce((sum, row) => sum + (Number(row.coursePurchaseCount) || 0), 0);
   const courseRepeatCount = formalStudents.filter(row => row.hasCourseRepeatPurchase).length;
+  const formalLessonWithinDays = (row, daysLimit) => {
+    const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
+    return days !== null && days <= daysLimit;
+  };
+  const packageBalanceRows = activeStudents.filter(row => (Number(row.packageBalanceRemaining) || 0) > 0);
+  const packageLowRows = activeStudents.filter(row => {
+    const remaining = Number(row.packageBalanceRemaining) || 0;
+    return remaining > 0 && remaining <= 2;
+  });
   return {
     courseStudents,
     trialStudents,
     formalStudents,
     historicalStudents,
     activeStudents,
-    trialPathStudents,
-    trialPathDealStudents,
-    trialPathPendingStudents,
+    trialAttendedStudents,
+    trialAttendedToFormalPurchaseStudents,
+    trialAttendedWithoutFormalStudents,
+    trialPathStudents: trialAttendedStudents,
+    trialPathDealStudents: trialAttendedToFormalPurchaseStudents,
+    trialPathPendingStudents: trialAttendedWithoutFormalStudents,
     directCourseDealStudents: directCourseStudents,
     summary: {
       courseStudentCount: courseStudents.length,
@@ -1172,11 +1178,22 @@ function buildTeachingStudentViews(customerLifecycleRows = [], data = {}) {
       activeStudentCount: activeStudents.length,
       historicalTagCounts: teachingStudentTagCounts(historicalStudents),
       activeTagCounts: teachingStudentTagCounts(activeStudents),
+      trialAttendedStudentCount: trialAttendedStudents.length,
+      trialAttendedToFormalPurchaseCount: trialAttendedToFormalPurchaseStudents.length,
+      trialAttendedWithoutFormalCount: trialAttendedWithoutFormalStudents.length,
+      historicalTrialAttendedCount: historicalStudents.filter(hasTrialAttended).length,
+      historicalFormalAttendedCount: historicalStudents.filter(hasFormalAttended).length,
+      historicalTrialWithoutFormalCount: historicalStudents.filter(row => hasTrialAttended(row) && !hasFormalAttended(row)).length,
+      historicalFormalLesson30Count: historicalStudents.filter(row => formalLessonWithinDays(row, 30)).length,
+      activeFormalLesson30Count: activeStudents.filter(row => formalLessonWithinDays(row, 30)).length,
+      activeFormalLesson90Count: activeStudents.filter(row => formalLessonWithinDays(row, 90)).length,
+      activePackageBalanceCount: packageBalanceRows.length,
+      activePackageLowCount: packageLowRows.length,
       courseDealCustomers: formalStudents.length,
-      trialPathStudents: trialPathStudents.length,
-      trialPathDealCustomers: trialPathDealStudents.length,
-      trialPathPendingCustomers: trialPathPendingStudents.length,
-      trialToCourseCustomers: trialPathDealStudents.length,
+      trialPathStudents: trialAttendedStudents.length,
+      trialPathDealCustomers: trialAttendedToFormalPurchaseStudents.length,
+      trialPathPendingCustomers: trialAttendedWithoutFormalStudents.length,
+      trialToCourseCustomers: trialAttendedToFormalPurchaseStudents.length,
       directCourseCustomers: directCourseStudents.length,
       coursePurchaseCount,
       courseRepeatCount
@@ -1307,9 +1324,12 @@ function buildStandardLifecycleMetrics(data = {}) {
   const formalStudents = Number(summary.courseDealCustomers || summary.formalStudentCount) || 0;
   const historicalStudents = Number(summary.historicalStudentCount) || 0;
   const activeStudents = Number(summary.activeStudentCount) || 0;
-  const trialPathStudents = Number(summary.trialPathStudents) || 0;
-  const trialPathDeals = Number(summary.trialPathDealCustomers || summary.trialToCourseCustomers) || 0;
-  const trialPathPending = Number(summary.trialPathPendingCustomers) || Math.max(0, trialPathStudents - trialPathDeals);
+  const trialAttendedStudents = Number(summary.trialAttendedStudentCount || summary.trialPathStudents) || 0;
+  const trialAttendedToFormalPurchase = Number(summary.trialAttendedToFormalPurchaseCount || summary.trialPathDealCustomers || summary.trialToCourseCustomers) || 0;
+  const trialAttendedWithoutFormal = Number(summary.trialAttendedWithoutFormalCount || summary.trialPathPendingCustomers) || Math.max(0, trialAttendedStudents - trialAttendedToFormalPurchase);
+  const trialPathStudents = trialAttendedStudents;
+  const trialPathDeals = trialAttendedToFormalPurchase;
+  const trialPathPending = trialAttendedWithoutFormal;
   const directCourseDeals = Number(summary.directCourseCustomers) || 0;
   const totalDeals = Number(leadConversionMetrics.convertedLeads) || 0;
   const courseRepeatBuyers = summary.courseRepeatCount !== undefined ? Number(summary.courseRepeatCount) || 0 : courseRepeatBuyerCount(data.purchases || []);
@@ -1320,9 +1340,12 @@ function buildStandardLifecycleMetrics(data = {}) {
     historicalStudents: standardMetric('HISTORICAL_STUDENTS', '历史学员', historicalStudents, validLeads, 'HISTORICAL_STUDENTS / VALID_LEADS'),
     activeStudents: standardMetric('ACTIVE_STUDENTS', '在期学员', activeStudents, historicalStudents, 'ACTIVE_STUDENTS / HISTORICAL_STUDENTS'),
     courseRepeatBuyers: standardMetric('COURSE_REPEAT_BUYERS', '课包复购', courseRepeatBuyers, formalStudents, 'COURSE_REPEAT_BUYERS / FORMAL_STUDENTS'),
-    trialPathStudents: standardMetric('TRIAL_PATH_STUDENTS', '体验路径学员', trialPathStudents, validLeads, 'TRIAL_PATH_STUDENTS / VALID_LEADS'),
-    trialPathDeals: standardMetric('TRIAL_PATH_DEALS', '体验路径成交', trialPathDeals, trialPathStudents, 'TRIAL_PATH_DEALS / TRIAL_PATH_STUDENTS'),
-    trialPathPending: standardMetric('TRIAL_PATH_PENDING', '体验路径未成交', trialPathPending, trialPathStudents, 'TRIAL_PATH_PENDING / TRIAL_PATH_STUDENTS'),
+    trialAttendedStudents: standardMetric('TRIAL_ATTENDED_STUDENTS', '上过体验课', trialAttendedStudents, validLeads, 'TRIAL_ATTENDED_STUDENTS / VALID_LEADS'),
+    trialAttendedToFormalPurchase: standardMetric('TRIAL_ATTENDED_TO_FORMAL_PURCHASE', '体验后买正式课', trialAttendedToFormalPurchase, trialAttendedStudents, 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE / TRIAL_ATTENDED_STUDENTS'),
+    trialAttendedWithoutFormal: standardMetric('TRIAL_ATTENDED_WITHOUT_FORMAL', '上过体验未买正式课', trialAttendedWithoutFormal, trialAttendedStudents, 'TRIAL_ATTENDED_WITHOUT_FORMAL / TRIAL_ATTENDED_STUDENTS'),
+    trialPathStudents: standardMetric('TRIAL_PATH_STUDENTS', '上过体验课', trialPathStudents, validLeads, 'TRIAL_ATTENDED_STUDENTS / VALID_LEADS'),
+    trialPathDeals: standardMetric('TRIAL_PATH_DEALS', '体验后买正式课', trialPathDeals, trialPathStudents, 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE / TRIAL_ATTENDED_STUDENTS'),
+    trialPathPending: standardMetric('TRIAL_PATH_PENDING', '上过体验未买正式课', trialPathPending, trialPathStudents, 'TRIAL_ATTENDED_WITHOUT_FORMAL / TRIAL_ATTENDED_STUDENTS'),
     directCourseDeals: standardMetric('DIRECT_COURSE_DEALS', '直接课程成交', directCourseDeals, formalStudents || validLeads, 'DIRECT_COURSE_DEALS / FORMAL_STUDENTS'),
     totalDeals: standardMetric('TOTAL_DEALS', '总成交', totalDeals, validLeads, 'TOTAL_DEALS / VALID_LEADS', '条')
   };
@@ -1350,9 +1373,9 @@ function buildStandardLifecycleMetrics(data = {}) {
         { id: 'COURSE_REPEAT_BUYERS', label: '课包复购', value: courseRepeatBuyers }
       ]),
       trialPath: standardFunnelRows([
-        { id: 'TRIAL_PATH_STUDENTS', label: '体验路径学员', value: trialPathStudents },
-        { id: 'TRIAL_PATH_DEALS', label: '体验路径成交', value: trialPathDeals },
-        { id: 'TRIAL_PATH_PENDING', label: '体验路径未成交', value: trialPathPending }
+        { id: 'TRIAL_ATTENDED_STUDENTS', label: '上过体验课', value: trialAttendedStudents },
+        { id: 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE', label: '体验后买正式课', value: trialAttendedToFormalPurchase },
+        { id: 'TRIAL_ATTENDED_WITHOUT_FORMAL', label: '上过体验未买正式课', value: trialAttendedWithoutFormal }
       ])
     },
     views: {
@@ -1361,6 +1384,9 @@ function buildStandardLifecycleMetrics(data = {}) {
       formalStudents: teachingStudentViews.formalStudents,
       historicalStudents: teachingStudentViews.historicalStudents,
       activeStudents: teachingStudentViews.activeStudents,
+      trialAttendedStudents: teachingStudentViews.trialAttendedStudents,
+      trialAttendedToFormalPurchase: teachingStudentViews.trialAttendedToFormalPurchaseStudents,
+      trialAttendedWithoutFormal: teachingStudentViews.trialAttendedWithoutFormalStudents,
       trialPathStudents: teachingStudentViews.trialPathStudents,
       trialPathDeals: teachingStudentViews.trialPathDealStudents,
       trialPathPending: teachingStudentViews.trialPathPendingStudents,

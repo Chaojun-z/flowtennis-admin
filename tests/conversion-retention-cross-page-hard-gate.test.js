@@ -78,7 +78,7 @@ async function membershipSummaryFromRows(rows = {}) {
   assert.strictEqual(
     operations.conversion.standardLifecycleMetrics.metrics.trialPathDeals.value,
     platform.teachingStudentViews.trialPathDealStudents.length,
-    '转化与留存体验路径成交必须等于普通学员页统一体验路径成交人数'
+    '转化与留存体验后买正式课必须等于统一上过体验课成交人数'
   );
   assert.strictEqual(
     operations.conversion.retention.teaching.packageRepeatRate.numerator,

@@ -75,11 +75,13 @@ assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
-assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*体验路径学员[\s\S]*体验路径成交/, 'lead stats should expose historical and active student metrics from the unified backend model');
-assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*体验路径学员 \/ 线索数[\s\S]*体验路径成交 \/ 体验路径学员/, 'lead stats should explain the unified historical and active student formulas');
+assert.match(leadsSource, /线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'lead stats should expose schedule-fact student metrics from the unified backend model');
+assert.match(leadsSource, /历史学员 \/ 线索数[\s\S]*在期学员 \/ 历史学员[\s\S]*上过体验课 \/ 线索数[\s\S]*体验后买正式课 \/ 上过体验课/, 'lead stats should explain the unified historical, active, and trial-attended formulas');
 assert.match(fnBody('leadStatsData'), /const total=Array\.isArray\(list\)\?list\.length:0/, 'lead count card should use the same backend lead rows as the list and filter totals');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('validLeads'\)/, 'lead count card must not use lifecycle validLeads when list/filter totals use lead rows');
 assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('courseChainStudents'\)|leadStandardMetricValue\('formalStudents'\)/, 'lead stats must not use old normal/formal student metrics for the top student cards');
+assert.doesNotMatch(fnBody('leadStatsData'), /leadStandardMetricValue\('trialPathStudents'\)|leadStandardMetricValue\('trialPathDeals'\)|leadStandardMetricValue\('trialPathPending'\)/, 'lead stats must not use old trial-path metrics for top cards');
+assert.match(fnBody('leadStatsData'), /leadTeachingSummaryValue\('historicalStudentCount'\)[\s\S]*leadTeachingSummaryValue\('activeStudentCount'\)[\s\S]*leadTeachingSummaryValue\('trialAttendedStudentCount'\)[\s\S]*leadTeachingSummaryValue\('trialAttendedToFormalPurchaseCount'\)/, 'lead stats should read explicit backend teaching summary fields');
 assert.match(leadsSource, /function leadDateRangeForPreset\(/, 'leads page should expose date preset range helper');
 assert.match(leadsSource, /function setLeadDatePreset\(/, 'leads page should expose lead date preset switching');
 assert.match(leadsSource, /function setLeadCustomDateRange\(/, 'leads page should expose custom lead date range switching');

@@ -71,10 +71,10 @@ const operations = buildOperationsMetrics({ ...sample, customerLifecycleRows }, 
 assert.strictEqual(standard.metrics.validLeads.value, 10, '有效线索必须按统一自然人线索池统计');
 assert.strictEqual(standard.metrics.courseChainStudents.value, 10, '普通学员必须包含已转化学员和有排课记录学员');
 assert.strictEqual(standard.metrics.formalStudents.value, 2, '正式学员必须来自统一教学链视图');
-assert.strictEqual(standard.metrics.trialPathStudents.value, 2, '体验路径不能把只有手工体验时间的线索算进去');
-assert.strictEqual(standard.metrics.trialPathDeals.value, 1, '体验路径成交只统计真实体验路径中的正式成交');
-assert.strictEqual(standard.metrics.trialPathPending.value, 1, '体验路径未成交来自统一体验路径集合');
-assert.strictEqual(standard.metrics.directCourseDeals.value, 1, '直接成交只统计没有真实体验路径的正式成交');
+assert.strictEqual(standard.metrics.trialAttendedStudents.value, 1, '上过体验课只认排课表里的有效已发生体验课');
+assert.strictEqual(standard.metrics.trialAttendedToFormalPurchase.value, 1, '体验后买正式课只统计上过体验课且买过正式课包的人');
+assert.strictEqual(standard.metrics.trialAttendedWithoutFormal.value, 0, '上过体验未买正式课来自同一份上过体验课集合');
+assert.strictEqual(standard.metrics.directCourseDeals.value, 1, '直接成交只统计没有上过体验课事实的正式成交');
 assert.strictEqual(standard.teachingSummary.coursePurchaseCount, 3, '正式学员购买次数必须累加正式课包购买笔数，不能用成交人数替代');
 assert.strictEqual(standard.teachingSummary.activePackageStudentCount, 1, '有效课包学员必须只统计仍有剩余正式课包的人');
 assert.strictEqual(standard.teachingSummary.totalIncome, 15000, '课包实收金额必须来自正式课包实收');
@@ -114,9 +114,49 @@ assert.strictEqual(
   '历史学员顶部总数必须来自历史学员新视图'
 );
 assert.strictEqual(
+  standard.teachingSummary.historicalTrialAttendedCount,
+  1,
+  '历史学员上过体验课必须只按排课表体验课事实统计'
+);
+assert.strictEqual(
+  standard.teachingSummary.historicalFormalAttendedCount,
+  6,
+  '历史学员上过正式课必须只按排课表正式课事实统计，不能把核销流水算成上课'
+);
+assert.strictEqual(
+  standard.teachingSummary.historicalTrialWithoutFormalCount,
+  1,
+  '上过体验未上正式课必须等于有体验课排课事实且没有正式课排课事实的人'
+);
+assert.strictEqual(
+  standard.teachingSummary.historicalFormalLesson30Count,
+  2,
+  '历史学员近30天正式课活跃必须只按排课表正式课事实统计'
+);
+assert.strictEqual(
   standard.teachingSummary.activeStudentCount,
   5,
   '在期学员顶部总数必须来自在期学员新视图'
+);
+assert.strictEqual(
+  standard.teachingSummary.activeFormalLesson30Count,
+  2,
+  '在期学员近30天正式课活跃必须和排课表正式课事实一致'
+);
+assert.strictEqual(
+  standard.teachingSummary.activeFormalLesson90Count,
+  4,
+  '在期学员近90天正式课活跃必须和排课表正式课事实一致'
+);
+assert.strictEqual(
+  standard.teachingSummary.activePackageBalanceCount,
+  1,
+  '在期学员课包有余额必须来自后端统一读模型'
+);
+assert.strictEqual(
+  standard.teachingSummary.activePackageLowCount,
+  0,
+  '在期学员课包即将耗尽必须来自后端统一读模型'
 );
 assert.ok(
   standard.views.activeStudents.some(row => row.studentId === 'student-single-pay-active' && row.packageBalanceText === '-'),
@@ -151,22 +191,26 @@ const hardCase = {
     { id: 'hard-package-cn', name: '中文课包划扣' },
     { id: 'hard-package-low', name: '即将耗尽课包' },
     { id: 'hard-package-no-lesson', name: '有余额未上课' },
+    { id: 'hard-ledger-only-recent', name: '只有核销无排课' },
     { id: 'hard-single-recent', name: '近期单次付费' },
     { id: 'hard-single-old', name: '超90天单次付费' }
   ],
   purchases: [
     { id: 'hard-purchase-package-cn', studentId: 'hard-package-cn', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-01' },
     { id: 'hard-purchase-package-low', studentId: 'hard-package-low', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-02' },
-    { id: 'hard-purchase-package-no-lesson', studentId: 'hard-package-no-lesson', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-03' }
+    { id: 'hard-purchase-package-no-lesson', studentId: 'hard-package-no-lesson', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-03' },
+    { id: 'hard-purchase-ledger-only', studentId: 'hard-ledger-only-recent', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-04' }
   ],
   entitlements: [
     { id: 'hard-ent-package-cn', studentId: 'hard-package-cn', purchaseId: 'hard-purchase-package-cn', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' },
     { id: 'hard-ent-package-low', studentId: 'hard-package-low', purchaseId: 'hard-purchase-package-low', courseType: '私教课', totalLessons: 10, remainingLessons: 1, status: 'active' },
-    { id: 'hard-ent-package-no-lesson', studentId: 'hard-package-no-lesson', purchaseId: 'hard-purchase-package-no-lesson', courseType: '私教课', totalLessons: 10, remainingLessons: 5, status: 'active' }
+    { id: 'hard-ent-package-no-lesson', studentId: 'hard-package-no-lesson', purchaseId: 'hard-purchase-package-no-lesson', courseType: '私教课', totalLessons: 10, remainingLessons: 5, status: 'active' },
+    { id: 'hard-ent-ledger-only', studentId: 'hard-ledger-only-recent', purchaseId: 'hard-purchase-ledger-only', courseType: '私教课', totalLessons: 10, remainingLessons: 9, status: 'active' }
   ],
   entitlementLedger: [
     { id: 'hard-ledger-package-cn-1', studentId: 'hard-package-cn', entitlementId: 'hard-ent-package-cn', purchaseId: 'hard-purchase-package-cn', lessonDelta: -1, relatedDate: '2026-07-03', courseType: '私教课' },
-    { id: 'hard-ledger-package-low-1', studentId: 'hard-package-low', entitlementId: 'hard-ent-package-low', purchaseId: 'hard-purchase-package-low', lessonDelta: -1, relatedDate: '2026-07-05', courseType: '私教课' }
+    { id: 'hard-ledger-package-low-1', studentId: 'hard-package-low', entitlementId: 'hard-ent-package-low', purchaseId: 'hard-purchase-package-low', lessonDelta: -1, relatedDate: '2026-07-05', courseType: '私教课' },
+    { id: 'hard-ledger-only-1', studentId: 'hard-ledger-only-recent', entitlementId: 'hard-ent-ledger-only', purchaseId: 'hard-purchase-ledger-only', lessonDelta: -1, relatedDate: '2026-07-06', courseType: '私教课' }
   ],
   schedule: [
     { id: 'hard-schedule-past', studentId: 'hard-past-scheduled', studentName: '已排课已上课单次', courseType: '私教课', startTime: '2026-07-01 10:00:00', endTime: '2026-07-01 11:00:00', status: '已排课', settlementType: 'single' },
@@ -189,7 +233,7 @@ const hardActiveIds = hardStandard.views.activeStudents.map(row => row.studentId
 assert.deepStrictEqual(
   hardHistoricalIds,
   ['hard-package-cn', 'hard-package-low', 'hard-past-scheduled', 'hard-single-old', 'hard-single-recent'],
-  '历史学员必须把未取消且时间已过去的已排课记录视为上课事实'
+  '历史学员必须只按排课表有效上课事实返回，有课包余额或核销流水但无排课不进入历史学员'
 );
 assert.deepStrictEqual(
   hardActiveIds,
@@ -205,7 +249,7 @@ assert.ok(cnPackageRow, '中文课包划扣学员必须进入在期学员');
 assert.strictEqual(cnPackageRow.packageStatusLabel, '课包有余额', '课包状态必须由后端统一输出');
 assert.strictEqual(cnPackageRow.paymentModeLabel, '课包学员', '中文“课包划扣”不能被误判为单次付费');
 assert.strictEqual(cnPackageRow.activityStatusLabel, '近30天活跃', '活跃状态必须由后端统一输出并识别课包核销上课事实');
-assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成稳定单次付费');
+assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成旧的稳定单次付费');
 assert.strictEqual(cnPackageRow.lessonVolumeLabel, '-', '历史课时标签必须由后端统一输出');
 assert.strictEqual(
   hardStandard.teachingSummary.historicalTagCounts.packageStatus['课包有余额'],
@@ -225,6 +269,26 @@ assert.strictEqual(
   hardStandard.teachingSummary.historicalTagCounts.activityStatus['近30天活跃'],
   hardStandard.teachingSummary.activeTagCounts.activityStatus['近30天活跃'],
   '近30天活跃是包含关系内的统一口径，历史页和在期页顶部数字必须一致'
+);
+assert.strictEqual(
+  hardStandard.teachingSummary.activePackageBalanceCount,
+  2,
+  '在期学员课包有余额卡片必须由后端统一输出，且只统计在期学员范围内'
+);
+assert.strictEqual(
+  hardStandard.teachingSummary.activePackageLowCount,
+  1,
+  '在期学员课包即将耗尽卡片必须由后端统一输出'
+);
+assert.strictEqual(
+  hardStandard.teachingSummary.activeFormalLesson30Count,
+  4,
+  '在期学员近30天正式课活跃必须只按排课表正式课事实输出'
+);
+assert.strictEqual(
+  hardStandard.teachingSummary.activeFormalLesson90Count,
+  4,
+  '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
 );
 
 console.log('lifecycle standard metrics tests passed');

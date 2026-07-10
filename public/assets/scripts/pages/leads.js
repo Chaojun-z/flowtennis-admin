@@ -738,6 +738,11 @@ function leadStandardMetric(key){
 function leadStandardMetricValue(key){
   return Number(leadStandardMetric(key)?.value)||0;
 }
+function leadTeachingSummaryValue(key){
+  const standard=leadStandardMetrics();
+  const value=standard.teachingSummary?.[key]??teachingStudentViews?.summary?.[key];
+  return Number(value)||0;
+}
 function leadStandardMetricRate(key,fallbackValue,fallbackTotal){
   const metric=leadStandardMetric(key);
   return metric?.rateText||leadRateText(fallbackValue,fallbackTotal);
@@ -777,23 +782,20 @@ function leadTrialCourseConverted(lead){
 }
 function leadStatsData(list){
   const total=Array.isArray(list)?list.length:0;
-  const historicalStudents=leadStandardMetricValue('historicalStudents');
-  const activeStudents=leadStandardMetricValue('activeStudents');
-  const trialPath=leadStandardMetricValue('trialPathStudents');
-  const trialPathDeal=leadStandardMetricValue('trialPathDeals');
-  const trialPathPending=leadStandardMetricValue('trialPathPending');
+  const historicalStudents=leadTeachingSummaryValue('historicalStudentCount');
+  const activeStudents=leadTeachingSummaryValue('activeStudentCount');
+  const trialAttended=leadTeachingSummaryValue('trialAttendedStudentCount');
+  const trialAttendedToFormalPurchase=leadTeachingSummaryValue('trialAttendedToFormalPurchaseCount');
   return {
     total,
     historicalStudents,
     historicalStudentRate:leadCurrentListRateText(historicalStudents,total),
     activeStudents,
     activeStudentRate:leadStandardMetricRate('activeStudents',activeStudents,historicalStudents),
-    trialBooked:trialPath,
-    trialBookedRate:leadCurrentListRateText(trialPath,total),
-    trialPathDeal,
-    trialPathDealRate:leadStandardMetricRate('trialPathDeals',trialPathDeal,trialPath),
-    trialPendingConversion:trialPathPending,
-    trialPendingConversionRate:leadStandardMetricRate('trialPathPending',trialPathPending,trialPath)
+    trialAttended,
+    trialAttendedRate:leadCurrentListRateText(trialAttended,total),
+    trialAttendedToFormalPurchase,
+    trialAttendedToFormalPurchaseRate:leadStandardMetricRate('trialAttendedToFormalPurchase',trialAttendedToFormalPurchase,trialAttended)
   };
 }
 function renderLeadStats(list){
@@ -802,8 +804,8 @@ function renderLeadStats(list){
     {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
     {label:'历史学员',valueHtml:stats.historicalStudents,percent:stats.historicalStudentRate,sub:'历史学员 / 线索数'},
     {label:'在期学员',valueHtml:stats.activeStudents,percent:stats.activeStudentRate,sub:'在期学员 / 历史学员'},
-    {label:'体验路径学员',valueHtml:stats.trialBooked,percent:stats.trialBookedRate,sub:'体验路径学员 / 线索数'},
-    {label:'体验路径成交',valueHtml:stats.trialPathDeal,percent:stats.trialPathDealRate,sub:'体验路径成交 / 体验路径学员'}
+    {label:'上过体验课',valueHtml:stats.trialAttended,percent:stats.trialAttendedRate,sub:'上过体验课 / 线索数'},
+    {label:'体验后买正式课',valueHtml:stats.trialAttendedToFormalPurchase,percent:stats.trialAttendedToFormalPurchaseRate,sub:'体验后买正式课 / 上过体验课'}
   ];
   const host=document.getElementById('leadStatsRow');
   if(host)host.innerHTML=renderStandardDataCards(cardData);

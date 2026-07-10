@@ -275,7 +275,7 @@ assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验路径成交率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验后买正式课率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
@@ -302,7 +302,7 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(chartsSource, /operations-funnel-transition[\s\S]*\$\{fmt\(transition\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
 assert.doesNotMatch(operationsSource, /function renderConversionInsightModule/, 'conversion page should move insight copy out of the conversion dashboard');
-assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*课程总漏斗[\s\S]*体验路径漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
+assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*课程总漏斗[\s\S]*体验课上课漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
 assert.doesNotMatch(operationsSource, /const moduleTitle = '转化漏斗'|<h3>\$\{moduleTitle\}<\/h3>|<h3>转化漏斗<\/h3>/, 'conversion page should not render the extra conversion funnel section title');
 assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]*renderConversionRetentionModule/, 'conversion page should remove the retention trend module from the page');
 assert.doesNotMatch(operationsSource, /operations-funnel-filter-row|operationsFilterDropdown\('operationsConversionSource'|operationsFilterDropdown\('operationsConversionCampus'|operationsFilterDropdown\('operationsConversionCoach'/, 'conversion funnel should not keep local source/campus/coach filters');

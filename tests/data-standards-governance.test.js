@@ -36,13 +36,13 @@ assert.match(packageJson.scripts.test, /node tests\/data-standard-source-guard\.
 assert.match(packageJson.scripts.test, /node tests\/unified-page-source-hard-guard\.test\.js/, 'npm test should run unified page source hard guard');
 assert.match(
   metricDocSource,
-  /线索池顶部转化 \| 线索数、历史学员、在期学员、体验路径学员、体验路径成交/,
+  /线索池顶部转化 \| 线索数、历史学员、在期学员、上过体验课、体验后买正式课/,
   'metric standard should match the current lead-pool top card requirement'
 );
 assert.match(
   metricDocSource,
-  /\| 体验路径成交 \| TRIAL_PATH_DEAL_CUSTOMERS \| 体验路径成交 \/ 体验路径学员 \|/,
-  'lead-pool top metric table should document trial-path deals instead of the retired pending card'
+  /\| 体验后买正式课 \| TRIAL_ATTENDED_TO_FORMAL_PURCHASE \| 体验后买正式课 \/ 上过体验课 \|/,
+  'lead-pool top metric table should document trial-attended formal purchase instead of the retired trial-path card'
 );
 
 [
