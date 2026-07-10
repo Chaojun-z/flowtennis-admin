@@ -81,7 +81,7 @@ const STUDENT_PACKAGE_STATUS_OPTIONS=['未买过课包','课包有余额','课�
 const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+单次付费'];
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
-const STUDENT_LIFECYCLE_STATUS_OPTIONS=['已转单次付费','有余额未活跃'];
+const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
 const STUDENT_TAG_FILTER_GROUPS=[
   {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
   {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
@@ -246,23 +246,62 @@ function studentFormalLessonCountValue(stu){
 function studentLessonVolumeText(stu){
   return String(stu?.lessonVolumeLabel||'-').trim()||'-';
 }
-function studentRecentDirectFormalLessonCount(stu,daysLimit=90){
-  return studentDirectFormalLessonRows(stu).filter(row=>{
-    const days=studentDaysSince(String(row.startTime||'').slice(0,10));
-    return days!==null&&days<=daysLimit;
-  }).length;
-}
-function studentHasDirectAfterPackageUsedUp(stu){
-  if(studentPackageStatusText(stu)!=='课包已用完')return false;
-  const packageDates=studentFormalPurchaseRows(stu).map(row=>String(row.purchaseDate||row.createdAt||'').slice(0,10)).filter(Boolean).sort();
-  const lastPackageDate=packageDates[packageDates.length-1]||'';
-  return studentDirectFormalLessonRows(stu).some(row=>{
-    const date=String(row.startTime||'').slice(0,10);
-    return date&&(!lastPackageDate||date>=lastPackageDate);
-  });
-}
 function studentLifecycleStatusText(stu){
   return String(stu?.studentStatusLabel||'-').trim()||'-';
+}
+function studentLabelDisplayText(value){
+  const raw=String(value||'').trim();
+  return ({
+    '未买过课包':'未买过',
+    '课包有余额':'有余额',
+    '课包即将耗尽':'将耗尽',
+    '课包已用完':'已用完',
+    '课包学员':'课包',
+    '单次付费学员':'单次',
+    '课包+单次付费':'课包+单次',
+    '近30天活跃':'近30天',
+    '31-90天活跃':'31~90天',
+    '91-180天沉默':'91~180天',
+    '180天以上沉睡':'181天+',
+    '从未正式上课':'未上课',
+    '历史课时30+':'30+',
+    '历史课时50+':'50+',
+    '历史课时100+':'100+',
+    '课包待续费':'待续费',
+    '已转单次付费':'转单次',
+    '稳定单次付费':'稳定单次',
+    '有余额未活跃':'未活跃'
+  })[raw]||raw;
+}
+function studentLabelTagClass(value){
+  const raw=String(value||'').trim();
+  return ({
+    '未买过课包':'tms-tag-business-neutral',
+    '课包有余额':'tms-tag-business-stage-won',
+    '课包即将耗尽':'tms-tag-tier-gold',
+    '课包已用完':'tms-tag-priority-p0',
+    '课包学员':'tms-tag-business-stage-new',
+    '单次付费学员':'tms-tag-course-partner',
+    '课包+单次付费':'tms-tag-business-type-adult',
+    '近30天活跃':'tms-tag-business-stage-won',
+    '31-90天活跃':'tms-tag-business-stage-new',
+    '91-180天沉默':'tms-tag-tier-gold',
+    '180天以上沉睡':'tms-tag-priority-p0',
+    '从未正式上课':'tms-tag-business-neutral',
+    '历史课时30+':'tms-tag-business-stage-new',
+    '历史课时50+':'tms-tag-course-partner',
+    '历史课时100+':'tms-tag-tier-gold',
+    '课包待续费':'tms-tag-priority-p0',
+    '已转单次付费':'tms-tag-business-stage-new',
+    '稳定单次付费':'tms-tag-business-stage-won',
+    '有余额未活跃':'tms-tag-tier-gold'
+  })[raw]||'tms-tag-business-neutral';
+}
+function renderStudentLabelTag(value){
+  const raw=String(value||'').trim();
+  if(!raw||raw==='-'||raw==='—')return renderStandardCellText(raw,false);
+  const text=studentLabelDisplayText(raw);
+  return `<span class="tms-tag ${studentLabelTagClass(raw)} tms-tooltip-text" data-tooltip="${esc(raw)}">${esc(text)}</span>`;
 }
 function studentIsHistoricalRosterRow(stu){
   if(stu?.__unifiedTeachingView&&typeof stu.isHistoricalStudentRoster==='boolean')return !!stu.isHistoricalStudentRoster;
@@ -897,12 +936,12 @@ function renderStudentMobileCards(list){
         <div><strong>${esc(s.name)}</strong><span>${esc(cn(s.campus)||'-')}</span></div>
         ${renderStandardBusinessTag(s.type,'customerType')}
       </div>
-      <div class="admin-h5-card-tags"><span class="tms-tag">${esc(studentSourceText(s)||'-')}</span><span class="tms-tag">${esc(studentActivityStatusText(s)||'-')}</span><span class="tms-tag">${esc(studentPaymentModeText(s)||'-')}</span></div>
+      <div class="admin-h5-card-tags"><span>${esc(studentSourceText(s)||'-')}</span>${renderStudentLabelTag(studentActivityStatusText(s))}${renderStudentLabelTag(studentPaymentModeText(s))}</div>
       <div class="admin-h5-card-grid">
-        <span><b>课包状态</b>${esc(studentPackageStatusText(s)||'-')}</span>
+        <span><b>课包状态</b>${renderStudentLabelTag(studentPackageStatusText(s))}</span>
         <span><b>课包余额</b>${esc(renderStandardEmptyText(s?.packageBalanceText))}</span>
-        <span><b>历史课时</b>${esc(studentLessonVolumeText(s)||'-')}</span>
-        <span><b>学员状态</b>${esc(studentLifecycleStatusText(s)||'-')}</span>
+        <span><b>历史课时</b>${renderStudentLabelTag(studentLessonVolumeText(s))}</span>
+        <span><b>学员状态</b>${renderStudentLabelTag(studentLifecycleStatusText(s))}</span>
         <span><b>负责教练</b>${esc(coachText||'-')}</span>
       </div>
       <p>${esc(noteText||'暂无备注')}</p>
@@ -930,7 +969,7 @@ function renderStudents(options={}){
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const coachText=studentPrimaryCoachText(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStandardCellText(studentActivityStatusText(s),false)}</td><td>${renderStandardCellText(studentPaymentModeText(s),false)}</td><td>${renderStandardCellText(studentPackageStatusText(s),false)}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentLessonVolumeText(s),false)}</td><td>${renderStandardCellText(studentLifecycleStatusText(s),false)}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStudentLabelTag(studentLessonVolumeText(s))}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
   renderStudentMobileCards(slice);
 }

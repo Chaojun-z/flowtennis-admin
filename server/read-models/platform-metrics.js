@@ -1011,8 +1011,17 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
+  const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
+    return days !== null && days <= 30;
+  }).length;
   if (packageStatus === '课包有余额' && activityStatus !== '近30天活跃') return '有余额未活跃';
   if (teachingStudentDirectLessonsAfterLastPackage(data, row, now).length > 0) return '已转单次付费';
+  if (teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+    const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
+    return days !== null && days <= 90;
+  }).length >= 2) return '稳定单次付费';
+  if (packageStatus === '课包已用完' && activityStatus === '近30天活跃' && !recentDirect30) return '课包待续费';
   return '-';
 }
 

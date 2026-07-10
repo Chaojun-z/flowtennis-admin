@@ -243,7 +243,16 @@ assert.match(fnBody('studentHasFormalPackage'), /coursePurchaseCount/, 'package 
 assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费'\]/, 'student payment mode options should match the agreed labels');
 assert.match(source, /const STUDENT_ACTIVITY_STATUS_OPTIONS=\['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'\]/, 'student activity status options should match the agreed labels');
 assert.match(source, /const STUDENT_LESSON_VOLUME_OPTIONS=\['历史课时30\+','历史课时50\+','历史课时100\+'\]/, 'student lesson volume options should match the agreed labels');
-assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['已转单次付费','有余额未活跃'\]/, 'student lifecycle status options should remove ambiguous renewal and stable single-pay labels');
+assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'\]/, 'student lifecycle status options should match the global student tag standard');
+assert.match(source, /function studentLabelDisplayText\(/, 'student labels should use one shared display-name helper');
+assert.match(fnBody('studentLabelDisplayText'), /'近30天活跃':'近30天'[\s\S]*'31-90天活跃':'31~90天'[\s\S]*'历史课时30\+':'30\+'[\s\S]*'课包待续费':'待续费'/, 'student label helper should map backend labels to compact table tags');
+assert.match(fnBody('studentLabelDisplayText'), /'课包\+单次付费':'课包\+单次'/, 'student label helper should shorten mixed payment mode labels');
+assert.match(source, /function studentLabelTagClass\(/, 'student labels should use one shared color-class helper');
+assert.match(fnBody('studentLabelTagClass'), /'180天以上沉睡':'tms-tag-priority-p0'/, 'sleeping activity labels should use the red tag color');
+assert.match(fnBody('studentLabelTagClass'), /'单次付费学员':'tms-tag-course-partner'/, 'single-pay labels should use the purple tag color');
+assert.match(fnBody('studentLabelTagClass'), /'课包\+单次付费':'tms-tag-business-type-adult'/, 'mixed payment labels should use the teal tag color');
+assert.match(source, /function renderStudentLabelTag\(/, 'student table labels should render through one shared tag helper');
+assert.match(fnBody('renderStudentLabelTag'), /raw==='-'\|\|raw==='—'[\s\S]*renderStandardCellText\(raw,false\)[\s\S]*studentLabelDisplayText\(raw\)[\s\S]*studentLabelTagClass\(raw\)/, 'empty student labels should stay plain dashes while real labels become tags');
 assert.match(fnBody('studentPackageStatusText'), /packageStatusLabel/, 'package status label must come from backend unified teaching view');
 assert.doesNotMatch(fnBody('studentPackageStatusText'), /studentFormalPurchaseRows|studentFormalEntitlementRows|studentUnifiedPackageListRows|studentPackageRemainingLessons|purchases|entitlements/, 'frontend must not recalculate package status from raw package rows');
 assert.match(fnBody('studentPaymentModeText'), /paymentModeLabel/, 'payment mode label must come from backend unified teaching view');
@@ -428,7 +437,7 @@ assert.match(css, /\.tms-grouped-filter-options\{[^}]*display:flex[^}]*flex-dire
 assert.match(css, /\.tms-grouped-filter-option\{[^}]*grid-template-columns:16px minmax\(0,1fr\)/, 'student tag cascader options should align checkbox and label through the shared style');
 assert.match(fnBody('studentHasActiveSearchOrFilter'), /studentTagFilterCount\(\)/, 'student empty state should treat the student tag cascader selections as active filters');
 assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studentTrialPathStatusText\(s\),'stage'\)|studentDealPathText\(s\)/, 'student rows should not render old trial-status or deal-path fields');
-assert.match(fnBody('renderStudents'), /renderStandardCellText\(studentSourceText\(s\),false\)[\s\S]*renderStandardCellText\(studentActivityStatusText\(s\),false\)[\s\S]*renderStandardCellText\(studentPaymentModeText\(s\),false\)[\s\S]*renderStandardCellText\(studentPackageStatusText\(s\),false\)[\s\S]*renderStandardCellText\(studentLessonVolumeText\(s\),false\)[\s\S]*renderStandardCellText\(studentLifecycleStatusText\(s\),false\)/, 'student list should render source plus the new student label fields as plain text');
+assert.match(fnBody('renderStudents'), /renderStandardCellText\(studentSourceText\(s\),false\)[\s\S]*renderStudentLabelTag\(studentActivityStatusText\(s\)\)[\s\S]*renderStudentLabelTag\(studentPaymentModeText\(s\)\)[\s\S]*renderStudentLabelTag\(studentPackageStatusText\(s\)\)[\s\S]*renderStudentLabelTag\(studentLessonVolumeText\(s\)\)[\s\S]*renderStudentLabelTag\(studentLifecycleStatusText\(s\)\)/, 'student list should keep source as text and render student status fields as standardized tags');
 assert.doesNotMatch(fnBody('renderStudents'), /renderStandardBusinessTag\(studentSourceText\(s\),'source'\)/, 'student source should not render as a tag in any student list');
 assert.match(source, /function renderPurchases[\s\S]*renderPurchasePagerControls\(total,pages\)/, 'purchase table should keep using the standard pager renderer');
 assert.match(source, /purchaseEntitlementMiniBar\(ent\)/, 'purchase balance column should reuse the mini balance bar style');

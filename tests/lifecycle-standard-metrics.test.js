@@ -192,6 +192,8 @@ const hardCase = {
     { id: 'hard-package-low', name: '即将耗尽课包' },
     { id: 'hard-package-no-lesson', name: '有余额未上课' },
     { id: 'hard-ledger-only-recent', name: '只有核销无排课' },
+    { id: 'hard-renewal-due', name: '课包待续费' },
+    { id: 'hard-stable-single', name: '稳定单次付费' },
     { id: 'hard-single-recent', name: '近期单次付费' },
     { id: 'hard-single-old', name: '超90天单次付费' }
   ],
@@ -199,13 +201,15 @@ const hardCase = {
     { id: 'hard-purchase-package-cn', studentId: 'hard-package-cn', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-01' },
     { id: 'hard-purchase-package-low', studentId: 'hard-package-low', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-02' },
     { id: 'hard-purchase-package-no-lesson', studentId: 'hard-package-no-lesson', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-03' },
-    { id: 'hard-purchase-ledger-only', studentId: 'hard-ledger-only-recent', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-04' }
+    { id: 'hard-purchase-ledger-only', studentId: 'hard-ledger-only-recent', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-04' },
+    { id: 'hard-purchase-renewal-due', studentId: 'hard-renewal-due', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-05' }
   ],
   entitlements: [
     { id: 'hard-ent-package-cn', studentId: 'hard-package-cn', purchaseId: 'hard-purchase-package-cn', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' },
     { id: 'hard-ent-package-low', studentId: 'hard-package-low', purchaseId: 'hard-purchase-package-low', courseType: '私教课', totalLessons: 10, remainingLessons: 1, status: 'active' },
     { id: 'hard-ent-package-no-lesson', studentId: 'hard-package-no-lesson', purchaseId: 'hard-purchase-package-no-lesson', courseType: '私教课', totalLessons: 10, remainingLessons: 5, status: 'active' },
-    { id: 'hard-ent-ledger-only', studentId: 'hard-ledger-only-recent', purchaseId: 'hard-purchase-ledger-only', courseType: '私教课', totalLessons: 10, remainingLessons: 9, status: 'active' }
+    { id: 'hard-ent-ledger-only', studentId: 'hard-ledger-only-recent', purchaseId: 'hard-purchase-ledger-only', courseType: '私教课', totalLessons: 10, remainingLessons: 9, status: 'active' },
+    { id: 'hard-ent-renewal-due', studentId: 'hard-renewal-due', purchaseId: 'hard-purchase-renewal-due', courseType: '私教课', totalLessons: 10, remainingLessons: 0, status: 'depleted' }
   ],
   entitlementLedger: [
     { id: 'hard-ledger-package-cn-1', studentId: 'hard-package-cn', entitlementId: 'hard-ent-package-cn', purchaseId: 'hard-purchase-package-cn', lessonDelta: -1, relatedDate: '2026-07-03', courseType: '私教课' },
@@ -216,6 +220,9 @@ const hardCase = {
     { id: 'hard-schedule-past', studentId: 'hard-past-scheduled', studentName: '已排课已上课单次', courseType: '私教课', startTime: '2026-07-01 10:00:00', endTime: '2026-07-01 11:00:00', status: '已排课', settlementType: 'single' },
     { id: 'hard-schedule-package-cn', studentId: 'hard-package-cn', studentName: '中文课包划扣', courseType: '私教课', startTime: '2026-07-03 10:00:00', endTime: '2026-07-03 11:00:00', status: '已下课', settlementType: '课包划扣' },
     { id: 'hard-schedule-package-low', studentId: 'hard-package-low', studentName: '即将耗尽课包', courseType: '私教课', startTime: '2026-07-05 10:00:00', endTime: '2026-07-05 11:00:00', status: '已下课', settlementType: '课包划扣' },
+    { id: 'hard-schedule-renewal-due', studentId: 'hard-renewal-due', studentName: '课包待续费', courseType: '私教课', startTime: '2026-07-04 10:00:00', endTime: '2026-07-04 11:00:00', status: '已下课', settlementType: '课包划扣' },
+    { id: 'hard-schedule-stable-single-1', studentId: 'hard-stable-single', studentName: '稳定单次付费', courseType: '私教课', startTime: '2026-06-20 10:00:00', endTime: '2026-06-20 11:00:00', status: '已下课', settlementType: 'single' },
+    { id: 'hard-schedule-stable-single-2', studentId: 'hard-stable-single', studentName: '稳定单次付费', courseType: '私教课', startTime: '2026-07-02 10:00:00', endTime: '2026-07-02 11:00:00', status: '已下课', settlementType: 'single' },
     { id: 'hard-schedule-single-recent', studentId: 'hard-single-recent', studentName: '近期单次付费', courseType: '私教课', startTime: '2026-07-04 10:00:00', endTime: '2026-07-04 11:00:00', status: '已下课', settlementType: 'single' },
     { id: 'hard-schedule-single-old', studentId: 'hard-single-old', studentName: '超90天单次付费', courseType: '私教课', startTime: '2026-03-01 10:00:00', endTime: '2026-03-01 11:00:00', status: '已下课', settlementType: 'single' }
   ],
@@ -232,12 +239,12 @@ const hardHistoricalIds = hardStandard.views.historicalStudents.map(row => row.s
 const hardActiveIds = hardStandard.views.activeStudents.map(row => row.studentId).sort();
 assert.deepStrictEqual(
   hardHistoricalIds,
-  ['hard-package-cn', 'hard-package-low', 'hard-past-scheduled', 'hard-single-old', 'hard-single-recent'],
+  ['hard-package-cn', 'hard-package-low', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-old', 'hard-single-recent', 'hard-stable-single'],
   '历史学员必须只按排课表有效上课事实返回，有课包余额或核销流水但无排课不进入历史学员'
 );
 assert.deepStrictEqual(
   hardActiveIds,
-  ['hard-package-cn', 'hard-package-low', 'hard-past-scheduled', 'hard-single-recent'],
+  ['hard-package-cn', 'hard-package-low', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
   '在期学员必须是历史学员的子集，并包含课包有余额或90天内上过正式课的人'
 );
 assert.ok(
@@ -251,6 +258,16 @@ assert.strictEqual(cnPackageRow.paymentModeLabel, '课包学员', '中文“课�
 assert.strictEqual(cnPackageRow.activityStatusLabel, '近30天活跃', '活跃状态必须由后端统一输出并识别课包核销上课事实');
 assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成旧的稳定单次付费');
 assert.strictEqual(cnPackageRow.lessonVolumeLabel, '-', '历史课时标签必须由后端统一输出');
+assert.strictEqual(
+  hardStandard.views.activeStudents.find(row => row.studentId === 'hard-renewal-due')?.studentStatusLabel,
+  '课包待续费',
+  '课包已用完且近30天仍上课的课包学员必须由后端标为课包待续费'
+);
+assert.strictEqual(
+  hardStandard.views.activeStudents.find(row => row.studentId === 'hard-stable-single')?.studentStatusLabel,
+  '稳定单次付费',
+  '最近90天有2次及以上单次正式课的学员必须由后端标为稳定单次付费'
+);
 assert.strictEqual(
   hardStandard.teachingSummary.historicalTagCounts.packageStatus['课包有余额'],
   hardStandard.teachingSummary.activeTagCounts.packageStatus['课包有余额'],
@@ -282,12 +299,12 @@ assert.strictEqual(
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson30Count,
-  4,
+  6,
   '在期学员近30天正式课活跃必须只按排课表正式课事实输出'
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson90Count,
-  4,
+  6,
   '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
 );
 
