@@ -4,7 +4,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../server/read-models/customer-lifecycle.js');
-const { buildLeadPoolRows } = require('../server/read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildTeachingStudentViews } = require('../server/read-models/platform-metrics.js');
 
 const rows = buildCustomerLifecycleRows({
   leads: [
@@ -218,6 +218,48 @@ const staleMaterializedFreeLeadRowsWithRawLead = buildLeadPoolRows({
 });
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].leadStage, '跟进中', 'raw lead stage must not override lifecycle facts when the student has no paid purchase');
 assert.strictEqual(staleMaterializedFreeLeadRowsWithRawLead[0].dealType, '', 'raw lead deal type must not override lifecycle facts when the student has no paid purchase');
+
+const linkedStudentDisplayRows = buildCustomerLifecycleRows({
+  leads: [
+    {
+      id: 'lead-lian',
+      displayName: '莲儿',
+      wechatName: '莲儿',
+      studentName: '莲儿（连女士）',
+      studentId: 'student-lian',
+      source: '大众点评',
+      campus: 'shunyi_mapo',
+      isCourseConverted: true
+    }
+  ],
+  students: [
+    {
+      id: 'student-lian',
+      name: '莲儿（连女士）',
+      source: '大众点评',
+      campus: 'shunyi_mapo'
+    }
+  ],
+  purchases: [
+    {
+      id: 'purchase-lian',
+      studentId: 'student-lian',
+      studentName: '莲儿（连女士）',
+      packageName: '成人1v1 黄金时间10课时',
+      status: 'active',
+      purchaseDate: '2026-04-23',
+      amountPaid: 4000
+    }
+  ]
+});
+assert.strictEqual(linkedStudentDisplayRows[0].displayName, '莲儿（连女士）', 'student roster display name should prefer the real linked student name over the shorter lead display name');
+const linkedStudentViews = buildTeachingStudentViews(linkedStudentDisplayRows, {
+  students: [{ id: 'student-lian', name: '莲儿（连女士）', source: '大众点评', campus: 'shunyi_mapo' }],
+  purchases: [{ id: 'purchase-lian', studentId: 'student-lian', studentName: '莲儿（连女士）', packageName: '成人1v1 黄金时间10课时', status: 'active', purchaseDate: '2026-04-23', amountPaid: 4000 }],
+  entitlements: [{ id: 'entitlement-lian', studentId: 'student-lian', studentName: '莲儿（连女士）', totalLessons: 10, remainingLessons: 5, status: 'active' }],
+  schedule: [{ id: 'schedule-lian', studentIds: ['student-lian'], studentName: '莲儿（连女士）', courseType: '私教课', status: '已结束', startTime: '2026-06-22 17:30' }]
+});
+assert.strictEqual(linkedStudentViews.activeStudents[0].name, '莲儿（连女士）', 'active student list should display the backend unified real student name');
 
 const directPrivateRows = buildCustomerLifecycleRows({
   students: [

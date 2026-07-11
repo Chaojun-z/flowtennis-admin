@@ -23,4 +23,5 @@ docs/
 var/finance-snapshots/
 var/ops-backups/
 var/ops-reports/
+_exports/
 tmp/

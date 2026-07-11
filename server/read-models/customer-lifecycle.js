@@ -415,10 +415,11 @@ function buildCustomerLifecycleRows({
       student.coachName
     ) : '';
     const campus = firstValue(student.campus, student.campusName);
+    const studentDisplayName = firstValue(student.name, student.studentName);
     mergeIntoRow(row, {
       sourceLeadId: sourceId,
       studentId: sid,
-      displayName: firstValue(student.name, student.studentName),
+      displayName: studentDisplayName,
       phone: text(student.phone),
       source: businessTaxonomy.normalizeLeadSource(student.source),
       campus,
@@ -445,6 +446,7 @@ function buildCustomerLifecycleRows({
       firstTouchAt,
       createdAt: firstValue(student.createdAt, student.leadDate)
     });
+    if (studentDisplayName) row.displayName = studentDisplayName;
     row.hasTrialExperience = row.hasTrialExperience || hasTrialExperience;
     row.hasScheduleRecord = row.hasScheduleRecord || hasScheduleRecord;
     row.hasCourseStudentEntry = row.hasCourseStudentEntry || row.studentStage === 'formal';
