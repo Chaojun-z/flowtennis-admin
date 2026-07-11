@@ -581,11 +581,11 @@ function renderTableSkeletonLoading(id,colspan,text){
   el.innerHTML=`<tr class="tms-table-skeleton-row-host"><td colspan="${colspan}"><div class="tms-table-skeleton-state" style="--tms-table-skeleton-columns:${cellCount}" role="status" aria-live="polite" aria-label="${safeText}"><div class="tms-table-skeleton-body">${rows}</div><div class="tms-table-skeleton-caption">${safeText}</div></div></td></tr>`;
 }
 function renderStudentTableLoading(){
-  renderTableSkeletonLoading('stuTbody',13,'学员数据加载中...');
+  renderTableSkeletonLoading('stuTbody',15,'学员数据加载中...');
 }
 function renderStudentTableError(message){
   const el=document.getElementById('stuTbody');
-  if(el)el.innerHTML=`<tr><td colspan="11"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
+  if(el)el.innerHTML=`<tr><td colspan="15"><div class="tms-table-error-state"><div class="tms-empty-title">加载失败</div><div class="tms-empty-desc">${esc(message||'请稍后重试')}</div><button class="tms-state-action" onclick="loadPageDataAndRender(currentPage,{force:true})">重新加载</button></div></td></tr>`;
 }
 function renderLeadTableLoading(){
   renderTableSkeletonLoading('leadTbody',15,'线索数据加载中...');

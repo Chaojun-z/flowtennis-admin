@@ -21,7 +21,9 @@ const source = {
     { id: 'ledger-1', entitlementId: 'entitlement-1', purchaseId: 'purchase-1', studentId: 'student-2', scheduleId: 'schedule-1', lessonDelta: -1, relatedDate: '2026-06-10', reason: '上课消耗', operator: 'Mira' }
   ],
   schedule: [
-    { id: 'schedule-1', studentIds: ['student-2'], startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已结束', courseType: '私教课', className: '成人私教', campus: 'shunyi_mapo', venue: '1号场', coach: '王教练', lessonCount: 1 }
+    { id: 'schedule-1', studentIds: ['student-2'], startTime: '2026-06-10 10:00:00', endTime: '2026-06-10 11:00:00', status: '已结束', courseType: '私教课', className: '成人私教', campus: 'shunyi_mapo', venue: '1号场', coach: '王教练', lessonCount: 1 },
+    { id: 'schedule-direct-1', studentId: 'student-2', startTime: '2026-06-12 10:00:00', endTime: '2026-06-12 11:00:00', status: '已结束', courseType: '私教课', settlementType: 'single', paidAmount: 300, campus: 'shunyi_mapo', coach: '王教练', lessonCount: 1 },
+    { id: 'schedule-field-fee-1', studentId: 'student-2', startTime: '2026-06-13 10:00:00', endTime: '2026-06-13 11:00:00', status: '已取消', courseType: '课程订场', paidAmount: 80, fieldFeeAmount: 80, campus: 'shunyi_mapo' }
   ],
   membershipBenefitLedger: [
     { id: 'benefit-grant-1', studentId: 'student-2', benefitCode: 'courtBooking', benefitLabel: '订场', unit: '次', delta: 3, action: 'supplement', reason: '赠送', relatedDate: '2026-06-04', operator: 'Mira' },
@@ -51,7 +53,10 @@ assert.strictEqual(platform.studentStageStats.find(row => row.stage === 'formal'
 const formalStudentView = platform.teachingStudentViews.formalStudents.find(row => row.studentId === 'student-2');
 assert.ok(formalStudentView, 'formal student unified view should expose student-2');
 assert.strictEqual(formalStudentView.packageBalanceText, '6/10', 'student list package balance should come from the backend unified view');
-assert.strictEqual(formalStudentView.completedLessons, 1, 'student completed lessons should come from the backend unified view');
+assert.strictEqual(formalStudentView.completedLessons, 2, 'student completed lessons should come from the backend unified view');
+assert.strictEqual(formalStudentView.detailRecentLessonDate, '2026-06-12', 'student recent lesson date should come from backend unified lesson detail rows');
+assert.strictEqual(formalStudentView.cumulativeCoursePaidAmount, 1300, 'student cumulative course paid amount should equal package paid amount plus direct single-lesson course receipts');
+assert.strictEqual(formalStudentView.cumulativeCoursePaidText, '¥1,300', 'student cumulative course paid amount should expose a ready-to-render money text');
 assert.deepStrictEqual(
   formalStudentView.detailPackageOrderRows.map(row => [row.packageName, row.purchaseDate, row.remainingLessons, row.totalLessons]),
   [['成人正式课包', '2026-06-03', 6, 10]],
@@ -59,7 +64,7 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   formalStudentView.detailLessonRecordRows.map(row => [row.kind, row.time, row.courseType, row.coach]),
-  [['ledger', '2026-06-10 10:00-11:00', '私教课', '王教练']],
+  [['schedule', '2026-06-12 10:00-11:00', '私教课', '王教练'], ['ledger', '2026-06-10 10:00-11:00', '私教课', '王教练']],
   'student lesson detail rows should be owned by the backend unified student detail model'
 );
 assert.deepStrictEqual(

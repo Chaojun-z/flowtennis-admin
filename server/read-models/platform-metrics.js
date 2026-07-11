@@ -14,6 +14,12 @@ function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function moneyText(value) {
+  const amount = money(value);
+  if (!amount) return '¥0';
+  return `¥${amount.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
+}
+
 function parseArr(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value) {
@@ -129,6 +135,23 @@ function courseRowIsCompanion(row = {}) {
   const normalized = businessTaxonomy.normalizeCourseType(row);
   const value = [row.courseType, row.packageCourseType, row.type, row.productType, row.courseTypeLevel2, row.packageName, row.productName, row.name, row.scheduleSource].filter(Boolean).join(' ');
   return normalized.level1 === '陪打' || /陪打/.test(value);
+}
+
+function courseRowIsCourtFee(row = {}) {
+  const value = [
+    row.businessType,
+    row.displayBusinessType,
+    row.incomeType,
+    row.courseType,
+    row.packageCourseType,
+    row.type,
+    row.productType,
+    row.courseTypeLevel2,
+    row.packageName,
+    row.productName,
+    row.name
+  ].filter(Boolean).join(' ');
+  return /订场|场地|field\s*fee/i.test(value);
 }
 
 function coursePaymentAmount(row = {}) {
@@ -417,6 +440,40 @@ function buildTeachingStudentCompletedLessonMap(data = {}) {
   return completedByStudent;
 }
 
+function buildTeachingStudentCoursePaidMap(data = {}) {
+  const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
+  const purchaseRows = new Map();
+  const pushPurchase = row => {
+    const studentId = text(row.studentId);
+    const amount = coursePaymentAmount(row);
+    if (!studentId || !amount || !activeStatus(row) || courseRowIsCompanion(row) || courseRowIsCourtFee(row)) return;
+    purchaseRows.set(coursePurchaseKey(row), { studentId, amount });
+  };
+  (data.purchases || []).forEach(pushPurchase);
+  (data.entitlements || []).forEach(row => {
+    const purchase = purchasesById.get(text(row.purchaseId)) || {};
+    const merged = { ...purchase, ...row, id: text(row.purchaseId || row.id) };
+    if (!purchaseRows.has(coursePurchaseKey(merged))) pushPurchase(merged);
+  });
+
+  const paidByStudent = new Map();
+  purchaseRows.forEach(({ studentId, amount }) => {
+    paidByStudent.set(studentId, money((paidByStudent.get(studentId) || 0) + amount));
+  });
+
+  const now = data.now || new Date();
+  (data.schedule || [])
+    .filter(row => activeStatus(row) && teachingScheduleLessonFact(row, now) && !courseRowIsCompanion(row) && !courseRowIsCourtFee(row) && teachingPaymentIsDirect(row))
+    .forEach(row => {
+      const amount = coursePaymentAmount(row);
+      if (!amount) return;
+      teachingScheduleStudentIds(row).forEach(studentId => {
+        paidByStudent.set(studentId, money((paidByStudent.get(studentId) || 0) + amount));
+      });
+    });
+  return paidByStudent;
+}
+
 function buildTeachingStudentLessonDetailMap(data = {}, { includeTrial = false } = {}) {
   const entitlementsById = new Map((data.entitlements || []).map(row => [text(row.id), row]));
   const purchasesById = new Map((data.purchases || []).map(row => [text(row.id), row]));
@@ -584,14 +641,16 @@ function buildTeachingStudentRecentFeedbackMap(data = {}) {
 function buildTeachingStudentListFieldMap(data = {}, options = {}) {
   const packageFieldMap = buildTeachingStudentPackageFieldMap(data, options);
   const completedByStudent = buildTeachingStudentCompletedLessonMap(data);
+  const coursePaidByStudent = buildTeachingStudentCoursePaidMap(data);
   const lessonDetailMap = buildTeachingStudentLessonDetailMap(data, options);
   const benefitDetailMap = buildTeachingStudentBenefitDetailMap(data);
   const feedbackMap = buildTeachingStudentRecentFeedbackMap(data);
   const details = new Map();
-  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
+  [...new Set([...packageFieldMap.keys(), ...completedByStudent.keys(), ...coursePaidByStudent.keys(), ...lessonDetailMap.keys(), ...benefitDetailMap.keys(), ...feedbackMap.keys()])].forEach(studentId => {
     const packageFields = packageFieldMap.get(studentId) || {};
     const lessonRows = lessonDetailMap.get(studentId) || [];
     const benefitFields = benefitDetailMap.get(studentId) || {};
+    const cumulativeCoursePaidAmount = money(coursePaidByStudent.get(studentId) || 0);
     details.set(studentId, {
       packageListRows: [],
       packageListText: '-',
@@ -607,6 +666,8 @@ function buildTeachingStudentListFieldMap(data = {}, options = {}) {
       detailBenefitGrantRows: [],
       detailBenefitConsumeRows: [],
       detailRecentFeedbackRows: feedbackMap.get(studentId) || [],
+      cumulativeCoursePaidAmount,
+      cumulativeCoursePaidText: moneyText(cumulativeCoursePaidAmount),
       ...packageFields,
       detailPackageOrderRows: Array.isArray(packageFields.packageListRows) ? packageFields.packageListRows : [],
       ...benefitFields,

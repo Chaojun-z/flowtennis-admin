@@ -86,7 +86,7 @@ const STUDENT_TAG_FILTER_GROUPS=[
   {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
   {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
   {key:'activityStatus',label:'活跃状态',options:STUDENT_ACTIVITY_STATUS_OPTIONS,getter:studentActivityStatusText},
-  {key:'lessonVolume',label:'历史课时',options:STUDENT_LESSON_VOLUME_OPTIONS,getter:studentLessonVolumeText},
+  {key:'lessonVolume',label:'累计上课',options:STUDENT_LESSON_VOLUME_OPTIONS,getter:studentLessonVolumeText},
   {key:'lifecycleStatus',label:'学员状态',options:STUDENT_LIFECYCLE_STATUS_OPTIONS,getter:studentLifecycleStatusText}
 ];
 let studentTagFilterState={packageStatus:[],paymentMode:[],activityStatus:[],lessonVolume:[],lifecycleStatus:[]};
@@ -145,7 +145,7 @@ function studentTagGroupedFilterConfig(baseRows){
     groups:STUDENT_TAG_FILTER_GROUPS.map(group=>({
       key:group.key,
       label:group.label,
-      options:group.options.map(value=>({value,label:value,count:studentTagOptionCount(baseRows,group,value)}))
+      options:group.options.map(value=>({value,label:studentLabelDisplayText(value),count:studentTagOptionCount(baseRows,group,value)}))
     }))
   };
 }
@@ -343,6 +343,13 @@ function studentLastLessonDate(stu){
   const row=Array.isArray(stu?.detailLessonRecordRows)?stu.detailLessonRecordRows[0]:null;
   return String(row?.time||row?.sortTime||'').slice(0,10);
 }
+function studentRecentLessonText(stu){
+  const date=studentLastLessonDate(stu);
+  return date?daysAgoText(date):'-';
+}
+function studentCumulativeCoursePaidText(stu){
+  return String(stu?.cumulativeCoursePaidText||'').trim()||'¥0';
+}
 function studentPackagePurchaseDate(stu){
   const sid=String(stu?.id||'');
   const dates=[
@@ -515,8 +522,10 @@ function studentTableColumns(){
     {label:'活跃状态',style:'width:120px'},
     {label:'付费方式',style:'width:120px'},
     {label:'课包状态',style:'width:120px'},
-    {label:'课包余额',style:'width:110px'},
-    {label:'历史课时',style:'width:110px'},
+    {html:studentSortHeader('packageLessons','课包余额'),style:'width:120px'},
+    {html:studentSortHeader('lastLesson','最近上课'),style:'width:150px'},
+    {html:studentSortHeader('completedLessons','累计上课'),style:'width:120px'},
+    {label:'累计课程付费',style:'width:130px'},
     {label:'学员状态',style:'width:120px'},
     {label:'负责教练',style:'width:110px'},
     {label:'备注',style:'width:280px'},
@@ -928,7 +937,9 @@ function renderStudentMobileCards(list){
       <div class="admin-h5-card-grid">
         <span><b>课包状态</b>${renderStudentLabelTag(studentPackageStatusText(s))}</span>
         <span><b>课包余额</b>${esc(renderStandardEmptyText(s?.packageBalanceText))}</span>
-        <span><b>历史课时</b>${renderStudentLabelTag(studentLessonVolumeText(s))}</span>
+        <span><b>最近上课</b>${esc(renderStandardEmptyText(studentRecentLessonText(s)))}</span>
+        <span><b>累计上课</b>${esc(renderStandardEmptyText(studentCompletedLessonCount(s)))}</span>
+        <span><b>累计课程付费</b>${esc(renderStandardEmptyText(studentCumulativeCoursePaidText(s)))}</span>
         <span><b>学员状态</b>${renderStudentLabelTag(studentLifecycleStatusText(s))}</span>
         <span><b>负责教练</b>${esc(coachText||'-')}</span>
       </div>
@@ -957,7 +968,7 @@ function renderStudents(options={}){
   document.getElementById('stuTbody').innerHTML=slice.length?slice.map(s=>{
     const coachText=studentPrimaryCoachText(s);
     const noteText=studentHumanText(studentNoteSummary(s));
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStudentLabelTag(studentLessonVolumeText(s))}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(s.name)}</div></td><td>${renderStandardCellText(studentSourceText(s),false)}</td><td>${renderStandardBusinessTag(s.type,'customerType')}</td><td>${renderStandardCellText(cn(s.campus))}</td><td>${renderStudentLabelTag(studentActivityStatusText(s))}</td><td>${renderStudentLabelTag(studentPaymentModeText(s))}</td><td>${renderStudentLabelTag(studentPackageStatusText(s))}</td><td>${studentUnifiedPackageBalanceHtml(s)}</td><td>${renderStandardCellText(studentRecentLessonText(s),false)}</td><td>${renderStandardCellText(studentCompletedLessonCount(s),false)}</td><td>${renderStandardCellText(studentCumulativeCoursePaidText(s),false)}</td><td>${renderStudentLabelTag(studentLifecycleStatusText(s))}</td><td>${renderStandardCellText(coachText)}</td><td>${renderStandardTooltipText(noteText,'tms-text-remark tms-text-remark-1 student-note-cell')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openStudentDetail('${s.id}')">查看</span><span class="tms-action-link" onclick="openPurchaseModal('${s.id}')">课包</span></td></tr>`;
   }).join(''):studentEmptyStateHtml();
   renderStudentMobileCards(slice);
 }
