@@ -273,6 +273,7 @@ assert.ok(cnPackageRow, '中文课包划扣学员必须进入在期学员');
 assert.strictEqual(cnPackageRow.packageStatusLabel, '课包有余额', '课包状态必须由后端统一输出');
 assert.strictEqual(cnPackageRow.paymentModeLabel, '课包学员', '中文“课包划扣”不能被误判为单次付费');
 assert.strictEqual(cnPackageRow.activityStatusLabel, '近30天活跃', '活跃状态必须由后端统一输出并识别课包核销上课事实');
+assert.strictEqual(cnPackageRow.studentStatusLabel, '课包活跃中', '课包有余额且近30天有正式课的学员必须由后端标为课包活跃中');
 assert.notStrictEqual(cnPackageRow.studentStatusLabel, '稳定单次付费', '只有课包上课记录的学员不能被标成旧的稳定单次付费');
 assert.strictEqual(cnPackageRow.lessonVolumeLabel, '-', '历史课时标签必须由后端统一输出');
 assert.strictEqual(

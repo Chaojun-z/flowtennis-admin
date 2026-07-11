@@ -81,7 +81,7 @@ const STUDENT_PACKAGE_STATUS_OPTIONS=['未买过课包','课包有余额','课�
 const STUDENT_PAYMENT_MODE_OPTIONS=['课包学员','单次付费学员','课包+单次付费'];
 const STUDENT_ACTIVITY_STATUS_OPTIONS=['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'];
 const STUDENT_LESSON_VOLUME_OPTIONS=['历史课时30+','历史课时50+','历史课时100+'];
-const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
+const STUDENT_LIFECYCLE_STATUS_OPTIONS=['课包活跃中','课包待续费','已转单次付费','稳定单次付费','有余额未活跃'];
 const STUDENT_TAG_FILTER_GROUPS=[
   {key:'packageStatus',label:'课包状态',options:STUDENT_PACKAGE_STATUS_OPTIONS,getter:studentPackageStatusText},
   {key:'paymentMode',label:'付费方式',options:STUDENT_PAYMENT_MODE_OPTIONS,getter:studentPaymentModeText},
@@ -267,6 +267,7 @@ function studentLabelDisplayText(value){
     '历史课时30+':'30+',
     '历史课时50+':'50+',
     '历史课时100+':'100+',
+    '课包活跃中':'课包活跃',
     '课包待续费':'待续费',
     '已转单次付费':'转单次',
     '稳定单次付费':'稳定单次',
@@ -291,6 +292,7 @@ function studentLabelTagClass(value){
     '历史课时30+':'tms-tag-business-stage-new',
     '历史课时50+':'tms-tag-course-partner',
     '历史课时100+':'tms-tag-tier-gold',
+    '课包活跃中':'tms-tag-business-stage-won',
     '课包待续费':'tms-tag-priority-p0',
     '已转单次付费':'tms-tag-business-stage-new',
     '稳定单次付费':'tms-tag-business-stage-won',

@@ -248,9 +248,9 @@ assert.match(fnBody('studentHasFormalPackage'), /coursePurchaseCount/, 'package 
 assert.match(source, /const STUDENT_PAYMENT_MODE_OPTIONS=\['课包学员','单次付费学员','课包\+单次付费'\]/, 'student payment mode options should match the agreed labels');
 assert.match(source, /const STUDENT_ACTIVITY_STATUS_OPTIONS=\['近30天活跃','31-90天活跃','91-180天沉默','180天以上沉睡','从未正式上课'\]/, 'student activity status options should match the agreed labels');
 assert.match(source, /const STUDENT_LESSON_VOLUME_OPTIONS=\['历史课时30\+','历史课时50\+','历史课时100\+'\]/, 'student lesson volume options should match the agreed labels');
-assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['课包待续费','已转单次付费','稳定单次付费','有余额未活跃'\]/, 'student lifecycle status options should match the global student tag standard');
+assert.match(source, /const STUDENT_LIFECYCLE_STATUS_OPTIONS=\['课包活跃中','课包待续费','已转单次付费','稳定单次付费','有余额未活跃'\]/, 'student lifecycle status options should match the global student tag standard');
 assert.match(source, /function studentLabelDisplayText\(/, 'student labels should use one shared display-name helper');
-assert.match(fnBody('studentLabelDisplayText'), /'近30天活跃':'近30天'[\s\S]*'31-90天活跃':'31~90天'[\s\S]*'历史课时30\+':'30\+'[\s\S]*'课包待续费':'待续费'/, 'student label helper should map backend labels to compact table tags');
+assert.match(fnBody('studentLabelDisplayText'), /'近30天活跃':'近30天'[\s\S]*'31-90天活跃':'31~90天'[\s\S]*'历史课时30\+':'30\+'[\s\S]*'课包活跃中':'课包活跃'[\s\S]*'课包待续费':'待续费'/, 'student label helper should map backend labels to compact table tags');
 assert.match(fnBody('studentLabelDisplayText'), /'课包\+单次付费':'课包\+单次'/, 'student label helper should shorten mixed payment mode labels');
 assert.match(source, /function studentLabelTagClass\(/, 'student labels should use one shared color-class helper');
 assert.match(fnBody('studentLabelTagClass'), /'180天以上沉睡':'tms-tag-priority-p0'/, 'sleeping activity labels should use the red tag color');
