@@ -36,7 +36,7 @@ function fnBody(source, name) {
   const source = pageSource(file);
   assert.match(fnBody(source, filterFn), new RegExp(`${prefix}Page=standardListFirstPage\\(\\)`), `${file} filters should reset to first page through the global list flow`);
   if (sortFn) assert.match(fnBody(source, sortFn), new RegExp(`${prefix}Page=standardListFirstPage\\(\\)`), `${file} sorting should reset to first page through the global list flow`);
-  assert.match(fnBody(source, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${file} page size should use the global 20/50/100 rule`);
+  assert.match(fnBody(source, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${file} page size should use the global 15/50/100 rule`);
   assert.match(fnBody(source, `set${title}Page`), /standardListPagination\(/, `${file} page switching should use global page normalization`);
   assert.match(fnBody(source, renderFn), /standardListSlice\(/, `${file} rendering should use global page slicing and empty-page fallback`);
   assert.doesNotMatch(source, /function \w+PageNumbers\(/, `${file} should not define page-number rules locally`);
@@ -54,7 +54,7 @@ const financeSource = pageSource('coachops');
   ['finance revenue', 'FinanceRevenue', 'financeRevenue'],
   ['finance recognized', 'FinanceRecognized', 'financeRecognized']
 ].forEach(([label, title, prefix]) => {
-  assert.match(fnBody(financeSource, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${label} page size should use the global 20/50/100 rule`);
+  assert.match(fnBody(financeSource, `set${title}PageSize`), new RegExp(`${prefix}PageSize=standardListPageSize\\(value,${prefix}PageSize\\)`), `${label} page size should use the global 15/50/100 rule`);
   assert.match(fnBody(financeSource, `set${title}Page`), /standardListPagination\(/, `${label} page switching should use global page normalization`);
 });
 assert.match(fnBody(financeSource, 'renderFinanceLedger'), /standardListSlice\(/, 'finance ledger rendering should use global page slicing and empty-page fallback');

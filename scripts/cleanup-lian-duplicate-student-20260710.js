@@ -59,8 +59,8 @@ function buildCleanupPlan(data, now = new Date().toISOString()) {
   const canonicalLead = data.leads.find(row => String(row.id) === CANONICAL_LEAD_ID);
   const duplicateLeads = data.leads.filter(row => DUPLICATE_LEAD_IDS.includes(String(row.id)));
   if (!keepStudent) throw new Error(`保留学员不存在：${KEEP_STUDENT_ID}`);
-  if (String(keepStudent.name || '') !== CANONICAL_NAME) throw new Error(`保留学员姓名异常：${keepStudent.name || ''}`);
-  if (duplicateStudent && String(duplicateStudent.name || '') !== '莲儿') throw new Error(`重复学员姓名异常：${duplicateStudent.name || ''}`);
+  if (String(keepStudent.name || '') !== CANONICAL_NAME) throw new Error(`保留对象姓名异常：${keepStudent.name || ''}`);
+  if (duplicateStudent && String(duplicateStudent.name || '') !== '莲儿') throw new Error(`重复对象姓名异常：${duplicateStudent.name || ''}`);
   if (!canonicalLead) throw new Error(`主线索不存在：${CANONICAL_LEAD_ID}`);
 
   const duplicateRefs = {

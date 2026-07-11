@@ -300,7 +300,7 @@ function renderPagerInfoHtml(total){
   return `共 ${Number(total)||0} 条`;
 }
 function renderPageSizeSelectorHtml(id,pageSize,onchange){
-  return `<span class="pager-divider"></span><span>每页</span>${renderStandardDropdownHtml(id,String(pageSize),[{value:'20',label:'20'},{value:'50',label:'50'},{value:'100',label:'100'}],String(pageSize),false,onchange)}<span>条</span>`;
+  return `<span class="pager-divider"></span><span>每页</span>${renderStandardDropdownHtml(id,String(pageSize),[{value:'15',label:'15'},{value:'50',label:'50'},{value:'100',label:'100'}],String(pageSize),false,onchange)}<span>条</span>`;
 }
 function renderPagerChevron(direction){
   const cls=direction==='prev'?'tms-page-chevron-prev':'tms-page-chevron-next';

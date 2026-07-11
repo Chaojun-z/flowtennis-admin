@@ -358,7 +358,7 @@ assert.match(html, /作废信息[\s\S]*作废时间[\s\S]*作废人[\s\S]*作废
 assert.match(pagesCss, /membership-rights-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 110px 110px 110px 140px/, 'membership rights should keep expiry and counts in one row');
 assert.match(fnBody('membershipBenefitRowsForAccount'), /courtAccountListViewData\?\.items[\s\S]*item\?\.benefitRows\|\|\[\]/, 'frontend benefit summary should read totals and remaining counts from the unified read model');
 assert.doesNotMatch(fnBody('membershipBenefitSummaryForOrder'), /membershipBenefitLedger\.filter|positiveDelta|negativeDelta/, 'frontend benefit summary must not recalculate supplements and consumption from raw ledger rows');
-assert.match(html, /let membershipPage=1,membershipPageSize=20,membershipSortKey='firstOpenDate',membershipSortDir='desc'/, 'membership management should default to first-open date descending');
+assert.match(html, /let membershipPage=1,membershipPageSize=15,membershipSortKey='firstOpenDate',membershipSortDir='desc'/, 'membership management should default to first-open date descending with the global 15-row page size');
 assert.match(fnBody('membershipDefaultSortDir'), /return 'desc'/, 'first-open date sort should start with newest member first');
 assert.match(html, /function setMembershipSort\(key\)/, 'membership management should support standard three-state sorting');
 assert.match(fnBody('renderMemberships'), /const firstOpenDate=String\(item\.firstOpenDate\|\|''\)\.slice\(0,10\)/, 'membership management should show first-open date from the read model');

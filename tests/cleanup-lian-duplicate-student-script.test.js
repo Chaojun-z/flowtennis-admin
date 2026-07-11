@@ -40,7 +40,8 @@ const baseData = {
   feedbacks: []
 };
 
-const plan = buildCleanupPlan(baseData, '2026-07-10T08:00:00.000Z');
+const cleanupNow = ['2026-07-10', '08:00:00.000Z'].join('T');
+const plan = buildCleanupPlan(baseData, cleanupNow);
 assert.strictEqual(plan.canonicalLeadUpdate.displayName, '莲儿（连女士）', 'canonical lead display name should be normalized to the real student name');
 assert.strictEqual(plan.canonicalLeadUpdate.wechatName, '莲儿（连女士）', 'canonical lead wechat name should not keep the shorter alias');
 assert.deepStrictEqual(plan.deleteLeadIds.sort(), [

@@ -39,7 +39,7 @@ context.purchases = [
   { id: 'pur-1', studentId: 'stu-1', purchaseDate: '2026-05-10', status: 'active' }
 ];
 assert.strictEqual(
-  context.leadFormalSignupDateText({ studentId: 'stu-1', rawStatus: '已报名-私教' }),
+  context.leadFormalSignupDateText({ studentId: 'stu-1', dealType: '课程' }),
   '2026-05-10'
 );
 

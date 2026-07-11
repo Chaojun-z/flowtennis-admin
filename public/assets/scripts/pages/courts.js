@@ -466,7 +466,7 @@ function setMembershipSort(key){
 }
 function setMembershipPageSize(value){
   const next=parseInt(value,10);
-  membershipPageSize=[20,50,100].includes(next)?next:20;
+  membershipPageSize=standardListPageSize(next,membershipPageSize);
   membershipPage=1;
   renderMemberships();
 }

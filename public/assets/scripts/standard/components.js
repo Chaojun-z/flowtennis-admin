@@ -329,15 +329,15 @@ function renderStandardPaginationButtonsHtml(page,pages,onPageChange){
 function standardListFirstPage(){
   return 1;
 }
-function standardListPageSize(value,current=20){
+function standardListPageSize(value,current=15){
   const next=parseInt(value,10);
-  if([20,50,100].includes(next))return next;
+  if([15,50,100].includes(next))return next;
   const fallback=parseInt(current,10);
-  return [20,50,100].includes(fallback)?fallback:20;
+  return [15,50,100].includes(fallback)?fallback:15;
 }
 function standardListPagination(total,page,pageSize){
   const safeTotal=Math.max(0,parseInt(total,10)||0);
-  const safePageSize=standardListPageSize(pageSize,20);
+  const safePageSize=standardListPageSize(pageSize,15);
   const pages=Math.max(1,Math.ceil(safeTotal/safePageSize));
   const current=Math.min(pages,Math.max(1,parseInt(page,10)||1));
   const start=(current-1)*safePageSize;

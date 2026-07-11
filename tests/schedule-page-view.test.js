@@ -184,7 +184,7 @@ assert.match(source, /function onScheduleFilterChange\(\)\{schPage=standardListF
 assert.match(source, /syncScheduleFilterOptions[\s\S]*withLinkedFilterCounts\(\[[\s\S]*key:'courseType'[\s\S]*key:'coach'[\s\S]*key:'proposal'[\s\S]*key:'feedback'[\s\S]*key:'status'/, 'schedule toolbar filters should use linked count labels in the requested order');
 assert.match(source, /schCourseTypeFilterHost[\s\S]*schCoachFilterHost[\s\S]*schProposalFilterHost[\s\S]*schFeedbackFilterHost[\s\S]*schStatusFilterHost/, 'schedule toolbar should order filters as course type, coach, lesson plan, feedback, status');
 assert.match(source, /function renderSchedulePagerControls\(/, 'schedule page should use the standard compact pager controls');
-assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 20, 50, and 100 row page sizes');
+assert.match(source, /function setSchedulePageSize\(/, 'schedule page should support 15, 50, and 100 row page sizes');
 assert.match(source, /function scheduleEmptyStateHtml\([\s\S]*没有匹配的排课[\s\S]*暂无排课[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角添加排课开始安排课程/, 'schedule empty state should distinguish filtered empty results from no data');
 assert.match(source, /pageSizeId:'schPageSize'/, 'schedule pager should expose a page size selector host');
 assert.match(source, /label:'日期'[\s\S]*className:'tms-sticky-l'[\s\S]*style:'width:84px;padding-left:14px'/, 'schedule table should keep the date column fixed on the left');
