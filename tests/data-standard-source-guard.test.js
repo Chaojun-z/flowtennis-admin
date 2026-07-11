@@ -66,7 +66,7 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/students.js',
   name: 'studentPageStats',
-  required: [/studentStandardSummaryForMode\(\)/],
+  required: [/FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/],
   forbidden: [/studentFinanceStatsForBase\(base\)/, /purchases\.filter/, /entitlements\.filter/, /aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/, /amountPaid/, /finalAmount/, /tagCounts/, /historicalTagCounts/, /activeTagCounts/]
 });
 assert.doesNotMatch(
@@ -77,7 +77,7 @@ assert.doesNotMatch(
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/leadTeachingSummaryValue\('historicalStudentCount'\)/, /leadTeachingSummaryValue\('activeStudentCount'\)/, /leadTeachingSummaryValue\('trialAttendedStudentCount'\)/, /leadTeachingSummaryValue\('trialAttendedToFormalPurchaseCount'\)/],
+  required: [/FlowTennisPlatformDataStandards\.currentLeadSummary\(list,\s*leadStandardMetrics\(\)\)/],
   forbidden: [/leadStandardMetricValue\('trialPathStudents'\)/, /leadStandardMetricValue\('trialPathDeals'\)/, /leadStandardMetricValue\('trialPathPending'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/]
 });
 
@@ -95,7 +95,7 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/courts.js',
   name: 'renderMembershipStats',
-  required: [/membershipFinanceSummary/],
+  required: [/financeSummary/],
   forbidden: [/courtFinanceLocal\(/, /normalizeCourtHistoryLocal\(/, /history\.reduce\(/, /membershipOrders\.filter/, /totalDeposit/]
 });
 
@@ -268,7 +268,7 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/leads.js',
   name: 'leadStatsData',
-  required: [/const total=Array\.isArray\(list\)\?list\.length:0/, /leadTeachingSummaryValue\('historicalStudentCount'\)/, /leadTeachingSummaryValue\('activeStudentCount'\)/],
+  required: [/FlowTennisPlatformDataStandards\.currentLeadSummary\(list,\s*leadStandardMetrics\(\)\)/],
   forbidden: [/leadStandardMetricValue\('historicalStudents'\)/, /leadStandardMetricValue\('activeStudents'\)/, /leadStandardMetricValue\('courseChainStudents'\)/, /leadStandardMetricValue\('formalStudents'\)/, /FlowTennisPlatformDataStandards\.leadFunnelStats\(base,/, /base\.filter\(leadTrialBooked\)/, /base\.filter\(leadTrialDone\)/, /base\.filter\(leadConverted\)/]
 });
 

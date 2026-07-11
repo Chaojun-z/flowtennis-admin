@@ -96,6 +96,17 @@ function renderMatchMobileCards(rows){
     </article>`;
   }).join('');
 }
+function renderMatchStats(stats={}){
+  const host=document.getElementById('matchStatsRow');
+  if(!host)return;
+  host.innerHTML=renderStandardDataCards([
+    {label:'活动数',valueHtml:Number(stats.totalCount)||0,sub:'当前筛选活动'},
+    {label:'报名人数',valueHtml:Number(stats.registeredCount)||0,sub:'当前筛选报名'},
+    {label:'成局数',valueHtml:Number(stats.formedCount)||0,percent:FlowTennisPlatformDataStandards.rateText(Number(stats.formedCount)||0,Number(stats.totalCount)||0),sub:'成局 / 活动数'},
+    {label:'预计费用',value:`¥${fmt(stats.estimatedCourtFee||0)}`,sub:'当前筛选合计'},
+    {label:'最终费用',value:`¥${fmt(stats.finalCourtFee||0)}`,sub:'当前筛选合计'}
+  ]);
+}
 function renderMatches(){
   const host=document.getElementById('matchTbody');if(!host)return;
   syncMatchFilters();
@@ -107,6 +118,7 @@ function renderMatches(){
     if(q&&!matchRowText(row).includes(q))return false;
     return true;
   });
+  renderMatchStats(FlowTennisPlatformDataStandards.currentMatchSummary(rows));
   host.innerHTML=rows.map(row=>{
     const regs=Array.isArray(row.registrations)?row.registrations:[];
     const campusText=cn(matchCampusCode(row));

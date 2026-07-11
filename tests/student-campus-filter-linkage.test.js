@@ -18,7 +18,8 @@ assert.match(source, /function studentCampusValuesForList\(/, 'student list shou
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the unified student campus source for filtering');
 assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student list base rows should use the shared student campus matcher and the new historical/active roster rules');
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
-assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should read the unified standard summary');
+assert.match(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/, 'student package stats should summarize the same filtered unified rows as the table list');
+assert.doesNotMatch(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should not read the unfiltered global summary as the current filter result');
 assert.doesNotMatch(source, /function studentFinanceStatsForBase\(/, 'student page should not keep a local finance stats calculator for top cards');
 assert.doesNotMatch(source, /function studentLifecycleStats\(/, 'student page should not keep a second local lifecycle stats calculator');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student package stats should not apply a second purchase-campus filter after the list is already filtered');
@@ -91,8 +92,10 @@ const context = {
   classes: [],
   courts: []
 };
+context.window = context;
+context.globalThis = context;
 vm.createContext(context);
-['public/assets/scripts/core/constants.js', 'public/assets/scripts/core/utils.js', 'public/assets/scripts/pages/students.js'].forEach(file => {
+['public/assets/scripts/core/constants.js', 'public/assets/scripts/core/utils.js', 'public/assets/scripts/core/platform-data-standards.js', 'public/assets/scripts/pages/students.js'].forEach(file => {
   vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
 });
 

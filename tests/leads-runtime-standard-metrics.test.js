@@ -38,6 +38,12 @@ context.standardLifecycleMetrics = {
     trialPathStudents: { value: 99, rateText: '99%' },
     trialPathDeals: { value: 88, rateText: '88%' },
     trialPathPending: { value: 77, rateText: '77%' }
+  },
+  views: {
+    historicalStudents: [{ id: 'lead-1' }, { id: 'lead-2' }],
+    activeStudents: [{ id: 'lead-2' }],
+    trialAttendedStudents: [{ id: 'lead-1' }, { id: 'lead-3' }],
+    trialAttendedToFormalPurchase: [{ id: 'lead-1' }]
   }
 };
 context.teachingStudentViews = { summary: {} };
@@ -61,14 +67,14 @@ assert.deepStrictEqual(
   },
   {
     total: 4,
-    historicalStudents: 5,
-    historicalStudentRate: '125%',
-    activeStudents: 3,
-    activeStudentRate: '60%',
+    historicalStudents: 2,
+    historicalStudentRate: '50%',
+    activeStudents: 1,
+    activeStudentRate: '50%',
     trialAttended: 2,
     trialAttendedToFormalPurchase: 1
   },
-  '线索池顶部必须读后端显式教学汇总字段，不能被旧 validLeads 或 trialPath 指标覆盖'
+  '线索池顶部必须用当前筛选后的线索集合匹配后端统一 views，不能退回全局 teachingSummary'
 );
 
 console.log('leads runtime standard metrics tests passed');

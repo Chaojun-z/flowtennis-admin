@@ -784,22 +784,7 @@ function leadTrialCourseConverted(lead){
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadStatsData(list){
-  const total=Array.isArray(list)?list.length:0;
-  const historicalStudents=leadTeachingSummaryValue('historicalStudentCount');
-  const activeStudents=leadTeachingSummaryValue('activeStudentCount');
-  const trialAttended=leadTeachingSummaryValue('trialAttendedStudentCount');
-  const trialAttendedToFormalPurchase=leadTeachingSummaryValue('trialAttendedToFormalPurchaseCount');
-  return {
-    total,
-    historicalStudents,
-    historicalStudentRate:leadCurrentListRateText(historicalStudents,total),
-    activeStudents,
-    activeStudentRate:leadStandardMetricRate('activeStudents',activeStudents,historicalStudents),
-    trialAttended,
-    trialAttendedRate:leadCurrentListRateText(trialAttended,total),
-    trialAttendedToFormalPurchase,
-    trialAttendedToFormalPurchaseRate:leadStandardMetricRate('trialAttendedToFormalPurchase',trialAttendedToFormalPurchase,trialAttended)
-  };
+  return FlowTennisPlatformDataStandards.currentLeadSummary(list, leadStandardMetrics());
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);

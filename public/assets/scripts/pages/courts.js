@@ -415,9 +415,8 @@ function membershipReadModelBookingRowsForCourt(court){
 function membershipReadModelAccountForCourt(court){
   return membershipReadModelItemForCourt(court)?.membershipAccount||null;
 }
-function renderMembershipStats(rows=[]){
+function renderMembershipStats(financeSummary={}){
   const host=document.getElementById('membershipStatsRow');if(!host)return;
-  const financeSummary=courtAccountListViewData?.summary?.membershipFinanceSummary||{};
   if(!Object.keys(financeSummary).length){
     host.innerHTML='';
     return;
@@ -534,7 +533,8 @@ function renderMemberships(){
   const body=document.getElementById('membershipTbody');if(!body)return;
   renderMembershipHeaderFilters(membershipBaseRows());
   const rows=getMembershipRows();
-  renderMembershipStats(rows);
+  const stats=FlowTennisPlatformDataStandards.currentMembershipSummary(rows);
+  renderMembershipStats(stats);
   const sortedRows=[...rows];
   if(membershipSortKey){
     sortedRows.sort((a,b)=>{
@@ -1124,8 +1124,19 @@ function renderCourtStatsCards(summary={}){
     card('散客消费',`<div class="tms-stat-value">¥${fmt(guestBookingAmount)} ${courtStatInlinePercent({part:guestBookingAmount,total:totalReceived})}</div>`,'散客消费金额 / 订场总实收金额占比')
   ].join('');
 }
-function renderCourtAccountListView(){
+function getCurrentCourtAccountRows(){
   const q=(document.getElementById('courtSearch')?.value||'').toLowerCase();
+  const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
+  const base=visibleItems.filter(item=>campus==='all'||item.campusCode===campus);
+  const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
+  return dateScopedBase.filter(item=>{
+    if(campus!=='all'&&item.campusCode!==campus)return false;
+    if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
+    if(courtAccountTypeFilterValue&&courtAccountStateLabel(item)!==courtAccountTypeFilterValue)return false;
+    return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
+  });
+}
+function renderCourtAccountListView(){
   document.getElementById('page-courts')?.classList.toggle('court-batch-mode',courtBatchMode);
   window.__courtAccountListViewCompare=courtAccountListViewCompareData||null;
   const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
@@ -1136,13 +1147,7 @@ function renderCourtAccountListView(){
     accountTypes:['会员账户','普通账户']
   };
   renderCourtHeaderFilters(base,scopedFilters);
-  const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
-  let list=dateScopedBase.filter(item=>{
-    if(campus!=='all'&&item.campusCode!==campus)return false;
-    if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
-    if(courtAccountTypeFilterValue&&courtAccountStateLabel(item)!==courtAccountTypeFilterValue)return false;
-    return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
-  });
+  let list=getCurrentCourtAccountRows();
   const sortedList=[...list];
   if(courtSortKey){
     sortedList.sort((a,b)=>{
@@ -1154,7 +1159,7 @@ function renderCourtAccountListView(){
   }else{
     sortedList.sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
   }
-  const summary=courtAccountListViewData?.summary||{};
+  const summary=FlowTennisPlatformDataStandards.currentCourtAccountSummary(list);
   renderCourtStatsCards(summary);
   const isMobileList=document.body.classList.contains('admin-mobile');
   const total=sortedList.length,pages=isMobileList?1:Math.max(1,Math.ceil(total/courtPageSize));
@@ -1995,7 +2000,7 @@ function openCourtHist(id){
   openStandardModal({title:`${esc(u.name)} · 充值/消费记录`,bodyHtml:`<div class="tms-history-list">${renderCourtHistoryItems(hist)}</div>`,actionsHtml:`<button class="tms-btn tms-btn-primary" style="width:100%;text-align:center" onclick="closeModal()">关闭</button>`,extraClass:'modal-tight'});
 }
 function exportCourtCSV(){
-  const d=(courtAccountListViewData?.items||[]).filter(item=>campus==='all'||item.campusCode===campus);
+  const d=getCurrentCourtAccountRows();
   let csv='姓名,手机号,关联学员,校区,余额,储值,消费金额,实收金额,跟进人,储值态度,备注\n';
   csv+=d.map(item=>{const row=item.exportRow||item;return [csvEscapeCell(row.displayName),csvEscapeCell(row.phone||''),csvEscapeCell(row.linkedStudentSummary),csvEscapeCell(row.campusName),csvEscapeCell(row.balance||0),csvEscapeCell(row.totalDeposit||0),csvEscapeCell(row.totalSpent||0),csvEscapeCell(row.totalReceived||0),csvEscapeCell(row.owner),csvEscapeCell(row.depositAttitude||''),csvEscapeCell(row.notesSummary||'')].join(',')}).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});

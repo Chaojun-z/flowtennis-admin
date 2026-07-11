@@ -636,20 +636,7 @@ function studentStandardSummaryForMode(){
   };
 }
 function studentPageStats(base){
-  const standardSummary=studentStandardSummaryForMode();
-  const unifiedTotal=Number(standardSummary.total);
-  return {
-    ...standardSummary,
-    total:Number.isFinite(unifiedTotal)?unifiedTotal:0,
-    historicalTrialAttendedCount:Number(standardSummary.historicalTrialAttendedCount)||0,
-    historicalFormalAttendedCount:Number(standardSummary.historicalFormalAttendedCount)||0,
-    historicalTrialWithoutFormalCount:Number(standardSummary.historicalTrialWithoutFormalCount)||0,
-    historicalFormalLesson30Count:Number(standardSummary.historicalFormalLesson30Count)||0,
-    activeFormalLesson30Count:Number(standardSummary.activeFormalLesson30Count)||0,
-    activeFormalLesson90Count:Number(standardSummary.activeFormalLesson90Count)||0,
-    activePackageBalanceCount:Number(standardSummary.activePackageBalanceCount)||0,
-    activePackageLowCount:Number(standardSummary.activePackageLowCount)||0
-  };
+  return FlowTennisPlatformDataStandards.currentStudentSummary(base, studentListViewMode());
 }
 function studentPercentText(value,total){
   if(!total)return '0%';
