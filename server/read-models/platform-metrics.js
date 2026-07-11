@@ -972,8 +972,10 @@ function teachingPaymentIsDirect(row = {}) {
   return (Number(row.paidAmount || row.paymentAmount || row.actualAmount || row.amountPaid || row.amount) || 0) > 0;
 }
 
-function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = new Date()) {
-  return teachingStudentFormalLessonFactRows(data, studentId, now).filter(teachingPaymentIsDirect);
+function teachingStudentDirectFormalLessonRows(data = {}, studentId = '', now = new Date(), studentRow = {}) {
+  const rows = teachingStudentFormalLessonFactRows(data, studentId, now);
+  const hasPackage = teachingStudentHasFormalPackage(studentRow) || rows.some(teachingPaymentIsPackage);
+  return rows.filter(row => teachingPaymentIsDirect(row) || (!hasPackage && !teachingPaymentIsPackage(row)));
 }
 
 function teachingStudentPackageStatusLabel(row = {}) {
@@ -994,8 +996,10 @@ function teachingStudentActivityStatusLabel(data = {}, row = {}, now = new Date(
 }
 
 function teachingStudentPaymentModeLabel(data = {}, row = {}, now = new Date()) {
-  const hasPackage = teachingStudentHasFormalPackage(row) || teachingStudentFormalLessonFactRows(data, text(row.studentId), now).some(teachingPaymentIsPackage);
-  const hasDirect = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).length > 0;
+  const studentId = text(row.studentId);
+  const formalLessonRows = teachingStudentFormalLessonFactRows(data, studentId, now);
+  const hasPackage = teachingStudentHasFormalPackage(row) || formalLessonRows.some(teachingPaymentIsPackage);
+  const hasDirect = teachingStudentDirectFormalLessonRows(data, studentId, now, row).length > 0;
   if (hasPackage && hasDirect) return '课包+单次付费';
   if (hasDirect) return '单次付费学员';
   if (hasPackage) return '课包学员';
@@ -1017,7 +1021,7 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
     .filter(Boolean)
     .sort()
     .pop() || '';
-  return teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+  return teachingStudentDirectFormalLessonRows(data, text(row.studentId), now, row).filter(item => {
     const date = dateOnly(item.startTime || item.endTime || item.createdAt);
     return date && (!lastPackageDate || date >= lastPackageDate);
   });
@@ -1026,13 +1030,13 @@ function teachingStudentDirectLessonsAfterLastPackage(data = {}, row = {}, now =
 function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()) {
   const packageStatus = teachingStudentPackageStatusLabel(row);
   const activityStatus = teachingStudentActivityStatusLabel(data, row, now);
-  const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+  const recentDirect30 = teachingStudentDirectFormalLessonRows(data, text(row.studentId), now, row).filter(item => {
     const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
     return days !== null && days <= 30;
   }).length;
   if (packageStatus === '课包有余额' && activityStatus !== '近30天活跃') return '有余额未活跃';
   if (teachingStudentDirectLessonsAfterLastPackage(data, row, now).length > 0) return '已转单次付费';
-  if (teachingStudentDirectFormalLessonRows(data, text(row.studentId), now).filter(item => {
+  if (teachingStudentDirectFormalLessonRows(data, text(row.studentId), now, row).filter(item => {
     const days = teachingDaysSince(dateOnly(item.startTime || item.endTime || item.createdAt), now);
     return days !== null && days <= 90;
   }).length >= 2) return '稳定单次付费';

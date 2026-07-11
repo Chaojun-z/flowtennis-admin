@@ -198,7 +198,9 @@ const hardCase = {
     { id: 'hard-single-old', name: '超90天单次付费' },
     { id: 'hard-gift-free', name: '赠送免费正式课' },
     { id: 'hard-package-free-note', name: '课包扣减免费备注' },
-    { id: 'hard-package-plus-gift', name: '课包加赠送免费' }
+    { id: 'hard-package-plus-gift', name: '课包加赠送免费' },
+    { id: 'hard-blank-formal', name: '无结算字段正式课' },
+    { id: 'hard-package-blank', name: '有课包无结算字段' }
   ],
   purchases: [
     { id: 'hard-purchase-package-cn', studentId: 'hard-package-cn', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-01' },
@@ -207,7 +209,8 @@ const hardCase = {
     { id: 'hard-purchase-ledger-only', studentId: 'hard-ledger-only-recent', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-04' },
     { id: 'hard-purchase-renewal-due', studentId: 'hard-renewal-due', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-05' },
     { id: 'hard-purchase-package-free-note', studentId: 'hard-package-free-note', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-06' },
-    { id: 'hard-purchase-package-plus-gift', studentId: 'hard-package-plus-gift', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-07' }
+    { id: 'hard-purchase-package-plus-gift', studentId: 'hard-package-plus-gift', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-07' },
+    { id: 'hard-purchase-package-blank', studentId: 'hard-package-blank', courseType: '私教课', packageLessons: 10, amountPaid: 5000, status: 'active', purchaseDate: '2026-06-08' }
   ],
   entitlements: [
     { id: 'hard-ent-package-cn', studentId: 'hard-package-cn', purchaseId: 'hard-purchase-package-cn', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' },
@@ -216,7 +219,8 @@ const hardCase = {
     { id: 'hard-ent-ledger-only', studentId: 'hard-ledger-only-recent', purchaseId: 'hard-purchase-ledger-only', courseType: '私教课', totalLessons: 10, remainingLessons: 9, status: 'active' },
     { id: 'hard-ent-renewal-due', studentId: 'hard-renewal-due', purchaseId: 'hard-purchase-renewal-due', courseType: '私教课', totalLessons: 10, remainingLessons: 0, status: 'depleted' },
     { id: 'hard-ent-package-free-note', studentId: 'hard-package-free-note', purchaseId: 'hard-purchase-package-free-note', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' },
-    { id: 'hard-ent-package-plus-gift', studentId: 'hard-package-plus-gift', purchaseId: 'hard-purchase-package-plus-gift', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' }
+    { id: 'hard-ent-package-plus-gift', studentId: 'hard-package-plus-gift', purchaseId: 'hard-purchase-package-plus-gift', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' },
+    { id: 'hard-ent-package-blank', studentId: 'hard-package-blank', purchaseId: 'hard-purchase-package-blank', courseType: '私教课', totalLessons: 10, remainingLessons: 6, status: 'active' }
   ],
   entitlementLedger: [
     { id: 'hard-ledger-package-cn-1', studentId: 'hard-package-cn', entitlementId: 'hard-ent-package-cn', purchaseId: 'hard-purchase-package-cn', lessonDelta: -1, relatedDate: '2026-07-03', courseType: '私教课' },
@@ -235,7 +239,9 @@ const hardCase = {
     { id: 'hard-schedule-gift-free', studentId: 'hard-gift-free', studentName: '赠送免费正式课', courseType: '私教课', startTime: '2026-07-05 10:00:00', endTime: '2026-07-05 11:00:00', status: '已下课', settlementType: 'gift', paymentMethod: '赠送/免费' },
     { id: 'hard-schedule-package-free-note', studentId: 'hard-package-free-note', studentName: '课包扣减免费备注', courseType: '私教课', startTime: '2026-07-05 12:00:00', endTime: '2026-07-05 13:00:00', status: '已下课', settlementType: '课包扣减', notes: '教练迟到，本节课免费' },
     { id: 'hard-schedule-package-plus-gift-1', studentId: 'hard-package-plus-gift', studentName: '课包加赠送免费', courseType: '私教课', startTime: '2026-07-05 14:00:00', endTime: '2026-07-05 15:00:00', status: '已下课', settlementType: '课包扣减' },
-    { id: 'hard-schedule-package-plus-gift-2', studentId: 'hard-package-plus-gift', studentName: '课包加赠送免费', courseType: '私教课', startTime: '2026-07-06 14:00:00', endTime: '2026-07-06 15:00:00', status: '已下课', settlementType: 'gift', paymentMethod: '赠送/免费' }
+    { id: 'hard-schedule-package-plus-gift-2', studentId: 'hard-package-plus-gift', studentName: '课包加赠送免费', courseType: '私教课', startTime: '2026-07-06 14:00:00', endTime: '2026-07-06 15:00:00', status: '已下课', settlementType: 'gift', paymentMethod: '赠送/免费' },
+    { id: 'hard-schedule-blank-formal', studentId: 'hard-blank-formal', studentName: '无结算字段正式课', courseType: '私教课', startTime: '2026-07-06 07:00:00', endTime: '2026-07-06 09:00:00', status: '已排课' },
+    { id: 'hard-schedule-package-blank', studentId: 'hard-package-blank', studentName: '有课包无结算字段', courseType: '私教课', startTime: '2026-07-06 09:00:00', endTime: '2026-07-06 10:00:00', status: '已排课' }
   ],
   courts: [],
   membershipAccounts: [],
@@ -250,12 +256,12 @@ const hardHistoricalIds = hardStandard.views.historicalStudents.map(row => row.s
 const hardActiveIds = hardStandard.views.activeStudents.map(row => row.studentId).sort();
 assert.deepStrictEqual(
   hardHistoricalIds,
-  ['hard-gift-free', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-old', 'hard-single-recent', 'hard-stable-single'],
+  ['hard-blank-formal', 'hard-gift-free', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-old', 'hard-single-recent', 'hard-stable-single'],
   '历史学员必须只按排课表有效上课事实返回，有课包余额或核销流水但无排课不进入历史学员'
 );
 assert.deepStrictEqual(
   hardActiveIds,
-  ['hard-gift-free', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
+  ['hard-blank-formal', 'hard-gift-free', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
   '在期学员必须是历史学员的子集，并包含课包有余额或90天内上过正式课的人'
 );
 assert.ok(
@@ -283,6 +289,16 @@ assert.strictEqual(
   hardStandard.views.activeStudents.find(row => row.studentId === 'hard-package-plus-gift')?.paymentModeLabel,
   '课包+单次付费',
   '同一学员既有课包扣减又有赠送/免费正式课，必须按课包+单次付费展示'
+);
+assert.strictEqual(
+  hardStandard.views.activeStudents.find(row => row.studentId === 'hard-blank-formal')?.paymentModeLabel,
+  '单次付费学员',
+  '没有课包且结算字段为空的正式课排课事实，必须兜底按单次付费学员展示'
+);
+assert.strictEqual(
+  hardStandard.views.activeStudents.find(row => row.studentId === 'hard-package-blank')?.paymentModeLabel,
+  '课包学员',
+  '有正式课包的历史老排课即使结算字段为空，也不能误判为单次付费'
 );
 const pastScheduledDetailRow = hardStandard.views.activeStudents.find(row => row.studentId === 'hard-past-scheduled');
 assert.deepStrictEqual(
@@ -330,7 +346,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activePackageBalanceCount,
-  4,
+  5,
   '在期学员课包有余额卡片必须由后端统一输出，且只统计在期学员范围内'
 );
 assert.strictEqual(
@@ -340,12 +356,12 @@ assert.strictEqual(
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson30Count,
-  9,
+  11,
   '在期学员近30天正式课活跃必须只按排课表正式课事实输出'
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activeFormalLesson90Count,
-  9,
+  11,
   '在期学员近90天正式课活跃必须只按排课表正式课事实输出'
 );
 
