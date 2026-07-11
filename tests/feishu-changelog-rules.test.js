@@ -109,6 +109,6 @@ assert.match(cardText, /线索与学员/, '卡片应按模块分类展示线索�
 assert.match(cardText, /课包与排课/, '卡片应按模块分类展示课包与排课');
 assert.match(cardText, /教练手机端/, '卡片应展示教练手机端播报');
 assert.match(cardText, /约球小程序/, '卡片应展示约球小程序播报');
-assert.match(cardText, /漏发，会在下次自动补发/, '卡片应说明漏发会补发');
+assert.doesNotMatch(cardText, /本摘要读取|自动补发/, '卡片不应展示底部说明文案');
 
 console.log('feishu changelog rules tests passed');

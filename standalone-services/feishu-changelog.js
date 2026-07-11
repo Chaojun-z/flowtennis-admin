@@ -479,17 +479,6 @@ function buildChangelogCard(payload) {
     });
   }
 
-  blocks.push({ tag: 'hr' });
-  blocks.push({
-    tag: 'note',
-    elements: [
-      {
-        tag: 'plain_text',
-        content: '本摘要读取提交或合并请求中的“产品播报”内容，并按端和模块归类；如前一天漏发，会在下次自动补发。'
-      }
-    ]
-  });
-
   return {
     msg_type: 'interactive',
     card: {
