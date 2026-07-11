@@ -53,13 +53,13 @@ assert.doesNotMatch(
 
 assert.match(
   functionBody(studentsSource, 'studentPageStats'),
-  /FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/,
-  '历史学员/在期学员顶部必须基于当前筛选后的学员列表汇总'
+  /studentStandardSummaryForMode\(\)/,
+  '历史学员/在期学员顶部必须读取后端统一排课事实汇总'
 );
 assert.doesNotMatch(
   functionBody(studentsSource, 'studentPageStats'),
-  /studentStandardSummaryForMode\(\)/,
-  '历史学员/在期学员顶部不得继续读取全局 standard summary 作为当前筛选结果'
+  /FlowTennisPlatformDataStandards\.currentStudentSummary/,
+  '历史学员/在期学员顶部不得由前端按当前列表自行汇总排课事实'
 );
 
 assert.match(

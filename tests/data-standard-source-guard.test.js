@@ -66,8 +66,8 @@ assertFunctionGuard({
 assertFunctionGuard({
   file: 'public/assets/scripts/pages/students.js',
   name: 'studentPageStats',
-  required: [/FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/],
-  forbidden: [/studentFinanceStatsForBase\(base\)/, /purchases\.filter/, /entitlements\.filter/, /aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/, /amountPaid/, /finalAmount/, /tagCounts/, /historicalTagCounts/, /activeTagCounts/]
+  required: [/studentStandardSummaryForMode\(\)/],
+  forbidden: [/FlowTennisPlatformDataStandards\.currentStudentSummary/, /studentFinanceStatsForBase\(base\)/, /purchases\.filter/, /entitlements\.filter/, /aggregateHistoricalMonthlyLedgerRows/, /deferredRevenueDelta/, /recognizedRevenueDelta/, /amountPaid/, /finalAmount/, /tagCounts/, /historicalTagCounts/, /activeTagCounts/]
 });
 assert.doesNotMatch(
   read('public/assets/scripts/pages/students.js'),

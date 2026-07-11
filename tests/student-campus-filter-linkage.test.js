@@ -17,9 +17,9 @@ function fnBody(name){
 assert.match(source, /function studentCampusValuesForList\(/, 'student list should derive campus from the unified student view row');
 assert.match(source, /function studentMatchesCampusForList\([\s\S]*studentCampusValuesForList\(stu\)[\s\S]*sameCampusValue/, 'student list should use the unified student campus source for filtering');
 assert.match(fnBody('getStudentBaseList'), /studentMatchesCampusForList\(s\)[\s\S]*studentListViewMode\(\)==='trial'\?studentIsHistoricalRosterRow\(s\):studentIsActiveRosterRow\(s\)/, 'student list base rows should use the shared student campus matcher and the new historical/active roster rules');
-assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top stats should use the same filtered rows as the table list');
-assert.match(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/, 'student package stats should summarize the same filtered unified rows as the table list');
-assert.doesNotMatch(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student package stats should not read the unfiltered global summary as the current filter result');
+assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student renderer should keep the existing render flow');
+assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats should read the backend unified teaching summary');
+assert.doesNotMatch(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary/, 'student top stats must not summarize schedule facts on the frontend');
 assert.doesNotMatch(source, /function studentFinanceStatsForBase\(/, 'student page should not keep a local finance stats calculator for top cards');
 assert.doesNotMatch(source, /function studentLifecycleStats\(/, 'student page should not keep a second local lifecycle stats calculator');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student package stats should not apply a second purchase-campus filter after the list is already filtered');

@@ -66,8 +66,9 @@ assert.match(source, /label:'全部',emptyDisplay:'负责教练'[\s\S]*未分配
 assert.match(source, /function studentTopStatsCards\(stats\)/, 'student top stats should be built by page mode');
 assert.match(source, /studentListViewMode\(\)==='trial'[\s\S]*历史学员[\s\S]*上过体验课[\s\S]*上过正式课[\s\S]*上过体验未上正式课[\s\S]*近30天正式课活跃/, 'historical student top stats should show schedule-fact cards');
 assert.doesNotMatch(source, /当前列表课程成交/, 'trial student top stats must not show the old local course-deal card');
-assert.match(source, /function studentStandardSummaryForMode\(/, 'student page may keep backend standard summary helper for non-filtered compatibility');
-assert.match(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary\(base,\s*studentListViewMode\(\)\)/, 'student top stats should summarize the current filtered unified rows');
+assert.match(source, /function studentStandardSummaryForMode\(/, 'student page should keep backend standard summary helper for top stats');
+assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student top stats must read the backend teaching summary');
+assert.doesNotMatch(fnBody('studentPageStats'), /FlowTennisPlatformDataStandards\.currentStudentSummary/, 'student top stats must not use frontend row summary');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentFinanceStatsForBase\(base\)|purchases\.filter|entitlements\.filter|amountPaid|finalAmount|recognizedRevenueDelta/, 'student top cards must not recalculate core metrics from frontend raw rows');
 assert.match(fnBody('studentStandardSummaryForMode'), /historicalStudentCount[\s\S]*activeStudentCount/, 'student top stats should use historical and active student backend counts');
 assert.doesNotMatch(fnBody('studentStandardSummaryForMode'), /historicalTagCounts[\s\S]*activeTagCounts/, 'student top cards should use explicit backend card fields instead of deriving from tag count maps');
@@ -83,7 +84,7 @@ assert.match(source, /function studentPageStats\(/, 'student page should central
 assert.match(fnBody('renderStudents'), /const filteredStudents=getFilteredStudents\(\);[\s\S]*const stats=studentPageStats\(filteredStudents\)/, 'student top package finance stats should use the same filtered rows as the table list');
 assert.doesNotMatch(fnBody('studentPageStats'), /studentStatsMatchesPackageCampus/, 'student top package income should not apply a second campus filter after the table list is filtered');
 assert.doesNotMatch(source, /const validEntitlements=entitlements\.filter\(e=>studentIds\.has\(String\(e\.studentId\|\|''\)\)&&entitlementStatusText\(e\)!=='已作废'\)/, 'student top package stats must not drop package-campus rows when the student campus is empty');
-assert.match(fnBody('studentPageStats'), /currentStudentSummary/, 'student stats should summarize package facts from current filtered unified rows');
+assert.match(fnBody('studentPageStats'), /studentStandardSummaryForMode\(\)/, 'student stats should use backend unified schedule facts');
 assert.doesNotMatch(fnBody('studentPageStats'), /standardSummary\.total\|\|base\.length/, 'student top stats must preserve unified zero values and not fall back to list length');
 assert.match(source, /function studentUnifiedRecordForId\(/, 'student detail and edit flows should resolve the same unified student view row used by the list');
 assert.match(fnBody('openStudentDetail'), /studentUnifiedRecordForId\(id\)/, 'student detail should use the unified student view row instead of raw students as the display source');

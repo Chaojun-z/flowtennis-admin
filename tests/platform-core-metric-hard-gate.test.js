@@ -36,6 +36,7 @@ assertNoLocalCoreMetric('public/assets/scripts/pages/leads.js', 'leadStatsData',
 ]);
 
 assertNoLocalCoreMetric('public/assets/scripts/pages/students.js', 'studentPageStats', [
+  [/FlowTennisPlatformDataStandards\.currentStudentSummary/, '普通/正式学员顶部不得调用前端列表汇总函数'],
   [/base\.filter\(s=>studentTrialPathStatusText\(s\)===/, '普通/正式学员顶部不得按当前列表本地统计体验阶段'],
   [/base\.filter\(studentHasTrialPathEvidence\)/, '普通/正式学员顶部不得本地统计体验路径学员'],
   [/studentHasTrialPathEvidence\(s\)&&studentIsFormalCourseDeal\(s\)/, '普通/正式学员顶部不得本地统计体验路径成交'],

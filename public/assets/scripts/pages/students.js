@@ -636,7 +636,7 @@ function studentStandardSummaryForMode(){
   };
 }
 function studentPageStats(base){
-  return FlowTennisPlatformDataStandards.currentStudentSummary(base, studentListViewMode());
+  return studentStandardSummaryForMode();
 }
 function studentPercentText(value,total){
   if(!total)return '0%';
