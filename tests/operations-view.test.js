@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const repoRoot = path.join(__dirname, '..');
 const indexSource = fs.readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
@@ -25,6 +26,99 @@ const operationsSource = fs.readFileSync(operationsPath, 'utf8');
 const operationsMetricsSource = fs.readFileSync(operationsMetricsPath, 'utf8');
 const operationsSourceReadModel = fs.readFileSync(operationsSourcePath, 'utf8');
 const stylesSource = fs.readFileSync(stylesPath, 'utf8');
+const operationsRuntime = {
+  console,
+  localStorage: { getItem: () => '', setItem: () => {} },
+  window: {},
+  esc: value => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;'),
+  fmt: value => {
+    const num = Number(value) || 0;
+    return Number.isInteger(num) ? String(num) : String(Math.round(num * 10) / 10);
+  },
+  dateKey: date => {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+  activeGlobalDateRange: () => ({ startDate: '2026-07-01', endDate: '2026-07-12' })
+};
+vm.createContext(operationsRuntime);
+vm.runInContext(operationsSource, operationsRuntime);
+
+function countClass(html, className) {
+  return (html.match(new RegExp(`class="[^"]*${className}(?:\\s|")`, 'g')) || []).length;
+}
+
+const operationsKpiSample = {
+  overview: {
+    cards: {
+      totalIncome: { value: 993300 },
+      recognizedRevenue: { value: 672500 },
+      pendingRevenue: { value: 320800 },
+      tradeCount: { value: 1392 }
+    },
+    trends: [
+      { date: '2026-07-01', totalIncome: 239, recognizedRevenue: 180, pendingRevenue: 59, tradeCount: 12, utilizationRate: 5 },
+      { date: '2026-07-02', totalIncome: 310, recognizedRevenue: 220, pendingRevenue: 90, tradeCount: 16, utilizationRate: 7 },
+      { date: '2026-07-03', totalIncome: 280, recognizedRevenue: 240, pendingRevenue: 40, tradeCount: 13, utilizationRate: 9 }
+    ],
+    trendComparisons: {}
+  },
+  court: {
+    cards: {
+      bookingAmount: { value: 188000 },
+      bookingHours: { value: 320 },
+      utilizationRate: { value: 9 },
+      goldenUtilizationRate: { value: 16 },
+      offPeakUtilizationRate: { value: 5 }
+    },
+    trends: [
+      { date: '2026-07-01', bookingAmount: 1200, bookingHours: 20, utilizationRate: 5, goldenUtilizationRate: 10, offPeakUtilizationRate: 2 },
+      { date: '2026-07-02', bookingAmount: 1500, bookingHours: 24, utilizationRate: 7, goldenUtilizationRate: 14, offPeakUtilizationRate: 4 },
+      { date: '2026-07-03', bookingAmount: 1800, bookingHours: 30, utilizationRate: 9, goldenUtilizationRate: 16, offPeakUtilizationRate: 5 }
+    ],
+    trendComparisons: {}
+  },
+  conversion: {
+    cards: {
+      totalLeads: { value: 268 }
+    },
+    standardLifecycleMetrics: {
+      metrics: {
+        totalDeals: { value: 86, rate: 32 },
+        trialPathDeals: { value: 28, rate: 41 },
+        courseRepeatBuyers: { value: 19, rate: 27 }
+      }
+    },
+    courtChain: { courtRepeatRate: 24 },
+    trends: [
+      { date: '2026-07-01', leads: 180, totalDealRate: 20, trialPathDealRate: 30, courseRepeatRate: 14, courtRepeatRate: 18 },
+      { date: '2026-07-02', leads: 220, totalDealRate: 26, trialPathDealRate: 34, courseRepeatRate: 20, courtRepeatRate: 21 },
+      { date: '2026-07-03', leads: 268, totalDealRate: 32, trialPathDealRate: 41, courseRepeatRate: 27, courtRepeatRate: 24 }
+    ],
+    trendComparisons: {}
+  },
+  coach: {
+    rows: [{ coach: 'Siren 教练', usedHours: 10, availableHours: 20, revenue: 8000 }],
+    cards: {
+      activeCoaches: { value: 6 },
+      utilizationRate: { value: 58 },
+      revenue: { value: 88000 },
+      trialConversionRate: { value: 45 },
+      renewalRate: { value: 36 }
+    },
+    trends: [
+      { date: '2026-07-01', activeCoaches: 5, utilizationRate: 44, revenue: 52000, trialConversionRate: 35, renewalRate: 28 },
+      { date: '2026-07-02', activeCoaches: 6, utilizationRate: 52, revenue: 76000, trialConversionRate: 40, renewalRate: 32 },
+      { date: '2026-07-03', activeCoaches: 6, utilizationRate: 58, revenue: 88000, trialConversionRate: 45, renewalRate: 36 }
+    ],
+    trendComparisons: {}
+  }
+};
 const courtOverviewSource = operationsSource.slice(
   operationsSource.indexOf('function renderOperationsCourtCampusOverview'),
   operationsSource.indexOf('function renderOperationsCourtHeatCell')
@@ -109,7 +203,7 @@ assert.match(stylesSource, /operations-funnel-host\{min-height:0\}/, 'funnel hos
 assert.match(stylesSource, /operations-funnel-node\{[^}]*min-height:44px[\s\S]*operations-funnel-volume\{[^}]*background:color-mix\(in srgb,var\(--ops-blue\) 10%,transparent\)/, 'funnel nodes should use a restrained theme-color volume background');
 assert.match(stylesSource, /operations-funnel-conversion\{[^}]*color:var\(--ops-blue\)[\s\S]*operations-funnel-drop\{[^}]*color:#87909D/, 'conversion should use the theme color while loss stays gray');
 assert.doesNotMatch(stylesSource, /operations-funnel-transition-label|operations-funnel-track|operations-funnel-fill/, 'funnel should remove old bar labels, tracks, and gradient fills');
-assert.match(stylesSource, /operations-conversion-kpi-row\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'conversion top KPI row should show four non-duplicated cards in one row');
+assert.match(stylesSource, /operations-conversion-kpi-row\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/, 'conversion top KPI row should show five non-duplicated cards in one row');
 assert.match(stylesSource, /operations-conversion-funnel-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/, 'conversion funnels should show three peer cards in one row');
 assert.match(stylesSource, /operations-channel-diagnostics-grid\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, 'channel diagnostics should show chart and table as two peer cards');
 assert.match(stylesSource, /operations-channel-quality-chart\{[^}]*border:0/, 'channel quality chart should not render a nested border inside the card');
@@ -275,7 +369,7 @@ assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验后买正式课率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*线索数[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验后买正式课率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
@@ -298,6 +392,50 @@ assert.match(operationsSource, /function operationsKpiSparklineSvg[\s\S]*drawabl
 assert.doesNotMatch(operationsSource, /function operationsTrendPointsWithFallback[\s\S]*fallbackValue[\s\S]*operationsTrendToday\(\)/, 'KPI sparklines should not fake a trend from the current metric when backend trend rows are empty');
 assert.match(operationsSource, /renderOperationsOverviewKpis[\s\S]*trendValue:[\s\S]*totalIncome[\s\S]*trendPoints: operationsTrendPointsWithFallback\(trends, card\.trendKey\)/, 'overview KPI cards should only use backend trend rows');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*trendValue:[\s\S]*card\.trendValue[\s\S]*trendPoints: operationsTrendPointsWithFallback\(conversion\.trendRows \|\| \[\], card\.trendKey\)/, 'conversion KPI cards should only use backend trend rows');
+const topKpiRenderCases = [
+  {
+    name: 'overview',
+    html: operationsRuntime.renderOperationsOverviewKpis(operationsKpiSample),
+    cardClass: 'operations-court-kpi',
+    expectedCount: 5,
+    labels: ['总收入', '入账流水', '待履约余额', '成交笔数', '场地利用率'],
+    values: ['¥993.3K', '¥672.5K', '¥320.8K', '1392', '9']
+  },
+  {
+    name: 'court',
+    html: operationsRuntime.renderOperationsCourtKpis(operationsKpiSample),
+    cardClass: 'operations-court-kpi',
+    expectedCount: 5,
+    labels: ['订场收入', '订场小时', '场地利用率', '黄金时段利用率', '非黄金时段利用率'],
+    values: ['¥188K', '320', '9', '16', '5']
+  },
+  {
+    name: 'conversion',
+    html: operationsRuntime.renderConversionCommandCenter(operationsKpiSample, operationsRuntime.operationsConversionView(operationsKpiSample)),
+    cardClass: 'operations-court-kpi',
+    expectedCount: 5,
+    labels: ['线索数', '总成交率（课程/订场/订场会员）', '体验后买正式课率', '课包复购率', '订场复订率'],
+    values: ['268', '32%', '41%', '27%', '24%']
+  },
+  {
+    name: 'coach',
+    html: operationsRuntime.renderOperationsCoach(operationsKpiSample),
+    cardClass: 'operations-coach-kpi',
+    expectedCount: 5,
+    labels: ['在岗教练', '工时利用率', '归属课程实收', '体验课转化率', '老客续费率'],
+    values: ['6', '58%', '¥88K', '45%', '36%']
+  }
+];
+topKpiRenderCases.forEach(testCase => {
+  assert.strictEqual(countClass(testCase.html, testCase.cardClass), testCase.expectedCount, `${testCase.name} top KPI row should render ${testCase.expectedCount} cards`);
+  testCase.labels.forEach(label => assert.match(testCase.html, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${testCase.name} top KPI should render ${label}`));
+  testCase.values.forEach(value => assert.match(testCase.html, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${testCase.name} top KPI should render non-zero value ${value}`));
+  assert.doesNotMatch(testCase.html, /<strong>\s*(?:0|0%|¥0|NaN|undefined|null)\s*(?:<em>[^<]*<\/em>)?\s*<\/strong>/, `${testCase.name} top KPI cards should not render empty, zero or invalid primary values with healthy sample data`);
+  assert.match(testCase.html, /operations-kpi-hover-point[\s\S]*width:[\s\S]*--point-x:[\s\S]*--point-y:/, `${testCase.name} KPI sparkline should render spatial hover bands that map to the nearest point`);
+});
+assert.match(stylesSource, /operations-kpi-hover-point\{[^}]*top:0[^}]*height:100%[^}]*transform:none/, 'KPI hover target should cover the full sparkline height instead of only the line point');
+assert.match(stylesSource, /operations-kpi-hover-point:hover::before\{[^}]*left:var\(--point-x[^}]*top:var\(--point-y/, 'KPI hover highlight should stay on the current data point inside the spatial hover band');
+assert.match(stylesSource, /operations-kpi-hover-point:hover::after\{[^}]*left:var\(--point-x[^}]*top:calc\(var\(--point-y/, 'KPI hover tooltip should anchor to the highlighted data point inside the spatial hover band');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-filter-row[\s\S]*function renderConversionInsightModule/, 'conversion filters should not float above the KPI cards');
 assert.match(chartsSource, /operations-funnel-transition[\s\S]*\$\{fmt\(transition\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');

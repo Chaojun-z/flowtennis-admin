@@ -323,7 +323,7 @@ function renderOperationsLoading() {
   host.innerHTML = renderStandardPageSkeleton({
     className: 'operations-page',
     sections: [
-      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 4, cardVariant: 'trend' },
+      { type: 'kpis', className: 'operations-kpi-row operations-conversion-kpi-row operations-court-kpi-row', count: 5, cardVariant: 'trend' },
       { type: 'grid', className: 'operations-conversion-funnel-grid', panels: [{}, {}, {}] },
       { type: 'grid', className: 'operations-channel-diagnostics-grid', panels: [{}, { variant: 'table' }] }
     ]
@@ -1046,13 +1046,28 @@ function operationsKpiSparklineSvg(points = [], key = '', className = 'operation
   }).filter(path => path.linePath);
   const safeGradientKey = String(`${className}-${key || 'line'}`).replace(/[^a-zA-Z0-9_-]/g, '');
   const gradientId = `operationsSpark${++operationsSparklineUid}${safeGradientKey}`;
+  const hoverZones = coords.map((point, index) => {
+    const prev = coords[index - 1];
+    const next = coords[index + 1];
+    const left = index === 0 ? 0 : (prev.x + point.x) / 2;
+    const right = index === coords.length - 1 ? width : (point.x + next.x) / 2;
+    const zoneWidth = Math.max(1, right - left);
+    const pointX = Math.max(0, Math.min(100, ((point.x - left) * 100) / zoneWidth));
+    return {
+      point,
+      leftPct: Math.round(left * 10000 / width) / 100,
+      widthPct: Math.round(zoneWidth * 10000 / width) / 100,
+      pointXPct: Math.round(pointX * 100) / 100,
+      pointYPct: Math.round(point.y * 10000 / height) / 100
+    };
+  });
   return `<div class="${esc(className)}">
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
       <defs><linearGradient id="${esc(gradientId)}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${esc(color)}" stop-opacity=".12"/><stop offset="72%" stop-color="${esc(color)}" stop-opacity=".035"/><stop offset="100%" stop-color="${esc(color)}" stop-opacity="0"/></linearGradient></defs>
       ${paths.map(path => `<path class="operations-kpi-area" d="${esc(path.areaPath)}" fill="url(#${esc(gradientId)})"></path>`).join('')}
       ${paths.map(path => `<path class="operations-kpi-line" d="${esc(path.linePath)}" fill="none" stroke="${esc(color)}" stroke-linecap="round" stroke-linejoin="round"></path>`).join('')}
     </svg>
-    ${coords.map(point => `<span class="operations-kpi-hover-point" style="--trend-color:${esc(color)};left:${Math.round(point.x * 10000 / width) / 100}%;top:${Math.round(point.y * 10000 / height) / 100}%" data-tip="${esc(operationsKpiPointLabel(point, key))}"></span>`).join('')}
+    ${hoverZones.map(zone => `<span class="operations-kpi-hover-point" style="--trend-color:${esc(color)};left:${zone.leftPct}%;width:${zone.widthPct}%;--point-x:${zone.pointXPct}%;--point-y:${zone.pointYPct}%" data-tip="${esc(operationsKpiPointLabel(zone.point, key))}"></span>`).join('')}
   </div>`;
 }
 
@@ -1062,12 +1077,14 @@ function operationsCoachSparklineSvg(points = [], key = '') {
 
 function operationsConversionKpiCards(conversion = {}) {
   const metricRate = key => Number(operationsStandardMetric(conversion, key)?.rate) || 0;
+  const cards = conversion.cards || {};
   const metricCard = (key, label, unit, trendKey, tone) => {
     const metric = operationsStandardMetric(conversion, key) || {};
     return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
   };
   const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
+    { label: '线索数', value: fmt(operationsCardValue(cards, 'totalLeads')), unit: '条', trendValue: operationsCardValue(cards, 'totalLeads'), trendKey: 'leads', tone: 'lead' },
     rateCard('总成交率（课程/订场/订场会员）', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
     rateCard('体验后买正式课率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
     rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
@@ -1186,6 +1203,7 @@ function operationsRiskRows(rows = []) {
 
 function operationsConversionView(data) {
   return {
+    cards: data.conversion?.cards || {},
     standardLifecycleMetrics: data.conversion?.standardLifecycleMetrics || {},
     courtChain: data.conversion?.courtChain || {},
     retention: data.conversion?.retention || {},
