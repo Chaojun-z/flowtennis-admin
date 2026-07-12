@@ -185,7 +185,7 @@ const DATA_CACHE_VERSION_KEY='ft_dataset_cache_version';
 const DATA_CACHE_VERSION='2026-06-09-campus-scope-v1';
 const DATA_CACHE_TTL_MS=60000;
 const OPERATIONS_PAGE_CACHE_PREFIX='ft_operations_view_cache_';
-const OPERATIONS_PAGE_CACHE_VERSION='2026-06-24-source-order-v1';
+const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2';
 const DATASETS_EXCLUDED_FROM_CACHE=new Set(['leads','leadFollowups','students','schedule','packages','purchases','entitlements','entitlementLedger','coachProposals']);
 const SENSITIVE_DATASETS_EXCLUDED_FROM_CACHE_IN_NON_PRODUCTION=new Set(['financialLedger','purchases','membershipAccounts','membershipOrders','membershipBenefitLedger','membershipAccountEvents']);
 const datasetLoadPromises=new Map();
@@ -343,8 +343,23 @@ function readOperationsPageClientCache(){
     return parsed&&parsed.operations?parsed:null;
   }catch(e){return null;}
 }
+function operationsPageCachePayloadIsCompatible(data){
+  const operations=data?.operations||{};
+  const conversion=operations.conversion||{};
+  const standard=conversion.standardLifecycleMetrics||{};
+  const metrics=standard.metrics||{};
+  const funnels=standard.funnels||{};
+  const requiredMetrics=['validLeads','historicalStudents','activeStudents','trialAttendedStudents','trialAttendedToFormalPurchase'];
+  const requiredTrendKeys=['validLeads','historicalStudents','activeStudents','trialAttendedStudents','trialAttendedToFormalPurchase'];
+  if(!requiredMetrics.every(key=>metrics[key]&&metrics[key].value!==undefined))return false;
+  if(!Array.isArray(funnels.leadStudentRoster)||funnels.leadStudentRoster.length<3)return false;
+  if(!Array.isArray(funnels.trialLeadPath)||funnels.trialLeadPath.length<3)return false;
+  const trends=Array.isArray(conversion.trends)?conversion.trends:[];
+  return !trends.length||trends.some(row=>requiredTrendKeys.every(key=>row&&row[key]!==undefined));
+}
 function persistOperationsPageClientCache(data){
   if(!data?.operations)return;
+  if(!operationsPageCachePayloadIsCompatible(data))return;
   try{
     const payload={savedAt:Date.now(),cacheVersion:OPERATIONS_PAGE_CACHE_VERSION,operations:data.operations,campuses:data.campuses||[]};
     localStorage.setItem(operationsPageClientCacheKey(),JSON.stringify(payload));
@@ -353,6 +368,7 @@ function persistOperationsPageClientCache(data){
 function hydrateOperationsPageFromClientCache(){
   const data=readOperationsPageClientCache();
   if(!data?.operations)return false;
+  if(!operationsPageCachePayloadIsCompatible(data))return false;
   setDatasetValue('campuses',data.campuses||[],{persist:false});
   operationsPageData=data.operations;
   if(currentPage==='operations'&&typeof renderOperations==='function')renderOperations();

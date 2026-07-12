@@ -1471,6 +1471,11 @@ function buildStandardLifecycleMetrics(data = {}) {
         { id: 'TRIAL_ATTENDED_STUDENTS', label: '上过体验课', value: trialAttendedStudents },
         { id: 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE', label: '体验后买正式课', value: trialAttendedToFormalPurchase },
         { id: 'TRIAL_ATTENDED_WITHOUT_FORMAL', label: '上过体验未买正式课', value: trialAttendedWithoutFormal }
+      ]),
+      trialLeadPath: standardFunnelRows([
+        { id: 'VALID_LEADS', label: '线索数', value: validLeads, unit: '条' },
+        { id: 'TRIAL_ATTENDED_STUDENTS', label: '体验课人数', value: trialAttendedStudents },
+        { id: 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE', label: '体验课后转课包', value: trialAttendedToFormalPurchase }
       ])
     },
     views: {

@@ -885,7 +885,7 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 
 ```text
 体验课上课漏斗：
-上过体验课 → 体验后买正式课 / 上过体验未买正式课
+线索数 → 体验课人数 → 体验课后转课包
 ```
 
 ```text
@@ -899,9 +899,9 @@ FlowTennis 只保留三类转化观察口径：课程总漏斗、体验课上课
 1. 线索与学员漏斗必须读取 `standardLifecycleMetrics.funnels.leadStudentRoster`，不得在经营分析页面重新扫描 `schedule / purchases / entitlements` 拼数。
 2. 历史学员必须等于历史学员页统一后端事实 `HISTORICAL_STUDENTS`。
 3. 在期学员必须等于在期学员页统一后端事实 `ACTIVE_STUDENTS`。
-4. 体验课上课漏斗不得包含直接正式成交客户。
-5. 订场链当前不得从线索数开始，除非客户身份关系已打通且可证明订场用户能回溯到线索池客户。
-6. 如果某个统计范围内 `TRIAL_ATTENDED_STUDENTS = 0`，页面不得展示“体验后买正式课人数”。
+4. 体验课上课漏斗必须读取 `standardLifecycleMetrics.funnels.trialLeadPath`，口径为 `VALID_LEADS → TRIAL_ATTENDED_STUDENTS → TRIAL_ATTENDED_TO_FORMAL_PURCHASE`。
+5. 体验课上课漏斗不得包含直接正式成交客户。
+6. 订场链当前不得从线索数开始，除非客户身份关系已打通且可证明订场用户能回溯到线索池客户。
 7. 本节只规定页面结构，计算公式必须复用第 5 章和第 6 章口径。
 
 ### 8.4 经营分析

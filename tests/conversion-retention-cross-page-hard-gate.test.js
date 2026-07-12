@@ -85,6 +85,21 @@ async function membershipSummaryFromRows(rows = {}) {
     ],
     '转化与留存主漏斗必须直接复用三页统一后端事实'
   );
+  const trialLeadPath = operations.conversion.standardLifecycleMetrics.funnels.trialLeadPath || [];
+  assert.deepStrictEqual(
+    trialLeadPath.map(row => row.label),
+    ['线索数', '体验课人数', '体验课后转课包'],
+    '体验课漏斗必须展示线索数 -> 体验课人数 -> 体验课后转课包'
+  );
+  assert.deepStrictEqual(
+    trialLeadPath.map(row => row.value),
+    [
+      platform.standardLifecycleMetrics.metrics.validLeads.value,
+      platform.standardLifecycleMetrics.metrics.trialAttendedStudents.value,
+      platform.standardLifecycleMetrics.metrics.trialAttendedToFormalPurchase.value
+    ],
+    '体验课漏斗必须直接复用统一标准生命周期指标'
+  );
 
   assert.strictEqual(
     operations.conversion.standardLifecycleMetrics.metrics.formalStudents.value,
@@ -123,6 +138,13 @@ async function membershipSummaryFromRows(rows = {}) {
     platform.standardLifecycleMetrics.metrics.courseRepeatBuyers.value,
     '课包复购趋势分子必须使用正式课包复购人数'
   );
+  ['validLeads', 'historicalStudents', 'activeStudents', 'trialAttendedStudents', 'trialAttendedToFormalPurchase'].forEach(key => {
+    assert.strictEqual(
+      latestTrend[key],
+      platform.standardLifecycleMetrics.metrics[key].value,
+      `顶部卡片折线最后一个点必须等于当前 ${key} 指标`
+    );
+  });
 
   const manualCourseOnlySample = {
     leads: [
@@ -189,6 +211,11 @@ async function membershipSummaryFromRows(rows = {}) {
     [0, 0, 0],
     '空数据：线索池、历史学员、在期学员漏斗必须全部为 0'
   );
+  assert.deepStrictEqual(
+    emptyOperations.conversion.standardLifecycleMetrics.funnels.trialLeadPath.map(row => row.value),
+    [0, 0, 0],
+    '空数据：体验课漏斗必须全部为 0'
+  );
 
   const campusDateSample = {
     leads: [
@@ -224,6 +251,23 @@ async function membershipSummaryFromRows(rows = {}) {
     campusOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster.map(row => row.value),
     [1, 1, 1],
     '筛选：转化与留存主漏斗必须同时跟随校区和时间周期'
+  );
+  assert.deepStrictEqual(
+    campusOperations.conversion.standardLifecycleMetrics.funnels.trialLeadPath.map(row => row.value),
+    [1, 0, 0],
+    '筛选：体验课漏斗必须同时跟随校区和时间周期'
+  );
+  const campusLatestTrend = campusOperations.conversion.trends.at(-1) || {};
+  assert.deepStrictEqual(
+    [
+      campusLatestTrend.validLeads,
+      campusLatestTrend.historicalStudents,
+      campusLatestTrend.activeStudents,
+      campusLatestTrend.trialAttendedStudents,
+      campusLatestTrend.trialAttendedToFormalPurchase
+    ],
+    [1, 1, 1, 0, 0],
+    '筛选：顶部卡片折线趋势也必须同时跟随校区和时间周期'
   );
 
   const membershipSample = {

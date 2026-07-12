@@ -1081,11 +1081,11 @@ function operationsConversionKpiCards(conversion = {}) {
     return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
   };
   return [
-    metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
+    metricCard('validLeads', '线索数', '条', 'validLeads', 'lead'),
     metricCard('historicalStudents', '历史学员', '人', 'historicalStudents', 'conversion'),
     metricCard('activeStudents', '在期学员', '人', 'activeStudents', 'retention'),
-    metricCard('trialAttendedStudents', '上过体验课', '人', 'trialPathStudents', 'conversion'),
-    metricCard('trialAttendedToFormalPurchase', '体验后买正式课', '人', 'trialPathDeals', 'conversion')
+    metricCard('trialAttendedStudents', '上过体验课', '人', 'trialAttendedStudents', 'conversion'),
+    metricCard('trialAttendedToFormalPurchase', '体验后买正式课', '人', 'trialAttendedToFormalPurchase', 'conversion')
   ];
 }
 
@@ -1238,7 +1238,7 @@ function operationsRateText(part, total) {
 function operationsFunnelRows(conversion = {}, key = '') {
   const standard = conversion.standardLifecycleMetrics || {};
   if (key === 'course') return standard.funnels?.leadStudentRoster || [];
-  if (key === 'trial') return (standard.funnels?.trialPath || []).filter(row => row.id !== 'TRIAL_PATH_PENDING');
+  if (key === 'trial') return standard.funnels?.trialLeadPath || [];
   if (key === 'court') return (standard.funnels?.courtChain || []).filter(row => row.id !== 'COURT_REBOOK_CUSTOMERS');
   return [];
 }

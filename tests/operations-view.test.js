@@ -111,9 +111,9 @@ const operationsKpiSample = {
     },
     courtChain: { courtRepeatRate: 24 },
     trends: [
-      { date: '2026-07-01', leads: 180, totalDealRate: 20, trialPathDealRate: 30, courseRepeatRate: 14, courtRepeatRate: 18 },
-      { date: '2026-07-02', leads: 220, totalDealRate: 26, trialPathDealRate: 34, courseRepeatRate: 20, courtRepeatRate: 21 },
-      { date: '2026-07-03', leads: 268, totalDealRate: 32, trialPathDealRate: 41, courseRepeatRate: 27, courtRepeatRate: 24 }
+      { date: '2026-07-01', validLeads: 180, historicalStudents: 72, activeStudents: 28, trialAttendedStudents: 40, trialAttendedToFormalPurchase: 16, totalDealRate: 20, trialPathDealRate: 30, courseRepeatRate: 14, courtRepeatRate: 18 },
+      { date: '2026-07-02', validLeads: 220, historicalStudents: 96, activeStudents: 35, trialAttendedStudents: 60, trialAttendedToFormalPurchase: 24, totalDealRate: 26, trialPathDealRate: 34, courseRepeatRate: 20, courtRepeatRate: 21 },
+      { date: '2026-07-03', validLeads: 268, historicalStudents: 118, activeStudents: 42, trialAttendedStudents: 78, trialAttendedToFormalPurchase: 32, totalDealRate: 32, trialPathDealRate: 41, courseRepeatRate: 27, courtRepeatRate: 24 }
     ],
     trendComparisons: {}
   },
@@ -183,6 +183,9 @@ assert.match(stateSource, /if\(typeof renderStandardPageLoading==='function'&&re
 assert.doesNotMatch(stateSource, /if\(pg==='packages'\)renderBlockLoading/, 'packages loading should not use a fake text block');
 assert.doesNotMatch(stateSource, /if\(pg==='workbench'\)renderBlockLoading/, 'workbench loading should not use a fake text block');
 assert.doesNotMatch(stateSource, /if\(pg==='postfeedback'\)renderBlockLoading/, 'postfeedback loading should not use a fake text block');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2'/, 'operations client cache must be versioned after conversion lifecycle payload shape changes');
+assert.match(stateSource, /function operationsPageCachePayloadIsCompatible\(/, 'operations client cache must validate payload shape before first paint');
+assert.match(functionBody(stateSource, 'hydrateOperationsPageFromClientCache'), /operationsPageCachePayloadIsCompatible\(data\)/, 'operations page must not hydrate stale cache that lacks new lifecycle metrics');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
 assert.match(functionBody(stateSource, 'operationsPageDataUrl'), /scopedPageDataUrl\('\/page-data\/operations'\)/, 'operations dashboard should request operations data with the same campus and date scope as lifecycle metrics');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
@@ -190,7 +193,7 @@ assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
 assert.match(stateSource, /operationsPageDatasetRequestKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations request key should include the active date range URL');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache should be scoped by the active date range URL');
-assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-06-24-source-order-v1'/, 'operations client cache should invalidate stale source filter ordering');
+assert.match(stateSource, /const OPERATIONS_PAGE_CACHE_VERSION='2026-07-12-conversion-lifecycle-v2'/, 'operations client cache should invalidate stale conversion lifecycle payloads');
 assert.match(stateSource, /function operationsPageClientCacheKey\(\)[\s\S]*OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageDataUrl\(\)/, 'operations client cache key should include the cache version');
 assert.match(stateSource, /function readOperationsPageClientCache\(\)[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should read a cached view model before waiting for the slow aggregate endpoint');
 assert.match(stateSource, /function persistOperationsPageClientCache\([\s\S]*cacheVersion:OPERATIONS_PAGE_CACHE_VERSION[\s\S]*operationsPageClientCacheKey\(\)/, 'operations should persist the latest versioned view model for fast repeat entry');
@@ -386,6 +389,8 @@ assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operat
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
 assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'conversion page should render the same top KPI cards as lead and student pages');
+assert.match(functionBody(operationsSource, 'operationsConversionKpiCards'), /metricCard\('validLeads', '线索数', '条', 'validLeads'/, 'lead KPI sparkline must use the unified validLeads trend key');
+assert.doesNotMatch(functionBody(operationsSource, 'operationsConversionKpiCards'), /'线索数', '条', 'leads'/, 'lead KPI sparkline must not keep the old local leads trend key');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
@@ -457,6 +462,8 @@ assert.match(chartsSource, /operations-funnel-transition[\s\S]*\$\{fmt\(transiti
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
 assert.doesNotMatch(operationsSource, /function renderConversionInsightModule/, 'conversion page should move insight copy out of the conversion dashboard');
 assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*线索与学员漏斗[\s\S]*体验课上课漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
+assert.match(functionBody(operationsSource, 'operationsFunnelRows'), /standard\.funnels\?\.trialLeadPath/, 'trial funnel should use the unified lead-to-trial-to-package backend funnel');
+assert.doesNotMatch(functionBody(operationsSource, 'operationsFunnelRows'), /standard\.funnels\?\.trialPath[\s\S]*filter/, 'trial funnel must not keep the old two-step attended-to-formal local filter');
 assert.doesNotMatch(operationsSource, /const moduleTitle = '转化漏斗'|<h3>\$\{moduleTitle\}<\/h3>|<h3>转化漏斗<\/h3>/, 'conversion page should not render the extra conversion funnel section title');
 assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]*renderConversionRetentionModule/, 'conversion page should remove the retention trend module from the page');
 assert.doesNotMatch(operationsSource, /operations-funnel-filter-row|operationsFilterDropdown\('operationsConversionSource'|operationsFilterDropdown\('operationsConversionCampus'|operationsFilterDropdown\('operationsConversionCoach'/, 'conversion funnel should not keep local source/campus/coach filters');

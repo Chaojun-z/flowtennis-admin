@@ -205,7 +205,7 @@ function trendBucketDate(day, period = 'day') {
   return day;
 }
 
-function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [], rateFields = [] } = {}) {
+function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [], lastKeys = [], rateFields = [] } = {}) {
   const days = (rows || []).map(row => row.date).filter(Boolean);
   const period = trendPeriodForDays(days);
   if (period === 'day') return { rows, meta: { period } };
@@ -221,6 +221,10 @@ function compactTrendRows(rows = [], { sumKeys = [], averageKeys = [], rateField
       if (row[key] === null || row[key] === undefined || row[key] === '') return;
       current[key] = (Number(current[key]) || 0) + (Number(row[key]) || 0);
       current._counts[key] = (current._counts[key] || 0) + 1;
+    });
+    lastKeys.forEach(key => {
+      if (row[key] === null || row[key] === undefined || row[key] === '') return;
+      current[key] = Number(row[key]) || 0;
     });
     rateFields.forEach(field => {
       if (field.aggregate === 'last') {
@@ -2487,6 +2491,44 @@ function buildConversionTrendSet(options = {}) {
   });
 }
 
+function lifecycleTrendSourceDates(source = {}) {
+  return [...new Set([
+    ...(source.leads || []).map(row => row.leadDate || row.createdAt || row.updatedAt),
+    ...(source.customerLifecycleRows || []).map(row => row.leadDate || row.createdAt || row.updatedAt || row.convertedAt || row.formalConvertedAt || row.packagePurchaseDate || row.lastLessonDate),
+    ...(source.schedule || []).map(row => row.startTime || row.date || row.createdAt),
+    ...(source.purchases || []).map(row => purchaseDate(row))
+  ].map(dateKey).filter(Boolean))].sort();
+}
+
+function buildLifecycleMetricTrendDailyRows({ source = {}, metricScope = {}, dateRange = {}, now = new Date() } = {}) {
+  const selectedDays = enumerateDateRange(futureSafeDateRange(dateRange, now));
+  const sourceDays = lifecycleTrendSourceDates(source);
+  const days = selectedDays.length ? selectedDays : operationsTrendDays({ dateRange, now, sourceDays });
+  return days.map(day => {
+    const range = dateRangeThroughDay(dateRange, day);
+    const dailySource = buildScopedLifecycleSource(source, {
+      ...metricScope,
+      startDate: range.startDate || '',
+      endDate: range.endDate || day
+    });
+    const metrics = buildStandardLifecycleMetrics(dailySource).metrics || {};
+    return {
+      date: day,
+      validLeads: Number(metrics.validLeads?.value) || 0,
+      historicalStudents: Number(metrics.historicalStudents?.value) || 0,
+      activeStudents: Number(metrics.activeStudents?.value) || 0,
+      trialAttendedStudents: Number(metrics.trialAttendedStudents?.value) || 0,
+      trialAttendedToFormalPurchase: Number(metrics.trialAttendedToFormalPurchase?.value) || 0
+    };
+  });
+}
+
+function buildLifecycleMetricTrendSet(options = {}) {
+  return compactTrendRows(buildLifecycleMetricTrendDailyRows(options), {
+    lastKeys: ['validLeads', 'historicalStudents', 'activeStudents', 'trialAttendedStudents', 'trialAttendedToFormalPurchase']
+  });
+}
+
 function courtHistoryRowsThroughDay(history, day = '') {
   return normalizeCourtHistory(history)
     .filter(row => {
@@ -2884,6 +2926,12 @@ function buildOperationsMetrics(data = {}, options = {}) {
   });
   const trendCourseRows = courseConversionRows({ ...trendMetricLifecycleSource, leads: trendRawLeadConversion.rawLeadPoolRows, customerLifecycleRows: trendMetricCustomerLifecycleRows }, { now });
   const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
+  const lifecycleMetricTrendSet = buildLifecycleMetricTrendSet({
+    source: trendMetricLifecycleSource,
+    metricScope,
+    dateRange: trendDateRange,
+    now
+  });
   const courtRetentionTrendSet = buildCourtRetentionTrendSet({
     courts: trendRangedData.courts || data.courts || [],
     membershipAccounts: trendRangedData.membershipAccounts || data.membershipAccounts || [],
@@ -2891,6 +2939,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
     dateRange: trendDateRange,
     now
   });
+  conversionTrendSet.rows = mergeTrendRowsByDate(conversionTrendSet.rows, lifecycleMetricTrendSet.rows);
   conversionTrendSet.rows = mergeTrendRowsByDate(conversionTrendSet.rows, courtRetentionTrendSet.rows);
   const coachTrendSet = buildCoachTrendSet({
     coaches: data.coaches || [],
@@ -2958,6 +3007,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const courtValues = cardValueMap(court.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const previousCourtValues = cardValueMap(previousCourt.cards || {}, ['bookingAmount', 'bookingHours', 'utilizationRate', 'goldenUtilizationRate', 'offPeakUtilizationRate']);
   const conversionValues = {
+    validLeads: Number(teachingStandardLifecycleMetrics.metrics.validLeads?.value) || 0,
+    historicalStudents: Number(teachingStandardLifecycleMetrics.metrics.historicalStudents?.value) || 0,
+    activeStudents: Number(teachingStandardLifecycleMetrics.metrics.activeStudents?.value) || 0,
+    trialAttendedStudents: Number(teachingStandardLifecycleMetrics.metrics.trialAttendedStudents?.value) || 0,
+    trialAttendedToFormalPurchase: Number(teachingStandardLifecycleMetrics.metrics.trialAttendedToFormalPurchase?.value) || 0,
     totalDealRate: Number(teachingStandardLifecycleMetrics.metrics.totalDeals?.rate) || 0,
     courseDealRate: Number(teachingStandardLifecycleMetrics.metrics.formalStudents?.rate) || 0,
     trialPathDealRate: Number(teachingStandardLifecycleMetrics.metrics.trialPathDeals?.rate) || 0,
@@ -2971,6 +3025,11 @@ function buildOperationsMetrics(data = {}, options = {}) {
     renewalRate: Number(teachingStandardLifecycleMetrics.metrics.courseRepeatBuyers?.rate) || 0
   };
   const previousConversionValues = {
+    validLeads: Number(previousStandardLifecycleMetrics?.metrics?.validLeads?.value) || 0,
+    historicalStudents: Number(previousStandardLifecycleMetrics?.metrics?.historicalStudents?.value) || 0,
+    activeStudents: Number(previousStandardLifecycleMetrics?.metrics?.activeStudents?.value) || 0,
+    trialAttendedStudents: Number(previousStandardLifecycleMetrics?.metrics?.trialAttendedStudents?.value) || 0,
+    trialAttendedToFormalPurchase: Number(previousStandardLifecycleMetrics?.metrics?.trialAttendedToFormalPurchase?.value) || 0,
     totalDealRate: Number(previousStandardLifecycleMetrics?.metrics?.totalDeals?.rate) || 0,
     courseDealRate: Number(previousStandardLifecycleMetrics?.metrics?.formalStudents?.rate) || 0,
     trialPathDealRate: Number(previousStandardLifecycleMetrics?.metrics?.trialPathDeals?.rate) || 0,
@@ -3072,7 +3131,7 @@ function buildOperationsMetrics(data = {}, options = {}) {
       trends: conversionTrendSet.rows,
       trendMeta: conversionTrendSet.meta,
       trendDiagnostics: buildTrendDiagnostics(conversionTrendSet.rows, ['leads', 'leadFollowups', 'students', 'purchases']),
-      trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['totalDealRate', 'courseDealRate', 'trialPathDealRate', 'trialPathPending', 'courseRepeatRate', 'courtRepeatRate', 'leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
+      trendComparisons: trendComparisonMap(conversionValues, previousConversionValues, ['validLeads', 'historicalStudents', 'activeStudents', 'trialAttendedStudents', 'trialAttendedToFormalPurchase', 'totalDealRate', 'courseDealRate', 'trialPathDealRate', 'trialPathPending', 'courseRepeatRate', 'courtRepeatRate', 'leads', 'appointmentRate', 'attendanceRate', 'dealRate', 'renewalRate'], canComparePrevious),
       courseFunnel,
       sourceRanking,
       channelEfficiencyRows,
