@@ -646,7 +646,24 @@ function studentStandardSummaryForMode(){
     activePackageLowCount:Number(summary.activePackageLowCount)||0
   };
 }
+function studentLoadingStatsForMode(){
+  if(studentListViewMode()==='trial')return {
+    total:null,
+    historicalTrialAttendedCount:null,
+    historicalFormalAttendedCount:null,
+    historicalTrialWithoutFormalCount:null,
+    historicalFormalLesson30Count:null
+  };
+  return {
+    total:null,
+    activeFormalLesson30Count:null,
+    activeFormalLesson90Count:null,
+    activePackageBalanceCount:null,
+    activePackageLowCount:null
+  };
+}
 function studentPageStats(base){
+  if(typeof lifecycleMetricsReady==='function'&&!lifecycleMetricsReady())return studentLoadingStatsForMode();
   return studentStandardSummaryForMode();
 }
 function studentPercentText(value,total){
@@ -958,7 +975,9 @@ function renderStudents(options={}){
   const filteredStudents=getFilteredStudents();
   let list=getSortedStudents(filteredStudents);
   const stats=studentPageStats(filteredStudents);
-  document.getElementById('studentStatsRow').innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
+  const statsHost=document.getElementById('studentStatsRow');
+  if(stats.total==null&&typeof renderStandardSkeletonKpiCards==='function')statsHost.innerHTML=renderStandardSkeletonKpiCards(5);
+  else statsHost.innerHTML=renderStandardDataCards(studentTopStatsCards(stats));
   const isMobileList=document.body.classList.contains('admin-mobile');
   const pageState=isMobileList?{total:list.length,pages:1,slice:list,page:1}:standardListSlice(list,stuPage,stuPageSize);
   stuPage=pageState.page;

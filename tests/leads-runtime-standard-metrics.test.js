@@ -22,6 +22,32 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/core/platform-data-standards.js'), 'utf8'), context);
 vm.runInContext(fs.readFileSync(path.join(repoRoot, 'public/assets/scripts/pages/leads.js'), 'utf8'), context);
 
+context.datasetHasCurrentRequestKey = () => false;
+context.standardLifecycleMetrics = { metrics: {}, views: {} };
+const notReadyStats = context.leadStatsData([
+  { id: 'lead-pending-1', hasTrialAttended: true, hasCourseConversion: true, hasTrialToCourseConversion: true },
+  { id: 'lead-pending-2', isActiveStudentRoster: true }
+]);
+
+assert.deepStrictEqual(
+  {
+    total: notReadyStats.total,
+    historicalStudents: notReadyStats.historicalStudents,
+    activeStudents: notReadyStats.activeStudents,
+    trialAttended: notReadyStats.trialAttended,
+    trialAttendedToFormalPurchase: notReadyStats.trialAttendedToFormalPurchase
+  },
+  {
+    total: null,
+    historicalStudents: null,
+    activeStudents: null,
+    trialAttended: null,
+    trialAttendedToFormalPurchase: null
+  },
+  '线索池统一生命周期统计未就绪时，顶部五张卡必须整体等待，不能用列表字段兜底显示假数字或 0'
+);
+
+context.datasetHasCurrentRequestKey = () => true;
 context.standardLifecycleMetrics = {
   teachingSummary: {
     historicalStudentCount: 5,

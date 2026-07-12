@@ -738,8 +738,22 @@ function leadTeachingSummaryValue(key){
   return value==null?null:Number(value)||0;
 }
 function leadLifecycleMetricsReady(){
+  if(typeof lifecycleMetricsReady==='function')return lifecycleMetricsReady();
   if(typeof datasetHasCurrentRequestKey==='function')return datasetHasCurrentRequestKey('lifecycleMetricsPage');
   return true;
+}
+function leadStatsLoadingData(){
+  return {
+    total:null,
+    historicalStudents:null,
+    historicalStudentRate:'',
+    activeStudents:null,
+    activeStudentRate:'',
+    trialAttended:null,
+    trialAttendedRate:'',
+    trialAttendedToFormalPurchase:null,
+    trialAttendedToFormalPurchaseRate:''
+  };
 }
 function leadStandardMetricRate(key,fallbackValue,fallbackTotal){
   if(fallbackValue==null)return '';
@@ -784,12 +798,18 @@ function leadTrialCourseConverted(lead){
   return leadTrialDone(lead)&&leadCourseConverted(lead);
 }
 function leadStatsData(list){
+  if(!leadLifecycleMetricsReady())return leadStatsLoadingData();
   return FlowTennisPlatformDataStandards.currentLeadSummary(list, leadStandardMetrics());
 }
 function renderLeadStats(list){
   const stats=leadStatsData(list);
+  if(stats.total==null&&typeof renderStandardSkeletonKpiCards==='function'){
+    const host=document.getElementById('leadStatsRow');
+    if(host)host.innerHTML=renderStandardSkeletonKpiCards(5);
+    return;
+  }
   const cardData=[
-    {label:'线索数',valueHtml:`${stats.total}<span>条</span>`},
+    {label:'线索数',valueHtml:stats.total==null?leadStatsValueHtml(stats.total):`${stats.total}<span>条</span>`},
     {label:'历史学员',valueHtml:leadStatsValueHtml(stats.historicalStudents),percent:stats.historicalStudentRate,sub:'历史学员 / 线索数'},
     {label:'在期学员',valueHtml:leadStatsValueHtml(stats.activeStudents),percent:stats.activeStudentRate,sub:'在期学员 / 历史学员'},
     {label:'上过体验课',valueHtml:leadStatsValueHtml(stats.trialAttended),percent:stats.trialAttendedRate,sub:'上过体验课 / 线索数'},
