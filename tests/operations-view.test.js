@@ -53,6 +53,16 @@ function countClass(html, className) {
   return (html.match(new RegExp(`class="[^"]*${className}(?:\\s|")`, 'g')) || []).length;
 }
 
+function functionBody(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.notStrictEqual(start, -1, `${name} should exist`);
+  const nextFunction = source.indexOf('\nfunction ', start + 1);
+  const nextAsyncFunction = source.indexOf('\nasync function ', start + 1);
+  const candidates = [nextFunction, nextAsyncFunction].filter(index => index !== -1);
+  const end = candidates.length ? Math.min(...candidates) : source.length;
+  return source.slice(start, end);
+}
+
 const operationsKpiSample = {
   overview: {
     cards: {
@@ -89,6 +99,11 @@ const operationsKpiSample = {
     },
     standardLifecycleMetrics: {
       metrics: {
+        validLeads: { value: 268, rate: 100 },
+        historicalStudents: { value: 118, rate: 44 },
+        activeStudents: { value: 42, rate: 36 },
+        trialAttendedStudents: { value: 78, rate: 29 },
+        trialAttendedToFormalPurchase: { value: 32, rate: 41 },
         totalDeals: { value: 86, rate: 32 },
         trialPathDeals: { value: 28, rate: 41 },
         courseRepeatBuyers: { value: 19, rate: 27 }
@@ -169,6 +184,7 @@ assert.doesNotMatch(stateSource, /if\(pg==='packages'\)renderBlockLoading/, 'pac
 assert.doesNotMatch(stateSource, /if\(pg==='workbench'\)renderBlockLoading/, 'workbench loading should not use a fake text block');
 assert.doesNotMatch(stateSource, /if\(pg==='postfeedback'\)renderBlockLoading/, 'postfeedback loading should not use a fake text block');
 assert.match(stateSource, /function operationsPageDataUrl\(\)/, 'state loader should build an operations endpoint URL with date range params');
+assert.match(functionBody(stateSource, 'operationsPageDataUrl'), /scopedPageDataUrl\('\/page-data\/operations'\)/, 'operations dashboard should request operations data with the same campus and date scope as lifecycle metrics');
 assert.match(stateSource, /function loadOperationsPageDataset\(\)[\s\S]*const url=operationsPageDataUrl\(\)[\s\S]*apiCall\('GET',url\)/, 'state loader should call the operations aggregate endpoint with the selected date range');
 assert.match(stateSource, /operationsPage:\(\)=>loadOperationsPageDataset\(\)/, 'operations dataset loader should use the date-aware loader');
 assert.match(stateSource, /function operationsPageDatasetRequestKey\(\)/, 'operations requests should use a date-aware request key');
@@ -369,7 +385,7 @@ assert.doesNotMatch(operationsSource, /schedule-detail-tabs|schedule-detail-tab/
 assert.doesNotMatch(operationsSource, /operationsTabsHtml|operations-tabs|operations-tab/, 'operations page should not render page-level horizontal tabs');
 assert.match(operationsSource, /renderConversionCommandCenter[\s\S]*operations-conversion-kpi-row/, 'conversion page should render trend KPI cards without an extra title card');
 assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s\S]*operations-loss-summary[\s\S]*function renderConversionInsightModule/, 'conversion page should not duplicate the worst-loss insight above the funnel');
-assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*线索数[\s\S]*总成交率（课程\/订场\/订场会员）[\s\S]*体验后买正式课率[\s\S]*课包复购率[\s\S]*订场复订率/, 'conversion page should render CRM-owner top KPI cards');
+assert.match(operationsSource, /operationsConversionKpiCards[\s\S]*线索数[\s\S]*历史学员[\s\S]*在期学员[\s\S]*上过体验课[\s\S]*体验后买正式课/, 'conversion page should render the same top KPI cards as lead and student pages');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*待转化体验学员/, 'conversion page should remove the pending trial-student KPI card from the top row');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*课程成交率/, 'conversion page should not show course deal rate when it duplicates total deal rate');
 assert.doesNotMatch(operationsSource, /operationsConversionKpiCards[\s\S]*预约率[\s\S]*到课率[\s\S]*成交率[\s\S]*续费率/, 'conversion page should not keep the legacy five-step local KPI formula');
@@ -414,8 +430,8 @@ const topKpiRenderCases = [
     html: operationsRuntime.renderConversionCommandCenter(operationsKpiSample, operationsRuntime.operationsConversionView(operationsKpiSample)),
     cardClass: 'operations-court-kpi',
     expectedCount: 5,
-    labels: ['线索数', '总成交率（课程/订场/订场会员）', '体验后买正式课率', '课包复购率', '订场复订率'],
-    values: ['268', '32%', '41%', '27%', '24%']
+    labels: ['线索数', '历史学员', '在期学员', '上过体验课', '体验后买正式课'],
+    values: ['268', '118', '42', '78', '32']
   },
   {
     name: 'coach',
@@ -440,7 +456,7 @@ assert.doesNotMatch(operationsSource, /function renderConversionCommandCenter[\s
 assert.match(chartsSource, /operations-funnel-transition[\s\S]*\$\{fmt\(transition\)\}%/, 'conversion funnel rows should focus on previous-step conversion rate');
 assert.doesNotMatch(stylesSource, /operations-conversion-kpi-sparkline \.operations-kpi-dot\{opacity:1/, 'conversion KPI sparklines should not show every point marker by default');
 assert.doesNotMatch(operationsSource, /function renderConversionInsightModule/, 'conversion page should move insight copy out of the conversion dashboard');
-assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*课程总漏斗[\s\S]*体验课上课漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
+assert.match(operationsSource, /renderConversionFunnelModule[\s\S]*线索与学员漏斗[\s\S]*体验课上课漏斗[\s\S]*订场链漏斗[\s\S]*operations-conversion-funnel-grid/, 'conversion page should render three peer funnel cards in one row');
 assert.doesNotMatch(operationsSource, /const moduleTitle = '转化漏斗'|<h3>\$\{moduleTitle\}<\/h3>|<h3>转化漏斗<\/h3>/, 'conversion page should not render the extra conversion funnel section title');
 assert.doesNotMatch(operationsSource, /renderOperationsConversion[\s\S]*renderConversionRetentionModule/, 'conversion page should remove the retention trend module from the page');
 assert.doesNotMatch(operationsSource, /operations-funnel-filter-row|operationsFilterDropdown\('operationsConversionSource'|operationsFilterDropdown\('operationsConversionCampus'|operationsFilterDropdown\('operationsConversionCoach'/, 'conversion funnel should not keep local source/campus/coach filters');

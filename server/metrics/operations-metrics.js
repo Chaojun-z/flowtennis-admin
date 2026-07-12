@@ -11,7 +11,7 @@ const {
   buildCustomerLifecycleRows,
   buildLeadConversionSetsFromLifecycle
 } = require('../read-models/customer-lifecycle.js');
-const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews, buildStandardLifecycleMetrics } = require('../read-models/platform-metrics.js');
+const { buildLeadPoolRows, buildRawLeadConversionMetrics, buildTeachingStudentViews, buildStandardLifecycleMetrics, buildScopedLifecycleSource } = require('../read-models/platform-metrics.js');
 const {
   buildFinanceOverviewSummaryFromRows,
   buildFinanceOverviewSummaryFromData
@@ -2751,19 +2751,22 @@ function buildOperationsMetrics(data = {}, options = {}) {
   const canComparePrevious = !!(previousRange && previousRangedData && rangeHasAnyActivity(previousRangedData, previousRange));
   const financeOverviewData = rangedData.financeOverviewData || {};
   const customerLifecycleRows = lifecycleRowsForData(data);
-  const sets = buildLeadConversionSets({ ...data, customerLifecycleRows });
-  const rawLeadConversion = buildRawLeadConversionMetrics({
-    leads: rangedData.leads || [],
+  const metricScope = options.metricScope || {};
+  const metricLifecycleSource = buildScopedLifecycleSource({
+    ...rangedData,
     customerLifecycleRows
+  }, metricScope);
+  const metricCustomerLifecycleRows = lifecycleRowsForData(metricLifecycleSource);
+  const sets = buildLeadConversionSets({ ...metricLifecycleSource, customerLifecycleRows: metricCustomerLifecycleRows });
+  const rawLeadConversion = buildRawLeadConversionMetrics({
+    leads: metricLifecycleSource.leads || [],
+    customerLifecycleRows: metricCustomerLifecycleRows
   });
   const rangedLeadPoolByLeadId = buildLeadPoolByLeadId(rawLeadConversion.rawLeadPoolRows);
   const stageRows = rawLeadConversion.stageRows;
-  const courseRows = courseConversionRows({ ...rangedData, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
-  const teachingCustomerLifecycleRows = customerLifecycleRows;
-  const teachingStandardLifecycleMetrics = buildStandardLifecycleMetrics({
-    ...rangedData,
-    customerLifecycleRows: teachingCustomerLifecycleRows
-  });
+  const courseRows = courseConversionRows({ ...metricLifecycleSource, leads: rawLeadConversion.rawLeadPoolRows, customerLifecycleRows: metricCustomerLifecycleRows }, { now });
+  const teachingCustomerLifecycleRows = metricCustomerLifecycleRows;
+  const teachingStandardLifecycleMetrics = buildStandardLifecycleMetrics(metricLifecycleSource);
   const courseFunnel = teachingStandardLifecycleMetrics.funnels.courseChain || [];
   const teachingSummary = teachingStandardLifecycleMetrics.teachingSummary || {};
   const teachingStudentViews = teachingStandardLifecycleMetrics.views || {};
@@ -2870,11 +2873,16 @@ function buildOperationsMetrics(data = {}, options = {}) {
     now
   });
   const overviewTrends = overviewTrendSet.rows;
-  const trendRawLeadConversion = buildRawLeadConversionMetrics({
-    leads: trendRangedData.leads || [],
+  const trendMetricLifecycleSource = buildScopedLifecycleSource({
+    ...trendRangedData,
     customerLifecycleRows
+  }, metricScope);
+  const trendMetricCustomerLifecycleRows = lifecycleRowsForData(trendMetricLifecycleSource);
+  const trendRawLeadConversion = buildRawLeadConversionMetrics({
+    leads: trendMetricLifecycleSource.leads || [],
+    customerLifecycleRows: trendMetricCustomerLifecycleRows
   });
-  const trendCourseRows = courseConversionRows({ ...trendRangedData, leads: trendRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now });
+  const trendCourseRows = courseConversionRows({ ...trendMetricLifecycleSource, leads: trendRawLeadConversion.rawLeadPoolRows, customerLifecycleRows: trendMetricCustomerLifecycleRows }, { now });
   const conversionTrendSet = buildConversionTrendSet({ rows: trendCourseRows, purchases: trendRangedData.purchases || [], dateRange: trendDateRange, now });
   const courtRetentionTrendSet = buildCourtRetentionTrendSet({
     courts: trendRangedData.courts || data.courts || [],
@@ -2901,15 +2909,17 @@ function buildOperationsMetrics(data = {}, options = {}) {
     financeOverviewData: previousRangedData.financeOverviewData || {},
     selectedDateRangeActive: true
   }) : {};
-  const previousRawLeadConversion = previousRangedData ? buildRawLeadConversionMetrics({
-    leads: previousRangedData.leads || [],
-    customerLifecycleRows
-  }) : null;
-  const previousCourseRows = previousRangedData ? courseConversionRows({ ...previousRangedData, leads: previousRawLeadConversion.rawLeadPoolRows, customerLifecycleRows }, { now }) : [];
-  const previousStandardLifecycleMetrics = previousRangedData ? buildStandardLifecycleMetrics({
+  const previousMetricLifecycleSource = previousRangedData ? buildScopedLifecycleSource({
     ...previousRangedData,
     customerLifecycleRows
+  }, metricScope) : null;
+  const previousMetricCustomerLifecycleRows = previousMetricLifecycleSource ? lifecycleRowsForData(previousMetricLifecycleSource) : [];
+  const previousRawLeadConversion = previousMetricLifecycleSource ? buildRawLeadConversionMetrics({
+    leads: previousMetricLifecycleSource.leads || [],
+    customerLifecycleRows: previousMetricCustomerLifecycleRows
   }) : null;
+  const previousCourseRows = previousMetricLifecycleSource ? courseConversionRows({ ...previousMetricLifecycleSource, leads: previousRawLeadConversion.rawLeadPoolRows, customerLifecycleRows: previousMetricCustomerLifecycleRows }, { now }) : [];
+  const previousStandardLifecycleMetrics = previousMetricLifecycleSource ? buildStandardLifecycleMetrics(previousMetricLifecycleSource) : null;
   const previousCourseFunnel = previousStandardLifecycleMetrics?.funnels?.courseChain || [];
   const previousPeriodRepurchase = previousRangedData ? buildPeriodRepurchaseMetrics(previousRangedData.purchases || []) : { rate: 0, numerator: 0, denominator: 0 };
   const previousCoachRows = previousRangedData ? buildCoachRows({

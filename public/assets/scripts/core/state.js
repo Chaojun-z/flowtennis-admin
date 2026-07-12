@@ -292,12 +292,7 @@ function assertPageDataPerformanceGuard(){
 }
 assertPageDataPerformanceGuard();
 function operationsPageDataUrl(){
-  const range=typeof activeGlobalDateRange==='function'?activeGlobalDateRange():{};
-  const params=new URLSearchParams();
-  if(range?.startDate)params.set('startDate',range.startDate);
-  if(range?.endDate)params.set('endDate',range.endDate);
-  const query=params.toString();
-  return query?`/page-data/operations?${query}`:'/page-data/operations';
+  return scopedPageDataUrl('/page-data/operations');
 }
 function currentScopeCampusName(){
   const code=String(campus||'').trim();

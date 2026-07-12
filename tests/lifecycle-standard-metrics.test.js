@@ -179,9 +179,13 @@ assert.strictEqual(
   '经营分析必须透出同一份标准生命周期指标'
 );
 assert.deepStrictEqual(
-  operations.conversion.courseFunnel.map(row => [row.stage, row.count]),
-  standard.funnels.courseChain.map(row => [row.stage, row.count]),
-  '经营分析标准漏斗不得继续使用旧 courseFunnel 预约体验口径'
+  operations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster.map(row => [row.stage, row.count]),
+  [
+    ['线索池', operations.conversion.standardLifecycleMetrics.metrics.validLeads.value],
+    ['历史学员', operations.conversion.standardLifecycleMetrics.metrics.historicalStudents.value],
+    ['在期学员', operations.conversion.standardLifecycleMetrics.metrics.activeStudents.value]
+  ],
+  '经营分析主漏斗必须使用线索池、历史学员、在期学员同一份标准生命周期口径'
 );
 
 const hardCase = {

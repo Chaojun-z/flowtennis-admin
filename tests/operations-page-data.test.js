@@ -47,7 +47,7 @@ assert.doesNotMatch(operationsPageSource, /async function getOperationsBaseRows/
 assert.match(operationsPageSource, /getOperationsRowsCacheKey/, 'operations page-data cache should be scoped before reuse');
 assert.match(operationsPageSource, /OPERATIONS_RESULT_CACHE_TTL_MS/, 'operations page-data should cache computed dashboard results for fast date switching');
 assert.doesNotMatch(operationsPageSource, /OPERATIONS_RESULT_STALE_TTL_MS/, 'operations page-data must not return old stale results as realtime operations data');
-assert.match(operationsPageSource, /getOperationsResultCacheKey[\s\S]*dateRange\.startDate[\s\S]*dateRange\.endDate/, 'computed operations cache should be scoped by selected date range');
+assert.match(operationsPageSource, /getOperationsResultCacheKey[\s\S]*scope\.campus[\s\S]*scope\.campusName[\s\S]*dateRange\.startDate[\s\S]*dateRange\.endDate/, 'computed operations cache should be scoped by selected campus and date range');
 assert.match(operationsPageSource, /const cachedOperations = operationsResultCache\.get\(resultCacheKey\)/, 'operations page-data should read the computed result cache before recalculating');
 assert.match(operationsPageSource, /function invalidateOperationsPageDataCache\(\)[\s\S]*operationsResultCache\.clear\(\)/, 'operations page-data should expose cache invalidation for realtime writes');
 assert.doesNotMatch(operationsPageSource, /function readStaleOperationsResultCache/, 'operations page-data should not keep a stale-result read path');
@@ -69,7 +69,9 @@ assert.match(operationsMetricsSource, /if \(Array\.isArray\(data\.customerLifecy
 assert.doesNotMatch(operationsMetricsSource, /buildPlatformMetrics/, 'operations conversion must not use the full searchable customer pool as course lead statistics');
 assert.match(operationsMetricsSource, /require\('\.\.\/read-models\/platform-metrics\.js'\)/, 'operations metrics should reuse the unified lead-pool read model when deriving raw lead stages');
 assert.match(operationsMetricsSource, /buildRawLeadConversionMetrics/, 'operations metrics should call the unified raw lead conversion read model');
-assert.match(operationsMetricsSource, /const rawLeadConversion = buildRawLeadConversionMetrics\(\{[\s\S]*leads: rangedData\.leads \|\| \[\],[\s\S]*customerLifecycleRows[\s\S]*\}\)/, 'operations conversion should derive raw lead cohort metrics from platform-metrics');
+assert.match(operationsMetricsSource, /const rawLeadConversion = buildRawLeadConversionMetrics\(\{[\s\S]*leads: metricLifecycleSource\.leads \|\| \[\],[\s\S]*customerLifecycleRows: metricCustomerLifecycleRows[\s\S]*\}\)/, 'operations conversion should derive scoped raw lead cohort metrics from platform-metrics');
+assert.match(operationsMetricsSource, /metricLifecycleSource[\s\S]*buildScopedLifecycleSource\(\{[\s\S]*rangedData[\s\S]*customerLifecycleRows[\s\S]*\},\s*metricScope\)/, 'operations conversion should scope lead/student metrics through the unified lifecycle source');
+assert.doesNotMatch(operationsMetricsSource, /function buildOperationsLeadStudentRoster|function buildLeadStudentRoster|leadStudentRoster:\s*\[[\s\S]*HISTORICAL_STUDENTS/, 'operations must not define a second backend formula for the lead/student roster funnel');
 assert.match(operationsMetricsSource, /const stageRows = rawLeadConversion\.stageRows/, 'operations stage rows should be driven by unified raw lead-pool rows instead of a second local stage tree');
 assert.match(operationsMetricsSource, /const totalLeads = rawLeadConversion\.totalLeads/, 'operations conversion lead total should use unified raw valid leads only');
 assert.match(operationsMetricsSource, /const convertedLeads = rawLeadConversion\.convertedLeads/, 'operations converted leads should use total成交口径 from unified raw lead rows');

@@ -15,9 +15,27 @@ function getOperationsDateRange(query) {
   };
 }
 
-function getOperationsResultCacheKey(user = {}, dateRange = {}) {
+function getOperationsPageScope(query) {
+  const dateRange = getOperationsDateRange(query);
+  return {
+    campus: String(query?.get?.('campus') || '').trim(),
+    campusName: String(query?.get?.('campusName') || '').trim(),
+    dateRange,
+    metricScope: {
+      campus: String(query?.get?.('campus') || '').trim(),
+      campusName: String(query?.get?.('campusName') || '').trim(),
+      startDate: dateRange.startDate || '',
+      endDate: dateRange.endDate || ''
+    }
+  };
+}
+
+function getOperationsResultCacheKey(user = {}, scope = {}) {
+  const dateRange = scope.dateRange || scope;
   return JSON.stringify({
     user: JSON.parse(getOperationsRowsCacheKey(user)),
+    campus: scope.campus || '',
+    campusName: scope.campusName || '',
     startDate: dateRange.startDate || '',
     endDate: dateRange.endDate || ''
   });
@@ -32,6 +50,7 @@ function readOperationsResultCache(resultCacheKey) {
 }
 
 async function buildOperationsPagePayload({
+  scope,
   dateRange,
   user,
   listCampusesWithDefaults,
@@ -96,7 +115,7 @@ async function buildOperationsPagePayload({
     customerLifecycleRows,
     financeOverviewData,
     financeNormalizedRows: scopedFinanceSnapshot.financeNormalizedRows
-  }, { dateRange });
+  }, { dateRange, metricScope: scope?.metricScope || {} });
 
   return {
     campuses: scoped.campuses,
@@ -130,11 +149,13 @@ async function handleOperationsPageData({
 }) {
   if (user.role !== 'admin') return sendJson(res, { error: '无权限' }, 403);
   await init();
-  const dateRange = getOperationsDateRange(query);
-  const resultCacheKey = getOperationsResultCacheKey(user, dateRange);
+  const scope = getOperationsPageScope(query);
+  const dateRange = scope.dateRange;
+  const resultCacheKey = getOperationsResultCacheKey(user, scope);
   const cachedPayload = readOperationsResultCache(resultCacheKey);
   if (cachedPayload) return sendJson(res, cachedPayload);
   const buildPayload = () => buildOperationsPagePayload({
+    scope,
     dateRange,
     user,
     listCampusesWithDefaults,

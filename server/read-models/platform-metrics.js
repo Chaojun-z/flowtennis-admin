@@ -1462,6 +1462,11 @@ function buildStandardLifecycleMetrics(data = {}) {
         { id: 'FORMAL_STUDENTS', label: '正式学员', value: formalStudents },
         { id: 'COURSE_REPEAT_BUYERS', label: '课包复购', value: courseRepeatBuyers }
       ]),
+      leadStudentRoster: standardFunnelRows([
+        { id: 'VALID_LEADS', label: '线索池', value: validLeads, unit: '条' },
+        { id: 'HISTORICAL_STUDENTS', label: '历史学员', value: historicalStudents },
+        { id: 'ACTIVE_STUDENTS', label: '在期学员', value: activeStudents }
+      ]),
       trialPath: standardFunnelRows([
         { id: 'TRIAL_ATTENDED_STUDENTS', label: '上过体验课', value: trialAttendedStudents },
         { id: 'TRIAL_ATTENDED_TO_FORMAL_PURCHASE', label: '体验后买正式课', value: trialAttendedToFormalPurchase },
@@ -1534,6 +1539,7 @@ module.exports = {
   buildPlatformMetrics,
   buildStandardLifecycleMetrics,
   buildScopedStandardLifecycleMetrics,
+  buildScopedLifecycleSource,
   buildLeadPoolRows,
   buildTeachingStudentViews,
   buildRawLeadConversionMetrics,

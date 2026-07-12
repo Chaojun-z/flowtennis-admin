@@ -1076,19 +1076,16 @@ function operationsCoachSparklineSvg(points = [], key = '') {
 }
 
 function operationsConversionKpiCards(conversion = {}) {
-  const metricRate = key => Number(operationsStandardMetric(conversion, key)?.rate) || 0;
-  const cards = conversion.cards || {};
   const metricCard = (key, label, unit, trendKey, tone) => {
     const metric = operationsStandardMetric(conversion, key) || {};
     return { label, value: fmt(metric.value || 0), unit, trendValue: metric.value || 0, trendKey, tone };
   };
-  const rateCard = (label, value, trendKey, tone) => ({ label, value: `${fmt(value)}%`, trendValue: value, trendKey, tone });
   return [
-    { label: '线索数', value: fmt(operationsCardValue(cards, 'totalLeads')), unit: '条', trendValue: operationsCardValue(cards, 'totalLeads'), trendKey: 'leads', tone: 'lead' },
-    rateCard('总成交率（课程/订场/订场会员）', metricRate('totalDeals'), 'totalDealRate', 'conversion'),
-    rateCard('体验后买正式课率', metricRate('trialPathDeals'), 'trialPathDealRate', 'conversion'),
-    rateCard('课包复购率', metricRate('courseRepeatBuyers'), 'courseRepeatRate', 'retention'),
-    rateCard('订场复订率', Number(conversion.courtChain?.courtRepeatRate) || 0, 'courtRepeatRate', 'retention')
+    metricCard('validLeads', '线索数', '条', 'leads', 'lead'),
+    metricCard('historicalStudents', '历史学员', '人', 'historicalStudents', 'conversion'),
+    metricCard('activeStudents', '在期学员', '人', 'activeStudents', 'retention'),
+    metricCard('trialAttendedStudents', '上过体验课', '人', 'trialPathStudents', 'conversion'),
+    metricCard('trialAttendedToFormalPurchase', '体验后买正式课', '人', 'trialPathDeals', 'conversion')
   ];
 }
 
@@ -1240,7 +1237,7 @@ function operationsRateText(part, total) {
 
 function operationsFunnelRows(conversion = {}, key = '') {
   const standard = conversion.standardLifecycleMetrics || {};
-  if (key === 'course') return standard.funnels?.courseChain || [];
+  if (key === 'course') return standard.funnels?.leadStudentRoster || [];
   if (key === 'trial') return (standard.funnels?.trialPath || []).filter(row => row.id !== 'TRIAL_PATH_PENDING');
   if (key === 'court') return (standard.funnels?.courtChain || []).filter(row => row.id !== 'COURT_REBOOK_CUSTOMERS');
   return [];
@@ -1267,7 +1264,7 @@ function renderConversionFunnelModule(data, conversion) {
   const courseRows = operationsFunnelRows(conversion, 'course');
   const trialRows = operationsFunnelRows(conversion, 'trial');
   const courtRows = operationsFunnelRows(conversion, 'court');
-  const courseCard = renderConversionFunnelCard('课程总漏斗', 'operationsCourseFunnel', courseRows);
+  const courseCard = renderConversionFunnelCard('线索与学员漏斗', 'operationsCourseFunnel', courseRows);
   const trialCard = renderConversionFunnelCard('体验课上课漏斗', 'operationsTrialFunnel', trialRows, operationsAuxMetric('上过体验未买正式课', trialPathPending, operationsStandardMetricRate(conversion, 'trialPathPending')));
   const courtCard = renderConversionFunnelCard('订场链漏斗', 'operationsCourtChainFunnel', courtRows, operationsAuxMetric('订场复订', courtRepeat, operationsRateText(courtRepeat, courtUsers)));
   return `<div class="operations-dashboard-block operations-funnel-block">

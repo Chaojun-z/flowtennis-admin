@@ -69,6 +69,22 @@ async function membershipSummaryFromRows(rows = {}) {
     now: new Date('2026-06-12 12:00:00'),
     dateRange: { startDate: '2026-06-01', endDate: '2026-06-12' }
   });
+  const leadStudentRoster = operations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster || [];
+
+  assert.deepStrictEqual(
+    leadStudentRoster.map(row => row.label),
+    ['线索池', '历史学员', '在期学员'],
+    '转化与留存主漏斗必须展示线索池 -> 历史学员 -> 在期学员'
+  );
+  assert.deepStrictEqual(
+    leadStudentRoster.map(row => row.value),
+    [
+      platform.standardLifecycleMetrics.metrics.validLeads.value,
+      platform.standardLifecycleMetrics.metrics.historicalStudents.value,
+      platform.standardLifecycleMetrics.metrics.activeStudents.value
+    ],
+    '转化与留存主漏斗必须直接复用三页统一后端事实'
+  );
 
   assert.strictEqual(
     operations.conversion.standardLifecycleMetrics.metrics.formalStudents.value,
@@ -150,6 +166,64 @@ async function membershipSummaryFromRows(rows = {}) {
     manualOperations.conversion.standardLifecycleMetrics.metrics.formalStudents.value,
     0,
     '经营分析课程成交标准指标必须继续等于正式学员统一视图'
+  );
+  assert.strictEqual(
+    manualOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster[1].value,
+    0,
+    '反例：只有手工课程成交、没有有效上课事实，不能被看板算成历史学员'
+  );
+
+  const emptyOperations = buildOperationsMetrics({
+    leads: [],
+    students: [],
+    purchases: [],
+    schedule: [],
+    courts: [],
+    membershipAccounts: [],
+    membershipOrders: [],
+    financeNormalizedRows: [],
+    financeOverviewData: {}
+  }, { now: new Date('2026-06-12 12:00:00') });
+  assert.deepStrictEqual(
+    emptyOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster.map(row => row.value),
+    [0, 0, 0],
+    '空数据：线索池、历史学员、在期学员漏斗必须全部为 0'
+  );
+
+  const campusDateSample = {
+    leads: [
+      { id: 'lead-mapo-in', displayName: '马坡范围内', campus: 'shunyi_mapo', leadDate: '2026-06-05' },
+      { id: 'lead-mapo-out-date', displayName: '马坡范围外日期', campus: 'shunyi_mapo', leadDate: '2026-05-20' },
+      { id: 'lead-other-campus', displayName: '其他校区', campus: 'other_campus', leadDate: '2026-06-05' }
+    ],
+    students: [
+      { id: 'stu-mapo-in', name: '马坡范围内', sourceLeadId: 'lead-mapo-in', campus: 'shunyi_mapo' },
+      { id: 'stu-mapo-out-date', name: '马坡范围外日期', sourceLeadId: 'lead-mapo-out-date', campus: 'shunyi_mapo' },
+      { id: 'stu-other-campus', name: '其他校区', sourceLeadId: 'lead-other-campus', campus: 'other_campus' }
+    ],
+    purchases: [
+      { id: 'purchase-mapo-in', studentId: 'stu-mapo-in', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' },
+      { id: 'purchase-other-campus', studentId: 'stu-other-campus', packageName: '成人正式课包', actualAmount: 1200, status: 'active', purchaseDate: '2026-06-06' }
+    ],
+    schedule: [
+      { id: 'schedule-mapo-in', studentId: 'stu-mapo-in', campus: 'shunyi_mapo', courseType: '私教课', startTime: '2026-06-07 10:00:00', endTime: '2026-06-07 11:00:00', status: '已完成' },
+      { id: 'schedule-mapo-out-date', studentId: 'stu-mapo-out-date', campus: 'shunyi_mapo', courseType: '私教课', startTime: '2026-05-21 10:00:00', endTime: '2026-05-21 11:00:00', status: '已完成' },
+      { id: 'schedule-other-campus', studentId: 'stu-other-campus', campus: 'other_campus', courseType: '私教课', startTime: '2026-06-07 10:00:00', endTime: '2026-06-07 11:00:00', status: '已完成' }
+    ],
+    courts: [],
+    membershipAccounts: [],
+    membershipOrders: []
+  };
+  const campusLifecycleRows = buildCustomerLifecycleRows(campusDateSample);
+  const campusOperations = buildOperationsMetrics({ ...campusDateSample, customerLifecycleRows: campusLifecycleRows }, {
+    now: new Date('2026-06-12 12:00:00'),
+    dateRange: { startDate: '2026-06-01', endDate: '2026-06-30' },
+    metricScope: { campus: 'shunyi_mapo', campusName: '顺义马坡', startDate: '2026-06-01', endDate: '2026-06-30' }
+  });
+  assert.deepStrictEqual(
+    campusOperations.conversion.standardLifecycleMetrics.funnels.leadStudentRoster.map(row => row.value),
+    [1, 1, 1],
+    '筛选：转化与留存主漏斗必须同时跟随校区和时间周期'
   );
 
   const membershipSample = {

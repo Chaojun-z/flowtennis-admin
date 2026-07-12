@@ -103,8 +103,8 @@ assert.doesNotMatch(
 );
 assert.match(
   functionBody(operationsMetricsSource, 'buildOperationsMetrics'),
-  /teachingStandardLifecycleMetrics[\s\S]*buildStandardLifecycleMetrics\(\{[\s\S]*customerLifecycleRows:\s*teachingCustomerLifecycleRows/,
-  '转化与留存课程漏斗必须从客户中心教学读模型生成'
+  /metricLifecycleSource[\s\S]*buildScopedLifecycleSource\(\{[\s\S]*rangedData[\s\S]*customerLifecycleRows[\s\S]*\},\s*metricScope\)[\s\S]*teachingStandardLifecycleMetrics[\s\S]*buildStandardLifecycleMetrics\(metricLifecycleSource\)/,
+  '转化与留存课程漏斗必须从客户中心教学统一读模型和页面筛选 scope 生成'
 );
 assert.doesNotMatch(
   functionBody(operationsMetricsSource, 'buildOperationsMetrics'),
