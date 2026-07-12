@@ -1541,6 +1541,26 @@ body.is-packages-page .content{overflow:hidden}
 .tms-skeleton-card-grid,.tms-skeleton-board-grid{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px}
 .tms-skeleton-card-grid .tms-skeleton-panel{min-height:220px}
 .tms-skeleton-board-grid .tms-skeleton-panel{min-height:360px}
+.course-package-showcase-grid.tms-skeleton-package-board{display:flex;gap:16px;align-items:stretch;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x pan-y;scrollbar-width:none;-ms-overflow-style:none;cursor:default}
+.course-package-showcase-grid.tms-skeleton-package-board::-webkit-scrollbar{display:none}
+.tms-skeleton-package-column{cursor:default;pointer-events:none}
+.tms-skeleton-package-column .package-board-header{cursor:default}
+.tms-skeleton-package-line,.tms-skeleton-package-count{display:block;border-radius:999px;background:linear-gradient(90deg,#E9E1D9 0%,#F7F2EE 45%,#E9E1D9 90%);background-size:220% 100%;animation:operationsSkeleton 1.2s ease-in-out infinite}
+.tms-skeleton-package-column .is-column-title{width:132px;height:15px}
+.tms-skeleton-package-count{width:22px;min-width:22px;height:22px;padding:0;border:0}
+.tms-skeleton-package-card{background:#FFFFFF;border-radius:12px;padding:12px;min-height:128px;cursor:default}
+.tms-skeleton-package-card .is-title{width:132px;height:13px}
+.tms-skeleton-package-card .is-status{width:56px;height:17px;border:0}
+.tms-skeleton-package-card .is-status::before{display:none}
+.tms-skeleton-package-price{display:flex;align-items:baseline;gap:6px;width:92px}
+.tms-skeleton-package-price .is-currency{width:12px;height:14px}
+.tms-skeleton-package-price .is-amount{width:66px;height:26px}
+.tms-skeleton-package-rules .is-rule{width:96px;height:11px}
+.tms-skeleton-package-rules .is-rule.is-short{width:74px}
+.tms-skeleton-package-card .is-date{width:54px;height:10px}
+.tms-skeleton-package-card .is-order{width:62px;height:10px}
+.tms-skeleton-package-actions{display:flex;gap:4px}
+.tms-skeleton-package-actions .is-action{width:36px;height:24px;border-radius:4px}
 .tms-skeleton-calendar-grid{display:grid;grid-template-columns:1fr;gap:14px}
 .tms-skeleton-calendar-grid .tms-skeleton-panel{min-height:420px}
 #page-operations .operations-skeleton-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}

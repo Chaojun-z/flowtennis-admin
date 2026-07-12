@@ -375,6 +375,16 @@ function renderStandardSkeletonTablePanel(panel={}){
   const rows=Array.from({length:Math.max(3,Math.min(8,Number(panel.rows)||5))},()=>`<div class="tms-skeleton-table-row">${cells}</div>`).join('');
   return `<div class="tms-skeleton-panel tms-skeleton-table-panel ${esc(cls)}"><span class="tms-skeleton-line is-title"></span><div class="tms-skeleton-table">${rows}</div></div>`;
 }
+function renderStandardSkeletonPackageCard(){
+  return `<div class="package-card-shell tms-skeleton-package-card" aria-hidden="true"><div class="showcase-card-body package-sales-card-body"><div class="showcase-card-header package-sales-header"><div class="showcase-card-title-group"><div class="package-sales-title-row"><span class="showcase-card-title package-sales-title tms-skeleton-package-line is-title"></span></div></div><span class="package-status-badge tms-skeleton-package-line is-status"></span></div><div class="package-sales-core"><div class="package-sales-price tms-skeleton-package-price"><span class="tms-skeleton-package-line is-currency"></span><span class="tms-skeleton-package-line is-amount"></span></div><div class="package-sales-rules tms-skeleton-package-rules"><span class="tms-skeleton-package-line is-rule"></span><span class="tms-skeleton-package-line is-rule is-short"></span></div></div></div><div class="showcase-card-footer package-sales-footer"><div class="package-card-meta"><span class="package-meta-token tms-skeleton-package-line is-date"></span><span class="package-meta-dot"></span><span class="package-order-link tms-skeleton-package-line is-order"></span></div><div class="showcase-card-actions tms-skeleton-package-actions"><span class="tms-skeleton-package-line is-action"></span><span class="tms-skeleton-package-line is-action"></span></div></div></div>`;
+}
+function renderStandardSkeletonPackageBoard(section={}){
+  const cls=String(section.className||'course-package-showcase-grid tms-skeleton-package-board').trim();
+  const columns=Math.max(1,Math.min(8,Number(section.columns)||5));
+  const cardsPerColumn=Math.max(1,Math.min(6,Number(section.cardsPerColumn)||4));
+  const cards=Array.from({length:cardsPerColumn},()=>renderStandardSkeletonPackageCard()).join('');
+  return `<div class="${esc(cls)}">${Array.from({length:columns},()=>`<div class="package-board-column tms-skeleton-package-column"><div class="package-board-header tms-skeleton-package-column-head"><span class="package-board-title tms-skeleton-package-line is-column-title"></span><span class="package-board-count tms-skeleton-package-count"></span></div><div class="package-board-stack">${cards}</div></div>`).join('')}</div>`;
+}
 function renderStandardSkeletonSection(section={}){
   const type=String(section.type||'grid');
   const cls=String(section.className||'').trim();
@@ -383,6 +393,7 @@ function renderStandardSkeletonSection(section={}){
     return `<div class="${esc(cls||'tms-skeleton-kpi-row')}">${renderStandardSkeletonKpiCards(count)}</div>`;
   }
   if(type==='table')return renderStandardSkeletonTablePanel(section);
+  if(type==='package-board')return renderStandardSkeletonPackageBoard(section);
   const panels=Array.isArray(section.panels)&&section.panels.length?section.panels:[{}];
   return `<div class="${esc(cls||'tms-skeleton-grid')}">${panels.map(renderStandardSkeletonChartPanel).join('')}</div>`;
 }
@@ -397,7 +408,7 @@ function standardPageSkeletonConfigs(){
       {type:'grid',className:'course-showcase-grid tms-skeleton-card-grid',panels:[{variant:'card'},{variant:'card'},{variant:'card'},{variant:'card'}]}
     ]},
     {page:'packages',hostId:'packageGrid',variant:'board',className:'course-package-skeleton',sections:[
-      {type:'grid',className:'course-package-showcase-grid tms-skeleton-board-grid',panels:[{variant:'table'},{variant:'table'},{variant:'table'},{variant:'table'}]}
+      {type:'package-board',className:'course-package-showcase-grid tms-skeleton-package-board',columns:5,cardsPerColumn:4}
     ]},
     {page:'finance',variant:'finance',onRender:()=>{
       const stats=document.getElementById('financeOverviewPrimaryStats');

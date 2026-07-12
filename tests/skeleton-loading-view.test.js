@@ -41,3 +41,16 @@ assert.match(chartSkeletonBody, /tms-skeleton-chart-surface[\s\S]*tms-skeleton-c
 assert.match(pagesCss, /\.tms-skeleton-card,.tms-skeleton-panel\{[^}]*background:#FFFDFC[^}]*border:1px solid rgba\(91,63,42,\.12\)/, 'non-table skeleton cards should use the same quiet surface as real dashboard cards');
 assert.doesNotMatch(pagesCss, /\.tms-skeleton-chart-body i\{/, 'non-table chart skeleton CSS should not style fake chart bars');
 assert.match(pagesCss, /\.tms-skeleton-chart-surface\{[^}]*background:linear-gradient\(180deg,rgba\(160,143,128,\.08\) 1px,transparent 1px\)/, 'chart skeleton surfaces should be light, structural placeholders instead of heavy fake charts');
+
+const packageBoardSkeletonBody = fnBody(standardComponentsSource, 'renderStandardSkeletonPackageBoard');
+const packageCardSkeletonBody = fnBody(standardComponentsSource, 'renderStandardSkeletonPackageCard');
+assert.match(standardComponentsSource, /function renderStandardSkeletonPackageBoard\(/, 'standard components should expose one shared package board skeleton helper');
+assert.match(standardComponentsSource, /if\(type==='package-board'\)return renderStandardSkeletonPackageBoard\(section\);/, 'page skeleton sections should route package-board through the shared helper');
+assert.match(standardComponentsSource, /page:'packages'[\s\S]*type:'package-board'[\s\S]*columns:5[\s\S]*cardsPerColumn:4/, 'package loading should use a dedicated package-board skeleton with the real board column count');
+assert.doesNotMatch(standardComponentsSource, /page:'packages'[\s\S]*tms-skeleton-board-grid[\s\S]*variant:'table'/, 'package loading should not reuse the fake table-board skeleton');
+assert.match(packageBoardSkeletonBody, /package-board-column[\s\S]*package-board-header[\s\S]*tms-skeleton-package-count[\s\S]*package-board-stack/, 'package board skeleton should mirror real board columns');
+assert.match(standardComponentsSource, /package-card-shell tms-skeleton-package-card/, 'package board skeleton should render package-card-shell based card placeholders');
+assert.match(packageCardSkeletonBody, /tms-skeleton-package-price[\s\S]*tms-skeleton-package-rules[\s\S]*tms-skeleton-package-actions/, 'package card skeleton should mirror price, rule lines and footer actions');
+assert.match(pagesCss, /\.course-package-showcase-grid\.tms-skeleton-package-board\{[^}]*display:flex[^}]*overflow-x:auto[^}]*cursor:default/, 'package board skeleton should keep the real horizontal board container');
+assert.match(pagesCss, /\.tms-skeleton-package-card\{[^}]*background:#FFFFFF[^}]*border-radius:12px[^}]*padding:12px/, 'package board skeleton cards should use the real package card shell structure');
+assert.match(pagesCss, /\.tms-skeleton-package-line,.tms-skeleton-package-count\{[^}]*animation:operationsSkeleton 1\.2s ease-in-out infinite/, 'package board skeleton should use the existing skeleton shimmer');
