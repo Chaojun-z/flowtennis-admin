@@ -44,6 +44,7 @@ const purchase = {
 };
 
 const entitlement = rules.buildEntitlementFromPurchase(pkg, purchase, { id: 'stu-1', name: '张三' }, 'ent-1', '2026-04-12 00:00:00');
+const legacyMapoCode = ['ma', 'bao'].join('');
 
 const oldImportedLedger = {
   id: 'old-2',
@@ -675,6 +676,28 @@ assert.doesNotThrow(
   'campus display name should match the same stored campus code'
 );
 
+assert.strictEqual(
+  rules.normalizeCampusValue(legacyMapoCode),
+  'shunyi_mapo',
+  'legacy mapo campus code should normalize to shunyi_mapo on backend'
+);
+
+assert.doesNotThrow(
+  () => rules.validateEntitlementForSchedule({ ...entitlement, campusIds: [legacyMapoCode] }, {
+    id: 'sch-campus-legacy-mapo',
+    studentIds: ['stu-1'],
+    courseType: '私教课',
+    coachId: 'coach-1',
+    coach: '朝珺',
+    campus: 'shunyi_mapo',
+    startTime: '2026-05-04 09:00',
+    endTime: '2026-05-04 10:00',
+    lessonCount: 1,
+    status: '已排课'
+  }),
+  'legacy mapo package campus should be usable for shunyi_mapo schedules'
+);
+
 assert.doesNotThrow(
   () => rules.validateEntitlementForSchedule({ ...entitlement, ownerCoach: '朝珺', allowedCoaches: ['mira'] }, {
     id: 'sch-owner-allowed',
@@ -719,6 +742,36 @@ assert.doesNotThrow(
     status: '已排课'
   }),
   'sold package should allow any coach to teach when the owner coach is unavailable'
+);
+
+const legacyMapoPackageRecommendation = rules.recommendEntitlements([
+  {
+    ...entitlement,
+    id: 'ent-mz-legacy-mapo',
+    packageName: '成人1v1 朝珺非黄金10课时',
+    ownerCoach: '朝珺教练',
+    allowedCoaches: ['岳克舟教练'],
+    coachNames: ['岳克舟教练'],
+    coachIds: ['coach-yuekezhou'],
+    campusIds: [legacyMapoCode],
+    remainingLessons: 2
+  }
+], {
+  studentIds: ['stu-1'],
+  courseType: '私教课',
+  coachId: 'coach-yuekezhou',
+  coach: '岳克舟教练',
+  campus: 'shunyi_mapo',
+  startTime: '2026-06-19 11:00',
+  endTime: '2026-06-19 12:00',
+  lessonCount: 1,
+  status: '已排课',
+  coachRefs: [{ id: 'coach-yuekezhou', name: '岳克舟教练' }]
+});
+assert.strictEqual(
+  legacyMapoPackageRecommendation.recommended.entitlementId,
+  'ent-mz-legacy-mapo',
+  'legacy M.Z mapo package should remain selectable for shunyi_mapo and the actual allowed coach'
 );
 
 assert.doesNotThrow(

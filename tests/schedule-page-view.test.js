@@ -159,6 +159,8 @@ assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /需补差价\/场地费
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /需补差价\/场地费|到期 \$\{selected\.validUntil\|\|'-'\}/, 'package recommendation hint should hide surcharge copy and empty expiry text');
 assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package picker should avoid repeating the package time-band label when the name already contains it');
 assert.match(source, /function scheduleEntitlementExpiryText\(/, 'package picker should only show expiry text when a real expiry exists');
+assert.doesNotMatch(styles, /\.schedule-entitlement-item \.tms-dropdown-menu\{[^}]*width:max-content/, 'schedule package dropdown menu should not expand beyond the drawer width');
+assert.match(styles, /\.schedule-entitlement-item \.tms-dropdown-menu\{[^}]*width:100%/, 'schedule package dropdown menu should stay within the package field width');
 assert.match(fnBody('scheduleSaveConfirmText'), /requiresFieldFee[\s\S]*场地费[\s\S]*fieldFeeAmount/, 'schedule confirm should show the field fee entry before saving');
 assert.match(source, /function scheduleEntitlementSmallClassType\(/, 'schedule package picker should read small group subtype from the selected package');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseTypeFields\(courseType,experienceType,smallClassType\)/, 'auto package matching should keep the selected course type');

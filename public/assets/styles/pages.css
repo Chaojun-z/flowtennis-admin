@@ -1110,7 +1110,7 @@ body.is-packages-page .content{overflow:hidden}
 .modal.modal-court.modal-schedule-drawer .schedule-payment-row .schedule-stored-value-hint{width:156px}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-display{position:relative;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:28px;line-height:30px}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-display::after{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
-.modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-menu{left:auto;right:0;width:max-content;max-width:492px}
+.modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-menu{left:0;right:auto;width:100%;max-width:100%}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-item{max-width:100%;min-width:0;box-sizing:border-box}
 .modal.modal-court.modal-schedule-drawer .schedule-entitlement-item .tms-dropdown-item span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .modal.modal-court.modal-schedule-drawer .schedule-settlement-row.is-direct .schedule-settlement-type-item{grid-column:1/-1;width:492px;max-width:492px}
