@@ -410,7 +410,7 @@ function coachRiskCount(list){
     rows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
     for(let i=1;i<rows.length;i++){
       const prev=rows[i-1],cur=rows[i];
-      if(prev.campus===cur.campus)continue;
+      if(sameCampusValue(prev.campus,cur.campus))continue;
       const gap=durMin(prev.endTime,cur.startTime);
       if(gap>=0&&gap<60)count++;
     }
@@ -1653,7 +1653,7 @@ function getCourtDuplicateCandidates(input,editingId=''){
     if(editingId&&c.id===editingId)return false;
     const courtPhone=normalizeImportPhone(c.phone);
     if(phone)return courtPhone&&courtPhone===phone;
-    return !!name&&!!campus&&String(c.name||'').trim()===name&&String(c.campus||'').trim()===campus;
+    return !!name&&!!campus&&String(c.name||'').trim()===name&&sameCampusValue(c.campus,campus);
   });
 }
 function courtFinanceConfirmText(h,studentId){

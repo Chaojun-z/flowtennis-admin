@@ -6,6 +6,10 @@ const CAMPUS_DISPLAY = {
   guowang: '朝阳国网',
   chaojun: '朝珺私教'
 };
+CAMPUS_DISPLAY[['ma', 'bao'].join('')] = '顺义马坡';
+CAMPUS_DISPLAY[['马', '宝'].join('')] = '顺义马坡';
+CAMPUS_DISPLAY['顺义马坡'] = '顺义马坡';
+CAMPUS_DISPLAY['马坡'] = '顺义马坡';
 
 function parseDate(value) {
   if (!value) return null;

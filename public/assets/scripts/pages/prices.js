@@ -228,7 +228,7 @@ function normalizeDefaultPriceName(name){
 function hasSameActivePricePlan(row){
   return pricePlans.some(p=>{
     if(p.type!==row.type)return false;
-    if(row.type==='venue_rate')return p.campus===row.campus&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
+    if(row.type==='venue_rate')return sameCampusValue(p.campus,row.campus)&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
     return p.channel===row.channel&&normalizeDefaultPriceName(p.productName)===normalizeDefaultPriceName(row.productName);
   });
 }
@@ -239,7 +239,7 @@ async function importDefaultVenuePrices(){
     for(const row of defaultVenuePricePlans()){
       const same=pricePlans.find(p=>{
         if(p.type!==row.type)return false;
-        if(row.type==='venue_rate')return p.campus===row.campus&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
+        if(row.type==='venue_rate')return sameCampusValue(p.campus,row.campus)&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
         return p.channel===row.channel&&normalizeDefaultPriceName(p.productName)===normalizeDefaultPriceName(row.productName);
       });
       const saved=same

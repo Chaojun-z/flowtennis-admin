@@ -397,12 +397,7 @@ function campusDisplayName(value,externalVenueName=''){
   const raw=String(value||'').trim();
   if(!raw)return '';
   if(raw==='__external__'||raw==='external')return String(externalVenueName||'').trim()||'校区外';
-  if(raw==='shunyi_mapo'||raw==='顺义马坡')return '马坡';
-  if(raw==='shilipu'||raw==='朝阳十里堡')return '朝阳十里堡';
-  if(raw==='guowang'||raw==='朝阳国网'||raw==='国家网球中心')return '国家网球中心';
-  if(raw==='langang'||raw==='朝阳蓝色港湾')return '蓝色港湾';
-  if(raw==='chaojun'||raw==='朝珺私教')return '朝珺私教';
-  return raw;
+  return displayCampusName(raw);
 }
 async function putFeedback(id,row){
   try{return await put(T_FEEDBACKS,id,row);}
@@ -526,7 +521,7 @@ const {
   buildLegacyCourtOpeningHistory,
   legacyCourtFinanceWarnings
 }=courtFinanceRules;
-const scheduleRules=createScheduleRules({normalizeCourtHistory,campusDisplayName});
+const scheduleRules=createScheduleRules({normalizeCourtHistory,campusDisplayName,normalizeCampusValue});
 const {
   isBillableSchedule,
   scheduleSettlementType,
@@ -757,7 +752,7 @@ function resolveWorkbenchState(schedule,prevSchedule,now=new Date(),feedbacks=[]
   const nowMs=now instanceof Date?now.getTime():dateMs(now);
   const startDiff=Number.isFinite(startMs)&&Number.isFinite(nowMs)?Math.round((startMs-nowMs)/60000):null;
   const sameDay=prevSchedule&&dateKey(prevSchedule.startTime)===dateKey(schedule.startTime);
-  const travelGap=sameDay&&prevSchedule&&prevSchedule.campus!==schedule.campus&&prevSchedule.endTime
+  const travelGap=sameDay&&prevSchedule&&normalizeCampusValue(prevSchedule.campus)!==normalizeCampusValue(schedule.campus)&&prevSchedule.endTime
     ? Math.round((dateMs(schedule.startTime)-dateMs(prevSchedule.endTime))/60000)
     : null;
   const ended=effectiveScheduleStatus(schedule,now)==='已结束';
@@ -2899,7 +2894,7 @@ function collectCourseReminderCandidates(rows=[],now=new Date()){
         .filter(s=>Number.isFinite(officialAccountScheduleMs(s.endTime))&&officialAccountScheduleMs(s.endTime)<=officialAccountScheduleMs(schedule.startTime))
         .sort((a,b)=>officialAccountScheduleMs(b.endTime)-officialAccountScheduleMs(a.endTime))[0]||null;
       const gap=previous?Math.round((officialAccountScheduleMs(schedule.startTime)-officialAccountScheduleMs(previous.endTime))/60000):null;
-      const crossCampus=!!(previous&&gap!==null&&gap>=0&&gap<=90&&String(previous.campus||'')!==String(schedule.campus||''));
+      const crossCampus=!!(previous&&gap!==null&&gap>=0&&gap<=90&&normalizeCampusValue(previous.campus)!==normalizeCampusValue(schedule.campus));
       return {schedule,previous,gap,crossCampus};
     });
 }
@@ -6124,7 +6119,7 @@ async function syncDefaultPricePlans(){
   for(const row of defaultVenuePricePlans()){
     const same=existing.find(p=>{
       if(p.type!==row.type)return false;
-      if(row.type==='venue_rate')return p.campus===row.campus&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
+      if(row.type==='venue_rate')return normalizeCampusValue(p.campus)===normalizeCampusValue(row.campus)&&p.dateType===row.dateType&&p.startTime===row.startTime&&p.endTime===row.endTime;
       return p.channel===row.channel&&normalizeDefaultPriceName(p.productName)===normalizeDefaultPriceName(row.productName);
     });
     const normalized=normalizePricePlan(row,same?.id||uuidv4(),now,same||null);
@@ -6149,7 +6144,7 @@ function quoteVenuePrice(pricePlans=[],input={}){
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)throw new Error('请填写有效时间段');
   const candidates=(pricePlans||[]).filter(plan=>{
     if(plan?.type!=='venue_rate'||plan.status==='inactive')return false;
-    if(String(plan.campus||'').trim()!==campus)return false;
+    if(normalizeCampusValue(plan.campus)!==normalizeCampusValue(campus))return false;
     if(String(plan.dateType||'').trim()!==dateType)return false;
     if(plan.effectiveFrom&&ds<plan.effectiveFrom)return false;
     if(plan.effectiveTo&&ds>plan.effectiveTo)return false;
@@ -6611,16 +6606,16 @@ function courtDeleteAction(court,data={}){
   }
 }
 function assertCanDeleteCampus(campusId,data={}){
-  const id=String(campusId||'').trim();
+  const id=normalizeCampusValue(campusId);
   if(!id)return;
   const used=
-    (data.students||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.coaches||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.classes||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.schedule||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.courts||[]).some(r=>String(r.campus||'').trim()===id)||
-    (data.packages||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id))||
-    (data.entitlements||[]).some(r=>parseArr(r.campusIds).some(c=>String(c||'').trim()===id));
+    (data.students||[]).some(r=>normalizeCampusValue(r.campus)===id)||
+    (data.coaches||[]).some(r=>normalizeCampusValue(r.campus)===id)||
+    (data.classes||[]).some(r=>normalizeCampusValue(r.campus)===id)||
+    (data.schedule||[]).some(r=>normalizeCampusValue(r.campus)===id)||
+    (data.courts||[]).some(r=>normalizeCampusValue(r.campus)===id)||
+    (data.packages||[]).some(r=>parseArr(r.campusIds).some(c=>normalizeCampusValue(c)===id))||
+    (data.entitlements||[]).some(r=>parseArr(r.campusIds).some(c=>normalizeCampusValue(c)===id));
   if(used)throw new Error('该校区已有学员、教练、班次、排课、课包或权益关联，不能直接删除');
 }
 const RECENT_MEMBERSHIP_ORDER_TTL_MS=60000;

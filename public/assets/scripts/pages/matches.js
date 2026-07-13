@@ -113,7 +113,7 @@ function renderMatches(){
   const q=String(document.getElementById('matchSearch')?.value||'').trim().toLowerCase();
   const status=document.getElementById('matchStatusFilter')?.value||'';
   const rows=(matches||[]).filter(row=>{
-    if(campus!=='all'&&matchCampusCode(row)!==campus)return false;
+    if(campus!=='all'&&!sameCampusValue(matchCampusCode(row),campus))return false;
     if(status&&row.status!==status)return false;
     if(q&&!matchRowText(row).includes(q))return false;
     return true;

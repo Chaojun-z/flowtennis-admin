@@ -6,6 +6,13 @@
     return String(value||'').split(/[,，\s]+/).map(item=>item.trim()).filter(Boolean);
   }
   function uniqueClientPermissionList(value){return [...new Set(parseClientPermissionList(value))];}
+  const CLIENT_CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
+  CLIENT_CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
+  CLIENT_CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
+  function normalizeClientCampusValue(value){
+    const raw=String(value||'').trim();
+    return CLIENT_CAMPUS_ALIASES[raw]||raw;
+  }
   function normalizeClientRole(role){return String(role||'').trim()==='editor'?'editor':'admin';}
   function normalizeClientDataScope(value,role,campusIds){
     const raw=String(value||'').trim();
@@ -28,7 +35,7 @@
   }
   function normalizeClientPermissionProfile(user){
     const role=normalizeClientRole(user?.role);
-    const campusIds=uniqueClientPermissionList(user?.campusIds);
+    const campusIds=uniqueClientPermissionList(user?.campusIds).map(normalizeClientCampusValue);
     const dataScope=normalizeClientDataScope(user?.dataScope,role,campusIds);
     return {
       role,
@@ -44,7 +51,7 @@
     const profile=normalizeClientPermissionProfile(user||{});
     if(profile.dataScope==='all')return true;
     if(profile.dataScope!=='campus')return true;
-    const value=String(campusId||'').trim();
+    const value=normalizeClientCampusValue(campusId);
     return !!value&&profile.campusIds.includes(value);
   }
   global.normalizeClientPermissionProfile=normalizeClientPermissionProfile;

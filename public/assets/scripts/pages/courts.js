@@ -1127,10 +1127,10 @@ function renderCourtStatsCards(summary={}){
 function getCurrentCourtAccountRows(){
   const q=(document.getElementById('courtSearch')?.value||'').toLowerCase();
   const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
-  const base=visibleItems.filter(item=>campus==='all'||item.campusCode===campus);
+  const base=visibleItems.filter(item=>campus==='all'||sameCampusValue(item.campusCode,campus));
   const dateScopedBase=applyCourtDateRangeFilter(base,activeCourtDateRange());
   return dateScopedBase.filter(item=>{
-    if(campus!=='all'&&item.campusCode!==campus)return false;
+    if(campus!=='all'&&!sameCampusValue(item.campusCode,campus))return false;
     if(courtOwnerFilterValue&&String(item.owner||'').trim()!==courtOwnerFilterValue)return false;
     if(courtAccountTypeFilterValue&&courtAccountStateLabel(item)!==courtAccountTypeFilterValue)return false;
     return searchHit(q,item.displayName,item.phone,item.campusName,item.owner,item.depositAttitude,item.notesSummary,item.balance,item.totalDeposit,item.totalSpent,item.totalReceived,item.linkedStudentSummary,item.membershipTierLabel,item.membershipStatus);
@@ -1140,7 +1140,7 @@ function renderCourtAccountListView(){
   document.getElementById('page-courts')?.classList.toggle('court-batch-mode',courtBatchMode);
   window.__courtAccountListViewCompare=courtAccountListViewCompareData||null;
   const visibleItems=(courtAccountListViewData?.items||[]).filter(Boolean);
-  const base=visibleItems.filter(item=>campus==='all'||item.campusCode===campus);
+  const base=visibleItems.filter(item=>campus==='all'||sameCampusValue(item.campusCode,campus));
   const filters=courtAccountListViewData?.filters||{};
   const scopedFilters={
     owners:campus==='all'?filters.owners:[...new Set(base.map(item=>String(item.owner||'').trim()).filter(Boolean))],

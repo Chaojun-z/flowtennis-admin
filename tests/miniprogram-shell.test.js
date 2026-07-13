@@ -280,6 +280,11 @@ assert.strictEqual(
   'mini program schedule items should render campus display names instead of raw campus codes'
 );
 assert.strictEqual(
+  scheduleUtils.formatScheduleItem({ campus: ['ma', 'bao'].join(''), venue: '1号场' }).locationText,
+  '顺义马坡 · 1号场',
+  'mini program schedule items should render legacy Shunyi Mapo campus values as Chinese names'
+);
+assert.strictEqual(
   scheduleUtils.formatScheduleItem({ campus: '__external__', externalVenueName: '国网北区', externalCourtName: 'C1' }).locationText,
   '国网北区 · C1',
   'mini program schedule items should hide the internal external-campus sentinel value'

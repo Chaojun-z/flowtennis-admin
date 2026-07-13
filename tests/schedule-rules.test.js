@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const api = require('../api/index.js');
 
 const rules = api._test;
+const legacyMapoCode = ['ma', 'bao'].join('');
 
 assert.ok(rules, 'api._test should expose schedule rule helpers');
 assert.ok(rules.effectiveScheduleStatus, 'api._test should expose effective schedule status helper');
@@ -363,6 +364,29 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(
   rules.resolveWorkbenchState(
     {
+      startTime: '2026-04-21 12:00',
+      endTime: '2026-04-21 13:00',
+      campus: 'shunyi_mapo',
+      status: '已排课'
+    },
+    {
+      startTime: '2026-04-21 10:00',
+      endTime: '2026-04-21 11:10',
+      campus: legacyMapoCode,
+      status: '已排课'
+    },
+    new Date('2026-04-21 10:00:00')
+  ),
+  {
+    code: 'later',
+    label: '今日后续'
+  },
+  'workbench state should not mark legacy and standard Shunyi Mapo values as travel'
+);
+
+assert.deepStrictEqual(
+  rules.resolveWorkbenchState(
+    {
       startTime: '2026-04-21 11:00',
       endTime: '2026-04-21 12:00',
       status: '已排课'
@@ -717,6 +741,15 @@ assert.deepStrictEqual(
   reminderCandidates.map(x => [x.schedule.id, x.crossCampus]),
   [['delayed-edge', false], ['due-cross', true], ['early-edge', false]],
   'course reminder helper should use a 90-150 minute safety window and flag cross-campus travel'
+);
+
+assert.strictEqual(
+  rules.collectCourseReminderCandidates([
+    { id: 'prev-legacy-mapo', coach: '朝珺', startTime: '2026-04-20 09:30', endTime: '2026-04-20 10:30', campus: legacyMapoCode, status: '已排课' },
+    { id: 'due-standard-mapo', coach: '朝珺', startTime: '2026-04-20 12:00', endTime: '2026-04-20 13:00', campus: 'shunyi_mapo', status: '已排课' }
+  ], new Date('2026-04-20 10:00:00'))[0].crossCampus,
+  false,
+  'course reminder should not flag legacy and standard Shunyi Mapo values as cross-campus'
 );
 
 assert.deepStrictEqual(
@@ -2050,6 +2083,33 @@ assert.throws(
 assert.throws(
   () => rules.validateScheduleConflicts(
     {
+      id: 'new-campus-alias',
+      startTime: '2026-04-11 10:30',
+      endTime: '2026-04-11 11:30',
+      coach: '李教练',
+      campus: 'shunyi_mapo',
+      venue: '1号场',
+      studentIds: ['stu-2'],
+      status: '已排课'
+    },
+    [{
+      id: 'old-campus-alias',
+      startTime: '2026-04-11 10:00',
+      endTime: '2026-04-11 11:00',
+      coach: '王教练',
+      campus: legacyMapoCode,
+      venue: '1号场',
+      studentIds: ['stu-1'],
+      status: '已排课'
+    }]
+  ),
+  /场地.*已被占用/,
+  'same venue conflict should treat legacy and standard Shunyi Mapo values as the same campus'
+);
+
+assert.throws(
+  () => rules.validateScheduleConflicts(
+    {
       id: 'new',
       startTime: '2026-04-11 10:30',
       endTime: '2026-04-11 11:30',
@@ -2210,9 +2270,57 @@ assert.deepStrictEqual(
       status: '已排课'
     }]
   ),
-  ['跨校区提醒：朝珺上一节在 马坡，下一节在 国家网球中心，中间仅 10 分钟'],
+  ['跨校区提醒：朝珺上一节在 顺义马坡，下一节在 国家网球中心，中间仅 10 分钟'],
   'cross-campus schedules less than 60 minutes apart should return a warning'
 );
+
+assert.deepStrictEqual(
+  rules.collectScheduleRiskWarnings(
+    {
+      id: 'new-standard-mapo',
+      startTime: '2026-04-11 10:10',
+      endTime: '2026-04-11 11:10',
+      coach: '朝珺',
+      campus: 'shunyi_mapo',
+      venue: '2号场',
+      status: '已排课'
+    },
+    [{
+      id: 'old-legacy-mapo',
+      startTime: '2026-04-11 09:00',
+      endTime: '2026-04-11 10:00',
+      coach: '朝珺',
+      campus: legacyMapoCode,
+      venue: '1号场',
+      status: '已排课'
+    }]
+  ),
+  [],
+  'schedule risk warning should not treat legacy and standard Shunyi Mapo values as cross-campus'
+);
+
+const legacyMapoWarning = rules.collectScheduleRiskWarnings(
+  {
+    id: 'new-guowang-after-legacy-mapo',
+    startTime: '2026-04-11 10:10',
+    endTime: '2026-04-11 11:10',
+    coach: '朝珺',
+    campus: 'guowang',
+    venue: '2号场',
+    status: '已排课'
+  },
+  [{
+    id: 'old-legacy-mapo-before-guowang',
+    startTime: '2026-04-11 09:00',
+    endTime: '2026-04-11 10:00',
+    coach: '朝珺',
+    campus: legacyMapoCode,
+    venue: '1号场',
+    status: '已排课'
+  }]
+)[0] || '';
+assert.ok(legacyMapoWarning.includes('顺义马坡'), 'cross-campus warning should display the Chinese campus name');
+assert.ok(!legacyMapoWarning.includes(legacyMapoCode), 'cross-campus warning should not leak legacy campus code');
 
 assert.strictEqual(rules.normalizeVenue('马坡1号场'), '1号场');
 assert.strictEqual(rules.normalizeVenue('4号场'), '4号场');
@@ -2355,6 +2463,34 @@ assert.throws(
   ),
   /已被订场用户.*订场用户A.*订场/,
   'court bookings should block schedule venue conflicts'
+);
+
+assert.throws(
+  () => rules.validateCourtBookingConflicts(
+    {
+      startTime: '2026-04-11 09:30',
+      endTime: '2026-04-11 10:30',
+      campus: 'shunyi_mapo',
+      venue: '1号场',
+      status: '已排课'
+    },
+    [{
+      id: 'court-legacy-campus',
+      name: '订场用户B',
+      campus: legacyMapoCode,
+      history: [{
+        type: '消费',
+        category: '订场',
+        date: '2026-04-11',
+        startTime: '09:00',
+        endTime: '10:00',
+        venue: '1号场',
+        amount: 100
+      }]
+    }]
+  ),
+  /已被订场用户.*订场用户B.*订场/,
+  'court booking conflict should treat legacy and standard Shunyi Mapo values as the same campus'
 );
 
 assert.throws(

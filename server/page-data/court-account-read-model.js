@@ -10,6 +10,14 @@ function courtText(value) {
   return String(value || '').trim();
 }
 
+const COURT_ACCOUNT_CAMPUS_ALIASES = { shunyi_mapo: 'shunyi_mapo', '顺义马坡': 'shunyi_mapo', '马坡': 'shunyi_mapo' };
+COURT_ACCOUNT_CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
+COURT_ACCOUNT_CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
+function courtAccountCampusKey(value) {
+  const raw = courtText(value);
+  return COURT_ACCOUNT_CAMPUS_ALIASES[raw] || raw;
+}
+
 function parseArr(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value) {
@@ -537,8 +545,8 @@ function scopeDateKey(value) {
 }
 
 function courtItemMatchesScope(item = {}, scope = {}) {
-  const campus = String(scope.campus || scope.campusCode || '').trim();
-  if (campus && campus !== 'all' && String(item.campusCode || '').trim() !== campus) return false;
+  const campus = courtAccountCampusKey(scope.campus || scope.campusCode || '');
+  if (campus && campus !== 'all' && courtAccountCampusKey(item.campusCode) !== campus) return false;
   return true;
 }
 

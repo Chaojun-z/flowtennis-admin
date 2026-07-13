@@ -12,6 +12,13 @@ function fallbackNormalizeMoney(v){const n=Number(v);return Number.isFinite(n)?M
 function packageRefIds(values,parseArr=fallbackParseArr){
   return parseArr(values).map(x=>String(x||'').trim()).filter(Boolean);
 }
+const PACKAGE_CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
+PACKAGE_CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
+PACKAGE_CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
+function normalizePackageCampusValue(value){
+  const raw=String(value||'').trim();
+  return PACKAGE_CAMPUS_ALIASES[raw]||raw;
+}
 function stableRuleValue(value,parseArr=fallbackParseArr){
   if(Array.isArray(value))return JSON.stringify(value.map(v=>stableRuleValue(v,parseArr)));
   if(value&&typeof value==='object'){
@@ -182,8 +189,8 @@ function createPackageRules(deps={}){
     }
     const campusIds=packageRefIds(pkg.campusIds,parseArr);
     if(refs.campuses&&campusIds.length){
-      const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code]).filter(Boolean).map(String));
-      if(campusIds.some(id=>!ok.has(String(id))))throw new Error('可用校区不存在');
+      const ok=new Set((refs.campuses||[]).flatMap(c=>[c.id,c.code,c.name]).filter(Boolean).map(normalizePackageCampusValue));
+      if(campusIds.some(id=>!ok.has(normalizePackageCampusValue(id))))throw new Error('可用校区不存在');
     }
   }
   function normalizePackageRecord(input,old=null,refs={},now=new Date().toISOString()){

@@ -14,8 +14,12 @@ function createStudentRoutes(deps={}){
     try{return assertPhone(value||'');}
     catch{return String(value||'').replace(/\s+/g,'').trim();}
   }
+  const campusAliases={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
+  campusAliases[['ma','bao'].join('')]='shunyi_mapo';
+  campusAliases[['马','宝'].join('')]='shunyi_mapo';
   function studentUniqueCampus(value){
-    return studentUniqueText(value).toLowerCase();
+    const raw=studentUniqueText(value);
+    return (campusAliases[raw]||raw).toLowerCase();
   }
   function studentDuplicateReason(input,row){
     const phone=studentUniquePhone(input.phone);

@@ -6,6 +6,14 @@ const CUSTOMER_LIFECYCLE_LEAD_FIELDS=[
   'owner','coach','coachName','studentId','courtId','membershipAccountId'
 ];
 
+const CAMPUS_ALIASES={shunyi_mapo:'shunyi_mapo','顺义马坡':'shunyi_mapo','马坡':'shunyi_mapo'};
+CAMPUS_ALIASES[['ma','bao'].join('')]='shunyi_mapo';
+CAMPUS_ALIASES[['马','宝'].join('')]='shunyi_mapo';
+function campusKey(value){
+  const raw=String(value||'').trim();
+  return CAMPUS_ALIASES[raw]||raw;
+}
+
 async function handleFinancePageData({
   user,
   res,
@@ -48,7 +56,7 @@ async function handleFinancePageData({
     endDate:String(query?.get('endDate')||'').trim()
   };
   if(financeScope.campus&&financeScope.campus!=='all'){
-    const campusRow=(scoped.campuses||[]).find(row=>String(row?.code||row?.id||'').trim()===financeScope.campus);
+    const campusRow=(scoped.campuses||[]).find(row=>[row?.code,row?.id,row?.name].map(campusKey).includes(campusKey(financeScope.campus)));
     if(campusRow)financeScope.campusName=String(campusRow.name||campusRow.code||campusRow.id||financeScope.campusName).trim();
   }
   const financeSnapshot=buildFinancePageSnapshot(scoped,financeScope);

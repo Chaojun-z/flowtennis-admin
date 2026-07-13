@@ -300,7 +300,7 @@ function coachOpsScheduleItemText(s){
 }
 function coachOpsCampusMatchesSchedule(s){
   if(campus==='all')return true;
-  return String(s?.campus||'').trim()===campus;
+  return sameCampusValue(s?.campus,campus);
 }
 function renderCoachOpsTopFilters(){
   const campusSource=typeof accessibleCampusRows==='function'?accessibleCampusRows():(Array.isArray(campuses)?campuses:[]);
@@ -455,7 +455,7 @@ function coachCourseTypeDistributionText(row){
 }
 function coachOpsHomeCampusCoachNames(){
   if(campus==='all')return activeCoachNames();
-  return [...new Set(coaches.filter(c=>c.status==='active'&&String(c.campus||'').trim()===campus).map(c=>coachName(c.name)).filter(Boolean))];
+  return [...new Set(coaches.filter(c=>c.status==='active'&&sameCampusValue(c.campus,campus)).map(c=>coachName(c.name)).filter(Boolean))];
 }
 function coachOpsComparisonText(row){
   return row?.comparisonText||'';

@@ -67,7 +67,13 @@ function shareStudent(a,b){
   const bn=String(b.studentName||'').trim();
   return !!(an&&bn&&an===bn);
 }
-function validateScheduleConflicts(candidate,schedules,excludeId){
+function normalizedCampusValue(value,normalizeCampusValue){
+  return typeof normalizeCampusValue==='function'?normalizeCampusValue(value):String(value||'').trim();
+}
+function sameCampusValue(a,b,normalizeCampusValue){
+  return normalizedCampusValue(a,normalizeCampusValue)===normalizedCampusValue(b,normalizeCampusValue);
+}
+function validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue){
   if(!isBillableSchedule(candidate))return;
   if(!candidate.startTime)throw new Error('请选择上课时间');
   if(!candidate.endTime)throw new Error('请选择下课时间，系统需要用它校验冲突');
@@ -79,7 +85,7 @@ function validateScheduleConflicts(candidate,schedules,excludeId){
     if(candidate.coach&&rec.coach&&candidate.coach===rec.coach)throw new Error(`教练「${candidate.coach}」此时间已有课程`);
     const candidateVenue=normalizeVenue(candidate.venue);
     const recVenue=normalizeVenue(rec.venue);
-    if(candidateVenue&&recVenue&&candidateVenue===recVenue&&(candidate.campus||'')===(rec.campus||''))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
+    if(candidateVenue&&recVenue&&candidateVenue===recVenue&&sameCampusValue(candidate.campus,rec.campus,normalizeCampusValue))throw new Error(`场地「${candidateVenue}」此时间已被占用`);
     if(shareStudent(candidate,rec))throw new Error('学员此时间已有课程');
   }
 }
@@ -100,7 +106,7 @@ function courtBookingRange(court,row){
     endTime:`${row.date} ${endClock}`
   };
 }
-function validateCourtBookingConflicts(candidate,courts,normalizeCourtHistory=()=>[]){
+function validateCourtBookingConflicts(candidate,courts,normalizeCourtHistory=()=>[],normalizeCampusValue){
   if(candidate?.scheduleSource==='订场陪打')return;
   if(!isBillableSchedule(candidate)||!candidate.startTime||!candidate.endTime||!candidate.campus||!candidate.venue)return;
   const candidateVenue=normalizeVenue(candidate.venue);
@@ -108,7 +114,7 @@ function validateCourtBookingConflicts(candidate,courts,normalizeCourtHistory=()
     for(const row of normalizeCourtHistory(court.history)){
       const booking=courtBookingRange(court,row);
       if(!booking)continue;
-      if(booking.campus!==candidate.campus||booking.venue!==candidateVenue)continue;
+      if(!sameCampusValue(booking.campus,candidate.campus,normalizeCampusValue)||booking.venue!==candidateVenue)continue;
       if(rangesOverlap(candidate.startTime,candidate.endTime,booking.startTime,booking.endTime)){
         throw new Error(`场地「${candidateVenue}」${booking.startTime.slice(11,16)}-${booking.endTime.slice(11,16)} 已被订场用户「${booking.courtName}」订场`);
       }
@@ -126,13 +132,13 @@ function scheduleParticipantSummary(rec){
     absentCount:base.filter(id=>!actualSet.has(id)).length
   };
 }
-function collectScheduleRiskWarnings(candidate,schedules,excludeId,campusDisplayName=(value)=>String(value||'').trim()){
+function collectScheduleRiskWarnings(candidate,schedules,excludeId,campusDisplayName=(value)=>String(value||'').trim(),normalizeCampusValue){
   if(!isBillableSchedule(candidate)||!candidate.coach||!candidate.campus||!candidate.startTime||!candidate.endTime)return[];
   const warnings=[];
   const currentCampusText=campusDisplayName(candidate.campus,candidate.externalVenueName||candidate.venue);
   for(const rec of schedules||[]){
     if(!rec||rec.id===(excludeId||candidate.id)||!isBillableSchedule(rec))continue;
-    if(rec.coach!==candidate.coach||!rec.campus||rec.campus===candidate.campus)continue;
+    if(rec.coach!==candidate.coach||!rec.campus||sameCampusValue(rec.campus,candidate.campus,normalizeCampusValue))continue;
     const prevCampusText=campusDisplayName(rec.campus,rec.externalVenueName||rec.venue);
     const gapBefore=minutesBetween(rec.endTime,candidate.startTime);
     if(gapBefore!==null&&dateMs(rec.endTime)<=dateMs(candidate.startTime)&&gapBefore<60){
@@ -146,7 +152,7 @@ function collectScheduleRiskWarnings(candidate,schedules,excludeId,campusDisplay
   }
   return [...new Set(warnings)];
 }
-function createScheduleRules({normalizeCourtHistory,campusDisplayName}={}){
+function createScheduleRules({normalizeCourtHistory,campusDisplayName,normalizeCampusValue}={}){
   return {
     isBillableSchedule,
     scheduleSettlementType,
@@ -157,14 +163,16 @@ function createScheduleRules({normalizeCourtHistory,campusDisplayName}={}){
     effectiveScheduleStatus,
     scheduleLessonChargeStatus,
     assertCanWriteSchedule,
-    validateScheduleConflicts,
+    validateScheduleConflicts(candidate,schedules,excludeId){
+      return validateScheduleConflicts(candidate,schedules,excludeId,normalizeCampusValue);
+    },
     courtBookingRange,
     validateCourtBookingConflicts(candidate,courts){
-      return validateCourtBookingConflicts(candidate,courts,normalizeCourtHistory);
+      return validateCourtBookingConflicts(candidate,courts,normalizeCourtHistory,normalizeCampusValue);
     },
     scheduleParticipantSummary,
     collectScheduleRiskWarnings(candidate,schedules,excludeId){
-      return collectScheduleRiskWarnings(candidate,schedules,excludeId,campusDisplayName);
+      return collectScheduleRiskWarnings(candidate,schedules,excludeId,campusDisplayName,normalizeCampusValue);
     }
   };
 }

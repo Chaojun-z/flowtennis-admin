@@ -10,6 +10,18 @@ function uniqueList(value) {
   return [...new Set(parseList(value))];
 }
 
+const CAMPUS_ALIASES = {
+  shunyi_mapo: 'shunyi_mapo',
+  '顺义马坡': 'shunyi_mapo',
+  '马坡': 'shunyi_mapo'
+};
+CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
+CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
+function normalizeCampusValue(value) {
+  const raw = String(value || '').trim();
+  return CAMPUS_ALIASES[raw] || raw;
+}
+
 function normalizeRole(role) {
   return String(role || '').trim() === 'editor' ? 'editor' : 'admin';
 }
@@ -37,7 +49,7 @@ function normalizeFeaturePermissions(user = {}) {
 
 function normalizePermissionProfile(user = {}) {
   const role = normalizeRole(user.role);
-  const campusIds = uniqueList(user.campusIds);
+  const campusIds = uniqueList(user.campusIds).map(normalizeCampusValue);
   const dataScope = normalizeDataScope(user.dataScope, role, campusIds);
   return {
     role,
@@ -58,7 +70,7 @@ function userCanAccessCampus(user, campusId) {
   const profile = normalizePermissionProfile(user);
   if (profile.dataScope === 'all') return true;
   if (profile.dataScope !== 'campus') return true;
-  const value = String(campusId || '').trim();
+  const value = normalizeCampusValue(campusId);
   return !!value && profile.campusIds.includes(value);
 }
 

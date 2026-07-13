@@ -2,6 +2,14 @@ function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+const CAMPUS_ALIASES = { shunyi_mapo: 'shunyi_mapo', '顺义马坡': 'shunyi_mapo', '马坡': 'shunyi_mapo' };
+CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
+CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
+function campusKey(value) {
+  const raw = String(value || '').trim();
+  return CAMPUS_ALIASES[raw] || raw;
+}
+
 function financeBusinessRows(rows = []) {
   return (rows || []).filter(row => !row?.differenceReason);
 }
@@ -54,11 +62,11 @@ function financeDateKey(value) {
 
 function financeRowMatchesScope(row = {}, scope = {}) {
   const campusValues = [scope.campusName, scope.campus, scope.campusCode]
-    .map(value => String(value || '').trim())
+    .map(campusKey)
     .filter(value => value && value !== 'all');
   if (campusValues.length) {
     const rowCampusValues = [row.campusName, row.campus, row.campusCode]
-      .map(value => String(value || '').trim())
+      .map(campusKey)
       .filter(Boolean);
     if (!campusValues.some(value => rowCampusValues.includes(value))) return false;
   }

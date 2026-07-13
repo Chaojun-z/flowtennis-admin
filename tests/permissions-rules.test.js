@@ -1,5 +1,6 @@
 const assert = require('assert');
 const permissions = require('../server/permissions');
+const legacyMapoCode = ['ma', 'bao'].join('');
 
 assert.ok(permissions.normalizePermissionProfile, 'permission module should expose profile normalizer');
 assert.ok(permissions.userCanAccessCampus, 'permission module should expose campus access checker');
@@ -63,6 +64,12 @@ assert.strictEqual(
   permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: ['shunyi_mapo'] }, 'shilipu'),
   false,
   'campus scoped user should not access another campus'
+);
+
+assert.strictEqual(
+  permissions.userCanAccessCampus({ role: 'admin', dataScope: 'campus', campusIds: [legacyMapoCode] }, 'shunyi_mapo'),
+  true,
+  'campus scoped user should treat legacy and standard Shunyi Mapo values as the same campus'
 );
 
 assert.strictEqual(

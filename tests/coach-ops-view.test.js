@@ -236,8 +236,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsCampusMatchesSchedule\([\s\S]*campus==='all'[\s\S]*String\(s\?\.campus\|\|''\)\.trim\(\)===campus/,
-  'coach ops campus filter should match schedules by lesson campus'
+  /function coachOpsCampusMatchesSchedule\([\s\S]*campus==='all'[\s\S]*sameCampusValue\(s\?\.campus,campus\)/,
+  'coach ops campus filter should match schedules by normalized lesson campus'
 );
 
 assert.match(
@@ -248,8 +248,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsHomeCampusCoachNames\([\s\S]*String\(c\.campus\|\|''\)\.trim\(\)===campus/,
-  'selected campus should always show active coaches whose home campus matches the selected campus'
+  /function coachOpsHomeCampusCoachNames\([\s\S]*sameCampusValue\(c\.campus,campus\)/,
+  'selected campus should always show active coaches whose normalized home campus matches the selected campus'
 );
 
 assert.match(

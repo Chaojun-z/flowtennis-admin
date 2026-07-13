@@ -6,9 +6,19 @@ const vm = require('vm');
 const repoRoot = path.join(__dirname, '..');
 const constantsPath = path.join(repoRoot, 'public/assets/scripts/core/constants.js');
 const leadsPath = path.join(repoRoot, 'public/assets/scripts/pages/leads.js');
+const packagesPath = path.join(repoRoot, 'public/assets/scripts/pages/packages.js');
+const pricesPath = path.join(repoRoot, 'public/assets/scripts/pages/prices.js');
+const coachPortalPath = path.join(repoRoot, 'public/assets/scripts/pages/coach-portal.js');
+const utilsPath = path.join(repoRoot, 'public/assets/scripts/core/utils.js');
+const serverSchedulePath = path.join(repoRoot, 'server/schedule.js');
 
 const constantsSource = fs.readFileSync(constantsPath, 'utf8');
 const leadsSource = fs.readFileSync(leadsPath, 'utf8');
+const packagesSource = fs.readFileSync(packagesPath, 'utf8');
+const pricesSource = fs.readFileSync(pricesPath, 'utf8');
+const coachPortalSource = fs.readFileSync(coachPortalPath, 'utf8');
+const utilsSource = fs.readFileSync(utilsPath, 'utf8');
+const serverScheduleSource = fs.readFileSync(serverSchedulePath, 'utf8');
 
 const context = {
   campuses: [
@@ -58,5 +68,11 @@ assert.doesNotMatch(
   /function leadCampusText\(lead\)\{\s*return campusDisplayName\(lead\?\.campus\|\|''\)\|\|'-';\s*\}/,
   'lead drawer must not display the raw lead.campus value through the narrow campusDisplayName fallback'
 );
+
+assert.doesNotMatch(packagesSource, /campusIds\.includes\(campus\)/, 'package filters must not compare raw campus ids');
+assert.doesNotMatch(pricesSource, /p\.campus===row\.campus/, 'price duplicate checks must not compare raw campus ids');
+assert.doesNotMatch(coachPortalSource, /prev\.campus===current\.campus/, 'coach portal travel checks must not compare raw campus ids');
+assert.doesNotMatch(utilsSource, /prev\.campus===cur\.campus/, 'coach risk counts must not compare raw campus ids');
+assert.doesNotMatch(serverScheduleSource, /rec\.campus===candidate\.campus|booking\.campus!==candidate\.campus|\(candidate\.campus\|\|''\)===\(rec\.campus\|\|''\)/, 'server schedule rules must not compare raw campus ids');
 
 console.log('campus display hard guard tests passed');

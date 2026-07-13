@@ -149,7 +149,7 @@ function packageFilterBaseRows(){
     const statusValue=packageListStatusValue(p);
     const campusIds=parseArr(p.campusIds);
     if(statusValue==='merged')return false;
-    if(campus&&campus!=='all'&&campusIds.length&&!campusIds.includes(campus))return false;
+    if(campus&&campus!=='all'&&campusIds.length&&!campusIds.some(id=>sameCampusValue(id,campus)))return false;
     return true;
   });
 }
@@ -262,7 +262,7 @@ function getFilteredPackages(){
     if(cf&&coachName(p.ownerCoach)!==cf&&!coachNames.includes(cf))return false;
     if(sf&&statusValue!==sf)return false;
     if(bf&&String(p.timeBand||'全天')!==bf)return false;
-    if(campus&&campus!=='all'&&campusIds.length&&!campusIds.includes(campus))return false;
+    if(campus&&campus!=='all'&&campusIds.length&&!campusIds.some(id=>sameCampusValue(id,campus)))return false;
     return true;
   }).sort((a,b)=>{
     const orderDiff=packageSortValue(a)-packageSortValue(b);

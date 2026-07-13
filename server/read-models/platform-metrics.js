@@ -5,6 +5,14 @@ function text(value) {
   return String(value || '').trim();
 }
 
+const CAMPUS_ALIASES = { shunyi_mapo: 'shunyi_mapo', '顺义马坡': 'shunyi_mapo', '马坡': 'shunyi_mapo' };
+CAMPUS_ALIASES[['ma', 'bao'].join('')] = 'shunyi_mapo';
+CAMPUS_ALIASES[['马', '宝'].join('')] = 'shunyi_mapo';
+function campusKey(value) {
+  const raw = text(value);
+  return CAMPUS_ALIASES[raw] || raw;
+}
+
 function round(value, digits = 1) {
   const base = 10 ** digits;
   return Math.round((Number(value) || 0) * base) / base;
@@ -250,11 +258,11 @@ function scopeCampusValues(row = {}) {
     row.campusId,
     row.campusName,
     ...parseArr(row.campusIds)
-  ].map(text).filter(Boolean);
+  ].map(campusKey).filter(Boolean);
 }
 
 function scopeMatchesCampus(row = {}, scope = {}) {
-  const expectedValues = [scope.campus, scope.campusCode, scope.campusName].map(text).filter(value => value && value !== 'all');
+  const expectedValues = [scope.campus, scope.campusCode, scope.campusName].map(campusKey).filter(value => value && value !== 'all');
   if (!expectedValues.length) return true;
   const actualValues = scopeCampusValues(row);
   return expectedValues.some(value => actualValues.includes(value));

@@ -205,7 +205,7 @@ function sortMyScheduleRows(rows=[]){
   });
 }
 function myScheduleTravelGap(prev,current){
-  if(!prev||!current||prev.campus===current.campus||!prev.endTime)return -1;
+  if(!prev||!current||sameCampusValue(prev.campus,current.campus)||!prev.endTime)return -1;
   return durMin(prev.endTime,current.startTime);
 }
 function myScheduleBlockTitle(schedule){
