@@ -587,6 +587,8 @@ function buildTeachingStudentBenefitDetailMap(data = {}) {
         time: dateOnly(row.relatedDate || row.createdAt) || '--',
         reason: text(row.reason || row.notes) || '--',
         operator: text(row.operator || row.createdBy || row.updatedBy) || '--',
+        sourcePurchaseId: text(row.sourcePurchaseId || row.purchaseId),
+        sourcePackageName: text(row.sourcePackageName || row.packageName),
         sortTime: text(row.relatedDate || row.createdAt)
       });
     });
@@ -612,7 +614,9 @@ function buildTeachingStudentBenefitDetailMap(data = {}) {
         label: row.label,
         count: `${lessonQty(Math.abs(row.delta))}${row.unit}`,
         reason: row.reason,
-        operator: row.operator
+        operator: row.operator,
+        sourcePurchaseId: row.sourcePurchaseId,
+        sourcePackageName: row.sourcePackageName
       }));
     result.set(studentId, {
       detailBenefitRows: summaryRows,

@@ -3,12 +3,65 @@ function createPurchaseEntitlementRoutes(deps={}){
     init,sendJson,getCachedScan,getCachedRow,get,scan,put,del,filterLoadAllForUser,uuidv4,
     isCampusScopedAdmin,parseArr,parseLessonValue,buildCoachRefs,buildOperationTrace,withOperationTrace,
     normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
-    validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,
+    validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
     assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
     buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,
     validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
-    T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
+    T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
   }=deps;
+
+  function buildPurchaseGiftBenefitRows({purchase,student,user,operationTrace,now,idFactory}={}){
+    const giftTypes=[
+      {field:'courtBookingGiftCount',benefitCode:'courtBooking',benefitLabel:'订场'},
+      {field:'ballMachineGiftCount',benefitCode:'ballMachine',benefitLabel:'发球机'}
+    ];
+    return giftTypes.map(type=>{
+      const count=Math.max(0,parseInt(purchase?.[type.field])||0);
+      if(!count)return null;
+      return buildStudentBenefitLedgerRecord({
+        studentId:purchase.studentId||student?.id||'',
+        studentName:purchase.studentName||student?.name||'',
+        benefitCode:type.benefitCode,
+        benefitLabel:type.benefitLabel,
+        unit:'次',
+        delta:count,
+        action:'supplement',
+        reason:purchase.giftReason||'课包购买赠送权益',
+        relatedDate:purchase.purchaseDate,
+        operator:user?.name||purchase.operator||'',
+        sourcePurchaseId:purchase.id,
+        sourcePackageId:purchase.packageId,
+        sourcePackageName:purchase.packageName,
+        purchaseId:purchase.id,
+        packageId:purchase.packageId,
+        packageName:purchase.packageName,
+        ...operationTrace
+      },{id:idFactory(),now});
+    }).filter(Boolean);
+  }
+
+  function buildPurchaseGiftVoidRows({purchase,benefitLedger,user,operationTrace,now,idFactory}={}){
+    return (benefitLedger||[]).filter(row=>String(row.sourcePurchaseId||row.purchaseId||'')===String(purchase?.id||'')&&Number(row.delta||0)>0).map(row=>buildStudentBenefitLedgerRecord({
+      studentId:row.studentId||purchase.studentId||'',
+      studentName:row.studentName||purchase.studentName||'',
+      benefitCode:row.benefitCode,
+      benefitLabel:row.benefitLabel,
+      unit:row.unit||'次',
+      delta:-Math.abs(parseInt(row.delta)||0),
+      action:'void',
+      reason:'购买记录作废，撤回赠送权益',
+      relatedDate:now.slice(0,10),
+      operator:user?.name||'',
+      sourcePurchaseId:purchase.id,
+      sourcePackageId:purchase.packageId,
+      sourcePackageName:purchase.packageName,
+      sourceBenefitLedgerId:row.id,
+      purchaseId:purchase.id,
+      packageId:purchase.packageId,
+      packageName:purchase.packageName,
+      ...operationTrace
+    },{id:idFactory(),now}));
+  }
 
   return async function handlePurchaseEntitlementRoutes({path,method,body,user,res,query}){
     if(path==='/purchases'){
@@ -36,9 +89,10 @@ function createPurchaseEntitlementRoutes(deps={}){
         const operationTrace=buildOperationTrace({operationType:'package-purchase',operator:user.name||body.operator||'',now});
         const purchase=buildPurchaseRecord(pkg,{...body,purchaseDate},student,{id,now,operator:user.name,operationTrace});
         const entitlement=buildEntitlementFromPurchase(pkg,purchase,student,uuidv4(),now);
-        await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement);
+        const benefitLedgerRows=buildPurchaseGiftBenefitRows({purchase,student,user,operationTrace,now,idFactory:uuidv4});
+        await writePurchaseAndEntitlementAtomic({put,del},T_PURCHASES,T_ENTITLEMENTS,purchase,entitlement,{benefitTable:T_MEMBERSHIP_BENEFIT_LEDGER,benefitRows:benefitLedgerRows});
         await syncStudentActiveEntitlementIndexes(null,entitlement);
-        return sendJson(res,{purchase,entitlement});
+        return sendJson(res,{purchase,entitlement,benefitLedgerRows});
       }
     }
 
@@ -85,10 +139,11 @@ function createPurchaseEntitlementRoutes(deps={}){
         }
       }
       if(method==='DELETE'){
-        const [ents,ledger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[])]);
-        assertCanVoidPurchase(id,ents,ledger);
+        const [ents,ledger,benefitLedger]=await Promise.all([scan(T_ENTITLEMENTS).catch(()=>[]),scan(T_ENTITLEMENT_LEDGER).catch(()=>[]),scan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[])]);
+        assertCanVoidPurchase(id,ents,ledger,benefitLedger);
         const now=new Date().toISOString();
         const operationTrace=buildOperationTrace({operationType:'package-purchase-void',operator:user.name||'',now});
+        const old=await get(T_PURCHASES,id).catch(()=>null);
         for(const ent of ents.filter(e=>e.purchaseId===id)){
           const nextEnt=withOperationTrace({...ent,status:'voided',updatedAt:now},operationTrace);
           await put(T_ENTITLEMENTS,ent.id,nextEnt);
@@ -96,9 +151,10 @@ function createPurchaseEntitlementRoutes(deps={}){
           const event=withOperationTrace({id:uuidv4(),entitlementId:ent.id,studentId:ent.studentId||'',purchaseId:id,lessonDelta:0,action:'void_purchase',reason:body.reason||'购买记录作废',operator:user.name||'',createdAt:now},operationTrace);
           await put(T_ENTITLEMENT_LEDGER,event.id,event);
         }
-        const old=await get(T_PURCHASES,id).catch(()=>null);
+        const voidBenefitRows=old?buildPurchaseGiftVoidRows({purchase:old,benefitLedger,user,operationTrace,now,idFactory:uuidv4}):[];
+        for(const row of voidBenefitRows)await put(T_MEMBERSHIP_BENEFIT_LEDGER,row.id,row);
         if(old)await put(T_PURCHASES,id,withOperationTrace({...old,status:'voided',voidedAt:now,voidedBy:user.name||'',voidReason:body.reason||'购买记录作废',updatedAt:now},operationTrace));
-        return sendJson(res,{success:true});
+        return sendJson(res,{success:true,benefitLedgerRows:voidBenefitRows});
       }
     }
 

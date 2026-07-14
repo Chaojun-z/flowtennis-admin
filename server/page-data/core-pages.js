@@ -68,7 +68,7 @@ function createCorePageDataRoutes(deps={}){
         schedule:scoped.schedule,
         feedbacks:scoped.feedbacks
       });
-      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
+      return sendJson(res,{purchases:scoped.purchases,packages:scoped.packages,students:scoped.students,entitlements:scoped.entitlements,entitlementLedger:scoped.entitlementLedger,membershipBenefitLedger:scoped.membershipBenefitLedger,customerLifecycleRows,teachingStudentViews:buildTeachingStudentViews(customerLifecycleRows,scoped),standardLifecycleMetrics:buildStandardLifecycleMetrics({...scoped,customerLifecycleRows}),purchaseUnifiedView:buildPurchaseUnifiedView({...scoped,customerLifecycleRows}),packageUnifiedView:buildPackageUnifiedView(scoped),entitlementUnifiedView:buildEntitlementUnifiedView(scoped)});
     }
     if(path==='/page-data/lifecycle-metrics'&&method==='GET'){
       if(user.role!=='admin')return sendJson(res,{error:'无权限'},403);

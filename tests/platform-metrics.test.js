@@ -26,7 +26,7 @@ const source = {
     { id: 'schedule-field-fee-1', studentId: 'student-2', startTime: '2026-06-13 10:00:00', endTime: '2026-06-13 11:00:00', status: '已取消', courseType: '课程订场', paidAmount: 80, fieldFeeAmount: 80, campus: 'shunyi_mapo' }
   ],
   membershipBenefitLedger: [
-    { id: 'benefit-grant-1', studentId: 'student-2', benefitCode: 'courtBooking', benefitLabel: '订场', unit: '次', delta: 3, action: 'supplement', reason: '赠送', relatedDate: '2026-06-04', operator: 'Mira' },
+    { id: 'benefit-grant-1', studentId: 'student-2', benefitCode: 'courtBooking', benefitLabel: '订场', unit: '次', delta: 3, action: 'supplement', reason: '买课包赠送', relatedDate: '2026-06-04', operator: 'Mira', sourcePurchaseId: 'purchase-1', sourcePackageName: '成人正式课包' },
     { id: 'benefit-consume-1', studentId: 'student-2', benefitCode: 'courtBooking', benefitLabel: '订场', unit: '次', delta: -1, action: 'consume', reason: '使用', relatedDate: '2026-06-11', operator: 'Mira' }
   ],
   courts: [
@@ -88,6 +88,11 @@ assert.deepStrictEqual(
   formalStudentView.detailBenefitRows.map(row => [row.benefitCode, row.total, row.used, row.remaining, row.lastAt]),
   [['courtBooking', 3, 1, 2, '2026-06-11']],
   'student benefit summary rows should be owned by the backend unified student detail model'
+);
+assert.deepStrictEqual(
+  formalStudentView.detailBenefitGrantRows.map(row => [row.time, row.label, row.count, row.reason, row.operator, row.sourcePurchaseId, row.sourcePackageName]),
+  [['2026-06-04', '订场', '3次', '买课包赠送', 'Mira', 'purchase-1', '成人正式课包']],
+  'student benefit grant rows should keep package purchase source for audit and rollback'
 );
 assert.deepStrictEqual(
   formalStudentView.detailBenefitConsumeRows.map(row => [row.time, row.label, row.count, row.reason, row.operator]),

@@ -148,7 +148,10 @@ function jumpPurchasePage(value){
 function purchaseDisplayPackageMeta(p={}){
   const ent=entitlements.find(e=>String(e.purchaseId||'')===String(p.id||''))||{};
   const pkg=packages.find(row=>String(row.id||'')===String(p.packageId||p.originalPackageId||ent.packageId||''))||{};
-  const lessons=Number(p.packageLessons)||Number(pkg.lessons)||Number(ent.totalLessons)||Number(p.lessons)||0;
+  const baseLessons=Number(p.packageLessons)||Number(pkg.lessons)||Number(p.lessons)||0;
+  const giftLessons=Number(p.giftLessons||ent.giftLessons)||0;
+  const lessons=baseLessons||Number(ent.totalLessons)||0;
+  const totalLessons=Number(ent.totalLessons)||Number(p.totalLessons)||baseLessons+giftLessons||lessons;
   const timeBand=p.packageTimeBand||p.timeBand||pkg.timeBand||ent.timeBand||'全天';
   return {
     ...p,
@@ -163,8 +166,9 @@ function purchaseDisplayPackageMeta(p={}){
     name:pkg.name||pkg.packageName||p.packageName||p.name||ent.packageName||'',
     packageName:pkg.name||pkg.packageName||p.packageName||p.name||ent.packageName||'',
     lessons,
-    packageLessons:lessons,
-    totalLessons:Number(ent.totalLessons)||lessons,
+    packageLessons:baseLessons||lessons,
+    giftLessons,
+    totalLessons,
     timeBand,
     packageTimeBand:timeBand
   };
@@ -255,6 +259,30 @@ function purchaseHasLedger(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   return entitlementLedger.some(l=>entIds.has(l.entitlementId));
 }
+function purchaseGiftBenefitRows(purchaseId){
+  return membershipBenefitLedger.filter(row=>String(row.sourcePurchaseId||row.purchaseId||'')===String(purchaseId||'')&&Number(row.delta||0)!==0&&row.studentId);
+}
+function purchaseGiftBenefitsConsumed(purchaseId){
+  const gifts=purchaseGiftBenefitRows(purchaseId).filter(row=>Number(row.delta||0)>0);
+  if(!gifts.length)return false;
+  const studentIds=new Set(gifts.map(row=>String(row.studentId||'')).filter(Boolean));
+  const benefitCodes=new Set(gifts.map(row=>String(row.benefitCode||'')).filter(Boolean));
+  const totalByKey=new Map();
+  const giftByKey=new Map();
+  const consumedByKey=new Map();
+  membershipBenefitLedger.filter(row=>studentIds.has(String(row.studentId||''))&&benefitCodes.has(String(row.benefitCode||''))).forEach(row=>{
+    const key=`${row.studentId}|${row.benefitCode}`;
+    const delta=Number(row.delta)||0;
+    if(delta>0)totalByKey.set(key,(totalByKey.get(key)||0)+delta);
+    if(delta>0&&String(row.sourcePurchaseId||row.purchaseId||'')===String(purchaseId||''))giftByKey.set(key,(giftByKey.get(key)||0)+delta);
+    if(delta<0)consumedByKey.set(key,(consumedByKey.get(key)||0)+Math.abs(delta));
+  });
+  for(const [key,giftTotal] of giftByKey.entries()){
+    const otherTotal=(totalByKey.get(key)||0)-giftTotal;
+    if((consumedByKey.get(key)||0)>otherTotal)return true;
+  }
+  return false;
+}
 function patchPurchaseVoidResult(id,reason=''){
   const now=new Date().toISOString();
   purchases=purchases.map(row=>row.id===id?{...row,status:'voided',voidedAt:now,voidReason:reason,updatedAt:now}:row);
@@ -317,6 +345,21 @@ function purchasePackageSnapshotDrawerFields(p){
     purchaseSnapshotField('使用结束',p.usageEndDate,purchaseSnapshotChanged(p.usageEndDate,currentPkg.usageEndDate))
   ].join('');
 }
+function purchaseGiftSummaryDrawerFields(p,ent){
+  const meta=purchaseDisplayPackageMeta({...p,...(ent||{})});
+  const unit=packageLessonUnitLabel(meta);
+  const giftLessons=Number(p.giftLessons||ent?.giftLessons)||0;
+  const baseLessons=Number(p.packageLessons)||Math.max(0,Number(meta.totalLessons||0)-giftLessons);
+  const rows=purchaseGiftBenefitRows(p.id).filter(row=>Number(row.delta||0)>0);
+  const benefitText=rows.map(row=>`${row.benefitLabel||row.benefitCode} ${lessonQty(row.delta)}${row.unit||'次'}`).join('、')||'无';
+  return [
+    renderDetailDrawerField('课包原课时',`${lessonQty(baseLessons)} ${unit}`),
+    renderDetailDrawerField('赠送课时',giftLessons>0?`${lessonQty(giftLessons)} ${unit}`:'无'),
+    renderDetailDrawerField('最终可用',`${lessonQty(meta.totalLessons||baseLessons)} ${unit}`),
+    renderDetailDrawerField('赠送权益',benefitText,{full:true}),
+    renderDetailDrawerField('赠送原因',p.giftReason||'')
+  ].join('');
+}
 function purchaseLedgerHtml(purchaseId){
   const entIds=new Set(entitlements.filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   const rows=aggregateHistoricalMonthlyLedgerRows(dedupeEntitlementLedgerForDisplay(entitlementLedger.filter(l=>String(l.purchaseId||'')===String(purchaseId||'')||entIds.has(l.entitlementId)))).sort((a,b)=>String(entitlementLedgerSortDate(b)||'').localeCompare(String(entitlementLedgerSortDate(a)||''))).slice(0,10);
@@ -336,6 +379,20 @@ function purchasePackagePickerLabel(p={}){
   const price=Number(p.price)||0;
   return [base,price?`${price}元`:'',coachName(p.ownerCoach)].filter(Boolean).join(' · ');
 }
+function purchaseGiftPreviewHtml(){
+  const packageId=document.getElementById('pur_packageId')?.value||'';
+  const pkg=packages.find(x=>x.id===packageId)||{};
+  const baseLessons=Number(pkg.lessons)||0;
+  const giftLessons=Number(document.getElementById('pur_giftLessons')?.value)||0;
+  const courtCount=parseInt(document.getElementById('pur_courtBookingGiftCount')?.value)||0;
+  const machineCount=parseInt(document.getElementById('pur_ballMachineGiftCount')?.value)||0;
+  const amount=Number(document.getElementById('pur_amountPaid')?.value)||0;
+  return `<div class="membership-drawer-preview">课包课时：${lessonQty(baseLessons)} 节<br>赠送课时：${lessonQty(giftLessons)} 节<br>最终可用：${lessonQty(baseLessons+giftLessons)} 节<br>赠送权益：${courtCount?`订场 ${courtCount} 次`:''}${courtCount&&machineCount?'；':''}${machineCount?`发球机 ${machineCount} 次`:''}${!courtCount&&!machineCount?'无':''}<br>实收金额：¥${fmt(amount)}<br>财务收入仍按实收金额计算</div>`;
+}
+function refreshPurchaseGiftPreview(){
+  const el=document.getElementById('purchaseGiftPreview');
+  if(el)el.innerHTML=purchaseGiftPreviewHtml();
+}
 function syncPurchasePackageMeta(prefix='pur',force=false){
   syncPurchasePriceFields(prefix,force);
   const packageId=document.getElementById(`${prefix}_packageId`)?.value||'';
@@ -352,6 +409,7 @@ function syncPurchasePackageMeta(prefix='pur',force=false){
       cb.checked=coachValues.has(cb.value);
     });
   }
+  if(prefix==='pur')refreshPurchaseGiftPreview();
 }
 function syncPurchasePriceFields(prefix='pur',force=false){
   const packageId=document.getElementById(`${prefix}_packageId`)?.value||'';
@@ -374,6 +432,7 @@ function purchasePriceOverrideChanged(prefix='pur'){
   if(reasonWrap)reasonWrap.style.display=changed?'block':'none';
   if(!changed&&reasonInput)reasonInput.value='';
   if(amountInput)amountInput.dataset.autofill='0';
+  if(prefix==='pur')refreshPurchaseGiftPreview();
 }
 function purchasePriceSummaryHtml(p){
   const systemAmount=Number(p.systemAmount??p.packagePrice??0)||0;
@@ -453,10 +512,12 @@ function openPurchaseModal(studentId=''){
   const actions=purchaseDrawerActions('closeModal()','savePurchase()','purchaseSaveBtn');
   const studentForm=`<div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">学员 *</label><input type="hidden" id="pur_studentId" value="${esc(stu?.id||'')}"><input class="finput tms-form-control" id="pur_studentSearch" value="${esc(studentSearchValue)}" placeholder="搜索姓名 / 手机号 / 校区 / 教练" oninput="renderPurchaseStudentPicker()"><div id="pur_studentPickerWrap" style="margin-top:8px">${purchaseStudentPickerHtml(stu?.id||'',studentSearchValue)}</div></div></div>`;
   const purchaseForm=`<div class="tms-form-row purchase-compact-row"><div class="tms-form-item" style="flex:2"><label class="tms-form-label">选择课包 *</label>${renderStandardDropdownHtml('pur_packageId','选择课包',packages.filter(p=>p.status!=='inactive'&&p.status!=='merged').map(p=>({value:p.id,label:purchasePackagePickerLabel(p)})), '', true, 'onPurchasePackageChange')}</div><div class="tms-form-item"><label class="tms-form-label">归属教练</label>${renderStandardDropdownHtml('pur_ownerCoach','归属教练',ownerOptions,coachName(stu?.primaryCoach),true)}</div></div><div class="tms-form-row purchase-compact-row"><div class="tms-form-item"><label class="tms-form-label">支付日期</label>${courtDateButtonHtml('pur_purchaseDate',today(),'支付日期')}</div><div class="tms-form-item"><label class="tms-form-label">系统价格</label><input class="finput tms-form-control" id="pur_systemAmount" type="number" value="0" readonly></div><div class="tms-form-item"><label class="tms-form-label">实收金额</label><input class="finput tms-form-control" id="pur_amountPaid" type="number" value="0" oninput="purchasePriceOverrideChanged('pur')"></div><div class="tms-form-item"><label class="tms-form-label">支付方式</label>${renderStandardDropdownHtml('pur_payMethod','支付方式',payOptions,'微信',true)}</div></div><div class="tms-form-row" id="pur_overrideReasonWrap" style="display:none"><div class="tms-form-item full-width"><label class="tms-form-label">改价原因</label><input class="finput tms-form-control" id="pur_overrideReason" placeholder="实际成交价与系统价格不一致时必填"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">可上课教练</label><div class="tms-checkbox-matrix purchase-coach-picker">${purchaseAllowedCoachChecks([], 'pur-allowed-coach-cb')}</div></div></div>`;
+  const giftForm=`<div id="purchaseGiftPreview">${purchaseGiftPreviewHtml()}</div><div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">赠送课时</label><input class="finput tms-form-control" id="pur_giftLessons" type="number" min="0" step="0.5" value="0" oninput="refreshPurchaseGiftPreview()"></div><div class="tms-form-item"><label class="tms-form-label">订场权益</label><input class="finput tms-form-control" id="pur_courtBookingGiftCount" type="number" min="0" step="1" value="0" oninput="refreshPurchaseGiftPreview()"></div><div class="tms-form-item"><label class="tms-form-label">发球机权益</label><input class="finput tms-form-control" id="pur_ballMachineGiftCount" type="number" min="0" step="1" value="0" oninput="refreshPurchaseGiftPreview()"></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">赠送原因</label><input class="finput tms-form-control" id="pur_giftReason" value="课包购买赠送权益"></div></div>`;
   const notesForm=`<div class="tms-form-row purchase-notes-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">备注</label><textarea class="finput tms-form-control" id="pur_notes"></textarea></div></div>`;
   const body=renderDetailDrawerContent([
     renderDetailDrawerFormCard('学员信息',studentForm,actions),
     renderDetailDrawerFormCard('购买信息',purchaseForm),
+    renderDetailDrawerFormCard('本次赠送',giftForm),
     renderDetailDrawerFormCard('备注',notesForm)
   ].join(''));
   openPurchaseDrawer(
@@ -465,6 +526,7 @@ function openPurchaseModal(studentId=''){
     {purchaseDetailId:''}
   );
   fillPurchasePackageMeta();
+  refreshPurchaseGiftPreview();
 }
 function fillPurchasePackageMeta(){
   syncPurchasePackageMeta('pur');
@@ -515,9 +577,11 @@ function openPurchaseDetailModal(id,tab='deal'){
     renderDetailDrawerField('作废原因',p.voidReason,{full:true})
   ].join(''):'';
   const tabs=[['deal','课包信息'],['balance','课包余额'],['rules','下单快照']];
+  const giftFields=purchaseGiftSummaryDrawerFields(p,ent);
   let cards=[];
   if(activeTab==='deal'){
     cards=[renderDetailDrawerCard('课包信息',dealFields,{actionsHtml:editAction})];
+    if(giftFields)cards.push(renderDetailDrawerCard('本次赠送',giftFields));
     if(voidFields)cards.push(renderDetailDrawerCard('作废信息',voidFields));
   }
   if(activeTab==='balance'){
@@ -665,14 +729,19 @@ function openPurchaseVoidModal(id){
   const ent=purchaseEntitlement(id);
   const meta=purchaseDisplayPackageMeta(p);
   const unit=packageLessonUnitLabel(meta);
-  const blocked=purchaseHasLedger(id);
+  const giftRows=membershipBenefitLedger.filter(row=>String(row.sourcePurchaseId||row.purchaseId||'')===String(id||'')&&Number(row.delta||0)>0);
+  const consumedGift=purchaseGiftBenefitsConsumed(id);
+  const blocked=purchaseHasLedger(id)||consumedGift;
+  const blockedText=consumedGift?'本次赠送权益已被消耗，不能直接作废':'该购买记录已有课时消耗，不能直接作废。';
+  const giftImpact=giftRows.length?`本次赠送权益将同步撤回：${giftRows.map(row=>`${row.benefitLabel||row.benefitCode} ${row.delta}${row.unit||'次'}`).join('、')}。`:'本次没有赠送订场/发球机权益。';
   const summary=[
     renderDetailDrawerField('学员',p.studentName),
     renderDetailDrawerField('售卖课包',standardPackageLabel(meta,true)||meta.packageName,{full:true}),
     renderDetailDrawerField('购买日期',p.purchaseDate),
     renderDetailDrawerField('实收金额',`¥${fmt(p.amountPaid)}`),
     renderDetailDrawerField('影响范围',ent?`将同步作废课包余额「${standardPackageLabel(meta,true)||meta.packageName}」，当前剩余 ${lessonQty(ent.remainingLessons)}/${lessonQty(ent.totalLessons)} ${unit}。`:'未找到对应课包余额。',{full:true}),
-    blocked?renderDetailDrawerField('当前状态','该购买记录已有课时消耗，不能直接作废。',{full:true}):''
+    renderDetailDrawerField('赠送权益',giftImpact,{full:true}),
+    blocked?renderDetailDrawerField('当前状态',blockedText,{full:true}):''
   ].join('');
   const actions=blocked
     ?`<div class="schedule-detail-card-actions"><button type="button" class="schedule-detail-action muted" onclick="openPurchaseDetailModal('${p.id}')">返回</button></div>`
@@ -692,8 +761,10 @@ async function voidPurchase(id){
   const reason=document.getElementById('pur_void_reason')?.value.trim()||'';
   if(!reason){toast('请填写作废原因','warn');return;}
   await runStandardMutation(document.querySelector('.btn-save'),async()=>{
-    await apiCall('DELETE','/purchases/'+id,{reason});
+    const result=await apiCall('DELETE','/purchases/'+id,{reason});
     patchPurchaseVoidResult(id,reason);
+    const rows=Array.isArray(result?.benefitLedgerRows)?result.benefitLedgerRows:[];
+    rows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     loadingText:'作废中…',
     errorPrefix:'作废失败',
@@ -708,13 +779,14 @@ async function savePurchase(){
   const packageId=document.getElementById('pur_packageId').value;
   if(!packageId){toast('请选择课包','warn');return;}
   const btn=document.getElementById('purchaseSaveBtn');
-  const data={studentId,packageId,ownerCoach:document.getElementById('pur_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_purchaseDate').value,amountPaid:parseFloat(document.getElementById('pur_amountPaid').value)||0,overrideReason:document.getElementById('pur_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_payMethod').value,notes:document.getElementById('pur_notes').value.trim()};
+  const data={studentId,packageId,ownerCoach:document.getElementById('pur_ownerCoach')?.value||'',allowedCoaches:[...document.querySelectorAll('.pur-allowed-coach-cb:checked')].map(cb=>cb.value),purchaseDate:document.getElementById('pur_purchaseDate').value,amountPaid:parseFloat(document.getElementById('pur_amountPaid').value)||0,overrideReason:document.getElementById('pur_overrideReason')?.value.trim()||'',payMethod:document.getElementById('pur_payMethod').value,giftLessons:parseFloat(document.getElementById('pur_giftLessons')?.value)||0,courtBookingGiftCount:parseInt(document.getElementById('pur_courtBookingGiftCount')?.value)||0,ballMachineGiftCount:parseInt(document.getElementById('pur_ballMachineGiftCount')?.value)||0,giftReason:document.getElementById('pur_giftReason')?.value.trim()||'',notes:document.getElementById('pur_notes').value.trim()};
   const systemAmount=Number(document.getElementById('pur_systemAmount')?.value)||0;
   if(systemAmount!==Number(data.amountPaid||0)&&!data.overrideReason){toast('请填写改价原因','warn');if(btn){btn.disabled=false;btn.textContent='保存';}return;}
   await runStandardMutation(btn,async()=>{
     const res=await apiCall('POST','/purchases',data);
     if(res.purchase)purchases.unshift(res.purchase);
     if(res.entitlement)entitlements.unshift(res.entitlement);
+    if(Array.isArray(res.benefitLedgerRows))res.benefitLedgerRows.filter(Boolean).forEach(x=>membershipBenefitLedger.unshift(x));
   },{
     successText:'购买成功',
     closeOnSuccess:true,

@@ -695,11 +695,11 @@ const handlePurchaseEntitlementRoutes=createPurchaseEntitlementRoutes({
   init,sendJson:routeSendJson,getCachedScan,getCachedRow,get,scan,put,del,filterLoadAllForUser,uuidv4,
   isCampusScopedAdmin,parseArr,parseLessonValue,buildCoachRefs,buildOperationTrace,withOperationTrace,
   normalizeEntitlementLedgerRowsForDetailView,getIndexedActiveEntitlementsForStudents,recommendEntitlements,
-  validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,
+  validateManualEntitlementAdjustment,applyEntitlementLessonDelta,buildManualEntitlementLedgerRecord,buildStudentBenefitLedgerRecord,
   assertCanDeleteEntitlement,syncStudentActiveEntitlementIndexes,writePurchaseAndEntitlementAtomic,
   buildEntitlementFromPurchase,buildPurchaseRecord,assertCanEditPurchaseWithLedger,purchaseHasEntitlementLedger,
   validatePurchaseInputForPackage,syncEntitlementFromPurchase,assertCanVoidPurchase,
-  T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
+  T_PURCHASES,T_PACKAGES,T_STUDENTS,T_ENTITLEMENTS,T_ENTITLEMENT_LEDGER,T_MEMBERSHIP_BENEFIT_LEDGER,T_SCHEDULE,T_CLASSES,T_COACHES,T_USERS
 });
 const handleCorePageDataRoutes=createCorePageDataRoutes({
   init,sendJson:routeSendJson,cappedScan,filterLoadAllForUser,listCampusesWithDefaults,getFastStudentsRead,
@@ -952,10 +952,24 @@ function assertSmallGroupScheduleRules(rec){
   if(actual.length>4)throw new Error('小班课最多 4 人');
   if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
 }
-async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement){
+async function writePurchaseAndEntitlementAtomic(store,purchaseTable,entitlementTable,purchase,entitlement,options={}){
+  const benefitTable=options.benefitTable||'';
+  const benefitRows=Array.isArray(options.benefitRows)?options.benefitRows.filter(Boolean):[];
+  const writtenBenefits=[];
+  let entitlementWritten=false;
   await store.put(purchaseTable,purchase.id,purchase);
-  try{return await store.put(entitlementTable,entitlement.id,entitlement);}
+  try{
+    const result=await store.put(entitlementTable,entitlement.id,entitlement);
+    entitlementWritten=true;
+    for(const row of benefitRows){
+      await store.put(benefitTable,row.id,row);
+      writtenBenefits.push(row);
+    }
+    return result;
+  }
   catch(err){
+    for(const row of writtenBenefits.reverse())await store.del(benefitTable,row.id).catch(()=>null);
+    if(entitlementWritten)await store.del(entitlementTable,entitlement.id).catch(()=>null);
     await store.del(purchaseTable,purchase.id).catch(()=>null);
     throw err;
   }
@@ -6366,9 +6380,27 @@ async function removeMatchCourtFinanceRowsForTest(matchIdPrefix){
   }
   return {removed};
 }
-function assertCanVoidPurchase(purchaseId,entitlements,ledger){
+function assertCanVoidPurchase(purchaseId,entitlements,ledger,studentBenefitLedger=[]){
   const entitlementIds=new Set((entitlements||[]).filter(e=>e.purchaseId===purchaseId).map(e=>e.id));
   if((ledger||[]).some(l=>entitlementIds.has(l.entitlementId)))throw new Error('该购买记录已有课时消耗，不能直接作废');
+  const giftRows=(studentBenefitLedger||[]).filter(row=>String(row.sourcePurchaseId||row.purchaseId||'')===String(purchaseId||'')&&Number(row.delta||0)>0&&row.studentId);
+  if(!giftRows.length)return;
+  const studentIds=new Set(giftRows.map(row=>String(row.studentId||'')).filter(Boolean));
+  const benefitCodes=new Set(giftRows.map(row=>String(row.benefitCode||'')).filter(Boolean));
+  const totalByKey=new Map();
+  const giftByKey=new Map();
+  let consumedByKey=new Map();
+  (studentBenefitLedger||[]).filter(row=>studentIds.has(String(row.studentId||''))&&benefitCodes.has(String(row.benefitCode||''))).forEach(row=>{
+    const key=`${row.studentId}|${row.benefitCode}`;
+    const delta=Number(row.delta)||0;
+    if(delta>0)totalByKey.set(key,(totalByKey.get(key)||0)+delta);
+    if(delta>0&&String(row.sourcePurchaseId||row.purchaseId||'')===String(purchaseId||''))giftByKey.set(key,(giftByKey.get(key)||0)+delta);
+    if(delta<0)consumedByKey.set(key,(consumedByKey.get(key)||0)+Math.abs(delta));
+  });
+  for(const [key,giftTotal] of giftByKey.entries()){
+    const otherTotal=(totalByKey.get(key)||0)-giftTotal;
+    if((consumedByKey.get(key)||0)>otherTotal)throw new Error('本次赠送权益已被消耗，不能直接作废');
+  }
 }
 function assertCanDeleteEntitlement(entitlementId,ledger,entitlements=[]){
   if((ledger||[]).some(l=>l.entitlementId===entitlementId))throw new Error('该课包余额已有消耗记录，不能删除');

@@ -680,6 +680,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('students',data.students||[]);
       setDatasetValue('entitlements',data.entitlements||[]);
       setDatasetValue('entitlementLedger',data.entitlementLedger||[]);
+      setDatasetValue('membershipBenefitLedger',data.membershipBenefitLedger||[]);
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       teachingStudentViews=data.teachingStudentViews||{historicalStudents:[],activeStudents:[],courseStudents:[],trialStudents:[],formalStudents:[],trialAttendedStudents:[],trialAttendedToFormalPurchaseStudents:[],trialAttendedWithoutFormalStudents:[],trialPathStudents:[],trialPathDealStudents:[],trialPathPendingStudents:[],directCourseDealStudents:[],summary:{}};
       standardLifecycleMetrics=data.standardLifecycleMetrics||{metrics:{},funnels:{},views:{}};
@@ -691,6 +692,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('entitlements');
       staleCachedDatasets.delete('entitlementLedger');
+      staleCachedDatasets.delete('membershipBenefitLedger');
       staleCachedDatasets.delete('customerLifecycleRows');
       markDatasetLoaded('purchasesPage',requestKey);
       return;

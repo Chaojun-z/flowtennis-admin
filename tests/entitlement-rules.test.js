@@ -254,6 +254,33 @@ assert.deepStrictEqual(
   'purchase should create a matching entitlement account'
 );
 
+const giftedPurchase = rules.buildPurchaseRecord(
+  pkg,
+  { ...purchase, giftLessons: 2, courtBookingGiftCount: 1, ballMachineGiftCount: 2, giftReason: '买课包赠送' },
+  { id: 'stu-1', name: '张三', phone: '13800000000' },
+  { id: 'pur-gift', now: '2026-04-12 00:00:00', operator: '管理员' }
+);
+const giftedEntitlement = rules.buildEntitlementFromPurchase(pkg, giftedPurchase, { id: 'stu-1', name: '张三' }, 'ent-gift', '2026-04-12 00:00:00');
+assert.deepStrictEqual(
+  {
+    packageLessons: giftedPurchase.packageLessons,
+    giftLessons: giftedPurchase.giftLessons,
+    totalLessons: giftedPurchase.totalLessons,
+    entitlementTotal: giftedEntitlement.totalLessons,
+    entitlementRemaining: giftedEntitlement.remainingLessons,
+    giftReason: giftedPurchase.giftReason
+  },
+  {
+    packageLessons: 5,
+    giftLessons: 2,
+    totalLessons: 7,
+    entitlementTotal: 7,
+    entitlementRemaining: 7,
+    giftReason: '买课包赠送'
+  },
+  'package purchase gifts should increase the entitlement balance while preserving the base package lesson count'
+);
+
 assert.deepStrictEqual(
   rules.buildPurchaseRecord(pkg, purchase, { id: 'stu-1', name: '张三', phone: '13800000000' }, { id: 'pur-1', now: '2026-04-12 00:00:00', operator: '管理员' }),
   {
@@ -1320,5 +1347,38 @@ assert.throws(
     'failed entitlement write should roll back purchase write'
   );
 })().then(()=>console.log('entitlement async rules tests passed'));
+
+(async()=>{
+  const writes=[];
+  const store={
+    put:async(table,id,row)=>{writes.push([table,id,row]);if(id==='gift-benefit-2')throw new Error('benefit write failed');},
+    del:async(table,id)=>writes.push(['del',table,id])
+  };
+  await assert.rejects(
+    () => rules.writePurchaseAndEntitlementAtomic(
+      store,
+      'purchases',
+      'entitlements',
+      { id:'pur-gift-atomic' },
+      { id:'ent-gift-atomic' },
+      { benefitTable:'membershipBenefitLedger', benefitRows:[{ id:'gift-benefit-1' },{ id:'gift-benefit-2' }] }
+    ),
+    /benefit write failed/,
+    'purchase, entitlement and gifted benefits should expose benefit write failure'
+  );
+  assert.deepStrictEqual(
+    writes.map(x=>x.slice(0,3)),
+    [
+      ['purchases','pur-gift-atomic',{ id:'pur-gift-atomic' }],
+      ['entitlements','ent-gift-atomic',{ id:'ent-gift-atomic' }],
+      ['membershipBenefitLedger','gift-benefit-1',{ id:'gift-benefit-1' }],
+      ['membershipBenefitLedger','gift-benefit-2',{ id:'gift-benefit-2' }],
+      ['del','membershipBenefitLedger','gift-benefit-1'],
+      ['del','entitlements','ent-gift-atomic'],
+      ['del','purchases','pur-gift-atomic']
+    ],
+    'failed gifted benefit write should roll back benefit, entitlement and purchase writes'
+  );
+})().then(()=>console.log('gifted purchase atomic rules tests passed'));
 
 console.log('entitlement rules tests passed');

@@ -38,12 +38,17 @@ assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helpe
 assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
+assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('本次赠送',giftForm\)/, 'purchase create should render gift fields in its own drawer card');
+assert.match(openPurchaseModal, /pur_giftLessons[\s\S]*pur_courtBookingGiftCount[\s\S]*pur_ballMachineGiftCount/, 'purchase create should expose package lesson and student benefit gift fields');
+assert.match(source, /function refreshPurchaseGiftPreview\(/, 'purchase create should render a gift preview');
+assert.match(source, /function purchaseGiftPreviewHtml\(/, 'purchase gift preview should have a dedicated renderer');
 assert.match(openPurchaseEditModal, /renderDetailDrawerFormCard\('购买信息'/, 'purchase edit should use one coherent two-column form card');
 assert.doesNotMatch(openPurchaseEditModal, /renderDetailDrawerFormCard\('备注'/, 'purchase edit should not split notes into a separate one-field card');
 assert.match(source, /function setPurchaseDetailTab\(/, 'purchase detail drawer should support tab switching');
 assert.match(openPurchaseDetailModal, /\[\['deal','课包信息'\],\['balance','课包余额'\],\['rules','下单快照'\]\]/, 'purchase detail should split content into renamed tabs');
 assert.match(openPurchaseDetailModal, /activeTab==='deal'[\s\S]*renderDetailDrawerCard\('课包信息'/, 'deal tab should show package info fields');
 assert.match(openPurchaseDetailModal, /activeTab==='balance'[\s\S]*renderDetailDrawerCard\('课包余额'[\s\S]*renderDetailDrawerCard\('扣课记录'/, 'balance tab should include lesson ledger rows');
+assert.match(openPurchaseDetailModal, /purchaseGiftSummaryDrawerFields\(p,ent\)/, 'purchase detail should show gift lesson and benefit summary');
 assert.doesNotMatch(openPurchaseDetailModal, /renderDetailDrawerField\('有效期'/, 'balance tab should not show validity period');
 assert.match(openPurchaseDetailModal, /activeTab==='rules'[\s\S]*renderDetailDrawerCard\('下单快照'/, 'rules tab should show order snapshot');
 assert.match(source, /function purchaseSnapshotChanged\(/, 'order snapshot should compare current package values');
@@ -62,5 +67,10 @@ assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGE
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
 assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
 assert.match(savePurchase, /ensureDatasetsByName\(\['purchasesPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh package data and lifecycle student views after creating a purchase');
+assert.match(savePurchase, /giftLessons:parseFloat\(document\.getElementById\('pur_giftLessons'\)\?\.value\)\|\|0/, 'purchase save should submit gifted lesson count');
+assert.match(savePurchase, /courtBookingGiftCount:parseInt\(document\.getElementById\('pur_courtBookingGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit booking benefit gifts');
+assert.match(savePurchase, /ballMachineGiftCount:parseInt\(document\.getElementById\('pur_ballMachineGiftCount'\)\?\.value\)\|\|0/, 'purchase save should submit ball-machine benefit gifts');
+assert.match(openPurchaseVoidModal, /sourcePurchaseId[\s\S]*本次赠送权益已被消耗，不能直接作废/, 'purchase void should block when gifted student benefits have already been consumed');
+assert.match(source, /const otherTotal=\(totalByKey\.get\(key\)\|\|0\)-giftTotal[\s\S]*consumedByKey\.get\(key\)\|\|0\)>otherTotal/, 'purchase void should not block when other student benefit grants can cover consumed benefits');
 
 console.log('purchase drawer view tests passed');

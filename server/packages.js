@@ -43,7 +43,9 @@ function createPackageRules(deps={}){
 
   function buildEntitlementFromPurchase(pkg,purchase,student,id=uuidv4(),now=new Date().toISOString()){
     const purchaseDate=purchase.purchaseDate||now.slice(0,10);
-    const totalLessons=parseInt(pkg.lessons)||parseInt(pkg.totalLessons)||0;
+    const baseLessons=parseLessonValue(pkg.lessons??pkg.totalLessons,0);
+    const giftLessons=parseLessonValue(purchase.giftLessons,0);
+    const totalLessons=parseLessonValue(purchase.totalLessons,baseLessons+giftLessons);
     const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames,parseArr);
     const rec={
       id,
@@ -74,6 +76,11 @@ function createPackageRules(deps={}){
       createdAt:now,
       updatedAt:now
     };
+    if(giftLessons>0){
+      rec.basePackageLessons=baseLessons;
+      rec.giftLessons=giftLessons;
+      rec.giftReason=String(purchase.giftReason||'').trim();
+    }
     if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
     if(isSmallGroupCourse(rec)){
       Object.assign(rec,smallGroupRuleSnapshot({...pkg,...purchase,courseType:rec.courseType}));
@@ -90,6 +97,11 @@ function createPackageRules(deps={}){
     const overrideReason=String(body.overrideReason||'').trim();
     if(priceOverridden&&!overrideReason)throw new Error('请填写改价原因');
     const packageCoaches=packageRefIds(pkg.allowedCoaches||pkg.coachNames,parseArr);
+    const packageLessons=parseLessonValue(pkg.lessons,0);
+    const giftLessons=Math.max(0,parseLessonValue(body.giftLessons,0));
+    const totalLessons=packageLessons+giftLessons;
+    const courtBookingGiftCount=Math.max(0,parseInt(body.courtBookingGiftCount)||0);
+    const ballMachineGiftCount=Math.max(0,parseInt(body.ballMachineGiftCount)||0);
     const rec={
       ...body,
       id:opts.id||body.id||uuidv4(),
@@ -101,7 +113,7 @@ function createPackageRules(deps={}){
       productId:pkg.productId||'',
       productName:pkg.productName||'',
       courseType:pkg.courseType||pkg.type||'',
-      packageLessons:parseInt(pkg.lessons)||0,
+      packageLessons,
       packagePrice:normalizeMoney(pkg.price),
       priceSource:'package',
       priceSourceId:pkg.id,
@@ -127,6 +139,17 @@ function createPackageRules(deps={}){
       createdAt:body.createdAt||now,
       updatedAt:now
     };
+    if(giftLessons>0){
+      rec.giftLessons=giftLessons;
+      rec.totalLessons=totalLessons;
+      rec.giftReason=String(body.giftReason||'').trim();
+    }else{
+      delete rec.giftLessons;
+      delete rec.totalLessons;
+      delete rec.giftReason;
+    }
+    if(courtBookingGiftCount>0)rec.courtBookingGiftCount=courtBookingGiftCount;else delete rec.courtBookingGiftCount;
+    if(ballMachineGiftCount>0)rec.ballMachineGiftCount=ballMachineGiftCount;else delete rec.ballMachineGiftCount;
     if(rec.courseType==='体验课'&&pkg.experienceType)rec.experienceType=pkg.experienceType;
     if(isSmallGroupCourse(rec))Object.assign(rec,smallGroupRuleSnapshot({...pkg,courseType:rec.courseType}));
     return withOperationTrace(rec,opts.operationTrace);
@@ -226,17 +249,30 @@ function createPackageRules(deps={}){
     const packageId=String(nextPackage?.id||'');
     const purchaseById=new Map((purchases||[]).map(p=>[String(p.id||''),p]));
     const purchaseUpdates=(purchases||[]).filter(p=>String(p.packageId||'')===packageId&&p.status!=='voided').map(p=>{
-      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',packageLessons:parseLessonValue(nextPackage.lessons),packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
+      const baseLessons=parseLessonValue(nextPackage.lessons);
+      const giftLessons=parseLessonValue(p.giftLessons);
+      const next={...p,courseType:nextPackage.courseType||nextPackage.type||'',packageLessons:baseLessons,totalLessons:baseLessons+giftLessons,packagePrice:normalizeMoney(nextPackage.price),systemAmount:normalizeMoney(nextPackage.price),packageTimeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',validDays:0,saleStartDate:nextPackage.saleStartDate||'',saleEndDate:nextPackage.saleEndDate||'',usageStartDate:nextPackage.usageStartDate||'',usageEndDate:'',updatedAt:now};
+      if(!giftLessons)delete next.totalLessons;
       if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
       if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
       return next;
     });
     const entitlementUpdates=(entitlements||[]).filter(e=>String(e.packageId||'')===packageId&&e.status!=='voided').map(e=>{
       const validity=packageEntitlementValidity(nextPackage,e,purchaseById.get(String(e.purchaseId||''))||{});
-      const totalLessons=parseLessonValue(nextPackage.lessons);
+      const purchase=purchaseById.get(String(e.purchaseId||''))||{};
+      const totalLessons=parseLessonValue(nextPackage.lessons)+parseLessonValue(purchase.giftLessons);
       const usedLessons=parseLessonValue(e.usedLessons,Math.max(0,parseLessonValue(e.totalLessons)-parseLessonValue(e.remainingLessons)));
       const remainingLessons=Math.max(0,totalLessons-usedLessons);
       const next={...e,courseType:nextPackage.courseType||nextPackage.type||'',totalLessons,usedLessons,remainingLessons,timeBand:nextPackage.timeBand||'',dailyTimeWindows:parseArr(nextPackage.dailyTimeWindows),ownerCoach:nextPackage.ownerCoach||'',...validity,status:remainingLessons<=0?'depleted':'active',updatedAt:now};
+      if(parseLessonValue(purchase.giftLessons)>0){
+        next.basePackageLessons=parseLessonValue(nextPackage.lessons);
+        next.giftLessons=parseLessonValue(purchase.giftLessons);
+        next.giftReason=String(purchase.giftReason||'').trim();
+      }else{
+        delete next.basePackageLessons;
+        delete next.giftLessons;
+        delete next.giftReason;
+      }
       if(next.courseType==='体验课'&&nextPackage.experienceType)next.experienceType=nextPackage.experienceType;else delete next.experienceType;
       if(isSmallGroupCourse(next))Object.assign(next,smallGroupRuleSnapshot({...nextPackage,courseType:next.courseType}));
       return next;
