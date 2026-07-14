@@ -703,16 +703,31 @@ function isOrphanMaterializedStudentLead(lead = {}) {
   return /^lead-from-student-/.test(text(lead.id || lead.leadId));
 }
 
+function normalizeLifecycleDealType(value = '') {
+  const raw = text(value);
+  if (!raw || /未转化|未成交/.test(raw)) return '';
+  const normalized = raw
+    .replace(/已转/g, '')
+    .replace(/转化/g, '')
+    .replace(/成交/g, '')
+    .replace(/\s/g, '')
+    .replace(/会员/g, '订场会员')
+    .replace(/订场订场会员/g, '订场会员');
+  const standard = ['课程', '订场', '订场会员', '课程+订场', '课程+订场会员', '订场+订场会员', '课程+订场+订场会员'];
+  if (standard.includes(raw)) return raw;
+  return standard.includes(normalized) ? normalized : '';
+}
+
 function manualLeadOutcomeStage(lead = {}) {
   if (isOrphanMaterializedStudentLead(lead)) return '';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
-  const dealType = text(lead.dealType || lead.conversionType);
   const convertedText = /成交|已报名|已订场|已定场|储值|会员/.test(explicit) || (/转化/.test(explicit) && !/未转化|待转化/.test(explicit));
-  if (dealType || lead.isCourseConverted === true || lead.isCourtConverted === true || lead.isMembershipConverted === true || convertedText) return '已成交';
+  if (lead.isCourseConverted === true || lead.isCourtConverted === true || lead.isMembershipConverted === true || convertedText) return '已成交';
   if (/流失|无意向/.test(explicit)) return '已流失';
   if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
   if (/已约|预约|约体验/.test(explicit)) return '已约体验';
   if (/新线索/.test(explicit)) return '新线索';
+  if (/跟进|沟通|对接/.test(explicit)) return '跟进中';
   return '';
 }
 
@@ -750,9 +765,9 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   const hasTrialBooked = !!text(row.trialBookedAt || row.trialAtRaw) || !!row.hasTrialExperience;
   const manualStage = manualLeadOutcomeStage(lead);
   if (hasCourse || hasBooking || hasMembership) return '已成交';
+  if (manualStage) return manualStage;
   if (hasTrialAttended || studentStage === 'trial') return '已体验待成交';
   if (hasTrialBooked) return '已约体验';
-  if (manualStage) return manualStage;
   if (studentStage === 'student') return '跟进中';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
   if (/未转化|未成交/.test(explicit)) return '跟进中';
@@ -767,20 +782,23 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 
 function lifecycleDealType(row = {}, lead = {}) {
   const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row, lead);
-  const stored = ignoreLegacyOutcome ? '' : text(lead.dealType || lead.conversionType || row.dealType).replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员');
+  const manualStage = manualLeadOutcomeStage(lead);
+  const hasConvertedFact = !!row.hasCourseConversion || !!row.hasBookingConversion || !!row.hasMembershipConversion || text(row.studentStage) === 'formal' || ['booking', 'member'].includes(text(row.courtStage));
+  const allowStoredDeal = !ignoreLegacyOutcome && (hasConvertedFact || manualStage === '已成交');
+  const stored = allowStoredDeal ? normalizeLifecycleDealType(lead.dealType || lead.conversionType || row.dealType) : '';
   if (stored) return stored;
-  const legacyText = ignoreLegacyOutcome ? '' : text([
+  const legacyText = allowStoredDeal ? text([
     lead.leadStage,
     lead.systemStatus,
     lead.stage,
     lead.rawStatus,
     lead.status,
     lead.statusAfter
-  ].filter(Boolean).join(' '));
+  ].filter(Boolean).join(' ')) : '';
   const studentStage = text(row.studentStage);
-  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || (!ignoreLegacyOutcome && !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) || /课程|课包|报名|私教|小班/.test(legacyText);
-  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage)) || !!text(lead.courtId || lead.bookingCourtId) || /订场|定场|场地/.test(legacyText);
-  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member' || !!text(lead.membershipAccountId || lead.memberId) || /会员|储值/.test(legacyText);
+  const hasCourse = !!row.hasCourseConversion || studentStage === 'formal' || (allowStoredDeal && !!text(lead.studentId || lead.formalStudentId || lead.courseStudentId)) || /课程|课包|报名|私教|小班/.test(legacyText);
+  const hasBooking = !!row.hasBookingConversion || ['booking', 'member'].includes(text(row.courtStage)) || (allowStoredDeal && !!text(lead.courtId || lead.bookingCourtId)) || /订场|定场|场地/.test(legacyText);
+  const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member' || (allowStoredDeal && !!text(lead.membershipAccountId || lead.memberId)) || /会员|储值/.test(legacyText);
   return [
     hasCourse ? '课程' : '',
     hasBooking ? '订场' : '',

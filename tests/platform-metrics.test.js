@@ -57,6 +57,37 @@ const manualConvertedLead = manualConvertedPlatform.leadPoolRows.find(row => row
 assert.strictEqual(manualConvertedLead?.leadStage, '已成交', 'lead pool should keep manually converted course leads as converted before package purchase');
 assert.strictEqual(manualConvertedLead?.systemStatus, '已成交', 'lead pool systemStatus should align with the displayed converted stage');
 
+const notConvertedPlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-not-converted', displayName: '未转化线索', leadStage: '跟进中', systemStatus: '跟进中', dealType: '未转化', conversionType: '未转化', leadDate: '2026-06-09' }
+  ],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const notConvertedLead = notConvertedPlatform.leadPoolRows.find(row => row.id === 'lead-not-converted');
+assert.strictEqual(notConvertedLead?.leadStage, '跟进中', '未转化 dealType must not force the unified lead stage to 已成交');
+assert.strictEqual(notConvertedLead?.dealType, '', '未转化 dealType must not be displayed as a成交类型');
+
+const lostAfterTrialPlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'lead-lost-after-trial', displayName: '体验后流失', leadStage: '已流失', systemStatus: '已流失', trialAtRaw: '2026-06-10', leadDate: '2026-06-01' }
+  ],
+  students: [],
+  purchases: [],
+  entitlements: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const lostAfterTrialLead = lostAfterTrialPlatform.leadPoolRows.find(row => row.id === 'lead-lost-after-trial');
+assert.strictEqual(lostAfterTrialLead?.leadStage, '已流失', 'manual current lead stage should not be overridden by old trial booking facts');
+
 assert.strictEqual(platform.customerLifecycleRows.length, 3, 'lifecycle should contain existing leads, student-only customers and court/member customers');
 assert.strictEqual(platform.leadPoolRows.length, 3, 'lead pool should expose every lifecycle customer identity');
 assert.ok(platform.leadPoolRows.find(row => row.id === 'student:student-2' && row.displayName === '无原始线索学员'), 'student without ft_leads should still be searchable in the lead pool');

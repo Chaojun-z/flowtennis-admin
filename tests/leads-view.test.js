@@ -102,7 +102,8 @@ assert.match(fnBody('leadTrialDoneByTime'), /trialAttendedAt/, 'lead stats shoul
 assert.match(leadsSource, /leadStageText\(lead\)/, 'leads list and detail should render the lead stage');
 assert.match(fnBody('getFilteredLeads'), /const dealTypeValue=document\.getElementById\('leadDealTypeFilter'\)\?\.value\|\|''[\s\S]*if\(dealTypeValue&&leadDealTypeText\(lead\)!==dealTypeValue\)return false;/, 'lead filtering should support the unified deal type');
 assert.match(leadsSource, /stageValue&&leadStageText\(lead\)!==stageValue/, 'lead filtering should support lead stage');
-assert.match(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)[\s\S]*leadStageText\(lead\)==='已成交'/, 'converted yes/no should align with displayed deal type');
+assert.match(fnBody('leadConvertedYesNo'), /leadStageText\(lead\)==='已成交'/, 'converted yes/no should align with the unified displayed lead stage');
+assert.doesNotMatch(fnBody('leadConvertedYesNo'), /leadDealTypeText\(lead\)/, 'deal type alone should not mark a lead as converted');
 assert.match(leadsSource, /function getFilteredLeads\(/, 'leads page should centralize lead filtering');
 assert.match(leadsSource, /function setLeadPageSize\(/, 'leads page should expose page size switching');
 assert.match(leadsSource, /function applyLeadSearch\(\)[\s\S]*leadPage=standardListFirstPage\(\)[\s\S]*renderLeads\(\)/, 'leads search should reset pagination through the standard list flow before rendering');

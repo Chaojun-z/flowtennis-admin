@@ -54,6 +54,8 @@ assert.match(fnBody('leadPurchasePackageActionHtml'), /已关联学员但未买�
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已购课包[\s\S]*leadFormalPackageText\(lead\)/, 'linked students with formal packages should keep a package info row after purchase');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /!lead\?\.studentId[\s\S]*leadStageText\(lead\)==='已成交'[\s\S]*创建学员档案并购买课包[\s\S]*convertLeadToStudentAndPurchase\('\$\{lead\.id\}'\)/, 'converted course leads without a student record should show a create-student-and-purchase entry');
 assert.match(source, /async function convertLeadToStudentAndPurchase\(leadId\)/, 'conversion tab should create a student record and continue into the purchase drawer for new students');
+assert.match(source, /function upsertLeadStudentLocal\(/, 'created students should be inserted into the local student list before opening the purchase drawer');
+assert.match(fnBody('convertLeadToStudentAndPurchase'), /upsertLeadStudentLocal\(res\?\.student\)[\s\S]*openPurchaseModal\(studentId\)/, 'create-student-and-purchase should not wait for a later refresh before the purchase drawer can find the student');
 assert.match(source, /function leadFormalCoachText\(lead\)/, 'lead conversion summary should derive deal coach from lifecycle or purchase owner coach');
 assert.match(fnBody('openLeadPurchasePackage'), /ensureDatasetsByName\(\['purchasesPage'\]\)[\s\S]*openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry must lazy-load purchase data and open the existing purchase drawer with the linked student id');
 assert.match(source, /function leadLinkSearchRows\(mode,keyword=''\)/, 'lead link forms should expose searchable linked account rows');

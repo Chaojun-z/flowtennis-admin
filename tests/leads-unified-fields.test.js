@@ -19,8 +19,9 @@ const context = {
   console,
   leads: [
     { id: 'lead-at-mira', displayName: 'A', owner: '@Mira', dealType: '课程', leadDate: '2026-07-01', createdAt: '2026-07-01' },
-    { id: 'lead-coach', displayName: 'B', owner: '张教练', conversionType: '订场会员', leadDate: '2026-07-02', createdAt: '2026-07-02' },
-    { id: 'lead-text-only', displayName: 'C', owner: '吴敌', rawStatus: '已报名-私教', leadDate: '2026-07-03', createdAt: '2026-07-03' }
+    { id: 'lead-coach', displayName: 'B', owner: '张教练', leadStage: '已成交', systemStatus: '已成交', conversionType: '订场会员', leadDate: '2026-07-02', createdAt: '2026-07-02' },
+    { id: 'lead-text-only', displayName: 'C', owner: '吴敌', rawStatus: '已报名-私教', leadDate: '2026-07-03', createdAt: '2026-07-03' },
+    { id: 'lead-deal-type-only', displayName: 'D', owner: '吴敌', leadStage: '跟进中', systemStatus: '跟进中', dealType: '课程', leadDate: '2026-07-04', createdAt: '2026-07-04' }
   ],
   leadFollowups: [],
   campus: 'all',
@@ -81,6 +82,11 @@ assert.strictEqual(
   vm.runInContext("leadStageDisplayText(leads.find(lead => lead.id === 'lead-coach'))", context),
   '已成交 · 订场会员',
   'lead stage display should show the stored deal type without a duplicate deal type column'
+);
+assert.strictEqual(
+  vm.runInContext("leadStageDisplayText(leads.find(lead => lead.id === 'lead-deal-type-only'))", context),
+  '跟进中',
+  'deal type alone should not force the displayed lead stage to 已成交'
 );
 
 const priorityEmpty = vm.runInContext('renderLeadPriorityCell({ followupPriority: "" })', context);

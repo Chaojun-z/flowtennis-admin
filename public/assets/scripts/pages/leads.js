@@ -189,7 +189,7 @@ function leadConversionTypeText(lead){
 }
 function leadStageText(lead){
   const status=leadStandardField(lead,'leadStage')||String(lead?.systemStatus||lead?.rawStatus||'').trim();
-  if(leadDealTypeText(lead)||status==='已成交')return '已成交';
+  if(status==='已成交'||/已报名|已转|成交/.test(status))return '已成交';
   if(status==='未转化'||status==='未成交')return '跟进中';
   if(status==='已流失'||status==='无意向')return '已流失';
   if(status==='已约体验'||status==='体验课预约')return '已约体验';
@@ -203,7 +203,7 @@ function leadStageDisplayText(lead){
   return stage==='已成交'&&dealType?`已成交 · ${dealType}`:stage;
 }
 function leadConvertedYesNo(lead){
-  return lead?.convertedFlag===true||leadDealTypeText(lead)||leadStageText(lead)==='已成交'?'是':'否';
+  return lead?.convertedFlag===true||leadStageText(lead)==='已成交'?'是':'否';
 }
 function leadCommunicationText(lead){
   const latest=leadFollowupRows(lead)[0]||null;
@@ -1422,6 +1422,20 @@ async function convertLeadToStudent(leadId){
     toast('转化失败：'+e.message,'error');
   }
 }
+function upsertLeadStudentLocal(student){
+  const id=String(student?.id||student?.studentId||'').trim();
+  if(!id)return '';
+  const next={...student,id};
+  const idx=students.findIndex(item=>String(item?.id||'')===id);
+  students=idx>=0?students.map((item,index)=>index===idx?{...item,...next}:item):[next,...students];
+  return id;
+}
+function upsertLeadLocal(lead){
+  const id=String(lead?.id||lead?.leadId||'').trim();
+  if(!id)return;
+  const next={...lead,id};
+  leads=leads.some(item=>String(item?.id||'')===id)?leads.map(item=>String(item?.id||'')===id?{...item,...next}:item):[next,...leads];
+}
 async function convertLeadToStudentAndPurchase(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
@@ -1429,12 +1443,14 @@ async function convertLeadToStudentAndPurchase(leadId){
   if(!await appConfirm(`确认给「${leadDisplayName(lead)}」创建学员档案并继续购买课包？`,{title:'创建学员档案',confirmText:'创建并购买'}))return;
   try{
     const res=await apiCall('POST',`/leads/${leadId}/convert-student`,{});
-    await refreshLeadRuntime({withStudents:true});
+    if(res?.lead)upsertLeadLocal(res.lead);
+    let studentId=upsertLeadStudentLocal(res?.student)||res?.student?.id||leadById(leadId)?.studentId||'';
     await ensureDatasetsByName(['purchasesPage']);
+    studentId=upsertLeadStudentLocal(res?.student)||studentId||leadById(leadId)?.studentId||'';
     renderLeads();
-    const studentId=res?.student?.id||leadById(leadId)?.studentId||'';
     if(!studentId){toast('学员档案创建失败','error');return;}
     openPurchaseModal(studentId);
+    refreshLeadRuntime({withStudents:true}).then(()=>renderLeads()).catch(e=>console.warn('lead runtime refresh skipped after student conversion',e));
   }catch(e){
     toast('创建学员失败：'+e.message,'error');
   }
