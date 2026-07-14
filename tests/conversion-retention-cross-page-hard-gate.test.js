@@ -195,6 +195,43 @@ async function membershipSummaryFromRows(rows = {}) {
     '反例：只有手工课程成交、没有有效上课事实，不能被看板算成历史学员'
   );
 
+  const purchasedNotScheduledSample = {
+    leads: [
+      { id: 'lead-purchased-not-scheduled', displayName: '已买课包未排课', leadDate: '2026-06-01', studentId: 'stu-purchased-not-scheduled' }
+    ],
+    students: [
+      { id: 'stu-purchased-not-scheduled', name: '已买课包未排课', sourceLeadId: 'lead-purchased-not-scheduled' }
+    ],
+    purchases: [
+      { id: 'purchase-purchased-not-scheduled', studentId: 'stu-purchased-not-scheduled', packageName: '成人正式课包', packageLessons: 10, actualAmount: 1200, status: 'active', purchaseDate: '2026-06-05' }
+    ],
+    entitlements: [
+      { id: 'entitlement-purchased-not-scheduled', purchaseId: 'purchase-purchased-not-scheduled', studentId: 'stu-purchased-not-scheduled', packageName: '成人正式课包', totalLessons: 10, remainingLessons: 10, status: 'active', purchaseDate: '2026-06-05' }
+    ],
+    schedule: [],
+    courts: [],
+    membershipAccounts: [],
+    membershipOrders: []
+  };
+  const purchasedNotScheduledLifecycleRows = buildCustomerLifecycleRows(purchasedNotScheduledSample);
+  const purchasedNotScheduledPlatform = buildPlatformMetrics({ ...purchasedNotScheduledSample, customerLifecycleRows: purchasedNotScheduledLifecycleRows });
+  const purchasedNotScheduledHistoricalIds = new Set(purchasedNotScheduledPlatform.teachingStudentViews.historicalStudents.map(row => row.studentId));
+  const purchasedNotScheduledActiveIds = new Set(purchasedNotScheduledPlatform.teachingStudentViews.activeStudents.map(row => row.studentId));
+  assert.ok(
+    purchasedNotScheduledHistoricalIds.has('stu-purchased-not-scheduled'),
+    '已买正式课包但还没排课的人，必须进入历史学员'
+  );
+  assert.ok(
+    purchasedNotScheduledActiveIds.has('stu-purchased-not-scheduled'),
+    '已买正式课包且课包有余额的人，必须进入在期学员'
+  );
+  purchasedNotScheduledActiveIds.forEach(studentId => {
+    assert.ok(
+      purchasedNotScheduledHistoricalIds.has(studentId),
+      '在期学员必须同时属于历史学员'
+    );
+  });
+
   const emptyOperations = buildOperationsMetrics({
     leads: [],
     students: [],

@@ -100,8 +100,8 @@ assert.strictEqual(formalViewRow.completedLessons, 9, '正式学员累计上课�
 assert.strictEqual(formalViewRow.packagePurchaseDate, '2026-06-08', '正式学员课包购买时间必须由后端统一读模型按首次正式课包给出');
 assert.deepStrictEqual(
   standard.views.historicalStudents.map(row => row.studentId).sort(),
-  ['student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
-  '历史学员必须按有效排课事实返回，包含已排课、无档案排课、体验课、正式课包课和单次付费正式课'
+  ['student-direct-course', 'student-formal-schedule-only', 'student-orphan-schedule', 'student-real-trial-deal', 'student-single-pay-31days', 'student-single-pay-91days', 'student-single-pay-active', 'student-single-pay-sleeping'],
+  '历史学员必须按有效排课事实或正式课包购买事实返回，包含已买课包未排课、已排课、无档案排课、体验课、正式课包课和单次付费正式课'
 );
 assert.deepStrictEqual(
   standard.views.activeStudents.map(row => row.studentId).sort(),
@@ -110,7 +110,7 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   standard.teachingSummary.historicalStudentCount,
-  7,
+  8,
   '历史学员顶部总数必须来自历史学员新视图'
 );
 assert.strictEqual(
@@ -260,12 +260,12 @@ const hardHistoricalIds = hardStandard.views.historicalStudents.map(row => row.s
 const hardActiveIds = hardStandard.views.activeStudents.map(row => row.studentId).sort();
 assert.deepStrictEqual(
   hardHistoricalIds,
-  ['hard-blank-formal', 'hard-gift-free', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-old', 'hard-single-recent', 'hard-stable-single'],
-  '历史学员必须只按排课表有效上课事实返回，有课包余额或核销流水但无排课不进入历史学员'
+  ['hard-blank-formal', 'hard-gift-free', 'hard-ledger-only-recent', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-no-lesson', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-old', 'hard-single-recent', 'hard-stable-single'],
+  '历史学员必须按排课表有效上课事实或正式课包购买事实返回，有正式课包但未排课也要进入历史学员'
 );
 assert.deepStrictEqual(
   hardActiveIds,
-  ['hard-blank-formal', 'hard-gift-free', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
+  ['hard-blank-formal', 'hard-gift-free', 'hard-ledger-only-recent', 'hard-package-blank', 'hard-package-cn', 'hard-package-free-note', 'hard-package-low', 'hard-package-no-lesson', 'hard-package-plus-gift', 'hard-past-scheduled', 'hard-renewal-due', 'hard-single-recent', 'hard-stable-single'],
   '在期学员必须是历史学员的子集，并包含课包有余额或90天内上过正式课的人'
 );
 assert.ok(
@@ -351,7 +351,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   hardStandard.teachingSummary.activePackageBalanceCount,
-  5,
+  7,
   '在期学员课包有余额卡片必须由后端统一输出，且只统计在期学员范围内'
 );
 assert.strictEqual(

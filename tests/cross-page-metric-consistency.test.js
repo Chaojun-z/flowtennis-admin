@@ -203,7 +203,7 @@ assert.deepStrictEqual(
   ['courseStudentCount', 7],
   ['trialStudentCount', 2],
   ['formalStudentCount', 3],
-  ['historicalStudentCount', 3],
+  ['historicalStudentCount', 5],
   ['activeStudentCount', 1],
   ['courseDealCustomers', 3],
   ['trialAttendedStudentCount', 2],

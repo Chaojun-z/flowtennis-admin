@@ -1001,6 +1001,10 @@ function teachingStudentHasCompletedLesson(data = {}, row = {}, now = new Date()
   return teachingStudentScheduleRows(data, studentId, schedule => teachingScheduleLessonFact(schedule, now)).length > 0;
 }
 
+function teachingStudentInHistoricalRoster(data = {}, row = {}, now = new Date()) {
+  return teachingStudentHasCompletedLesson(data, row, now) || teachingStudentHasFormalPackage(row);
+}
+
 function teachingStudentInActiveRoster(data = {}, row = {}, now = new Date()) {
   if ((Number(row.packageBalanceRemaining) || 0) > 0) return true;
   const days = teachingDaysSince(teachingStudentLatestFormalLessonDate(data, text(row.studentId)), now);
@@ -1115,7 +1119,7 @@ function teachingStudentStudentStatusLabel(data = {}, row = {}, now = new Date()
 }
 
 function teachingStudentApplyStandardLabels(data = {}, row = {}, now = new Date()) {
-  const isHistoricalStudentRoster = teachingStudentHasCompletedLesson(data, row, now);
+  const isHistoricalStudentRoster = teachingStudentInHistoricalRoster(data, row, now);
   const isActiveStudentRoster = isHistoricalStudentRoster && teachingStudentInActiveRoster(data, row, now);
   return {
     ...row,

@@ -855,6 +855,7 @@ function ensureLeadConversionLookups(leadId){
   if(!lead)return;
   const needed=[];
   if((leadDetailConversionMode==='link-student'&&!(Array.isArray(students)&&students.length))||leadNeedsLookup(students,lead?.studentId))needed.push('students');
+  if(lead?.studentId&&!loadedDatasets.has('purchasesPage'))needed.push('purchasesPage');
   if((leadDetailConversionMode==='link-court'&&!(Array.isArray(courts)&&courts.length))||leadNeedsLookup(courts,lead?.courtId))needed.push('courts');
   if(lead?.formalCoach&&!(Array.isArray(coaches)&&coaches.length))needed.push('coaches');
   if(!needed.length)return;
@@ -1043,6 +1044,7 @@ function leadConversionSummaryHtml(lead){
     leadDetailFieldHtml('线索阶段',leadStageText(lead)),
     leadDetailFieldHtml('成交类型',leadDealTypeText(lead)||'-'),
     leadLinkedAccountFieldHtml(lead,'student'),
+    leadPurchasePackageActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'court'),
     leadDetailFieldHtml('成交教练',linkedCoachName(lead?.formalCoach)),
     leadDetailFieldHtml('成交时间',leadFormalSignupDateText(lead)),
@@ -1061,6 +1063,30 @@ function leadLinkedAccountFieldHtml(lead,type){
   const deleteAction=linked?leadInlineActionHtml('删除',isStudent?`unlinkLeadStudent('${lead.id}')`:`unlinkLeadCourt('${lead.id}')`,'danger'):'';
   const valueHtml=linked?`<span>${esc(value)}</span>`:'';
   return `<div class="schedule-detail-field"><div class="schedule-detail-label">${esc(label)}</div><div class="schedule-detail-value lead-linked-account-value">${valueHtml}<span class="lead-inline-actions">${linkAction}${deleteAction}</span></div></div>`;
+}
+function leadPackageRowIsFormal(row){
+  const text=[row?.courseType,row?.standardCourseType,row?.packageCourseType,row?.type,row?.courseTypeLevel2,row?.packageName,row?.productName,row?.name].filter(Boolean).join(' ');
+  return !/体验|trial|experience/i.test(text);
+}
+function leadPackageRowActive(row){
+  const status=String(row?.status||row?.systemStatus||'').trim();
+  return !['voided','cancelled','canceled','deleted','inactive','已作废','作废'].includes(status);
+}
+function leadHasFormalPackage(lead){
+  const studentId=String(lead?.studentId||'').trim();
+  if(!studentId)return false;
+  return (Array.isArray(entitlements)?entitlements:[]).some(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row))
+    || (Array.isArray(purchases)?purchases:[]).some(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row));
+}
+function leadPurchasePackageActionHtml(lead){
+  if(!lead?.studentId||leadHasFormalPackage(lead))return '';
+  return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包状态</div><div class="schedule-detail-value lead-linked-account-value"><span>已关联学员但未买课包</span><span class="lead-inline-actions">${leadInlineActionHtml('去购买课包',`openLeadPurchasePackage('${lead.id}')`)}</span></div></div>`;
+}
+async function openLeadPurchasePackage(leadId){
+  const lead=leads.find(item=>String(item?.id||'')===String(leadId));
+  if(!lead?.studentId){toast('请先关联学员','warn');return;}
+  await ensureDatasetsByName(['purchasesPage']);
+  openPurchaseModal(lead.studentId);
 }
 function startLeadConversionDrawerMode(leadId,mode){
   leadDetailActiveTab='conversion';
