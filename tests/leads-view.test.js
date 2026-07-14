@@ -75,6 +75,7 @@ assert.match(leadsSource, /function leadTrialDateText\(/, 'leads page should for
 assert.match(leadsSource, /function leadRecentDateText\(/, 'leads page should format recent follow-up date with relative days');
 assert.match(leadsSource, /function leadFormalSignupDateText\(/, 'leads page should format formal signup date');
 assert.match(leadsSource, /function leadPurchaseSignupDate\(/, 'converted course leads should be able to use package purchase dates for formal signup date');
+assert.match(leadsSource, /function leadFormalCoachText\(lead\)/, 'converted course leads should derive deal coach from lifecycle or package purchase owner coach');
 assert.match(leadsSource, /function leadFollowupCount\(/, 'leads page should expose the follow-up count helper');
 assert.match(leadsSource, /function leadCanonicalNameKey\(/, 'leads page should merge leads with the same visible name');
 assert.match(leadsSource, /function leadStatsData\(/, 'leads page should expose summary stats for the filtered lead rows');
@@ -135,7 +136,9 @@ assert.match(fnBody('renderLeadPriorityCell'), /priority==='-'\?renderStandardCe
 assert.match(fnBody('renderLeads'), /renderLeadTag\(leadStageDisplayText\(lead\),'stage'\)[\s\S]*renderStandardCellText\(lead\?\.intentLevel,false\)[\s\S]*renderLeadPriorityCell\(lead\)/, 'lead list should show deal type through lead stage before plain-text intent level');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(leadDealTypeText\(lead\)\|\|'-','dealType'\)/, 'lead list rows should not render a separate deal type tag');
 assert.doesNotMatch(fnBody('renderLeadMobileCards'), /leadDealTypeText\(lead\)\|\|'-'/, 'lead mobile cards should not render a separate deal type tag');
+assert.match(fnBody('renderLeadMobileCards'), /成交教练[\s\S]*leadFormalCoachText\(lead\)/, 'lead mobile cards should show the derived deal coach instead of only raw lead formalCoach');
 assert.doesNotMatch(fnBody('renderLeads'), /renderLeadTag\(lead\?\.owner,'owner'\)/, 'lead list rows should render owner as plain text');
+assert.match(fnBody('renderLeads'), /renderStandardCellText\(leadFormalCoachText\(lead\),leadFormalCoachText\(lead\)==='-'\)/, 'lead list should show the derived deal coach instead of only raw lead formalCoach');
 assert.match(leadsSource, /function leadEmptyStateHtml\([\s\S]*没有匹配的线索[\s\S]*暂无线索[\s\S]*调整搜索或筛选后再试[\s\S]*点击右上角新增线索开始录入/, 'leads empty state should distinguish filtered results from no data');
 assert.match(leadsSource, /function leadDetailFieldHtml\(/, 'lead detail should expose readonly field helper');
 assert.match(leadsSource, /function leadDetailFieldHtml\([\s\S]*renderDetailDrawerField/, 'lead detail readonly fields should use the shared drawer field helper');

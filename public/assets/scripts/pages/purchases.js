@@ -396,7 +396,7 @@ function openPurchaseDrawer(titleHtml,bodyHtml,data={}){
     actionsHtml:'',
     data,
     overlayClasses:['schedule-drawer-overlay'],
-    modalClass:'modal modal-court modal-schedule-drawer'
+    modalClass:'modal modal-court modal-schedule-drawer modal-purchase-drawer'
   });
 }
 function purchaseDrawerActions(cancelOnclick,saveOnclick,saveId,saveText='保存'){
@@ -718,7 +718,13 @@ async function savePurchase(){
   },{
     successText:'购买成功',
     closeOnSuccess:true,
-    refresh:[renderStudents,renderPurchases,renderEntitlements]
+    refresh:async()=>{
+      await ensureDatasetsByName(['purchasesPage','lifecycleMetricsPage'],{force:true});
+      renderStudents();
+      renderPurchases();
+      renderEntitlements();
+      if(currentPage==='leads')renderLeads();
+    }
   });
 }
 function focusPurchaseByPackage(packageId,ownerCoach=''){

@@ -24,6 +24,7 @@ const openPurchaseDetailModal = fnBody('openPurchaseDetailModal');
 const openPurchaseEditModal = fnBody('openPurchaseEditModal');
 const openPurchaseVoidModal = fnBody('openPurchaseVoidModal');
 const openManualEntitlementAdjustModal = fnBody('openManualEntitlementAdjustModal');
+const savePurchase = fnBody('savePurchase');
 
 assert.match(renderPurchases, /openPurchaseDetailModal\('\$\{p\.id\}'\)">查看/, 'purchase list should keep a view action');
 assert.match(renderPurchases, /openPurchaseVoidModal\('\$\{p\.id\}'\)">作废/, 'purchase list should keep a void action');
@@ -34,6 +35,7 @@ assert.doesNotMatch(renderPurchases, /openPurchaseEditModal\('\$\{p\.id\}'\)">�
 });
 assert.match(openPurchaseDrawer, /openStandardDetailDrawer\(/, 'purchase drawer helper should call the standard drawer');
 assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helper should use the right-side drawer shell');
+assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
 assert.match(openPurchaseEditModal, /renderDetailDrawerFormCard\('购买信息'/, 'purchase edit should use one coherent two-column form card');
@@ -58,5 +60,7 @@ assert.match(source, /setDatasetValue\('entitlementLedger',data\.entitlementLedg
 assert.match(source, /String\(l\.purchaseId\|\|''\)===String\(purchaseId\|\|''\)\|\|entIds\.has\(l\.entitlementId\)/, 'purchase ledger should match rows by purchase id as well as entitlement id');
 assert.match(corePageDataSource, /page-data\/purchases[\s\S]*T_ENTITLEMENT_LEDGER[\s\S]*entitlementLedger:scoped\.entitlementLedger/, 'purchase page aggregate endpoint should return lesson ledger rows');
 assert.match(styles, /purchase-snapshot-change-tag/, 'changed snapshot marker should have scoped drawer styling');
+assert.match(styles, /modal-purchase-drawer[\s\S]*#pur_packageId_dropdown[\s\S]*text-overflow:ellipsis/, 'purchase package dropdown should clip long package names instead of overflowing the input');
+assert.match(savePurchase, /ensureDatasetsByName\(\['purchasesPage','lifecycleMetricsPage'\],\{force:true\}\)/, 'purchase save should force-refresh package data and lifecycle student views after creating a purchase');
 
 console.log('purchase drawer view tests passed');

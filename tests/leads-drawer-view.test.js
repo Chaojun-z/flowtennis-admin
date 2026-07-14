@@ -43,12 +43,16 @@ assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /<button[^>]*class="sc
 assert.doesNotMatch(fnBody('leadLinkedAccountFieldHtml'), /未关联/, 'unlinked accounts should only show the inline link text');
 assert.match(source, /function ensureLeadConversionLookups\(/, 'conversion tab should lazy-load linked student/court/coach names');
 assert.match(fnBody('ensureLeadConversionLookups'), /lead\?\.studentId[\s\S]*purchasesPage/, 'conversion tab should lazy-load purchase data before judging whether the linked student has a formal package');
-assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(lead,'student'\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*linkedCoachName\(lead\?\.formalCoach\)/, 'conversion summary should render linked account helpers and coach names instead of raw ids');
+assert.match(fnBody('leadConversionSummaryHtml'), /leadLinkedAccountFieldHtml\(lead,'student'\)[\s\S]*leadPurchasePackageActionHtml\(lead\)[\s\S]*leadLinkedAccountFieldHtml\(lead,'court'\)[\s\S]*leadFormalCoachText\(lead\)/, 'conversion summary should render linked account helpers, package status, and coach names instead of raw ids');
 assert.match(fnBody('leadLinkedAccountFieldHtml'), /linkedStudentName\(lead\)[\s\S]*linkedCourtName\(lead\)/, 'linked account helper should render names instead of raw ids');
 assert.match(source, /function leadHasFormalPackage\(lead\)/, 'lead conversion summary should know whether linked student already has a formal package');
+assert.match(source, /function leadFormalPackageRows\(lead\)/, 'lead conversion summary should collect formal package rows for the linked student');
+assert.match(source, /function leadFormalPackageText\(lead\)/, 'lead conversion summary should render purchased package info after buying a package');
 assert.match(source, /function leadPurchasePackageActionHtml\(lead\)/, 'lead conversion summary should expose a package purchase action for linked students without formal packages');
 assert.match(fnBody('leadConversionSummaryHtml'), /leadPurchasePackageActionHtml\(lead\)/, 'conversion summary should render the package purchase action with the linked student status');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已关联学员但未买课包[\s\S]*去购买课包[\s\S]*openLeadPurchasePackage\('\$\{lead\.id\}'\)/, 'linked students without formal packages should see a purchase package entry');
+assert.match(fnBody('leadPurchasePackageActionHtml'), /已购课包[\s\S]*leadFormalPackageText\(lead\)/, 'linked students with formal packages should keep a package info row after purchase');
+assert.match(source, /function leadFormalCoachText\(lead\)/, 'lead conversion summary should derive deal coach from lifecycle or purchase owner coach');
 assert.match(fnBody('openLeadPurchasePackage'), /ensureDatasetsByName\(\['purchasesPage'\]\)[\s\S]*openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry must lazy-load purchase data and open the existing purchase drawer with the linked student id');
 assert.match(fnBody('openLeadLinkStudentModal'), /startLeadConversionDrawerMode\(leadId,'link-student'\)/, 'link student should stay in the lead drawer');
 assert.match(fnBody('openLeadLinkCourtModal'), /startLeadConversionDrawerMode\(leadId,'link-court'\)/, 'link court should stay in the lead drawer');

@@ -857,7 +857,7 @@ function ensureLeadConversionLookups(leadId){
   if((leadDetailConversionMode==='link-student'&&!(Array.isArray(students)&&students.length))||leadNeedsLookup(students,lead?.studentId))needed.push('students');
   if(lead?.studentId&&!loadedDatasets.has('purchasesPage'))needed.push('purchasesPage');
   if((leadDetailConversionMode==='link-court'&&!(Array.isArray(courts)&&courts.length))||leadNeedsLookup(courts,lead?.courtId))needed.push('courts');
-  if(lead?.formalCoach&&!(Array.isArray(coaches)&&coaches.length))needed.push('coaches');
+  if((leadStandardField(lead,'formalCoach')||leadFormalPackageCoach(lead))&&!(Array.isArray(coaches)&&coaches.length))needed.push('coaches');
   if(!needed.length)return;
   ensureDatasetsByName([...new Set(needed)],{force:false}).then(()=>{
     const currentId=document.getElementById('overlay')?.dataset.leadDetailId||'';
@@ -1046,7 +1046,7 @@ function leadConversionSummaryHtml(lead){
     leadLinkedAccountFieldHtml(lead,'student'),
     leadPurchasePackageActionHtml(lead),
     leadLinkedAccountFieldHtml(lead,'court'),
-    leadDetailFieldHtml('成交教练',linkedCoachName(lead?.formalCoach)),
+    leadDetailFieldHtml('成交教练',leadFormalCoachText(lead)),
     leadDetailFieldHtml('成交时间',leadFormalSignupDateText(lead)),
     leadDetailBlockHtml('流失原因',esc(lead?.lostReason||'-'),{hideEmpty:false})
   ].join('');
@@ -1072,14 +1072,41 @@ function leadPackageRowActive(row){
   const status=String(row?.status||row?.systemStatus||'').trim();
   return !['voided','cancelled','canceled','deleted','inactive','已作废','作废'].includes(status);
 }
-function leadHasFormalPackage(lead){
+function leadFormalPackageRows(lead){
   const studentId=String(lead?.studentId||'').trim();
-  if(!studentId)return false;
-  return (Array.isArray(entitlements)?entitlements:[]).some(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row))
-    || (Array.isArray(purchases)?purchases:[]).some(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row));
+  if(!studentId)return [];
+  const entitlementRows=(Array.isArray(entitlements)?entitlements:[])
+    .filter(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row));
+  const entitlementPurchaseIds=new Set(entitlementRows.map(row=>String(row?.purchaseId||'')).filter(Boolean));
+  const purchaseRows=(Array.isArray(purchases)?purchases:[])
+    .filter(row=>String(row?.studentId||'')===studentId&&leadPackageRowActive(row)&&leadPackageRowIsFormal(row)&&!entitlementPurchaseIds.has(String(row?.id||'')));
+  return [...entitlementRows,...purchaseRows].sort((a,b)=>String(b?.purchaseDate||b?.createdAt||'').localeCompare(String(a?.purchaseDate||a?.createdAt||'')));
+}
+function leadHasFormalPackage(lead){
+  return leadFormalPackageRows(lead).length>0;
+}
+function leadFormalPackageText(lead){
+  const rows=leadFormalPackageRows(lead);
+  return rows.slice(0,2).map(row=>{
+    const name=String(row?.packageName||row?.productName||row?.name||row?.courseType||'正式课包').trim();
+    const total=Number(row?.totalLessons||row?.packageLessons)||0;
+    const remaining=Number(row?.remainingLessons);
+    const balance=total>0&&Number.isFinite(remaining)?` ${lessonQty(remaining)}/${lessonQty(total)}`:total>0?` ${lessonQty(total)}节`:'';
+    return `${name}${balance}`;
+  }).join('；')||'已购课包';
+}
+function leadFormalPackageCoach(lead){
+  const row=leadFormalPackageRows(lead).find(item=>String(item?.ownerCoach||item?.coach||item?.coachName||'').trim())||{};
+  return String(row.ownerCoach||row.coach||row.coachName||'').trim();
+}
+function leadFormalCoachText(lead){
+  return linkedCoachName(leadStandardField(lead,'formalCoach')||leadFormalPackageCoach(lead));
 }
 function leadPurchasePackageActionHtml(lead){
-  if(!lead?.studentId||leadHasFormalPackage(lead))return '';
+  if(!lead?.studentId)return '';
+  if(leadHasFormalPackage(lead)){
+    return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包信息</div><div class="schedule-detail-value lead-linked-account-value"><span>已购课包：${esc(leadFormalPackageText(lead))}</span></div></div>`;
+  }
   return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包状态</div><div class="schedule-detail-value lead-linked-account-value"><span>已关联学员但未买课包</span><span class="lead-inline-actions">${leadInlineActionHtml('去购买课包',`openLeadPurchasePackage('${lead.id}')`)}</span></div></div>`;
 }
 async function openLeadPurchasePackage(leadId){
@@ -1464,7 +1491,7 @@ function renderLeadMobileCards(list){
         <span><b>来源</b>${esc(leadSourceText(lead)||'-')}</span>
         <span><b>跟进人</b>${esc(leadOwnerText(lead))}</span>
         <span><b>体验课</b>${esc(trialDate||'-')}</span>
-        <span><b>成交教练</b>${esc(lead?.formalCoach||'-')}</span>
+        <span><b>成交教练</b>${esc(leadFormalCoachText(lead))}</span>
       </div>
       <p>${esc(leadProfileText(lead)||'暂无基本信息')}</p>
       <div class="admin-h5-card-actions"><button type="button" onclick="openLeadDetailFromList('${lead.id}')">查看</button><button type="button" onclick="openLeadFollowupFromList('${lead.id}')">跟进</button></div>
@@ -1508,7 +1535,7 @@ function renderLeads(){
   if(!tbody)return;
   tbody.innerHTML=slice.length?slice.map(lead=>{
     const trialDate=leadTrialDateText(lead);
-    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(leadWechatText(lead))}</div></td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadPriorityCell(lead)}</td><td>${renderStandardCellText(leadOwnerText(lead),leadOwnerText(lead)==='-')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(lead?.formalCoach||'-',!lead?.formalCoach)}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
+    return `<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(leadWechatText(lead))}</div></td><td>${renderStandardCellText(leadDateDisplayText(lead),leadDateDisplayText(lead)==='-')}</td><td>${renderStandardCellText(leadSourceText(lead),false)}</td><td>${renderLeadTag(leadCustomerTypeText(lead),'customerType')}</td><td>${renderLeadTag(leadDemandProductText(lead),'demandProduct')}</td><td>${renderStandardCellText(leadLevelText(lead),leadLevelText(lead)==='-')}</td><td>${renderStandardTooltipText(leadProfileText(lead))}</td><td>${renderLeadTag(leadStageDisplayText(lead),'stage')}</td><td>${renderStandardCellText(lead?.intentLevel,false)}</td><td>${renderLeadPriorityCell(lead)}</td><td>${renderStandardCellText(leadOwnerText(lead),leadOwnerText(lead)==='-')}</td><td>${renderStandardCellText(trialDate,trialDate==='-')}</td><td>${renderStandardCellText(leadFormalCoachText(lead),leadFormalCoachText(lead)==='-')}</td><td>${renderStandardTooltipText(lead?.lostReason||'')}</td><td class="tms-sticky-r tms-action-cell" style="width:150px;padding-right:20px"><span class="tms-action-link" onclick="openLeadDetailFromList('${lead.id}')">查看</span><span class="tms-action-link" onclick="openLeadFollowupFromList('${lead.id}')">跟进</span></td></tr>`;
   }).join(''):leadEmptyStateHtml();
   renderLeadMobileCards(slice);
   const info=document.getElementById('leadPagerInfo');
