@@ -55,7 +55,7 @@ function createCorePageDataRoutes(deps={}){
         cappedScan(T_ENTITLEMENTS),
         cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
         T_LEADS ? cappedScan(T_LEADS, PRODUCTION_PAGE_READ_LIMITS.leads).catch(()=>[]) : Promise.resolve([]),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([]),
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
         T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
         T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);
@@ -79,7 +79,7 @@ function createCorePageDataRoutes(deps={}){
         cappedScan(T_PURCHASES),
         cappedScan(T_ENTITLEMENTS),
         cappedScan(T_ENTITLEMENT_LEDGER, PRODUCTION_PAGE_READ_LIMITS.entitlementLedger),
-        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule).catch(()=>[]) : Promise.resolve([]),
+        T_SCHEDULE ? cappedScan(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS.schedule) : Promise.resolve([]),
         T_MEMBERSHIP_BENEFIT_LEDGER ? cappedScan(T_MEMBERSHIP_BENEFIT_LEDGER).catch(()=>[]) : Promise.resolve([]),
         T_FEEDBACKS ? cappedScan(T_FEEDBACKS).catch(()=>[]) : Promise.resolve([])
       ]);

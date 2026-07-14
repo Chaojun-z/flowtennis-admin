@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '../public/assets/scripts/core/state.js'), 'utf8');
+const corePagesSource = fs.readFileSync(path.join(__dirname, '../server/page-data/core-pages.js'), 'utf8');
+const apiSource = fs.readFileSync(path.join(__dirname, '../api/index.js'), 'utf8');
 
 assert.match(source, /students:\['campuses','students','coaches'\]/, 'students page should only block on the datasets needed to paint the list and coach filter immediately');
 assert.match(source, /leads:\['campuses','leads'\]/, 'leads page should only block on the data needed for first paint');
@@ -67,5 +69,7 @@ assert.match(source, /function refreshScopedTopSummaryForCurrentPage\(\)/, 'top-
 assert.match(source, /ensureDatasetsByName\(names,\{force:true\}\)\.then\(\(\)=>\{[\s\S]*renderScopedSummaryPage\(pg\)/, 'top filter changes should still refresh the backend scoped summary');
 assert.match(source, /return false;/, 'top filters should repaint the current page immediately and refresh backend scoped summaries asynchronously');
 assert.match(source, /loadPageBackgroundDatasets\(pg,requestVersion,\{force\}\);/, 'page background loading should revalidate cached data without blocking first paint');
+assert.match(apiSource, /schedule:2000,entitlementLedger:2000,/, 'production lifecycle page-data schedule reads must not be capped below current live schedule volume');
+assert.doesNotMatch(corePagesSource, /T_SCHEDULE \? cappedScan\(T_SCHEDULE, PRODUCTION_PAGE_READ_LIMITS\.schedule\)\.catch\(\(\)=>\[\]\) : Promise\.resolve\(\[\]\)/, 'student lifecycle page-data must not silently treat schedule read overflow as an empty schedule table');
 
 console.log('page data requirements tests passed');

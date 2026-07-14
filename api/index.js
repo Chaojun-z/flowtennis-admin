@@ -304,7 +304,7 @@ const PRODUCTION_PAGE_READ_LIMITS={
   default:500,
   leads:LEAD_SOURCE_READ_LIMIT,
   leadFollowups:1000,
-  schedule:800,entitlementLedger:2000,
+  schedule:2000,entitlementLedger:2000,
   [T_COURTS]:1000,
   adminUsers:200
 };
