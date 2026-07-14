@@ -38,6 +38,19 @@ async function main() {
       isCourseConverted: false,
       createdAt: '2026-07-09',
       updatedAt: '2026-07-09'
+    }, {
+      id: 'lead-feng',
+      displayName: '冯先生',
+      wechatName: '冯先生',
+      leadStage: '已成交',
+      systemStatus: '已成交',
+      rawStatus: '已成交',
+      dealType: '课程',
+      conversionType: '课程',
+      studentId: '',
+      isCourseConverted: true,
+      createdAt: '2026-07-01',
+      updatedAt: '2026-07-01'
     }],
     ft_lead_followups: [{
       id: 'fu-wly',
@@ -48,6 +61,15 @@ async function main() {
       followupAt: '2026-07-09',
       createdAt: '2026-07-09',
       updatedAt: '2026-07-09'
+    }, {
+      id: 'fu-feng',
+      leadId: 'lead-feng',
+      statusAfter: '已体验待成交',
+      dealType: '',
+      conversionType: '',
+      followupAt: '2026-07-10',
+      createdAt: '2026-07-10',
+      updatedAt: '2026-07-10'
     }],
     ft_students: [],
     ft_purchases: [],
@@ -105,6 +127,11 @@ async function main() {
   assert.ok(leadRow, '已成交课程线索必须仍在线索池可见');
   assert.strictEqual(leadRow.leadStage, '已成交', '线索池阶段必须使用最新跟进快照');
   assert.strictEqual(leadRow.dealType, '课程', '线索池成交类型必须使用最新跟进快照，保证创建学员入口出现');
+  const downgradedRow = listRes.body.find(row => row.id === 'lead-feng');
+  assert.ok(downgradedRow, '旧成交线索必须仍在线索池可见');
+  assert.strictEqual(downgradedRow.leadStage, '已体验待成交', '最新跟进降为已体验待成交时，线索池不能继续显示旧成交状态');
+  assert.strictEqual(downgradedRow.dealType, '', '最新跟进不是已成交时，线索池不能继续保留旧成交类型');
+  assert.strictEqual(downgradedRow.isCourseConverted, false, '最新跟进不是已成交时，旧课程成交快照必须失效');
 
   const updateRes = makeRes();
   await handle({
@@ -122,6 +149,19 @@ async function main() {
     writes.some(item => item.table === 'ft_leads' && item.id === 'lead-wly' && item.row.dealType === '课程'),
     '基础信息保存必须把统一后的当前线索状态写回主表'
   );
+
+  const downgradeUpdateRes = makeRes();
+  await handle({
+    path: '/leads/lead-feng',
+    method: 'PUT',
+    body: { owner: 'Mira' },
+    user: { role: 'admin' },
+    res: downgradeUpdateRes,
+    query: new URLSearchParams()
+  });
+  assert.strictEqual(downgradeUpdateRes.body.leadStage, '已体验待成交', '保存基础信息后不能把已降级的最新跟进状态改回已成交');
+  assert.strictEqual(downgradeUpdateRes.body.dealType, '', '保存基础信息后不能把已降级的成交类型改回课程');
+  assert.strictEqual(downgradeUpdateRes.body.isCourseConverted, false, '保存基础信息后不能保留旧课程成交快照');
 
   console.log('leads current state sync tests passed');
 }

@@ -719,15 +719,15 @@ function normalizeLifecycleDealType(value = '') {
 }
 
 function manualLeadOutcomeStage(lead = {}) {
-  if (isOrphanMaterializedStudentLead(lead)) return '';
+  if (isOrphanMaterializedStudentLead(lead) && !text(lead.lastFollowupAt)) return '';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
-  const convertedText = /成交|已报名|已订场|已定场|储值|会员/.test(explicit) || (/转化/.test(explicit) && !/未转化|待转化/.test(explicit));
-  if (lead.isCourseConverted === true || lead.isCourtConverted === true || lead.isMembershipConverted === true || convertedText) return '已成交';
   if (/流失|无意向/.test(explicit)) return '已流失';
   if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
   if (/已约|预约|约体验/.test(explicit)) return '已约体验';
   if (/新线索/.test(explicit)) return '新线索';
   if (/跟进|沟通|对接/.test(explicit)) return '跟进中';
+  const convertedText = /成交|已报名|已订场|已定场|储值|会员/.test(explicit) || (/转化/.test(explicit) && !/未转化|待转化/.test(explicit));
+  if (lead.isCourseConverted === true || lead.isCourtConverted === true || lead.isMembershipConverted === true || convertedText) return '已成交';
   return '';
 }
 
@@ -819,6 +819,9 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
     const lead = existing || {};
     const leadStage = lifecycleLeadStage(lifecycle, lead);
     const dealType = lifecycleDealType(lifecycle, lead);
+    const realStudentId = text(lead.studentId || lead.formalStudentId || lead.courseStudentId);
+    const realCourtId = text(lead.courtId || lead.bookingCourtId);
+    const realMembershipAccountId = text(lead.membershipAccountId || lead.memberId);
     const next = {
       ...lead,
       id,
@@ -843,9 +846,9 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       profileNote: visibleLeadProfileNote(lead),
       dealType,
       conversionType: dealType,
-      studentId: text(lifecycle.studentId || lead.studentId || lead.formalStudentId || lead.courseStudentId),
-      courtId: text(lifecycle.courtId || lead.courtId || lead.bookingCourtId),
-      membershipAccountId: text(lifecycle.membershipAccountId || lead.membershipAccountId || lead.memberId),
+      studentId: realStudentId || (!existing ? text(lifecycle.studentId) : ''),
+      courtId: realCourtId || (!existing ? text(lifecycle.courtId) : ''),
+      membershipAccountId: realMembershipAccountId || (!existing ? text(lifecycle.membershipAccountId) : ''),
       leadDate: leadBusinessDate(lifecycle, lead),
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
       leadStage,

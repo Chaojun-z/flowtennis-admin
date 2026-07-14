@@ -47,7 +47,7 @@ async function main() {
         id: 'lead-from-student-student-shell',
         displayName: '学生壳',
         wechatName: '学生壳',
-        studentId: 'student-shell',
+        studentId: '',
         source: '小红书',
         customerType: '成人',
         demandProduct: '其他',
@@ -65,7 +65,7 @@ async function main() {
       { id: 'student-2', name: '可搜学员', phone: '13900000002', createdAt: '2026-06-26 03:37:16' },
       { id: 'student-3', name: '污染学员', phone: '13900000003', sourceLeadId: 'lead-polluted', createdAt: '2026-06-26 03:37:16' },
       { id: 'student-4', name: '丫丫', phone: '13900000004', createdAt: '2026-06-26 03:37:16' },
-      { id: 'student-shell', name: '学生壳', phone: '', campus: 'chaojun', updatedAt: '2026-06-01 09:51:06' }
+      { id: 'student-shell', name: '学生壳', phone: '', campus: 'chaojun', sourceLeadId: 'lead-from-student-student-shell', updatedAt: '2026-06-01 09:51:06' }
     ],
     ft_courts: [{ id: 'court-1', name: '小成', status: 'active' }],
     ft_purchases: [{
@@ -150,6 +150,7 @@ async function main() {
   assert.strictEqual(shellStudentLead.leadDate, '', '学生壳没有业务事实时不能用合成线索 createdAt 显示为 6 月 26');
   assert.strictEqual(shellStudentLead.leadStage, '跟进中', '学生壳没有业务事实时不能显示已成交');
   assert.strictEqual(shellStudentLead.dealType, '', '学生壳没有业务事实时不能显示已成交课程');
+  assert.strictEqual(shellStudentLead.studentId, '', '线索主表没有 studentId 时，生命周期同名或历史 sourceLeadId 不能伪装成已关联学员');
   assert.ok(!String(materializedStudentLead.id).startsWith('student:'), '线索池列表不能把 student: 临时 ID 暴露给编辑保存');
   assert.ok(
     writes.some((item) => item.table === 'ft_leads' && item.id === 'lead-from-student-student-2' && item.row.studentId === 'student-2' && item.row.leadDate === '2026-04-15' && item.row.profileNote === ''),

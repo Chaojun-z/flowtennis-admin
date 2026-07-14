@@ -5660,12 +5660,13 @@ function extractLeadPhoneMeta(value){
 }
 function deriveLeadSystemStatus(input={}){
   const rawStatus=cleanLeadText(input.rawStatus||input.statusAfter||input.leadStage||input.systemStatus);
-  const linked=cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
-  if(linked||/已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值|成交/.test(rawStatus))return '已成交';
   if(rawStatus==='已流失'||rawStatus==='无意向')return '已流失';
   if(rawStatus==='体验课预约'||rawStatus==='已约体验')return '已约体验';
   if(['体验课完成','已体验待转化','已体验待成交'].includes(rawStatus))return '已体验待成交';
-  return rawStatus==='新线索'?'新线索':'跟进中';
+  if(['新线索','跟进中'].includes(rawStatus))return rawStatus;
+  if(/成交|已报名|已转课程|已转订场|已订场|已定场|定场|订场|会员|储值/.test(rawStatus))return '已成交';
+  const linked=cleanLeadText(input.courtId)||cleanLeadText(input.membershipAccountId)||input.isCourseConverted===true||input.isCourtConverted===true||input.isMembershipConverted===true;
+  return linked?'已成交':'跟进中';
 }
 const LEAD_DEAL_TYPE_VALUES=['课程','订场','订场会员','课程+订场','课程+订场会员','订场+订场会员','课程+订场+订场会员'];
 function normalizeLeadDealType(value){
@@ -5753,6 +5754,10 @@ function normalizeLeadFollowupRecord(input={},opts={}){
   };
 }
 function applyLeadFollowupSnapshot(lead,followup){
+  const statusAfter=cleanLeadText(followup.statusAfter);
+  const followupDealType=cleanLeadText(followup.dealType||followup.conversionType);
+  const hasFollowupStatus=!!statusAfter;
+  const converted=statusAfter==='已成交';
   const next={
     ...lead,
     lastFollowupAt:cleanLeadText(followup.followupAt)||lead.lastFollowupAt||'',
@@ -5760,11 +5765,12 @@ function applyLeadFollowupSnapshot(lead,followup){
     latestConclusion:cleanLeadText(followup.conclusion)||lead.latestConclusion||'',
     nextFollowupAt:cleanLeadText(followup.nextFollowupAt)||'',
     nextAction:cleanLeadText(followup.nextAction)||'',
-    dealType:cleanLeadText(followup.dealType)||lead.dealType||'',
-    conversionType:cleanLeadText(followup.dealType||followup.conversionType)||lead.conversionType||'',
-    rawStatus:cleanLeadText(followup.statusAfter)||lead.rawStatus||'',
+    dealType:hasFollowupStatus?(converted?followupDealType:''):(lead.dealType||''),
+    conversionType:hasFollowupStatus?(converted?followupDealType:''):(lead.conversionType||''),
+    rawStatus:statusAfter||lead.rawStatus||'',
     updatedAt:followup.updatedAt||new Date().toISOString()
   };
+  if(hasFollowupStatus){next.convertedFlag=converted;next.isCourseConverted=converted&&followupDealType.split('+').includes('课程');next.isCourtConverted=converted&&followupDealType.split('+').includes('订场');next.isMembershipConverted=converted&&followupDealType.split('+').includes('订场会员');}
   return applyLeadOutcomeFields(next);
 }
 function latestLeadFollowupSnapshot(followups=[]){

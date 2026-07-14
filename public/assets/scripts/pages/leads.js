@@ -189,11 +189,11 @@ function leadConversionTypeText(lead){
 }
 function leadStageText(lead){
   const status=leadStandardField(lead,'leadStage')||String(lead?.systemStatus||lead?.rawStatus||'').trim();
-  if(status==='已成交'||/已报名|已转|成交/.test(status))return '已成交';
   if(status==='未转化'||status==='未成交')return '跟进中';
   if(status==='已流失'||status==='无意向')return '已流失';
   if(status==='已约体验'||status==='体验课预约')return '已约体验';
   if(status==='体验课完成'||status==='已体验待转化'||status==='已体验待成交'||leadTrialDone(lead))return '已体验待成交';
+  if(status==='已成交'||/已报名|已转|成交/.test(status))return '已成交';
   if(status==='新线索')return '新线索';
   return '跟进中';
 }
@@ -1106,6 +1106,9 @@ function leadPurchasePackageActionHtml(lead){
   if(!lead?.studentId){
     if(leadStageText(lead)==='已成交'&&/课程/.test(leadDealTypeText(lead))){
       return `<div class="schedule-detail-field"><div class="schedule-detail-label">学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交课程但未创建学员档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建学员档案并购买课包',`convertLeadToStudentAndPurchase('${lead.id}')`)}</span></div></div>`;
+    }
+    if(leadStageText(lead)==='已约体验'||leadStageText(lead)==='已体验待成交'){
+      return `<div class="schedule-detail-field"><div class="schedule-detail-label">体验学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>需要先创建学员档案才能买体验课包和排课</span><span class="lead-inline-actions">${leadInlineActionHtml('创建体验学员档案并购买体验课包',`convertLeadToStudentAndPurchase('${lead.id}')`)}</span></div></div>`;
     }
     return '';
   }

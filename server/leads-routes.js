@@ -433,7 +433,12 @@ function createLeadsRoutes(deps={}){
       const now=new Date().toISOString();
       const nextLead=normalizeLeadRecord({...lead,studentId:'',isCourseConverted:false,dealType:'',conversionType:'',createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,student});
+      let nextStudent=student;
+      if(student&&cleanLeadText(student.sourceLeadId||student.leadId||student.fromLeadId)===cleanLeadText(lead.id)){
+        nextStudent={...student,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
+        await put(T_STUDENTS,nextStudent.id,nextStudent);
+      }
+      return sendJson(res,{lead:nextLead,student:nextStudent});
     }
     const leadUnlinkCourtM=path.match(/^\/leads\/([^/]+)\/unlink-court$/);
     if(leadUnlinkCourtM&&method==='POST'){
@@ -446,7 +451,12 @@ function createLeadsRoutes(deps={}){
       const now=new Date().toISOString();
       const nextLead=normalizeLeadRecord({...lead,courtId:'',membershipAccountId:'',isCourtConverted:false,isMembershipConverted:false,dealType:'',conversionType:'',createdAt:lead.createdAt},{id:lead.id,now});
       await put(T_LEADS,lead.id,nextLead);
-      return sendJson(res,{lead:nextLead,court});
+      let nextCourt=court;
+      if(court&&cleanLeadText(court.sourceLeadId||court.leadId||court.fromLeadId)===cleanLeadText(lead.id)){
+        nextCourt={...court,sourceLeadId:'',leadId:'',fromLeadId:'',updatedAt:now};
+        await put(T_COURTS,nextCourt.id,nextCourt);
+      }
+      return sendJson(res,{lead:nextLead,court:nextCourt});
     }
     return false;
   };

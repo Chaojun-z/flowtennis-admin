@@ -70,6 +70,7 @@ const handle = createLeadsRoutes({
   assert.strictEqual(studentRes.body.lead.studentId, '', 'unlink student should clear only the lead student link');
   assert.strictEqual(studentRes.body.lead.courtId, 'court-1', 'unlink student should keep the court link');
   assert.strictEqual(studentRes.body.student.id, 'stu-1', 'unlink student should return the untouched student account');
+  assert.strictEqual(rows.ft_students.find(row => row.id === 'stu-1').sourceLeadId, '', 'unlink student must clear the reverse sourceLeadId so the link cannot reappear after reopening');
   assert.ok(rows.ft_students.find(row => row.id === 'stu-1'), 'unlink student must not delete the student account');
 
   const courtRes = makeRes();
