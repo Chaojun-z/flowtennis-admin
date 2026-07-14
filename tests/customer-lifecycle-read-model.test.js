@@ -261,6 +261,58 @@ const linkedStudentViews = buildTeachingStudentViews(linkedStudentDisplayRows, {
 });
 assert.strictEqual(linkedStudentViews.activeStudents[0].name, '莲儿（连女士）', 'active student list should display the backend unified real student name');
 
+const depletedRecentScheduledRows = buildCustomerLifecycleRows({
+  students: [{ id: 'student-dede', name: '德德', campus: 'mabao' }],
+  purchases: [{
+    id: 'purchase-dede',
+    studentId: 'student-dede',
+    studentName: '德德',
+    courseType: '私教课',
+    packageName: '1v1私教课 · 10课时 · 非黄金',
+    status: 'active',
+    purchaseDate: '2026-06-10',
+    amountPaid: 6800
+  }],
+  entitlements: [{
+    id: 'entitlement-dede',
+    studentId: 'student-dede',
+    studentName: '德德',
+    courseType: '私教课',
+    packageName: '1v1私教课 · 10课时 · 非黄金',
+    totalLessons: 10,
+    remainingLessons: 0,
+    status: 'depleted'
+  }],
+  schedule: [{
+    id: 'schedule-dede',
+    studentIds: ['student-dede'],
+    studentName: '德德',
+    courseType: '私教课',
+    status: '已排课',
+    startTime: '2026-07-14 11:00'
+  }]
+});
+const depletedRecentScheduledViews = buildTeachingStudentViews(depletedRecentScheduledRows, {
+  students: [{ id: 'student-dede', name: '德德', campus: 'mabao' }],
+  purchases: [{ id: 'purchase-dede', studentId: 'student-dede', studentName: '德德', courseType: '私教课', packageName: '1v1私教课 · 10课时 · 非黄金', status: 'active', purchaseDate: '2026-06-10', amountPaid: 6800 }],
+  entitlements: [{ id: 'entitlement-dede', studentId: 'student-dede', studentName: '德德', courseType: '私教课', packageName: '1v1私教课 · 10课时 · 非黄金', totalLessons: 10, remainingLessons: 0, status: 'depleted' }],
+  schedule: [{ id: 'schedule-dede', studentIds: ['student-dede'], studentName: '德德', courseType: '私教课', status: '已排课', startTime: '2026-07-14 11:00' }],
+  now: new Date('2026-07-14T15:30:00+08:00')
+});
+assert.ok(
+  depletedRecentScheduledViews.historicalStudents.some(row => row.studentId === 'student-dede'),
+  '课包已用完但有过去已排课正式课的学员必须保留在历史学员'
+);
+assert.ok(
+  depletedRecentScheduledViews.activeStudents.some(row => row.studentId === 'student-dede'),
+  '课包已用完但近90天有过去已排课正式课的学员必须保留在在期学员'
+);
+assert.strictEqual(
+  depletedRecentScheduledViews.activeStudents.find(row => row.studentId === 'student-dede').lastFormalLessonAt,
+  '2026-07-14',
+  '过去已排课正式课必须进入最近正式课日期'
+);
+
 const directPrivateRows = buildCustomerLifecycleRows({
   students: [
     {

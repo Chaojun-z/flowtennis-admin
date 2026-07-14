@@ -979,6 +979,7 @@ function teachingScheduleLessonFact(row = {}, now = new Date()) {
   const base = now instanceof Date
     ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     : dateOnly(now);
+  if (status === '已排课') return !!day && !!base && day <= base;
   return !!day && !!base && day <= base;
 }
 
