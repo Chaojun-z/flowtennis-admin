@@ -588,7 +588,7 @@ function smallGroupRuleSnapshot(source={}){
   if(!isSmallGroupCourse(source))return {};
   const smallClassType=inferSmallClassType(source,parseInt(source.lessons||source.totalLessons||source.packageLessons)===6?'bootcamp':'single');
   const maxStudents=parseInt(source.maxStudents)||4;
-  const fixedStudentCount=smallClassType==='bootcamp'?4:(parseInt(source.fixedStudentCount)||0);
+  const fixedStudentCount=0;
   const minAttendStudents=smallClassType==='bootcamp'?2:(parseInt(source.minAttendStudents)||2);
   const freeAbsenceLimit=smallClassType==='bootcamp'?1:(parseInt(source.freeAbsenceLimit)||0);
   return {smallClassType,maxStudents,fixedStudentCount,minAttendStudents,freeAbsenceLimit};

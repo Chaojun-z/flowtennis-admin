@@ -566,9 +566,10 @@ function applySmallClassPackagePreset(){
   const preset=presets[sub]||presets.single;
   const price=document.getElementById('pkg_price');
   const lessons=document.getElementById('pkg_lessons');
+  const currentMaxStudents=document.getElementById('pkg_maxStudents')?.value||'';
   if(price)price.value=preset.price;
   if(lessons)lessons.value=preset.lessons;
-  setStandardDropdownValue('pkg_maxStudents',preset.maxStudents,`1v${preset.maxStudents}`);
+  if(!currentMaxStudents||currentMaxStudents==='1')setStandardDropdownValue('pkg_maxStudents',preset.maxStudents,`1v${preset.maxStudents}`);
   setStandardDropdownValue('pkg_timeBand',preset.timeBand,preset.timeBand);
   setPackageLessonShortcut(preset.lessons);
   applyPackageTimeBandPreset(preset.timeBand);
@@ -735,8 +736,6 @@ function packageSaveErrorText(err){
     '请选择小班课类型':'小班课类型还没选，请先选择小班课类型',
     '小班单次必须是 1 次':'单次小班课请把课时改成 1',
     '训练营必须是黄金时段':'训练营只能选黄金时段',
-    '训练营固定 4 人':'训练营人数必须是 4 人',
-    '随到随学必须是 6 次':'随到随学请把课时改成 6',
     '活动结束时间不能早于活动开始时间':'活动时间结束日期不能早于开始日期',
     '可用结束时间不能早于可用开始时间':'可用时间结束日期不能早于开始日期',
     '可用时段请填写完整':'请把可用时段的开始和结束时间都填完整',
@@ -782,7 +781,7 @@ async function savePackage(){
     endTime:idx===0?timeEnd:timeEnd2,
     daysOfWeek:preset.daysOfWeek
   })).filter(row=>row.startTime&&row.endTime);
-  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:courseType==='小班课'&&smallClassType==='bootcamp'?4:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:0,saleStartDate,saleEndDate:'',usageStartDate,usageEndDate:'',timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
+  const data={name,productId:'',productName:'',courseType,audience,type:audience,experienceType:courseType==='体验课'?experienceType:'',smallClassType:courseType==='小班课'?smallClassType:'',courseTypeLevel2:courseTypeLevel2Label(courseType,experienceType,smallClassType),standardCourseType:standardCourseTypeLabel(courseType,experienceType,smallClassType),fixedStudentCount:0,minAttendStudents:courseType==='小班课'?2:0,freeAbsenceLimit:courseType==='小班课'&&smallClassType==='bootcamp'?1:0,ownerCoach,price:parseFloat(document.getElementById('pkg_price').value)||0,lessons:parseInt(document.getElementById('pkg_lessons').value)||0,validDays:0,saleStartDate,saleEndDate:'',usageStartDate,usageEndDate:'',timeBand,dailyTimeWindows,coachNames,coachIds:coachNames,campusIds,maxStudents:parseInt(document.getElementById('pkg_maxStudents').value)||1,status:document.getElementById('pkg_status').value,notes:document.getElementById('pkg_notes').value.trim()};
   await runStandardMutation(document.querySelector('.btn-save'),async()=>{
     if(editId){const r=await apiCall('PUT','/packages/'+editId,data);const i=packages.findIndex(x=>x.id===editId);packages[i]=r;}
     else{const r=await apiCall('POST','/packages',data);packages.unshift(r);}

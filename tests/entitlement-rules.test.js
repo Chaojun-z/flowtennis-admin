@@ -469,6 +469,28 @@ for(const lessons of [10,20,12]){
   );
 }
 
+for(const maxStudents of [2,3,4]){
+  const bootcamp = {
+    ...smallGroupBootcampPackage,
+    maxStudents,
+    fixedStudentCount: 0
+  };
+  assert.doesNotThrow(
+    () => rules.validatePackageInput(bootcamp, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
+    `small group bootcamp should allow 1v${maxStudents} instead of forcing 1v4`
+  );
+  assert.strictEqual(
+    rules.normalizePackageRecord(bootcamp, null, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }).fixedStudentCount,
+    0,
+    `small group bootcamp 1v${maxStudents} should not persist a fixed 4-person class size`
+  );
+}
+
+assert.doesNotThrow(
+  () => rules.validatePackageInput({ ...smallGroupBootcampPackage, smallClassType: 'dropin', price: 5200, lessons: 10, timeBand: '全天', maxStudents: 3, fixedStudentCount: 0, freeAbsenceLimit: 0 }, { products: [], coaches: [{ id: 'coach-1', name: '朝珺' }], campuses: [{ id: 'shunyi_mapo' }] }),
+  'small group dropin should allow 1v3 multi-session packages instead of forcing 6 lessons'
+);
+
 for(const smallClassPackage of [
   { ...smallGroupBootcampPackage, smallClassType: 'single', price: 199, lessons: 1, timeBand: '全天', fixedStudentCount: 0 },
   { ...smallGroupBootcampPackage, smallClassType: 'bootcamp', price: 2888, lessons: 10 },
@@ -514,11 +536,11 @@ assert.deepStrictEqual(
     packageLessons: 10,
     packagePrice: 1888,
     maxStudents: 4,
-    fixedStudentCount: 4,
+    fixedStudentCount: 0,
     minAttendStudents: 2,
     freeAbsenceLimit: 1
   },
-  'small group purchase should keep the bootcamp rule snapshot'
+  'small group purchase should keep the bootcamp rule snapshot without fixed class size'
 );
 
 const smallGroupEntitlement = rules.buildEntitlementFromPurchase(
