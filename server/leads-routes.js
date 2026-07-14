@@ -65,6 +65,48 @@ function createLeadsRoutes(deps={}){
     return normalizeLeadRecord?normalizeLeadRecord(raw,{id,now}):raw;
   }
 
+  function groupLeadFollowupsByLeadId(followups=[]){
+    const map=new Map();
+    for(const row of followups||[]){
+      const leadId=cleanLeadText(row?.leadId);
+      if(!leadId)continue;
+      const list=map.get(leadId)||[];
+      list.push(row);
+      map.set(leadId,list);
+    }
+    return map;
+  }
+
+  function applyCurrentLeadSnapshots(leads=[],followups=[]){
+    if(typeof applyLeadFollowupsSnapshot!=='function')return leads||[];
+    const followupsByLeadId=groupLeadFollowupsByLeadId(followups);
+    return (leads||[]).map(lead=>{
+      const leadId=cleanLeadText(lead?.id);
+      const rows=leadId?followupsByLeadId.get(leadId):null;
+      return rows?.length?applyLeadFollowupsSnapshot(lead,rows):lead;
+    });
+  }
+
+  async function readLeadFollowupRows(){
+    if(!T_LEAD_FOLLOWUPS)return [];
+    if(isProductionRuntime()){
+      if(typeof scanFirstRows!=='function')return [];
+      return scanFirstRows(T_LEAD_FOLLOWUPS,{
+        limit:PRODUCTION_PAGE_READ_LIMITS?.leadFollowups,
+        columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS
+      }).catch(()=>[]);
+    }
+    if(typeof getCachedScan!=='function')return [];
+    return getCachedScan(T_LEAD_FOLLOWUPS,{columns:LEAD_FOLLOWUP_LIST_PROJECTION_FIELDS}).catch(()=>[]);
+  }
+
+  async function applyPersistedLeadSnapshot(lead){
+    const leadId=cleanLeadText(lead?.id);
+    if(!leadId||!T_LEAD_FOLLOWUPS||typeof scan!=='function'||typeof applyLeadFollowupsSnapshot!=='function')return lead;
+    const rows=(await scan(T_LEAD_FOLLOWUPS).catch(()=>[])).filter(row=>cleanLeadText(row.leadId)===leadId);
+    return rows.length?applyLeadFollowupsSnapshot(lead,rows):lead;
+  }
+
   async function materializeStudentLifecycleLeads(mergedLeads=[],customerLifecycleRows=[]){
     const existingIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.id)).filter(Boolean));
     const existingStudentIds=new Set((mergedLeads||[]).map(row=>cleanLeadText(row.studentId)).filter(Boolean));
@@ -85,8 +127,9 @@ function createLeadsRoutes(deps={}){
   }
 
   async function readLeadPoolRows({lifecycleScope='all'}={}){
-    const [leads,students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
+    const [leads,followups,students,purchases,entitlements,schedule,courts,membershipAccounts,membershipOrders]=await Promise.all([
       readLeadSourceRows({isProductionRuntime,scanFirstRows,getCachedScan,table:T_LEADS,columns:LEAD_LIST_PROJECTION_FIELDS}),
+      readLeadFollowupRows(),
       T_STUDENTS?getCachedScan(T_STUDENTS).catch(()=>[]):Promise.resolve([]),
       T_PURCHASES?getCachedScan(T_PURCHASES).catch(()=>[]):Promise.resolve([]),
       T_ENTITLEMENTS?getCachedScan(T_ENTITLEMENTS).catch(()=>[]):Promise.resolve([]),
@@ -95,7 +138,7 @@ function createLeadsRoutes(deps={}){
       T_MEMBERSHIP_ACCOUNTS?getCachedScan(T_MEMBERSHIP_ACCOUNTS).catch(()=>[]):Promise.resolve([]),
       T_MEMBERSHIP_ORDERS?getCachedScan(T_MEMBERSHIP_ORDERS).catch(()=>[]):Promise.resolve([])
     ]);
-    let mergedLeads=mergeDuplicateLeadRows(leads);
+    let mergedLeads=mergeDuplicateLeadRows(applyCurrentLeadSnapshots(leads,followups));
     let customerLifecycleRows=buildCustomerLifecycleRows({
       leads:mergedLeads,
       students,
@@ -194,7 +237,8 @@ function createLeadsRoutes(deps={}){
         await init();
         const old=await get(T_LEADS,leadId).catch(()=>null);
         if(!old)return sendJson(res,{error:'线索不存在'},404);
-        const next=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
+        const normalized=normalizeLeadRecord({...old,...body,id:leadId,createdAt:old.createdAt},{now:new Date().toISOString()});
+        const next=await applyPersistedLeadSnapshot(normalized);
         await put(T_LEADS,leadId,next);
         return sendJson(res,next);
       }
