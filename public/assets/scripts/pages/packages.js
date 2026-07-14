@@ -561,7 +561,8 @@ function applySmallClassPackagePreset(){
   const presets={
     single:{price:260,lessons:1,timeBand:'全天',maxStudents:'4'},
     bootcamp:{price:1999,lessons:10,timeBand:'黄金时段',maxStudents:'4'},
-    dropin:{price:1499,lessons:6,timeBand:'全天',maxStudents:'4'}
+    dropin:{price:1499,lessons:6,timeBand:'全天',maxStudents:'4'},
+    family:{price:260,lessons:1,timeBand:'全天',maxStudents:'3'}
   };
   const preset=presets[sub]||presets.single;
   const price=document.getElementById('pkg_price');
@@ -626,7 +627,7 @@ function packageTimeWindowsText(p){
   }).filter(Boolean).join('\n');
 }
 function packageSmallClassTypeText(value){
-  return ({single:'单次',bootcamp:'训练营',dropin:'随到随学'})[value]||value||'';
+  return ({single:'单次',bootcamp:'训练营',dropin:'随到随学',family:'亲子课'})[value]||value||'';
 }
 function packageDrawerHeaderHtml(p,mode){
   const title=mode==='create'?'创建课包':packageListTitle(p);

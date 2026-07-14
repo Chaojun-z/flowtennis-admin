@@ -36,8 +36,8 @@ async function main() {
       conversionType: '',
       studentId: '',
       isCourseConverted: false,
-      createdAt: '2026-07-09T09:40:00.000Z',
-      updatedAt: '2026-07-09T09:45:18.147Z'
+      createdAt: '2026-07-09',
+      updatedAt: '2026-07-09'
     }],
     ft_lead_followups: [{
       id: 'fu-wly',
@@ -46,8 +46,8 @@ async function main() {
       dealType: '课程',
       conversionType: '课程',
       followupAt: '2026-07-09',
-      createdAt: '2026-07-09T09:44:01.352Z',
-      updatedAt: '2026-07-09T09:44:01.352Z'
+      createdAt: '2026-07-09',
+      updatedAt: '2026-07-09'
     }],
     ft_students: [],
     ft_purchases: [],

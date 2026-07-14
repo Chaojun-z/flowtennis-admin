@@ -38,6 +38,7 @@ assert.deepStrictEqual(taxonomy.STANDARD_BUSINESS_TYPE_OPTIONS.map(item => item.
   '课程 / 小班课 / 单次',
   '课程 / 小班课 / 训练营',
   '课程 / 小班课 / 随到随学',
+  '课程 / 小班课 / 亲子课',
   '课程 / 体验课 / 私教体验课',
   '课程 / 体验课 / 小班体验课',
   '课程 / 大师课',
@@ -67,6 +68,10 @@ assert.strictEqual(taxonomy.normalizeTransactionType({ status: 'voided' }), '废
 assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '训练营' }), {
   level1: '小班课',
   level2: '训练营'
+});
+assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '亲子课' }), {
+  level1: '小班课',
+  level2: '亲子课'
 });
 assert.deepStrictEqual(taxonomy.normalizeCourseType({ courseType: '体验课', experienceType: '私教体验课' }), {
   level1: '体验课',

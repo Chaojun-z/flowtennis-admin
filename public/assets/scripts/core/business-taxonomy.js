@@ -13,6 +13,7 @@
     '课程 / 小班课 / 单次',
     '课程 / 小班课 / 训练营',
     '课程 / 小班课 / 随到随学',
+    '课程 / 小班课 / 亲子课',
     '课程 / 体验课 / 私教体验课',
     '课程 / 体验课 / 小班体验课',
     '课程 / 大师课',
@@ -33,6 +34,7 @@
     { value: '小班课 / 单次', label: '小班课 / 单次' },
     { value: '小班课 / 训练营', label: '小班课 / 训练营' },
     { value: '小班课 / 随到随学', label: '小班课 / 随到随学' },
+    { value: '小班课 / 亲子课', label: '小班课 / 亲子课' },
     { value: '大师课', label: '大师课' },
     { value: '陪打', label: '陪打' }
   ];
@@ -40,7 +42,8 @@
   const SMALL_CLASS_TYPE_OPTIONS = [
     { value: 'single', label: '单次' },
     { value: 'bootcamp', label: '训练营' },
-    { value: 'dropin', label: '随到随学' }
+    { value: 'dropin', label: '随到随学' },
+    { value: 'family', label: '亲子课' }
   ];
   const STUDENT_TYPE_OPTIONS = ['成人', '青少年'].map(value => ({ value, label: value }));
   const PACKAGE_STATUS_OPTIONS = [
@@ -162,6 +165,7 @@
     { level1: '小班课', level2: '单次' },
     { level1: '小班课', level2: '训练营' },
     { level1: '小班课', level2: '随到随学' },
+    { level1: '小班课', level2: '亲子课' },
     { level1: '体验课', level2: '私教体验课' },
     { level1: '体验课', level2: '小班体验课' },
     { level1: '大师课', level2: '' },
@@ -332,6 +336,7 @@
     const experienceType = text(row && row.experienceType);
     const packageName = text(row && (row.packageName || row.productName || row.name || row.incomeType));
     const haystack = `${courseType} ${level2} ${experienceType} ${packageName}`;
+    if (courseType === '亲子课' || level2 === '亲子课' || includesAny(haystack, ['亲子课', '亲子'])) return { level1: '小班课', level2: '亲子课' };
     if (courseType === '训练营' || level2 === '训练营' || includesAny(haystack, ['训练营'])) return { level1: '小班课', level2: '训练营' };
     if (level2 === '随到随学' || includesAny(haystack, ['随到随学'])) return { level1: '小班课', level2: '随到随学' };
     if (level2 === '单次') return { level1: '小班课', level2: '单次' };

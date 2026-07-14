@@ -20,6 +20,7 @@ assert.match(fnBody('openScheduleModal'), /normalizeCourseTypeForForm\(s\|\|seed
 assert.match(fnBody('openPackageModal'), /normalizeCourseTypeForForm\(p\)/, 'package modal should map legacy 训练营 rows to 小班课/训练营 for editing');
 assert.match(fnBody('saveSchedule'), /courseTypeLevel2:/, 'schedule save should persist the standard course subtype');
 assert.match(fnBody('saveSchedule'), /standardCourseType:/, 'schedule save should persist the standard display course type');
+assert.match(fnBody('saveSchedule'), /actualStudentCount:/, 'schedule save should persist actual attendance count for family small group lessons');
 assert.match(fnBody('savePackage'), /courseTypeLevel2:/, 'package save should persist the standard course subtype');
 assert.match(fnBody('savePackage'), /standardCourseType:/, 'package save should persist the standard display course type');
 assert.match(fnBody('syncScheduleFilterOptions'), /STANDARD_COURSE_TYPE_OPTIONS/, 'schedule course type filter should expose standard subtype options');

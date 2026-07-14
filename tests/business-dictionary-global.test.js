@@ -30,7 +30,7 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   taxonomy.optionList('smallClassTypes').map(item => item.value),
-  ['single', 'bootcamp', 'dropin']
+  ['single', 'bootcamp', 'dropin', 'family']
 );
 assert.deepStrictEqual(
   taxonomy.optionList('packageStatuses').map(item => item.value),

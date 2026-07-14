@@ -117,10 +117,13 @@ assert.doesNotMatch(fnBody('setScheduleCourseTypeFields'), /setStandardDropdownV
 assert.match(fnBody('openScheduleModal'), /sch_experienceType/, 'schedule modal should expose a second-level trial course selector');
 assert.match(fnBody('saveSchedule'), /experienceType:/, 'schedule save should persist trial course subtype');
 assert.match(fnBody('openScheduleModal'), /sch_smallClassType/, 'schedule modal should expose a second-level small group course selector');
+assert.match(fnBody('openScheduleModal'), /sch_actualStudentCount/, 'schedule modal should expose actual attendance count for family small group lessons');
 assert.match(source, /function syncScheduleSmallClassType\(/, 'schedule modal should sync bootcamp repeat defaults');
 assert.match(fnBody('syncScheduleSmallClassType'), /sch_repeatEnabled[\s\S]*weeks\.value=6/, 'small group bootcamp should default to six weekly schedules');
 assert.match(fnBody('scheduleLessonUnitsFromFields'), /durMin\(start,end\)[\s\S]*Math\.round\(\(mins\/60\)\*10\)\/10/, 'scheduled lesson hours should follow the real start-end duration');
 assert.match(fnBody('saveSchedule'), /smallClassType:/, 'schedule save should persist small group subtype');
+assert.match(fnBody('saveSchedule'), /actualStudentCount:/, 'schedule save should persist actual attendance count');
+assert.match(fnBody('saveSchedule'), /selectedSmallClassType!=='family'[\s\S]*studentIds\.length<2/, 'non-family small group lessons should still require two selected students');
 assert.match(fnBody('openScheduleModal'), /设置迟到/, 'schedule modal should expose late settings beside coach');
 assert.match(fnBody('openScheduleModal'), /renderScheduleDetailFormCard\('设置迟到',lateSettings\)/, 'late settings should render as a separate drawer card');
 assert.doesNotMatch(fnBody('openScheduleModal'), /schedule-late-field">\$\{lateSettings\}/, 'late settings should not expand inside the coach row field');

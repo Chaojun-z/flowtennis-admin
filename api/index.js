@@ -197,6 +197,7 @@ const SCHEDULE_LIST_PROJECTION_FIELDS=[
   'courseType',
   'experienceType',
   'smallClassType',
+  'actualStudentCount',
   'coach',
   'campus',
   'venue',
@@ -538,7 +539,7 @@ const {
   scheduleParticipantSummary,
   collectScheduleRiskWarnings
 }=scheduleRules;
-const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
+const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
 function isSmallGroupCourse(row={}){
   return String(row.courseType||row.type||'').trim()==='小班课';
 }
@@ -553,6 +554,7 @@ function isCountBasedCourse(row={}){
 function normalizeSmallClassType(value='',fallback='single'){
   const raw=String(value||'').trim();
   if(SMALL_CLASS_TYPES.includes(raw))return raw;
+  if(/亲子课|亲子/.test(raw))return 'family';
   if(/训练营/.test(raw))return 'bootcamp';
   if(/随到随学/.test(raw))return 'dropin';
   if(/单次/.test(raw))return 'single';
@@ -563,7 +565,7 @@ function smallClassTypesCompatible(entitlementType='',scheduleType=''){
   const schType=normalizeSmallClassType(scheduleType,'');
   if(!entType||!schType)return true;
   if(entType===schType)return true;
-  if(entType==='bootcamp'||schType==='bootcamp')return false;
+  if(entType==='bootcamp'||schType==='bootcamp'||entType==='family'||schType==='family')return false;
   return ['single','dropin'].includes(entType)&&['single','dropin'].includes(schType);
 }
 function inferSmallClassType(source={},fallback='single'){
@@ -572,6 +574,7 @@ function inferSmallClassType(source={},fallback='single'){
   const explicit=String(source.smallClassType||source.packageSubType||source.subType||'').trim();
   if(explicit&&!(explicit==='single'&&price===1499&&lessons!==1))return normalizeSmallClassType(explicit,fallback);
   const text=[source.courseTypeLevel2,source.name,source.packageName,source.productName].filter(Boolean).join(' ');
+  if(/亲子课|亲子/.test(text))return 'family';
   if(/随到随学/.test(text)||(price===1499&&lessons!==1))return 'dropin';
   if(/训练营/.test(text))return 'bootcamp';
   if(/单次/.test(text))return 'single';
@@ -948,7 +951,14 @@ function assertScheduleEntitlementRequired(rec){
 function assertSmallGroupScheduleRules(rec){
   if(!isSmallGroupCourse(rec)||!isBillableSchedule(rec))return;
   const actual=parseArr(rec.studentIds).filter(Boolean);
-  const expected=parseArr(rec.expectedStudentIds).filter(Boolean);
+  const smallClassType=normalizeSmallClassType(rec.smallClassType||rec.packageSubType||rec.subType,'single');
+  const actualStudentCount=parseInt(rec.actualStudentCount)||actual.length;
+  if(smallClassType==='family'){
+    if(actual.length<=0)throw new Error('请先选择亲子课主客户');
+    if(actualStudentCount>4)throw new Error('小班课最多 4 人');
+    if(actualStudentCount<2)throw new Error('亲子课至少 2 人到场');
+    return;
+  }
   if(actual.length>4)throw new Error('小班课最多 4 人');
   if(actual.length>0&&actual.length<2)throw new Error('小班课至少 2 人到场才能开课');
 }
@@ -1106,7 +1116,9 @@ function validateEntitlementForSchedule(entitlement,schedule){
   if(from&&usedDate<from)throw new Error('不在课包可用日期范围');
   if(!isScheduleInsideEntitlementTimeWindows(schedule,entitlement)&&!scheduleNeedsFieldFeeForEntitlement(entitlement,schedule))throw new Error('不在课包可用时间段');
   const max=parseInt(entitlement.maxStudents)||0;
-  if(max>0&&studentIds.length>max)throw new Error('课包适用人数不匹配');
+  const scheduleSmallClassType=normalizeSmallClassType(schedule.smallClassType||schedule.packageSubType||schedule.subType,'');
+  const countForMax=scheduleSmallClassType==='family'?(parseInt(schedule.actualStudentCount)||studentIds.length):studentIds.length;
+  if(max>0&&countForMax>max)throw new Error('课包适用人数不匹配');
   if(isSmallGroupCourse(entitlement)&&isSmallGroupCourse(schedule)){
     const entType=normalizeSmallClassType(entitlement.smallClassType);
     const schType=normalizeSmallClassType(schedule.smallClassType||schedule.packageSubType||schedule.subType,entType);

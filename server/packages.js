@@ -1,5 +1,5 @@
 const DEFAULT_ID_FACTORY=()=>`${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const SMALL_CLASS_TYPES=['single','bootcamp','dropin'];
+const SMALL_CLASS_TYPES=['single','bootcamp','dropin','family'];
 const PACKAGE_MERGE_CORE_FIELDS=[
   'ownerCoach','courseType','price','lessons','validDays',
   'saleStartDate','saleEndDate','usageStartDate','usageEndDate',

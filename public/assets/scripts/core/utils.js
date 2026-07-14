@@ -151,6 +151,7 @@ function normalizeCourseType(type=''){
   if(raw==='半私教课')return '私教课';
   if(raw==='班课')return '小班课';
   if(raw==='训练营')return '小班课';
+  if(raw==='亲子课')return '小班课';
   if(raw==='专项训练')return '小班课';
   if(raw==='订场陪打')return '陪打';
   if(raw==='\u6b63\u5f0f\u8bfe')return '私教课';
@@ -158,7 +159,7 @@ function normalizeCourseType(type=''){
 }
 function courseTypeLevel2Label(courseType,experienceType='',smallClassType=''){
   if(courseType==='体验课')return normalizeExperienceType(experienceType,'私教体验课');
-  if(courseType==='小班课')return ({single:'单次',bootcamp:'训练营',dropin:'随到随学'})[smallClassType]||smallClassType||'单次';
+  if(courseType==='小班课')return ({single:'单次',bootcamp:'训练营',dropin:'随到随学',family:'亲子课'})[smallClassType]||smallClassType||'单次';
   return '';
 }
 function standardCourseTypeLabel(courseType,experienceType='',smallClassType=''){
@@ -171,6 +172,7 @@ function inferSmallClassTypeForForm(source={},fallback='single'){
   const explicit=String(source.smallClassType||source.packageSubType||source.subType||'').trim();
   if(explicit&&!(explicit==='single'&&price===1499&&lessons!==1))return explicit;
   const text=[source.courseTypeLevel2,source.name,source.packageName,source.productName].filter(Boolean).join(' ');
+  if(/亲子课|亲子/.test(text))return 'family';
   if(/随到随学/.test(text)||(price===1499&&lessons!==1))return 'dropin';
   if(/训练营/.test(text))return 'bootcamp';
   if(/单次/.test(text))return 'single';

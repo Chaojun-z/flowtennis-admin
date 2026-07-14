@@ -119,6 +119,44 @@ assert.doesNotThrow(
   'direct paid schedule should save without a package entitlement'
 );
 
+assert.doesNotThrow(
+  () => rules.assertScheduleEntitlementRequired({
+    id: 'sch-family',
+    status: '已排课',
+    settlementType: 'package',
+    courseType: '小班课',
+    smallClassType: 'family',
+    lessonCount: 1,
+    studentIds: ['parent-1'],
+    actualStudentCount: 3
+  }),
+  'family small group lesson should allow one main customer when actual attendance count is at least 2'
+);
+
+assert.throws(
+  () => rules.assertScheduleEntitlementRequired({
+    id: 'sch-family-too-few',
+    status: '已排课',
+    settlementType: 'package',
+    courseType: '小班课',
+    smallClassType: 'family',
+    lessonCount: 1,
+    studentIds: ['parent-1'],
+    actualStudentCount: 1
+  }),
+  /亲子课至少 2 人到场/,
+  'family small group lesson should reject fewer than 2 actual attendees'
+);
+
+assert.throws(
+  () => rules.validateEntitlementForSchedule(
+    { id: 'ent-family-3', studentId: 'parent-1', status: 'active', courseType: '小班课', smallClassType: 'family', maxStudents: 3, totalLessons: 6, remainingLessons: 6 },
+    { id: 'sch-family-too-many', status: '已排课', courseType: '小班课', smallClassType: 'family', lessonCount: 1, studentIds: ['parent-1'], actualStudentCount: 4 }
+  ),
+  /课包适用人数不匹配/,
+  'family small group lesson should compare actual attendance count against package max students'
+);
+
 assert.strictEqual(
   rules.scheduleLessonChargeStatus(
     { id: 'sch-1', status: '已取消', entitlementId: 'ent-1', lessonCount: 1 },
