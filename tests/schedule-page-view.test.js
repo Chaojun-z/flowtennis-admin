@@ -49,7 +49,7 @@ assert.match(source, /function resetScheduleSaveButton\(/, 'schedule save should
 assert.match(fnBody('saveSchedule'), /runStandardMutation\('scheduleSaveBtn'/, 'schedule save should restore the save button through the global mutation helper');
 assert.doesNotMatch(fnBody('saveSchedule'), /catch\(e\)\{toast\('保存失败：'\+e\.message,'error'\);btn\.disabled=false;btn\.textContent='保存';\}/, 'schedule save failure should not assume the save button exists');
 assert.match(source, /function renderAfterScheduleMutation\(\)/, 'schedule save should render follow-up views through a safe helper');
-assert.match(fnBody('renderAfterScheduleMutation'), /try\{renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);\}catch\(err\)/, 'post-save render failures should not be reported as save failures');
+assert.match(fnBody('renderAfterScheduleMutation'), /try\{renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);refreshCoachOpsWorkbenchAfterScheduleMutation\(\);\}catch\(err\)/, 'post-save render failures should not be reported as save failures');
 assert.doesNotMatch(fnBody('saveSchedule'), /renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);[\s\S]*catch\(e\)\{toast\('保存失败：'/, 'successful API saves should not be caught as failed saves when rendering fails');
 assert.match(fnBody('openCancelScheduleModal'), /确认取消/, 'schedule cancel should use a dedicated confirm modal instead of reopening the edit form');
 assert.match(fnBody('openCancelScheduleModal'), /取消本节及后续未上课的循环课/, 'repeat schedules should expose a future-lessons cancel option');
@@ -158,6 +158,10 @@ assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /setScheduleCourseType
 assert.match(fnBody('applySchEntitlementOptions'), /setScheduleCoachFromEntitlement\(selected\)/, 'schedule entitlement recommendation should default the coach from the selected package owner');
 assert.match(source, /function handleScheduleCoachChange\([\s\S]*dataset\.userChanged='1'[\s\S]*refreshSchEntitlementOptions/, 'manual coach changes should be remembered before refreshing package options');
 assert.match(source, /function setScheduleCoachFromEntitlement\([\s\S]*dataset\.userChanged==='1'[\s\S]*ownerCoach/, 'package owner coach default should not override a manually changed coach');
+assert.match(fnBody('openScheduleModal'), /seed\.scheduleCoachLocked[\s\S]*dataset\.userChanged='1'/, 'coach selected from the calendar should be treated as explicit user intent');
+assert.match(fnBody('syncScheduleProfileFromStudents'), /coachInput\?\.dataset\.userChanged!=='1'/, 'student profile defaults should not override a calendar-selected coach');
+assert.match(source, /function refreshCoachOpsWorkbenchAfterScheduleMutation\(/, 'schedule saves should refresh the coach schedule workbench read model');
+assert.match(fnBody('renderAfterScheduleMutation'), /renderSchedule\(\);renderCoachOps\(\);renderMySchedule\(\);refreshCoachOpsWorkbenchAfterScheduleMutation\(\);/, 'schedule saves should rerender and then refresh coach ops from the unified workbench source');
 assert.doesNotMatch(fnBody('scheduleEntitlementLabel'), /需补差价\/场地费|到期\$\{option\.validUntil\|\|'-'\}/, 'package options should hide surcharge copy and empty expiry text');
 assert.doesNotMatch(fnBody('applySchEntitlementOptions'), /需补差价\/场地费|到期 \$\{selected\.validUntil\|\|'-'\}/, 'package recommendation hint should hide surcharge copy and empty expiry text');
 assert.match(source, /function scheduleEntitlementTimeBandText\(/, 'package picker should avoid repeating the package time-band label when the name already contains it');

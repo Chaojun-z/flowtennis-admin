@@ -273,7 +273,7 @@ function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
   const h=Math.min(22,parseInt(startTime.slice(0,2))||9),m=startTime.slice(3,5)||'00';
   const endH=Math.min(23,h+1);
   const co=coaches.find(c=>coachName(c.name)===coachName(coach));
-  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),campus:campus==='all'?(co?.campus||''):campus,venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
+  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),scheduleCoachLocked:true,campus:campus==='all'?(co?.campus||''):campus,venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
 }
 function coachOpsLooksLikeTechnicalStudentValue(value){
   const text=String(value||'').trim();
@@ -378,11 +378,16 @@ function openCoachOpsMorePopover(el,coach,date,event){
 }
 function openCoachOpsLineCreate(e,coach,date){
   if(e.target.closest('.coach-ops-block'))return;
+  openCoachOpsCreateSchedule(coach,date,coachOpsStartTimeFromLineClick(e));
+}
+function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
-  const pct=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-  const minutes=Math.round((pct*(22-7)*60)/30)*30;
-  const h=Math.min(22,7+Math.floor(minutes/60)),m=minutes%60;
-  openCoachOpsCreateSchedule(coach,date,`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  const cellWidth=120,startHour=7,endHour=22;
+  const x=Math.max(0,Math.min(rect.width-1,e.clientX-rect.left));
+  const hourIndex=Math.floor(x/cellWidth);
+  const hour=Math.min(endHour,startHour+hourIndex);
+  const minute=hour>=endHour?0:(x%cellWidth>=cellWidth/2?30:0);
+  return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
 }
 function coachOpsDragStart(e,coach){
   coachOpsDraggedName=coachName(coach);
@@ -417,6 +422,16 @@ function scrollCoachOpsDayToNow(){
   const nowLineLeft=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*120;
   scroll.scrollLeft=Math.max(0,nowLineLeft-360);
 }
+function syncCoachOpsUnifiedOrder(order){
+  const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
+  coachOpsUnifiedView={
+    ...(coachOpsUnifiedView||{}),
+    rows:(coachOpsUnifiedView?.rows||[]).map(row=>{
+      const sortOrder=sortMap.get(coachName(row.name));
+      return sortOrder?{...row,sortOrder}:row;
+    })
+  };
+}
 async function saveCoachOpsOrder(order){
   const byName=new Map(coaches.map(coach=>[coachName(coach.name),coach]));
   const updates=[];
@@ -432,6 +447,7 @@ async function saveCoachOpsOrder(order){
   try{
     if(updates.length)await Promise.all(updates.map(coach=>apiCall('PUT','/coaches/'+coach.id,{...coach,sortOrder:coach.sortOrder})));
     saveCoachOpsStoredOrder(order);
+    syncCoachOpsUnifiedOrder(order);
     renderCoachOps();
     toast('教练排序已保存','success');
   }catch(err){

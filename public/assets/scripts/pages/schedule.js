@@ -207,8 +207,8 @@ function syncScheduleHomeCampusFromStudents(ids,applyDefault=true){
 }
 function syncScheduleProfileFromStudents(ids,applyDefault=true){
   syncScheduleHomeCampusFromStudents(ids,applyDefault);
-  const meta=scheduleSelectedStudentCoachMeta(ids);
-  if(applyDefault&&meta.coach){const selectedCoach=coachName(meta.coach);setStandardDropdownValue('sch_coach',selectedCoach,selectedCoach);}
+  const meta=scheduleSelectedStudentCoachMeta(ids),coachInput=document.getElementById('sch_coach');
+  if(applyDefault&&meta.coach&&coachInput?.dataset.userChanged!=='1'){const selectedCoach=coachName(meta.coach);setStandardDropdownValue('sch_coach',selectedCoach,selectedCoach);}
 }
 function renderScheduleStudentTags(selectedIds=[]){
   const picked=new Set(parseArr(selectedIds));
@@ -549,6 +549,8 @@ function openScheduleModal(id,seed={}){
     overlayClasses:['schedule-drawer-overlay'],
     modalClass:'modal modal-court modal-schedule-drawer'
   });
+  const coachInput=document.getElementById('sch_coach');
+  if(seed.scheduleCoachLocked&&seed.coach&&coachInput)coachInput.dataset.userChanged='1';
   setScheduleStudentSelection(selectedStudentIds,false,!id);
   updateScheduleStudentSummary(selectedStudentIds);
   toggleScheduleRepeatWeeks();
@@ -1125,12 +1127,8 @@ async function saveSchedule(){
   if(result?.warnings?.length)toast(result.warnings.join('；'),'warn');
   renderAfterScheduleMutation();
 }
-function renderAfterScheduleMutation(){
-  try{renderSchedule();renderCoachOps();renderMySchedule();}catch(err){
-    console.error('schedule post-save render failed:',err);
-    toast('排课已保存，页面刷新异常，请手动刷新页面','warn');
-  }
-}
+function refreshCoachOpsWorkbenchAfterScheduleMutation(){if(typeof ensureDatasetsByName!=='function'||(currentPage!=='coachschedule'&&currentPage!=='coachops'&&!loadedDatasets.has('workbenchPage')))return Promise.resolve();return ensureDatasetsByName(['workbenchPage'],{force:true}).then(()=>{if(currentPage==='coachschedule'||currentPage==='coachops')renderCoachOps();}).catch(err=>{console.error('coach schedule refresh failed:',err);toast('排课已保存，日历刷新失败，请手动刷新页面','warn');});}
+function renderAfterScheduleMutation(){try{renderSchedule();renderCoachOps();renderMySchedule();refreshCoachOpsWorkbenchAfterScheduleMutation();}catch(err){console.error('schedule post-save render failed:',err);toast('排课已保存，页面刷新异常，请手动刷新页面','warn');}}
 function resetScheduleSaveButton(){
   const btn=document.getElementById('scheduleSaveBtn');
   if(btn){btn.disabled=false;btn.textContent='保存修改';}

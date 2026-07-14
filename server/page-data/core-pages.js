@@ -210,6 +210,7 @@ function createCorePageDataRoutes(deps={}){
         const stats=buildWorkbenchStats({schedule:decoratedSchedule,feedbacks:decoratedFeedbacks,standardLifecycleMetrics,now});
         return sendJson(res,{
           campuses:scoped.campuses||[],
+          coaches:scoped.coaches||[],
           students:decoratedStudents,
           classes:decoratedClasses,
           schedule:decoratedSchedule,

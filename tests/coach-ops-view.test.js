@@ -4,6 +4,8 @@ const path = require('path');
 const { appSource: source } = require('./helpers/read-index-bundle');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'styles', 'pages.css'), 'utf8');
 const coachOpsSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'pages', 'coachops.js'), 'utf8');
+const stateSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'assets', 'scripts', 'core', 'state.js'), 'utf8');
+const corePagesSource = fs.readFileSync(path.join(__dirname, '..', 'server', 'page-data', 'core-pages.js'), 'utf8');
 const html = source;
 
 assert.match(
@@ -988,6 +990,48 @@ assert.match(
   html,
   /noteScheduleLocalMutation\(\)/,
   'schedule save should mark local schedule mutations before rendering coach ops'
+);
+
+assert.match(
+  corePagesSource,
+  /coaches:scoped\.coaches\|\|\[\]/,
+  'workbench page-data should return the current coach list used by schedule coach pickers'
+);
+
+assert.match(
+  stateSource,
+  /if\(name==='workbenchPage'\)\{[\s\S]*setDatasetValue\('coaches',data\.coaches\|\|\[\]\)/,
+  'loading the coach schedule workbench should hydrate the global coach list'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsStartTimeFromLineClick\(e\)[\s\S]*const hourIndex=Math\.floor\(x\/cellWidth\)[\s\S]*const minute=hour>=endHour\?0:\(x%cellWidth>=cellWidth\/2\?30:0\)/,
+  'coach schedule day clicks should map each visual hour cell into first-half and second-half start times'
+);
+
+assert.match(
+  coachOpsSource,
+  /openCoachOpsCreateSchedule\(coach,date,coachOpsStartTimeFromLineClick\(e\)\)/,
+  'coach schedule line clicks should create from the fixed cell-based time helper'
+);
+
+assert.match(
+  coachOpsSource,
+  /scheduleCoachLocked:true/,
+  'creating a schedule from a coach row should lock that coach as the user intent'
+);
+
+assert.match(
+  coachOpsSource,
+  /function syncCoachOpsUnifiedOrder\(order\)[\s\S]*coachOpsUnifiedView=\{[\s\S]*rows:\(coachOpsUnifiedView\?\.rows\|\|\[\]\)\.map/,
+  'coach drag sorting should update the current unified coach schedule rows before rerendering'
+);
+
+assert.match(
+  coachOpsSource,
+  /saveCoachOpsStoredOrder\(order\);[\s\S]*syncCoachOpsUnifiedOrder\(order\);[\s\S]*renderCoachOps\(\);/,
+  'coach drag sorting should rerender from the updated in-memory unified order'
 );
 
 console.log('coach ops view tests passed');

@@ -746,6 +746,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
     }
     if(name==='workbenchPage'){
       setDatasetValue('campuses',data.campuses||[]);
+      setDatasetValue('coaches',data.coaches||[]);
       setDatasetValue('students',data.students||[]);
       setDatasetValue('classes',data.classes||[]);
       setDatasetValue('schedule',data.schedule||[]);
@@ -757,6 +758,7 @@ async function ensureDatasetsByName(names=[],{force=false}={}){
       setDatasetValue('customerLifecycleRows',data.customerLifecycleRows||[],{persist:false});
       coachOpsUnifiedView=data.coachOpsUnifiedView||{rows:[]};
       staleCachedDatasets.delete('campuses');
+      staleCachedDatasets.delete('coaches');
       staleCachedDatasets.delete('students');
       staleCachedDatasets.delete('classes');
       staleCachedDatasets.delete('schedule');
