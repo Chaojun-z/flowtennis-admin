@@ -189,6 +189,7 @@ assert.match(fnBody('openLeadModal'), /openLeadCreateDrawer\(\)/, 'legacy create
 assert.doesNotMatch(leadsSource, /openStandardModal\(\{title:leadId\?'编辑线索':'新增线索'/, 'lead create should not keep the old centered modal shell');
 assert.doesNotMatch(leadsSource, /setCourtModalFrame\(leadId\?'编辑线索':'新增线索'/, 'lead create and edit modal should not keep the old shell');
 assert.match(leadsSource, /lead_campus','所属校区'/, 'lead create and edit modal should expose campus selection');
+assert.doesNotMatch(fnBody('leadCampusOptions'), /\{value:'',label:'-'\}/, 'campus options should only return real campuses so the new lead drawer does not render two dash choices');
 assert.doesNotMatch(fnBody('leadBasicInfoFormHtml'), /lead\?\.campus\|\|leadDefaultCampusValue\(\)|currentUser\?\.name/, 'empty create fields should not fall back to current campus or current user');
 assert.doesNotMatch(leadsSource, /id="lead_systemStatus"/, 'lead create and edit modal should remove the current status field');
 assert.doesNotMatch(leadsSource, /function leadConversionActionPanelHtml\(/, 'lead conversion tab should remove the separate conversion action panel');

@@ -699,6 +699,19 @@ function isOrphanMaterializedStudentLead(lead = {}) {
   return /^lead-from-student-/.test(text(lead.id || lead.leadId));
 }
 
+function manualLeadOutcomeStage(lead = {}) {
+  if (isOrphanMaterializedStudentLead(lead)) return '';
+  const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
+  const dealType = text(lead.dealType || lead.conversionType);
+  const convertedText = /成交|已报名|已订场|已定场|储值|会员/.test(explicit) || (/转化/.test(explicit) && !/未转化|待转化/.test(explicit));
+  if (dealType || lead.isCourseConverted === true || lead.isCourtConverted === true || lead.isMembershipConverted === true || convertedText) return '已成交';
+  if (/流失|无意向/.test(explicit)) return '已流失';
+  if (/已体验|体验待转化|体验待成交/.test(explicit)) return '已体验待成交';
+  if (/已约|预约|约体验/.test(explicit)) return '已约体验';
+  if (/新线索/.test(explicit)) return '新线索';
+  return '';
+}
+
 function hasLifecycleBusinessFact(row = {}) {
   return !!(
     text(row.studentId || row.courtId || row.membershipAccountId) ||
@@ -712,7 +725,8 @@ function hasLifecycleBusinessFact(row = {}) {
   );
 }
 
-function shouldIgnoreLegacyLeadOutcome(row = {}) {
+function shouldIgnoreLegacyLeadOutcome(row = {}, lead = {}) {
+  if (manualLeadOutcomeStage(lead) === '已成交') return false;
   return hasLifecycleBusinessFact(row) && text(row.studentStage) !== 'formal';
 }
 
@@ -730,9 +744,11 @@ function lifecycleLeadStage(row = {}, lead = {}) {
   const hasMembership = !!row.hasMembershipConversion || text(row.courtStage) === 'member';
   const hasTrialAttended = !!text(row.trialAttendedAt);
   const hasTrialBooked = !!text(row.trialBookedAt || row.trialAtRaw) || !!row.hasTrialExperience;
+  const manualStage = manualLeadOutcomeStage(lead);
   if (hasCourse || hasBooking || hasMembership) return '已成交';
   if (hasTrialAttended || studentStage === 'trial') return '已体验待成交';
   if (hasTrialBooked) return '已约体验';
+  if (manualStage) return manualStage;
   if (studentStage === 'student') return '跟进中';
   const explicit = text(lead.leadStage || lead.systemStatus || lead.stage || lead.rawStatus);
   if (/未转化|未成交/.test(explicit)) return '跟进中';
@@ -746,7 +762,7 @@ function lifecycleLeadStage(row = {}, lead = {}) {
 }
 
 function lifecycleDealType(row = {}, lead = {}) {
-  const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row);
+  const ignoreLegacyOutcome = shouldIgnoreLegacyLeadOutcome(row, lead);
   const stored = ignoreLegacyOutcome ? '' : text(lead.dealType || lead.conversionType || row.dealType).replace(/会员/g, '订场会员').replace(/订场订场会员/g, '订场会员');
   if (stored) return stored;
   const legacyText = ignoreLegacyOutcome ? '' : text([
@@ -811,7 +827,7 @@ function buildLeadPoolRows({ leads = [], customerLifecycleRows = [], lifecycleSc
       leadDate: leadBusinessDate(lifecycle, lead),
       createdAt: text(lead.createdAt || lifecycle.createdAt || lifecycle.leadDate),
       leadStage,
-      systemStatus: text(lead.systemStatus || leadStage),
+      systemStatus: leadStage,
       studentStage: text(lifecycle.studentStage),
       hasTrialExperience: !!lifecycle.hasTrialExperience,
       hasTrialBooked: !!text(lifecycle.trialBookedAt || lifecycle.trialAtRaw || lead.trialBookedAt || lead.trialAtRaw || lead.trialLessonAt || lead.trialAt || lifecycle.trialAttendedAt),

@@ -39,6 +39,23 @@ const source = {
 };
 
 const platform = buildPlatformMetrics(source);
+const manualConvertedPlatform = buildPlatformMetrics({
+  leads: [
+    { id: 'manual-lead-1', displayName: '手动成交线索', leadStage: '已成交', systemStatus: '已成交', dealType: '课程', studentId: 'manual-student-1', isCourseConverted: true, leadDate: '2026-06-08' }
+  ],
+  students: [
+    { id: 'manual-student-1', name: '手动成交线索', sourceLeadId: 'manual-lead-1', createdAt: '2026-06-08' }
+  ],
+  purchases: [],
+  entitlements: [],
+  schedule: [],
+  courts: [],
+  membershipAccounts: [],
+  membershipOrders: []
+});
+const manualConvertedLead = manualConvertedPlatform.leadPoolRows.find(row => row.id === 'manual-lead-1');
+assert.strictEqual(manualConvertedLead?.leadStage, '已成交', 'lead pool should keep manually converted course leads as converted before package purchase');
+assert.strictEqual(manualConvertedLead?.systemStatus, '已成交', 'lead pool systemStatus should align with the displayed converted stage');
 
 assert.strictEqual(platform.customerLifecycleRows.length, 3, 'lifecycle should contain existing leads, student-only customers and court/member customers');
 assert.strictEqual(platform.leadPoolRows.length, 3, 'lead pool should expose every lifecycle customer identity');

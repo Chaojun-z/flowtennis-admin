@@ -52,8 +52,14 @@ assert.match(source, /function leadPurchasePackageActionHtml\(lead\)/, 'lead con
 assert.match(fnBody('leadConversionSummaryHtml'), /leadPurchasePackageActionHtml\(lead\)/, 'conversion summary should render the package purchase action with the linked student status');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已关联学员但未买课包[\s\S]*去购买课包[\s\S]*openLeadPurchasePackage\('\$\{lead\.id\}'\)/, 'linked students without formal packages should see a purchase package entry');
 assert.match(fnBody('leadPurchasePackageActionHtml'), /已购课包[\s\S]*leadFormalPackageText\(lead\)/, 'linked students with formal packages should keep a package info row after purchase');
+assert.match(fnBody('leadPurchasePackageActionHtml'), /!lead\?\.studentId[\s\S]*leadStageText\(lead\)==='已成交'[\s\S]*创建学员档案并购买课包[\s\S]*convertLeadToStudentAndPurchase\('\$\{lead\.id\}'\)/, 'converted course leads without a student record should show a create-student-and-purchase entry');
+assert.match(source, /async function convertLeadToStudentAndPurchase\(leadId\)/, 'conversion tab should create a student record and continue into the purchase drawer for new students');
 assert.match(source, /function leadFormalCoachText\(lead\)/, 'lead conversion summary should derive deal coach from lifecycle or purchase owner coach');
 assert.match(fnBody('openLeadPurchasePackage'), /ensureDatasetsByName\(\['purchasesPage'\]\)[\s\S]*openPurchaseModal\(lead\.studentId\)/, 'lead purchase entry must lazy-load purchase data and open the existing purchase drawer with the linked student id');
+assert.match(source, /function leadLinkSearchRows\(mode,keyword=''\)/, 'lead link forms should expose searchable linked account rows');
+assert.match(source, /function leadLinkPickerHtml\(lead,mode,selectedId='',keyword=''\)/, 'lead link forms should render a searchable picker instead of a long plain dropdown');
+assert.match(fnBody('leadConversionLinkFormHtml'), /lead_link_search[\s\S]*placeholder="搜索姓名 \/ 手机号 \/ 校区"[\s\S]*oninput="renderLeadLinkPicker\(/, 'link student and court forms should support keyword search');
+assert.doesNotMatch(fnBody('leadConversionLinkFormHtml'), /renderStandardDropdownHtml\(id/, 'link student and court forms should not use the non-searchable standard dropdown');
 assert.match(fnBody('openLeadLinkStudentModal'), /startLeadConversionDrawerMode\(leadId,'link-student'\)/, 'link student should stay in the lead drawer');
 assert.match(fnBody('openLeadLinkCourtModal'), /startLeadConversionDrawerMode\(leadId,'link-court'\)/, 'link court should stay in the lead drawer');
 assert.match(source, /function openLeadDetailFromList\(/, 'lead list view action should reset to basic tab');

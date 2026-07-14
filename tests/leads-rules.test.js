@@ -83,7 +83,9 @@ const convertedFollowup = rules.normalizeLeadFollowupRecord({
 assert.strictEqual(convertedFollowup.dealType, '课程+订场会员');
 const convertedLead = rules.applyLeadFollowupSnapshot(lead, convertedFollowup);
 assert.strictEqual(convertedLead.systemStatus, '已成交');
+assert.strictEqual(convertedLead.leadStage, '已成交');
 assert.strictEqual(convertedLead.dealType, '课程+订场会员');
+assert.strictEqual(convertedLead.conversionType, '课程+订场会员');
 assert.throws(() => rules.normalizeLeadFollowupRecord({
   leadId: 'lead-1',
   statusAfter: '已成交'

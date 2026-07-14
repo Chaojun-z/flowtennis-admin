@@ -490,7 +490,7 @@ function leadCampusText(lead){
   return (typeof cn==='function'?cn(value):campusDisplayName(value))||'-';
 }
 function leadCampusOptions(){
-  return [{value:'',label:'-'},...campuses.map(c=>({value:c.code||c.id,label:campusDisplayName(c.name||c.code||c.id)}))];
+  return campuses.map(c=>({value:c.code||c.id,label:campusDisplayName(c.name||c.code||c.id)}));
 }
 function leadDefaultCampusValue(){
   return campus!=='all'?campus:(leadCampusOptions().find(option=>option.value)?.value||'');
@@ -1103,7 +1103,12 @@ function leadFormalCoachText(lead){
   return linkedCoachName(leadStandardField(lead,'formalCoach')||leadFormalPackageCoach(lead));
 }
 function leadPurchasePackageActionHtml(lead){
-  if(!lead?.studentId)return '';
+  if(!lead?.studentId){
+    if(leadStageText(lead)==='已成交'&&/课程/.test(leadDealTypeText(lead))){
+      return `<div class="schedule-detail-field"><div class="schedule-detail-label">学员档案</div><div class="schedule-detail-value lead-linked-account-value"><span>已成交课程但未创建学员档案</span><span class="lead-inline-actions">${leadInlineActionHtml('创建学员档案并购买课包',`convertLeadToStudentAndPurchase('${lead.id}')`)}</span></div></div>`;
+    }
+    return '';
+  }
   if(leadHasFormalPackage(lead)){
     return `<div class="schedule-detail-field"><div class="schedule-detail-label">课包信息</div><div class="schedule-detail-value lead-linked-account-value"><span>已购课包：${esc(leadFormalPackageText(lead))}</span></div></div>`;
   }
@@ -1122,14 +1127,54 @@ function startLeadConversionDrawerMode(leadId,mode){
   leadDetailConversionMode=mode||'';
   openLeadDetail(leadId);
 }
-function leadConversionLinkFormHtml(lead,mode){
+function leadLinkSearchRows(mode,keyword=''){
   const isStudent=mode==='link-student';
   const rows=isStudent?students:courts;
-  const options=[{value:'',label:isStudent?'- 选择学员 -':'- 选择订场用户 -'},...rows.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
+  const q=String(keyword||'').trim().toLowerCase();
+  return rows.filter(row=>{
+    if(!q)return true;
+    return [row?.name,row?.displayName,row?.wechatName,row?.phone,cn(row?.campus||row?.campusName)].some(value=>String(value||'').toLowerCase().includes(q));
+  }).sort((a,b)=>String(a?.name||a?.displayName||'').localeCompare(String(b?.name||b?.displayName||''),'zh-CN')).slice(0,80);
+}
+function leadLinkRecordLabel(row={}){
+  const name=String(row.name||row.displayName||row.wechatName||'未命名').trim();
+  const phone=String(row.phone||'').trim();
+  const campusName=cn(row.campus||row.campusName);
+  return [name,phone,campusName].filter(Boolean).join(' · ');
+}
+function leadLinkPickerHtml(lead,mode,selectedId='',keyword=''){
+  const rows=leadLinkSearchRows(mode,keyword);
+  if(!rows.length)return '<div style="font-size:12px;color:var(--td);padding:10px 0">没有匹配结果，请换个关键词。</div>';
+  return `<div class="tms-checkbox-matrix lead-link-picker">${rows.map(row=>`<label class="tms-checkbox-wrap ${String(row.id||'')===String(selectedId||'')?'active':''}" onclick="selectLeadLinkedRecord('${mode}','${row.id}')"><input type="radio" class="tms-checkbox" name="leadLinkPick" ${String(row.id||'')===String(selectedId||'')?'checked':''}><span>${esc(leadLinkRecordLabel(row))}</span></label>`).join('')}</div>`;
+}
+function renderLeadLinkPicker(mode){
+  const isStudent=mode==='link-student';
   const id=isStudent?'lead_link_student_id':'lead_link_court_id';
+  const host=document.getElementById('lead_link_picker_wrap');
+  if(!host)return;
+  const lead=leadById(document.getElementById('overlay')?.dataset.leadDetailId)||{};
+  host.innerHTML=leadLinkPickerHtml(lead,mode,document.getElementById(id)?.value||'',document.getElementById('lead_link_search')?.value||'');
+}
+function selectLeadLinkedRecord(mode,recordId){
+  const isStudent=mode==='link-student';
+  const id=isStudent?'lead_link_student_id':'lead_link_court_id';
+  const input=document.getElementById(id);
+  if(input)input.value=recordId||'';
+  const row=(isStudent?students:courts).find(item=>String(item?.id||'')===String(recordId||''));
+  const search=document.getElementById('lead_link_search');
+  if(search&&row)search.value=leadLinkRecordLabel(row);
+  renderLeadLinkPicker(mode);
+}
+function leadConversionLinkFormHtml(lead,mode,{modal=false}={}){
+  const isStudent=mode==='link-student';
+  const id=isStudent?'lead_link_student_id':'lead_link_court_id';
+  const selectedId=isStudent?(lead.studentId||''):(lead.courtId||'');
+  const selectedRow=(isStudent?students:courts).find(row=>String(row?.id||'')===String(selectedId));
+  const searchValue=selectedRow?leadLinkRecordLabel(selectedRow):'';
   const save=isStudent?`saveLeadLinkStudent('${lead.id}')`:`saveLeadLinkCourt('${lead.id}')`;
   const btnId=isStudent?'leadLinkStudentBtn':'leadLinkCourtBtn';
-  return `<div class="schedule-detail-form"><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">${isStudent?'选择学员':'选择订场用户'}</label>${renderStandardDropdownHtml(id,isStudent?'选择学员':'选择订场用户',options,isStudent?(lead.studentId||''):(lead.courtId||''),true)}</div></div><div class="schedule-detail-card-actions lead-conversion-form-actions"><button type="button" class="schedule-detail-action muted" onclick="startLeadConversionDrawerMode('${lead.id}','')">取消</button><button type="button" class="schedule-detail-action primary" id="${btnId}" onclick="${save}">确认关联</button></div></div>`;
+  const cancel=modal?'closeModal()':`startLeadConversionDrawerMode('${lead.id}','')`;
+  return `<div class="schedule-detail-form"><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">${isStudent?'选择学员':'选择订场用户'}</label><input type="hidden" id="${id}" value="${esc(selectedId)}"><input class="finput tms-form-control" id="lead_link_search" value="${esc(searchValue)}" placeholder="搜索姓名 / 手机号 / 校区" oninput="renderLeadLinkPicker('${mode}')"><div id="lead_link_picker_wrap" style="margin-top:8px">${leadLinkPickerHtml(lead,mode,selectedId,searchValue)}</div></div></div><div class="schedule-detail-card-actions lead-conversion-form-actions"><button type="button" class="schedule-detail-action muted" onclick="${cancel}">取消</button><button type="button" class="schedule-detail-action primary" id="${btnId}" onclick="${save}">确认关联</button></div></div>`;
 }
 function leadDetailConversionTabHtml(lead){
   const form=leadDetailConversionMode==='link-student'
@@ -1377,6 +1422,23 @@ async function convertLeadToStudent(leadId){
     toast('转化失败：'+e.message,'error');
   }
 }
+async function convertLeadToStudentAndPurchase(leadId){
+  const lead=leadById(leadId);
+  if(!lead)return;
+  if(lead.studentId){await openLeadPurchasePackage(leadId);return;}
+  if(!await appConfirm(`确认给「${leadDisplayName(lead)}」创建学员档案并继续购买课包？`,{title:'创建学员档案',confirmText:'创建并购买'}))return;
+  try{
+    const res=await apiCall('POST',`/leads/${leadId}/convert-student`,{});
+    await refreshLeadRuntime({withStudents:true});
+    await ensureDatasetsByName(['purchasesPage']);
+    renderLeads();
+    const studentId=res?.student?.id||leadById(leadId)?.studentId||'';
+    if(!studentId){toast('学员档案创建失败','error');return;}
+    openPurchaseModal(studentId);
+  }catch(e){
+    toast('创建学员失败：'+e.message,'error');
+  }
+}
 async function convertLeadToCourt(leadId){
   const lead=leadById(leadId);
   if(!lead)return;
@@ -1399,9 +1461,8 @@ function openLeadLinkStudentModal(leadId){
   }
   const lead=leadById(leadId);
   if(!lead)return;
-  const options=[{value:'',label:'- 选择学员 -'},...students.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
-  const body=`<div class="tms-section-header" style="margin-top:0;">关联已有学员</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">选择学员</label>${renderStandardDropdownHtml('lead_link_student_id','选择学员',options,lead.studentId||'',true)}</div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadLinkStudentBtn" onclick="saveLeadLinkStudent('${leadId}')">确认关联</button>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">关联已有学员</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div>${leadConversionLinkFormHtml(lead,'link-student',{modal:true})}`;
+  const actions='';
   openStandardModal({title:'关联已有学员',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveLeadLinkStudent(leadId){
@@ -1428,9 +1489,8 @@ function openLeadLinkCourtModal(leadId){
   }
   const lead=leadById(leadId);
   if(!lead)return;
-  const options=[{value:'',label:'- 选择订场用户 -'},...courts.slice().sort((a,b)=>String(a?.name||'').localeCompare(String(b?.name||''))).map(item=>({value:item.id,label:`${item.name}${item.phone?` · ${item.phone}`:''}`}))];
-  const body=`<div class="tms-section-header" style="margin-top:0;">关联已有订场用户</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div><div class="tms-form-row" style="margin-bottom:0"><div class="tms-form-item full-width"><label class="tms-form-label">选择订场用户</label>${renderStandardDropdownHtml('lead_link_court_id','选择订场用户',options,lead.courtId||'',true)}</div></div>`;
-  const actions=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="leadLinkCourtBtn" onclick="saveLeadLinkCourt('${leadId}')">确认关联</button>`;
+  const body=`<div class="tms-section-header" style="margin-top:0;">关联已有订场用户</div><div class="tms-form-row"><div class="tms-form-item full-width"><label class="tms-form-label">线索</label><input class="finput tms-form-control" value="${esc(leadDisplayName(lead))}" readonly></div></div>${leadConversionLinkFormHtml(lead,'link-court',{modal:true})}`;
+  const actions='';
   openStandardModal({title:'关联已有订场用户',bodyHtml:body,actionsHtml:actions,extraClass:'modal-tight'});
 }
 async function saveLeadLinkCourt(leadId){
