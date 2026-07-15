@@ -675,14 +675,26 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function openCoachOpsMonthDay\(ds\)[\s\S]*coachOpsSelectedCoach='';[\s\S]*openCoachOpsDay\(ds\)/,
-  'clicking a month date should enter the day view for all coaches'
+  /function openCoachOpsMonthCreate\(ds,event\)[\s\S]*openCoachOpsCreateSchedule\('',ds,'09:00','10:00'\)/,
+  'clicking blank space in a month date should create a schedule with the selected date and default time'
+);
+
+assert.doesNotMatch(
+  coachOpsSource,
+  /openCoachOpsMonthCoachDay|openCoachOpsMonthDay/,
+  'month coach and date interactions should not jump to the day view'
 );
 
 assert.match(
   coachOpsSource,
-  /function openCoachOpsMonthCoachDay\(coach,ds,event\)[\s\S]*coachOpsSelectedCoach=coachName\(coach\)[\s\S]*openCoachOpsDay\(ds\)/,
-  'clicking a month coach summary should enter the day view filtered by that coach'
+  /class="coach-ops-month-coach-row" onclick="event\.stopPropagation\(\)"/,
+  'clicking a month coach summary should not create or navigate'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsMonthCoachPreviewHtml\(item,date\)[\s\S]*scheduleLocationText\(s\)/,
+  'month coach hover preview should include location information'
 );
 
 assert.match(
@@ -927,8 +939,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-month-overview\{display:grid;grid-template-columns:120px 1120px;min-width:1240px\}/,
-  'coach schedule month overview should align with the weekday header'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-head\{grid-template-columns:1120px;min-width:1120px\}/,
+  'coach schedule month header should remove the blank left axis column'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-corner\{display:none!important\}/,
+  'coach schedule month corner should be hidden with no left axis'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-overview\{display:grid;grid-template-columns:1120px;min-width:1120px\}/,
+  'coach schedule month overview should not render a blank left column'
 );
 
 assert.match(
@@ -1306,8 +1330,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /scheduleCoachLocked:true/,
-  'creating a schedule from a coach row should lock that coach as the user intent'
+  /scheduleCoachLocked:!!selectedCoach/,
+  'creating a schedule should lock the coach only when a coach is selected'
 );
 
 assert.match(
