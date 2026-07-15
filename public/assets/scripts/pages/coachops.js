@@ -3,6 +3,7 @@ let coachOpsDraggedName='';
 const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
 const COACH_OPS_DAY_HOUR_HEIGHT=56;
 const COACH_OPS_DAY_COACH_WIDTH=128;
+const COACH_OPS_WEEK_HOUR_HEIGHT=40;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
 let coachOpsPendingCreateSlot=null;
@@ -407,7 +408,7 @@ function coachOpsMinutesToTimeText(total){
 }
 function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
-  const cellHeight=COACH_OPS_DAY_HOUR_HEIGHT,startHour=7,endHour=22;
+  const cellHeight=e.currentTarget.closest('.coach-ops-week-experiment')?COACH_OPS_WEEK_HOUR_HEIGHT:COACH_OPS_DAY_HOUR_HEIGHT,startHour=7,endHour=22;
   const y=Math.max(0,Math.min(rect.height-1,e.clientY-rect.top));
   const hourIndex=Math.floor(y/cellHeight);
   const hour=Math.min(endHour,startHour+hourIndex);
@@ -416,6 +417,9 @@ function coachOpsStartTimeFromLineClick(e){
 }
 function coachOpsDayTimeLabelTop(index,totalHours){
   return Math.max(0,Math.min(index*COACH_OPS_DAY_HOUR_HEIGHT,totalHours*COACH_OPS_DAY_HOUR_HEIGHT-16));
+}
+function coachOpsWeekTimeLabelTop(index,totalHours){
+  return Math.max(0,Math.min(index*COACH_OPS_WEEK_HOUR_HEIGHT,totalHours*COACH_OPS_WEEK_HOUR_HEIGHT-16));
 }
 function coachOpsRowDisplayName(row){
   return coachName(row?.name||row?.coach||row?.coachName||row?.displayName||'');
@@ -442,6 +446,40 @@ function coachOpsDrop(e,targetCoach){
   if(from<0||to<0)return;
   order.splice(to,0,order.splice(from,1)[0]);
   saveCoachOpsOrder(order);
+}
+function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalMin,todayKey){
+  const weekDays=Array.from({length:7},(_,i)=>addDays(range.start,i));
+  const dayHeight=opsTotalMin/60*COACH_OPS_WEEK_HOUR_HEIGHT;
+  const timeAxis=Array.from({length:opsEndH-opsStartH+1},(_,i)=>{
+    const top=coachOpsWeekTimeLabelTop(i,opsEndH-opsStartH);
+    return `<span class="coach-ops-week-time-label" style="top:${top}px">${i+opsStartH}:00</span>`;
+  }).join('');
+  return `<div class="coach-ops-week-experiment">${weekDays.map((day,i)=>{
+    const ds=dateKey(day);
+    const dayName=`周${'一二三四五六日'[i]}`;
+    const base=new Date(day);base.setHours(opsStartH,0,0,0);
+    const columns=renderRows.map(row=>{
+      const coachLabel=coachOpsRowDisplayName(row);
+      const pending=coachOpsPendingCreateSlot&&coachOpsPendingCreateSlot.date===ds&&coachName(coachOpsPendingCreateSlot.coach)===coachName(coachLabel)?coachOpsPendingCreateSlot:null;
+      const pendingBlock=pending?(()=>{
+        const startMin=coachOpsTimeTextToMinutes(pending.startTime)-opsStartH*60;
+        const endMin=coachOpsTimeTextToMinutes(pending.endTime)-opsStartH*60;
+        const top=Math.max(0,startMin/60*COACH_OPS_WEEK_HOUR_HEIGHT);
+        const height=Math.max(18,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT);
+        return `<span class="coach-ops-create-preview" style="top:${top}px;height:${height}px"></span>`;
+      })():'';
+      const blocks=row.rangeRows.filter(s=>String(s.startTime||'').slice(0,10)===ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
+        const startMin=(dateMs(s.startTime)-base.getTime())/60000;
+        const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
+        const endMin=(endMs-base.getTime())/60000;
+        const top=Math.max(0,startMin/60*COACH_OPS_WEEK_HOUR_HEIGHT);
+        const height=Math.max(28,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT-4);
+        return `<div class="coach-ops-week-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${String(s.startTime||'').slice(11,16)}${s.endTime?' - '+String(s.endTime).slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
+      }).join('');
+      return `<div class="coach-ops-week-coach-col" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${ds}')">${pendingBlock}${blocks}</div>`;
+    }).join('');
+    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div></div></section>`;
+  }).join('')}</div>`;
 }
 function scrollCoachOpsDayToNow(){
   if(!isCoachSchedulePage()||coachOpsMode!=='day')return;
@@ -641,6 +679,7 @@ function renderCoachOps(){
     const dayCoachCount=Math.max(1,rows.length);
     gridCard.style.setProperty('--coach-ops-day-coach-count',String(dayCoachCount));
     gridCard.style.setProperty('--coach-ops-day-grid-width',`${dayCoachCount*COACH_OPS_DAY_COACH_WIDTH}px`);
+    gridCard.style.setProperty('--coach-ops-week-grid-width',`${dayCoachCount*COACH_OPS_DAY_COACH_WIDTH}px`);
   }
   const hourHost=document.getElementById('coachOpsHours');
   const opsStartH=7,opsEndH=22,opsTotalMin=(opsEndH-opsStartH)*60;
@@ -649,15 +688,14 @@ function renderCoachOps(){
     hourHost.classList.toggle('day-coaches',mode==='day');
     hourHost.style.setProperty('--coach-ops-day-coach-count',String(Math.max(1,rows.length)));
     hourHost.style.setProperty('--coach-ops-day-grid-width',`${Math.max(1,rows.length)*COACH_OPS_DAY_COACH_WIDTH}px`);
-    hourHost.innerHTML=mode==='day'
+    hourHost.style.setProperty('--coach-ops-week-grid-width',`${Math.max(1,rows.length)*COACH_OPS_DAY_COACH_WIDTH}px`);
+    hourHost.innerHTML=mode==='day'||mode==='week'
       ?rows.map(r=>{
         const name=coachOpsRowDisplayName(r);
         const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(name)})"`;
-        return `<span class="coach-ops-day-coach-head" ${dragAttrs}><b>${esc(name||'未命名教练')}</b></span>`;
+        return `<span class="${mode==='day'?'coach-ops-day-coach-head':'coach-ops-week-coach-head'}" ${dragAttrs}><b>${esc(name||'未命名教练')}</b></span>`;
       }).join('')
-      :mode==='week'
-        ?Array.from({length:7},(_,i)=>{const d=addDays(range.start,i),ds=dateKey(d);return `<span class="${ds===todayKey?'is-today':''}">周${'一二三四五六日'[i]} ${d.getMonth()+1}/${d.getDate()}</span>`;}).join('')
-        :['周一','周二','周三','周四','周五','周六','周日'].map((d,i)=>{
+      :['周一','周二','周三','周四','周五','周六','周日'].map((d,i)=>{
           const currentMonthHasToday=todayKey>=dateKey(range.start)&&todayKey<dateKey(range.end);
           const todayDate=new Date(`${todayKey}T00:00:00`);
           const todayWeekIndex=(todayDate.getDay()+6)%7;
@@ -677,7 +715,7 @@ function renderCoachOps(){
     gridCard.classList.remove('is-loading');
   }
   const corner=document.querySelector('#page-coachschedule .coach-ops-corner');
-  if(corner)corner.textContent=mode==='day'?'时间':'教练';
+  if(corner)corner.textContent=mode==='day'?'时间':mode==='week'?'日期/时间':'教练';
   const host=document.getElementById('coachOpsTimeline');
   if(host){
     const renderRows=rows;
@@ -715,6 +753,8 @@ function renderCoachOps(){
         return `<div class="coach-ops-day-coach-col ${dayIsToday?'is-today':''}" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${dateKey(range.start)}')">${pendingBlock}${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div>`;
       }).join('');
       host.innerHTML=`<div class="coach-ops-day-board"><div class="coach-ops-day-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-day-coach-grid" style="height:${dayHeight}px">${columns}</div>${nowLineHtml}${nowHeadHtml}</div>`;
+    }else if(mode==='week'){
+      host.innerHTML=renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalMin,todayKey);
     }else{
       host.innerHTML=renderRows.map(r=>{
       const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;

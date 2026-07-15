@@ -11,7 +11,7 @@ const html = source;
 assert.match(
   source,
   /mode==='week'\|\|mode==='month'/,
-  'month view should use the weekday header like week view'
+  'coach schedule should keep shared week/month mode flags'
 );
 
 assert.match(
@@ -543,8 +543,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /return `<span class="coach-ops-day-coach-head" \$\{dragAttrs\}><b>\$\{esc\(name\|\|'未命名教练'\)\}<\/b><\/span>`;/,
-  'coach schedule day coach headers should keep drag behavior without rendering a drag icon'
+  /return `<span class="\$\{mode==='day'\?'coach-ops-day-coach-head':'coach-ops-week-coach-head'\}" \$\{dragAttrs\}><b>\$\{esc\(name\|\|'未命名教练'\)\}<\/b><\/span>`;/,
+  'coach schedule day and week coach headers should keep drag behavior without rendering a drag icon'
 );
 
 assert.match(
@@ -578,9 +578,51 @@ assert.match(
 );
 
 assert.match(
+  coachOpsSource,
+  /const COACH_OPS_WEEK_HOUR_HEIGHT=40;/,
+  'coach schedule week view should use a compact vertical time scale'
+);
+
+assert.match(
+  coachOpsSource,
+  /function renderCoachOpsWeekTimeline\([\s\S]*weekDays=Array\.from\(\{length:7\}[\s\S]*coach-ops-week-day[\s\S]*coach-ops-week-time-axis[\s\S]*coach-ops-week-coach-grid/,
+  'coach schedule week view should stack 7 days vertically with a time axis inside each day'
+);
+
+assert.match(
+  coachOpsSource,
+  /hourHost\.innerHTML=mode==='day'\|\|mode==='week'[\s\S]*coach-ops-week-coach-head/,
+  'coach schedule week header should use coach names on the horizontal axis'
+);
+
+assert.match(
+  coachOpsSource,
+  /mode==='week'\?'日期\/时间':'教练'/,
+  'coach schedule week corner should label the left axis as date and time'
+);
+
+assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{grid-template-columns:repeat\(7,160px\)\}/,
-  'coach schedule week and month headers should keep 160px columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours\{display:grid;grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)/,
+  'coach schedule week header should render coaches as horizontal columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-experiment\{width:calc\(72px \+ var\(--coach-ops-week-grid-width\)\);min-width:calc\(72px \+ var\(--coach-ops-week-grid-width\)\);background:#fff\}/,
+  'coach schedule week experiment should size from coach count instead of seven day columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)[^}]*transparent 40px/,
+  'coach schedule week day grids should use coach columns and 40px hour rows'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{grid-template-columns:repeat\(7,160px\)\}/,
+  'coach schedule month header should keep 160px weekday columns'
 );
 
 assert.match(
@@ -771,14 +813,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours,#page-coachschedule \.coach-ops-week,#page-coachschedule \.coach-ops-month\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\);gap:0;padding:0;border:0\}/,
-  'coach schedule week and month header/content grids should share one exact 1120px layout'
+  /#page-coachschedule \.coach-ops-month\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\);gap:0;padding:0;border:0\}/,
+  'coach schedule month content grid should keep the exact 1120px weekday layout'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours span,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span,#page-coachschedule \.coach-ops-daycell\{width:160px;min-width:160px;max-width:160px;box-sizing:border-box\}/,
-  'coach schedule week and month header/content cells should share exact 160px columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours span,#page-coachschedule \.coach-ops-daycell\{width:160px;min-width:160px;max-width:160px;box-sizing:border-box\}/,
+  'coach schedule month header/content cells should share exact 160px columns'
 );
 
 assert.match(
