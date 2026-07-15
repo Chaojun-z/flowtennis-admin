@@ -525,8 +525,26 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head\{[^}]*display:flex!important[^}]*justify-content:center/,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head\{[^}]*display:flex!important[^}]*justify-content:center[^}]*font-size:10px[^}]*font-weight:400/,
   'coach schedule day coach headers should visibly center coach names'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head \.coach-ops-drag-handle\{[^}]*width:10px!important[^}]*min-width:10px!important[^}]*max-width:10px!important/,
+  'coach schedule day coach header drag handles should not occupy the full coach column'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-time-axis span\{[^}]*font-size:10px[^}]*font-weight:400/,
+  'coach schedule day time axis labels should use 10px normal weight'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-corner\{[^}]*font-size:10px[^}]*font-weight:400/,
+  'coach schedule day header corner should use 10px normal weight'
 );
 
 assert.match(
@@ -824,6 +842,12 @@ assert.match(
 );
 
 assert.match(
+  styles,
+  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:block;min-height:calc\(100vh - 215px\);background:#fff\}/,
+  'coach schedule day-view skeleton should not use the old row flex layout'
+);
+
+assert.match(
   html,
   /<div class="coach-ops-grid-card[^"]*is-loading[^"]*mode-day[^"]*"[^>]*>/,
   'coach schedule should start in a full loading state before data renders'
@@ -885,7 +909,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:flex;flex-direction:column;min-height:calc\(100vh - 215px\);background:#fff\}/,
+  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:block;min-height:calc\(100vh - 215px\);background:#fff\}/,
   'coach schedule skeleton should fill the visible grid area'
 );
 
@@ -927,7 +951,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-line\{position:absolute;left:72px;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.75\);z-index:30;pointer-events:none\}/,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-line\{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba\(242,72,34,\.75\);border-left:0;z-index:30;pointer-events:none\}/,
   'coach schedule current-time body line should start after the time axis and stay above the day grid'
 );
 
