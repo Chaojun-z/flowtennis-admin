@@ -501,6 +501,14 @@ function openPurchaseEntryModal(){
   openPurchaseModal();
 }
 function openPurchaseModal(studentId=''){
+  const needsPackageData=typeof ensureDatasetsByName==='function'&&typeof loadedDatasets==='object'&&(!loadedDatasets.has('purchasesPage')||(typeof staleCachedDatasets==='object'&&staleCachedDatasets.has('purchasesPage'))||(typeof datasetHasCurrentRequestKey==='function'&&!datasetHasCurrentRequestKey('purchasesPage')));
+  if(needsPackageData){
+    ensureDatasetsByName(['purchasesPage']).then(()=>openPurchaseModal(studentId)).catch(e=>{
+      console.error('purchase package data load failed',e);
+      toast('课包数据加载失败，请刷新后重试','error');
+    });
+    return;
+  }
   const stu=studentId?students.find(x=>x.id===studentId):null;
   if(studentId&&!stu){toast('学员不存在','error');return;}
   editId=null;

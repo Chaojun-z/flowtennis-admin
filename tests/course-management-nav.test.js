@@ -241,6 +241,7 @@ assert.match(fnBody('purchasePackagePickerLabel'), /standardPackageLabel\(p,true
 assert.match(html, /function coursePackageBusinessSortValue\(/, 'course package dropdown should expose business sorting by audience, course type, class size, lesson count, time band, price and coach');
 assert.match(html, /function renderCoursePackagePickerDropdownHtml\(/, 'course package dropdown should have a shared searchable grouped renderer');
 assert.match(fnBody('renderCoursePackagePickerDropdownHtml'), /renderStandardSearchableDropdownHtml[\s\S]*搜索课包 \/ 教练 \/ 价格 \/ 课时/, 'course package picker should be searchable by package, coach, price and lesson count');
+assert.match(fnBody('coursePackageDropdownOptions'), /searchText:\[label,p\.audience/, 'course package search should directly include audience words such as 成人 and 青少年');
 assert.match(fnBody('openPurchaseModal'), /renderCoursePackagePickerDropdownHtml\('pur_packageId'[\s\S]*includeCoach:true/, 'purchase create package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('openPurchaseEditModal'), /renderCoursePackagePickerDropdownHtml\('pur_edit_packageId'[\s\S]*includeCoach:true/, 'purchase edit package picker should use the searchable grouped package dropdown');
 assert.match(fnBody('refreshPurchaseFilters'), /renderCoursePackagePickerDropdownHtml\('purPackageFilter'[\s\S]*showAllOption:true[\s\S]*includeCoach:true/, 'purchase record package filter should use the searchable grouped package dropdown');

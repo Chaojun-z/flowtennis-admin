@@ -38,6 +38,7 @@ assert.match(openPurchaseDrawer, /modal-schedule-drawer/, 'purchase drawer helpe
 assert.match(openPurchaseDrawer, /modal-purchase-drawer/, 'purchase drawer should expose a scoped class for purchase-only layout fixes');
 
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('学员信息'[\s\S]*renderDetailDrawerFormCard\('购买信息'[\s\S]*renderDetailDrawerFormCard\('备注'/, 'purchase create should group fields into drawer cards');
+assert.match(openPurchaseModal, /ensureDatasetsByName\(\['purchasesPage'\]\)/, 'purchase create should load package data before rendering the package picker');
 assert.match(openPurchaseModal, /renderDetailDrawerFormCard\('本次赠送',giftForm\)/, 'purchase create should render gift fields in its own drawer card');
 assert.match(openPurchaseModal, /pur_giftLessons[\s\S]*pur_courtBookingGiftCount[\s\S]*pur_ballMachineGiftCount/, 'purchase create should expose package lesson and student benefit gift fields');
 assert.match(source, /function refreshPurchaseGiftPreview\(/, 'purchase create should render a gift preview');

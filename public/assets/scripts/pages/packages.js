@@ -514,7 +514,7 @@ function coursePackageDropdownOptions(rows=[],config={}){
       value:p.id,
       label,
       group:coursePackageBusinessGroup(p),
-      searchText:[label,p.name,p.packageName,p.productName,p.notes,p.lessons,p.packageLessons,p.totalLessons,p.price,p.timeBand,p.packageTimeBand,p.ownerCoach,coachName(p.ownerCoach)].filter(Boolean).join(' ')
+      searchText:[label,p.audience,p.name,p.packageName,p.productName,p.notes,p.lessons,p.packageLessons,p.totalLessons,p.price,p.timeBand,p.packageTimeBand,p.ownerCoach,coachName(p.ownerCoach)].filter(Boolean).join(' ')
     };
   });
   if(config.showAllOption)list.unshift({value:'',label:config.allLabel||'全部课包',emptyDisplay:config.allLabel||'全部课包',searchText:config.allLabel||'全部课包'});
