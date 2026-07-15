@@ -1,8 +1,8 @@
 // ===== 教练运营 =====
 let coachOpsDraggedName='';
 const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
-const COACH_OPS_DAY_HOUR_HEIGHT=66;
-const COACH_OPS_DAY_COACH_WIDTH=144;
+const COACH_OPS_DAY_HOUR_HEIGHT=56;
+const COACH_OPS_DAY_COACH_WIDTH=128;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
 let coachOpsPendingCreateSlot=null;
@@ -386,10 +386,15 @@ function openCoachOpsLineCreate(e,coach,date){
   renderCoachOps();
   openCoachOpsCreateSchedule(coach,date,slot.startTime,slot.endTime);
 }
+function clearCoachOpsPendingCreateSlot(){
+  if(!coachOpsPendingCreateSlot)return;
+  coachOpsPendingCreateSlot=null;
+  if(currentPage==='coachschedule')renderCoachOps();
+}
 function coachOpsCreateSlotFromLineClick(e,date,coach){
   const startTime=coachOpsStartTimeFromLineClick(e);
   const startMin=coachOpsTimeTextToMinutes(startTime);
-  const endMin=Math.min(23*60,startMin+60);
+  const endMin=Math.min(23*60,startMin+(startTime.endsWith(':00')?120:60));
   return {coach:coachName(coach),date,startTime,endTime:coachOpsMinutesToTimeText(endMin)};
 }
 function coachOpsTimeTextToMinutes(value){

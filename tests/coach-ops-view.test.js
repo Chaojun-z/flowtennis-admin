@@ -112,14 +112,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_DAY_HOUR_HEIGHT=66;/,
-  'coach schedule day view should use a denser 66px hour height'
+  /const COACH_OPS_DAY_HOUR_HEIGHT=56;/,
+  'coach schedule day view should use a denser 56px hour height'
 );
 
 assert.match(
   coachOpsSource,
-  /const COACH_OPS_DAY_COACH_WIDTH=144;/,
-  'coach schedule day view should use a narrower 144px coach column'
+  /const COACH_OPS_DAY_COACH_WIDTH=128;/,
+  'coach schedule day view should use a narrower 128px coach column'
 );
 
 assert.match(
@@ -531,7 +531,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{[^}]*display:grid[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),144px\)/,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{[^}]*display:grid[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)/,
   'coach schedule day view should render narrower coaches as horizontal columns'
 );
 
@@ -561,13 +561,13 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),144px\)[^}]*transparent 66px/,
+  /#page-coachschedule \.coach-ops-day-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)[^}]*transparent 56px/,
   'coach schedule day grid should use the denser hour height and narrower coach columns'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-coach-col:hover\{background:transparent\}/,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-day-coach-col:hover\{background:transparent!important\}/,
   'coach schedule empty day columns should not show a full-column hover state'
 );
 
@@ -861,8 +861,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-board \.coach-ops-block\{[^}]*border:1px solid #D4E2FF[^}]*border-left:0/,
-  'coach schedule day cards should use the original single-marker style without an outer left bar'
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-block\{[^}]*left:9px[^}]*border:1px solid #D4E2FF[^}]*padding:7px 8px 7px 10px/,
+  'coach schedule day cards should keep a complete left edge and the original single-marker style'
 );
 
 assert.match(
@@ -879,14 +879,14 @@ assert.match(
 
 assert.match(
   html,
-  /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-day-board[\s\S]*coach-ops-day-time-axis[\s\S]*coach-ops-day-coach-grid/,
-  'coach schedule should show the day-view skeleton before the first script render'
+  /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-day-loading-panel/,
+  'coach schedule should show one large loading panel before the first script render'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:block;min-height:calc\(100vh - 215px\);background:#fff\}/,
-  'coach schedule day-view skeleton should not use the old row flex layout'
+  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:flex;min-height:calc\(100vh - 215px\);background:#fff;padding:24px;box-sizing:border-box\}/,
+  'coach schedule day-view skeleton should use one large loading panel'
 );
 
 assert.match(
@@ -897,8 +897,8 @@ assert.match(
 
 assert.match(
   html,
-  /<div class="coach-ops-corner">时间<\/div>/,
-  'coach schedule loading header should show the day-view time axis label before data renders'
+  /<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>/,
+  'coach schedule loading header should not show text or grid columns before data renders'
 );
 
 assert.match(
@@ -951,7 +951,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:block;min-height:calc\(100vh - 215px\);background:#fff\}/,
+  /#page-coachschedule #coachOpsTimeline\.is-skeleton\{display:flex;min-height:calc\(100vh - 215px\);background:#fff;padding:24px;box-sizing:border-box\}/,
   'coach schedule skeleton should fill the visible grid area'
 );
 
@@ -1096,14 +1096,26 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsCreateSlotFromLineClick\(e,date,coach\)[\s\S]*const startTime=coachOpsStartTimeFromLineClick\(e\)[\s\S]*const endMin=Math\.min\(23\*60,startMin\+60\)/,
-  'coach schedule line clicks should build a one-hour selected slot from the clicked half-hour'
+  /function coachOpsCreateSlotFromLineClick\(e,date,coach\)[\s\S]*const startTime=coachOpsStartTimeFromLineClick\(e\)[\s\S]*const endMin=Math\.min\(23\*60,startMin\+\(startTime\.endsWith\(':00'\)\?120:60\)\)/,
+  'coach schedule line clicks should build a two-hour whole-hour slot or one-hour half-hour slot'
 );
 
 assert.match(
   coachOpsSource,
   /coachOpsPendingCreateSlot=slot;[\s\S]*renderCoachOps\(\);[\s\S]*openCoachOpsCreateSchedule\(coach,date,slot\.startTime,slot\.endTime\)/,
   'coach schedule line clicks should highlight the selected time range before opening the drawer'
+);
+
+assert.match(
+  coachOpsSource,
+  /function clearCoachOpsPendingCreateSlot\(\)[\s\S]*coachOpsPendingCreateSlot=null/,
+  'coach schedule should expose a helper to clear the temporary selected time range'
+);
+
+assert.match(
+  source,
+  /function closeModal\(\)[\s\S]*clearCoachOpsPendingCreateSlot\(\)/,
+  'closing the schedule drawer should clear the temporary selected time range'
 );
 
 assert.match(
