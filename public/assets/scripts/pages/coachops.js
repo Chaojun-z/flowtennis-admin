@@ -391,6 +391,9 @@ function coachOpsStartTimeFromLineClick(e){
   const minute=hour>=endHour?0:(y%cellHeight>=cellHeight/2?30:0);
   return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
 }
+function coachOpsDayTimeLabelTop(index,totalHours){
+  return Math.max(0,Math.min(index*COACH_OPS_DAY_HOUR_HEIGHT,totalHours*COACH_OPS_DAY_HOUR_HEIGHT-16));
+}
 function coachOpsDragStart(e,coach){
   coachOpsDraggedName=coachName(coach);
   if(e.dataTransfer){
@@ -661,8 +664,8 @@ function renderCoachOps(){
       const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
       const dayHeight=opsTotalMin/60*COACH_OPS_DAY_HOUR_HEIGHT;
       const timeAxis=Array.from({length:opsEndH-opsStartH+1},(_,i)=>{
-        const top=i*COACH_OPS_DAY_HOUR_HEIGHT;
-        return `<span style="top:${top}px">${i+opsStartH}:00</span>`;
+        const top=coachOpsDayTimeLabelTop(i,opsEndH-opsStartH);
+        return `<span class="coach-ops-day-time-label" style="top:${top}px">${i+opsStartH}:00</span>`;
       }).join('');
       const columns=renderRows.map(row=>{
         const blocks=row.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
@@ -675,7 +678,7 @@ function renderCoachOps(){
         }).join('');
         return `<div class="coach-ops-day-coach-col ${dayIsToday?'is-today':''}" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(row.name)},'${dateKey(range.start)}')">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div>`;
       }).join('');
-      host.innerHTML=`<div class="coach-ops-day-board"><div class="coach-ops-day-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-day-coach-grid" style="height:${dayHeight}px">${nowLineHtml}${nowHeadHtml}${columns}</div></div>`;
+      host.innerHTML=`<div class="coach-ops-day-board"><div class="coach-ops-day-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-day-coach-grid" style="height:${dayHeight}px">${columns}</div>${nowLineHtml}${nowHeadHtml}</div>`;
     }else{
       host.innerHTML=renderRows.map(r=>{
       const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;

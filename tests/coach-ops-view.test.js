@@ -112,6 +112,12 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function coachOpsDayTimeLabelTop\(index,totalHours\)[\s\S]*Math\.min\(index\*COACH_OPS_DAY_HOUR_HEIGHT,totalHours\*COACH_OPS_DAY_HOUR_HEIGHT-16\)/,
+  'coach schedule day time labels should clamp first and last labels inside the grid'
+);
+
+assert.match(
+  coachOpsSource,
   /const nowHeadHtml=showNowLine\?`<div class="coach-ops-now-head" style="top:\$\{nowLineTop\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/div>`:'';/,
   'coach schedule current time label should render beside the vertical time axis'
 );
@@ -513,6 +519,12 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head\{[^}]*display:flex!important[^}]*justify-content:center/,
+  'coach schedule day coach headers should visibly center coach names'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-grid-card\.mode-week \.coach-ops-hours,#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-hours\{grid-template-columns:repeat\(7,160px\)\}/,
   'coach schedule week and month headers should keep 160px columns'
 );
@@ -909,8 +921,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-line\{position:absolute;left:0;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.35\);z-index:12;pointer-events:none\}/,
-  'coach schedule current-time body line should be horizontal in day view'
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-line\{position:absolute;left:0;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.45\);z-index:30;pointer-events:none\}/,
+  'coach schedule current-time body line should be horizontal and above the full day grid'
 );
 
 assert.match(
@@ -921,7 +933,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
   'coach schedule current-time label should sit beside the horizontal red line'
 );
 
