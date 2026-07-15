@@ -112,6 +112,18 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /const COACH_OPS_DAY_HOUR_HEIGHT=66;/,
+  'coach schedule day view should use a denser 66px hour height'
+);
+
+assert.match(
+  coachOpsSource,
+  /const COACH_OPS_DAY_COACH_WIDTH=144;/,
+  'coach schedule day view should use a narrower 144px coach column'
+);
+
+assert.match(
+  coachOpsSource,
   /function coachOpsDayTimeLabelTop\(index,totalHours\)[\s\S]*Math\.min\(index\*COACH_OPS_DAY_HOUR_HEIGHT,totalHours\*COACH_OPS_DAY_HOUR_HEIGHT-16\)/,
   'coach schedule day time labels should clamp first and last labels inside the grid'
 );
@@ -519,8 +531,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{[^}]*display:grid[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),160px\)/,
-  'coach schedule day view should render coaches as horizontal columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{[^}]*display:grid[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),144px\)/,
+  'coach schedule day view should render narrower coaches as horizontal columns'
 );
 
 assert.match(
@@ -530,9 +542,9 @@ assert.match(
 );
 
 assert.match(
-  styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours \.coach-ops-day-coach-head \.coach-ops-drag-handle\{[^}]*width:10px!important[^}]*min-width:10px!important[^}]*max-width:10px!important/,
-  'coach schedule day coach header drag handles should not occupy the full coach column'
+  coachOpsSource,
+  /return `<span class="coach-ops-day-coach-head" \$\{dragAttrs\}><b>\$\{esc\(name\|\|'未命名教练'\)\}<\/b><\/span>`;/,
+  'coach schedule day coach headers should keep drag behavior without rendering a drag icon'
 );
 
 assert.match(
@@ -545,6 +557,24 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-corner\{[^}]*font-size:10px[^}]*font-weight:400/,
   'coach schedule day header corner should use 10px normal weight'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),144px\)[^}]*transparent 66px/,
+  'coach schedule day grid should use the denser hour height and narrower coach columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-coach-col:hover\{background:transparent\}/,
+  'coach schedule empty day columns should not show a full-column hover state'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-create-preview\{position:absolute;left:6px;right:6px;border:1px solid rgba\(76,125,224,\.52\)/,
+  'coach schedule day creation should show a temporary selected time range'
 );
 
 assert.match(
@@ -831,6 +861,18 @@ assert.match(
 
 assert.match(
   styles,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-block\{[^}]*border:1px solid #D4E2FF[^}]*border-left:0/,
+  'coach schedule day cards should use the original single-marker style without an outer left bar'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-block\.type-small,#page-coachschedule \.coach-ops-day-board \.coach-ops-block\.type-camp\{background:#F0FDF4;border-color:#D1FAE5;color:#047857\}/,
+  'coach schedule small-group day cards should use the green legend color'
+);
+
+assert.match(
+  styles,
   /#page-coachschedule \.coach-ops-time,#page-coachschedule \.coach-ops-student,#page-coachschedule \.coach-ops-location\{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/,
   'coach schedule short day card text should not wrap into vertical text'
 );
@@ -1054,8 +1096,14 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /openCoachOpsCreateSchedule\(coach,date,coachOpsStartTimeFromLineClick\(e\)\)/,
-  'coach schedule line clicks should create from the fixed cell-based time helper'
+  /function coachOpsCreateSlotFromLineClick\(e,date,coach\)[\s\S]*const startTime=coachOpsStartTimeFromLineClick\(e\)[\s\S]*const endMin=Math\.min\(23\*60,startMin\+60\)/,
+  'coach schedule line clicks should build a one-hour selected slot from the clicked half-hour'
+);
+
+assert.match(
+  coachOpsSource,
+  /coachOpsPendingCreateSlot=slot;[\s\S]*renderCoachOps\(\);[\s\S]*openCoachOpsCreateSchedule\(coach,date,slot\.startTime,slot\.endTime\)/,
+  'coach schedule line clicks should highlight the selected time range before opening the drawer'
 );
 
 assert.match(

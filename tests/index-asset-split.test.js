@@ -9,7 +9,7 @@ assert.match(html, /assets\/styles\/base\.css/, 'index.html should load base.css
 assert.match(html, /assets\/styles\/components\.css/, 'index.html should load components.css');
 assert.match(html, /assets\/styles\/pages\.css/, 'index.html should load pages.css');
 assert.match(html, /assets\/styles\/pages\.css\?v=/, 'index.html should version pages.css to bust stale modal styles');
-assert.match(html, /assets\/styles\/pages\.css\?v=20260715-coach-day-axis-v3/, 'index.html should bust stale cached pages.css after coach day-axis fixes');
+assert.match(html, /assets\/styles\/pages\.css\?v=20260715-coach-day-axis-v4/, 'index.html should bust stale cached pages.css after coach day-axis fixes');
 assert.match(html, /assets\/scripts\/core\/constants\.js/, 'index.html should load constants.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js/, 'index.html should load utils.js');
 assert.match(html, /assets\/scripts\/core\/utils\.js\?v=20260608-student-drawer-v2/, 'index.html should bust stale cached utils.js after coach operations split changes');
@@ -28,7 +28,7 @@ assert.match(html, /assets\/scripts\/pages\/purchases\.js/, 'index.html should l
 assert.match(html, /assets\/scripts\/pages\/entitlements\.js/, 'index.html should load entitlements page module');
 assert.match(html, /assets\/scripts\/pages\/coach-portal\.js/, 'index.html should load coach-portal page module');
 assert.match(html, /assets\/scripts\/pages\/coachops\.js/, 'index.html should load coachops page module');
-assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260715-coach-day-axis-v3/, 'index.html should version coachops.js after coach day-axis fixes');
+assert.match(html, /assets\/scripts\/pages\/coachops\.js\?v=20260715-coach-day-axis-v4/, 'index.html should version coachops.js after coach day-axis fixes');
 assert.match(html, /assets\/scripts\/standard\/charts\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached charts.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/operations\.js\?v=20260701-channel-quality-matrix-v1/, 'index.html should bust stale cached operations.js after channel quality matrix changes');
 assert.match(html, /assets\/scripts\/pages\/courts\.js/, 'index.html should load courts page module');

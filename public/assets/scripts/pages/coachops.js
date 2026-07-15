@@ -1,10 +1,11 @@
 // ===== 教练运营 =====
 let coachOpsDraggedName='';
 const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
-const COACH_OPS_DAY_HOUR_HEIGHT=80;
-const COACH_OPS_DAY_COACH_WIDTH=160;
+const COACH_OPS_DAY_HOUR_HEIGHT=66;
+const COACH_OPS_DAY_COACH_WIDTH=144;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
+let coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){
   return currentPage==='coachschedule';
 }
@@ -271,11 +272,11 @@ function coachOpsSkeletonRows(count=8){
 function coachOpsDragIconHtml(){
   return '<span class="coach-ops-drag-handle"><svg viewBox="0 0 1024 1024" aria-hidden="true"><path d="M448 192a64 64 0 1 1-128 0 64 64 0 0 1 128 0zM384 576a64 64 0 1 0 0-128 64 64 0 0 0 0 128z m0 320a64 64 0 1 0 0-128 64 64 0 0 0 0 128zM704 192a64 64 0 1 1-128 0 64 64 0 0 1 128 0z m-64 384a64 64 0 1 0 0-128 64 64 0 0 0 0 128z m0 320a64 64 0 1 0 0-128 64 64 0 0 0 0 128z" fill="#262626"></path></svg></span>';
 }
-function openCoachOpsCreateSchedule(coach,date,startTime='09:00'){
+function openCoachOpsCreateSchedule(coach,date,startTime='09:00',endTime=''){
   const h=Math.min(22,parseInt(startTime.slice(0,2))||9),m=startTime.slice(3,5)||'00';
-  const endH=Math.min(23,h+1);
+  const endValue=endTime||`${String(Math.min(23,h+1)).padStart(2,'0')}:${m}`;
   const co=coaches.find(c=>coachName(c.name)===coachName(coach));
-  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${String(endH).padStart(2,'0')}:${m}`,coach:coachName(coach),scheduleCoachLocked:true,campus:campus==='all'?(co?.campus||''):campus,venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
+  openScheduleModal(null,{startTime:`${date} ${String(h).padStart(2,'0')}:${m}`,endTime:`${date} ${endValue}`,coach:coachName(coach),scheduleCoachLocked:true,campus:campus==='all'?(co?.campus||''):campus,venue:'1号场',lessonCount:1,status:'已排课',scheduleSource:'教练运营'});
 }
 function coachOpsLooksLikeTechnicalStudentValue(value){
   const text=String(value||'').trim();
@@ -380,7 +381,24 @@ function openCoachOpsMorePopover(el,coach,date,event){
 }
 function openCoachOpsLineCreate(e,coach,date){
   if(e.target.closest('.coach-ops-block'))return;
-  openCoachOpsCreateSchedule(coach,date,coachOpsStartTimeFromLineClick(e));
+  const slot=coachOpsCreateSlotFromLineClick(e,date,coach);
+  coachOpsPendingCreateSlot=slot;
+  renderCoachOps();
+  openCoachOpsCreateSchedule(coach,date,slot.startTime,slot.endTime);
+}
+function coachOpsCreateSlotFromLineClick(e,date,coach){
+  const startTime=coachOpsStartTimeFromLineClick(e);
+  const startMin=coachOpsTimeTextToMinutes(startTime);
+  const endMin=Math.min(23*60,startMin+60);
+  return {coach:coachName(coach),date,startTime,endTime:coachOpsMinutesToTimeText(endMin)};
+}
+function coachOpsTimeTextToMinutes(value){
+  const [h,m]=String(value||'09:00').split(':').map(v=>parseInt(v,10)||0);
+  return h*60+m;
+}
+function coachOpsMinutesToTimeText(total){
+  const h=Math.floor(total/60),m=total%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
@@ -630,7 +648,7 @@ function renderCoachOps(){
       ?rows.map(r=>{
         const name=coachOpsRowDisplayName(r);
         const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(name)})"`;
-        return `<span class="coach-ops-day-coach-head" ${dragAttrs}>${coachOpsDragIconHtml()}<b>${esc(name||'未命名教练')}</b></span>`;
+        return `<span class="coach-ops-day-coach-head" ${dragAttrs}><b>${esc(name||'未命名教练')}</b></span>`;
       }).join('')
       :mode==='week'
         ?Array.from({length:7},(_,i)=>{const d=addDays(range.start,i),ds=dateKey(d);return `<span class="${ds===todayKey?'is-today':''}">周${'一二三四五六日'[i]} ${d.getMonth()+1}/${d.getDate()}</span>`;}).join('')
@@ -673,6 +691,14 @@ function renderCoachOps(){
       }).join('');
       const columns=renderRows.map(row=>{
         const coachLabel=coachOpsRowDisplayName(row);
+        const pending=coachOpsPendingCreateSlot&&coachOpsPendingCreateSlot.date===dateKey(range.start)&&coachName(coachOpsPendingCreateSlot.coach)===coachName(coachLabel)?coachOpsPendingCreateSlot:null;
+        const pendingBlock=pending?(()=>{
+          const startMin=coachOpsTimeTextToMinutes(pending.startTime)-opsStartH*60;
+          const endMin=coachOpsTimeTextToMinutes(pending.endTime)-opsStartH*60;
+          const top=Math.max(0,startMin/60*COACH_OPS_DAY_HOUR_HEIGHT);
+          const height=Math.max(18,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_DAY_HOUR_HEIGHT);
+          return `<span class="coach-ops-create-preview" style="top:${top}px;height:${height}px"></span>`;
+        })():'';
         const blocks=row.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
           const startMin=(dateMs(s.startTime)-base.getTime())/60000;
           const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
@@ -681,7 +707,7 @@ function renderCoachOps(){
           const height=Math.max(34,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_DAY_HOUR_HEIGHT-4);
           return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
         }).join('');
-        return `<div class="coach-ops-day-coach-col ${dayIsToday?'is-today':''}" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${dateKey(range.start)}')">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div>`;
+        return `<div class="coach-ops-day-coach-col ${dayIsToday?'is-today':''}" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${dateKey(range.start)}')">${pendingBlock}${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div>`;
       }).join('');
       host.innerHTML=`<div class="coach-ops-day-board"><div class="coach-ops-day-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-day-coach-grid" style="height:${dayHeight}px">${columns}</div>${nowLineHtml}${nowHeadHtml}</div>`;
     }else{
