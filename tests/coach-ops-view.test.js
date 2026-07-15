@@ -88,20 +88,32 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function restoreCoachOpsScrollLeft\(/,
-  'coach schedule should restore the horizontal scroll position after rerendering'
+  /function coachOpsHorizontalScrollContainer\(\)[\s\S]*querySelector\('#page-coachschedule \.coach-ops-scroll'\)/,
+  'coach schedule should use the calendar grid scroller for horizontal movement'
+);
+
+assert.match(
+  coachOpsSource,
+  /function preserveCoachOpsScrollLeft\(\)[\s\S]*const scroll=coachOpsHorizontalScrollContainer\(\);[\s\S]*return scroll\?scroll\.scrollLeft:null;/,
+  'coach schedule should preserve horizontal scroll from the calendar grid, not the page'
+);
+
+assert.match(
+  coachOpsSource,
+  /function restoreCoachOpsScrollLeft\(value\)[\s\S]*const scroll=coachOpsHorizontalScrollContainer\(\);[\s\S]*if\(scroll\)scroll\.scrollLeft=value;/,
+  'coach schedule should restore horizontal scroll back to the calendar grid'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:0;overflow:visible;background:#fff;border-radius:16px\}/,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
   'coach schedule desktop calendar should grow with its content instead of using a fixed-height frame'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-scroll\{overflow:visible;flex:0 0 auto;min-height:0;background:#fff\}/,
-  'coach schedule desktop calendar should not own vertical scrolling inside the grid'
+  /#page-coachschedule \.coach-ops-scroll\{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
+  'coach schedule desktop calendar should own horizontal clipping without fixed vertical scrolling'
 );
 
 assert.match(
@@ -981,14 +993,14 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:calc\(100vh \+ 88px\);overflow:visible\}/,
-  'coach schedule grid should be 200px taller than the previous viewport height'
+  /#page-coachschedule\.active\{display:flex;min-height:calc\(100vh - var\(--topH\) - 22px\)\}/,
+  'coach schedule white canvas should extend to the bottom of the visible page area'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto\}/,
-  'coach schedule grid should shrink to content for small campus-filtered coach lists'
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
+  'coach schedule grid should be a bottomless white canvas instead of a fixed-height frame'
 );
 
 assert.match(
@@ -1089,25 +1101,31 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:relative;z-index:80;overflow:visible\}/,
-  'coach schedule toolbar band should use #FFFCF9'
+  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:80;overflow:visible\}/,
+  'coach schedule toolbar band should stay fixed and use #FFFCF9'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:0;overflow:visible;background:#fff;border-radius:16px\}/,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
   'coach schedule grid should grow with the page instead of scrolling inside a fixed card'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto;overflow:visible\}/,
+  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible\}/,
   'coach schedule compact campus view should shrink to the visible coaches'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-head\{position:sticky;top:0;z-index:60;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  /#page-coachschedule \.coach-ops-scroll\{overflow-x:auto;overflow-y:visible;flex:0 0 auto;min-height:0;max-width:100%;background:#fff\}/,
+  'coach schedule calendar should keep horizontal scrolling clipped inside the white canvas'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head\{position:sticky;top:65px;z-index:70;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
   'coach schedule table header should stay fixed in the page content scroll area'
 );
 

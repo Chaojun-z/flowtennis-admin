@@ -58,23 +58,10 @@ function renderFinanceCenter(){
   setFinancePanel(financePanel);
 }
 let financePrepaidFilter='all';
-function renderFinanceLedgerPageSizeFilter(){
-  const host=document.getElementById('financeLedgerPageSize');
-  if(!host)return;
-  host.innerHTML=renderPageSizeSelectorHtml('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize');
-}
-function setFinanceLedgerPageSize(value){
-  financeLedgerPageSize=standardListPageSize(value,financeLedgerPageSize);
-  financeLedgerPage=standardListFirstPage();
-  renderFinanceLedger();
-}
-function setFinanceLedgerPage(page){
-  financeLedgerPage=standardListPagination(financeLedgerRows().length,page,financeLedgerPageSize).page;
-  renderFinanceLedger();
-}
-function resetFinanceLedgerPage(){
-  financeLedgerPage=standardListFirstPage();
-}
+function renderFinanceLedgerPageSizeFilter(){const host=document.getElementById('financeLedgerPageSize');if(!host)return;host.innerHTML=renderPageSizeSelectorHtml('financeLedgerPageSizeValue',financeLedgerPageSize,'setFinanceLedgerPageSize');}
+function setFinanceLedgerPageSize(value){financeLedgerPageSize=standardListPageSize(value,financeLedgerPageSize);financeLedgerPage=standardListFirstPage();renderFinanceLedger();}
+function setFinanceLedgerPage(page){financeLedgerPage=standardListPagination(financeLedgerRows().length,page,financeLedgerPageSize).page;renderFinanceLedger();}
+function resetFinanceLedgerPage(){financeLedgerPage=standardListFirstPage();}
 function financeLedgerExactTimeText(row){
   const businessDate=String(row?.businessDate||'').trim().replace('T',' ');
   if(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(businessDate))return businessDate.slice(11,19);
@@ -97,40 +84,14 @@ function jumpFinanceLedgerPage(value){
   financeLedgerPage=standardListPagination(financeLedgerRows().length,value,financeLedgerPageSize).page;
   renderFinanceLedger();
 }
-function renderFinanceRevenuePageSizeFilter(){
-  const host=document.getElementById('financeRevenuePageSize');
-  if(!host)return;
-  host.innerHTML=renderPageSizeSelectorHtml('financeRevenuePageSizeValue',financeRevenuePageSize,'setFinanceRevenuePageSize');
-}
-function setFinanceRevenuePageSize(value){
-  financeRevenuePageSize=standardListPageSize(value,financeRevenuePageSize);
-  financeRevenuePage=standardListFirstPage();
-  renderFinanceRevenueReport();
-}
-function setFinanceRevenuePage(page){
-  financeRevenuePage=standardListPagination(financeRevenueRows().length,page,financeRevenuePageSize).page;
-  renderFinanceRevenueReport();
-}
-function resetFinanceRevenuePage(){
-  financeRevenuePage=standardListFirstPage();
-}
-function renderFinanceRecognizedPageSizeFilter(){
-  const host=document.getElementById('financeRecognizedPageSize');
-  if(!host)return;
-  host.innerHTML=renderPageSizeSelectorHtml('financeRecognizedPageSizeValue',financeRecognizedPageSize,'setFinanceRecognizedPageSize');
-}
-function setFinanceRecognizedPageSize(value){
-  financeRecognizedPageSize=standardListPageSize(value,financeRecognizedPageSize);
-  financeRecognizedPage=standardListFirstPage();
-  renderFinanceConsumeReport();
-}
-function setFinanceRecognizedPage(page){
-  financeRecognizedPage=standardListPagination(financeRecognizedRows().length,page,financeRecognizedPageSize).page;
-  renderFinanceConsumeReport();
-}
-function resetFinanceRecognizedPage(){
-  financeRecognizedPage=standardListFirstPage();
-}
+function renderFinanceRevenuePageSizeFilter(){const host=document.getElementById('financeRevenuePageSize');if(!host)return;host.innerHTML=renderPageSizeSelectorHtml('financeRevenuePageSizeValue',financeRevenuePageSize,'setFinanceRevenuePageSize');}
+function setFinanceRevenuePageSize(value){financeRevenuePageSize=standardListPageSize(value,financeRevenuePageSize);financeRevenuePage=standardListFirstPage();renderFinanceRevenueReport();}
+function setFinanceRevenuePage(page){financeRevenuePage=standardListPagination(financeRevenueRows().length,page,financeRevenuePageSize).page;renderFinanceRevenueReport();}
+function resetFinanceRevenuePage(){financeRevenuePage=standardListFirstPage();}
+function renderFinanceRecognizedPageSizeFilter(){const host=document.getElementById('financeRecognizedPageSize');if(!host)return;host.innerHTML=renderPageSizeSelectorHtml('financeRecognizedPageSizeValue',financeRecognizedPageSize,'setFinanceRecognizedPageSize');}
+function setFinanceRecognizedPageSize(value){financeRecognizedPageSize=standardListPageSize(value,financeRecognizedPageSize);financeRecognizedPage=standardListFirstPage();renderFinanceConsumeReport();}
+function setFinanceRecognizedPage(page){financeRecognizedPage=standardListPagination(financeRecognizedRows().length,page,financeRecognizedPageSize).page;renderFinanceConsumeReport();}
+function resetFinanceRecognizedPage(){financeRecognizedPage=standardListFirstPage();}
 function setFinancePrepaidFilter(filter){
   financePrepaidFilter=['all','lesson','stored'].includes(filter)?filter:'all';
   [['financePrepaidFilterAll','all'],['financePrepaidFilterLesson','lesson'],['financePrepaidFilterStored','stored']].forEach(([id,key])=>{
@@ -221,13 +182,16 @@ function prepareCoachSchedulePageOpen(){
   const el=coachOpsDateInput();
   if(!el||!el.value||el.dataset.coachOpsAutoDate==='1')resetCoachScheduleToToday();
 }
+function coachOpsHorizontalScrollContainer(){
+  return document.querySelector('#page-coachschedule .coach-ops-scroll');
+}
 function preserveCoachOpsScrollLeft(){
-  const scroll=coachOpsPageScrollContainer();
+  const scroll=coachOpsHorizontalScrollContainer();
   return scroll?scroll.scrollLeft:null;
 }
 function restoreCoachOpsScrollLeft(value){
   if(value===null||value===undefined)return;
-  const scroll=coachOpsPageScrollContainer();
+  const scroll=coachOpsHorizontalScrollContainer();
   if(scroll)scroll.scrollLeft=value;
 }
 function coachOpsPageScrollContainer(){
