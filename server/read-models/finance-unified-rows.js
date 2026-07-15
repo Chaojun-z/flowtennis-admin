@@ -52,11 +52,12 @@ function financeCourtHistoryBusinessType(row){
   return '其他';
 }
 function financeCourtHistoryBusinessDate(historyRow){
-  const primary=historyRow.recordedAt||historyRow.createdAt;
-  const occurredAt=historyRow.occurredAt;
-  const dateOnly=historyRow.occurredDate||historyRow.date;
-  if(!primary&&!occurredAt&&dateOnly)return String(dateOnly).slice(0,10);
-  return financeBusinessDateTime(primary,occurredAt,dateOnly);
+  const dateOnly=historyRow.occurredDate||historyRow.date||historyRow.businessDate||historyRow.bookingDate||historyRow.startDate;
+  if(dateOnly)return String(dateOnly).slice(0,10);
+  const occurredAt=historyRow.occurredAt||historyRow.startTime||historyRow.consumedAt||historyRow.usedAt;
+  const recordedAt=historyRow.recordedAt||historyRow.createdAt;
+  if(!occurredAt&&recordedAt)return financeBusinessDateTime(recordedAt);
+  return financeBusinessDateTime(occurredAt,recordedAt);
 }
 function financeDateKey(value){
   return String(value||'').slice(0,10);
@@ -238,7 +239,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
     return {
       id:`consume-${row.id}`,
       ...financeOperationTraceFields(row),
-      businessDate:financeBusinessDateTime(row.createdAt,row.recordedAt,row.relatedDate),
+      businessDate:financeBusinessDateTime(row.relatedDate||row.sourceDate||scheduleRow.startTime,row.recordedAt,row.createdAt,scheduleRow.startTime),
       weekdayText:financeWeekdayText(row.relatedDate||row.createdAt),
       timeText:financeTimeText(scheduleRow.startTime),
       customer:entitlement.studentName||purchase.studentName||scheduleRow.studentName||'—',
@@ -267,7 +268,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   const directScheduleRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&isDirectPaidSchedule(item)&&!isStoredValuePayMethod(item.payMethod||item.paymentChannel)&&roundMoney(item.paidAmount||item.paymentAmount)>0).map(item=>{
     const amount=roundMoney(item.paidAmount||item.paymentAmount);
     const payMethod=String(item.payMethod||item.paymentChannel||'').trim()||'—';
-    const businessDate=financeBusinessDateTime(item.paidAt||item.paymentTime||item.createdAt,item.paymentTime,item.createdAt,String(item.startTime||'').slice(0,10));
+    const businessDate=financeBusinessDateTime(item.startTime,item.paidAt,item.paymentTime,item.createdAt);
     const courseLabel=item.courseType==='体验课'?(item.experienceType||'体验课'):(item.courseType||'课程');
     const operator=operatorText(item.operator,item.createdBy,item.updatedBy);
     return {
@@ -300,7 +301,7 @@ function buildFinanceUnifiedRows({campuses=[],students=[],purchases=[],entitleme
   });
   const scheduleFieldFeeRows=(schedule||[]).filter(item=>isBillableSchedule(item)&&roundMoney(item.fieldFeeAmount)>0).map(item=>{
     const amount=roundMoney(item.fieldFeeAmount);
-    const businessDate=financeBusinessDateTime(item.fieldFeePaidAt||item.fieldFeePaymentTime||item.paidAt||item.paymentTime||item.createdAt,item.fieldFeePaymentTime,item.paymentTime,item.createdAt,String(item.startTime||'').slice(0,10));
+    const businessDate=financeBusinessDateTime(item.startTime,item.fieldFeePaidAt,item.fieldFeePaymentTime,item.paidAt,item.paymentTime,item.createdAt);
     const operator=operatorText(item.fieldFeeOperator,item.operator,item.createdBy,item.updatedBy);
     return {
       id:`schedule-field-fee-${item.id}`,

@@ -177,7 +177,7 @@ assert.match(source,/function financeRevenueBaseRows\(\)\{[\s\S]*return financeU
 assert.match(source,/function financeRecognizedRows\(\)\{[\s\S]*return financeUnifiedRows\(\)\.filter/,'recognized report should read from the unified finance snapshot');
 assert.match(source,/bookingIncome:financeStandardNumber\('bookingIncome','courtIncome'\)/,'revenue stats should read booking income from backend standard summary');
 assert.match(source,/storedValueRecognized:financeStandardNumber\('storedValueConsumed'\)/,'stored value recognized amount should use backend standard summary');
-assert.match(financeUnifiedRowsSource,/businessDate:financeBusinessDateTime\(row\.createdAt,row\.recordedAt,row\.relatedDate\)/,'course consume transaction time should prefer ledger creation time over future class time');
+assert.match(financeUnifiedRowsSource,/businessDate:financeBusinessDateTime\(row\.relatedDate\|\|row\.sourceDate\|\|scheduleRow\.startTime,row\.recordedAt,row\.createdAt,scheduleRow\.startTime\)/,'course consume transaction time should prefer business date and only use creation time as same-day time or fallback');
 assert.doesNotMatch(financeSnapshotSource,/function buildFinanceUnifiedRows\(/,'finance snapshot should not own finance unified row generation');
 assert.match(revenueShell,/infoId:'financeRevenuePagerInfo'/,'revenue should expose pager info');
 assert.match(revenueShell,/pageSizeId:'financeRevenuePageSize'/,'revenue should expose page size selector');
