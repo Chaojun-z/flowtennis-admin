@@ -73,6 +73,16 @@ const source = {
     fieldFeePaymentTime: `${reportDate} 09:25:00`,
     createdAt: backfillAt
   }],
+  membershipOrders: [{
+    id: 'membership-backfill',
+    courtId: 'court-backfill',
+    courtName: '历史订场用户',
+    rechargeAmount: 500,
+    purchaseDate: historicalDate,
+    createdAt: backfillAt,
+    payMethod: '微信',
+    status: 'active'
+  }],
   courts: [{
     id: 'court-backfill',
     name: '历史订场用户',
@@ -97,6 +107,7 @@ const financeSnapshot = _test.buildFinancePageSnapshot(source);
 const rowsById = new Map(financeSnapshot.financeNormalizedRows.map((row) => [row.id, row]));
 
 assert.strictEqual(rowsById.get('purchase-purchase-backfill').businessDate.slice(0, 10), historicalDate, '历史补录购买应按购买日期入账');
+assert.strictEqual(rowsById.get('membership-membership-backfill').businessDate.slice(0, 10), historicalDate, '历史补录会员储值应按购买日期入账');
 assert.strictEqual(rowsById.get('consume-ledger-backfill').businessDate.slice(0, 10), historicalDate, '历史补录消课应按消课日期入账');
 assert.strictEqual(rowsById.get('schedule-direct-schedule-direct-backfill').businessDate.slice(0, 10), historicalDate, '历史补录排课直接收款应按上课日期入账');
 assert.strictEqual(rowsById.get('schedule-field-fee-schedule-field-fee-backfill').businessDate.slice(0, 10), historicalDate, '历史补录排课场地费应按上课日期入账');
@@ -115,6 +126,8 @@ assert.strictEqual(reportSnapshot.overall.cash.today, 0, '历史补录收款不�
 assert.strictEqual(reportSnapshot.overall.recognized.today, 0, '历史补录核销不能污染录入当天核销确收');
 assert.strictEqual(reportSnapshot.overall.tradeCount.today, 0, '历史补录成交不能污染录入当天成交笔数');
 assert.strictEqual(reportSnapshot.overall.lessonRedemption.todayStudents, 0, '历史补录消课不能污染录入当天上课核销人数');
+assert.deepStrictEqual(reportSnapshot.incomeStructure, { packageIncome: 0, bookingIncome: 0, storedValueIncome: 0 }, '历史补录不能污染录入当天收入结构');
+assert.deepStrictEqual(reportSnapshot.recognitionStructure, { courseRecognized: 0, bookingRecognized: 0, storedValueRecognized: 0 }, '历史补录不能污染录入当天核销结构');
 const campusRow = reportSnapshot.campusRows.find((row) => row.campusName === '顺义马坡');
 assert.ok(campusRow, '当前待履约余额允许生成校区行');
 assert.strictEqual(campusRow.cash, 0, '历史补录不能污染录入当天校区实收');
