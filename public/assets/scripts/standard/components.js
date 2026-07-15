@@ -494,8 +494,32 @@ function renderStandardPageLoading(pageKey){
   host.innerHTML=renderStandardPageSkeleton(config);
   return true;
 }
+const STANDARD_SEARCH_INPUT_DELAY_MS=180;
+let standardSearchInputTimer=null;
+let standardSearchInputActiveUntil=0;
+function runStandardSearchInputHandlers(oninput=''){
+  String(oninput||'').split(';').map(item=>item.trim()).filter(Boolean).forEach(handler=>{
+    const match=handler.match(/^([A-Za-z_$][\w$]*)\(\)$/);
+    if(!match)return;
+    const fn=window[match[1]];
+    if(typeof fn==='function')fn();
+  });
+}
+function queueStandardSearchInput(oninput=''){
+  standardSearchInputActiveUntil=Date.now()+STANDARD_SEARCH_INPUT_DELAY_MS+250;
+  if(standardSearchInputTimer)clearTimeout(standardSearchInputTimer);
+  standardSearchInputTimer=setTimeout(()=>{
+    standardSearchInputTimer=null;
+    runStandardSearchInputHandlers(oninput);
+  },STANDARD_SEARCH_INPUT_DELAY_MS);
+}
+function standardSearchInputIsActive(){
+  if(Date.now()<standardSearchInputActiveUntil)return true;
+  if(typeof document==='undefined')return false;
+  return !!document.activeElement?.classList?.contains('tms-search-input');
+}
 function renderStandardSearchHtml({id='',placeholder='搜索姓名、手机号',oninput=''}={}){
-  return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` oninput="${esc(oninput)}"`:''}></div>`;
+  return `<div class="tms-search-wrapper"><span class="tms-search-icon" aria-hidden="true"></span><input type="text" class="tms-search-input" id="${esc(id)}" placeholder="${esc(placeholder)}"${oninput?` data-search-oninput="${esc(oninput)}" oninput="queueStandardSearchInput(this.dataset.searchOninput)"`:''}></div>`;
 }
 function renderStandardToolbarHtml({search=null,filterHostIds=[],filterHtmls=[],actionsHtml='',leftHtml='',toolbarClass='tms-toolbar',filterClass='tms-filters',actionsClass='tms-toolbar-right'}={}){
   const joinClasses=(base,custom)=>[base,...String(custom||'').split(/\s+/).filter(Boolean).filter(cls=>cls!==base)].join(' ');
@@ -664,6 +688,9 @@ Object.assign(window,{
   standardListPageSize,
   standardListPagination,
   standardListSlice,
+  queueStandardSearchInput,
+  runStandardSearchInputHandlers,
+  standardSearchInputIsActive,
   renderStandardSearchHtml,
   renderStandardToolbarHtml,
   renderAdminMobileCascadeFilters,

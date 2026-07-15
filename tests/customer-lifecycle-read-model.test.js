@@ -262,7 +262,7 @@ const linkedStudentViews = buildTeachingStudentViews(linkedStudentDisplayRows, {
 assert.strictEqual(linkedStudentViews.activeStudents[0].name, '莲儿（连女士）', 'active student list should display the backend unified real student name');
 
 const depletedRecentScheduledRows = buildCustomerLifecycleRows({
-  students: [{ id: 'student-dede', name: '德德', campus: 'mabao' }],
+  students: [{ id: 'student-dede', name: '德德', campus: 'campus-main' }],
   purchases: [{
     id: 'purchase-dede',
     studentId: 'student-dede',
@@ -293,11 +293,11 @@ const depletedRecentScheduledRows = buildCustomerLifecycleRows({
   }]
 });
 const depletedRecentScheduledViews = buildTeachingStudentViews(depletedRecentScheduledRows, {
-  students: [{ id: 'student-dede', name: '德德', campus: 'mabao' }],
+  students: [{ id: 'student-dede', name: '德德', campus: 'campus-main' }],
   purchases: [{ id: 'purchase-dede', studentId: 'student-dede', studentName: '德德', courseType: '私教课', packageName: '1v1私教课 · 10课时 · 非黄金', status: 'active', purchaseDate: '2026-06-10', amountPaid: 6800 }],
   entitlements: [{ id: 'entitlement-dede', studentId: 'student-dede', studentName: '德德', courseType: '私教课', packageName: '1v1私教课 · 10课时 · 非黄金', totalLessons: 10, remainingLessons: 0, status: 'depleted' }],
   schedule: [{ id: 'schedule-dede', studentIds: ['student-dede'], studentName: '德德', courseType: '私教课', status: '已排课', startTime: '2026-07-14 11:00' }],
-  now: new Date('2026-07-14T15:30:00+08:00')
+  now: new Date(Date.UTC(2026,6,14,7,30,0))
 });
 assert.ok(
   depletedRecentScheduledViews.historicalStudents.some(row => row.studentId === 'student-dede'),

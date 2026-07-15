@@ -797,14 +797,14 @@ async function loadPageBackgroundDatasets(pg,requestVersion,{force=false}={}){
     }));
   }
   if(requestVersion!==dataRequestVersion)return;
-  renderLoadedCurrentPage(pg);
+  renderLoadedCurrentPageWhenSearchIdle(pg,requestVersion);
   if(isStudentListPage(pg)&&STUDENT_PAGE_DEFERRED_REQUIREMENTS.length){
     setTimeout(()=>{
       if(requestVersion!==dataRequestVersion)return;
       ensureDatasetsByName(STUDENT_PAGE_DEFERRED_REQUIREMENTS,{force})
         .then(()=>{
           if(requestVersion!==dataRequestVersion)return;
-          renderLoadedCurrentPage(pg);
+          renderLoadedCurrentPageWhenSearchIdle(pg,requestVersion);
         })
         .catch(e=>{
           if(requestVersion!==dataRequestVersion)return;
@@ -819,6 +819,14 @@ function renderLoadedCurrentPage(pg){
   buildCampusTabs();
   renderPageData(currentPage);
   return true;
+}
+function renderLoadedCurrentPageWhenSearchIdle(pg,requestVersion){
+  if(requestVersion!==dataRequestVersion)return false;
+  if(typeof standardSearchInputIsActive==='function'&&standardSearchInputIsActive()){
+    setTimeout(()=>renderLoadedCurrentPageWhenSearchIdle(pg,requestVersion),250);
+    return false;
+  }
+  return renderLoadedCurrentPage(pg);
 }
 function clearLoadedData(){
   leads=[];leadFollowups=[];courts=[];students=[];products=[];packages=[];purchases=[];entitlements=[];entitlementLedger=[];financialLedger=[];
@@ -1059,6 +1067,7 @@ async function loadAll(){
 }
 async function syncAllQuietly(){
   if(isSyncingAll||!currentUser)return;
+  if(typeof standardSearchInputIsActive==='function'&&standardSearchInputIsActive())return;
   if(document.hidden)return;
   if(typeof document.hasFocus==='function'&&!document.hasFocus())return;
   if(document.getElementById('overlay')?.classList.contains('open'))return;
