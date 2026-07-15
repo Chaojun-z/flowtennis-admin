@@ -1,6 +1,8 @@
 // ===== 教练运营 =====
 let coachOpsDraggedName='';
 const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
+const COACH_OPS_DAY_HOUR_HEIGHT=80;
+const COACH_OPS_DAY_COACH_WIDTH=160;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
 function isCoachSchedulePage(){
@@ -382,11 +384,11 @@ function openCoachOpsLineCreate(e,coach,date){
 }
 function coachOpsStartTimeFromLineClick(e){
   const rect=e.currentTarget.getBoundingClientRect();
-  const cellWidth=120,startHour=7,endHour=22;
-  const x=Math.max(0,Math.min(rect.width-1,e.clientX-rect.left));
-  const hourIndex=Math.floor(x/cellWidth);
+  const cellHeight=COACH_OPS_DAY_HOUR_HEIGHT,startHour=7,endHour=22;
+  const y=Math.max(0,Math.min(rect.height-1,e.clientY-rect.top));
+  const hourIndex=Math.floor(y/cellHeight);
   const hour=Math.min(endHour,startHour+hourIndex);
-  const minute=hour>=endHour?0:(x%cellWidth>=cellWidth/2?30:0);
+  const minute=hour>=endHour?0:(y%cellHeight>=cellHeight/2?30:0);
   return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
 }
 function coachOpsDragStart(e,coach){
@@ -419,8 +421,8 @@ function scrollCoachOpsDayToNow(){
   const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
   if(!scroll)return;
   const now=new Date();
-  const nowLineLeft=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*120;
-  scroll.scrollLeft=Math.max(0,nowLineLeft-360);
+  const nowLineTop=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*COACH_OPS_DAY_HOUR_HEIGHT;
+  scroll.scrollTop=Math.max(0,nowLineTop-180);
 }
 function syncCoachOpsUnifiedOrder(order){
   const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
@@ -598,21 +600,31 @@ function renderCoachOps(){
   const dayIsToday=mode==='day'&&dateKey(range.start)===todayKey;
   const nowMinutes=(nowForGrid.getHours()-7)*60+nowForGrid.getMinutes()+nowForGrid.getSeconds()/60;
   const showNowLine=dayIsToday&&nowMinutes>=0&&nowMinutes<=(22-7)*60;
-  const nowLineLeft=showNowLine?nowMinutes/60*120:0;
-  const nowLineHtml=showNowLine?`<span class="coach-ops-now-line" style="left:${nowLineLeft}px"></span>`:'';
-  const nowHeadHtml=showNowLine?`<div class="coach-ops-now-head" style="left:${nowLineLeft}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></div>`:'';
+  const nowLineTop=showNowLine?nowMinutes/60*COACH_OPS_DAY_HOUR_HEIGHT:0;
+  const nowLineHtml=showNowLine?`<span class="coach-ops-now-line" style="top:${nowLineTop}px"></span>`:'';
+  const nowHeadHtml=showNowLine?`<div class="coach-ops-now-head" style="top:${nowLineTop}px"><i>${String(nowForGrid.getHours()).padStart(2,'0')}:${String(nowForGrid.getMinutes()).padStart(2,'0')}</i><b></b></div>`:'';
   const gridCard=document.querySelector('#page-coachschedule .coach-ops-grid-card');
+  const rows=coachOpsRows();
   if(gridCard){
     gridCard.classList.toggle('mode-day',mode==='day');
     gridCard.classList.toggle('mode-week',mode==='week');
     gridCard.classList.toggle('mode-month',mode==='month');
+    const dayCoachCount=Math.max(1,rows.length);
+    gridCard.style.setProperty('--coach-ops-day-coach-count',String(dayCoachCount));
+    gridCard.style.setProperty('--coach-ops-day-grid-width',`${dayCoachCount*COACH_OPS_DAY_COACH_WIDTH}px`);
   }
   const hourHost=document.getElementById('coachOpsHours');
   const opsStartH=7,opsEndH=22,opsTotalMin=(opsEndH-opsStartH)*60;
   if(hourHost){
     hourHost.classList.toggle('week',mode==='week'||mode==='month');
+    hourHost.classList.toggle('day-coaches',mode==='day');
+    hourHost.style.setProperty('--coach-ops-day-coach-count',String(Math.max(1,rows.length)));
+    hourHost.style.setProperty('--coach-ops-day-grid-width',`${Math.max(1,rows.length)*COACH_OPS_DAY_COACH_WIDTH}px`);
     hourHost.innerHTML=mode==='day'
-      ?Array.from({length:opsEndH-opsStartH+1},(_,i)=>`<span>${i+opsStartH}:00</span>`).join('')+nowHeadHtml
+      ?rows.map(r=>{
+        const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
+        return `<span class="coach-ops-day-coach-head" ${dragAttrs}>${coachOpsDragIconHtml()}<b>${esc(r.name)}</b></span>`;
+      }).join('')
       :mode==='week'
         ?Array.from({length:7},(_,i)=>{const d=addDays(range.start,i),ds=dateKey(d);return `<span class="${ds===todayKey?'is-today':''}">周${'一二三四五六日'[i]} ${d.getMonth()+1}/${d.getDate()}</span>`;}).join('')
         :['周一','周二','周三','周四','周五','周六','周日'].map((d,i)=>{
@@ -630,13 +642,12 @@ function renderCoachOps(){
     const dayText=['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
     gridClock.textContent=`● ${now.getMonth()+1}/${now.getDate()} ${dayText} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   }
-  const rows=coachOpsRows();
   if(gridCard){
     gridCard.classList.toggle('is-compact',rows.length>0&&rows.length<=3);
     gridCard.classList.remove('is-loading');
   }
   const corner=document.querySelector('#page-coachschedule .coach-ops-corner');
-  if(corner)corner.textContent='教练';
+  if(corner)corner.textContent=mode==='day'?'时间':'教练';
   const host=document.getElementById('coachOpsTimeline');
   if(host){
     const renderRows=rows;
@@ -646,6 +657,25 @@ function renderCoachOps(){
       host.innerHTML=`<div class="coach-ops-empty-state"><strong>${emptyText}</strong><span>不是加载中，可切换校区或日期查看</span></div>`;
     }else if(isCoachOpsMobileSchedule()){
       host.innerHTML=renderCoachOpsMobileTimeline(renderRows,mode,range);
+    }else if(mode==='day'){
+      const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
+      const dayHeight=opsTotalMin/60*COACH_OPS_DAY_HOUR_HEIGHT;
+      const timeAxis=Array.from({length:opsEndH-opsStartH+1},(_,i)=>{
+        const top=i*COACH_OPS_DAY_HOUR_HEIGHT;
+        return `<span style="top:${top}px">${i+opsStartH}:00</span>`;
+      }).join('');
+      const columns=renderRows.map(row=>{
+        const blocks=row.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
+          const startMin=(dateMs(s.startTime)-base.getTime())/60000;
+          const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
+          const endMin=(endMs-base.getTime())/60000;
+          const top=Math.max(0,startMin/60*COACH_OPS_DAY_HOUR_HEIGHT);
+          const height=Math.max(34,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_DAY_HOUR_HEIGHT-4);
+          return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
+        }).join('');
+        return `<div class="coach-ops-day-coach-col ${dayIsToday?'is-today':''}" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(row.name)},'${dateKey(range.start)}')">${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div>`;
+      }).join('');
+      host.innerHTML=`<div class="coach-ops-day-board"><div class="coach-ops-day-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-day-coach-grid" style="height:${dayHeight}px">${nowLineHtml}${nowHeadHtml}${columns}</div></div>`;
     }else{
       host.innerHTML=renderRows.map(r=>{
       const dragAttrs=`draggable="true" ondragstart="coachOpsDragStart(event,${jsArg(r.name)})" ondragover="coachOpsDragOver(event)" ondrop="coachOpsDrop(event,${jsArg(r.name)})"`;
@@ -654,19 +684,6 @@ function renderCoachOps(){
           ?`<div class="coach-ops-line coach-ops-skeleton-line"><span></span><span></span></div>`
           :`<div class="coach-ops-period-line ${mode==='week'?'coach-ops-week':'coach-ops-month'}">${Array.from({length:7},(_,i)=>`<div class="coach-ops-daycell skeleton-cell"><span></span>${i<3?'<i></i>':''}</div>`).join('')}</div>`;
         return `<div class="coach-ops-row coach-ops-skeleton-row"><div class="coach-ops-name"><span class="coach-ops-skeleton-dot"></span><span></span></div>${cells}</div>`;
-      }
-      if(mode==='day'){
-        const base=new Date(range.start);base.setHours(opsStartH,0,0,0);
-        const blocks=r.rangeRows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))).map(s=>{
-          const startMin=(dateMs(s.startTime)-base.getTime())/60000;
-          const endMs=Number.isFinite(dateMs(s.endTime))?dateMs(s.endTime):dateMs(s.startTime)+60*60000;
-          const endMin=(endMs-base.getTime())/60000;
-          const left=Math.max(0,startMin/60*120);
-          const width=Math.max(24,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*120);
-          const cardWidth=Math.min(Math.max(width-4,112),1920-left-4);
-          return `<div class="coach-ops-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="left:${left+2}px;width:${cardWidth}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${s.startTime.slice(11,16)}${s.endTime?' - '+s.endTime.slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
-        }).join('');
-        return `<div class="coach-ops-row" ${dragAttrs}><div class="coach-ops-name">${coachOpsDragIconHtml()}<span>${esc(r.name)}</span></div><div class="coach-ops-line ${dayIsToday?'is-today':''}" onclick="openCoachOpsLineCreate(event,${jsArg(r.name)},'${dateKey(range.start)}')">${nowLineHtml}${blocks||'<span class="coach-ops-empty">当日暂无课程</span>'}</div></div>`;
       }
       const days=[];
       const gridStart=mode==='month'?weekStart(range.start):range.start;

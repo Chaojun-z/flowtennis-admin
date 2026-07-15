@@ -106,14 +106,14 @@ assert.doesNotMatch(
 
 assert.match(
   coachOpsSource,
-  /function scrollCoachOpsDayToNow\(\)[\s\S]*scroll\.scrollLeft=Math\.max\(0,nowLineLeft-360\)/,
-  'coach schedule day view should auto-scroll near the current time'
+  /function scrollCoachOpsDayToNow\(\)[\s\S]*scroll\.scrollTop=Math\.max\(0,nowLineTop-180\)/,
+  'coach schedule day view should auto-scroll vertically near the current time'
 );
 
 assert.match(
   coachOpsSource,
-  /const nowHeadHtml=showNowLine\?`<div class="coach-ops-now-head" style="left:\$\{nowLineLeft\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/div>`:'';/,
-  'coach schedule current time label should render near the header'
+  /const nowHeadHtml=showNowLine\?`<div class="coach-ops-now-head" style="top:\$\{nowLineTop\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/div>`:'';/,
+  'coach schedule current time label should render beside the vertical time axis'
 );
 
 assert.doesNotMatch(
@@ -507,8 +507,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{grid-template-columns:repeat\(16,120px\)\}/,
-  'coach schedule day view should keep 120px hour columns'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-day \.coach-ops-hours\{[^}]*display:grid[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),160px\)/,
+  'coach schedule day view should render coaches as horizontal columns'
 );
 
 assert.match(
@@ -909,8 +909,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-line\{position:absolute;top:0;bottom:0;width:0;border-left:1px solid rgba\(242,72,34,\.25\);z-index:12;pointer-events:none\}/,
-  'coach schedule current-time body line should be 1px at 25% opacity'
+  /#page-coachschedule \.coach-ops-now-line\{position:absolute;left:0;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.35\);z-index:12;pointer-events:none\}/,
+  'coach schedule current-time body line should be horizontal in day view'
 );
 
 assert.match(
@@ -921,8 +921,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:calc\(100% \+ 6px\);left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
-  'coach schedule current-time label should sit beside the red line instead of covering it'
+  /#page-coachschedule \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
+  'coach schedule current-time label should sit beside the horizontal red line'
 );
 
 assert.doesNotMatch(
@@ -1006,8 +1006,8 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /function coachOpsStartTimeFromLineClick\(e\)[\s\S]*const hourIndex=Math\.floor\(x\/cellWidth\)[\s\S]*const minute=hour>=endHour\?0:\(x%cellWidth>=cellWidth\/2\?30:0\)/,
-  'coach schedule day clicks should map each visual hour cell into first-half and second-half start times'
+  /function coachOpsStartTimeFromLineClick\(e\)[\s\S]*const hourIndex=Math\.floor\(y\/cellHeight\)[\s\S]*const minute=hour>=endHour\?0:\(y%cellHeight>=cellHeight\/2\?30:0\)/,
+  'coach schedule day clicks should map vertical hour cells into first-half and second-half start times'
 );
 
 assert.match(
