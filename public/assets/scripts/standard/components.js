@@ -147,6 +147,55 @@ function renderStandardDropdownHtml(id,label,options,value,isForm=false,onchange
   const checkIcon='<span class="tms-dropdown-check" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.2L5.7 10.2L11.5 3.8"/></svg></span>';
   return `<div class="tms-dropdown ${isForm?'tms-dropdown-form ':''}${isPageSize?'tms-page-size-dropdown ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${onchange}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()">${list.map(opt=>{const optionLabel=renderStandardOptionLabel(opt);const isActive=active&&String(opt.value)===String(active.value);return `<div class="tms-dropdown-item ${isActive?'active':''}" data-value="${esc(opt.value??'')}" onclick="selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)">${isPageSize?checkIcon:''}<span>${esc(optionLabel)}</span></div>`;}).join('')}</div></div>`;
 }
+function renderStandardSearchableDropdownHtml(config={}){
+  const id=String(config.id||'');
+  if(!id)return '';
+  const label=String(config.label||'选择');
+  const value=config.value??'';
+  const list=(config.options||[]).map(opt=>typeof opt==='string'?{value:opt,label:opt}:opt);
+  const active=list.find(opt=>String(opt.value)===String(value))||list.find(opt=>opt.active)||null;
+  const displayLabel=active?(String(active.value)===''&&active.emptyDisplay?active.emptyDisplay:renderStandardOptionLabel(active)):label;
+  const hasValue=String(active?.value||value||'')!=='';
+  const groups=[];
+  const byGroup=new Map();
+  list.forEach(opt=>{
+    const group=String(opt.group||'').trim();
+    if(group&&!byGroup.has(group)){byGroup.set(group,[]);groups.push(group);}
+    if(group)byGroup.get(group).push(opt);
+  });
+  const itemHtml=(opt)=>{
+    const optionLabel=renderStandardOptionLabel(opt);
+    const isActive=active&&String(opt.value)===String(active.value);
+    const searchText=[optionLabel,opt.searchText,opt.group,opt.value].filter(Boolean).join(' ');
+    return `<div class="tms-dropdown-item ${isActive?'active':''}" data-value="${esc(opt.value??'')}" data-search-text="${esc(searchText.toLowerCase())}" onclick="selectStandardDropdownItem('${id}',${jsArg(opt.value)},${jsArg(optionLabel)},event)"><span>${esc(optionLabel)}</span></div>`;
+  };
+  const grouped=list.some(opt=>String(opt.group||'').trim());
+  const itemsHtml=grouped
+    ? list.filter(opt=>!String(opt.group||'').trim()).map(itemHtml).join('')+groups.map(group=>`<div class="tms-dropdown-group" data-dropdown-group="${esc(group)}"><div class="tms-dropdown-group-title">${esc(group)}</div>${(byGroup.get(group)||[]).map(itemHtml).join('')}</div>`).join('')
+    : list.map(itemHtml).join('');
+  const searchPlaceholder=String(config.searchPlaceholder||'搜索');
+  const emptyText=String(config.emptyText||'没有匹配结果');
+  const onchange=String(config.onchange||'');
+  return `<div class="tms-dropdown tms-searchable-dropdown ${config.isForm?'tms-dropdown-form ':''}${hasValue?'has-value':''}" id="${id}_dropdown" data-target="${id}" data-label="${esc(label)}" data-onchange="${esc(onchange)}" onclick="toggleStandardDropdown('${id}',event)"><input type="hidden" id="${id}" value="${esc(active?.value||value||'')}"><div class="tms-dropdown-display">${esc(displayLabel)}</div><div class="tms-dropdown-menu tms-searchable-dropdown-menu" style="touch-action:pan-y;-webkit-overflow-scrolling:touch" onwheel="event.stopPropagation();event.preventDefault();this.scrollTop += event.deltaY" ontouchmove="event.stopPropagation()"><div class="tms-dropdown-search-row" onclick="event.stopPropagation()"><input class="tms-dropdown-search-input" id="${id}_search" placeholder="${esc(searchPlaceholder)}" oninput="filterStandardSearchableDropdown('${id}',this.value)" onkeydown="event.stopPropagation()"></div><div class="tms-dropdown-options">${itemsHtml}</div><div class="tms-dropdown-empty">${esc(emptyText)}</div></div></div>`;
+}
+function filterStandardSearchableDropdown(id,keyword=''){
+  const dropdown=document.getElementById(id+'_dropdown');
+  if(!dropdown)return;
+  const tokens=String(keyword||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let visibleCount=0;
+  dropdown.querySelectorAll('.tms-dropdown-item').forEach(item=>{
+    const text=String(item.dataset.searchText||item.textContent||'').toLowerCase();
+    const visible=!tokens.length||tokens.every(token=>text.includes(token));
+    item.style.display=visible?'flex':'none';
+    if(visible)visibleCount++;
+  });
+  dropdown.querySelectorAll('[data-dropdown-group]').forEach(group=>{
+    const hasVisible=[...group.querySelectorAll('.tms-dropdown-item')].some(item=>item.style.display!=='none');
+    group.style.display=hasVisible?'block':'none';
+  });
+  const empty=dropdown.querySelector('.tms-dropdown-empty');
+  if(empty)empty.style.display=visibleCount?'none':'block';
+}
 function standardGroupedFilterState(config={}){
   const groups=(config.groups||[]).map(group=>({
     ...group,
@@ -271,6 +320,8 @@ function toggleStandardDropdown(id,event){
       if(spaceBelow<menuHeight+12&&spaceAbove>spaceBelow)dropdown.classList.add('open-upward');
       const active=menu.querySelector('.tms-dropdown-item.active');
       if(active)active.scrollIntoView({block:'nearest'});
+      const search=menu.querySelector('.tms-dropdown-search-input');
+      if(search){search.value='';filterStandardSearchableDropdown(id,'');setTimeout(()=>search.focus(),0);}
     }
   }
   const formItem=dropdown.closest('.tms-form-item');
@@ -596,6 +647,8 @@ Object.assign(window,{
   renderStandardTooltipText,
   renderStandardCellText,
   renderStandardDropdownHtml,
+  renderStandardSearchableDropdownHtml,
+  filterStandardSearchableDropdown,
   renderStandardGroupedFilterHtml,
   refreshStandardGroupedFilterPanel,
   setStandardGroupedFilterGroup,

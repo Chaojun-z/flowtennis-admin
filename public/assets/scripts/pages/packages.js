@@ -455,12 +455,88 @@ function packageOpts(sel){
 function purchasePackageOpts(sel){
   return '<option value="">— 选择售卖课包 —</option>'+packages.filter(p=>p.status!=='inactive'||p.id===sel).map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${esc(standardPackageLabel(p,false)||p.name)}${p.status==='inactive'?' · 已停售':''}</option>`).join('');
 }
+function coursePackageClassSizeValue(p={}){
+  const text=[p.maxStudents,p.name,p.packageName,p.productName,p.notes].filter(Boolean).join(' ');
+  if(/1v4|4人/.test(text))return 4;
+  if(/1v3|3人/.test(text))return 3;
+  if(/1v2|2人/.test(text))return 2;
+  return Number(p.maxStudents)||1;
+}
+function coursePackageTimeBandOrder(p={}){
+  const text=String(p.timeBand||p.packageTimeBand||'全天');
+  if(text.includes('非黄金'))return 1;
+  if(text.includes('黄金'))return 2;
+  if(text.includes('全天'))return 3;
+  return 9;
+}
+function coursePackageBusinessGroup(p={}){
+  const courseType=standardCourseTypeFilterValue(p);
+  if(courseType==='体验课')return '体验课';
+  const audience=packageAudienceLabelFromText([p.audience,p.type,p.productName,p.name,p.packageName,p.notes])||'其他';
+  if((audience==='青少年'||audience==='成人')&&(courseType==='私教课'||courseType==='小班课'))return `${audience} · ${courseType}`;
+  return '其他';
+}
+function coursePackageBusinessSortValue(p={}){
+  const groupOrder={'青少年 · 私教课':1,'青少年 · 小班课':2,'成人 · 私教课':3,'成人 · 小班课':4,'体验课':5,'其他':9};
+  return [
+    groupOrder[coursePackageBusinessGroup(p)]||9,
+    coursePackageClassSizeValue(p),
+    Number(p.lessons||p.packageLessons||p.totalLessons)||0,
+    coursePackageTimeBandOrder(p),
+    Number(p.price)||0,
+    coachName(p.ownerCoach),
+    String(p.createdAt||'')
+  ];
+}
+function compareCoursePackageBusinessOrder(a={},b={}){
+  const av=coursePackageBusinessSortValue(a);
+  const bv=coursePackageBusinessSortValue(b);
+  for(let i=0;i<av.length;i++){
+    if(typeof av[i]==='number'||typeof bv[i]==='number'){
+      const diff=(Number(av[i])||0)-(Number(bv[i])||0);
+      if(diff)return diff;
+    }else{
+      const diff=String(av[i]||'').localeCompare(String(bv[i]||''),'zh-Hans-CN');
+      if(diff)return diff;
+    }
+  }
+  return String(a.id||'').localeCompare(String(b.id||''));
+}
+function coursePackageDropdownLabel(p={},includeCoach=true){
+  const base=standardPackageLabel(p,true)||p.name||'课包';
+  const price=Number(p.price)||0;
+  return [base,price?`${price}元`:'',includeCoach?coachName(p.ownerCoach):''].filter(Boolean).join(' · ');
+}
+function coursePackageDropdownOptions(rows=[],config={}){
+  const list=[...(Array.isArray(rows)?rows:[])].sort(compareCoursePackageBusinessOrder).map(p=>{
+    const label=coursePackageDropdownLabel(p,config.includeCoach!==false);
+    return {
+      value:p.id,
+      label,
+      group:coursePackageBusinessGroup(p),
+      searchText:[label,p.name,p.packageName,p.productName,p.notes,p.lessons,p.packageLessons,p.totalLessons,p.price,p.timeBand,p.packageTimeBand,p.ownerCoach,coachName(p.ownerCoach)].filter(Boolean).join(' ')
+    };
+  });
+  if(config.showAllOption)list.unshift({value:'',label:config.allLabel||'全部课包',emptyDisplay:config.allLabel||'全部课包',searchText:config.allLabel||'全部课包'});
+  return list;
+}
+function renderCoursePackagePickerDropdownHtml(id,label,rows,value='',config={}){
+  return renderStandardSearchableDropdownHtml({
+    id,
+    label,
+    value,
+    options:config.options||coursePackageDropdownOptions(rows,config),
+    isForm:config.isForm!==false,
+    onchange:config.onchange||'',
+    searchPlaceholder:'搜索课包 / 教练 / 价格 / 课时',
+    emptyText:'没有匹配到课包'
+  });
+}
 function packageMergeOpts(sel){
-  return [{value:'',label:'— 选择课包 —'},...packages.filter(p=>p.status!=='merged').map(p=>({value:p.id,label:standardPackageLabel(p,true)||p.name}))];
+  return coursePackageDropdownOptions(packages.filter(p=>p.status!=='merged'),{includeCoach:true});
 }
 function openPackageMergeModal(){
-  const opts=packageMergeOpts('');
-  const body=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留课包 *</label>${renderStandardDropdownHtml('pkg_merge_master','选择课包',opts,'',true)}</div><div class="tms-form-item"><label class="tms-form-label">并入课包 *</label>${renderStandardDropdownHtml('pkg_merge_source','选择课包',opts,'',true)}</div></div>`;
+  const body=`<div class="tms-form-row"><div class="tms-form-item"><label class="tms-form-label">保留课包 *</label>${renderCoursePackagePickerDropdownHtml('pkg_merge_master','选择课包',packages.filter(p=>p.status!=='merged'),'',{includeCoach:true})}</div><div class="tms-form-item"><label class="tms-form-label">并入课包 *</label>${renderCoursePackagePickerDropdownHtml('pkg_merge_source','选择课包',packages.filter(p=>p.status!=='merged'),'',{includeCoach:true})}</div></div>`;
   const footer=`<button class="tms-btn tms-btn-default" onclick="closeModal()">取消</button><button class="tms-btn tms-btn-primary" id="packageMergeBtn" onclick="mergePackage()">确认合并</button>`;
   openStandardModal({title:'合并课包',bodyHtml:body,actionsHtml:footer,extraClass:'modal-tight modal-merge-package'});
 }

@@ -178,7 +178,7 @@ assert.match(html, /function productHasReferences/, 'product modal should know w
 assert.match(html, /function packageHasPurchases/, 'package modal should know whether package is sold');
 assert.match(html, /onclick="openPackageMergeModal\(\)"[\s\S]*合并课包/, 'package page should expose a package merge entry');
 assert.match(html, /function mergePackage\(\)[\s\S]*\/packages\/merge/, 'package merge should call the dedicated merge endpoint');
-assert.match(html, /openPackageMergeModal[\s\S]*renderStandardDropdownHtml\('pkg_merge_master'[\s\S]*renderStandardDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the shared custom dropdown');
+assert.match(html, /openPackageMergeModal[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_master'[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the shared searchable package dropdown');
 assert.match(html, /openStandardModal\(\{title:'合并课包'[\s\S]*modal-merge-package/, 'package merge modal should use the dedicated overflow class through standard modal');
 assert.doesNotMatch(html, /<select class="fselect tms-form-control" id="pkg_merge_/, 'package merge modal should not use native select controls');
 assert.doesNotMatch(html, /只支持规则一致的课包合并。并入课包会在后台隐藏，购买记录和课包余额会显示为保留课包。/, 'package merge notice should remove the unreadable yellow hint');
@@ -238,9 +238,13 @@ assert.match(html, /function openPurchaseModal/, 'purchase page should provide t
 assert.match(fnBody('openPurchaseModal'), /packages\.filter\(p=>p\.status!=='inactive'&&p\.status!=='merged'\)/, 'purchase create package picker should hide merged packages');
 assert.match(html, /function purchasePackagePickerLabel/, 'purchase package picker should have a dedicated display label');
 assert.match(fnBody('purchasePackagePickerLabel'), /standardPackageLabel\(p,true\)[\s\S]*Number\(p\.price\)[\s\S]*\$\{price\}元[\s\S]*coachName\(p\.ownerCoach\)/, 'purchase package picker label should include package price and bound owner coach');
-assert.match(fnBody('openPurchaseModal'), /label:purchasePackagePickerLabel\(p\)/, 'purchase create package picker should show price and bound owner coach');
-assert.match(fnBody('openPurchaseEditModal'), /label:purchasePackagePickerLabel\(pkg\)/, 'purchase edit package picker should show price and bound owner coach');
-assert.match(fnBody('refreshPurchaseFilters'), /label:purchasePackagePickerLabel\(p\)/, 'purchase record package filter should show price and owner coach');
+assert.match(html, /function coursePackageBusinessSortValue\(/, 'course package dropdown should expose business sorting by audience, course type, class size, lesson count, time band, price and coach');
+assert.match(html, /function renderCoursePackagePickerDropdownHtml\(/, 'course package dropdown should have a shared searchable grouped renderer');
+assert.match(fnBody('renderCoursePackagePickerDropdownHtml'), /renderStandardSearchableDropdownHtml[\s\S]*搜索课包 \/ 教练 \/ 价格 \/ 课时/, 'course package picker should be searchable by package, coach, price and lesson count');
+assert.match(fnBody('openPurchaseModal'), /renderCoursePackagePickerDropdownHtml\('pur_packageId'[\s\S]*includeCoach:true/, 'purchase create package picker should use the searchable grouped package dropdown');
+assert.match(fnBody('openPurchaseEditModal'), /renderCoursePackagePickerDropdownHtml\('pur_edit_packageId'[\s\S]*includeCoach:true/, 'purchase edit package picker should use the searchable grouped package dropdown');
+assert.match(fnBody('refreshPurchaseFilters'), /renderCoursePackagePickerDropdownHtml\('purPackageFilter'[\s\S]*showAllOption:true[\s\S]*includeCoach:true/, 'purchase record package filter should use the searchable grouped package dropdown');
+assert.match(fnBody('openPackageMergeModal'), /renderCoursePackagePickerDropdownHtml\('pkg_merge_master'[\s\S]*renderCoursePackagePickerDropdownHtml\('pkg_merge_source'/, 'package merge modal should use the searchable grouped package dropdown for both package selectors');
 assert.match(html, /function purchaseStudentPickerHtml\(/, 'purchase modal should expose a searchable student picker helper');
 assert.match(html, /function selectPurchaseStudent\(/, 'purchase modal should allow selecting a student from search results');
 assert.match(html, /id="pur_studentSearch"/, 'purchase modal should provide a student search input');

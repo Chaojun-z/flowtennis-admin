@@ -14,6 +14,16 @@
 .tms-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 .course-package-showcase-filters .tms-dropdown.has-value .tms-dropdown-display{color:#C06031;font-weight:400}
 .tms-grouped-filter .tms-dropdown-display{min-width:108px}
+.tms-searchable-dropdown .tms-dropdown-menu{width:360px;max-width:min(420px,calc(100vw - 32px));max-height:360px;padding:6px}
+.tms-searchable-dropdown.tms-dropdown-form .tms-dropdown-menu{width:100%;min-width:360px}
+.tms-dropdown-search-row{position:sticky;top:0;z-index:1;background:#FAF6F2;padding:2px 2px 6px}
+.tms-dropdown-search-input{width:100%;height:32px;box-sizing:border-box;border:1px solid #E8DFD5;border-radius:6px;background:#FFFFFF;color:#5C4D43;font-size:13px;padding:0 10px;outline:none;font-family:inherit}
+.tms-dropdown-search-input::placeholder{color:#A08E7E}
+.tms-dropdown-search-input:focus{border-color:#D19356}
+.tms-dropdown-group{padding:2px 0}
+.tms-dropdown-group-title{padding:7px 10px 4px;color:#9A897B;font-size:12px;font-weight:600;line-height:1.2}
+.tms-searchable-dropdown .tms-dropdown-item span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tms-dropdown-empty{display:none;padding:12px 10px;color:#9A897B;font-size:13px}
 .tms-grouped-filter-menu{width:340px;max-width:calc(100vw - 40px);max-height:none;padding:0;overflow:hidden}
 .tms-grouped-filter-selected{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid #EAE0D6;background:#FAF6F2}
 .tms-grouped-filter-chip{height:24px;border:1px solid #E8DFD5;border-radius:6px;background:#FBF7F4;color:#805435;font-size:12px;font-family:inherit;padding:0 7px;cursor:pointer}
