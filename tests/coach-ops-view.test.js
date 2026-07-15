@@ -112,6 +112,18 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*todaySection\.offsetTop\+30\+nowLineTop-180/,
+  'coach schedule week view should auto-scroll near today and the current time'
+);
+
+assert.match(
+  coachOpsSource,
+  /coachOpsAutoScrollWeekView=coachOpsMode==='week'/,
+  'switching into week view should request the current-time auto-scroll'
+);
+
+assert.match(
+  coachOpsSource,
   /const COACH_OPS_DAY_HOUR_HEIGHT=56;/,
   'coach schedule day view should use a denser 56px hour height'
 );
@@ -591,6 +603,24 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /ds===todayKey\?nowLineHtml:''/,
+  'coach schedule week view should render the current-time red line only in today section'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-week-now-line/,
+  'coach schedule week view should render a current-time red line'
+);
+
+assert.match(
+  coachOpsSource,
+  /coach-ops-week-block[\s\S]*<div class="coach-ops-student"><span class="coach-ops-card-dot"><\/span>\$\{esc\(coachOpsScheduleStudentTitle\(s\)\)\}<\/div><div class="coach-ops-location">\$\{esc\(scheduleLocationText\(s\)\)\}<\/div>/,
+  'coach schedule week cards should show student and location instead of repeating the time'
+);
+
+assert.match(
+  coachOpsSource,
   /hourHost\.innerHTML=mode==='day'\|\|mode==='week'[\s\S]*coach-ops-week-coach-head/,
   'coach schedule week header should use coach names on the horizontal axis'
 );
@@ -617,6 +647,18 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-week-coach-grid\{[^}]*grid-template-columns:repeat\(var\(--coach-ops-day-coach-count\),128px\)[^}]*transparent 40px/,
   'coach schedule week day grids should use coach columns and 40px hour rows'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-now-line\{position:absolute;left:72px;right:0;bottom:auto;width:auto;height:0;border-top:1px solid rgba\(242,72,34,\.75\);z-index:30;pointer-events:none\}/,
+  'coach schedule week current-time line should start after the time axis'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-block \.coach-ops-student\{display:flex;align-items:center;gap:6px;padding-left:0/,
+  'coach schedule week card student row should replace the old time row'
 );
 
 assert.match(

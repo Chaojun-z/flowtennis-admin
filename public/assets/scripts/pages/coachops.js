@@ -6,6 +6,7 @@ const COACH_OPS_DAY_COACH_WIDTH=128;
 const COACH_OPS_WEEK_HOUR_HEIGHT=40;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
+let coachOpsAutoScrollWeekView=false;
 let coachOpsPendingCreateSlot=null;
 function isCoachSchedulePage(){
   return currentPage==='coachschedule';
@@ -204,6 +205,7 @@ function ensureCoachOpsDate(){
 }
 function coachOpsModeDateForMode(mode){
   if(mode==='day')return new Date();
+  if(mode==='week')return new Date();
   return coachOpsInputDate();
 }
 function resetCoachScheduleToToday(){
@@ -234,10 +236,11 @@ function setCoachOpsMode(mode){
   coachOpsMode=mode;
   if(d)d.value=coachOpsInputValue(base,coachOpsMode);
   coachOpsAutoScrollDayView=coachOpsMode==='day';
+  coachOpsAutoScrollWeekView=coachOpsMode==='week';
   closeCoachOpsPicker();
   renderCoachOps();
 }
-function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=coachOpsMode==='day';renderCoachOps();}
+function setCoachOpsToday(){const el=coachOpsDateInput();if(el){el.value=coachOpsInputValue(new Date(),coachOpsMode);delete el.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=coachOpsMode==='day';coachOpsAutoScrollWeekView=coachOpsMode==='week';renderCoachOps();}
 function shiftCoachOpsDate(step){
   const el=coachOpsDateInput();if(!el)return;
   const mode=coachOpsMode;
@@ -246,6 +249,7 @@ function shiftCoachOpsDate(step){
   else if(mode==='week')el.value=coachOpsInputValue(addDays(base,step*7),mode);
   else el.value=dateKey(addDays(base,step));
   delete el.dataset.coachOpsAutoDate;
+  coachOpsAutoScrollWeekView=false;
   renderCoachOps();
 }
 function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=ds===today();renderCoachOps();}
@@ -450,6 +454,11 @@ function coachOpsDrop(e,targetCoach){
 function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalMin,todayKey){
   const weekDays=Array.from({length:7},(_,i)=>addDays(range.start,i));
   const dayHeight=opsTotalMin/60*COACH_OPS_WEEK_HOUR_HEIGHT;
+  const nowForWeek=new Date();
+  const nowMinutes=(nowForWeek.getHours()-opsStartH)*60+nowForWeek.getMinutes()+nowForWeek.getSeconds()/60;
+  const showNowLine=nowMinutes>=0&&nowMinutes<=opsTotalMin;
+  const nowLineTop=showNowLine?nowMinutes/60*COACH_OPS_WEEK_HOUR_HEIGHT:0;
+  const nowLineHtml=showNowLine?`<span class="coach-ops-week-now-line" style="top:${nowLineTop}px"></span><div class="coach-ops-week-now-head" style="top:${nowLineTop}px"><i>${String(nowForWeek.getHours()).padStart(2,'0')}:${String(nowForWeek.getMinutes()).padStart(2,'0')}</i><b></b></div>`:'';
   const timeAxis=Array.from({length:opsEndH-opsStartH+1},(_,i)=>{
     const top=coachOpsWeekTimeLabelTop(i,opsEndH-opsStartH);
     return `<span class="coach-ops-week-time-label" style="top:${top}px">${i+opsStartH}:00</span>`;
@@ -474,11 +483,11 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
         const endMin=(endMs-base.getTime())/60000;
         const top=Math.max(0,startMin/60*COACH_OPS_WEEK_HOUR_HEIGHT);
         const height=Math.max(28,(Math.min(opsTotalMin,endMin)-Math.max(0,startMin))/60*COACH_OPS_WEEK_HOUR_HEIGHT-4);
-        return `<div class="coach-ops-week-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-time"><span class="coach-ops-card-dot"></span>${String(s.startTime||'').slice(11,16)}${s.endTime?' - '+String(s.endTime).slice(11,16):''}</div><div class="coach-ops-student">${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
+        return `<div class="coach-ops-week-block ${coachOpsCourseTypeTagClass(scheduleCourseType(s))}" style="top:${top+2}px;height:${height}px" onclick="event.stopPropagation();openScheduleDetail('${s.id}')"><div class="coach-ops-student"><span class="coach-ops-card-dot"></span>${esc(coachOpsScheduleStudentTitle(s))}</div><div class="coach-ops-location">${esc(scheduleLocationText(s))}</div></div>`;
       }).join('');
       return `<div class="coach-ops-week-coach-col" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${ds}')">${pendingBlock}${blocks}</div>`;
     }).join('');
-    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div></div></section>`;
+    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div>${ds===todayKey?nowLineHtml:''}</div></section>`;
   }).join('')}</div>`;
 }
 function scrollCoachOpsDayToNow(){
@@ -490,6 +499,18 @@ function scrollCoachOpsDayToNow(){
   const now=new Date();
   const nowLineTop=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*COACH_OPS_DAY_HOUR_HEIGHT;
   scroll.scrollTop=Math.max(0,nowLineTop-180);
+}
+function scrollCoachOpsWeekToNow(){
+  if(!isCoachSchedulePage()||coachOpsMode!=='week')return;
+  const range=rangeBounds('week'),todayKey=today();
+  if(todayKey<dateKey(range.start)||todayKey>=dateKey(range.end))return;
+  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  const todaySection=document.querySelector('#page-coachschedule .coach-ops-week-day.is-today');
+  if(!scroll||!todaySection)return;
+  const now=new Date();
+  const nowMin=Math.max(0,Math.min((22-7)*60,(now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60));
+  const nowLineTop=nowMin/60*COACH_OPS_WEEK_HOUR_HEIGHT;
+  scroll.scrollTop=Math.max(0,todaySection.offsetTop+30+nowLineTop-180);
 }
 function syncCoachOpsUnifiedOrder(order){
   const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
@@ -786,6 +807,10 @@ function renderCoachOps(){
   if(mode==='day'&&coachOpsAutoScrollDayView){
     requestAnimationFrame(scrollCoachOpsDayToNow);
     coachOpsAutoScrollDayView=false;
+  }
+  if(mode==='week'&&coachOpsAutoScrollWeekView){
+    requestAnimationFrame(scrollCoachOpsWeekToNow);
+    coachOpsAutoScrollWeekView=false;
   }
   const workloadBody=document.getElementById('coachOpsTbody');
   if(workloadBody)workloadBody.innerHTML=rows.map(r=>`<tr><td class="tms-sticky-l" style="padding-left:20px"><div class="tms-text-primary">${esc(r.name)}</div></td><td><div class="coach-workload-lessons">${lessonUnitsText(r.totalLessonUnits)}<span>节</span>${coachOpsComparisonText(r)}</div></td><td>${operationsCoachTrialConversionText(r.name)}</td><td><div class="tms-text-remark coach-workload-course-types coach-workload-wrap" title="${esc(coachCourseTypeDistributionText(r))}">${esc(coachCourseTypeDistributionText(r))}</div></td><td><span class="coach-workload-count">${r.feedback}</span></td><td><span class="coach-workload-count">${r.pending}</span></td><td><div class="coach-workload-wrap coach-workload-campus">${esc(r.campusDistributionText)}</div></td><td><div class="coach-workload-wrap coach-workload-timeband">${esc(r.timeBandDistributionText)}</div></td></tr>`).join('');
