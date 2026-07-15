@@ -645,8 +645,44 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /mode==='week'\?'日期\/时间':'教练'/,
-  'coach schedule week corner should label the left axis as date and time'
+  /mode==='day'\?'时间':mode==='week'\?'日期\/时间':'日期'/,
+  'coach schedule month corner should label the left axis as date'
+);
+
+assert.match(
+  coachOpsSource,
+  /const COACH_OPS_MONTH_VISIBLE_COACHES=5;/,
+  'coach schedule month view should show five coach summaries before more'
+);
+
+assert.match(
+  coachOpsSource,
+  /function renderCoachOpsMonthOverview\([\s\S]*summaries\.slice\(0,COACH_OPS_MONTH_VISIBLE_COACHES\)[\s\S]*\+\$\{hiddenCount\} 更多/,
+  'coach schedule month view should summarize dates by coach and then show more'
+);
+
+assert.match(
+  coachOpsSource,
+  /function openCoachOpsMonthDay\(ds\)[\s\S]*coachOpsSelectedCoach='';[\s\S]*openCoachOpsDay\(ds\)/,
+  'clicking a month date should enter the day view for all coaches'
+);
+
+assert.match(
+  coachOpsSource,
+  /function openCoachOpsMonthCoachDay\(coach,ds,event\)[\s\S]*coachOpsSelectedCoach=coachName\(coach\)[\s\S]*openCoachOpsDay\(ds\)/,
+  'clicking a month coach summary should enter the day view filtered by that coach'
+);
+
+assert.match(
+  coachOpsSource,
+  /function openCoachOpsMorePopover\(el,coach,date,event\)[\s\S]*\(!coachKey\|\|coachName\(s\.coach\)===coachKey\)/,
+  'month more popover should support all coaches for the selected date'
+);
+
+assert.match(
+  coachOpsSource,
+  /else if\(mode==='month'\)\{\s*host\.innerHTML=renderCoachOpsMonthOverview\(renderRows,range,todayKey\);/,
+  'coach schedule month view should use the date overview renderer'
 );
 
 assert.match(
@@ -875,6 +911,36 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-month\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\);gap:0;padding:0;border:0\}/,
   'coach schedule month content grid should keep the exact 1120px weekday layout'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-overview\{display:grid;grid-template-columns:120px 1120px;min-width:1240px\}/,
+  'coach schedule month overview should align with the weekday header'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-overview-grid\{display:grid;width:1120px;min-width:1120px;max-width:1120px;grid-template-columns:repeat\(7,160px\)\}/,
+  'coach schedule month overview should render seven 160px date columns'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-overview \.coach-ops-daycell\.month-cell\{min-height:154px\}/,
+  'coach schedule month date cells should be tall enough for five coach summaries'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-coach-row:hover\{background:#F3F4F6\}/,
+  'coach schedule month hover should apply only to coach summary rows'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-month-coach-row:hover \.coach-ops-month-preview\{display:block\}/,
+  'coach schedule month coach row hover should show the daily preview'
 );
 
 assert.match(

@@ -4,6 +4,7 @@ const COACH_OPS_COACH_FILTER_KEY='ft_coach_ops_coach_filter';
 const COACH_OPS_DAY_HOUR_HEIGHT=56;
 const COACH_OPS_DAY_COACH_WIDTH=128;
 const COACH_OPS_WEEK_HOUR_HEIGHT=40;
+const COACH_OPS_MONTH_VISIBLE_COACHES=5;
 let coachOpsSelectedCoach=localStorage.getItem(COACH_OPS_COACH_FILTER_KEY)||'';
 let coachOpsAutoScrollDayView=false;
 let coachOpsAutoScrollWeekView=false;
@@ -263,6 +264,19 @@ function shiftCoachOpsDate(step){
   renderCoachOps();
 }
 function openCoachOpsDay(ds){coachOpsMode='day';const d=coachOpsDateInput();if(d){d.value=ds;delete d.dataset.coachOpsAutoDate;}coachOpsAutoScrollDayView=ds===today();renderCoachOps();}
+function openCoachOpsMonthDay(ds){
+  coachOpsSelectedCoach='';
+  localStorage.removeItem(COACH_OPS_COACH_FILTER_KEY);
+  refreshCoachOpsTopFilters();
+  openCoachOpsDay(ds);
+}
+function openCoachOpsMonthCoachDay(coach,ds,event){
+  if(event)event.stopPropagation();
+  coachOpsSelectedCoach=coachName(coach);
+  if(coachOpsSelectedCoach)localStorage.setItem(COACH_OPS_COACH_FILTER_KEY,coachOpsSelectedCoach);
+  refreshCoachOpsTopFilters();
+  openCoachOpsDay(ds);
+}
 function coachOpsQuickCreate(){
   openScheduleModal(null,{scheduleSource:'教练运营'});
 }
@@ -370,12 +384,13 @@ function openCoachOpsDaySchedules(coach,date){
 function openCoachOpsMorePopover(el,coach,date,event){
   if(event)event.stopPropagation();
   document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove());
+  const coachKey=coachName(coach);
   const rows=billableSchedules()
-    .filter(s=>coachOpsCampusMatchesSchedule(s)&&coachName(s.coach)===coachName(coach)&&String(s.startTime||'').slice(0,10)===date)
+    .filter(s=>coachOpsCampusMatchesSchedule(s)&&(!coachKey||coachName(s.coach)===coachKey)&&String(s.startTime||'').slice(0,10)===date)
     .sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
   const overlay=document.createElement('div');
   overlay.className='coach-ops-more-overlay';
-  overlay.onclick=function(){document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove());};
+  overlay.onclick=function(e){if(e)e.stopPropagation();document.querySelectorAll('.coach-ops-more-popover,.coach-ops-more-overlay').forEach(node=>node.remove());};
   const pop=document.createElement('div');
   pop.className='coach-ops-more-popover';
   const displayDate=String(date||'').replace(/^(\d{4})-(\d{2})-(\d{2})$/,(_,y,m,d)=>`${Number(m)}月${Number(d)}日`);
@@ -393,6 +408,43 @@ function openCoachOpsMorePopover(el,coach,date,event){
       pop.classList.add('is-edge-left');
     }
   }
+}
+function coachOpsMonthDayRows(renderRows,date){
+  return (renderRows||[]).flatMap(row=>(row.rangeRows||[]).filter(s=>String(s.startTime||'').slice(0,10)===date));
+}
+function coachOpsMonthCoachSummaries(dayRows){
+  const grouped=new Map();
+  (dayRows||[]).forEach(s=>{
+    const name=coachName(s.coach)||'未命名教练';
+    if(!grouped.has(name))grouped.set(name,[]);
+    grouped.get(name).push(s);
+  });
+  return [...grouped.entries()].map(([name,rows])=>({
+    name,
+    rows:rows.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))),
+    lessonUnits:sumScheduleLessonUnits(rows)
+  })).sort((a,b)=>b.lessonUnits-a.lessonUnits||b.rows.length-a.rows.length||a.name.localeCompare(b.name,'zh-Hans-CN'));
+}
+function coachOpsMonthCoachPreviewHtml(item,date){
+  const rows=item.rows.slice(0,6);
+  const hidden=item.rows.length-rows.length;
+  return `<span class="coach-ops-month-preview"><b>${esc(String(date||'').slice(5).replace('-','/'))} · ${esc(item.name)}</b>${rows.map(s=>`<span>${String(s.startTime||'').slice(11,16)}${s.endTime?`-${String(s.endTime).slice(11,16)}`:''} ${esc(coachOpsScheduleStudentTitle(s))}</span>`).join('')}${hidden>0?`<em>还有 ${hidden} 节</em>`:''}<i>点击查看日视图</i></span>`;
+}
+function renderCoachOpsMonthOverview(renderRows,range,todayKey){
+  const gridStart=weekStart(range.start),gridEnd=addDays(weekStart(range.end),7);
+  const days=[];
+  for(let d=new Date(gridStart);d<gridEnd;d=addDays(d,1))days.push(new Date(d));
+  const cells=days.map(d=>{
+    const ds=dateKey(d);
+    const dayRows=coachOpsMonthDayRows(renderRows,ds).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+    const summaries=coachOpsMonthCoachSummaries(dayRows);
+    const visible=summaries.slice(0,COACH_OPS_MONTH_VISIBLE_COACHES);
+    const hiddenCount=Math.max(0,summaries.length-visible.length);
+    const lessonCount=lessonUnitsText(sumScheduleLessonUnits(dayRows));
+    const coachList=visible.length?`<div class="coach-ops-daycell-list coach-ops-month-coach-list">${visible.map(item=>`<button type="button" class="coach-ops-month-coach-row" onclick="openCoachOpsMonthCoachDay(${jsArg(item.name)},'${ds}',event)"><span class="coach-ops-month-coach-name">${esc(item.name)}</span><span class="coach-ops-month-coach-count">${lessonUnitsText(item.lessonUnits)}节</span>${coachOpsMonthCoachPreviewHtml(item,ds)}</button>`).join('')}${hiddenCount?`<button type="button" class="coach-ops-more-btn" onclick="openCoachOpsMorePopover(this,'','${ds}',event)">+${hiddenCount} 更多</button>`:''}</div>`:'<div class="coach-ops-daycell-empty">暂无课</div>';
+    return `<div class="coach-ops-daycell month-cell ${ds===todayKey?'is-today':''} ${dayRows.length?'has-course':''} ${d.getMonth()!==range.start.getMonth()?'is-muted':''}" onclick="openCoachOpsMonthDay('${ds}')"><div class="coach-ops-daycell-head"><strong>${d.getMonth()+1}/${d.getDate()}</strong>${dayRows.length?`<span class="coach-ops-daycell-count">共 ${lessonCount} 节</span>`:''}</div>${coachList}</div>`;
+  }).join('');
+  return `<div class="coach-ops-month-overview"><div class="coach-ops-month-side"></div><div class="coach-ops-month-overview-grid">${cells}</div></div>`;
 }
 function openCoachOpsLineCreate(e,coach,date){
   if(e.target.closest('.coach-ops-block'))return;
@@ -747,7 +799,7 @@ function renderCoachOps(){
     gridCard.classList.remove('is-loading');
   }
   const corner=document.querySelector('#page-coachschedule .coach-ops-corner');
-  if(corner)corner.textContent=mode==='day'?'时间':mode==='week'?'日期/时间':'教练';
+  if(corner)corner.textContent=mode==='day'?'时间':mode==='week'?'日期/时间':'日期';
   const host=document.getElementById('coachOpsTimeline');
   if(host){
     const renderRows=rows;
@@ -755,6 +807,8 @@ function renderCoachOps(){
     if(!renderRows.length){
       const emptyText=campus==='all'?'当前日期暂无教练排课':'当前筛选无教练排课';
       host.innerHTML=`<div class="coach-ops-empty-state"><strong>${emptyText}</strong><span>不是加载中，可切换校区或日期查看</span></div>`;
+    }else if(mode==='month'){
+      host.innerHTML=renderCoachOpsMonthOverview(renderRows,range,todayKey);
     }else if(isCoachOpsMobileSchedule()){
       host.innerHTML=renderCoachOpsMobileTimeline(renderRows,mode,range);
     }else if(mode==='day'){
