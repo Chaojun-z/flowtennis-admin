@@ -118,6 +118,12 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /function coachOpsRowDisplayName\(row\)[\s\S]*row\?\.name\|\|row\?\.coach\|\|row\?\.coachName/,
+  'coach schedule day headers should derive a visible coach name from every supported row field'
+);
+
+assert.match(
+  coachOpsSource,
   /const nowHeadHtml=showNowLine\?`<div class="coach-ops-now-head" style="top:\$\{nowLineTop\}px"><i>\$\{String\(nowForGrid\.getHours\(\)\)\.padStart\(2,'0'\)\}:\$\{String\(nowForGrid\.getMinutes\(\)\)\.padStart\(2,'0'\)\}<\/i><b><\/b><\/div>`:'';/,
   'coach schedule current time label should render beside the vertical time axis'
 );
@@ -268,7 +274,7 @@ assert.match(
 
 assert.match(
   coachOpsSource,
-  /row\.rangeRows\.length\|\|coachOpsHomeCampusCoachNames\(\)\.includes\(row\.name\)/,
+  /row\.rangeRows\.length\|\|coachOpsHomeCampusCoachNames\(\)\.includes\(coachOpsRowDisplayName\(row\)\)/,
   'selected campus coach list should keep home-campus coaches and unified rows with current-range lessons'
 );
 
@@ -813,20 +819,20 @@ assert.match(
 
 assert.match(
   html,
-  /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-skeleton-row/,
-  'coach schedule should show a skeleton before the first script render'
+  /id="coachOpsTimeline" class="is-skeleton"[\s\S]*coach-ops-day-board[\s\S]*coach-ops-day-time-axis[\s\S]*coach-ops-day-coach-grid/,
+  'coach schedule should show the day-view skeleton before the first script render'
 );
 
 assert.match(
   html,
-  /<div class="coach-ops-grid-card is-loading">/,
+  /<div class="coach-ops-grid-card[^"]*is-loading[^"]*mode-day[^"]*"[^>]*>/,
   'coach schedule should start in a full loading state before data renders'
 );
 
 assert.match(
   html,
-  /<div class="coach-ops-corner"><\/div>/,
-  'coach schedule loading header should not show the coach label before data renders'
+  /<div class="coach-ops-corner">时间<\/div>/,
+  'coach schedule loading header should show the day-view time axis label before data renders'
 );
 
 assert.match(
@@ -921,8 +927,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-line\{position:absolute;left:0;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.45\);z-index:30;pointer-events:none\}/,
-  'coach schedule current-time body line should be horizontal and above the full day grid'
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-line\{position:absolute;left:72px;right:0;height:0;border-top:1px solid rgba\(242,72,34,\.75\);z-index:30;pointer-events:none\}/,
+  'coach schedule current-time body line should start after the time axis and stay above the day grid'
 );
 
 assert.match(
@@ -933,7 +939,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 5px;border-radius:999px;background:rgba\(242,72,34,\.9\)/,
+  /#page-coachschedule \.coach-ops-day-board \.coach-ops-now-head i\{position:absolute;top:-8px;left:8px;transform:none;height:16px;padding:0 6px;border-radius:999px;background:rgba\(242,72,34,\.95\)/,
   'coach schedule current-time label should sit beside the horizontal red line'
 );
 
