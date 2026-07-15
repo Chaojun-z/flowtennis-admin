@@ -105,6 +105,24 @@ assert.match(
 );
 
 assert.match(
+  coachOpsSource,
+  /function syncCoachOpsHeaderScroll\(\)[\s\S]*hours\.style\.transform=`translateX\(\$\{-left\}px\)`;/,
+  'coach schedule should sync the detached header with the body horizontal scroll'
+);
+
+assert.match(
+  coachOpsSource,
+  /function bindCoachOpsHeaderScroll\(\)[\s\S]*scroll\.addEventListener\('scroll',syncCoachOpsHeaderScroll,\{passive:true\}\)/,
+  'coach schedule should bind the body scroller to the detached header'
+);
+
+assert.match(
+  coachOpsSource,
+  /restoreCoachOpsScrollLeft\(previousScrollLeft\);[\s\S]*bindCoachOpsHeaderScroll\(\);/,
+  'coach schedule should re-sync header position after every render'
+);
+
+assert.match(
   styles,
   /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible;background:#fff;border-radius:16px 16px 0 0;border-bottom:0\}/,
   'coach schedule desktop calendar should grow with its content instead of using a fixed-height frame'
@@ -148,8 +166,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-corner\{position:sticky;left:0;z-index:115\}/,
-  'coach schedule top-left corner should stay locked during horizontal scrolling'
+  /#page-coachschedule \.coach-ops-corner\{z-index:115\}/,
+  'coach schedule top-left corner should stay above the detached header scroll track'
 );
 
 assert.match(
@@ -987,8 +1005,8 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-head\{grid-template-columns:1120px;min-width:1120px\}/,
-  'coach schedule month header should remove the blank left axis column'
+  /#page-coachschedule \.coach-ops-grid-card\.mode-month \.coach-ops-head\{grid-template-columns:minmax\(0,1fr\);min-width:0;gap:0;background:#fff\}/,
+  'coach schedule month header should be a detached full-width weekday layer without a blank left axis'
 );
 
 assert.match(
@@ -1149,8 +1167,8 @@ assert.match(
 
 assert.match(
   html,
-  /<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>/,
-  'coach schedule loading header should not show text or grid columns before data renders'
+  /<div class="coach-ops-head"><div class="coach-ops-corner"><\/div><div class="coach-ops-hours" id="coachOpsHours"><\/div><\/div>\s*<div class="coach-ops-scroll">/,
+  'coach schedule header should be detached above the horizontal body scroller'
 );
 
 assert.match(
@@ -1197,7 +1215,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-head\{position:sticky;top:65px;z-index:100;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  /#page-coachschedule \.coach-ops-head\{position:sticky;top:var\(--coach-ops-toolbar-h\);z-index:110;width:100%;max-width:100%;height:38px;display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
   'coach schedule table header should stay fixed in the page content scroll area'
 );
 

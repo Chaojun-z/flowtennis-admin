@@ -185,6 +185,25 @@ function prepareCoachSchedulePageOpen(){
 function coachOpsHorizontalScrollContainer(){
   return document.querySelector('#page-coachschedule .coach-ops-scroll');
 }
+function syncCoachOpsHeaderScroll(){
+  const hours=document.getElementById('coachOpsHours');
+  if(!hours)return;
+  const scroll=coachOpsHorizontalScrollContainer();
+  const left=scroll?scroll.scrollLeft:0;
+  hours.style.transform=`translateX(${-left}px)`;
+}
+function bindCoachOpsHeaderScroll(){
+  const scroll=coachOpsHorizontalScrollContainer();
+  if(!scroll){
+    syncCoachOpsHeaderScroll();
+    return;
+  }
+  if(scroll.dataset.coachOpsHeaderScrollBound!=='1'){
+    scroll.addEventListener('scroll',syncCoachOpsHeaderScroll,{passive:true});
+    scroll.dataset.coachOpsHeaderScrollBound='1';
+  }
+  syncCoachOpsHeaderScroll();
+}
 function preserveCoachOpsScrollLeft(){
   const scroll=coachOpsHorizontalScrollContainer();
   return scroll?scroll.scrollLeft:null;
@@ -193,6 +212,7 @@ function restoreCoachOpsScrollLeft(value){
   if(value===null||value===undefined)return;
   const scroll=coachOpsHorizontalScrollContainer();
   if(scroll)scroll.scrollLeft=value;
+  syncCoachOpsHeaderScroll();
 }
 function coachOpsPageScrollContainer(){
   return document.querySelector('.content')||document.scrollingElement||document.documentElement;
@@ -825,6 +845,7 @@ function renderCoachOps(){
     }
   }
   restoreCoachOpsScrollLeft(previousScrollLeft);
+  bindCoachOpsHeaderScroll();
   if(mode==='day'&&coachOpsAutoScrollDayView){
     requestAnimationFrame(scrollCoachOpsDayToNow);
     coachOpsAutoScrollDayView=false;

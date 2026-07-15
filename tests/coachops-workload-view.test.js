@@ -43,8 +43,8 @@ assert.match(fnBody('renderCoachOps'), /coach-ops-more-btn/, 'coach schedule mon
 assert.match(fnBody('renderCoachOps'), /const visibleRows=mode==='week'\?dayRows:dayRows\.slice\(0,3\)/, 'coach schedule week view should list all courses without +more');
 assert.match(fnBody('coachOpsScheduleItemText'), /coachOpsScheduleStudentTitle/, 'coach schedule cards should use the cleaned student title');
 assert.match(fnBody('openCoachOpsMorePopover'), /coach-ops-more-popover/, 'coach schedule more trigger should render a floating popover');
-assert.match(styles, /#page-coachschedule \.coach-ops-head\{[\s\S]*position:sticky[\s\S]*top:0/, 'coach schedule time header should stay fixed while scrolling');
-assert.match(styles, /#page-coachschedule \.coach-ops-name,#page-coachschedule \.coach-ops-corner\{[\s\S]*position:sticky[\s\S]*left:0/, 'coach schedule left coach column should stay fixed while scrolling');
+assert.match(styles, /#page-coachschedule \.coach-ops-head\{[\s\S]*position:sticky[\s\S]*top:var\(--coach-ops-toolbar-h\)/, 'coach schedule time header should stay fixed below the toolbar');
+assert.match(styles, /#page-coachschedule \.coach-ops-day-time-axis\{position:sticky;left:0/, 'coach schedule day time axis should stay fixed while horizontally scrolling');
 assert.match(source, /function operationsCoachTrialConversionText\(/, 'coach workload should display trial conversion from the unified operations read model');
 assert.match(fnBody('operationsCoachTrialConversionText'), /operationsPageData\?\.coach\?\.rows/, 'trial conversion should read the operations coach metrics');
 assert.match(source, /function coachCourseTypeDistributionText\(/, 'coach workload should show course type distribution');
