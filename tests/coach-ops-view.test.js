@@ -148,7 +148,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{width:100%;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column\}/,
+  /#page-coachschedule \.coach-ops-grid-card\{width:100%;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;position:relative;isolation:isolate\}/,
   'coach schedule white canvas should stay inside the page width while growing vertically'
 );
 
@@ -699,6 +699,12 @@ assert.match(
 
 assert.match(
   coachOpsSource,
+  /coach-ops-week-day-label-fixed[\s\S]*coach-ops-week-day-label-track/,
+  'coach schedule week date labels should split the frozen left label from the horizontal track'
+);
+
+assert.match(
+  coachOpsSource,
   /ds===todayKey\?nowLineHtml:''/,
   'coach schedule week view should render the current-time red line only in today section'
 );
@@ -1217,6 +1223,24 @@ assert.match(
   styles,
   /#page-coachschedule \.coach-ops-head\{position:sticky;top:var\(--coach-ops-toolbar-h\);z-index:110;width:100%;max-width:100%;height:38px;display:grid;grid-template-columns:var\(--coach-ops-axis-w\) minmax\(0,1fr\);overflow:hidden;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
   'coach schedule table header should stay fixed in the page content scroll area'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-head::before\{content:"";position:absolute;inset:0;background:inherit;z-index:0;pointer-events:none\}/,
+  'coach schedule table header should have an opaque mask above scrolling content'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-day-label-fixed\{position:sticky;left:0;z-index:70;width:72px;height:30px;[^}]*background:#F9FAFB/,
+  'coach schedule week date label should lock the left 72px area during horizontal scrolling'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-day-label-track\{width:var\(--coach-ops-week-grid-width\);height:30px;box-sizing:border-box;background:#F9FAFB;border-bottom:1px solid #EDE9E8\}/,
+  'coach schedule week date label track should scroll with the coach columns'
 );
 
 assert.match(

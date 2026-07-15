@@ -525,7 +525,7 @@ function renderCoachOpsWeekTimeline(renderRows,range,opsStartH,opsEndH,opsTotalM
       }).join('');
       return `<div class="coach-ops-week-coach-col" style="height:${dayHeight}px" onclick="openCoachOpsLineCreate(event,${jsArg(coachLabel)},'${ds}')">${pendingBlock}${blocks}</div>`;
     }).join('');
-    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div>${ds===todayKey?nowLineHtml:''}</div></section>`;
+    return `<section class="coach-ops-week-day ${ds===todayKey?'is-today':''}"><div class="coach-ops-week-day-label"><div class="coach-ops-week-day-label-fixed"><strong>${dayName}</strong><span>${day.getMonth()+1}/${day.getDate()}</span></div><div class="coach-ops-week-day-label-track"></div></div><div class="coach-ops-week-day-board"><div class="coach-ops-week-time-axis" style="height:${dayHeight}px">${timeAxis}</div><div class="coach-ops-week-coach-grid" style="height:${dayHeight}px">${columns}</div>${ds===todayKey?nowLineHtml:''}</div></section>`;
   }).join('')}</div>`;
 }
 function scrollCoachOpsDayToNow(){
