@@ -2247,11 +2247,11 @@ body.is-packages-page .content{overflow:hidden}
 #page-coachschedule .coach-ops-drag-handle{width:10px;height:20px}
 #page-coachschedule .coach-ops-drag-handle svg{width:10px;height:20px}
 #page-coachschedule .coach-ops-block,#page-coachschedule .coach-ops-block *,#page-coachschedule .coach-ops-course-card,#page-coachschedule .coach-ops-course-card *,#page-coachschedule .coach-ops-more-course,#page-coachschedule .coach-ops-more-course *{font-size:10px}
-#page-coachschedule .coach-ops-grid-card{height:calc(100vh - 112px);overflow:hidden;background:#fff;border-radius:16px}
-#page-coachschedule .coach-ops-grid-card.is-compact{height:auto;overflow:hidden}
+#page-coachschedule .coach-ops-grid-card{height:auto;min-height:0;overflow:visible;background:#fff;border-radius:16px}
+#page-coachschedule .coach-ops-grid-card.is-compact{height:auto;overflow:visible}
 #page-coachschedule .coach-ops-grid-card.is-compact .coach-ops-scroll{flex:0 0 auto;overflow:visible}
 #page-coachschedule .coach-ops-shell{background:#FFFCF9;position:relative;z-index:80;overflow:visible}
-#page-coachschedule .coach-ops-scroll{overflow:auto;flex:1;min-height:0;background:#fff}
+#page-coachschedule .coach-ops-scroll{overflow:visible;flex:0 0 auto;min-height:0;background:#fff}
 #page-coachschedule .coach-ops-head{position:sticky;top:0;z-index:60;background:#FCF7F3;border-bottom:1px solid #E3DDDC}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours,#page-coachschedule .coach-ops-hours span,#page-coachschedule .coach-ops-name{background:#FCF7F3}
 #page-coachschedule .coach-ops-corner,#page-coachschedule .coach-ops-hours span{font-weight:500}

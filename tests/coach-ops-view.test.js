@@ -93,6 +93,24 @@ assert.match(
 );
 
 assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:0;overflow:visible;background:#fff;border-radius:16px\}/,
+  'coach schedule desktop calendar should grow with its content instead of using a fixed-height frame'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-scroll\{overflow:visible;flex:0 0 auto;min-height:0;background:#fff\}/,
+  'coach schedule desktop calendar should not own vertical scrolling inside the grid'
+);
+
+assert.match(
+  coachOpsSource,
+  /function coachOpsPageScrollContainer\([\s\S]*querySelector\('\.content'\)/,
+  'coach schedule should use the page content scroller for vertical movement'
+);
+
+assert.match(
   coachOpsSource,
   /const previousScrollLeft=preserveCoachOpsScrollLeft\(\);[\s\S]*restoreCoachOpsScrollLeft\(previousScrollLeft\);/,
   'coach schedule rerender should keep the user at the place they left'
@@ -106,14 +124,14 @@ assert.doesNotMatch(
 
 assert.match(
   coachOpsSource,
-  /function scrollCoachOpsDayToNow\(\)[\s\S]*scroll\.scrollTop=Math\.max\(0,nowLineTop-180\)/,
-  'coach schedule day view should auto-scroll vertically near the current time'
+  /function scrollCoachOpsDayToNow\(\)[\s\S]*const scroll=coachOpsPageScrollContainer\(\);[\s\S]*coachOpsScrollTopForElement\(scroll,board,nowLineTop-180\)/,
+  'coach schedule day view should auto-scroll the page near the current time'
 );
 
 assert.match(
   coachOpsSource,
-  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*todaySection\.offsetTop\+30\+nowLineTop-180/,
-  'coach schedule week view should auto-scroll near today and the current time'
+  /function scrollCoachOpsWeekToNow\(\)[\s\S]*todayKey<dateKey\(range\.start\)\|\|todayKey>=dateKey\(range\.end\)[\s\S]*coachOpsScrollTopForElement\(scroll,todaySection,30\+nowLineTop-180\)/,
+  'coach schedule week view should auto-scroll the page near today and the current time'
 );
 
 assert.match(
@@ -1011,20 +1029,20 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\{height:calc\(100vh - 112px\);overflow:hidden;background:#fff;border-radius:16px\}/,
-  'coach schedule grid should keep scrolling inside the card instead of the whole page'
+  /#page-coachschedule \.coach-ops-grid-card\{height:auto;min-height:0;overflow:visible;background:#fff;border-radius:16px\}/,
+  'coach schedule grid should grow with the page instead of scrolling inside a fixed card'
 );
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto;overflow:hidden\}/,
+  /#page-coachschedule \.coach-ops-grid-card\.is-compact\{height:auto;overflow:visible\}/,
   'coach schedule compact campus view should shrink to the visible coaches'
 );
 
 assert.match(
   styles,
   /#page-coachschedule \.coach-ops-head\{position:sticky;top:0;z-index:60;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
-  'coach schedule table header should stay fixed in the internal scroll area'
+  'coach schedule table header should stay fixed in the page content scroll area'
 );
 
 assert.match(

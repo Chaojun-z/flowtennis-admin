@@ -221,13 +221,23 @@ function prepareCoachSchedulePageOpen(){
   if(!el||!el.value||el.dataset.coachOpsAutoDate==='1')resetCoachScheduleToToday();
 }
 function preserveCoachOpsScrollLeft(){
-  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  const scroll=coachOpsPageScrollContainer();
   return scroll?scroll.scrollLeft:null;
 }
 function restoreCoachOpsScrollLeft(value){
   if(value===null||value===undefined)return;
-  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  const scroll=coachOpsPageScrollContainer();
   if(scroll)scroll.scrollLeft=value;
+}
+function coachOpsPageScrollContainer(){
+  return document.querySelector('.content')||document.scrollingElement||document.documentElement;
+}
+function coachOpsScrollTopForElement(scroll,el,offset=0){
+  if(!scroll||!el)return 0;
+  const scrollRect=scroll.getBoundingClientRect?.();
+  const elRect=el.getBoundingClientRect?.();
+  if(scrollRect&&elRect)return scroll.scrollTop+elRect.top-scrollRect.top+offset;
+  return (el.offsetTop||0)+offset;
 }
 function setCoachOpsMode(mode){
   const d=coachOpsDateInput();
@@ -494,23 +504,24 @@ function scrollCoachOpsDayToNow(){
   if(!isCoachSchedulePage()||coachOpsMode!=='day')return;
   const range=rangeBounds('day');
   if(dateKey(range.start)!==today())return;
-  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
-  if(!scroll)return;
+  const scroll=coachOpsPageScrollContainer();
+  const board=document.querySelector('#page-coachschedule .coach-ops-day-board');
+  if(!scroll||!board)return;
   const now=new Date();
   const nowLineTop=((now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60)/60*COACH_OPS_DAY_HOUR_HEIGHT;
-  scroll.scrollTop=Math.max(0,nowLineTop-180);
+  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,board,nowLineTop-180));
 }
 function scrollCoachOpsWeekToNow(){
   if(!isCoachSchedulePage()||coachOpsMode!=='week')return;
   const range=rangeBounds('week'),todayKey=today();
   if(todayKey<dateKey(range.start)||todayKey>=dateKey(range.end))return;
-  const scroll=document.querySelector('#page-coachschedule .coach-ops-scroll');
+  const scroll=coachOpsPageScrollContainer();
   const todaySection=document.querySelector('#page-coachschedule .coach-ops-week-day.is-today');
   if(!scroll||!todaySection)return;
   const now=new Date();
   const nowMin=Math.max(0,Math.min((22-7)*60,(now.getHours()-7)*60+now.getMinutes()+now.getSeconds()/60));
   const nowLineTop=nowMin/60*COACH_OPS_WEEK_HOUR_HEIGHT;
-  scroll.scrollTop=Math.max(0,todaySection.offsetTop+30+nowLineTop-180);
+  scroll.scrollTop=Math.max(0,coachOpsScrollTopForElement(scroll,todaySection,30+nowLineTop-180));
 }
 function syncCoachOpsUnifiedOrder(order){
   const sortMap=new Map((order||[]).map((name,index)=>[coachName(name),(index+1)*10]));
