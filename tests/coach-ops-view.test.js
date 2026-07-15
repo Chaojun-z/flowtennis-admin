@@ -117,6 +117,54 @@ assert.match(
 );
 
 assert.match(
+  source,
+  /document\.body\.classList\.toggle\('is-coachschedule-page',pg==='coachschedule'\)/,
+  'coach schedule page should mark the body so the page cannot create a global horizontal scrollbar'
+);
+
+assert.match(
+  styles,
+  /body\.is-coachschedule-page \.content\{overflow-x:hidden;padding-bottom:0\}/,
+  'coach schedule page should hide page-level horizontal overflow and let the white canvas reach the bottom'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-grid-card\{width:100%;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column\}/,
+  'coach schedule white canvas should stay inside the page width while growing vertically'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-scroll\{width:100%;box-sizing:border-box;overscroll-behavior-x:contain;scrollbar-width:none;-ms-overflow-style:none\}/,
+  'coach schedule should keep horizontal movement inside the calendar and hide the native bottom bar'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-scroll::-webkit-scrollbar\{display:none\}/,
+  'coach schedule should hide the webkit horizontal scrollbar'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-corner\{position:sticky;left:0;z-index:115\}/,
+  'coach schedule top-left corner should stay locked during horizontal scrolling'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-day-time-axis\{position:sticky;left:0;z-index:65;[^}]*box-shadow:1px 0 0 #EDE9E8\}/,
+  'coach schedule day time axis should stay locked during horizontal scrolling'
+);
+
+assert.match(
+  styles,
+  /#page-coachschedule \.coach-ops-week-time-axis\{position:sticky;left:0;z-index:65;[^}]*box-shadow:1px 0 0 #EDE9E8\}/,
+  'coach schedule week time axis should stay locked during horizontal scrolling'
+);
+
+assert.match(
   coachOpsSource,
   /function coachOpsPageScrollContainer\([\s\S]*querySelector\('\.content'\)/,
   'coach schedule should use the page content scroller for vertical movement'
@@ -1017,7 +1065,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule\.active\{display:flex;min-height:calc\(100vh - var\(--topH\) - 22px\)\}/,
+  /#page-coachschedule\.active\{display:flex;flex-direction:column;width:100%;max-width:100%;min-height:calc\(100vh - var\(--topH\) - 22px\);overflow:visible\}/,
   'coach schedule white canvas should extend to the bottom of the visible page area'
 );
 
@@ -1125,7 +1173,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:80;overflow:visible\}/,
+  /#page-coachschedule \.coach-ops-shell\{background:#FFFCF9;position:sticky;top:0;z-index:120;overflow:visible\}/,
   'coach schedule toolbar band should stay fixed and use #FFFCF9'
 );
 
@@ -1149,7 +1197,7 @@ assert.match(
 
 assert.match(
   styles,
-  /#page-coachschedule \.coach-ops-head\{position:sticky;top:65px;z-index:70;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
+  /#page-coachschedule \.coach-ops-head\{position:sticky;top:65px;z-index:100;background:#FCF7F3;border-bottom:1px solid #E3DDDC\}/,
   'coach schedule table header should stay fixed in the page content scroll area'
 );
 
